@@ -250,7 +250,7 @@ it('retains deliberate path repetitions with caller occurrence indices', async (
   const nodes =
     path.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="node"]');
   expect(nodes).to.have.length(2);
-  const entityActivation = oneEvent(path, 'lr-entity-activate');
+  const entityActivation = oneEvent(path, 'lr-entity-select');
   nodes[1]!.click();
   expect((await entityActivation).detail).to.deep.equal({
     entityId: 'entity-a',

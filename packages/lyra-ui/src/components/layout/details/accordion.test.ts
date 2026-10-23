@@ -1115,7 +1115,8 @@ describe('<lr-accordion-item>', () => {
     for (const removed of ['open', 'summary', 'name', 'size', 'show', 'hide']) {
       expect(removed in item, `${removed} must remain on lr-details only`).to.equal(false);
     }
-    expect(item.shadowRoot!.querySelector('[part~="base"][part~="accordion-item"]')).to.exist;
+    expect(item.shadowRoot!.querySelector('[part="accordion-item"]')).to.exist;
+    expect(item.shadowRoot!.querySelectorAll('[part~="base"]').length).to.equal(0);
     expect(item.shadowRoot!.querySelector('h2[part~="heading"]')).to.exist;
     for (const part of ['button', 'label', 'icon', 'panel', 'content']) {
       expect(item.shadowRoot!.querySelector(`[part~="${part}"]`), `missing part ${part}`).to.exist;

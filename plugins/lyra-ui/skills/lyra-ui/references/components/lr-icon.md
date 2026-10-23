@@ -7,7 +7,7 @@
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecated property** `autoWidth` / `auto-width` since `8.0.0`; use property `canvas="auto"`; removal not before `10.0.0` — autoWidth is a boolean compatibility spelling that cannot express fixed canvas sizes; canvas covers both automatic and explicit sizing. That version is a policy floor, not a plan: `wa-icon` still publishes its own deprecated `auto-width` attribute, so this alias is removed only when upstream's is.
+- **Deprecations** none
 - **Optional peers** `dompurify` — see `llms/peers.md`
 - **Themeable via** 4 parts, 44 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -55,8 +55,6 @@ Pairs with `lr-icon-button` (see `llms/components/lr-icon-button.md`).
 - `canvas?: 'fixed' | 'auto' | 'square' | 'roomy'` (reflected, type `LyraIconCanvas`) — sizes the
   layout box. Unset behaves as `fixed` (1.25em × 1em); `auto` follows the SVG's intrinsic width at
   1em high; `square` is 1.25em × 1.25em; `roomy` is 1.5em × 1.5em. All scale with `font-size`.
-- `autoWidth: boolean = false` (attribute `auto-width`, reflected, deprecated) — compatibility
-  alias for `canvas="auto"`; an explicit `canvas` wins.
 - `swapOpacity: boolean = false` (attribute `swap-opacity`, reflected) — swaps the primary and
   secondary opacity hooks on SVGs that carry `.fa-primary`/`.fa-secondary` duotone layers.
 - `animation?: LyraIconAnimation` (reflected) — one of `beat`, `fade`, `beat-fade`, `bounce`,

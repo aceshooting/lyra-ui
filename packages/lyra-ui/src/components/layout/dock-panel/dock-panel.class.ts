@@ -37,10 +37,6 @@ export interface LyraDockPanelEventMap {
   'lr-resize': CustomEvent<LyraDockPanelResizeDetail>;
   'lr-resize-input': CustomEvent<LyraDockPanelResizeDetail>;
   'lr-resize-change': CustomEvent<LyraDockPanelResizeDetail>;
-  /** @deprecated Use `lr-toggle-request`; same expanded detail. */
-  'lr-collapse-request': CustomEvent<LyraDockPanelCollapseChangeDetail>;
-  /** @deprecated Use `lr-toggle`; same expanded detail. */
-  'lr-collapse-change': CustomEvent<LyraDockPanelCollapseChangeDetail>;
   'lr-toggle-request': CustomEvent<LyraDockPanelCollapseChangeDetail>;
   'lr-toggle': CustomEvent<LyraDockPanelCollapseChangeDetail>;
 }
@@ -118,13 +114,10 @@ interface DragState {
  *   least one accepted value transition, and after each accepted keyboard step. Pointer
  *   cancellation, lost capture, policy/geometry mutation, no-op attempts, and a prevented
  *   `lr-resize-request` all emit nothing.
- * @event lr-collapse-request - A cancelable proposed `collapsed` state from the built-in collapse
- *   toggle. Call `preventDefault()` to keep `collapsed` unchanged. Not fired when a consumer sets
- *   `collapsed` directly. `detail: { expanded }` carries the proposed state.
- * @event lr-collapse-change - Non-cancelable post-commit notification from the built-in collapse
- *   toggle. Not fired when a consumer sets `collapsed` directly. `detail: { expanded }` carries the new state.
  * @event lr-toggle-request - Cancelable proposed `detail: { expanded }` before the built-in toggle commits.
- * @event lr-toggle - Accepted built-in disclosure change with `detail: { expanded }`.
+ *   Call `preventDefault()` to keep `collapsed` unchanged. Not fired when a consumer sets `collapsed` directly.
+ * @event lr-toggle - Accepted built-in disclosure change with `detail: { expanded }`. Not fired when a
+ *   consumer sets `collapsed` directly.
  * @csspart base - The panel root.
  * @csspart content - The wrapper around the default slot; hidden while `collapsed`.
  * @csspart handle - The draggable resize handle on the panel's inner edge. Its numeric ARIA range
@@ -454,7 +447,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   }
 
   /** Proposes `extent` through the cancelable `lr-resize-request` veto point (mirroring
-   *  `lr-collapse-request`'s propose-then-commit shape) and applies it only when not
+   *  `lr-toggle-request`'s propose-then-commit shape) and applies it only when not
    *  `defaultPrevented`. Returns whether it was applied. */
   private requestResize(bounds: { minPx: number; maxPx: number }, extent: string): string | undefined {
     const requestSequence = ++this.resizeRequestSequence;
@@ -643,17 +636,12 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     try {
       requestThenCommit({
         requestDetail: detail(),
-        emitRequest: (proposal, init: { cancelable: true }) => {
-          const request = this.emit('lr-toggle-request', proposal, init);
-          const legacy = this.emit('lr-collapse-request', detail(), init);
-          if (legacy.defaultPrevented) request.preventDefault();
-          return request;
-        },
+        emitRequest: (proposal, init: { cancelable: true }) =>
+          this.emit('lr-toggle-request', proposal, init),
         guard: this.toggleWriteGuard,
         commit: () => {
           if (this.collapsed !== previous) return;
           this.collapsed = !previous;
-          this.emit('lr-collapse-change', detail());
           this.emit('lr-toggle', detail());
         },
       });

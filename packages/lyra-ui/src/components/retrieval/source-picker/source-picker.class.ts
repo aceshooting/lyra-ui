@@ -43,10 +43,6 @@ export interface LyraSourcePickerEventMap {
   'lr-selection-change': CustomEvent<
     LyraEventDetailSnapshot<{ selectedSourceIds: string[] }>
   >;
-  /** @deprecated Use `lr-selection-change`. */
-  'lr-sources-change': CustomEvent<
-    LyraEventDetailSnapshot<{ selectedSourceIds: string[] }>
-  >;
 }
 
 interface SourceRow {
@@ -89,7 +85,6 @@ const EMPTY_SOURCE_IDS: readonly string[] = Object.freeze([]);
  * fired after every toggle including select-all. Also fires when a `sources` reassignment prunes
  * a previously-selected id that is no longer a valid leaf. Not fired when a consumer sets
  * `selectedSourceIds` directly; that assignment is normalized silently.
- * @event lr-sources-change - Deprecated alias of `lr-selection-change`, dispatched right after it.
  * @csspart base - The root wrapper.
  * @csspart search - The built-in filter `lr-input`, omitted while `withoutSearch` is set.
  * @csspart select-all - The header select-all row, omitted while `withoutSelectAll` is set.
@@ -168,7 +163,6 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-selection-change',
-    'lr-sources-change',
   ]);
 
   /** Flat (no `children`) or a tree. */
@@ -517,7 +511,6 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
 
   private reportSelection(selectedSourceIds: string[]): void {
     this.emit('lr-selection-change', { selectedSourceIds });
-    this.emit('lr-sources-change', { selectedSourceIds });
   }
 
   private commitSelection(next: string[]): void {

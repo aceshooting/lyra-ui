@@ -210,8 +210,8 @@ or disabled. Activating one never toggles the panel: a click whose
 composed path crosses `[part~="header-actions"]` is exempted from disclosure activation. Its wrapper
 is hidden and reclaims layout space whenever the slot is empty.
 
-**CSS parts:** accordion exposes `base`. Accordion item exposes `base` and `accordion-item` on the
-same outer wrapper, plus `heading`, `button`, `label`, `icon`, `panel`, and `content`. Details
+**CSS parts:** accordion exposes `base`. Accordion item exposes `accordion-item` on its
+outer wrapper, plus `heading`, `button`, `label`, `icon`, `panel`, and `content`. Details
 exposes `base` and `details` on the same outer container, plus `header`, `summary`, `icon`,
 `header-actions`, and `content`. The native `<details>` is private; `content` is inside its
 findable `hidden="until-found"` closed-state gate.

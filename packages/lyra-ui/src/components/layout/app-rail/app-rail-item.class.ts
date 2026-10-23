@@ -90,8 +90,6 @@ export interface LyraAppRailItemEventMap {
  * @slot - The visible navigation label.
  * @slot start - The leading decorative icon. Its flattened subtree is inert and hidden from
  *   assistive technology; the default slot or host `aria-label` names the internal control.
- * @slot icon - Legacy slot content is deprecated; use `start`. Its flattened subtree is inert and
- *   hidden from assistive technology.
  * @slot meta - Secondary trailing text -- an unread count, a keyboard shortcut. Rendered as a
  *   SIBLING of the internal link/button, never inside it, so it is not part of the item's
  *   accessible name and a pointer landing on it does not activate the item. Visually clipped in
@@ -396,7 +394,7 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
   };
 
   // Only the default slot's own content counts toward the tooltip text and the disclosure's
-  // interpolated {label}; every named slot (`icon`, `meta`, `end`, `children`) stays out.
+  // interpolated {label}; every named slot (`start`, `meta`, `end`, `children`) stays out.
   private get labelText(): string {
     return Array.from(this.childNodes)
       .filter((node) => node.nodeType === 3 || (node.nodeType === 1 && !(node as Element).getAttribute('slot')))
@@ -613,7 +611,7 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
     const content = html`
       ${this.current ? html`<span part="current-indicator" aria-hidden="true"></span>` : nothing}
       ${renderInertPresentation(
-        html`<slot name="start"><slot name="icon"></slot></slot>`,
+        html`<slot name="start"></slot>`,
         { part: 'icon' },
       )}
       <span part="label"><slot></slot></span>

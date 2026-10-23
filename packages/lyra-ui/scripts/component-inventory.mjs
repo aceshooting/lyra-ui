@@ -2258,6 +2258,10 @@ export function compareMappedSurfaces(upstream, target, { upstreamPrefix, rewrit
   const drift = [];
   const attributeRewrites = new Map((rewrites.attributes ?? []).map((entry) => [entry.from, entry.to]));
   const propertyRewrites = new Map((rewrites.properties ?? []).map((entry) => [entry.from, entry.to]));
+  // A rule carrying `value` migrates a boolean spelling to `to="value"`: the two members differ in
+  // type, default and reflection by construction, so only the target's existence is compared.
+  const valuedAttributes = new Set((rewrites.attributes ?? []).filter((entry) => entry.value !== undefined).map((entry) => entry.from));
+  const valuedProperties = new Set((rewrites.properties ?? []).filter((entry) => entry.value !== undefined).map((entry) => entry.from));
   const eventRewrites = new Map((rewrites.events ?? []).map((entry) => [entry.from, entry.to]));
   const methodRewrites = new Map((rewrites.methods ?? []).map((entry) => [entry.from, entry.to]));
   const sectionDeprecationRewrites = new Map([
@@ -2334,6 +2338,10 @@ export function compareMappedSurfaces(upstream, target, { upstreamPrefix, rewrit
     }
     const expectedName = attributeRewrites.get(attribute.name) || attribute.name;
     const candidate = (target.attributes ?? []).find((entry) => entry.name === expectedName);
+    if (valuedAttributes.has(attribute.name)) {
+      if (!candidate) pushMissing(drift, 'missing-attribute', 'attributes', attribute.name);
+      continue;
+    }
     if (!candidate) {
       const opposite = (target.attributes ?? []).find(
         (entry) => polarityStem(entry.name) === polarityStem(expectedName) && polarity(entry.name) !== polarity(expectedName),
@@ -2424,6 +2432,10 @@ export function compareMappedSurfaces(upstream, target, { upstreamPrefix, rewrit
     const expectedName = propertyRewrites.get(property.name) || property.name;
     const candidate = (target.properties ?? []).find((entry) => entry.name === expectedName);
     if (!candidate && suppressionRequiredProperties.has(expectedName)) continue;
+    if (valuedProperties.has(property.name)) {
+      if (!candidate) pushMissing(drift, 'missing-property', 'properties', property.name);
+      continue;
+    }
     if ((upstream.attributes ?? []).some((attribute) => attribute.property === property.name)) {
       // Attribute comparison already owns this member's type, reflection, and default. The
       // corresponding JavaScript property remains a separate public contract for existence and
@@ -2858,7 +2870,8 @@ function validateRewrites(mapping, findings) {
         !rule.from ||
         typeof rule.to !== 'string' ||
         !rule.to ||
-        keys.some((key) => key !== 'from' && key !== 'to')
+        keys.some((key) => key !== 'from' && key !== 'to' && key !== 'value') ||
+        (Object.hasOwn(rule, 'value') && (typeof rule.value !== 'string' || !rule.value))
       ) {
         findings.push(`${mapping.upstreamTag}: invalid rewrites.${section} rule`);
         continue;

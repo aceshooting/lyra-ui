@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecated event** `lr-entity-activate` since `26.0.0`; use event `@lr-entity-select`; removal not before `28.0.0` — lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 11 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -41,7 +41,7 @@ string; summary?: string; memberCount?: number }`; `memberCount` is a non-negati
 
 **Events:** `lr-drill` (`detail: { communityId }`, the drill button, header, or overflow chip — all three
 mean "show me this whole community"), `lr-entity-select` (`detail: { entityId }`, a member chip was
-activated; the deprecated alias `lr-entity-activate` follows with the same detail).
+activated).
 
 **Slots:** `actions` — extra header actions alongside the built-in drill button.
 

@@ -2,10 +2,7 @@ import { twoFrames as nextFrame } from '../../../../test/frames.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './retrieval-results.js';
-import type {
-  LyraRetrievalResults,
-  RetrievalResultsSelectDetail,
-} from './retrieval-results.js';
+import type { LyraRetrievalResults } from './retrieval-results.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 import type { LyraChunkInspector } from '../chunk-inspector/chunk-inspector.class.js';
 import type { LyraCheckbox } from '../../forms/checkbox/checkbox.class.js';
@@ -21,6 +18,8 @@ import {
   type DeprecatedUsage,
 } from '../../../../test/expected-deprecations.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+
+type SelectionDetail = { selectedChunkIds: string[]; chunks: RetrievalChunk[] };
 
 // The locale-aware metadata fixture formats numbers under an Arabic locale with no registered
 // catalog; its English-default messages are intentional.
@@ -999,7 +998,7 @@ describe('grouping', () => {
 });
 
 describe('selection', () => {
-  it('emits lr-select with the updated ids and matching chunks, and reflects the checked state', async () => {
+  it('emits lr-selection-change with the updated ids and matching chunks, and reflects the checked state', async () => {
     const el = (await fixture(
       html`<lr-retrieval-results></lr-retrieval-results>`
     )) as LyraRetrievalResults;
@@ -1008,10 +1007,10 @@ describe('selection', () => {
     const rows = flatRows(el);
     const topRow = rows[0]!; // c2, highest score
     const checkbox = topRow.querySelector('lr-checkbox') as LyraCheckbox;
-    const listener = oneEvent(el, 'lr-select');
+    const listener = oneEvent(el, 'lr-selection-change');
     clickCheckbox(checkbox);
-    const event = (await listener) as CustomEvent<RetrievalResultsSelectDetail>;
-    expect(event.detail.chunkIds).to.deep.equal(['c2']);
+    const event = (await listener) as CustomEvent<SelectionDetail>;
+    expect(event.detail.selectedChunkIds).to.deep.equal(['c2']);
     expect(event.detail.chunks.map((c) => c.id)).to.deep.equal(['c2']);
     expect(el.selectedChunkIds).to.deep.equal(['c2']);
     await el.updateComplete;
@@ -1020,13 +1019,13 @@ describe('selection', () => {
     ).to.be.true;
 
     // Toggling again deselects.
-    const listener2 = oneEvent(el, 'lr-select');
+    const listener2 = oneEvent(el, 'lr-selection-change');
     clickCheckbox(
       flatRows(el)[0]!.querySelector('lr-checkbox') as LyraCheckbox
     );
     const event2 =
-      (await listener2) as CustomEvent<RetrievalResultsSelectDetail>;
-    expect(event2.detail.chunkIds).to.deep.equal([]);
+      (await listener2) as CustomEvent<SelectionDetail>;
+    expect(event2.detail.selectedChunkIds).to.deep.equal([]);
   });
 
   it('derives exactly one first-wins selected record when without-dedupe is set', async () => {
@@ -1051,12 +1050,12 @@ describe('selection', () => {
     )) as LyraRetrievalResults;
     expect(flatRows(el).length).to.equal(1);
 
-    const pending = oneEvent(el, 'lr-select');
+    const pending = oneEvent(el, 'lr-selection-change');
     clickCheckbox(
       flatRows(el)[0]!.querySelector('lr-checkbox') as LyraCheckbox
     );
-    const detail = (await pending).detail as RetrievalResultsSelectDetail;
-    expect(detail.chunkIds).to.deep.equal(['dup']);
+    const detail = (await pending).detail as SelectionDetail;
+    expect(detail.selectedChunkIds).to.deep.equal(['dup']);
     expect(detail.chunks.map((chunk) => [chunk.id, chunk.text])).to.deep.equal([
       ['dup', 'low'],
     ]);
@@ -1088,10 +1087,10 @@ describe('selection', () => {
       'lr-checkbox'
     ) as LyraCheckbox;
     expect(checkbox).to.exist;
-    const pending = oneEvent(el, 'lr-select');
+    const pending = oneEvent(el, 'lr-selection-change');
     clickCheckbox(checkbox);
-    const detail = (await pending).detail as RetrievalResultsSelectDetail;
-    expect(detail.chunkIds).to.deep.equal(['dup']);
+    const detail = (await pending).detail as SelectionDetail;
+    expect(detail.selectedChunkIds).to.deep.equal(['dup']);
     expect(detail.chunks.map((chunk) => [chunk.id, chunk.text])).to.deep.equal([
       ['dup', 'low'],
     ]);
@@ -1163,10 +1162,10 @@ describe('selection', () => {
 
   /**
    * Regression: a `chunks` reassignment silently pruning stale selected ids never fired
-   * `lr-select`, so a host's own external copy of `selectedChunkIds` diverged from the
+   * `lr-selection-change`, so a host's own external copy of `selectedChunkIds` diverged from the
    * component's with no event to resync it.
    */
-  it('emits lr-select when a chunks reassignment prunes previously-selected ids', async () => {
+  it('emits lr-selection-change when a chunks reassignment prunes previously-selected ids', async () => {
     const el = (await fixture(
       html`<lr-retrieval-results></lr-retrieval-results>`
     )) as LyraRetrievalResults;
@@ -1174,17 +1173,17 @@ describe('selection', () => {
     el.selectedChunkIds = ['c1', 'c2'];
     await el.updateComplete;
 
-    const listener = oneEvent(el, 'lr-select');
+    const listener = oneEvent(el, 'lr-selection-change');
     el.chunks = [chunks[1]!]; // drops c1, keeps c2
-    const event = (await listener) as CustomEvent<RetrievalResultsSelectDetail>;
+    const event = (await listener) as CustomEvent<SelectionDetail>;
 
-    expect(event.detail.chunkIds).to.deep.equal(['c2']);
+    expect(event.detail.selectedChunkIds).to.deep.equal(['c2']);
     expect(event.detail.chunks.map((c) => c.id)).to.deep.equal(['c2']);
     await el.updateComplete;
     expect(el.selectedChunkIds).to.deep.equal(['c2']);
   });
 
-  it('does not emit lr-select on the very first update (nothing to resync yet)', async () => {
+  it('does not emit lr-selection-change on the very first update (nothing to resync yet)', async () => {
     const el = (await fixture(
       html`<lr-retrieval-results
         .chunks=${chunks}
@@ -1192,7 +1191,7 @@ describe('selection', () => {
       ></lr-retrieval-results>`
     )) as LyraRetrievalResults;
     let emitted = 0;
-    el.addEventListener('lr-select', () => emitted++);
+    el.addEventListener('lr-selection-change', () => emitted++);
     await el.updateComplete;
     expect(el.selectedChunkIds).to.deep.equal([]);
     expect(emitted).to.equal(0);
@@ -1628,10 +1627,10 @@ it('renders and lets selection work under dir="rtl"', async () => {
   const rows = flatRows(el);
   expect(rows.length).to.equal(3);
   const checkbox = rows[0]!.querySelector('lr-checkbox') as LyraCheckbox;
-  const listener = oneEvent(el, 'lr-select');
+  const listener = oneEvent(el, 'lr-selection-change');
   clickCheckbox(checkbox);
-  const event = (await listener) as CustomEvent<RetrievalResultsSelectDetail>;
-  expect(event.detail.chunkIds.length).to.equal(1);
+  const event = (await listener) as CustomEvent<SelectionDetail>;
+  expect(event.detail.selectedChunkIds.length).to.equal(1);
 });
 
 it('can shrink to a 320px allocation without overflowing its host box', async () => {
@@ -1978,7 +1977,7 @@ describe('row checkbox containment', () => {
     return el.shadowRoot!.querySelector<LyraCheckbox>(`lr-checkbox[data-chunk-id="${chunkId}"]`)!;
   }
 
-  it('keeps the toggle proposal and its input/change aliases inside for native pointer and keyboard activation while lr-select still reports', async () => {
+  it('keeps the toggle proposal and its input/change aliases inside for native pointer and keyboard activation while lr-selection-change still reports', async () => {
     const el = await fixture<LyraRetrievalResults>(
       html`<lr-retrieval-results .chunks=${chunks}></lr-retrieval-results>`
     );
@@ -1992,11 +1991,11 @@ describe('row checkbox containment', () => {
     };
     const selections: string[][] = [];
     const onSelect = (event: Event): void => {
-      selections.push([...(event as CustomEvent<RetrievalResultsSelectDetail>).detail.chunkIds]);
+      selections.push([...(event as CustomEvent<SelectionDetail>).detail.selectedChunkIds]);
     };
     first.addEventListener('lr-checkbox-toggle-request', onProposal);
     second.addEventListener('lr-checkbox-toggle-request', onProposal);
-    el.addEventListener('lr-select', onSelect);
+    el.addEventListener('lr-selection-change', onSelect);
     const { leaked, stop } = trackLeaks(el);
     try {
       await resetMouse();
@@ -2016,7 +2015,7 @@ describe('row checkbox containment', () => {
       stop();
       first.removeEventListener('lr-checkbox-toggle-request', onProposal);
       second.removeEventListener('lr-checkbox-toggle-request', onProposal);
-      el.removeEventListener('lr-select', onSelect);
+      el.removeEventListener('lr-selection-change', onSelect);
     }
 
     expect(leaked).to.deep.equal([]);
@@ -2045,7 +2044,7 @@ describe('row checkbox containment', () => {
       selects += 1;
     };
     checkbox.addEventListener('lr-checkbox-toggle-request', onProposal);
-    el.addEventListener('lr-select', onSelect);
+    el.addEventListener('lr-selection-change', onSelect);
     const { leaked, stop } = trackLeaks(el);
     try {
       checkbox.focus();
@@ -2056,7 +2055,7 @@ describe('row checkbox containment', () => {
     } finally {
       stop();
       checkbox.removeEventListener('lr-checkbox-toggle-request', onProposal);
-      el.removeEventListener('lr-select', onSelect);
+      el.removeEventListener('lr-selection-change', onSelect);
     }
 
     expect(vetoes).to.deep.equal([true]);
@@ -2127,20 +2126,17 @@ const isExpanded = (inspector: LyraChunkInspector): boolean =>
   inspector.shadowRoot!.querySelector('[part="toggle"]')!.getAttribute('aria-expanded') === 'true';
 
 describe('review fixes', () => {
-  it('reports a selection change as lr-selection-change, then the deprecated lr-select', async () => {
+  it('reports a selection change as lr-selection-change, and never the removed lr-select', async () => {
     const el = (await fixture(html`<lr-retrieval-results .chunks=${chunks}></lr-retrieval-results>`)) as LyraRetrievalResults;
     const seen: string[] = [];
     el.addEventListener('lr-selection-change', (event) => {
       const detail = (event as CustomEvent<{ selectedChunkIds: string[]; chunks: RetrievalChunk[] }>).detail;
       seen.push(`selection:${detail.selectedChunkIds}:${detail.chunks.map((chunk) => chunk.id)}`);
     });
-    el.addEventListener('lr-select', (event) => {
-      const detail = (event as CustomEvent<RetrievalResultsSelectDetail>).detail;
-      seen.push(`select:${detail.chunkIds}:${detail.chunks.map((chunk) => chunk.id)}`);
-    });
+    el.addEventListener('lr-select', () => seen.push('select'));
     clickCheckbox(el.shadowRoot!.querySelector('lr-checkbox') as LyraCheckbox);
     await el.updateComplete;
-    expect(seen).to.deep.equal(['selection:c2:c2', 'select:c2:c2']);
+    expect(seen).to.deep.equal(['selection:c2:c2']);
   });
 
   it('keeps a row\'s expansion toggle and the virtual list events inside', async () => {

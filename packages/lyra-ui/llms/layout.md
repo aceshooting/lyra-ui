@@ -546,12 +546,8 @@ TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
 
 **Events:** `lr-toggle-request` (cancelable; `detail: { expanded }` proposes the inverse of
 `collapsed`) and `lr-toggle` (accepted state, same detail) are the shared disclosure pair for the
-built-in toggle. The legacy `lr-collapse-request` (cancelable; `detail: { collapsed }` is the state proposed by the
-built-in collapse toggle. Call `preventDefault()` to leave `collapsed` and any persisted state
-unchanged. It is not emitted when a consumer assigns `collapsed` directly), `lr-collapse-change`
-(non-cancelable; `detail: { collapsed }` is the accepted built-in-toggle state. It is not emitted
-when a consumer assigns `collapsed` directly) remain available but are deprecated. Either request
-can veto the toggle. `lr-fullscreen-request` (cancelable; `detail: {
+built-in toggle. Call `preventDefault()` on the request to leave `collapsed` and any persisted state
+unchanged. Neither is emitted when a consumer assigns `collapsed` directly. `lr-fullscreen-request` (cancelable; `detail: {
 fullscreen }` is the state proposed by the fullscreen toggle, Escape, or a backdrop click. Call
 `preventDefault()` to leave `fullscreen` unchanged. Not emitted when a consumer assigns
 `fullscreen` directly), `lr-fullscreen-change` (non-cancelable; `detail: { fullscreen }` is the
@@ -573,8 +569,7 @@ this shadow root, so a retargeted `click` names no view. When an activation _doe
 `activeViewId` directly)
 
 **Slots:** default (the panel body, rendered only while `views` is empty), `start` (optional leading
-decorative icon in the title row; its flattened subtree is inert and aria-hidden; `icon` is the
-deprecated legacy slot), `label` (rich label content,
+decorative icon in the title row; its flattened subtree is inert and aria-hidden), `label` (rich label content,
 overrides the `label` attribute), `sublabel` (rich sublabel content, overrides the `sublabel`
 attribute), `actions` (header action controls,
 rendered before the collapse/expand buttons), `collapse-icon` (replaces the built-in chevron in the
@@ -587,7 +582,7 @@ reading the `fullscreen` attribute; its assigned content is decorative, inert, a
 the outer toggle remains the only action; only meaningful while `expandable`), and one `view-{viewId}`
 slot per `views` entry, used instead of the default slot
 
-**CSS parts:** `base`, `header`, `title`, `icon` (wrapper around the `icon` slot, hidden entirely when
+**CSS parts:** `base`, `header`, `title`, `icon` (wrapper around the `start` slot, hidden entirely when
 empty), `label-group` (wrapper around the label and sublabel), `label`, `sublabel`, `actions`,
 `view-toggles` (the header toggle-button group, only rendered when `views` is non-empty),
 `view-toggle` (a single view toggle button), `view-icon` (a decorative view glyph whose rendered
@@ -676,7 +671,7 @@ panel'`) and `widgetExpand` (default `'Expand panel'`) keys.
   framework binding, including one that pins the property to its own default `false` — always wins
   over a `storageKey`-restored value for that mount, and skips the restore entirely. For
   uncontrolled persistence, don't bind `collapsed`: read the restored value back after
-  `updateComplete` and track further changes from `lr-collapse-change`, pushing the property down
+  `updateComplete` and track further changes from `lr-toggle`, pushing the property down
   imperatively only for later external changes.
 - prior to this release the collapse-button `aria-label` was localized through `lr-dock-panel`'s
   own `dockPanelCollapse`/`dockPanelExpand` keys (a borrowed, differently-named pair). A locale
@@ -2737,7 +2732,7 @@ An auto-hide sidebar that peeks open over the content and docks only when pinned
 ```html
 <lr-app-rail auto-hide label="Workspace" storage-key="app" persist="preferred-mode">
   <lr-app-rail-item href="/inbox" current>
-    <svg slot="icon" aria-hidden="true">...</svg>Inbox
+    <svg slot="start" aria-hidden="true">...</svg>Inbox
   </lr-app-rail-item>
 </lr-app-rail>
 ```
@@ -2834,7 +2829,7 @@ visible parent item.
   <lr-app-rail id="sidebar" label="Workspace" frame="card" without-toggle trigger-collapses
     for="sidebar-trigger" hotkey="mod+b" storage-key="app" persist="preferred-mode">
     <lr-app-rail-group heading="Platform">
-      <lr-app-rail-item href="/projects" current tooltip><span slot="icon">▦</span>Projects</lr-app-rail-item>
+      <lr-app-rail-item href="/projects" current tooltip><span slot="start">▦</span>Projects</lr-app-rail-item>
     </lr-app-rail-group>
     <lr-divider></lr-divider>
   </lr-app-rail>
@@ -2866,7 +2861,7 @@ shadow tokens. A raised sidebar tint is opt-in with
   <lr-app-rail slot="navigation" id="workspace-nav" label="Workspace" frame="plain"
     mobile-breakpoint="0px" icon-only-breakpoint="0px" collapsible hotkey="mod+b"
     storage-key="app" persist="preferred-mode">
-    <lr-app-rail-item href="/projects"><span slot="icon">▦</span>Projects</lr-app-rail-item>
+    <lr-app-rail-item href="/projects"><span slot="start">▦</span>Projects</lr-app-rail-item>
   </lr-app-rail>
   <p>Main content</p>
 </lr-page>
@@ -2942,7 +2937,7 @@ A host `aria-label` is copied to the rendered native link or button by attribute
 including an explicitly empty value; without it, the default slot supplies the native name. The
 same precedence supplies the tooltip text when that opt-in flyout is visible, and the disclosure's
 interpolated `{label}` (see Events below); without it both read the default slot only, never the
-`icon`, `meta`, `end` or `children` slots.
+`start`, `meta`, `end` or `children` slots.
 
 **Events:** `lr-toggle-request` — cancelable, emitted before `expanded` changes from the built-in
 disclosure (`detail: { expanded }` is the proposed state, matching `<lr-app-rail-group>`'s
@@ -2962,8 +2957,7 @@ external focus move is always preserved, and this repair dispatches no activatio
 
 **Slots:** default (the visible label), `start` (the leading decorative icon, always hidden from
 assistive technology and inert across its flattened subtree; the default slot or host `aria-label`
-names the native control, which remains the sole action). The `icon` slot is its deprecated legacy
-alias.
+names the native control, which remains the sole action).
 
 - `meta` slot — secondary trailing text (an unread count, a keyboard shortcut). Rendered as a
   SIBLING of the item's own link/button, so its text is not part of the item's accessible name and a
@@ -3825,13 +3819,9 @@ resolved in the host's owner realm.
   lost capture, disconnect/adoption, live policy/geometry mutation, no-op attempts, and a prevented
   `lr-resize-request` all emit nothing.
 - `lr-toggle-request` (cancelable) and `lr-toggle` (accepted) are the shared disclosure pair;
-  their fresh frozen details contain `{ expanded }`. The former can veto a built-in toggle.
-  `lr-collapse-request` (cancelable; `detail: { expanded }` is the state proposed by the
-  built-in collapse toggle. Call `preventDefault()` to leave the host `collapsed` property
-  unchanged. Not fired when a consumer assigns `collapsed` directly), `lr-collapse-change`
-  (non-cancelable; `detail: { expanded }` is
-  the accepted built-in-toggle state. Not fired when a consumer assigns `collapsed` directly)
-  remain available but are deprecated. Both details are fresh readonly/frozen snapshots.
+  their fresh frozen details contain `{ expanded }`. The former can veto a built-in toggle
+  (`preventDefault()` leaves the host `collapsed` property unchanged). Neither is fired when a
+  consumer assigns `collapsed` directly. Both details are fresh readonly/frozen snapshots.
 
 Events bubble and are composed, so a listener on an ancestor (for example an `lr-multi-split` that
 contains this panel and listens for its own `lr-resize-request`) should ignore events whose `target`
@@ -3880,7 +3870,7 @@ being dragged. `--lr-dock-panel-handle-hit-area` requests a resize target width 
   const panel = document.querySelector("lr-dock-panel");
   panel.addEventListener("lr-resize-input", (e) => updateLayoutPreview(e.detail.extent));
   panel.addEventListener("lr-resize-change", (e) => persistExtent(e.detail.extent));
-  panel.addEventListener("lr-collapse-change", (e) => console.log(e.detail.expanded));
+  panel.addEventListener("lr-toggle", (e) => console.log(e.detail.expanded));
 </script>
 ```
 
@@ -4436,8 +4426,8 @@ or disabled. Activating one never toggles the panel: a click whose
 composed path crosses `[part~="header-actions"]` is exempted from disclosure activation. Its wrapper
 is hidden and reclaims layout space whenever the slot is empty.
 
-**CSS parts:** accordion exposes `base`. Accordion item exposes `base` and `accordion-item` on the
-same outer wrapper, plus `heading`, `button`, `label`, `icon`, `panel`, and `content`. Details
+**CSS parts:** accordion exposes `base`. Accordion item exposes `accordion-item` on its
+outer wrapper, plus `heading`, `button`, `label`, `icon`, `panel`, and `content`. Details
 exposes `base` and `details` on the same outer container, plus `header`, `summary`, `icon`,
 `header-actions`, and `content`. The native `<details>` is private; `content` is inside its
 findable `hidden="until-found"` closed-state gate.
@@ -6153,7 +6143,7 @@ shared region below the bar. It never uses `menu`/`menubar` roles — applicatio
   unset or unresolvable means the menu never collapses and its row wraps instead.
 - `expanded: boolean = false` (reflected) — whether the list shows in the collapsed layout. Kept
   while the bar layout is active and applied at the next collapse; reset to `false` (with
-  `lr-expanded-change`, source `programmatic`) when the menu leaves the collapsed layout.
+  `lr-toggle`, source `programmatic`) when the menu leaves the collapsed layout.
 - `indicator: boolean = false` (reflected) — shows a decorative notch under the trigger whose panel
   is open.
 - `panelAnchor: LyraNavigationMenuPanelAnchor = 'menu'` (attribute `panel-anchor`, reflected) —
@@ -6188,8 +6178,7 @@ hide the focused element; a router's own later `focus()` still wins.
 
 **Events:** cancelable `lr-toggle-request` for user-initiated changes and accepted `lr-toggle`
 with `{ expanded, source: 'user' | 'programmatic' }`. The former can veto the change;
-programmatic changes emit only the accepted event. Deprecated `lr-expanded-change` remains
-available with the same accepted detail after rendering. `user` covers the toggle, Escape in the
+programmatic changes emit only the accepted event, after rendering. `user` covers the toggle, Escape in the
 collapsed list, and a link or plain-button activation that collapses it. Nested item `lr-toggle`
 events retain the item as their target; filter by target when listening for the menu's event.
 

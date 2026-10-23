@@ -1,0 +1,119 @@
+[
+  {
+    "tag": "lr-agent-eval-dashboard",
+    "from": "lr-metric-change",
+    "to": "lr-metric-change-request",
+    "input": "document.querySelector('lr-agent-eval-dashboard').addEventListener('lr-metric-change', event => { void event.detail; });",
+    "expected": "document.querySelector('lr-agent-eval-dashboard').addEventListener('lr-metric-change-request', event => { void event.detail; });",
+    "resolved": "document.querySelector('lr-agent-eval-dashboard').addEventListener('lr-metric-change-request', event => { void event.detail; });",
+    "warning": null
+  },
+  {
+    "tag": "lr-agent-run",
+    "from": "lr-cancel",
+    "to": "lr-run-cancel",
+    "input": "document.querySelector('lr-agent-run').addEventListener('lr-cancel', event => { void event.detail; });",
+    "expected": "document.querySelector('lr-agent-run').addEventListener('lr-cancel', event => { void event.detail; });",
+    "resolved": "document.querySelector('lr-agent-run').addEventListener('lr-run-cancel', event => { void event.detail; });",
+    "warning": "RENAME_TARGET_SHARED_REVIEW"
+  },
+  {
+    "tag": "lr-background-runs",
+    "from": "lr-run-open",
+    "to": "lr-run-activate",
+    "input": "document.querySelector('lr-background-runs').addEventListener('lr-run-open', event => { void event.detail; });",
+    "expected": "document.querySelector('lr-background-runs').addEventListener('lr-run-open', event => { void event.detail; });",
+    "resolved": "document.querySelector('lr-background-runs').addEventListener('lr-run-activate', event => { void event.detail; });",
+    "warning": "RENAME_TARGET_SHARED_REVIEW"
+  },
+  {
+    "tag": "lr-change-review",
+    "from": "lr-change-decision",
+    "to": "lr-change-decision-request",
+    "input": "document.querySelector('lr-change-review').addEventListener('lr-change-decision', event => { void event.detail; });",
+    "expected": "document.querySelector('lr-change-review').addEventListener('lr-change-decision-request', event => { void event.detail; });",
+    "resolved": "document.querySelector('lr-change-review').addEventListener('lr-change-decision-request', event => { void event.detail; });",
+    "warning": null
+  },
+  {
+    "tag": "lr-community-card",
+    "from": "lr-entity-activate",
+    "to": "lr-entity-select",
+    "input": "document.querySelector('lr-community-card').addEventListener('lr-entity-activate', event => { void event.detail; });",
+    "expected": "document.querySelector('lr-community-card').addEventListener('lr-entity-activate', event => { void event.detail; });",
+    "resolved": "document.querySelector('lr-community-card').addEventListener('lr-entity-select', event => { void event.detail; });",
+    "warning": "RENAME_TARGET_SHARED_REVIEW"
+  },
+  {
+    "tag": "lr-dock-panel",
+    "from": "lr-collapse-change",
+    "to": "lr-toggle",
+    "input": "document.querySelector('lr-dock-panel').addEventListener('lr-collapse-change', event => { void event.detail; });",
+    "expected": "document.querySelector('lr-dock-panel').addEventListener('lr-collapse-change', event => { void event.detail; });",
+    "resolved": "document.querySelector('lr-dock-panel').addEventListener('lr-toggle', event => { void event.detail; });",
+    "warning": "RENAME_TARGET_SHARED_REVIEW"
+  },
+  {
+    "tag": "lr-dock-panel",
+    "from": "lr-collapse-request",
+    "to": "lr-toggle-request",
+    "input": "document.querySelector('lr-dock-panel').addEventListener('lr-collapse-request', event => { void event.detail; });",
+    "expected": "document.querySelector('lr-dock-panel').addEventListener('lr-collapse-request', event => { void event.detail; });",
+    "resolved": "document.querySelector('lr-dock-panel').addEventListener('lr-toggle-request', event => { void event.detail; });",
+    "warning": "RENAME_TARGET_SHARED_REVIEW"
+  },
+  {
+    "tag": "lr-navigation-menu",
+    "from": "lr-expanded-change",
+    "to": "lr-toggle",
+    "input": "document.querySelector('lr-navigation-menu').addEventListener('lr-expanded-change', event => { void event.detail; });",
+    "expected": "document.querySelector('lr-navigation-menu').addEventListener('lr-expanded-change', event => { void event.detail; });",
+    "resolved": "document.querySelector('lr-navigation-menu').addEventListener('lr-toggle', event => { void event.detail; });",
+    "warning": "RENAME_TARGET_SHARED_REVIEW"
+  },
+  {
+    "tag": "lr-path-strip",
+    "from": "lr-entity-activate",
+    "to": "lr-entity-select",
+    "input": "document.querySelector('lr-path-strip').addEventListener('lr-entity-activate', event => { void event.detail; });",
+    "expected": "document.querySelector('lr-path-strip').addEventListener('lr-entity-activate', event => { void event.detail; });",
+    "resolved": "document.querySelector('lr-path-strip').addEventListener('lr-entity-select', event => { void event.detail; });",
+    "warning": "RENAME_TARGET_SHARED_REVIEW"
+  },
+  {
+    "tag": "lr-rag-eval-dashboard",
+    "from": "lr-metric-change",
+    "to": "lr-metric-change-request",
+    "input": "document.querySelector('lr-rag-eval-dashboard').addEventListener('lr-metric-change', event => { void event.detail; });",
+    "expected": "document.querySelector('lr-rag-eval-dashboard').addEventListener('lr-metric-change-request', event => { void event.detail; });",
+    "resolved": "document.querySelector('lr-rag-eval-dashboard').addEventListener('lr-metric-change-request', event => { void event.detail; });",
+    "warning": null
+  },
+  {
+    "tag": "lr-rag-eval-dashboard",
+    "from": "lr-slice-change",
+    "to": "lr-slice-change-request",
+    "input": "document.querySelector('lr-rag-eval-dashboard').addEventListener('lr-slice-change', event => { void event.detail; });",
+    "expected": "document.querySelector('lr-rag-eval-dashboard').addEventListener('lr-slice-change-request', event => { void event.detail; });",
+    "resolved": "document.querySelector('lr-rag-eval-dashboard').addEventListener('lr-slice-change-request', event => { void event.detail; });",
+    "warning": null
+  },
+  {
+    "tag": "lr-source-picker",
+    "from": "lr-sources-change",
+    "to": "lr-selection-change",
+    "input": "document.querySelector('lr-source-picker').addEventListener('lr-sources-change', event => { void event.detail; });",
+    "expected": "document.querySelector('lr-source-picker').addEventListener('lr-sources-change', event => { void event.detail; });",
+    "resolved": "document.querySelector('lr-source-picker').addEventListener('lr-selection-change', event => { void event.detail; });",
+    "warning": "RENAME_TARGET_SHARED_REVIEW"
+  },
+  {
+    "tag": "lr-subagent-panel",
+    "from": "lr-cancel",
+    "to": "lr-run-cancel",
+    "input": "document.querySelector('lr-subagent-panel').addEventListener('lr-cancel', event => { void event.detail; });",
+    "expected": "document.querySelector('lr-subagent-panel').addEventListener('lr-cancel', event => { void event.detail; });",
+    "resolved": "document.querySelector('lr-subagent-panel').addEventListener('lr-run-cancel', event => { void event.detail; });",
+    "warning": "RENAME_TARGET_SHARED_REVIEW"
+  }
+]

@@ -137,7 +137,7 @@ it('falls back to the documented default of 8 for a non-numeric max-members', as
   expect(el.shadowRoot!.querySelector('[part="overflow"]') == null).to.be.true;
 });
 
-it('emits lr-entity-select, then the deprecated lr-entity-activate, when a member chip is activated', async () => {
+it('emits lr-entity-select, and no removed lr-entity-activate alias, when a member chip is activated', async () => {
   const el = (await fixture(
     html`<lr-community-card></lr-community-card>`
   )) as LyraCommunityCard;
@@ -150,10 +150,7 @@ it('emits lr-entity-select, then the deprecated lr-entity-activate, when a membe
   (
     el.shadowRoot!.querySelectorAll('[part="member"]')[0] as HTMLButtonElement
   ).click();
-  expect(events).to.deep.equal([
-    ['lr-entity-select', { entityId: 'e1' }],
-    ['lr-entity-activate', { entityId: 'e1' }],
-  ]);
+  expect(events).to.deep.equal([['lr-entity-select', { entityId: 'e1' }]]);
 });
 
 it('emits lr-drill from the drill button, the header, and the overflow chip', async () => {

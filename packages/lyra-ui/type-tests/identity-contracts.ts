@@ -160,8 +160,8 @@ const chunkOpen: LyraChunkInspectorEventMap['lr-chunk-open']['detail'] = {
 };
 // @ts-expect-error chunk activation detail uses chunkId.
 const legacyChunkOpen: LyraChunkInspectorEventMap['lr-chunk-open']['detail'] = { id: 'chunk-a', sourceId: 'document-a' };
-const chunkExpand: LyraChunkInspectorEventMap['lr-chunk-toggle']['detail'] = {
-  chunkId: 'chunk-a',
+const chunkExpand: LyraChunkInspectorEventMap['lr-toggle']['detail'] = {
+  itemId: 'chunk-a',
   expanded: true,
 };
 
@@ -174,7 +174,8 @@ const memoryRemove: LyraMemoryPanelEventMap['lr-remove']['detail'] = {
   memoryId: 'memory-a',
   scope: 'long-term',
 };
-const memoryExpand: LyraMemoryPanelEventMap['lr-memory-toggle']['detail'] = {
+const memoryExpand: LyraMemoryPanelEventMap['lr-toggle']['detail'] = {
+  itemId: 'memory-a',
   memoryId: 'memory-a',
   scope: 'long-term',
   expanded: true,

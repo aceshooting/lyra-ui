@@ -25,6 +25,12 @@ const syntheticExportNotice = {
   removalNotBefore: '27.0.0', rationale: 'Synthetic source-partition fixture.',
 };
 
+const syntheticMemberNotice = {
+  tag: 'lr-icon', kind: 'property', name: 'fixtureLegacy', since: 'unreleased',
+  replacement: { kind: 'property', name: 'canvas' },
+  removalNotBefore: '27.0.0', rationale: 'Synthetic source-partition fixture.',
+};
+
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'metadata-source-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -33,6 +39,7 @@ function fixture(t) {
     fs.copyFileSync(path.join(packageDir, file), path.join(root, file));
   }
   fs.cpSync(path.join(packageDir, sourceDirectory), path.join(root, sourceDirectory), { recursive: true });
+  change(root, 'families/utility.json', value => { value.deprecations.push(structuredClone(syntheticMemberNotice)); });
   return root;
 }
 
@@ -61,13 +68,13 @@ test('authored metadata sources reproduce the aggregate bytes and detached recor
   const aggregate = assembleComponentMetadata(sources);
   assert.equal(render(aggregate), fs.readFileSync(path.join(packageDir, aggregatePath), 'utf8'));
   assert.deepEqual(componentMetadataSourceFindings(sources), []);
-  aggregate.deprecations[0].rationale = 'changed detached view';
-  assert.notEqual(assembleComponentMetadata(sources).deprecations[0].rationale, aggregate.deprecations[0].rationale);
+  aggregate.policy.deprecation.minimumFullMajorsAfterDeprecation += 1;
+  assert.notEqual(assembleComponentMetadata(sources).policy.deprecation.minimumFullMajorsAfterDeprecation, aggregate.policy.deprecation.minimumFullMajorsAfterDeprecation);
 });
 
 test('an authored family edit is visible before refreshing the generated aggregate', t => {
   const root = fixture(t);
-  change(root, 'families/media.json', value => { value.deprecations[0].rationale += ' Additional context.'; });
+  change(root, 'families/utility.json', value => { value.deprecations[0].rationale += ' Additional context.'; });
   const sources = readComponentMetadataSources(root);
   const aggregate = assembleComponentMetadata(sources);
   assert.ok(aggregate.deprecations.some(entry => entry.rationale.endsWith(' Additional context.')));
@@ -78,7 +85,7 @@ test('the CEM metadata plugin reads its package sources when the aggregate is st
   const root = fixture(t);
   fs.copyFileSync(path.join(packageDir, 'package.json'), path.join(root, 'package.json'));
   let changedTag;
-  change(root, 'families/media.json', value => {
+  change(root, 'families/utility.json', value => {
     changedTag = value.deprecations[0].tag;
     value.deprecations[0].rationale = 'An updated authored family rationale.';
   });
@@ -88,6 +95,10 @@ test('the CEM metadata plugin reads its package sources when the aggregate is st
   fs.writeFileSync(configPath, configSource);
   const config = (await import(pathToFileURL(configPath).href)).default;
   const manifest = read(path.join(packageDir, 'custom-elements.json'));
+  const owner = manifest.modules.flatMap(module => module.declarations ?? []).find(entry => entry.tagName === changedTag);
+  owner.members ??= [];
+  owner.members.push({ kind: 'field', name: syntheticMemberNotice.name, type: { text: 'string' },
+    deprecated: 'Use canvas instead.' });
   config.plugins.find(plugin => plugin.name === 'lr-component-maturity-metadata').packageLinkPhase({ customElementsManifest: manifest });
   const declaration = manifest.modules.flatMap(module => module.declarations ?? []).find(entry => entry.tagName === changedTag);
   assert.ok(declaration.deprecations.some(entry => entry.rationale === 'An updated authored family rationale.'));
@@ -100,9 +111,9 @@ for (const [name, mutate, pattern] of [
     const file = path.join(root, sourceDirectory, 'policy.json');
     fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replace('"schemaVersion": 1', '"schemaVersion": 1, "schemaVersion": 1'));
   }, /duplicate JSON key/i],
-  ['duplicate member', root => change(root, 'families/media.json', value => value.deprecations.push(value.deprecations[0])), /duplicate.*member/i],
+  ['duplicate member', root => change(root, 'families/utility.json', value => value.deprecations.push(value.deprecations[0])), /duplicate.*member/i],
   ['duplicate export', root => change(root, 'exports.json', value => value.exportDeprecations.push(syntheticExportNotice, syntheticExportNotice)), /duplicate.*export/i],
-  ['cross-family member', root => change(root, 'families/media.json', value => { value.deprecations[0].tag = 'lr-card'; }), /family/i],
+  ['cross-family member', root => change(root, 'families/utility.json', value => { value.deprecations[0].tag = 'lr-card'; }), /family/i],
   ['duplicate assignment', root => change(root, 'families/forms.json', value => {
     const profile = Object.keys(value.assignments).find(key => value.assignments[key].length);
     value.assignments[profile].push(value.assignments[profile][0]);
@@ -131,7 +142,7 @@ for (const [name, mutate, pattern] of [
 
 test('same-version writes retain unreleased notices and rollover persists stamps in both owners', t => {
   const root = fixture(t);
-  change(root, 'families/media.json', value => {
+  change(root, 'families/utility.json', value => {
     value.deprecations[0].since = 'unreleased';
     value.deprecations[0].removalNotBefore = '27.0.0';
   });
@@ -149,7 +160,7 @@ test('same-version writes retain unreleased notices and rollover persists stamps
     current: { ...history.current, version: '25.0.0' }, taggedCurrent: null,
   });
   commitComponentMetadataWritePlan(createComponentMetadataWritePlan(sources, next));
-  assert.equal(read(path.join(root, sourceDirectory, 'families/media.json')).deprecations[0].since, '25.0.0');
+  assert.equal(read(path.join(root, sourceDirectory, 'families/utility.json')).deprecations[0].since, '25.0.0');
   assert.equal(read(path.join(root, sourceDirectory, 'exports.json')).exportDeprecations[0].since, '25.0.0');
   assert.equal(read(path.join(root, sourceDirectory, 'exports.json')).exportDeprecations[0].removalNotBefore, '27.0.0');
   sources = readComponentMetadataSources(root);

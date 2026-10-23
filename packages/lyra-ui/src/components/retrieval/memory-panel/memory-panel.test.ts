@@ -11,7 +11,6 @@ import {
   composedContains,
   deepActiveElement,
 } from '../../../internal/overlay-manager.js';
-import { captureDeprecationWarnings } from '../../../../test/expected-deprecations.js';
 
 /** Lets every queued `updateComplete.then()` focus hop settle before focus is asserted. */
 async function settleFocus(el: LyraMemoryPanel): Promise<void> {
@@ -283,7 +282,7 @@ describe('lr-memory-panel', () => {
     expect(body.querySelector('lr-provenance-panel') === null).to.equal(true);
   });
 
-  it('toggling the expand-toggle emits lr-memory-toggle, unhides the body, and reveals a populated lr-provenance-panel', async () => {
+  it('toggling the expand-toggle emits lr-toggle, unhides the body, and reveals a populated lr-provenance-panel', async () => {
     const el = await populated();
     const withProvenance = el.shadowRoot!.querySelector(
       '[part="item"][data-id="l1"]'
@@ -292,7 +291,7 @@ describe('lr-memory-panel', () => {
       '[part="expand-toggle"]'
     ) as HTMLButtonElement;
 
-    const listener = oneEvent(el, 'lr-memory-toggle');
+    const listener = oneEvent(el, 'lr-toggle');
     const toggles: unknown[] = [];
     el.addEventListener('lr-toggle', (event) => toggles.push((event as CustomEvent).detail));
     toggle.click();
@@ -325,10 +324,11 @@ describe('lr-memory-panel', () => {
     await el.updateComplete;
     expect(toggle.getAttribute('aria-expanded')).to.equal('true');
 
-    const listener = oneEvent(el, 'lr-memory-toggle');
+    const listener = oneEvent(el, 'lr-toggle');
     toggle.click();
     const event = await listener;
     expect(event.detail).to.deep.equal({
+      itemId: 'l1',
       memoryId: 'l1',
       scope: 'long-term',
       expanded: false,
@@ -1822,34 +1822,23 @@ describe('lr-memory-panel render cap', () => {
   });
 });
 
-describe('lr-memory-panel retired lr-expand alias', () => {
-  it('fires lr-memory-toggle, without the retired lr-expand alias, without warning', async () => {
+describe('lr-memory-panel disclosure events', () => {
+  it('fires only lr-toggle, never the removed lr-memory-toggle, lr-chunk-toggle or lr-expand', async () => {
     const el = await populated();
     const toggle = el.shadowRoot!.querySelector(
       '[part="item"][data-id="l1"] [part="expand-toggle"]'
     ) as HTMLButtonElement;
     const seen: { type: string; detail: unknown; cancelable: boolean }[] = [];
-    const details = new Set<unknown>();
-    for (const type of ['lr-memory-toggle', 'lr-expand']) {
+    for (const type of ['lr-toggle', 'lr-memory-toggle', 'lr-chunk-toggle', 'lr-expand']) {
       el.addEventListener(type, (event) => {
         const custom = event as CustomEvent;
         seen.push({ type, detail: { ...custom.detail }, cancelable: custom.cancelable });
-        details.add(custom.detail);
       });
     }
-    const warnings = await captureDeprecationWarnings(
-      [{ tag: 'lr-memory-panel', kind: 'event', name: 'lr-expand' }],
-      async () => {
-        toggle.click();
-        await el.updateComplete;
-      }
-    );
-    const detail = { memoryId: 'l1', scope: 'long-term', expanded: true };
-    expect(seen).to.deep.equal([
-      { type: 'lr-memory-toggle', detail, cancelable: false },
-    ]);
-    expect(details.size, 'only the canonical event is emitted').to.equal(1);
-    expect(warnings).to.have.length(0);
+    toggle.click();
+    await el.updateComplete;
+    const detail = { itemId: 'l1', memoryId: 'l1', scope: 'long-term', expanded: true };
+    expect(seen).to.deep.equal([{ type: 'lr-toggle', detail, cancelable: false }]);
   });
 });
 

@@ -179,9 +179,7 @@ const errorCorrectionConverter = {
  * grid.
  *
  * @customElement lr-qr-code
- * @csspart base - Deprecated in 8.2.3; compatibility name for the outer wrapper; use `qr-code`.
- * @csspart qr-code - The outer wrapper, sized to `size`×`size` CSS px in every state. It is the
- *   same node as `base`.
+ * @csspart qr-code - The outer wrapper, sized to `size`×`size` CSS px in every state.
  * @csspart canvas - The stable QR canvas. It remains hidden but reachable through `.canvas`
  *   while the component is empty, loading, or in an error state.
  * @csspart empty - Shown when `value` is empty.
@@ -760,7 +758,7 @@ export class LyraQrCode extends LyraElement {
   override render(): TemplateResult {
     const ready = this.loadState.kind === 'ready';
     const fallbackSemantics = !this.accessibilityInternals && ready;
-    return html`<div part="base qr-code" style=${styleMap({ inlineSize: `${this.size}px`, blockSize: `${this.size}px` })}>
+    return html`<div part="qr-code" style=${styleMap({ inlineSize: `${this.size}px`, blockSize: `${this.size}px` })}>
       <canvas
         part="canvas"
         ?hidden=${!ready}

@@ -45,7 +45,7 @@ it('keeps the chunk inspector input when an unrelated section toggles', async ()
   expect(inspector.chunks === before).to.equal(true);
 });
 
-it('surfaces lr-entity-select from an entity chip and a path strip node, then the deprecated lr-entity-activate for the strip', async () => {
+it('surfaces lr-entity-select from an entity chip and a path strip node, and never the removed lr-entity-activate', async () => {
   const el = await fixture<LyraProvenancePanel>(html`<lr-provenance-panel .provenance=${grounded}></lr-provenance-panel>`);
   const seen: string[] = [];
   for (const type of ['lr-entity-select', 'lr-entity-activate'])
@@ -59,6 +59,5 @@ it('surfaces lr-entity-select from an entity chip and a path strip node, then th
   expect(seen).to.deep.equal([
     'lr-entity-select:{"entityId":"e1"}',
     'lr-entity-select:{"entityId":"e1","occurrenceIndex":0}',
-    'lr-entity-activate:{"entityId":"e1","occurrenceIndex":0}',
   ]);
 });

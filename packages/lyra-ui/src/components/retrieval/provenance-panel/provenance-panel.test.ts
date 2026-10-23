@@ -146,7 +146,7 @@ it('renders relationships as lr-path-strip, communities as size="s" lr-community
   expect(inspector.getAttribute('size')).to.equal('s');
 });
 
-it('surfaces an embedded chunk inspector lr-chunk-toggle, without its retired lr-expand alias', async () => {
+it('does not surface the removed lr-chunk-toggle or lr-expand events from an embedded chunk inspector', async () => {
   const el = (await fixture(
     html`<lr-provenance-panel .provenance=${provenance}></lr-provenance-panel>`
   )) as LyraProvenancePanel;
@@ -165,8 +165,7 @@ it('surfaces an embedded chunk inspector lr-chunk-toggle, without its retired lr
     );
   }
   (inspector.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement).click();
-  const detail = JSON.stringify({ chunkId: 'ch1', expanded: true });
-  expect(seen).to.deep.equal([`lr-chunk-toggle:${detail}`]);
+  expect(seen).to.deep.equal([]);
 });
 
 it('re-emits one contextual toggle for an embedded chunk', async () => {

@@ -7,7 +7,7 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `22.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
-- **Deprecated event** `lr-run-open` since `26.0.0`; use event `@lr-run-activate`; removal not before `28.0.0` — lr-run-activate matches the activate vocabulary of the library's other run lists; the alias fires right after it for one major.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 13 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -17,7 +17,7 @@
 ## `lr-background-runs`
 
 `lr-background-runs` displays controlled run records with statuses `queued`, `running`,
-`completed`, `failed`, and `cancelled`. Open buttons emit `lr-run-open` (`{ runId }`); queued and
+`completed`, `failed`, and `cancelled`. Open buttons emit `lr-run-activate` (`{ runId }`); queued and
 running records also offer Cancel and emit `lr-run-cancel` (`{ runId }`). Terminal runs cannot
 request cancellation. The component does not poll, schedule timers, start runs, or change status.
 Assign a new `.runs` array after host updates; collection snapshots keep the first nonblank identity
@@ -27,7 +27,7 @@ and mount no more than 100 rows. `disabled` gates every action. Host `aria-label
 `completed` and `error` as `failed`. An explicit foreign status keeps its row and shows localized
 neutral `Unknown`, without a Cancel action. Existing component-specific status translations and
 `.strings` overrides still name recognized states. `lr-run-activate` (`detail: { runId }`) requests
-opening a run; `lr-run-open` is a deprecated alias dispatched right after it.
+opening a run.
 
 **CSS parts:**
 
@@ -48,7 +48,7 @@ opening a run; `lr-run-open` is a deprecated alias dispatched right after it.
 | `limit` | Notice that more than 100 valid runs were supplied. |
 
 
-**Events:** non-cancelable `lr-run-activate` (`detail: { runId }`) requests opening a run, followed by its deprecated alias `lr-run-open`. Non-cancelable `lr-run-cancel` (`detail: { runId }`) requests cancellation and is emitted only for queued/running runs; terminal runs cannot emit it. The host performs the operation and publishes updated state.
+**Events:** non-cancelable `lr-run-activate` (`detail: { runId }`) requests opening a run. Non-cancelable `lr-run-cancel` (`detail: { runId }`) requests cancellation and is emitted only for queued/running runs; terminal runs cannot emit it. The host performs the operation and publishes updated state.
 ```ts
 import '@aceshooting/lyra-ui/components/lr-background-runs.js';
 import type { BackgroundRun } from '@aceshooting/lyra-ui/components/agent-tools/background-runs/background-runs.class.js';

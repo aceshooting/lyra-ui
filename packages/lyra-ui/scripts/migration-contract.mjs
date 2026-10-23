@@ -82,11 +82,12 @@ function validateMemberRules(mapping, source, target, section) {
       rule && typeof rule.from === 'string' && rule.from && typeof rule.to === 'string' && rule.to,
       `${mapping.upstreamTag}: every rewrites.${section} rule needs non-empty from/to`,
     );
-    const unknownKeys = Object.keys(rule).filter((key) => key !== 'from' && key !== 'to');
+    const unknownKeys = Object.keys(rule).filter((key) => key !== 'from' && key !== 'to' && key !== 'value');
     invariant(
       unknownKeys.length === 0,
       `${mapping.upstreamTag}: rewrites.${section} rule has unknown key(s) ${unknownKeys.join(', ')}`,
     );
+    invariant(rule.value === undefined || (['attributes', 'properties'].includes(section) && typeof rule.value === 'string' && rule.value), `${mapping.upstreamTag}: rewrites.${section} value is only supported as a non-empty attribute/property string`);
     invariant(rule.from !== rule.to, `${mapping.upstreamTag}: rewrites.${section} cannot map a member to itself`);
     invariant(!seen.has(rule.from), `${mapping.upstreamTag}: duplicate rewrites.${section} source ${rule.from}`);
     seen.add(rule.from);

@@ -2842,3 +2842,39 @@ test('lyra-ui-migrate --rule=immutable-collections reports, honors --check and n
     fs.rmSync(scratch, { recursive: true, force: true });
   }
 });
+
+
+test('v30 retired upstream names migrate to renderable canonical fixture surfaces', () => {
+  const current = buildMigrationContract(checkedInventory);
+  const cases = JSON.parse(fixture('v30-retirements.json'));
+  assert.equal(cases.length, 8);
+  for (const item of cases) {
+    const result = migrateText(item.input, current, { file: item.file });
+    assert.equal(result.content, item.expected, item.input);
+    if (item.warning) assert.ok(result.warnings.some(warning => warning.warningCode === item.warning));
+    const repeat = migrateText(item.resolved ?? result.content, current, { file: item.file });
+    assert.equal(repeat.content, item.resolved ?? item.expected);
+    assert.deepEqual(repeat.changes, []);
+  }
+  for (const input of ['<wa-icon .autoWidth=${wide}></wa-icon>',
+    '<wa-icon auto-width canvas="square"></wa-icon>']) {
+    const result = migrateText(input, current, { file: 'migration.ts' });
+    assert.equal(result.warnings.some(warning => warning.warningCode === 'DYNAMIC_VALUE_REVIEW'), true);
+    assert.equal(result.content.includes('canvas="auto"'), false);
+  }
+});
+
+
+test('valued member rewrites report direct and aliased script uses', () => {
+  const current = buildMigrationContract(checkedInventory);
+  for (const input of [
+    `document.querySelector('wa-icon').autoWidth = wide;`,
+    `document.querySelector('wa-icon').setAttribute('auto-width', '');`,
+    `const icon = document.querySelector('wa-icon'); icon.autoWidth = wide;`,
+    `const icon = document.querySelector('wa-icon'); icon.setAttribute('auto-width', '');`,
+  ]) {
+    const result = migrateText(input, current, { file: 'migration.ts' });
+    assert.ok(result.warnings.some(warning => ['DYNAMIC_VALUE_REVIEW', 'ALIASED_MEMBER_REVIEW'].includes(warning.warningCode)), input);
+    assert.equal(result.content.includes('.canvas = wide'), false, input);
+  }
+});

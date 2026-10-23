@@ -61,7 +61,7 @@ the single citation presentation/action owner; the answer-level duplicate citati
 Both child badge signals (`lr-citation-activate` and `lr-citation-open`) are stopped at the answer
 boundary and translated into that one section- and action-qualified `lr-citation-select` contract;
 a double-click reports two `activate`s then one `open`, so a host that only wants the open
-ignores the `activate`s. The generated source cards' `lr-expand`, the source list's `lr-toggle` and
+ignores the `activate`s. The generated source cards' and the source list's `lr-toggle` and
 the Markdown renderer's housekeeping events stay inside.
 
 **Slots:** `answer` replaces the data-driven Markdown body; `sources` replaces the data-driven

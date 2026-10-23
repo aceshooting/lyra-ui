@@ -505,7 +505,7 @@ it("forwards caller-supplied retrieval failure text through the child errorText 
   ).to.equal("Retrieval service unavailable");
 });
 
-it("forwards lr-cancel from the built-in agent run carrying that run's own object detail", async () => {
+it("forwards lr-run-cancel from the built-in agent run carrying that run's own object detail", async () => {
   const el = await fixture<LyraAgentWorkspace>(
     html`<lr-agent-workspace .run=${run}></lr-agent-workspace>`
   );
@@ -518,18 +518,18 @@ it("forwards lr-cancel from the built-in agent run carrying that run's own objec
 
   let detailIsObject = false;
   let reason: string | undefined;
-  el.addEventListener("lr-cancel", (event) => {
+  el.addEventListener("lr-run-cancel", (event) => {
     detailIsObject = typeof event.detail === "object" && event.detail !== null;
     // `event` is typed straight off `LyraAgentWorkspaceEventMap` via LyraElement's
     // addEventListener overload, so reading `.reason` here is only well-typed while that map
-    // declares `CancelEventDetail` rather than `undefined`.
+    // declares an object detail rather than `undefined`.
     reason = event.detail.reason;
   });
-  // Exactly what <lr-agent-run>'s own Cancel button emits (`emit('lr-cancel', {})`), plus a
+  // Exactly what <lr-agent-run>'s own Cancel button emits (`emit('lr-run-cancel', { runId })`), plus a
   // `reason` the shape allows -- both cross the shadow boundary unchanged.
   agentRun!.dispatchEvent(
-    new CustomEvent<CancelEventDetail>("lr-cancel", {
-      detail: { reason: "stopped" },
+    new CustomEvent<CancelEventDetail & { runId: string }>("lr-run-cancel", {
+      detail: { runId: "run-1", reason: "stopped" },
       bubbles: true,
       composed: true,
     })
@@ -693,7 +693,7 @@ it("forwards a controlled retrieval selection as lr-retrieval-select, without le
   const results = el.shadowRoot!.querySelector("lr-retrieval-results")!;
 
   let rawLeaked = false;
-  el.addEventListener("lr-select", () => {
+  el.addEventListener("lr-selection-change", () => {
     rawLeaked = true;
   });
   let forwardedCount = 0;
@@ -729,7 +729,7 @@ it("forwards a controlled retrieval selection as lr-retrieval-select, without le
   expect(forwardedCount, "the deprecated alias does not trigger another forwarded event").to.equal(1);
   expect(
     rawLeaked,
-    "the raw lr-select from lr-retrieval-results must not leak past agent-workspace"
+    "the raw lr-selection-change from lr-retrieval-results must not leak past agent-workspace"
   ).to.be.false;
 });
 

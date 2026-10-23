@@ -2195,3 +2195,63 @@ test('the checked-in v26 profile covers the remaining 27.0.0 migration items', (
   assert.deepEqual(profile.globals.filter((entry) => ['part', 'css-property'].includes(entry.kind)).map((entry) => `${entry.kind} ${entry.tag ?? ''} ${entry.from}`.replace('  ', ' ')).sort(),
     ['css-property --lr-eval-dataset-search-', 'part lr-connector-manager action', 'part lr-eval-dataset search-clear', 'part lr-eval-dataset search-input', 'part lr-permission-grant decision']);
 });
+
+test('every retired v25 alias still produces a rewrite or an explicit migration review', () => {
+  const retired = readJson(path.join(scriptDir, 'fixtures', 'compatibility-history', 'retirements-30.0.0.json'));
+  const records = retired.capture.records.filter(record => record.policy.removalNotBefore === '28.0.0');
+  assert.equal(records.length, 28);
+  const current = buildMigrationContract(checkedInventory, {
+    renameLedger: readRenameLedger(), compatibilityContext: checkedCompatibilityContext,
+  });
+  for (const { key } of records) {
+    const input = key.kind === 'slot'
+      ? `<${key.tag}><span slot="${key.name}">Content</span></${key.tag}>`
+      : `document.querySelector('${key.tag}').addEventListener('${key.name}', handler);`;
+    const result = migrateText(input, current, { file: key.kind === 'slot' ? 'alias.html' : 'alias.ts', origin: 'lyra-v25' });
+    assert.ok([...result.changes, ...result.warnings].some(site => site.upstreamMember === key.name), `${key.tag}/${key.name}`);
+  }
+});
+
+test('v30 exact event aliases have explicit edit or reach-review witnesses', () => {
+  const cases = readJson(path.join(fixtureDir, 'v30-exact-events.json'));
+  const profile = readRenameLedger().profiles.find(entry => entry.origin === 'lyra-v25');
+  assert.deepEqual(cases.map(({ tag, from, to }) => ({ tag, from, to })), profile.renames.map(({ tag, from, to }) => ({ tag, from, to })));
+  assert.equal(cases.filter(item => item.warning === null).length, 4);
+  const typed = fs.readFileSync(path.join(packageDir, 'type-tests/migration-v30-exact-events.ts'), 'utf8');
+  assert.equal(typed.split('// Migrated exact-event fixtures.\n')[1].split('// Reviewed shared-target replacement fixtures.')[0].trim(), cases.filter(item => item.warning === null)
+    .map(item => item.expected.replace("').addEventListener", "')!.addEventListener")).join('\n'));
+  assert.equal(typed.split('// Reviewed shared-target replacement fixtures.\n')[1].trim(), cases.filter(item => item.warning !== null)
+    .map(item => item.resolved.replace("').addEventListener", "')!.addEventListener")).join('\n'));
+  const current = buildMigrationContract(checkedInventory, {
+    renameLedger: readRenameLedger(), compatibilityContext: checkedCompatibilityContext,
+  });
+  for (const item of cases) {
+    const result = migrateText(item.input, current, { file: 'alias.ts', origin: 'lyra-v25' });
+    assert.equal(result.content, item.expected, `${item.tag}/${item.from}`);
+    if (item.warning) {
+      assert.deepEqual(result.changes, [], item.tag);
+      assert.ok(result.warnings.some(site => site.warningCode === item.warning && site.upstreamMember === item.from && site.target === item.to), item.tag);
+      for (const warning of result.warnings) assert.doesNotMatch(warning.message, /keeps working until/);
+    } else {
+      assert.deepEqual(result.warnings, [], item.tag);
+      assert.equal(result.changes.length, 1, item.tag);
+      assert.equal(result.changes[0].target, item.to, item.tag);
+    }
+  }
+});
+
+test('reviewed v30 slot recipes preserve canonical-content precedence', () => {
+  const cases = readJson(path.join(fixtureDir, 'v30-reviewed-slots.json'));
+  assert.deepEqual(cases.map(item => item.tag), ['lr-app-rail-item', 'lr-flow-node', 'lr-widget', 'lr-tool-call-chip']);
+  const current = buildMigrationContract(checkedInventory, {
+    renameLedger: readRenameLedger(), compatibilityContext: checkedCompatibilityContext,
+  });
+  for (const item of cases) {
+    const result = migrateText(item.input, current, { file: 'slots.html', origin: 'lyra-v25' });
+    assert.equal(result.content, item.input, item.tag);
+    assert.ok(result.warnings.some(site => site.warningCode === 'DEPRECATED_MEMBER_REVIEW' && site.upstreamMember === 'icon'), item.tag);
+    const resolved = migrateText(item.resolved, current, { file: 'slots.html', origin: 'lyra-v25' });
+    assert.deepEqual(resolved.changes, [], item.tag);
+    assert.deepEqual(resolved.warnings, [], item.tag);
+  }
+});

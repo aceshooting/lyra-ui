@@ -66,8 +66,8 @@ async function layout(dir: 'ltr' | 'rtl' = 'ltr', attrs = ''): Promise<Layout> {
   const wrapper = await fixture<HTMLElement>(`
     <div dir="${dir}" style="display:flex;inline-size:700px;block-size:360px">
       <lr-app-rail label="Main" ${open} ${close} ${attrs}>
-        <lr-app-rail-item href="#a" aria-label="Alpha"><svg slot="icon" aria-hidden="true" width="16" height="16"></svg>Alpha</lr-app-rail-item>
-        <lr-app-rail-item href="#b" aria-label="Beta"><svg slot="icon" aria-hidden="true" width="16" height="16"></svg>Beta</lr-app-rail-item>
+        <lr-app-rail-item href="#a" aria-label="Alpha"><svg slot="start" aria-hidden="true" width="16" height="16"></svg>Alpha</lr-app-rail-item>
+        <lr-app-rail-item href="#b" aria-label="Beta"><svg slot="start" aria-hidden="true" width="16" height="16"></svg>Beta</lr-app-rail-item>
       </lr-app-rail>
       <main style="flex:1 1 auto"><button type="button">Content</button></main>
     </div>`);

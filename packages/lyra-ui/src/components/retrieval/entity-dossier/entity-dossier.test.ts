@@ -149,20 +149,17 @@ it('forwards chunks/thresholds to lr-chunk-inspector, and the same thresholds to
   expect(panel.thresholds).to.deep.equal({ high: 0.9, medium: 0.6 });
 });
 
-it('surfaces the chunk inspector lr-chunk-toggle, without its retired lr-expand alias', async () => {
+it('surfaces the chunk inspector lr-toggle, without the removed lr-chunk-toggle or lr-expand aliases', async () => {
   const el = await populated();
   const inspector = el.shadowRoot!.querySelector('lr-chunk-inspector') as LyraChunkInspector;
   const seen: string[] = [];
-  el.addEventListener('lr-chunk-toggle', (event) =>
+  el.addEventListener('lr-toggle', (event) =>
     seen.push(`toggle:${JSON.stringify((event as CustomEvent).detail)}`)
   );
-  el.addEventListener('lr-expand', (event) =>
-    seen.push(`expand:${JSON.stringify((event as CustomEvent).detail)}`)
-  );
+  for (const type of ['lr-chunk-toggle', 'lr-expand'])
+    el.addEventListener(type, () => seen.push(type));
   (inspector.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement).click();
-  expect(seen).to.deep.equal([
-    'toggle:{"chunkId":"ch1","expanded":true}',
-  ]);
+  expect(seen).to.deep.equal(['toggle:{"section":"chunks","expanded":true,"itemId":"ch1"}']);
 });
 
 it('forwards provenance and types to lr-provenance-panel', async () => {
@@ -426,16 +423,16 @@ it('names the overall dossier independently of the compatibility tab-strip name'
 });
 
 
-it('qualifies the supporting inspector toggle once while retaining its legacy event', async () => {
+it('qualifies the supporting inspector toggle once, without the removed lr-chunk-toggle event', async () => {
   const el = await populated();
   const inspector = el.shadowRoot!.querySelector('lr-chunk-inspector') as LyraChunkInspector;
   const toggles: unknown[] = [];
   const legacy: unknown[] = [];
   el.addEventListener('lr-toggle', (event) => toggles.push(event.detail));
-  el.addEventListener('lr-chunk-toggle', (event) => legacy.push(event.detail));
+  el.addEventListener('lr-chunk-toggle', (event) => legacy.push((event as CustomEvent).detail));
   inspector.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!.click();
   expect(toggles).to.deep.equal([{ section: 'chunks', expanded: true, itemId: 'ch1' }]);
-  expect(legacy).to.deep.equal([{ chunkId: 'ch1', expanded: true }]);
+  expect(legacy).to.deep.equal([]);
 });
 
 it('leaves descendant toggles distinct from the inspector-owned disclosure event', async () => {

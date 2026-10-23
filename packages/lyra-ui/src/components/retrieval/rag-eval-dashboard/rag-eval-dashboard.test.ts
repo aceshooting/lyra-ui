@@ -126,7 +126,7 @@ it('emits controlled metric, slice, and run selection events', async () => {
     ></lr-rag-eval-dashboard>`
   )) as LyraRagEvalDashboard;
 
-  const metricPending = oneEvent(el, 'lr-metric-change');
+  const metricPending = oneEvent(el, 'lr-metric-change-request');
   (
     el.shadowRoot!.querySelector(
       '[data-metric-id="groundedness"]'
@@ -136,15 +136,15 @@ it('emits controlled metric, slice, and run selection events', async () => {
     metricId: 'groundedness',
   });
 
-  const slicePending = oneEvent(el, 'lr-slice-change');
+  const slicePending = oneEvent(el, 'lr-slice-change-request');
   (
     el.shadowRoot!.querySelector('[data-slice="legal"]') as HTMLButtonElement
   ).click();
   expect((await slicePending).detail).to.deep.equal({ slice: 'legal' });
 
-  const runPending = oneEvent(el, 'lr-run-change');
+  const runPending = oneEvent(el, 'lr-run-activate');
   (el.shadowRoot!.querySelector('[part="run"]') as HTMLButtonElement).click();
-  expect((await runPending).detail).to.deep.equal({ run: runs[0] });
+  expect((await runPending).detail).to.deep.equal({ runId: runs[0]!.id, run: runs[0] });
 });
 
 it('has a localized empty state and one populated overall owner', async () => {
@@ -331,15 +331,15 @@ it('omits blank and later duplicate metric and run ids before fallback, filters,
   expect(el.shadowRoot!.querySelector('[data-slice="later-slice"]') === null).to
     .be.true;
 
-  const metricSelected = oneEvent(el, 'lr-metric-change');
+  const metricSelected = oneEvent(el, 'lr-metric-change-request');
   el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="metric"]')!.click();
   expect((await metricSelected).detail).to.deep.equal({
     metricId: firstMetric.id,
   });
 
-  const runSelected = oneEvent(el, 'lr-run-change');
+  const runSelected = oneEvent(el, 'lr-run-activate');
   el.shadowRoot!.querySelector<HTMLButtonElement>('[part="run"]')!.click();
-  expect((await runSelected).detail).to.deep.equal({ run: firstRun });
+  expect((await runSelected).detail).to.deep.equal({ runId: firstRun.id, run: firstRun });
 });
 
 it('renders runs without metric definitions or slices as bounded history only', async () => {
@@ -503,7 +503,7 @@ describe('lr-rag-eval-dashboard review fixes', () => {
     expect(chart.labels === before[0] && chart.datasets === before[1]).to.equal(true);
   });
 
-  it('reports a metric, slice or run pick as a request event, then the deprecated change event', async () => {
+  it('reports a metric, slice or run pick as a request event, and never the removed change events', async () => {
     const el = await fixture<LyraRagEvalDashboard>(html`<lr-rag-eval-dashboard .metrics=${metrics} .runs=${runs} metric-id="mrr"></lr-rag-eval-dashboard>`);
     const seen: string[] = [];
     for (const name of ['lr-metric-change-request', 'lr-metric-change', 'lr-slice-change-request', 'lr-slice-change', 'lr-run-activate', 'lr-run-change'])
@@ -513,11 +513,8 @@ describe('lr-rag-eval-dashboard review fixes', () => {
     el.shadowRoot!.querySelector<HTMLElement>('[part="run"]')!.click();
     expect(seen).to.deep.equal([
       'lr-metric-change-request:{"metricId":"groundedness"}',
-      'lr-metric-change:{"metricId":"groundedness"}',
       'lr-slice-change-request:{"slice":"legal"}',
-      'lr-slice-change:{"slice":"legal"}',
       `lr-run-activate:${JSON.stringify({ runId: runs[0]!.id, run: runs[0] })}`,
-      `lr-run-change:${JSON.stringify({ run: runs[0] })}`,
     ]);
   });
 

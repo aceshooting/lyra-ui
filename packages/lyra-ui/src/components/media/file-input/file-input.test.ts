@@ -128,21 +128,21 @@ it('uses the localized dropzone instruction when the form label is omitted or em
   expect(explicit.shadowRoot!.querySelector('[part="dropzone-text"]')!.textContent).to.contain(
     'Drop files here or click to browse',
   );
-  expect(explicit.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label')).to.equal(
+  expect(explicit.shadowRoot!.querySelector('[part~="file-input"]')!.getAttribute('aria-label')).to.equal(
     'Drop files here or click to browse',
   );
 
   const named = (await fixture(
     html`<lr-file-input label="" aria-label="Choose reference files"></lr-file-input>`,
   )) as LyraFileInput;
-  expect(named.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label')).to.equal(
+  expect(named.shadowRoot!.querySelector('[part~="file-input"]')!.getAttribute('aria-label')).to.equal(
     'Choose reference files',
   );
 
   const accessible = (await fixture(
     html`<lr-file-input label="" aria-label="Pick reference files"></lr-file-input>`,
   )) as LyraFileInput;
-  expect(accessible.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label')).to.equal(
+  expect(accessible.shadowRoot!.querySelector('[part~="file-input"]')!.getAttribute('aria-label')).to.equal(
     'Pick reference files',
   );
 });
@@ -151,7 +151,7 @@ describe('retired accessible-label attribute', () => {
   it('ignores old attribute changes while retaining native host-name precedence', async () => {
     const el = await fixture<LyraFileInput>(html`<lr-file-input accessible-label="Retired"></lr-file-input>`);
     await el.updateComplete;
-    const name = () => el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label');
+    const name = () => el.shadowRoot!.querySelector('[part~="file-input"]')!.getAttribute('aria-label');
     expect(name()).not.to.equal('Retired');
     Reflect.set(el, 'accessibleLabel', 'Programmatic');
     await el.updateComplete;
@@ -176,7 +176,7 @@ it('treats whitespace-only labels as absent through dynamic changes without chan
     fileInputDefaultLabel: 'Déposer les fichiers',
   }}></lr-file-input>`);
   const label = el.shadowRoot!.querySelector<HTMLElement>('[part~="form-control-label"]')!;
-  const base = el.shadowRoot!.querySelector('[part~="base"]')!;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]')!;
   expect(el.label).to.equal(' \t\n ');
   expect(label.hidden).to.equal(true);
   expect(base.getAttribute('aria-label')).to.equal('Déposer les fichiers');
@@ -197,7 +197,7 @@ it("emits lr-files with all files accepted when no mime restrictions are set", a
   const el = (await fixture(
     html`<lr-file-input multiple></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   const first = makeFile('a.csv', 'text/csv');
   const second = makeFile('b.csv', 'text/csv');
   setTimeout(() =>
@@ -218,7 +218,7 @@ it("rejects files not in allowedMimeTypes", async () => {
   )) as LyraFileInput;
   el.allowedMimeTypes = ["text/csv"];
   await el.updateComplete;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   setTimeout(() => dropWith(base, [makeFile("a.png", "image/png")]));
   const ev = await oneEvent(el, "lr-files");
   expect(ev.detail.files.length).to.equal(0);
@@ -231,7 +231,7 @@ it("rejects files in forbiddenMimeTypes even when they would otherwise be allowe
   )) as LyraFileInput;
   el.forbiddenMimeTypes = ["image/png"];
   await el.updateComplete;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   setTimeout(() =>
     dropWith(base, [
       makeFile("a.csv", "text/csv"),
@@ -252,7 +252,7 @@ it("forbiddenMimeTypes takes precedence over allowedMimeTypes for the same type"
   el.allowedMimeTypes = ["text/csv"];
   el.forbiddenMimeTypes = ["text/csv"];
   await el.updateComplete;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   setTimeout(() => dropWith(base, [makeFile("a.csv", "text/csv")]));
   const ev = await oneEvent(el, "lr-files");
   expect(ev.detail.files.length).to.equal(0);
@@ -314,7 +314,7 @@ it("treats non-array MIME and validator policies as empty, and forwards the nati
   expect(el.forbiddenMimeTypes).to.deep.equal([]);
   expect(el.checkValidity()).to.be.true;
   expect(
-    el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute("aria-label")
+    el.shadowRoot!.querySelector('[part~="file-input"]')!.getAttribute("aria-label")
   ).to.equal("Private upload");
 });
 
@@ -322,7 +322,7 @@ it("rejects a multi-file drop when multiple is false", async () => {
   const el = (await fixture(
     html`<lr-file-input></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   setTimeout(() =>
     dropWith(base, [
       makeFile("a.csv", "text/csv"),
@@ -340,7 +340,7 @@ it("enforces accept on the drop path, not just the native picker", async () => {
   const el = (await fixture(
     html`<lr-file-input accept=".csv,.xlsx"></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   setTimeout(() => dropWith(base, [makeFile("a.png", "image/png")]));
   const ev = await oneEvent(el, "lr-files");
   expect(ev.detail.files.length).to.equal(0);
@@ -352,7 +352,7 @@ it("does not throw on dragenter when accept has an extension pattern", async () 
   const el = (await fixture(
     html`<lr-file-input accept=".csv,.xlsx"></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   expect(() =>
     dragEnterWith(base, [makeFile("a.png", "image/png")])
   ).to.not.throw();
@@ -362,7 +362,7 @@ it('previews an extension-only accept list as "accept", not "reject", on dragent
   const el = (await fixture(
     html`<lr-file-input accept=".csv,.xlsx"></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   dragEnterWith(base, [makeFile("a.csv", "text/csv")]);
   await el.updateComplete;
   expect(base.getAttribute("data-drag-state")).to.equal("accept");
@@ -372,7 +372,7 @@ it("matches an accept MIME wildcard on drop", async () => {
   const el = (await fixture(
     html`<lr-file-input accept="image/*"></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   setTimeout(() => dropWith(base, [makeFile("a.png", "image/png")]));
   const ev = await oneEvent(el, "lr-files");
   expect(ev.detail.files.length).to.equal(1);
@@ -383,7 +383,7 @@ it('rejects a file over maxFileSize with reason "size"', async () => {
   const el = (await fixture(
     html`<lr-file-input max-file-size="4"></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   setTimeout(() => dropWith(base, [makeSizedFile("a.csv", "text/csv", 10)]));
   const ev = await oneEvent(el, "lr-files");
   expect(ev.detail.files.length).to.equal(0);
@@ -396,7 +396,7 @@ it('keeps maxFileSize="0" (explicit or default) meaning "no limit", not a cap', 
     html`<lr-file-input></lr-file-input>`
   )) as LyraFileInput;
   expect(el.maxFileSize).to.equal(0);
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   const hugeFile = makeFakeSizedFile(
     "huge.bin",
     "application/octet-stream",
@@ -416,7 +416,7 @@ it('does not silently disable maxFileSize when the attribute is invalid (NaN) --
   // exact value that made the old `this.maxFileSize > 0` gate silently false (bypassing the
   // whole size check, since `NaN > 0` is always false).
   expect(Number.isNaN(el.maxFileSize)).to.be.true;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   const oversizedFile = makeFakeSizedFile(
     "big.bin",
     "application/octet-stream",
@@ -435,7 +435,7 @@ it("falls back to the same sane cap for a negative maxFileSize override", async 
   )) as LyraFileInput;
   el.maxFileSize = -1;
   await el.updateComplete;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   const oversizedFile = makeFakeSizedFile(
     "big.bin",
     "application/octet-stream",
@@ -451,7 +451,7 @@ it("does not accept drops while disabled", async () => {
   const el = (await fixture(
     html`<lr-file-input disabled></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   let fired = false;
   el.addEventListener("lr-files", () => (fired = true));
   dropWith(base, [makeFile("a.csv", "text/csv")]);
@@ -464,7 +464,7 @@ it("still calls preventDefault on dragover/drop while disabled, so the browser d
   const el = (await fixture(
     html`<lr-file-input disabled></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
 
   const dragOverEvent = new DragEvent("dragover", {
     bubbles: true,
@@ -482,7 +482,7 @@ it('keeps the "accept"/"reject" preview state while a drag moves across nested c
   const el = (await fixture(
     html`<lr-file-input><span>drop here</span></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   const child = el.querySelector("span") as HTMLElement;
 
   dragEnterWith(base, [makeFile("a.csv", "text/csv")]);
@@ -516,7 +516,7 @@ it("clears an active drag session when disabled mid-drag", async () => {
   const el = (await fixture(
     html`<lr-file-input></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   dragEnterWith(base, [makeFile("a.csv", "text/csv")]);
   await el.updateComplete;
   expect(base.getAttribute("data-drag-state")).to.equal("accept");
@@ -539,7 +539,7 @@ it("clears an active drag session across disconnect and reconnect", async () => 
   const el = (await fixture(
     html`<lr-file-input></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   dragEnterWith(base, [makeFile("a.csv", "text/csv")]);
   await el.updateComplete;
   expect(base.getAttribute("data-drag-state")).to.equal("accept");
@@ -568,7 +568,7 @@ it("accepts pasted files by default", async () => {
   const el = (await fixture(
     html`<lr-file-input></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   const event = new Event("paste", { bubbles: true, cancelable: true });
   Object.defineProperty(event, "clipboardData", {
     value: { files: [makeFile("clip.txt", "text/plain")] },
@@ -585,14 +585,14 @@ it("ignores clipboard values that are not real Files", async () => {
   Object.defineProperty(event, "clipboardData", { value: { files: [{ name: "fake.txt", size: 1, type: "text/plain" }] } });
   let fired = false;
   el.addEventListener("lr-files", () => { fired = true; });
-  el.shadowRoot!.querySelector('[part~="base"]')!.dispatchEvent(event);
+  el.shadowRoot!.querySelector('[part~="file-input"]')!.dispatchEvent(event);
   expect(fired).to.be.false;
   expect(event.defaultPrevented).to.be.false;
 });
 
 /** Dispatches a clipboard paste carrying one file and reports whether `lr-files` fired. */
 function pasteOneFile(el: LyraFileInput): boolean {
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   const event = new Event("paste", { bubbles: true, cancelable: true });
   Object.defineProperty(event, "clipboardData", {
     value: { files: [makeFile("clip.txt", "text/plain")] },
@@ -690,7 +690,7 @@ it("the dropzone base is keyboard-focusable and operable", async () => {
   const el = (await fixture(
     html`<lr-file-input></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   expect(base.getAttribute("role")).to.equal("button");
   expect(base.getAttribute("tabindex")).to.equal("0");
 });
@@ -699,7 +699,7 @@ it("opens the picker on Enter and Space keydown", async () => {
   const el = (await fixture(
     html`<lr-file-input></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   const input = el.shadowRoot!.querySelector(
     'input[type="file"]'
   ) as HTMLInputElement;
@@ -725,7 +725,7 @@ it("removes the dropzone base from the tab order and ignores Enter/Space while d
   const el = (await fixture(
     html`<lr-file-input disabled></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   const input = el.shadowRoot!.querySelector(
     'input[type="file"]'
   ) as HTMLInputElement;
@@ -747,7 +747,7 @@ it('exposes aria-disabled="false" while enabled', async () => {
   const el = (await fixture(
     html`<lr-file-input></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   expect(base.getAttribute("aria-disabled")).to.equal("false");
 });
 
@@ -758,7 +758,7 @@ it("forwards a host aria-label to the semantic dropzone and native file input", 
       label="Visible instructions"
     ></lr-file-input>
   `)) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   const input = el.shadowRoot!.querySelector(
     'input[type="file"]'
   ) as HTMLInputElement;
@@ -772,7 +772,7 @@ it("focus() delegates to the semantic dropzone", async () => {
   )) as LyraFileInput;
   el.focus();
   expect(
-    (el.shadowRoot!.activeElement as HTMLElement | null)?.part.contains("base")
+    (el.shadowRoot!.activeElement as HTMLElement | null)?.part.contains("file-input")
   ).to.be.true;
 });
 
@@ -799,7 +799,7 @@ it("blur() and click() delegate to the semantic dropzone contract", async () => 
   const el = (await fixture(
     html`<lr-file-input></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   const input = el.shadowRoot!.querySelector(
     'input[type="file"]'
   ) as HTMLInputElement;
@@ -823,7 +823,7 @@ it("bridges focus and blur from the dropzone a user actually tabs to, not the hi
   const el = (await fixture(
     html`<lr-file-input></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
 
   const focusPromise = oneEvent(el, "focus");
   base.dispatchEvent(new FocusEvent("focus"));
@@ -838,7 +838,7 @@ it("does not mark touched from a blur caused by the control itself becoming disa
   const el = (await fixture(
     html`<lr-file-input></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
 
   base.focus();
   // Never chai-compare DOM nodes directly (hangs the whole file) -- compare identity as a plain
@@ -866,7 +866,7 @@ it("still marks touched from a genuine blur while enabled", async () => {
   const el = (await fixture(
     html`<lr-file-input></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
 
   base.focus();
   expect(el.shadowRoot!.activeElement === base).to.be.true;
@@ -892,7 +892,7 @@ it("keeps the accessible name sourced from `label` even when slot content overri
       ><svg aria-hidden="true"></svg
     ></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   const label = el.shadowRoot!.querySelector(
     "#file-input-label"
   ) as HTMLLabelElement;
@@ -905,7 +905,7 @@ it("names the dropzone from the visible label when the host aria-label is explic
   const el = await fixture<LyraFileInput>(html`
     <lr-file-input aria-label="" label="Visible instructions"></lr-file-input>
   `);
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   const input = el.shadowRoot!.querySelector(
     'input[type="file"]'
   ) as HTMLInputElement;
@@ -921,7 +921,7 @@ it("adds a :focus-visible outline to the dropzone base using the shared focus-ri
   const el = (await fixture(
     html`<lr-file-input></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
 
   const probe = document.createElement("span");
   probe.setAttribute(
@@ -948,7 +948,7 @@ it("renders the dropzone hover treatment before a mouse user clicks", async () =
   const el = await fixture<LyraFileInput>(html`
     <lr-file-input data-lr-theme-scope style="--lr-color-brand: rgb(1, 2, 3)"></lr-file-input>
   `);
-  const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="file-input"]')!;
   base.scrollIntoView({ block: "center" });
   const rect = base.getBoundingClientRect();
   try {
@@ -971,9 +971,9 @@ it("lets a consumer retint the drag accept/reject highlight independently via --
       style="--lr-file-input-accept-border-color: rgb(10, 20, 30); --lr-file-input-accept-bg: rgb(11, 21, 31); --lr-file-input-reject-border-color: rgb(40, 50, 60); --lr-file-input-reject-bg: rgb(41, 51, 61)"
     ></lr-file-input>
   `)) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
 
-  // [part~="base"] eases border-color/background-color over --lr-transition-fast, and each
+  // [part~="file-input"] eases border-color/background-color over --lr-transition-fast, and each
   // dragEnterWith below is a real post-mount state change (no drag -> accept, then accept ->
   // reject), so a synchronous read right after updateComplete can sample a starting or
   // mid-interpolation color instead of the settled one. Poll for the exact expected end color.
@@ -1020,7 +1020,7 @@ it("renders byte-identical drag accept/reject colors to the pre-hatch shared tok
   const el = (await fixture(
     html`<lr-file-input></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
 
   dragEnterWith(base, [makeFile("a.csv", "text/csv")]);
   await el.updateComplete;
@@ -1039,7 +1039,7 @@ it("keeps drag accept and reject previews distinguishable without color", async 
     const el = (await fixture(
       html`<lr-file-input></lr-file-input>`
     )) as LyraFileInput;
-    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
 
     base.setAttribute("data-drag-state", "accept");
     const accept = getComputedStyle(base);
@@ -1087,7 +1087,7 @@ it("keeps the gap and radius hooks opt-in, inheritable, and subordinate to the s
     ).rowGap;
   const dropzoneRadius = (el: LyraFileInput) =>
     getComputedStyle(
-      el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement
+      el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement
     ).borderTopLeftRadius;
 
   // These are the pre-hook defaults: --lr-space-xs and --lr-radius.
@@ -1103,7 +1103,7 @@ it("resolves the shared --lr-opacity-disabled token on the disabled dropzone", a
   const el = (await fixture(
     html`<lr-file-input disabled style="--lr-opacity-disabled: 0.37"></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
 
   expect(getComputedStyle(base).opacity).to.equal("0.37");
 });
@@ -1140,7 +1140,7 @@ it("renders standard error chrome in the form-control frame and describes the se
   `)) as LyraFileInput;
   const root = el.shadowRoot!;
   const frame = root.querySelector<HTMLElement>('[part~="form-control"]');
-  const base = root.querySelector<HTMLElement>('[part~="base"]');
+  const base = root.querySelector<HTMLElement>('[part~="file-input"]');
   const error = root.querySelector<HTMLElement>('[part~="error"]');
 
   expect(frame?.getAttribute("part") ?? "").to.contain("form-control");
@@ -1161,7 +1161,7 @@ it("keeps the opt-in error chrome hidden and unassociated when no error source i
     html`<lr-file-input hint="PDF or image files only"></lr-file-input>`
   )) as LyraFileInput;
   const root = el.shadowRoot!;
-  const base = root.querySelector<HTMLElement>('[part~="base"]');
+  const base = root.querySelector<HTMLElement>('[part~="file-input"]');
   const error = root.querySelector<HTMLElement>('[part~="error"]');
 
   expect(el.withError).to.equal(false);
@@ -1193,7 +1193,7 @@ it("updates a slotted error description when the authored error content is remov
     html`<lr-file-input hint="PDF or image files only"></lr-file-input>`
   )) as LyraFileInput;
   const root = el.shadowRoot!;
-  const base = root.querySelector<HTMLElement>('[part~="base"]');
+  const base = root.querySelector<HTMLElement>('[part~="file-input"]');
   const error = root.querySelector<HTMLElement>('[part~="error"]');
   const errorSlot = root.querySelector<HTMLSlotElement>('slot[name="error"]');
   expect(errorSlot?.name ?? "").to.equal("error");
@@ -1238,7 +1238,7 @@ it("renders intrinsic and custom validity errors, preserves a custom error throu
   `)) as HTMLFormElement;
   const el = form.querySelector<LyraFileInput>("lr-file-input")!;
   const root = el.shadowRoot!;
-  const base = root.querySelector<HTMLElement>('[part~="base"]');
+  const base = root.querySelector<HTMLElement>('[part~="file-input"]');
   const error = root.querySelector<HTMLElement>('[part~="error"]');
 
   expect(el.reportValidity()).to.equal(false);
@@ -1296,7 +1296,7 @@ it("announces accept/reject drag state changes via the shared polite light-DOM r
   const el = (await fixture(
     html`<lr-file-input></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   const status = el.shadowRoot!.querySelector('[part="status"]') as HTMLElement;
   // The retained part is a styling/inspection mirror only -- a live region inside a shadow root is
   // not reliably announced, and leaving it live would double-announce where it *is* honored.
@@ -1326,7 +1326,7 @@ it("announces a repeated identical drag state twice instead of silently rewritin
   const el = (await fixture(
     html`<lr-file-input></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
 
   dragEnterWith(base, [makeFile("a.csv", "text/csv")]);
   await el.updateComplete;
@@ -1377,7 +1377,7 @@ it("localizes the drag-preview live-region announcements via this.localize(), no
       }}
     ></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   const status = el.shadowRoot!.querySelector('[part="status"]') as HTMLElement;
 
   dragEnterWith(base, [makeFile("a.csv", "text/csv")]);
@@ -1398,7 +1398,7 @@ it("announces accepted and rejected selection outcomes through the live region",
       .allowedMimeTypes=${["text/csv"]}
     ></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   const status = el.shadowRoot!.querySelector('[part="status"]') as HTMLElement;
 
   const accepted = oneEvent(el, "lr-files");
@@ -1432,7 +1432,7 @@ it("does not replay an old selection result when a later drag preview ends", asy
   const el = await fixture<LyraFileInput>(
     html`<lr-file-input></lr-file-input>`
   );
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   const selected = oneEvent(el, "lr-files");
   dropWith(base, [makeFile("ok.csv", "text/csv")]);
   await selected;
@@ -1459,7 +1459,7 @@ it("treats a completed rejected selection as validity interaction", async () => 
   const el = await fixture<LyraFileInput>(html`
     <lr-file-input required accept="text/csv"></lr-file-input>
   `);
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   const rejected = oneEvent(el, "lr-files");
   dropWith(base, [makeFile("bad.png", "image/png")]);
   await rejected;
@@ -1481,7 +1481,7 @@ it("formats accepted and rejected result counts with the effective locale", asyn
       .allowedMimeTypes=${["text/csv"]}
     ></lr-file-input>
   `)) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   const status = el.shadowRoot!.querySelector('[part="status"]') as HTMLElement;
   const result = oneEvent(el, "lr-files");
   dropWith(base, [
@@ -1508,7 +1508,7 @@ it("renders a visible, per-reason rejection region naming the rejected file (reg
   const el = (await fixture(
     html`<lr-file-input .allowedMimeTypes=${["text/csv"]}></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
 
   const ev = oneEvent(el, "lr-files");
   dropWith(base, [makeFile("bad.png", "image/png")]);
@@ -1536,7 +1536,7 @@ it("keeps the visible rejection region separate from, and in addition to, the sr
   const el = (await fixture(
     html`<lr-file-input .allowedMimeTypes=${["text/csv"]}></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
 
   const ev = oneEvent(el, "lr-files");
   dropWith(base, [makeFile("bad.png", "image/png")]);
@@ -1556,7 +1556,7 @@ it("uses a distinct localized message for a size rejection than a type rejection
   const el = (await fixture(
     html`<lr-file-input max-file-size="4"></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
 
   const ev = oneEvent(el, "lr-files");
   dropWith(base, [makeSizedFile("big.csv", "text/csv", 10)]);
@@ -1573,7 +1573,7 @@ it("names each rejected file individually when multiple is false and more than o
   const el = (await fixture(
     html`<lr-file-input></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
 
   const ev = oneEvent(el, "lr-files");
   dropWith(base, [
@@ -1598,7 +1598,7 @@ it("wires the now-referenced fileInputFolderRejected key into the visible reject
   const el = (await fixture(
     html`<lr-file-input></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
 
   const evPromise = oneEvent(el, "lr-files");
   dropFolderWith(base, "My Folder");
@@ -1622,7 +1622,7 @@ it("localizes the new per-reason rejection messages via .strings, not hardcoded 
       }}
     ></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
 
   const ev = oneEvent(el, "lr-files");
   dropWith(base, [makeFile("bad.png", "image/png")]);
@@ -1639,7 +1639,7 @@ it("clears the visible rejection region once a subsequent drop is fully accepted
   const el = (await fixture(
     html`<lr-file-input .allowedMimeTypes=${["text/csv"]}></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
 
   let ev = oneEvent(el, "lr-files");
   dropWith(base, [makeFile("bad.png", "image/png")]);
@@ -1659,7 +1659,7 @@ it("is accessible with the visible rejection region populated", async () => {
   const el = (await fixture(
     html`<lr-file-input .allowedMimeTypes=${["text/csv"]}></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   const ev = oneEvent(el, "lr-files");
   dropWith(base, [makeFile("bad.png", "image/png")]);
   await ev;
@@ -1668,7 +1668,7 @@ it("is accessible with the visible rejection region populated", async () => {
 });
 
 const fileInputBaseChrome = (el: LyraFileInput) => {
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   const s = getComputedStyle(base);
   return {
     paddingTop: s.paddingTop,
@@ -1746,7 +1746,7 @@ it("keeps arbitrary slotted controls outside the dropzone button and does not op
   `)) as LyraFileInput;
   const slottedButton = el.querySelector("button")!;
   const dropzoneButton = el.shadowRoot!.querySelector(
-    '[part~="base"]'
+    '[part~="file-input"]'
   ) as HTMLElement;
   const input = el.shadowRoot!.querySelector(
     'input[type="file"]'
@@ -1847,7 +1847,7 @@ describe("reviewed Web Awesome Pro file-input surface", () => {
     expect(el.withHint).to.be.false;
     expect(el.withLabel).to.be.false;
     expect(
-      el.validationTarget === el.shadowRoot!.querySelector('[part~="base"]')
+      el.validationTarget === el.shadowRoot!.querySelector('[part~="file-input"]')
     ).to.equal(true);
   });
 
@@ -1869,7 +1869,7 @@ describe("reviewed Web Awesome Pro file-input surface", () => {
     await el.updateComplete;
     expect(el.fileCount).to.equal(1);
 
-    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
     dragEnterWith(base, [makeFile("two.txt", "text/plain")]);
     await el.updateComplete;
     expect(el.dragging).to.equal(true);
@@ -1885,7 +1885,7 @@ describe("reviewed Web Awesome Pro file-input surface", () => {
       html`<lr-file-input required></lr-file-input>`
     )) as LyraFileInput;
     const defaultTarget = el.shadowRoot!.querySelector(
-      '[part~="base"]'
+      '[part~="file-input"]'
     ) as HTMLElement;
     const override = document.createElement("span");
     el.shadowRoot!.append(override);
@@ -2039,22 +2039,7 @@ describe("reviewed Web Awesome Pro file-input surface", () => {
       el.shadowRoot!.querySelector('[part~="error"]')!.textContent
     ).to.contain("Choose at least one document.");
     expect(el.shadowRoot!.querySelector('slot[name="dropzone"]')).to.exist;
-    expect(el.shadowRoot!.querySelector('[part~="label"]')).to.exist;
-  });
-
-  it("keeps each deprecated part alias on the exact replacement node", async () => {
-    const el = (await fixture(
-      html`<lr-file-input label="Documents"></lr-file-input>`
-    )) as LyraFileInput;
-    const root = el.shadowRoot!;
-    expect(
-      root.querySelector('[part~="base"]') ===
-        root.querySelector('[part~="file-input"]')
-    ).to.be.true;
-    expect(
-      root.querySelector('[part~="label"]') ===
-        root.querySelector('[part~="form-control-label"]')
-    ).to.be.true;
+    expect(el.shadowRoot!.querySelectorAll('[part~="form-control-label"]').length).to.equal(1);
   });
 
   it("uses with-error to render and associate rich slotted error content on the first SSR-hinted render", async () => {
@@ -2068,7 +2053,7 @@ describe("reviewed Web Awesome Pro file-input surface", () => {
     const root = el.shadowRoot!;
     const error = root.querySelector<HTMLElement>('[part~="error"]');
     const errorSlot = root.querySelector<HTMLSlotElement>('slot[name="error"]');
-    const base = root.querySelector<HTMLElement>('[part~="base"]');
+    const base = root.querySelector<HTMLElement>('[part~="file-input"]');
 
     expect(el.withError).to.equal(true);
     expect(
@@ -2188,7 +2173,7 @@ it("reports synchronous directory and file-reader failures without accepting a p
 
   for (const candidate of cases) {
     const el = await fixture<LyraFileInput>(html`<lr-file-input multiple></lr-file-input>`);
-    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
     const result = oneEvent(el, "lr-files");
     dropEntriesWith(base, [candidate.entry]);
     const event = await result;
@@ -2200,7 +2185,7 @@ it("reports synchronous directory and file-reader failures without accepting a p
 
 it("rejects an over-budget root item list atomically even when it contains no readable folder name", async () => {
   const el = await fixture<LyraFileInput>(html`<lr-file-input multiple></lr-file-input>`);
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   const result = oneEvent(el, "lr-files");
   dropEntriesWith(base, Array.from({ length: 10_001 }, () => null));
   const event = await result;
@@ -2213,7 +2198,7 @@ it("rejects an over-budget root item list atomically even when it contains no re
 
 it("cancels an in-flight folder traversal when the control becomes disabled", async () => {
   const el = await fixture<LyraFileInput>(html`<lr-file-input multiple></lr-file-input>`);
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   let finishBatch: ((entries: unknown[]) => void) | undefined;
   const directory = {
     isDirectory: true,
@@ -2241,7 +2226,7 @@ it("cancels an in-flight folder traversal when the control becomes disabled", as
 
 it("contains a synthetic dropzone focus delivered during same-task disablement", async () => {
   const el = await fixture<LyraFileInput>(html`<lr-file-input></lr-file-input>`);
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   let relayed = 0;
   el.addEventListener("focus", () => relayed++);
   el.disabled = true;
@@ -2331,7 +2316,7 @@ it("clears its own state when the owning form resets", async () => {
     </form>
   `);
   const el = form.querySelector<LyraFileInput>("lr-file-input")!;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   setTimeout(() =>
     dropWith(base, [
       makeFile("note.txt", "text/plain"),
@@ -2555,7 +2540,7 @@ it("creates folder-rejection placeholder files in its adopted owner realm", asyn
   try {
     frameDocument.body.append(frameDocument.adoptNode(el));
     await el.updateComplete;
-    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
     const result = oneEvent(el, "lr-files");
     const dataTransfer = {
       files: [] as unknown as FileList,
@@ -2776,27 +2761,15 @@ it("paints the shared required marker on the label, and lets a consumer retune o
   ).to.equal("");
 });
 
-it("keeps the deprecated base and label tokens beside their canonical part names", async () => {
-  // wa-file-input still publishes both spellings -- `base` beside `file-input` and `label` beside
-  // `form-control-label` -- so a migrated `::part(base)` / `::part(label)` rule keeps matching.
+it("no longer carries the removed base and label part tokens", async () => {
   const el = await fixture<LyraFileInput>(
     html`<lr-file-input label="Attachments"></lr-file-input>`
   );
   await el.updateComplete;
-  const picker = el.shadowRoot!.querySelector(
-    '[part~="file-input"]'
-  ) as HTMLElement;
-  const label = el.shadowRoot!.querySelector(
-    '[part~="form-control-label"]'
-  ) as HTMLElement;
-  expect(picker.part.contains("base")).to.equal(true);
-  expect(label.part.contains("label")).to.equal(true);
-  // Compare identity as a boolean, never the nodes themselves: a DOM payload in chai's
-  // actual/expected hangs the whole file until the per-file watchdog.
-  expect(el.shadowRoot!.querySelector('[part~="base"]') === picker, "base resolves to the picker").to
-    .be.true;
-  expect(el.shadowRoot!.querySelector('[part~="label"]') === label, "label resolves to the form-control-label").to
-    .be.true;
+  expect(el.shadowRoot!.querySelectorAll('[part~="file-input"]').length).to.equal(1);
+  expect(el.shadowRoot!.querySelectorAll('[part~="form-control-label"]').length).to.equal(1);
+  expect(el.shadowRoot!.querySelectorAll('[part~="base"]').length).to.equal(0);
+  expect(el.shadowRoot!.querySelectorAll('[part~="label"]').length).to.equal(0);
 });
 
 it("leaves the required marker off an optional file input", async () => {
@@ -3093,7 +3066,7 @@ it("uses a custom acceptedMessage/rejectedMessage override with {count} interpol
   el.acceptedMessage = "{count} custom accepted!";
   el.rejectedMessage = "{count} custom rejected!";
   await el.updateComplete;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   const status = el.shadowRoot!.querySelector('[part="status"]') as HTMLElement;
 
   const ev = oneEvent(el, "lr-files");
@@ -3118,7 +3091,7 @@ it("uses localized outcome defaults only while acceptedMessage/rejectedMessage a
       }}
     ></lr-file-input>
   `);
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   const status = el.shadowRoot!.querySelector('[part="status"]') as HTMLElement;
   const select = async (): Promise<void> => {
     const result = oneEvent(el, "lr-files");
@@ -3155,7 +3128,7 @@ it("ignores dragenter while disabled", async () => {
   const el = (await fixture(
     html`<lr-file-input disabled></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   dragEnterWith(base, [makeFile("a.csv", "text/csv")]);
   await el.updateComplete;
   expect(base.getAttribute("data-drag-state")).to.equal("default");
@@ -3166,7 +3139,7 @@ it('tolerates a dragenter event with no dataTransfer, defaulting drag state to "
   const el = (await fixture(
     html`<lr-file-input></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   expect(() =>
     base.dispatchEvent(
       new DragEvent("dragenter", { bubbles: true, cancelable: true })
@@ -3180,7 +3153,7 @@ it("ignores dragleave while disabled, leaving the browser default action intact"
   const el = (await fixture(
     html`<lr-file-input disabled></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   const ev = new DragEvent("dragleave", { bubbles: true, cancelable: true });
   base.dispatchEvent(ev);
   expect(ev.defaultPrevented).to.be.false;
@@ -3520,7 +3493,7 @@ it("publishes deeply frozen selection snapshots", async () => {
   const el = await fixture<LyraFileInput>(html`
     <lr-file-input multiple accept="text/csv"></lr-file-input>
   `);
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   const result = oneEvent(el, "lr-files");
   dropWith(base, [
     makeFile("ok.csv", "text/csv"),
@@ -3681,7 +3654,7 @@ it("falls back to globalThis.File for a folder-rejection placeholder when its ow
     frameWindow.File = undefined as unknown as typeof File;
     frameDocument.body.append(frameDocument.adoptNode(el));
     await el.updateComplete;
-    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
 
     const result = oneEvent(el, "lr-files");
     const dataTransfer = {
@@ -3713,7 +3686,7 @@ it("tolerates a paste event with no clipboardData", async () => {
   const el = (await fixture(
     html`<lr-file-input></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   let fired = false;
   el.addEventListener("lr-files", () => (fired = true));
   expect(() =>
@@ -3784,7 +3757,7 @@ it('opens the picker on the legacy "Spacebar" key name for older browsers', asyn
   const el = (await fixture(
     html`<lr-file-input></lr-file-input>`
   )) as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   const input = el.shadowRoot!.querySelector(
     'input[type="file"]'
   ) as HTMLInputElement;
@@ -3850,15 +3823,15 @@ it("scales the whole dropzone with size, leaving the default tier byte-identical
 
   // The "m" tier IS the pre-existing rendering: 0.875rem dropzone text, 1.25rem icon, 1rem padding,
   // 0.8125rem hint.
-  expect(read(medium, '[part~="base"]').fontSize).to.equal("14px");
-  expect(read(medium, '[part~="base"]').paddingTop).to.equal("16px");
+  expect(read(medium, '[part~="file-input"]').fontSize).to.equal("14px");
+  expect(read(medium, '[part~="file-input"]').paddingTop).to.equal("16px");
   expect(read(medium, '[part="dropzone-icon"]').fontSize).to.equal("20px");
   expect(read(medium, '[part="hint"]').fontSize).to.equal("13px");
 
   const biggerFont = (selector: string) =>
     parseFloat(read(large, selector).fontSize) >
     parseFloat(read(medium, selector).fontSize);
-  expect(biggerFont('[part~="base"]'), "dropzone text scales").to.equal(true);
+  expect(biggerFont('[part~="file-input"]'), "dropzone text scales").to.equal(true);
   expect(
     biggerFont(".dropzone-content"),
     "dropzone content text scales"
@@ -3868,17 +3841,17 @@ it("scales the whole dropzone with size, leaving the default tier byte-identical
   );
   expect(biggerFont('[part="hint"]'), "hint text scales").to.equal(true);
   expect(
-    parseFloat(read(large, '[part~="base"]').paddingTop),
+    parseFloat(read(large, '[part~="file-input"]').paddingTop),
     "dropzone padding scales"
-  ).to.be.greaterThan(parseFloat(read(medium, '[part~="base"]').paddingTop));
+  ).to.be.greaterThan(parseFloat(read(medium, '[part~="file-input"]').paddingTop));
 
   const small = (await fixture(html`
     <lr-file-input size="s" label="Files" hint="Any format"></lr-file-input>
   `)) as LyraFileInput;
   expect(
-    parseFloat(read(small, '[part~="base"]').fontSize),
+    parseFloat(read(small, '[part~="file-input"]').fontSize),
     "the small tier shrinks the dropzone text"
-  ).to.be.lessThan(parseFloat(read(medium, '[part~="base"]').fontSize));
+  ).to.be.lessThan(parseFloat(read(medium, '[part~="file-input"]').fontSize));
 });
 
 // `validators` is a `wa-file-input` parity member. Before 9.0.0 it was declared and read by
@@ -4282,7 +4255,7 @@ it("fills a host stretched to a definite block size by an absolutely positioned 
     '[part="form-control"]'
   ) as HTMLElement;
   const dropzone = el.shadowRoot!.querySelector(".dropzone") as HTMLElement;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   expect(
     formControl.getBoundingClientRect().height,
     "form-control"
@@ -4457,7 +4430,7 @@ describe("aria-describedby forwarding", () => {
     `)) as HTMLElement;
     const el = wrapper.querySelector("lr-file-input") as LyraFileInput;
     const description = wrapper.querySelector("#upload-policy")!;
-    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement & {
+    const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement & {
       ariaDescribedByElements?: Element[] | null;
     };
 
@@ -4477,7 +4450,7 @@ it('draws selected-file rows in the subtle border tier while the dropzone stays 
     </div>
   `)) as HTMLElement;
   const el = wrapper.querySelector('lr-file-input') as LyraFileInput;
-  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="file-input"]') as HTMLElement;
   const result = oneEvent(el, 'lr-files');
   dropWith(base, [makeFile('a.csv', 'text/csv')]);
   await result;
@@ -4580,7 +4553,7 @@ describe("review remediation", () => {
     await sendKeys({ press: "Enter" });
     await waitUntil(() => el.shadowRoot!.activeElement === removeButtons()[0]);
     await sendKeys({ press: "Enter" });
-    await waitUntil(() => el.shadowRoot!.activeElement === el.shadowRoot!.querySelector('[part~="base"]'));
+    await waitUntil(() => el.shadowRoot!.activeElement === el.shadowRoot!.querySelector('[part~="file-input"]'));
     expect(el.files).to.deep.equal([]);
   });
 
@@ -4604,7 +4577,7 @@ describe("review remediation", () => {
 
   it("keeps the dropzone named when the host aria-label is explicitly empty", async () => {
     const el = (await fixture(html`<lr-file-input aria-label=""></lr-file-input>`)) as LyraFileInput;
-    expect(el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute("aria-label")).to.equal(
+    expect(el.shadowRoot!.querySelector('[part~="file-input"]')!.getAttribute("aria-label")).to.equal(
       "Drop files here or click to browse",
     );
   });

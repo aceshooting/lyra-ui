@@ -1124,7 +1124,7 @@ it("does not throw on a stray pointermove/pointerup after disconnect mid-drag", 
   }).to.not.throw();
 });
 
-it("toggles collapsed via the collapse-toggle button and emits lr-collapse-change", async () => {
+it("toggles collapsed via the collapse-toggle button and emits lr-toggle", async () => {
   const el = await dockedFixture('extent="280px" collapsible');
   await elementUpdated(el);
   const toggle = el.shadowRoot!.querySelector(
@@ -1136,13 +1136,13 @@ it("toggles collapsed via the collapse-toggle button and emits lr-collapse-chang
   let requestDetail: LyraDockPanelCollapseChangeDetail | undefined;
   let detail: LyraDockPanelCollapseChangeDetail | undefined;
   el.addEventListener(
-    "lr-collapse-request",
+    "lr-toggle-request",
     (e) =>
       (requestDetail = (e as CustomEvent<LyraDockPanelCollapseChangeDetail>)
         .detail)
   );
   el.addEventListener(
-    "lr-collapse-change",
+    "lr-toggle",
     (e) =>
       (detail = (e as CustomEvent<LyraDockPanelCollapseChangeDetail>).detail)
   );
@@ -1192,7 +1192,7 @@ it('does not overwrite an identical host collapsed write made in a toggle reques
   expect(accepted).to.equal(0);
 });
 
-it("emits a cancelable lr-collapse-request before lr-collapse-change, vetoing the mutation when prevented", async () => {
+it("emits a cancelable lr-toggle-request before lr-toggle, vetoing the mutation when prevented", async () => {
   const el = await dockedFixture('extent="280px" collapsible');
   await elementUpdated(el);
   const toggle = el.shadowRoot!.querySelector(
@@ -1200,8 +1200,8 @@ it("emits a cancelable lr-collapse-request before lr-collapse-change, vetoing th
   ) as HTMLElement;
 
   const order: string[] = [];
-  el.addEventListener("lr-collapse-request", (e) => {
-    order.push("lr-collapse-request");
+  el.addEventListener("lr-toggle-request", (e) => {
+    order.push("lr-toggle-request");
     expect((e as CustomEvent).cancelable).to.equal(true);
     expect(
       el.collapsed,
@@ -1209,8 +1209,8 @@ it("emits a cancelable lr-collapse-request before lr-collapse-change, vetoing th
     ).to.equal(false);
     e.preventDefault();
   });
-  el.addEventListener("lr-collapse-change", () =>
-    order.push("lr-collapse-change")
+  el.addEventListener("lr-toggle", () =>
+    order.push("lr-toggle")
   );
 
   toggle.click();
@@ -1218,9 +1218,23 @@ it("emits a cancelable lr-collapse-request before lr-collapse-change, vetoing th
 
   expect(
     order,
-    "a prevented request must veto the mutation and skip lr-collapse-change"
-  ).to.deep.equal(["lr-collapse-request"]);
+    "a prevented request must veto the mutation and skip lr-toggle"
+  ).to.deep.equal(["lr-toggle-request"]);
   expect(el.collapsed).to.equal(false);
+});
+
+it("no longer emits the removed lr-collapse-request or lr-collapse-change events", async () => {
+  const el = await dockedFixture('extent="280px" collapsible');
+  await elementUpdated(el);
+  const removed: string[] = [];
+  el.addEventListener("lr-collapse-request", () => removed.push("lr-collapse-request"));
+  el.addEventListener("lr-collapse-change", () => removed.push("lr-collapse-change"));
+  const toggled: string[] = [];
+  el.addEventListener("lr-toggle", () => toggled.push("lr-toggle"));
+  (el.shadowRoot!.querySelector('[part="collapse-toggle"]') as HTMLElement).click();
+  await elementUpdated(el);
+  expect(toggled).to.have.length(1);
+  expect(removed).to.have.length(0);
 });
 
 it("preserves the last expanded extent across a collapse/expand round trip", async () => {

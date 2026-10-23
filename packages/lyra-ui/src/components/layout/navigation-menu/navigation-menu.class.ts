@@ -40,15 +40,13 @@ export type LyraNavigationMenuPanelAnchor = 'menu' | 'item';
 /** How an `expanded` change began. */
 export type LyraNavigationMenuExpandedChangeSource = 'user' | 'programmatic';
 
-/** Payload emitted with `lr-expanded-change` after a change to `expanded` renders. */
+/** Payload emitted with `lr-toggle` after a change to `expanded` renders. */
 export interface LyraNavigationMenuExpandedChangeDetail {
   expanded: boolean;
   source: LyraNavigationMenuExpandedChangeSource;
 }
 
 export interface LyraNavigationMenuEventMap {
-  /** @deprecated Use `lr-toggle`; same expanded and source detail. */
-  'lr-expanded-change': CustomEvent<LyraNavigationMenuExpandedChangeDetail>;
   'lr-toggle-request': CustomEvent<LyraNavigationMenuExpandedChangeDetail>;
   'lr-toggle': CustomEvent<LyraNavigationMenuExpandedChangeDetail>;
 }
@@ -120,8 +118,6 @@ function isAnchorWithHref(value: EventTarget): boolean {
  * @slot - `<lr-navigation-menu-item>` children.
  * @slot toggle-icon - Replaces the hamburger glyph of the collapsed-layout toggle. The wrapper is
  *   inert and `aria-hidden`.
- * @event lr-expanded-change - A change to `expanded` rendered. Not cancelable.
- *   `detail: { expanded: boolean, source: 'user' | 'programmatic' }`.
  * @event lr-toggle-request - Cancelable user proposal to change the collapsed-layout list's expanded state.
  * @event lr-toggle - Accepted list state change with `detail: { expanded, source }`; item toggles
  *   remain their own composed child events, distinguishable by `event.target`.
@@ -970,8 +966,6 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
     this.requestUpdate('expanded', old);
     if (source !== null) {
       void this.updateComplete.then(() => {
-        if (!this.isConnected || this._expanded !== next || this.expansionNotificationSequence !== notificationSequence) return;
-        this.emit('lr-expanded-change', { expanded: next, source });
         if (!this.isConnected || this._expanded !== next || this.expansionNotificationSequence !== notificationSequence) return;
         this.emit('lr-toggle', { expanded: next, source });
       });

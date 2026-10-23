@@ -31,9 +31,13 @@ while doing something else. The vocabulary rules apply to every component, mirro
   list is valid, and `scripts/check-part-reachability.mjs` keeps the added token honest), and a
   property keeps its canonical accessor while gaining a compatibility alias read alongside it. Web
   Awesome has deprecated the generic `base` part in favor of one named after the component, so
-  where a pinned upstream publishes that component-named wrapper part (or its own deprecated
-  `base`), the mirrored component's outer wrapper carries both tokens and documents both with
-  `@csspart`. A component-named alias is kept only where an upstream publishes one: when neither
+  where a pinned upstream publishes that component-named wrapper part, the mirrored component's
+  outer wrapper carries the component-named token (and `base` only where Lyra's own consumers
+  established it), documented with `@csspart`. The mirror covers an upstream's *current* API, not
+  names upstream itself deprecated: Lyra may drop such a name (30.0.0 dropped the deprecated
+  `base`/`label` parts of six components and `lr-icon`'s `auto-width`), provided the `wa-`/`sl-`
+  mapping carries a `parts`/`attributes` rewrite to its replacement, so a dropped name is
+  migrated rather than silently dead. A component-named alias is kept only where an upstream publishes one: when neither
   pinned upstream exposes a wrapper part at all, `base` alone is the supported spelling, and a
   Lyra-only component-named token is deprecated rather than kept (`lr-split-panel`'s
   `split-panel`, since `wa-split-panel`/`sl-split-panel` publish only `start`, `end`, `panel` and

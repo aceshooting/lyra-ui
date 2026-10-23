@@ -296,14 +296,26 @@ describe('cancel/retry controls', () => {
     expect((el.shadowRoot!.querySelector('[part="retry-button"]')) == null).to.be.true;
   });
 
-  it('emits lr-cancel with an empty-reason CancelEventDetail when Cancel is clicked', async () => {
+  it('emits lr-run-cancel with the run id and no reason when Cancel is clicked', async () => {
     const el = (await fixture(
       html`<lr-agent-run .run=${makeRun({ status: { kind: 'running' } })}></lr-agent-run>`,
     )) as LyraAgentRun;
-    const listener = oneEvent(el, 'lr-cancel');
+    const listener = oneEvent(el, 'lr-run-cancel');
     (el.shadowRoot!.querySelector('[part="cancel-button"]') as HTMLButtonElement).click();
     const event = await listener;
     expect((event.detail as CancelEventDetail).reason).to.be.undefined;
+  });
+
+  it('no longer emits the removed lr-cancel alias', async () => {
+    const el = (await fixture(
+      html`<lr-agent-run .run=${makeRun({ status: { kind: 'running' } })}></lr-agent-run>`,
+    )) as LyraAgentRun;
+    let removed = 0;
+    el.addEventListener('lr-cancel', () => removed++);
+    const canonical = oneEvent(el, 'lr-run-cancel');
+    (el.shadowRoot!.querySelector('[part="cancel-button"]') as HTMLButtonElement).click();
+    await canonical;
+    expect(removed).to.equal(0);
   });
 
   it('emits lr-run-retry with a 1-based attempt counter, incrementing per click', async () => {
@@ -898,10 +910,10 @@ describe('lr-agent-run deprecated --lr-agent-run-background alias', () => {
 });
 
 describe('run-scoped events', () => {
-  it('names cancel and retry with the run id, keeping lr-cancel as a deprecated alias fired after lr-run-cancel', async () => {
+  it('names cancel and retry with the run id, and no longer fires the removed lr-cancel alias', async () => {
     const el = await fixture<LyraAgentRun>(html`<lr-agent-run .run=${makeRun({ status: { kind: 'running' } })}></lr-agent-run>`);
     const seen: string[] = [];
-    for (const name of ['lr-run-cancel', 'lr-cancel', 'lr-run-retry']) {
+    for (const name of ['lr-run-cancel', 'lr-run-retry']) {
       el.addEventListener(name, (event) => seen.push(`${name}:${JSON.stringify((event as CustomEvent).detail)}`));
     }
     el.shadowRoot!.querySelector<HTMLButtonElement>('[part="cancel-button"]')!.click();
@@ -910,7 +922,6 @@ describe('run-scoped events', () => {
     el.shadowRoot!.querySelector<HTMLButtonElement>('[part="retry-button"]')!.click();
     expect(seen).to.deep.equal([
       'lr-run-cancel:{"runId":"run-1"}',
-      'lr-cancel:{"runId":"run-1"}',
       'lr-run-retry:{"runId":"run-1","attempt":1}',
     ]);
   });

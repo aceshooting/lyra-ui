@@ -45,6 +45,12 @@ function options(version = '23.0.0') {
   };
 }
 
+function addCurrentMirror(input, kind, name) {
+  const section = kind === 'property' ? 'properties' : 'attributes';
+  input.currentInventory.mappings = [{ targetTag: 'lr-alpha', upstreamTag: 'wa-alpha', classification: 'exact' }];
+  input.currentInventory.upstreams = { fixture: { components: [{ tag: 'wa-alpha', surface: { [section]: [{ name }] } }] } };
+}
+
 test('structured keys preserve empty slots, export modules and case without collisions', () => {
   assert.notEqual(compatibilityKey({ scope: 'member', tag: 'lr-alpha', kind: 'slot', name: '' }), compatibilityKey(key));
   assert.equal(compatibilityKey({ scope: 'export', kind: 'type', name: 'Thing' }), compatibilityKey({ scope: 'export', kind: 'type', module: null, name: 'Thing' }));
@@ -100,7 +106,10 @@ test('rejects later floors, unpublished policy, missing retirement, duplicates a
     x => { x.retirementIndex = []; },
     x => { x.retirementIndex.push(structuredClone(x.retirementIndex[0])); },
     x => { x.currentInventory.components[0].surface.properties = []; },
-    x => { x.captures[0].mirrors = [{ tag: 'lr-alpha', kind: 'property', name: 'oldValue', upstreamTag: 'wa-alpha' }]; },
+    x => {
+      x.captures[0].mirrors = [{ tag: 'lr-alpha', kind: 'property', name: 'oldValue', upstreamTag: 'wa-alpha' }];
+      addCurrentMirror(x, 'property', 'oldValue');
+    },
   ]) {
     const input = options(); mutate(input);
     assert.throws(() => assembleCompatibilityContext(input));
@@ -172,7 +181,14 @@ test('retirement rejects new-only replacements, mirrored paired attributes and d
   const tooEarly = options(); tooEarly.captures[0].sourceVersion = '21.2.0'; tooEarly.captures[0].sourceRelease = 'lyra-ui@21.2.0'; tooEarly.retirementIndex[0].sourceRelease = 'lyra-ui@21.2.0';
   assert.throws(() => assembleCompatibilityContext(tooEarly), /published compatibility window/u);
   const mirrored = options(); mirrored.captures[0].mirrors.push({ tag: 'lr-alpha', kind: 'attribute', name: 'old-value', upstreamTag: 'wa-alpha' });
+  addCurrentMirror(mirrored, 'attribute', 'old-value');
   assert.throws(() => assembleCompatibilityContext(mirrored), /mirrored/u);
+  mirrored.currentInventory.mappings[0].rewrites = { attributes: [{ from: 'old-value', to: 'value' }] };
+  assert.equal(resolveCompatibilityRecord(assembleCompatibilityContext(mirrored), key).state, 'retired',
+    'A mapping that redirects the upstream alias to its canonical replacement permits retirement');
+  mirrored.currentInventory.mappings = [];
+  assert.equal(resolveCompatibilityRecord(assembleCompatibilityContext(mirrored), key).state, 'retired',
+    'A historical mirror alone does not protect a member absent from current mappings');
   const slot = options();
   const slotPolicy = { ...record, kind: 'slot-content', name: '', replacement: { kind: 'slot', name: 'content' } }; delete slotPolicy.attribute;
   const slotKey = { ...key, kind: 'slot-content', name: '' };

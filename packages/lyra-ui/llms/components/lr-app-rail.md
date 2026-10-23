@@ -415,7 +415,7 @@ An auto-hide sidebar that peeks open over the content and docks only when pinned
 ```html
 <lr-app-rail auto-hide label="Workspace" storage-key="app" persist="preferred-mode">
   <lr-app-rail-item href="/inbox" current>
-    <svg slot="icon" aria-hidden="true">...</svg>Inbox
+    <svg slot="start" aria-hidden="true">...</svg>Inbox
   </lr-app-rail-item>
 </lr-app-rail>
 ```
@@ -512,7 +512,7 @@ visible parent item.
   <lr-app-rail id="sidebar" label="Workspace" frame="card" without-toggle trigger-collapses
     for="sidebar-trigger" hotkey="mod+b" storage-key="app" persist="preferred-mode">
     <lr-app-rail-group heading="Platform">
-      <lr-app-rail-item href="/projects" current tooltip><span slot="icon">▦</span>Projects</lr-app-rail-item>
+      <lr-app-rail-item href="/projects" current tooltip><span slot="start">▦</span>Projects</lr-app-rail-item>
     </lr-app-rail-group>
     <lr-divider></lr-divider>
   </lr-app-rail>
@@ -544,7 +544,7 @@ shadow tokens. A raised sidebar tint is opt-in with
   <lr-app-rail slot="navigation" id="workspace-nav" label="Workspace" frame="plain"
     mobile-breakpoint="0px" icon-only-breakpoint="0px" collapsible hotkey="mod+b"
     storage-key="app" persist="preferred-mode">
-    <lr-app-rail-item href="/projects"><span slot="icon">▦</span>Projects</lr-app-rail-item>
+    <lr-app-rail-item href="/projects"><span slot="start">▦</span>Projects</lr-app-rail-item>
   </lr-app-rail>
   <p>Main content</p>
 </lr-page>
@@ -620,7 +620,7 @@ A host `aria-label` is copied to the rendered native link or button by attribute
 including an explicitly empty value; without it, the default slot supplies the native name. The
 same precedence supplies the tooltip text when that opt-in flyout is visible, and the disclosure's
 interpolated `{label}` (see Events below); without it both read the default slot only, never the
-`icon`, `meta`, `end` or `children` slots.
+`start`, `meta`, `end` or `children` slots.
 
 **Events:** `lr-toggle-request` — cancelable, emitted before `expanded` changes from the built-in
 disclosure (`detail: { expanded }` is the proposed state, matching `<lr-app-rail-group>`'s
@@ -640,8 +640,7 @@ external focus move is always preserved, and this repair dispatches no activatio
 
 **Slots:** default (the visible label), `start` (the leading decorative icon, always hidden from
 assistive technology and inert across its flattened subtree; the default slot or host `aria-label`
-names the native control, which remains the sole action). The `icon` slot is its deprecated legacy
-alias.
+names the native control, which remains the sole action).
 
 - `meta` slot — secondary trailing text (an unread count, a keyboard shortcut). Rendered as a
   SIBLING of the item's own link/button, so its text is not part of the item's accessible name and a

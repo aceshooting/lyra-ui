@@ -30,7 +30,7 @@ import { LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy,
 export type EvaluationMetricFormat = 'number' | 'percent' | 'milliseconds' | 'currency';
 export interface AgentEvaluationMetric { readonly id: string; readonly label: string; readonly value: number; readonly format?: EvaluationMetricFormat; }
 export interface AgentEvaluationDashboardRun { readonly id: string; readonly label: string; readonly status: AgentStatusValue; readonly metrics?: Readonly<Record<string, number>>; }
-export interface LyraAgentEvalDashboardEventMap { 'lr-metric-change-request': CustomEvent<{ metricId: string }>; 'lr-metric-change': CustomEvent<{ metricId: string }>; 'lr-run-activate': CustomEvent<LyraEventDetailSnapshot<AgentRunActivateDetail<AgentEvaluationDashboardRun>>>; }
+export interface LyraAgentEvalDashboardEventMap { 'lr-metric-change-request': CustomEvent<{ metricId: string }>; 'lr-run-activate': CustomEvent<LyraEventDetailSnapshot<AgentRunActivateDetail<AgentEvaluationDashboardRun>>>; }
 /**
  * `<lr-agent-eval-dashboard>` — a controlled evaluation overview with metric cards, a trend chart,
  * and run-status history. It never launches or scores evaluations. Duplicate metric or run ids
@@ -42,7 +42,6 @@ export interface LyraAgentEvalDashboardEventMap { 'lr-metric-change-request': Cu
  * @customElement lr-agent-eval-dashboard
  * @event lr-metric-change-request - A metric card was activated; the host decides whether to change `metricId`.
  *   `detail: { metricId }`.
- * @event lr-metric-change - Deprecated alias of `lr-metric-change-request`, dispatched right after it.
  * @event lr-run-activate - A run row was activated. `detail: { runId, run }`.
  * @csspart base - The root dashboard wrapper.
  * @csspart heading - The visible heading.
@@ -257,10 +256,7 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
               data-metric-id=${metric.id}
               aria-pressed=${active?.id === metric.id ? 'true' : 'false'}
               aria-label=${this.localize('chartValueLabel', undefined, { label: metric.label, value })}
-              @click=${() => {
-                this.emit('lr-metric-change-request', { metricId: metric.id });
-                this.emit('lr-metric-change', { metricId: metric.id });
-              }}
+              @click=${() => this.emit('lr-metric-change-request', { metricId: metric.id })}
             ><lr-stat frame="plain" .label=${metric.label} .value=${value}></lr-stat></button>`;
           })}</div>`
         : nothing}

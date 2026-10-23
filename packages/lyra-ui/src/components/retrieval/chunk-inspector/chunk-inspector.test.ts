@@ -159,10 +159,7 @@ it('toggles per-chunk text expand state, keyed by id, surviving a chunks reassig
   const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
   const toggles: unknown[] = [];
   el.addEventListener('lr-toggle', (event) => toggles.push((event as CustomEvent).detail));
-  const listener = oneEvent(el, 'lr-chunk-toggle');
   toggle.click();
-  const event = await listener;
-  expect(event.detail).to.deep.equal({ chunkId: chunks[0]!.id, expanded: true });
   expect(toggles).to.deep.equal([{ itemId: chunks[0]!.id, expanded: true }]);
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="toggle"]')!.getAttribute('aria-expanded')).to.equal('true');
@@ -616,16 +613,14 @@ it('formats finite numeric page locators with the effective locale while retaini
   expect(names[1]).to.include('Appendix — p. 3');
 });
 
-describe('lr-chunk-inspector retired lr-expand alias', () => {
-  it('fires lr-chunk-toggle, without the retired lr-expand alias, in both directions', async () => {
+describe('lr-chunk-inspector disclosure events', () => {
+  it('fires lr-toggle in both directions, and never the removed lr-chunk-toggle or lr-expand', async () => {
     const el = await fixture<LyraChunkInspector>(html`<lr-chunk-inspector .chunks=${chunks}></lr-chunk-inspector>`);
     const seen: { type: string; detail: unknown; cancelable: boolean }[] = [];
-    const details = new Set<unknown>();
-    for (const type of ['lr-chunk-toggle', 'lr-expand']) {
+    for (const type of ['lr-toggle', 'lr-chunk-toggle', 'lr-expand']) {
       el.addEventListener(type, (event) => {
         const custom = event as CustomEvent;
         seen.push({ type, detail: { ...custom.detail }, cancelable: custom.cancelable });
-        details.add(custom.detail);
       });
     }
     const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
@@ -635,23 +630,9 @@ describe('lr-chunk-inspector retired lr-expand alias', () => {
     await el.updateComplete;
     const id = chunks[0]!.id;
     expect(seen).to.deep.equal([
-      { type: 'lr-chunk-toggle', detail: { chunkId: id, expanded: true }, cancelable: false },
-      { type: 'lr-chunk-toggle', detail: { chunkId: id, expanded: false }, cancelable: false },
+      { type: 'lr-toggle', detail: { itemId: id, expanded: true }, cancelable: false },
+      { type: 'lr-toggle', detail: { itemId: id, expanded: false }, cancelable: false },
     ]);
-    expect(details.size, 'each canonical event carries its own detail object').to.equal(2);
-  });
-
-  it('never warns for the non-cancelable alias', async () => {
-    const el = await fixture<LyraChunkInspector>(html`<lr-chunk-inspector .chunks=${chunks}></lr-chunk-inspector>`);
-    el.addEventListener('lr-expand', () => {});
-    const warnings = await captureDeprecationWarnings(
-      [{ tag: 'lr-chunk-inspector', kind: 'event', name: 'lr-expand' }],
-      async () => {
-        (el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement).click();
-        await el.updateComplete;
-      }
-    );
-    expect(warnings).to.have.length(0);
   });
 });
 
@@ -700,9 +681,9 @@ it('expands the chunks named by expandedChunkIds and keeps that property in step
   const el = (await fixture(html`<lr-chunk-inspector .chunks=${chunks} .expandedChunkIds=${['c2']}></lr-chunk-inspector>`)) as LyraChunkInspector;
   const toggles = (): HTMLElement[] => [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="toggle"]')];
   expect(toggles().map((toggle) => toggle.getAttribute('aria-expanded'))).to.deep.equal(['false', 'true', 'false']);
-  const toggled = oneEvent(el, 'lr-chunk-toggle');
+  const toggled = oneEvent(el, 'lr-toggle');
   toggles()[0]!.click();
-  expect((await toggled).detail).to.deep.equal({ chunkId: 'c1', expanded: true });
+  expect((await toggled).detail).to.deep.equal({ itemId: 'c1', expanded: true });
   expect(el.expandedChunkIds).to.deep.equal(['c2', 'c1']);
   toggles()[1]!.click();
   expect(el.expandedChunkIds).to.deep.equal(['c1']);

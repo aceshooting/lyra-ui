@@ -1542,7 +1542,6 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
           ? this.pathReady ? html`<lr-path-strip
               part="path"
               .path=${this.path}
-              @lr-entity-activate=${(event: Event) => event.stopPropagation()}
             ></lr-path-strip>`
             : html`<p part="path">${this.localize(this.optionalFailed ? 'statusError' : 'loading')}</p>`
           : nothing}

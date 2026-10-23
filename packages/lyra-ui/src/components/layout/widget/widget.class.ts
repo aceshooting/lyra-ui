@@ -118,7 +118,7 @@ function snapshotWidgetViews(value: unknown): readonly Readonly<LyraWidgetView>[
  *
  * Lit's own `reflect: true` writes the attribute during `update()`, not during the assignment.
  * That timing is right for every other reflected property here -- but `requestCollapse()` assigns
- * `collapsed` and emits `lr-collapse-change` in the same synchronous turn, so a listener reading
+ * `collapsed` and emits `lr-toggle` in the same synchronous turn, so a listener reading
  * the reflected `[collapsed]` attribute (the ordinary way to observe a reflecting boolean) would
  * read the pre-toggle value and leave whatever it syncs one state behind until some unrelated
  * render happened to catch it up. That is not how this component shipped, and moving `collapsed`
@@ -159,10 +159,6 @@ function installSynchronousCollapsedReflection(prototype: LyraWidget): void {
 }
 
 export interface LyraWidgetEventMap {
-  /** @deprecated Use `lr-toggle-request`; its detail uses expanded polarity. */
-  'lr-collapse-request': CustomEvent<{ collapsed: boolean }>;
-  /** @deprecated Use `lr-toggle`; its detail uses expanded polarity. */
-  'lr-collapse-change': CustomEvent<{ collapsed: boolean }>;
   'lr-toggle-request': CustomEvent<{ expanded: boolean }>;
   'lr-toggle': CustomEvent<{ expanded: boolean }>;
   'lr-fullscreen-request': CustomEvent<{ fullscreen: boolean }>;
@@ -181,8 +177,6 @@ export interface LyraWidgetEventMap {
  * @slot - The panel body.
  * @slot start - Optional decorative leading icon in the title row. Its flattened subtree is inert
  *   and hidden from assistive technology.
- * @slot icon - Legacy slot content is deprecated; use `start`. Its flattened subtree is inert and
- *   hidden from assistive technology.
  * @slot label - Rich label content (overrides the `label` attribute).
  * @slot sublabel - Rich sublabel content (overrides the `sublabel` attribute).
  * @slot actions - Header action controls, rendered before the collapse/expand buttons.
@@ -199,14 +193,11 @@ export interface LyraWidgetEventMap {
  *   while `expandable`.
  * @slot view-{viewId} - Content for the view whose `LyraWidgetView.viewId` matches `{viewId}`, rendered when
  *   `views` is non-empty.
- * @event lr-collapse-request - A cancelable proposed `collapsed` state from the built-in collapse
- *   toggle. Call `preventDefault()` to keep `collapsed` and persistence unchanged. Not fired when
- *   a consumer sets `collapsed` directly. `detail: { collapsed }`.
- * @event lr-collapse-change - Non-cancelable post-commit notification from the built-in collapse
- *   toggle. Not fired when a consumer sets `collapsed` directly. `detail: { collapsed }` (the new
- *   `collapsed` state).
  * @event lr-toggle-request - Cancelable proposed `detail: { expanded }` before the built-in toggle commits.
- * @event lr-toggle - Accepted built-in disclosure change with `detail: { expanded }`.
+ *   Call `preventDefault()` to keep `collapsed` and persistence unchanged. Not fired when a consumer
+ *   sets `collapsed` directly.
+ * @event lr-toggle - Accepted built-in disclosure change with `detail: { expanded }`. Not fired when a
+ *   consumer sets `collapsed` directly.
  * @event lr-fullscreen-request - A cancelable proposed `fullscreen` state from the fullscreen
  *   toggle, Escape, or a backdrop click. Call `preventDefault()` to leave `fullscreen` unchanged.
  *   Not fired when a consumer sets `fullscreen` directly. `detail: { fullscreen }`.
@@ -321,7 +312,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
       // rather than at every read site.
       coerce: (next: boolean) => Boolean(next),
     });
-    // Keeps the attribute in step with the synchronous `lr-collapse-change` emit -- see the
+    // Keeps the attribute in step with the synchronous `lr-toggle` emit -- see the
     // function's own doc for why Lit's update-time reflection is too late for this one property.
     installSynchronousCollapsedReflection(this.prototype);
   }
@@ -451,7 +442,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
       // updated() keeps this restored value from being written straight back.
       // Never overwrites `collapsed` when the consumer already assigned it before this point --
       // a controlled `.collapsed=${false}` binding stays authoritative over stale `localStorage`
-      // state instead of being silently clobbered by it, with no `lr-collapse-change` firing for
+      // state instead of being silently clobbered by it, with no `lr-toggle` firing for
       // a change the consumer never asked for. The guard reports whether the property's setter
       // ever ran, which `changed.has('collapsed')` cannot: a declared default lands in the same
       // first-update batch as a consumer's binding. Mirrors `lr-app-rail`'s and `lr-table`'s
@@ -693,7 +684,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   };
 
   /** Emits the cancelable interaction proposal before touching the persisted
-   *  property, while retaining lr-collapse-change as the existing post-commit
+   *  property, while emitting lr-toggle as the post-commit
    *  notification. */
   private dispatchingCollapse = false;
   private requestCollapse(next: boolean): void {
@@ -703,17 +694,12 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     try {
       requestThenCommit({
         requestDetail: { expanded: !next },
-        emitRequest: (proposal, init: { cancelable: true }) => {
-          const request = this.emit('lr-toggle-request', proposal, init);
-          const legacy = this.emit('lr-collapse-request', { collapsed: next }, init);
-          if (legacy.defaultPrevented) request.preventDefault();
-          return request;
-        },
+        emitRequest: (proposal, init: { cancelable: true }) =>
+          this.emit('lr-toggle-request', proposal, init),
         guard: collapseWriteGuardFor(this),
         commit: () => {
           if (this.collapsed !== previous) return;
           this.collapsed = next;
-          this.emit('lr-collapse-change', { collapsed: next });
           this.emit('lr-toggle', { expanded: !next });
         },
       });
@@ -787,8 +773,8 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
         <div part="header">
           <div part="title">
             ${renderInertPresentation(
-              html`<slot name="start"><slot name="icon"></slot></slot>`,
-              { part: 'icon', hidden: !this.slotPresence.has('start') && !this.slotPresence.has('icon') },
+              html`<slot name="start"></slot>`,
+              { part: 'icon', hidden: !this.slotPresence.has('start') },
             )}
             <div part="label-group">
               <span part="label" ?hidden=${!hasLabel && !this.slotPresence.has('label')}

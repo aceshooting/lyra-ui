@@ -60,8 +60,8 @@ export interface LyraRagAnswerEventMap {
  * Both child citation signals (`lr-citation-activate` and `lr-citation-open`) are contained and
  * translated to this component's single `lr-citation-select` event, with `section` identifying
  * whether the answer citation row or grounding summary owned the badge and `action` which signal
- * it was. The generated source cards' `lr-open` crosses this host; their `lr-expand`, the source
- * list's `lr-toggle` and the Markdown renderer's housekeeping events stay inside.
+ * it was. The generated source cards' `lr-open` crosses this host; the source cards' and the source
+ * list's `lr-toggle`, and the Markdown renderer's housekeeping events stay inside.
  *
  * @customElement lr-rag-answer
  * @slot answer - Replaces the data-driven Markdown answer body.
@@ -450,7 +450,6 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
               .label=${this.localize('ragAnswerSources')}
               expanded
               @lr-toggle=${this.stopGeneratedEvent}
-              @lr-expand=${this.stopGeneratedEvent}
               >${this.renderSourceItems(sources)}</lr-source-list
             >
           </section>`

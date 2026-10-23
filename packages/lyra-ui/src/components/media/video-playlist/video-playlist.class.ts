@@ -139,7 +139,6 @@ function trackSnapshot(
  *   event.
  * @event {FocusEvent} blur - Relayed once from a playlist row as a bubbling, composed native
  *   event.
- * @csspart base - Deprecated alias on the same root node as `video-playlist`.
  * @csspart video-playlist - Root video-and-playlist layout.
  * @csspart playlist - Playlist sidebar container.
  * @csspart playlist-duration - Duration text within a playlist item.
@@ -870,7 +869,7 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
           true,
         ));
     return html`
-      <div part="base video-playlist">
+      <div part="video-playlist">
         <div data-video-stage>
           <slot @slotchange=${this.onSlotChange}></slot>
         </div>

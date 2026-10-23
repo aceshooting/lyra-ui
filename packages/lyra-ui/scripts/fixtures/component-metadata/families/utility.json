@@ -31,33 +31,5 @@
       "lr-visually-hidden"
     ]
   },
-  "deprecations": [
-    {
-      "tag": "lr-icon",
-      "kind": "property",
-      "name": "autoWidth",
-      "attribute": "auto-width",
-      "since": "8.0.0",
-      "replacement": {
-        "kind": "property",
-        "name": "canvas",
-        "usage": "canvas=\"auto\""
-      },
-      "removalNotBefore": "10.0.0",
-      "rationale": "autoWidth is a boolean compatibility spelling that cannot express fixed canvas sizes; canvas covers both automatic and explicit sizing. That version is a policy floor, not a plan: `wa-icon` still publishes its own deprecated `auto-width` attribute, so this alias is removed only when upstream's is."
-    },
-    {
-      "tag": "lr-known-date",
-      "kind": "part",
-      "name": "label",
-      "since": "8.0.0",
-      "replacement": {
-        "kind": "part",
-        "name": "form-control-label",
-        "usage": "::part(form-control-label)"
-      },
-      "removalNotBefore": "10.0.0",
-      "rationale": "The form-control-label part matches the shared form-control vocabulary; label remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-known-date` still publishes its own deprecated `label` part, so this alias is removed only when upstream's is."
-    }
-  ]
+  "deprecations": []
 }

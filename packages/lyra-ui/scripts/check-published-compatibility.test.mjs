@@ -58,7 +58,7 @@ test('reviewed descriptor/archive pins fail closed before accepting changed evid
   } finally { await rm(temp, { recursive: true, force: true }); }
 });
 
-test('actual source retirement partition agrees with verified history and preserves protected policies', async () => {
+test('actual source retirement partition agrees with verified and compact history', async () => {
   const { compatibilityKey } = await import('./published-compatibility.mjs');
   const verified = await checkPublishedCompatibility(directory);
   const retired = new Set(verified.retirements.map(entry => compatibilityKey(entry.key)));
@@ -87,16 +87,18 @@ test('actual source retirement partition agrees with verified history and preser
   assert.deepEqual([...retired].sort(), [...previousCohort, ...currentCohort].sort(),
     'The complete published removal cohorts must retire together');
   assert.equal(latestFacts.records.length - currentCohort.length, 8,
-    'All published upstream holds must survive');
+    'The published capture identifies eight former upstream holds');
   const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
   const context = await readCurrentCompatibilityContext(packageRoot);
-  const historicalKeys = new Set(verified.captures.flatMap(entry => entry.facts.records.map(record => compatibilityKey(record.key))));
+  const compact = JSON.parse(await readFile(join(directory, 'retirements-30.0.0.json'), 'utf8'));
+  const allRetired = new Set([...retired, ...compact.retirements.map(entry => compatibilityKey(entry.key))]);
+  const allFacts = [...verified.captures.flatMap(entry => entry.facts.records), ...compact.capture.records];
+  const historicalKeys = new Set(allFacts.map(record => compatibilityKey(record.key)));
   assert.deepEqual(Object.keys(context.records).sort(), [...historicalKeys].sort());
-  for (const published of verified.captures.flatMap(entry => entry.facts.records)) {
-    const key = compatibilityKey(published.key);
-    assert.equal(context.records[key].state, retired.has(key) ? 'retired' : 'current', key);
-    assert.deepEqual(context.records[key].policy, published.policy, key);
-    if (!retired.has(key)) assert.equal(context.records[key].state, 'current', key);
+  const latestPolicies = new Map(allFacts.map(record => [compatibilityKey(record.key), record.policy]));
+  for (const [key, policy] of latestPolicies) {
+    assert.equal(context.records[key].state, allRetired.has(key) ? 'retired' : 'current', key);
+    assert.deepEqual(context.records[key].policy, policy, key);
   }
 });
 

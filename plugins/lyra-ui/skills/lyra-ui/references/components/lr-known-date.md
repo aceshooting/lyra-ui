@@ -7,9 +7,9 @@
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecated part** `label` since `8.0.0`; use part `::part(form-control-label)`; removal not before `10.0.0` — The form-control-label part matches the shared form-control vocabulary; label remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-known-date` still publishes its own deprecated `label` part, so this alias is removed only when upstream's is.
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -112,8 +112,7 @@ when native validity fails.
 **CSS parts:** `base`, `known-date`, and `form-control` are aliases on the same outer wrapper;
 `fieldset` (the `<fieldset>` grouping the fields —
 carries `aria-label` when `accessibleLabel` is set), `legend` (the `<legend>`; hidden when there is
-no label, and grows a `*` suffix while `required`), `form-control-label` (`label` is its deprecated
-compatibility alias), `fields` / `form-control-input` (aliases on the flex row), `field` (one field
+no label, and grows a `*` suffix while `required`), `form-control-label`, `fields` / `form-control-input` (aliases on the flex row), `field` (one field
 block, repeated three times, `data-field="day"|"month"|"year"`) plus its matching `field-day`,
 `field-month`, or `field-year` token, `field-input` (the native
 `<input type="text" inputmode="numeric">` inside it, same `data-field` marker), `field-label` (the
@@ -131,12 +130,6 @@ restores `visibility:visible` remains exposed. Updates also stay silent while th
 composed ancestor is hidden, then the current error announces if it becomes newly visible. This
 tracking follows nested forwarding slots as well: mutations and reassignment of their flattened
 assigned nodes update the announcement without requiring the wrapper component to re-render.
-
-The `label` part alias was deprecated in 8.0.0 in favor of the shared form vocabulary
-`form-control-label`. Both names remain on the same node during the compatibility window; use
-`::part(form-control-label)` in new CSS. Removal is not scheduled: Web Awesome still publishes its
-own deprecated `label` part on `<wa-known-date>`, and a mirrored tag owes its whole upstream
-surface, so the alias goes only when upstream's does.
 
 **The required marker.** The `*` the legend grows while `required` is the library's shared
 required-field marker, and it takes the same three consumer-settable properties every other

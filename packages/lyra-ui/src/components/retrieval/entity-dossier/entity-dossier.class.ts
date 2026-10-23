@@ -64,15 +64,10 @@ export interface LyraEntityDossierConfidence {
 export interface LyraEntityDossierEventMap
   extends Omit<LyraNeighborListEventMap, 'lr-entity-select'>,
     Omit<LyraChunkInspectorEventMap, 'lr-toggle'>,
-    Omit<LyraProvenancePanelEventMap, 'lr-entity-activate' | 'lr-entity-select'>,
+    Omit<LyraProvenancePanelEventMap, 'lr-entity-select'>,
     Omit<LyraTabGroupEventMap, 'lr-tab-show'> {
   /** Canonical "user picked this entity" gesture from any composed child; a path strip adds `occurrenceIndex`. */
   'lr-entity-select': CustomEvent<{ entityId: string; occurrenceIndex?: number }>;
-  /** @deprecated Use `lr-entity-select`. */
-  'lr-entity-activate': CustomEvent<{
-    entityId: string;
-    occurrenceIndex?: number;
-  }>;
   'lr-tab-show': CustomEvent<{ tabId: LyraEntityDossierTab }>;
 }
 
@@ -82,7 +77,7 @@ export interface LyraEntityDossierEventMap
  * Supporting chunks (`lr-chunk-inspector`), and Provenance (`lr-provenance-panel`). Pure layout —
  * it never fetches, ranks, or mutates graph/document state, and never re-renders what any of those
  * five composed components already render themselves; every one of their own events (`
- * lr-entity-select`, `lr-entity-activate`, `lr-node-expand`, `lr-chunk-open`, `lr-chunk-toggle`,
+ * lr-entity-select`, `lr-node-expand`, `lr-chunk-open`,
  * `lr-toggle`, `lr-tab-show`, plus the provenance panel's own conduit set — `lr-entity-open`, `lr-drill`,
  * `lr-relation-activate`) bubbles through unmodified (`composed: true` crosses this component's own
  * shadow boundary with no re-dispatch needed), except direct chunk-inspector `lr-toggle` events,
@@ -112,14 +107,10 @@ export interface LyraEntityDossierEventMap
  * @customElement lr-entity-dossier
  * @event lr-entity-select - Surfaced unchanged from the embedded entity card, neighbor list, or
  *   the provenance panel's community card or path strip. `detail: { entityId, occurrenceIndex? }`.
- * @event lr-entity-activate - Deprecated alias of `lr-entity-select` from the provenance panel's
- *   community card or path strip, dispatched right after it.
  * @event lr-node-expand - Surfaced unchanged from the embedded neighbor list.
  *   `detail: { nodeId }`.
  * @event lr-chunk-open - Surfaced unchanged from the embedded chunk inspector.
  *   `detail: { chunkId, sourceId, anchor? }`.
- * @event lr-chunk-toggle - Surfaced unchanged from the embedded chunk inspector.
- *   `detail: { chunkId, expanded }`.
  * @event lr-toggle - A section or chunk disclosure changed. Direct supporting-chunk toggles
  *   gain `section: 'chunks'`; provenance-panel toggles pass through unchanged.
  *   `detail: { section, expanded, itemId? }`.

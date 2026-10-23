@@ -39,32 +39,5 @@
       "lr-tree-item"
     ]
   },
-  "deprecations": [
-    {
-      "tag": "lr-flow-node",
-      "kind": "slot",
-      "name": "icon",
-      "since": "26.0.0",
-      "replacement": {
-        "kind": "slot",
-        "name": "start",
-        "usage": "slot=\"start\""
-      },
-      "removalNotBefore": "28.0.0",
-      "rationale": "The header glyph uses the shared start slot vocabulary; existing icon slot content remains rendered during migration."
-    },
-    {
-      "tag": "lr-sparkline",
-      "kind": "part",
-      "name": "base",
-      "since": "8.0.0",
-      "replacement": {
-        "kind": "part",
-        "name": "sparkline",
-        "usage": "::part(sparkline)"
-      },
-      "removalNotBefore": "10.0.0",
-      "rationale": "The sparkline part names the rendered SVG wrapper unambiguously; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-sparkline` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is."
-    }
-  ]
+  "deprecations": []
 }

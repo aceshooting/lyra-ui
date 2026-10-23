@@ -49,14 +49,8 @@ export interface LyraRagEvaluationRun {
 }
 export interface LyraRagEvalDashboardEventMap {
   'lr-metric-change-request': CustomEvent<{ metricId: string }>;
-  /** @deprecated Use `lr-metric-change-request`. */
-  'lr-metric-change': CustomEvent<{ metricId: string }>;
   'lr-slice-change-request': CustomEvent<{ slice: string }>;
-  /** @deprecated Use `lr-slice-change-request`. */
-  'lr-slice-change': CustomEvent<{ slice: string }>;
   'lr-run-activate': CustomEvent<{ runId: string; run: LyraRagEvaluationRun }>;
-  /** @deprecated Use `lr-run-activate`. */
-  'lr-run-change': CustomEvent<{ run: LyraRagEvaluationRun }>;
 }
 
 /** Caps how many of the most recent evaluation runs mount as `[part="run"]` buttons (and feed the
@@ -92,13 +86,9 @@ const MAX_SLICE_CONTROLS = 500;
  * @customElement lr-rag-eval-dashboard
  * @event lr-metric-change-request - A metric was activated; the host decides whether to change
  *   `metricId`. `detail: { metricId }`.
- * @event lr-metric-change - Deprecated alias of `lr-metric-change-request`, dispatched right after it.
  * @event lr-slice-change-request - An evaluation slice was activated; the host decides whether to
  *   change `slice`. `detail: { slice }`.
- * @event lr-slice-change - Deprecated alias of `lr-slice-change-request`, dispatched right after it.
  * @event lr-run-activate - An evaluation run was activated. `detail: { runId, run }`.
- * @event lr-run-change - Deprecated alias of `lr-run-activate` (`detail: { run }`), dispatched right
- *   after it.
  * @csspart input-limit - Original run admission-loss notice.
  * @csspart slices-limit - Notice of available slices outside the bounded controls.
  * @csspart base - The named dashboard region.
@@ -329,17 +319,14 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
 
   private requestMetric(metricId: string): void {
     this.emit('lr-metric-change-request', { metricId });
-    this.emit('lr-metric-change', { metricId });
   }
 
   private requestSlice(slice: string): void {
     this.emit('lr-slice-change-request', { slice });
-    this.emit('lr-slice-change', { slice });
   }
 
   private activateRun(run: LyraRagEvaluationRun): void {
     this.emit('lr-run-activate', { runId: run.id, run });
-    this.emit('lr-run-change', { run });
   }
 
   private onRunKeyDown(event: KeyboardEvent, index: number, count: number): void {

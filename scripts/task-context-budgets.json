@@ -45,7 +45,8 @@
       "published23Utf8Bytes": null,
       "reviewedCheckpointUtf8Bytes": 19080,
       "reviewedCheckpointProxyTokens": 4770,
-      "ceilingUtf8Bytes": 22000
+      "ceilingUtf8Bytes": 27420,
+      "$comment": "The unchanged full entry index and complete v29-to-v30 migration guide measure 27,420 UTF-8 bytes including the existing path/label wrappers. This exact reviewed ceiling preserves the full upgrade route; historical checkpoint measurements remain unchanged."
     }
   }
 }

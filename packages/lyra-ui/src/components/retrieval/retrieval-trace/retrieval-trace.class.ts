@@ -115,8 +115,6 @@ function toLyraChunk(chunk: RetrievalChunk): LyraChunk {
 
 export interface LyraRetrievalTraceEventMap {
   'lr-stage-select': CustomEvent<{ stageId: string }>;
-  /** @deprecated Use `lr-toggle` and read `itemId`; this alias remains during its deprecation window. */
-  'lr-stage-toggle': CustomEvent<{ stageId: string; expanded: boolean }>;
   'lr-toggle': CustomEvent<{ expanded: boolean; itemId: string; stageId?: string }>;
   'lr-stage-chunk-action': CustomEvent<LyraEventDetailSnapshot<LyraRetrievalTraceChunkActionDetail>>;
 }
@@ -144,10 +142,9 @@ export type LyraRetrievalTraceChunkActionDetail =
  *
  * @customElement lr-retrieval-trace
  * @event lr-stage-select - A stage's bar was activated in the timeline (click, Enter, Space). `detail: { stageId }`.
- * @event lr-stage-toggle - A stage's evidence panel was expanded or collapsed (via its own toggle,
- * or implicitly by selecting that stage in the timeline for the first time). `detail: { stageId, expanded }`.
- * @event lr-toggle - A stage changed (`{ expanded, itemId }`) or a nested chunk changed
- *   (`{ expanded, itemId, stageId }`).
+ * @event lr-toggle - A stage's evidence panel was expanded or collapsed (via its own toggle, or
+ *   implicitly by selecting that stage in the timeline for the first time) (`{ expanded, itemId }`),
+ *   or a nested chunk changed (`{ expanded, itemId, stageId }`).
  * @event lr-stage-chunk-action - A chunk inside a stage was opened or expanded. The discriminated
  *   detail always includes `stageId` and `action`, so consumers never infer ownership from DOM ancestry.
  * @csspart base - The root wrapper.
@@ -307,7 +304,6 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
     if (expanded) next.add(stageId);
     else next.delete(stageId);
     this.expandedStageIds = next;
-    this.emit('lr-stage-toggle', { stageId, expanded });
     this.emit('lr-toggle', { itemId: stageId, expanded });
   }
 
@@ -328,7 +324,6 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
       const next = new Set(this.expandedStageIds);
       next.add(stageId);
       this.expandedStageIds = next;
-      this.emit('lr-stage-toggle', { stageId, expanded: true });
       this.emit('lr-toggle', { itemId: stageId, expanded: true });
     }
   };
@@ -363,6 +358,12 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
             @lr-toggle=${(event: CustomEvent<{ expanded: boolean; itemId: string }>) => {
               event.stopPropagation();
               this.emit('lr-toggle', { ...event.detail, stageId: stage.id });
+              this.emit('lr-stage-chunk-action', {
+                stageId: stage.id,
+                action: 'expand',
+                chunkId: event.detail.itemId,
+                expanded: event.detail.expanded,
+              });
             }}
             @lr-chunk-open=${(
               event: CustomEvent<{
@@ -375,16 +376,6 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
               this.emit('lr-stage-chunk-action', {
                 stageId: stage.id,
                 action: 'open',
-                ...event.detail,
-              });
-            }}
-            @lr-chunk-toggle=${(
-              event: CustomEvent<{ chunkId: string; expanded: boolean }>
-            ) => {
-              event.stopPropagation();
-              this.emit('lr-stage-chunk-action', {
-                stageId: stage.id,
-                action: 'expand',
                 ...event.detail,
               });
             }}

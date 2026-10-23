@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecated event** `lr-stage-toggle` since `26.0.0`; use event `@lr-toggle`; removal not before `28.0.0` — lr-toggle shares the itemId disclosure vocabulary and correlates nested chunk toggles; the older stage event remains available during the deprecation window.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 18 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -55,9 +55,8 @@ unknown> }` — `chunks` is **`RetrievalChunk` from `@aceshooting/lyra-ui/ai`** 
 - `frame: LyraFrame = 'card'` (reflected) — container treatment. `'card'` keeps each `evidence-row`'s bordered box; `'plain'` removes the border and corner radius from every `evidence-row`, for use inside an already-bordered container.
 
 **Events:** `lr-stage-select` (`detail: { stageId: string }`, a stage's bar was activated — click,
-Enter, Space), `lr-stage-toggle` (`detail: { stageId: string; expanded: boolean }`, deprecated alias of `lr-toggle`; an evidence panel was
-toggled, either by its own button or implicitly by selecting that stage in the timeline for the
-first time), `lr-toggle` (`{ expanded, itemId }` for a stage or
+Enter, Space), `lr-toggle` (`{ expanded, itemId }` for a stage's evidence panel toggled, either by its own button or implicitly by selecting that stage in the timeline for the
+first time, or
 `{ expanded, itemId, stageId }` for a nested chunk), and `lr-stage-chunk-action` (`detail: LyraRetrievalTraceChunkActionDetail`, a
 discriminated `{ stageId, action: 'open', chunkId, sourceId, anchor? } | { stageId, action: 'expand', chunkId,
 expanded }`). Generic nested chunk events are stopped at the trace boundary so every action has

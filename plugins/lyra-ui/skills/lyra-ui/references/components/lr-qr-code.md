@@ -7,9 +7,9 @@
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
-- **Deprecated part** `base` since `8.2.3`; use part `::part(qr-code)`; removal not before `10.0.0` — The qr-code part names the rendered code wrapper explicitly; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-qr-code` still publishes `base` as a deprecated part and `sl-qr-code` still publishes it as its only, undeprecated part, so this alias stays for as long as either upstream ships it.
+- **Deprecations** none
 - **Optional peers** `qrcode` — see `llms/peers.md`
-- **Themeable via** 6 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -52,8 +52,7 @@ ratio. It degrades uniformly only to stay within 4,096 pixels per dimension and 
 pixels. Modules span the full canvas with no injected quiet zone; add host padding when a scanner
 or physical output needs one.
 
-**CSS parts:** `base` and `qr-code` are aliases on the same outer wrapper; `canvas`, `empty`,
-`loading`, and `error`. **CSS custom properties:**
+**CSS parts:** `qr-code` (the outer wrapper); `canvas`, `empty`, `loading`, and `error`. **CSS custom properties:**
 `--lr-qr-code-fill` and `--lr-qr-code-bg`.
 
 `error` is ordinary localized visible text, not a shadow live region. A missing peer or encode

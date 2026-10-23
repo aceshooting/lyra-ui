@@ -1,0 +1,61 @@
+[
+  {
+    "input": "wa-accordion-item::part(base) { opacity: 0.5; }",
+    "expected": "lr-accordion-item::part(accordion-item) { opacity: 0.5; }",
+    "file": "migration.css",
+    "tag": "lr-accordion-item",
+    "part": "accordion-item"
+  },
+  {
+    "input": "wa-file-input::part(base) { opacity: 0.5; }",
+    "expected": "wa-file-input::part(base) { opacity: 0.5; }",
+    "file": "migration.css",
+    "tag": "lr-file-input",
+    "part": "file-input",
+    "resolved": "lr-file-input::part(file-input) { opacity: 0.5; }",
+    "warning": "WARNING_REQUIRED"
+  },
+  {
+    "input": "wa-qr-code::part(base) { opacity: 0.5; }",
+    "expected": "lr-qr-code::part(qr-code) { opacity: 0.5; }",
+    "file": "migration.css",
+    "tag": "lr-qr-code",
+    "part": "qr-code"
+  },
+  {
+    "input": "wa-sparkline::part(base) { opacity: 0.5; }",
+    "expected": "lr-sparkline::part(sparkline) { opacity: 0.5; }",
+    "file": "migration.css",
+    "tag": "lr-sparkline",
+    "part": "sparkline"
+  },
+  {
+    "input": "wa-video-playlist::part(base) { opacity: 0.5; }",
+    "expected": "lr-video-playlist::part(video-playlist) { opacity: 0.5; }",
+    "file": "migration.css",
+    "tag": "lr-video-playlist",
+    "part": "video-playlist"
+  },
+  {
+    "input": "wa-file-input::part(label) { opacity: 0.5; }",
+    "expected": "wa-file-input::part(label) { opacity: 0.5; }",
+    "file": "migration.css",
+    "tag": "lr-file-input",
+    "part": "form-control-label",
+    "resolved": "lr-file-input::part(form-control-label) { opacity: 0.5; }",
+    "warning": "WARNING_REQUIRED"
+  },
+  {
+    "input": "wa-known-date::part(label) { opacity: 0.5; }",
+    "expected": "lr-known-date::part(form-control-label) { opacity: 0.5; }",
+    "file": "migration.css",
+    "tag": "lr-known-date",
+    "part": "form-control-label"
+  },
+  {
+    "input": "<wa-icon auto-width></wa-icon>",
+    "expected": "<lr-icon canvas=\"auto\"></lr-icon>",
+    "file": "migration.html",
+    "tag": "lr-icon"
+  }
+]

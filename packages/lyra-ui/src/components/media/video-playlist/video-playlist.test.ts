@@ -156,7 +156,8 @@ describe('lr-video-playlist public contract', () => {
     expect((el.shadowRoot!.querySelector('slot')) != null).to.equal(true);
 
     const root = el.shadowRoot!.querySelector('[part~="video-playlist"]')!;
-    expect(root.getAttribute('part')!.split(/\s+/u)).to.include.members(['base', 'video-playlist']);
+    expect(root.getAttribute('part')!.split(/\s+/u)).to.deep.equal(['video-playlist']);
+    expect(el.shadowRoot!.querySelectorAll('[part~="base"]').length).to.equal(0);
     for (const part of [
       'playlist',
       'playlist-duration',

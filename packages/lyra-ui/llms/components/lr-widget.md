@@ -7,9 +7,7 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecated event** `lr-collapse-change` since `26.0.0`; use event `@lr-toggle`; removal not before `28.0.0` — The shared toggle event uses expanded polarity while the older event retains its collapsed field; consumers must review payload handling.
-- **Deprecated event** `lr-collapse-request` since `26.0.0`; use event `@lr-toggle-request`; removal not before `28.0.0` — The shared cancelable request uses expanded polarity while the older event retains its collapsed field; consumers must review payload handling.
-- **Deprecated slot** `icon` since `26.0.0`; use slot `slot="start"`; removal not before `28.0.0` — The title glyph uses the shared start slot vocabulary; existing icon slot content remains rendered during migration.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 16 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -72,12 +70,8 @@ TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
 
 **Events:** `lr-toggle-request` (cancelable; `detail: { expanded }` proposes the inverse of
 `collapsed`) and `lr-toggle` (accepted state, same detail) are the shared disclosure pair for the
-built-in toggle. The legacy `lr-collapse-request` (cancelable; `detail: { collapsed }` is the state proposed by the
-built-in collapse toggle. Call `preventDefault()` to leave `collapsed` and any persisted state
-unchanged. It is not emitted when a consumer assigns `collapsed` directly), `lr-collapse-change`
-(non-cancelable; `detail: { collapsed }` is the accepted built-in-toggle state. It is not emitted
-when a consumer assigns `collapsed` directly) remain available but are deprecated. Either request
-can veto the toggle. `lr-fullscreen-request` (cancelable; `detail: {
+built-in toggle. Call `preventDefault()` on the request to leave `collapsed` and any persisted state
+unchanged. Neither is emitted when a consumer assigns `collapsed` directly. `lr-fullscreen-request` (cancelable; `detail: {
 fullscreen }` is the state proposed by the fullscreen toggle, Escape, or a backdrop click. Call
 `preventDefault()` to leave `fullscreen` unchanged. Not emitted when a consumer assigns
 `fullscreen` directly), `lr-fullscreen-change` (non-cancelable; `detail: { fullscreen }` is the
@@ -99,8 +93,7 @@ this shadow root, so a retargeted `click` names no view. When an activation _doe
 `activeViewId` directly)
 
 **Slots:** default (the panel body, rendered only while `views` is empty), `start` (optional leading
-decorative icon in the title row; its flattened subtree is inert and aria-hidden; `icon` is the
-deprecated legacy slot), `label` (rich label content,
+decorative icon in the title row; its flattened subtree is inert and aria-hidden), `label` (rich label content,
 overrides the `label` attribute), `sublabel` (rich sublabel content, overrides the `sublabel`
 attribute), `actions` (header action controls,
 rendered before the collapse/expand buttons), `collapse-icon` (replaces the built-in chevron in the
@@ -113,7 +106,7 @@ reading the `fullscreen` attribute; its assigned content is decorative, inert, a
 the outer toggle remains the only action; only meaningful while `expandable`), and one `view-{viewId}`
 slot per `views` entry, used instead of the default slot
 
-**CSS parts:** `base`, `header`, `title`, `icon` (wrapper around the `icon` slot, hidden entirely when
+**CSS parts:** `base`, `header`, `title`, `icon` (wrapper around the `start` slot, hidden entirely when
 empty), `label-group` (wrapper around the label and sublabel), `label`, `sublabel`, `actions`,
 `view-toggles` (the header toggle-button group, only rendered when `views` is non-empty),
 `view-toggle` (a single view toggle button), `view-icon` (a decorative view glyph whose rendered
@@ -202,7 +195,7 @@ panel'`) and `widgetExpand` (default `'Expand panel'`) keys.
   framework binding, including one that pins the property to its own default `false` — always wins
   over a `storageKey`-restored value for that mount, and skips the restore entirely. For
   uncontrolled persistence, don't bind `collapsed`: read the restored value back after
-  `updateComplete` and track further changes from `lr-collapse-change`, pushing the property down
+  `updateComplete` and track further changes from `lr-toggle`, pushing the property down
   imperatively only for later external changes.
 - prior to this release the collapse-button `aria-label` was localized through `lr-dock-panel`'s
   own `dockPanelCollapse`/`dockPanelExpand` keys (a borrowed, differently-named pair). A locale

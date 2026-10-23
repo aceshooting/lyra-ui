@@ -30,7 +30,6 @@ export interface ChangeReviewFile {
 }
 export interface LyraChangeReviewEventMap {
   'lr-change-decision-request': CustomEvent<{ fileId: string; hunkId: string; decision: Exclude<ChangeReviewDecision, 'pending'> }>;
-  'lr-change-decision': CustomEvent<{ fileId: string; hunkId: string; decision: Exclude<ChangeReviewDecision, 'pending'> }>;
 }
 const MAX_CHANGES = 200;
 
@@ -45,7 +44,6 @@ const MAX_CHANGES = 200;
  *
  * @customElement lr-change-review
  * @event lr-change-decision-request - A keep/discard request. `detail: { fileId, hunkId, decision }`.
- * @event lr-change-decision - Deprecated alias of `lr-change-decision-request`, dispatched right after it.
  * @csspart base - The named review group.
  * @csspart heading - The review heading.
  * @csspart file - A file disclosure.
@@ -111,7 +109,6 @@ export class LyraChangeReview extends LyraElement<LyraChangeReviewEventMap> {
     this.decisionDispatching = true;
     try {
       this.emit('lr-change-decision-request', { fileId: file.id, hunkId: hunk.id, decision });
-      this.emit('lr-change-decision', { fileId: file.id, hunkId: hunk.id, decision });
     } finally {
       this.decisionDispatching = false;
     }

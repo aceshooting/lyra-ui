@@ -1,12 +1,11 @@
 ## Current event migration
 
-Listen for `lr-entity-select` from community cards and relationship paths. Their
-`lr-entity-activate` compatibility alias still fires immediately afterward, and can be removed
-only after its published deprecation window. Retrieval selection and dashboard events likewise
-retain their documented compatibility aliases; use each component's canonical event for new code.
-Disclosure controls emit `lr-toggle` with `expanded` and, for an item, `itemId`; the older
-component-specific event names remain available. The `lyra-v25` migration profile reports
-detail or event-reach changes that cannot be rewritten mechanically.
+Listen for `lr-entity-select` from community cards and relationship paths, and for
+`lr-selection-change` from retrieval results and the source picker. Dashboard events are
+`lr-metric-change-request`, `lr-slice-change-request` and `lr-run-activate`. Disclosure controls emit
+`lr-toggle` with `expanded` and, for an item, `itemId`; the older component-specific event names are
+no longer emitted. The `lyra-v25` migration profile reports detail or event-reach changes that
+cannot be rewritten mechanically.
 
 ## Breaking changes in 23.0.0
 
@@ -17,8 +16,8 @@ use `edge-distance`, `with-edge-labels`, and explorer `query`. Source-card headi
 native `title` remains an independent browser tooltip.
 
 Listen for `lr-edge-enter`/`lr-edge-leave` with `edgeId`, `lr-community-activate`,
-`lr-chunk-toggle`, or memory-panel `lr-memory-toggle`; the aliases removed in that release are no
-longer emitted. Graph and explorer use `lr-node-activate`/`lr-edge-activate`. Source-card's own `lr-expand` event remains available. Style graph
+and `lr-toggle` for chunk and memory disclosures; the aliases removed in that release are no
+longer emitted. Graph and explorer use `lr-node-activate`/`lr-edge-activate`. Style graph
 nodes and edges with `--lr-graph-node-fill` and `--lr-graph-edge-color`; the old token fallbacks are removed.
 
 ## `lr-graph`
@@ -957,8 +956,7 @@ reverse?: boolean }`
   non-empty host `aria-label` makes
   the host the sole overall owner; an explicitly empty host label stays empty on the group
 
-**Events:** `lr-entity-select` (`detail: { entityId, occurrenceIndex }`, a node element activated;
-the deprecated alias `lr-entity-activate` follows with the same detail),
+**Events:** `lr-entity-select` (`detail: { entityId, occurrenceIndex }`, a node element activated),
 `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, an edge element activated —
 source/target resolved from the adjacent node elements, `undefined` when the path is malformed at
 that position. `occurrenceIndex` is the original supplied array position, so repeated entity ids
@@ -1024,7 +1022,7 @@ string; summary?: string; memberCount?: number }`; `memberCount` is a non-negati
 
 **Events:** `lr-drill` (`detail: { communityId }`, the drill button, header, or overflow chip — all three
 mean "show me this whole community"), `lr-entity-select` (`detail: { entityId }`, a member chip was
-activated; the deprecated alias `lr-entity-activate` follows with the same detail).
+activated).
 
 **Slots:** `actions` — extra header actions alongside the built-in drill button.
 
@@ -1090,7 +1088,7 @@ number; sourceId: string; title?: string; page?: string | number; anchor?: LyraC
   already holds instead of forcing a full offset/identity rebuild
 - `activeChunkId: string = ''` (attribute `active-chunk-id`)
 - `expandedChunkIds: string[] = []` (attribute: false) — ids of the chunks whose text is expanded.
-  The inspector updates its own copy on toggle _then_ emits `lr-chunk-toggle`; reassign to control
+  The inspector updates its own copy on toggle _then_ emits `lr-toggle`; reassign to control
   (a composing list keeps expansion here across scrolling and re-sorting)
 - `virtualizeAt: number = 50` (attribute `virtualize-at`)
 - `size: LyraSize = 'm'` (reflected) — row density on the shared size scale. `s` (and the smaller
@@ -1106,9 +1104,8 @@ number; sourceId: string; title?: string; page?: string | number; anchor?: LyraC
 
 **Events:** `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`, a chunk's title/open button was
 activated — the event a host routes into `lr-document-viewer`, setting `src` from `sourceId` and
-`anchor` from the chunk's own), `lr-chunk-toggle` (`detail: { chunkId, expanded }`, a chunk's text
-  toggle was activated, expanding or collapsing it; deprecated alias), and `lr-toggle` (`detail: { expanded, itemId }`)
-for the same disclosure. The internal virtual list's scroll and range
+`anchor` from the chunk's own), `lr-toggle` (`detail: { expanded, itemId }`, a chunk's text
+toggle was activated, expanding or collapsing it). The internal virtual list's scroll and range
 events stay inside the component.
 
 **Slots:** none.
@@ -1248,8 +1245,7 @@ string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat 
 **Events:** `lr-selection-change` (`detail: { selectedSourceIds }`, the complete updated leaf-id
 array, fired after every toggle including select-all. Also fired when a `sources` reassignment
 prunes a previously-selected id that is no longer a valid leaf. Not fired when a consumer sets
-`selectedSourceIds` directly; that assignment is normalized silently) and its deprecated alias
-`lr-sources-change`, dispatched right after it. The select-all checkbox's and the filter field's
+`selectedSourceIds` directly; that assignment is normalized silently). The select-all checkbox's and the filter field's
 `lr-checkbox-toggle-request`, native `input`/`change`, and `lr-input`/`lr-change` stay inside the
 component; `lr-selection-change` is the host-level report.
 
@@ -1350,12 +1346,10 @@ re-emits one contextual toggle at its boundary. Because the panel is a
 conduit, every affordance it renders also reaches a listener on the panel itself, and all are
 part of its typed event map: `lr-entity-select` (`detail: { entityId, occurrenceIndex? }`, from an
 entity chip, a community card member or a path-strip node — only the path strip carries
-`occurrenceIndex`), its deprecated alias `lr-entity-activate` (same detail, dispatched right after
-it by a community card member or path-strip node), `lr-entity-open` (`detail: { entityId }`, an entity chip double-click or
+`occurrenceIndex`), `lr-entity-open` (`detail: { entityId }`, an entity chip double-click or
 Space), `lr-drill` (`detail: { communityId }`, a community card's title, drill button, or overflow chip), and
 `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, a relationship path-strip
-edge), plus `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) and `lr-chunk-toggle`
-(`detail: { chunkId, expanded }`) from the chunk inspector.
+edge), plus `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) from the chunk inspector.
 
 **Slots:** none.
 
@@ -1758,8 +1752,8 @@ tokens — `--lr-color-border`, `--lr-color-border-subtle`, `--lr-color-surface`
   chrome. Use the shared `LyraFrame` type when authoring this property.
 - `disabled: boolean = false` (reflected) — turns off this card's OWN controls. The `title` button
   and the "Show more"/"Show less" `toggle` both render `disabled`, so neither one can emit `lr-open`
-  or `lr-expand` and neither remains in the tab order, and the card paints at
-  `--lr-opacity-disabled` with a `not-allowed` cursor on both. The one `lr-expand` a disabled card
+  or `lr-toggle` and neither remains in the tab order, and the card paints at
+  `--lr-opacity-disabled` with a `not-allowed` cursor on both. The one `lr-toggle` a disabled card
   can still emit is the automatic collapse when the `full` slot empties while expanded — that
   reports a state change the card genuinely made, exactly as it does when enabled. Both buttons
   carry the native `:disabled`, so `::part(title):disabled` / `::part(toggle):disabled` restyle the
@@ -1778,8 +1772,8 @@ tokens — `--lr-color-border`, `--lr-color-border-subtle`, `--lr-color-surface`
 
 **Events:**
 
-- `lr-expand` (`detail: { sourceId: string; expanded: boolean }`, deprecated alias of `lr-toggle`) — the per-card "Show
-  more"/"Show less" toggle was activated. Unrelated to the parent `lr-source-list`'s own
+- `lr-toggle` (`detail: { expanded: boolean; itemId: string }`) — the per-card "Show
+  more"/"Show less" toggle was activated, or the `full` slot emptied while expanded. Unrelated to the parent `lr-source-list`'s own
   expand/collapse, which only ever hides/shows the _set_ of cards, never a single card's own content.
 - `lr-toggle` (`detail: { expanded, itemId }`) — the same per-card disclosure change, including
   automatic collapse when the full slot empties.
@@ -1850,7 +1844,7 @@ time.
 - `lr-source-list` does not automatically build an “N sources” plural summary: provide
   `labelPlural` when that is wanted. Its no-label fallback is localized through
   `sourceListDefaultLabel`, and a per-instance `.strings` override reaches the rendered header.
-- `lr-source-card`'s own expand/collapse (`full` slot, `lr-expand` event) is completely
+- `lr-source-card`'s own expand/collapse (`full` slot, `lr-toggle` event) is completely
   independent of the parent list's `expanded`/`lr-toggle` — collapsing the list doesn't reset an
   individual card's `fullExpanded` state, and there is no cross-talk between the two components at
   all beyond DOM nesting.
@@ -1904,9 +1898,8 @@ shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape
 **Events:** composed child events reach the host (`composed: true`), with the direct supporting
 chunk toggle qualified by its section and tab changes projected to `tabId`: `lr-entity-select` (`detail: { entityId, occurrenceIndex? }`, surfaced from the
 embedded entity card, neighbor list, or the provenance panel's community card or path strip, which
-add `occurrenceIndex`), its deprecated alias `lr-entity-activate` (from those last two only), `lr-node-expand` (`detail: { nodeId }`),
-`lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`), `lr-chunk-toggle` (`detail: { chunkId,
-expanded }`), `lr-toggle` (`detail: { section, expanded, itemId? }`; the direct supporting-chunk
+add `occurrenceIndex`), `lr-node-expand` (`detail: { nodeId }`),
+`lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`), `lr-toggle` (`detail: { section, expanded, itemId? }`; the direct supporting-chunk
 inspector adds `section: 'chunks'`, while provenance-panel toggles pass through), and `lr-tab-show`
 (`detail: { tabId: LyraEntityDossierTab }`, where `LyraEntityDossierTab = 'relationships' | 'chunks'
 | 'provenance'` — also the `lr-tab-group` slot/tab ids). The Provenance tab's own controls reach the
@@ -2707,14 +2700,11 @@ their own section with ArrowUp/ArrowDown/Home/End. Secondary row controls remain
   — a pending per-item removal was approved. Offered on every item.
 - `lr-forget` (`detail: null`) — the pending "forget all long-term memories" bulk action was
   approved. Only rendered while `longTerm` is non-empty.
-- `lr-memory-toggle` (`detail: LyraMemoryExpandDetail` = `{ memoryId: string; scope: 'short-term' |
-'long-term'; expanded: boolean }`) — an item's provenance disclosure was toggled, expanding or
-collapsing it; deprecated alias of `lr-toggle`.
 - `lr-toggle` carries `{ expanded, itemId, memoryId, scope }` for a memory item's own disclosure.
   Nested provenance toggles are re-emitted once with their `section` and owning `memoryId`/`scope`.
 - The expanded item's other `lr-provenance-panel` events cross the panel and are part of its
-  typed event map: `lr-entity-select`, `lr-entity-activate` (deprecated alias),
-  `lr-entity-open`, `lr-drill`, `lr-relation-activate`, `lr-chunk-open` and `lr-chunk-toggle` (details
+  typed event map: `lr-entity-select`,
+  `lr-entity-open`, `lr-drill`, `lr-relation-activate` and `lr-chunk-open` (details
   as on `lr-provenance-panel`). The owning `[part="item"]` — `data-id`, `data-scope` — is on the
   event's `composedPath()`.
 
@@ -2823,8 +2813,8 @@ a successful global absence proof removes an ID. Complete canonical records are 
 provider `order`, independently of page/query order. The selected-record cache and pending user
 transaction survive paging, query changes and page retry. Selection failure exposes a separate
 retry without emitting a partial selection. External assignment and reconnect/adoption
-reconciliation are silent. A user toggle emits `lr-selection-change` and its guarded deprecated
-`lr-select` alias only after the current complete selection resolves.
+reconciliation are silent. A user toggle emits `lr-selection-change`
+only after the current complete selection resolves.
 
 Source selection event arrays and closed projected record fields are frozen; each record's
 `metadata` remains an opaque reference to the provider-owned value. The component neither deeply
@@ -2946,14 +2936,13 @@ string[]; chunks: RetrievalChunk[] }`) — the _complete_ updated selection, bot
   toggle. This derived detail is always canonicalized nonblank/first-wins regardless of the legacy
   `without-dedupe` switch. It is the only host-level report of a row toggle: the row checkbox's
   `lr-checkbox-toggle-request`, native `input`/`change`, and `lr-input`/`lr-change` stay inside the
-  component. Its deprecated alias `lr-select` (`detail: { chunkIds, chunks }`, the same
-  selection) is dispatched right after it.
+  component.
 - `lr-load-more` (`detail: null`) — from the virtual list's scroll-near-bottom detection while
   virtualized, or the `[part="load-more"]` button otherwise. Only fires while `hasMore` is true and
   `loading` is false.
 - `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) — forwarded verbatim from a row's
   `lr-chunk-inspector`; the event a host routes into `lr-document-viewer`. A row's
-  `lr-chunk-toggle` and the virtual list's scroll events stay inside: the component keeps each
+  `lr-toggle` and the virtual list's scroll events stay inside: the component keeps each
   row's "Show more" state itself, so it survives scrolling a virtualized row out and back and a
   re-sort.
 
@@ -3164,9 +3153,8 @@ unknown> }` — `chunks` is **`RetrievalChunk` from `@aceshooting/lyra-ui/ai`** 
 - `frame: LyraFrame = 'card'` (reflected) — container treatment. `'card'` keeps each `evidence-row`'s bordered box; `'plain'` removes the border and corner radius from every `evidence-row`, for use inside an already-bordered container.
 
 **Events:** `lr-stage-select` (`detail: { stageId: string }`, a stage's bar was activated — click,
-Enter, Space), `lr-stage-toggle` (`detail: { stageId: string; expanded: boolean }`, deprecated alias of `lr-toggle`; an evidence panel was
-toggled, either by its own button or implicitly by selecting that stage in the timeline for the
-first time), `lr-toggle` (`{ expanded, itemId }` for a stage or
+Enter, Space), `lr-toggle` (`{ expanded, itemId }` for a stage's evidence panel toggled, either by its own button or implicitly by selecting that stage in the timeline for the
+first time, or
 `{ expanded, itemId, stageId }` for a nested chunk), and `lr-stage-chunk-action` (`detail: LyraRetrievalTraceChunkActionDetail`, a
 discriminated `{ stageId, action: 'open', chunkId, sourceId, anchor? } | { stageId, action: 'expand', chunkId,
 expanded }`). Generic nested chunk events are stopped at the trace boundary so every action has
@@ -3247,7 +3235,7 @@ the single citation presentation/action owner; the answer-level duplicate citati
 Both child badge signals (`lr-citation-activate` and `lr-citation-open`) are stopped at the answer
 boundary and translated into that one section- and action-qualified `lr-citation-select` contract;
 a double-click reports two `activate`s then one `open`, so a host that only wants the open
-ignores the `activate`s. The generated source cards' `lr-expand`, the source list's `lr-toggle` and
+ignores the `activate`s. The generated source cards' and the source list's `lr-toggle` and
 the Markdown renderer's housekeeping events stay inside.
 
 **Slots:** `answer` replaces the data-driven Markdown body; `sources` replaces the data-driven
@@ -3655,8 +3643,7 @@ later changed omissions are politely announced.
 
 **Events:** `lr-metric-change-request` (`{ metricId }`), `lr-slice-change-request` (`{ slice }`) and
 `lr-run-activate` (`{ runId, run }`). All are controlled intents; the component does not mutate the
-corresponding selection properties. The deprecated `lr-metric-change`, `lr-slice-change` and
-`lr-run-change` (`{ run }`) are dispatched right after them.
+corresponding selection properties.
 
 **CSS parts:** `base`, `heading`, `slices`, `slice`, `slice-selected`, `metrics`, `metric`,
 `metric-selected`, `metric-category` (the caller-supplied category rendered visibly on each metric),

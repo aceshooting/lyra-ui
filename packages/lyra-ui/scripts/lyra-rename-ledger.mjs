@@ -681,6 +681,19 @@ function historicalMember(context, tag, kind, name) {
   const key = JSON.stringify(['member', tag, kind, name]);
   return context?.records?.[key] ?? context?.records?.[context?.aliases?.[key]] ?? null;
 }
+/** Follows a retired replacement through later retirements to the name that is current today. */
+function followReplacement(context, tag, replacement) {
+  let current = replacement;
+  for (let hops = 0; hops < 8 && isPlainObject(current); hops++) {
+    const successor = (context?.successors ?? []).find((item) => item.key.tag === tag && item.key.kind === current.kind && item.key.name === current.name);
+    if (successor) { current = successor.replacement; continue; }
+    const historical = historicalMember(context, tag, current.kind, current.name);
+    const next = historical?.state === 'retired' ? historical.policy?.replacement : null;
+    if (!isPlainObject(next) || ['host-css-property', 'component'].includes(next.kind)) break;
+    current = next;
+  }
+  return current;
+}
 function historicalSourceComponent(context, tag, record = null) {
   const historical = record ?? historicalMember(context, tag, 'component', tag);
   if (historical?.state !== 'retired') return null;
@@ -818,7 +831,9 @@ export function validateRenameLedger(ledger, { inventory, exportDeprecations = [
       const label = entryLabel(origin, 'detailFields', entry);
       const component = ownerFor(components, compatibilityContext, entry.tag);
       if (!component) findings.push(`${label}: component is not in the inventory`);
-      else if (!surfaceEntry(component, 'event', entry.event)) findings.push(`${label}: the event is not dispatched by ${entry.tag}`);
+      else if (!surfaceEntry(component, 'event', entry.event) && historicalMember(compatibilityContext, entry.tag, 'event', entry.event)?.state !== 'retired') {
+        findings.push(`${label}: the event is not dispatched by ${entry.tag}`);
+      }
     }
 
     for (const entry of profile.renames) {
@@ -848,7 +863,8 @@ export function validateRenameLedger(ledger, { inventory, exportDeprecations = [
         findings.push(`${label}: no deprecation record retires ${entry.from}`);
       } else {
         checkRecordWindow(label, record);
-        if (!replacementMatches(targetOwner, entry.kind, record, entry.to)) {
+        const chained = followReplacement(compatibilityContext, entry.tag, record.replacement);
+        if (!replacementMatches(targetOwner, entry.kind, record, entry.to) && !(chained?.kind === entry.kind && chained.name === entry.to)) {
           findings.push(`${label}: its deprecation record names a different replacement than ${entry.to}`);
         }
       }

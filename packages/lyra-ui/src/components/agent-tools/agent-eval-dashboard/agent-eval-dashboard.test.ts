@@ -236,7 +236,7 @@ describe('lr-agent-eval-dashboard', () => {
     );
   });
 
-  it('emits lr-metric-change from an operable metric selector', async () => {
+  it('emits lr-metric-change-request from an operable metric selector', async () => {
     const el = (await fixture(html`
       <lr-agent-eval-dashboard
         metric-id="first"
@@ -246,7 +246,7 @@ describe('lr-agent-eval-dashboard', () => {
         ]}
       ></lr-agent-eval-dashboard>
     `)) as LyraAgentEvalDashboard;
-    const event = oneEvent(el, 'lr-metric-change');
+    const event = oneEvent(el, 'lr-metric-change-request');
     (el.shadowRoot!.querySelector('[data-metric-id="second"]') as HTMLButtonElement).click();
     expect((await event).detail).to.deep.equal({ metricId: 'second' });
   });
@@ -504,14 +504,14 @@ describe('lr-agent-eval-dashboard heading', () => {
 });
 
 describe('lr-agent-eval-dashboard metric requests', () => {
-  it('requests a metric change through lr-metric-change-request, then the deprecated lr-metric-change alias', async () => {
+  it('requests a metric change through lr-metric-change-request, and no longer fires the removed lr-metric-change alias', async () => {
     const el = await fixture<LyraAgentEvalDashboard>(html`<lr-agent-eval-dashboard .metrics=${[{ id: 'a', label: 'A', value: 1 }]}></lr-agent-eval-dashboard>`);
     const seen: string[] = [];
     for (const name of ['lr-metric-change-request', 'lr-metric-change']) {
       el.addEventListener(name, (event) => seen.push(`${name}:${(event as CustomEvent<{ metricId: string }>).detail.metricId}`));
     }
     el.shadowRoot!.querySelector<HTMLButtonElement>('[part="metric"]')!.click();
-    expect(seen).to.deep.equal(['lr-metric-change-request:a', 'lr-metric-change:a']);
+    expect(seen).to.deep.equal(['lr-metric-change-request:a']);
   });
 });
 

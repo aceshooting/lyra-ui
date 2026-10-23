@@ -20,8 +20,8 @@ export const OptionalHeaderCopy: Story = {
 };
 
 function preventWidgetCollapse(event: Event): void {
-  const request = event as CustomEvent<{ collapsed: boolean }>;
-  if (request.detail.collapsed) request.preventDefault();
+  const request = event as CustomEvent<{ expanded: boolean }>;
+  if (!request.detail.expanded) request.preventDefault();
 }
 
 export const Default: Story = {
@@ -56,7 +56,7 @@ export const CancelableCollapse: Story = {
     docs: {
       description: {
         story:
-          'The `lr-collapse-request` event proposes a built-in toggle change before the widget changes its persisted `collapsed` property. This example vetoes collapse requests, so the existing `lr-collapse-change` event only fires after an accepted toggle.',
+          'The `lr-toggle-request` event proposes a built-in toggle change before the widget changes its persisted `collapsed` property. This example vetoes collapse requests, so the `lr-toggle` event only fires after an accepted toggle.',
       },
     },
   },
@@ -66,7 +66,7 @@ export const CancelableCollapse: Story = {
       sublabel="Collapse is vetoed"
       collapsible
       style="max-width: 28rem;"
-      @lr-collapse-request=${preventWidgetCollapse}
+      @lr-toggle-request=${preventWidgetCollapse}
     >
       <div style="padding: 1rem;">
         Click the chevron: the cancelable request leaves this body open.
@@ -291,7 +291,7 @@ export const DecorativeTitleAndViewIcons: Story = {
       ]}
       style="max-width: 28rem;"
     >
-      <span slot="icon">◈</span>
+      <span slot="start">◈</span>
       <button slot="actions" type="button">Export</button>
       <div slot="view-chart" style="padding: 1rem;">Chart view body.</div>
       <div slot="view-table" style="padding: 1rem;">Table view body.</div>

@@ -545,7 +545,7 @@ async function verifyPackedMigrationCli(fixtureDir) {
   const expected = [
     "import '@aceshooting/lyra-ui/components/lr-accordion-item.js';\n",
     '<lr-accordion-item>Panel</lr-accordion-item>\n',
-    'lr-accordion-item::part(base) { color: currentColor; }\n',
+    'lr-accordion-item::part(accordion-item) { color: currentColor; }\n',
   ];
   if (JSON.stringify(migrated) !== JSON.stringify(expected)) {
     throw new Error(`Packed migration CLI produced unexpected output:\n${migrated.join('\n')}`);

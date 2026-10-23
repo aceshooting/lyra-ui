@@ -15,6 +15,6 @@ function acknowledge(event: CustomEvent<{ fileId: string; hunkId: string; decisi
     ? { ...file, hunks: file.hunks.map((hunk) => hunk.id === event.detail.hunkId ? { ...hunk, decision: event.detail.decision } : hunk) }
     : file);
 }
-export const Default: Story = { render: () => html`<lr-change-review .files=${files} @lr-change-decision=${acknowledge}></lr-change-review>` };
+export const Default: Story = { render: () => html`<lr-change-review .files=${files} @lr-change-decision-request=${acknowledge}></lr-change-review>` };
 export const Readonly: Story = { render: () => html`<lr-change-review readonly .files=${files}></lr-change-review>` };
-export const NarrowRTL: Story = { render: () => html`<div dir="rtl" style="inline-size: 320px; max-inline-size: 100%;"><lr-change-review .files=${files} @lr-change-decision=${acknowledge}></lr-change-review></div>` };
+export const NarrowRTL: Story = { render: () => html`<div dir="rtl" style="inline-size: 320px; max-inline-size: 100%;"><lr-change-review .files=${files} @lr-change-decision-request=${acknowledge}></lr-change-review></div>` };

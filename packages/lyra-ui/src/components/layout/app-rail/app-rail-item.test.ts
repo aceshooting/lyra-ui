@@ -22,7 +22,7 @@ if (!customElements.get('app-rail-icon-forwarder')) {
 it("renders a labeled link with icon and label parts", async () => {
   const el = (await fixture(html`
     <lr-app-rail-item href="/inbox" aria-label="Inbox">
-      <span slot="icon" aria-hidden="true">📥</span>Inbox
+      <span slot="start" aria-hidden="true">📥</span>Inbox
     </lr-app-rail-item>
   `)) as LyraAppRailItem;
 
@@ -324,7 +324,7 @@ it("hardens links opened in a new browsing context", async () => {
 it("floors the row at the shared target size without inflating it from the icon box", async () => {
   const el = (await fixture(html`
     <lr-app-rail-item href="/inbox" aria-label="Inbox">
-      <span slot="icon" aria-hidden="true">📥</span>Inbox
+      <span slot="start" aria-hidden="true">📥</span>Inbox
     </lr-app-rail-item>
   `)) as LyraAppRailItem;
   const icon = el.shadowRoot!.querySelector('[part="icon"]')!;
@@ -355,7 +355,7 @@ it("is accessible", async () => {
 it("hides the icon slot wrapper from assistive tech even without a host aria-label", async () => {
   const el = (await fixture(html`
     <lr-app-rail-item href="/inbox">
-      <span slot="icon">📥</span>Inbox
+      <span slot="start">📥</span>Inbox
     </lr-app-rail-item>
   `)) as LyraAppRailItem;
   const icon = el.shadowRoot!.querySelector('[part="icon"]')!;
@@ -367,7 +367,7 @@ it('keeps flattened interactive icon content visible but inert and outside the f
     <div>
       <button id="before-app-rail-icon" type="button">Before</button>
       <lr-app-rail-item href="/inbox">
-        <app-rail-icon-forwarder slot="icon">
+        <app-rail-icon-forwarder slot="start">
           <button id="nested-app-rail-icon" type="button">Decorative icon control</button>
         </app-rail-icon-forwarder>
         Inbox
@@ -378,7 +378,7 @@ it('keeps flattened interactive icon content visible but inert and outside the f
   const el = root.querySelector<LyraAppRailItem>('lr-app-rail-item')!;
   const nested = root.querySelector<HTMLButtonElement>('#nested-app-rail-icon')!;
   const before = root.querySelector<HTMLButtonElement>('#before-app-rail-icon')!;
-  const slot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="icon"]')!;
+  const slot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="start"]')!;
 
   expect(slot.assignedElements({ flatten: true }).length).to.equal(1);
   expect(slot.closest<HTMLElement>('[inert]')?.getAttribute('aria-hidden')).to.equal('true');
@@ -388,6 +388,16 @@ it('keeps flattened interactive icon content visible but inert and outside the f
   nested.focus();
   expect(document.activeElement?.id).to.equal(before.id);
   await expect(el).to.be.accessible();
+});
+
+it('no longer projects the removed icon slot', async () => {
+  const el = await fixture<LyraAppRailItem>(
+    html`<lr-app-rail-item href="/inbox"><span id="removed-icon-slot" slot="icon">I</span>Inbox</lr-app-rail-item>`
+  );
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('slot[name="icon"]').length).to.equal(0);
+  expect(el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="start"]')!.assignedNodes().length).to.equal(0);
+  expect((el.querySelector('#removed-icon-slot') as HTMLElement).assignedSlot === null).to.equal(true);
 });
 
 it('marks the base part aria-current="page" when current', async () => {
@@ -565,7 +575,7 @@ describe("tooltip", () => {
   it("excludes icon-slot text from the flyout label, using only the default slot content", async () => {
     const el = (await fixture(html`
       <lr-app-rail-item tooltip icon-only>
-        <span slot="icon">📥</span>Dashboard
+        <span slot="start">📥</span>Dashboard
       </lr-app-rail-item>
     `)) as LyraAppRailItem;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -981,7 +991,7 @@ describe('current-ring token', () => {
   it('is accessible while current, icon-only, and ringed', async () => {
     const el = (await fixture(
       html`<lr-app-rail-item href="/home" aria-label="Home" icon-only current
-        ><span slot="icon" aria-hidden="true">*</span>Home</lr-app-rail-item
+        ><span slot="start" aria-hidden="true">*</span>Home</lr-app-rail-item
       >`
     )) as LyraAppRailItem;
     await expect(el).to.be.accessible();
@@ -992,7 +1002,7 @@ describe('geometry hooks (min-block-size, padding, gap, icon-size)', () => {
   it('renders min-block-size/padding/gap/icon-size byte-identical to their prior hard-wired values when unset', async () => {
     const el = (await fixture(
       html`<lr-app-rail-item href="/home"
-        ><span slot="icon" aria-hidden="true">*</span>Home</lr-app-rail-item
+        ><span slot="start" aria-hidden="true">*</span>Home</lr-app-rail-item
       >`
     )) as LyraAppRailItem;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -1020,7 +1030,7 @@ describe('geometry hooks (min-block-size, padding, gap, icon-size)', () => {
         --lr-app-rail-item-icon-size: 40px;
       ">
         <lr-app-rail-item href="/home"
-          ><span slot="icon" aria-hidden="true">*</span>Home</lr-app-rail-item
+          ><span slot="start" aria-hidden="true">*</span>Home</lr-app-rail-item
         >
       </div>
     `)) as HTMLElement;
@@ -1076,7 +1086,7 @@ describe('icon-only square hit area', () => {
   it('resolves the icon-only item to a square instead of stretching the row', async () => {
     const el = (await fixture(html`
       <lr-app-rail-item icon-only href="/inbox">
-        <span slot="icon" aria-hidden="true">*</span>Inbox
+        <span slot="start" aria-hidden="true">*</span>Inbox
       </lr-app-rail-item>
     `)) as LyraAppRailItem;
     await el.updateComplete;
@@ -1090,7 +1100,7 @@ describe('icon-only square hit area', () => {
     const wrapper = (await fixture(html`
       <div style="inline-size: 240px;">
         <lr-app-rail-item href="/inbox">
-          <span slot="icon" aria-hidden="true">*</span>Inbox
+          <span slot="start" aria-hidden="true">*</span>Inbox
         </lr-app-rail-item>
       </div>
     `)) as HTMLElement;
@@ -1104,7 +1114,7 @@ describe('icon-only square hit area', () => {
     const wrapper = (await fixture(html`
       <div style="--lr-app-rail-item-min-block-size: 64px;">
         <lr-app-rail-item icon-only href="/inbox">
-          <span slot="icon" aria-hidden="true">*</span>Inbox
+          <span slot="start" aria-hidden="true">*</span>Inbox
         </lr-app-rail-item>
       </div>
     `)) as HTMLElement;
@@ -1124,7 +1134,7 @@ describe('icon-only square hit area', () => {
         "
       >
         <lr-app-rail-item icon-only href="/inbox">
-          <span slot="icon" aria-hidden="true">*</span>Inbox
+          <span slot="start" aria-hidden="true">*</span>Inbox
         </lr-app-rail-item>
       </div>
     `)) as HTMLElement;
@@ -1296,7 +1306,7 @@ describe('end and meta slots', () => {
   it('stays accessible with both slots populated', async () => {
     const el = (await fixture(html`
       <lr-app-rail-item href="/inbox">
-        <span slot="icon" aria-hidden="true">📥</span>
+        <span slot="start" aria-hidden="true">📥</span>
         Inbox
         <span slot="meta">12</span>
         <button slot="end" aria-label="Archive inbox">x</button>
@@ -1712,7 +1722,7 @@ describe('collecting already-slotted meta/end content without relying on the ini
 });
 
 it('hides nested disclosure in icon-only while preserving its expansion and accessible item', async () => {
-  const rail = await fixture<import('./app-rail.class.js').LyraAppRail>(html`<lr-app-rail force-mode="icon-only" label="Workspace"><lr-app-rail-item expanded><span slot="icon">A</span>Account<lr-app-rail-item slot="children">Profile</lr-app-rail-item></lr-app-rail-item></lr-app-rail>`);
+  const rail = await fixture<import('./app-rail.class.js').LyraAppRail>(html`<lr-app-rail force-mode="icon-only" label="Workspace"><lr-app-rail-item expanded><span slot="start">A</span>Account<lr-app-rail-item slot="children">Profile</lr-app-rail-item></lr-app-rail-item></lr-app-rail>`);
   const el = rail.querySelector<LyraAppRailItem>('lr-app-rail-item')!;
   await el.updateComplete;
   expect(getComputedStyle(el.shadowRoot!.querySelector('[part="toggle"]')!).display).to.equal('none');

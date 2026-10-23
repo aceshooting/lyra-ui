@@ -33,8 +33,7 @@ export const styles = css`
     display: none;
   }
 
-  :host(:where([canvas="auto"])),
-  :host(:where([auto-width]:not([canvas]))) {
+  :host(:where([canvas="auto"])) {
     inline-size: auto;
   }
 

@@ -53,8 +53,7 @@ export type {
  *   names the sole trigger button.
  * @slot icon - Optional decorative expand/collapse icon. Its flattened subtree remains visible
  *   but is inert and hidden from assistive technology; the trigger button is the sole action.
- * @csspart base - Deprecated compatibility name for the outer wrapper; use `accordion-item`.
- * @csspart accordion-item - The outer wrapper. It is the same node as `base`.
+ * @csspart accordion-item - The outer wrapper.
  * @csspart heading - Heading around the trigger; omitted for `heading-level="none"`.
  * @csspart button - The trigger button.
  * @csspart label - Label container.
@@ -336,7 +335,7 @@ export class LyraAccordionItem extends LyraElement {
     </button>`;
 
     return html`<div
-      part="base accordion-item"
+      part="accordion-item"
       data-appearance=${this.effectiveAppearance}
       data-icon-placement=${this.effectiveIconPlacement}
     >

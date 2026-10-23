@@ -345,7 +345,7 @@ export interface LyraAppRailEventMap {
  * ```html
  * <lr-app-rail>
  *   <lr-app-rail-item href="/inbox" aria-label="Inbox">
- *     <svg slot="icon" aria-hidden="true">...</svg>Inbox
+ *     <svg slot="start" aria-hidden="true">...</svg>Inbox
  *   </lr-app-rail-item>
  * </lr-app-rail>
  * ```
@@ -356,7 +356,7 @@ export interface LyraAppRailEventMap {
  * <lr-app-rail auto-hide label="Workspace" storage-key="app" persist="preferred-mode"
  *   peek-open-delay="150" peek-close-delay="300">
  *   <lr-app-rail-item href="/inbox" current>
- *     <svg slot="icon" aria-hidden="true">...</svg>Inbox
+ *     <svg slot="start" aria-hidden="true">...</svg>Inbox
  *   </lr-app-rail-item>
  * </lr-app-rail>
  * ```
@@ -374,7 +374,7 @@ export interface LyraAppRailEventMap {
  *     for="sidebar-trigger" hotkey="mod+b" storage-key="app" persist="preferred-mode">
  *     <lr-app-rail-group heading="Platform">
  *       <lr-app-rail-item href="/inbox" current tooltip>
- *         <svg slot="icon" aria-hidden="true">...</svg>Inbox
+ *         <svg slot="start" aria-hidden="true">...</svg>Inbox
  *       </lr-app-rail-item>
  *     </lr-app-rail-group>
  *     <lr-divider></lr-divider>

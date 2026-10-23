@@ -251,10 +251,9 @@ const composedEventMapTypes: [
   LyraContextInspectorEventMap['lr-export-complete'],
   LyraContextInspectorEventMap['lr-citation-activate'],
   LyraContextInspectorEventMap['lr-citation-open'],
-  LyraEntityDossierEventMap['lr-entity-activate'],
+  LyraEntityDossierEventMap['lr-entity-select'],
   LyraEntityDossierEventMap['lr-node-expand'],
   LyraEntityDossierEventMap['lr-chunk-open'],
-  LyraEntityDossierEventMap['lr-chunk-toggle'],
   LyraEntityDossierEventMap['lr-toggle'],
   LyraEntityDossierEventMap['lr-tab-show'],
 ] | undefined = undefined;
@@ -546,14 +545,14 @@ dockPanel.addEventListener('lr-resize', (event) => {
   const extent: string = event.detail.extent;
   void extent;
 });
-dockPanel.addEventListener('lr-collapse-request', (event) => {
+dockPanel.addEventListener('lr-toggle-request', (event) => {
   const expanded: boolean = event.detail.expanded;
   // @ts-expect-error The proposed state uses expanded, not the retired collapsed field.
   const collapsed: boolean = event.detail.collapsed;
   void expanded;
   void collapsed;
 });
-dockPanel.addEventListener('lr-collapse-change', (event) => {
+dockPanel.addEventListener('lr-toggle', (event) => {
   const expanded: boolean = event.detail.expanded;
   // @ts-expect-error The committed state uses expanded, not the retired collapsed field.
   const collapsed: boolean = event.detail.collapsed;

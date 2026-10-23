@@ -27,13 +27,13 @@ type Story = StoryObj;
 
 const navItems = html`
   <lr-app-rail-item href="#inbox" aria-label="Inbox" current
-    ><span slot="icon">📥</span>Inbox</lr-app-rail-item
+    ><span slot="start">📥</span>Inbox</lr-app-rail-item
   >
   <lr-app-rail-item href="#chats" aria-label="Chats"
-    ><span slot="icon">💬</span>Chats</lr-app-rail-item
+    ><span slot="start">💬</span>Chats</lr-app-rail-item
   >
   <lr-app-rail-item href="#settings" aria-label="Settings"
-    ><span slot="icon">⚙️</span>Settings</lr-app-rail-item
+    ><span slot="start">⚙️</span>Settings</lr-app-rail-item
   >
 `;
 
@@ -246,11 +246,11 @@ export const NarrowRtlLongContent: Story = {
           >عنوان-تطبيق-طويل-جداً-غير-قابل-للفصل-ويجب-أن-يلتف-داخل-اللوحة</span
         >
         <lr-app-rail-item href="#reports">
-          <span slot="icon" aria-hidden="true">📊</span>
+          <span slot="start" aria-hidden="true">📊</span>
           تقرير-تحليلي-طويل-جداً-غير-قابل-للفصل
         </lr-app-rail-item>
         <lr-app-rail-item href="#archive">
-          <span slot="icon" aria-hidden="true">🗂️</span>
+          <span slot="start" aria-hidden="true">🗂️</span>
           أرشيف-المستندات-ذات-الأسماء-الطويلة-جداً
         </lr-app-rail-item>
         <span slot="footer">حساب-مستخدم-طويل-جداً-غير-قابل-للفصل</span>
@@ -535,16 +535,16 @@ export const GroupedSections: Story = {
         <span slot="header" style="padding:0.5rem; font-weight:600;">Acme</span>
         <lr-app-rail-group collapsible heading="Workspaces">
           <lr-app-rail-item href="#atlas" current
-            ><span slot="icon">🗂️</span>Atlas
+            ><span slot="start">🗂️</span>Atlas
             <span slot="meta">12</span></lr-app-rail-item
           >
           <lr-app-rail-item href="#beacon"
-            ><span slot="icon">📡</span>Beacon</lr-app-rail-item
+            ><span slot="start">📡</span>Beacon</lr-app-rail-item
           >
         </lr-app-rail-group>
         <lr-app-rail-group heading="Support">
           <lr-app-rail-item href="#docs"
-            ><span slot="icon">📚</span>Docs</lr-app-rail-item
+            ><span slot="start">📚</span>Docs</lr-app-rail-item
           >
         </lr-app-rail-group>
       </lr-app-rail>
@@ -553,11 +553,11 @@ export const GroupedSections: Story = {
 
 const sidebarItems = () => html`
   <lr-app-rail-group heading="Platform">
-    <lr-app-rail-item href="#projects" current tooltip><span slot="icon">▦</span>Projects<span slot="meta">3</span></lr-app-rail-item>
-    <lr-app-rail-item href="#account" tooltip expanded><span slot="icon">○</span>Account<lr-app-rail-item slot="children" href="#profile">Profile</lr-app-rail-item><lr-app-rail-item slot="children" href="#security">Security</lr-app-rail-item></lr-app-rail-item>
+    <lr-app-rail-item href="#projects" current tooltip><span slot="start">▦</span>Projects<span slot="meta">3</span></lr-app-rail-item>
+    <lr-app-rail-item href="#account" tooltip expanded><span slot="start">○</span>Account<lr-app-rail-item slot="children" href="#profile">Profile</lr-app-rail-item><lr-app-rail-item slot="children" href="#security">Security</lr-app-rail-item></lr-app-rail-item>
   </lr-app-rail-group>
   <lr-divider style="align-self:stretch"></lr-divider>
-  <lr-app-rail-item href="#settings" tooltip><span slot="icon">⚙</span>Settings</lr-app-rail-item>`;
+  <lr-app-rail-item href="#settings" tooltip><span slot="start">⚙</span>Settings</lr-app-rail-item>`;
 
 export const SidebarFloating: Story = {
   parameters: { docs: { description: { story: 'A floating sidebar frame with grouped navigation. Collapse preserves nested expansion and exposes compact item tooltips.' } } },
@@ -566,7 +566,7 @@ export const SidebarFloating: Story = {
 
 export const SidebarInset: Story = {
   parameters: { docs: { description: { story: 'An edgeless rail beside a main content card. End actions stay visible, so this composition keeps the full-width rail.' } } },
-  render: () => html`<div style="display:flex;block-size:28rem;background:var(--lr-color-surface-raised)"><lr-app-rail label="Workspace" frame="plain" icon-only-breakpoint="0px">${sidebarItems()}<lr-app-rail-item><span slot="icon">＋</span>Create project<button slot="end" aria-label="Project options">⋯</button></lr-app-rail-item></lr-app-rail><main style="flex:1;margin:var(--lr-space-s);padding:var(--lr-space-l);background:var(--lr-color-surface);border:var(--lr-border-width-thin) solid var(--lr-color-border-subtle);border-radius:var(--lr-radius);box-shadow:var(--lr-shadow-s)"><h2>Project overview</h2><p>The content owns its card presentation.</p></main></div>`,
+  render: () => html`<div style="display:flex;block-size:28rem;background:var(--lr-color-surface-raised)"><lr-app-rail label="Workspace" frame="plain" icon-only-breakpoint="0px">${sidebarItems()}<lr-app-rail-item><span slot="start">＋</span>Create project<button slot="end" aria-label="Project options">⋯</button></lr-app-rail-item></lr-app-rail><main style="flex:1;margin:var(--lr-space-s);padding:var(--lr-space-l);background:var(--lr-color-surface);border:var(--lr-border-width-thin) solid var(--lr-color-border-subtle);border-radius:var(--lr-radius);box-shadow:var(--lr-shadow-s)"><h2>Project overview</h2><p>The content owns its card presentation.</p></main></div>`,
 };
 
 export const SidebarTriggerAndShortcut: Story = {

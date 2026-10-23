@@ -136,7 +136,7 @@ it('keeps one stable owner across explicit-empty and dynamic host naming', async
   expect(shell().getAttribute('role')).to.equal('group');
 });
 
-it('emits lr-entity-select, then the deprecated lr-entity-activate, when a node element is activated', async () => {
+it('emits lr-entity-select, and no removed lr-entity-activate alias, when a node element is activated', async () => {
   const el = (await fixture(
     html`<lr-path-strip></lr-path-strip>`
   )) as LyraPathStrip;
@@ -148,10 +148,7 @@ it('emits lr-entity-select, then the deprecated lr-entity-activate, when a node 
   (
     el.shadowRoot!.querySelectorAll('[part="node"]')[0] as HTMLButtonElement
   ).click();
-  expect(events).to.deep.equal([
-    ['lr-entity-select', { entityId: 'e1', occurrenceIndex: 0 }],
-    ['lr-entity-activate', { entityId: 'e1', occurrenceIndex: 0 }],
-  ]);
+  expect(events).to.deep.equal([['lr-entity-select', { entityId: 'e1', occurrenceIndex: 0 }]]);
 });
 
 it('emits lr-relation-activate with source/target resolved from adjacent node elements', async () => {
@@ -457,7 +454,7 @@ it('does not re-activate while Enter or Space auto-repeats', async () => {
   const el = await fixture<LyraPathStrip>(html`<lr-path-strip .path=${path}></lr-path-strip>`);
   const node = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="node"]')!;
   let activations = 0;
-  el.addEventListener('lr-entity-activate', () => (activations += 1));
+  el.addEventListener('lr-entity-select', () => (activations += 1));
   for (const key of ['Enter', ' '])
     node.dispatchEvent(new KeyboardEvent('keydown', { key, repeat: true, bubbles: true, composed: true, cancelable: true }));
   expect(activations).to.equal(0);

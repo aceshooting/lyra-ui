@@ -99,8 +99,8 @@ tokens — `--lr-color-border`, `--lr-color-border-subtle`, `--lr-color-surface`
   chrome. Use the shared `LyraFrame` type when authoring this property.
 - `disabled: boolean = false` (reflected) — turns off this card's OWN controls. The `title` button
   and the "Show more"/"Show less" `toggle` both render `disabled`, so neither one can emit `lr-open`
-  or `lr-expand` and neither remains in the tab order, and the card paints at
-  `--lr-opacity-disabled` with a `not-allowed` cursor on both. The one `lr-expand` a disabled card
+  or `lr-toggle` and neither remains in the tab order, and the card paints at
+  `--lr-opacity-disabled` with a `not-allowed` cursor on both. The one `lr-toggle` a disabled card
   can still emit is the automatic collapse when the `full` slot empties while expanded — that
   reports a state change the card genuinely made, exactly as it does when enabled. Both buttons
   carry the native `:disabled`, so `::part(title):disabled` / `::part(toggle):disabled` restyle the
@@ -119,8 +119,8 @@ tokens — `--lr-color-border`, `--lr-color-border-subtle`, `--lr-color-surface`
 
 **Events:**
 
-- `lr-expand` (`detail: { sourceId: string; expanded: boolean }`, deprecated alias of `lr-toggle`) — the per-card "Show
-  more"/"Show less" toggle was activated. Unrelated to the parent `lr-source-list`'s own
+- `lr-toggle` (`detail: { expanded: boolean; itemId: string }`) — the per-card "Show
+  more"/"Show less" toggle was activated, or the `full` slot emptied while expanded. Unrelated to the parent `lr-source-list`'s own
   expand/collapse, which only ever hides/shows the _set_ of cards, never a single card's own content.
 - `lr-toggle` (`detail: { expanded, itemId }`) — the same per-card disclosure change, including
   automatic collapse when the full slot empties.
@@ -191,7 +191,7 @@ time.
 - `lr-source-list` does not automatically build an “N sources” plural summary: provide
   `labelPlural` when that is wanted. Its no-label fallback is localized through
   `sourceListDefaultLabel`, and a per-instance `.strings` override reaches the rendered header.
-- `lr-source-card`'s own expand/collapse (`full` slot, `lr-expand` event) is completely
+- `lr-source-card`'s own expand/collapse (`full` slot, `lr-toggle` event) is completely
   independent of the parent list's `expanded`/`lr-toggle` — collapsing the list doesn't reset an
   individual card's `fullExpanded` state, and there is no cross-talk between the two components at
   all beyond DOM nesting.

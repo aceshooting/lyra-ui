@@ -705,15 +705,18 @@ it("translates every owned evidence/document event with authoritative node and i
   const evidence = el.shadowRoot!.querySelectorAll("lr-source-card")[1]!;
 
   let rawExpand = 0;
+  el.addEventListener("lr-toggle", () => {
+    rawExpand += 1;
+  });
   el.addEventListener("lr-expand", () => {
     rawExpand += 1;
   });
   const expand = oneEvent(el, "lr-drilldown-evidence-expand");
   evidence.dispatchEvent(
-    new CustomEvent("lr-expand", {
+    new CustomEvent("lr-toggle", {
       bubbles: true,
       composed: true,
-      detail: { sourceId: "spoofed", expanded: true },
+      detail: { itemId: "spoofed", expanded: true },
     })
   );
   expect((await expand).detail).to.deep.equal({

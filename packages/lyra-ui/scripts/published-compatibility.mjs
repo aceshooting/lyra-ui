@@ -150,9 +150,9 @@ export function extractPublishedCompatibility({ metadata, inventory, packageJson
 }
 
 /** Validates actual-version eligibility and produces detached facts for existing ledger operations. */
-export function assembleCompatibilityContext({ packageVersion, currentInventory, currentExportDeprecations = [],
+export function assembleCompatibilityContext({ packageVersion, releaseVersion = packageVersion, successors = [], currentInventory, currentExportDeprecations = [],
   currentExportSurface = null, componentRegistrationRoutes = {}, captures = [], retirementIndex = [] }) {
-  version(packageVersion);
+  version(packageVersion); version(releaseVersion);
   requireThat(Array.isArray(captures) && Array.isArray(retirementIndex), 'Compatibility captures and retirements must be arrays');
   const components = index(currentInventory.components, item => item.tag, 'current owner');
   requireThat(plain(componentRegistrationRoutes), 'Current component registration routes must be an object');
@@ -166,6 +166,12 @@ export function assembleCompatibilityContext({ packageVersion, currentInventory,
   ], item => compatibilityKey(item.key), 'current policy');
   const exportSurface = index(currentExportSurface ?? [], item => compatibilityKey(item.key), 'current export surface');
   const retirements = index(retirementIndex, item => compatibilityKey(item.key), 'retirement');
+  // Mirroring covers the upstream API a mapping still preserves: a name the current mapping rewrites
+  // away (an upstream-deprecated part, say) is no longer mirrored, so its published policy may retire.
+  const currentMirrors = new Set([...mirroredMembers(currentInventory)].map(([key]) => {
+    const [tag, kind, name] = key.split('\u0000'); return compatibilityKey(policyKey({ tag, kind, name }));
+  }));
+  const protectedMirror = id => mirrors.has(id) && currentMirrors.has(id);
   const historical = Object.create(null); const sourceComponents = Object.create(null); const capturesByRelease = new Map(); const mirrors = new Set();
   const exposure = Object.fromEntries(exposureKinds.map(kind => [kind, Object.create(null)]));
   const addExposure = (kind, name, tags) => { exposure[kind][name] = [...new Set([...(exposure[kind][name] ?? []), ...tags])].sort(); };
@@ -198,8 +204,31 @@ export function assembleCompatibilityContext({ packageVersion, currentInventory,
     if (components[tag]) return tag;
     const id = compatibilityKey({ scope: 'member', tag, kind: 'component', name: tag });
     const policy = historical[id]?.policy; const retirement = retirements[id];
-    requireThat(policy?.replacement?.kind === 'component' && retirement && compare(packageVersion, retirement.removedIn) >= 0 && components[policy.replacement.name], `Historical owner ${tag} has no current supported replacement`);
+    requireThat(policy?.replacement?.kind === 'component' && retirement && compare(releaseVersion, retirement.removedIn) >= 0 && components[policy.replacement.name], `Historical owner ${tag} has no current supported replacement`);
     return policy.replacement.name;
+  };
+  // A replacement that was itself retired later (an alias of an alias) resolves through its own
+  // published replacement to the member that is current today.
+  const retiredSuccessor = (owner, kind, name) => {
+    if (typeof owner !== 'string' || !memberKinds.has(kind) || typeof name !== 'string') return null;
+    const id = compatibilityKey({ scope: 'member', tag: owner, kind, name });
+    // A published undeprecated name later removed outright: the retirement file records its successor.
+    const successor = successors.find(item => compatibilityKey({ scope: 'member', ...item.key }) === id);
+    if (successor && !member(components[owner], kind, name)) return successor.replacement;
+    const entry = historical[id];
+    return entry && retirements[id] && !member(components[owner], kind, name) && plain(entry.policy.replacement) &&
+      entry.policy.replacement.kind !== 'host-css-property' ? entry.policy.replacement : null;
+  };
+  const resolveMember = (owner, kind, name) => {
+    for (let hops = 0; hops < 8; hops++) {
+      const found = member(components[owner], kind, name);
+      if (found) return found;
+      const next = retiredSuccessor(owner, kind, name);
+      if (!next) return undefined;
+      if (next.kind === 'component') owner = next.name;
+      kind = next.kind; name = next.name;
+    }
+    return undefined;
   };
   const hasSupportedMemberSuccessor = (owner, kind, name) => {
     const seen = new Set();
@@ -208,7 +237,13 @@ export function assembleCompatibilityContext({ packageVersion, currentInventory,
       if (seen.has(id)) return false;
       seen.add(id);
       const currentMember = member(components[owner], kind, name);
-      if (!currentMember) return false;
+      if (!currentMember) {
+        const next = retiredSuccessor(owner, kind, name);
+        if (!next) return false;
+        if (next.kind === 'component') owner = next.name;
+        kind = next.kind; name = next.name;
+        continue;
+      }
       if (!currentMember.deprecated) return true;
       const replacement = currentRecords[id]?.policy?.replacement;
       if (!replacement || replacement.kind === 'host-css-property') return false;
@@ -239,18 +274,18 @@ export function assembleCompatibilityContext({ packageVersion, currentInventory,
         requireThat(sourceComponent, `Retirement has no exact published source component: ${id}`);
         requireThat(sourceMember, `Retirement has no exact published source member: ${id}`);
       }
-      requireThat(compare(packageVersion, retirement.removedIn) >= 0, `Cannot remove ${id} before ${retirement.removedIn}`);
+      requireThat(compare(releaseVersion, retirement.removedIn) >= 0, `Cannot remove ${id} before ${retirement.removedIn}`);
       requireThat(compare(retirement.removedIn, policy.removalNotBefore) >= 0 && version(policy.removalNotBefore)[0] >= version(policy.since)[0] + 2, `Retirement violates published floor: ${id}`);
       const pairedId = key.scope === 'member' && key.kind === 'property' && policy.attribute
         ? compatibilityKey({ ...key, kind: 'attribute', name: policy.attribute }) : null;
-      requireThat(!mirrors.has(id) && (!pairedId || !mirrors.has(pairedId)), `Protected upstream mirrored member cannot retire: ${id}`);
+      requireThat(!protectedMirror(id) && (!pairedId || !protectedMirror(pairedId)), `Protected upstream mirrored member cannot retire: ${id}`);
       if (key.kind === 'slot-content') requireThat(currentMember, `Retired slot content requires its surviving public slot: ${id}`);
       const replacement = policy.replacement;
       requireThat(plain(replacement), `Missing replacement: ${id}`);
       let replacementMember; let replacementOwner = null;
       if (key.scope === 'member') {
         replacementOwner = replacement.kind === 'component' ? replacement.name : effectiveOwner(key.tag);
-        replacementMember = member(components[replacementOwner], replacement.kind, replacement.name);
+        replacementMember = resolveMember(replacementOwner, replacement.kind, replacement.name);
         // Host CSS replacements are native public inputs, not a fabricated component member.
         if (replacement.kind === 'host-css-property' && ['background', 'color', 'inline-size'].includes(replacement.name)) replacementMember = { name: replacement.name };
       } else {
@@ -293,9 +328,9 @@ export function assembleCompatibilityContext({ packageVersion, currentInventory,
     requireThat(compare(retirement.removedIn, published.policy.removalNotBefore) >= 0 && version(published.policy.removalNotBefore)[0] >= version(published.policy.since)[0] + 2, `Retirement violates published floor: ${id}`);
     const paired = published.key.scope === 'member' && published.key.kind === 'property' && published.policy.attribute
       ? compatibilityKey({ ...published.key, kind: 'attribute', name: published.policy.attribute }) : null;
-    requireThat(!mirrors.has(id) && (!paired || !mirrors.has(paired)), `Protected upstream mirrored member cannot retire: ${id}`);
+    requireThat(!protectedMirror(id) && (!paired || !protectedMirror(paired)), `Protected upstream mirrored member cannot retire: ${id}`);
   }
-  return freeze(clone({ schemaVersion: 1, packageVersion, componentRegistrationRoutes, records, aliases, exposure,
+  return freeze(clone({ schemaVersion: 1, packageVersion, componentRegistrationRoutes, records, aliases, exposure, successors,
     sourceComponents: Object.fromEntries(Object.entries(sourceComponents).map(([tag, entry]) => [tag, entry.component])) }));
 }
 

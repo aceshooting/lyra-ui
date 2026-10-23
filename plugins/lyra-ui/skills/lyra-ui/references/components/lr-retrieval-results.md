@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecated event** `lr-select` since `26.0.0`; use event `@lr-selection-change`; removal not before `28.0.0` — lr-selection-change is the library's one name for a changed selection (detail chunkIds is selectedChunkIds); the alias fires right after it for one major.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 35 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -79,8 +79,8 @@ a successful global absence proof removes an ID. Complete canonical records are 
 provider `order`, independently of page/query order. The selected-record cache and pending user
 transaction survive paging, query changes and page retry. Selection failure exposes a separate
 retry without emitting a partial selection. External assignment and reconnect/adoption
-reconciliation are silent. A user toggle emits `lr-selection-change` and its guarded deprecated
-`lr-select` alias only after the current complete selection resolves.
+reconciliation are silent. A user toggle emits `lr-selection-change`
+only after the current complete selection resolves.
 
 Source selection event arrays and closed projected record fields are frozen; each record's
 `metadata` remains an opaque reference to the provider-owned value. The component neither deeply
@@ -202,14 +202,13 @@ string[]; chunks: RetrievalChunk[] }`) — the _complete_ updated selection, bot
   toggle. This derived detail is always canonicalized nonblank/first-wins regardless of the legacy
   `without-dedupe` switch. It is the only host-level report of a row toggle: the row checkbox's
   `lr-checkbox-toggle-request`, native `input`/`change`, and `lr-input`/`lr-change` stay inside the
-  component. Its deprecated alias `lr-select` (`detail: { chunkIds, chunks }`, the same
-  selection) is dispatched right after it.
+  component.
 - `lr-load-more` (`detail: null`) — from the virtual list's scroll-near-bottom detection while
   virtualized, or the `[part="load-more"]` button otherwise. Only fires while `hasMore` is true and
   `loading` is false.
 - `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) — forwarded verbatim from a row's
   `lr-chunk-inspector`; the event a host routes into `lr-document-viewer`. A row's
-  `lr-chunk-toggle` and the virtual list's scroll events stay inside: the component keeps each
+  `lr-toggle` and the virtual list's scroll events stay inside: the component keeps each
   row's "Show more" state itself, so it survives scrolling a virtualized row out and back and a
   re-sort.
 

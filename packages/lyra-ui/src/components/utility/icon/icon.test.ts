@@ -2,7 +2,7 @@ import { expectStaleAttribute } from '../../../../test/expected-stale-attributes
 import { fixture, expect, html, aTimeout, oneEvent, waitUntil } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import './icon.js';
-import type { LyraIcon } from './icon.js';
+import { LyraIcon } from './icon.js';
 import {
   getIconLibrary,
   registerIconLibrary,
@@ -15,6 +15,7 @@ import { __clearIconResourceCacheForTesting } from './icon-resource.js';
 
 // These fixtures deliberately verify that retired attributes remain inert.
 expectStaleAttribute('lr-icon', 'fixed-width');
+expectStaleAttribute('lr-icon', 'auto-width');
 
 it('uses mapped defaults and reflects name changes', async () => {
   const el = (await fixture(html`<lr-icon></lr-icon>`)) as LyraIcon;
@@ -1152,7 +1153,6 @@ describe('lr-icon icon libraries', () => {
       expect(el.hasAttribute('family')).to.be.false;
       expect(el.hasAttribute('variant')).to.be.false;
       expect(el.hasAttribute('canvas')).to.be.false;
-      expect(el.hasAttribute('auto-width')).to.be.false;
       expect(el.hasAttribute('swap-opacity')).to.be.false;
       expect(el.hasAttribute('animation')).to.be.false;
     } finally {
@@ -1204,7 +1204,7 @@ describe('lr-icon presentation knobs', () => {
     expect(matrixOf(el)).to.deep.equal([1, 0, 0, -1, 0, 0]);
   });
 
-  it('implements fixed, intrinsic, square, roomy, and deprecated auto-width canvases', async () => {
+  it('implements fixed, intrinsic, square, and roomy canvases', async () => {
     const icon = async (attributes = ''): Promise<LyraIcon> =>
       (await fixture(
         html`<lr-icon name="search" style="font-size: 20px" .canvas=${attributes || undefined}></lr-icon>`,
@@ -1214,15 +1214,12 @@ describe('lr-icon presentation knobs', () => {
     const auto = await icon('auto');
     const square = await icon('square');
     const roomy = await icon('roomy');
-    const autoAlias = (await fixture(
-      html`<lr-icon name="search" style="font-size: 20px" auto-width></lr-icon>`,
-    )) as LyraIcon;
 
     for (const el of [plain, fixed]) {
       expect(el.getBoundingClientRect().width).to.be.closeTo(25, 0.25);
       expect(el.getBoundingClientRect().height).to.be.closeTo(20, 0.25);
     }
-    for (const el of [auto, autoAlias]) {
+    for (const el of [auto]) {
       expect(el.getBoundingClientRect().width).to.be.closeTo(20, 0.25);
       expect(el.getBoundingClientRect().height).to.be.closeTo(20, 0.25);
     }
@@ -1232,20 +1229,13 @@ describe('lr-icon presentation knobs', () => {
     expect(roomy.getBoundingClientRect().height).to.be.closeTo(30, 0.25);
   });
 
-  it('is a pure CSS-level alias: an explicit canvas value always wins over the deprecated auto-width attribute', async () => {
-    // auto-width alone renders 20x20 at this font size (see the preceding test). It must not
-    // override an explicit canvas="square" (25x25) set alongside it -- autoWidth never reads or
-    // writes `canvas`, so a migrating consumer's explicit canvas is never silently defeated by a
-    // leftover deprecated auto-width attribute.
+  it('no longer supports the removed auto-width alias', async () => {
     const el = (await fixture(
-      html`<lr-icon name="search" style="font-size: 20px" canvas="square" auto-width></lr-icon>`,
+      html`<lr-icon name="search" style="font-size: 20px" auto-width></lr-icon>`,
     )) as LyraIcon;
+    expect('autoWidth' in el).to.equal(false);
+    expect(LyraIcon.observedAttributes.includes('auto-width')).to.equal(false);
     expect(el.getBoundingClientRect().width).to.be.closeTo(25, 0.25);
-    expect(el.getBoundingClientRect().height).to.be.closeTo(25, 0.25);
-    // The alias property itself is untouched by canvas and vice versa -- confirms it truly never
-    // syncs, rather than merely losing a CSS specificity fight.
-    expect(el.autoWidth).to.be.true;
-    expect(el.canvas).to.equal('square');
   });
 
   it('runs every documented animation and resolves the shared timing hooks', async function () {

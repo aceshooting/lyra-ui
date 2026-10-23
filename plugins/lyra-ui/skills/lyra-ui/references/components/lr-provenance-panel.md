@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecated event** `lr-entity-activate` since `26.0.0`; use event `@lr-entity-select`; removal not before `28.0.0` — lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 8 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -46,12 +46,10 @@ re-emits one contextual toggle at its boundary. Because the panel is a
 conduit, every affordance it renders also reaches a listener on the panel itself, and all are
 part of its typed event map: `lr-entity-select` (`detail: { entityId, occurrenceIndex? }`, from an
 entity chip, a community card member or a path-strip node — only the path strip carries
-`occurrenceIndex`), its deprecated alias `lr-entity-activate` (same detail, dispatched right after
-it by a community card member or path-strip node), `lr-entity-open` (`detail: { entityId }`, an entity chip double-click or
+`occurrenceIndex`), `lr-entity-open` (`detail: { entityId }`, an entity chip double-click or
 Space), `lr-drill` (`detail: { communityId }`, a community card's title, drill button, or overflow chip), and
 `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, a relationship path-strip
-edge), plus `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) and `lr-chunk-toggle`
-(`detail: { chunkId, expanded }`) from the chunk inspector.
+edge), plus `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) from the chunk inspector.
 
 **Slots:** none.
 

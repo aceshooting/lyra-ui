@@ -2807,6 +2807,7 @@ test('the manual wa-video-playlist review is complete and comparison-driven', as
   ).surface;
   const rewrites = emptyRewrites();
   rewrites.events.push({ from: 'wa-video-change', to: 'lr-video-change' });
+  rewrites.parts.push({ from: 'base', to: 'video-playlist' });
   const normalizations = reviewedMappingNormalizations('wa-video-playlist');
   assert.deepEqual(
     compareMappedSurfaces(reviewed.surface, target, {
@@ -2851,8 +2852,8 @@ test('the reviewed QR base-part replacement closes the live generic-prose ambigu
       member: 'base',
       upstreamDeprecated: true,
       upstreamReplacement: null,
-      targetDeprecated: true,
-      targetReplacement: 'qr-code',
+      targetDeprecated: false,
+      targetReplacement: null,
     },
     {
       section: 'attributes',

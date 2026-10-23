@@ -708,7 +708,7 @@
           "tag": "lr-chunk-inspector",
           "kind": "event",
           "from": "lr-expand",
-          "to": "lr-chunk-toggle"
+          "to": "lr-toggle"
         },
         {
           "tag": "lr-code-block",
@@ -1239,7 +1239,7 @@
           "tag": "lr-entity-dossier",
           "kind": "event",
           "from": "lr-expand",
-          "to": "lr-chunk-toggle"
+          "to": "lr-toggle"
         },
         {
           "tag": "lr-entity-dossier",
@@ -1986,7 +1986,7 @@
           "tag": "lr-memory-panel",
           "kind": "event",
           "from": "lr-expand",
-          "to": "lr-memory-toggle"
+          "to": "lr-toggle"
         },
         {
           "tag": "lr-menu-item",
@@ -2314,7 +2314,7 @@
           "tag": "lr-provenance-panel",
           "kind": "event",
           "from": "lr-expand",
-          "to": "lr-chunk-toggle"
+          "to": "lr-toggle"
         },
         {
           "tag": "lr-push-to-talk",

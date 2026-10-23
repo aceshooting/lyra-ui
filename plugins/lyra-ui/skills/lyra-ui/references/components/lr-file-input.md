@@ -7,10 +7,9 @@
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
-- **Deprecated part** `base` since `8.2.3`; use part `::part(file-input)`; removal not before `10.0.0` — The file-input part names the interactive picker surface; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-file-input` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is.
-- **Deprecated part** `label` since `8.2.3`; use part `::part(form-control-label)`; removal not before `10.0.0` — The form-control-label part follows the shared form-control vocabulary; label remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-file-input` still publishes its own deprecated `label` part, so this alias is removed only when upstream's is.
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 22 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 20 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -208,10 +207,10 @@ The semantic button describes its rendered owned error and hint in that order. A
 after interaction, while a custom validity message is immediately visible and survives native form
 reset until `resetValidity()` or `setCustomValidity('')` clears it.
 
-**CSS parts:** `file-input` (compatibility alias) and `form-control` (the complete form-control
-frame), `form-control-label`, `label`, `hint`, `error`, `dropzone`, `dropzone-icon`, `dropzone-text`,
-`base` (the native dropzone button, visually behind but semantically beside the
-slotted content), `input`, `file-list`, `file`, `file-thumbnail`, `file-image`, `file-icon`,
+**CSS parts:** `file-input` (the native dropzone button, visually behind but semantically beside
+the slotted content) and `form-control` (the complete form-control
+frame), `form-control-label`, `hint`, `error`, `dropzone`, `dropzone-icon`, `dropzone-text`,
+`input`, `file-list`, `file`, `file-thumbnail`, `file-image`, `file-icon`,
 `file-details`, `file-name`, `file-size`, `remove-button`, `status` (a visually-hidden,
 `aria-hidden` mirror of the drag accept/reject state and the aggregate accepted/rejected count),
 `rejection` (a **visible** region, rendered only while a rejection exists, listing each
@@ -251,7 +250,7 @@ here exactly as they do on `lr-input`. See `llms/shared.md` → "The required-fi
 
 **Themeable custom properties:** `--lr-file-input-gap` (default `var(--lr-space-xs)`) — gap between
 the dropzone's slotted children; `--lr-file-input-radius` (default `var(--lr-radius)`) — corner
-radius of `[part='base']`. At `size="s"` or `size="small"`,
+radius of `[part='file-input']`. At `size="s"` or `size="small"`,
 `--lr-file-input-compact-padding`, `--lr-file-input-compact-gap`, and
 `--lr-file-input-compact-font-size` optionally override the padding, content gap, and instruction
 font size. They take precedence over the corresponding dropzone padding/font and general gap
@@ -267,7 +266,7 @@ unset, medium, or other sizes. `--lr-file-input-font-size` (default
 validation error, each file's formatted size). Each documented default is the `m`/`medium` tier, and
 each is re-declared per `size` tier — so an unset or default-size control renders exactly as before,
 while `size="xl"` scales the dropzone coherently instead of enlarging the label alone. The drag accept/reject
-highlight on `[part='base'][data-drag-state='accept'|'reject']` is independently overridable too:
+highlight on `[part='file-input'][data-drag-state='accept'|'reject']` is independently overridable too:
 `--lr-file-input-accept-border-color` (default `var(--lr-color-success)`) and
 `--lr-file-input-accept-bg` (default `color-mix(in srgb, var(--lr-color-success) 8%, transparent)`)
 for the drag-accept state; `--lr-file-input-reject-border-color` (default `var(--lr-color-danger)`)
@@ -283,11 +282,11 @@ itself is unchanged), and `--lr-file-input-dropzone-hover-border-color` (default
 `var(--lr-color-brand)`), which recolours the edge whether the pointer is over the button or over
 the content stacked on it. The shared field halo `--lr-form-control-focus-shadow` (default `none`)
 paints a `box-shadow` while the dropzone holds focus; it is additive, so the
-`[part='base']:focus-visible` outline is untouched. Plus shared
+`[part='file-input']:focus-visible` outline is untouched. Plus shared
 tokens — `--lr-space-xs`, `--lr-space-l`,
 `--lr-color-border`, `--lr-color-border-subtle` (the selected-file rows' edge), `--lr-radius`,
 `--lr-color-surface`, `--lr-color-text-quiet`,
-`--lr-focus-ring-width/-color/-offset` (`[part="base"]:focus-visible` outline),
+`--lr-focus-ring-width/-color/-offset` (`[part="file-input"]:focus-visible` outline),
 `--lr-opacity-disabled` (`:host([disabled])` dimming).
 
 **Optional peer deps:** none.

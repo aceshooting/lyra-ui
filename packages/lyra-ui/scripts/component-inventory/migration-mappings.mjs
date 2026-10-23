@@ -925,6 +925,19 @@ const DECISION_NOTES = new Map([
 // When Lyra intentionally keeps a v8 default that differs from a source contract, migration
 // inserts the source default only when the consumer omitted the attribute. This preserves source
 // behavior without changing Lyra's own default for newly-authored markup.
+// Upstream part names the target dropped in 30.0.0 (each is deprecated upstream, or replaced by the
+// component-named part a pinned upstream also publishes). Rewriting them keeps `::part()` selectors
+// working through the migration and records the name as migrated away, not mirrored.
+const REVIEWED_PART_REWRITES = new Map([
+  ['wa-accordion-item', [{ from: 'base', to: 'accordion-item' }]],
+  ['wa-file-input', [{ from: 'base', to: 'file-input' }, { from: 'label', to: 'form-control-label' }]],
+  ['wa-known-date', [{ from: 'label', to: 'form-control-label' }]],
+  ['wa-qr-code', [{ from: 'base', to: 'qr-code' }]],
+  ['sl-qr-code', [{ from: 'base', to: 'qr-code' }]],
+  ['wa-sparkline', [{ from: 'base', to: 'sparkline' }]],
+  ['wa-video-playlist', [{ from: 'base', to: 'video-playlist' }]],
+]);
+
 const REVIEWED_DEFAULT_REWRITES = new Map([
   [
     'sl-copy-button',
@@ -1128,6 +1141,14 @@ export function mappingDecisions({
               events: prefixEventRewrites(component, target, upstream),
               defaults: REVIEWED_DEFAULT_REWRITES.get(upstreamTag) ?? [],
             });
+      if (upstreamTag === 'wa-icon') {
+        // `auto-width` is the boolean spelling of `canvas="auto"`; the rule carries the value.
+        rewrites.attributes = [...rewrites.attributes, { from: 'auto-width', to: 'canvas', value: 'auto' }];
+        rewrites.properties = [...rewrites.properties, { from: 'autoWidth', to: 'canvas', value: 'auto' }];
+      }
+      if (REVIEWED_PART_REWRITES.has(upstreamTag)) {
+        rewrites.parts = REVIEWED_PART_REWRITES.get(upstreamTag).map((rule) => ({ ...rule }));
+      }
       const reviewedNormalizations = hasReviewedMappingNormalizations(
         upstreamTag
       )

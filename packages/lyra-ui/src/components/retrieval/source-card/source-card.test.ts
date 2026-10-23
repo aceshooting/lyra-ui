@@ -154,7 +154,7 @@ it('collapses the full wrapper and removes the toggle when its only slotted cont
   expect((el.shadowRoot!.querySelector('[part="full"]') as HTMLElement).hidden).to.be.true;
 });
 
-it('announces the automatic collapse through lr-expand when the full slot empties while expanded', async () => {
+it('announces the automatic collapse through lr-toggle when the full slot empties while expanded', async () => {
   const el = (await fixture(
     html`<lr-source-card source-id="doc-1" heading="a.pdf"><span slot="full" id="full-content">Full text.</span></lr-source-card>`,
   )) as LyraSourceCard;
@@ -162,14 +162,15 @@ it('announces the automatic collapse through lr-expand when the full slot emptie
   await el.updateComplete;
 
   const details: unknown[] = [];
-  el.addEventListener('lr-expand', (event) => details.push((event as CustomEvent).detail));
+  el.addEventListener('lr-toggle', (event) => details.push((event as CustomEvent).detail));
+  el.addEventListener('lr-expand', () => details.push('removed lr-expand'));
   const fullSlot = el.shadowRoot!.querySelector('slot[name="full"]') as HTMLSlotElement;
   const slotChanged = oneEvent(fullSlot, 'slotchange');
   el.querySelector('#full-content')!.remove();
   await slotChanged;
   await el.updateComplete;
 
-  expect(details).to.deep.equal([{ sourceId: 'doc-1', expanded: false }]);
+  expect(details).to.deep.equal([{ itemId: 'doc-1', expanded: false }]);
 });
 
 it('stays silent when the full slot empties while the card was already collapsed', async () => {
@@ -179,7 +180,7 @@ it('stays silent when the full slot empties while the card was already collapsed
   await el.updateComplete;
 
   const details: unknown[] = [];
-  el.addEventListener('lr-expand', (event) => details.push((event as CustomEvent).detail));
+  el.addEventListener('lr-toggle', (event) => details.push((event as CustomEvent).detail));
   const fullSlot = el.shadowRoot!.querySelector('slot[name="full"]') as HTMLSlotElement;
   const slotChanged = oneEvent(fullSlot, 'slotchange');
   el.querySelector('#full-content')!.remove();
@@ -189,7 +190,7 @@ it('stays silent when the full slot empties while the card was already collapsed
   expect(details.length, 'a collapsed card did not change state, so nothing is announced').to.equal(0);
 });
 
-it('toggles the full wrapper and fires lr-expand with sourceId and the new state', async () => {
+it('toggles the full wrapper and fires lr-toggle with itemId and the new state, and never the removed lr-expand', async () => {
   const el = (await fixture(
     html`<lr-source-card source-id="doc-1" heading="a.pdf">
       <span slot="full">Full text.</span>
@@ -198,28 +199,25 @@ it('toggles the full wrapper and fires lr-expand with sourceId and the new state
   const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement;
   const full = el.shadowRoot!.querySelector('[part="full"]') as HTMLElement;
   const toggles: unknown[] = [];
+  let removed = 0;
   el.addEventListener('lr-toggle', (event) => toggles.push((event as CustomEvent).detail));
+  el.addEventListener('lr-expand', () => (removed += 1));
 
-  let firing = oneEvent(el, 'lr-expand');
   toggle.click();
-  let event = await firing;
   await el.updateComplete;
-  expect((event as CustomEvent).detail).to.deep.equal({ sourceId: 'doc-1', expanded: true });
   expect(toggle.textContent!.trim()).to.equal('Show less');
   expect(toggle.getAttribute('aria-expanded')).to.equal('true');
   expect(full.hidden).to.be.false;
 
-  firing = oneEvent(el, 'lr-expand');
   toggle.click();
-  event = await firing;
   await el.updateComplete;
-  expect((event as CustomEvent).detail).to.deep.equal({ sourceId: 'doc-1', expanded: false });
   expect(toggle.textContent!.trim()).to.equal('Show more');
   expect(full.hidden).to.be.true;
   expect(toggles).to.deep.equal([
     { itemId: 'doc-1', expanded: true },
     { itemId: 'doc-1', expanded: false },
   ]);
+  expect(removed).to.equal(0);
 });
 
 it('links the toggle to the full-content wrapper it controls via aria-controls', async () => {
@@ -561,7 +559,7 @@ describe('lr-source-card parity pass: resting background token, disabled, presse
     ).to.equal(true);
   });
 
-  it('stops lr-open and lr-expand while disabled and removes both controls from the tab order', async () => {
+  it('stops lr-open and lr-toggle while disabled and removes both controls from the tab order', async () => {
     const el = (await fixture(html`
       <lr-source-card source-id="s1" heading="a.pdf" disabled>
         <span slot="full">Full text</span>
@@ -570,7 +568,7 @@ describe('lr-source-card parity pass: resting background token, disabled, presse
     let opens = 0;
     let expands = 0;
     el.addEventListener('lr-open', () => (opens += 1));
-    el.addEventListener('lr-expand', () => (expands += 1));
+    el.addEventListener('lr-toggle', () => (expands += 1));
 
     const titleButton = partOf(el, 'title') as HTMLButtonElement;
     const toggleButton = partOf(el, 'toggle') as HTMLButtonElement;

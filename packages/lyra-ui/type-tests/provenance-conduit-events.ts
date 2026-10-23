@@ -22,7 +22,7 @@ dossier.addEventListener('lr-entity-open', (event) => {
   const entityId: string = event.detail.entityId;
   void entityId;
 });
-dossier.addEventListener('lr-entity-activate', (event) => {
+dossier.addEventListener('lr-entity-select', (event) => {
   const entityId: string = event.detail.entityId;
   const occurrenceIndex: number | undefined = event.detail.occurrenceIndex;
   void entityId;
@@ -47,7 +47,7 @@ panel.addEventListener('lr-entity-open', (event) => {
   const entityId: string = event.detail.entityId;
   void entityId;
 });
-panel.addEventListener('lr-entity-activate', (event) => {
+panel.addEventListener('lr-entity-select', (event) => {
   const entityId: string = event.detail.entityId;
   const occurrenceIndex: number | undefined = event.detail.occurrenceIndex;
   void entityId;
@@ -68,12 +68,6 @@ panel.addEventListener('lr-chunk-open', (event) => {
   const sourceId: string = event.detail.sourceId;
   void chunkId;
   void sourceId;
-});
-panel.addEventListener('lr-chunk-toggle', (event) => {
-  const chunkId: string = event.detail.chunkId;
-  const expanded: boolean = event.detail.expanded;
-  void chunkId;
-  void expanded;
 });
 
 const dossierDrill: LyraEntityDossierEventMap['lr-drill'] | undefined =

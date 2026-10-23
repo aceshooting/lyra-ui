@@ -67,7 +67,7 @@ describe('lr-background-runs', () => {
 
   it('emits open requests for any run and cancel requests only for active runs', async () => {
     const el = await fixture<LyraBackgroundRuns>(html`<lr-background-runs .runs=${runs}></lr-background-runs>`);
-    const open = oneEvent(el, 'lr-run-open');
+    const open = oneEvent(el, 'lr-run-activate');
     el.shadowRoot!.querySelector<HTMLButtonElement>('[data-run-id="done"] [part="open"]')!.click();
     expect((await open as CustomEvent).detail).to.deep.equal({ runId: 'done' });
     const cancel = oneEvent(el, 'lr-run-cancel');
@@ -176,12 +176,12 @@ describe('lr-background-runs', () => {
   });
 });
 
-it('opens a run through lr-run-activate, then the deprecated lr-run-open alias', async () => {
+it('opens a run through lr-run-activate, and no longer fires the removed lr-run-open alias', async () => {
   const el = await fixture<LyraBackgroundRuns>(html`<lr-background-runs .runs=${runs}></lr-background-runs>`);
   const seen: string[] = [];
   for (const name of ['lr-run-activate', 'lr-run-open']) {
     el.addEventListener(name, (event) => seen.push(`${name}:${(event as CustomEvent<{ runId: string }>).detail.runId}`));
   }
   el.shadowRoot!.querySelector<HTMLButtonElement>('[data-run-id="running"] [part="open"]')!.click();
-  expect(seen).to.deep.equal(['lr-run-activate:running', 'lr-run-open:running']);
+  expect(seen).to.deep.equal(['lr-run-activate:running']);
 });

@@ -195,6 +195,9 @@ vocabulary. Full rules: **[docs/agents/upstream-parity.md](docs/agents/upstream-
 - Mirroring obliges the whole documented surface; each omission states a reason (class JSDoc, or
   `noCounterpart` in `scripts/fixtures/upstream-tags.json`).
 - Never rename a mirrored member; add the upstream name as a second token/alias.
+- The mirror covers an upstream's current API, not names upstream itself deprecated (wa `base`
+  parts, `auto-width`): those are not kept; a `parts`/`attributes` rewrite in the mapping migrates
+  them.
 - Where upstreams disagree (`with-clear`/`clearable`), accept both, deprecate neither, test both.
 - Never invert polarity (gated by `check-migration-coverage.mjs`) or change a default (ungated).
 - README `Mirrors` cells are executable rewrite rules (`buildMirrorMap`), gated by

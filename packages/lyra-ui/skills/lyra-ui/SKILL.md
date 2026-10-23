@@ -103,9 +103,9 @@ setup file instead of local patches (details in `node_modules/@aceshooting/lyra-
 ## Migrating from Web Awesome or Shoelace
 
 Mappings, import rewrites and warnings: `node_modules/@aceshooting/lyra-ui/llms/migration.md`; procedure: `/lyra-ui:migrate`.
-Some deprecated Lyra spellings stay supported (`removalNotBefore` is a floor, not a removal date),
-such as `clearable`/`with-clear` on the combobox and `lr-icon`'s `autoWidth` (a CSS-level alias of
-`canvas="auto"`; an explicit `canvas` wins); do not blanket-rewrite them.
+The combobox accepts both `clearable` and `with-clear`. The retired `lr-icon` `autoWidth` /
+`auto-width` spelling uses `canvas="auto"` instead; preserve an explicit `canvas` value and review
+dynamic boolean bindings. Follow the v29 to v30 guide for the other retired compatibility names.
 
 ## Workflows
 

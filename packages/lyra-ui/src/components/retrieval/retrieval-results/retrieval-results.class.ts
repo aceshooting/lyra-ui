@@ -38,9 +38,9 @@ import { LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_retry, LYRA_D
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraScoreThresholds } from '../../../internal/score-tiers.js';
-/** The deprecated `lr-select`'s detail: the complete updated selection, both as bare ids and as one
- *  deterministic canonical `RetrievalChunk` record per id (`lr-selection-change` carries the same as
- *  `selectedChunkIds`). This contract is independent of the visible `without-dedupe` projection:
+/** A complete updated selection, both as bare ids and as one deterministic canonical
+ *  `RetrievalChunk` record per id (`lr-selection-change` carries the same as `selectedChunkIds`).
+ *  This contract is independent of the visible `without-dedupe` projection:
  *  duplicate rows never duplicate derived selection records. */
 export interface RetrievalResultsSelectDetail {
   chunkIds: string[];
@@ -50,10 +50,6 @@ export interface RetrievalResultsSelectDetail {
 export interface LyraRetrievalResultsEventMap {
   'lr-selection-change': CustomEvent<
     LyraEventDetailSnapshot<{ selectedChunkIds: string[]; chunks: RetrievalChunk[] }>
-  >;
-  /** @deprecated Use `lr-selection-change`. */
-  'lr-select': CustomEvent<
-    LyraEventDetailSnapshot<RetrievalResultsSelectDetail>
   >;
   'lr-load-more': CustomEvent<null>;
   'lr-chunk-open': CustomEvent<
@@ -172,13 +168,11 @@ function safeScore(score: number): number {
  * @event lr-selection-change - The selected-chunk set changed. `detail: { selectedChunkIds, chunks }` —
  * `selectedChunkIds` is the complete updated selection (not just the toggled id), `chunks` the
  * matching canonical `RetrievalChunk` records.
- * @event lr-select - Deprecated alias of `lr-selection-change` (`detail: { chunkIds, chunks }`),
- * dispatched right after it.
  * @event lr-load-more - More results were requested — via the internal `<lr-virtual-list>`'s own
  * scroll-near-bottom detection while virtualized, or the built-in `[part="load-more"]` button
  * otherwise. Only ever fires while `has-more` is true and `loading` is false.
  * @event lr-chunk-open - A row's title/open button was activated, forwarded verbatim from the
- * per-row `<lr-chunk-inspector>`'s own `lr-chunk-open`; the inspector's `lr-chunk-toggle` and the
+ * per-row `<lr-chunk-inspector>`'s own `lr-chunk-open`; the inspector's `lr-toggle` and the
  * virtual list's scroll events stay inside. `detail: { chunkId, sourceId, anchor? }` — the
  * event a host routes into `<lr-document-viewer>`.
  * @csspart base - The outer container and programmatic focus fallback when a controlled
@@ -268,7 +262,6 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-selection-change',
-    'lr-select',
     'lr-chunk-open',
   ]);
 
@@ -276,7 +269,6 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
    * detached as one complete snapshot before entering this identity-preserving envelope. */
   protected static override readonly identityEventDetailCollectionItems = Object.freeze({
     'lr-selection-change': Object.freeze(['chunks']),
-    'lr-select': Object.freeze(['chunks']),
   });
 
   private _dataSource?: RetrievalResultsSource;
@@ -479,8 +471,6 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
       if (report) {
         const chunks = records.map(record => record.value);
         this.emit('lr-selection-change', { selectedChunkIds: [...committed], chunks });
-        const aliasRevision = source.revision;
-        if (aliasRevision === revision && lifecycle === this.sourceLifecycle && this.isConnected && this.ownerDocument === owner && this.dataSource === source && this.sourceEpoch === epoch && this.selectedChunkIds === committed) this.emit('lr-select', { chunkIds: [...committed], chunks });
       }
       this.sourceStateVersion++;
     });
@@ -1082,14 +1072,11 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     if (this.canonicalSource !== this.chunks) this.canonicalChunks();
     const chunks = [...new Set(chunkIds)].flatMap(id => this.canonicalById.get(id) ?? [])
       .sort((a, b) => this.canonicalOrder.get(a.id)! - this.canonicalOrder.get(b.id)!);
-    // Preserve the legacy whole-detail copy budget, including null on exhaustion. Provider
+    // Preserve the whole-detail copy budget, including null on exhaustion. Provider
     // selection instead supplies its already-projected records through the frozen envelope.
     this.emit('lr-selection-change', snapshotEventDetail(
       { selectedChunkIds: chunkIds, chunks }, this.ownerDocument.defaultView
     ) as { selectedChunkIds: string[]; chunks: RetrievalChunk[] });
-    this.emit('lr-select', snapshotEventDetail(
-      { chunkIds, chunks }, this.ownerDocument.defaultView
-    ) as RetrievalResultsSelectDetail);
   }
 
   private toggleSelect(chunk: RetrievalChunk): void {
@@ -1107,16 +1094,12 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     this.reportSelection(this.selectedChunkIds as string[]);
   }
 
-  /** The inspector's `lr-toggle` twin of `lr-chunk-toggle` stays inside the list. */
-  private stopRowToggle = (event: Event): void => {
-    event.stopPropagation();
-  };
-
+  /** The inspector's `lr-toggle` is the list's own expand state; it stays inside the list. */
   private onChunkToggle = (
-    event: CustomEvent<{ chunkId: string; expanded: boolean }>
+    event: CustomEvent<{ itemId: string; expanded: boolean }>
   ): void => {
     event.stopPropagation();
-    const { chunkId, expanded } = event.detail;
+    const { itemId: chunkId, expanded } = event.detail;
     const rest = this.expandedChunkIds.filter((id) => id !== chunkId);
     this.expandedChunkIds = expanded ? [...rest, chunkId] : rest;
   };
@@ -1210,8 +1193,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
             e.stopPropagation();
             if (this.currentSourceRow(chunk)) this.emit('lr-chunk-open', e.detail);
           }}
-          @lr-chunk-toggle=${(event: CustomEvent<{ chunkId: string; expanded: boolean }>) => { event.stopPropagation(); if (this.currentSourceRow(chunk)) this.onChunkToggle(event); }}
-          @lr-toggle=${this.stopRowToggle}
+          @lr-toggle=${(event: CustomEvent<{ itemId: string; expanded: boolean }>) => { event.stopPropagation(); if (this.currentSourceRow(chunk)) this.onChunkToggle(event); }}
         ></lr-chunk-inspector>
         ${this.presentation === 'expanded'
           ? this.renderMetadata(chunk.metadata)

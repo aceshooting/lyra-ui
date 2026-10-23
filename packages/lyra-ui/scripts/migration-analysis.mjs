@@ -1394,6 +1394,8 @@ export function namedRule(rawName, mapping) {
         section: candidate.section,
         from: rule.from,
         to: rule.to,
+        value: rule.value,
+        prefix: candidate.prefix,
         replacement: `${candidate.prefix}${targetName}`,
       };
     }

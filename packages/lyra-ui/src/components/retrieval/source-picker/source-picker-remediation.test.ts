@@ -62,7 +62,7 @@ it('select-all while filtering selects and clears only the visible leaves', asyn
   );
   await typeFilter(el, 'alpha');
   const changes: string[][] = [];
-  el.addEventListener('lr-sources-change', (event) =>
+  el.addEventListener('lr-selection-change', (event) =>
     changes.push([...(event as CustomEvent<{ selectedSourceIds: string[] }>).detail.selectedSourceIds].sort())
   );
   const selectAll = el.shadowRoot!.querySelector<HTMLElement & { checked: boolean }>('[part="select-all-control"]')!;
@@ -83,7 +83,7 @@ it('select-all with no visible match changes nothing', async () => {
   );
   await typeFilter(el, 'zzz');
   let fired = 0;
-  el.addEventListener('lr-sources-change', () => (fired += 1));
+  el.addEventListener('lr-selection-change', () => (fired += 1));
   el.shadowRoot!.querySelector<HTMLElement>('[part="select-all-control"]')!.click();
   await el.updateComplete;
   expect(fired).to.equal(0);
@@ -101,7 +101,7 @@ it('keeps every composed search-field event inside while typing and committing',
   expect(el.shadowRoot!.querySelectorAll('[role="treeitem"]')).to.have.length(2);
 });
 
-it('reports a selection change as lr-selection-change, then the deprecated lr-sources-change', async () => {
+it('reports a selection change as lr-selection-change, and never the removed lr-sources-change', async () => {
   const el = await fixture<LyraSourcePicker>(
     html`<lr-source-picker .sources=${filterable} .selectedSourceIds=${['d']}></lr-source-picker>`
   );
@@ -111,11 +111,11 @@ it('reports a selection change as lr-selection-change, then the deprecated lr-so
       seen.push(`${name}:${[...(event as CustomEvent<{ selectedSourceIds: string[] }>).detail.selectedSourceIds]}`)
     );
   el.shadowRoot!.querySelectorAll<HTMLElement>('[role="treeitem"]')[0]!.click();
-  expect(seen).to.deep.equal(['lr-selection-change:d,a', 'lr-sources-change:d,a']);
+  expect(seen).to.deep.equal(['lr-selection-change:d,a']);
   seen.length = 0;
   el.sources = [{ id: 'd', label: 'Delta' }];
   await el.updateComplete;
-  expect(seen).to.deep.equal(['lr-selection-change:d', 'lr-sources-change:d']);
+  expect(seen).to.deep.equal(['lr-selection-change:d']);
 });
 
 it('draws a check for a checked row and a dash for a mixed row, also under forced colors', async () => {

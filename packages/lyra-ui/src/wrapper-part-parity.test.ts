@@ -20,7 +20,6 @@ import './components/layout/details/details.js';
 import './components/layout/tab-group/tab-group.js';
 import './components/layout/tab-group/tab.js';
 import './components/media/image-comparer/image-comparer.js';
-import './components/media/qr-code/qr-code.js';
 import './components/overlays/badge/badge.js';
 import './components/overlays/overlay/tooltip.js';
 import './components/overlays/progress/progress-bar.js';
@@ -51,7 +50,6 @@ const mappedWrapperParts = [
   ['wa-pagination', 'lr-pagination', 'pagination'],
   ['wa-progress-bar', 'lr-progress-bar', 'progress-bar'],
   ['wa-progress-ring', 'lr-progress-ring', 'progress-ring'],
-  ['wa-qr-code', 'lr-qr-code', 'qr-code'],
   ['wa-rating', 'lr-rating', 'rating'],
   ['wa-switch', 'lr-switch', 'switch'],
   ['wa-tab', 'lr-tab', 'tab'],
@@ -74,10 +72,12 @@ async function render(tagName: string): Promise<TestElement> {
 
 describe('mapped outer-wrapper part parity', () => {
   for (const [upstreamTag, lyraTag, namedPart] of mappedWrapperParts) {
-    it(`${lyraTag} renders base and ${namedPart} on one node (${upstreamTag})`, async () => {
+    it(`${lyraTag} renders the canonical ${namedPart} wrapper (${upstreamTag})`, async () => {
       const element = await render(lyraTag);
       try {
-        const selector = `[part~="base"][part~="${namedPart}"]`;
+        const selector = lyraTag === 'lr-accordion-item'
+          ? `[part~="${namedPart}"]` : `[part~="base"][part~="${namedPart}"]`;
+        if (lyraTag === 'lr-accordion-item') expect(element.shadowRoot?.querySelectorAll('[part~="base"]').length ?? 0).to.equal(0);
         expect(element.shadowRoot?.querySelectorAll(selector).length ?? 0).to.equal(1);
       } finally {
         element.remove();

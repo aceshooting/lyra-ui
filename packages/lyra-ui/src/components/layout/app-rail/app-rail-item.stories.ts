@@ -48,7 +48,7 @@ export const IconOnlyTooltip: StoryObj = {
   render: () => html`
     <div style="inline-size:var(--lr-icon-button-size);">
       <lr-app-rail-item href="#inbox" aria-label="Inbox" icon-only tooltip>
-        <span slot="icon" aria-hidden="true">📥</span>Inbox
+        <span slot="start" aria-hidden="true">📥</span>Inbox
       </lr-app-rail-item>
     </div>
   `,
@@ -121,17 +121,17 @@ export const IconOnlyCurrent: StoryObj = {
     <div style="display: flex; gap: var(--lr-space-m);">
       <div style="inline-size: var(--lr-icon-button-size); --lr-app-rail-item-current-indicator-display: block;">
         <lr-app-rail-item href="/home" icon-only current
-          ><span slot="icon" aria-hidden="true">🏠</span>Home</lr-app-rail-item
+          ><span slot="start" aria-hidden="true">🏠</span>Home</lr-app-rail-item
         >
       </div>
       <div style="inline-size: var(--lr-icon-button-size);">
         <lr-app-rail-item href="/inbox" icon-only current
-          ><span slot="icon" aria-hidden="true">📥</span>Inbox</lr-app-rail-item
+          ><span slot="start" aria-hidden="true">📥</span>Inbox</lr-app-rail-item
         >
       </div>
       <div style="inline-size: var(--lr-size-12rem); --lr-app-rail-item-current-ring: inset 0 0 0 1px var(--lr-color-brand);">
         <lr-app-rail-item href="/settings" current
-          ><span slot="icon" aria-hidden="true">⚙️</span>Settings</lr-app-rail-item
+          ><span slot="start" aria-hidden="true">⚙️</span>Settings</lr-app-rail-item
         >
       </div>
     </div>
@@ -152,12 +152,12 @@ export const GeometryHooks: StoryObj = {
     <div style="display: flex; flex-direction: column; gap: var(--lr-space-m);">
       <div style="inline-size: var(--lr-size-12rem); --lr-app-rail-item-font-size: 1.125rem;">
         <lr-app-rail-item href="/home"
-          ><span slot="icon" aria-hidden="true">🏠</span>Home</lr-app-rail-item
+          ><span slot="start" aria-hidden="true">🏠</span>Home</lr-app-rail-item
         >
       </div>
       <div style="inline-size: var(--lr-icon-button-size);">
         <lr-app-rail-item href="/home" icon-only
-          ><span slot="icon" aria-hidden="true">🏠</span>Home</lr-app-rail-item
+          ><span slot="start" aria-hidden="true">🏠</span>Home</lr-app-rail-item
         >
       </div>
       <div
@@ -168,7 +168,7 @@ export const GeometryHooks: StoryObj = {
         "
       >
         <lr-app-rail-item href="/home" icon-only
-          ><span slot="icon" aria-hidden="true">🏠</span>Home</lr-app-rail-item
+          ><span slot="start" aria-hidden="true">🏠</span>Home</lr-app-rail-item
         >
       </div>
     </div>
@@ -182,12 +182,12 @@ export const WithMetaAndEndSlots: StoryObj = {
       style="inline-size: 16rem; border: 1px solid var(--lr-color-border); border-radius: 0.5rem; padding: 0.5rem;"
     >
       <lr-app-rail-item href="/inbox" current>
-        <span slot="icon">📥</span>Inbox
+        <span slot="start">📥</span>Inbox
         <span slot="meta">12</span>
         <button slot="end" aria-label="Archive inbox">×</button>
       </lr-app-rail-item>
       <lr-app-rail-item href="/chats">
-        <span slot="icon">💬</span>Chats
+        <span slot="start">💬</span>Chats
         <span slot="meta">3</span>
       </lr-app-rail-item>
     </div>
@@ -216,16 +216,16 @@ export const NestedChildren: StoryObj = {
       style="inline-size: 16rem; border: 1px solid var(--lr-color-border); border-radius: 0.5rem; padding: 0.5rem;"
     >
       <lr-app-rail-item href="/projects" expanded>
-        <span slot="icon" aria-hidden="true">📁</span>Projects
+        <span slot="start" aria-hidden="true">📁</span>Projects
         <lr-app-rail-item slot="children" href="/projects/atlas">
-          <span slot="icon" aria-hidden="true">🛰️</span>Atlas
+          <span slot="start" aria-hidden="true">🛰️</span>Atlas
         </lr-app-rail-item>
         <lr-app-rail-item slot="children" href="/projects/beacon" current>
-          <span slot="icon" aria-hidden="true">🔦</span>Beacon
+          <span slot="start" aria-hidden="true">🔦</span>Beacon
         </lr-app-rail-item>
       </lr-app-rail-item>
       <lr-app-rail-item href="/settings">
-        <span slot="icon" aria-hidden="true">⚙️</span>Settings
+        <span slot="start" aria-hidden="true">⚙️</span>Settings
       </lr-app-rail-item>
     </div>
   `,
@@ -234,7 +234,7 @@ export const NestedChildren: StoryObj = {
 
 export const IconOnlyWithChildren: StoryObj = {
   parameters: { docs: { description: { story: 'Collapse the rail to hide nested disclosure controls and lists. Returning to full restores the previous expanded state.' } } },
-  render: () => html`<lr-app-rail label="Workspace" collapsible icon-only-breakpoint="0px"><lr-app-rail-item expanded><span slot="icon">○</span>Account<lr-app-rail-item slot="children">Profile</lr-app-rail-item><lr-app-rail-item slot="children">Security</lr-app-rail-item></lr-app-rail-item></lr-app-rail>`,
+  render: () => html`<lr-app-rail label="Workspace" collapsible icon-only-breakpoint="0px"><lr-app-rail-item expanded><span slot="start">○</span>Account<lr-app-rail-item slot="children">Profile</lr-app-rail-item><lr-app-rail-item slot="children">Security</lr-app-rail-item></lr-app-rail-item></lr-app-rail>`,
 };
 
 export const TopLayer: StoryObj = {

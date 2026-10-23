@@ -74,7 +74,7 @@ export interface AgentRunMetric {
 /** Visual chrome for `<lr-agent-run>`'s root — the library's shared container-frame vocabulary. */
 export type AgentRunAppearance = LyraFrame;
 
-/** `detail` for `lr-run-cancel` and its deprecated alias `lr-cancel`. */
+/** `detail` for `lr-run-cancel`. */
 export interface AgentRunCancelDetail extends CancelEventDetail {
   runId: string;
 }
@@ -86,7 +86,6 @@ export interface AgentRunRetryDetail extends RetryEventDetail {
 
 export interface LyraAgentRunEventMap {
   'lr-run-cancel': CustomEvent<AgentRunCancelDetail>;
-  'lr-cancel': CustomEvent<AgentRunCancelDetail>;
   'lr-run-retry': CustomEvent<AgentRunRetryDetail>;
 }
 
@@ -140,7 +139,7 @@ export interface LyraAgentRunEventMap {
  *
  * Unless `without-cancel` is set, the built-in Cancel button renders while the run's status is one
  * of `TICKING_KINDS` (still genuinely in progress); unless `without-retry` is set, Retry renders
- * while the status is `error` or `cancelled`. Clicking either fires `lr-cancel`/`lr-run-retry` with
+ * while the status is `error` or `cancelled`. Clicking either fires `lr-run-cancel`/`lr-run-retry` with
  * `CancelEventDetail`/`RetryEventDetail` from `src/ai/types.ts` — this component never cancels or
  * retries anything itself, it only requests. `RetryEventDetail.attempt` is a 1-based counter
  * local to this component, incremented on every `lr-run-retry` click and reset to `0` whenever
@@ -169,7 +168,6 @@ export interface LyraAgentRunEventMap {
  * @slot output - The run's final output content. No default content.
  * @slot actions - Extra header actions alongside the built-in Cancel/Retry buttons.
  * @event lr-run-cancel - The built-in Cancel button was activated. `detail: { runId }`.
- * @event lr-cancel - Deprecated alias of `lr-run-cancel`, dispatched right after it with the same detail.
  * @event lr-run-retry - The built-in Retry button was activated. `detail: { runId, attempt }`
  *   (`attempt` is a 1-based counter reset per `run.id`).
  * @csspart base - The root container.
@@ -440,7 +438,6 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
   private onCancelClick = (): void => {
     const runId = this.run?.id ?? '';
     this.emit('lr-run-cancel', { runId });
-    this.emit('lr-cancel', { runId });
   };
 
   private onRetryClick = (): void => {

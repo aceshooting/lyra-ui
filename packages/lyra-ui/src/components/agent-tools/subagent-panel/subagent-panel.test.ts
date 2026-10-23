@@ -115,7 +115,7 @@ it('emits full selections plus status-appropriate cancel and retry intents', asy
   (el.shadowRoot!.querySelector('[data-run-id="research"] [part="run-trigger"]') as HTMLButtonElement).click();
   expect((await selectPending).detail).to.deep.equal({ runId: 'research', run: runs[0] });
 
-  const cancelPending = oneEvent(el, 'lr-cancel');
+  const cancelPending = oneEvent(el, 'lr-run-cancel');
   (el.shadowRoot!.querySelector('[data-run-id="research"] [part="cancel"]') as HTMLButtonElement).click();
   expect((await cancelPending).detail).to.deep.equal({ runId: 'research' });
 
@@ -863,14 +863,14 @@ describe('lr-subagent-panel deprecated --lr-subagent-panel-background/-hover-bac
   });
 });
 
-it('requests cancellation through lr-run-cancel, then the deprecated lr-cancel alias', async () => {
+it('requests cancellation through lr-run-cancel and no longer fires the removed lr-cancel alias', async () => {
   const el = (await fixture(html`<lr-subagent-panel .runs=${runs}></lr-subagent-panel>`)) as LyraSubagentPanel;
   const seen: string[] = [];
   for (const name of ['lr-run-cancel', 'lr-cancel']) {
     el.addEventListener(name, (event) => seen.push(`${name}:${(event as CustomEvent<{ runId: string }>).detail.runId}`));
   }
   el.shadowRoot!.querySelector<HTMLButtonElement>('[data-run-id="research"] [part="cancel"]')!.click();
-  expect(seen).to.deep.equal(['lr-run-cancel:research', 'lr-cancel:research']);
+  expect(seen).to.deep.equal(['lr-run-cancel:research']);
 });
 
 it('names retry actions from their visible localized labels and keeps the run context in the description', async () => {

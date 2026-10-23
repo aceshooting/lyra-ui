@@ -152,7 +152,8 @@ function recordToggles(menu: LyraNavigationMenu): RecordedToggle[] {
 
 function recordExpanded(menu: LyraNavigationMenu): LyraNavigationMenuExpandedChangeDetail[] {
   const events: LyraNavigationMenuExpandedChangeDetail[] = [];
-  menu.addEventListener('lr-expanded-change', (event) => {
+  menu.addEventListener('lr-toggle', (event) => {
+    if (event.target !== menu) return;
     events.push((event as CustomEvent<LyraNavigationMenuExpandedChangeDetail>).detail);
   });
   return events;
@@ -1408,6 +1409,25 @@ describe('<lr-navigation-menu> collapse', () => {
     // wait-reason: negative assertion, a wider allocation must not collapse
     await aTimeout(50);
     expect(wider.collapsed).to.equal(false);
+  });
+
+  it('no longer emits the removed lr-expanded-change event', async () => {
+    const menu = await menuFixture(html`
+      <div style="inline-size: 320px">
+        <lr-navigation-menu mobile-breakpoint="40rem" show-delay="0">${items()}</lr-navigation-menu>
+      </div>
+    `);
+    await waitUntil(() => part(menu, 'toggle') !== null, 'toggle never rendered');
+    const removed: string[] = [];
+    menu.addEventListener('lr-expanded-change', () => removed.push('lr-expanded-change'));
+    const ownToggles: string[] = [];
+    menu.addEventListener('lr-toggle', (event) => {
+      if (event.target === menu) ownToggles.push('lr-toggle');
+    });
+    part(menu, 'toggle')!.click();
+    await settle(menu);
+    expect(ownToggles).to.have.length(1);
+    expect(removed).to.have.length(0);
   });
 
   it('expands from the toggle into full-width in-flow items that ignore hover', async () => {

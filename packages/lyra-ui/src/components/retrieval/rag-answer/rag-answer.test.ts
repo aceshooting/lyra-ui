@@ -956,7 +956,7 @@ describe('review fixes', () => {
   it('keeps the Markdown, source card and source list housekeeping events inside, and surfaces lr-open', async () => {
     const el = await fixture<LyraRagAnswer>(html`<lr-rag-answer answer="x" .sources=${[{ id: 'd1', name: 'guide.md' }]}></lr-rag-answer>`);
     const leaked: string[] = [];
-    for (const name of ['lr-content-settled', 'lr-copy', 'lr-copy-error', 'lr-expand', 'lr-toggle'])
+    for (const name of ['lr-content-settled', 'lr-copy', 'lr-copy-error', 'lr-toggle'])
       el.addEventListener(name, () => leaked.push(name));
     const opened: unknown[] = [];
     el.addEventListener('lr-open', (event) => opened.push((event as CustomEvent).detail));
@@ -966,7 +966,7 @@ describe('review fixes', () => {
     fire(el.shadowRoot!.querySelector('lr-markdown')!, 'lr-content-settled');
     fire(el.shadowRoot!.querySelector('lr-markdown')!, 'lr-copy');
     fire(el.shadowRoot!.querySelector('lr-markdown')!, 'lr-copy-error');
-    fire(el.shadowRoot!.querySelector('lr-source-card')!, 'lr-expand');
+    fire(el.shadowRoot!.querySelector('lr-source-card')!, 'lr-toggle');
     fire(el.shadowRoot!.querySelector('lr-source-list')!, 'lr-toggle');
     const card = el.shadowRoot!.querySelector('lr-source-card') as LyraSourceCard;
     await card.updateComplete;

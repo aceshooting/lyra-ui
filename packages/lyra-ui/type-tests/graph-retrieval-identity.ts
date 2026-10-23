@@ -36,10 +36,12 @@ const pathRequest: LyraKnowledgeGraphExplorerEventMap['lr-path-request']['detail
     sourceNodeId: 'entity-a',
     targetNodeId: 'entity-b',
   };
-const pathEntity: LyraPathStripEventMap['lr-entity-activate']['detail'] = {
+const pathEntity: LyraPathStripEventMap['lr-entity-select']['detail'] = {
   entityId: 'entity-a',
   occurrenceIndex: 2,
 };
+// @ts-expect-error The old path-strip entity event was replaced by lr-entity-select.
+export type _RemovedPathEntityActivate = LyraPathStripEventMap['lr-entity-activate'];
 const pathRelation: LyraPathStripEventMap['lr-relation-activate']['detail'] = {
   relation: 'related-to',
   sourceNodeId: 'entity-a',

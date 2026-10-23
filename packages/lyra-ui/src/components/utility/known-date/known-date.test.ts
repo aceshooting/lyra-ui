@@ -233,14 +233,15 @@ describe('mirrored Web Awesome public surface', () => {
     expect(getComputedStyle(hint).display).to.equal('none');
   });
 
-  it('publishes the exact compatibility part aliases', async () => {
+  it('publishes the exact compatibility part aliases and no removed label part', async () => {
     const el = (await fixture(
       html`<lr-known-date locale="en-GB" label="Birth date"></lr-known-date>`,
     )) as LyraKnownDate;
     await el.updateComplete;
     const label = el.shadowRoot!.querySelector('[part~="form-control-label"]') as HTMLElement;
     const fieldsRow = el.shadowRoot!.querySelector('[part~="form-control-input"]') as HTMLElement;
-    expect(label.part.contains('label')).to.be.true;
+    expect(label.part.contains('form-control-label')).to.be.true;
+    expect(el.shadowRoot!.querySelectorAll('[part~="label"]').length).to.equal(0);
     expect(fieldsRow.part.contains('fields')).to.be.true;
     for (const field of ['day', 'month', 'year'] as const) {
       const block = fieldFor(el, field).parentElement!;

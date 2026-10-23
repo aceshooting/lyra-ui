@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { assembleCompatibilityContext, compatibilityExportCandidates, policyKey } from './published-compatibility.mjs';
 import { readComponentMetadataSources, assembleComponentMetadata } from './component-metadata-source.mjs';
 import { compareVersions, inspectExportContract } from './component-metadata.mjs';
@@ -91,10 +91,24 @@ export function readCurrentCompatibilityContextSync(packageDir = join(dirname(fi
       componentRegistrationRoutes[component.tag] = route;
     }
   }
-  return assembleCompatibilityContext({ packageVersion: packageJson.version, currentInventory: inventory,
+  // Retirements after the last full capture (the package split in 27 stopped packing the manifest)
+  // carry a compact snapshot of the published release's policy and surface for the removed names.
+  const leanPath = join(packageDir, 'scripts/fixtures/compatibility-history/retirements-30.0.0.json');
+  const lean = existsSync(leanPath) ? JSON.parse(readFileSync(leanPath, 'utf8')) : null;
+  // A pending major changeset is the release being prepared: its removals are checked against that
+  // version before the bump stamps package.json.
+  const changesetDir = join(packageDir, '../../.changeset');
+  let releaseVersion = packageJson.version;
+  if (existsSync(changesetDir)) {
+    const pendingMajor = readdirSync(changesetDir).some(file => file.endsWith('.md') && file !== 'README.md' &&
+      /^---\n[\s\S]*?['"]@aceshooting\/lyra-ui['"]:\s*major\b[\s\S]*?\n---/u.test(readFileSync(join(changesetDir, file), 'utf8')));
+    if (pendingMajor) releaseVersion = `${Number(packageJson.version.split('.')[0]) + 1}.0.0`;
+  }
+  return assembleCompatibilityContext({ packageVersion: packageJson.version, releaseVersion, successors: lean?.successors ?? [], currentInventory: inventory,
     currentExportDeprecations: metadata.exportDeprecations, currentExportSurface,
     componentRegistrationRoutes,
-    captures: verified.captures.map(entry => entry.facts), retirementIndex: verified.retirements });
+    captures: [...verified.captures.map(entry => entry.facts), ...(lean ? [lean.capture] : [])],
+    retirementIndex: [...verified.retirements, ...(lean ? lean.retirements : [])] });
 }
 
 export async function checkPublishedCompatibility(directory) { return checkPublishedCompatibilitySync(directory); }

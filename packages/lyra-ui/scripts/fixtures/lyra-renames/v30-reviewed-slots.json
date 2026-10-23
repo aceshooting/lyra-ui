@@ -1,0 +1,26 @@
+[
+  {
+    "tag": "lr-app-rail-item",
+    "slot": "start",
+    "input": "<lr-app-rail-item href=\"/inbox\"><span slot=\"start\">Canonical</span><span slot=\"icon\">Fallback</span></lr-app-rail-item>",
+    "resolved": "<lr-app-rail-item href=\"/inbox\"><span slot=\"start\">Canonical</span></lr-app-rail-item>"
+  },
+  {
+    "tag": "lr-flow-node",
+    "slot": "start",
+    "input": "<lr-flow-node heading=\"Node\"><span slot=\"start\">Canonical</span><span slot=\"icon\">Fallback</span></lr-flow-node>",
+    "resolved": "<lr-flow-node heading=\"Node\"><span slot=\"start\">Canonical</span></lr-flow-node>"
+  },
+  {
+    "tag": "lr-widget",
+    "slot": "start",
+    "input": "<lr-widget label=\"Widget\"><span slot=\"start\">Canonical</span><span slot=\"icon\">Fallback</span></lr-widget>",
+    "resolved": "<lr-widget label=\"Widget\"><span slot=\"start\">Canonical</span></lr-widget>"
+  },
+  {
+    "tag": "lr-tool-call-chip",
+    "slot": "status-icon",
+    "input": "<lr-tool-call-chip name=\"Tool\"><span slot=\"status-icon\">Canonical</span><span slot=\"icon\">Fallback</span></lr-tool-call-chip>",
+    "resolved": "<lr-tool-call-chip name=\"Tool\"><span slot=\"status-icon\">Canonical</span></lr-tool-call-chip>"
+  }
+]

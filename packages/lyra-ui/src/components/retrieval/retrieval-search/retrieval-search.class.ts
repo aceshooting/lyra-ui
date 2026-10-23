@@ -48,7 +48,7 @@ const RETRIEVAL_MODE = literalSetConverter<LyraRetrievalMode>(
 );
 
 /** `detail` for `lr-filters-change` -- the complete, already-updated `filters`/`scope` state
- *  after a chip removal, mirroring `<lr-source-picker>`'s `lr-sources-change` "full next state"
+ *  after a chip removal, mirroring `<lr-source-picker>`'s `lr-selection-change` "full next state"
  *  convention rather than a single-item delta. */
 export interface RetrievalFiltersChangeDetail {
   filters: Record<string, unknown>;

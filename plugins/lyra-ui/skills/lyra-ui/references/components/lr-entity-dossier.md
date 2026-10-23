@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecated event** `lr-entity-activate` since `26.0.0`; use event `@lr-entity-select`; removal not before `28.0.0` — lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 9 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -59,9 +59,8 @@ shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape
 **Events:** composed child events reach the host (`composed: true`), with the direct supporting
 chunk toggle qualified by its section and tab changes projected to `tabId`: `lr-entity-select` (`detail: { entityId, occurrenceIndex? }`, surfaced from the
 embedded entity card, neighbor list, or the provenance panel's community card or path strip, which
-add `occurrenceIndex`), its deprecated alias `lr-entity-activate` (from those last two only), `lr-node-expand` (`detail: { nodeId }`),
-`lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`), `lr-chunk-toggle` (`detail: { chunkId,
-expanded }`), `lr-toggle` (`detail: { section, expanded, itemId? }`; the direct supporting-chunk
+add `occurrenceIndex`), `lr-node-expand` (`detail: { nodeId }`),
+`lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`), `lr-toggle` (`detail: { section, expanded, itemId? }`; the direct supporting-chunk
 inspector adds `section: 'chunks'`, while provenance-panel toggles pass through), and `lr-tab-show`
 (`detail: { tabId: LyraEntityDossierTab }`, where `LyraEntityDossierTab = 'relationships' | 'chunks'
 | 'provenance'` — also the `lr-tab-group` slot/tab ids). The Provenance tab's own controls reach the

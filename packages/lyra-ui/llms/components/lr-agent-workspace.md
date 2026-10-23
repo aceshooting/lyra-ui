@@ -128,7 +128,7 @@ RetrievalChunk[] }`) — forwarded from the built-in retrieval results.
   from the built-in tool timeline; `args` is present only on approval and may differ from what the
   entry originally proposed (the dialog's inline edit step). Call `preventDefault()` synchronously
   to hold the built-in dialog while persisting the decision.
-- `lr-cancel` (`detail: CancelEventDetail = { reason?: string }`) / `lr-run-retry` (`detail: RetryEventDetail` =
+- `lr-run-cancel` (`detail: { runId: string; reason?: string }`) / `lr-run-retry` (`detail: RetryEventDetail` =
   `{ attempt: number; messageId?: string }`, from `@aceshooting/lyra-ui/ai`) — forwarded from the
   built-in agent run. The distinct retry name prevents a rendered message or attachment retry from
   being mistaken for a whole-run retry.

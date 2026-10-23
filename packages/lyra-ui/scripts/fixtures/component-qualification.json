@@ -29980,7 +29980,7 @@
           "evidence": [
             {
               "file": "src/components/utility/known-date/known-date.class.ts",
-              "line": 380,
+              "line": 377,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -42129,7 +42129,7 @@
           "evidence": [
             {
               "file": "src/components/media/qr-code/qr-code.class.ts",
-              "line": 413,
+              "line": 411,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -45767,7 +45767,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.class.ts",
-              "line": 933,
+              "line": 923,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -48919,7 +48919,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/source-picker/source-picker.class.ts",
-              "line": 570,
+              "line": 563,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -60105,7 +60105,7 @@
           "evidence": [
             {
               "file": "src/components/media/video-playlist/video-playlist.class.ts",
-              "line": 533,
+              "line": 532,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

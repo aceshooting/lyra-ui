@@ -90,7 +90,7 @@ it('falls back to pending for an out-of-union status attribute', async () => {
 
   expect(el.status).to.equal('pending');
   expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Pending');
-  expect(el.shadowRoot!.querySelector('slot[name="icon"] svg')).to.exist;
+  expect(el.shadowRoot!.querySelector('slot[name="status-icon"] svg')).to.exist;
   expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement).ariaLabel).to.contain('Pending');
 });
 
@@ -105,16 +105,16 @@ it('renders a pending fallback for a direct out-of-union status assignment', asy
   expect(el.status).to.equal('pending');
   expect(el.getAttribute('status')).to.equal('pending');
   expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Pending');
-  expect(el.shadowRoot!.querySelector('slot[name="icon"] svg')).to.exist;
+  expect(el.shadowRoot!.querySelector('slot[name="status-icon"] svg')).to.exist;
   expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement).ariaLabel).to.contain('Pending');
 });
 
-it('renders a distinct built-in glyph per status as the icon slot fallback content', async () => {
+it('renders a distinct built-in glyph per status as the status-icon slot fallback content', async () => {
   const statuses = ['pending', 'running', 'success', 'error', 'denied', 'incomplete'] as const;
   const markups = new Set<string>();
   for (const status of statuses) {
     const el = (await fixture(html`<lr-tool-call-chip status=${status}></lr-tool-call-chip>`)) as LyraToolCallChip;
-    const slot = el.shadowRoot!.querySelector('slot[name="icon"]') as HTMLSlotElement;
+    const slot = el.shadowRoot!.querySelector('slot[name="status-icon"]') as HTMLSlotElement;
     const svg = slot.querySelector('svg');
     expect((svg) != null, `status=${status} should render a built-in svg glyph`).to.equal(true);
     markups.add(svg!.innerHTML);
@@ -133,7 +133,7 @@ it('keeps an incomplete status as a neutral, unanimated terminal state with visi
     expect(el.getAttribute('status')).to.equal('incomplete');
     expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal('Incomplete');
     expect(base.getAttribute('aria-label')).to.equal('read_file — Incomplete');
-    expect(getComputedStyle(el.shadowRoot!.querySelector('slot[name="icon"] svg')!).animationName).to.equal('none');
+    expect(getComputedStyle(el.shadowRoot!.querySelector('slot[name="status-icon"] svg')!).animationName).to.equal('none');
 
     const probe = document.createElement('span');
     probe.style.color = 'var(--lr-color-border)';
@@ -320,10 +320,10 @@ it('forwards host focus() and blur() to the current internal base button', async
   expect(el.shadowRoot!.activeElement === null).to.be.true;
 });
 
-it('keeps arbitrary icon-slot controls inert inside the decorative wrapper', async () => {
+it('keeps arbitrary status-icon-slot controls inert inside the decorative wrapper', async () => {
   const el = await fixture<LyraToolCallChip>(html`
     <lr-tool-call-chip name="search">
-      <button slot="icon">Unexpected action</button>
+      <button slot="status-icon">Unexpected action</button>
     </lr-tool-call-chip>
   `);
   const wrapper = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
@@ -331,6 +331,17 @@ it('keeps arbitrary icon-slot controls inert inside the decorative wrapper', asy
   expect(wrapper.inert).to.be.true;
   assigned.focus();
   expect(document.activeElement === assigned).to.be.false;
+});
+
+it('no longer projects the removed icon slot: its content is unassigned and the glyph still renders', async () => {
+  const el = await fixture<LyraToolCallChip>(html`
+    <lr-tool-call-chip name="search"><span slot="icon">legacy</span></lr-tool-call-chip>
+  `);
+  expect(el.shadowRoot!.querySelectorAll('slot[name="icon"]').length).to.equal(0);
+  const status = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="status-icon"]')!;
+  expect(status.assignedNodes().length).to.equal(0);
+  expect(status.querySelectorAll('svg').length).to.equal(1);
+  expect(el.querySelector('[slot="icon"]')!.assignedSlot === null).to.equal(true);
 });
 
 it('emits only lr-tool-call-chip-select — the removed lr-tool-chip-select alias never fires', async () => {
@@ -393,7 +404,7 @@ it('keeps its button purpose-named instead of cloning non-empty or empty host la
 describe('icon override precedence', () => {
   it('falls back to the built-in status glyph when neither the icon slot nor icon prop is set', async () => {
     const el = (await fixture(html`<lr-tool-call-chip status="success"></lr-tool-call-chip>`)) as LyraToolCallChip;
-    const slot = el.shadowRoot!.querySelector('slot[name="icon"]') as HTMLSlotElement;
+    const slot = el.shadowRoot!.querySelector('slot[name="status-icon"]') as HTMLSlotElement;
     // Plain (non-flattened) assignedElements() reports only real light-DOM
     // assignment, staying empty here -- {flatten: true} would instead report
     // the slot's own fallback content (the built-in svg below) once nothing
@@ -404,17 +415,17 @@ describe('icon override precedence', () => {
 
   it('renders the icon prop as literal fallback text when the icon slot is empty', async () => {
     const el = (await fixture(html`<lr-tool-call-chip icon="🔍"></lr-tool-call-chip>`)) as LyraToolCallChip;
-    const slot = el.shadowRoot!.querySelector('slot[name="icon"]') as HTMLSlotElement;
+    const slot = el.shadowRoot!.querySelector('slot[name="status-icon"]') as HTMLSlotElement;
     expect(slot.assignedElements()).to.have.length(0);
     expect((slot.querySelector('svg')) == null).to.equal(true);
     expect(slot.textContent!.trim()).to.equal('🔍');
   });
 
-  it('lets a slot="icon" child override both the built-in glyph and the icon prop', async () => {
+  it('lets a slot="status-icon" child override both the built-in glyph and the icon prop', async () => {
     const el = (await fixture(
-      html`<lr-tool-call-chip icon="🔍"><span slot="icon" id="custom">X</span></lr-tool-call-chip>`,
+      html`<lr-tool-call-chip icon="🔍"><span slot="status-icon" id="custom">X</span></lr-tool-call-chip>`,
     )) as LyraToolCallChip;
-    const slot = el.shadowRoot!.querySelector('slot[name="icon"]') as HTMLSlotElement;
+    const slot = el.shadowRoot!.querySelector('slot[name="status-icon"]') as HTMLSlotElement;
     const assigned = slot.assignedElements({ flatten: true });
     expect(assigned).to.have.length(1);
     expect(assigned[0]!.id).to.equal('custom');
@@ -426,7 +437,7 @@ describe('detail tooltip', () => {
     const el = (await fixture(html`
       <lr-tool-call-chip name="web_search">
         <span id="explicit-default" slot="">Query: solar panel efficiency</span>
-        <span slot="icon">⌕</span>
+        <span slot="status-icon">⌕</span>
       </lr-tool-call-chip>
     `)) as LyraToolCallChip;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
@@ -443,7 +454,7 @@ describe('detail tooltip', () => {
 
   it('tracks explicit default-slot mutations while continuing to exclude named-slot content', async () => {
     const el = (await fixture(html`
-      <lr-tool-call-chip name="web_search"><span id="preview" slot="icon">⌕</span></lr-tool-call-chip>
+      <lr-tool-call-chip name="web_search"><span id="preview" slot="status-icon">⌕</span></lr-tool-call-chip>
     `)) as LyraToolCallChip;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;

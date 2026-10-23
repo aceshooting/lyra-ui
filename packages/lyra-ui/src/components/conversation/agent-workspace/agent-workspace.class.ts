@@ -11,13 +11,12 @@ import { finiteCount } from '../../../internal/numbers.js';
 import { tag } from '../../../internal/prefix.js';
 import { normalizeChatComposerStatus } from '../chat-composer/chat-composer.class.js';
 import type { ChatComposerStatus, ChatComposerWrap } from '../chat-composer/chat-composer.class.js';
-import type { AgentRunMetric } from '../../agent-tools/agent-run/agent-run.class.js';
+import type { AgentRunCancelDetail, AgentRunMetric } from '../../agent-tools/agent-run/agent-run.class.js';
 export type { AgentRunMetric } from '../../agent-tools/agent-run/agent-run.class.js';
 import type { ContextInspectorSegment } from '../../agent-tools/context-inspector/context-inspector.class.js';
 export type { ContextInspectorSegment } from '../../agent-tools/context-inspector/context-inspector.class.js';
 import type {
   AgentRun,
-  CancelEventDetail,
   ChatMessage,
   Citation,
   CitationSelectEventDetail,
@@ -90,9 +89,9 @@ export interface LyraAgentWorkspaceEventMap {
   'lr-citation-select': CustomEvent<LyraEventDetailSnapshot<CitationSelectEventDetail>>;
   'lr-tool-approval-decide-request': CustomEvent<ToolTimelineApprovalDetail>;
   // Both of these bubble up unchanged from the composed `<lr-agent-run>`, so each has to carry
-  // that element's own detail type -- `lr-cancel` is emitted there as `emit('lr-cancel', {})`,
-  // i.e. always a real `CancelEventDetail` object, never `undefined`.
-  'lr-cancel': CustomEvent<CancelEventDetail>;
+  // that element's own detail type -- `lr-run-cancel` is emitted there as
+  // `emit('lr-run-cancel', { runId })`, i.e. always a real object, never `undefined`.
+  'lr-run-cancel': CustomEvent<AgentRunCancelDetail>;
   'lr-run-retry': CustomEvent<RetryEventDetail>;
 }
 
@@ -148,7 +147,7 @@ export interface LyraAgentWorkspaceEventMap {
  * @event lr-retrieval-select - Forwarded from the built-in retrieval results. `detail: { chunkIds, chunks }`.
  * @event lr-citation-select - Forwarded from the built-in grounding summary. `detail: { citation }`.
  * @event lr-tool-approval-decide-request - Forwarded from the built-in tool timeline.
- * @event lr-cancel - Forwarded from the built-in agent run.
+ * @event lr-run-cancel - Forwarded from the built-in agent run.
  * @event lr-run-retry - Forwarded from the built-in agent run.
  * @csspart input-limit - Original collection admission-loss notices.
  * @csspart base - The root workspace wrapper.
@@ -475,11 +474,6 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
     });
   };
 
-  /** The deprecated `lr-select` alias follows `lr-selection-change`; it only has to stay contained. */
-  private onRetrievalSelectAlias = (event: Event): void => {
-    event.stopPropagation();
-  };
-
   private onMessageRetry = (event: CustomEvent<{ messageId?: string }>): void => {
     event.stopPropagation();
     if (event.detail.messageId) this.emit('lr-message-retry', { messageId: event.detail.messageId });
@@ -565,7 +559,6 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
                 .hasMore=${this.retrievalHasMore}
                 .errorText=${this.retrievalErrorText}
                 @lr-selection-change=${this.onRetrievalSelect}
-                @lr-select=${this.onRetrievalSelectAlias}
               ></lr-retrieval-results>
             </section>`
           : nothing}

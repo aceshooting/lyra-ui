@@ -31,8 +31,8 @@ its content.
 - `summary: string = ''` — short human-readable status text, e.g. `Searching web…`
 - `durationMs?: number` (attribute `duration-ms`) — how long the call took, in milliseconds; the
   `duration` part is omitted entirely when unset
-- `icon: string = ''` — literal icon hint (e.g. an emoji) rendered when the `icon` slot is empty;
-  ignored once anything is assigned to `slot="icon"`
+- `icon: string = ''` — literal icon hint (e.g. an emoji) rendered when the `status-icon` slot is empty;
+  ignored once anything is assigned to `slot="status-icon"`
 - `callId: string = ''` (attribute `call-id`) — unique identifier for this invocation, echoed back
   in `lr-tool-call-chip-select`'s detail so a listener can correlate the click with the call it fired for
 
@@ -46,7 +46,7 @@ interaction.
 **Slots:** default (rich tooltip/detail content — e.g. the tool's raw arguments or a short preview —
 shown in a floating tooltip on hover or keyboard focus (the focused control matches `:focus-visible` and no pointer press preceded it); nothing renders at all, no hover affordance, when this
 slot is empty), `status-icon` (overrides the built-in per-status glyph; otherwise the `icon` prop or
-built-in glyph appears), `icon` (deprecated slot alias for `status-icon`)
+built-in glyph appears)
 
 **CSS parts:** `base` (the clickable `<button>`), `icon`, `label` (wrapper around `category`, `name`,
 `summary`), `category`, `name` (the tool name, or `display-name` when set), `summary`, `meta` (wrapper around `status-text` and `duration`),
@@ -94,7 +94,7 @@ ancestor to change every unset chip beneath it.
   duration-ms="820"
   call-id="call_123"
 >
-  <pre slot="icon" style="display:none"></pre>
+  <pre slot="status-icon" style="display:none"></pre>
   <code>{"query": "lyra ui components"}</code>
 </lr-tool-call-chip>
 <script type="module">
@@ -120,7 +120,7 @@ sub-1000ms `"820ms"`, else trimmed to at most one decimal of seconds (`"1.5s"`, 
 - the native button always keeps its purpose-specific generated name (`"name — summary — Status —
 duration"`). A host `aria-label` remains on the host and is not cloned onto that button; even an
   explicit empty host label never leaves the actionable button unnamed
-- the `icon` slot is decorative by contract. Its wrapper is both `aria-hidden` and `inert`, so do
+- the `status-icon` slot is decorative by contract. Its wrapper is both `aria-hidden` and `inert`, so do
   not place links, buttons, or other controls there; use the chip activation or detail slot instead
 - Escape only dismisses the tooltip when it's open; it does not fire any event or otherwise affect
   `status`/`open` state, since the chip has no "open" state of its own beyond the tooltip
@@ -3015,7 +3015,7 @@ assigned array or record has no effect; create and reassign a new value after ch
   and stay visibly interactive either way. The exported alias `AgentRunAppearance` is retained as a
   name for the same union
 
-**Events:** `lr-run-cancel` (`detail: { runId }`), and its deprecated alias `lr-cancel` (`detail: CancelEventDetail` = `{ reason?: string }`, from
+**Events:** `lr-run-cancel` (`detail: { runId }`, extending `CancelEventDetail` = `{ reason?: string }` from
 `@aceshooting/lyra-ui/ai`; `reason` is `undefined` from the built-in button), `lr-run-retry`
 (`detail: RetryEventDetail` = `{ attempt: number; messageId?: string }`, same module — `attempt` is
 this component's own retry counter, reset when `run.id` changes).
@@ -3023,7 +3023,7 @@ this component's own retry counter, reset when `run.id` changes).
 **Slots:** `header` and `summary` replace the corresponding built-in chrome; `tasks`, `tools`,
 `reasoning`, `output`, and `actions` are host-controlled composition regions.
 
-**Events and status:** `lr-run-cancel` (`detail: { runId }`) and `lr-run-retry` (`detail: { runId, attempt }`) carry the run id; `lr-cancel` is a deprecated alias of `lr-run-cancel`, dispatched right after it. A run whose `status` is missing or the compact string form renders through the same status normalizer as its steps.
+**Events and status:** `lr-run-cancel` (`detail: { runId }`) and `lr-run-retry` (`detail: { runId, attempt }`) carry the run id. A run whose `status` is missing or the compact string form renders through the same status normalizer as its steps.
 
 **CSS parts:** `base`, `header`, `status`, `status-badge`, `status-message`,
 `elapsed` (the live ticker), `elapsed-static` (a terminal run's frozen duration), `summary`, `model`,
@@ -3710,10 +3710,10 @@ displayed rows and chart show only the most recent runs.
 Empty metric/run ids are omitted and later duplicates use deterministic first-occurrence-wins
 normalization before cards, selectors, chart series, row lookup, and emitted events are derived.
 
-**Events:** `lr-metric-change-request` (`{ metricId }`, emitted when a metric selector is activated; the host decides whether to change `metricId`), its deprecated alias `lr-metric-change`, and
+**Events:** `lr-metric-change-request` (`{ metricId }`, emitted when a metric selector is activated; the host decides whether to change `metricId`), and
 `lr-run-activate` (`{ runId, run }`).
 
-**Heading, events and window:** `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`) sets the title level, with the run history heading one level below (`'none'` drops heading semantics); an empty `label` renders no title. `lr-metric-change-request` (`detail: { metricId }`) is the request; `lr-metric-change` is a deprecated alias dispatched right after it. `format: 'milliseconds'` metrics render as a localized short duration (`850ms`, `1.2s`). `max-rendered-runs` keeps the first N runs in input order, so pass newest-first history to chart the latest runs.
+**Heading, events and window:** `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`) sets the title level, with the run history heading one level below (`'none'` drops heading semantics); an empty `label` renders no title. `lr-metric-change-request` (`detail: { metricId }`) is the request. `format: 'milliseconds'` metrics render as a localized short duration (`850ms`, `1.2s`). `max-rendered-runs` keeps the first N runs in input order, so pass newest-first history to chart the latest runs.
 
 **CSS parts:** `base`, `heading`, `metrics`, `metric`, `chart`, `runs`, `runs-heading`, `run`,
 `run-label`, `run-meta`, `run-status`, `run-status-message`, `limit` (shown when run history exceeds
@@ -4033,10 +4033,10 @@ inclusive.
 Empty/blank run ids are omitted and later duplicate ids are ignored before hierarchy, focus,
 counts, selection, and events.
 
-**Events:** `lr-run-activate` (`{ runId, run }`), `lr-run-cancel` (`{ runId }`), its deprecated alias `lr-cancel` (`{ runId }`), and
+**Events:** `lr-run-activate` (`{ runId, run }`), `lr-run-cancel` (`{ runId }`), and
 `lr-run-retry` (`{ runId }`).
 
-**Keyboard, selection and events:** the tree has one tab stop: only the focused row's trigger, cancel and retry buttons are tabbable, and ArrowRight/ArrowLeft move to the first child / parent (swapped under RTL) beside ArrowUp/Down, Home/End and Enter/Space. The selected run is `aria-selected` on its tree item (the trigger no longer carries `aria-pressed`), and a selection made after mount is reserved inside the 500-row cap. `lr-run-cancel` (`detail: { runId }`) is the cancellation request; `lr-cancel` is a deprecated alias dispatched right after it. Unknown status kinds render title-cased.
+**Keyboard, selection and events:** the tree has one tab stop: only the focused row's trigger, cancel and retry buttons are tabbable, and ArrowRight/ArrowLeft move to the first child / parent (swapped under RTL) beside ArrowUp/Down, Home/End and Enter/Space. The selected run is `aria-selected` on its tree item (the trigger no longer carries `aria-pressed`), and a selection made after mount is reserved inside the 500-row cap. `lr-run-cancel` (`detail: { runId }`) is the cancellation request. Unknown status kinds render title-cased.
 
 **CSS parts:** `base`, `list`, `run`, `run-selected`, `run-row`, `run-trigger`, `label`, `status`,
 `task`, `model`, `progress`, `actions`, `cancel`, `retry`, `limit`, `empty`.
@@ -4786,13 +4786,13 @@ Files and per-file hunks need nonblank, unique ids; malformed duplicates normali
 At most 200 files and 200 hunks total render, with a visible limit notice. Diff inputs use
 `lr-diff-view`'s own line limit. Arrays are clone-owned snapshots: reassign after changes.
 
-`lr-change-decision` provides `{ fileId, hunkId, decision }`. The host acknowledges by replacing
+`lr-change-decision-request` provides `{ fileId, hunkId, decision }`. The host acknowledges by replacing
 `files`; there is no patch parser, filesystem access or optimistic decision update. `disabled`
 (default false) disables decision buttons; `readonly` (default false) hides them. File disclosures
 remain readable in both states. Optional `label` overrides the localized heading; a host
 `aria-label` names the internal group.
 
-**Heading and events:** `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`); an empty `label` renders no title. `lr-change-decision-request` is the keep/discard request; `lr-change-decision` is a deprecated alias dispatched right after it.
+**Heading and events:** `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`); an empty `label` renders no title. `lr-change-decision-request` is the keep/discard request.
 
 **CSS parts:**
 
@@ -4812,14 +4812,14 @@ remain readable in both states. Optional `label` overrides the localized heading
 | `limit` | Render-limit notice. |
 
 
-**Events:** non-cancelable `lr-change-decision-request` (`detail: { fileId, hunkId, decision }`), followed by its deprecated alias `lr-change-decision`, reports a keep/discard action; the host applies it by replacing `files`.
+**Events:** non-cancelable `lr-change-decision-request` (`detail: { fileId, hunkId, decision }`), reports a keep/discard action; the host applies it by replacing `files`.
 ```js
 import '@aceshooting/lyra-ui/components/lr-change-review.js';
 const review = document.querySelector('lr-change-review');
 review.files = [{ id: 'config', path: 'config.ts', hunks: [
   { id: 'timeout', before: 'timeout = 1000', after: 'timeout = 3000' }
 ] }];
-review.addEventListener('lr-change-decision', ({ detail }) => {
+review.addEventListener('lr-change-decision-request', ({ detail }) => {
   review.files = review.files.map(file => file.id === detail.fileId
     ? { ...file, hunks: file.hunks.map(hunk => hunk.id === detail.hunkId
       ? { ...hunk, decision: detail.decision } : hunk) } : file);
@@ -5030,7 +5030,7 @@ element.addEventListener('lr-connector-action', (event) => {
 ## `lr-background-runs`
 
 `lr-background-runs` displays controlled run records with statuses `queued`, `running`,
-`completed`, `failed`, and `cancelled`. Open buttons emit `lr-run-open` (`{ runId }`); queued and
+`completed`, `failed`, and `cancelled`. Open buttons emit `lr-run-activate` (`{ runId }`); queued and
 running records also offer Cancel and emit `lr-run-cancel` (`{ runId }`). Terminal runs cannot
 request cancellation. The component does not poll, schedule timers, start runs, or change status.
 Assign a new `.runs` array after host updates; collection snapshots keep the first nonblank identity
@@ -5040,7 +5040,7 @@ and mount no more than 100 rows. `disabled` gates every action. Host `aria-label
 `completed` and `error` as `failed`. An explicit foreign status keeps its row and shows localized
 neutral `Unknown`, without a Cancel action. Existing component-specific status translations and
 `.strings` overrides still name recognized states. `lr-run-activate` (`detail: { runId }`) requests
-opening a run; `lr-run-open` is a deprecated alias dispatched right after it.
+opening a run.
 
 **CSS parts:**
 
@@ -5061,7 +5061,7 @@ opening a run; `lr-run-open` is a deprecated alias dispatched right after it.
 | `limit` | Notice that more than 100 valid runs were supplied. |
 
 
-**Events:** non-cancelable `lr-run-activate` (`detail: { runId }`) requests opening a run, followed by its deprecated alias `lr-run-open`. Non-cancelable `lr-run-cancel` (`detail: { runId }`) requests cancellation and is emitted only for queued/running runs; terminal runs cannot emit it. The host performs the operation and publishes updated state.
+**Events:** non-cancelable `lr-run-activate` (`detail: { runId }`) requests opening a run. Non-cancelable `lr-run-cancel` (`detail: { runId }`) requests cancellation and is emitted only for queued/running runs; terminal runs cannot emit it. The host performs the operation and publishes updated state.
 ```ts
 import '@aceshooting/lyra-ui/components/lr-background-runs.js';
 import type { BackgroundRun } from '@aceshooting/lyra-ui/components/agent-tools/background-runs/background-runs.class.js';

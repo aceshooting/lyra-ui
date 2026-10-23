@@ -84,17 +84,30 @@ it("renders label and sublabel in the header", async () => {
   ).to.equal("Last 7 days");
 });
 
-describe("icon slot", () => {
-  it("renders a leading icon from the icon slot", async () => {
+describe("start slot", () => {
+  it("renders a leading icon from the start slot", async () => {
     const el = (await fixture(
       html`<lr-widget label="Load"
-        ><svg slot="icon" width="16" height="16"></svg>content</lr-widget
+        ><svg slot="start" width="16" height="16"></svg>content</lr-widget
       >`
     )) as LyraWidget;
     const iconSlot = el.shadowRoot!.querySelector(
-      'slot[name="icon"]'
+      'slot[name="start"]'
     ) as HTMLSlotElement;
     expect(iconSlot.assignedElements().length).to.equal(1);
+  });
+
+  it("no longer projects the removed icon slot", async () => {
+    const el = (await fixture(
+      html`<lr-widget label="Load"
+        ><svg id="removed-icon-slot" slot="icon" width="16" height="16"></svg>content</lr-widget
+      >`
+    )) as LyraWidget;
+    expect(el.shadowRoot!.querySelectorAll('slot[name="icon"]').length).to.equal(0);
+    expect(
+      el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="start"]')!.assignedElements().length
+    ).to.equal(0);
+    expect((el.querySelector("#removed-icon-slot") as HTMLElement).assignedSlot === null).to.equal(true);
   });
 
   it("keeps nested interactive title-icon content visible but inert", async () => {
@@ -104,7 +117,7 @@ describe("icon slot", () => {
         <lr-widget label="Load">
           <a
             id="nested-widget-title-icon"
-            slot="icon"
+            slot="start"
             href="#nested-widget-title-icon"
           >
             Decorative title icon
@@ -121,7 +134,7 @@ describe("icon slot", () => {
       "#nested-widget-title-icon"
     )!;
     const slot =
-      el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="icon"]')!;
+      el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="start"]')!;
 
     expect(
       slot.closest<HTMLElement>("[inert]")?.getAttribute("aria-hidden")
@@ -1335,13 +1348,13 @@ it("does not render the collapse or fullscreen buttons unless opted in", async (
   ).to.equal(0);
 });
 
-it("toggles collapsed on collapse-button click and emits lr-collapse-change", async () => {
+it("toggles collapsed on collapse-button click and emits lr-toggle", async () => {
   const el = (await fixture(
     html`<lr-widget label="x" collapsible>content</lr-widget>`
   )) as LyraWidget;
   let detail: unknown;
   el.addEventListener(
-    "lr-collapse-change",
+    "lr-toggle",
     (e) => (detail = (e as CustomEvent).detail)
   );
 
@@ -1353,9 +1366,24 @@ it("toggles collapsed on collapse-button click and emits lr-collapse-change", as
   await el.updateComplete;
 
   expect(el.collapsed).to.be.true;
-  expect(detail).to.deep.equal({ collapsed: true });
+  expect(detail).to.deep.equal({ expanded: false });
   expect(el.shadowRoot!.querySelector('[part="body"]')!.hasAttribute("hidden"))
     .to.be.true;
+});
+
+it("no longer emits the removed lr-collapse-request or lr-collapse-change events", async () => {
+  const el = (await fixture(
+    html`<lr-widget label="x" collapsible>content</lr-widget>`
+  )) as LyraWidget;
+  const removed: string[] = [];
+  el.addEventListener("lr-collapse-request", () => removed.push("lr-collapse-request"));
+  el.addEventListener("lr-collapse-change", () => removed.push("lr-collapse-change"));
+  const toggled: string[] = [];
+  el.addEventListener("lr-toggle", () => toggled.push("lr-toggle"));
+  (el.shadowRoot!.querySelector('[part="collapse-button"]') as HTMLButtonElement).click();
+  await el.updateComplete;
+  expect(toggled).to.have.length(1);
+  expect(removed).to.have.length(0);
 });
 
 it('emits canonical toggle with expanded polarity and guards request reentry', async () => {
@@ -1393,25 +1421,25 @@ it("emits a cancelable collapse request before the committed event and keeps dir
   let requests = 0;
   let committed = 0;
   let request:
-    | { collapsed: boolean; cancelable: boolean; collapsedAtDispatch: boolean }
+    | { expanded: boolean; cancelable: boolean; collapsedAtDispatch: boolean }
     | undefined;
   let change:
-    | { collapsed: boolean; cancelable: boolean; collapsedAtDispatch: boolean }
+    | { expanded: boolean; cancelable: boolean; collapsedAtDispatch: boolean }
     | undefined;
-  el.addEventListener("lr-collapse-request", (event) => {
-    const requestEvent = event as CustomEvent<{ collapsed: boolean }>;
+  el.addEventListener("lr-toggle-request", (event) => {
+    const requestEvent = event as CustomEvent<{ expanded: boolean }>;
     requests += 1;
     request = {
-      collapsed: requestEvent.detail.collapsed,
+      expanded: requestEvent.detail.expanded,
       cancelable: requestEvent.cancelable,
       collapsedAtDispatch: el.collapsed,
     };
   });
-  el.addEventListener("lr-collapse-change", (event) => {
-    const changeEvent = event as CustomEvent<{ collapsed: boolean }>;
+  el.addEventListener("lr-toggle", (event) => {
+    const changeEvent = event as CustomEvent<{ expanded: boolean }>;
     committed += 1;
     change = {
-      collapsed: changeEvent.detail.collapsed,
+      expanded: changeEvent.detail.expanded,
       cancelable: changeEvent.cancelable,
       collapsedAtDispatch: el.collapsed,
     };
@@ -1421,12 +1449,12 @@ it("emits a cancelable collapse request before the committed event and keeps dir
   await el.updateComplete;
 
   expect(request).to.deep.equal({
-    collapsed: true,
+    expanded: false,
     cancelable: true,
     collapsedAtDispatch: false,
   });
   expect(change).to.deep.equal({
-    collapsed: true,
+    expanded: false,
     cancelable: false,
     collapsedAtDispatch: true,
   });
@@ -1450,13 +1478,13 @@ it("lets listeners veto a collapse request without changing or persisting the st
     '[part="collapse-button"]'
   ) as HTMLButtonElement;
   let request:
-    | { collapsed: boolean; cancelable: boolean; collapsedAtDispatch: boolean }
+    | { expanded: boolean; cancelable: boolean; collapsedAtDispatch: boolean }
     | undefined;
   let committed = 0;
   const veto = (event: Event): void => {
-    const requestEvent = event as CustomEvent<{ collapsed: boolean }>;
+    const requestEvent = event as CustomEvent<{ expanded: boolean }>;
     request = {
-      collapsed: requestEvent.detail.collapsed,
+      expanded: requestEvent.detail.expanded,
       cancelable: requestEvent.cancelable,
       collapsedAtDispatch: el.collapsed,
     };
@@ -1465,15 +1493,15 @@ it("lets listeners veto a collapse request without changing or persisting the st
   const countCommitted = (): void => {
     committed += 1;
   };
-  el.addEventListener("lr-collapse-request", veto);
-  el.addEventListener("lr-collapse-change", countCommitted);
+  el.addEventListener("lr-toggle-request", veto);
+  el.addEventListener("lr-toggle", countCommitted);
 
   try {
     button.click();
     await el.updateComplete;
 
     expect(request).to.deep.equal({
-      collapsed: true,
+      expanded: false,
       cancelable: true,
       collapsedAtDispatch: false,
     });
@@ -1481,8 +1509,8 @@ it("lets listeners veto a collapse request without changing or persisting the st
     expect(committed).to.equal(0);
     expect(localStorage.getItem(fullKey)).to.equal(null);
   } finally {
-    el.removeEventListener("lr-collapse-request", veto);
-    el.removeEventListener("lr-collapse-change", countCommitted);
+    el.removeEventListener("lr-toggle-request", veto);
+    el.removeEventListener("lr-toggle", countCommitted);
     localStorage.removeItem(fullKey);
   }
 });
@@ -2684,7 +2712,7 @@ describe("storage-key persistence", () => {
   /**
    * Regression: willUpdate() applied a stored `collapsed` preference unconditionally, so an
    * explicit `.collapsed=${…}` binding on the same mount was silently overwritten with no
-   * `lr-collapse-change` event -- the exact bug shape already fixed once in lr-app-rail's
+   * `lr-toggle` event -- the exact bug shape already fixed once in lr-app-rail's
    * `loadPersisted()`, which this mirrors via a `changed.has('collapsed')` guard.
    */
   it("keeps an explicit collapsed binding authoritative over a stale persisted value", async () => {
@@ -2694,7 +2722,7 @@ describe("storage-key persistence", () => {
 
     let changeEvents = 0;
     const el = document.createElement("lr-widget") as LyraWidget;
-    el.addEventListener("lr-collapse-change", () => changeEvents++);
+    el.addEventListener("lr-toggle", () => changeEvents++);
     el.setAttribute("storage-key", key);
     el.setAttribute("collapsible", "");
     el.collapsed = true;
@@ -2720,7 +2748,7 @@ describe("storage-key persistence", () => {
 
     let changeEvents = 0;
     const el = document.createElement("lr-widget") as LyraWidget;
-    el.addEventListener("lr-collapse-change", () => changeEvents++);
+    el.addEventListener("lr-toggle", () => changeEvents++);
     el.setAttribute("storage-key", key);
     el.setAttribute("collapsible", "");
     el.collapsed = false;
@@ -2737,19 +2765,19 @@ describe("storage-key persistence", () => {
 
   /**
    * `collapsed`'s hand-written setter (the one `definePersistedProperty()` replaced) wrote the
-   * reflected attribute synchronously, and `requestCollapse()` emits `lr-collapse-change` in the
+   * reflected attribute synchronously, and `requestCollapse()` emits `lr-toggle` in the
    * same turn as the assignment -- so a listener reading `[collapsed]`, the ordinary way to
    * observe a reflecting boolean, read the post-toggle value. Lit's own `reflect: true` lands
    * during `update()` instead, which would silently leave such a listener (and whatever sibling
    * chrome it syncs) one state behind. Pinned here because nothing else in the suite reads the
    * attribute before `updateComplete`, so the regression was invisible.
    */
-  it("reflects collapsed to the attribute synchronously, in step with lr-collapse-change", async () => {
+  it("reflects collapsed to the attribute synchronously, in step with lr-toggle", async () => {
     const el = (await fixture(
       html`<lr-widget label="x" collapsible>content</lr-widget>`
     )) as LyraWidget;
     const seenInListener: boolean[] = [];
-    el.addEventListener("lr-collapse-change", () =>
+    el.addEventListener("lr-toggle", () =>
       seenInListener.push(el.hasAttribute("collapsed"))
     );
     const button = el.shadowRoot!.querySelector(

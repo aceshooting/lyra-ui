@@ -33,6 +33,96 @@ and SSR contracts use the focused guides: [imports and registration](./imports-a
 5. **Verify the migrated application.** Run the project's typecheck and tests, and exercise every
    screen that mutates a list shown by one of the components in the table below.
 
+## Removed deprecated names
+
+V30 removes the 36 deprecated names whose compatibility window ended. Every replacement already
+works in v29, so update first, then upgrade. Run `npx lyra-ui-migrate --origin=lyra-v25 --check src`
+to preview safe event renames and report changed payloads, slot content, and listeners whose reach would widen; a `wa-`/`sl-` project is migrated by the upstream
+run, which now maps the removed part names and `auto-width`. `wa-file-input` still requires manual review; use its canonical parts after completing that review.
+
+| Component | Removed | Use instead |
+| --- | --- | --- |
+| `lr-agent-run`, `lr-subagent-panel` | event `lr-cancel` | `lr-run-cancel` |
+| `lr-agent-eval-dashboard`, `lr-rag-eval-dashboard` | event `lr-metric-change` | `lr-metric-change-request` |
+| `lr-background-runs` | event `lr-run-open` | `lr-run-activate` |
+| `lr-change-review` | event `lr-change-decision` | `lr-change-decision-request` |
+| `lr-community-card`, `lr-path-strip`, `lr-entity-dossier`, `lr-memory-panel`, `lr-provenance-panel` | event `lr-entity-activate` | `lr-entity-select` |
+| `lr-chunk-inspector` | event `lr-chunk-toggle` | `lr-toggle` |
+| `lr-memory-panel` | event `lr-memory-toggle` | `lr-toggle` |
+| `lr-source-card` | event `lr-expand` | `lr-toggle` |
+| `lr-retrieval-trace` | event `lr-stage-toggle` | `lr-toggle` |
+| `lr-navigation-menu` | event `lr-expanded-change` | `lr-toggle` |
+| `lr-dock-panel`, `lr-widget` | event `lr-collapse-change` | `lr-toggle` (`expanded` is the opposite of `collapsed`) |
+| `lr-dock-panel`, `lr-widget` | event `lr-collapse-request` | `lr-toggle-request` |
+| `lr-rag-eval-dashboard` | events `lr-run-change`, `lr-slice-change` | `lr-run-activate`, `lr-slice-change-request` |
+| `lr-retrieval-results` | event `lr-select` | `lr-selection-change` |
+| `lr-source-picker` | event `lr-sources-change` | `lr-selection-change` |
+| `lr-app-rail-item`, `lr-flow-node`, `lr-widget` | slot `icon` | slot `start` |
+| `lr-tool-call-chip` | slot `icon` | slot `status-icon` |
+| `lr-accordion-item`, `lr-file-input`, `lr-qr-code`, `lr-sparkline`, `lr-video-playlist` | part `base` | the part named after the component, e.g. `::part(accordion-item)` |
+| `lr-file-input`, `lr-known-date` | part `label` | `::part(form-control-label)` |
+| `lr-icon` | `autoWidth` / `auto-width` | `canvas="auto"` |
+
+The disclosure events pass `expanded` (and `itemId` where several items share a component); the
+removed names reported the older shapes, so read the new detail rather than renaming blindly.
+Content left in a removed `icon` slot is no longer projected.
+
+
+### Review-required replacement recipes
+
+A rename is automatic only when it preserves both the payload and which events or content reach
+that site. The CLI reports ambiguous sites instead of changing them. Merge an existing canonical
+listener with the legacy listener deliberately, and update matching `removeEventListener` calls.
+
+| Reviewed source | Concrete replacement |
+| --- | --- |
+| `lr-chunk-inspector` `lr-chunk-toggle` | Listen to `lr-toggle`; replace `detail.chunkId` with `detail.itemId`, keeping `detail.expanded`. |
+| `lr-source-card` `lr-expand` | Listen to `lr-toggle`; replace `detail.sourceId` with `detail.itemId`, keeping `detail.expanded`. |
+| `lr-retrieval-trace` `lr-stage-toggle` | Listen to `lr-toggle`; ignore events whose `detail.stageId` is defined, because those report a nested chunk toggle. For the remaining stage disclosures, use `detail.itemId` as the former `stageId`. |
+| `lr-retrieval-results` `lr-select` | Listen to `lr-selection-change`; replace `detail.chunkIds` with `detail.selectedChunkIds`. `detail.chunks` stays available. |
+| `lr-widget` `lr-collapse-change` / `lr-collapse-request` | Listen to `lr-toggle` / `lr-toggle-request`; replace every read of `detail.collapsed` with `!detail.expanded`. Keep request vetoes on `lr-toggle-request` by calling `preventDefault()` before committing application state. |
+| `lr-memory-panel` `lr-memory-toggle` | Listen to `lr-toggle`. To keep only whole-memory disclosure, ignore details whose `section` is defined, then require `memoryId` and `scope` before consuming them with `expanded`. Section disclosures carry the same event name. |
+| `lr-rag-eval-dashboard` `lr-run-change` | Listen to `lr-run-activate`; keep reading `detail.run`. The canonical detail also includes `runId`; when passing the old exact payload to another API, construct `{ run: event.detail.run }` explicitly. |
+| `lr-entity-dossier`, `lr-memory-panel`, `lr-provenance-panel` `lr-entity-activate` | Listen to `lr-entity-select`. To preserve the former conduit reach, accept community-card/path-strip origins only; canonical events from entity-card/chip/neighbor-list are additional sources. Inspect `composedPath()` rather than a retargeted `event.target`. |
+
+For example, preserve an old collapsed-state consumer without reversing its behavior:
+
+```ts
+widget.addEventListener('lr-toggle-request', event => {
+  const proposedCollapsed = !event.detail.expanded;
+  if (!allowCollapsed(proposedCollapsed)) event.preventDefault();
+});
+```
+
+For the three entity conduits, an origin filter can preserve the old source set:
+
+```ts
+panel.addEventListener('lr-entity-select', event => {
+  const origin = event.composedPath().find(node => node instanceof Element &&
+    node.matches('lr-community-card, lr-path-strip, lr-entity-card, lr-entity-chip, lr-neighbor-list'));
+  if (!(origin instanceof Element) || !origin.matches('lr-community-card, lr-path-strip')) return;
+  selectEntity(event.detail.entityId);
+});
+```
+
+For the four retired `icon` slots, move content to `start` on `lr-app-rail-item`, `lr-flow-node`,
+and `lr-widget`, or to `status-icon` on `lr-tool-call-chip`. Preserve precedence: the old `icon`
+slot was fallback inside the canonical slot. If both had content, the canonical content won;
+renaming both into the canonical slot would incorrectly display both. Keep the canonical content
+and remove the unused fallback, or make the application render only one branch when the content
+is conditional. For example:
+
+```html
+<!-- Before: only Canonical was visible. -->
+<lr-widget label="Example"><span slot="start">Canonical</span><span slot="icon">Fallback</span></lr-widget>
+<!-- After: preserve the same visible content. -->
+<lr-widget label="Example"><span slot="start">Canonical</span></lr-widget>
+```
+
+An owned listener can still need review when its canonical event name is also dispatched by
+nested components. Choose whether to accept those additional events or filter their origin;
+renaming a string alone does not preserve listener reach.
+
 ## Map
 
 `lr-map` `center` is compared by value. Assigning a new array that holds the coordinates the map

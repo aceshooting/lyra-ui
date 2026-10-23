@@ -105,7 +105,7 @@ element or package module, the deprecated API, and its replacement. A warning on
 usage that can be observed cheaply and exactly — setting a deprecated property or attribute,
 connecting a deprecated tag, vetoing through a deprecated alias event, or calling a deprecated
 function — and **not every deprecated API
-warns**: many deprecations have no runtime warning, among them `lr-icon`'s `auto-width`,
+warns**: many deprecations have no runtime warning, among them deprecated slot content,
 `lr-stat`'s default-slot icon and `lr-menu`'s non-item default-slot content. Deprecated CSS parts, custom properties, and
 custom states are styling hooks a component cannot observe, so they never warn. A silent console
 is therefore not evidence that an application uses no deprecated API. Where a warning exists, it
@@ -15004,7 +15004,7 @@ It adds no table, CSV or source-selection event.
 
 **Slots:** none.
 
-**CSS parts:** `sparkline` and deprecated `base` are aliases on the same outer SVG, `fill` is the
+**CSS parts:** `sparkline` is the outer SVG, `fill` is the
 area path for solid/gradient appearance, `line` is the stroke path, and the additive `bar` is each
 extension-mode rectangle. `status` is the visible invalid-prepared-input message.
 
@@ -18944,8 +18944,7 @@ owns none of that.
 
 **Events:** none — purely presentational, activation/drag/connect all live on `lr-flow-canvas`.
 
-**Slots:** default (body content), `start` (leading header glyph; `icon` is the deprecated legacy
-slot), `header` (replaces the built-in
+**Slots:** default (body content), `start` (leading header glyph), `header` (replaces the built-in
 heading row entirely), `toolbar` (action row at the block-end edge; revealed by hover/focus on
 hover-capable devices and always visible with a coarse pointer or no hover; it also stays revealed
 while an `lr-dropdown`, `lr-popover`, `lr-context-menu` or picker (`lr-select`, `lr-combobox`,
@@ -21333,12 +21332,8 @@ TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
 
 **Events:** `lr-toggle-request` (cancelable; `detail: { expanded }` proposes the inverse of
 `collapsed`) and `lr-toggle` (accepted state, same detail) are the shared disclosure pair for the
-built-in toggle. The legacy `lr-collapse-request` (cancelable; `detail: { collapsed }` is the state proposed by the
-built-in collapse toggle. Call `preventDefault()` to leave `collapsed` and any persisted state
-unchanged. It is not emitted when a consumer assigns `collapsed` directly), `lr-collapse-change`
-(non-cancelable; `detail: { collapsed }` is the accepted built-in-toggle state. It is not emitted
-when a consumer assigns `collapsed` directly) remain available but are deprecated. Either request
-can veto the toggle. `lr-fullscreen-request` (cancelable; `detail: {
+built-in toggle. Call `preventDefault()` on the request to leave `collapsed` and any persisted state
+unchanged. Neither is emitted when a consumer assigns `collapsed` directly. `lr-fullscreen-request` (cancelable; `detail: {
 fullscreen }` is the state proposed by the fullscreen toggle, Escape, or a backdrop click. Call
 `preventDefault()` to leave `fullscreen` unchanged. Not emitted when a consumer assigns
 `fullscreen` directly), `lr-fullscreen-change` (non-cancelable; `detail: { fullscreen }` is the
@@ -21360,8 +21355,7 @@ this shadow root, so a retargeted `click` names no view. When an activation _doe
 `activeViewId` directly)
 
 **Slots:** default (the panel body, rendered only while `views` is empty), `start` (optional leading
-decorative icon in the title row; its flattened subtree is inert and aria-hidden; `icon` is the
-deprecated legacy slot), `label` (rich label content,
+decorative icon in the title row; its flattened subtree is inert and aria-hidden), `label` (rich label content,
 overrides the `label` attribute), `sublabel` (rich sublabel content, overrides the `sublabel`
 attribute), `actions` (header action controls,
 rendered before the collapse/expand buttons), `collapse-icon` (replaces the built-in chevron in the
@@ -21374,7 +21368,7 @@ reading the `fullscreen` attribute; its assigned content is decorative, inert, a
 the outer toggle remains the only action; only meaningful while `expandable`), and one `view-{viewId}`
 slot per `views` entry, used instead of the default slot
 
-**CSS parts:** `base`, `header`, `title`, `icon` (wrapper around the `icon` slot, hidden entirely when
+**CSS parts:** `base`, `header`, `title`, `icon` (wrapper around the `start` slot, hidden entirely when
 empty), `label-group` (wrapper around the label and sublabel), `label`, `sublabel`, `actions`,
 `view-toggles` (the header toggle-button group, only rendered when `views` is non-empty),
 `view-toggle` (a single view toggle button), `view-icon` (a decorative view glyph whose rendered
@@ -21463,7 +21457,7 @@ panel'`) and `widgetExpand` (default `'Expand panel'`) keys.
   framework binding, including one that pins the property to its own default `false` — always wins
   over a `storageKey`-restored value for that mount, and skips the restore entirely. For
   uncontrolled persistence, don't bind `collapsed`: read the restored value back after
-  `updateComplete` and track further changes from `lr-collapse-change`, pushing the property down
+  `updateComplete` and track further changes from `lr-toggle`, pushing the property down
   imperatively only for later external changes.
 - prior to this release the collapse-button `aria-label` was localized through `lr-dock-panel`'s
   own `dockPanelCollapse`/`dockPanelExpand` keys (a borrowed, differently-named pair). A locale
@@ -23524,7 +23518,7 @@ An auto-hide sidebar that peeks open over the content and docks only when pinned
 ```html
 <lr-app-rail auto-hide label="Workspace" storage-key="app" persist="preferred-mode">
   <lr-app-rail-item href="/inbox" current>
-    <svg slot="icon" aria-hidden="true">...</svg>Inbox
+    <svg slot="start" aria-hidden="true">...</svg>Inbox
   </lr-app-rail-item>
 </lr-app-rail>
 ```
@@ -23621,7 +23615,7 @@ visible parent item.
   <lr-app-rail id="sidebar" label="Workspace" frame="card" without-toggle trigger-collapses
     for="sidebar-trigger" hotkey="mod+b" storage-key="app" persist="preferred-mode">
     <lr-app-rail-group heading="Platform">
-      <lr-app-rail-item href="/projects" current tooltip><span slot="icon">▦</span>Projects</lr-app-rail-item>
+      <lr-app-rail-item href="/projects" current tooltip><span slot="start">▦</span>Projects</lr-app-rail-item>
     </lr-app-rail-group>
     <lr-divider></lr-divider>
   </lr-app-rail>
@@ -23653,7 +23647,7 @@ shadow tokens. A raised sidebar tint is opt-in with
   <lr-app-rail slot="navigation" id="workspace-nav" label="Workspace" frame="plain"
     mobile-breakpoint="0px" icon-only-breakpoint="0px" collapsible hotkey="mod+b"
     storage-key="app" persist="preferred-mode">
-    <lr-app-rail-item href="/projects"><span slot="icon">▦</span>Projects</lr-app-rail-item>
+    <lr-app-rail-item href="/projects"><span slot="start">▦</span>Projects</lr-app-rail-item>
   </lr-app-rail>
   <p>Main content</p>
 </lr-page>
@@ -23729,7 +23723,7 @@ A host `aria-label` is copied to the rendered native link or button by attribute
 including an explicitly empty value; without it, the default slot supplies the native name. The
 same precedence supplies the tooltip text when that opt-in flyout is visible, and the disclosure's
 interpolated `{label}` (see Events below); without it both read the default slot only, never the
-`icon`, `meta`, `end` or `children` slots.
+`start`, `meta`, `end` or `children` slots.
 
 **Events:** `lr-toggle-request` — cancelable, emitted before `expanded` changes from the built-in
 disclosure (`detail: { expanded }` is the proposed state, matching `<lr-app-rail-group>`'s
@@ -23749,8 +23743,7 @@ external focus move is always preserved, and this repair dispatches no activatio
 
 **Slots:** default (the visible label), `start` (the leading decorative icon, always hidden from
 assistive technology and inert across its flattened subtree; the default slot or host `aria-label`
-names the native control, which remains the sole action). The `icon` slot is its deprecated legacy
-alias.
+names the native control, which remains the sole action).
 
 - `meta` slot — secondary trailing text (an unread count, a keyboard shortcut). Rendered as a
   SIBLING of the item's own link/button, so its text is not part of the item's accessible name and a
@@ -24612,13 +24605,9 @@ resolved in the host's owner realm.
   lost capture, disconnect/adoption, live policy/geometry mutation, no-op attempts, and a prevented
   `lr-resize-request` all emit nothing.
 - `lr-toggle-request` (cancelable) and `lr-toggle` (accepted) are the shared disclosure pair;
-  their fresh frozen details contain `{ expanded }`. The former can veto a built-in toggle.
-  `lr-collapse-request` (cancelable; `detail: { expanded }` is the state proposed by the
-  built-in collapse toggle. Call `preventDefault()` to leave the host `collapsed` property
-  unchanged. Not fired when a consumer assigns `collapsed` directly), `lr-collapse-change`
-  (non-cancelable; `detail: { expanded }` is
-  the accepted built-in-toggle state. Not fired when a consumer assigns `collapsed` directly)
-  remain available but are deprecated. Both details are fresh readonly/frozen snapshots.
+  their fresh frozen details contain `{ expanded }`. The former can veto a built-in toggle
+  (`preventDefault()` leaves the host `collapsed` property unchanged). Neither is fired when a
+  consumer assigns `collapsed` directly. Both details are fresh readonly/frozen snapshots.
 
 Events bubble and are composed, so a listener on an ancestor (for example an `lr-multi-split` that
 contains this panel and listens for its own `lr-resize-request`) should ignore events whose `target`
@@ -24667,7 +24656,7 @@ being dragged. `--lr-dock-panel-handle-hit-area` requests a resize target width 
   const panel = document.querySelector("lr-dock-panel");
   panel.addEventListener("lr-resize-input", (e) => updateLayoutPreview(e.detail.extent));
   panel.addEventListener("lr-resize-change", (e) => persistExtent(e.detail.extent));
-  panel.addEventListener("lr-collapse-change", (e) => console.log(e.detail.expanded));
+  panel.addEventListener("lr-toggle", (e) => console.log(e.detail.expanded));
 </script>
 ```
 
@@ -25223,8 +25212,8 @@ or disabled. Activating one never toggles the panel: a click whose
 composed path crosses `[part~="header-actions"]` is exempted from disclosure activation. Its wrapper
 is hidden and reclaims layout space whenever the slot is empty.
 
-**CSS parts:** accordion exposes `base`. Accordion item exposes `base` and `accordion-item` on the
-same outer wrapper, plus `heading`, `button`, `label`, `icon`, `panel`, and `content`. Details
+**CSS parts:** accordion exposes `base`. Accordion item exposes `accordion-item` on its
+outer wrapper, plus `heading`, `button`, `label`, `icon`, `panel`, and `content`. Details
 exposes `base` and `details` on the same outer container, plus `header`, `summary`, `icon`,
 `header-actions`, and `content`. The native `<details>` is private; `content` is inside its
 findable `hidden="until-found"` closed-state gate.
@@ -26940,7 +26929,7 @@ shared region below the bar. It never uses `menu`/`menubar` roles — applicatio
   unset or unresolvable means the menu never collapses and its row wraps instead.
 - `expanded: boolean = false` (reflected) — whether the list shows in the collapsed layout. Kept
   while the bar layout is active and applied at the next collapse; reset to `false` (with
-  `lr-expanded-change`, source `programmatic`) when the menu leaves the collapsed layout.
+  `lr-toggle`, source `programmatic`) when the menu leaves the collapsed layout.
 - `indicator: boolean = false` (reflected) — shows a decorative notch under the trigger whose panel
   is open.
 - `panelAnchor: LyraNavigationMenuPanelAnchor = 'menu'` (attribute `panel-anchor`, reflected) —
@@ -26975,8 +26964,7 @@ hide the focused element; a router's own later `focus()` still wins.
 
 **Events:** cancelable `lr-toggle-request` for user-initiated changes and accepted `lr-toggle`
 with `{ expanded, source: 'user' | 'programmatic' }`. The former can veto the change;
-programmatic changes emit only the accepted event. Deprecated `lr-expanded-change` remains
-available with the same accepted detail after rendering. `user` covers the toggle, Escape in the
+programmatic changes emit only the accepted event, after rendering. `user` covers the toggle, Escape in the
 collapsed list, and a link or plain-button activation that collapses it. Nested item `lr-toggle`
 events retain the item as their target; filter by target when listening for the menu's event.
 
@@ -31943,8 +31931,6 @@ Pairs with `lr-icon-button` (see `llms/components/lr-icon-button.md`).
 - `canvas?: 'fixed' | 'auto' | 'square' | 'roomy'` (reflected, type `LyraIconCanvas`) — sizes the
   layout box. Unset behaves as `fixed` (1.25em × 1em); `auto` follows the SVG's intrinsic width at
   1em high; `square` is 1.25em × 1.25em; `roomy` is 1.5em × 1.5em. All scale with `font-size`.
-- `autoWidth: boolean = false` (attribute `auto-width`, reflected, deprecated) — compatibility
-  alias for `canvas="auto"`; an explicit `canvas` wins.
 - `swapOpacity: boolean = false` (attribute `swap-opacity`, reflected) — swaps the primary and
   secondary opacity hooks on SVGs that carry `.fa-primary`/`.fa-secondary` duotone layers.
 - `animation?: LyraIconAnimation` (reflected) — one of `beat`, `fade`, `beat-fade`, `bounce`,
@@ -32359,8 +32345,7 @@ when native validity fails.
 **CSS parts:** `base`, `known-date`, and `form-control` are aliases on the same outer wrapper;
 `fieldset` (the `<fieldset>` grouping the fields —
 carries `aria-label` when `accessibleLabel` is set), `legend` (the `<legend>`; hidden when there is
-no label, and grows a `*` suffix while `required`), `form-control-label` (`label` is its deprecated
-compatibility alias), `fields` / `form-control-input` (aliases on the flex row), `field` (one field
+no label, and grows a `*` suffix while `required`), `form-control-label`, `fields` / `form-control-input` (aliases on the flex row), `field` (one field
 block, repeated three times, `data-field="day"|"month"|"year"`) plus its matching `field-day`,
 `field-month`, or `field-year` token, `field-input` (the native
 `<input type="text" inputmode="numeric">` inside it, same `data-field` marker), `field-label` (the
@@ -32378,12 +32363,6 @@ restores `visibility:visible` remains exposed. Updates also stay silent while th
 composed ancestor is hidden, then the current error announces if it becomes newly visible. This
 tracking follows nested forwarding slots as well: mutations and reassignment of their flattened
 assigned nodes update the announcement without requiring the wrapper component to re-render.
-
-The `label` part alias was deprecated in 8.0.0 in favor of the shared form vocabulary
-`form-control-label`. Both names remain on the same node during the compatibility window; use
-`::part(form-control-label)` in new CSS. Removal is not scheduled: Web Awesome still publishes its
-own deprecated `label` part on `<wa-known-date>`, and a mirrored tag owes its whole upstream
-surface, so the alias goes only when upstream's does.
 
 **The required marker.** The `*` the legend grows while `required` is the library's shared
 required-field marker, and it takes the same three consumer-settable properties every other
@@ -34712,10 +34691,10 @@ The semantic button describes its rendered owned error and hint in that order. A
 after interaction, while a custom validity message is immediately visible and survives native form
 reset until `resetValidity()` or `setCustomValidity('')` clears it.
 
-**CSS parts:** `file-input` (compatibility alias) and `form-control` (the complete form-control
-frame), `form-control-label`, `label`, `hint`, `error`, `dropzone`, `dropzone-icon`, `dropzone-text`,
-`base` (the native dropzone button, visually behind but semantically beside the
-slotted content), `input`, `file-list`, `file`, `file-thumbnail`, `file-image`, `file-icon`,
+**CSS parts:** `file-input` (the native dropzone button, visually behind but semantically beside
+the slotted content) and `form-control` (the complete form-control
+frame), `form-control-label`, `hint`, `error`, `dropzone`, `dropzone-icon`, `dropzone-text`,
+`input`, `file-list`, `file`, `file-thumbnail`, `file-image`, `file-icon`,
 `file-details`, `file-name`, `file-size`, `remove-button`, `status` (a visually-hidden,
 `aria-hidden` mirror of the drag accept/reject state and the aggregate accepted/rejected count),
 `rejection` (a **visible** region, rendered only while a rejection exists, listing each
@@ -34755,7 +34734,7 @@ here exactly as they do on `lr-input`. See `llms/shared.md` → "The required-fi
 
 **Themeable custom properties:** `--lr-file-input-gap` (default `var(--lr-space-xs)`) — gap between
 the dropzone's slotted children; `--lr-file-input-radius` (default `var(--lr-radius)`) — corner
-radius of `[part='base']`. At `size="s"` or `size="small"`,
+radius of `[part='file-input']`. At `size="s"` or `size="small"`,
 `--lr-file-input-compact-padding`, `--lr-file-input-compact-gap`, and
 `--lr-file-input-compact-font-size` optionally override the padding, content gap, and instruction
 font size. They take precedence over the corresponding dropzone padding/font and general gap
@@ -34771,7 +34750,7 @@ unset, medium, or other sizes. `--lr-file-input-font-size` (default
 validation error, each file's formatted size). Each documented default is the `m`/`medium` tier, and
 each is re-declared per `size` tier — so an unset or default-size control renders exactly as before,
 while `size="xl"` scales the dropzone coherently instead of enlarging the label alone. The drag accept/reject
-highlight on `[part='base'][data-drag-state='accept'|'reject']` is independently overridable too:
+highlight on `[part='file-input'][data-drag-state='accept'|'reject']` is independently overridable too:
 `--lr-file-input-accept-border-color` (default `var(--lr-color-success)`) and
 `--lr-file-input-accept-bg` (default `color-mix(in srgb, var(--lr-color-success) 8%, transparent)`)
 for the drag-accept state; `--lr-file-input-reject-border-color` (default `var(--lr-color-danger)`)
@@ -34787,11 +34766,11 @@ itself is unchanged), and `--lr-file-input-dropzone-hover-border-color` (default
 `var(--lr-color-brand)`), which recolours the edge whether the pointer is over the button or over
 the content stacked on it. The shared field halo `--lr-form-control-focus-shadow` (default `none`)
 paints a `box-shadow` while the dropzone holds focus; it is additive, so the
-`[part='base']:focus-visible` outline is untouched. Plus shared
+`[part='file-input']:focus-visible` outline is untouched. Plus shared
 tokens — `--lr-space-xs`, `--lr-space-l`,
 `--lr-color-border`, `--lr-color-border-subtle` (the selected-file rows' edge), `--lr-radius`,
 `--lr-color-surface`, `--lr-color-text-quiet`,
-`--lr-focus-ring-width/-color/-offset` (`[part="base"]:focus-visible` outline),
+`--lr-focus-ring-width/-color/-offset` (`[part="file-input"]:focus-visible` outline),
 `--lr-opacity-disabled` (`:host([disabled])` dimming).
 
 **Optional peer deps:** none.
@@ -36170,8 +36149,7 @@ ratio. It degrades uniformly only to stay within 4,096 pixels per dimension and 
 pixels. Modules span the full canvas with no injected quiet zone; add host padding when a scanner
 or physical output needs one.
 
-**CSS parts:** `base` and `qr-code` are aliases on the same outer wrapper; `canvas`, `empty`,
-`loading`, and `error`. **CSS custom properties:**
+**CSS parts:** `qr-code` (the outer wrapper); `canvas`, `empty`, `loading`, and `error`. **CSS custom properties:**
 `--lr-qr-code-fill` and `--lr-qr-code-bg`.
 
 `error` is ordinary localized visible text, not a shadow live region. A missing peer or encode
@@ -36874,7 +36852,7 @@ previously active one: `video` is `null` and `currentIndex` is `-1` in that case
 **Slot:** the default slot accepts direct `<lr-video>` children. Nested videos and other elements
 are not playlist items.
 
-**CSS parts:** `base` and `video-playlist` (aliases on the same root node), `playlist`,
+**CSS parts:** `video-playlist` (the root node), `playlist`,
 `playlist-duration`, `playlist-item`, `playlist-thumbnail`, and `playlist-title`.
 
 **Themeable custom properties:** `--lr-video-playlist-item-current-border-color` (default
@@ -47933,7 +47911,7 @@ RetrievalChunk[] }`) — forwarded from the built-in retrieval results.
   from the built-in tool timeline; `args` is present only on approval and may differ from what the
   entry originally proposed (the dialog's inline edit step). Call `preventDefault()` synchronously
   to hold the built-in dialog while persisting the decision.
-- `lr-cancel` (`detail: CancelEventDetail = { reason?: string }`) / `lr-run-retry` (`detail: RetryEventDetail` =
+- `lr-run-cancel` (`detail: { runId: string; reason?: string }`) / `lr-run-retry` (`detail: RetryEventDetail` =
   `{ attempt: number; messageId?: string }`, from `@aceshooting/lyra-ui/ai`) — forwarded from the
   built-in agent run. The distinct retry name prevents a rendered message or attachment retry from
   being mistaken for a whole-run retry.
@@ -48963,8 +48941,8 @@ its content.
 - `summary: string = ''` — short human-readable status text, e.g. `Searching web…`
 - `durationMs?: number` (attribute `duration-ms`) — how long the call took, in milliseconds; the
   `duration` part is omitted entirely when unset
-- `icon: string = ''` — literal icon hint (e.g. an emoji) rendered when the `icon` slot is empty;
-  ignored once anything is assigned to `slot="icon"`
+- `icon: string = ''` — literal icon hint (e.g. an emoji) rendered when the `status-icon` slot is empty;
+  ignored once anything is assigned to `slot="status-icon"`
 - `callId: string = ''` (attribute `call-id`) — unique identifier for this invocation, echoed back
   in `lr-tool-call-chip-select`'s detail so a listener can correlate the click with the call it fired for
 
@@ -48978,7 +48956,7 @@ interaction.
 **Slots:** default (rich tooltip/detail content — e.g. the tool's raw arguments or a short preview —
 shown in a floating tooltip on hover or keyboard focus (the focused control matches `:focus-visible` and no pointer press preceded it); nothing renders at all, no hover affordance, when this
 slot is empty), `status-icon` (overrides the built-in per-status glyph; otherwise the `icon` prop or
-built-in glyph appears), `icon` (deprecated slot alias for `status-icon`)
+built-in glyph appears)
 
 **CSS parts:** `base` (the clickable `<button>`), `icon`, `label` (wrapper around `category`, `name`,
 `summary`), `category`, `name` (the tool name, or `display-name` when set), `summary`, `meta` (wrapper around `status-text` and `duration`),
@@ -49026,7 +49004,7 @@ ancestor to change every unset chip beneath it.
   duration-ms="820"
   call-id="call_123"
 >
-  <pre slot="icon" style="display:none"></pre>
+  <pre slot="status-icon" style="display:none"></pre>
   <code>{"query": "lyra ui components"}</code>
 </lr-tool-call-chip>
 <script type="module">
@@ -49052,7 +49030,7 @@ sub-1000ms `"820ms"`, else trimmed to at most one decimal of seconds (`"1.5s"`, 
 - the native button always keeps its purpose-specific generated name (`"name — summary — Status —
 duration"`). A host `aria-label` remains on the host and is not cloned onto that button; even an
   explicit empty host label never leaves the actionable button unnamed
-- the `icon` slot is decorative by contract. Its wrapper is both `aria-hidden` and `inert`, so do
+- the `status-icon` slot is decorative by contract. Its wrapper is both `aria-hidden` and `inert`, so do
   not place links, buttons, or other controls there; use the chip activation or detail slot instead
 - Escape only dismisses the tooltip when it's open; it does not fire any event or otherwise affect
   `status`/`open` state, since the chip has no "open" state of its own beyond the tooltip
@@ -51943,7 +51921,7 @@ assigned array or record has no effect; create and reassign a new value after ch
   and stay visibly interactive either way. The exported alias `AgentRunAppearance` is retained as a
   name for the same union
 
-**Events:** `lr-run-cancel` (`detail: { runId }`), and its deprecated alias `lr-cancel` (`detail: CancelEventDetail` = `{ reason?: string }`, from
+**Events:** `lr-run-cancel` (`detail: { runId }`, extending `CancelEventDetail` = `{ reason?: string }` from
 `@aceshooting/lyra-ui/ai`; `reason` is `undefined` from the built-in button), `lr-run-retry`
 (`detail: RetryEventDetail` = `{ attempt: number; messageId?: string }`, same module — `attempt` is
 this component's own retry counter, reset when `run.id` changes).
@@ -51951,7 +51929,7 @@ this component's own retry counter, reset when `run.id` changes).
 **Slots:** `header` and `summary` replace the corresponding built-in chrome; `tasks`, `tools`,
 `reasoning`, `output`, and `actions` are host-controlled composition regions.
 
-**Events and status:** `lr-run-cancel` (`detail: { runId }`) and `lr-run-retry` (`detail: { runId, attempt }`) carry the run id; `lr-cancel` is a deprecated alias of `lr-run-cancel`, dispatched right after it. A run whose `status` is missing or the compact string form renders through the same status normalizer as its steps.
+**Events and status:** `lr-run-cancel` (`detail: { runId }`) and `lr-run-retry` (`detail: { runId, attempt }`) carry the run id. A run whose `status` is missing or the compact string form renders through the same status normalizer as its steps.
 
 **CSS parts:** `base`, `header`, `status`, `status-badge`, `status-message`,
 `elapsed` (the live ticker), `elapsed-static` (a terminal run's frozen duration), `summary`, `model`,
@@ -52636,10 +52614,10 @@ displayed rows and chart show only the most recent runs.
 Empty metric/run ids are omitted and later duplicates use deterministic first-occurrence-wins
 normalization before cards, selectors, chart series, row lookup, and emitted events are derived.
 
-**Events:** `lr-metric-change-request` (`{ metricId }`, emitted when a metric selector is activated; the host decides whether to change `metricId`), its deprecated alias `lr-metric-change`, and
+**Events:** `lr-metric-change-request` (`{ metricId }`, emitted when a metric selector is activated; the host decides whether to change `metricId`), and
 `lr-run-activate` (`{ runId, run }`).
 
-**Heading, events and window:** `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`) sets the title level, with the run history heading one level below (`'none'` drops heading semantics); an empty `label` renders no title. `lr-metric-change-request` (`detail: { metricId }`) is the request; `lr-metric-change` is a deprecated alias dispatched right after it. `format: 'milliseconds'` metrics render as a localized short duration (`850ms`, `1.2s`). `max-rendered-runs` keeps the first N runs in input order, so pass newest-first history to chart the latest runs.
+**Heading, events and window:** `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`) sets the title level, with the run history heading one level below (`'none'` drops heading semantics); an empty `label` renders no title. `lr-metric-change-request` (`detail: { metricId }`) is the request. `format: 'milliseconds'` metrics render as a localized short duration (`850ms`, `1.2s`). `max-rendered-runs` keeps the first N runs in input order, so pass newest-first history to chart the latest runs.
 
 **CSS parts:** `base`, `heading`, `metrics`, `metric`, `chart`, `runs`, `runs-heading`, `run`,
 `run-label`, `run-meta`, `run-status`, `run-status-message`, `limit` (shown when run history exceeds
@@ -52958,10 +52936,10 @@ inclusive.
 Empty/blank run ids are omitted and later duplicate ids are ignored before hierarchy, focus,
 counts, selection, and events.
 
-**Events:** `lr-run-activate` (`{ runId, run }`), `lr-run-cancel` (`{ runId }`), its deprecated alias `lr-cancel` (`{ runId }`), and
+**Events:** `lr-run-activate` (`{ runId, run }`), `lr-run-cancel` (`{ runId }`), and
 `lr-run-retry` (`{ runId }`).
 
-**Keyboard, selection and events:** the tree has one tab stop: only the focused row's trigger, cancel and retry buttons are tabbable, and ArrowRight/ArrowLeft move to the first child / parent (swapped under RTL) beside ArrowUp/Down, Home/End and Enter/Space. The selected run is `aria-selected` on its tree item (the trigger no longer carries `aria-pressed`), and a selection made after mount is reserved inside the 500-row cap. `lr-run-cancel` (`detail: { runId }`) is the cancellation request; `lr-cancel` is a deprecated alias dispatched right after it. Unknown status kinds render title-cased.
+**Keyboard, selection and events:** the tree has one tab stop: only the focused row's trigger, cancel and retry buttons are tabbable, and ArrowRight/ArrowLeft move to the first child / parent (swapped under RTL) beside ArrowUp/Down, Home/End and Enter/Space. The selected run is `aria-selected` on its tree item (the trigger no longer carries `aria-pressed`), and a selection made after mount is reserved inside the 500-row cap. `lr-run-cancel` (`detail: { runId }`) is the cancellation request. Unknown status kinds render title-cased.
 
 **CSS parts:** `base`, `list`, `run`, `run-selected`, `run-row`, `run-trigger`, `label`, `status`,
 `task`, `model`, `progress`, `actions`, `cancel`, `retry`, `limit`, `empty`.
@@ -53711,13 +53689,13 @@ Files and per-file hunks need nonblank, unique ids; malformed duplicates normali
 At most 200 files and 200 hunks total render, with a visible limit notice. Diff inputs use
 `lr-diff-view`'s own line limit. Arrays are clone-owned snapshots: reassign after changes.
 
-`lr-change-decision` provides `{ fileId, hunkId, decision }`. The host acknowledges by replacing
+`lr-change-decision-request` provides `{ fileId, hunkId, decision }`. The host acknowledges by replacing
 `files`; there is no patch parser, filesystem access or optimistic decision update. `disabled`
 (default false) disables decision buttons; `readonly` (default false) hides them. File disclosures
 remain readable in both states. Optional `label` overrides the localized heading; a host
 `aria-label` names the internal group.
 
-**Heading and events:** `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`); an empty `label` renders no title. `lr-change-decision-request` is the keep/discard request; `lr-change-decision` is a deprecated alias dispatched right after it.
+**Heading and events:** `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`); an empty `label` renders no title. `lr-change-decision-request` is the keep/discard request.
 
 **CSS parts:**
 
@@ -53736,14 +53714,14 @@ remain readable in both states. Optional `label` overrides the localized heading
 | `empty` | Empty review message. |
 | `limit` | Render-limit notice. |
 
-**Events:** non-cancelable `lr-change-decision-request` (`detail: { fileId, hunkId, decision }`), followed by its deprecated alias `lr-change-decision`, reports a keep/discard action; the host applies it by replacing `files`.
+**Events:** non-cancelable `lr-change-decision-request` (`detail: { fileId, hunkId, decision }`), reports a keep/discard action; the host applies it by replacing `files`.
 ```js
 import '@aceshooting/lyra-ui/components/lr-change-review.js';
 const review = document.querySelector('lr-change-review');
 review.files = [{ id: 'config', path: 'config.ts', hunks: [
   { id: 'timeout', before: 'timeout = 1000', after: 'timeout = 3000' }
 ] }];
-review.addEventListener('lr-change-decision', ({ detail }) => {
+review.addEventListener('lr-change-decision-request', ({ detail }) => {
   review.files = review.files.map(file => file.id === detail.fileId
     ? { ...file, hunks: file.hunks.map(hunk => hunk.id === detail.hunkId
       ? { ...hunk, decision: detail.decision } : hunk) } : file);
@@ -53950,7 +53928,7 @@ element.addEventListener('lr-connector-action', (event) => {
 ## `lr-background-runs`
 
 `lr-background-runs` displays controlled run records with statuses `queued`, `running`,
-`completed`, `failed`, and `cancelled`. Open buttons emit `lr-run-open` (`{ runId }`); queued and
+`completed`, `failed`, and `cancelled`. Open buttons emit `lr-run-activate` (`{ runId }`); queued and
 running records also offer Cancel and emit `lr-run-cancel` (`{ runId }`). Terminal runs cannot
 request cancellation. The component does not poll, schedule timers, start runs, or change status.
 Assign a new `.runs` array after host updates; collection snapshots keep the first nonblank identity
@@ -53960,7 +53938,7 @@ and mount no more than 100 rows. `disabled` gates every action. Host `aria-label
 `completed` and `error` as `failed`. An explicit foreign status keeps its row and shows localized
 neutral `Unknown`, without a Cancel action. Existing component-specific status translations and
 `.strings` overrides still name recognized states. `lr-run-activate` (`detail: { runId }`) requests
-opening a run; `lr-run-open` is a deprecated alias dispatched right after it.
+opening a run.
 
 **CSS parts:**
 
@@ -53980,7 +53958,7 @@ opening a run; `lr-run-open` is a deprecated alias dispatched right after it.
 | `empty` | Empty state. |
 | `limit` | Notice that more than 100 valid runs were supplied. |
 
-**Events:** non-cancelable `lr-run-activate` (`detail: { runId }`) requests opening a run, followed by its deprecated alias `lr-run-open`. Non-cancelable `lr-run-cancel` (`detail: { runId }`) requests cancellation and is emitted only for queued/running runs; terminal runs cannot emit it. The host performs the operation and publishes updated state.
+**Events:** non-cancelable `lr-run-activate` (`detail: { runId }`) requests opening a run. Non-cancelable `lr-run-cancel` (`detail: { runId }`) requests cancellation and is emitted only for queued/running runs; terminal runs cannot emit it. The host performs the operation and publishes updated state.
 ```ts
 import '@aceshooting/lyra-ui/components/lr-background-runs.js';
 import type { BackgroundRun } from '@aceshooting/lyra-ui/components/agent-tools/background-runs/background-runs.class.js';
@@ -54038,13 +54016,12 @@ form control is appropriate when its public validation, selection, or form behav
 
 ## Current event migration
 
-Listen for `lr-entity-select` from community cards and relationship paths. Their
-`lr-entity-activate` compatibility alias still fires immediately afterward, and can be removed
-only after its published deprecation window. Retrieval selection and dashboard events likewise
-retain their documented compatibility aliases; use each component's canonical event for new code.
-Disclosure controls emit `lr-toggle` with `expanded` and, for an item, `itemId`; the older
-component-specific event names remain available. The `lyra-v25` migration profile reports
-detail or event-reach changes that cannot be rewritten mechanically.
+Listen for `lr-entity-select` from community cards and relationship paths, and for
+`lr-selection-change` from retrieval results and the source picker. Dashboard events are
+`lr-metric-change-request`, `lr-slice-change-request` and `lr-run-activate`. Disclosure controls emit
+`lr-toggle` with `expanded` and, for an item, `itemId`; the older component-specific event names are
+no longer emitted. The `lyra-v25` migration profile reports detail or event-reach changes that
+cannot be rewritten mechanically.
 
 ## Breaking changes in 23.0.0
 
@@ -54055,8 +54032,8 @@ use `edge-distance`, `with-edge-labels`, and explorer `query`. Source-card headi
 native `title` remains an independent browser tooltip.
 
 Listen for `lr-edge-enter`/`lr-edge-leave` with `edgeId`, `lr-community-activate`,
-`lr-chunk-toggle`, or memory-panel `lr-memory-toggle`; the aliases removed in that release are no
-longer emitted. Graph and explorer use `lr-node-activate`/`lr-edge-activate`. Source-card's own `lr-expand` event remains available. Style graph
+and `lr-toggle` for chunk and memory disclosures; the aliases removed in that release are no
+longer emitted. Graph and explorer use `lr-node-activate`/`lr-edge-activate`. Style graph
 nodes and edges with `--lr-graph-node-fill` and `--lr-graph-edge-color`; the old token fallbacks are removed.
 
 ## `lr-graph`
@@ -54995,8 +54972,7 @@ reverse?: boolean }`
   non-empty host `aria-label` makes
   the host the sole overall owner; an explicitly empty host label stays empty on the group
 
-**Events:** `lr-entity-select` (`detail: { entityId, occurrenceIndex }`, a node element activated;
-the deprecated alias `lr-entity-activate` follows with the same detail),
+**Events:** `lr-entity-select` (`detail: { entityId, occurrenceIndex }`, a node element activated),
 `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, an edge element activated —
 source/target resolved from the adjacent node elements, `undefined` when the path is malformed at
 that position. `occurrenceIndex` is the original supplied array position, so repeated entity ids
@@ -55062,7 +55038,7 @@ string; summary?: string; memberCount?: number }`; `memberCount` is a non-negati
 
 **Events:** `lr-drill` (`detail: { communityId }`, the drill button, header, or overflow chip — all three
 mean "show me this whole community"), `lr-entity-select` (`detail: { entityId }`, a member chip was
-activated; the deprecated alias `lr-entity-activate` follows with the same detail).
+activated).
 
 **Slots:** `actions` — extra header actions alongside the built-in drill button.
 
@@ -55128,7 +55104,7 @@ number; sourceId: string; title?: string; page?: string | number; anchor?: LyraC
   already holds instead of forcing a full offset/identity rebuild
 - `activeChunkId: string = ''` (attribute `active-chunk-id`)
 - `expandedChunkIds: string[] = []` (attribute: false) — ids of the chunks whose text is expanded.
-  The inspector updates its own copy on toggle _then_ emits `lr-chunk-toggle`; reassign to control
+  The inspector updates its own copy on toggle _then_ emits `lr-toggle`; reassign to control
   (a composing list keeps expansion here across scrolling and re-sorting)
 - `virtualizeAt: number = 50` (attribute `virtualize-at`)
 - `size: LyraSize = 'm'` (reflected) — row density on the shared size scale. `s` (and the smaller
@@ -55144,9 +55120,8 @@ number; sourceId: string; title?: string; page?: string | number; anchor?: LyraC
 
 **Events:** `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`, a chunk's title/open button was
 activated — the event a host routes into `lr-document-viewer`, setting `src` from `sourceId` and
-`anchor` from the chunk's own), `lr-chunk-toggle` (`detail: { chunkId, expanded }`, a chunk's text
-  toggle was activated, expanding or collapsing it; deprecated alias), and `lr-toggle` (`detail: { expanded, itemId }`)
-for the same disclosure. The internal virtual list's scroll and range
+`anchor` from the chunk's own), `lr-toggle` (`detail: { expanded, itemId }`, a chunk's text
+toggle was activated, expanding or collapsing it). The internal virtual list's scroll and range
 events stay inside the component.
 
 **Slots:** none.
@@ -55286,8 +55261,7 @@ string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat 
 **Events:** `lr-selection-change` (`detail: { selectedSourceIds }`, the complete updated leaf-id
 array, fired after every toggle including select-all. Also fired when a `sources` reassignment
 prunes a previously-selected id that is no longer a valid leaf. Not fired when a consumer sets
-`selectedSourceIds` directly; that assignment is normalized silently) and its deprecated alias
-`lr-sources-change`, dispatched right after it. The select-all checkbox's and the filter field's
+`selectedSourceIds` directly; that assignment is normalized silently). The select-all checkbox's and the filter field's
 `lr-checkbox-toggle-request`, native `input`/`change`, and `lr-input`/`lr-change` stay inside the
 component; `lr-selection-change` is the host-level report.
 
@@ -55388,12 +55362,10 @@ re-emits one contextual toggle at its boundary. Because the panel is a
 conduit, every affordance it renders also reaches a listener on the panel itself, and all are
 part of its typed event map: `lr-entity-select` (`detail: { entityId, occurrenceIndex? }`, from an
 entity chip, a community card member or a path-strip node — only the path strip carries
-`occurrenceIndex`), its deprecated alias `lr-entity-activate` (same detail, dispatched right after
-it by a community card member or path-strip node), `lr-entity-open` (`detail: { entityId }`, an entity chip double-click or
+`occurrenceIndex`), `lr-entity-open` (`detail: { entityId }`, an entity chip double-click or
 Space), `lr-drill` (`detail: { communityId }`, a community card's title, drill button, or overflow chip), and
 `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, a relationship path-strip
-edge), plus `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) and `lr-chunk-toggle`
-(`detail: { chunkId, expanded }`) from the chunk inspector.
+edge), plus `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) from the chunk inspector.
 
 **Slots:** none.
 
@@ -55796,8 +55768,8 @@ tokens — `--lr-color-border`, `--lr-color-border-subtle`, `--lr-color-surface`
   chrome. Use the shared `LyraFrame` type when authoring this property.
 - `disabled: boolean = false` (reflected) — turns off this card's OWN controls. The `title` button
   and the "Show more"/"Show less" `toggle` both render `disabled`, so neither one can emit `lr-open`
-  or `lr-expand` and neither remains in the tab order, and the card paints at
-  `--lr-opacity-disabled` with a `not-allowed` cursor on both. The one `lr-expand` a disabled card
+  or `lr-toggle` and neither remains in the tab order, and the card paints at
+  `--lr-opacity-disabled` with a `not-allowed` cursor on both. The one `lr-toggle` a disabled card
   can still emit is the automatic collapse when the `full` slot empties while expanded — that
   reports a state change the card genuinely made, exactly as it does when enabled. Both buttons
   carry the native `:disabled`, so `::part(title):disabled` / `::part(toggle):disabled` restyle the
@@ -55816,8 +55788,8 @@ tokens — `--lr-color-border`, `--lr-color-border-subtle`, `--lr-color-surface`
 
 **Events:**
 
-- `lr-expand` (`detail: { sourceId: string; expanded: boolean }`, deprecated alias of `lr-toggle`) — the per-card "Show
-  more"/"Show less" toggle was activated. Unrelated to the parent `lr-source-list`'s own
+- `lr-toggle` (`detail: { expanded: boolean; itemId: string }`) — the per-card "Show
+  more"/"Show less" toggle was activated, or the `full` slot emptied while expanded. Unrelated to the parent `lr-source-list`'s own
   expand/collapse, which only ever hides/shows the _set_ of cards, never a single card's own content.
 - `lr-toggle` (`detail: { expanded, itemId }`) — the same per-card disclosure change, including
   automatic collapse when the full slot empties.
@@ -55888,7 +55860,7 @@ time.
 - `lr-source-list` does not automatically build an “N sources” plural summary: provide
   `labelPlural` when that is wanted. Its no-label fallback is localized through
   `sourceListDefaultLabel`, and a per-instance `.strings` override reaches the rendered header.
-- `lr-source-card`'s own expand/collapse (`full` slot, `lr-expand` event) is completely
+- `lr-source-card`'s own expand/collapse (`full` slot, `lr-toggle` event) is completely
   independent of the parent list's `expanded`/`lr-toggle` — collapsing the list doesn't reset an
   individual card's `fullExpanded` state, and there is no cross-talk between the two components at
   all beyond DOM nesting.
@@ -55942,9 +55914,8 @@ shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape
 **Events:** composed child events reach the host (`composed: true`), with the direct supporting
 chunk toggle qualified by its section and tab changes projected to `tabId`: `lr-entity-select` (`detail: { entityId, occurrenceIndex? }`, surfaced from the
 embedded entity card, neighbor list, or the provenance panel's community card or path strip, which
-add `occurrenceIndex`), its deprecated alias `lr-entity-activate` (from those last two only), `lr-node-expand` (`detail: { nodeId }`),
-`lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`), `lr-chunk-toggle` (`detail: { chunkId,
-expanded }`), `lr-toggle` (`detail: { section, expanded, itemId? }`; the direct supporting-chunk
+add `occurrenceIndex`), `lr-node-expand` (`detail: { nodeId }`),
+`lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`), `lr-toggle` (`detail: { section, expanded, itemId? }`; the direct supporting-chunk
 inspector adds `section: 'chunks'`, while provenance-panel toggles pass through), and `lr-tab-show`
 (`detail: { tabId: LyraEntityDossierTab }`, where `LyraEntityDossierTab = 'relationships' | 'chunks'
 | 'provenance'` — also the `lr-tab-group` slot/tab ids). The Provenance tab's own controls reach the
@@ -56745,14 +56716,11 @@ their own section with ArrowUp/ArrowDown/Home/End. Secondary row controls remain
   — a pending per-item removal was approved. Offered on every item.
 - `lr-forget` (`detail: null`) — the pending "forget all long-term memories" bulk action was
   approved. Only rendered while `longTerm` is non-empty.
-- `lr-memory-toggle` (`detail: LyraMemoryExpandDetail` = `{ memoryId: string; scope: 'short-term' |
-'long-term'; expanded: boolean }`) — an item's provenance disclosure was toggled, expanding or
-collapsing it; deprecated alias of `lr-toggle`.
 - `lr-toggle` carries `{ expanded, itemId, memoryId, scope }` for a memory item's own disclosure.
   Nested provenance toggles are re-emitted once with their `section` and owning `memoryId`/`scope`.
 - The expanded item's other `lr-provenance-panel` events cross the panel and are part of its
-  typed event map: `lr-entity-select`, `lr-entity-activate` (deprecated alias),
-  `lr-entity-open`, `lr-drill`, `lr-relation-activate`, `lr-chunk-open` and `lr-chunk-toggle` (details
+  typed event map: `lr-entity-select`,
+  `lr-entity-open`, `lr-drill`, `lr-relation-activate` and `lr-chunk-open` (details
   as on `lr-provenance-panel`). The owning `[part="item"]` — `data-id`, `data-scope` — is on the
   event's `composedPath()`.
 
@@ -56861,8 +56829,8 @@ a successful global absence proof removes an ID. Complete canonical records are 
 provider `order`, independently of page/query order. The selected-record cache and pending user
 transaction survive paging, query changes and page retry. Selection failure exposes a separate
 retry without emitting a partial selection. External assignment and reconnect/adoption
-reconciliation are silent. A user toggle emits `lr-selection-change` and its guarded deprecated
-`lr-select` alias only after the current complete selection resolves.
+reconciliation are silent. A user toggle emits `lr-selection-change`
+only after the current complete selection resolves.
 
 Source selection event arrays and closed projected record fields are frozen; each record's
 `metadata` remains an opaque reference to the provider-owned value. The component neither deeply
@@ -56984,14 +56952,13 @@ string[]; chunks: RetrievalChunk[] }`) — the _complete_ updated selection, bot
   toggle. This derived detail is always canonicalized nonblank/first-wins regardless of the legacy
   `without-dedupe` switch. It is the only host-level report of a row toggle: the row checkbox's
   `lr-checkbox-toggle-request`, native `input`/`change`, and `lr-input`/`lr-change` stay inside the
-  component. Its deprecated alias `lr-select` (`detail: { chunkIds, chunks }`, the same
-  selection) is dispatched right after it.
+  component.
 - `lr-load-more` (`detail: null`) — from the virtual list's scroll-near-bottom detection while
   virtualized, or the `[part="load-more"]` button otherwise. Only fires while `hasMore` is true and
   `loading` is false.
 - `lr-chunk-open` (`detail: { chunkId, sourceId, anchor? }`) — forwarded verbatim from a row's
   `lr-chunk-inspector`; the event a host routes into `lr-document-viewer`. A row's
-  `lr-chunk-toggle` and the virtual list's scroll events stay inside: the component keeps each
+  `lr-toggle` and the virtual list's scroll events stay inside: the component keeps each
   row's "Show more" state itself, so it survives scrolling a virtualized row out and back and a
   re-sort.
 
@@ -57202,9 +57169,8 @@ unknown> }` — `chunks` is **`RetrievalChunk` from `@aceshooting/lyra-ui/ai`** 
 - `frame: LyraFrame = 'card'` (reflected) — container treatment. `'card'` keeps each `evidence-row`'s bordered box; `'plain'` removes the border and corner radius from every `evidence-row`, for use inside an already-bordered container.
 
 **Events:** `lr-stage-select` (`detail: { stageId: string }`, a stage's bar was activated — click,
-Enter, Space), `lr-stage-toggle` (`detail: { stageId: string; expanded: boolean }`, deprecated alias of `lr-toggle`; an evidence panel was
-toggled, either by its own button or implicitly by selecting that stage in the timeline for the
-first time), `lr-toggle` (`{ expanded, itemId }` for a stage or
+Enter, Space), `lr-toggle` (`{ expanded, itemId }` for a stage's evidence panel toggled, either by its own button or implicitly by selecting that stage in the timeline for the
+first time, or
 `{ expanded, itemId, stageId }` for a nested chunk), and `lr-stage-chunk-action` (`detail: LyraRetrievalTraceChunkActionDetail`, a
 discriminated `{ stageId, action: 'open', chunkId, sourceId, anchor? } | { stageId, action: 'expand', chunkId,
 expanded }`). Generic nested chunk events are stopped at the trace boundary so every action has
@@ -57285,7 +57251,7 @@ the single citation presentation/action owner; the answer-level duplicate citati
 Both child badge signals (`lr-citation-activate` and `lr-citation-open`) are stopped at the answer
 boundary and translated into that one section- and action-qualified `lr-citation-select` contract;
 a double-click reports two `activate`s then one `open`, so a host that only wants the open
-ignores the `activate`s. The generated source cards' `lr-expand`, the source list's `lr-toggle` and
+ignores the `activate`s. The generated source cards' and the source list's `lr-toggle` and
 the Markdown renderer's housekeeping events stay inside.
 
 **Slots:** `answer` replaces the data-driven Markdown body; `sources` replaces the data-driven
@@ -57693,8 +57659,7 @@ later changed omissions are politely announced.
 
 **Events:** `lr-metric-change-request` (`{ metricId }`), `lr-slice-change-request` (`{ slice }`) and
 `lr-run-activate` (`{ runId, run }`). All are controlled intents; the component does not mutate the
-corresponding selection properties. The deprecated `lr-metric-change`, `lr-slice-change` and
-`lr-run-change` (`{ run }`) are dispatched right after them.
+corresponding selection properties.
 
 **CSS parts:** `base`, `heading`, `slices`, `slice`, `slice-selected`, `metrics`, `metric`,
 `metric-selected`, `metric-category` (the caller-supplied category rendered visibly on each metric),

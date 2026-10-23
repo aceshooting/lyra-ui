@@ -50,7 +50,7 @@ element or package module, the deprecated API, and its replacement. A warning on
 usage that can be observed cheaply and exactly — setting a deprecated property or attribute,
 connecting a deprecated tag, vetoing through a deprecated alias event, or calling a deprecated
 function — and **not every deprecated API
-warns**: many deprecations have no runtime warning, among them `lr-icon`'s `auto-width`,
+warns**: many deprecations have no runtime warning, among them deprecated slot content,
 `lr-stat`'s default-slot icon and `lr-menu`'s non-item default-slot content. Deprecated CSS parts, custom properties, and
 custom states are styling hooks a component cannot observe, so they never warn. A silent console
 is therefore not evidence that an application uses no deprecated API. Where a warning exists, it

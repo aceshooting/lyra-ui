@@ -111,6 +111,32 @@ function fixture() {
   };
 }
 
+// Synthetic notices exercise policy handling independently of the current retirement cohort.
+function deprecationFixture() {
+  const state = fixture();
+  for (const [tag, kind, name, replacement, attribute] of [
+    ['lr-icon', 'property', 'autoWidth', { kind: 'property', name: 'canvas', usage: 'canvas="auto"' }, 'auto-width'],
+    ['lr-known-date', 'part', 'label', { kind: 'part', name: 'form-control-label', usage: '::part(form-control-label)' }],
+    ['lr-sparkline', 'part', 'base', { kind: 'part', name: 'sparkline', usage: '::part(sparkline)' }],
+  ]) {
+    const record = { tag, kind, name, since: '8.0.0', removalNotBefore: '10.0.0', replacement,
+      rationale: 'Use the canonical fixture surface.', ...(attribute ? { attribute } : {}) };
+    putDeprecation(state.metadata, record);
+    const declaration = state.manifest.modules.flatMap(module => module.declarations ?? []).find(entry => entry.tagName === tag);
+    const section = kind === 'property' ? 'members' : 'cssParts';
+    declaration[section] ??= [];
+    declaration[section].push({ name, ...(kind === 'property' ? { kind: 'field', type: { text: 'boolean' } } : {}),
+      description: 'Deprecated. Use the canonical fixture surface.', deprecated: 'Use the canonical fixture surface.' });
+    if (attribute) {
+      declaration.attributes ??= [];
+      declaration.attributes.push({ name: attribute, fieldName: name, deprecated: 'Use the canonical fixture surface.' });
+    }
+  }
+  applyComponentMetadataToManifest(state.metadata, state.manifest, { packageVersion: state.packageJson.version });
+  state.inventory = applyMaturityToInventory(state.metadata, state.inventory);
+  return state;
+}
+
 test('every actual root component constructor has an exact deprecation policy', () => {
   const state = fixture();
   assert.deepEqual(validateRootComponentClassDeprecations(state.metadata, { ...state,
@@ -508,18 +534,7 @@ test('checked-in metadata covers the current manifest and inventory', () => {
   );
   assert.equal(state.metadata.assignments['compatibility-stable'].length, 1);
   assert.equal(state.metadata.assignments['introduced-stable'].length, 19);
-  // The eight older mirrored hooks stay while their upstream counterparts exist. The five
-  // entity-activate and ten selection, source, run, metric and decision event aliases, plus four
-  // legacy icon slots and nine normalized toggle-event aliases, stay until their 28.0.0 floor.
-  // All 44 member notices with a 24.0.0 removal floor have retired.
-  const removalCohorts = {};
-  for (const entry of state.metadata.deprecations) {
-    removalCohorts[entry.removalNotBefore] = (removalCohorts[entry.removalNotBefore] ?? 0) + 1;
-  }
-  assert.deepEqual(removalCohorts, {
-    '10.0.0': 8,
-    '28.0.0': 28,
-  });
+  assert.deepEqual(state.metadata.deprecations, []);
   assert.deepEqual(state.metadata.exportDeprecations, []);
 });
 
@@ -999,7 +1014,7 @@ test('validation fails closed on missing assignments and experimental semver exe
 });
 
 test('validation rejects a removal in the immediately following major and a missing replacement', () => {
-  const state = fixture();
+  const state = deprecationFixture();
   const metadata = structuredClone(state.metadata);
   const icon = autoWidthRecord(metadata);
   icon.removalNotBefore = '9.0.0';
@@ -1019,7 +1034,7 @@ test('validation rejects a removal in the immediately following major and a miss
 });
 
 test('validation rejects unsorted, pre-introduction, and future deprecation records', () => {
-  const state = fixture();
+  const state = deprecationFixture();
   const metadata = structuredClone(state.metadata);
   metadata.deprecations.reverse();
   const icon = autoWidthRecord(metadata);
@@ -1053,13 +1068,8 @@ test('validation rejects unsorted, pre-introduction, and future deprecation reco
   );
 });
 
-// Only `part` deprecations remain in the ledger: 9.0.0 removed the last recorded `event` records
-// (lr-tool-call-chip/lr-message-parts' `lr-tool-chip-select`) and the last `css-property` one
-// (lr-flow-canvas' `--lr-flow-canvas-node-current-outline-color`), all three having reached their
-// recorded `removalNotBefore: "9.0.0"`. Re-widen this to the kinds actually present if a future
-// release records an event or CSS-property deprecation again.
 test('validation covers prose-only part deprecations', () => {
-  const state = fixture();
+  const state = deprecationFixture();
   const metadata = structuredClone(state.metadata);
   metadata.deprecations = metadata.deprecations.filter(
     (entry) => entry.tag !== 'lr-sparkline'
@@ -1074,7 +1084,7 @@ test('validation covers prose-only part deprecations', () => {
 });
 
 test('applying metadata changes only maturity records and remains deterministic', () => {
-  const state = fixture();
+  const state = deprecationFixture();
   const stripped = structuredClone(state.inventory);
   for (const component of stripped.components) {
     component.maturity = {
@@ -1115,7 +1125,7 @@ test('validation rejects a stale component-inventory Lyra version pin', () => {
 });
 
 test('CEM projection surfaces status, since, policy, and structured member deprecation metadata', () => {
-  const state = fixture();
+  const state = deprecationFixture();
   const manifest = structuredClone(state.manifest);
   applyComponentMetadataToManifest(state.metadata, manifest, {
     packageVersion: state.packageJson.version,
@@ -1137,7 +1147,6 @@ test('CEM projection surfaces status, since, policy, and structured member depre
   const autoWidthAttribute = icon.attributes.find(
     (entry) => entry.name === 'auto-width'
   );
-  // The mirrored autoWidth notice remains; fixedWidth and its CSS alias have retired.
   assert.equal(icon.deprecations.length, 1);
   assert.equal(autoWidth.deprecation.since, '8.0.0');
   assert.deepEqual(autoWidth.deprecation.replacement, {
@@ -1168,45 +1177,20 @@ test('CEM projection surfaces status, since, policy, and structured member depre
   );
 });
 
-test('authored compatibility parts carry deprecation markers before metadata validation', async () => {
+test('authored component parts carry no retired deprecation markers', async () => {
   const { manifest: compact } = await generateManifest({ write: false });
   const manifest = expandManifestDeprecations(compact);
-  const declarations = new Map(
-    manifest.modules
-      .flatMap((module) => module.declarations ?? [])
-      .filter((declaration) => declaration.tagName)
-      .map((declaration) => [declaration.tagName, declaration])
-  );
-
-  for (const [tag, parts] of [
-    ['lr-file-input', ['base', 'label']],
-    ['lr-qr-code', ['base']],
-  ]) {
-    const declaration = declarations.get(tag);
-    assert.ok(declaration, `${tag} declaration`);
-    for (const name of parts) {
-      const part = declaration.cssParts?.find((entry) => entry.name === name);
-      assert.ok(part, `${tag}::part(${name})`);
-      assert.match(
-        part.description ?? '',
-        /^Deprecated\b/i,
-        `${tag}::part(${name}) source marker`
-      );
-      assert.equal(
-        part.deprecation?.kind,
-        'part',
-        `${tag}::part(${name}) structured policy`
-      );
-      assert.ok(
-        part.deprecation?.replacement?.name,
-        `${tag}::part(${name}) replacement`
-      );
+  for (const declaration of manifest.modules.flatMap(module => module.declarations ?? [])) {
+    if (!declaration.tagName) continue;
+    for (const part of declaration.cssParts ?? []) {
+      assert.doesNotMatch(part.description ?? '', /^Deprecated\b/i, `${declaration.tagName}::part(${part.name})`);
+      assert.equal(part.deprecation, undefined);
     }
   }
 });
 
 test('Storybook presentation exposes central maturity and structured deprecations', () => {
-  const state = fixture();
+  const state = deprecationFixture();
   const manifest = structuredClone(state.manifest);
   applyComponentMetadataToManifest(state.metadata, manifest, {
     packageVersion: state.packageJson.version,
@@ -1530,7 +1514,7 @@ function autoWidthRecord(metadata) {
 }
 
 test('an unreleased deprecation is valid only while the current release is tagged', () => {
-  const state = fixture();
+  const state = deprecationFixture();
   const metadata = withTaggedCurrent(structuredClone(state.metadata));
   const icon = autoWidthRecord(metadata);
   icon.since = UNRELEASED_VERSION;
@@ -1601,7 +1585,7 @@ test('the metadata write stamps unreleased deprecations only on a version rollov
 });
 
 test('a stamped rollover into a new major fails closed on a removal floor set before it', () => {
-  const state = fixture();
+  const state = deprecationFixture();
   const metadata = withTaggedCurrent(structuredClone(state.metadata));
   const major = currentMajor(state);
   const icon = autoWidthRecord(metadata);
@@ -1628,7 +1612,7 @@ test('a stamped rollover into a new major fails closed on a removal floor set be
 });
 
 test('a host inline-size declaration is an accepted host CSS replacement', () => {
-  const state = fixture();
+  const state = deprecationFixture();
   const metadata = structuredClone(state.metadata);
   const icon = autoWidthRecord(metadata);
   icon.replacement = {

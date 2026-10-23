@@ -19,7 +19,7 @@ describe('lr-change-review', () => {
   it('requests controlled hunk decisions with exact identities and no mutation', async () => {
     const el = await fixture<LyraChangeReview>(html`<lr-change-review .files=${files}></lr-change-review>`);
     const details: unknown[] = [];
-    el.addEventListener('lr-change-decision', (event) => details.push(event.detail));
+    el.addEventListener('lr-change-decision-request', (event) => details.push(event.detail));
     (el.shadowRoot!.querySelector('[data-decision="keep"]') as HTMLButtonElement).click();
     expect(details).to.deep.equal([{ fileId: 'file', hunkId: 'hunk', decision: 'keep' }]);
     expect(el.files[0]!.hunks[0]!.decision).to.equal(undefined);
@@ -41,7 +41,7 @@ describe('lr-change-review', () => {
     const oldButton = el.shadowRoot!.querySelector('[data-decision="keep"]') as HTMLButtonElement;
     el.files = [];
     let events = 0;
-    el.addEventListener('lr-change-decision', () => events++);
+    el.addEventListener('lr-change-decision-request', () => events++);
     oldButton.click();
     await el.updateComplete;
     expect(events).to.equal(0);
@@ -52,7 +52,7 @@ describe('lr-change-review', () => {
     const el = await fixture<LyraChangeReview>(html`<lr-change-review .files=${files}></lr-change-review>`);
     const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[data-decision="keep"]')!;
     let calls = 0;
-    el.addEventListener('lr-change-decision', () => calls++);
+    el.addEventListener('lr-change-decision-request', () => calls++);
     el.files = [{ ...files[0]!, hunks: [{ ...files[0]!.hunks[0]!, after: 'unseen replacement' }] }];
     button.click();
     expect(calls).to.equal(0);
@@ -65,7 +65,7 @@ describe('lr-change-review', () => {
     const el = await fixture<LyraChangeReview>(html`<lr-change-review .files=${files}></lr-change-review>`);
     const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[data-decision="keep"]')!;
     let calls = 0;
-    el.addEventListener('lr-change-decision', () => {
+    el.addEventListener('lr-change-decision-request', () => {
       calls++;
       if (calls === 1) button.dispatchEvent(new MouseEvent('click'));
     });
@@ -90,7 +90,7 @@ describe('lr-change-review', () => {
     const el = wrapper.querySelector<LyraChangeReview>('lr-change-review')!;
     await el.updateComplete;
     let decision = '';
-    el.addEventListener('lr-change-decision', (event) => { decision = event.detail.decision; });
+    el.addEventListener('lr-change-decision-request', (event) => { decision = event.detail.decision; });
     await focusByKeyboard(el.shadowRoot!.querySelector('[data-decision="discard"]') as HTMLButtonElement);
     await sendKeys({ press: 'Enter' });
     expect(decision).to.equal('discard');
@@ -117,12 +117,12 @@ it('follows heading-level and renders no heading for an empty label', async () =
   expect(heading() === null).to.equal(true);
 });
 
-it('requests a decision through lr-change-decision-request, then the deprecated lr-change-decision alias', async () => {
+it('requests a decision through lr-change-decision-request, and no longer fires the removed lr-change-decision alias', async () => {
   const el = await fixture<LyraChangeReview>(html`<lr-change-review .files=${files}></lr-change-review>`);
   const seen: string[] = [];
   for (const name of ['lr-change-decision-request', 'lr-change-decision']) {
     el.addEventListener(name, (event) => seen.push(`${name}:${(event as CustomEvent<{ decision: string }>).detail.decision}`));
   }
   (el.shadowRoot!.querySelector('[data-decision="keep"]') as HTMLButtonElement).click();
-  expect(seen).to.deep.equal(['lr-change-decision-request:keep', 'lr-change-decision:keep']);
+  expect(seen).to.deep.equal(['lr-change-decision-request:keep']);
 });

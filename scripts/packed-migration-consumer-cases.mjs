@@ -55,7 +55,7 @@ export function createMemberMigrationCases(context, ledger) {
     const review = profile.reviews.find(item => item.tag === tag && item.kind === kind && item.name === name);
     const slotContent = kind === 'slot-content' && profile.slotContent.find(item => item.tag === tag && item.slot === name);
     assert.ok(Boolean(rule) !== Boolean(review || slotContent), `Missing or conflicting recipe: ${compatibilityKey(record.key)}`);
-    if (rule) assert.equal(rule.to, record.policy.replacement.name, 'Ledger and policy target differ');
+    if (rule) assert.equal(rule.to, record.replacementMember?.name ?? record.policy.replacement.name, 'Ledger and supported policy target differ');
     const target = rule?.to ?? record.policy.replacement.name;
     // Events and CSS declarations reach nested components. Bind expectations to independently checked
     // exposure rather than assuming a published rename stays global as new components adopt it.

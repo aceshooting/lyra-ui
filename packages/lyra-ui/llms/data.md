@@ -71,7 +71,7 @@ It adds no table, CSV or source-selection event.
 
 **Slots:** none.
 
-**CSS parts:** `sparkline` and deprecated `base` are aliases on the same outer SVG, `fill` is the
+**CSS parts:** `sparkline` is the outer SVG, `fill` is the
 area path for solid/gradient appearance, `line` is the stroke path, and the additive `bar` is each
 extension-mode rectangle. `status` is the visible invalid-prepared-input message.
 
@@ -4011,8 +4011,7 @@ owns none of that.
 
 **Events:** none — purely presentational, activation/drag/connect all live on `lr-flow-canvas`.
 
-**Slots:** default (body content), `start` (leading header glyph; `icon` is the deprecated legacy
-slot), `header` (replaces the built-in
+**Slots:** default (body content), `start` (leading header glyph), `header` (replaces the built-in
 heading row entirely), `toolbar` (action row at the block-end edge; revealed by hover/focus on
 hover-capable devices and always visible with a coarse pointer or no hover; it also stays revealed
 while an `lr-dropdown`, `lr-popover`, `lr-context-menu` or picker (`lr-select`, `lr-combobox`,

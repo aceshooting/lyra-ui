@@ -21,8 +21,6 @@ export interface SourceCardOpenDetail {
 }
 
 export interface LyraSourceCardEventMap {
-  /** @deprecated Use `lr-toggle` and read `itemId`; this alias remains during its deprecation window. */
-  'lr-expand': CustomEvent<SourceCardExpandDetail>;
   'lr-toggle': CustomEvent<{ expanded: boolean; itemId: string }>;
   'lr-open': CustomEvent<SourceCardOpenDetail>;
 }
@@ -53,12 +51,11 @@ class LyraSourceCardBase extends LyraElement<LyraSourceCardEventMap> {}
  * more"/"Show less" toggle. When left empty, no toggle renders at all — a
  * card with no `full` content simply has no expand affordance. Removing all
  * `full`-slotted content while expanded automatically collapses it back, and
- * announces that collapse through `lr-expand` like any other state change.
- * @event lr-expand - The card's expanded state changed — either the per-card
+ * announces that collapse through `lr-toggle` like any other state change.
+ * @event lr-toggle - The card's expanded state changed — either the per-card
  * "Show more"/"Show less" toggle was activated, or all `full`-slotted content
  * was removed while expanded, collapsing the card automatically.
- * `detail: { sourceId, expanded }`.
- * @event lr-toggle - The same change with `detail: { expanded, itemId }`.
+ * `detail: { expanded, itemId }`.
  * @event lr-open - The title was activated. `detail: { sourceId, href }` —
  * `href` may be `undefined`. This component never navigates on its own
  * (staying a controlled component, the same convention
@@ -144,9 +141,9 @@ export class LyraSourceCard extends LyraSourceCardBase {
   @property({ reflect: true }) size: LyraSize = 'm';
 
   /** Turns off this card's OWN controls: the `title` button and the "Show more"/"Show less"
-   *  `toggle` both render `disabled`, so neither one can emit `lr-open` or `lr-expand` and neither
+   *  `toggle` both render `disabled`, so neither one can emit `lr-open` or `lr-toggle` and neither
    *  remains in the tab order, and the card paints at `--lr-opacity-disabled` with a
-   *  `not-allowed` cursor on both. The one `lr-expand` a disabled card can still emit is the
+   *  `not-allowed` cursor on both. The one `lr-toggle` a disabled card can still emit is the
    *  automatic collapse when the `full` slot empties while expanded -- that reports a state change
    *  the card genuinely made, exactly as it does when enabled, and swallowing it would desync a
    *  host tracking expansion off the event stream.
@@ -220,7 +217,6 @@ export class LyraSourceCard extends LyraSourceCardBase {
     // desync if only the manual toggle announced itself, so the automatic path emits too.
     if (count === 0 && this.fullExpanded) {
       this.fullExpanded = false;
-      this.emit('lr-expand', { sourceId: this.sourceId, expanded: false });
       this.emit('lr-toggle', { itemId: this.sourceId, expanded: false });
     }
   };
@@ -242,10 +238,6 @@ export class LyraSourceCard extends LyraSourceCardBase {
 
   private toggleFull = (): void => {
     this.fullExpanded = !this.fullExpanded;
-    this.emit('lr-expand', {
-      sourceId: this.sourceId,
-      expanded: this.fullExpanded,
-    });
     this.emit('lr-toggle', { itemId: this.sourceId, expanded: this.fullExpanded });
   };
 

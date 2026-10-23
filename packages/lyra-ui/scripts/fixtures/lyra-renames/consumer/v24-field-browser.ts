@@ -13,6 +13,7 @@ import { fieldProofConfig } from './v24-field-config.js';
 
 type FieldExposure = {
   key: { tag: string; event: string; declaration: { module: string; detailType: string; field: string } };
+  currentEvent: string;
   role: 'request' | 'settled';
   relation: 'equal' | 'inverse';
   canonicalOptional: boolean;
@@ -151,6 +152,8 @@ for (const exposure of exposures) {
   group.push(exposure); grouped.set(exposure.key.tag, group);
 }
 const observed: FieldExposure['key'][] = [];
+const currentObserved: FieldExposure['key'][] = [];
+const retiredObserved: Array<{ key: FieldExposure['key']; count: number }> = [];
 for (const [tag, rows] of grouped) {
   const { element, act } = await createAndAct(tag);
   const requests = rows.filter(row => row.role === 'request');
@@ -159,28 +162,34 @@ for (const [tag, rows] of grouped) {
   const eventOrder: string[] = [];
   for (const row of rows) {
     const events: Array<{ detail: Record<string, unknown>; cancelable: boolean }> = [];
-    received.set(row.key.event, events);
-    element.addEventListener(row.key.event, event => {
-      check(event instanceof CustomEvent, `${tag}/${row.key.event} was not a CustomEvent`);
-      check(event.detail && (typeof event.detail.expanded === 'boolean' || (row.canonicalOptional && event.detail.expanded === undefined)), `${tag}/${row.key.event} lost canonical detail.expanded`);
+    received.set(row.currentEvent, events);
+    element.addEventListener(row.currentEvent, event => {
+      check(event instanceof CustomEvent, `${tag}/${row.currentEvent} was not a CustomEvent`);
+      check(event.detail && (typeof event.detail.expanded === 'boolean' || (row.canonicalOptional && event.detail.expanded === undefined)), `${tag}/${row.currentEvent} lost canonical detail.expanded`);
       if (fieldMode() === 'retirement') {
-        check(!Object.hasOwn(event.detail, row.key.declaration.field), `${tag}/${row.key.event} retained retired detail.${row.key.declaration.field}`);
+        check(!Object.hasOwn(event.detail, row.key.declaration.field), `${tag}/${row.currentEvent} retained retired detail.${row.key.declaration.field}`);
       } else {
-        check(Object.hasOwn(event.detail, row.key.declaration.field), `${tag}/${row.key.event} pre-removal proof lost detail.${row.key.declaration.field}`);
+        check(Object.hasOwn(event.detail, row.key.declaration.field), `${tag}/${row.currentEvent} pre-removal proof lost detail.${row.key.declaration.field}`);
         const alias = event.detail[row.key.declaration.field];
-        check(typeof alias === 'boolean', `${tag}/${row.key.event} deprecated detail field is not boolean`);
-        check(alias === (row.relation === 'equal' ? event.detail.expanded : !event.detail.expanded), `${tag}/${row.key.event} deprecated detail field relation changed`);
+        check(typeof alias === 'boolean', `${tag}/${row.currentEvent} deprecated detail field is not boolean`);
+        check(alias === (row.relation === 'equal' ? event.detail.expanded : !event.detail.expanded), `${tag}/${row.currentEvent} deprecated detail field relation changed`);
       }
       events.push({ detail: event.detail, cancelable: event.cancelable });
-      eventOrder.push(row.key.event);
+      eventOrder.push(row.currentEvent);
     });
     observed.push(row.key);
+    currentObserved.push({ ...row.key, event: row.currentEvent });
+    if (row.currentEvent !== row.key.event) {
+      const retired = { key: row.key, count: 0 };
+      retiredObserved.push(retired);
+      element.addEventListener(row.key.event, () => { retired.count += 1; });
+    }
   }
   if (requests.length) {
     check(settledRows.length === requests.length, `${tag} request/settled exposure count differs`);
     const before = state(element);
-    const requestName = requests[0].key.event;
-    const settledName = settledRows[0].key.event;
+    const requestName = requests[0].currentEvent;
+    const settledName = settledRows[0].currentEvent;
     if (tag === 'lr-multi-split') {
       const split = element as HTMLElement & { collapseState: string; open: boolean };
       const reentrant = () => { split.collapseState = 'rail'; };
@@ -211,13 +220,15 @@ for (const [tag, rows] of grouped) {
   } else {
     check(settledRows.length === 1, `${tag} settled-only exposure count differs`);
     await act(); await settled(element);
-    await until(() => (received.get(settledRows[0].key.event)?.length ?? 0) === 1, `${tag}/${settledRows[0].key.event} did not emit`);
-    check(!received.get(settledRows[0].key.event)![0].cancelable, `${tag}/${settledRows[0].key.event} must be non-cancelable`);
-    check(stateEqual(eventOrder, [settledRows[0].key.event]), `${tag} settled-only event order changed`);
+    await until(() => (received.get(settledRows[0].currentEvent)?.length ?? 0) === 1, `${tag}/${settledRows[0].currentEvent} did not emit`);
+    check(!received.get(settledRows[0].currentEvent)![0].cancelable, `${tag}/${settledRows[0].currentEvent} must be non-cancelable`);
+    check(stateEqual(eventOrder, [settledRows[0].currentEvent]), `${tag} settled-only event order changed`);
   }
   element.remove();
 }
 
 check(observed.length === 20, `Installed browser exercised ${observed.length}/20 published field exposures`);
-document.documentElement.dataset.migrationFieldsProof = JSON.stringify({ mode: fieldProofConfig.mode, exposures: observed });
+check(currentObserved.length === 20, 'Installed browser lost current field event exposures');
+check(retiredObserved.every(item => item.count === 0), 'Installed browser emitted a retired field event');
+document.documentElement.dataset.migrationFieldsProof = JSON.stringify({ mode: fieldProofConfig.mode, exposures: observed, currentExposures: currentObserved, retiredEvents: retiredObserved });
 stage.remove();

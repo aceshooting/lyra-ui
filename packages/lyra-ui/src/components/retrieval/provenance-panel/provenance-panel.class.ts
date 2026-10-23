@@ -83,18 +83,13 @@ function deriveSections(p: Readonly<LyraProvenance> | null) {
  *  events, all of which are `composed` and therefore reach a host listener on
  *  `<lr-provenance-panel>` itself. */
 export interface LyraProvenancePanelEventMap
-  extends Omit<LyraCommunityCardEventMap, 'lr-entity-select' | 'lr-entity-activate'>,
+  extends Omit<LyraCommunityCardEventMap, 'lr-entity-select'>,
     Omit<LyraEntityChipEventMap, 'lr-entity-select'>,
-    Omit<LyraPathStripEventMap, 'lr-entity-select' | 'lr-entity-activate'>,
+    Omit<LyraPathStripEventMap, 'lr-entity-select'>,
     Omit<LyraChunkInspectorEventMap, 'lr-toggle'> {
   /** "The user picked this entity", surfaced unchanged from an embedded entity chip, community
    *  card or relationship path strip; only the path strip carries `occurrenceIndex`. */
   'lr-entity-select': CustomEvent<{
-    entityId: string;
-    occurrenceIndex?: number;
-  }>;
-  /** @deprecated Use `lr-entity-select`. */
-  'lr-entity-activate': CustomEvent<{
     entityId: string;
     occurrenceIndex?: number;
   }>;
@@ -117,8 +112,6 @@ export interface LyraProvenancePanelEventMap
  * @event lr-entity-select - Surfaced unchanged from an embedded entity chip, community card or
  *   relationship path strip. `detail: { entityId, occurrenceIndex? }`; only the path strip sets
  *   `occurrenceIndex`.
- * @event lr-entity-activate - Deprecated alias of `lr-entity-select`, dispatched right after it by
- *   an embedded community card or relationship path strip.
  * @event lr-entity-open - Surfaced unchanged from an embedded entity chip (double-click, or Space
  *   while focused). `detail: { entityId }`.
  * @event lr-drill - Surfaced unchanged from an embedded community card's title, drill button, or
@@ -127,8 +120,6 @@ export interface LyraProvenancePanelEventMap
  *   `detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`.
  * @event lr-chunk-open - Surfaced unchanged from an embedded chunk inspector.
  *   `detail: { chunkId, sourceId, anchor? }`.
- * @event lr-chunk-toggle - Surfaced unchanged from an embedded chunk inspector.
- *   `detail: { chunkId, expanded }`.
  * @csspart base - The root wrapper.
  * @csspart section - One section's wrapper.
  * @csspart header - A section's disclosure `<button>`.

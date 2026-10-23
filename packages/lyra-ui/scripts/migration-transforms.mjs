@@ -856,6 +856,32 @@ export function migrateText(original, contract, options = {}) {
     for (const attribute of attributes) {
       const rule = namedRule(attribute.rawName, mapping);
       if (!rule) continue;
+      if (rule.value !== undefined) {
+        // The upstream member is a boolean spelling of `to="value"`: only a bare static attribute
+        // maps mechanically; every other form (bound, valued, property) is reviewed by hand.
+        if (rule.prefix === '' && attribute.valueKind === 'boolean' &&
+          !attributes.some(candidate => candidate !== attribute &&
+            [rule.to, `.${rule.to}`, `:${rule.to}`, `v-bind:${rule.to}`].includes(candidate.rawName))) {
+          addEdit(attribute.nameStart, attribute.nameEnd, `${rule.to}="${rule.value}"`, {
+            upstreamTag: mapping.upstreamTag,
+            upstreamMember: rule.from,
+            action: memberAction(rule.section),
+            target: `${rule.to}="${rule.value}"`,
+            message: `Rewrite ${rule.section} member ${rule.from} to ${rule.to}="${rule.value}".`,
+          });
+        } else {
+          usage[mapping.upstream].manual += 1;
+          warn(
+            attribute.nameStart,
+            mapping.upstreamTag,
+            rule.from,
+            'DYNAMIC_VALUE_REVIEW',
+            rule.to,
+            `${rule.from} is a boolean spelling of ${rule.to}="${rule.value}"; set ${rule.to} to "${rule.value}" when it is true and leave it unset otherwise.`,
+          );
+        }
+        continue;
+      }
       addEdit(attribute.nameStart, attribute.nameEnd, rule.replacement, {
         upstreamTag: mapping.upstreamTag,
         upstreamMember: rule.from,
@@ -1070,6 +1096,12 @@ export function migrateText(original, contract, options = {}) {
           if (insideRanges(memberMatch.index, ignoredRanges)) continue;
           const relative = memberMatch[0].lastIndexOf(memberMatch.groups.member);
           const offset = memberMatch.index + relative;
+          if (rule.value !== undefined) {
+            usage[mapping.upstream].manual += 1;
+            warn(offset, mapping.upstreamTag, rule.from, 'DYNAMIC_VALUE_REVIEW', rule.to,
+              `${rule.from} is a boolean spelling of ${rule.to}="${rule.value}"; preserve explicit ${rule.to} values and review the boolean expression.`);
+            continue;
+          }
           addEdit(offset, offset + rule.from.length, rule.to, {
             upstreamTag: mapping.upstreamTag,
             upstreamMember: rule.from,
@@ -1078,6 +1110,17 @@ export function migrateText(original, contract, options = {}) {
             message: `Rewrite ${section} member ${rule.from} to ${rule.to}.`,
           });
         }
+      }
+    }
+    for (const rule of mapping.rewrites.attributes.filter(entry => entry.value !== undefined)) {
+      const escaped = rule.from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`${owner}\\s*(?:\\?\\.|!\\s*\\.|\\.)\\s*(?:get|set|has|toggle|remove)Attribute\\(\\s*(['"])(?<member>${escaped})\\2`, 'g');
+      for (const attributeMatch of original.matchAll(regex)) {
+        if (insideRanges(attributeMatch.index, ignoredRanges)) continue;
+        const offset = attributeMatch.index + attributeMatch[0].lastIndexOf(attributeMatch.groups.member);
+        usage[mapping.upstream].manual += 1;
+        warn(offset, mapping.upstreamTag, rule.from, 'DYNAMIC_VALUE_REVIEW', rule.to,
+          `${rule.from} is a boolean spelling of ${rule.to}="${rule.value}"; review this attribute operation before migrating it.`);
       }
     }
     for (const rule of mapping.rewrites.events) {

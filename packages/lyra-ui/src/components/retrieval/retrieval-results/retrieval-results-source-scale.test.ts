@@ -128,12 +128,6 @@ it('does not emit a pending user transaction after disconnect and authoritative 
   const parent = el.parentNode!; el.remove(); parent.appendChild(el); pending[0]!([entry(0)]); await waitUntil(() => pending.length === 2); pending[1]!([]);
   await waitUntil(() => el.selectedChunkIds.length === 0); expect(events).to.equal(0);
 });
-it('suppresses the deprecated alias when a selection listener supersedes source authority', async () => {
-  const el = await fixture<LyraRetrievalResults>(html`<lr-retrieval-results .dataSource=${source()}></lr-retrieval-results>`);
-  const control = await checkbox(el, 'c0'); let aliases = 0; let events = 0;
-  el.addEventListener('lr-selection-change', () => { events++; el.dataSource = source(); }); el.addEventListener('lr-select', () => aliases++);
-  control.click(); await waitUntil(() => events === 1); await list(el, 'c0'); expect(aliases).to.equal(0);
-});
 it('uses canonical source order for complete selected records while preserving explicit ID order', async () => {
   const provider = source(); provider.lookup = async keys => keys.map(key => entry(Number(key.slice(1)))).reverse();
   const el = await fixture<LyraRetrievalResults>(html`<lr-retrieval-results .dataSource=${provider} .selectedChunkIds=${['c90', 'c30']}></lr-retrieval-results>`);
@@ -255,8 +249,8 @@ it('keeps legacy selection record metadata detached and deeply frozen for both e
   const metadata = { nested: { label: 'Original' } }; const chunk = { ...entry(0).value, metadata };
   const el = await fixture<LyraRetrievalResults>(html`<lr-retrieval-results .chunks=${[chunk]}></lr-retrieval-results>`);
   const details: { chunks: readonly RetrievalChunk[] }[] = [];
-  el.addEventListener('lr-selection-change', e => details.push(e.detail)); el.addEventListener('lr-select', e => details.push(e.detail));
-  el.shadowRoot!.querySelector<LyraCheckbox>('[part="select"]')!.click(); expect(details.length).to.equal(2);
+  el.addEventListener('lr-selection-change', e => details.push(e.detail));
+  el.shadowRoot!.querySelector<LyraCheckbox>('[part="select"]')!.click(); expect(details.length).to.equal(1);
   for (const detail of details) {
     expect(detail.chunks[0] === chunk).to.equal(false); expect(detail.chunks[0]!.metadata === metadata).to.equal(false);
     expect(Object.isFrozen(detail.chunks)).to.equal(true); expect(Object.isFrozen(detail.chunks[0])).to.equal(true);
@@ -268,9 +262,9 @@ it('preserves legacy null event details when the entire selection exceeds the sh
   const chunks = Array.from({ length: 10000 }, (_, i) => entry(i).value);
   const el = await fixture<LyraRetrievalResults>(html`<lr-retrieval-results sort="none" .chunks=${chunks} .selectedChunkIds=${chunks.map(c => c.id)}></lr-retrieval-results>`);
   const virtual = el.shadowRoot!.querySelector<LyraVirtualList>('lr-virtual-list')!; await virtual.updateComplete;
-  const details: unknown[] = []; el.addEventListener('lr-selection-change', e => details.push(e.detail)); el.addEventListener('lr-select', e => details.push(e.detail));
+  const details: unknown[] = []; el.addEventListener('lr-selection-change', e => details.push(e.detail));
   virtual.shadowRoot!.querySelector<LyraCheckbox>('[data-chunk-id="c0"][part="select"]')!.click();
-  expect(details).to.deep.equal([null, null]);
+  expect(details).to.deep.equal([null]);
 });
 for (const virtual of [false, true]) {
   it(`revokes legacy ${virtual ? 'virtual forwarding' : 'footer'} load-more at source entry and preserves current legacy requests`, async () => {
@@ -288,16 +282,6 @@ for (const virtual of [false, true]) {
     el.hasMore = false; request(current); expect(events).to.equal(2);
   });
 }
-it('revokes the selection alias when a revision getter replaces the provider during its final guard', async () => {
-  const provider = source(); const replacement = source(); let armed = false; let swaps = 0;
-  let el!: LyraRetrievalResults;
-  Object.defineProperty(provider, 'revision', { get() { if (armed) { armed = false; swaps++; el.dataSource = replacement; } return 1; } });
-  el = await fixture<LyraRetrievalResults>(html`<lr-retrieval-results .dataSource=${provider}></lr-retrieval-results>`);
-  const control = await checkbox(el, 'c0'); await waitUntil(() => !control.disabled); let events = 0; let aliases = 0;
-  el.addEventListener('lr-selection-change', () => { events++; armed = true; }); el.addEventListener('lr-select', () => aliases++);
-  control.click(); await waitUntil(() => swaps === 1); await el.updateComplete;
-  expect(events).to.equal(1); expect(el.dataSource === replacement).to.equal(true); expect(aliases).to.equal(0);
-});
 
 it('stops obsolete source descriptor capture when an early field navigates pages', async () => {
   const el = await fixture<LyraRetrievalResults>(html`<lr-retrieval-results grouping="none" .sourcePageSize=${1}></lr-retrieval-results>`);

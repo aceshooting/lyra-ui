@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { X_CASES, RETAINED_ROOT } from '../packages/lyra-ui/scripts/fixtures/lyra-renames/consumer/x-cases.mjs';
 import { compatibilityKey } from '../packages/lyra-ui/scripts/published-compatibility.mjs';
 import { emptyRenameProjection } from '../packages/lyra-ui/scripts/lyra-rename-ledger.mjs';
-import { assertInstalledMigrationBanner, assertInstalledRetainedField, createV24SemanticMigrationCases, selectMigrationCases, assertMigrationReport, assertBrowserProof, runMigrationProcess, verifyPackedMigrationConsumers, writeResolvedMigrationEntry } from './packed-migration-consumer.mjs';
+import { projectInstalledFieldExposures, assertInstalledFieldEventMap, assertInstalledMigrationBanner, assertInstalledRetainedField, createV24SemanticMigrationCases, selectMigrationCases, assertMigrationReport, assertBrowserProof, runMigrationProcess, verifyPackedMigrationConsumers, writeResolvedMigrationEntry } from './packed-migration-consumer.mjs';
 
 function currentContractFromHistoricalCapture(publishedMigration) {
   const inventory = structuredClone(publishedMigration);
@@ -293,6 +293,90 @@ test('pre-removal candidate fields preserve the published shape and notice as se
   assert.throws(() => assertInstalledRetainedField(body(sample).replace('open:', 'open?:'), sample), /field shape changed/u);
   assert.throws(() => assertInstalledRetainedField(body(sample).replace('@deprecated', '@ordinary'), sample), /notice changed/u);
 });
+
+test('field exposure projection keeps twenty historical identities and exact current event routes', async () => {
+  const facts = JSON.parse(await readFile(new URL('../packages/lyra-ui/scripts/fixtures/compatibility-history/field-evidence/23.0.0/facts.json', import.meta.url), 'utf8'));
+  const current = { packageVersion: '30.0.0', records: {}, exposure: { event: { 'lr-toggle-request': ['lr-dock-panel'], 'lr-toggle': ['lr-dock-panel'] } } };
+  for (const [name, target, cancelable] of [['lr-collapse-request', 'lr-toggle-request', 'always'], ['lr-collapse-change', 'lr-toggle', 'never']]) {
+    const key = { scope: 'member', tag: 'lr-dock-panel', kind: 'event', name };
+    current.records[compatibilityKey(key)] = { key, state: 'retired', removedIn: '30.0.0', policy: { replacement: { kind: 'event', name: target } },
+      sourceMember: { name, type: 'CustomEvent<LyraDockPanelCollapseChangeDetail>' }, replacementOwner: 'lr-dock-panel',
+      replacementMember: { name: target, type: 'CustomEvent<LyraDockPanelCollapseChangeDetail>', cancelable } };
+  }
+  const unchangedFacts = structuredClone(facts);
+  const projected = projectInstalledFieldExposures(facts, current);
+  assert.equal(projected.length, 20);
+  assert.deepEqual(projected.map(row => row.key), facts.exposures.map(row => row.key));
+  assert.deepEqual(projected.filter(row => row.currentEvent !== row.key.event).map(row => [row.key.event, row.currentEvent]), [
+    ['lr-collapse-request', 'lr-toggle-request'], ['lr-collapse-change', 'lr-toggle'],
+  ]);
+  assert.deepEqual(facts, unchangedFacts, 'Published field facts must remain immutable');
+  const unretired = structuredClone(current);
+  unretired.packageVersion = '29.2.2';
+  for (const record of Object.values(unretired.records)) record.state = 'current';
+  assert.ok(projectInstalledFieldExposures(facts, unretired).every(row => row.currentEvent === row.key.event));
+  assert.throws(() => projectInstalledFieldExposures(facts, current, 'pre-removal'), /cannot project a retired event/u);
+  const firstKey = compatibilityKey({ scope: 'member', tag: 'lr-dock-panel', kind: 'event', name: 'lr-collapse-request' });
+  for (const mutate of [
+    context => { delete context.records[firstKey]; },
+    context => { context.records[firstKey].state = 'unknown'; },
+    context => { context.records[firstKey].key.tag = 'lr-widget'; },
+    context => { context.records[firstKey].policy.replacement.kind = 'part'; },
+    context => { context.records[firstKey].policy.replacement.name = 'lr-other'; },
+    context => { context.records[firstKey].removedIn = '31.0.0'; },
+    context => { context.records[firstKey].replacementOwner = 'lr-widget'; },
+    context => { context.records[firstKey].sourceMember.name = 'lr-other'; },
+    context => { context.records[firstKey].sourceMember.type = 'CustomEvent<WrongDetail>'; },
+    context => { context.records[firstKey].replacementMember.type = 'CustomEvent<WrongDetail>'; },
+    context => { context.records[firstKey].replacementMember.cancelable = 'never'; },
+    context => { delete context.exposure.event['lr-toggle-request']; },
+    context => { context.records[compatibilityKey({ scope: 'member', tag: 'lr-details', kind: 'event', name: 'lr-toggle' })] = { state: 'retired' }; },
+  ]) {
+    const invalid = structuredClone(current); mutate(invalid);
+    assert.throws(() => projectInstalledFieldExposures(facts, invalid), 'Missing/malformed/unreviewed projection must fail closed');
+  }
+  const request = projected.find(row => row.key.tag === 'lr-dock-panel' && row.role === 'request');
+  const canonical = "'lr-toggle-request': CustomEvent<LyraDockPanelCollapseChangeDetail>;";
+  assert.doesNotThrow(() => assertInstalledFieldEventMap(canonical, request));
+  assert.throws(() => assertInstalledFieldEventMap('', request), /event map lost/u);
+  assert.throws(() => assertInstalledFieldEventMap(canonical.replace('LyraDockPanelCollapseChangeDetail', 'WrongDetail'), request), /event map lost/u);
+  assert.throws(() => assertInstalledFieldEventMap(canonical + "\n'lr-collapse-request': CustomEvent<LyraDockPanelCollapseChangeDetail>;", request), /retained retired/u);
+  const legacy = projectInstalledFieldExposures(facts, unretired).find(row => row.key.tag === 'lr-dock-panel' && row.role === 'request');
+  assert.doesNotThrow(() => assertInstalledFieldEventMap("'lr-collapse-request': CustomEvent<LyraDockPanelCollapseChangeDetail>;", legacy));
+});
+
+test('field event notice boundary is independent of the field-alias proof mode', async () => {
+  const facts = JSON.parse(await readFile(new URL('../packages/lyra-ui/scripts/fixtures/compatibility-history/field-evidence/23.0.0/facts.json', import.meta.url), 'utf8'));
+  const retirement = JSON.parse(await readFile(new URL('../packages/lyra-ui/scripts/fixtures/compatibility-history/retirements-30.0.0.json', import.meta.url), 'utf8'));
+  const notices = retirement.capture.records.filter(record => record.key.tag === 'lr-dock-panel' && record.key.kind === 'event' &&
+    ['lr-collapse-request', 'lr-collapse-change'].includes(record.key.name));
+  assert.deepEqual(notices.map(record => [record.key.name, record.policy.since]).sort(), [
+    ['lr-collapse-change', '26.0.0'], ['lr-collapse-request', '26.0.0'],
+  ], 'The missing-record allowance must match the reviewed event-notice boundary');
+  for (const mode of ['pre-removal', 'retirement']) {
+    for (const packageVersion of ['24.0.0', '24.9.9', '25.0.0', '25.99.99']) {
+      const rows = projectInstalledFieldExposures(facts, { packageVersion, records: {} }, mode);
+      assert.equal(rows.length, 20);
+      assert.deepEqual(rows.map(row => row.key), facts.exposures.map(row => row.key));
+      assert.ok(rows.every(row => row.currentEvent === row.key.event && row.eventRetiredIn === null));
+      for (const row of rows.filter(row => row.key.tag === 'lr-dock-panel')) {
+        const legacy = `'${row.key.event}': CustomEvent<${row.key.declaration.detailType}>;`;
+        assert.doesNotThrow(() => assertInstalledFieldEventMap(legacy, row));
+        assert.throws(() => assertInstalledFieldEventMap('', row), /event map lost/u);
+        assert.throws(() => assertInstalledFieldEventMap(legacy.replace('lr-collapse', 'lr-toggle'), row), /event map lost/u);
+      }
+      const malformed = { packageVersion, records: { [compatibilityKey(notices[0].key)]: {} } };
+      assert.throws(() => projectInstalledFieldExposures(facts, malformed, mode), /record identity changed/u);
+    }
+    for (const packageVersion of ['26.0.0', '26.0.1', '29.2.2', '30.0.0']) {
+      assert.throws(() => projectInstalledFieldExposures(facts, { packageVersion, records: {} }, mode), /Missing reviewed field event record/u);
+    }
+    for (const packageVersion of [undefined, '25.0.0-beta.1', '25.0.0+build', '025.0.0', '25.0', '23.0.0']) {
+      assert.throws(() => projectInstalledFieldExposures(facts, { packageVersion, records: {} }, mode), /stable semantic version|v24 or later/u);
+    }
+  }
+});
+
 test('expected process status is checked rather than treating every failure as a negative proof', async () => {
   const ok = await runMigrationProcess(process.execPath, ['-e', "process.stdout.write('checked'); process.exit(1)"], process.cwd(), 1);
   assert.equal(ok.stdout, 'checked');
@@ -453,15 +537,15 @@ test('current shared chunk event ownership preserves exact manual decisions and 
   const ledger = JSON.parse(await readFile(new URL('../packages/lyra-ui/scripts/fixtures/lyra-renames.json', import.meta.url), 'utf8'));
   const cases = createMemberMigrationCases(context, ledger);
   assert.equal(cases.length, 390);
-  const shared = cases.filter(item => item.key.kind === 'event' && item.key.name === 'lr-expand' && item.rule?.to === 'lr-chunk-toggle');
-  assert.deepEqual(shared.map(item => item.key.tag).sort(), ['lr-chunk-inspector', 'lr-entity-dossier', 'lr-provenance-panel']);
+  const shared = cases.filter(item => item.key.kind === 'event' && item.key.name === 'lr-expand' && item.rule?.to === 'lr-toggle');
+  assert.deepEqual(shared.map(item => item.key.tag).sort(), ['lr-chunk-inspector', 'lr-entity-dossier', 'lr-memory-panel', 'lr-provenance-panel']);
   const contract = buildMigrationContract(inventory, { renameLedger: ledger, lyraVersion: context.packageVersion, compatibilityContext: context });
   for (const item of shared) {
     assert.equal(item.automatic, false, item.id);
     assert.equal(item.sharedTargetReview, true, item.id);
-    assert.deepEqual(item.targetKeepers, ['lr-memory-panel'], item.id);
+    assert.ok(item.targetKeepers.includes('lr-source-card'), item.id);
     let handler;
-    const owner = { addEventListener(name, listener) { assert.equal(name, 'lr-chunk-toggle'); handler = listener; } };
+    const owner = { addEventListener(name, listener) { assert.equal(name, 'lr-toggle'); handler = listener; } };
     const received = [];
     const resolveListener = new Function('document', 'console', item.resolved.replace(')!', ')'));
     resolveListener({ querySelector(selector) { assert.equal(selector, item.key.tag); return owner; } }, { log(event) { received.push(event); } });
@@ -475,12 +559,13 @@ test('current shared chunk event ownership preserves exact manual decisions and 
     const report = { schemaVersion: 1, origin: 'lyra-v21', ...result, filesChanged: 0,
       summary: { rewrites: result.changes.length, warnings: result.warnings.length, acknowledged: result.acknowledged } };
     assertMemberMigrationReport(report, [{ ...item, file }], 'lyra-v21');
-    assert.match(result.warnings[0].message, /lr-memory-panel also dispatches lr-chunk-toggle/);
+    assert.match(result.warnings[0].message, /lr-source-card/);
+    assert.match(result.warnings[0].message, /also dispatch(?:es)? lr-toggle/);
     const acknowledged = migrateText(`// lyra-migrate-reviewed: RENAME_TARGET_SHARED_REVIEW:${item.key.name}\n${item.input}`, contract, { file, origin: 'lyra-v21' });
     assert.equal(acknowledged.content.endsWith(item.input), true);
     assert.deepEqual(acknowledged.changes, []); assert.deepEqual(acknowledged.warnings, []);
     assert.equal(acknowledged.acknowledged, 1);
-    for (const [field, value] of [['warningCode', 'DEPRECATED_MEMBER_REVIEW'], ['target', 'lr-other-toggle'], ['column', item.column + 1], ['upstreamTag', 'lr-memory-panel']]) {
+    for (const [field, value] of [['warningCode', 'DEPRECATED_MEMBER_REVIEW'], ['target', 'lr-other-toggle'], ['column', item.column + 1], ['upstreamTag', 'lr-source-card']]) {
       const drifted = structuredClone(report); drifted.warnings[0][field] = value;
       assert.throws(() => assertMemberMigrationReport(drifted, [{ ...item, file }], 'lyra-v21'), `Manual ${field} drift must fail`);
     }
@@ -505,9 +590,9 @@ test('current shared chunk event ownership preserves exact manual decisions and 
     assert.equal(resolved.acknowledged, item.resolvedAcknowledgementsByOrigin[origin], `${item.id}/${origin}`);
   }
   const beforeSharedTarget = structuredClone(context);
-  beforeSharedTarget.exposure.event['lr-chunk-toggle'] = beforeSharedTarget.exposure.event['lr-chunk-toggle'].filter(tag => tag !== 'lr-memory-panel');
+  beforeSharedTarget.exposure.event['lr-toggle'] = shared.map(item => item.key.tag);
   const historical = createMemberMigrationCases(beforeSharedTarget, ledger);
-  assert.equal(historical.filter(item => item.key.kind === 'event' && item.key.name === 'lr-expand' && item.rule?.to === 'lr-chunk-toggle' && item.automatic).length, 3,
+  assert.equal(historical.filter(item => item.key.kind === 'event' && item.key.name === 'lr-expand' && item.rule?.to === 'lr-toggle' && item.automatic).length, 4,
     'Expectation changes only when independently checked ownership changes');
 });
 

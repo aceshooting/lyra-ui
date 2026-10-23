@@ -3141,16 +3141,11 @@ for (const [tags, defaults] of REVIEWED_TARGET_CSS_DEFAULT_ADDITION_GROUPS) {
 // prose intentionally does not guess a replacement, so the QR base-part replacement remains an
 // exact reviewed equivalence even though both sides describe the same migration.
 const REVIEWED_DEPRECATION_EQUIVALENCE_GROUPS = new Map([
-  [
-    'sl-qr-code',
-    [
-      ['parts', ['base'], false, null, true, 'qr-code'],
-    ],
-  ],
+  ['sl-qr-code', []],
   [
     'wa-qr-code',
     [
-      ['parts', ['base'], true, null, true, 'qr-code'],
+      ['parts', ['base'], true, null, false, null],
       ['attributes', ['background'], true, 'background', false, null],
       ['attributes', ['fill'], true, 'color', false, null],
       ['properties', ['background'], true, 'background', false, null],
@@ -3184,7 +3179,16 @@ const REVIEWED_DEPRECATION_EQUIVALENCE_GROUPS = new Map([
     'wa-tree',
     'wa-tree-item',
   ].map((tag) => [tag, [['parts', ['base'], true, null, false, null]]]),
-  ['wa-accordion-item', [['parts', ['base'], true, null, true, 'accordion-item']]],
+  ['wa-accordion-item', [['parts', ['base'], true, null, false, null]]],
+  [
+    'wa-file-input',
+    [
+      ['parts', ['base'], true, 'file-input', false, null],
+      ['parts', ['label'], true, 'form-control-label', false, null],
+    ],
+  ],
+  ['wa-sparkline', [['parts', ['base'], true, 'sparkline', false, null]]],
+  ['wa-video-playlist', [['parts', ['base'], true, 'video-playlist', false, null]]],
   ...['wa-input', 'wa-number-input', 'wa-textarea', 'wa-time-input'].map(
     (tag) => [
       tag,
@@ -3198,6 +3202,13 @@ const REVIEWED_DEPRECATION_EQUIVALENCE_GROUPS = new Map([
     tag,
     [['parts', ['label'], true, 'form-control-label', false, null]],
   ]),
+  [
+    'wa-known-date',
+    [
+      ['parts', ['base'], true, null, false, null],
+      ['parts', ['label'], true, 'form-control-label', false, null],
+    ],
+  ],
   ['wa-video', [['parts', ['base'], true, 'video-wrapper', false, null]]],
   [
     'wa-date-input',

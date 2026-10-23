@@ -7,7 +7,7 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
-- **Deprecated slot** `icon` since `26.0.0`; use slot `slot="status-icon"`; removal not before `28.0.0` — The status glyph uses the purpose-specific slot name; existing icon slot content remains rendered during migration.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 10 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -43,8 +43,8 @@ its content.
 - `summary: string = ''` — short human-readable status text, e.g. `Searching web…`
 - `durationMs?: number` (attribute `duration-ms`) — how long the call took, in milliseconds; the
   `duration` part is omitted entirely when unset
-- `icon: string = ''` — literal icon hint (e.g. an emoji) rendered when the `icon` slot is empty;
-  ignored once anything is assigned to `slot="icon"`
+- `icon: string = ''` — literal icon hint (e.g. an emoji) rendered when the `status-icon` slot is empty;
+  ignored once anything is assigned to `slot="status-icon"`
 - `callId: string = ''` (attribute `call-id`) — unique identifier for this invocation, echoed back
   in `lr-tool-call-chip-select`'s detail so a listener can correlate the click with the call it fired for
 
@@ -58,7 +58,7 @@ interaction.
 **Slots:** default (rich tooltip/detail content — e.g. the tool's raw arguments or a short preview —
 shown in a floating tooltip on hover or keyboard focus (the focused control matches `:focus-visible` and no pointer press preceded it); nothing renders at all, no hover affordance, when this
 slot is empty), `status-icon` (overrides the built-in per-status glyph; otherwise the `icon` prop or
-built-in glyph appears), `icon` (deprecated slot alias for `status-icon`)
+built-in glyph appears)
 
 **CSS parts:** `base` (the clickable `<button>`), `icon`, `label` (wrapper around `category`, `name`,
 `summary`), `category`, `name` (the tool name, or `display-name` when set), `summary`, `meta` (wrapper around `status-text` and `duration`),
@@ -106,7 +106,7 @@ ancestor to change every unset chip beneath it.
   duration-ms="820"
   call-id="call_123"
 >
-  <pre slot="icon" style="display:none"></pre>
+  <pre slot="status-icon" style="display:none"></pre>
   <code>{"query": "lyra ui components"}</code>
 </lr-tool-call-chip>
 <script type="module">
@@ -132,7 +132,7 @@ sub-1000ms `"820ms"`, else trimmed to at most one decimal of seconds (`"1.5s"`, 
 - the native button always keeps its purpose-specific generated name (`"name — summary — Status —
 duration"`). A host `aria-label` remains on the host and is not cloned onto that button; even an
   explicit empty host label never leaves the actionable button unnamed
-- the `icon` slot is decorative by contract. Its wrapper is both `aria-hidden` and `inert`, so do
+- the `status-icon` slot is decorative by contract. Its wrapper is both `aria-hidden` and `inert`, so do
   not place links, buttons, or other controls there; use the chip activation or detail slot instead
 - Escape only dismisses the tooltip when it's open; it does not fire any event or otherwise affect
   `status`/`open` state, since the chip has no "open" state of its own beyond the tooltip

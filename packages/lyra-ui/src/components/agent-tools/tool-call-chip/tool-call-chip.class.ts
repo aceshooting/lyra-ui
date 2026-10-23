@@ -75,7 +75,7 @@ const TOOL_CALL_CHIP_STATUS = literalSetConverter<ToolStatus>(TOOL_CALL_STATUSES
  * platform's own slot-fallback-content mechanism (`<slot
  * name="status-icon">${fallback}</slot>` — the same pattern `<lr-stat>`'s
  * `caption` slot and `<lr-file-input>`'s default slot already use):
- * whatever is assigned to `slot="status-icon"` (or its deprecated `icon` alias) wins; otherwise
+ * whatever is assigned to `slot="status-icon"` wins; otherwise
  * the `icon` prop is rendered as a literal hint (e.g. an emoji); otherwise the built-in glyph
  * for the current `status` is used.
  *
@@ -86,7 +86,6 @@ const TOOL_CALL_CHIP_STATUS = literalSetConverter<ToolStatus>(TOOL_CALL_STATUSES
  * participates in shared Escape ordering even while only hovered, deferring to a genuinely
  * topmost overlay opened on top of it.
  * @slot status-icon - Overrides the built-in status glyph entirely.
- * @slot icon - Legacy slot content is deprecated; use `status-icon` to override the built-in status glyph.
  * @event lr-tool-call-chip-select - The chip was activated (click or
  * Enter/Space while focused). `detail: { name, callId }`. The `lr-tool-chip-select`
  * alias this event replaced was removed in 9.0.0.
@@ -188,8 +187,8 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   // numeric-guard-exempt: safeDurationMs() in internal/duration.ts rejects non-finite values and clamps negatives.
   @property({ type: Number, attribute: 'duration-ms' }) durationMs?: number;
 
-  /** Literal icon hint (e.g. an emoji) used when the `icon` slot is empty — see the class doc's
-   *  icon-precedence note. Ignored once anything is assigned to `slot="icon"`. */
+  /** Literal icon hint (e.g. an emoji) used when the `status-icon` slot is empty — see the class doc's
+   *  icon-precedence note. Ignored once anything is assigned to `slot="status-icon"`. */
   @property() icon = '';
 
   /** Unique identifier for this specific invocation — echoed back in `lr-tool-call-chip-select`'s
@@ -449,11 +448,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
         @blur=${this.onBlur}
       >
         <span part="icon" aria-hidden="true" inert>
-          <slot name="status-icon"
-            ><slot name="icon"
-              >${this.icon ? this.icon : STATUS_ICON(status)}</slot
-            ></slot
-          >
+          <slot name="status-icon">${this.icon ? this.icon : STATUS_ICON(status)}</slot>
         </span>
         <span part="label">
           <span part="category" ?hidden=${!hasCategory}>${this.category}</span>

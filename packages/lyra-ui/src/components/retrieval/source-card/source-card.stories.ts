@@ -157,7 +157,7 @@ export const Disabled: Story = {
     docs: {
       description: {
         story:
-          '`disabled` gates every self-rendered control, not just the title: both the title button and the "Show more" toggle render `disabled`, `lr-open`/`lr-expand` stop firing, neither stays in the tab order, and the card paints at `--lr-opacity-disabled`.',
+          '`disabled` gates every self-rendered control, not just the title: both the title button and the "Show more" toggle render `disabled`, `lr-open`/`lr-toggle` stop firing, neither stays in the tab order, and the card paints at `--lr-opacity-disabled`.',
       },
     },
   },

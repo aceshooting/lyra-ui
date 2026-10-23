@@ -44,9 +44,9 @@ it('keeps expansion fresh for virtual callbacks after scrolling and replacement'
   await waitUntil(() => expanded('Title 99') === 'true');
   const row = [...list.shadowRoot!.querySelectorAll('[part="chunk"]')]
     .find((candidate) => candidate.querySelector('[part="title"]')?.textContent === 'Title 99')!;
-  const toggled = oneEvent(inspector, 'lr-chunk-toggle');
+  const toggled = oneEvent(inspector, 'lr-toggle');
   row.querySelector<HTMLButtonElement>('[part="toggle"]')!.click();
-  expect((await toggled).detail).to.deep.equal({ chunkId: 'membership-99', expanded: false });
+  expect((await toggled).detail).to.deep.equal({ itemId: 'membership-99', expanded: false });
   expect(inspector.expandedChunkIds).to.deep.equal(['membership-unknown']);
 });
 

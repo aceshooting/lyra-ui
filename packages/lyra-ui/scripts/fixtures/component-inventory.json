@@ -1829,21 +1829,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-accordion-item",
-            "kind": "part",
-            "name": "base",
-            "since": "8.2.3",
-            "replacement": {
-              "kind": "part",
-              "name": "accordion-item",
-              "usage": "::part(accordion-item)"
-            },
-            "removalNotBefore": "10.0.0",
-            "rationale": "The accordion-item part names the outer wrapper explicitly; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: Web Awesome still publishes its own deprecated `base` part on `wa-accordion-item`, and a mirrored tag owes its whole upstream surface, so this alias is removed only when upstream's is."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -1864,7 +1850,7 @@
           "upstream": "webawesome",
           "tag": "wa-accordion-item",
           "tier": "free",
-          "classification": "exact"
+          "classification": "rewritten"
         }
       ],
       "surface": {
@@ -2031,22 +2017,6 @@
           {
             "name": "accordion-item",
             "deprecated": null
-          },
-          {
-            "name": "base",
-            "deprecated": {
-              "tag": "lr-accordion-item",
-              "kind": "part",
-              "name": "base",
-              "since": "8.2.3",
-              "replacement": {
-                "kind": "part",
-                "name": "accordion-item",
-                "usage": "::part(accordion-item)"
-              },
-              "removalNotBefore": "10.0.0",
-              "rationale": "The accordion-item part names the outer wrapper explicitly; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: Web Awesome still publishes its own deprecated `base` part on `wa-accordion-item`, and a mirrored tag owes its whole upstream surface, so this alias is removed only when upstream's is."
-            }
           },
           {
             "name": "button",
@@ -2684,21 +2654,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-agent-eval-dashboard",
-            "kind": "event",
-            "name": "lr-metric-change",
-            "since": "26.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-metric-change-request",
-              "usage": "@lr-metric-change-request"
-            },
-            "removalNotBefore": "28.0.0",
-            "rationale": "lr-metric-change-request names what the event is, a request the host decides on; the alias fires right after it for one major."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -2906,25 +2862,6 @@
         ],
         "slots": [],
         "events": [
-          {
-            "name": "lr-metric-change",
-            "type": "CustomEvent<{ metricId: string }>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-agent-eval-dashboard",
-              "kind": "event",
-              "name": "lr-metric-change",
-              "since": "26.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-metric-change-request",
-                "usage": "@lr-metric-change-request"
-              },
-              "removalNotBefore": "28.0.0",
-              "rationale": "lr-metric-change-request names what the event is, a request the host decides on; the alias fires right after it for one major."
-            },
-            "constructor": "CustomEvent"
-          },
           {
             "name": "lr-metric-change-request",
             "type": "CustomEvent<{ metricId: string }>",
@@ -3327,21 +3264,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-agent-run",
-            "kind": "event",
-            "name": "lr-cancel",
-            "since": "26.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-run-cancel",
-              "usage": "@lr-run-cancel"
-            },
-            "removalNotBefore": "28.0.0",
-            "rationale": "lr-run-cancel is the one name for asking to cancel a run, shared with lr-subagent-panel; the alias fires right after it for one major."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -3552,25 +3475,6 @@
           }
         ],
         "events": [
-          {
-            "name": "lr-cancel",
-            "type": "CustomEvent<AgentRunCancelDetail>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-agent-run",
-              "kind": "event",
-              "name": "lr-cancel",
-              "since": "26.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-run-cancel",
-                "usage": "@lr-run-cancel"
-              },
-              "removalNotBefore": "28.0.0",
-              "rationale": "lr-run-cancel is the one name for asking to cancel a run, shared with lr-subagent-panel; the alias fires right after it for one major."
-            },
-            "constructor": "CustomEvent"
-          },
           {
             "name": "lr-run-cancel",
             "type": "CustomEvent<AgentRunCancelDetail>",
@@ -4853,12 +4757,6 @@
         ],
         "events": [
           {
-            "name": "lr-cancel",
-            "type": "CustomEvent<CancelEventDetail>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-citation-select",
             "type": "CustomEvent<LyraEventDetailSnapshot<CitationSelectEventDetail>>",
             "cancelable": "never",
@@ -4885,6 +4783,12 @@
           {
             "name": "lr-retrieval-select",
             "type": "CustomEvent<LyraEventDetailSnapshot<RetrievalResultsSelectDetail>>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-run-cancel",
+            "type": "CustomEvent<AgentRunCancelDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -7504,21 +7408,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-app-rail-item",
-            "kind": "slot",
-            "name": "icon",
-            "since": "26.0.0",
-            "replacement": {
-              "kind": "slot",
-              "name": "start",
-              "usage": "slot=\"start\""
-            },
-            "removalNotBefore": "28.0.0",
-            "rationale": "The leading glyph uses the shared start slot vocabulary; existing icon slot content remains rendered during migration."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -7737,22 +7627,6 @@
           {
             "name": "end",
             "deprecated": null
-          },
-          {
-            "name": "icon",
-            "deprecated": {
-              "tag": "lr-app-rail-item",
-              "kind": "slot",
-              "name": "icon",
-              "since": "26.0.0",
-              "replacement": {
-                "kind": "slot",
-                "name": "start",
-                "usage": "slot=\"start\""
-              },
-              "removalNotBefore": "28.0.0",
-              "rationale": "The leading glyph uses the shared start slot vocabulary; existing icon slot content remains rendered during migration."
-            }
           },
           {
             "name": "meta",
@@ -11557,21 +11431,7 @@
         "profile": "new-component-experimental",
         "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
         "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
-        "deprecations": [
-          {
-            "tag": "lr-background-runs",
-            "kind": "event",
-            "name": "lr-run-open",
-            "since": "26.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-run-activate",
-              "usage": "@lr-run-activate"
-            },
-            "removalNotBefore": "28.0.0",
-            "rationale": "lr-run-activate matches the activate vocabulary of the library's other run lists; the alias fires right after it for one major."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -11673,25 +11533,6 @@
             "name": "lr-run-cancel",
             "type": "CustomEvent<{ runId: string }>",
             "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-run-open",
-            "type": "CustomEvent<{ runId: string }>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-background-runs",
-              "kind": "event",
-              "name": "lr-run-open",
-              "since": "26.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-run-activate",
-                "usage": "@lr-run-activate"
-              },
-              "removalNotBefore": "28.0.0",
-              "rationale": "lr-run-activate matches the activate vocabulary of the library's other run lists; the alias fires right after it for one major."
-            },
             "constructor": "CustomEvent"
           }
         ],
@@ -19934,21 +19775,7 @@
         "profile": "new-component-experimental",
         "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
         "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
-        "deprecations": [
-          {
-            "tag": "lr-change-review",
-            "kind": "event",
-            "name": "lr-change-decision",
-            "since": "26.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-change-decision-request",
-              "usage": "@lr-change-decision-request"
-            },
-            "removalNotBefore": "28.0.0",
-            "rationale": "lr-change-decision-request names what the event is, a request the host decides on; the alias fires right after it for one major."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -20082,25 +19909,6 @@
         ],
         "slots": [],
         "events": [
-          {
-            "name": "lr-change-decision",
-            "type": "CustomEvent<{ fileId: string; hunkId: string; decision: Exclude<ChangeReviewDecision, 'pending'> }>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-change-review",
-              "kind": "event",
-              "name": "lr-change-decision",
-              "since": "26.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-change-decision-request",
-                "usage": "@lr-change-decision-request"
-              },
-              "removalNotBefore": "28.0.0",
-              "rationale": "lr-change-decision-request names what the event is, a request the host decides on; the alias fires right after it for one major."
-            },
-            "constructor": "CustomEvent"
-          },
           {
             "name": "lr-change-decision-request",
             "type": "CustomEvent<{ fileId: string; hunkId: string; decision: Exclude<ChangeReviewDecision, 'pending'> }>",
@@ -26094,21 +25902,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-chunk-inspector",
-            "kind": "event",
-            "name": "lr-chunk-toggle",
-            "since": "26.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-toggle",
-              "usage": "@lr-toggle"
-            },
-            "removalNotBefore": "28.0.0",
-            "rationale": "lr-toggle carries the shared expanded and itemId disclosure detail; the older event remains available during the deprecation window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -26305,25 +26099,6 @@
             "name": "lr-chunk-open",
             "type": "CustomEvent<LyraEventDetailSnapshot<{ chunkId: string; sourceId: string; anchor?: LyraChunkAnchor; }>>",
             "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-chunk-toggle",
-            "type": "CustomEvent<{ chunkId: string; expanded: boolean }>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-chunk-inspector",
-              "kind": "event",
-              "name": "lr-chunk-toggle",
-              "since": "26.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-toggle",
-                "usage": "@lr-toggle"
-              },
-              "removalNotBefore": "28.0.0",
-              "rationale": "lr-toggle carries the shared expanded and itemId disclosure detail; the older event remains available during the deprecation window."
-            },
             "constructor": "CustomEvent"
           },
           {
@@ -33260,21 +33035,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-community-card",
-            "kind": "event",
-            "name": "lr-entity-activate",
-            "since": "26.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-entity-select",
-              "usage": "@lr-entity-select"
-            },
-            "removalNotBefore": "28.0.0",
-            "rationale": "lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -33420,25 +33181,6 @@
             "name": "lr-drill",
             "type": "CustomEvent<{ communityId: string }>",
             "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-entity-activate",
-            "type": "CustomEvent<{ entityId: string }>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-community-card",
-              "kind": "event",
-              "name": "lr-entity-activate",
-              "since": "26.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-entity-select",
-                "usage": "@lr-entity-select"
-              },
-              "removalNotBefore": "28.0.0",
-              "rationale": "lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major."
-            },
             "constructor": "CustomEvent"
           },
           {
@@ -46748,34 +46490,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-dock-panel",
-            "kind": "event",
-            "name": "lr-collapse-change",
-            "since": "26.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-toggle",
-              "usage": "@lr-toggle"
-            },
-            "removalNotBefore": "28.0.0",
-            "rationale": "The shared toggle event carries the same expanded detail; the older name remains emitted during migration."
-          },
-          {
-            "tag": "lr-dock-panel",
-            "kind": "event",
-            "name": "lr-collapse-request",
-            "since": "26.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-toggle-request",
-              "usage": "@lr-toggle-request"
-            },
-            "removalNotBefore": "28.0.0",
-            "rationale": "The shared cancelable toggle request carries the same expanded proposal; the older name remains emitted during migration."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -46960,44 +46675,6 @@
           }
         ],
         "events": [
-          {
-            "name": "lr-collapse-change",
-            "type": "CustomEvent<LyraDockPanelCollapseChangeDetail>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-dock-panel",
-              "kind": "event",
-              "name": "lr-collapse-change",
-              "since": "26.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-toggle",
-                "usage": "@lr-toggle"
-              },
-              "removalNotBefore": "28.0.0",
-              "rationale": "The shared toggle event carries the same expanded detail; the older name remains emitted during migration."
-            },
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-collapse-request",
-            "type": "CustomEvent<LyraDockPanelCollapseChangeDetail>",
-            "cancelable": "always",
-            "deprecated": {
-              "tag": "lr-dock-panel",
-              "kind": "event",
-              "name": "lr-collapse-request",
-              "since": "26.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-toggle-request",
-                "usage": "@lr-toggle-request"
-              },
-              "removalNotBefore": "28.0.0",
-              "rationale": "The shared cancelable toggle request carries the same expanded proposal; the older name remains emitted during migration."
-            },
-            "constructor": "CustomEvent"
-          },
           {
             "name": "lr-resize",
             "type": "CustomEvent<LyraDockPanelResizeDetail>",
@@ -55955,21 +55632,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-entity-dossier",
-            "kind": "event",
-            "name": "lr-entity-activate",
-            "since": "26.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-entity-select",
-              "usage": "@lr-entity-select"
-            },
-            "removalNotBefore": "28.0.0",
-            "rationale": "lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -56231,34 +55894,9 @@
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-chunk-toggle",
-            "type": "CustomEvent<{ chunkId: string; expanded: boolean }>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-drill",
             "type": "CustomEvent<{ communityId: string }>",
             "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-entity-activate",
-            "type": "CustomEvent<{ entityId: string; occurrenceIndex?: number; }>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-entity-dossier",
-              "kind": "event",
-              "name": "lr-entity-activate",
-              "since": "26.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-entity-select",
-                "usage": "@lr-entity-select"
-              },
-              "removalNotBefore": "28.0.0",
-              "rationale": "lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major."
-            },
             "constructor": "CustomEvent"
           },
           {
@@ -58487,34 +58125,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-file-input",
-            "kind": "part",
-            "name": "base",
-            "since": "8.2.3",
-            "replacement": {
-              "kind": "part",
-              "name": "file-input",
-              "usage": "::part(file-input)"
-            },
-            "removalNotBefore": "10.0.0",
-            "rationale": "The file-input part names the interactive picker surface; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-file-input` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is."
-          },
-          {
-            "tag": "lr-file-input",
-            "kind": "part",
-            "name": "label",
-            "since": "8.2.3",
-            "replacement": {
-              "kind": "part",
-              "name": "form-control-label",
-              "usage": "::part(form-control-label)"
-            },
-            "removalNotBefore": "10.0.0",
-            "rationale": "The form-control-label part follows the shared form-control vocabulary; label remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-file-input` still publishes its own deprecated `label` part, so this alias is removed only when upstream's is."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -59278,22 +58889,6 @@
         ],
         "parts": [
           {
-            "name": "base",
-            "deprecated": {
-              "tag": "lr-file-input",
-              "kind": "part",
-              "name": "base",
-              "since": "8.2.3",
-              "replacement": {
-                "kind": "part",
-                "name": "file-input",
-                "usage": "::part(file-input)"
-              },
-              "removalNotBefore": "10.0.0",
-              "rationale": "The file-input part names the interactive picker surface; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-file-input` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is."
-            }
-          },
-          {
             "name": "dropzone",
             "deprecated": null
           },
@@ -59360,22 +58955,6 @@
           {
             "name": "input",
             "deprecated": null
-          },
-          {
-            "name": "label",
-            "deprecated": {
-              "tag": "lr-file-input",
-              "kind": "part",
-              "name": "label",
-              "since": "8.2.3",
-              "replacement": {
-                "kind": "part",
-                "name": "form-control-label",
-                "usage": "::part(form-control-label)"
-              },
-              "removalNotBefore": "10.0.0",
-              "rationale": "The form-control-label part follows the shared form-control vocabulary; label remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-file-input` still publishes its own deprecated `label` part, so this alias is removed only when upstream's is."
-            }
           },
           {
             "name": "rejection",
@@ -62089,21 +61668,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-flow-node",
-            "kind": "slot",
-            "name": "icon",
-            "since": "26.0.0",
-            "replacement": {
-              "kind": "slot",
-              "name": "start",
-              "usage": "slot=\"start\""
-            },
-            "removalNotBefore": "28.0.0",
-            "rationale": "The header glyph uses the shared start slot vocabulary; existing icon slot content remains rendered during migration."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -62385,22 +61950,6 @@
           {
             "name": "header",
             "deprecated": null
-          },
-          {
-            "name": "icon",
-            "deprecated": {
-              "tag": "lr-flow-node",
-              "kind": "slot",
-              "name": "icon",
-              "since": "26.0.0",
-              "replacement": {
-                "kind": "slot",
-                "name": "start",
-                "usage": "slot=\"start\""
-              },
-              "removalNotBefore": "28.0.0",
-              "rationale": "The header glyph uses the shared start slot vocabulary; existing icon slot content remains rendered during migration."
-            }
           },
           {
             "name": "start",
@@ -70055,22 +69604,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-icon",
-            "kind": "property",
-            "name": "autoWidth",
-            "attribute": "auto-width",
-            "since": "8.0.0",
-            "replacement": {
-              "kind": "property",
-              "name": "canvas",
-              "usage": "canvas=\"auto\""
-            },
-            "removalNotBefore": "10.0.0",
-            "rationale": "autoWidth is a boolean compatibility spelling that cannot express fixed canvas sizes; canvas covers both automatic and explicit sizing. That version is a policy floor, not a plan: `wa-icon` still publishes its own deprecated `auto-width` attribute, so this alias is removed only when upstream's is."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -70110,29 +69644,6 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": false
-          },
-          {
-            "name": "auto-width",
-            "property": "autoWidth",
-            "type": "boolean",
-            "reflects": true,
-            "inferred": false,
-            "deprecated": {
-              "tag": "lr-icon",
-              "kind": "property",
-              "name": "autoWidth",
-              "attribute": "auto-width",
-              "since": "8.0.0",
-              "replacement": {
-                "kind": "property",
-                "name": "canvas",
-                "usage": "canvas=\"auto\""
-              },
-              "removalNotBefore": "10.0.0",
-              "rationale": "autoWidth is a boolean compatibility spelling that cannot express fixed canvas sizes; canvas covers both automatic and explicit sizing. That version is a policy floor, not a plan: `wa-icon` still publishes its own deprecated `auto-width` attribute, so this alias is removed only when upstream's is."
-            },
-            "hasDefault": true,
-            "default": false
           },
           {
             "name": "canvas",
@@ -70262,29 +69773,6 @@
             "reflects": true,
             "deprecated": null,
             "hasDefault": false
-          },
-          {
-            "name": "autoWidth",
-            "attribute": "auto-width",
-            "type": "boolean",
-            "readonly": false,
-            "reflects": true,
-            "deprecated": {
-              "tag": "lr-icon",
-              "kind": "property",
-              "name": "autoWidth",
-              "attribute": "auto-width",
-              "since": "8.0.0",
-              "replacement": {
-                "kind": "property",
-                "name": "canvas",
-                "usage": "canvas=\"auto\""
-              },
-              "removalNotBefore": "10.0.0",
-              "rationale": "autoWidth is a boolean compatibility spelling that cannot express fixed canvas sizes; canvas covers both automatic and explicit sizing. That version is a policy floor, not a plan: `wa-icon` still publishes its own deprecated `auto-width` attribute, so this alias is removed only when upstream's is."
-            },
-            "hasDefault": true,
-            "default": false
           },
           {
             "name": "canvas",
@@ -77242,21 +76730,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-known-date",
-            "kind": "part",
-            "name": "label",
-            "since": "8.0.0",
-            "replacement": {
-              "kind": "part",
-              "name": "form-control-label",
-              "usage": "::part(form-control-label)"
-            },
-            "removalNotBefore": "10.0.0",
-            "rationale": "The form-control-label part matches the shared form-control vocabulary; label remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-known-date` still publishes its own deprecated `label` part, so this alias is removed only when upstream's is."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -77947,22 +77421,6 @@
           {
             "name": "known-date",
             "deprecated": null
-          },
-          {
-            "name": "label",
-            "deprecated": {
-              "tag": "lr-known-date",
-              "kind": "part",
-              "name": "label",
-              "since": "8.0.0",
-              "replacement": {
-                "kind": "part",
-                "name": "form-control-label",
-                "usage": "::part(form-control-label)"
-              },
-              "removalNotBefore": "10.0.0",
-              "rationale": "The form-control-label part matches the shared form-control vocabulary; label remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-known-date` still publishes its own deprecated `label` part, so this alias is removed only when upstream's is."
-            }
           },
           {
             "name": "legend",
@@ -85568,34 +85026,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-memory-panel",
-            "kind": "event",
-            "name": "lr-entity-activate",
-            "since": "26.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-entity-select",
-              "usage": "@lr-entity-select"
-            },
-            "removalNotBefore": "28.0.0",
-            "rationale": "lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major."
-          },
-          {
-            "tag": "lr-memory-panel",
-            "kind": "event",
-            "name": "lr-memory-toggle",
-            "since": "26.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-toggle",
-              "usage": "@lr-toggle"
-            },
-            "removalNotBefore": "28.0.0",
-            "rationale": "lr-toggle carries the owning memory identity and shared disclosure fields; the older event remains available during the deprecation window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -85786,34 +85217,9 @@
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-chunk-toggle",
-            "type": "CustomEvent<{ chunkId: string; expanded: boolean }>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-drill",
             "type": "CustomEvent<{ communityId: string }>",
             "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-entity-activate",
-            "type": "CustomEvent<{ entityId: string; occurrenceIndex?: number; }>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-memory-panel",
-              "kind": "event",
-              "name": "lr-entity-activate",
-              "since": "26.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-entity-select",
-                "usage": "@lr-entity-select"
-              },
-              "removalNotBefore": "28.0.0",
-              "rationale": "lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major."
-            },
             "constructor": "CustomEvent"
           },
           {
@@ -85832,25 +85238,6 @@
             "name": "lr-forget",
             "type": "CustomEvent<null>",
             "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-memory-toggle",
-            "type": "CustomEvent<LyraMemoryExpandDetail>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-memory-panel",
-              "kind": "event",
-              "name": "lr-memory-toggle",
-              "since": "26.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-toggle",
-                "usage": "@lr-toggle"
-              },
-              "removalNotBefore": "28.0.0",
-              "rationale": "lr-toggle carries the owning memory identity and shared disclosure fields; the older event remains available during the deprecation window."
-            },
             "constructor": "CustomEvent"
           },
           {
@@ -93230,21 +92617,7 @@
         "profile": "new-component-experimental",
         "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
         "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
-        "deprecations": [
-          {
-            "tag": "lr-navigation-menu",
-            "kind": "event",
-            "name": "lr-expanded-change",
-            "since": "26.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-toggle",
-              "usage": "@lr-toggle"
-            },
-            "removalNotBefore": "28.0.0",
-            "rationale": "The shared toggle event carries the same expanded and source detail; the older name remains emitted during migration."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -93522,25 +92895,6 @@
           }
         ],
         "events": [
-          {
-            "name": "lr-expanded-change",
-            "type": "CustomEvent<LyraNavigationMenuExpandedChangeDetail>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-navigation-menu",
-              "kind": "event",
-              "name": "lr-expanded-change",
-              "since": "26.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-toggle",
-                "usage": "@lr-toggle"
-              },
-              "removalNotBefore": "28.0.0",
-              "rationale": "The shared toggle event carries the same expanded and source detail; the older name remains emitted during migration."
-            },
-            "constructor": "CustomEvent"
-          },
           {
             "name": "lr-toggle",
             "type": "CustomEvent<LyraNavigationMenuExpandedChangeDetail>",
@@ -100663,21 +100017,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-path-strip",
-            "kind": "event",
-            "name": "lr-entity-activate",
-            "since": "26.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-entity-select",
-              "usage": "@lr-entity-select"
-            },
-            "removalNotBefore": "28.0.0",
-            "rationale": "lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -100751,25 +100091,6 @@
         ],
         "slots": [],
         "events": [
-          {
-            "name": "lr-entity-activate",
-            "type": "CustomEvent<{ entityId: string; occurrenceIndex: number; }>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-path-strip",
-              "kind": "event",
-              "name": "lr-entity-activate",
-              "since": "26.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-entity-select",
-                "usage": "@lr-entity-select"
-              },
-              "removalNotBefore": "28.0.0",
-              "rationale": "lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major."
-            },
-            "constructor": "CustomEvent"
-          },
           {
             "name": "lr-entity-select",
             "type": "CustomEvent<{ entityId: string; occurrenceIndex?: number }>",
@@ -110178,21 +109499,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-provenance-panel",
-            "kind": "event",
-            "name": "lr-entity-activate",
-            "since": "26.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-entity-select",
-              "usage": "@lr-entity-select"
-            },
-            "removalNotBefore": "28.0.0",
-            "rationale": "lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -110302,34 +109609,9 @@
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-chunk-toggle",
-            "type": "CustomEvent<{ chunkId: string; expanded: boolean }>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-drill",
             "type": "CustomEvent<{ communityId: string }>",
             "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-entity-activate",
-            "type": "CustomEvent<{ entityId: string; occurrenceIndex?: number; }>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-provenance-panel",
-              "kind": "event",
-              "name": "lr-entity-activate",
-              "since": "26.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-entity-select",
-                "usage": "@lr-entity-select"
-              },
-              "removalNotBefore": "28.0.0",
-              "rationale": "lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major."
-            },
             "constructor": "CustomEvent"
           },
           {
@@ -110868,21 +110150,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-qr-code",
-            "kind": "part",
-            "name": "base",
-            "since": "8.2.3",
-            "replacement": {
-              "kind": "part",
-              "name": "qr-code",
-              "usage": "::part(qr-code)"
-            },
-            "removalNotBefore": "10.0.0",
-            "rationale": "The qr-code part names the rendered code wrapper explicitly; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-qr-code` still publishes `base` as a deprecated part and `sl-qr-code` still publishes it as its only, undeprecated part, so this alias stays for as long as either upstream ships it."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -110909,7 +110177,7 @@
           "upstream": "webawesome",
           "tag": "wa-qr-code",
           "tier": "free",
-          "classification": "exact"
+          "classification": "rewritten"
         }
       ],
       "surface": {
@@ -111169,22 +110437,6 @@
         "slots": [],
         "events": [],
         "parts": [
-          {
-            "name": "base",
-            "deprecated": {
-              "tag": "lr-qr-code",
-              "kind": "part",
-              "name": "base",
-              "since": "8.2.3",
-              "replacement": {
-                "kind": "part",
-                "name": "qr-code",
-                "usage": "::part(qr-code)"
-              },
-              "removalNotBefore": "10.0.0",
-              "rationale": "The qr-code part names the rendered code wrapper explicitly; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-qr-code` still publishes `base` as a deprecated part and `sl-qr-code` still publishes it as its only, undeprecated part, so this alias stays for as long as either upstream ships it."
-            }
-          },
           {
             "name": "canvas",
             "deprecated": null
@@ -115247,47 +114499,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-rag-eval-dashboard",
-            "kind": "event",
-            "name": "lr-metric-change",
-            "since": "26.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-metric-change-request",
-              "usage": "@lr-metric-change-request"
-            },
-            "removalNotBefore": "28.0.0",
-            "rationale": "lr-metric-change-request names a request the application decides on; the old event fires right after it for one major."
-          },
-          {
-            "tag": "lr-rag-eval-dashboard",
-            "kind": "event",
-            "name": "lr-run-change",
-            "since": "26.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-run-activate",
-              "usage": "@lr-run-activate"
-            },
-            "removalNotBefore": "28.0.0",
-            "rationale": "lr-run-activate matches the activate vocabulary of the library's other run lists; the alias fires right after it for one major."
-          },
-          {
-            "tag": "lr-rag-eval-dashboard",
-            "kind": "event",
-            "name": "lr-slice-change",
-            "since": "26.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-slice-change-request",
-              "usage": "@lr-slice-change-request"
-            },
-            "removalNotBefore": "28.0.0",
-            "rationale": "lr-slice-change-request names a request the application decides on; the old event fires right after it for one major."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -115476,25 +114688,6 @@
         "slots": [],
         "events": [
           {
-            "name": "lr-metric-change",
-            "type": "CustomEvent<{ metricId: string }>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-rag-eval-dashboard",
-              "kind": "event",
-              "name": "lr-metric-change",
-              "since": "26.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-metric-change-request",
-                "usage": "@lr-metric-change-request"
-              },
-              "removalNotBefore": "28.0.0",
-              "rationale": "lr-metric-change-request names a request the application decides on; the old event fires right after it for one major."
-            },
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-metric-change-request",
             "type": "CustomEvent<{ metricId: string }>",
             "cancelable": "never",
@@ -115504,44 +114697,6 @@
             "name": "lr-run-activate",
             "type": "CustomEvent<{ runId: string; run: LyraRagEvaluationRun }>",
             "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-run-change",
-            "type": "CustomEvent<{ run: LyraRagEvaluationRun }>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-rag-eval-dashboard",
-              "kind": "event",
-              "name": "lr-run-change",
-              "since": "26.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-run-activate",
-                "usage": "@lr-run-activate"
-              },
-              "removalNotBefore": "28.0.0",
-              "rationale": "lr-run-activate matches the activate vocabulary of the library's other run lists; the alias fires right after it for one major."
-            },
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-slice-change",
-            "type": "CustomEvent<{ slice: string }>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-rag-eval-dashboard",
-              "kind": "event",
-              "name": "lr-slice-change",
-              "since": "26.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-slice-change-request",
-                "usage": "@lr-slice-change-request"
-              },
-              "removalNotBefore": "28.0.0",
-              "rationale": "lr-slice-change-request names a request the application decides on; the old event fires right after it for one major."
-            },
             "constructor": "CustomEvent"
           },
           {
@@ -119176,21 +118331,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-retrieval-results",
-            "kind": "event",
-            "name": "lr-select",
-            "since": "26.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-selection-change",
-              "usage": "@lr-selection-change"
-            },
-            "removalNotBefore": "28.0.0",
-            "rationale": "lr-selection-change is the library's one name for a changed selection (detail chunkIds is selectedChunkIds); the alias fires right after it for one major."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -119604,25 +118745,6 @@
             "name": "lr-load-more",
             "type": "CustomEvent<null>",
             "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-select",
-            "type": "CustomEvent< LyraEventDetailSnapshot<RetrievalResultsSelectDetail> >",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-retrieval-results",
-              "kind": "event",
-              "name": "lr-select",
-              "since": "26.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-selection-change",
-                "usage": "@lr-selection-change"
-              },
-              "removalNotBefore": "28.0.0",
-              "rationale": "lr-selection-change is the library's one name for a changed selection (detail chunkIds is selectedChunkIds); the alias fires right after it for one major."
-            },
             "constructor": "CustomEvent"
           },
           {
@@ -120184,21 +119306,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-retrieval-trace",
-            "kind": "event",
-            "name": "lr-stage-toggle",
-            "since": "26.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-toggle",
-              "usage": "@lr-toggle"
-            },
-            "removalNotBefore": "28.0.0",
-            "rationale": "lr-toggle shares the itemId disclosure vocabulary and correlates nested chunk toggles; the older stage event remains available during the deprecation window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -120346,25 +119454,6 @@
             "name": "lr-stage-select",
             "type": "CustomEvent<{ stageId: string }>",
             "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-stage-toggle",
-            "type": "CustomEvent<{ stageId: string; expanded: boolean }>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-retrieval-trace",
-              "kind": "event",
-              "name": "lr-stage-toggle",
-              "since": "26.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-toggle",
-                "usage": "@lr-toggle"
-              },
-              "removalNotBefore": "28.0.0",
-              "rationale": "lr-toggle shares the itemId disclosure vocabulary and correlates nested chunk toggles; the older stage event remains available during the deprecation window."
-            },
             "constructor": "CustomEvent"
           },
           {
@@ -127697,21 +126786,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-source-card",
-            "kind": "event",
-            "name": "lr-expand",
-            "since": "26.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-toggle",
-              "usage": "@lr-toggle"
-            },
-            "removalNotBefore": "28.0.0",
-            "rationale": "lr-toggle carries the shared expanded and itemId disclosure detail; the older event remains available during the deprecation window."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -127920,25 +126995,6 @@
           }
         ],
         "events": [
-          {
-            "name": "lr-expand",
-            "type": "CustomEvent<SourceCardExpandDetail>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-source-card",
-              "kind": "event",
-              "name": "lr-expand",
-              "since": "26.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-toggle",
-                "usage": "@lr-toggle"
-              },
-              "removalNotBefore": "28.0.0",
-              "rationale": "lr-toggle carries the shared expanded and itemId disclosure detail; the older event remains available during the deprecation window."
-            },
-            "constructor": "CustomEvent"
-          },
           {
             "name": "lr-open",
             "type": "CustomEvent<SourceCardOpenDetail>",
@@ -128265,21 +127321,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-source-picker",
-            "kind": "event",
-            "name": "lr-sources-change",
-            "since": "26.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-selection-change",
-              "usage": "@lr-selection-change"
-            },
-            "removalNotBefore": "28.0.0",
-            "rationale": "lr-selection-change is the library's one name for a changed selection; the alias fires right after it for one major."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -128448,25 +127490,6 @@
             "name": "lr-selection-change",
             "type": "CustomEvent< LyraEventDetailSnapshot<{ selectedSourceIds: string[] }> >",
             "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-sources-change",
-            "type": "CustomEvent< LyraEventDetailSnapshot<{ selectedSourceIds: string[] }> >",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-source-picker",
-              "kind": "event",
-              "name": "lr-sources-change",
-              "since": "26.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-selection-change",
-                "usage": "@lr-selection-change"
-              },
-              "removalNotBefore": "28.0.0",
-              "rationale": "lr-selection-change is the library's one name for a changed selection; the alias fires right after it for one major."
-            },
             "constructor": "CustomEvent"
           }
         ],
@@ -128950,21 +127973,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-sparkline",
-            "kind": "part",
-            "name": "base",
-            "since": "8.0.0",
-            "replacement": {
-              "kind": "part",
-              "name": "sparkline",
-              "usage": "::part(sparkline)"
-            },
-            "removalNotBefore": "10.0.0",
-            "rationale": "The sparkline part names the rendered SVG wrapper unambiguously; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-sparkline` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -128985,7 +127994,7 @@
           "upstream": "webawesome",
           "tag": "wa-sparkline",
           "tier": "pro",
-          "classification": "exact"
+          "classification": "rewritten"
         }
       ],
       "surface": {
@@ -129210,22 +128219,6 @@
           {
             "name": "bar",
             "deprecated": null
-          },
-          {
-            "name": "base",
-            "deprecated": {
-              "tag": "lr-sparkline",
-              "kind": "part",
-              "name": "base",
-              "since": "8.0.0",
-              "replacement": {
-                "kind": "part",
-                "name": "sparkline",
-                "usage": "::part(sparkline)"
-              },
-              "removalNotBefore": "10.0.0",
-              "rationale": "The sparkline part names the rendered SVG wrapper unambiguously; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-sparkline` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is."
-            }
           },
           {
             "name": "fill",
@@ -132991,21 +131984,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-subagent-panel",
-            "kind": "event",
-            "name": "lr-cancel",
-            "since": "26.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-run-cancel",
-              "usage": "@lr-run-cancel"
-            },
-            "removalNotBefore": "28.0.0",
-            "rationale": "lr-run-cancel is the one name for asking to cancel a run, shared with lr-agent-run; the alias fires right after it for one major."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -133140,25 +132119,6 @@
         ],
         "slots": [],
         "events": [
-          {
-            "name": "lr-cancel",
-            "type": "CustomEvent<LyraEventDetailSnapshot<{ runId: string }>>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-subagent-panel",
-              "kind": "event",
-              "name": "lr-cancel",
-              "since": "26.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-run-cancel",
-                "usage": "@lr-run-cancel"
-              },
-              "removalNotBefore": "28.0.0",
-              "rationale": "lr-run-cancel is the one name for asking to cancel a run, shared with lr-agent-run; the alias fires right after it for one major."
-            },
-            "constructor": "CustomEvent"
-          },
           {
             "name": "lr-run-activate",
             "type": "CustomEvent<LyraEventDetailSnapshot<AgentRunActivateDetail<SubagentRun>>>",
@@ -148910,21 +147870,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-tool-call-chip",
-            "kind": "slot",
-            "name": "icon",
-            "since": "26.0.0",
-            "replacement": {
-              "kind": "slot",
-              "name": "status-icon",
-              "usage": "slot=\"status-icon\""
-            },
-            "removalNotBefore": "28.0.0",
-            "rationale": "The status glyph uses the purpose-specific slot name; existing icon slot content remains rendered during migration."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -149124,22 +148070,6 @@
           {
             "name": "",
             "deprecated": null
-          },
-          {
-            "name": "icon",
-            "deprecated": {
-              "tag": "lr-tool-call-chip",
-              "kind": "slot",
-              "name": "icon",
-              "since": "26.0.0",
-              "replacement": {
-                "kind": "slot",
-                "name": "status-icon",
-                "usage": "slot=\"status-icon\""
-              },
-              "removalNotBefore": "28.0.0",
-              "rationale": "The status glyph uses the purpose-specific slot name; existing icon slot content remains rendered during migration."
-            }
           },
           {
             "name": "status-icon",
@@ -156519,21 +155449,7 @@
         "profile": "introduced-mapped-experimental",
         "rationale": "This newly introduced Lyra tag mirrors an experimental Web Awesome 3.11 public surface and remains experimental while production compatibility evidence is gathered.",
         "graduationCriteria": "Eligible for stable status once the mapped public surface, populated accessibility states, cross-browser media behavior, and lifecycle edge cases demonstrate sustained reliability.",
-        "deprecations": [
-          {
-            "tag": "lr-video-playlist",
-            "kind": "part",
-            "name": "base",
-            "since": "8.0.0",
-            "replacement": {
-              "kind": "part",
-              "name": "video-playlist",
-              "usage": "::part(video-playlist)"
-            },
-            "removalNotBefore": "10.0.0",
-            "rationale": "The video-playlist part identifies the root component explicitly; base remains on the same root node for migration compatibility. That version is a policy floor, not a plan: `wa-video-playlist` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -156706,22 +155622,6 @@
           }
         ],
         "parts": [
-          {
-            "name": "base",
-            "deprecated": {
-              "tag": "lr-video-playlist",
-              "kind": "part",
-              "name": "base",
-              "since": "8.0.0",
-              "replacement": {
-                "kind": "part",
-                "name": "video-playlist",
-                "usage": "::part(video-playlist)"
-              },
-              "removalNotBefore": "10.0.0",
-              "rationale": "The video-playlist part identifies the root component explicitly; base remains on the same root node for migration compatibility. That version is a policy floor, not a plan: `wa-video-playlist` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is."
-            }
-          },
           {
             "name": "playlist",
             "deprecated": null
@@ -158667,47 +157567,7 @@
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
         "graduationCriteria": "Already stable; it retains that status while its documented behavior, accessibility, compatibility, and cross-browser support remain part of the public contract.",
-        "deprecations": [
-          {
-            "tag": "lr-widget",
-            "kind": "event",
-            "name": "lr-collapse-change",
-            "since": "26.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-toggle",
-              "usage": "@lr-toggle"
-            },
-            "removalNotBefore": "28.0.0",
-            "rationale": "The shared toggle event uses expanded polarity while the older event retains its collapsed field; consumers must review payload handling."
-          },
-          {
-            "tag": "lr-widget",
-            "kind": "event",
-            "name": "lr-collapse-request",
-            "since": "26.0.0",
-            "replacement": {
-              "kind": "event",
-              "name": "lr-toggle-request",
-              "usage": "@lr-toggle-request"
-            },
-            "removalNotBefore": "28.0.0",
-            "rationale": "The shared cancelable request uses expanded polarity while the older event retains its collapsed field; consumers must review payload handling."
-          },
-          {
-            "tag": "lr-widget",
-            "kind": "slot",
-            "name": "icon",
-            "since": "26.0.0",
-            "replacement": {
-              "kind": "slot",
-              "name": "start",
-              "usage": "slot=\"start\""
-            },
-            "removalNotBefore": "28.0.0",
-            "rationale": "The title glyph uses the shared start slot vocabulary; existing icon slot content remains rendered during migration."
-          }
-        ]
+        "deprecations": []
       },
       "qualification": {
         "status": "incomplete",
@@ -159004,22 +157864,6 @@
             "deprecated": null
           },
           {
-            "name": "icon",
-            "deprecated": {
-              "tag": "lr-widget",
-              "kind": "slot",
-              "name": "icon",
-              "since": "26.0.0",
-              "replacement": {
-                "kind": "slot",
-                "name": "start",
-                "usage": "slot=\"start\""
-              },
-              "removalNotBefore": "28.0.0",
-              "rationale": "The title glyph uses the shared start slot vocabulary; existing icon slot content remains rendered during migration."
-            }
-          },
-          {
             "name": "label",
             "deprecated": null
           },
@@ -159044,44 +157888,6 @@
             "constructor": "CustomEvent",
             "bubbles": true,
             "composed": true
-          },
-          {
-            "name": "lr-collapse-change",
-            "type": "CustomEvent<{ collapsed: boolean }>",
-            "cancelable": "never",
-            "deprecated": {
-              "tag": "lr-widget",
-              "kind": "event",
-              "name": "lr-collapse-change",
-              "since": "26.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-toggle",
-                "usage": "@lr-toggle"
-              },
-              "removalNotBefore": "28.0.0",
-              "rationale": "The shared toggle event uses expanded polarity while the older event retains its collapsed field; consumers must review payload handling."
-            },
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-collapse-request",
-            "type": "CustomEvent<{ collapsed: boolean }>",
-            "cancelable": "always",
-            "deprecated": {
-              "tag": "lr-widget",
-              "kind": "event",
-              "name": "lr-collapse-request",
-              "since": "26.0.0",
-              "replacement": {
-                "kind": "event",
-                "name": "lr-toggle-request",
-                "usage": "@lr-toggle-request"
-              },
-              "removalNotBefore": "28.0.0",
-              "rationale": "The shared cancelable request uses expanded polarity while the older event retains its collapsed field; consumers must review payload handling."
-            },
-            "constructor": "CustomEvent"
           },
           {
             "name": "lr-fullscreen-change",
@@ -213577,7 +212383,12 @@
         "properties": [],
         "events": [],
         "slots": [],
-        "parts": [],
+        "parts": [
+          {
+            "from": "base",
+            "to": "qr-code"
+          }
+        ],
         "cssProperties": [],
         "methods": [],
         "defaults": [
@@ -213615,16 +212426,7 @@
         "attributePropertyEquivalences": [],
         "reflectionEquivalences": [],
         "cssDefaultEquivalences": [],
-        "deprecationEquivalences": [
-          {
-            "section": "parts",
-            "member": "base",
-            "upstreamDeprecated": false,
-            "upstreamReplacement": null,
-            "targetDeprecated": true,
-            "targetReplacement": "qr-code"
-          }
-        ]
+        "deprecationEquivalences": []
       },
       "drift": []
     },
@@ -215883,8 +214685,8 @@
       "upstreamTag": "wa-accordion-item",
       "upstreamTier": "free",
       "targetTag": "lr-accordion-item",
-      "classification": "exact",
-      "rationale": null,
+      "classification": "rewritten",
+      "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -215915,7 +214717,12 @@
         "properties": [],
         "events": [],
         "slots": [],
-        "parts": [],
+        "parts": [
+          {
+            "from": "base",
+            "to": "accordion-item"
+          }
+        ],
         "cssProperties": [],
         "methods": [],
         "defaults": []
@@ -215964,8 +214771,8 @@
             "member": "base",
             "upstreamDeprecated": true,
             "upstreamReplacement": null,
-            "targetDeprecated": true,
-            "targetReplacement": "accordion-item"
+            "targetDeprecated": false,
+            "targetReplacement": null
           }
         ]
       },
@@ -220192,7 +218999,16 @@
           }
         ],
         "slots": [],
-        "parts": [],
+        "parts": [
+          {
+            "from": "base",
+            "to": "file-input"
+          },
+          {
+            "from": "label",
+            "to": "form-control-label"
+          }
+        ],
         "cssProperties": [],
         "methods": [],
         "defaults": []
@@ -220267,7 +219083,24 @@
           }
         ],
         "cssDefaultEquivalences": [],
-        "deprecationEquivalences": []
+        "deprecationEquivalences": [
+          {
+            "section": "parts",
+            "member": "base",
+            "upstreamDeprecated": true,
+            "upstreamReplacement": "file-input",
+            "targetDeprecated": false,
+            "targetReplacement": null
+          },
+          {
+            "section": "parts",
+            "member": "label",
+            "upstreamDeprecated": true,
+            "upstreamReplacement": "form-control-label",
+            "targetDeprecated": false,
+            "targetReplacement": null
+          }
+        ]
       },
       "drift": [
         {
@@ -220591,8 +219424,20 @@
         "behaviorReviewFlags": []
       },
       "rewrites": {
-        "attributes": [],
-        "properties": [],
+        "attributes": [
+          {
+            "from": "auto-width",
+            "to": "canvas",
+            "value": "auto"
+          }
+        ],
+        "properties": [
+          {
+            "from": "autoWidth",
+            "to": "canvas",
+            "value": "auto"
+          }
+        ],
         "events": [
           {
             "from": "wa-error",
@@ -221233,7 +220078,12 @@
           }
         ],
         "slots": [],
-        "parts": [],
+        "parts": [
+          {
+            "from": "label",
+            "to": "form-control-label"
+          }
+        ],
         "cssProperties": [],
         "methods": [],
         "defaults": []
@@ -221313,6 +220163,14 @@
             "member": "base",
             "upstreamDeprecated": true,
             "upstreamReplacement": null,
+            "targetDeprecated": false,
+            "targetReplacement": null
+          },
+          {
+            "section": "parts",
+            "member": "label",
+            "upstreamDeprecated": true,
+            "upstreamReplacement": "form-control-label",
             "targetDeprecated": false,
             "targetReplacement": null
           }
@@ -223244,8 +222102,8 @@
       "upstreamTag": "wa-qr-code",
       "upstreamTier": "free",
       "targetTag": "lr-qr-code",
-      "classification": "exact",
-      "rationale": null,
+      "classification": "rewritten",
+      "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -223278,7 +222136,12 @@
         "properties": [],
         "events": [],
         "slots": [],
-        "parts": [],
+        "parts": [
+          {
+            "from": "base",
+            "to": "qr-code"
+          }
+        ],
         "cssProperties": [],
         "methods": [],
         "defaults": []
@@ -223309,8 +222172,8 @@
             "member": "base",
             "upstreamDeprecated": true,
             "upstreamReplacement": null,
-            "targetDeprecated": true,
-            "targetReplacement": "qr-code"
+            "targetDeprecated": false,
+            "targetReplacement": null
           },
           {
             "section": "attributes",
@@ -224941,8 +223804,8 @@
       "upstreamTag": "wa-sparkline",
       "upstreamTier": "pro",
       "targetTag": "lr-sparkline",
-      "classification": "exact",
-      "rationale": null,
+      "classification": "rewritten",
+      "rationale": "All reviewed differences are covered by deterministic member rewrites.",
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -224973,7 +223836,12 @@
         "properties": [],
         "events": [],
         "slots": [],
-        "parts": [],
+        "parts": [
+          {
+            "from": "base",
+            "to": "sparkline"
+          }
+        ],
         "cssProperties": [],
         "methods": [],
         "defaults": []
@@ -225029,7 +223897,16 @@
             "target": "var(--lr-border-width-medium)"
           }
         ],
-        "deprecationEquivalences": []
+        "deprecationEquivalences": [
+          {
+            "section": "parts",
+            "member": "base",
+            "upstreamDeprecated": true,
+            "upstreamReplacement": "sparkline",
+            "targetDeprecated": false,
+            "targetReplacement": null
+          }
+        ]
       },
       "drift": []
     },
@@ -226831,7 +225708,12 @@
           }
         ],
         "slots": [],
-        "parts": [],
+        "parts": [
+          {
+            "from": "base",
+            "to": "video-playlist"
+          }
+        ],
         "cssProperties": [],
         "methods": [],
         "defaults": []
@@ -226862,7 +225744,16 @@
         "attributePropertyEquivalences": [],
         "reflectionEquivalences": [],
         "cssDefaultEquivalences": [],
-        "deprecationEquivalences": []
+        "deprecationEquivalences": [
+          {
+            "section": "parts",
+            "member": "base",
+            "upstreamDeprecated": true,
+            "upstreamReplacement": "video-playlist",
+            "targetDeprecated": false,
+            "targetReplacement": null
+          }
+        ]
       },
       "drift": []
     },

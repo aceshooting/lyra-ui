@@ -358,7 +358,7 @@ it("hides app-rail-item labels visually in icon-only mode while retaining their 
   const el = (await fixture(html`
     <lr-app-rail force-mode="icon-only">
       <lr-app-rail-item href="/inbox" aria-label="Inbox">
-        <span slot="icon" aria-hidden="true">📥</span>Inbox with a long
+        <span slot="start" aria-hidden="true">📥</span>Inbox with a long
         localized label
       </lr-app-rail-item>
     </lr-app-rail>
@@ -386,7 +386,7 @@ it("suppresses a current item's indicator bar while the rail-driven icon-only at
   const el = (await fixture(html`
     <lr-app-rail force-mode="icon-only">
       <lr-app-rail-item href="/inbox" current aria-label="Inbox">
-        <span slot="icon" aria-hidden="true">📥</span>Inbox
+        <span slot="start" aria-hidden="true">📥</span>Inbox
       </lr-app-rail-item>
     </lr-app-rail>
   `)) as LyraAppRail;
@@ -3095,7 +3095,7 @@ describe("layout: resizer anchor, overflow, and mobile containing block", () => 
             >عنوان-تطبيق-طويل-جداً-غير-قابل-للفصل-ويجب-أن-يلتف-داخل-اللوحة</span
           >
           <lr-app-rail-item href="#reports">
-            <span slot="icon" aria-hidden="true">📊</span>
+            <span slot="start" aria-hidden="true">📊</span>
             تقرير-تحليلي-طويل-جداً-غير-قابل-للفصل
           </lr-app-rail-item>
           <span slot="footer">حساب-مستخدم-طويل-جداً-غير-قابل-للفصل</span>

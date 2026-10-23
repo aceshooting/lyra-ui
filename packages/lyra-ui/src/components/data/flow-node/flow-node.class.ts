@@ -38,7 +38,6 @@ import { LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_D
  * @customElement lr-flow-node
  * @slot - Body content.
  * @slot start - Leading header glyph.
- * @slot icon - Legacy slot content is deprecated; use `start`.
  * @slot header - Replaces the built-in heading row entirely.
  * @slot toolbar - Action row at the block-end edge. Always visible on coarse-pointer/no-hover
  *   devices; pointer-hover and focus-within reveal it elsewhere, and it stays revealed while an
@@ -49,7 +48,7 @@ import { LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_D
  *   card chrome of its own — style the card itself through the `card` part.
  * @csspart card - The bordered, filled node card.
  * @csspart header - The built-in header row (omitted when the `header` slot has content).
- * @csspart icon - The wrapper around the `icon` slot.
+ * @csspart icon - The wrapper around the `start` slot.
  * @csspart heading - The heading text. Exposed as a heading only while `heading-level` names a
  *   level.
  * @csspart status - The visible status chip (status is never color-only).
@@ -65,7 +64,7 @@ import { LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_D
  * @cssprop [--lr-flow-node-compact-gap=var(--lr-space-2xs)] - Gap between `[part="card"]`'s rows
  *   at the compact density.
  * @cssprop [--lr-flow-node-compact-header-gap=var(--lr-space-2xs)] - Gap between `[part="header"]`'s
- *   icon slot and heading at the compact density.
+ *   start slot and heading at the compact density.
  * @cssprop [--lr-flow-node-selected-outline-color=var(--lr-color-brand)] - Outline color of the
  *   card while `selected`. The outline stays independent from execution-state border and glow.
  *   Inside `lr-flow-canvas` the canvas's own selection ring replaces it.
@@ -240,8 +239,7 @@ export class LyraFlowNode extends LyraElement {
     const children = (this as unknown as { children?: HTMLCollection }).children;
     const lightChildren = Array.from(children ?? []);
     this.hasHeaderSlot = lightChildren.some((element) => element.getAttribute('slot') === 'header');
-    this.hasIconSlot = lightChildren.some((element) =>
-      element.getAttribute('slot') === 'start' || element.getAttribute('slot') === 'icon');
+    this.hasIconSlot = lightChildren.some((element) => element.getAttribute('slot') === 'start');
     this.hasToolbarSlot = lightChildren.some((element) => element.getAttribute('slot') === 'toolbar');
 
     const renderRoot = this.renderRoot as ParentNode | undefined;
@@ -367,9 +365,7 @@ export class LyraFlowNode extends LyraElement {
       <div part="card" class="card" ?data-pulse=${this.pulsesRing}>
         <slot name="header" @slotchange=${this.onSlotChange}></slot>
         <div part="header" ?hidden=${this.hasHeaderSlot || (!this.heading && !this.renderSlotPresence(this.hasIconSlot))}>
-          <slot name="start" part="icon" @slotchange=${this.onSlotChange}
-            ><slot name="icon" @slotchange=${this.onSlotChange}></slot
-          ></slot>
+          <slot name="start" part="icon" @slotchange=${this.onSlotChange}></slot>
           <span
             part="heading"
             role=${headingLevel ? 'heading' : nothing}

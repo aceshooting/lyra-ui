@@ -94,7 +94,6 @@ function normalizeCurve(value: unknown): LyraSparklineCurve {
  *
  * @customElement lr-sparkline
  * @csspart sparkline - The outer SVG wrapper.
- * @csspart base - Deprecated alias for `sparkline` on the same SVG wrapper.
  * @csspart fill - The filled area rendered by `appearance="solid"` and `appearance="gradient"`.
  * @csspart line - The stroked trend path.
  * @csspart status - The visible localized invalid-prepared-input message.
@@ -404,7 +403,7 @@ export class LyraSparkline extends LyraElement {
     }).join(' ');
 
     return html`<svg
-      part="sparkline base"
+      part="sparkline"
       viewBox="0 0 ${VIEW} ${VIEW}"
       preserveAspectRatio="none"
       role=${name ? 'img' : nothing}

@@ -58,7 +58,7 @@ export const styles = css`
     /* A percentage block-size against an auto-height ancestor resolves to auto, so this is a no-op
        for the content-sized default; it bites only when :host has a definite block size (a consumer
        using this control as a full-area drop overlay, host absolutely positioned with inset: 0 over
-       a sized panel). The chain must continue through .dropzone and [part~="base"] below or the
+       a sized panel). The chain must continue through .dropzone and [part~="file-input"] below or the
        fill breaks at whichever one is missing it. */
     block-size: 100%;
   }
@@ -85,7 +85,7 @@ export const styles = css`
     min-inline-size: 0;
     block-size: 100%;
   }
-  [part~="base"] {
+  [part~="file-input"] {
     grid-area: 1 / 1;
     inline-size: 100%;
     block-size: 100%;
@@ -156,7 +156,7 @@ export const styles = css`
     pointer-events: auto;
   }
   /* Small-size overrides retain the ordinary size ladder when omitted. */
-  :host(:is([size='s'], [size='small'])) [part~='base'],
+  :host(:is([size='s'], [size='small'])) [part~='file-input'],
   :host(:is([size='s'], [size='small'])) .dropzone-content {
     padding: var(--lr-file-input-compact-padding,
       var(--lr-file-input-dropzone-padding, var(--_lr-file-input-dropzone-padding)));
@@ -171,7 +171,7 @@ export const styles = css`
      highlight without hijacking the shared --lr-color-success and --lr-color-danger tokens used
      everywhere else in their theme. Unset, each falls back to the pre-hatch value, so default
      rendering is unchanged. */
-  [part~="base"][data-drag-state="accept"] {
+  [part~="file-input"][data-drag-state="accept"] {
     border-color: var(
       --lr-file-input-accept-border-color,
       var(--lr-color-success)
@@ -181,7 +181,7 @@ export const styles = css`
       color-mix(in srgb, var(--lr-color-success) 8%, transparent)
     );
   }
-  [part~="base"][data-drag-state="reject"] {
+  [part~="file-input"][data-drag-state="reject"] {
     border-color: var(
       --lr-file-input-reject-border-color,
       var(--lr-color-danger)
@@ -192,13 +192,13 @@ export const styles = css`
     );
   }
   @media (forced-colors: active) {
-    [part~="base"][data-drag-state="accept"] {
+    [part~="file-input"][data-drag-state="accept"] {
       border-color: Highlight;
       border-style: double;
       outline: var(--lr-border-width-thin) solid Highlight;
       outline-offset: calc(-1 * var(--lr-border-width-medium));
     }
-    [part~="base"][data-drag-state="reject"] {
+    [part~="file-input"][data-drag-state="reject"] {
       border-color: CanvasText;
       border-style: dotted;
       outline: var(--lr-border-width-medium) double CanvasText;
@@ -208,17 +208,17 @@ export const styles = css`
   /* Both selector shapes take the hook, because the pointer can be over the button itself or over
      the pointer-events: none content stacked on it in the same grid cell -- the same pairing the
      pressed rules below already use. */
-  :host(:not(:disabled)) [part~="base"]:hover {
+  :host(:not(:disabled)) [part~="file-input"]:hover {
     border-color: var(--lr-file-input-dropzone-hover-border-color, var(--lr-color-brand));
   }
-  :host(:not(:disabled)) .dropzone:hover [part~="base"] {
+  :host(:not(:disabled)) .dropzone:hover [part~="file-input"] {
     border-color: var(--lr-file-input-dropzone-hover-border-color, var(--lr-color-brand));
   }
-  /* [part~='base'] opens the file dialog, so a press is a real activation needing its own answer --
+  /* [part~='file-input'] opens the file dialog, so a press is a real activation needing its own answer --
      the hover border alone repeats what hover already said. Both selector shapes are mirrored
      because the pointer can be over the button itself or over the pointer-events: none content
      stacked on top of it in the same grid cell. */
-  :host(:not(:disabled)) [part~="base"]:active {
+  :host(:not(:disabled)) [part~="file-input"]:active {
     border-color: var(--lr-color-brand);
     background: color-mix(
       in oklab,
@@ -226,7 +226,7 @@ export const styles = css`
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
-  :host(:not(:disabled)) .dropzone:active [part~="base"] {
+  :host(:not(:disabled)) .dropzone:active [part~="file-input"] {
     border-color: var(--lr-color-brand);
     background: color-mix(
       in oklab,
@@ -234,17 +234,17 @@ export const styles = css`
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
-  [part~="base"]:focus-visible {
+  [part~="file-input"]:focus-visible {
     outline: var(--lr-focus-ring);
     outline-offset: var(--lr-focus-ring-offset);
   }
   /* The opt-in focus halo, on :focus rather than :focus-visible: the outline above is the
      accessibility answer to KEYBOARD focus and is untouched, while a halo a consumer deliberately
      configured should read on a pointer focus too. Unset it resolves to none. */
-  [part~="base"]:focus {
+  [part~="file-input"]:focus {
     ${formControlFocusHalo}
   }
-  :host(:disabled) [part~="base"] {
+  :host(:disabled) [part~="file-input"] {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }

@@ -7,7 +7,7 @@
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `22.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [agent-tools](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/agent-tools.md)
-- **Deprecated event** `lr-change-decision` since `26.0.0`; use event `@lr-change-decision-request`; removal not before `28.0.0` — lr-change-decision-request names what the event is, a request the host decides on; the alias fires right after it for one major.
+- **Deprecations** none
 - **Optional peers** `shiki` — see `llms/peers.md`
 - **Themeable via** 12 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -23,13 +23,13 @@ Files and per-file hunks need nonblank, unique ids; malformed duplicates normali
 At most 200 files and 200 hunks total render, with a visible limit notice. Diff inputs use
 `lr-diff-view`'s own line limit. Arrays are clone-owned snapshots: reassign after changes.
 
-`lr-change-decision` provides `{ fileId, hunkId, decision }`. The host acknowledges by replacing
+`lr-change-decision-request` provides `{ fileId, hunkId, decision }`. The host acknowledges by replacing
 `files`; there is no patch parser, filesystem access or optimistic decision update. `disabled`
 (default false) disables decision buttons; `readonly` (default false) hides them. File disclosures
 remain readable in both states. Optional `label` overrides the localized heading; a host
 `aria-label` names the internal group.
 
-**Heading and events:** `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`); an empty `label` renders no title. `lr-change-decision-request` is the keep/discard request; `lr-change-decision` is a deprecated alias dispatched right after it.
+**Heading and events:** `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`); an empty `label` renders no title. `lr-change-decision-request` is the keep/discard request.
 
 **CSS parts:**
 
@@ -49,14 +49,14 @@ remain readable in both states. Optional `label` overrides the localized heading
 | `limit` | Render-limit notice. |
 
 
-**Events:** non-cancelable `lr-change-decision-request` (`detail: { fileId, hunkId, decision }`), followed by its deprecated alias `lr-change-decision`, reports a keep/discard action; the host applies it by replacing `files`.
+**Events:** non-cancelable `lr-change-decision-request` (`detail: { fileId, hunkId, decision }`), reports a keep/discard action; the host applies it by replacing `files`.
 ```js
 import '@aceshooting/lyra-ui/components/lr-change-review.js';
 const review = document.querySelector('lr-change-review');
 review.files = [{ id: 'config', path: 'config.ts', hunks: [
   { id: 'timeout', before: 'timeout = 1000', after: 'timeout = 3000' }
 ] }];
-review.addEventListener('lr-change-decision', ({ detail }) => {
+review.addEventListener('lr-change-decision-request', ({ detail }) => {
   review.files = review.files.map(file => file.id === detail.fileId
     ? { ...file, hunks: file.hunks.map(hunk => hunk.id === detail.hunkId
       ? { ...hunk, decision: detail.decision } : hunk) } : file);

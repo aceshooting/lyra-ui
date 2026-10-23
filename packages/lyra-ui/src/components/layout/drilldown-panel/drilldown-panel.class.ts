@@ -921,7 +921,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
           heading=${item.title}
           .page=${item.page}
           href=${item.href ?? nothing}
-          @lr-expand=${(event: CustomEvent<{ expanded: boolean }>) =>
+          @lr-toggle=${(event: CustomEvent<{ expanded: boolean }>) =>
             this.onEvidenceExpand(nodeId, item.evidenceId, event)}
           @lr-open=${(event: Event) => this.onEvidenceOpen(nodeId, item, event)}
         >

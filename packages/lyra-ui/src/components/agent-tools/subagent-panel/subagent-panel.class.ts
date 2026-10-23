@@ -44,7 +44,6 @@ export interface SubagentRun {
 export interface LyraSubagentPanelEventMap {
   'lr-run-activate': CustomEvent<LyraEventDetailSnapshot<AgentRunActivateDetail<SubagentRun>>>;
   'lr-run-cancel': CustomEvent<LyraEventDetailSnapshot<{ runId: string }>>;
-  'lr-cancel': CustomEvent<LyraEventDetailSnapshot<{ runId: string }>>;
   'lr-run-retry': CustomEvent<LyraEventDetailSnapshot<{ runId: string }>>;
 }
 
@@ -75,7 +74,6 @@ interface OrderedRuns {
  * @customElement lr-subagent-panel
  * @event lr-run-activate - A complete subagent run was activated. `detail: { runId, run }`.
  * @event lr-run-cancel - Cancellation was requested for an active run. `detail: { runId }`.
- * @event lr-cancel - Deprecated alias of `lr-run-cancel`, dispatched right after it.
  * @event lr-run-retry - Retry was requested for an errored/cancelled run.
  * @csspart base - The named subagent region.
  * @csspart list - Hierarchical run list.
@@ -161,7 +159,6 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-run-activate',
     'lr-run-cancel',
-    'lr-cancel',
     'lr-run-retry',
   ]);
 
@@ -463,10 +460,7 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
                   type="button"
                   tabindex=${buttonTabindex}
                   aria-label=${this.localize('subagentPanelCancelRun', undefined, { name: run.label })}
-                  @click=${() => {
-                    this.emit('lr-run-cancel', { runId: run.id });
-                    this.emit('lr-cancel', { runId: run.id });
-                  }}
+                  @click=${() => this.emit('lr-run-cancel', { runId: run.id })}
                 >×</button>`
               : nothing}
             ${run.status === 'error' || run.status === 'cancelled'

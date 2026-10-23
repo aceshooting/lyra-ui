@@ -181,7 +181,7 @@ it('uses aria-checked as the sole false, true, and mixed treeitem selection stat
   ).to.equal(null);
 });
 
-it('toggling a folder selects/deselects all of its descendant leaves and emits lr-sources-change', async () => {
+it('toggling a folder selects/deselects all of its descendant leaves and emits lr-selection-change', async () => {
   const el = (await fixture(
     html`<lr-source-picker></lr-source-picker>`
   )) as LyraSourcePicker;
@@ -190,7 +190,7 @@ it('toggling a folder selects/deselects all of its descendant leaves and emits l
   const folderRow = el.shadowRoot!.querySelector(
     '[role="treeitem"]'
   ) as HTMLElement;
-  const listener = oneEvent(el, 'lr-sources-change');
+  const listener = oneEvent(el, 'lr-selection-change');
   folderRow.click();
   const event = await listener;
   expect([...event.detail.selectedSourceIds].sort()).to.deep.equal([
@@ -207,7 +207,7 @@ it('toggling select-all selects/deselects every leaf', async () => {
   el.sources = sources;
   await el.updateComplete;
   const selectAll = selectAllCheckbox(el);
-  const listener = oneEvent(el, 'lr-sources-change');
+  const listener = oneEvent(el, 'lr-selection-change');
   selectAll.click();
   const event = await listener;
   expect([...event.detail.selectedSourceIds].sort()).to.deep.equal([
@@ -321,7 +321,7 @@ it('keyboard: Space toggles the focused row, ArrowDown moves focus, ArrowRight e
     4
   );
 
-  const listener = oneEvent(el, 'lr-sources-change');
+  const listener = oneEvent(el, 'lr-selection-change');
   tree.dispatchEvent(
     new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true })
   );
@@ -342,7 +342,7 @@ it('keyboard: the shared select-all checkbox toggles with Space and leaves Enter
   await selectAll.updateComplete;
   const control = checkboxControl(selectAll);
 
-  const selectListener = oneEvent(el, 'lr-sources-change');
+  const selectListener = oneEvent(el, 'lr-selection-change');
   const space = new KeyboardEvent('keydown', {
     key: ' ',
     bubbles: true,
@@ -360,7 +360,7 @@ it('keyboard: the shared select-all checkbox toggles with Space and leaves Enter
   el.selectedSourceIds = ['doc1', 'doc2', 'doc3'];
   await el.updateComplete;
   let enterChanges = 0;
-  el.addEventListener('lr-sources-change', () => enterChanges++);
+  el.addEventListener('lr-selection-change', () => enterChanges++);
   control.dispatchEvent(
     new KeyboardEvent('keydown', {
       key: 'Enter',
@@ -371,7 +371,7 @@ it('keyboard: the shared select-all checkbox toggles with Space and leaves Enter
   await el.updateComplete;
   expect(enterChanges).to.equal(0);
 
-  const deselectListener = oneEvent(el, 'lr-sources-change');
+  const deselectListener = oneEvent(el, 'lr-selection-change');
   control.dispatchEvent(
     new KeyboardEvent('keydown', {
       key: ' ',
@@ -560,7 +560,7 @@ it('toggling a fully-selected folder deselects all of its descendant leaves', as
     '[role="treeitem"]'
   ) as HTMLElement;
   expect(folderRow.getAttribute('aria-checked')).to.equal('true');
-  const listener = oneEvent(el, 'lr-sources-change');
+  const listener = oneEvent(el, 'lr-selection-change');
   folderRow.click();
   const event = await listener;
   expect(event.detail.selectedSourceIds).to.deep.equal([]);
@@ -793,7 +793,7 @@ it('keyboard: Enter on the focused tree row toggles it, same as Space', async ()
   el.sources = sources;
   await el.updateComplete;
   const tree = el.shadowRoot!.querySelector('[part="tree"]')!;
-  const listener = oneEvent(el, 'lr-sources-change');
+  const listener = oneEvent(el, 'lr-selection-change');
   tree.dispatchEvent(
     new KeyboardEvent('keydown', {
       key: 'Enter',
@@ -849,7 +849,7 @@ it('keyboard: an unrecognized key is a no-op', async () => {
   await el.updateComplete;
   const tree = el.shadowRoot!.querySelector('[part="tree"]')!;
   let fired = false;
-  el.addEventListener('lr-sources-change', () => {
+  el.addEventListener('lr-selection-change', () => {
     fired = true;
   });
 
@@ -1015,7 +1015,7 @@ it('keyboard: a non-activation key on the select-all checkbox is a no-op', async
   const selectAll = selectAllCheckbox(el);
   await selectAll.updateComplete;
   let fired = false;
-  el.addEventListener('lr-sources-change', () => {
+  el.addEventListener('lr-selection-change', () => {
     fired = true;
   });
   const tab = new KeyboardEvent('keydown', {
@@ -1229,7 +1229,7 @@ it('renders and selects only the first source occurrence for duplicate ids', asy
   const rows = el.shadowRoot!.querySelectorAll('[role="treeitem"]');
   expect(rows.length).to.equal(1);
   expect(rows[0]!.textContent).to.include('First occurrence');
-  const pending = oneEvent(el, 'lr-sources-change');
+  const pending = oneEvent(el, 'lr-selection-change');
   (rows[0] as HTMLElement).click();
   expect((await pending).detail.selectedSourceIds).to.deep.equal(['duplicate']);
 });
@@ -1249,7 +1249,7 @@ it('rejects empty and whitespace-only source ids before rendering or selection',
   expect(rows.length).to.equal(1);
   expect(rows[0]!.textContent).to.include('Valid source');
 
-  const pending = oneEvent(el, 'lr-sources-change');
+  const pending = oneEvent(el, 'lr-selection-change');
   (rows[0] as HTMLElement).click();
   expect((await pending).detail.selectedSourceIds).to.deep.equal(['valid']);
 });
@@ -1276,7 +1276,7 @@ it('normalizes cyclic and repeated-identity source trees without recursion or du
   expect(
     rows.map((row) => row.querySelector('[part="label"]')?.textContent)
   ).to.deep.equal(['Root', 'Leaf']);
-  const pending = oneEvent(el, 'lr-sources-change');
+  const pending = oneEvent(el, 'lr-selection-change');
   rows[1]!.click();
   expect((await pending).detail.selectedSourceIds).to.deep.equal(['leaf']);
 });
@@ -1387,11 +1387,11 @@ it('canonicalizes and prunes controlled source ids across replacement and emitte
     el.shadowRoot!.querySelector('[part="summary"]')!.textContent
   ).to.include('1 of 2');
 
-  const pending = oneEvent(el, 'lr-sources-change');
+  const pending = oneEvent(el, 'lr-selection-change');
   el.shadowRoot!.querySelectorAll<HTMLElement>('[role="treeitem"]')[1]!.click();
   expect((await pending).detail.selectedSourceIds).to.deep.equal(['a', 'b']);
 
-  const prunedPending = oneEvent(el, 'lr-sources-change');
+  const prunedPending = oneEvent(el, 'lr-selection-change');
   el.sources = [{ id: 'b', label: 'Beta' }];
   expect((await prunedPending).detail.selectedSourceIds).to.deep.equal(['b']);
   expect(el.selectedSourceIds).to.deep.equal(['b']);
@@ -1584,7 +1584,7 @@ describe('select-all checkbox containment', () => {
     };
   }
 
-  it('keeps the toggle proposal and its input/change aliases inside for native pointer and keyboard activation while lr-sources-change still reports', async () => {
+  it('keeps the toggle proposal and its input/change aliases inside for native pointer and keyboard activation while lr-selection-change still reports', async () => {
     const el = await fixture<LyraSourcePicker>(
       html`<lr-source-picker .sources=${sources}></lr-source-picker>`
     );
@@ -1601,7 +1601,7 @@ describe('select-all checkbox containment', () => {
       ]);
     };
     selectAll.addEventListener('lr-checkbox-toggle-request', onProposal);
-    el.addEventListener('lr-sources-change', onChange);
+    el.addEventListener('lr-selection-change', onChange);
     const { leaked, stop } = trackLeaks(el);
     try {
       await resetMouse();
@@ -1621,7 +1621,7 @@ describe('select-all checkbox containment', () => {
       await resetMouse();
       stop();
       selectAll.removeEventListener('lr-checkbox-toggle-request', onProposal);
-      el.removeEventListener('lr-sources-change', onChange);
+      el.removeEventListener('lr-selection-change', onChange);
     }
 
     expect(leaked).to.deep.equal([]);
@@ -1650,7 +1650,7 @@ describe('select-all checkbox containment', () => {
       changes += 1;
     };
     selectAll.addEventListener('lr-checkbox-toggle-request', onProposal);
-    el.addEventListener('lr-sources-change', onChange);
+    el.addEventListener('lr-selection-change', onChange);
     const { leaked, stop } = trackLeaks(el);
     try {
       selectAll.focus();
@@ -1661,7 +1661,7 @@ describe('select-all checkbox containment', () => {
     } finally {
       stop();
       selectAll.removeEventListener('lr-checkbox-toggle-request', onProposal);
-      el.removeEventListener('lr-sources-change', onChange);
+      el.removeEventListener('lr-selection-change', onChange);
     }
 
     expect(vetoes).to.deep.equal([true]);
@@ -1704,4 +1704,14 @@ describe('lr-source-picker retired searchable alias', () => {
     expect(canonical).to.not.equal(plain);
     expect(warnings).to.have.length(0);
   });
+});
+
+it('reports a toggle only as lr-selection-change, never the removed lr-sources-change', async () => {
+  const el = await fixture<LyraSourcePicker>(html`<lr-source-picker .sources=${sources}></lr-source-picker>`);
+  const seen: string[] = [];
+  for (const name of ['lr-selection-change', 'lr-sources-change'])
+    el.addEventListener(name, () => seen.push(name));
+  selectAllCheckbox(el).click();
+  await el.updateComplete;
+  expect(seen).to.deep.equal(['lr-selection-change']);
 });

@@ -155,13 +155,23 @@ it('renders one handle per input/output with data-handle-id/data-handle-kind and
   expect(el.shadowRoot!.querySelectorAll('[part~="handle-output"]').length).to.equal(1);
 });
 
-it('renders icon/header/toolbar slots and the default body slot', async () => {
+it('renders start/header/toolbar slots and the default body slot', async () => {
   const el = (await fixture(
-    html`<lr-flow-node><span slot="icon">i</span><span slot="toolbar">t</span>body</lr-flow-node>`
+    html`<lr-flow-node><span slot="start">i</span><span slot="toolbar">t</span>body</lr-flow-node>`
   )) as LyraFlowNode;
-  expect(el.shadowRoot!.querySelector('slot[name="icon"]')).to.exist;
+  expect(el.shadowRoot!.querySelector('slot[name="start"]')).to.exist;
   expect(el.shadowRoot!.querySelector('slot[name="toolbar"]')).to.exist;
   expect(el.shadowRoot!.querySelector('slot:not([name])')).to.exist;
+});
+
+it('no longer projects the removed icon slot', async () => {
+  const el = (await fixture(
+    html`<lr-flow-node><span slot="icon">legacy</span></lr-flow-node>`
+  )) as LyraFlowNode;
+  expect(el.shadowRoot!.querySelectorAll('slot[name="icon"]').length).to.equal(0);
+  expect(el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="start"]')!.assignedNodes().length).to.equal(0);
+  expect(el.querySelector('[slot="icon"]')!.assignedSlot === null).to.equal(true);
+  expect(el.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!.hidden).to.equal(true);
 });
 
 it('suppresses empty header, body, and toolbar rows and updates them after slot churn', async () => {
@@ -596,10 +606,10 @@ describe('compact density (size) and the card part', () => {
 
   it('also tightens [part="header"]\'s own icon-to-heading gap at size s, falling back to --lr-space-2xs when unset', async () => {
     const regular = (await fixture(
-      html`<lr-flow-node heading="Fetch"><span slot="icon">i</span></lr-flow-node>`
+      html`<lr-flow-node heading="Fetch"><span slot="start">i</span></lr-flow-node>`
     )) as LyraFlowNode;
     const compact = (await fixture(
-      html`<lr-flow-node size="s" heading="Fetch"><span slot="icon">i</span></lr-flow-node>`
+      html`<lr-flow-node size="s" heading="Fetch"><span slot="start">i</span></lr-flow-node>`
     )) as LyraFlowNode;
     const headerOf = (el: LyraFlowNode): HTMLElement =>
       el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
@@ -612,7 +622,7 @@ describe('compact density (size) and the card part', () => {
 
   it('retunes the small size header gap through --lr-flow-node-compact-header-gap', async () => {
     const el = (await fixture(
-      html`<lr-flow-node size="s" heading="Fetch"><span slot="icon">i</span></lr-flow-node>`
+      html`<lr-flow-node size="s" heading="Fetch"><span slot="start">i</span></lr-flow-node>`
     )) as LyraFlowNode;
     el.style.setProperty('--lr-flow-node-compact-header-gap', '6px');
     await el.updateComplete;

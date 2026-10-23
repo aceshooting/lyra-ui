@@ -52,8 +52,8 @@ rename on a Lyra component. The inventory records these exclusions explicitly.
 
 Lyra 21 minor releases and Lyra 22 rename some Lyra-only attributes, properties, events, CSS parts,
 custom properties and slots. Published names retired in this installed release remain migration inputs.
-Removed aliases no longer work at runtime. Names mirrored from Web Awesome or Shoelace, and their defaults, never
-change. Run the CLI of the installed package after upgrading; historical profiles remain available. It
+Removed aliases no longer work at runtime. Names and defaults in the pinned upstream's current, nondeprecated API remain mirrored.
+Run the CLI of the installed package after upgrading; historical profiles remain available. It
 applies only the entries the installed release ships, so running it again after a later upgrade
 picks up the rest:
 
@@ -206,7 +206,7 @@ hydration compares template strings.
 | `<lr-checkpoint>` | property | `confirmRestore` | `withoutRestoreConfirmation` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
 | `<lr-checkpoint>` | property | `restorable` | `withoutRestore` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
 | `<lr-chip>` | event | `lr-chip-select` | `lr-chip-toggle-request` | Rewritten where the reach is unchanged, otherwise reported |
-| `<lr-chunk-inspector>` | event | `lr-expand` | `lr-chunk-toggle` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-chunk-inspector>` | event | `lr-expand` | `lr-toggle` | Rewritten where the reach is unchanged, otherwise reported |
 | `<lr-code-block>` | attribute | `copyable` | `without-copy-button` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
 | `<lr-code-block>` | part | `copy-button__control` | `copy-button-control` | Rewritten where the component is proven |
 | `<lr-code-block>` | property | `copyable` | `withoutCopyButton` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
@@ -290,7 +290,7 @@ hydration compares template strings.
 | `<lr-entity-card>` | attribute | `show-focus-button` | `without-focus-button` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
 | `<lr-entity-card>` | property | `showFocusButton` | `withoutFocusButton` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
 | `<lr-entity-dossier>` | attribute | `show-focus-button` | `without-focus-button` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
-| `<lr-entity-dossier>` | event | `lr-expand` | `lr-chunk-toggle` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-entity-dossier>` | event | `lr-expand` | `lr-toggle` | Rewritten where the reach is unchanged, otherwise reported |
 | `<lr-entity-dossier>` | property | `showFocusButton` | `withoutFocusButton` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
 | `<lr-env-list>` | attribute | `copyable` | `without-copy-button` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
 | `<lr-env-list>` | attribute | `revealable` | `without-reveal` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
@@ -408,7 +408,7 @@ hydration compares template strings.
 | `<lr-markdown-core>` | property | `gfm` | `withoutGfm` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
 | `<lr-markdown-core>` | property | `highlightCode` | `withoutSyntaxHighlighting` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
 | `<lr-media-card>` | event | `lr-before-media-download` | `lr-media-download-request` | Rewritten where the reach is unchanged, otherwise reported |
-| `<lr-memory-panel>` | event | `lr-expand` | `lr-memory-toggle` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-memory-panel>` | event | `lr-expand` | `lr-toggle` | Rewritten where the reach is unchanged, otherwise reported |
 | `<lr-menu-item>` | event | `lr-menu-item-change` | `lr-menu-item-change-request` | Rewritten where the reach is unchanged, otherwise reported |
 | `<lr-message-actions>` | part | `edit-button__control` | `edit-button-control` | Rewritten where the component is proven |
 | `<lr-message-actions>` | part | `regenerate-button__control` | `regenerate-button-control` | Rewritten where the component is proven |
@@ -460,7 +460,7 @@ hydration compares template strings.
 | `<lr-prompt-queue>` | attribute | `editable` | `readonly` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
 | `<lr-prompt-queue>` | property | `editable` | `readonly` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
 | `<lr-prompt-studio>` | event | `lr-message-reorder` | `lr-message-reorder-request` | Rewritten where the reach is unchanged, otherwise reported |
-| `<lr-provenance-panel>` | event | `lr-expand` | `lr-chunk-toggle` | Rewritten where the reach is unchanged, otherwise reported |
+| `<lr-provenance-panel>` | event | `lr-expand` | `lr-toggle` | Rewritten where the reach is unchanged, otherwise reported |
 | `<lr-push-to-talk>` | attribute | `show-timer` | `without-timer` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
 | `<lr-push-to-talk>` | property | `showTimer` | `withoutTimer` | Inverted boolean: static HTML and Lit attributes rewritten, everything else reported |
 | `<lr-qr-code>` | css-property | `--lr-qr-code-background` | `--lr-qr-code-bg` | Rewritten where the reach is unchanged, otherwise reported |
@@ -789,8 +789,8 @@ need manual inspection. Review event detail, saved preferences and selector scop
 
 Lyra 22 minor releases and Lyra 23 rename some Lyra-only attributes, properties, events, CSS parts,
 custom properties and slots. Published names retired in this installed release remain migration inputs.
-Removed aliases no longer work at runtime. Names mirrored from Web Awesome or Shoelace, and their defaults, never
-change. Run the CLI of the installed package after upgrading; historical profiles remain available. It
+Removed aliases no longer work at runtime. Names and defaults in the pinned upstream's current, nondeprecated API remain mirrored.
+Run the CLI of the installed package after upgrading; historical profiles remain available. It
 applies only the entries the installed release ships, so running it again after a later upgrade
 picks up the rest:
 
@@ -1510,9 +1510,9 @@ need manual inspection. Review event detail, saved preferences and selector scop
 ## Migrating from Lyra 25 to Lyra 26 (`--origin=lyra-v25`)
 
 Lyra 25 minor releases and Lyra 26 rename some Lyra-only attributes, properties, events, CSS parts,
-custom properties and slots. Each previous name keeps working as a deprecated alias until
-Lyra 28 removes it. Names mirrored from Web Awesome or Shoelace, and their defaults, never
-change. Run the CLI of the installed package after upgrading, within Lyra 25 or to Lyra 26. It
+custom properties and slots. Published names retired in this installed release remain migration inputs.
+Removed aliases no longer work at runtime. Names and defaults in the pinned upstream's current, nondeprecated API remain mirrored.
+Run the CLI of the installed package after upgrading; historical profiles remain available. It
 applies only the entries the installed release ships, so running it again after a later upgrade
 picks up the rest:
 
@@ -1529,7 +1529,7 @@ selectors that name the component; and calls rooted at `querySelector('lr-…')`
 other component already dispatches the new name, and an unowned listener or any custom-property
 use only when, in addition, every component with the old name renamed it the same way and the
 scanned code never dispatches the old name itself. Everything else is reported with a location;
-the old name keeps working meanwhile.
+review removed names before running the migrated application.
 
 | Code | Reported when |
 |---|---|
@@ -1591,9 +1591,9 @@ hydration compares template strings.
 ## Migrating from Lyra 26 to Lyra 27 (`--origin=lyra-v26`)
 
 Lyra 26 minor releases and Lyra 27 rename some Lyra-only attributes, properties, events, CSS parts,
-custom properties and slots. Each previous name keeps working as a deprecated alias until
-Lyra 29 removes it. Names mirrored from Web Awesome or Shoelace, and their defaults, never
-change. Run the CLI of the installed package after upgrading, within Lyra 26 or to Lyra 27. It
+custom properties and slots. Previous names still supported by the installed release are deprecated aliases.
+A removal floor is not an automatic removal date. Names and defaults in the pinned upstream's current, nondeprecated API remain mirrored.
+Run the CLI of the installed package after upgrading, within Lyra 26 or to Lyra 27. It
 applies only the entries the installed release ships, so running it again after a later upgrade
 picks up the rest:
 
@@ -1685,30 +1685,19 @@ It adds `data-lr-theme-scope` to elements whose inline style sets a token-layer 
 markers inside loops, and stylesheet rules that set an input or a shared output outside a theme scope
 (`THEME_SCOPE_*_REVIEW`, acknowledged like any other code).
 
-## Upstream-protected compatibility spellings
+## Upstream compatibility spellings
 
-These 8 legacy spellings remain supported while their corresponding Web Awesome or Shoelace surface publishes them. Prefer the current Lyra spelling for new code. Their recorded `removalNotBefore` value is a minimum, not an automatic removal date or permission to remove a still-mirrored spelling.
+The deprecated upstream compatibility spellings have retired; see the v29 to v30 migration guide for their replacements and review requirements.
 
-| Lyra surface | Retained spelling | Preferred spelling for new code |
-|---|---|---|
-| `<lr-accordion-item>` | `::part(base)` | `::part(accordion-item)` |
-| `<lr-file-input>` | `::part(base)` | `::part(file-input)` |
-| `<lr-file-input>` | `::part(label)` | `::part(form-control-label)` |
-| `<lr-icon>` | `autoWidth / auto-width` | `canvas="auto"` |
-| `<lr-known-date>` | `::part(label)` | `::part(form-control-label)` |
-| `<lr-qr-code>` | `::part(base)` | `::part(qr-code)` |
-| `<lr-sparkline>` | `::part(base)` | `::part(sparkline)` |
-| `<lr-video-playlist>` | `::part(base)` | `::part(video-playlist)` |
-
-For `lr-icon`, `autoWidth` is a CSS-level alias for `canvas="auto"`; an explicit `canvas` value wins. Review selector reach before changing existing `[auto-width]` rules. The migration tool does not blanket-rewrite these protected spellings.
+For `lr-icon`, the retired `auto-width` attribute migrates to `canvas="auto"`. Review selector reach before changing existing `[auto-width]` rules.
 
 ## Classification summary
 
 | Ecosystem | Exact | Rewritten | Warning required | Conceptual only | Unsupported | Automatic | Manual |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Web Awesome | 33 | 35 | 19 | 0 | 0 | 68 | 19 |
+| Web Awesome | 30 | 38 | 19 | 0 | 0 | 68 | 19 |
 | Shoelace | 18 | 28 | 12 | 0 | 0 | 46 | 12 |
-| **Total** | **51** | **63** | **31** | **0** | **0** | **114** | **31** |
+| **Total** | **48** | **66** | **31** | **0** | **0** | **114** | **31** |
 
 ## Web Awesome (87)
 
@@ -1717,7 +1706,7 @@ The pinned Web Awesome manifest is authoritative for this inventory; only rows m
 | From | Lyra target or candidate | Classification | Disposition |
 |---|---|---|---|
 | `<wa-accordion>` | `<lr-accordion>` | `warning-required` | Manual: Lyra snapshots each expand/collapse event detail into a frozen readonly value at dispatch time rather than exposing a live mutable item reference; migrated handlers that mutate the event detail in place must be reviewed. |
-| `<wa-accordion-item>` | `<lr-accordion-item>` | `exact` | Automatic: tag and supported side-effect registration import. Native disclosure and coordinated accordion panels. |
+| `<wa-accordion-item>` | `<lr-accordion-item>` | `rewritten` | Automatic: tag/import plus parts: base → accordion-item. |
 | `<wa-animated-image>` | `<lr-animated-image>` | `rewritten` | Automatic: tag/import plus events: wa-error → lr-error; events: wa-load → lr-load. |
 | `<wa-animation>` | `<lr-animation>` | `rewritten` | Automatic: tag/import plus events: wa-cancel → lr-cancel; events: wa-finish → lr-finish; events: wa-start → lr-start. |
 | `<wa-avatar>` | `<lr-avatar>` | `rewritten` | Automatic: tag/import plus events: wa-error → lr-error. |
@@ -1753,11 +1742,11 @@ The pinned Web Awesome manifest is authoritative for this inventory; only rows m
 | `<wa-format-bytes>` | `<lr-format-bytes>` | `exact` | Automatic: tag and supported side-effect registration import. |
 | `<wa-format-date>` | `<lr-format-date>` | `exact` | Automatic: tag and supported side-effect registration import. |
 | `<wa-format-number>` | `<lr-format-number>` | `exact` | Automatic: tag and supported side-effect registration import. |
-| `<wa-icon>` | `<lr-icon>` | `rewritten` | Automatic: tag/import plus events: wa-error → lr-error; events: wa-load → lr-load. |
+| `<wa-icon>` | `<lr-icon>` | `rewritten` | Automatic: tag/import plus attributes: auto-width → canvas; properties: autoWidth → canvas; events: wa-error → lr-error; events: wa-load → lr-load. |
 | `<wa-include>` | `<lr-include>` | `warning-required` | Manual: Lyra intentionally sanitizes included markup and keeps a same-origin default; uses that depend on cross-origin or script-executing behavior require an explicit security warning rather than a silent rename. |
 | `<wa-input>` | `<lr-input>` | `rewritten` | Automatic: tag/import plus events: wa-clear → lr-clear; events: wa-invalid → lr-invalid. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
 | `<wa-intersection-observer>` | `<lr-intersection-observer>` | `rewritten` | Automatic: tag/import plus events: wa-intersect → lr-intersect. |
-| `<wa-known-date>` | `<lr-known-date>` | `rewritten` | Automatic: tag/import plus events: wa-invalid → lr-invalid. |
+| `<wa-known-date>` | `<lr-known-date>` | `rewritten` | Automatic: tag/import plus events: wa-invalid → lr-invalid; parts: label → form-control-label. |
 | `<wa-line-chart>` | `<lr-line-chart>` | `exact` | Automatic: tag and supported side-effect registration import. Typed `<lr-chart>` subclasses with tag-specific defaults and the full writable `LyraChartType` vocabulary — same optional peer deps as `<lr-chart>`. |
 | `<wa-markdown>` | `<lr-markdown>` | `warning-required` | Manual: The source and target light-DOM Markdown content models and optional-peer runtime requirements are not mechanically equivalent; migration leaves the use unchanged and reports the required review. |
 | `<wa-mutation-observer>` | `<lr-mutation-observer>` | `rewritten` | Automatic: tag/import plus events: wa-mutation → lr-mutation. |
@@ -1772,7 +1761,7 @@ The pinned Web Awesome manifest is authoritative for this inventory; only rows m
 | `<wa-popup>` | `<lr-popup>` | `rewritten` | Automatic: tag/import plus events: wa-reposition → lr-reposition. Equivalent surface representation: autoSizeBoundary is analyzer-inferred for property-only autoSizeBoundary; flipBoundary is analyzer-inferred for property-only flipBoundary; shiftBoundary is analyzer-inferred for property-only shiftBoundary; no source rewrite. |
 | `<wa-progress-bar>` | `<lr-progress-bar>` | `exact` | Automatic: tag and supported side-effect registration import. Determinate or indeterminate progress indicators. |
 | `<wa-progress-ring>` | `<lr-progress-ring>` | `exact` | Automatic: tag and supported side-effect registration import. Determinate or indeterminate progress indicators. |
-| `<wa-qr-code>` | `<lr-qr-code>` | `exact` | Automatic: tag and supported side-effect registration import. Canvas QR renderer; needs the optional peer `qrcode`. |
+| `<wa-qr-code>` | `<lr-qr-code>` | `rewritten` | Automatic: tag/import plus parts: base → qr-code. |
 | `<wa-radar-chart>` | `<lr-radar-chart>` | `exact` | Automatic: tag and supported side-effect registration import. Typed `<lr-chart>` subclasses with tag-specific defaults and the full writable `LyraChartType` vocabulary — same optional peer deps as `<lr-chart>`. |
 | `<wa-radio>` | `<lr-radio>` | `exact` | Automatic: tag and supported side-effect registration import. Equivalent surface representation: name defaults null ≡ ; no source rewrite. Form-associated single-choice controls with roving arrow-key navigation and group validation; Lyra's group `name` defaults empty while Shoelace defaults to `option`, so the codemod inserts `name="option"` (set it for a manual rename). |
 | `<wa-radio-group>` | `<lr-radio-group>` | `warning-required` | Manual: Native input notifications are Event instances. Migrated handlers must not require InputEvent-specific fields. |
@@ -1785,7 +1774,7 @@ The pinned Web Awesome manifest is authoritative for this inventory; only rows m
 | `<wa-select>` | `<lr-select>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-clear → lr-clear; events: wa-hide → lr-hide; events: wa-invalid → lr-invalid; events: wa-show → lr-show. |
 | `<wa-skeleton>` | `<lr-skeleton>` | `exact` | Automatic: tag and supported side-effect registration import. Loading placeholder (pulse/sheen). |
 | `<wa-slider>` | `<lr-slider>` | `rewritten` | Automatic: tag/import plus events: wa-invalid → lr-invalid. |
-| `<wa-sparkline>` | `<lr-sparkline>` | `exact` | Automatic: tag and supported side-effect registration import. Zero-dependency inline SVG. |
+| `<wa-sparkline>` | `<lr-sparkline>` | `rewritten` | Automatic: tag/import plus parts: base → sparkline. |
 | `<wa-spinner>` | `<lr-spinner>` | `exact` | Automatic: tag and supported side-effect registration import. Localized indeterminate busy indicator with reduced-motion support. |
 | `<wa-split-panel>` | `<lr-split-panel>` | `rewritten` | Automatic: tag/import plus events: wa-reposition → lr-reposition. |
 | `<wa-switch>` | `<lr-switch>` | `warning-required` | Manual: Native input notifications are Event instances. Migrated handlers must not require InputEvent-specific fields. |
@@ -1801,7 +1790,7 @@ The pinned Web Awesome manifest is authoritative for this inventory; only rows m
 | `<wa-tree>` | `<lr-tree>` | `warning-required` | Manual: Lyra freezes each selection snapshot and exposes it as readonly so listeners cannot mutate component-owned selection state. Migrated handlers that modify the event array in place must create their own copy. |
 | `<wa-tree-item>` | `<lr-tree-item>` | `rewritten` | Automatic: tag/import plus events: wa-after-collapse → lr-after-collapse; events: wa-after-expand → lr-after-expand; events: wa-collapse → lr-collapse; events: wa-expand → lr-expand; events: wa-lazy-change → lr-lazy-change; events: wa-lazy-load → lr-lazy-load. |
 | `<wa-video>` | `<lr-video>` | `warning-required` | Manual: Lyra exposes playing as read-only live state that is reflected but not observed as an attribute; migrated code that assigned playing or authored the playing attribute must call play() or pause() instead. |
-| `<wa-video-playlist>` | `<lr-video-playlist>` | `rewritten` | Automatic: tag/import plus events: wa-video-change → lr-video-change. |
+| `<wa-video-playlist>` | `<lr-video-playlist>` | `rewritten` | Automatic: tag/import plus events: wa-video-change → lr-video-change; parts: base → video-playlist. |
 | `<wa-zoomable-frame>` | `<lr-zoomable-frame>` | `warning-required` | Manual: Lyra always renders a sandbox with an `allow-same-origin` default, rejects active and non-embeddable URL schemes, and drops `allow-same-origin` when paired with `allow-scripts`; migration leaves the use unchanged and reports the security-sensitive difference. |
 
 ## Shoelace (58)
@@ -1846,7 +1835,7 @@ Shoelace relationships are classified independently; a same-suffix tag is never 
 | `<sl-popup>` | `<lr-popup>` | `rewritten` | Automatic: tag/import plus events: sl-reposition → lr-reposition. Equivalent surface representation: autoSizeBoundary is analyzer-inferred for property-only autoSizeBoundary; flipBoundary is analyzer-inferred for property-only flipBoundary; shiftBoundary is analyzer-inferred for property-only shiftBoundary; no source rewrite. |
 | `<sl-progress-bar>` | `<lr-progress-bar>` | `exact` | Automatic: tag and supported side-effect registration import. Built-in status copy is localized through Lyra's runtime. |
 | `<sl-progress-ring>` | `<lr-progress-ring>` | `exact` | Automatic: tag and supported side-effect registration import. Determinate or indeterminate progress indicators. |
-| `<sl-qr-code>` | `<lr-qr-code>` | `rewritten` | Automatic: tag/import plus insert background=white; insert fill=black. |
+| `<sl-qr-code>` | `<lr-qr-code>` | `rewritten` | Automatic: tag/import plus parts: base → qr-code; insert background=white; insert fill=black. |
 | `<sl-radio>` | `<lr-radio>` | `rewritten` | Automatic: tag/import plus events: sl-blur → blur; events: sl-focus → focus. Equivalent surface representation: size defaults medium ≡ m; no source rewrite. |
 | `<sl-radio-button>` | `<lr-radio-button>` | `rewritten` | Automatic: tag/import plus events: sl-blur → blur; events: sl-focus → focus. Equivalent surface representation: size defaults medium ≡ m; no source rewrite. |
 | `<sl-radio-group>` | `<lr-radio-group>` | `rewritten` | Automatic: tag/import plus events: sl-change → lr-change; events: sl-input → lr-input; events: sl-invalid → lr-invalid; insert name=option. Equivalent surface representation: form defaults  ≡ null; size defaults medium ≡ m; no source rewrite. |

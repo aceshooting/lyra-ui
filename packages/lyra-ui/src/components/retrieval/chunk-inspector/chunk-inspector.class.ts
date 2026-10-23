@@ -75,8 +75,6 @@ export interface LyraChunkInspectorEventMap {
     sourceId: string;
     anchor?: LyraChunkAnchor;
   }>>;
-  /** @deprecated Use `lr-toggle` and read `itemId`; this alias remains during its deprecation window. */
-  'lr-chunk-toggle': CustomEvent<{ chunkId: string; expanded: boolean }>;
   'lr-toggle': CustomEvent<{ expanded: boolean; itemId: string }>;
 }
 
@@ -115,9 +113,8 @@ function isDenseSize(size: LyraSize): boolean {
  * @event lr-chunk-open - A chunk's title/open button was activated -- the event a host routes
  * into `lr-document-viewer` (set `src` from `sourceId`, set `anchor`). `detail: { chunkId,
  * sourceId, anchor? }`.
- * @event lr-chunk-toggle - A chunk's text toggle was activated, expanding or collapsing it.
- *   `detail: { chunkId, expanded }`; `expandedChunkIds` already reflects it.
- * @event lr-toggle - The same change with `detail: { expanded, itemId }`.
+ * @event lr-toggle - A chunk's text toggle was activated, expanding or collapsing it.
+ *   `detail: { expanded, itemId }`; `expandedChunkIds` already reflects it.
  * @csspart base - The result wrapper. It owns `role="group"` and the fallback name unless a
  *   non-empty host `aria-label` makes the host the sole overall owner.
  * @csspart chunk - One chunk row. Carries `role="listitem"` only in the non-virtualized path;
@@ -200,7 +197,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
    */
   @property({ reflect: true }) size: LyraSize = 'm';
   /** Ids of the chunks whose text is expanded. The inspector updates its own copy on toggle, then
-   *  emits `lr-chunk-toggle`; reassign to control. */
+   *  emits `lr-toggle`; reassign to control. */
   @property({ attribute: false }) expandedChunkIds: readonly string[] = [];
   /** Fallback name for the populated chunk group; omitting it falls back to the localized default
    *  and an explicit empty string clears it. A non-empty host `aria-label` makes the host the sole
@@ -294,7 +291,6 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     this.expandedChunkIds = expanded
       ? [...this.expandedChunkIds, chunkId]
       : this.expandedChunkIds.filter((id) => id !== chunkId);
-    this.emit('lr-chunk-toggle', { chunkId, expanded });
     this.emit('lr-toggle', { itemId: chunkId, expanded });
   }
 

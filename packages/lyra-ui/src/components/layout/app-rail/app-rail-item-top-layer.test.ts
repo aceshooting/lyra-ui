@@ -10,7 +10,7 @@ async function mount(topLayer: boolean) {
       tooltip
       ?top-layer=${topLayer}
       style="--lr-transition-fast: 0ms"
-      ><span slot="icon">D</span>Dashboard</lr-app-rail-item
+      ><span slot="start">D</span>Dashboard</lr-app-rail-item
     >`,
     '96px',
   );
@@ -60,7 +60,7 @@ describe('top-layer on lr-app-rail-item', () => {
     const { wrapper, sibling } = await headerFixture(
       html`<lr-app-rail top-layer mode="icon-only" force-mode="icon-only"
         ><lr-app-rail-item data-lr-theme-scope tooltip style="--lr-transition-fast: 0ms"
-          ><span slot="icon">D</span>Dashboard</lr-app-rail-item
+          ><span slot="start">D</span>Dashboard</lr-app-rail-item
         ></lr-app-rail
       >`,
       '96px',

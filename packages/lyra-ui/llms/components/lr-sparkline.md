@@ -7,9 +7,9 @@
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecated part** `base` since `8.0.0`; use part `::part(sparkline)`; removal not before `10.0.0` — The sparkline part names the rendered SVG wrapper unambiguously; base remains on that same node during the compatibility window. That version is a policy floor, not a plan: `wa-sparkline` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is.
+- **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -87,7 +87,7 @@ It adds no table, CSV or source-selection event.
 
 **Slots:** none.
 
-**CSS parts:** `sparkline` and deprecated `base` are aliases on the same outer SVG, `fill` is the
+**CSS parts:** `sparkline` is the outer SVG, `fill` is the
 area path for solid/gradient appearance, `line` is the stroke path, and the additive `bar` is each
 extension-mode rectangle. `status` is the visible invalid-prepared-input message.
 

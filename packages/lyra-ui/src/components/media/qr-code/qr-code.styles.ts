@@ -9,7 +9,7 @@ export const styles = css`
     color: var(--lr-qr-code-fill, inherit);
     background-color: var(--lr-qr-code-bg, initial);
   }
-  [part~='base'] {
+  [part='qr-code'] {
     display: inline-flex;
     align-items: center;
     justify-content: center;

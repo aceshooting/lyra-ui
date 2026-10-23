@@ -138,7 +138,7 @@ describe('app rail sidebar frame', () => {
   });
 
   for (const frame of ['card', 'plain'] as const) it(`is accessible with populated ${frame} sidebar content`, async () => {
-    const el = await fixture<LyraAppRail>(html`<lr-app-rail frame=${frame} label="Workspace"><lr-app-rail-group heading="Platform"><lr-app-rail-item current tooltip><span slot="icon">A</span>Account<span slot="meta">3</span><lr-app-rail-item slot="children">Profile</lr-app-rail-item></lr-app-rail-item></lr-app-rail-group></lr-app-rail>`);
+    const el = await fixture<LyraAppRail>(html`<lr-app-rail frame=${frame} label="Workspace"><lr-app-rail-group heading="Platform"><lr-app-rail-item current tooltip><span slot="start">A</span>Account<span slot="meta">3</span><lr-app-rail-item slot="children">Profile</lr-app-rail-item></lr-app-rail-item></lr-app-rail-group></lr-app-rail>`);
     await expect(el).to.be.accessible(); el.forceMode = 'icon-only'; await el.updateComplete; await expect(el).to.be.accessible();
   });
 });
@@ -267,7 +267,7 @@ describe('app rail sidebar hotkey', () => {
 
 describe('sidebar composition', () => {
   it('hides nested disclosure in icon-only, preserves expanded and recovers nested focus', async () => {
-    const rail = await fixture<LyraAppRail>(html`<lr-app-rail><lr-app-rail-item id="parent" expanded><span slot="icon">A</span>Account<span slot="meta">3</span><lr-app-rail-item id="child" slot="children">Profile</lr-app-rail-item></lr-app-rail-item></lr-app-rail>`);
+    const rail = await fixture<LyraAppRail>(html`<lr-app-rail><lr-app-rail-item id="parent" expanded><span slot="start">A</span>Account<span slot="meta">3</span><lr-app-rail-item id="child" slot="children">Profile</lr-app-rail-item></lr-app-rail-item></lr-app-rail>`);
     const parent = rail.querySelector<LyraAppRailItem>('#parent')!; const child = rail.querySelector<LyraAppRailItem>('#child')!;
     for (const target of [parent.shadowRoot!.querySelector<HTMLElement>('[part="toggle"]')!, child.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!]) {
       rail.forceMode = 'full'; await rail.updateComplete; await parent.updateComplete; target.focus(); rail.forceMode = 'icon-only'; await rail.updateComplete;
@@ -280,7 +280,7 @@ describe('sidebar composition', () => {
   });
 
   it('reserves width for end content and stretches a compact divider', async () => {
-    const wrapper = await fixture<HTMLDivElement>(html`<div><style>lr-app-rail lr-divider { align-self: stretch; }</style><lr-app-rail force-mode="icon-only" style="--lr-app-rail-icon-width:5.5rem"><lr-app-rail-item><span slot="icon">A</span>Account<span slot="end" style="inline-size:1.5rem">3</span></lr-app-rail-item><lr-divider></lr-divider></lr-app-rail></div>`);
+    const wrapper = await fixture<HTMLDivElement>(html`<div><style>lr-app-rail lr-divider { align-self: stretch; }</style><lr-app-rail force-mode="icon-only" style="--lr-app-rail-icon-width:5.5rem"><lr-app-rail-item><span slot="start">A</span>Account<span slot="end" style="inline-size:1.5rem">3</span></lr-app-rail-item><lr-divider></lr-divider></lr-app-rail></div>`);
     const rail = wrapper.querySelector<LyraAppRail>('lr-app-rail')!; const item = rail.querySelector<LyraAppRailItem>('lr-app-rail-item')!; await item.updateComplete;
     await waitUntil(() => base(rail).getBoundingClientRect().width >= 88, 'icon-only rail width did not settle');
     const end = item.shadowRoot!.querySelector('[part="end"]')!.getBoundingClientRect(); const bounds = base(rail).getBoundingClientRect(); expect(end.right).to.be.at.most(bounds.right + 0.5);
@@ -288,7 +288,7 @@ describe('sidebar composition', () => {
   });
 
   it('uses one allocation-owned drawer and restores the inline preference when returning wide', async () => {
-    const wrapper = await fixture<HTMLDivElement>(html`<div style="inline-size:1200px;block-size:500px"><style>lr-page[view='mobile'] lr-app-rail::part(collapse-toggle) { display:none; }</style><lr-page><lr-app-rail slot="navigation" label="Workspace" frame="plain" mobile-breakpoint="0px" icon-only-breakpoint="0px" collapsible hotkey="ctrl+b"><lr-app-rail-item><span slot="icon">A</span>Account</lr-app-rail-item></lr-app-rail><p>Main content</p></lr-page></div>`);
+    const wrapper = await fixture<HTMLDivElement>(html`<div style="inline-size:1200px;block-size:500px"><style>lr-page[view='mobile'] lr-app-rail::part(collapse-toggle) { display:none; }</style><lr-page><lr-app-rail slot="navigation" label="Workspace" frame="plain" mobile-breakpoint="0px" icon-only-breakpoint="0px" collapsible hotkey="ctrl+b"><lr-app-rail-item><span slot="start">A</span>Account</lr-app-rail-item></lr-app-rail><p>Main content</p></lr-page></div>`);
     const page = wrapper.querySelector<LyraPage>('lr-page')!; const rail = wrapper.querySelector<LyraAppRail>('lr-app-rail')!;
     const sync = () => { rail.forceMode = page.view === 'mobile' ? 'full' : 'auto'; };
     const observer = new MutationObserver(sync); observer.observe(page, { attributes: true, attributeFilter: ['view'] }); sync();
@@ -355,7 +355,7 @@ describe('sidebar focus return, triggers and hotkey eligibility', () => {
 });
 
 describe('sidebar recipes and item presentation', () => {
-  const recipeB = (inlineSize: string) => html`<div style=${`inline-size:${inlineSize};block-size:500px`}><style>lr-page[view='mobile'] lr-app-rail::part(collapse-toggle) { display:none; }</style><lr-page><lr-app-rail slot="navigation" label="Workspace" frame="plain" mobile-breakpoint="0px" icon-only-breakpoint="0px" collapsible hotkey="ctrl+b" style="--lr-transition-base:0ms"><lr-app-rail-item><span slot="icon">A</span>Account</lr-app-rail-item></lr-app-rail><p>Main content</p></lr-page></div>`;
+  const recipeB = (inlineSize: string) => html`<div style=${`inline-size:${inlineSize};block-size:500px`}><style>lr-page[view='mobile'] lr-app-rail::part(collapse-toggle) { display:none; }</style><lr-page><lr-app-rail slot="navigation" label="Workspace" frame="plain" mobile-breakpoint="0px" icon-only-breakpoint="0px" collapsible hotkey="ctrl+b" style="--lr-transition-base:0ms"><lr-app-rail-item><span slot="start">A</span>Account</lr-app-rail-item></lr-app-rail><p>Main content</p></lr-page></div>`;
   const glue = (page: LyraPage, rail: LyraAppRail): MutationObserver => {
     const sync = () => { rail.forceMode = page.view === 'mobile' ? 'full' : 'auto'; };
     const observer = new MutationObserver(sync); observer.observe(page, { attributes: true, attributeFilter: ['view'] }); sync(); return observer;
@@ -391,7 +391,7 @@ describe('sidebar recipes and item presentation', () => {
 
   // G2: the full presentation shows the disclosure and children, and icon-only never resets expanded.
   it('shows the nested disclosure in full and restores it after an icon-only round trip', async () => {
-    const rail = await fixture<LyraAppRail>(html`<lr-app-rail force-mode="full"><lr-app-rail-item id="parent" expanded><span slot="icon">A</span>Account<lr-app-rail-item slot="children">Profile</lr-app-rail-item></lr-app-rail-item></lr-app-rail>`);
+    const rail = await fixture<LyraAppRail>(html`<lr-app-rail force-mode="full"><lr-app-rail-item id="parent" expanded><span slot="start">A</span>Account<lr-app-rail-item slot="children">Profile</lr-app-rail-item></lr-app-rail-item></lr-app-rail>`);
     const parent = rail.querySelector<LyraAppRailItem>('#parent')!; await parent.updateComplete;
     const shown = (name: string): boolean => getComputedStyle(parent.shadowRoot!.querySelector(`[part="${name}"]`)!).display !== 'none';
     expect(shown('toggle')).to.equal(true); expect(shown('children')).to.equal(true);

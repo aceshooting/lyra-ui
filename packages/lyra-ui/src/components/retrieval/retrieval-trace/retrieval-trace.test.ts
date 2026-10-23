@@ -401,7 +401,7 @@ describe("lr-retrieval-trace", () => {
     expect(body.hidden).to.be.true;
   });
 
-  it("selecting a stage with evidence for the first time opens its evidence panel and emits lr-stage-toggle", async () => {
+  it("selecting a stage with evidence for the first time opens its evidence panel and emits lr-toggle", async () => {
     const el = (await fixture(
       html`<lr-retrieval-trace .stages=${STAGES}></lr-retrieval-trace>`
     )) as LyraRetrievalTrace;
@@ -412,10 +412,10 @@ describe("lr-retrieval-trace", () => {
     const bar = waterfall.shadowRoot!.querySelector(
       '[data-id="retrieve"]'
     ) as HTMLElement;
-    const listener = oneEvent(el, "lr-stage-toggle");
+    const listener = oneEvent(el, "lr-toggle");
     bar.click();
     const ev = await listener;
-    expect(ev.detail).to.deep.equal({ stageId: "retrieve", expanded: true });
+    expect(ev.detail).to.deep.equal({ itemId: "retrieve", expanded: true });
     await el.updateComplete;
     const toggle = el.shadowRoot!.querySelector(
       '[data-id="retrieve"] [part="evidence-toggle"]'
@@ -423,7 +423,7 @@ describe("lr-retrieval-trace", () => {
     expect(toggle.getAttribute("aria-expanded")).to.equal("true");
   });
 
-  it("selecting a stage with no evidence emits no lr-stage-toggle", async () => {
+  it("selecting a stage with no evidence emits no lr-toggle", async () => {
     const el = (await fixture(
       html`<lr-retrieval-trace .stages=${STAGES}></lr-retrieval-trace>`
     )) as LyraRetrievalTrace;
@@ -435,7 +435,7 @@ describe("lr-retrieval-trace", () => {
       '[data-id="rerank"]'
     ) as HTMLElement;
     let toggled = false;
-    el.addEventListener("lr-stage-toggle", () => {
+    el.addEventListener("lr-toggle", () => {
       toggled = true;
     });
     const listener = oneEvent(el, "lr-stage-select");
@@ -444,7 +444,7 @@ describe("lr-retrieval-trace", () => {
     expect(toggled).to.be.false;
   });
 
-  it("clicking the evidence-toggle button directly toggles aria-expanded/hidden and emits lr-stage-toggle both ways", async () => {
+  it("clicking the evidence-toggle button directly toggles aria-expanded/hidden and emits lr-toggle both ways, and never the removed lr-stage-toggle", async () => {
     const el = (await fixture(
       html`<lr-retrieval-trace .stages=${STAGES}></lr-retrieval-trace>`
     )) as LyraRetrievalTrace;
@@ -456,18 +456,21 @@ describe("lr-retrieval-trace", () => {
       '[data-id="rewrite"] [part="evidence-body"]'
     ) as HTMLElement;
 
-    let listener = oneEvent(el, "lr-stage-toggle");
+    let removed = 0;
+    el.addEventListener("lr-stage-toggle", () => (removed += 1));
+    let listener = oneEvent(el, "lr-toggle");
     toggle.click();
     let ev = await listener;
-    expect(ev.detail).to.deep.equal({ stageId: "rewrite", expanded: true });
+    expect(ev.detail).to.deep.equal({ itemId: "rewrite", expanded: true });
     await el.updateComplete;
     expect(toggle.getAttribute("aria-expanded")).to.equal("true");
     expect(body.hidden).to.be.false;
 
-    listener = oneEvent(el, "lr-stage-toggle");
+    listener = oneEvent(el, "lr-toggle");
     toggle.click();
     ev = await listener;
-    expect(ev.detail).to.deep.equal({ stageId: "rewrite", expanded: false });
+    expect(ev.detail).to.deep.equal({ itemId: "rewrite", expanded: false });
+    expect(removed).to.equal(0);
     await el.updateComplete;
     expect(toggle.getAttribute("aria-expanded")).to.equal("false");
     expect(body.hidden).to.be.true;
@@ -966,6 +969,7 @@ it('correlates and contains chunk expansion events from an evidence inspector', 
   ) as LyraChunkInspector;
   let leaked = 0;
   el.addEventListener('lr-chunk-toggle', () => leaked++);
+  el.addEventListener('lr-stage-toggle', () => leaked++);
   const actions: unknown[] = [];
   const toggles: unknown[] = [];
   el.addEventListener('lr-toggle', (event) => toggles.push((event as CustomEvent).detail));
@@ -973,8 +977,8 @@ it('correlates and contains chunk expansion events from an evidence inspector', 
     actions.push((event as CustomEvent).detail)
   );
 
-  inspector.dispatchEvent(new CustomEvent('lr-chunk-toggle', {
-    detail: { chunkId: 'c2', expanded: true },
+  inspector.dispatchEvent(new CustomEvent('lr-toggle', {
+    detail: { itemId: 'c2', expanded: true },
     bubbles: true,
     composed: true,
   }));
@@ -988,11 +992,6 @@ it('correlates and contains chunk expansion events from an evidence inspector', 
     },
   ]);
   expect(leaked).to.equal(0);
-  inspector.dispatchEvent(new CustomEvent('lr-toggle', {
-    detail: { itemId: 'c2', expanded: true },
-    bubbles: true,
-    composed: true,
-  }));
   expect(toggles).to.deep.equal([{ itemId: 'c2', expanded: true, stageId: 'retrieve' }]);
 });
 

@@ -173,9 +173,6 @@ function addCompatibilityDetail<T extends Event>(
  * @csspart fieldset - The `<fieldset>` grouping the three fields.
  * @csspart legend - The `<legend>` element.
  * @csspart form-control-label - The visible label wrapper inside the legend.
- * @csspart label - Deprecated in 8.0.0; compatibility alias for `form-control-label`. Web Awesome
- *   still publishes its own deprecated `label` part on `<wa-known-date>`, so this alias stays on
- *   the same node until upstream drops it.
  * @csspart fields - The row wrapping the three field blocks.
  * @csspart form-control-input - Alias on the fields row matching other form controls.
  * @csspart field - Each field block (label + input), repeated three times; distinguished by
@@ -1024,7 +1021,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
         />
         <fieldset part="fieldset" aria-label=${this.accessibleLabel ?? nothing}>
           <legend part="legend" ?hidden=${!hasLabel}>
-            <span part="form-control-label label">
+            <span part="form-control-label">
               <slot name="label"
                 >${this.label}</slot
               >

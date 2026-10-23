@@ -886,7 +886,7 @@ export function migrateRenameText(original, contract, options) {
         (sourceKeepers.length ? `, while ${list(sourceKeepers)} still ${sourceKeepers.length === 1 ? 'uses' : 'use'} ${name}` : '') +
         (targetKeepers.length ? `; ${list(targetKeepers)} already ${targetKeepers.length === 1 ? 'uses' : 'use'} ${targets.join(' and ')}, which this site would start reaching` : '') +
         (constructed ? `; the scanned code also dispatches ${name} itself, so its listeners and dispatches must move together` : '') +
-        `. Update it by hand for the components it is meant for; ${name} keeps working until ${removal}.` +
+        `. Update it by hand for the components it is meant for; ${name} has a recorded removal floor of ${removal}; check the installed release migration guide.` +
         (kind === 'event' ? detailNote(targets[0]) : ''),
     });
     return null;
@@ -939,7 +939,7 @@ export function migrateRenameText(original, contract, options) {
           target: own.to,
           message:
             `Not renamed: the scanned code dispatches ${name} itself, so this listener would stop hearing it. Rename the ` +
-            `dispatch and its listeners to ${own.to} together; ${name} keeps working until ${removal}.${detailNote(own.to)}`,
+            `dispatch and its listeners to ${own.to} together; ${name} has a recorded removal floor of ${removal}; check the installed release migration guide.${detailNote(own.to)}`,
         });
       } else if (keepers.length) {
         warn(start, {
@@ -950,7 +950,7 @@ export function migrateRenameText(original, contract, options) {
           message:
             `Not renamed: ${list(keepers)} also ${keepers.length === 1 ? 'dispatches' : 'dispatch'} ${own.to}, so this listener would ` +
             `start receiving their events when they are nested inside this ${owner}. Rename it by hand and ignore events whose ` +
-            `target is not this ${owner}; ${name} keeps working until ${removal}.${detailNote(own.to)}`,
+            `target is not this ${owner}; ${name} has a recorded removal floor of ${removal}; check the installed release migration guide.${detailNote(own.to)}`,
         });
       } else if (conflict) {
         warn(start, {
@@ -958,7 +958,7 @@ export function migrateRenameText(original, contract, options) {
           member: name,
           code: RENAME_CONFLICT_REVIEW,
           target: own.to,
-          message: `${conflictMessage(conflict, `This ${owner}`, own.to)} ${name} keeps working until ${removal}.`,
+          message: `${conflictMessage(conflict, `This ${owner}`, own.to)} ${name} has a recorded removal floor of ${removal}; check the installed release migration guide.`,
         });
       } else {
         const narrowed = profile.sourceKeepers('event', name, own.to).filter((tag) => tag !== owner);
@@ -1088,7 +1088,7 @@ export function migrateRenameText(original, contract, options) {
         message:
           `${target} is the inverse of ${name} on ${owner}, and this ${kind === 'binding' ? 'binding' : kind === 'property' ? 'property access' : 'attribute binding'} ` +
           'is not a static attribute. ' +
-          `Bind the negated value to ${target} by hand; ${name} keeps working until ${removal}.`,
+          `Bind the negated value to ${target} by hand; ${name} has a recorded removal floor of ${removal}; check the installed release migration guide.`,
       });
       return null;
     }
@@ -1633,7 +1633,7 @@ export function migrateRenameText(original, contract, options) {
           target: rule.to,
           message:
             `If this reads or writes an ${rule.tag}, ${rule.polarity ? `use the inverse property .${rule.to}` : `rename .${name} to .${rule.to}`}; ` +
-            `.${name} keeps working until ${removal}.`,
+            `.${name} has a recorded removal floor of ${removal}; check the installed release migration guide.`,
         });
       }
     }
@@ -1655,7 +1655,7 @@ export function migrateRenameText(original, contract, options) {
         target: rule.to,
         message:
           `If this element is an ${tag}, ${rule.polarity ? `use the inverse attribute ${rule.to}` : `rename ${name} to ${rule.to}`}; ` +
-          `${name} keeps working until ${removal}.`,
+          `${name} has a recorded removal floor of ${removal}; check the installed release migration guide.`,
       });
     }
   }

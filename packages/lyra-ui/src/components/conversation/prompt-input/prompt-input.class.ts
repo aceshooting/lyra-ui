@@ -889,8 +889,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
               part="source-picker"
               .sources=${sources}
               .selectedSourceIds=${this.effectiveSelectedSourceIds}
-              @lr-selection-change=${(event: Event) => event.stopPropagation()}
-              @lr-sources-change=${(
+              @lr-selection-change=${(
                 event: CustomEvent<{ selectedSourceIds: string[] }>
               ) => this.reemit(event, 'lr-sources-change')}
             ></lr-source-picker>

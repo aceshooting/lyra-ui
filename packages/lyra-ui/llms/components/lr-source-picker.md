@@ -7,7 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecated event** `lr-sources-change` since `26.0.0`; use event `@lr-selection-change`; removal not before `28.0.0` — lr-selection-change is the library's one name for a changed selection; the alias fires right after it for one major.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 14 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -60,8 +60,7 @@ string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat 
 **Events:** `lr-selection-change` (`detail: { selectedSourceIds }`, the complete updated leaf-id
 array, fired after every toggle including select-all. Also fired when a `sources` reassignment
 prunes a previously-selected id that is no longer a valid leaf. Not fired when a consumer sets
-`selectedSourceIds` directly; that assignment is normalized silently) and its deprecated alias
-`lr-sources-change`, dispatched right after it. The select-all checkbox's and the filter field's
+`selectedSourceIds` directly; that assignment is normalized silently). The select-all checkbox's and the filter field's
 `lr-checkbox-toggle-request`, native `input`/`change`, and `lr-input`/`lr-change` stay inside the
 component; `lr-selection-change` is the host-level report.
 

@@ -106,7 +106,7 @@ export const WithSlots: Story = {
   },
   render: () => html`
     <lr-flow-node heading="Review" status="running">
-      <span slot="icon">👁</span>
+      <span slot="start">👁</span>
       Custom body content describing the review step.
       <button slot="toolbar" type="button">Open</button>
     </lr-flow-node>

@@ -30,7 +30,6 @@ type NormalizedRun = Omit<BackgroundRun, 'status'> & { status: BackgroundRunStat
 
 export interface LyraBackgroundRunsEventMap {
   'lr-run-activate': CustomEvent<{ runId: string }>;
-  'lr-run-open': CustomEvent<{ runId: string }>;
   'lr-run-cancel': CustomEvent<{ runId: string }>;
 }
 
@@ -55,7 +54,6 @@ const CANCELLABLE_STATUSES: ReadonlySet<NormalizedRun['status']> = new Set(['que
  *
  * @customElement lr-background-runs
  * @event lr-run-activate - A run was requested for opening. `detail: { runId }`.
- * @event lr-run-open - Deprecated alias of `lr-run-activate`, dispatched right after it.
  * @event lr-run-cancel - A queued or running run was requested for cancellation. `detail: { runId }`.
  *   Terminal or missing runs cannot emit this event.
  * @csspart base - The fieldset and group.
@@ -143,7 +141,6 @@ export class LyraBackgroundRuns extends LyraElement<LyraBackgroundRunsEventMap> 
     this.dispatchingRequest = true;
     try {
       this.emit('lr-run-activate', { runId });
-      this.emit('lr-run-open', { runId });
     } finally {
       this.dispatchingRequest = false;
     }

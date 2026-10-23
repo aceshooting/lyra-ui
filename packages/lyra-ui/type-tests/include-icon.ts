@@ -20,7 +20,7 @@ icon.variant = 'solid';
 icon.canvas = 'roomy';
 icon.flip = 'x';
 icon.animation = 'spin-snap-8';
-icon.autoWidth = false;
+icon.canvas = 'square';
 icon.swapOpacity = true;
 
 const canvas: LyraIconCanvas | undefined = icon.canvas;

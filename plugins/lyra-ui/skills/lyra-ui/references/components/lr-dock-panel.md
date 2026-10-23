@@ -7,8 +7,7 @@
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
-- **Deprecated event** `lr-collapse-change` since `26.0.0`; use event `@lr-toggle`; removal not before `28.0.0` — The shared toggle event carries the same expanded detail; the older name remains emitted during migration.
-- **Deprecated event** `lr-collapse-request` since `26.0.0`; use event `@lr-toggle-request`; removal not before `28.0.0` — The shared cancelable toggle request carries the same expanded proposal; the older name remains emitted during migration.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 4 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -73,13 +72,9 @@ resolved in the host's owner realm.
   lost capture, disconnect/adoption, live policy/geometry mutation, no-op attempts, and a prevented
   `lr-resize-request` all emit nothing.
 - `lr-toggle-request` (cancelable) and `lr-toggle` (accepted) are the shared disclosure pair;
-  their fresh frozen details contain `{ expanded }`. The former can veto a built-in toggle.
-  `lr-collapse-request` (cancelable; `detail: { expanded }` is the state proposed by the
-  built-in collapse toggle. Call `preventDefault()` to leave the host `collapsed` property
-  unchanged. Not fired when a consumer assigns `collapsed` directly), `lr-collapse-change`
-  (non-cancelable; `detail: { expanded }` is
-  the accepted built-in-toggle state. Not fired when a consumer assigns `collapsed` directly)
-  remain available but are deprecated. Both details are fresh readonly/frozen snapshots.
+  their fresh frozen details contain `{ expanded }`. The former can veto a built-in toggle
+  (`preventDefault()` leaves the host `collapsed` property unchanged). Neither is fired when a
+  consumer assigns `collapsed` directly. Both details are fresh readonly/frozen snapshots.
 
 Events bubble and are composed, so a listener on an ancestor (for example an `lr-multi-split` that
 contains this panel and listens for its own `lr-resize-request`) should ignore events whose `target`
@@ -128,7 +123,7 @@ being dragged. `--lr-dock-panel-handle-hit-area` requests a resize target width 
   const panel = document.querySelector("lr-dock-panel");
   panel.addEventListener("lr-resize-input", (e) => updateLayoutPreview(e.detail.extent));
   panel.addEventListener("lr-resize-change", (e) => persistExtent(e.detail.extent));
-  panel.addEventListener("lr-collapse-change", (e) => console.log(e.detail.expanded));
+  panel.addEventListener("lr-toggle", (e) => console.log(e.detail.expanded));
 </script>
 ```
 

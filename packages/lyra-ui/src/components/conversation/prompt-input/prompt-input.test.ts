@@ -1240,14 +1240,17 @@ it("translates composed control events from its host without leaking the raw chi
   el.addEventListener("lr-sources-change", (event) => {
     sourceTargets.push((event.target as Element).tagName);
   });
+  let leakedSelection = 0;
+  el.addEventListener("lr-selection-change", () => leakedSelection++);
   sourcePicker.dispatchEvent(
-    new CustomEvent("lr-sources-change", {
+    new CustomEvent("lr-selection-change", {
       bubbles: true,
       composed: true,
       detail: { selectedSourceIds: ['doc-1'] },
     })
   );
   expect(sourceTargets).to.deep.equal(["LR-PROMPT-INPUT"]);
+  expect(leakedSelection).to.equal(0);
 
   const previewed = oneEvent(el, "lr-attachment-preview-request");
   const previewRequest = new CustomEvent("lr-preview-request", {

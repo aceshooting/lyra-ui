@@ -35,8 +35,6 @@ export interface LyraCommunityCardEventMap {
   /** The drill button, header, or overflow chip -- all three mean "show me this whole community". */
   'lr-drill': CustomEvent<{ communityId: string }>;
   'lr-entity-select': CustomEvent<{ entityId: string }>;
-  /** @deprecated Use `lr-entity-select`. */
-  'lr-entity-activate': CustomEvent<{ entityId: string }>;
 }
 
 /** Whether a `size` sits on the dense tier uses for dense rendering. */
@@ -58,7 +56,6 @@ function isDenseSize(size: LyraSize): boolean {
  * @slot actions - Extra header actions alongside the built-in drill button.
  * @event lr-drill - `detail: { communityId }`.
  * @event lr-entity-select - A member chip was activated. `detail: { entityId }`.
- * @event lr-entity-activate - Deprecated alias of `lr-entity-select`, dispatched right after it.
  * @csspart base - The outer bordered container.
  * @csspart header - The header row.
  * @attr {string | number | null} aria-level - Heading level forwarded to the title. An absent or empty value
@@ -200,10 +197,7 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
                 (m) => html`<button
                   part="member"
                   type="button"
-                  @click=${() => {
-                    this.emit('lr-entity-select', { entityId: m.id });
-                    this.emit('lr-entity-activate', { entityId: m.id });
-                  }}
+                  @click=${() => this.emit('lr-entity-select', { entityId: m.id })}
                 >
                   <lr-chip>${m.label || m.id}</lr-chip>
                 </button>`

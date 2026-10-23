@@ -215,7 +215,7 @@ export const Live: Story = {
   render: () => {
     const logRef = createRef<HTMLElement>();
     const onCancel = (): void => {
-      if (logRef.value) logRef.value.textContent = 'lr-cancel fired';
+      if (logRef.value) logRef.value.textContent = 'lr-run-cancel fired';
     };
     const onRetry = (event: Event): void => {
       if (logRef.value) {
@@ -227,7 +227,7 @@ export const Live: Story = {
         <lr-agent-run
           .run=${{ ...runningRun, status: { kind: 'error' } }}
           style="width: 100%;"
-          @lr-cancel=${onCancel}
+          @lr-run-cancel=${onCancel}
           @lr-run-retry=${onRetry}
         ></lr-agent-run>
         <p ${ref(logRef)} data-log style="margin: 0; font-size: 0.8125rem; color: var(--lr-color-text-quiet);">

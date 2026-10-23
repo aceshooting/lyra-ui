@@ -98,10 +98,10 @@ export const CustomIconViaProp: Story = {
 };
 
 export const CustomIconViaSlot: Story = {
-  name: 'Custom icon override (icon slot wins over both)',
+  name: 'Custom icon override (status-icon slot wins over both)',
   render: () => html`
     <lr-tool-call-chip name="send_email" icon="✉️" status="success" summary="Sent">
-      <span slot="icon" style="font-size:1em;line-height:1;">✅</span>
+      <span slot="status-icon" style="font-size:1em;line-height:1;">✅</span>
     </lr-tool-call-chip>
   `,
 };

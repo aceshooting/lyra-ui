@@ -7,9 +7,9 @@
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Status** `experimental` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
-- **Deprecated part** `base` since `8.0.0`; use part `::part(video-playlist)`; removal not before `10.0.0` — The video-playlist part identifies the root component explicitly; base remains on the same root node for migration compatibility. That version is a policy floor, not a plan: `wa-video-playlist` still publishes its own deprecated `base` part, so this alias is removed only when upstream's is.
+- **Deprecations** none
 - **Optional peers** `dompurify` — see `llms/peers.md`
-- **Themeable via** 7 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -59,7 +59,7 @@ previously active one: `video` is `null` and `currentIndex` is `-1` in that case
 **Slot:** the default slot accepts direct `<lr-video>` children. Nested videos and other elements
 are not playlist items.
 
-**CSS parts:** `base` and `video-playlist` (aliases on the same root node), `playlist`,
+**CSS parts:** `video-playlist` (the root node), `playlist`,
 `playlist-duration`, `playlist-item`, `playlist-thumbnail`, and `playlist-title`.
 
 **Themeable custom properties:** `--lr-video-playlist-item-current-border-color` (default

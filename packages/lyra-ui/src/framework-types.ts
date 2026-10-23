@@ -484,8 +484,7 @@ export interface LyraComponentTypeMap {
       {}
     >;
     events: LyraAgentEvalDashboardEventMap;
-    eventNames:       | 'lr-metric-change'
-      | 'lr-metric-change-request'
+    eventNames:       | 'lr-metric-change-request'
       | 'lr-run-activate';
     cssNames:       | '--lr-agent-eval-dashboard-active-bg'
       | '--lr-agent-eval-dashboard-active-border';
@@ -541,8 +540,7 @@ export interface LyraComponentTypeMap {
       {}
     >;
     events: LyraAgentRunEventMap;
-    eventNames:       | 'lr-cancel'
-      | 'lr-run-cancel'
+    eventNames:       | 'lr-run-cancel'
       | 'lr-run-retry';
     cssNames:       | '--lr-agent-run-bg'
       | '--lr-agent-run-border-color'
@@ -636,12 +634,12 @@ export interface LyraComponentTypeMap {
       {}
     >;
     events: LyraAgentWorkspaceEventMap;
-    eventNames:       | 'lr-cancel'
-      | 'lr-citation-select'
+    eventNames:       | 'lr-citation-select'
       | 'lr-follow-change'
       | 'lr-input'
       | 'lr-message-retry'
       | 'lr-retrieval-select'
+      | 'lr-run-cancel'
       | 'lr-run-retry'
       | 'lr-stop'
       | 'lr-submit'
@@ -1274,8 +1272,7 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraBackgroundRunsEventMap;
     eventNames:       | 'lr-run-activate'
-      | 'lr-run-cancel'
-      | 'lr-run-open';
+      | 'lr-run-cancel';
     cssNames: never;
     attributeAliases: {};
   };
@@ -2077,8 +2074,7 @@ export interface LyraComponentTypeMap {
       {}
     >;
     events: LyraChangeReviewEventMap;
-    eventNames:       | 'lr-change-decision'
-      | 'lr-change-decision-request';
+    eventNames:       | 'lr-change-decision-request';
     cssNames: never;
     attributeAliases: {
       'heading-level'?: LyraChangeReview['headingLevel'];
@@ -2587,7 +2583,6 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraChunkInspectorEventMap;
     eventNames:       | 'lr-chunk-open'
-      | 'lr-chunk-toggle'
       | 'lr-toggle';
     cssNames:       | '--lr-chunk-inspector-current-bg'
       | '--lr-chunk-inspector-current-color';
@@ -3158,7 +3153,6 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraCommunityCardEventMap;
     eventNames:       | 'lr-drill'
-      | 'lr-entity-activate'
       | 'lr-entity-select';
     cssNames:       | '--lr-community-card-bg'
       | '--lr-community-card-compact-gap'
@@ -4257,9 +4251,7 @@ export interface LyraComponentTypeMap {
       {}
     >;
     events: LyraDockPanelEventMap;
-    eventNames:       | 'lr-collapse-change'
-      | 'lr-collapse-request'
-      | 'lr-resize'
+    eventNames:       | 'lr-resize'
       | 'lr-resize-change'
       | 'lr-resize-input'
       | 'lr-resize-request'
@@ -5116,9 +5108,7 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraEntityDossierEventMap;
     eventNames:       | 'lr-chunk-open'
-      | 'lr-chunk-toggle'
       | 'lr-drill'
-      | 'lr-entity-activate'
       | 'lr-entity-open'
       | 'lr-entity-select'
       | 'lr-node-expand'
@@ -6351,7 +6341,6 @@ export interface LyraComponentTypeMap {
     properties: LyraElementProperties<
       LyraIcon,
       | 'animation'
-      | 'autoWidth'
       | 'canvas'
       | 'family'
       | 'flip'
@@ -6418,7 +6407,6 @@ export interface LyraComponentTypeMap {
       | '--swing-angle'
       | '--wag-angle';
     attributeAliases: {
-      'auto-width'?: LyraIcon['autoWidth'];
       'swap-opacity'?: LyraIcon['swapOpacity'];
     };
   };
@@ -7702,13 +7690,10 @@ export interface LyraComponentTypeMap {
     events: LyraMemoryPanelEventMap;
     eventNames:       | 'lr-add'
       | 'lr-chunk-open'
-      | 'lr-chunk-toggle'
       | 'lr-drill'
-      | 'lr-entity-activate'
       | 'lr-entity-open'
       | 'lr-entity-select'
       | 'lr-forget'
-      | 'lr-memory-toggle'
       | 'lr-relation-activate'
       | 'lr-remove'
       | 'lr-toggle';
@@ -8347,8 +8332,7 @@ export interface LyraComponentTypeMap {
       {}
     >;
     events: LyraNavigationMenuEventMap;
-    eventNames:       | 'lr-expanded-change'
-      | 'lr-toggle'
+    eventNames:       | 'lr-toggle'
       | 'lr-toggle-request';
     cssNames:       | '--lr-navigation-menu-gap'
       | '--lr-navigation-menu-indicator-color'
@@ -8938,8 +8922,7 @@ export interface LyraComponentTypeMap {
       {}
     >;
     events: LyraPathStripEventMap;
-    eventNames:       | 'lr-entity-activate'
-      | 'lr-entity-select'
+    eventNames:       | 'lr-entity-select'
       | 'lr-relation-activate';
     cssNames: never;
     attributeAliases: {};
@@ -9783,9 +9766,7 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraProvenancePanelEventMap;
     eventNames:       | 'lr-chunk-open'
-      | 'lr-chunk-toggle'
       | 'lr-drill'
-      | 'lr-entity-activate'
       | 'lr-entity-open'
       | 'lr-entity-select'
       | 'lr-relation-activate'
@@ -10198,11 +10179,8 @@ export interface LyraComponentTypeMap {
       {}
     >;
     events: LyraRagEvalDashboardEventMap;
-    eventNames:       | 'lr-metric-change'
-      | 'lr-metric-change-request'
+    eventNames:       | 'lr-metric-change-request'
       | 'lr-run-activate'
-      | 'lr-run-change'
-      | 'lr-slice-change'
       | 'lr-slice-change-request';
     cssNames:       | '--lr-rag-eval-dashboard-selected-border-color';
     attributeAliases: {
@@ -10548,7 +10526,6 @@ export interface LyraComponentTypeMap {
     events: LyraRetrievalResultsEventMap;
     eventNames:       | 'lr-chunk-open'
       | 'lr-load-more'
-      | 'lr-select'
       | 'lr-selection-change';
     cssNames:       | '--lr-retrieval-results-selected-border';
     attributeAliases: {
@@ -10610,7 +10587,6 @@ export interface LyraComponentTypeMap {
     events: LyraRetrievalTraceEventMap;
     eventNames:       | 'lr-stage-chunk-action'
       | 'lr-stage-select'
-      | 'lr-stage-toggle'
       | 'lr-toggle';
     cssNames:       | '--lr-retrieval-trace-active-border';
     attributeAliases: {
@@ -11247,8 +11223,7 @@ export interface LyraComponentTypeMap {
       {}
     >;
     events: LyraSourceCardEventMap;
-    eventNames:       | 'lr-expand'
-      | 'lr-open'
+    eventNames:       | 'lr-open'
       | 'lr-toggle';
     cssNames:       | '--lr-source-card-bg'
       | '--lr-source-card-compact-gap'
@@ -11299,8 +11274,7 @@ export interface LyraComponentTypeMap {
       {}
     >;
     events: LyraSourcePickerEventMap;
-    eventNames:       | 'lr-selection-change'
-      | 'lr-sources-change';
+    eventNames:       | 'lr-selection-change';
     cssNames:       | '--lr-source-picker-checked-bg'
       | '--lr-source-picker-checked-border'
       | '--lr-source-picker-depth'
@@ -11736,8 +11710,7 @@ export interface LyraComponentTypeMap {
       {}
     >;
     events: LyraSubagentPanelEventMap;
-    eventNames:       | 'lr-cancel'
-      | 'lr-run-activate'
+    eventNames:       | 'lr-run-activate'
       | 'lr-run-cancel'
       | 'lr-run-retry';
     cssNames:       | '--lr-subagent-panel-bg'
@@ -13887,8 +13860,6 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraWidgetEventMap;
     eventNames:       | 'lr-activate'
-      | 'lr-collapse-change'
-      | 'lr-collapse-request'
       | 'lr-fullscreen-change'
       | 'lr-fullscreen-request'
       | 'lr-toggle'

@@ -7,8 +7,7 @@
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
-- **Deprecated event** `lr-entity-activate` since `26.0.0`; use event `@lr-entity-select`; removal not before `28.0.0` — lr-entity-select is the library's one name for picking an entity; the alias fires right after it for one major.
-- **Deprecated event** `lr-memory-toggle` since `26.0.0`; use event `@lr-toggle`; removal not before `28.0.0` — lr-toggle carries the owning memory identity and shared disclosure fields; the older event remains available during the deprecation window.
+- **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 19 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -63,14 +62,11 @@ their own section with ArrowUp/ArrowDown/Home/End. Secondary row controls remain
   — a pending per-item removal was approved. Offered on every item.
 - `lr-forget` (`detail: null`) — the pending "forget all long-term memories" bulk action was
   approved. Only rendered while `longTerm` is non-empty.
-- `lr-memory-toggle` (`detail: LyraMemoryExpandDetail` = `{ memoryId: string; scope: 'short-term' |
-'long-term'; expanded: boolean }`) — an item's provenance disclosure was toggled, expanding or
-collapsing it; deprecated alias of `lr-toggle`.
 - `lr-toggle` carries `{ expanded, itemId, memoryId, scope }` for a memory item's own disclosure.
   Nested provenance toggles are re-emitted once with their `section` and owning `memoryId`/`scope`.
 - The expanded item's other `lr-provenance-panel` events cross the panel and are part of its
-  typed event map: `lr-entity-select`, `lr-entity-activate` (deprecated alias),
-  `lr-entity-open`, `lr-drill`, `lr-relation-activate`, `lr-chunk-open` and `lr-chunk-toggle` (details
+  typed event map: `lr-entity-select`,
+  `lr-entity-open`, `lr-drill`, `lr-relation-activate` and `lr-chunk-open` (details
   as on `lr-provenance-panel`). The owning `[part="item"]` — `data-id`, `data-scope` — is on the
   event's `composedPath()`.
 

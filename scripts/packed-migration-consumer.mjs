@@ -369,7 +369,7 @@ async function verifyActualV24MigrationConsumers({ fixtureDir, compatibilityCont
   assert.equal(members.filter(item => item.automatic).length, 2, 'The exact v24 automatic member cohort changed');
   assert.equal(exports.flatMap(item => item.additionalReviews).length, 7, 'The exact v24 nested module review cohort changed');
   const published23FieldFacts = verifyPublishedFieldAuthority(fieldAuthority);
-  const fieldProof = await verifyInstalledFieldDeclarations({ fixtureDir, facts: published23FieldFacts, mode: fieldMode });
+  const fieldProof = await verifyInstalledFieldDeclarations({ fixtureDir, facts: published23FieldFacts, compatibilityContext, mode: fieldMode });
   const sha = createHash('sha256').update(await readFile(tarballPath)).digest('hex');
   const scratch = join(fixtureDir, 'migration-v24');
   const p21Input = join(scratch, 'p21-input');
@@ -508,8 +508,65 @@ export function verifyPublishedFieldAuthority(fieldAuthority) {
   return published23.facts;
 }
 
+/** Project only the two reviewed event retirements; historical field identities never change. */
+export function projectInstalledFieldExposures(facts, compatibilityContext, mode = 'retirement') {
+  assert.ok(['pre-removal', 'retirement'].includes(mode), 'Unknown installed field proof mode');
+  assert.equal(facts.exposures.length, 20, 'Published field exposure cohort changed');
+  assert.ok(compatibilityContext?.records && !Array.isArray(compatibilityContext.records), 'Missing validated compatibility records');
+  const installedMajor = assertMigrationPackageVersion(compatibilityContext.packageVersion);
+  const replacements = new Map([
+    ['lr-dock-panel/lr-collapse-request', 'lr-toggle-request'],
+    ['lr-dock-panel/lr-collapse-change', 'lr-toggle'],
+  ]);
+  const rows = facts.exposures.map(exposure => {
+    const { tag, event, declaration } = exposure.key;
+    const recordKey = { scope: 'member', tag, kind: 'event', name: event };
+    const record = compatibilityContext.records[compatibilityKey(recordKey)];
+    const target = replacements.get(`${tag}/${event}`);
+    if (!target) {
+      assert.notEqual(record?.state, 'retired', `Unreviewed field event retirement: ${tag}/${event}`);
+      return { ...exposure, currentEvent: event, eventRetiredIn: null };
+    }
+    // These event notices began in 26.0.0, independently of the field-alias proof mode.
+    // Earlier stable packages must still prove their original installed event routes.
+    if (installedMajor < 26 && !record) return { ...exposure, currentEvent: event, eventRetiredIn: null };
+    assert.ok(record, `Missing reviewed field event record: ${tag}/${event}`);
+    assert.deepEqual(record.key, recordKey, `Field event record identity changed: ${tag}/${event}`);
+    assert.ok(['current', 'retired'].includes(record.state), `Unknown field event state: ${tag}/${event}`);
+    assert.equal(record.policy?.replacement?.kind, 'event', `Field event replacement kind changed: ${tag}/${event}`);
+    assert.equal(record.policy.replacement.name, target, `Field event replacement target changed: ${tag}/${event}`);
+    const expectedType = `CustomEvent<${declaration.detailType}>`;
+    assert.equal(record.sourceMember?.name, event, `Historical field event name changed: ${tag}/${event}`);
+    assert.equal(record.sourceMember?.type, expectedType, `Historical field event detail type changed: ${tag}/${event}`);
+    if (record.state === 'current') return { ...exposure, currentEvent: event, eventRetiredIn: null };
+    assert.equal(mode, 'retirement', 'Pre-removal proof cannot project a retired event');
+    assert.equal(record.removedIn, '30.0.0', `Unreviewed field event retirement version: ${tag}/${event}`);
+    assert.equal(record.replacementOwner, tag, `Field event replacement owner changed: ${tag}/${event}`);
+    assert.equal(record.replacementMember?.name, target, `Missing current field event target: ${tag}/${event}`);
+    assert.equal(record.replacementMember.type, expectedType, `Current field event detail type changed: ${tag}/${event}`);
+    assert.ok(!record.replacementMember.deprecated, `Field event target remains deprecated: ${tag}/${event}`);
+    assert.equal(target.endsWith('-request') ? 'request' : 'settled', exposure.role, `Field event role changed: ${tag}/${event}`);
+    assert.equal(record.replacementMember.cancelable, exposure.role === 'request' ? 'always' : 'never', `Current field event cancelability changed: ${tag}/${event}`);
+    assert.ok(compatibilityContext.exposure?.event?.[target]?.includes(tag), `Current field event target is not exposed: ${tag}/${event}`);
+    return { ...exposure, currentEvent: target, eventRetiredIn: record.removedIn };
+  });
+  assert.equal(new Set(rows.map(row => fieldExposureKey(row.key))).size, 20, 'Historical field identities changed');
+  assert.equal(new Set(rows.map(row => fieldExposureKey({ ...row.key, event: row.currentEvent }))).size, 20, 'Current field event identities collide');
+  return rows;
+}
+
+/** Every current event retains the published detail type; retired aliases must be absent. */
+export function assertInstalledFieldEventMap(emitterDeclaration, row) {
+  const eventType = new RegExp(`['"]${escapeRegExp(row.currentEvent)}['"]\\s*:\\s*CustomEvent<${escapeRegExp(row.key.declaration.detailType)}>`,'u');
+  assert.match(emitterDeclaration, eventType, `Installed event map lost ${row.key.tag}/${row.currentEvent}`);
+  if (row.currentEvent !== row.key.event) {
+    const retiredEvent = new RegExp(`['"]${escapeRegExp(row.key.event)}['"]\\s*:`, 'u');
+    assert.doesNotMatch(emitterDeclaration, retiredEvent, `Installed event map retained retired ${row.key.tag}/${row.key.event}`);
+  }
+}
+
 /** Check candidate package declarations and public type routes without deriving historical facts from v24. */
-async function verifyInstalledFieldDeclarations({ fixtureDir, facts, mode = 'retirement' }) {
+async function verifyInstalledFieldDeclarations({ fixtureDir, facts, compatibilityContext, mode = 'retirement' }) {
   assert.ok(['pre-removal', 'retirement'].includes(mode), 'Unknown installed field proof mode');
   assert.equal(facts?.sourceRelease, 'lyra-ui@23.0.0', 'Candidate inspection requires published v23 authority');
   assert.equal(facts.declarations.length, 10); assert.equal(facts.exposures.length, 20);
@@ -517,10 +574,12 @@ async function verifyInstalledFieldDeclarations({ fixtureDir, facts, mode = 'ret
   const packageJson = JSON.parse(await readFile(join(installedRoot, 'package.json'), 'utf8'));
   assert.equal(packageJson.name, packageName);
   assertMigrationPackageVersion(packageJson.version);
+  assert.equal(compatibilityContext.packageVersion, packageJson.version, 'Installed field context version differs');
+  const currentExposures = projectInstalledFieldExposures(facts, compatibilityContext, mode);
   const declarationByKey = new Map(facts.declarations.map(item => [fieldDeclarationKey(item.key), item]));
   const publicTypeRouteByDeclaration = new Map();
   const seenExposures = new Set();
-  for (const exposure of facts.exposures) {
+  for (const exposure of currentExposures) {
     const exposureKey = fieldExposureKey(exposure.key);
     assert.ok(!seenExposures.has(exposureKey), `Duplicate published field exposure ${exposureKey}`); seenExposures.add(exposureKey);
     const declaration = declarationByKey.get(fieldDeclarationKey(exposure.key.declaration));
@@ -537,8 +596,7 @@ async function verifyInstalledFieldDeclarations({ fixtureDir, facts, mode = 'ret
     assert.equal(tagExport.default, `./${exposure.publicRuntimePath.slice('package/'.length)}`, `Installed runtime route changed for ${exposure.key.tag}`);
     assert.ok(runtimeRoute.length > 0, `Installed runtime route is empty: ${exposure.publicRuntimePath}`);
     const emitterDeclaration = await readInstalledPackagePath(installedRoot, exposure.emitterPackedPath.replace(/\.js$/u, '.d.ts'));
-    const eventType = new RegExp(`['"]${escapeRegExp(exposure.key.event)}['"]\\s*:\\s*CustomEvent<${escapeRegExp(exposure.key.declaration.detailType)}>`,'u');
-    assert.match(emitterDeclaration, eventType, `Installed event map lost ${exposure.key.tag}/${exposure.key.event}`);
+    assertInstalledFieldEventMap(emitterDeclaration, exposure);
   }
   assert.equal(seenExposures.size, 20, 'Candidate exposure set is incomplete');
 
@@ -570,11 +628,13 @@ async function verifyInstalledFieldDeclarations({ fixtureDir, facts, mode = 'ret
     return `declare const detail${index}: ${item.key.detailType};\n${fieldRead}${absent}`;
   }).join('\n');
   const registrationImports = [...new Set(facts.exposures.map(item => item.key.tag))].map(tag => `import '@aceshooting/lyra-ui/components/${tag}.js';`).join('\n');
-  const exposureChecks = facts.exposures.map((item, index) => {
+  const exposureChecks = currentExposures.map((item, index) => {
     const absent = mode === 'retirement' ? `\n// @ts-expect-error retired event-detail alias must be absent\nvoid event${index}.detail.${item.key.declaration.field};` : '';
     const declaration = declarationByKey.get(fieldDeclarationKey(item.key.declaration));
     const canonicalType = declaration.expandedField.optional ? 'boolean | undefined' : 'boolean';
-    return `document.createElement('${item.key.tag}').addEventListener('${item.key.event}', (event${index}) => {\n  const canonical${facts.declarations.length + index}: ${canonicalType} = event${index}.detail.expanded;${absent}\n});`;
+    const retiredEventCheck = item.currentEvent !== item.key.event
+      ? `\n// @ts-expect-error retired event name must not expose a typed detail\ndocument.createElement('${item.key.tag}').addEventListener('${item.key.event}', event => { void event.detail; });` : '';
+    return `document.createElement('${item.key.tag}').addEventListener('${item.currentEvent}', (event${index}) => {\n  const canonical${facts.declarations.length + index}: ${canonicalType} = event${index}.detail.expanded;${absent}\n});${retiredEventCheck}`;
   }).join('\n');
   await writeFile(typeFixture, `${registrationImports}\n${imports}\n${declarationChecks}\n${exposureChecks}\n`);
   const config = join(fixtureDir, `migration-v24/field-types-${mode}-tsconfig.json`);
@@ -582,8 +642,10 @@ async function verifyInstalledFieldDeclarations({ fixtureDir, facts, mode = 'ret
   await runMigrationProcess(join(fixtureDir, 'node_modules', '.bin', binName('tsc')), ['--noEmit', '--skipLibCheck', 'false', '-p', config], fixtureDir);
   return { sourceRelease: facts.sourceRelease, mode, authority: 'verified-published-continuity', declarations: 10, exposures: 20,
     fieldExposureKeys: facts.exposures.map(item => item.key),
-    exposureRows: facts.exposures.map(({ key, role, relation }) => ({
-      key, role, relation,
+    currentExposureKeys: currentExposures.map(item => ({ ...item.key, event: item.currentEvent })),
+    retiredExposureKeys: currentExposures.filter(item => item.currentEvent !== item.key.event).map(item => item.key),
+    exposureRows: currentExposures.map(({ key, currentEvent, eventRetiredIn, role, relation }) => ({
+      key, currentEvent, eventRetiredIn, role, relation,
       canonicalOptional: declarationByKey.get(fieldDeclarationKey(key.declaration)).expandedField.optional,
     })),
     candidateFields, typeFixture: relative(fixtureDir, typeFixture).split(sep).join('/') };
@@ -727,6 +789,10 @@ export async function verifyResolvedMigrationBrowser({ bundleDir, proof, artifac
           assert.equal(fieldBrowserProof.mode, proof.fieldExposureProof.mode);
           assert.equal(fieldBrowserProof.exposures.length, 20);
           assert.deepEqual(fieldBrowserProof.exposures.map(item => fieldExposureKey(item)).sort(), proof.fieldExposureProof.fieldExposureKeys.map(fieldExposureKey).sort());
+          assert.equal(fieldBrowserProof.currentExposures.length, 20);
+          assert.deepEqual(fieldBrowserProof.currentExposures.map(fieldExposureKey).sort(), proof.fieldExposureProof.currentExposureKeys.map(fieldExposureKey).sort());
+          assert.deepEqual(fieldBrowserProof.retiredEvents.map(item => fieldExposureKey(item.key)).sort(), proof.fieldExposureProof.retiredExposureKeys.map(fieldExposureKey).sort());
+          assert.ok(fieldBrowserProof.retiredEvents.every(item => item.count === 0), 'Installed browser emitted a retired field event');
         }
         const state = await page.evaluate(() => ({ oldTagDefined: Boolean(customElements.get('lr-geojson-view')),
           viewers: ['lr-geojson-viewer', 'consumer-geojson-view'].filter(id => document.getElementById(id)).map(id => {

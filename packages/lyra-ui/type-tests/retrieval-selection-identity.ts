@@ -21,10 +21,12 @@ const chunkOpen: LyraChunkInspectorEventMap['lr-chunk-open']['detail'] = {
   chunkId: 'chunk-a',
   sourceId: 'source-a',
 };
-const chunkExpand: LyraChunkInspectorEventMap['lr-chunk-toggle']['detail'] = {
-  chunkId: 'chunk-a',
+const chunkExpand: LyraChunkInspectorEventMap['lr-toggle']['detail'] = {
+  itemId: 'chunk-a',
   expanded: true,
 };
+// @ts-expect-error The old chunk toggle event was replaced by lr-toggle.
+export type _RemovedChunkToggle = LyraChunkInspectorEventMap['lr-chunk-toggle'];
 
 declare const results: LyraRetrievalResults;
 results.activeChunkId = 'chunk-a';
@@ -46,9 +48,11 @@ declare const picker: LyraSourcePicker;
 picker.selectedSourceIds = ['source-a'];
 // @ts-expect-error source selection uses selectedSourceIds.
 picker.selectedIds = ['source-a'];
-const sourceSelection: LyraSourcePickerEventMap['lr-sources-change']['detail'] = {
+const sourceSelection: LyraSourcePickerEventMap['lr-selection-change']['detail'] = {
   selectedSourceIds: ['source-a'],
 };
+// @ts-expect-error The old source picker event was replaced by lr-selection-change.
+export type _RemovedSourcesChange = LyraSourcePickerEventMap['lr-sources-change'];
 
 void chunkOpen;
 void chunkExpand;

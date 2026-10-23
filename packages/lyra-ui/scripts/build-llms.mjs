@@ -649,9 +649,9 @@ export function buildLyraRenameReference(renameLedger, inventory, { exportDeprec
       `## Migrating from ${from} to ${to} (\`--origin=${profile.origin}\`)`,
       '',
       `${from} minor releases and ${to} rename some Lyra-only attributes, properties, events, CSS parts,`,
-      hasRetired ? 'custom properties and slots. Published names retired in this installed release remain migration inputs.' : 'custom properties and slots. Each previous name keeps working as a deprecated alias until',
-      `${hasRetired ? 'Removed aliases no longer work at runtime.' : `Lyra ${profile.aliasRemovalMajor} removes it.`} Names mirrored from Web Awesome or Shoelace, and their defaults, never`,
-      hasRetired ? 'change. Run the CLI of the installed package after upgrading; historical profiles remain available. It' : `change. Run the CLI of the installed package after upgrading, within ${from} or to ${to}. It`,
+      hasRetired ? 'custom properties and slots. Published names retired in this installed release remain migration inputs.' : 'custom properties and slots. Previous names still supported by the installed release are deprecated aliases.',
+      `${hasRetired ? 'Removed aliases no longer work at runtime.' : 'A removal floor is not an automatic removal date.'} Names and defaults in the pinned upstream's current, nondeprecated API remain mirrored.`,
+      hasRetired ? 'Run the CLI of the installed package after upgrading; historical profiles remain available. It' : `Run the CLI of the installed package after upgrading, within ${from} or to ${to}. It`,
       'applies only the entries the installed release ships, so running it again after a later upgrade',
       'picks up the rest:',
       '',
@@ -1044,23 +1044,27 @@ export function buildMigration({ compatibilityContext = readCurrentCompatibility
     'rename on a Lyra component. The inventory records these exclusions explicitly.',
     '',
     ...buildLyraRenameReference(renameLedger, inventory, { exportDeprecations, compatibilityContext }),
-    '## Upstream-protected compatibility spellings',
+    '## Upstream compatibility spellings',
     '',
-    `These ${upstreamProtectedAliases.length} legacy spellings remain supported while their corresponding Web Awesome or Shoelace surface publishes them. Prefer the current Lyra spelling for new code. Their recorded \`removalNotBefore\` value is a minimum, not an automatic removal date or permission to remove a still-mirrored spelling.`,
+    upstreamProtectedAliases.length > 0
+      ? `These ${upstreamProtectedAliases.length} legacy spellings remain supported. Prefer the current Lyra spelling for new code; a recorded removal floor is not an automatic removal date.`
+      : 'The deprecated upstream compatibility spellings have retired; see the v29 to v30 migration guide for their replacements and review requirements.',
     '',
-    '| Lyra surface | Retained spelling | Preferred spelling for new code |',
-    '|---|---|---|',
-    ...upstreamProtectedAliases.map((entry) => {
-      const retained = entry.kind === 'part'
-        ? `::part(${entry.name})`
-        : entry.kind === 'property'
-          ? `${entry.name} / ${entry.attribute}`
-          : entry.name;
-      const preferred = entry.replacement?.usage ?? entry.replacement?.name ?? 'review the current API';
-      return `| \`<${entry.tag}>\` | \`${escapeCell(retained)}\` | \`${escapeCell(preferred)}\` |`;
-    }),
-    '',
-    'For `lr-icon`, `autoWidth` is a CSS-level alias for `canvas="auto"`; an explicit `canvas` value wins. Review selector reach before changing existing `[auto-width]` rules. The migration tool does not blanket-rewrite these protected spellings.',
+    ...(upstreamProtectedAliases.length > 0 ? [
+      '| Lyra surface | Retained spelling | Preferred spelling for new code |',
+      '|---|---|---|',
+      ...upstreamProtectedAliases.map((entry) => {
+        const retained = entry.kind === 'part'
+          ? `::part(${entry.name})`
+          : entry.kind === 'property'
+            ? `${entry.name} / ${entry.attribute}`
+            : entry.name;
+        const preferred = entry.replacement?.usage ?? entry.replacement?.name ?? 'review the current API';
+        return `| \`<${entry.tag}>\` | \`${escapeCell(retained)}\` | \`${escapeCell(preferred)}\` |`;
+      }),
+      '',
+    ] : []),
+    'For `lr-icon`, the retired `auto-width` attribute migrates to `canvas="auto"`. Review selector reach before changing existing `[auto-width]` rules.',
     '',
     '## Classification summary',
     '',

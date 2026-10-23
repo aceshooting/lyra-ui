@@ -49,14 +49,15 @@ it('normalizes and reflects a foreign mark token to line', async () => {
   expect(el.shadowRoot!.querySelector('[part~="fill"]')).to.exist;
 });
 
-it('parses space-separated data, uses label verbatim, and exposes the public part aliases', async () => {
+it('parses space-separated data, uses label verbatim, and exposes the sparkline part', async () => {
   const el = (await fixture(html`
     <lr-sparkline data="5 4 4 3 4 2 3" label="Revenue over seven days"></lr-sparkline>
   `)) as LyraSparkline;
   const svg = el.shadowRoot!.querySelector('svg');
   expect(el.shadowRoot!.querySelectorAll('[part~="line"]').length).to.equal(1);
   expect(el.shadowRoot!.querySelectorAll('[part~="fill"]').length).to.equal(1);
-  expect(svg?.getAttribute('part')).to.equal('sparkline base');
+  expect(svg?.getAttribute('part')).to.equal('sparkline');
+  expect(el.shadowRoot!.querySelectorAll('[part~="base"]').length).to.equal(0);
   expect(svg?.getAttribute('aria-label')).to.equal('Revenue over seven days');
 });
 
