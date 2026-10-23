@@ -21,8 +21,13 @@ const EXTERNAL_ARGS = Object.freeze([
   '--accept', '100..=103,200..=299,429',
 ]);
 
+export function linkInputs(files) {
+  // lychee.toml excludes this package-root fragment; passing it explicitly still emits a warning.
+  return files.filter(file => file !== 'packages/lyra-ui/llms/00-llms-txt-intro.md');
+}
+
 function trackedMarkdown(root = ROOT) {
-  return execFileSync('git', ['ls-files', '*.md'], { cwd: root, encoding: 'utf8' }).split('\n').filter(Boolean);
+  return linkInputs(execFileSync('git', ['ls-files', '*.md'], { cwd: root, encoding: 'utf8' }).split('\n').filter(Boolean));
 }
 
 export function lycheeArgs({ external = false, root = ROOT } = {}) {

@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { gunzipSync, gzipSync } from 'node:zlib';
 
-import { lycheeArgs } from './check-links.mjs';
+import { linkInputs, lycheeArgs } from './check-links.mjs';
 import { SHELL_SHEBANG, shellScripts } from './check-shell.mjs';
 import { trackedFindings } from './check-spelling.mjs';
 import { ZIZMOR_ARGS } from './check-workflow-security.mjs';
@@ -168,6 +168,18 @@ test('spelling findings count only for tracked files, in a stable one-line form'
   assert.deepEqual(trackedFindings(stream, new Set()), [], 'untracked scratch files never fail the check');
   assert.deepEqual(trackedFindings('', new Set(['docs/a.md'])), []);
   assert.throws(() => trackedFindings('not json', new Set()), /JSON/u);
+});
+
+test('link inputs omit only the fragment already excluded for its package-root links', () => {
+  const files = [
+    'README.md',
+    'packages/lyra-ui/llms/00-llms-txt-intro.md',
+    'packages/lyra-ui/llms/00-llms-full-intro.md',
+    'docs/00-llms-txt-intro.md',
+  ];
+  assert.deepEqual(linkInputs(files), [files[0], files[2], files[3]]);
+  assert.equal(files.length, 4, 'selection does not change the tracked input inventory');
+  assert.ok(read('lychee.toml').includes("'^packages/lyra-ui/llms/00-llms-txt-intro\\.md$'"));
 });
 
 test('the tool wrappers pass the arguments the checks depend on', () => {
