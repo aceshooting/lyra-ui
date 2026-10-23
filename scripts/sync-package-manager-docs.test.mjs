@@ -40,6 +40,9 @@ function fixtureDocuments({ node22 = '11.24.0' } = {}) {
     agentsMd:
       `pnpm workspace (\`pnpm-workspace.yaml\`: \`packages/*\`), Node ≥ 22, \`pnpm@${node22}\`.\n`,
     contributingMd:
+      '```bash\nnvm use\n' +
+      `npm install --global pnpm@${node22}\n` +
+      'pnpm install --frozen-lockfile\n```\n' +
       `Node ≥ 22, \`pnpm@${node22}\` (pinned via \`packageManager\` in \`package.json\` — check that file if this\n` +
       'drifts again).\n',
     ciAndGatesMd:
@@ -119,7 +122,7 @@ test('canonical POSIX repo-relative keys traverse nested parents with a win32 pa
   }
 });
 
-test('updates all four anchored documentation claims from the authorities', () => {
+test('updates all five anchored documentation claims from the authorities', () => {
   const synchronized = synchronizePackageManagerDocumentTexts(
     fixtureDocuments(),
     derivePackageManagerVersions(fixtureManifests()),
@@ -127,6 +130,7 @@ test('updates all four anchored documentation claims from the authorities', () =
 
   assert.match(synchronized.agentsMd, /`pnpm@11\.25\.0`/u);
   assert.match(synchronized.contributingMd, /`pnpm@11\.25\.0`/u);
+  assert.match(synchronized.contributingMd, /^npm install --global pnpm@11\.25\.0$/mu);
   assert.match(
     synchronized.ciAndGatesMd,
     /Node 22 uses `package\.json#packageManager` \(`pnpm@11\.25\.0`\)/u,
@@ -172,6 +176,43 @@ test('fails closed when any documentation anchor is missing or ambiguous', () =>
     ),
     /expected exactly one local platform package-manager claim, found 0/u,
   );
+});
+
+test('fails closed when the setup installation command is missing or duplicated', () => {
+  const documents = fixtureDocuments();
+  const versions = derivePackageManagerVersions(fixtureManifests());
+  const command = 'npm install --global pnpm@11.24.0\n';
+  for (const [replacement, count] of [['', 0], [command.repeat(2), 2]]) {
+    assert.throws(
+      () => synchronizePackageManagerDocumentTexts({
+        ...documents, contributingMd: documents.contributingMd.replace(command, replacement),
+      }, versions),
+      new RegExp(`expected exactly one CONTRIBUTING setup package-manager claim, found ${count}`, 'u'),
+    );
+  }
+});
+
+test('check mode detects a stale setup command when all prose claims already match', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'lyra-package-manager-docs-test-'));
+  try {
+    const documents = fixtureDocuments({ node22: '11.25.0' });
+    documents.contributingMd = documents.contributingMd.replace(
+      'npm install --global pnpm@11.25.0', 'npm install --global pnpm@11.24.0',
+    );
+    await writeFixtureRoot(root, { documents });
+    await assert.rejects(
+      synchronizePackageManagerDocsAtRoot(root, { mode: 'check' }),
+      /package-manager documentation is stale: CONTRIBUTING\.md$/u,
+    );
+    assert.equal(await readFile(join(root, 'CONTRIBUTING.md'), 'utf8'), documents.contributingMd);
+    assert.deepEqual(await synchronizePackageManagerDocsAtRoot(root, { mode: 'write' }), ['CONTRIBUTING.md']);
+    const synchronized = await readFile(join(root, 'CONTRIBUTING.md'), 'utf8');
+    assert.match(synchronized, /^npm install --global pnpm@11\.25\.0$/mu);
+    assert.match(synchronized, /^pnpm install --frozen-lockfile$/mu);
+    assert.deepEqual(await synchronizePackageManagerDocsAtRoot(root, { mode: 'check' }), []);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 test('check mode rejects stale same-major claims without writing; write mode is idempotent', async () => {

@@ -1,3 +1,4 @@
+import { projectMapLocalImageUrl } from './map-local-image-url.js';
 import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR, readOwnArrayLength, UNSAFE_OWN_DATA_DESCRIPTOR, type OwnDataDescriptorResult } from '../../../internal/data-descriptors.js';
 import { projectMapInteractionOptions, type LyraMapInteractionOptions, type CanonicalMapInteraction } from './map-interaction-options.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
@@ -57,6 +58,7 @@ export interface LyraMapRasterDataLayer extends LyraMapExternalDataLayerOptions 
 /** Interactive hits use the four-corner footprint, independently of pixel alpha. Hits expose sourceId, without a feature ID or sourceLayer. */
 export interface LyraMapImageDataLayer extends LyraMapExternalDataLayerOptions {
   readonly kind: 'image';
+  /** HTTP(S), strict base64 PNG/JPEG/WebP data URL, or same-origin blob URL. Local images are validated and bounded before use. */
   readonly url: string;
   readonly coordinates: LyraMapSourceCoordinates;
 }
@@ -66,6 +68,8 @@ export interface LyraMapCanvasDataLayer extends LyraMapExternalDataLayerOptions 
   readonly canvas: HTMLCanvasElement;
   readonly coordinates: LyraMapSourceCoordinates;
   readonly animate?: boolean;
+  /** Nonnegative safe integer; change after drawing into the same canvas. Defaults to zero. */
+  readonly redrawRevision?: number;
 }
 export type LyraMapExternalDataLayer = LyraMapVectorDataLayer | LyraMapRasterDataLayer | LyraMapImageDataLayer | LyraMapCanvasDataLayer;
 export interface CanonicalMapLabel {
@@ -84,6 +88,7 @@ export interface CanonicalMapExternalLayer extends CanonicalMapInteraction {
   readonly sourceId: string;
   readonly kind: LyraMapExternalDataLayer['kind'];
   readonly source: Readonly<Record<string, unknown>>;
+  readonly redrawRevision?: number;
   readonly sourceLayer?: string;
   readonly render: 'line' | 'circle' | 'fill' | 'symbol' | 'raster';
   readonly before?: string;
@@ -263,16 +268,19 @@ export function projectMapLabelOptions(value: unknown): CanonicalMapLabel | unde
   } catch { return undefined; }
 }
 
-function external(value: unknown, base: string, kind: unknown): CanonicalMapExternalLayer {
+function external(value: unknown, base: string, ownerOrigin: string, kind: unknown): CanonicalMapExternalLayer {
   if (!isPlainDataRecord(value)) return invalid();
   if (typeof kind !== 'string' || !EXTERNAL_KINDS.has(kind)) return invalid();
   const extra = kind === 'vector' ? ['source', 'sourceLayer', 'render', 'color', 'strokeColor', 'width', 'radius', 'categoryField', 'label']
-    : kind === 'raster' ? ['source'] : kind === 'image' ? ['url', 'coordinates'] : ['canvas', 'coordinates', 'animate'];
+    : kind === 'raster' ? ['source'] : kind === 'image' ? ['url', 'coordinates'] : ['canvas', 'coordinates', 'animate', 'redrawRevision'];
   const input = record(value, [...COMMON_KEYS, ...extra], kind);
   const [minZoom, maxZoom] = zoomRange(input);
   const source = kind === 'vector' || kind === 'raster' ? tileSource(own(input, 'source'), kind, base)
     : Object.freeze({ type: kind, coordinates: coordinates(own(input, 'coordinates')),
-      ...(kind === 'image' ? { url: url(own(input, 'url'), base) } : { canvas: canvas(own(input, 'canvas')), animate: boolean(own(input, 'animate'), true) }) });
+      ...(kind === 'image' ? { url: projectMapLocalImageUrl(own(input, 'url'), ownerOrigin)?.url ?? url(own(input, 'url'), base) } : { canvas: canvas(own(input, 'canvas')), animate: boolean(own(input, 'animate'), true) }) });
+  const authoredRevision = kind === 'canvas' ? own(input, 'redrawRevision') : undefined;
+  const revision = kind === 'canvas' ? (authoredRevision === undefined ? 0 : authoredRevision) : undefined;
+  if (revision !== undefined && (typeof revision !== 'number' || !Number.isSafeInteger(revision) || revision < 0)) return invalid();
   const render = kind === 'vector' ? own(input, 'render') : 'raster';
   if (render !== 'line' && render !== 'circle' && render !== 'fill' && render !== 'symbol' && render !== 'raster') return invalid();
   if (kind === 'vector' && render === 'raster') return invalid();
@@ -281,6 +289,7 @@ function external(value: unknown, base: string, kind: unknown): CanonicalMapExte
   if ((labelInput !== undefined && !label) || (render === 'symbol' && !label)) return invalid();
   if (label && Math.max(minZoom, label.minZoom) > maxZoom) return invalid();
   return Object.freeze({ ...projectMapInteractionOptions(input), sourceId: id(own(input, 'sourceId')), kind: kind as CanonicalMapExternalLayer['kind'], source,
+    ...(revision === undefined ? {} : { redrawRevision: revision as number }),
     sourceLayer: kind === 'vector' ? text(own(input, 'sourceLayer'), 128) : undefined,
     render, before: own(input, 'before') === undefined ? undefined : id(own(input, 'before')),
     minZoom, maxZoom, opacity: numeric(own(input, 'opacity'), 1, 0, 1), category: optionalText(own(input, 'category'), 128),
@@ -292,7 +301,7 @@ export type MapDataLayerModel<T> = { readonly ok: true; readonly geojson: readon
 
 /** Mixed first-100 admission; legacy row validation remains with its existing projector. */
 export function projectMapDataLayerModel<T extends { readonly sourceId: string }>(value: unknown, options: {
-  readonly baseUrl: string; readonly projectGeoJson: (row: unknown, kind: OwnDataDescriptorResult) => T | undefined;
+  readonly baseUrl: string; readonly ownerOrigin?: string; readonly projectGeoJson: (row: unknown, kind: OwnDataDescriptorResult) => T | undefined;
 }): MapDataLayerModel<T> {
   let requestedExternal = false;
   try {
@@ -308,7 +317,7 @@ export function projectMapDataLayerModel<T extends { readonly sourceId: string }
       const kind = descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ? undefined : descriptor.value;
       if (typeof kind === 'string' && EXTERNAL_KINDS.has(kind)) {
         requestedExternal = true;
-        const layer = external(row, options.baseUrl, kind);
+        const layer = external(row, options.baseUrl, options.ownerOrigin ?? 'null', kind);
         if (seen.has(layer.sourceId)) continue;
         if (sources.length >= 32) return { ok: false };
         seen.add(layer.sourceId); sources.push(layer);

@@ -29,7 +29,7 @@
   "engines": {
     "node": ">=22"
   },
-  "packageManager": "pnpm@12.14.0",
+  "packageManager": "pnpm@12.15.0",
   "sideEffects": [
     "./dist/**/*.worker.js"
   ],
@@ -88,6 +88,6 @@
     "@types/three": "^0.186.0",
     "playwright": "^1.64.1",
     "typescript": "^7.0.2",
-    "vite": "^8.3.4"
+    "vite": "^8.3.5"
   }
 }

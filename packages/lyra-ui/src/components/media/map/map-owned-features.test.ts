@@ -508,3 +508,144 @@ it('settles native image ownership before callback-queued cancellation cleanup s
     expect(h.peer.layers.has('icons')).to.equal(false);
   } finally { await interrupted; h.features.dispose(); }
 });
+
+
+describe('map mutable owned-layer adapter', () => {
+  it('adapts all mutable layer setters without retiring opaque GeoJSON, image ownership or feature-state routes', async () => {
+    const h = await harness(), states = new MapFeatureStateRoutes(); let reads = 0;
+    const data = { type: 'FeatureCollection', features: [{ type: 'Feature', id: 1, geometry: null,
+      properties: Object.defineProperty({}, 'opaque', { enumerable: true, get() { reads++; throw new Error('opaque payload'); } }) }] };
+    const writes: string[] = [], stateWrites: string[] = [], changes: MapOwnedSourceChange[] = [];
+    const paint = h.peer.setPaintProperty.bind(h.peer), layout = h.peer.setLayoutProperty.bind(h.peer);
+    h.peer.setPaintProperty = (id, name, value) => { writes.push(`paint:${name}`); paint(id, name, value); };
+    h.peer.setLayoutProperty = (id, name, value) => { writes.push(`layout:${name}`); layout(id, name, value); };
+    Object.assign(h.peer, {
+      setFilter: (_id: string, value: unknown) => { writes.push(`filter:${JSON.stringify(value)}`); },
+      setLayerZoomRange: (_id: string, min: number, max: number) => { writes.push(`zoom:${min}:${max}`); },
+    });
+    const input = (color: string, visibility: string, value: string, minzoom: number) => ({ overlays: {
+      sources: [{ id: 'points', source: { type: 'geojson', data } }],
+      layers: [{ layer: { id: 'dots', type: 'circle', source: 'points', paint: { 'circle-color': color },
+        layout: { visibility }, filter: ['==', ['get', 'value'], value], minzoom, maxzoom: 20 } }],
+    }, images: [descriptor()], styleOverrides: [] });
+    const ctx = { ...h.context, beforeSourceChange: (change: MapOwnedSourceChange) => { changes.push(change); states.refreshNative('overlay', change.id); } };
+    const run = (color: string, visibility: string, value: string, min: number) => h.features.reconcile(h.peer as unknown as MapLibreMapCapability, 1, input(color, visibility, value, min), ctx);
+    const statePeer: MapFeatureStatePeer = { getSource: id => h.peer.getSource(id), setFeatureState: () => { stateWrites.push('set'); }, removeFeatureState: () => { stateWrites.push('remove'); } };
+    try {
+      await run('red', 'visible', 'old', 1);
+      const source = h.peer.getSource('points'), layer = h.peer.getLayer('dots'), image = h.peer.images.get('pin');
+      const route = { origin: 'overlay', source: 'points', nativeSource: 'points', identity: data };
+      const target = { origin: 'overlay', source: 'points', id: 1 };
+      states.configure([route]); states.set(target, { selected: true }); states.replay(statePeer, 1); h.peer.calls.length = 0;
+      await run('blue', 'none', 'new', 2); states.configure([route]); states.replay(statePeer, 1);
+      expect(writes).to.deep.equal(['paint:circle-color', 'layout:visibility', 'filter:["==",["get","value"],"new"]', 'zoom:2:20']);
+      expect(h.peer.calls).to.deep.equal(['repaint']); expect(changes).to.deep.equal([]); expect(reads).to.equal(0);
+      expect(h.peer.getSource('points') === source).to.equal(true); expect(h.peer.getLayer('dots') === layer).to.equal(true);
+      expect(h.peer.images.get('pin') === image).to.equal(true); expect(h.prepare.calls).to.equal(1); expect(h.prepare.disposals).to.equal(0);
+      expect(states.get(target)).to.deep.equal({ selected: true }); expect(stateWrites).to.deep.equal(['set']);
+    } finally { states.dispose(); h.features.dispose(); }
+  });
+  it('does not invoke a native setter accessor when deciding whether to retain a layer', async () => {
+    const h = await harness(); let reads = 0;
+    Object.defineProperty(h.peer, 'setFilter', { get() { reads++; throw new Error('native accessor'); } });
+    const data = { type: 'FeatureCollection', features: [] };
+    const input = (filter: unknown) => ({ overlays: { sources: [{ id: 'points', source: { type: 'geojson', data } }],
+      layers: [{ layer: { id: 'dots', type: 'circle', source: 'points', filter } }] }, images: [], styleOverrides: [] });
+    try {
+      await h.run(input(['has', 'first'])); const source = h.peer.getSource('points'), layer = h.peer.getLayer('dots'); h.peer.calls.length = 0;
+      await h.run(input(['has', 'second'])); expect(reads).to.equal(0);
+      expect(h.peer.getSource('points') === source).to.equal(true); expect(h.peer.getLayer('dots') === layer).to.equal(false);
+      expect(h.peer.calls).to.deep.equal(['layer-dots', 'layer+dots']);
+    } finally { h.features.dispose(); }
+  });
+  it('sanitizes mutable setter failure while keeping restored native identity and the owned-image lease', async () => {
+    const h = await harness(), data = { type: 'FeatureCollection', features: [] };
+    const paint = h.peer.setPaintProperty.bind(h.peer);
+    h.peer.setPaintProperty = (id, name, value) => { paint(id, name, value); if (value === 'blue') throw new Error('private mutable detail'); };
+    const input = (color: string) => ({ overlays: { sources: [{ id: 'points', source: { type: 'geojson', data } }],
+      layers: [{ layer: { id: 'dots', type: 'circle', source: 'points', paint: { 'circle-color': color } } }] }, images: [descriptor()], styleOverrides: [] });
+    try {
+      await h.run(input('red')); const source = h.peer.getSource('points'), layer = h.peer.getLayer('dots'), image = h.peer.images.get('pin');
+      let message = ''; try { await h.run(input('blue')); } catch (error) { message = String(error); }
+      expect(message).not.to.equal(''); expect(message.includes('private mutable detail')).to.equal(false);
+      expect(h.peer.getSource('points') === source).to.equal(true); expect(h.peer.getLayer('dots') === layer).to.equal(true);
+      expect(h.peer.getPaintProperty('dots', 'circle-color')).to.equal('red'); expect(h.peer.images.get('pin') === image).to.equal(true);
+      expect(h.prepare.disposals).to.equal(0);
+    } finally { h.features.dispose(); }
+  });
+
+});
+
+describe('map native source option ownership', () => {
+  for (const throwsAfterMutation of [false, true]) {
+    it(`keeps mutable native image options separate from admitted source journals (throw after mutation=${throwsAfterMutation})`, async () => {
+      const h = await harness();
+      const data = { type: 'FeatureCollection', features: [] };
+      const originalAddSource = h.peer.addSource.bind(h.peer);
+      const installed: Record<string, unknown>[] = [], changes: MapOwnedSourceChange[] = [];
+      let rejectUpdate = false, writes = 0;
+      h.peer.addSource = (id, value) => {
+        originalAddSource(id, value);
+        const options = value as Record<string, unknown>;
+        if (options['type'] !== 'image') return;
+        installed.push(options);
+        h.peer.sources.set(id, {
+          updateImage(next: { url: string; coordinates: unknown }) {
+            options['url'] = next.url; writes++;
+            if (rejectUpdate) { rejectUpdate = false; throw new Error('image update failed after mutation'); }
+          },
+        });
+      };
+      const input = (url: string) => ({ overlays: {
+        sources: [{ id: 'coverage', source: { type: 'image', url,
+          coordinates: [[-1, 1], [1, 1], [1, -1], [-1, -1]] } },
+          { id: 'points', source: { type: 'geojson', data } }],
+        layers: [{ layer: { id: 'coverage-layer', type: 'raster', source: 'coverage' } }],
+      }, images: [], styleOverrides: [] });
+      const original = input('https://example.test/a.png'), changed = input('https://example.test/b.png');
+      const ctx = { ...h.context, beforeSourceChange: (change: MapOwnedSourceChange) => { changes.push(change); } };
+      const run = (value: ReturnType<typeof input>, style = 1) =>
+        h.features.reconcile(h.peer as unknown as MapLibreMapCapability, style, value, ctx);
+      try {
+        await run(original);
+        expect((h.peer.getSource('points') as Record<string, unknown>)['data'] === data).to.equal(true);
+        const source = h.peer.getSource('coverage'), layer = h.peer.getLayer('coverage-layer');
+        rejectUpdate = throwsAfterMutation;
+        let rejected = false;
+        try { await run(changed); } catch { rejected = true; }
+        expect(rejected).to.equal(throwsAfterMutation);
+        expect(writes).to.equal(1);
+        expect(installed[0]!['url']).to.equal('https://example.test/b.png');
+        expect(Object.isFrozen(installed[0])).to.equal(false);
+        expect(original.overlays.sources[0]!.source.url).to.equal('https://example.test/a.png');
+        expect(changes[0]!.previous?.['url']).to.equal('https://example.test/a.png');
+        expect(Object.isFrozen(changes[0]!.previous)).to.equal(true);
+        expect(installed[0] === changes[0]!.previous).to.equal(false);
+        if (throwsAfterMutation) {
+          expect(changes.map(({ id, reason }) => ({ id, reason }))).to.deep.equal([
+            { id: 'coverage', reason: 'update' },
+            { id: 'coverage', reason: 'rollback' },
+            { id: 'points', reason: 'rollback' },
+          ]);
+          expect(installed).to.have.length(2);
+          expect(installed[1]!['url']).to.equal('https://example.test/a.png');
+          expect(h.peer.getSource('coverage') === source).to.equal(false);
+          await run(changed);
+          expect(writes).to.equal(2);
+        } else {
+          expect(h.peer.getSource('coverage') === source).to.equal(true);
+          expect(h.peer.getLayer('coverage-layer') === layer).to.equal(true);
+        }
+        const current = h.peer.getSource('coverage'), totalWrites = writes;
+        await run(changed);
+        expect(writes).to.equal(totalWrites); expect(h.peer.getSource('coverage') === current).to.equal(true);
+        h.peer.sources.clear(); h.peer.layers.clear(); h.peer.order = [];
+        await run(changed, 2);
+        expect((h.peer.getSource('points') as Record<string, unknown>)['data'] === data).to.equal(true);
+        expect(installed.at(-1)!['url']).to.equal('https://example.test/b.png');
+        expect(installed.at(-1) === installed[0]).to.equal(false);
+        expect(writes).to.equal(totalWrites);
+      } finally { h.features.dispose(); }
+    });
+  }
+});

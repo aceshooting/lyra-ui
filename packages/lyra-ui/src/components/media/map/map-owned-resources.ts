@@ -19,6 +19,11 @@ export interface MapOwnedResourcePeer {
   addLayer(layer: Readonly<Record<string, unknown>>, before?: string): unknown;
   removeLayer(id: string): unknown;
   moveLayer(id: string, before?: string): unknown;
+  setPaintProperty?(id: string, property: string, value: unknown): unknown;
+  setLayoutProperty?(id: string, property: string, value: unknown): unknown;
+  setFilter?(id: string, filter: unknown): unknown;
+  setLayerZoomRange?(id: string, min: number, max: number): unknown;
+  triggerRepaint?(): unknown;
   hasImage(id: string): boolean;
   addImage(id: string, image: ImageData, options: { readonly pixelRatio: number; readonly sdf?: boolean }): unknown;
   removeImage(id: string): unknown;
@@ -61,6 +66,46 @@ function equal(left: unknown, right: unknown): boolean {
   const keys = Object.keys(left);
   return keys.length === Object.keys(right).length && keys.every(key => Object.hasOwn(right, key) && equal(left[key], right[key]));
 }
+interface LayerMutation { apply(): void; restore(): void; }
+const MUTABLE_LAYER_KEYS = new Set(['paint', 'layout', 'filter', 'minzoom', 'maxzoom']);
+
+/** Plan bounded, already-admitted descriptors only. Unknown native fields remain structural. */
+function planLayerUpdate(peer: MapOwnedResourcePeer, previous: LyraMapOverlayLayer['layer'], next: LyraMapOverlayLayer['layer']): readonly LayerMutation[] | undefined {
+  const structural = (layer: LyraMapOverlayLayer['layer']) => Object.fromEntries(
+    Object.entries(layer).filter(([key]) => !MUTABLE_LAYER_KEYS.has(key)),
+  );
+  if (!equal(structural(previous), structural(next))) return undefined;
+  const id = next.id, mutations: LayerMutation[] = [];
+  for (const kind of ['paint', 'layout'] as const) {
+    const before = previous[kind] === undefined ? {} : previous[kind], after = next[kind] === undefined ? {} : next[kind];
+    if (!isPlainDataRecord(before) || !isPlainDataRecord(after)) return undefined;
+    const names = [...new Set([...Object.keys(before), ...Object.keys(after)])].filter(key => !equal(before[key], after[key]));
+    if (!names.length) continue;
+    const write = kind === 'paint' ? peer.setPaintProperty : peer.setLayoutProperty;
+    if (typeof write !== 'function') return undefined;
+    for (const name of names) mutations.push({
+      apply: () => { write.call(peer, id, name, Object.hasOwn(after, name) ? after[name] : null); },
+      restore: () => { write.call(peer, id, name, Object.hasOwn(before, name) ? before[name] : null); },
+    });
+  }
+  if (!equal(previous['filter'], next['filter'])) {
+    const write = peer.setFilter;
+    if (typeof write !== 'function') return undefined;
+    mutations.push({ apply: () => { write.call(peer, id, next['filter'] ?? null); },
+      restore: () => { write.call(peer, id, previous['filter'] ?? null); } });
+  }
+  if (!equal(previous['minzoom'], next['minzoom']) || !equal(previous['maxzoom'], next['maxzoom'])) {
+    const beforeMin = previous['minzoom'] === undefined ? 0 : previous['minzoom'], beforeMax = previous['maxzoom'] === undefined ? 24 : previous['maxzoom'];
+    const afterMin = next['minzoom'] === undefined ? 0 : next['minzoom'], afterMax = next['maxzoom'] === undefined ? 24 : next['maxzoom'];
+    const write = peer.setLayerZoomRange;
+    if (typeof write !== 'function' || typeof beforeMin !== 'number' || typeof beforeMax !== 'number' ||
+      typeof afterMin !== 'number' || typeof afterMax !== 'number') return undefined;
+    mutations.push({ apply: () => { write.call(peer, id, afterMin, afterMax); },
+      restore: () => { write.call(peer, id, beforeMin, beforeMax); } });
+  }
+  return mutations.length && typeof peer.triggerRepaint !== 'function' ? undefined : mutations;
+}
+
 interface Transaction {
   readonly abort: AbortController;
   readonly images: ReadonlySet<PreparedMapImage>;
@@ -84,6 +129,7 @@ export class MapOwnedResources {
   private uncertain = false;
   private disposing = false;
   private readonly interruptedSourceUpdates = new Set<string>();
+  private readonly interruptedLayerUpdates = new Set<string>();
   /** Image IDs owned under an earlier style of the same peer. A diffed style swap keeps the
    *  engine's runtime images, so these may still be installed; they are replaced, not collisions. */
   private carriedImages = new Set<string>();
@@ -122,6 +168,8 @@ export class MapOwnedResources {
       guard(); context.beforeSourceChange?.(Object.freeze(change)); guard();
     };
     let started = false; let locked = false; let original: State | undefined; let safeToRestore = false;
+    let fullRollback = false, mutableStarted = false;
+    const layerJournal: Array<() => void> = [];
     try {
       // Aborting an older request can synchronously start a newer one. Do not replace that
       // newer request's peer/style ownership while the interrupted outer call resumes.
@@ -129,7 +177,7 @@ export class MapOwnedResources {
       if (this.peer !== peer || !Object.is(this.style, style)) {
         this.carriedImages = this.peer === peer ? new Set([...this.carriedImages, ...this.applied.images.keys()]) : new Set();
         this.peer = peer; this.style = style; this.applied = state(); this.uncertain = false;
-        this.interruptedSourceUpdates.clear();
+        this.interruptedSourceUpdates.clear(); this.interruptedLayerUpdates.clear();
       }
       guard();
       if (this.uncertain) return failure('peer', true);
@@ -185,12 +233,19 @@ export class MapOwnedResources {
         if (typeof apply === 'function') { sourceUpdates.set(id, apply); changedSources.delete(id); }
       }
       const changedImages = new Set([...original.images].filter(([id, entry]) => entry !== desired.images.get(id)).map(([id]) => id));
-      const removedLayers = new Set([...original.layers].filter(([id, entry]) => {
+      const removedLayers = new Set<string>();
+      const layerUpdates = new Map<string, readonly LayerMutation[]>();
+      for (const [id, entry] of original.layers) {
         const next = desired.layers.get(id);
-        // Images change in place: the engine re-resolves icons for every layer that uses them.
-        return !next || !equal(entry.layer, next.layer) ||
-          typeof entry.layer['source'] === 'string' && changedSources.has(entry.layer['source']);
-      }).map(([id]) => id));
+        // Changed images retain every dependent layer; changed source structure cannot.
+        if (!next || this.interruptedLayerUpdates.has(id) ||
+          typeof entry.layer['source'] === 'string' && changedSources.has(entry.layer['source'])) {
+          removedLayers.add(id); continue;
+        }
+        if (equal(entry.layer, next.layer)) continue;
+        guard(); const update = planLayerUpdate(peer, entry.layer, next.layer); guard();
+        if (update) layerUpdates.set(id, update); else removedLayers.add(id);
+      }
       for (const entry of desired.layers.values()) {
         const source = entry.layer['source'];
         if (typeof source === 'string' && !desired.sources.has(source) &&
@@ -212,45 +267,62 @@ export class MapOwnedResources {
       guard(); context.beforeMutation?.(); guard(); started = true;
       this.applied = copy(original);
       for (const id of [...existing].reverse()) if (removedLayers.has(id)) {
-        guard(); this.applied.layers.delete(id); peer.removeLayer(id); guard();
+        guard(); this.applied.layers.delete(id); fullRollback = true; peer.removeLayer(id); guard();
       }
       for (const id of changedSources) {
         guard(); const exists = peer.getSource(id); guard();
-        this.applied.sources.delete(id); if (exists) peer.removeSource(id); guard();
+        this.applied.sources.delete(id); if (exists) { fullRollback = true; peer.removeSource(id); } guard();
       }
       for (const id of changedImages) {
         guard(); const exists = peer.hasImage(id); guard();
-        this.applied.images.delete(id); if (exists) peer.removeImage(id); guard();
+        this.applied.images.delete(id); if (exists) { fullRollback = true; peer.removeImage(id); } guard();
       }
       for (const [id, image] of desired.images) if (!this.applied.images.has(id)) {
-        if (this.carriedImages.has(id)) { guard(); const carried = peer.hasImage(id); guard(); if (carried) peer.removeImage(id); guard(); }
+        if (this.carriedImages.has(id)) { guard(); const carried = peer.hasImage(id); guard(); if (carried) { fullRollback = true; peer.removeImage(id); } guard(); }
         guard(); this.applied.images.set(id, image);
-        peer.addImage(id, image.image!, imageOptions(image)); guard();
+        fullRollback = true; peer.addImage(id, image.image!, imageOptions(image)); guard();
       }
       for (const [id, source] of desired.sources) if (!this.applied.sources.has(id)) {
-        guard(); this.applied.sources.set(id, source); peer.addSource(id, source.source); guard();
+        guard(); this.applied.sources.set(id, source); fullRollback = true; peer.addSource(id, source.source); guard();
       }
       for (const [id, apply] of sourceUpdates) {
         // Journal the next descriptor first: cancellation may leave a partially updated native
         // source that a later request must replace, while a current failure can restore original.
         guard(); this.applied.sources.set(id, desired.sources.get(id)!);
-        this.interruptedSourceUpdates.add(id); apply(); guard(); this.interruptedSourceUpdates.delete(id);
+        this.interruptedSourceUpdates.add(id); fullRollback = true; apply(); guard(); this.interruptedSourceUpdates.delete(id);
       }
+      for (const [id, mutations] of layerUpdates) {
+        guard(); this.applied.layers.set(id, desired.layers.get(id)!);
+        if (mutations.length) this.interruptedLayerUpdates.add(id);
+        for (const mutation of mutations) {
+          // Native setters can mutate and then throw. Record restoration before the call.
+          guard(); layerJournal.push(mutation.restore); mutableStarted = true; mutation.apply(); guard();
+        }
+      }
+      const workingOrder = existing.filter(id => !removedLayers.has(id));
       for (const operation of order.operations) {
         guard();
         const entry = desired.layers.get(operation.id)!;
         this.applied.layers.set(operation.id, entry);
-        if (operation.kind === 'add') peer.addLayer(entry.layer, operation.before);
-        else peer.moveLayer(operation.id, operation.before);
+        if (operation.kind === 'add') { fullRollback = true; peer.addLayer(entry.layer, operation.before); }
+        else {
+          const position = workingOrder.indexOf(operation.id), oldBefore = workingOrder[position + 1];
+          layerJournal.push(() => { peer.moveLayer(operation.id, oldBefore); });
+          peer.moveLayer(operation.id, operation.before);
+        }
         guard();
+        const position = workingOrder.indexOf(operation.id);
+        if (position >= 0) workingOrder.splice(position, 1);
+        workingOrder.splice(operation.before === undefined ? workingOrder.length : workingOrder.indexOf(operation.before), 0, operation.id);
       }
+      if (mutableStarted) { guard(); peer.triggerRepaint!(); guard(); }
       this.applied = desired;
-      this.interruptedSourceUpdates.clear();
+      this.interruptedSourceUpdates.clear(); this.interruptedLayerUpdates.clear();
       // Retired carried images that the engine still holds stay ours to remove later.
       for (const id of [...this.carriedImages]) {
         if (desired.images.has(id)) { this.carriedImages.delete(id); continue; }
         guard(); const held = peer.hasImage(id); guard();
-        if (held) peer.removeImage(id);
+        if (held) { fullRollback = true; peer.removeImage(id); }
         this.carriedImages.delete(id); guard();
       }
       safeToRestore = true;
@@ -259,7 +331,14 @@ export class MapOwnedResources {
       const code = error instanceof ResourceFailure ? error.code : 'peer';
       let rollbackFailed = false;
       if (started && original && current()) {
-        try { this.rollback(peer, original, guard, notify); }
+        try {
+          for (const restore of [...layerJournal].reverse()) { guard(); restore(); guard(); }
+          if (fullRollback) this.rollback(peer, original, guard, notify);
+          else {
+            if (mutableStarted) { guard(); peer.triggerRepaint!(); guard(); }
+            this.applied = original; this.interruptedLayerUpdates.clear();
+          }
+        }
         catch {
           rollbackFailed = true;
           if (this.peer === peer && Object.is(this.style, style)) this.uncertain = true;
@@ -296,7 +375,7 @@ export class MapOwnedResources {
     try {
       this.cancel(); this.peer = undefined; this.style = undefined; this.applied = state(); this.uncertain = false;
       this.carriedImages = new Set();
-      this.interruptedSourceUpdates.clear();
+      this.interruptedSourceUpdates.clear(); this.interruptedLayerUpdates.clear();
       for (const transaction of [...this.transactions]) transaction.abort.abort();
       this.transactions.clear();
       for (const image of this.retained) image.dispose();
@@ -343,6 +422,6 @@ export class MapOwnedResources {
       guard(); peer.addLayer(original.layers.get(operation.id)!.layer, operation.before); guard();
     }
     this.applied = original;
-    this.interruptedSourceUpdates.clear();
+    this.interruptedSourceUpdates.clear(); this.interruptedLayerUpdates.clear();
   }
 }

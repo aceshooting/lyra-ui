@@ -1,3 +1,4 @@
+import { createShikiOnigurumaEngine } from './shiki-oniguruma.js';
 import { expect } from '@open-wc/testing';
 import { captureDevWarnings } from '../../../../test/expected-dev-warnings.js';
 import {
@@ -42,9 +43,9 @@ describe('loadShikiHighlighterCore engine and reflection edge cases', () => {
     __resetShikiCoreEngineForTesting();
   });
 
-  it("builds a working highlighter when the 'oniguruma' preset is selected explicitly", async function () {
+  it('builds a working highlighter when the Oniguruma factory is selected explicitly', async function () {
     this.timeout(120_000);
-    setShikiCoreEngine('oniguruma');
+    setShikiCoreEngine(createShikiOnigurumaEngine);
     const grammar = testGrammar();
     const core = await loadShikiHighlighterCore({ [grammar.name]: grammar });
     cores.add(core);

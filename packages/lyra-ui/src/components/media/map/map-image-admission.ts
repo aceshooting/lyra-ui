@@ -1,13 +1,7 @@
 import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR, readOwnArrayLength, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
+import { MAP_IMAGE_LIMITS } from './map-image-limits.js';
 
-export const MAP_IMAGE_MAX_DIMENSION = 2048;
-export const MAP_IMAGE_MAX_PIXELS = 4_194_304;
-export const MAP_IMAGE_MAX_ENCODED_BYTES = 1_048_576;
-/** Limits apply to backing pixels; pixelRatio changes logical size without multiplying allocation.
- * The count admits sprite catalogs; the aggregate pixel and byte budgets bound the atlas itself. */
-export const MAP_IMAGE_LIMITS = Object.freeze({ count: 1024, idLength: 128, svgBytes: 262_144,
-  encodedBytes: MAP_IMAGE_MAX_ENCODED_BYTES, totalBytes: 8_388_608, dimension: MAP_IMAGE_MAX_DIMENSION, pixels: MAP_IMAGE_MAX_PIXELS,
-  totalPixels: 16_777_216, elements: 2048, decodeTimeoutMs: 15_000 });
+export { MAP_IMAGE_MAX_DIMENSION, MAP_IMAGE_MAX_PIXELS, MAP_IMAGE_MAX_ENCODED_BYTES, MAP_IMAGE_LIMITS } from './map-image-limits.js';
 export interface LyraMapImage {
   readonly id: string;
   readonly source: { readonly kind: 'svg'; readonly markup: string } | { readonly kind: 'url'; readonly url: string };

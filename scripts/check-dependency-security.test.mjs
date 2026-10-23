@@ -25,6 +25,12 @@ test('accepts exact verified patches while retaining registry advisory counts', 
   assert.deepEqual(parseAudit(report([]), 0), []);
 });
 
+test('verifies retained patches when the registry no longer reports their advisory', () => {
+  const active = mitigations.filter((entry) => entry.package !== 'sprintf-js').map(advisory);
+  assert.deepEqual(validateMitigations(active, mitigations, evidence()), { unmitigated: 0, patched: active.length });
+  assert.deepEqual(validateMitigations([], mitigations, evidence()), { unmitigated: 0, patched: 0 });
+});
+
 test('rejects new advisories and every finding of an unexpected version', () => {
   const changed = mitigations.map(advisory);
   changed[0].github_advisory_id = 'GHSA-new-advisory';
@@ -51,7 +57,7 @@ for (const change of [
     const proof = evidence();
     change(proof[0]);
     assert.throws(() => validateMitigations(mitigations.map(advisory), mitigations, proof));
-    // Patch evidence is mandatory even when the registry temporarily stops reporting the advisory.
+    // Patch evidence is mandatory even when the registry no longer reports the advisory.
     assert.throws(() => validateMitigations([], mitigations, proof));
   });
 }

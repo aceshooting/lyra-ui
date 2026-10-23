@@ -1,4 +1,5 @@
-import { getOwnDataDescriptor, isPlainDataRecord } from '../../../internal/data-descriptors.js';
+export { MapExternalSourceEffects } from './map-external-source-effects.js';
+import { getInheritedPropertyDescriptor, getOwnDataDescriptor, isPlainDataRecord } from '../../../internal/data-descriptors.js';
 import { loadMapImageRuntime, loadMapStyleOverrideRuntime } from './map-resource-feature-loaders.js';
 import { admitMapImages, MAP_IMAGE_LIMITS, type LyraMapImage } from './map-image-admission.js';
 import type { prepareMapImages, PreparedMapImage } from './map-images.js';
@@ -275,6 +276,15 @@ export class MapOwnedFeatures {
   private bind(map: MapLibreMapCapability): void {
     if (this.peer === map) return;
     this.peer = map;
+    // Optional setters are data methods, never native accessors with side effects. Capture their
+    // receiver once so registry guards directly bracket the callback-capable invocation.
+    const nativeMethod = (key: string): ((...args: unknown[]) => unknown) | undefined => {
+      const descriptor = getInheritedPropertyDescriptor(map, key);
+      return descriptor && Object.hasOwn(descriptor, 'value') && typeof descriptor.value === 'function'
+        ? (...args) => Reflect.apply(descriptor.value as (...values: unknown[]) => unknown, map, args) : undefined;
+    };
+    const setPaintProperty = nativeMethod('setPaintProperty'), setLayoutProperty = nativeMethod('setLayoutProperty');
+    const setFilter = nativeMethod('setFilter'), setLayerZoomRange = nativeMethod('setLayerZoomRange'), triggerRepaint = nativeMethod('triggerRepaint');
     this.resourcePeer = {
       getSource: id => map.getSource(id), getLayer: id => map.getLayer(id),
       layerIds: () => {
@@ -282,10 +292,14 @@ export class MapOwnedFeatures {
         if (!Array.isArray(layers) || layers.length > 20_000) failed();
         return layers.map(layer => layer.id);
       },
-      addSource: (id, source) => map.addSource(id, source), removeSource: id => map.removeSource(id),
+      // Native sources may update their options; retain the immutable journal and opaque payload identities.
+      addSource: (id, source) => map.addSource(id, { ...source }), removeSource: id => map.removeSource(id),
       planSourceUpdate: (id, previous, next, checkCurrent) => planMapSourceUpdate(map.getSource(id), previous, next, checkCurrent),
       addLayer: (layer, before) => map.addLayer(layer, before), removeLayer: id => map.removeLayer(id),
       moveLayer: (id, before) => map.moveLayer!(id, before),
+      ...(setPaintProperty ? { setPaintProperty } : {}), ...(setLayoutProperty ? { setLayoutProperty } : {}),
+      ...(setFilter ? { setFilter } : {}), ...(setLayerZoomRange ? { setLayerZoomRange } : {}),
+      ...(triggerRepaint ? { triggerRepaint } : {}),
       hasImage: id => map.hasImage!(id), addImage: (id, image, options) => map.addImage!(id, image, options),
       removeImage: id => map.removeImage!(id),
     };

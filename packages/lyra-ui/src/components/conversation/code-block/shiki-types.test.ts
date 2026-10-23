@@ -1,3 +1,4 @@
+import { createShikiOnigurumaEngine } from './shiki-oniguruma.js';
 import { expect } from '@open-wc/testing';
 import jsonGrammar from 'shiki/langs/json.mjs';
 import {
@@ -11,14 +12,7 @@ import {
   type ShikiLanguageRegistration,
 } from './shiki-types.js';
 
-/**
- * Building the fine-grained shiki/core highlighter -- importing shiki/core, the oniguruma WASM
- * engine, and both seed themes -- takes seconds once a saturated CI machine is compiling the regex
- * engine and instantiating WASM alongside the rest of the suite (mirrors code-loader.test.ts's
- * identical warning for the full loader's own module-level cache). A root-level before() pays that
- * cold-start cost once, with its own generous timeout, so every test below only ever awaits an
- * already-warm dynamic import graph.
- */
+/** Warm the fine-grained loader and seed themes once before the rendering assertions. */
 before(async function () {
   this.timeout(120_000);
   const warm = await loadShikiHighlighterCore({ json: jsonGrammar });
@@ -154,12 +148,12 @@ describe('setShikiCoreEngine()', () => {
     this.timeout(20_000);
     const languages: Record<string, ShikiLanguageInput> = Object.freeze({ [testGrammar().name]: testGrammar() });
 
-    __resetShikiCoreEngineForTesting();
+    setShikiCoreEngine(createShikiOnigurumaEngine);
     const onigumaCore = await loadShikiHighlighterCore(languages);
     setShikiCoreEngine('javascript');
     const javascriptCore = await loadShikiHighlighterCore(languages);
 
-    expect(onigumaCore, 'the default oniguruma engine must build a usable highlighter').to.not.equal(null);
+    expect(onigumaCore, 'the explicit oniguruma engine must build a usable highlighter').to.not.equal(null);
     expect(javascriptCore, 'the javascript engine must build a usable highlighter').to.not.equal(null);
     expect(onigumaCore, 'the two engines must never share one cached HighlighterCore').to.not.equal(
       javascriptCore,

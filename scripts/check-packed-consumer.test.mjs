@@ -49,7 +49,7 @@ test('the migrated consumer configures its modular worker without changing nativ
   }
 });
 
-test('caps the full core graph with an exact binary allowance and tightly measured non-asset headroom', () => {
+test('caps the full core graph without an implicit binary allowance', () => {
   const block = checkerSource.match(/const coreRawBudget = \{(?<body>[\s\S]*?)\n\};/u);
   assert.ok(block?.groups?.body, 'coreRawBudget must remain an inspectable measured budget');
 
@@ -63,20 +63,20 @@ test('caps the full core graph with an exact binary allowance and tightly measur
     selectedRegressionHeadroomBytes: 60,
   });
   const nonAssetCeiling = terms.reviewedCoreMeasurementBytes + terms.selectedRegressionHeadroomBytes;
-  const ceiling = nonAssetCeiling + terms.reviewedRequiredShikiAssetBytes;
+  const ceiling = nonAssetCeiling;
   assert.equal(nonAssetCeiling, 5_614_931);
-  assert.equal(ceiling, 6_081_541);
+  assert.equal(ceiling, 5_614_931);
   assert.ok(terms.selectedRegressionHeadroomBytes / terms.reviewedCoreMeasurementBytes < 0.005,
     'the selected raw regression headroom must remain below 0.5%');
   assert.match(
     checkerSource,
-    /maxRawBytes:\s*coreRawBudget\.reviewedCoreMeasurementBytes\s*\+\s*coreRawBudget\.selectedRegressionHeadroomBytes\s*\+\s*coreRawBudget\.reviewedRequiredShikiAssetBytes\s*,/u,
+    /maxRawBytes:\s*coreRawBudget\.reviewedCoreMeasurementBytes\s*\+\s*coreRawBudget\.selectedRegressionHeadroomBytes\s*,/u,
     'the core bundle entry must use the exact reviewed measurement and selected headroom',
   );
   assert.match(checkerSource,
     /maxNonAssetRawBytes:\s*coreRawBudget\.reviewedCoreMeasurementBytes\s*\+\s*coreRawBudget\.selectedRegressionHeadroomBytes\s*,/u);
   assert.match(checkerSource,
-    /codeBlock:\s*\{[^}]*maxRawBytes:\s*600_000 \+ coreRawBudget\.reviewedRequiredShikiAssetBytes,[^}]*maxNonAssetRawBytes:\s*600_000,[^}]*requiredShikiWasmBytes:\s*coreRawBudget\.reviewedRequiredShikiAssetBytes,/u);
+    /codeBlock:\s*\{[^}]*maxRawBytes:\s*600_000,[^}]*forbidShikiWasm:\s*true,/u);
   const overageGate = checkerSource.match(/if \(config\.maxRawBytes != null && output\.rawBytes > config\.maxRawBytes\) \{[\s\S]*?\n  \}/u)?.[0];
   assert.ok(overageGate, 'the packed raw-byte gate must remain inspectable');
   const inspectOverage = new Function('output', 'config', 'formatBytes', `const violations = []; ${overageGate}\nreturn violations;`);
@@ -429,3 +429,21 @@ test('map companion uses verified supplied tarballs and keeps native map fixture
 
 // Enroll the paired optional 3D consumer graph contracts in the existing tooling gate.
 import './packed-3d-consumer.test.mjs';
+
+test('default graphs reject unrequested WASM and encoded copies while explicit ownership keeps its allowance', () => {
+  const source = checkerSource.match(/function unrequestedShikiAssetFindings\([^]*?\n\}/u)?.[0];
+  assert.ok(source);
+  const inspect = new Function(`return (${source});`)();
+  const packagedWasm = Buffer.alloc(466_610, 7);
+  const input = { wasmFiles: [], javascript: 'export const ready = true;', packagedWasm };
+  assert.deepEqual(inspect(input), []);
+  assert.equal(inspect({ ...input, wasmFiles: ['orphan.wasm'] }).length, 1);
+  assert.equal(inspect({ ...input, javascript: packagedWasm.toString('base64') }).length, 1);
+  for (const entry of ['core', 'codeBlock', 'autoloaderTreeShaken']) {
+    const block = checkerSource.slice(checkerSource.indexOf(`  ${entry}: {`)).split('\n  },')[0];
+    assert.match(block, /forbidShikiWasm: true/u, entry);
+    assert.doesNotMatch(block, /requiredShikiWasmBytes:/u, entry);
+  }
+  const optIn = checkerSource.slice(checkerSource.indexOf('  shikiOniguruma: {')).split('\n  },')[0];
+  assert.match(optIn, /requiredShikiWasmBytes: coreRawBudget.reviewedRequiredShikiAssetBytes/u);
+});

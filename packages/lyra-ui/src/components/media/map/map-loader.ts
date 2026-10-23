@@ -121,7 +121,7 @@ export interface MapLibreMapCapability {
   getBounds?(): { getWest(): number; getSouth(): number; getEast(): number; getNorth(): number };
   remove(): void;
   on(type: 'error', listener: (event: { error?: unknown }) => void): this;
-  on(type: 'render' | 'load' | 'style.load' | 'idle' | 'dataloading' | 'movestart' | 'move' | 'error', listener: () => void): this;
+  on(type: 'render' | 'load' | 'style.load' | 'idle' | 'dataloading' | 'sourcedata' | 'movestart' | 'move' | 'error', listener: () => void): this;
   on(type: 'moveend', listener: (event: Readonly<Record<string, unknown>> | undefined) => void): this;
   on(type: 'move', listener: () => void): this;
   on(type: 'boxzoomend', listener: () => void): this;
@@ -138,6 +138,8 @@ export interface MapLibreMapCapability {
   getPaintProperty?(id: string, property: string): unknown;
   getLayoutProperty?(id: string, property: string): unknown;
   setLayoutProperty?(id: string, property: string, value: unknown): unknown;
+  setFilter?(id: string, filter: unknown): unknown;
+  setLayerZoomRange?(id: string, min: number, max: number): unknown;
   setFeatureState?(target: import('./map-feature-state.js').LyraMapFeatureIdentifier, state: import('./map-feature-state.js').LyraMapFeatureState): unknown;
   removeFeatureState?(target: import('./map-feature-state.js').LyraMapFeatureIdentifier, key: string): unknown;
   triggerRepaint?(): unknown;

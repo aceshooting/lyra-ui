@@ -656,3 +656,294 @@ describe('owned source identity reconciliation', () => {
     } finally { registry.dispose(); }
   });
 });
+
+
+class MutableResourcePeer extends ResourcePeer {
+  beforeSetter?: (operation: string) => void;
+  readonly featureState = new Map<string, unknown>();
+  override addLayer(layer: Readonly<Record<string, unknown>>, before?: string): void {
+    super.addLayer({ ...layer, paint: { ...(layer['paint'] as Record<string, unknown> | undefined) }, layout: { ...(layer['layout'] as Record<string, unknown> | undefined) } }, before);
+  }
+  override removeSource(id: string): void { super.removeSource(id); this.featureState.delete(id); }
+  private write(operation: string, apply: () => void): void {
+    this.operations.push(operation); this.beforeSetter?.(operation); apply(); this.after?.(operation);
+    if (this.reject === operation) { this.reject = undefined; throw new Error('private setter detail'); }
+  }
+  setPaintProperty(id: string, name: string, value: unknown): void {
+    this.write(`paint:${id}:${name}`, () => {
+      const paint = this.layers.get(id)!['paint'] as Record<string, unknown>;
+      if (value === null) delete paint[name]; else paint[name] = value;
+    });
+  }
+  setLayoutProperty(id: string, name: string, value: unknown): void {
+    this.write(`layout:${id}:${name}`, () => {
+      const layout = this.layers.get(id)!['layout'] as Record<string, unknown>;
+      if (value === null) delete layout[name]; else layout[name] = value;
+    });
+  }
+  setFilter(id: string, value: unknown): void {
+    this.write(`filter:${id}`, () => {
+      const layer = this.layers.get(id)! as Record<string, unknown>;
+      if (value === null) delete layer['filter']; else layer['filter'] = value;
+    });
+  }
+  setLayerZoomRange(id: string, min: number, max: number): void {
+    this.write(`zoom:${id}`, () => { const layer = this.layers.get(id)! as Record<string, unknown>; layer['minzoom'] = min; layer['maxzoom'] = max; });
+  }
+  triggerRepaint(): void { this.write('repaint', () => {}); }
+}
+const mutableData = { type: 'FeatureCollection', features: [{ type: 'Feature', id: 1, properties: {}, geometry: null }] };
+const mutableOverlay = (options: Record<string, unknown> = {}, before?: string) => admission({
+  sources: [{ id: 'points', source: { type: 'geojson', data: mutableData } }],
+  layers: [{ layer: { id: 'dots', type: 'circle', source: 'points', ...options }, ...(before ? { before } : {}) }],
+});
+const initialMutable = () => mutableOverlay({ paint: { 'circle-color': 'red', 'circle-radius': 2 },
+  layout: { visibility: 'visible', 'circle-sort-key': 1 }, filter: ['==', ['get', 'kind'], 'old'], minzoom: 2, maxzoom: 10 });
+const nextMutable = () => mutableOverlay({ paint: { 'circle-color': 'blue' }, layout: { visibility: 'none' } });
+
+describe('owned map mutable layer transactions', () => {
+  it('updates paint/layout/filter/zoom, unsets omitted members and retains native source/layer/feature state', async () => {
+    const peer = new MutableResourcePeer(), registry = new MapOwnedResources();
+    await registry.reconcile(peer, 1, initialMutable(), [], context());
+    const source = peer.getSource('points'), layer = peer.getLayer('dots'); peer.featureState.set('points', { selected: true });
+    const notifications: MapOwnedSourceChange[] = []; peer.operations.length = 0;
+    const ctx = { ...context(), beforeSourceChange: (change: MapOwnedSourceChange) => { notifications.push(change); } };
+    expect((await registry.reconcile(peer, 1, nextMutable(), [], ctx)).ok).to.equal(true);
+    expect(peer.operations).to.deep.equal(['paint:dots:circle-color', 'paint:dots:circle-radius',
+      'layout:dots:visibility', 'layout:dots:circle-sort-key', 'filter:dots', 'zoom:dots', 'repaint']);
+    expect(peer.getSource('points') === source).to.equal(true); expect(peer.getLayer('dots') === layer).to.equal(true);
+    expect(peer.layers.get('dots')!['paint']).to.deep.equal({ 'circle-color': 'blue' });
+    expect(peer.layers.get('dots')!['layout']).to.deep.equal({ visibility: 'none' });
+    expect(peer.layers.get('dots')!['filter']).to.equal(undefined);
+    expect(peer.layers.get('dots')!['minzoom']).to.equal(0); expect(peer.layers.get('dots')!['maxzoom']).to.equal(24);
+    expect(peer.featureState.get('points')).to.deep.equal({ selected: true }); expect(notifications).to.deep.equal([]);
+    peer.operations.length = 0; await registry.reconcile(peer, 1, nextMutable(), [], ctx);
+    expect(peer.operations).to.deep.equal([]); registry.dispose();
+  });
+  for (const capability of ['setPaintProperty', 'setLayoutProperty', 'setFilter', 'setLayerZoomRange', 'triggerRepaint'] as const) {
+    it(`uses dependency replacement when the required ${capability} capability is missing`, async () => {
+      const peer = new MutableResourcePeer(), registry = new MapOwnedResources();
+      await registry.reconcile(peer, 1, initialMutable(), [], context());
+      const source = peer.getSource('points'), layer = peer.getLayer('dots');
+      Object.defineProperty(peer, capability, { value: undefined }); peer.operations.length = 0;
+      expect((await registry.reconcile(peer, 1, nextMutable(), [], context())).ok).to.equal(true);
+      expect(peer.getSource('points') === source).to.equal(true); expect(peer.getLayer('dots') === layer).to.equal(false);
+      expect(peer.operations).to.deep.equal(['layer-dots', 'layer+dots']); registry.dispose();
+    });
+  }
+  for (const structural of [{ type: 'fill' }, { 'source-layer': 'places' }, { metadata: { revision: 2 } }]) {
+    it(`keeps ${Object.keys(structural)[0]} structural even when mutable fields also change`, async () => {
+      const peer = new MutableResourcePeer(), registry = new MapOwnedResources();
+      const vector = Object.hasOwn(structural, 'source-layer');
+      const input = (changed: boolean) => admission({
+        sources: [{ id: 'points', source: vector ? { type: 'vector', url: 'https://example.test/tiles.json' } : { type: 'geojson', data: mutableData } }],
+        layers: [{ layer: { id: 'dots', type: 'circle', source: 'points', ...(vector ? { 'source-layer': 'original' } : {}),
+          ...(changed ? structural : {}), paint: changed && structural.type === 'fill' ? { 'fill-color': 'blue' } : { 'circle-color': changed ? 'blue' : 'red' } } }],
+      });
+      await registry.reconcile(peer, 1, input(false), [], context());
+      const source = peer.getSource('points'), layer = peer.getLayer('dots'); peer.operations.length = 0;
+      await registry.reconcile(peer, 1, input(true), [], context());
+      expect(peer.getSource('points') === source).to.equal(true); expect(peer.getLayer('dots') === layer).to.equal(false);
+      expect(peer.operations).to.deep.equal(['layer-dots', 'layer+dots']); registry.dispose();
+    });
+  }
+  it('coalesces mutable paint, ordering, image replacement and an in-place source update without replacing retained layers', async () => {
+    const peer = new MutableResourcePeer(), registry = new MapOwnedResources(), first = prepared('pin'), second = prepared('pin');
+    peer.addLayer({ id: 'labels', type: 'background' });
+    const input = (data: unknown, color: string, moved = false) => admission({
+      sources: [{ id: 'points', source: { type: 'geojson', data } }],
+      layers: [{ layer: { id: 'a', type: 'circle', source: 'points', paint: { 'circle-color': color } }, ...(moved ? { before: 'b' } : {}) },
+        { layer: { id: 'b', type: 'circle', source: 'points' }, ...(moved ? { before: 'labels' } : {}) }],
+    });
+    await registry.reconcile(peer, 1, input(mutableData, 'red'), [first.resource], context());
+    let nativeData: unknown = mutableData;
+    const native = { setData: (data: unknown) => { nativeData = data; peer.operations.push('setData'); } };
+    peer.sources.set('points', native); peer.planSourceUpdate = (id, old, next, guard) => planMapSourceUpdate(peer.getSource(id), old, next, guard);
+    const layers = ['a', 'b'].map(id => peer.getLayer(id)), nextData = { ...mutableData, features: [] };
+    peer.operations.length = 0;
+    expect((await registry.reconcile(peer, 1, input(nextData, 'blue', true), [second.resource], context())).ok).to.equal(true);
+    expect(peer.getSource('points') === native).to.equal(true); expect(nativeData === nextData).to.equal(true);
+    expect(['a', 'b'].every((id, i) => peer.getLayer(id) === layers[i])).to.equal(true);
+    expect(peer.order).to.deep.equal(['a', 'b', 'labels']); expect(peer.operations.filter(op => op.startsWith('layer'))).to.deep.equal([]);
+    expect(peer.operations.filter(op => op === 'repaint')).to.have.length(1); expect(first.disposals).to.equal(1); expect(second.disposals).to.equal(0);
+    registry.dispose(); expect(second.disposals).to.equal(1);
+  });
+  for (const beforeMutation of [false, true]) {
+    it(`journals the failed setter before invocation and restores reverse order (throws before mutation=${beforeMutation})`, async () => {
+      const peer = new MutableResourcePeer(), registry = new MapOwnedResources(); await registry.reconcile(peer, 1, initialMutable(), [], context());
+      const source = peer.getSource('points'), layer = peer.getLayer('dots'); peer.featureState.set('points', { selected: true });
+      peer.operations.length = 0;
+      if (beforeMutation) peer.beforeSetter = operation => {
+        if (operation === 'paint:dots:circle-radius') { peer.beforeSetter = undefined; throw new Error('setter refused'); }
+      }; else peer.reject = 'paint:dots:circle-radius';
+      expect(await registry.reconcile(peer, 1, nextMutable(), [], context())).to.deep.equal({ ok: false, code: 'peer', rollbackFailed: false });
+      expect(peer.operations).to.deep.equal(['paint:dots:circle-color', 'paint:dots:circle-radius', 'paint:dots:circle-radius', 'paint:dots:circle-color', 'repaint']);
+      expect(peer.getSource('points') === source).to.equal(true); expect(peer.getLayer('dots') === layer).to.equal(true);
+      expect(peer.layers.get('dots')!['paint']).to.deep.equal({ 'circle-color': 'red', 'circle-radius': 2 });
+      expect(peer.featureState.get('points')).to.deep.equal({ selected: true });
+      peer.operations.length = 0; expect((await registry.reconcile(peer, 1, nextMutable(), [], context())).ok).to.equal(true);
+      expect(peer.getLayer('dots') === layer).to.equal(true); registry.dispose();
+    });
+  }
+  it('restores a completed mutable batch and move after repaint throws without replacing native resources', async () => {
+    const peer = new MutableResourcePeer(), registry = new MapOwnedResources(); peer.addLayer({ id: 'labels', type: 'background' });
+    await registry.reconcile(peer, 1, initialMutable(), [], context()); const layer = peer.getLayer('dots'), source = peer.getSource('points');
+    peer.reject = 'repaint'; peer.operations.length = 0;
+    const next = admission({ ...nextMutable(), layers: [{ ...nextMutable().layers[0]!, before: 'labels' }] });
+    expect(await registry.reconcile(peer, 1, next, [], context())).to.deep.equal({ ok: false, code: 'peer', rollbackFailed: false });
+    expect(peer.order).to.deep.equal(['labels', 'dots']); expect(peer.getSource('points') === source).to.equal(true);
+    expect(peer.getLayer('dots') === layer).to.equal(true); expect(peer.layers.get('dots')!['paint']).to.deep.equal({ 'circle-color': 'red', 'circle-radius': 2 });
+    expect(peer.operations.some(op => op.startsWith('layer') || op.startsWith('source'))).to.equal(false); registry.dispose();
+  });
+  it('fails closed after rollback throws and reclaims ownership only under a fresh style', async () => {
+    const peer = new MutableResourcePeer(), registry = new MapOwnedResources(), image = prepared('pin');
+    await registry.reconcile(peer, 1, initialMutable(), [image.resource], context());
+    peer.beforeSetter = operation => { if (operation === 'paint:dots:circle-radius') throw new Error('write and restore failed'); };
+    expect(await registry.reconcile(peer, 1, nextMutable(), [image.resource], context())).to.deep.equal({ ok: false, code: 'peer', rollbackFailed: true });
+    peer.beforeSetter = undefined; peer.operations.length = 0;
+    expect(await registry.reconcile(peer, 1, nextMutable(), [image.resource], context())).to.deep.equal({ ok: false, code: 'peer', rollbackFailed: true });
+    expect(peer.operations).to.deep.equal([]); expect(image.disposals).to.equal(0);
+    peer.layers.clear(); peer.sources.clear(); peer.order = [];
+    expect((await registry.reconcile(peer, 2, nextMutable(), [image.resource], context())).ok).to.equal(true);
+    expect(peer.layers.get('dots')!['paint']).to.deep.equal({ 'circle-color': 'blue' });
+    registry.dispose(); expect(image.disposals).to.equal(1);
+  });
+  it('never rolls back a canceled setter and replaces its partial layer on the next safe reconciliation', async () => {
+    const peer = new MutableResourcePeer(), registry = new MapOwnedResources(); await registry.reconcile(peer, 1, initialMutable(), [], context());
+    const source = peer.getSource('points'), layer = peer.getLayer('dots'); peer.operations.length = 0;
+    peer.after = operation => { if (operation === 'paint:dots:circle-color') registry.cancel(); };
+    expect(await registry.reconcile(peer, 1, nextMutable(), [], context())).to.deep.equal({ ok: false, code: 'aborted', rollbackFailed: false });
+    expect(peer.operations).to.deep.equal(['paint:dots:circle-color']); peer.after = undefined; peer.operations.length = 0;
+    expect((await registry.reconcile(peer, 1, nextMutable(), [], context())).ok).to.equal(true);
+    expect(peer.getSource('points') === source).to.equal(true); expect(peer.getLayer('dots') === layer).to.equal(false);
+    expect(peer.operations).to.deep.equal(['layer-dots', 'layer+dots']); registry.dispose();
+  });
+  it('marks cancel-plus-throw uncertain and never mutates the retired transaction again', async () => {
+    const peer = new MutableResourcePeer(), registry = new MapOwnedResources(); await registry.reconcile(peer, 1, initialMutable(), [], context());
+    peer.operations.length = 0; peer.after = operation => {
+      if (operation === 'paint:dots:circle-color') { registry.cancel(); throw new Error('cancelled native failure'); }
+    };
+    expect(await registry.reconcile(peer, 1, nextMutable(), [], context())).to.deep.equal({ ok: false, code: 'peer', rollbackFailed: true });
+    expect(peer.operations).to.deep.equal(['paint:dots:circle-color']); peer.after = undefined;
+    expect(await registry.reconcile(peer, 1, nextMutable(), [], context())).to.deep.equal({ ok: false, code: 'peer', rollbackFailed: true });
+    expect(peer.operations).to.deep.equal(['paint:dots:circle-color']); registry.dispose();
+  });
+  it('rejects reentrant setter work without allowing it to steal the current transaction', async () => {
+    const peer = new MutableResourcePeer(), registry = new MapOwnedResources(); await registry.reconcile(peer, 1, initialMutable(), [], context());
+    let nested: Promise<unknown> | undefined;
+    peer.after = operation => { if (operation === 'paint:dots:circle-color') nested = registry.reconcile(peer, 1, empty(), [], context()); };
+    expect((await registry.reconcile(peer, 1, nextMutable(), [], context())).ok).to.equal(true);
+    expect(await nested).to.deep.equal({ ok: false, code: 'reentrant', rollbackFailed: false }); registry.dispose();
+  });
+  it('replays full descriptors into a fresh style and never replays a mutable diff against missing layers', async () => {
+    const peer = new MutableResourcePeer(), registry = new MapOwnedResources(); await registry.reconcile(peer, 1, initialMutable(), [], context());
+    await registry.reconcile(peer, 1, nextMutable(), [], context()); peer.layers.clear(); peer.sources.clear(); peer.order = []; peer.operations.length = 0;
+    expect((await registry.reconcile(peer, 2, nextMutable(), [], context())).ok).to.equal(true);
+    expect(peer.operations).to.deep.equal(['source+points', 'layer+dots']); registry.dispose();
+  });
+  it('requires only capabilities used by the admitted change', async () => {
+    const peer = new MutableResourcePeer(), registry = new MapOwnedResources();
+    await registry.reconcile(peer, 1, initialMutable(), [], context()); const layer = peer.getLayer('dots');
+    Object.defineProperty(peer, 'setFilter', { value: undefined }); peer.operations.length = 0;
+    const original = initialMutable();
+    const next = admission({ ...original, layers: [{ layer: { ...original.layers[0]!.layer, paint: { 'circle-color': 'blue', 'circle-radius': 2 } } }] });
+    expect((await registry.reconcile(peer, 1, next, [], context())).ok).to.equal(true);
+    expect(peer.getLayer('dots') === layer).to.equal(true); expect(peer.operations).to.deep.equal(['paint:dots:circle-color', 'repaint']); registry.dispose();
+  });
+  it('stops restoration immediately when its first restoring setter cancels ownership', async () => {
+    const peer = new MutableResourcePeer(), registry = new MapOwnedResources(); await registry.reconcile(peer, 1, initialMutable(), [], context());
+    let radiusCalls = 0; peer.reject = 'paint:dots:circle-radius'; peer.operations.length = 0;
+    peer.after = operation => { if (operation === 'paint:dots:circle-radius' && ++radiusCalls === 2) registry.cancel(); };
+    expect(await registry.reconcile(peer, 1, nextMutable(), [], context())).to.deep.equal({ ok: false, code: 'peer', rollbackFailed: true });
+    expect(peer.operations).to.deep.equal(['paint:dots:circle-color', 'paint:dots:circle-radius', 'paint:dots:circle-radius']); registry.dispose();
+  });
+  it('keeps mutable recovery pending when the repaint callback supersedes the final commit', async () => {
+    const peer = new MutableResourcePeer(), registry = new MapOwnedResources(); await registry.reconcile(peer, 1, initialMutable(), [], context());
+    const source = peer.getSource('points'), layer = peer.getLayer('dots');
+    peer.after = operation => { if (operation === 'repaint') registry.cancel(); };
+    expect(await registry.reconcile(peer, 1, nextMutable(), [], context())).to.deep.equal({ ok: false, code: 'aborted', rollbackFailed: false });
+    peer.after = undefined; peer.operations.length = 0;
+    expect((await registry.reconcile(peer, 1, nextMutable(), [], context())).ok).to.equal(true);
+    expect(peer.getLayer('dots') === layer).to.equal(false); expect(peer.getSource('points') === source).to.equal(true);
+    expect(peer.operations).to.deep.equal(['layer-dots', 'layer+dots']); registry.dispose();
+  });
+
+  it('keeps mutable values inside existing own-descriptor and bounded-value admission', () => {
+    let reads = 0;
+    const paint = Object.defineProperty({}, 'circle-color', { enumerable: true, get() { reads++; return 'red'; } });
+    for (const options of [
+      { paint }, { layout: Object.create({ visibility: 'none' }) as unknown },
+      { filter: ['all', ...Array.from({ length: 10_001 }, () => true)] },
+    ]) {
+      expect(admitMapOverlays({ layers: [{ layer: { id: 'dots', type: 'circle', ...options } }] }).ok).to.equal(false);
+    }
+    expect(reads).to.equal(0);
+  });
+
+  for (const failureAt of ['move', 'repaint', 'restore-cancel'] as const) {
+    it(`restores mixed mutable/order work before full source/image/structural rollback (${failureAt})`, async () => {
+      const peer = new MutableResourcePeer(), registry = new MapOwnedResources();
+      const first = prepared('pin'), second = prepared('pin'); peer.addLayer({ id: 'labels', type: 'background' });
+      const nextData = { ...mutableData, features: [] };
+      const input = (changed: boolean) => admission({
+        sources: [{ id: 'points', source: { type: 'geojson', data: changed ? nextData : mutableData } }],
+        layers: [
+          { layer: { id: 'a', type: 'circle', source: 'points', paint: { 'circle-color': changed ? 'blue' : 'red' } }, ...(changed ? { before: 'b' } : {}) },
+          { layer: { id: 'b', type: changed ? 'fill' : 'circle', source: 'points', paint: changed ? { 'fill-color': 'green' } : { 'circle-color': 'red' } },
+            ...(changed ? { before: 'labels' } : {}) },
+        ],
+      });
+      await registry.reconcile(peer, 1, input(false), [first.resource], context());
+      const oldPixels = peer.images.get('pin'); let nativeData: unknown = mutableData;
+      const native = { setData: (data: unknown) => { nativeData = data; peer.operations.push('setData'); } };
+      peer.sources.set('points', native);
+      peer.planSourceUpdate = (id, old, next, guard) => planMapSourceUpdate(peer.getSource(id), old, next, guard);
+      peer.operations.length = 0; peer.reject = failureAt === 'move' ? 'move:a' : 'repaint';
+      let paintCalls = 0;
+      if (failureAt === 'restore-cancel') peer.after = operation => {
+        if (operation === 'paint:a:circle-color' && ++paintCalls === 2) registry.cancel();
+      };
+      const changes: MapOwnedSourceChange[] = [], rollbackEntries: string[][] = [], settlements: boolean[] = [];
+      const result = await registry.reconcile(peer, 1, input(true), [second.resource], {
+        ...context(), beforeSourceChange: change => {
+          changes.push(change);
+          if (change.reason === 'rollback') rollbackEntries.push([...peer.operations]);
+        }, afterMutation: safe => { settlements.push(safe); },
+      });
+      expect(result).to.deep.equal({ ok: false, code: 'peer', rollbackFailed: failureAt === 'restore-cancel' });
+      expect(nativeData === nextData).to.equal(true);
+      expect(peer.operations.slice(0, 6)).to.deep.equal(['layer-b', 'image-pin', 'image+pin', 'setData', 'paint:a:circle-color', 'layer+b']);
+      if (failureAt === 'restore-cancel') {
+        expect(changes.map(change => change.reason)).to.deep.equal(['update']);
+        expect(peer.operations.slice(-2)).to.deep.equal(['move:a', 'paint:a:circle-color']);
+        expect(peer.getSource('points') === native).to.equal(true); expect(peer.images.get('pin') === second.resource.image).to.equal(true);
+        expect(settlements).to.deep.equal([false]); expect(first.disposals).to.equal(0); expect(second.disposals).to.equal(0);
+        const operations = [...peer.operations]; peer.after = undefined;
+        expect(await registry.reconcile(peer, 1, input(true), [second.resource], context())).to.deep.equal({ ok: false, code: 'peer', rollbackFailed: true });
+        expect(peer.operations).to.deep.equal(operations);
+      } else {
+        expect(changes.map(change => change.reason)).to.deep.equal(['update', 'rollback']);
+        expect(rollbackEntries).to.have.length(1);
+        expect(rollbackEntries[0]!.slice(-2)).to.deep.equal(['move:a', 'paint:a:circle-color']);
+        expect(changes[1]!.previous?.['data'] === nextData).to.equal(true); expect(changes[1]!.next?.['data'] === mutableData).to.equal(true);
+        expect((peer.getSource('points') as { data: unknown }).data === mutableData).to.equal(true);
+        expect(peer.layers.get('a')!['paint']).to.deep.equal({ 'circle-color': 'red' });
+        expect(peer.layers.get('b')!['type']).to.equal('circle'); expect(peer.layers.get('b')!['paint']).to.deep.equal({ 'circle-color': 'red' });
+        expect(peer.order).to.deep.equal(['labels', 'a', 'b']); expect(peer.images.get('pin') === oldPixels).to.equal(true);
+        expect(settlements).to.deep.equal([true]); expect(first.disposals).to.equal(0); expect(second.disposals).to.equal(1);
+      }
+      if (failureAt === 'restore-cancel') {
+        peer.sources.clear(); peer.layers.clear(); peer.order = []; peer.addLayer({ id: 'labels', type: 'background' });
+      }
+      const recovered = prepared('pin');
+      expect((await registry.reconcile(peer, failureAt === 'restore-cancel' ? 2 : 1, input(true), [recovered.resource], context())).ok).to.equal(true);
+      expect((peer.getSource('points') as { data: unknown }).data === nextData).to.equal(true);
+      expect(peer.layers.get('a')!['paint']).to.deep.equal({ 'circle-color': 'blue' });
+      expect(peer.layers.get('b')!['type']).to.equal('fill'); expect(peer.order).to.deep.equal(['a', 'b', 'labels']);
+      expect(peer.images.get('pin') === recovered.resource.image).to.equal(true);
+      expect(first.disposals).to.equal(1); expect(second.disposals).to.equal(1); expect(recovered.disposals).to.equal(0);
+      registry.dispose(); expect(recovered.disposals).to.equal(1);
+    });
+  }
+
+});

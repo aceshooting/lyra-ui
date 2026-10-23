@@ -8,7 +8,7 @@ reason = "braces 3.0.3 is patched by patches/braces@3.0.3.patch to bound parser 
 
 [[IgnoredVulns]]
 id = "GHSA-hp3w-g68c-fv3c"
-reason = "sprintf-js 1.0.3 is patched by patches/sprintf-js@1.0.3.patch to bound numeric precision and padding allocation. CI check:dependency-security verifies patch registration, installed source digests, and exploit regression tests; version-only scanning cannot identify this local fix."
+reason = "GHSA-hp3w-g68c-fv3c was withdrawn on 2026-10-22. Retain patches/sprintf-js@1.0.3.patch as hardening that bounds numeric precision and padding allocation. CI check:dependency-security verifies patch registration, installed source digests, and regression tests even when the registry no longer reports this advisory."
 
 [[IgnoredVulns]]
 id = "GHSA-5pgg-2g8v-p4x9"

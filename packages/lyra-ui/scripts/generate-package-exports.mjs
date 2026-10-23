@@ -25,6 +25,7 @@ export const CURATED_COMPONENT_HELPER_MODULES = Object.freeze([
   'src/components/charts/chart/chart-preload.ts',
   'src/components/conversation/agent-workspace/agent-workspace-register.ts',
   'src/components/conversation/code-block/code-loader.ts',
+  'src/components/conversation/code-block/shiki-oniguruma.ts',
   'src/components/conversation/markdown/markdown-loader.ts',
   'src/components/conversation/message-actions/toolbar-actions.ts',
   'src/components/conversation/prompt-input/prompt-input-register.ts',

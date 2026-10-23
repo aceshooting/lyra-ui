@@ -26,7 +26,7 @@ export const TOOLING = Object.freeze({
   ],
   exclude: [
     { pattern: /\.test\.mjs$/u, reason: 'test' },
-    { pattern: /(?:-browser|^scripts\/browser-test|^scripts\/lib\/harness)\.mjs$/u, reason: 'browser test suite/harness' },
+    { pattern: /(?:-browser|^scripts\/browser-test|^scripts\/lib\/harness|^scripts\/engine-regressions|^scripts\/engine-regression-fixtures\/[^/]+)\.mjs$/u, reason: 'browser test suite/harness' },
   ],
 });
 

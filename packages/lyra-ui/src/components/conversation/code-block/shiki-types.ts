@@ -126,44 +126,25 @@ export interface ShikiRegexEngine {
  *  builds its `HighlighterCore` with. */
 export type ShikiRegexEngineFactory = () => ShikiRegexEngine | Promise<ShikiRegexEngine>;
 
-/** `setShikiCoreEngine()`'s accepted values -- either of the two built-in presets, or a caller-
+/** `setShikiCoreEngine()`'s accepted values -- the JavaScript preset, or a caller-
  *  supplied factory for a pre-instantiated engine or a WASM asset served from elsewhere. */
-export type ShikiEngineOption = 'oniguruma' | 'javascript' | ShikiRegexEngineFactory;
-
-/** The default engine uses the reviewed binary packaged beside its lazy asset loader. */
-function defaultOnigurumaEngineFactory(): Promise<ShikiRegexEngine> {
-  return import('shiki/engine/oniguruma').then((module) => {
-    const candidate = typeof module.createOnigurumaEngine === 'function'
-      ? module
-      : unwrapOptionalPeerDefault(module) as {
-        createOnigurumaEngine?: (wasm: Promise<Response>) => Promise<ShikiRegexEngine>;
-      } | null;
-    const createEngine = candidate?.createOnigurumaEngine;
-    if (typeof createEngine !== 'function') {
-      throw new Error('Invalid optional peer shiki: an Oniguruma engine factory is required.');
-    }
-    // Validate the optional peer before fetching the packaged binary.
-    return createEngine(fetch(new URL('./onig.wasm', import.meta.url))) as unknown as Promise<ShikiRegexEngine>;
-  });
-}
+export type ShikiEngineOption = 'javascript' | ShikiRegexEngineFactory;
 
 /** The pure-JS regex engine -- no WebAssembly at all, at the cost of not every TextMate grammar
  *  being supported (an unsupported pattern throws while loading a grammar unless a `languages`
- *  entry is itself built with `forgiving` semantics). Opt in only once a bounded `languages` set is
- *  verified to highlight correctly with it. */
+ *  entry is itself built with `forgiving` semantics). Use an explicit Oniguruma factory for
+ *  custom grammars requiring its regex behavior. */
 function javascriptEngineFactory(): Promise<ShikiRegexEngine> {
   return import('shiki/engine/javascript').then(
     ({ createJavaScriptRegexEngine }) => createJavaScriptRegexEngine() as unknown as ShikiRegexEngine,
   );
 }
 
-let engineFactory: ShikiRegexEngineFactory = defaultOnigurumaEngineFactory;
+let engineFactory: ShikiRegexEngineFactory = javascriptEngineFactory;
 
 /**
  * Selects the regex-scanning engine every subsequent `loadShikiHighlighterCore()` call builds its
- * `HighlighterCore` with. `'oniguruma'` (the default) is the binary-WASM Oniguruma engine
- * documented on {@link defaultOnigurumaEngineFactory}; `'javascript'` selects
- * `createJavaScriptRegexEngine()` instead. A function value is called on first use per distinct
+ * `HighlighterCore` with. `'javascript'` (the default) selects the pure-JavaScript engine. A function value is called on first use per distinct
  * `languages` object and may return a {@link ShikiRegexEngine} synchronously or via a promise, for
  * a consumer supplying its own pre-instantiated engine or a WASM asset served from a different URL.
  * Every distinct engine gets its own cached `HighlighterCore` per `languages` object -- two engines
@@ -171,17 +152,15 @@ let engineFactory: ShikiRegexEngineFactory = defaultOnigurumaEngineFactory;
  * previous one.
  */
 export function setShikiCoreEngine(engine: ShikiEngineOption): void {
-  engineFactory =
-    engine === 'oniguruma'
-      ? defaultOnigurumaEngineFactory
-      : engine === 'javascript'
-        ? javascriptEngineFactory
-        : engine;
+  if (engine !== 'javascript' && typeof engine !== 'function') {
+    throw new TypeError('Expected the javascript preset or a regex engine factory.');
+  }
+  engineFactory = engine === 'javascript' ? javascriptEngineFactory : engine;
 }
 
-/** @internal Test-only reset back to the built-in Oniguruma/WASM default. */
+/** @internal Test-only reset back to the built-in JavaScript default. */
 export function __resetShikiCoreEngineForTesting(): void {
-  engineFactory = defaultOnigurumaEngineFactory;
+  engineFactory = javascriptEngineFactory;
 }
 
 /** One cached fine-grained highlighter promise per distinct `languages` object identity, further

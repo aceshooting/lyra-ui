@@ -1,9 +1,9 @@
 Lyra Docs internal DOCX engine
 
 This package includes a modified derivative of the Apache-2.0 portions of
-@docx-editor.dev/core 2.31.0, copyright 2026 EigenPal Inc., from:
+@docx-editor.dev/core 2.32.0, copyright 2026 EigenPal Inc., from:
 https://github.com/eigenpal/docx-editor
-Commit: d22e3b4f02d4d0b73d7964114d077b286f207742
+Commit: 5f2d96ca8b05389968906199e25b91e3538441ba
 
 Lyra modifications provide explicit module preparation for document features,
 DOM presentation, editing commands and native input; split shared pure helpers;

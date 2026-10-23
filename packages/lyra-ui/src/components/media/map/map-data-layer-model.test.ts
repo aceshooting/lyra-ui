@@ -7,7 +7,7 @@ const legacy = (value: unknown): { sourceId: string } | undefined => {
   const row = value as { sourceId?: string; geojson?: unknown };
   return row?.geojson && typeof row.sourceId === 'string' ? { sourceId: row.sourceId } : undefined;
 };
-const project = (rows: unknown) => projectMapDataLayerModel(rows, { baseUrl, projectGeoJson: legacy });
+const project = (rows: unknown) => projectMapDataLayerModel(rows, { baseUrl, ownerOrigin: new URL(baseUrl).origin, projectGeoJson: legacy });
 const vector = { kind: 'vector', sourceId: 'roads', sourceLayer: 'transportation', render: 'line', source: { tiles: ['../tiles/{z}/{x}/{y}.pbf'] } };
 
 describe('map data layer model', () => {
@@ -209,4 +209,38 @@ it('reuses the admitted kind descriptor for legacy and external rows', () => {
   } });
   expect(result.ok).to.equal(true); expect(legacyReads).to.equal(1); expect(externalReads).to.equal(1);
   if (result.ok) { expect(result.geojson.length).to.equal(1); expect(result.external.length).to.equal(1); }
+});
+
+
+describe('canvas redraw revision admission', () => {
+  it('defaults to zero, retains canvas identity and never forwards its revision to the native source', () => {
+    const canvas = document.createElement('canvas');
+    for (const fields of [{}, { redrawRevision: 3 }]) {
+      const result = project([{ kind: 'canvas', sourceId: 'canvas', canvas, coordinates, ...fields }]);
+      expect(result.ok).to.equal(true);
+      if (!result.ok) return;
+      expect(result.external[0]!.redrawRevision).to.equal('redrawRevision' in fields ? 3 : 0);
+      expect(result.external[0]!.source['canvas'] === canvas).to.equal(true);
+      expect(Object.hasOwn(result.external[0]!.source, 'redrawRevision')).to.equal(false);
+    }
+  });
+  it('rejects fractional, unsafe and accessor revisions', () => {
+    const row = { kind: 'canvas', sourceId: 'canvas', canvas: document.createElement('canvas'), coordinates };
+    for (const redrawRevision of [-1, 0.5, Infinity, NaN, Number.MAX_SAFE_INTEGER + 1, '1', null, true]) {
+      expect(project([{ ...row, redrawRevision }]).ok).to.equal(false);
+    }
+    let reads = 0;
+    expect(project([{ ...row, get redrawRevision() { reads++; return 1; } }]).ok).to.equal(false);
+    expect(reads).to.equal(0);
+  });
+  it('uses explicit owner origin for blobs independently of the HTTP resolution base', () => {
+    const options = { baseUrl: 'https://cdn.test/maps/', ownerOrigin: 'https://owner.test', projectGeoJson: legacy };
+    const row = { kind: 'image', sourceId: 'image', coordinates };
+    expect(projectMapDataLayerModel([{ ...row, url: 'blob:https://owner.test/id' }], options).ok).to.equal(true);
+    expect(projectMapDataLayerModel([{ ...row, url: 'blob:https://cdn.test/id' }], options).ok).to.equal(false);
+    expect(projectMapDataLayerModel([{ ...row, url: 'blob:https://owner.test/id' }], { ...options, ownerOrigin: 'null' }).ok).to.equal(false);
+    const remote = projectMapDataLayerModel([{ ...row, url: './image.png' }], options);
+    expect(remote.ok && remote.external[0]!.source['url']).to.equal('https://cdn.test/maps/image.png');
+  });
+
 });

@@ -132,6 +132,135 @@ describe('lr-map actual modular companion integration', function () {
   });
   afterEach(async () => { try { await resetMouse(); } finally { try { fixtureCleanup(); } finally { setWorkerUrl(previousWorkerUrl); } } });
 
+  for (const engine of ['modular', 'maplibre'] as const) {
+    it(`updates retained static canvas pixels by revision in ${engine}`, async () => {
+      const canvas = document.createElement('canvas'); canvas.width = canvas.height = 8;
+      const draw = (fill: string) => { const context = canvas.getContext('2d')!; context.fillStyle = fill; context.fillRect(0, 0, 8, 8); };
+      draw('#ff0000');
+      const layer = { kind: 'canvas' as const, sourceId: 'retained', canvas, animate: false,
+        coordinates: [[-10, 10], [10, 10], [10, -10], [-10, -10]] as const };
+      const { el } = await mount(element => { element.engine = engine; element.overlays = {}; element.dataLayers = [layer]; });
+      const map = peer(el), id = Object.entries(map.getStyle().sources).find(([, source]) => (source as { type?: string }).type === 'canvas')![0];
+      const source = map.getSource(id), nativeLayer = map.getLayer(`${id}-render`);
+      color(await centerPixel(el), [255, 0, 0, 255]); draw('#0000ff');
+      color(await centerPixel(el), [255, 0, 0, 255]);
+      const uploaded = new Promise<number[]>(resolve => {
+        const rendered = () => {
+          map.off('render', rendered); const drawing = map.getCanvas(), gl = drawing.getContext('webgl2')!, rgba = new Uint8Array(4);
+          gl.readPixels(Math.floor(drawing.width / 2), Math.floor(drawing.height / 2), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, rgba);
+          resolve(Array.from(rgba));
+        };
+        map.on('render', rendered);
+      });
+      el.dataLayers = [{ ...layer, redrawRevision: 1 }]; await el.updateComplete; await el.whenIdle();
+      color(await uploaded, [0, 0, 255, 255]);
+      expect(map.getSource(id) === source).to.equal(true); expect(map.getLayer(`${id}-render`) === nativeLayer).to.equal(true);
+      expect((source as { hasTransition(): boolean }).hasTransition()).to.equal(false);
+      draw('#00ff00'); el.dataLayers = [{ ...layer, redrawRevision: 1 }]; await el.updateComplete; await el.whenIdle();
+      color(await centerPixel(el), [0, 0, 255, 255]);
+      el.mapStyle = localStyle(); await el.updateComplete; await el.whenIdle();
+      color(await centerPixel(el), [0, 255, 0, 255]);
+    });
+  }
+
+  it('shows a paint-only ramp switch on an idle map without replacing its source or layer', async () => {
+    const data = geometry(); Object.assign(data.features[0]!.properties, { value: 1 });
+    const { el } = await mount(element => {
+      element.overlays = {}; element.style.setProperty('--lr-map-choropleth-fill-opacity', '1');
+      element.choropleth = { sourceId: 'metric', geojson: data as NonNullable<LyraMap['choropleth']>['geojson'], field: 'value', stops: [[0, '#ff0000'], [2, '#ff0000']] };
+    });
+    const map = peer(el), id = Object.keys(map.getStyle().sources)[0]!, source = map.getSource(id), layer = map.getLayer(`${id}-fill`);
+    color(await centerPixel(el), [255, 0, 0, 255]);
+    let painted: number[] | undefined;
+    let renders = 0;
+    let lastPixel: number[] | undefined;
+    const samples: number[][] = [];
+    const rendered = () => {
+      const canvas = map.getCanvas(), gl = canvas.getContext('webgl2')!, rgba = new Uint8Array(4);
+      gl.readPixels(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, rgba);
+      const sample = Array.from(rgba); renders++; lastPixel = sample;
+      if (samples.length < 8) samples.push(sample);
+      if ([0, 0, 255, 255].every((value, index) => Math.abs(value - sample[index]!) < 25)) painted = sample;
+    };
+    map.on('render', rendered);
+    try {
+      el.choropleth = { ...el.choropleth!, stops: [[0, '#0000ff'], [2, '#0000ff']] }; await el.updateComplete;
+      // Data-driven paint can reload worker tiles; observe its own frames without forcing one.
+      try { await waitUntil(() => painted !== undefined, 'The changed ramp did not render', { timeout: 5000 }); }
+      catch (error) { throw new Error(`The changed ramp did not render: frames=${renders}, firstPixels=${JSON.stringify(samples)}, lastPixel=${JSON.stringify(lastPixel)}`, { cause: error }); }
+      color(painted!, [0, 0, 255, 255]); await el.whenIdle();
+    } finally { map.off('render', rendered); }
+    expect(map.getSource(id) === source).to.equal(true); expect(map.getLayer(`${id}-fill`) === layer).to.equal(true);
+  });
+
+  for (const engine of ['modular', 'maplibre'] as const) {
+    it(`updates mutable owned-layer fields in place and preserves feature state in ${engine}`, async () => {
+      const data = geometry();
+      const target = { origin: 'overlay' as const, source: 'local-area', id: 7 };
+      const initial: LyraMapOverlays = {
+        sources: [{ id: 'local-area', source: { type: 'geojson', data } }],
+        layers: [{ interactive: true, layer: {
+          id: 'local-fill', type: 'fill', source: 'local-area', minzoom: 2, maxzoom: 6,
+          filter: ['==', ['get', 'name'], 'Local area'], layout: { visibility: 'visible' },
+          paint: { 'fill-color': ['case', ['boolean', ['feature-state', 'selected'], false], '#0000ff', '#ff0000'], 'fill-opacity': 1 },
+        } }],
+      };
+      const { el } = await mount(element => { element.engine = engine; element.overlays = initial; });
+      const map = peer(el), source = map.getSource('local-area'), layer = map.getLayer('local-fill');
+      expect(source !== undefined && layer !== undefined).to.equal(true);
+      expect(el.setFeatureState(target, { selected: true })).to.equal(true); await el.whenIdle();
+      color(await centerPixel(el), [0, 0, 255, 255]);
+
+      el.overlays = { sources: initial.sources, layers: [{ interactive: true, layer: {
+        id: 'local-fill', type: 'fill', source: 'local-area', minzoom: 1, maxzoom: 10,
+        filter: ['has', 'name'],
+        paint: { 'fill-color': ['case', ['boolean', ['feature-state', 'selected'], false], '#00ff00', '#ff0000'] },
+      } }] };
+      await el.updateComplete; await el.whenIdle();
+      expect(map.getSource('local-area') === source).to.equal(true);
+      expect(map.getLayer('local-fill') === layer).to.equal(true);
+      expect(el.getFeatureState(target)).to.deep.equal({ selected: true });
+      const changed = map.getStyle().layers.find(row => row.id === 'local-fill') as {
+        paint?: Record<string, unknown>; layout?: Record<string, unknown>; filter?: unknown; minzoom?: number; maxzoom?: number;
+      };
+      expect(changed.paint?.['fill-opacity'] === undefined || changed.paint?.['fill-opacity'] === null).to.equal(true);
+      expect(changed.layout?.['visibility'] === undefined || changed.layout?.['visibility'] === null).to.equal(true);
+      expect(changed.filter).to.deep.equal(['has', 'name']);
+      expect(changed.minzoom).to.equal(1); expect(changed.maxzoom).to.equal(10);
+      color(await centerPixel(el), [0, 255, 0, 255]);
+      const clicked = oneEvent(el, 'lr-map-click'); await clickCanvas(el);
+      const detail = (await clicked).detail;
+      expect(detail.hit?.origin).to.equal('overlay'); expect(detail.sourceId).to.equal('local-area');
+
+      el.overlays = { sources: initial.sources, layers: [{ interactive: true, layer: {
+        id: 'local-fill', type: 'fill', source: 'local-area',
+        paint: { 'fill-color': ['case', ['boolean', ['feature-state', 'selected'], false], '#00ff00', '#ff0000'] },
+      } }] };
+      await el.updateComplete; await el.whenIdle();
+      expect(map.getLayer('local-fill') === layer).to.equal(true);
+      const reset = map.getStyle().layers.find(row => row.id === 'local-fill') as { filter?: unknown; minzoom?: number; maxzoom?: number };
+      expect(reset.filter === undefined || reset.filter === null).to.equal(true);
+      expect(reset.minzoom ?? 0).to.equal(0); expect(reset.maxzoom ?? 24).to.equal(24);
+      expect(el.getFeatureState(target)).to.deep.equal({ selected: true });
+    });
+  }
+
+  for (const engine of ['modular', 'maplibre'] as const) {
+    it(`updates and replays validated local image pixels without replacing its source in ${engine}`, async () => {
+      const canvas = document.createElement('canvas'); canvas.width = canvas.height = 8;
+      const image = (fill: string) => { const context = canvas.getContext('2d')!; context.fillStyle = fill; context.fillRect(0, 0, 8, 8); return canvas.toDataURL('image/png'); };
+      const row = { kind: 'image' as const, sourceId: 'local', url: image('#ff0000'), coordinates: [[-10, 10], [10, 10], [10, -10], [-10, -10]] as const };
+      const { el } = await mount(element => { element.engine = engine; element.overlays = {}; element.dataLayers = [row]; });
+      const map = peer(el), id = Object.entries(map.getStyle().sources).find(([, source]) => (source as { type?: string }).type === 'image')![0];
+      const source = map.getSource(id), layer = map.getLayer(`${id}-render`);
+      color(await centerPixel(el), [255, 0, 0, 255]);
+      el.dataLayers = [{ ...row, url: image('#0000ff') }]; await el.updateComplete; await el.whenIdle();
+      color(await centerPixel(el), [0, 0, 255, 255]);
+      expect(map.getSource(id) === source).to.equal(true); expect(map.getLayer(`${id}-render`) === layer).to.equal(true);
+      el.mapStyle = localStyle(); await el.updateComplete; await el.whenIdle(); color(await centerPixel(el), [0, 0, 255, 255]);
+    });
+  }
+
   it('M01 settles real controls and camera hash ownership across reconnect', async () => {
     const originalUrl = location.href, originalState = history.state;
     let el: LyraMap | undefined;

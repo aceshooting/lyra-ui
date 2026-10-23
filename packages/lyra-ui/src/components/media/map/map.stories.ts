@@ -10,6 +10,7 @@ import type {
   LyraMapLegendEntry,
   LyraMapMarker,
   LyraMapMarkerActivationDetail,
+  LyraMapOverlays,
   LyraMapPointIcon,
   LyraMapViewChangeDetail,
 } from './map.js';
@@ -211,8 +212,17 @@ export const Choropleth: Story = {
         ],
       },
     };
+    let map: LyraMap | undefined, reversed = false;
     return html`
+      <lr-button @click=${() => {
+        if (!map) return;
+        reversed = !reversed;
+        const stops = choropleth.stops.map(([value], index) =>
+          [value, choropleth.stops[reversed ? choropleth.stops.length - 1 - index : index]![1]] as const);
+        map.choropleth = { ...choropleth, stops }; map.legendGradient = stops;
+      }}>Reverse the color scale</lr-button>
       <lr-map
+        ${ref(node => { map = node as LyraMap | undefined; })}
         style="height: 20rem"
         center="[2.3522, 48.8566]"
         zoom="10"
@@ -1220,6 +1230,40 @@ export const LargeStyledGeoJson: Story = {
   },
 };
 
+/** Reassign fresh overlay descriptors to change paint, layout, filter and zoom bounds
+ * while the same native source and layer remain installed. */
+export const MutableOverlayLayer: Story = {
+  render: () => {
+    const data = { type: 'FeatureCollection', features: [
+      { type: 'Feature', properties: { side: 'west' }, geometry: { type: 'Polygon', coordinates: [[[-12, -8], [-2, -8], [-2, 8], [-12, 8], [-12, -8]]] } },
+      { type: 'Feature', properties: { side: 'east' }, geometry: { type: 'Polygon', coordinates: [[[2, -8], [12, -8], [12, 8], [2, 8], [2, -8]]] } },
+    ] };
+    let map: LyraMap | undefined, east = false, hidden = false;
+    let status: HTMLElement | undefined;
+    const snapshot = (): LyraMapOverlays => ({
+      sources: [{ id: 'regions', source: { type: 'geojson', data } }],
+      layers: [{ interactive: true, layer: {
+        id: 'region-fill', type: 'fill', source: 'regions', minzoom: east ? 3 : 2, maxzoom: east ? 8 : 9,
+        filter: ['==', ['get', 'side'], east ? 'east' : 'west'],
+        layout: { visibility: hidden ? 'none' : 'visible' },
+        paint: { 'fill-color': east ? storyColor('success') : storyColor('brand'), 'fill-opacity': east ? 0.8 : 1 },
+      } }],
+    });
+    const update = () => {
+      if (map) map.overlays = snapshot();
+      if (status) status.textContent = hidden ? 'Overlay hidden' : `${east ? 'Eastern' : 'Western'} region visible`;
+    };
+    return html`
+      <lr-button @click=${() => { east = !east; update(); }}>Switch region and paint</lr-button>
+      <lr-button @click=${() => { hidden = !hidden; update(); }}>Toggle visibility</lr-button>
+      <lr-map ${ref(node => { map = node as LyraMap | undefined; })}
+        label="Mutable overlay layer" center="[0, 0]" zoom="4" style="block-size: 20rem"
+        .mapStyle=${LYRA_MAP_EMPTY_STYLE} .overlays=${snapshot()}></lr-map>
+      <p role="status" ${ref(node => { status = node as HTMLElement | undefined; })}>Western region visible</p>
+    `;
+  },
+};
+
 /** `minZoom`/`maxZoom` clamp gestures, commands and fits. */
 export const ZoomLimits: Story = {
   render: () => {
@@ -1566,6 +1610,28 @@ export const GeolocationSuccess: Story = {
         @lr-map-geolocate-error=${(event: CustomEvent) => { if (status) status.textContent = `Location failed: ${String(event.detail.code)}`; }}
       ></lr-map>
       <p role="status" ${ref(node => { status = node as HTMLElement | undefined; })}>Use the location button on the map.</p>
+    `;
+  },
+};
+
+
+export const CanvasRedrawAndLocalImage: Story = {
+  render: () => {
+    const canvas = document.createElement('canvas'); canvas.width = canvas.height = 64;
+    const context = canvas.getContext('2d')!;
+    let map: LyraMap | undefined, revision = 0;
+    const draw = () => { context.fillStyle = storyColor(revision % 2 ? 'danger' : 'brand'); context.fillRect(0, 0, 64, 64); };
+    draw();
+    const rows = () => [{ kind: 'canvas' as const, sourceId: 'drawing', canvas, animate: false, redrawRevision: revision,
+      coordinates: [[-12, 6], [-2, 6], [-2, -6], [-12, -6]] as const },
+      { kind: 'image' as const, sourceId: 'snapshot', url: canvas.toDataURL('image/png'),
+        coordinates: [[2, 6], [12, 6], [12, -6], [2, -6]] as const }];
+    return html`
+      <p>Redraw the canvas and update its image snapshot.</p>
+      <button type="button" @click=${() => { revision++; draw(); if (map) map.dataLayers = rows(); }}>Change colors</button>
+      <lr-map label="Canvas drawing and image snapshot" style="block-size:22rem" zoom="3"
+        ${ref(node => { map = node as LyraMap | undefined; })}
+        .mapStyle=${LYRA_MAP_EMPTY_STYLE} .dataLayers=${rows()}></lr-map>
     `;
   },
 };

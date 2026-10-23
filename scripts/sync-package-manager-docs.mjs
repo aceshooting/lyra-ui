@@ -93,6 +93,10 @@ export function synchronizePackageManagerDocumentTexts(
       `)`,
     'gu',
   );
+  const contributingInstallPattern = new RegExp(
+    `^(npm install --global pnpm@)${versionPattern}([ \t]*\r?$)`,
+    'gmu',
+  );
   const ciMatrixPattern = new RegExp(
     '(Node 22 uses `package\\.json#packageManager` \\(`pnpm@' +
       `)${versionPattern}(` + '`\\)\\.)',
@@ -111,9 +115,14 @@ export function synchronizePackageManagerDocumentTexts(
       `$1${node22Pnpm}$2`,
     ),
     contributingMd: replaceExactlyOne(
-      contributingMd,
-      contributingPattern,
-      'CONTRIBUTING package-manager',
+      replaceExactlyOne(
+        contributingMd,
+        contributingPattern,
+        'CONTRIBUTING package-manager',
+        `$1${node22Pnpm}$2`,
+      ),
+      contributingInstallPattern,
+      'CONTRIBUTING setup package-manager',
       `$1${node22Pnpm}$2`,
     ),
     ciAndGatesMd: replaceExactlyOne(

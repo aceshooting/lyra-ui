@@ -196,12 +196,11 @@ const bundleEntries = {
     // has its separate tree-shaking canary below. The reviewed raw sum includes every emitted file.
     maxRawBytes:
       coreRawBudget.reviewedCoreMeasurementBytes +
-      coreRawBudget.selectedRegressionHeadroomBytes +
-      coreRawBudget.reviewedRequiredShikiAssetBytes,
+      coreRawBudget.selectedRegressionHeadroomBytes,
     maxNonAssetRawBytes:
       coreRawBudget.reviewedCoreMeasurementBytes +
       coreRawBudget.selectedRegressionHeadroomBytes,
-    requiredShikiWasmBytes: coreRawBudget.reviewedRequiredShikiAssetBytes,
+    forbidShikiWasm: true,
   },
   // The other half of the registration split, and the reason the `core` budget above could move to
   // `all.js` without losing coverage: a bare `import '@aceshooting/lyra-ui'` must still collapse to
@@ -293,6 +292,7 @@ const bundleEntries = {
   // metadata with the same production tree-shaker consumers use.
   autoloaderTreeShaken: {
     fixture: 'core',
+    forbidShikiWasm: true,
   },
   autoloaderCdn: {
     fixture: 'core',
@@ -306,6 +306,11 @@ const bundleEntries = {
   },
   codeBlock: {
     fixture: 'core',
+    maxRawBytes: 600_000,
+    forbidShikiWasm: true,
+  },
+  shikiOniguruma: {
+    fixture: 'optional',
     maxRawBytes: 600_000 + coreRawBudget.reviewedRequiredShikiAssetBytes,
     maxNonAssetRawBytes: 600_000,
     requiredShikiWasmBytes: coreRawBudget.reviewedRequiredShikiAssetBytes,
@@ -849,6 +854,13 @@ import { loadChartAndZoom } from '@aceshooting/lyra-ui/components/charts/chart/c
 import { loadMaplibre } from '@aceshooting/lyra-ui/components/media/map/map-loader.js';
 import { loadMarkdownAndSanitizer } from '@aceshooting/lyra-ui/components/conversation/markdown/markdown-loader.js';
 import { loadShikiHighlighter } from '@aceshooting/lyra-ui/components/conversation/code-block/code-loader.js';
+import { createShikiOnigurumaEngine } from '@aceshooting/lyra-ui/components/conversation/code-block/shiki-oniguruma.js';
+import { setShikiCoreEngine, type ShikiRegexEngineFactory } from '@aceshooting/lyra-ui/components/lr-code-block-core.js';
+const onigurumaFactory: ShikiRegexEngineFactory = createShikiOnigurumaEngine;
+setShikiCoreEngine(onigurumaFactory);
+setShikiCoreEngine('javascript');
+// @ts-expect-error The former string preset requires an explicit factory import.
+setShikiCoreEngine('oniguruma');
 import { loadD3 } from '@aceshooting/lyra-ui/components/retrieval/graph/graph-loader.js';
 import { seriesPalette } from '@aceshooting/lyra-ui/components/charts/chart/chart.class.js';
 import { createLyraThemeBootstrap } from '@aceshooting/lyra-ui/theme.js';
@@ -1174,6 +1186,7 @@ export const loaded = true;
 `,
     flag: `import flagUrl from '@aceshooting/lyra-flags/flags/fr.svg';\nexport { flagUrl };\n`,
     codeBlock: `import '@aceshooting/lyra-ui/components/lr-code-block.js';\nexport const loaded = true;\n`,
+    shikiOniguruma: `import { createShikiOnigurumaEngine } from '@aceshooting/lyra-ui/components/conversation/code-block/shiki-oniguruma.js';\nglobalThis.packedShikiEngine = createShikiOnigurumaEngine;\n`,
     chart: `import '@aceshooting/lyra-ui/components/lr-chart.js';\nexport const loaded = true;\n`,
     map: maplibreVersion.startsWith('^5')
       ? `import '@aceshooting/lyra-ui/components/lr-map.js';
@@ -1282,6 +1295,16 @@ async function bundleSize(directory) {
     0,
   );
   return { rawBytes, gzipBytes, files };
+}
+
+/** Default graphs must not acquire a binary asset or move its encoded payload into JavaScript. */
+function unrequestedShikiAssetFindings({ wasmFiles, javascript, packagedWasm }) {
+  const findings = [];
+  if (wasmFiles.length) findings.push('a default import graph emitted an unrequested WASM asset');
+  if (javascript.includes(packagedWasm.toString('base64').slice(0, 96))) {
+    findings.push('a default import graph contains the encoded Shiki binary');
+  }
+  return findings;
 }
 
 /** Allow only the one byte-identical packaged binary, without increasing the remaining graph's cap. */
@@ -1577,6 +1600,13 @@ async function runBundle(fixtureDir, entry, config, noOptionalPeers, maplibreMaj
     if (cssFiles.length === 0 || expected.some((marker) => !css.includes(marker))) {
       violations.push(`the bare ${entry} import emitted no retained Lyra styles`);
     }
+  }
+  if (config.forbidShikiWasm) {
+    const packagedWasm = await readFile(join(fixtureDir, 'node_modules', '@aceshooting', 'lyra-ui',
+      'dist', 'components', 'conversation', 'code-block', 'onig.wasm'));
+    violations.push(...unrequestedShikiAssetFindings({
+      wasmFiles: output.files.filter(file => file.endsWith('.wasm')), javascript, packagedWasm,
+    }));
   }
   if (config.requiredShikiWasmBytes != null) {
     const packagedWasm = await readFile(join(fixtureDir, 'node_modules', '@aceshooting', 'lyra-ui',

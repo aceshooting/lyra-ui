@@ -445,6 +445,21 @@ outside its `minzoom`/`maxzoom` at the fractional camera zoom, with `visibility:
 every opacity (a constant or a `["zoom"]`-driven `interpolate`/`step`) is `0`, so a hidden tier never
 shadows a visible one.
 
+Reassign a fresh `overlays` snapshot to change an owned layer's `paint`, `layout`, `filter`,
+`minzoom` or `maxzoom`. When its `id`, `type`, source/source-layer binding and other structural
+fields stay the same and its source does not need replacement, the wrapper applies those mutable
+fields in place. Removed paint and layout
+keys are unset; removing `filter` clears it, and omitted zoom bounds return to `0`/`24`. The native
+source and layer stay installed, so feature state, image references and interaction attribution
+survive the change. The `before` order planner also runs when a snapshot changes. Changing a
+structural field, or using a peer without the needed mutation methods, takes the existing
+remove/add path instead. A failed native mutation is rolled back while the current peer can still
+be used; if restoration fails, ownership stays uncertain until a fresh style or peer can rebuild
+the resources. Failures
+produce the localized resource error, without exposing the native exception or claiming readiness
+for a partial update. Keep the application snapshot authoritative and await `whenIdle()` after a
+successful assignment before relying on the new rendering.
+
 ```js
 mapEl.overlays = {
   sources: [{ id: 'communes', source: { type: 'geojson', data: communes /* 600k values */, promoteId: 'code' } }],
@@ -524,6 +539,25 @@ layers accept `before`, `minZoom`, `maxZoom`, `opacity`, and `category`. GeoJSON
 use `label: LyraMapLabelOptions` with exactly one `field` or `expression`; text needs a style with
 a glyph provider. Image/canvas interaction tests the full four-corner footprint, including
 transparent pixels, and reports `sourceId` without inventing feature identity or `sourceLayer`.
+
+For a retained canvas, change `redrawRevision` (default `0`, a nonnegative safe integer) in a
+fresh `dataLayers` array after drawing. With `animate: false`, this uploads the new pixels once
+without replacing the source or its layers. Repeating a revision does not request another upload.
+An already animated canvas keeps its animation policy. Coordinate and revision changes can be
+assigned together. Missing native upload support fails through the map's resource-error path.
+
+Image-layer `url` also accepts strict base64 PNG/JPEG/WebP data URLs and blob URLs from the
+current document origin. SVG and other local formats are rejected. Local image preparation has a
+1 MiB byte limit, a 2,048-pixel per-axis limit, a 4,194,304-pixel limit and a 15-second deadline.
+The map owns a separately validated object URL; it never revokes the caller's blob URL. Retained
+local URLs share an 8 MiB encoded-byte retention budget, including older URLs awaiting native retirement.
+This local-source budget is separate from the atlas-image budget used by `images` and `imageProvider`.
+Keep an input blob URL available until preparation finishes. The owned URL survives style replay
+and is released after its native use retires or the map disconnects. Tile and style URLs keep
+their HTTP(S)-only policy.
+
+Paint-only data-layer and choropleth changes request one repaint per synchronous mutation batch.
+Equal paint produces no repaint; camera movement is not needed to show a metric or theme change.
 
 **Interactions:** opt in with `interactive` and optional `priority` on a data layer, choropleth or
 owned overlay layer; `interactiveBasemapLayers = []` explicitly enrolls basemap layers.
@@ -4546,7 +4580,7 @@ These named interfaces and helper signatures are available to typed integrations
     getBounds?(): { getWest(): number; getSouth(): number; getEast(): number; getNorth(): number };
     remove(): void;
     on(type: 'error', listener: (event: { error?: unknown }) => void): this;
-    on(type: 'render' | 'load' | 'style.load' | 'idle' | 'dataloading' | 'movestart' | 'move' | 'error', listener: () => void): this;
+    on(type: 'render' | 'load' | 'style.load' | 'idle' | 'dataloading' | 'sourcedata' | 'movestart' | 'move' | 'error', listener: () => void): this;
     on(type: 'moveend', listener: (event: Readonly<Record<string, unknown>> | undefined) => void): this;
     on(type: 'move', listener: () => void): this;
     on(type: 'boxzoomend', listener: () => void): this;
@@ -4559,8 +4593,10 @@ These named interfaces and helper signatures are available to typed integrations
     getPaintProperty?(id: string, property: string): unknown;
     getLayoutProperty?(id: string, property: string): unknown;
     setLayoutProperty?(id: string, property: string, value: unknown): unknown;
-    setFeatureState?(target: import('./map-feature-state.js').MapFeatureStateTarget, state: import('./map-feature-state.js').MapFeatureState): unknown;
-    removeFeatureState?(target: import('./map-feature-state.js').MapFeatureStateTarget, key: string): unknown;
+    setFilter?(id: string, filter: unknown): unknown;
+    setLayerZoomRange?(id: string, min: number, max: number): unknown;
+    setFeatureState?(target: import('./map-feature-state.js').LyraMapFeatureIdentifier, state: import('./map-feature-state.js').LyraMapFeatureState): unknown;
+    removeFeatureState?(target: import('./map-feature-state.js').LyraMapFeatureIdentifier, key: string): unknown;
     triggerRepaint?(): unknown;
     getSource(id: string): MapLibreGeoJsonSource | undefined;
     addSource(id: string, source: unknown): this;
@@ -4915,6 +4951,7 @@ particular country. Representative language mappings also include `lb` (Luxembou
     readonly canvas: HTMLCanvasElement;
     readonly coordinates: LyraMapSourceCoordinates;
     readonly animate?: boolean;
+    readonly redrawRevision?: number;
     readonly sourceId: string;
     readonly before?: string;
     readonly minZoom?: number;

@@ -22,7 +22,7 @@ covers every language it will ever render. Where `<lr-code-block>` can call
 lookup table a bundler can't statically narrow away even when a consumer never actually uses it —
 this component's own module never imports or calls that function at all. It only ever calls
 `loadShikiHighlighterCore(languages)` (shiki's "fine-grained bundle" recipe: `createHighlighterCore()`
-plus an explicit oniguruma engine, seeded with the resolved grammars in `languages`; a lazy grammar
+plus the JavaScript engine by default, seeded with the resolved grammars in `languages`; a lazy grammar
 is loaded only when requested), so a consumer
 importing this entry point instead of `code-block.js` gets a build genuinely free of shiki's full
 language table.
@@ -128,9 +128,7 @@ for the full rationale, including why `<lr-markdown>`/`<lr-markdown-core>` must 
 fallback separately. `base` is a flex column and `body` grows to fill whatever block space a
 explicitly sized host gives it too, identically to `<lr-code-block>` above.
 
-**Optional peer deps:** `shiki` (specifically its `shiki/core`, `shiki/engine/oniguruma`, Lyra’s packaged
-Oniguruma binary (the default; select `shiki/engine/javascript` instead via
-`setShikiCoreEngine('javascript')`), and `shiki/themes/github-{light,dark}.mjs` subpaths — never
+**Optional peer deps:** `shiki` (specifically its `shiki/core`, `shiki/engine/javascript` (the default), and `shiki/themes/github-{light,dark}.mjs` subpaths — never
 `shiki`'s main entry point, which is what carries the ~200-language table this component exists to
 avoid). Building the
 fine-grained highlighter is cached per `languages` object identity. A bounded weak cache also shares

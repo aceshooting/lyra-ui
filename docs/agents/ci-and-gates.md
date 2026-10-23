@@ -258,7 +258,7 @@ Firefox in two shards, and Chromium, Chrome, Edge and Safari (WebKit) in one eac
 pinned Playwright image; branded Chrome and Edge use the runner VM with bounded browser setup. Every
 leg installs with `--frozen-lockfile` and enables strict browser console checking. The packed-consumer
 jobs cover the Node floor, declarations, tree shaking and framework recipes without repeating that
-matrix per browser. Node 22 uses `package.json#packageManager` (`pnpm@12.14.0`).
+matrix per browser. Node 22 uses `package.json#packageManager` (`pnpm@12.15.0`).
 
 ## Scheduled full Firefox/WebKit suite
 
@@ -376,7 +376,7 @@ before they measure); re-rolling to get past a broken test or a benchmark interv
   its automatic default and WebKit/Safari use the smaller of four pages or half the CPUs. The
   aggregate runner budgets shard pages from Firefox's one-page and WebKit's four-page allocations.
 - `./scripts/ci.sh --platform-matrix` (or `--all`) runs the primary aggregate and the same six
-  Node 22 browser/shard legs as CI. Node 22 needs pnpm 12.14.0.
+  Node 22 browser/shard legs as CI. Node 22 needs pnpm 12.15.0.
   Its 6 legs are source-derived: Node 22 runs Chromium (1 shard), Chrome (1 shard), Edge (1 shard), Firefox (2 shards), and Safari (1 shard).
   `CI_SH_NODE22_BIN` and `CI_SH_PNPM22_BIN` accept explicit executable paths; the selected Node
   must match the exact `.nvmrc` patch.
@@ -421,9 +421,12 @@ locally patched advisory only for its reviewed package/version, patch registrati
 and installed source digests. Unknown advisories, changed patch contents, unpatched copies, and audit
 errors fail the check. Both CI and `scripts/ci.sh` run this gate.
 
-Per-patch scope: see the patch files under `patches/` and `osv-scanner.toml`. The patched upstream
-versions have no published fix; a version-only `pnpm audit` still reports the original advisory
-metadata.
+Per-patch scope: see the patch files under `patches/` and `osv-scanner.toml`. The `braces` advisory
+has no published upstream fix. The [sprintf-js advisory](https://github.com/advisories/GHSA-hp3w-g68c-fv3c)
+was withdrawn on 2026-10-22 because applications are responsible for handling exceptions. Its patch
+remains as hardening that bounds numeric precision and padding allocation. Every registered patch
+still requires verified evidence, including when the registry no longer reports its advisory. A
+version-only `pnpm audit` can report the original metadata for locally patched packages.
 
 Workspace patches do not propagate through published npm packages. A consumer that installs an
 affected dependency must apply the patch in its own package-manager configuration and verify the

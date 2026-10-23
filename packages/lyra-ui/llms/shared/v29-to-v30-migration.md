@@ -252,3 +252,18 @@ longer fails `--check`.
 `immutableSourceCollectionProperties`, the protected static list that `lr-thread-list` used to opt
 into this behavior, is removed from `LyraElement`: the rule is now the default for every identity
 collection, so a custom subclass that declared it needs no replacement.
+
+## Fine-grained syntax highlighting engines
+
+Core renderers and explicit `languages`/`languageLoaders` paths now use Shiki's JavaScript engine
+by default. The full components' automatic language highlighting keeps its existing engine.
+Custom grammars may require Oniguruma; replace `setShikiCoreEngine('oniguruma')` with:
+
+```js
+import { setShikiCoreEngine } from '@aceshooting/lyra-ui/components/lr-code-block-core.js';
+import { createShikiOnigurumaEngine } from '@aceshooting/lyra-ui/components/conversation/code-block/shiki-oniguruma.js';
+setShikiCoreEngine(createShikiOnigurumaEngine);
+```
+
+Configure the factory before rendering. The JavaScript preset and custom engine factories remain
+supported. The opt-in import keeps the packaged binary outside default component import graphs.

@@ -115,8 +115,7 @@ rendered code and defaults to `var(--lr-font-mono)`.
 
 **Optional peer deps:** `marked`, `dompurify` (both lazy-loaded, same as `<lr-markdown>`), `katex`
 (for `math`). Does _not_ depend on the full `shiki` package's default entry point — only
-`shiki/core`, `shiki/engine/oniguruma`, Lyra’s packaged Oniguruma binary (the default; select
-`shiki/engine/javascript` instead via `setShikiCoreEngine('javascript')`), and
+`shiki/core`, `shiki/engine/javascript` (the default), and
 `shiki/themes/github-{light,dark}.mjs`, the same fine-grained subset `<lr-code-block-core>` depends
 on.
 

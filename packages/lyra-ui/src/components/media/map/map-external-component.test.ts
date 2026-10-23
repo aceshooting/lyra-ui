@@ -1,4 +1,5 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
+import { captureReentrantUpdateWarning } from '../../../../test/expected-lit-update.js';
 import './map.js';
 import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from './map.js';
 import { loadMapFeatureStateRuntime } from './map-feature-loader.js';
@@ -88,7 +89,8 @@ class OwnedMap {
   getPaintProperty(id: string, key: string): unknown { return this.paint.get(`${id}:${key}`); }
   getLayoutProperty(): unknown { return undefined; }
   setLayoutProperty(): this { return this; }
-  triggerRepaint(): void {}
+  repaints = 0;
+  triggerRepaint(): void { this.repaints++; }
   getStyle() { return { layers: this.order.map(id => ({ id })) }; }
   moveLayer(id: string, before?: string): void { this.order = this.order.filter(value => value !== id); this.order.splice(before ? this.order.indexOf(before) : this.order.length, 0, id); }
   hasImage(id: string): boolean { return this.images.has(id); }
@@ -133,6 +135,30 @@ describe('lr-map external data layers and labels', () => {
     fixtureCleanup();
     Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: originalObserver });
     HTMLCanvasElement.prototype.getContext = originalContext;
+  });
+
+  it('coalesces generated paint changes and keeps equal snapshots repaint-free', async () => {
+    const row = { sourceId: 'points', geojson: POINTS, color: '#ff0000' };
+    const { element, peer } = await mount(el => { el.dataLayers = [row]; });
+    await load(element, peer); await element.whenIdle();
+    const source = [...peer.sources.values()][0], layers = [...peer.layers.values()]; peer.repaints = 0;
+    element.dataLayers = [{ ...row, color: '#0000ff' }]; await element.updateComplete; await element.whenIdle();
+    expect(peer.repaints).to.equal(1);
+    expect([...peer.sources.values()][0] === source).to.equal(true);
+    expect([...peer.layers.values()].every((layer, index) => layer === layers[index])).to.equal(true);
+    element.dataLayers = [{ ...row, color: '#0000ff' }]; await element.updateComplete; await element.whenIdle();
+    expect(peer.repaints).to.equal(1);
+  });
+
+  it('sanitizes repaint failure and retires the failed peer', async () => {
+    const row = { sourceId: 'points', geojson: POINTS, color: '#ff0000' };
+    const { element, peer } = await mount(el => { el.dataLayers = [row]; });
+    await load(element, peer); await element.whenIdle();
+    peer.triggerRepaint = () => { throw new Error('private repaint diagnostic'); };
+    element.dataLayers = [{ ...row, color: '#0000ff' }]; await element.updateComplete;
+    try { await element.whenIdle(); } catch { /* The existing sanitized resource failure is expected. */ }
+    expect(peer.removed).to.equal(true);
+    expect(element.shadowRoot?.textContent?.includes('private repaint diagnostic')).to.equal(false);
   });
 
   it('reports an image footprint click with authored source identity and no invented feature identity', async () => {
@@ -511,4 +537,44 @@ describe('lr-map external data layers and labels', () => {
     element.dataLayers = [{ sourceId: 'same', geojson: POINTS }]; await element.updateComplete;
     await waitUntil(() => peer.layers.size === 3); expect(peer.sources.size).to.equal(1);
   });
+  for (const reentrant of [false, true]) {
+    it(`recovers complete choropleth paint and readiness after ${reentrant ? 'multiple nested generations' : 'data supersession'}`, async () => {
+      const initial = { sourceId: 'regions', geojson: POINTS, field: 'value',
+        stops: [[0, '#ff0000'], [1, '#ff0000']] as const, noData: { color: '#cccccc', strokeColor: '#000000' } };
+      const { element, peer } = await mount(el => {
+        el.choropleth = initial; el.style.setProperty('--lr-map-choropleth-fill-opacity', '0.4');
+      });
+      await load(element, peer); await element.whenIdle();
+      const layerId = [...peer.layers.keys()].find(id => id.endsWith('-fill'))!;
+      const source = [...peer.sources.values()][0], layer = peer.getLayer(layerId);
+      for (const [key, value] of Object.entries((layer as { paint: Record<string, unknown> }).paint)) peer.paint.set(`${layerId}:${key}`, value);
+      const original = peer.setPaintProperty.bind(peer); let interrupted = false;
+      peer.repaints = 0;
+      peer.setPaintProperty = (id, key, value) => {
+        original(id, key, value);
+        if (!interrupted && key === 'fill-color') {
+          interrupted = true;
+          if (reentrant) {
+            const internal = element as unknown as { reconcileGeneratedLayers(): Promise<void> };
+            void internal.reconcileGeneratedLayers();
+            void internal.reconcileGeneratedLayers();
+          } else element.dataLayers = [];
+        }
+        return peer;
+      };
+      const updatePaint = async () => {
+        element.choropleth = { ...initial, stops: [[0, '#0000ff'], [1, '#0000ff']], noData: { color: '#cccccc', strokeColor: '#00ff00' } };
+        await element.updateComplete; await element.whenIdle();
+      };
+      if (reentrant) await updatePaint();
+      else expect(await captureReentrantUpdateWarning(element.localName, updatePaint)).to.equal(1);
+      expect(interrupted).to.equal(true); expect(peer.removed).to.equal(false);
+      expect(peer.getPaintProperty(layerId, 'fill-opacity')).to.equal(0.4);
+      expect(JSON.stringify(peer.getPaintProperty(layerId, 'fill-outline-color'))).to.include('#00ff00');
+      expect(JSON.stringify(peer.getPaintProperty(layerId, 'fill-color'))).to.include('#0000ff');
+      expect(peer.repaints).to.be.greaterThan(0);
+      expect([...peer.sources.values()][0] === source).to.equal(true); expect(peer.getLayer(layerId) === layer).to.equal(true);
+    });
+  }
+
 });

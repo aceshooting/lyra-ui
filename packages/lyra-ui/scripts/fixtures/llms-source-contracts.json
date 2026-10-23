@@ -3793,7 +3793,7 @@
       "module": "src/components/conversation/code-block/shiki-types.ts",
       "exportName": "setShikiCoreEngine",
       "kind": "function",
-      "fingerprint": "0846bc1dad7c02587f2c",
+      "fingerprint": "de8a05c2d6c23d5f9cc9",
       "routes": [
         "src/components/conversation/code-block/code-block-core.ts",
         "src/components/conversation/markdown/markdown-core.ts",
@@ -9836,7 +9836,7 @@
       "module": "src/components/media/map/map-data-layer-model.ts",
       "exportName": "LyraMapCanvasDataLayer",
       "kind": "interface",
-      "fingerprint": "5c5624ede7d2e585e3f3",
+      "fingerprint": "60d7b79750a283964583",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -10144,7 +10144,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "loadMaplibre",
       "kind": "function",
-      "fingerprint": "762a43a08c873cfbc41b",
+      "fingerprint": "ed02b16dca63ad8542aa",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -10192,7 +10192,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MapLibreMapCapability",
       "kind": "interface",
-      "fingerprint": "c78c953cf1c87538c8af",
+      "fingerprint": "a619c0e683fa5584d344",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -10208,7 +10208,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MapLibreMarkerCapability",
       "kind": "interface",
-      "fingerprint": "fd99e31736e416badef7",
+      "fingerprint": "afecdda9542687cdee42",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -10224,7 +10224,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MaplibreModule",
       "kind": "interface",
-      "fingerprint": "6465e96b39fc292567fb",
+      "fingerprint": "9ea980526685e7da6f80",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -18742,7 +18742,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "loadModularMap",
       "kind": "function",
-      "fingerprint": "7c05d33b1e0bb51c8e9c",
+      "fingerprint": "6ef6aa49a6c3b9141f7f",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -18781,7 +18781,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "ModularMapModule",
       "kind": "interface",
-      "fingerprint": "73d846dfa7f1cec9813c",
+      "fingerprint": "919a2798c1c9c8023188",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -21631,6 +21631,22 @@
         "declaration": "LyraMapPointerDetail"
       },
       "fingerprint": "8e1fb68427d9d3af33e3"
+    },
+    {
+      "module": "src/components/conversation/code-block/shiki-oniguruma.ts",
+      "exportName": "createShikiOnigurumaEngine",
+      "kind": "function",
+      "fingerprint": "2007f39ba9c4dd06d47d",
+      "routes": [
+        "src/components/conversation/code-block/shiki-oniguruma.ts"
+      ],
+      "document": "llms/conversation.md",
+      "family": "conversation",
+      "locator": {
+        "kind": "utility",
+        "name": "components-conversation-code-block-shiki-oniguruma-contracts",
+        "declaration": "createShikiOnigurumaEngine"
+      }
     }
   ],
   "legacy": []

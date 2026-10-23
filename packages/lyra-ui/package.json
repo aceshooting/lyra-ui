@@ -205,6 +205,7 @@
     "./components/conversation/code-block/code-block-core.class.js": "./dist/components/conversation/code-block/code-block-core.class.js",
     "./components/conversation/code-block/code-block.class.js": "./dist/components/conversation/code-block/code-block.class.js",
     "./components/conversation/code-block/code-loader.js": "./dist/components/conversation/code-block/code-loader.js",
+    "./components/conversation/code-block/shiki-oniguruma.js": "./dist/components/conversation/code-block/shiki-oniguruma.js",
     "./components/conversation/conversation-item/conversation-item.class.js": "./dist/components/conversation/conversation-item/conversation-item.class.js",
     "./components/conversation/generation-metrics/generation-metrics.class.js": "./dist/components/conversation/generation-metrics/generation-metrics.class.js",
     "./components/conversation/handoff-divider/handoff-divider.class.js": "./dist/components/conversation/handoff-divider/handoff-divider.class.js",
@@ -2971,7 +2972,7 @@
     "@web/test-runner-commands": "^1.0.1",
     "@web/test-runner-junit-reporter": "^1.0.0",
     "@web/test-runner-playwright": "^1.0.0",
-    "chart.js": "^4.5.1",
+    "chart.js": "^4.6.1",
     "chartjs-plugin-annotation": "^3.1.0",
     "chartjs-plugin-datalabels": "^2.2.0",
     "chartjs-plugin-zoom": "^2.2.0",
@@ -3002,7 +3003,7 @@
     "pixelmatch": "^8.0.0",
     "playwright": "^1.64.1",
     "pngjs": "^7.0.0",
-    "postal-mime": "^4.0.11",
+    "postal-mime": "^4.1.4",
     "qrcode": "^1.5.4",
     "react": "^19.3.1",
     "shiki": "^4.5.0",
@@ -3011,5 +3012,5 @@
     "vue": "^3.5.44",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
-  "packageManager": "pnpm@12.14.0"
+  "packageManager": "pnpm@12.15.0"
 }

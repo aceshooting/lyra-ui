@@ -76,7 +76,7 @@ items let them move to `lr-map`, or at least drop their workarounds on the engin
 - [ ] Per-data-layer `minZoom`/`maxZoom` and symbol text labels (line-placed labels, point names,
   halo, colors from theme tokens). External data layers and labels are done; GeoJSON `dataLayers`
   entries still lack a zoom range.
-- [ ] Repaint after paint changes applied through data layers on every engine (WebKit otherwise
+- [x] Repaint after paint changes applied through data layers on every engine (WebKit otherwise
   skips a frame).
 - [ ] First-class lazy construction (build on visibility or idle with a built-in control
   placeholder), so applications stop deferring the map behind timers.
@@ -115,8 +115,10 @@ regional site, whose map package is a separate fork of the main site's):
   surviving a style swap, a drag-end signal and a color option.
 - [x] Pointer events with `{ lngLat, point }` and feature geometry on hover events.
 - [x] Basemap layer selectors and a read-only style-layer list.
-- [ ] Canvas redraw signal and `data:`/`blob:` image URLs for image layers; in-place updates of owned
-  layers; owner-scoped composition; control order within a corner and linked custom attribution.
+- [x] Canvas redraw signal and bounded `data:`/`blob:` image URLs for image layers, with retained
+  source identity and replay after style changes.
+- [x] In-place updates of owned layers, preserving feature state and rolling back failed changes.
+- [ ] Owner-scoped composition; control order within a corner and linked custom attribution.
 - [ ] Prototype each raw-engine application on `lr-map` against the release candidate build and
   confirm the same behavior (basemap and theme switching, overlays, popups, drawing, geolocation,
   URL hash, right-to-left, translations, mobile layout).

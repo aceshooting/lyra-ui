@@ -29,7 +29,7 @@
   "engines": {
     "node": ">=22"
   },
-  "packageManager": "pnpm@12.14.0",
+  "packageManager": "pnpm@12.15.0",
   "sideEffects": [
     "./dist/docx/editor.js",
     "./src/docx/editor.ts",
@@ -74,12 +74,13 @@
     "lint": "tsc --noEmit -p tsconfig.test.json && oxlint -c ../../.oxlintrc.json --type-aware --deny-warnings src && node scripts/check-package.mjs",
     "test": "pnpm build && tsc --noEmit -p tsconfig.exports.json && tsc -p tsconfig.test.json && node --test --test-concurrency=2 .test-output/src/docx/*.test.js scripts/package.test.mjs scripts/check-package.test.mjs scripts/coverage.test.mjs scripts/node-coverage.test.mjs scripts/performance.test.mjs scripts/source-preparation.test.mjs scripts/static-files.test.mjs scripts/build-engine.test.mjs scripts/engine/source.test.mjs scripts/engine/distribution.test.mjs scripts/editor-command-lifecycle.test.mjs test/xml.test.mjs",
     "test:browser": "node scripts/browser-test.mjs",
+    "test:engine-source": "node scripts/engine-regressions.mjs",
     "test:performance": "node scripts/performance-browser.mjs",
     "test:coverage": "node scripts/coverage.mjs"
   },
   "devDependencies": {
     "@aceshooting/lyra-ui": "workspace:*",
-    "@docx-editor.dev/core": "2.31.0",
+    "@docx-editor.dev/core": "2.32.0",
     "@types/node": "^22.20.5",
     "axe-core": "^4.14.0",
     "istanbul-lib-coverage": "^3.2.2",
@@ -88,7 +89,7 @@
     "playwright": "^1.64.1",
     "typescript": "^7.0.2",
     "v8-to-istanbul": "^9.3.0",
-    "vite": "^8.3.4"
+    "vite": "^8.3.5"
   },
   "dependencies": {
     "fflate": "^0.8.3",

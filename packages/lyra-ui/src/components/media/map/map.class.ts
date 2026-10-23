@@ -1,3 +1,5 @@
+import { MapPaintBatch } from './map-paint-batch.js';
+import type { MapExternalSourceEffects } from './map-external-source-effects.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { snapshotMapStyle } from './map-style-input.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
@@ -3755,6 +3757,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private _canonicalChoropleth: CanonicalMapChoropleth | undefined;
   private _canonicalDataLayersSource: unknown = UNPROJECTED_MAP_VALUE;
   private _canonicalDataLayersBase = '';
+  private _canonicalDataLayersOrigin = '';
   private _canonicalExternalLayers: readonly CanonicalMapExternalLayer[] = [];
   private invalidDataLayerModel = false;
   private _canonicalDataLayers: readonly CanonicalMapDataLayer[] = EMPTY_CANONICAL_MAP_DATA_LAYERS;
@@ -3772,11 +3775,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   private get canonicalDataLayers(): readonly CanonicalMapDataLayer[] {
     const source = this.dataLayers;
-    const base = this.ownerDocument.baseURI;
-    if (Object.is(source, this._canonicalDataLayersSource) && base === this._canonicalDataLayersBase) return this._canonicalDataLayers;
+    const base = this.ownerDocument.baseURI, origin = this.ownerDocument.defaultView?.origin ?? 'null';
+    if (Object.is(source, this._canonicalDataLayersSource) && base === this._canonicalDataLayersBase && origin === this._canonicalDataLayersOrigin) return this._canonicalDataLayers;
     this._canonicalDataLayersSource = source;
-    this._canonicalDataLayersBase = base;
-    const model = projectMapDataLayerModel(source, { baseUrl: base, projectGeoJson: projectMapDataLayer });
+    this._canonicalDataLayersBase = base; this._canonicalDataLayersOrigin = origin;
+    const model = projectMapDataLayerModel(source, { baseUrl: base, ownerOrigin: origin, projectGeoJson: projectMapDataLayer });
     this.invalidDataLayerModel = !model.ok;
     this._canonicalDataLayers = model.ok ? model.geojson : EMPTY_CANONICAL_MAP_DATA_LAYERS;
     this._canonicalExternalLayers = model.ok ? model.external : [];
@@ -5146,6 +5149,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.drawingController?.disposeResources();
     this.ownedFeatures?.dispose();
     this.externalFeatures?.dispose();
+    this.externalSourceEffects?.dispose(); this.externalSourceEffects = undefined;
     this.externalFeatureWorkStarted = false;
     this.externalSourceIds.clear();
     this.setControlIssue(undefined);
@@ -5666,12 +5670,55 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   /** Repaints token-derived and visibility-derived MapLibre values without touching sources,
    *  layers, or map geometry -- which is exactly what a theme change and a `hiddenCategories`
    *  change each need. */
+  private readonly mapPaintBatch = new MapPaintBatch();
+  private mapPaintBatchActive = false;
+
+  private withMapPaintBatch(apply: () => void): boolean {
+    const map = this._map;
+    if (!map || !this._styleLoaded || !this.isConnected) return false;
+    const style = this._styleGeneration, connection = this._connectGeneration, generation = this.featureGeneration;
+    const styleInput = this.mapStyle, data = this.dataLayers, choropleth = this.choropleth, hidden = this.hiddenCategories;
+    const current = () => this.isConnected && this._map === map && this._styleLoaded && this._styleGeneration === style &&
+      this._connectGeneration === connection && this.featureGeneration === generation && this.mapStyle === styleInput &&
+      this.dataLayers === data && this.choropleth === choropleth && this.hiddenCategories === hidden;
+    const previous = this.mapPaintBatchActive; this.mapPaintBatchActive = true;
+    try { this.mapPaintBatch.run(map, style, current, apply); return true; }
+    catch (error) {
+      // A native callback may supersede the batch after only its first write. Clear every
+      // success cache and let the next current transaction supply missing paint and repaint.
+      this.appliedLayerPaintKeys.clear(); this.appliedChoroplethPaintKey = undefined;
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        // This scheduler keeps the first callback for its key. Read the latest owner when it
+        // runs, rather than capturing a generation that another deferred request can replace.
+        this.scheduleAfterUpdate(() => {
+          if (this.isConnected && this._map && this._styleLoaded) void this.reconcileGeneratedLayers();
+        }, 'map-paint-reconcile');
+      } else if (current()) this.failInitialization('initialization-failed');
+      return false;
+    } finally { this.mapPaintBatchActive = previous; }
+  }
+
+  private removeMapLayer(id: string): void {
+    this.mapPaintBatch.invalidate(id);
+    this._map?.removeLayer(id);
+  }
+
+  private setMapPaint(id: string, property: string, value: unknown): void {
+    if (this.mapPaintBatchActive) this.mapPaintBatch.write(id, property, value);
+    else this.withMapPaintBatch(() => { this.mapPaintBatch.write(id, property, value); });
+  }
+
   private refreshThemePaint(): void {
+    if (!this.withMapPaintBatch(() => this.refreshThemePaintBatch())) return;
+    if (this._canonicalExternalLayers.length || this.externalFeatureWorkStarted) void this.reconcileGeneratedLayers();
+  }
+
+  private refreshThemePaintBatch(): void {
     paintColorCache.delete(this);
     if (!this._map || !this._styleLoaded) return;
     if (this.preparingFeatures) {
       if (this._canonicalExternalLayers.length || this.externalFeatureWorkStarted) {
-        this.appliedLayerPaintKeys.clear(); void this.reconcileGeneratedLayers();
+        this.appliedLayerPaintKeys.clear();
       }
       return;
     }
@@ -5680,9 +5727,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (this._appliedFillLayerId) {
       const choropleth = this.canonicalChoropleth;
       if (choropleth && choropleth.stops.length > 0) {
-        this._map.setPaintProperty(this._appliedFillLayerId, 'fill-color', this.choroplethColorExpression(choropleth) as never);
+        this.setMapPaint(this._appliedFillLayerId, 'fill-color', this.choroplethColorExpression(choropleth) as never);
       }
-      this._map.setPaintProperty(this._appliedFillLayerId, 'fill-opacity', fillOpacity);
+      this.setMapPaint(this._appliedFillLayerId, 'fill-opacity', fillOpacity);
     }
     const dataLayersBySourceId = new Map(
       this.canonicalDataLayers.map((layer) => [layer.sourceId, layer]),
@@ -5697,7 +5744,6 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       const {geojson: _geojson, geojsonProjection: _projection, ...paint} = dataLayer;
       this.appliedLayerPaintKeys.set(sourceId, JSON.stringify(paint));
     }
-    if (this._canonicalExternalLayers.length || this.externalFeatureWorkStarted) void this.reconcileGeneratedLayers();
   }
 
   /**
@@ -6268,6 +6314,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     return { sources, layers };
   }
 
+  private externalSourceEffects?: MapExternalSourceEffects;
+
   private externalLayerInput(owned: MapOwnedOverlaySnapshot): ReturnType<typeof buildMapExternalLayers> {
     if (this.externalIdStyle !== this._styleGeneration) {
       this.externalIdStyle = this._styleGeneration;
@@ -6334,14 +6382,16 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       const nextId = next ? this.resolveChoroplethSourceId(next.sourceId) : undefined;
       if (this._appliedChoroplethSourceId && this._appliedChoroplethSourceId !== nextId) this.removeChoropleth();
       // Rebuilds retain the original paint order: generated overlays sit above the choropleth.
-      if (this.rebuildGeneratedLayers) {
-        this.applyChoropleth();
-        this.applyDataLayers();
-        this.rebuildGeneratedLayers = false;
-      } else {
-        this.applyDataLayers();
-        this.applyChoropleth();
-      }
+      if (!this.withMapPaintBatch(() => {
+        if (this.rebuildGeneratedLayers) {
+          this.applyChoropleth();
+          this.applyDataLayers();
+          this.rebuildGeneratedLayers = false;
+        } else {
+          this.applyDataLayers();
+          this.applyChoropleth();
+        }
+      })) return;
       const complete = (): void => {
         if (!current() || controller.signal.aborted) return;
         this.configureMapInteractions(ownedInput.overlays as MapOwnedOverlaySnapshot, externalInput);
@@ -6367,7 +6417,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       const external = this.externalFeatureWorkStarted || externalInput.sources.length > 0;
       if (external) this.externalFeatureWorkStarted = true;
       // Native resource ownership loads on demand, inside this same feature transaction.
-      const reconcileOwned = ({ MapOwnedFeatures }: NonNullable<typeof loadMapOwnedFeatureRuntime.loaded>): void => {
+      const reconcileOwned = ({ MapOwnedFeatures, MapExternalSourceEffects }: NonNullable<typeof loadMapOwnedFeatureRuntime.loaded>): void => {
         if (!current() || controller.signal.aborted) return;
         const owned = this.ownedFeatures ??= new MapOwnedFeatures();
         const applyOwned = (): Promise<void> => owned.reconcile(map, styleGeneration, ownedInput, {
@@ -6379,11 +6429,25 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
           styleLayers: () => this._styleLayers,
         });
         if (external) {
-          void (this.externalFeatures ??= new MapOwnedFeatures()).reconcile(map, styleGeneration, { overlays: { sources: externalInput.sources, layers: externalInput.layers }, images: [], styleOverrides: [] }, {
+          const effects = this.externalSourceEffects ??= new MapExternalSourceEffects();
+          const revisions = new Map(this._canonicalExternalLayers.filter(row => row.kind === 'canvas').map(row =>
+            [this.externalSourceIds.get(row.sourceId)!, row.redrawRevision ?? 0] as const));
+          const live = () => this.isConnected && this._map === map && this._styleGeneration === styleGeneration &&
+            this._connectGeneration === connection && this.mapStyle === style;
+          void effects.reconcile(map, styleGeneration, externalInput.sources, revisions, {
+            owner: this, signal: controller.signal, isCurrent: current, isLive: live,
+            canPauseCanvas: id => {
+              void this.canonicalDataLayers;
+              return !this.invalidDataLayerModel && this._canonicalExternalLayers.some(row =>
+                row.kind === 'canvas' && this.externalSourceIds.get(row.sourceId) === id && row.source['animate'] === false);
+            },
+            retire: () => { if (live()) this.failInitialization('initialization-failed'); },
+          }, sources => (this.externalFeatures ??= new MapOwnedFeatures()).reconcile(map, styleGeneration,
+            { overlays: { sources, layers: externalInput.layers }, images: [], styleOverrides: [] }, {
             owner: this, signal: controller.signal, isCurrent: current, isGeneratedLayer: () => false,
             beforeSourceChange: change => { this.featureStates?.refreshNative('data-layer', change.id); },
             resolve: (value, property) => this.resolveStyleOverride(value, property),
-          }).then(() => {
+          })).then(() => {
             if (!current() || controller.signal.aborted) return;
             return applyOwned().then(complete);
           }).catch(failure);
@@ -6516,13 +6580,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const {geojson: _geojson, geojsonProjection: _projection, ...paint} = choropleth;
     const paintKey = JSON.stringify(paint);
     if (this.appliedChoroplethPaintKey === paintKey && this._map.getLayer(fillLayerId)) return;
-    this.appliedChoroplethPaintKey = paintKey;
     const colorExpr = this.choroplethColorExpression(choropleth);
     const outlineExpr = this.choroplethOutlineExpression(choropleth, colorExpr);
     if (this._map.getLayer(fillLayerId)) {
-      this._map.setPaintProperty(fillLayerId, 'fill-color', colorExpr as never);
-      this._map.setPaintProperty(fillLayerId, 'fill-opacity', choroplethFillOpacity(this));
-      this._map.setPaintProperty(fillLayerId, 'fill-outline-color', (outlineExpr ?? null) as never);
+      this.setMapPaint(fillLayerId, 'fill-color', colorExpr as never);
+      this.setMapPaint(fillLayerId, 'fill-opacity', choroplethFillOpacity(this));
+      this.setMapPaint(fillLayerId, 'fill-outline-color', (outlineExpr ?? null) as never);
     } else {
       this._map.addLayer({
         id: fillLayerId,
@@ -6535,6 +6598,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         },
       });
     }
+    this.appliedChoroplethPaintKey = paintKey;
     this._appliedFillLayerId = fillLayerId;
   }
 
@@ -6613,7 +6677,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (!this._map || !this._appliedChoroplethSourceId) return;
     this.featureStates?.refreshNative('choropleth', this._appliedChoroplethSourceId);
     if (this._appliedFillLayerId && this._map.getLayer(this._appliedFillLayerId)) {
-      this._map.removeLayer(this._appliedFillLayerId);
+      this.removeMapLayer(this._appliedFillLayerId);
     }
     if (this._map.getSource(this._appliedChoroplethSourceId)) {
       this._map.removeSource(this._appliedChoroplethSourceId);
@@ -6722,7 +6786,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.paintPointIcons(sourceId, layer);
     if (layer.label && this.appliedGeoLabels.has(sourceId)) {
       const descriptor = buildMapLabelLayer(`${sourceId}-label`, sourceId, layer.label, value => resolvedLayerColor(this, value, layer.tone));
-      for (const [property, value] of Object.entries(descriptor['paint'] as Record<string, unknown>)) this._map?.setPaintProperty(descriptor.id, property, value);
+      for (const [property, value] of Object.entries(descriptor['paint'] as Record<string, unknown>)) this.setMapPaint(descriptor.id, property, value);
     }
   }
 
@@ -6781,8 +6845,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         paint: { 'circle-color': stroke, 'circle-radius': 5 },
       });
     }
-    this._map.setPaintProperty(lineId, 'line-width', layer.line?.width ?? 2);
-    this._map.setPaintProperty(lineId, 'line-opacity', layer.line?.opacity ?? 1);
+    this.setMapPaint(lineId, 'line-width', layer.line?.width ?? 2);
+    this.setMapPaint(lineId, 'line-opacity', layer.line?.opacity ?? 1);
     this.paintGeometryLayers(sourceId, layer);
   }
 
@@ -6791,9 +6855,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (!this._map) return;
     const tone = layer.tone;
     const color = resolvedLayerColor(this, layer.color, tone);
-    this._map.setPaintProperty(`${sourceId}-fill`, 'fill-color', color);
-    this._map.setPaintProperty(`${sourceId}-fill`, 'fill-opacity', choroplethFillOpacity(this));
-    this._map.setPaintProperty(`${sourceId}-line`, 'line-color', this.lineColor(layer));
+    this.setMapPaint(`${sourceId}-fill`, 'fill-color', color);
+    this.setMapPaint(`${sourceId}-fill`, 'fill-opacity', choroplethFillOpacity(this));
+    this.setMapPaint(`${sourceId}-line`, 'line-color', this.lineColor(layer));
     this.paintPoints(sourceId, layer);
   }
 
@@ -6841,18 +6905,18 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       fallback,
     );
     const id = `${sourceId}-circle`;
-    this._map.setPaintProperty(id, 'circle-color', color);
+    this.setMapPaint(id, 'circle-color', color);
     // Before the early return below: an un-mute must still land on a layer whose `point` options
     // were removed in the same update, which is the one case that return would otherwise skip.
     const opacity = this.mutedPointOpacity(id, point?.field);
     if (opacity !== undefined) {
-      this._map.setPaintProperty(id, 'circle-opacity', opacity);
-      this._map.setPaintProperty(id, 'circle-stroke-opacity', opacity);
+      this.setMapPaint(id, 'circle-opacity', opacity);
+      this.setMapPaint(id, 'circle-stroke-opacity', opacity);
     }
     if (!point && !this.appliedPointPaint.has(sourceId)) return;
-    this._map.setPaintProperty(id, 'circle-radius', pointRadiusExpression(point?.radius ?? 5));
-    this._map.setPaintProperty(id, 'circle-stroke-width', point?.strokeWidth ?? 0);
-    this._map.setPaintProperty(id, 'circle-stroke-color', point?.strokeColor
+    this.setMapPaint(id, 'circle-radius', pointRadiusExpression(point?.radius ?? 5));
+    this.setMapPaint(id, 'circle-stroke-width', point?.strokeWidth ?? 0);
+    this.setMapPaint(id, 'circle-stroke-color', point?.strokeColor
       ? resolvedLayerColor(this, point.strokeColor, layer.tone) : fallback);
     if (point) this.appliedPointPaint.add(sourceId);
     else this.appliedPointPaint.delete(sourceId);
@@ -6877,7 +6941,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const applied = this.appliedPointIcons.get(sourceId);
     if (!applied || !this._map) return;
     const id = `${sourceId}-point-icon`;
-    if (this._map.getLayer(id)) this._map.removeLayer(id);
+    if (this._map.getLayer(id)) this.removeMapLayer(id);
     for (const { id: imageId } of applied.icons) {
       if (this._map.hasImage?.(imageId)) this._map.removeImage?.(imageId);
     }
@@ -6929,7 +6993,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // silently never reach the muting write.
     const iconLayerId = `${sourceId}-point-icon`;
     const opacity = this.mutedPointOpacity(iconLayerId, layer.point?.iconField);
-    if (opacity !== undefined) this._map?.setPaintProperty(iconLayerId, 'icon-opacity', opacity);
+    if (opacity !== undefined) this.setMapPaint(iconLayerId, 'icon-opacity', opacity);
     const color = this.pointIconColor(layer);
     if (color === applied.color) return;
     for (const { id, icon } of applied.icons) {
@@ -7045,29 +7109,29 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const tone = layer.tone;
     const stroke = resolvedClusterStrokeColor(this, cluster.strokeColor, layer);
     const clusterId = `${sourceId}-cluster`;
-    this._map.setPaintProperty(clusterId, 'circle-color', this.clusterColorExpression(layer, cluster));
-    this._map.setPaintProperty(
+    this.setMapPaint(clusterId, 'circle-color', this.clusterColorExpression(layer, cluster));
+    this.setMapPaint(
       clusterId,
       'circle-radius',
       stepExpression(['get', 'point_count'], cluster.radiusSteps),
     );
-    this._map.setPaintProperty(clusterId, 'circle-stroke-color', stroke);
+    this.setMapPaint(clusterId, 'circle-stroke-color', stroke);
     // Gated on the same glyph condition that decided whether to add the layer at all, rather than
     // on a `getLayer` probe: a repaint must not query map structure (see `refreshThemePaint`).
     if (this.styleProvidesGlyphs()) {
-      this._map.setPaintProperty(
+      this.setMapPaint(
         `${sourceId}-cluster-count`,
         'text-color',
         resolvedClusterCountColor(this, cluster.countColor)
           ?? resolvedLayerColor(this, `var(${ON_TONE_TOKEN[tone ?? 'accent']})`, tone),
       );
       const countHaloColor = resolvedClusterCountColor(this, cluster.countHaloColor);
-      this._map.setPaintProperty(
+      this.setMapPaint(
         `${sourceId}-cluster-count`,
         'text-halo-color',
         countHaloColor ?? null,
       );
-      this._map.setPaintProperty(
+      this.setMapPaint(
         `${sourceId}-cluster-count`,
         'text-halo-width',
         countHaloColor ? cluster.countHaloWidth : null,
@@ -7111,23 +7175,23 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // `?? 1` rather than a skip: an update that DROPS `weightField` has to put the layer back on
     // MapLibre's own uniform weight, and leaving the previous expression in place would keep
     // weighting by a property the consumer no longer asked for.
-    this._map.setPaintProperty(
+    this.setMapPaint(
       heatmapId,
       'heatmap-weight',
       heatmapWeightExpression(layer.heatmap) ?? 1,
     );
-    this._map.setPaintProperty(
+    this.setMapPaint(
       heatmapId,
       'heatmap-intensity',
       heatmapZoomValue(layer.heatmap?.intensity, DEFAULT_HEATMAP_INTENSITY, 0, 100),
     );
-    this._map.setPaintProperty(heatmapId, 'heatmap-color', this.heatmapColorExpression(layer));
-    this._map.setPaintProperty(
+    this.setMapPaint(heatmapId, 'heatmap-color', this.heatmapColorExpression(layer));
+    this.setMapPaint(
       heatmapId,
       'heatmap-radius',
       heatmapZoomValue(layer.heatmap?.radius, DEFAULT_HEATMAP_RADIUS, 1, 200),
     );
-    this._map.setPaintProperty(
+    this.setMapPaint(
       heatmapId,
       'heatmap-opacity',
       finiteRange(layer.heatmap?.opacity ?? Number.NaN, 1, 0, 1),
@@ -7258,7 +7322,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     for (const suffix of DATA_LAYER_SUFFIXES) {
       const layerId = `${sourceId}${suffix}`;
       this.appliedPointMuting.delete(layerId);
-      if (this._map.getLayer(layerId)) this._map.removeLayer(layerId);
+      if (this._map.getLayer(layerId)) this.removeMapLayer(layerId);
     }
     if (this._map.getSource(sourceId)) this._map.removeSource(sourceId);
     this._appliedDataLayerIds.delete(publicSourceId);

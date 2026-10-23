@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { resolve, dirname, sep, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -1491,6 +1492,28 @@ try {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const url = `http://127.0.0.1:${server.address().port}/test/browser.html`;
   for (const name of browsers) await runBrowser(name, url, lazyEntries);
+  if (Object.keys(selection).length === 0) {
+    const report = resolve(output, 'engine-source-evidence.json');
+    const result = spawnSync(process.execPath, [resolve(here, 'engine-regressions.mjs')], {
+      cwd: root, stdio: 'inherit', env: { ...process.env, DOCX_BROWSERS: browsers.join(','),
+        DOCX_ENGINE_REGRESSION_MUTANT: '', DOCX_ENGINE_REGRESSION_REPORT: report },
+    });
+    if (result.error) throw result.error;
+    assert.equal(result.signal, null, 'Engine source regression process was interrupted');
+    assert.equal(result.status, 0, 'Engine source behavioral regressions failed');
+    const sourceEvidence = JSON.parse(await readFile(report, 'utf8'));
+    assert.equal(sourceEvidence.mutant, '', 'Full qualification cannot use a causal mutant');
+    const sourceLock = JSON.parse(await readFile(resolve(here, 'engine-source.lock.json'), 'utf8'));
+    assert.equal(sourceEvidence.sourceVersion, sourceLock.upstream.version, 'Engine source version differs');
+    assert.equal(sourceEvidence.sourceCommit, sourceLock.upstream.commit, 'Engine source commit differs');
+    const expectedCases = ['table-preparation', 'refresh-preparation-rejection', 'refresh-preparation-cancellation'];
+    assert.deepEqual(sourceEvidence.checks.map(check => `${check.browser}/${check.testCase}`).sort(),
+      browsers.flatMap(browser => expectedCases.map(testCase => `${browser}/${testCase}`)).sort(),
+      'Missing, duplicate or unexpected engine source regression cases');
+    assert.ok(sourceEvidence.checks.every(check => check.status === 'passed'), 'Engine source regression evidence failed');
+    evidence.engineSourceRegressions = sourceEvidence;
+    evidence.checks.push(...sourceEvidence.checks.map(check => `${check.browser}: ${check.testCase}`));
+  }
   evidence.result = Object.keys(selection).length > 0 ? 'partial' : 'pass';
   if (evidence.result === 'partial') evidence.selection = selection;
 } catch (error) {

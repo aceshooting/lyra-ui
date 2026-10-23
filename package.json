@@ -76,7 +76,7 @@
     "@storybook/web-components-vite": "10.6.3",
     "@tailwindcss/vite": "^4.3.3",
     "axe-core": "^4.14.0",
-    "chart.js": "^4.5.1",
+    "chart.js": "^4.6.1",
     "chartjs-plugin-zoom": "^2.2.0",
     "d3-drag": "^3.0.0",
     "d3-force": "^3.0.0",
@@ -89,7 +89,7 @@
     "lit": "^3.3.3",
     "maplibre-gl": "^6.15.0",
     "oxlint": "1.89.0",
-    "oxlint-tsgolint": "7.0.2004",
+    "oxlint-tsgolint": "7.0.2005",
     "pdfjs-dist": "^6.4.299",
     "playwright": "^1.64.1",
     "publint": "^0.3.25",
@@ -100,13 +100,13 @@
     "sherif": "^1.13.0",
     "storybook": "10.6.3",
     "tailwindcss": "^4.3.3",
-    "vite": "^8.3.4"
+    "vite": "^8.3.5"
   },
   "sherif": {
     "//": "maplibre-gl is pinned exactly in lyra-map on purpose: that package is built from the pinned upstream release, so its devDependency must not follow the caret range used by the root and lyra-ui.",
     "failOnWarnings": true,
     "ignoreDependency": ["maplibre-gl"]
   },
-  "packageManager": "pnpm@12.14.0",
+  "packageManager": "pnpm@12.15.0",
   "customElements": "packages/lyra-ui/custom-elements.json"
 }

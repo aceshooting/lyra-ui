@@ -12,7 +12,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          "A build-lean variant of `lr-code-block` for a consumer whose `languages` map already covers every language it renders. This component's module never references shiki's full ~200-language default entry point, so importing it gives a genuine compile-time exclusion of that table from the build output. A `language` absent from the supplied `languages` map always renders the plain-text fallback; there is no default highlighter to fall back to.",
+          "A build-lean variant of `lr-code-block` for a consumer whose `languages` map already covers every language it renders. This component's module never references shiki's full ~200-language default entry point, so importing it gives a genuine compile-time exclusion of that table from the build output. Fine-grained highlighting defaults to the JavaScript regex engine. For custom grammars that require Oniguruma, import `createShikiOnigurumaEngine` from `@aceshooting/lyra-ui/components/conversation/code-block/shiki-oniguruma.js` and pass the factory to `setShikiCoreEngine()` before rendering. A `language` absent from the supplied `languages` map always renders the plain-text fallback; there is no default highlighter to fall back to.",
       },
     },
   },
