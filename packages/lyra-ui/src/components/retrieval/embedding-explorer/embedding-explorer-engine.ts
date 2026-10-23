@@ -179,13 +179,13 @@ export class EmbeddingEngineController {
       if (!current()) { engine.dispose(); return; }
       engine.setStyle(this.style());
       engine.setData(rows.data(), ++this.revision);
-      engine.fit?.();
       const resize = () => {
         if (!current()) return;
         const box = container.getBoundingClientRect();
         engine!.resize(Math.max(1, box.width), Math.max(1, box.height));
       };
       resize();
+      engine.fit?.();
       const view = owner.defaultView;
       if (view?.ResizeObserver) {
         this.resizeObserver = new view.ResizeObserver(() => {

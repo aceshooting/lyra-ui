@@ -63,4 +63,29 @@ describe('lr-embedding-explorer actual companion integration', function () {
     const selected = oneEvent(el, 'lr-point-select'); await clickCenter(replacement);
     expect((await selected).detail.id).to.equal('center');
   });
+  it('N04 frames initial typed points across the native viewport while preserving the default builtin view', async () => {
+    const input = { ids: ['left', 'center', 'right'], x: new Float32Array([-1, 0, 1]),
+      y: new Float32Array(3), z: new Float32Array(3) };
+    const el = await fixture<LyraEmbeddingExplorer>(html`<lr-embedding-explorer data-lr-theme-scope height="360px" style="inline-size:640px;--lr-color-brand:rgb(255,0,0);--lr-focus-ring-color:rgb(255,0,0)" .pointColumns=${input}></lr-embedding-explorer>`);
+    expect(el.engine).to.equal('builtin');
+    expect(el.shadowRoot!.querySelectorAll('[part="engine"] canvas').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="point"]').length).to.equal(3);
+    el.engine = 'webgl';
+    const canvas = await ready(el);
+    const pixels = await capture(el, canvas, () => { el.selectedPointId = 'right'; });
+    let selectedPointAwayFromCenter = false;
+    for (let y = Math.floor(canvas.height * 0.25); y < canvas.height * 0.75 && !selectedPointAwayFromCenter; y++) {
+      for (let x = Math.floor(canvas.width * 0.65); x < canvas.width * 0.95; x++) {
+        const offset = (y * canvas.width + x) * 4;
+        if (pixels[offset]! > 220 && pixels[offset + 1]! < 35 && pixels[offset + 2]! < 35) {
+          selectedPointAwayFromCenter = true;
+          break;
+        }
+      }
+    }
+    expect(selectedPointAwayFromCenter, 'the selected right endpoint occupies the right side of the rendered viewport').to.equal(true);
+    expect(el.selectedPointId).to.equal('right');
+    expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(3);
+  });
+
 });

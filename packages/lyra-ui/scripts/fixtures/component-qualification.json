@@ -9150,8 +9150,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/conversation/chat-composer/chat-composer.test.ts",
-              "test": "keeps a populated long draft inside a 320px allocation",
+              "file": "src/components/conversation/chat-composer/chat-composer-resize-boundary.test.ts",
+              "test": "coalesces legacy resize notifications and ignores callbacks retained after disconnect",
               "kind": "320px allocation test signal"
             }
           ]
@@ -9244,6 +9244,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/chat-composer/chat-composer-resize-boundary.test.ts",
           "src/components/conversation/chat-composer/chat-composer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -11412,6 +11413,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/conversation/code-block/code-block-composition.test.ts",
+          "src/components/conversation/code-block/code-block-controlled-navigation.test.ts",
           "src/components/conversation/code-block/code-block-core.test.ts",
           "src/components/conversation/code-block/code-block-remediation.test.ts",
           "src/components/conversation/code-block/code-block-scale.test.ts",
@@ -11620,6 +11622,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/conversation/code-block/code-block-composition.test.ts",
+          "src/components/conversation/code-block/code-block-controlled-navigation.test.ts",
           "src/components/conversation/code-block/code-block-core.test.ts",
           "src/components/conversation/code-block/code-block-remediation.test.ts",
           "src/components/conversation/code-block/code-block-scale.test.ts",
@@ -31537,6 +31540,7 @@
           "src/components/media/map/map-scale.test.ts",
           "src/components/media/map/map-source-updates.test.ts",
           "src/components/media/map/map-style-failure-supersession.test.ts",
+          "src/components/media/map/map-style-input.property.test.ts",
           "src/components/media/map/map-style-input.test.ts",
           "src/components/media/map/map-style-lifecycle.test.ts",
           "src/components/media/map/map-style-overrides.test.ts",

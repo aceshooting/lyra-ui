@@ -64,7 +64,8 @@ function fontFaces(value: unknown): Readonly<Record<string, unknown>> {
       return Object.freeze({ url, 'unicode-range': Object.freeze(ranges) });
     }));
   }
-  return Object.keys(output).length > 0 ? Object.freeze(output) : invalid();
+  // Native font validators require an ordinary record; spread defines special names as own data.
+  return Object.keys(output).length > 0 ? Object.freeze({ ...output }) : invalid();
 }
 
 /** Preserve the general immutable style boundary while admitting font providers by their schema. */

@@ -6,6 +6,7 @@ const stage = document.querySelector('#stage');
 
 // Count WebGL draw calls so a frame the engine did not draw can never pass as a rendered frame.
 const draws = { count: 0 };
+let inputObservation;
 for (const name of ['drawArrays', 'drawElements', 'drawArraysInstanced', 'drawElementsInstanced', 'drawRangeElements']) {
   const original = WebGL2RenderingContext.prototype[name];
   WebGL2RenderingContext.prototype[name] = function (...args) { draws.count += 1; return original.apply(this, args); };
@@ -72,7 +73,7 @@ function mount(element) {
 }
 
 /** Pinned positions keep the force layout out of the measurement: this is rendering throughput. */
-async function graph({ nodes, edges }) {
+async function graph({ nodes, edges, unpinned = false }) {
   const next = random(7);
   const { x, y, z } = ball(nodes, 600, next);
   const source = new Uint32Array(edges), target = new Uint32Array(edges);
@@ -86,7 +87,7 @@ async function graph({ nodes, edges }) {
   element.nodeLabels = 'none';
   element.camera = { yaw: 0, pitch: 0.3, distance: 1900, target: { x: 0, y: 0, z: 0 } };
   const started = performance.now();
-  element.graphColumns = Object.freeze({ ids: ids('n', nodes), x, y, z, source, target });
+  element.graphColumns = Object.freeze({ ids: ids('n', nodes), ...(unpinned ? {} : { x, y, z }), source, target });
   mount(element);
   await until(() => {
     const host = element.shadowRoot?.querySelector('[data-webgl-host]');
@@ -160,4 +161,49 @@ async function frames({ durationMs, orbit, drag }) {
   return { intervals, drawnFrames, drawCalls: draws.count - firstDraw, fallbacks: [...fallbacks] };
 }
 
-window.__gpuBenchmark = Object.freeze({ renderer, graph, points, engineCanvas, frames });
+function clearInputObservation() {
+  inputObservation?.inputSurface.removeEventListener('pointermove', inputObservation.listener, true);
+  for (const [name, original] of inputObservation?.drawMethods ?? []) WebGL2RenderingContext.prototype[name] = original;
+  inputObservation = undefined;
+}
+
+function armInputObservation() {
+  clearInputObservation();
+  const canvas = engineElement();
+  const inputSurface = canvas.parentElement;
+  if (!inputSurface) throw new Error('NO_ENGINE_INPUT_SURFACE');
+  const observation = { canvas, inputSurface, inputAt: null, drawAt: null, listener: null };
+  observation.listener = event => {
+    if (event.isTrusted && event.buttons === 1 && event.composedPath().includes(canvas) && observation.inputAt === null) observation.inputAt = performance.now();
+  };
+  // Graph node dragging stops same-target listeners; capture on its owning surface first.
+  inputSurface.addEventListener('pointermove', observation.listener, true);
+  observation.drawMethods = new Map();
+  for (const name of ['drawArrays', 'drawElements', 'drawArraysInstanced', 'drawElementsInstanced', 'drawRangeElements']) {
+    const original = WebGL2RenderingContext.prototype[name];
+    observation.drawMethods.set(name, original);
+    WebGL2RenderingContext.prototype[name] = function (...args) {
+      const result = original.apply(this, args);
+      if (observation.canvas === this.canvas && observation.inputAt !== null && observation.drawAt === null) observation.drawAt = performance.now();
+      return result;
+    };
+  }
+  inputObservation = observation;
+}
+
+async function readInputObservation() {
+  try {
+    await until(() => inputObservation && inputObservation.drawAt !== null, 5000, 'INPUT_DRAW_NOT_OBSERVED');
+    return { inputAt: inputObservation.inputAt, drawAt: inputObservation.drawAt,
+      inputToDrawMs: inputObservation.drawAt - inputObservation.inputAt };
+  } finally { clearInputObservation(); }
+}
+
+async function dispose() {
+  clearInputObservation();
+  active?.remove(); active = undefined; stage.replaceChildren(); fallbacks.length = 0;
+  await frame(); await frame();
+}
+
+window.__gpuBenchmark = Object.freeze({ renderer, graph, points, engineCanvas, frames,
+  armInputObservation, readInputObservation, dispose, readFallbacks: () => [...fallbacks] });

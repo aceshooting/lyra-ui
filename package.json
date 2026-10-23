@@ -15,7 +15,7 @@
     "benchmark:compare": "node benchmarks/compare.mjs",
     "benchmark:gpu": "node benchmarks/gpu/run.mjs",
     "benchmark:ab": "node benchmarks/ab.mjs",
-    "test:benchmarks": "node --test benchmarks/helpers.test.mjs benchmarks/gpu/run.test.mjs benchmarks/ab.test.mjs && node benchmarks/schema.mjs --check",
+    "test:benchmarks": "node --test benchmarks/helpers.test.mjs benchmarks/gpu/run.test.mjs benchmarks/gpu/acceptance.test.mjs benchmarks/ab.test.mjs && node benchmarks/schema.mjs --check",
     "lint": "pnpm -r --if-present run lint",
     "manifest": "pnpm --filter @aceshooting/lyra-ui run manifest",
     "manifest:check": "pnpm --filter @aceshooting/lyra-ui run manifest:check",

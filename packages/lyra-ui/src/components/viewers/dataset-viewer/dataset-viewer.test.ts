@@ -1506,3 +1506,39 @@ describe('dataset header and cell search ceilings', () => {
     expect(detail).to.deep.include({ matchCount: 1_000, matchCountExact: false });
   });
 });
+
+
+it('readmits an owned table against changed limits and recovers without caller reassignment', async () => {
+  const el = await fixture<LyraDatasetViewer>(html`<lr-dataset-viewer></lr-dataset-viewer>`);
+  el.table = { fields: ['Name'], rows: [{ Name: 'First' }, { Name: 'Second' }] };
+  await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.textContent?.includes('Second') === true);
+  el.maxRows = 3;
+  await el.updateComplete; await twoFrames();
+  expect(el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.textContent?.includes('Second')).to.equal(true);
+  expect(el.table?.rows.length).to.equal(2);
+  const failed = oneEvent(el, 'lr-render-error');
+  el.maxRows = 1;
+  const error = await failed;
+  expect(error.detail.error instanceof LyraResourceLimitError).to.equal(true);
+  await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+  el.maxRows = 3;
+  await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') === null && el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.textContent?.includes('Second') === true);
+  expect(el.table?.rows.map(row => row['Name'])).to.deep.equal(['First', 'Second']);
+});
+
+it('reports provider rejection without exposing backend details and recovers on source replacement', async () => {
+  const el = await fixture<LyraDatasetViewer>(html`<lr-dataset-viewer></lr-dataset-viewer>`);
+  const failure = new Error('backend-private-diagnostic');
+  const event = oneEvent(el, 'lr-render-error');
+  el.dataSource = { revision: 1, rowCount: 1, columnCount: 1,
+    columnAt: () => ({ key: 'name', label: 'Name' }),
+    readCells: async () => { throw failure; } };
+  expect((await event).detail.error === failure).to.equal(true);
+  await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+  const message = el.shadowRoot!.querySelector('[part="error"]')!.textContent!.trim();
+  expect(message.length).to.be.greaterThan(0);
+  expect(message.includes(failure.message)).to.equal(false);
+  el.dataSource = { revision: 2, rowCount: 1, columnCount: 1,
+    columnAt: () => ({ key: 'name', label: 'Name' }), cellAt: () => 'Recovered row' };
+  await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') === null && el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.textContent?.includes('Recovered row') === true);
+});

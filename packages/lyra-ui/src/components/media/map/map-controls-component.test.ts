@@ -271,7 +271,12 @@ describe('lr-map controls and named URL ownership', () => {
     await waitUntil(() => element.shadowRoot!.textContent!.includes('Credit unavailable'));
     element.controls = { attribution: { customAttribution: { label: 'Linked', url: 'https://example.com/credits' } } };
     await element.updateComplete;
-    await waitUntil(() => peer.controls.size === 1 && String([...peer.controls][0]!.options?.['customAttribution']).includes('https://example.com/credits'));
+    await waitUntil(() => {
+      if (peer.controls.size !== 1) return false;
+      const content = document.createElement('template');
+      content.innerHTML = String([...peer.controls][0]!.options?.['customAttribution']);
+      return content.content.querySelector('a')?.getAttribute('href') === 'https://example.com/credits';
+    });
     expect(element.shadowRoot!.textContent).not.to.include('javascript:');
   });
 

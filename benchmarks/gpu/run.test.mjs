@@ -22,8 +22,9 @@ test('a sampling profile ranks functions by self time with their share', () => {
 });
 
 test('options reject unknown modes, profiles, flags and unbounded durations', () => {
-  assert.deepEqual(parse([]), { modes: ['gpu', 'software'], profile: 'quick', durationMs: 5000, warmupMs: 1000, output: null, cpuProfile: false });
+  assert.deepEqual(parse([]), { modes: ['gpu', 'software'], profile: 'quick', durationMs: 5000, warmupMs: 1000, output: null, cpuProfile: false, acceptanceObservations: false });
   assert.equal(parse(['--modes', 'gpu', '--cpu-profile']).cpuProfile, true);
+  assert.equal(parse(['--acceptance-observations']).acceptanceObservations, true);
   assert.throws(() => parse(['--modes', 'metal']), /--modes/);
   assert.throws(() => parse(['--profile', 'huge']), /--profile/);
   assert.throws(() => parse(['--duration-ms', '600000']), /durationMs/);

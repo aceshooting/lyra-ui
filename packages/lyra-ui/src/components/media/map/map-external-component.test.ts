@@ -361,6 +361,158 @@ describe('lr-map external data layers and labels', () => {
     expect(peer.sources.get(vectorId) === vectorHandle).to.equal(true);
   });
 
+  it('restores every changed GeoJSON range before retiring a failed peer and recovers on reconnect', async () => {
+    const row = { sourceId: 'bounded', geojson: POINTS, minZoom: 3, maxZoom: 9 };
+    const { element, peer, wrapper } = await mount(el => {
+      el.dataLayers = [row];
+      el.strings = { mapInitializationFailed: 'Map could not update' };
+    });
+    await load(element, peer); await element.whenIdle();
+    const previous = structuredClone([...peer.layers]);
+    const setRange = peer.setLayerZoomRange.bind(peer), remove = peer.remove.bind(peer);
+    const writes: { id: string; min: number; max: number }[] = [];
+    let atRetirement: [string, unknown][] = [];
+    peer.remove = () => { atRetirement = structuredClone([...peer.layers]); remove(); };
+    peer.setLayerZoomRange = (id, min, max) => {
+      writes.push({ id, min, max });
+      setRange(id, min, max);
+      if (writes.length === 2) throw new Error('Renderer range update failed');
+      return peer;
+    };
+    element.dataLayers = [{ ...row, minZoom: 5, maxZoom: 7 }];
+    await element.updateComplete;
+    try { await element.whenIdle(); } catch { /* The failed native transaction rejects readiness. */ }
+    await waitUntil(() => peer.removed, 'range failure did not retire the peer');
+    expect(writes.length).to.equal(4);
+    expect(writes.slice(2)).to.deep.equal(writes.slice(0, 2).reverse().map(({ id }) => ({ id, min: 3, max: 9 })));
+    expect(atRetirement).to.deep.equal(previous);
+    await waitUntil(() => element.shadowRoot?.textContent?.includes('Map could not update') === true);
+    expect(element.shadowRoot?.textContent?.includes('Renderer range update failed')).to.equal(false);
+
+    element.remove(); wrapper.append(element);
+    await waitUntil(() => element.map !== undefined, 'reconnected map did not initialize');
+    const recovered = element.map;
+    if (!(recovered instanceof OwnedMap)) throw new Error('Expected the injected renderer');
+    await load(element, recovered); await element.whenIdle();
+    expect(recovered === peer).to.equal(false);
+    expect(recovered.layers.size).to.equal(3);
+    for (const layer of recovered.layers.values()) expect(layer).to.include({ minzoom: 5, maxzoom: 7 });
+    expect(element.shadowRoot?.textContent?.includes('Map could not update')).to.equal(false);
+  });
+
+  it('keeps the newest controlled bounds when a native range write replaces the current proposal', async () => {
+    const row = { sourceId: 'bounded', geojson: POINTS, minZoom: 3, maxZoom: 9 };
+    const { element, peer } = await mount(el => { el.dataLayers = [row]; });
+    await load(element, peer); await element.whenIdle();
+    const setRange = peer.setLayerZoomRange.bind(peer);
+    const writes: { min: number; max: number }[] = [];
+    let replaced = false;
+    peer.setLayerZoomRange = (id, min, max) => {
+      writes.push({ min, max });
+      setRange(id, min, max);
+      if (!replaced) {
+        replaced = true;
+        element.dataLayers = [{ ...row, minZoom: 6, maxZoom: 8 }];
+      }
+      return peer;
+    };
+    await captureReentrantUpdateWarning(element.localName, async () => {
+      element.dataLayers = [{ ...row, minZoom: 5, maxZoom: 7 }];
+      await element.updateComplete; await element.whenIdle();
+    });
+    expect(replaced).to.equal(true);
+    expect(writes[0]).to.deep.equal({ min: 5, max: 7 });
+    expect(writes.length).to.be.greaterThan(1);
+    expect(writes.slice(1).every(write => write.min === 6 && write.max === 8)).to.equal(true);
+    expect(peer.removed).to.equal(false);
+    for (const layer of peer.layers.values()) expect(layer).to.include({ minzoom: 6, maxzoom: 8 });
+  });
+
+  it('updates and removes label-specific zoom bounds in place while retaining the row bounds', async () => {
+    const row = { sourceId: 'places', geojson: POINTS, minZoom: 2, maxZoom: 9,
+      label: { field: 'name', minZoom: 4 } };
+    const { element, peer } = await mount(el => {
+      el.mapStyle = { ...LYRA_MAP_EMPTY_STYLE, glyphs: 'https://example.test/{fontstack}/{range}.pbf' };
+      el.dataLayers = [row];
+    });
+    await load(element, peer); await element.whenIdle();
+    const labelId = [...peer.layers.keys()].find(id => id.endsWith('-label'));
+    if (!labelId) throw new Error('Expected a rendered label layer');
+    const label = peer.layers.get(labelId), source = [...peer.sources.values()][0];
+    expect(label).to.include({ minzoom: 4, maxzoom: 9 });
+    element.dataLayers = [{ ...row, label: { ...row.label, minZoom: 6 } }];
+    await element.updateComplete; await element.whenIdle();
+    expect(peer.layers.get(labelId) === label).to.equal(true);
+    expect(label).to.include({ minzoom: 6, maxzoom: 9 });
+    element.dataLayers = [{ ...row, label: { field: 'name' } }];
+    await element.updateComplete; await element.whenIdle();
+    expect(peer.layers.get(labelId) === label).to.equal(true);
+    expect([...peer.sources.values()][0] === source).to.equal(true);
+    expect(peer.layers.size).to.equal(4);
+    for (const layer of peer.layers.values()) expect(layer).to.include({ minzoom: 2, maxzoom: 9 });
+  });
+
+  it('restores a label zoom update that mutates before throwing and reports localized failure', async () => {
+    const row = { sourceId: 'places', geojson: POINTS, minZoom: 2, maxZoom: 9,
+      label: { field: 'name', minZoom: 4 } };
+    const { element, peer } = await mount(el => {
+      el.mapStyle = { ...LYRA_MAP_EMPTY_STYLE, glyphs: 'https://example.test/{fontstack}/{range}.pbf' };
+      el.dataLayers = [row];
+      el.strings = { mapInitializationFailed: 'Label update unavailable' };
+    });
+    await load(element, peer); await element.whenIdle();
+    const labelId = [...peer.layers.keys()].find(id => id.endsWith('-label'));
+    if (!labelId) throw new Error('Expected a rendered label layer');
+    const setRange = peer.setLayerZoomRange.bind(peer), remove = peer.remove.bind(peer);
+    const writes: number[] = [];
+    let retiredLabel: unknown;
+    peer.remove = () => { retiredLabel = structuredClone(peer.layers.get(labelId)); remove(); };
+    peer.setLayerZoomRange = (id, min, max) => {
+      setRange(id, min, max);
+      if (id === labelId) {
+        writes.push(min);
+        if (writes.length === 1) throw new Error('Renderer label update failed');
+      }
+      return peer;
+    };
+    element.dataLayers = [{ ...row, label: { ...row.label, minZoom: 6 } }];
+    await element.updateComplete;
+    try { await element.whenIdle(); } catch { /* The failed native transaction rejects readiness. */ }
+    await waitUntil(() => peer.removed, 'label failure did not retire the peer');
+    expect(writes).to.deep.equal([6, 4]);
+    expect(retiredLabel).to.include({ minzoom: 4, maxzoom: 9 });
+    await waitUntil(() => element.shadowRoot?.textContent?.includes('Label update unavailable') === true);
+    expect(element.shadowRoot?.textContent?.includes('Renderer label update failed')).to.equal(false);
+  });
+
+  it('repaints installed label colors after an inherited token change without replacing resources', async () => {
+    const row = { sourceId: 'places', geojson: POINTS,
+      label: { field: 'name', color: 'var(--label-ink)', haloColor: 'var(--label-halo)', haloWidth: 1 } };
+    const { element, peer, wrapper } = await mount(el => {
+      el.mapStyle = { ...LYRA_MAP_EMPTY_STYLE, glyphs: 'https://example.test/{fontstack}/{range}.pbf' };
+      el.dataLayers = [row];
+    });
+    wrapper.style.setProperty('--label-ink', 'rgb(1, 2, 3)');
+    wrapper.style.setProperty('--label-halo', 'rgb(4, 5, 6)');
+    await load(element, peer); await element.whenIdle();
+    const labelId = [...peer.layers.keys()].find(id => id.endsWith('-label'));
+    if (!labelId) throw new Error('Expected a rendered label layer');
+    const label = peer.layers.get(labelId), source = [...peer.sources.values()][0];
+    expect(label).to.have.nested.property('paint.text-color', 'rgb(1, 2, 3)');
+    expect(label).to.have.nested.property('paint.text-halo-color', 'rgb(4, 5, 6)');
+    const sourceWrites = peer.sourceWrites, order = [...peer.order];
+    wrapper.style.setProperty('--label-ink', 'rgb(7, 8, 9)');
+    wrapper.style.setProperty('--label-halo', 'rgb(10, 11, 12)');
+    await waitUntil(() => peer.paint.get(`${labelId}:text-color`) === 'rgb(7, 8, 9)' &&
+      peer.paint.get(`${labelId}:text-halo-color`) === 'rgb(10, 11, 12)', 'label paint did not follow inherited tokens');
+    await element.whenIdle();
+    expect(peer.layers.get(labelId) === label).to.equal(true);
+    expect([...peer.sources.values()][0] === source).to.equal(true);
+    expect(peer.sourceWrites).to.equal(sourceWrites);
+    expect(peer.order).to.deep.equal(order);
+    expect(peer.removed).to.equal(false);
+  });
+
   it('keeps positioned labels and sources installed across updates, removal and RTL', async () => {
     const row = { sourceId: 'places', geojson: POINTS, minZoom: 2, maxZoom: 8,
       label: { field: 'name', anchor: 'top' as const, offset: [0, 1.25] as const } };

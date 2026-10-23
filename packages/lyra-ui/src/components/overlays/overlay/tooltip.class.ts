@@ -595,11 +595,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
           if (this.contentSnapshot) this.bindContentObservation(this.contentSnapshot);
         }
       } else if (changed.has('interactiveContent') && this.open && this.isConnected) {
-        if (this.requiresOverlayManager) this.activateTooltipOverlay();
-        else {
-          this.overlayHandle?.deactivate({ restoreFocus: false });
-          this.overlayHandle = undefined;
-        }
+        this.activateTooltipOverlay();
       }
       this.syncTriggerA11y();
     }

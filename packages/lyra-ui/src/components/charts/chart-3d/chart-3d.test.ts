@@ -605,3 +605,38 @@ describe('lr-chart-3d lifecycle', () => {
     expect(buttonIds(el)).to.deep.equal(['newest']);
   });
 });
+
+
+it('refreshes the Z-axis header while retaining source values and owned axis metadata', async () => {
+  const el = await mount(columns());
+  const axis = { label: 'Depth', unit: 'm' };
+  el.zAxis = axis; await el.updateComplete;
+  expect(headers(el)[3]).to.equal('Depth (m)');
+  expect(cells(el, 1)[2]).to.equal('-1');
+  axis.label = 'Caller mutation';
+  el.label = 'Updated chart'; await el.updateComplete;
+  expect(headers(el)[3]).to.equal('Depth (m)');
+  el.zAxis = {}; await el.updateComplete;
+  expect(headers(el)[3]).to.equal('Z');
+});
+
+it('retains accessible rows and selection across real document adoption', async () => {
+  const el = await mount(columns());
+  const parent = el.parentNode!;
+  const selections = record<LyraChart3dSelectDetail>(el, 'lr-chart-row-select');
+  const frame = await fixture<HTMLIFrameElement>(html`<iframe title="Chart owner document"></iframe>`);
+  await waitUntil(() => !!frame.contentDocument?.body);
+  try {
+    frame.contentDocument!.body.append(el); await el.updateComplete;
+    expect(el.ownerDocument === frame.contentDocument).to.equal(true);
+    expect(buttonIds(el)).to.deep.equal(['row-0', 'row-1', 'row-2']);
+    parts(el, 'row-button')[1]!.click(); await el.updateComplete;
+    expect(el.selectedId).to.equal('row-1');
+    expect(selections).to.deep.equal([{ id: 'row-1', index: 1 }]);
+    parent.appendChild(el); await el.updateComplete;
+    expect(el.ownerDocument === document).to.equal(true);
+    expect(pressed(el)).to.deep.equal(['false', 'true', 'false']);
+    parts(el, 'row-button')[2]!.click(); await el.updateComplete;
+    expect(selections).to.deep.equal([{ id: 'row-1', index: 1 }, { id: 'row-2', index: 2 }]);
+  } finally { parent.appendChild(el); frame.remove(); }
+});

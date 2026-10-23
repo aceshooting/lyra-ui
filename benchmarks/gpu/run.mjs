@@ -7,12 +7,14 @@
 //   node benchmarks/gpu/run.mjs [--modes gpu,software] [--profile quick|stress|all]
 //                               [--duration-ms 5000] [--warmup-ms 1000] [--output FILE]
 //                               [--cpu-profile]  (unminified build; top main-thread functions per scenario)
+//                               [--acceptance-observations] (three extra repetitions, heap/input/captures)
 import { existsSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { cpus, totalmem } from 'node:os';
 import { dirname, extname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { collectAcceptanceObservations, measurementFailed } from './acceptance.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url)), root = resolve(here, '../..');
 const PROFILES = {
@@ -35,7 +37,7 @@ const MODES = {
 };
 
 export function parse(argv) {
-  const options = { modes: ['gpu', 'software'], profile: 'quick', durationMs: 5000, warmupMs: 1000, output: null, cpuProfile: false };
+  const options = { modes: ['gpu', 'software'], profile: 'quick', durationMs: 5000, warmupMs: 1000, output: null, cpuProfile: false, acceptanceObservations: false };
   for (let index = 0; index < argv.length; index += 1) {
     const flag = argv[index], value = argv[index + 1];
     if (flag === '--modes') { options.modes = value.split(','); index += 1; }
@@ -44,6 +46,7 @@ export function parse(argv) {
     else if (flag === '--warmup-ms') { options.warmupMs = Number(value); index += 1; }
     else if (flag === '--output') { options.output = resolve(value); index += 1; }
     else if (flag === '--cpu-profile') options.cpuProfile = true;
+    else if (flag === '--acceptance-observations') options.acceptanceObservations = true;
     else throw new Error(`Unknown option ${flag}`);
   }
   if (!options.modes.length || options.modes.some((mode) => !MODES[mode])) throw new Error('--modes takes gpu and/or software');
@@ -160,6 +163,8 @@ export async function run(options) {
     configuration: { profile: options.profile, durationMs: options.durationMs, warmupMs: options.warmupMs },
     modes: [],
   };
+  const output = options.output ?? join(here, 'results', `${result.recordedAt.replaceAll(':', '-').replaceAll('.', '-')}.json`);
+  await mkdir(dirname(output), { recursive: true });
   let server, browser;
   try {
     const outDir = join(work, 'dist');
@@ -187,6 +192,10 @@ export async function run(options) {
           await page.close();
         }
       }
+      if (options.acceptanceObservations) {
+        report.acceptance = await collectAcceptanceObservations(browser, hosted.origin, PROFILES.quick,
+          result.environment.viewport, `${output}.captures/${mode}`);
+      }
       report.hardware = /swiftshader|llvmpipe|software/i.test(report.renderer?.renderer ?? '') ? 'software' : report.renderer?.webgl2 ? 'gpu' : 'none';
       await browser.close(); browser = undefined;
     }
@@ -195,8 +204,6 @@ export async function run(options) {
     server?.close();
     await rm(work, { recursive: true, force: true });
   }
-  const output = options.output ?? join(here, 'results', `${result.recordedAt.replaceAll(':', '-').replaceAll('.', '-')}.json`);
-  await mkdir(dirname(output), { recursive: true });
   await writeFile(output, `${JSON.stringify(result, null, 2)}\n`);
   return { result, output };
 }
@@ -212,11 +219,12 @@ function table({ modes }) {
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const { result, output } = await run(parse(process.argv.slice(2)));
+  const options = parse(process.argv.slice(2));
+  const { result, output } = await run(options);
   process.stdout.write(`${table(result)}\n\nResults: ${output}\n`);
   for (const report of result.modes) for (const scenario of report.scenarios) {
     if (scenario.hottest) process.stdout.write(`\nHottest main-thread functions, ${report.mode} ${scenario.id}:\n${scenario.hottest.map((entry) => `  ${entry.selfMs} ms (${Math.round(entry.share * 100)}%) ${entry.name}`).join('\n')}\n`);
   }
-  const failed = result.modes.some((report) => report.scenarios.some((scenario) => scenario.status !== 'measured'));
+  const failed = measurementFailed(result, options.acceptanceObservations);
   process.exitCode = failed ? 1 : 0;
 }

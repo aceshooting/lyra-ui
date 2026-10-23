@@ -316,6 +316,54 @@ describe('lr-map on-demand runtimes', () => {
     expect([images.imports, overrides.imports]).to.deep.equal([1, 1]); expect(peer.paint.get('water:fill-color')).to.equal('#336699');
   });
 
+  for (const warm of [false, true]) it(`applies images and a provider together after idle with the ownership runtime ${warm ? 'loaded' : 'unloaded'}`, async () => {
+    const gate = hold(loadMapOwnedFeatureRuntime, ownedRuntime);
+    if (warm) { gate.release(); await loadMapOwnedFeatureRuntime(); }
+    const { element, peer } = await mount(); await settle(element, peer);
+    const asked: string[] = [];
+    const descriptor = (id: string): imageRuntime.LyraMapImage => ({ id, width: 4, height: 4, pixelRatio: 1,
+      source: { kind: 'svg', markup: '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"><rect width="4" height="4" fill="red"/></svg>' } });
+    element.images = [descriptor('declared')];
+    element.imageProvider = id => { asked.push(id); return descriptor(id); };
+    element.overlays = overlay;
+    await element.updateComplete;
+    if (!warm) {
+      let idle = false; void element.whenIdle().then(() => { idle = true; }, () => undefined);
+      await tick(); expect(idle).to.equal(false); expect(peer.images.size).to.equal(0);
+      gate.release();
+    }
+    await settle(element, peer);
+    expect(peer.images.has('declared')).to.equal(true);
+    expect(peer.layers.has('local-fill')).to.equal(true);
+    peer.fire('styleimagemissing', { id: 'provided' });
+    await waitUntil(() => peer.images.has('provided'));
+    expect(asked).to.deep.equal(['provided']); expect(gate.imports).to.equal(1);
+    expect(element.map === peer).to.equal(true);
+  });
+
+  for (const remove of [false, true]) it(`restarts pending image preparation when its provider is ${remove ? 'removed' : 'replaced'}`, async () => {
+    const gate = hold(loadMapImageRuntime, imageRuntime);
+    const asked: string[] = [], retired: string[] = [];
+    const descriptor = (id: string): imageRuntime.LyraMapImage => ({ id, width: 4, height: 4, pixelRatio: 1,
+      source: { kind: 'svg', markup: '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"><rect width="4" height="4" fill="red"/></svg>' } });
+    const { element, peer } = await mount(el => {
+      el.imageProvider = id => { retired.push(id); return descriptor(id); };
+    });
+    await settle(element, peer);
+    element.images = [descriptor('declared')]; element.overlays = overlay;
+    await element.updateComplete; await waitUntil(() => gate.imports === 1);
+    const pending = element.whenIdle().then(() => 'idle', () => 'rejected');
+    element.imageProvider = remove ? undefined : id => { asked.push(id); return descriptor(id); };
+    await element.updateComplete; gate.release();
+    expect(await pending).to.equal('idle'); await settle(element, peer);
+    expect(peer.images.has('declared')).to.equal(true); expect(peer.layers.has('local-fill')).to.equal(true);
+    expect(element.map === peer).to.equal(true);
+    peer.fire('styleimagemissing', { id: 'provided' });
+    if (!remove) await waitUntil(() => peer.images.has('provided'));
+    else { await tick(); expect(peer.images.has('provided')).to.equal(false); }
+    expect(retired).to.deep.equal([]); expect(asked).to.deep.equal(remove ? [] : ['provided']);
+  });
+
   it('loads override ownership before any native resource change, so overlays and overrides apply together', async () => {
     const gate = hold(loadMapStyleOverrideRuntime, overrideRuntime);
     const { element, peer } = await mountWithBasemap(el => { el.overlays = overlay; el.styleOverrides = [{ layerId: 'water', paint: { 'fill-color': '#336699' } }]; });

@@ -5590,6 +5590,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       if (this.featureStateLoad === 'failed') this.featureStateLoad = undefined;
     }
 
+    // Provider configuration replaces its image reservation; finish it before resource work
+    // reserves the same atlas, including when both first load the ownership runtime.
+    if (changed.has('imageProvider') && this._map) this.syncImageProvider();
+
     if (changed.has('mapStyle') && !hasMapStyle(this.mapStyle) && this._maplibreModule) {
       this.scheduleStyleRequiredFailure();
     } else if (changed.has('mapStyle') && !this._map && this._maplibreModule && hasMapStyle(this.mapStyle)) {
@@ -5603,7 +5607,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         map.setStyle(this.mapStyle as never);
       });
     } else if (this._styleLoaded && (this.refreshingGeoJson || changed.has('dataLayers') || changed.has('choropleth') ||
-      changed.has('overlays') || changed.has('images') || changed.has('styleOverrides') || changed.has('interactiveBasemapLayers'))) {
+      changed.has('overlays') || changed.has('images') || changed.has('styleOverrides') || changed.has('interactiveBasemapLayers') ||
+      (changed.has('imageProvider') && this.preparingFeatures))) {
       void this.reconcileGeneratedLayers();
     }
     const constructionMode = this.initializationMode, constructionDelay = this.safeInitializationDelay;
@@ -5618,7 +5623,6 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.pushCamera(changed);
     if (changed.has('maxBounds') && this._map) this.writeCamera(() => this.applyMaxBounds());
     if ((changed.has('minZoom') || changed.has('maxZoom')) && this._map) this.applyZoomLimits();
-    if (changed.has('imageProvider') && this._map) this.syncImageProvider();
     if (changed.has('controls') && this._map) this.syncControls();
     if (changed.has('drawingMeasurements')) this.drawingController?.scheduleHandles();
     if (changed.has('pickMode') || changed.has('interactionBlocked')) { this.clearMapHover(); this.syncMapCursor(); }
@@ -6485,6 +6489,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const choropleth = this.choropleth;
     const overlays = this.overlays;
     const images = this.images;
+    const imageProvider = this.imageProvider;
     const styleOverrides = this.styleOverrides;
     const hiddenCategories = this.hiddenCategories;
     const interactiveBasemapLayers = this.interactiveBasemapLayers;
@@ -6508,7 +6513,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       generation === this.featureGeneration && connection === this._connectGeneration &&
       styleGeneration === this._styleGeneration && style === this.mapStyle &&
       dataLayers === this.dataLayers && choropleth === this.choropleth &&
-      overlays === this.overlays && images === this.images && styleOverrides === this.styleOverrides && interactiveBasemapLayers === this.interactiveBasemapLayers &&
+      overlays === this.overlays && images === this.images && imageProvider === this.imageProvider &&
+      styleOverrides === this.styleOverrides && interactiveBasemapLayers === this.interactiveBasemapLayers &&
       ((!externalInput?.sources.length && !this.externalFeatureWorkStarted) || hiddenCategories === this.hiddenCategories);
     const apply = (): void => {
       if (!current() || controller.signal.aborted) return;

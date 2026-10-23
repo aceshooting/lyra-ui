@@ -52,6 +52,20 @@ describe('map style font admission', () => {
     expect(Object.isFrozen(result['font-faces'])).to.equal(true);
   });
 
+  it('gives admitted font families an ordinary prototype without changing special own names', () => {
+    const families = Object.create(null) as Record<string, unknown>;
+    families['__proto__'] = [{ url: 'font.woff2' }];
+    families['toString'] = 'other.woff2';
+    const result = snapshot({ 'font-faces': families })['font-faces'] as Record<string, unknown>;
+    expect(Object.getPrototypeOf(result) === Object.prototype).to.equal(true);
+    expect(Object.hasOwn(result, '__proto__')).to.equal(true);
+    expect(Object.getOwnPropertyDescriptor(result, '__proto__')?.value).to.deep.equal([{ url: 'font.woff2' }]);
+    expect(Object.getOwnPropertyDescriptor(result, 'toString')?.value).to.equal('other.woff2');
+    expect(Object.isFrozen(result)).to.equal(true);
+    expect(Object.getPrototypeOf(families)).to.equal(null);
+    expect(Object.getOwnPropertyDescriptor(Object.prototype, '__proto__')?.set !== undefined).to.equal(true);
+  });
+
   it('retains a valid glyph provider when native face data is invalid', () => {
     const result = snapshot({ glyphs: 'glyphs/{fontstack}/{range}.pbf', 'font-faces': { Demo: [] } });
     expect(result['glyphs']).to.equal('glyphs/{fontstack}/{range}.pbf');

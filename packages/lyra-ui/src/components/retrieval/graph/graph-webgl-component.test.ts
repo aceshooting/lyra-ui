@@ -305,3 +305,67 @@ describe('graph optional engine component integration', () => {
     expect(value.graph.getNodePosition3d('local-a')).to.equal(undefined); expect(await value.graph.focusNode('remote')).to.equal(true);
   });
 });
+
+it('pans the WebGL camera through keyboard input without orbiting and reverses horizontal pan in RTL', async () => {
+  const value = setup(); value.graph.engine = 'webgl'; value.graph.view = '3d'; value.graph.camera = camera();
+  await fixture(value.graph); const engine = await mounted(value);
+  const surface = value.graph.shadowRoot!.querySelector<HTMLElement>('[data-webgl-host]')!;
+  await focusByKeyboard(surface);
+  const initial = engine.cameras.at(-1)!;
+  surface.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', shiftKey: true, bubbles: true, cancelable: true }));
+  await settle(value.graph);
+  const right = engine.cameras.at(-1)!;
+  expect(right.target.x).to.be.lessThan(initial.target.x);
+  expect(right.target.y).to.equal(initial.target.y); expect(right.target.z).to.equal(initial.target.z);
+  expect([right.yaw, right.pitch, right.distance]).to.deep.equal([initial.yaw, initial.pitch, initial.distance]);
+  surface.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', shiftKey: true, bubbles: true, cancelable: true }));
+  await settle(value.graph);
+  expect(engine.cameras.at(-1)!.target.x).to.be.closeTo(initial.target.x, 1e-8);
+  value.graph.setAttribute('dir', 'rtl'); await settle(value.graph);
+  surface.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', shiftKey: true, bubbles: true, cancelable: true }));
+  await settle(value.graph);
+  expect(engine.cameras.at(-1)!.target.x).to.be.greaterThan(initial.target.x);
+});
+
+it('places WebGL edge labels from live endpoints and stops drawing labels when disabled', async () => {
+  const value = setup(); value.graph.engine = 'webgl'; value.graph.view = '3d'; value.graph.camera = camera();
+  value.graph.nodeLabels = 'none'; value.graph.withEdgeLabels = true; value.graph.edgeLabelMinZoom = 0.001;
+  value.graph.edges = [{ id: 'span', source: 'local-a', target: 'local-b', label: 'Span' }, { id: 'loop', source: 'local-a', target: 'local-a', label: 'Loop' }];
+  await fixture(value.graph); const engine = await mounted(value);
+  const ctx = value.graph.shadowRoot!.querySelector<HTMLCanvasElement>('[data-graph-labels]')!.getContext('2d')!;
+  const original = ctx.fillText, labels: { text: string; x: number; y: number; alpha: number }[] = [];
+  ctx.fillText = function(text, x, y, maxWidth) { labels.push({ text, x, y, alpha: this.globalAlpha }); if (maxWidth === undefined) original.call(this, text, x, y); else original.call(this, text, x, y, maxWidth); };
+  try {
+    engine.positions.set(0, { x: -20, y: 0, z: 0 }); engine.positions.set(1, { x: 20, y: 0, z: 0 });
+    value.graph.camera = camera(); await settle(value.graph);
+    const span = labels.find(label => label.text === 'Span'), loop = labels.find(label => label.text === 'Loop');
+    expect(span !== undefined).to.equal(true); expect(loop !== undefined).to.equal(true);
+    expect(loop!.y).to.be.lessThan(span!.y);
+    labels.length = 0; engine.positions.set(1, { x: 120, y: 0, z: 0 });
+    value.graph.dimmedEdgeIds = ['span']; await settle(value.graph);
+    const moved = labels.find(label => label.text === 'Span');
+    expect(moved !== undefined).to.equal(true); expect(moved!.x).to.be.greaterThan(span!.x);
+    expect(moved!.alpha).to.be.lessThan(1); expect(ctx.globalAlpha).to.equal(1);
+    labels.length = 0; value.graph.withEdgeLabels = false; await settle(value.graph);
+    expect(labels.length).to.equal(0); expect(engine.disposals()).to.equal(0);
+  } finally { ctx.fillText = original; }
+});
+
+it('mounts and retires the visible WebGL surface when IntersectionObserver is unavailable', async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(window, 'IntersectionObserver');
+  const value = setup();
+  try {
+    Object.defineProperty(window, 'IntersectionObserver', { configurable: true, writable: true, value: undefined });
+    value.graph.engine = 'webgl'; value.graph.view = '3d';
+    await fixture(value.graph); const engine = await mounted(value);
+    expect(engine.data.at(-1)!.nodeCount).to.equal(2);
+    value.graph.remove(); await nextFrame();
+    expect(engine.disposals()).to.equal(1);
+    const count = engine.cameras.length; value.graph.camera = { ...camera(), distance: 700 }; await settle(value.graph);
+    expect(engine.cameras.length).to.equal(count);
+  } finally {
+    value.graph.remove();
+    if (descriptor) Object.defineProperty(window, 'IntersectionObserver', descriptor);
+    else Reflect.deleteProperty(window, 'IntersectionObserver');
+  }
+});

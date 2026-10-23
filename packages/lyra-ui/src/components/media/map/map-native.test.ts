@@ -262,6 +262,22 @@ describe('lr-map actual modular companion integration', function () {
     });
   }
 
+  it('admits font-face maps through the full native validator on construction and style replacement', async () => {
+    // No symbol layer requests these fonts; this exercises native style validation without a font service.
+    const initial = { ...localStyle(), 'font-faces': { Demo: [{ url: '/unused-font.woff2', 'unicode-range': ['U+0-7F'] }] } };
+    const el = await fixture<LyraMap>(html`<lr-map engine="maplibre" initialization="eager"
+      style="display:block;inline-size:480px;block-size:360px" .mapStyle=${initial}></lr-map>`);
+    await el.whenStyleReady(); await el.whenIdle();
+    const map = peer(el);
+    expect(map !== undefined).to.equal(true);
+    expect((map.getStyle() as unknown as Record<string, unknown>)['font-faces']).to.deep.equal(initial['font-faces']);
+    const replacement = { ...localStyle(), 'font-faces': { Other: 'unused-other-font.woff2' } };
+    el.mapStyle = replacement;
+    await el.updateComplete; await el.whenStyleReady(); await el.whenIdle();
+    expect(el.map === map).to.equal(true);
+    expect((map.getStyle() as unknown as Record<string, unknown>)['font-faces']).to.deep.equal(replacement['font-faces']);
+  });
+
   it('M01 settles real controls and camera hash ownership across reconnect', async () => {
     const originalUrl = location.href, originalState = history.state;
     let el: LyraMap | undefined;
@@ -818,6 +834,29 @@ describe('lr-map actual modular companion integration', function () {
       for (const layer of layers) expect(current.getLayer(layer.id)).to.include({ minzoom: 3, maxzoom: 3 });
       const absent = oneEvent(el, 'lr-map-click'); await clickCanvas(el); expect((await absent).detail.hit).to.equal(undefined);
     }
+  });
+
+  it('adds a sprite catalog and lazy SDF provider together after the map is idle', async () => {
+    const { el } = await mount(map => { map.overlays = {}; });
+    const map = peer(el), asked: string[] = [];
+    const square = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="#ffffff"/></svg>';
+    const catalog = Array.from({ length: 243 }, (_, index) => ({ id: `late-icon-${index}`, width: 8, height: 8, pixelRatio: 1,
+      source: { kind: 'svg' as const, markup: square.replace('#ffffff', '#ff0000') } }));
+    el.images = catalog;
+    el.imageProvider = id => { asked.push(id); return { id, width: 32, height: 32, pixelRatio: 1, sdf: true,
+      source: { kind: 'svg', markup: square } }; };
+    el.overlays = { sources: [{ id: 'late-pins', source: { type: 'geojson', data: { type: 'FeatureCollection', features: [
+      { type: 'Feature', id: 1, properties: {}, geometry: { type: 'Point', coordinates: [0, 0] } },
+    ] } } }], layers: [{ interactive: true, layer: { id: 'late-pins-icon', type: 'symbol', source: 'late-pins',
+      layout: { 'icon-image': 'late-provider', 'icon-allow-overlap': true }, paint: { 'icon-color': '#0000ff' } } }] };
+    await el.updateComplete; await el.whenIdle();
+    await waitUntil(() => map.hasImage('late-provider'), 'late provider image added'); await el.whenIdle();
+    expect(catalog.every(image => map.hasImage(image.id))).to.equal(true);
+    expect(asked).to.deep.equal(['late-provider']);
+    expect(el.map === map).to.equal(true); color(await centerPixel(el), [0, 0, 255, 255]);
+    const clicked = oneEvent(el, 'lr-map-click'); await clickCanvas(el);
+    const detail = (await clicked).detail;
+    expect(detail.sourceId).to.equal('late-pins'); expect(detail.hit?.id).to.equal(1);
   });
 
 });

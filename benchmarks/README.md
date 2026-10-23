@@ -146,6 +146,13 @@ records the WebGL renderer string that drew it, so a software frame never passes
 animation frames that issued WebGL draw calls, so an idle frame never passes as a rendered one. Results are written
 to `benchmarks/gpu/results/`. `--cpu-profile` builds without minification so function names stay readable.
 
+Add `--acceptance-observations` to collect three fresh-page repetitions for each quick workload,
+including screenshots, trusted pointer input to WebGL draw submission, and main-thread JavaScript
+heap before mounting and after disposal and garbage collection. The graph repetitions also observe
+an unpinned worker layout and distinguish convergence from exhaustion of its iteration budget.
+Results retain the raw samples and their spread; missing observations fail the command. These
+measurements exclude display latency, worker heaps and GPU memory. Screenshots require visual review.
+
 ## Validate the tooling
 
 ```sh
