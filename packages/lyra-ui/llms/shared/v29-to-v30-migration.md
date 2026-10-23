@@ -2,36 +2,27 @@
 
 ## Migration scope
 
-This guide is for applications moving from Lyra UI 29 to v30. Keep the exact package version you
-test pinned while you migrate, and verify its availability in the package registry before updating
-production dependencies.
-
-V30 keeps the public component tags. The sections below list each behavior that changed; this
-document is the project cleanup sequence, not a duplicate member inventory. For import, style, event
-and SSR contracts use the focused guides: [imports and registration](./imports-and-registration.md),
+For Lyra UI 29 → v30, pin the tested package version and verify registry availability before
+updating production. Public tags remain unchanged. For import, style, event and SSR contracts see: [imports and registration](./imports-and-registration.md),
 [events and types](./events-and-types.md) and [styles and tokens](./styles-and-tokens.md).
 
 ## Migrate a project in reviewable steps
 
-1. **Establish a clean comparison point.** Record the installed Lyra version, package manager lock
-   and unrelated edits (`git status`). Use a branch or disposable worktree so a codemod report
-   cannot mix with in-progress application work.
-2. **Upgrade only Lyra and its lockfile.** Install the exact v30 package build being evaluated and
-   confirm the resolved version. Do not change unrelated dependencies in this step.
-3. **Run the collections review.** The `immutable-collections` rule only reports; it never edits
-   source. It also asks you to review `lr-map` `center` assignments (see [Map](#map)). Run it with the CLI of the installed release, review each site by hand, and acknowledge
-   a reviewed site with a comment (see [Collections](#collections)):
+1. **Record the baseline:** installed Lyra version, lockfile and unrelated edits (`git status`).
+   Isolate migration work in a branch or disposable worktree.
+2. **Upgrade only Lyra and its lockfile** to the exact v30 build; confirm the resolved version.
+3. **Run the installed CLI's collections review.** It reports without editing source, including
+   [Map](#map) `center` assignments. Review each site manually; see [Collections](#collections)
+   for acknowledgement comments:
 
    ```sh
    npx lyra-ui-migrate --rule=immutable-collections --check \
      --report=lyra-immutable-collections.json src
    ```
 
-4. **Fix each reported site** by assigning a new array, as described below, then rerun the command.
-   A clean second pass reports nothing. A zero exit is not proof that a dynamic use the scan cannot
-   see (an array mutated in a helper and bound through a template) is correct.
-5. **Verify the migrated application.** Run the project's typecheck and tests, and exercise every
-   screen that mutates a list shown by one of the components in the table below.
+4. **Fix reported sites** as described below, then rerun until clean. Also review mutations in
+   helpers or template bindings: a zero exit cannot validate uses outside the scan's reach.
+5. **Verify the application:** typecheck, test, and exercise every screen mutating a listed collection.
 
 ## Removed deprecated names
 
@@ -105,12 +96,10 @@ panel.addEventListener('lr-entity-select', event => {
 });
 ```
 
-For the four retired `icon` slots, move content to `start` on `lr-app-rail-item`, `lr-flow-node`,
-and `lr-widget`, or to `status-icon` on `lr-tool-call-chip`. Preserve precedence: the old `icon`
-slot was fallback inside the canonical slot. If both had content, the canonical content won;
-renaming both into the canonical slot would incorrectly display both. Keep the canonical content
-and remove the unused fallback, or make the application render only one branch when the content
-is conditional. For example:
+Move retired `icon` content to `start` on `lr-app-rail-item`, `lr-flow-node` and `lr-widget`, or
+`status-icon` on `lr-tool-call-chip`. The canonical slot previously won over the `icon` fallback:
+keep canonical content and remove unused fallback, or render only one conditional branch.
+Renaming both slots would incorrectly display both:
 
 ```html
 <!-- Before: only Canonical was visible. -->
@@ -160,11 +149,9 @@ or alone on the line above it. The rule never edits source.
 
 ## Collections
 
-Components that keep the caller's own item objects (the identity-preserving collections: feeds,
-queues, traces, task lists, virtual lists and similar) now ignore an assignment of the array they
-already hold. Before v30, assigning the same array again re-read it, so code that changed an item or
-called `push()`, `splice()` or `sort()` on the array and then assigned it back still rendered. In
-v30 the one rule for every such property is:
+Identity-preserving collections (feeds, queues, traces, task lists, virtual lists and similar)
+now ignore reassignment of their current array. Before v30, reassigning it rendered item edits
+and in-place mutations such as `push()`, `splice()` or `sort()`. Now:
 
 - **Create a new array to publish a change.** `el.items = [...el.items, item]`,
   `el.items = el.items.filter(...)`, `el.items = el.items.map(...)` and `el.items = next` where
