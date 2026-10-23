@@ -3097,33 +3097,7 @@ it('keeps every marker category distinguishable in forced colors', async () => {
   }
 });
 
-it.skip('keeps rate hover visible in forced colors', async function () {
-  // Quarantined, not a reflexive skip -- see the investigation trail below. The underlying
-  // behavior (the playback-rate select's hover outline stays visible without color under
-  // forced-colors) is real and its stylesheet rule
-  // (av-player.styles.ts's `@media (forced-colors: active) { [part='rate-select']:hover {...} }`)
-  // is unchanged and still shipping; only this synthetic-mouse-driven behavioral reproduction of
-  // it is unreliable, and only in one specific CI configuration.
-  //
-  // Four independent, genuine fix attempts across two sessions, each verified against the real
-  // failure before landing: (1) widened a single waitUntil() 3000ms -> 5000ms; (2) split a
-  // compound wait into a single polled :hover condition plus a separate style read; (3) retried
-  // the physical sendMouse() dispatch itself (5 attempts x 1000ms), not just the wait, since the
-  // synthesized mouse move's underlying CDP command completing (what sendMouse()'s returned
-  // promise actually waits on -- see wtr-mouse.ts) does not guarantee the browser has gone on to
-  // process the resulting native pointer event and update :hover matching state; (4) widened the
-  // per-attempt budget further, 1000ms -> 3000ms (15000ms total), matching the figure that
-  // stabilized image-viewer.test.ts's near-identical forced-colors hover wait. All four were
-  // verified clean standalone and under WTR_COVERAGE=1's full local suite; all four still failed
-  // -- identically, on both the chromium and edge jobs of the same CI run -- under this repo's
-  // "Test All Browsers" workflow, which runs the complete unsharded 120-file suite as a single
-  // Chromium-engine process per job. That workflow is the one reproducible common factor across
-  // every recorded failure; the sharded equivalents (CI's own chromium coverage shards, this
-  // suite's own local run) have never reproduced it. A native <select>'s hit-testing under a
-  // CDP-synthesized pointer move, specifically while `forced-colors: active` is engaged, may
-  // simply not be reliable in that unsharded configuration at any wait budget -- a fifth blind
-  // widening isn't warranted. Diagnosing this for real needs instrumentation running inside an
-  // actual failing Test All Browsers job, not another local or standalone repro attempt.
+it('keeps rate hover visible in forced colors', async function () {
   this.timeout(20000);
   await setForcedColors('active');
   try {
@@ -3133,29 +3107,14 @@ it.skip('keeps rate hover visible in forced colors', async function () {
     media.dispatchEvent(new Event('loadedmetadata'));
     await el.updateComplete;
     const select = el.shadowRoot!.querySelector('[part="rate-select"]') as HTMLSelectElement;
-    await resetMouse();
-    select.scrollIntoView({ block: 'center', inline: 'center' });
-    await aTimeout(0);
-    const rect = select.getBoundingClientRect();
-    const position: [number, number] = [
-      Math.round(rect.left + rect.width / 2),
-      Math.round(rect.top + rect.height / 2),
-    ];
-    // Firefox's forced-colors UA sheet retains the authored hover outline while normalizing the
-    // native select border back to solid. The outline is the stable non-color hover cue owned by
-    // this component across engines; exact native border painting is not.
-    let hovered = false;
-    for (let attempt = 0; attempt < 5 && !hovered; attempt += 1) {
-      await sendMouse({ type: 'move', position });
-      const deadline = Date.now() + 3000;
-      while (!select.matches(':hover') && Date.now() < deadline) {
-        // wait-reason: poll interval inside a bounded per-attempt retry loop (waitUntil would throw)
-        await aTimeout(10);
-      }
-      hovered = select.matches(':hover');
-    }
-    expect(hovered, 'the playback-rate select never registered :hover after repeated attempts').to.be.true;
-    await aTimeout(0);
+    // A native media error can insert a banner between pointer commands and move this control.
+    await hoverAndAwaitPaint(
+      select,
+      'the playback-rate select never registered :hover',
+      () => getComputedStyle(select).outlineStyle === 'solid',
+      'the playback-rate select never painted its forced-colors outline',
+    );
+    expect(select.matches(':hover')).to.equal(true);
     expect(getComputedStyle(select).outlineStyle).to.equal('solid');
   } finally {
     await resetMouse();
