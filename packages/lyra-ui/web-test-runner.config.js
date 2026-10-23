@@ -318,19 +318,16 @@ const failureReportPath = process.env.WTR_FAILURE_REPORT || undefined;
 const browserProduct = (process.env.WTR_BROWSER ?? 'chromium').toLowerCase();
 const isPointerTimingSensitiveBrowser =
   browserProduct === 'firefox' || browserProduct === 'webkit' || browserProduct === 'safari';
-// Web Test Runner otherwise opens half the host CPU count in parallel pages. That becomes 30
-// browser tabs on the release host, where background-tab pointer/paint state is no longer reliable.
-// Preserve the low-core default for WebKit/Safari within a four-page ceiling. Firefox additionally
-// requires one page per browser process for native pointer capture isolation below.
-const pointerSafeDefaultConcurrency = Math.max(
-  1,
-  Math.min(4, Math.floor(availableParallelism() / 2)),
-);
+// Size ordinary sessions from the CPUs available to this process, including affinity limits.
+// Web Test Runner's machine-wide CPU count can oversubscribe a constrained runner.
+const defaultTestConcurrency = Math.max(1, Math.floor(availableParallelism() / 2));
+// WebKit/Safari additionally need a four-page ceiling for reliable pointer/paint state.
+const pointerSafeDefaultConcurrency = Math.min(4, defaultTestConcurrency);
 // Firefox shares native pointer capture across pages, even in separate browser contexts. A
 // sibling reset can release another page's active drag; explicit overrides must not bypass isolation.
 const effectiveTestConcurrency = browserProduct === 'firefox'
   ? 1
-  : testConcurrency ?? (isPointerTimingSensitiveBrowser ? pointerSafeDefaultConcurrency : undefined);
+  : testConcurrency ?? (isPointerTimingSensitiveBrowser ? pointerSafeDefaultConcurrency : defaultTestConcurrency);
 // Headless Linux CI/dev runners expose no GPU. Recent WebKit (WPE) builds probe Vulkan-backed
 // Zink for GL before falling back to software rendering, and on a driverless host that probe
 // itself fails hard (`MESA: error: ZINK: vkCreateInstance failed (VK_ERROR_INCOMPATIBLE_DRIVER)`),
@@ -522,16 +519,11 @@ export default {
   // Export resolution stays enabled; packed-consumer gates verify tree-shaking metadata.
   nodeResolve: { ignoreSideEffectsForRoot: true, exportConditions: ['development'] },
   browsers: [enforceStrictConsole(playwrightLauncher(launcherConfig))],
-  // The runner otherwise opens half the host's reported CPU count in browser pages.
-  // WebKit retains a bounded default; Firefox uses one page per process because
-  // native pointer capture crosses browser contexts. Chromium retains WTR's automatic default.
+  // Ordinary concurrency respects process CPU availability; WebKit retains a bounded default.
+  // Firefox uses one page per process because native pointer capture crosses browser contexts.
   // Aggregate overrides preserve the Firefox isolation ceiling; shards provide parallelism.
   // Coverage: one runner process for a deterministic combined report, WTR_COVERAGE_CONCURRENCY pages.
-  ...(collectCoverage
-    ? { concurrency: coverageConcurrency }
-    : effectiveTestConcurrency === undefined
-      ? {}
-      : { concurrency: effectiveTestConcurrency }),
+  concurrency: collectCoverage ? coverageConcurrency : effectiveTestConcurrency,
   // Keep the complete browser-session watchdog high enough for a slow worker to report the actual
   // result while still failing resource leaks and unresolved tests within a bounded five minutes.
   testsFinishTimeout: 300000,

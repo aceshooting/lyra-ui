@@ -12,6 +12,26 @@ describe('map paint batches', () => {
     expect(writes).to.deep.equal(['fill-color', 'fill-opacity']); expect(paints).to.equal(1);
     batch.run(peer, 2, () => true, apply); expect(paints).to.equal(2);
   });
+  it('preserves paint writes and deduplication when explicit repaint is unavailable', () => {
+    const writes: string[] = [];
+    const peer = { setPaintProperty: (_id: string, key: string) => { writes.push(key); } };
+    const batch = new MapPaintBatch();
+    const apply = () => { batch.write('fill', 'fill-color', 'red'); batch.write('fill', 'fill-opacity', 0.5); };
+    expect(() => batch.run(peer, 1, () => true, apply)).not.to.throw();
+    batch.run(peer, 1, () => true, apply);
+    expect(writes).to.deep.equal(['fill-color', 'fill-opacity']);
+    batch.run(peer, 2, () => true, apply);
+    expect(writes).to.deep.equal(['fill-color', 'fill-opacity', 'fill-color', 'fill-opacity']);
+  });
+  it('still aborts a superseded paint batch when explicit repaint is unavailable', () => {
+    let current = true, writes = 0;
+    const peer = { setPaintProperty: () => { writes++; current = false; } };
+    const batch = new MapPaintBatch();
+    expect(() => batch.run(peer, 1, () => current, () => {
+      batch.write('fill', 'fill-color', 'red'); batch.write('fill', 'fill-opacity', 0.5);
+    })).to.throw(DOMException);
+    expect(writes).to.equal(1);
+  });
   it('stops after a reentrant mutation retires the owner and never repaints it', () => {
     let current = true, paints = 0, writes = 0;
     const peer = { getLayer: () => ({}), setPaintProperty: () => { writes++; current = false; }, triggerRepaint: () => { paints++; } };

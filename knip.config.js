@@ -66,7 +66,9 @@ export default {
       ],
     },
     'packages/lyra-docs': {
-      entry: ['src/index.ts!', 'src/docx/index.ts!', 'src/docx/editor.ts!', 'src/docx/docx-editor.class.ts!', 'src/**/*.test.ts', 'type-tests/**/*.ts'],
+      entry: ['src/index.ts!', 'src/docx/index.ts!', 'src/docx/editor.ts!', 'src/docx/docx-editor.class.ts!', 'src/**/*.test.ts', 'type-tests/**/*.ts',
+        // Vite builds this browser entry in scripts/engine-regressions.mjs.
+        'scripts/engine-regression-fixtures/refresh-regressions.mjs'],
       project: ['src/**/*.ts!', '!src/**/*.test.ts!', '!src/**/*-fixtures.ts!', 'scripts/**/*.mjs', 'type-tests/**/*.ts', 'test/**/*.ts'],
     },
     'packages/lyra-map': {

@@ -80,6 +80,7 @@ async function hoverAndAwaitPaint(
 }
 
 expectLocaleFallback('ar-EG', [
+  'avPlayerFailedToLoad',
   'avPlayerLabel',
   'avPlayerPlaybackRate',
   'avPlayerPosition',
@@ -88,6 +89,7 @@ expectLocaleFallback('ar-EG', [
   'avPlayerTranscript',
 ]);
 expectLocaleFallback('tr', [
+  'avPlayerFailedToLoad',
   'avPlayerLabel',
   'avPlayerPlaybackRate',
   'avPlayerPosition',
@@ -2580,6 +2582,18 @@ describe('source identity', () => {
 });
 
 describe('i18n', () => {
+  for (const locale of ['tr', 'ar-EG']) {
+    it(`uses the declared ${locale} fallback for native media failures`, async () => {
+      const el = (await fixture(html`<lr-av-player lang=${locale}></lr-av-player>`)) as LyraAvPlayer;
+      const error = oneEvent(el, 'lr-render-error');
+      mediaEl(el).dispatchEvent(new Event('error'));
+      await error;
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('The media failed to load.');
+      expect(assertiveAnnouncements()).to.deep.equal(['The media failed to load.']);
+    });
+  }
+
   it('routes every localized string through a .strings override, reaching the rendered DOM', async () => {
     const el = (await fixture(html`
       <lr-av-player

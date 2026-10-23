@@ -46,7 +46,11 @@ try {
         async resolveId(id, importer) {
           if (id === 'virtual:docx-preparation-gate') return gateId;
           if (importer === editorFile && id === '../features/document-preparation.ts') return gateId;
-          if (id.startsWith('@engine/')) return path.join(source, 'src', id.slice('@engine/'.length));
+          if (id.startsWith('virtual:docx-engine/')) {
+            assert(importer?.startsWith(path.join(scripts, 'engine-regression-fixtures') + path.sep),
+              'Engine source aliases are limited to regression fixtures');
+            return path.join(source, 'src', id.slice('virtual:docx-engine/'.length));
+          }
           if (Object.hasOwn(sourceEntries, id)) return path.join(source, sourceEntries[id]);
           if (id === 'module') return path.join(source, 'src/layout/node-module-shim.ts');
           if (importer?.startsWith(source + path.sep) && !id.startsWith('.') && !path.isAbsolute(id) && !id.startsWith('\0')) {

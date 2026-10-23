@@ -279,10 +279,11 @@ describe('lr-map external data layers and labels', () => {
     const { element, peer } = await mount(el => { el.dataLayers = [row]; }); await load(element, peer);
     const sourceId = [...peer.sources.keys()][0]; if (!sourceId) throw new Error('Missing source');
     const original = peer.sources.get(sourceId); const writes = peer.sourceWrites;
+    const layer = peer.getLayer(`${sourceId}-render`) as { id: string };
     element.dataLayers = [{ ...row, width: 8 }]; await element.updateComplete;
-    await waitUntil(() => [...peer.layers.values()].some(layer => (layer as { paint?: Record<string, unknown> }).paint?.['line-width'] === 8));
+    await waitUntil(() => peer.getPaintProperty(layer.id, 'line-width') === 8);
     expect(peer.sources.get(sourceId) === original).to.equal(true); expect(peer.sourceWrites).to.equal(writes);
-    const layer = [...peer.layers.values()][0] as { id: string };
+    expect(peer.getLayer(layer.id) === layer).to.equal(true);
     peer.hits = [{ type: 'Feature', properties: {}, geometry: null, layer: { id: layer.id } }];
     let detail: unknown; element.addEventListener('lr-map-click', event => { detail = event.detail; });
     peer.fire('click', { point: { x: 1, y: 2 }, lngLat: { lng: 1, lat: 2 } });

@@ -18,8 +18,7 @@ export class MapPaintBatch {
     try {
       apply();
       if (!current()) aborted();
-      if (batch.dirty) {
-        if (typeof peer.triggerRepaint !== 'function') throw new Error('Map paint refresh is unavailable.');
+      if (batch.dirty && typeof peer.triggerRepaint === 'function') {
         peer.triggerRepaint();
         if (!current()) aborted();
       }

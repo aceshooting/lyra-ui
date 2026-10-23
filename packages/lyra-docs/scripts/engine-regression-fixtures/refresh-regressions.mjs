@@ -1,7 +1,7 @@
-import { createDocxEditor } from '@engine/editor/docx-editor.ts';
-import { blankDocumentBytes } from '@engine/editor/blank-document.ts';
-import { refreshHostFor } from '@engine/editor/document-refresh-host.ts';
-import { refreshGuardSet } from '@engine/editor/refresh-write-guard.ts';
+import { createDocxEditor } from 'virtual:docx-engine/editor/docx-editor.ts';
+import { blankDocumentBytes } from 'virtual:docx-engine/editor/blank-document.ts';
+import { refreshHostFor } from 'virtual:docx-engine/editor/document-refresh-host.ts';
+import { refreshGuardSet } from 'virtual:docx-engine/editor/refresh-write-guard.ts';
 import { gateNextPreparation } from 'virtual:docx-preparation-gate';
 import { tablePreparationRegression } from './table-preparation-regressions.mjs';
 function assert(condition, message) {

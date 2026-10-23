@@ -28,6 +28,7 @@ function runConfigInspection({
   coverageConcurrency,
   timingReport,
   failureReport,
+  parallelism,
 } = {}) {
   const environment = { ...process.env };
   if (coverageConcurrency === undefined) delete environment.WTR_COVERAGE_CONCURRENCY;
@@ -52,7 +53,14 @@ function runConfigInspection({
   else delete environment.WTR_HEADED;
 
   const source = `
-    import config from ${JSON.stringify(configUrl)};
+    import os from 'node:os';
+    import { syncBuiltinESMExports } from 'node:module';
+    ${parallelism === undefined ? '' : `
+      os.availableParallelism = () => ${JSON.stringify(parallelism)};
+      os.cpus = () => Array.from({ length: 48 }, () => ({}));
+      syncBuiltinESMExports();
+    `}
+    const { default: config } = await import(${JSON.stringify(configUrl)});
     const launch = config.browsers[0].launchOptions ?? {};
     process.stdout.write(JSON.stringify({
       coverage: config.coverage,
@@ -222,7 +230,7 @@ test('caps coverage browser sessions without changing ordinary test concurrency'
   });
   assert.deepEqual(inspectConfig(), {
     coverage: false,
-    concurrency: null,
+    concurrency: Math.max(1, Math.floor(availableParallelism() / 2)),
     port: null,
     files: ['src/**/*.test.ts', '!src/**/*.native-scrollbar.test.ts'],
     mediaCommand: true,
@@ -246,7 +254,18 @@ test('isolates Firefox pages and preserves the bounded WebKit default', () => {
   assert.equal(inspectConfig({ browser: 'firefox' }).concurrency, 1);
   assert.equal(inspectConfig({ browser: 'webkit' }).concurrency, expectedConcurrency);
   assert.equal(inspectConfig({ browser: 'safari' }).concurrency, expectedConcurrency);
-  assert.equal(inspectConfig({ browser: 'chromium' }).concurrency, null);
+  assert.equal(inspectConfig({ browser: 'chromium' }).concurrency, Math.max(1, Math.floor(availableParallelism() / 2)));
+});
+
+test('sizes Chromium sessions from available CPUs rather than the machine CPU count', () => {
+  for (const [parallelism, expected] of [[1, 1], [2, 1], [3, 1], [8, 4], [12, 6]]) {
+    assert.equal(inspectConfig({ browser: 'chromium', parallelism }).concurrency, expected);
+  }
+  assert.equal(inspectConfig({ browser: 'chromium', parallelism: 2, concurrency: '8' }).concurrency, 8);
+  assert.equal(inspectConfig({ browser: 'firefox', parallelism: 12, concurrency: '8' }).concurrency, 1);
+  assert.equal(inspectConfig({ browser: 'webkit', parallelism: 12 }).concurrency, 4);
+  assert.equal(inspectConfig({ browser: 'webkit', parallelism: 2 }).concurrency, 1);
+  assert.equal(inspectConfig({ coverage: true, parallelism: 12, concurrency: '8' }).concurrency, 1);
 });
 
 test('enables real WebGL2 in ordinary and native-scrollbar Firefox sessions', () => {
@@ -342,7 +361,7 @@ test('coverage keeps one page unless WTR_COVERAGE_CONCURRENCY asks for more', ()
   assert.equal(inspectConfig({ coverage: true }).concurrency, 1);
   assert.equal(inspectConfig({ coverage: true, coverageConcurrency: '2' }).concurrency, 2);
   assert.equal(inspectConfig({ coverage: true, concurrency: '8', coverageConcurrency: '2' }).concurrency, 2);
-  assert.equal(inspectConfig({ coverageConcurrency: '2' }).concurrency, null, 'ordinary runs ignore it');
+  assert.equal(inspectConfig({ coverageConcurrency: '2' }).concurrency, inspectConfig().concurrency, 'ordinary runs ignore it');
   for (const coverageConcurrency of ['0', '1.5', 'two']) {
     const result = runConfigInspection({ coverage: true, coverageConcurrency });
     assert.notEqual(result.status, 0, `WTR_COVERAGE_CONCURRENCY=${coverageConcurrency} must be rejected`);

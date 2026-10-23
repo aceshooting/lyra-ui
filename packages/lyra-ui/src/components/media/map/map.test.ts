@@ -2630,6 +2630,7 @@ it('updates fill opacity when existing choropleth and data layers are reused', a
     };
     const privateMap = el as unknown as {
       _map?: unknown;
+      _styleLoaded: boolean;
       _appliedDataLayerIds: Map<string, string>;
       _appliedChoroplethSourceId?: string;
       _appliedFillLayerId?: string;
@@ -2647,6 +2648,7 @@ it('updates fill opacity when existing choropleth and data layers are reused', a
     }];
     await el.updateComplete;
 
+    privateMap._styleLoaded = true;
     privateMap.applyChoropleth();
     privateMap.applyDataLayers();
 
@@ -2657,6 +2659,10 @@ it('updates fill opacity when existing choropleth and data layers are reused', a
       paintCalls.find((call) => call.layerId === 'lr-data-layer-0-fill' && call.name === 'fill-opacity')
         ?.value,
     ).to.equal(0.42);
+    expect(privateMap._map === fakeMap).to.equal(true);
+    expect(sources.get('regions') === fakeSource).to.equal(true);
+    expect(sources.get('lr-data-layer-0') === fakeSource).to.equal(true);
+    expect(layers.size).to.equal(4);
   } finally {
     wrapper.remove();
   }

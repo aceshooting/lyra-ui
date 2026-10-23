@@ -1,11 +1,11 @@
-import { readOoxmlPart } from '@engine/store/package/ooxml-tree.ts';
-import { applyMergeTableCells } from '@engine/store/store/tree-op-table-merge.ts';
-import { applySplitTableCell } from '@engine/store/store/tree-op-table-split.ts';
-import { applyMergedColumnOp } from '@engine/store/store/tree-op-table-merged-columns.ts';
-import { readEditableTableTopology } from '@engine/store/store/tree-op-table-topology.ts';
-import { wmlAttributeValue, wmlChildNamed } from '@engine/store/store/tree-op-table-shared.ts';
-import { FeatureNotPreparedError, featureIsPrepared } from '@engine/features/prepared-runtime.ts';
-import { prepareCommandFeatures } from '@engine/features/command-preparation.ts';
+import { readOoxmlPart } from 'virtual:docx-engine/store/package/ooxml-tree.ts';
+import { applyMergeTableCells } from 'virtual:docx-engine/store/store/tree-op-table-merge.ts';
+import { applySplitTableCell } from 'virtual:docx-engine/store/store/tree-op-table-split.ts';
+import { applyMergedColumnOp } from 'virtual:docx-engine/store/store/tree-op-table-merged-columns.ts';
+import { readEditableTableTopology } from 'virtual:docx-engine/store/store/tree-op-table-topology.ts';
+import { wmlAttributeValue, wmlChildNamed } from 'virtual:docx-engine/store/store/tree-op-table-shared.ts';
+import { FeatureNotPreparedError, featureIsPrepared } from 'virtual:docx-engine/features/prepared-runtime.ts';
+import { prepareCommandFeatures } from 'virtual:docx-engine/features/command-preparation.ts';
 function check(value, message) {
     if (!value)
         throw new Error(message);

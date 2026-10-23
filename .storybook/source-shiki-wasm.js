@@ -6,7 +6,7 @@ import { dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { reviewedSha256 } from '../packages/lyra-ui/scripts/generate-shiki-wasm.mjs';
 
-const sourceModule = fileURLToPath(new URL('../packages/lyra-ui/src/components/conversation/code-block/shiki-types.ts', import.meta.url));
+const sourceModule = fileURLToPath(new URL('../packages/lyra-ui/src/components/conversation/code-block/shiki-oniguruma.ts', import.meta.url));
 const assetReference = /new URL\(\s*(['"])\.\/onig\.wasm\1\s*,\s*import\.meta\.url\s*\)/g;
 
 /** Source stories use the same reviewed binary as the package, without requiring dist. */

@@ -159,12 +159,15 @@ describe('lr-map application parity', () => {
   describe('theme colors in overlay paint', () => {
     const overlays = (color: string) => ({ sources: [{ id: 'area', source: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } } }],
       layers: [{ layer: { id: 'area-fill', type: 'fill', source: 'area', paint: { 'fill-color': ['case', ['has', 'x'], color, '#000000'], 'fill-opacity': 0.5 } } }] });
-    const fill = (peer: ParityMap) => ((peer.layers.get('area-fill') as Layer).paint!['fill-color'] as unknown[])[2];
+    const fill = (peer: ParityMap) => (peer.getPaintProperty('area-fill', 'fill-color') as unknown[])[2];
     it('resolves tokens to sRGB against the host and re-resolves them after a theme change', async () => {
       const { element, peer, wrapper } = await mount(el => { el.overlays = overlays('var(--parity-brand)'); });
       await settle(element, peer); expect(fill(peer)).to.equal('rgb(10, 20, 30)');
+      const source = peer.getSource('area'), layer = peer.getLayer('area-fill');
       wrapper.style.setProperty('--parity-brand', 'rgb(200, 100, 50)');
       await waitUntil(() => fill(peer) === 'rgb(200, 100, 50)', 'theme change re-resolves overlay paint');
+      expect(peer.getSource('area') === source).to.equal(true);
+      expect(peer.getLayer('area-fill') === layer).to.equal(true);
     });
     it('converts CSS color functions the engine cannot parse, keeping plain colors untouched', async () => {
       const { element, peer } = await mount(el => { el.overlays = overlays('color-mix(in srgb, rgb(255, 0, 0), rgb(0, 0, 255))'); });
