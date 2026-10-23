@@ -163,6 +163,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
+  '@codecov/bundler-plugin-core@2.0.1>zod': 4.6.7
   '@docx-editor.dev/core@2.32.0>@docx-editor.dev/i18n': 2.32.0
   '@docx-editor.dev/core@2.32.0>prosemirror-view': 1.42.7
   prosemirror-state@1.4.4>prosemirror-view: 1.42.7
@@ -180,6 +181,7 @@ overrides:
 packageExtensionsChecksum: sha256-5oBc91IK/iCH5Cm2kcVJI6T1cvRJRDwspF1YwatD2FM=
 
 patchedDependencies:
+  '@codecov/bundler-plugin-core@2.0.1': 7116b3d1b1e41ccfa91c3d7d58e661d2594288534c589b18520a01e60b65dfbe
   '@web/test-runner-coverage-v8@1.0.0': 1678e3d6a33f48e696cbc7599b4588a07e2b653412890cde7fe8729e53f02ddc
   braces@3.0.3: 6a51944e47fdf849394529628931b895d58dbf01ce01aa96ce460a6f9f45e6b8
   sprintf-js@1.0.3: 3cc545bd22e591995f0a9f7841330069463717b32798e92b23976cd8a96d9b69
@@ -6994,9 +6996,6 @@ packages:
   zimmerframe@1.1.5:
     resolution: {integrity: sha512-msJxIvYDYcoNL+PJsu+7qmpDWsYmAxTY+2TNYXXF0hzBzBk0BMecOqDOG/EckUoKCuKwObfbugIl8QpqHDXeFA==}
 
-  zod@3.25.76:
-    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
-
   zod@4.6.7:
     resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==}
 
@@ -7462,22 +7461,22 @@ snapshots:
 
   '@codecov/bundle-analyzer@2.0.1':
     dependencies:
-      '@codecov/bundler-plugin-core': 2.0.1
+      '@codecov/bundler-plugin-core': 2.0.1(patch_hash=7116b3d1b1e41ccfa91c3d7d58e661d2594288534c589b18520a01e60b65dfbe)
       micromatch: 4.0.8
       yargs: 17.7.3
 
-  '@codecov/bundler-plugin-core@2.0.1':
+  '@codecov/bundler-plugin-core@2.0.1(patch_hash=7116b3d1b1e41ccfa91c3d7d58e661d2594288534c589b18520a01e60b65dfbe)':
     dependencies:
       '@actions/core': 3.0.1
       '@actions/github': 9.1.1
       chalk: 4.1.2
       semver: 7.8.5
       unplugin: 1.16.1
-      zod: 3.25.76
+      zod: 4.6.7
 
   '@codecov/vite-plugin@2.0.1(vite@8.3.5(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))':
     dependencies:
-      '@codecov/bundler-plugin-core': 2.0.1
+      '@codecov/bundler-plugin-core': 2.0.1(patch_hash=7116b3d1b1e41ccfa91c3d7d58e661d2594288534c589b18520a01e60b65dfbe)
       unplugin: 1.16.1
       vite: 8.3.5(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
 
@@ -13294,8 +13293,6 @@ snapshots:
   yoctocolors@2.2.0: {}
 
   zimmerframe@1.1.5: {}
-
-  zod@3.25.76: {}
 
   zod@4.6.7: {}
 

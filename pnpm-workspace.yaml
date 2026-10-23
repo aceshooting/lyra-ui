@@ -4,6 +4,7 @@ packages:
 # through lyra-ui). Neither build needs the other's install, and lyra-translations assembles from lyra-ui's dist.
 ignoreWorkspaceCycles: true
 patchedDependencies:
+  '@codecov/bundler-plugin-core@2.0.1': patches/@codecov__bundler-plugin-core@2.0.1.patch
   '@web/test-runner-coverage-v8@1.0.0': patches/@web__test-runner-coverage-v8@1.0.0.patch
   braces@3.0.3: patches/braces@3.0.3.patch
   sprintf-js@1.0.3: patches/sprintf-js@1.0.3.patch
@@ -41,6 +42,8 @@ peerDependencyRules:
     # SheetJS CDN tarball, whose resolved version is a URL that pnpm cannot compare with a range.
     - xlsx
 overrides:
+  # Codecov 2.0.1 uses Zod 3 schemas; its compatibility patch supports patched Zod 4.
+  '@codecov/bundler-plugin-core@2.0.1>zod': 4.6.7
   # Keep the reviewed DOCX engine dependency graph aligned with its source lock.
   '@docx-editor.dev/core@2.32.0>@docx-editor.dev/i18n': 2.32.0
   '@docx-editor.dev/core@2.32.0>prosemirror-view': 1.42.7

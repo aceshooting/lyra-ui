@@ -1,0 +1,539 @@
+diff --git a/dist/index.mjs b/dist/index.mjs
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -169,32 +169,32 @@
+     z.literal("gitlab_enterprise"),
+     z.literal("bitbucket_server")
+   ],
+-  { invalid_type_error: "`gitService` must be a valid git service." }
++  { error: (issue) => issue.input === undefined ? "Required" : "`gitService` must be a valid git service." }
+ );
+ const UploadOverridesSchema = z.object({
+   branch: z.string({
+-    invalid_type_error: "`branch` must be a string."
++    error: (issue) => issue.input === undefined ? "Required" : "`branch` must be a string."
+   }).optional(),
+   build: z.string({
+-    invalid_type_error: "`build` must be a string."
++    error: (issue) => issue.input === undefined ? "Required" : "`build` must be a string."
+   }).optional(),
+   compareSha: z.string({
+-    invalid_type_error: "`compareSha` must be a string."
++    error: (issue) => issue.input === undefined ? "Required" : "`compareSha` must be a string."
+   }).optional(),
+   pr: z.string({
+-    invalid_type_error: "`pr` must be a string."
++    error: (issue) => issue.input === undefined ? "Required" : "`pr` must be a string."
+   }).optional(),
+   sha: z.string({
+-    invalid_type_error: "`sha` must be a string."
++    error: (issue) => issue.input === undefined ? "Required" : "`sha` must be a string."
+   }).optional(),
+   slug: z.string({
+-    invalid_type_error: "`slug` must be a string."
++    error: (issue) => issue.input === undefined ? "Required" : "`slug` must be a string."
+   }).optional()
+ });
+ const OIDCSchema = z.object(
+   {
+     useGitHubOIDC: z.boolean({
+-      invalid_type_error: "`useGitHubOIDC` must be a boolean."
++      error: (issue) => issue.input === undefined ? "Required" : "`useGitHubOIDC` must be a boolean."
+     }).default(false),
+     /**
+      * Following along with how we handle this in our GH Action.
+@@ -202,40 +202,39 @@
+      * See: https://github.com/codecov/codecov-action/blob/main/src/buildExec.ts#L53-L58
+      */
+     gitHubOIDCTokenAudience: z.string({
+-      invalid_type_error: "`gitHubOIDCTokenAudience` must be a string."
++      error: (issue) => issue.input === undefined ? "Required" : "`gitHubOIDCTokenAudience` must be a string."
+     }).optional().default("https://codecov.io")
+   },
+-  { invalid_type_error: "`oidc` must be an object." }
++  { error: (issue) => issue.input === undefined ? "Required" : "`oidc` must be an object." }
+ );
+ const optionsSchemaFactory = (options) => z.object({
+   apiUrl: z.string({
+-    invalid_type_error: "`apiUrl` must be a string."
++    error: (issue) => issue.input === undefined ? "Required" : "`apiUrl` must be a string."
+   }).url({
+     message: `apiUrl: \`${options?.apiUrl}\` is not a valid URL.`
+   }).default(DEFAULT_API_URL),
+   bundleName: z.string({
+-    invalid_type_error: "`bundleName` must be a string.",
+-    required_error: "`bundleName` is required for uploading bundle analysis information."
++    error: (issue) => issue.input === undefined ? "`bundleName` is required for uploading bundle analysis information." : "`bundleName` must be a string."
+   }).regex(validBundleName, {
+     message: `bundleName: \`${options?.bundleName}\` does not match format: \`/^[wd_:/@.{}[]$-]+$/\`.`
+   }),
+   dryRun: z.boolean({
+-    invalid_type_error: "`dryRun` must be a boolean."
++    error: (issue) => issue.input === undefined ? "Required" : "`dryRun` must be a boolean."
+   }).default(false),
+   retryCount: z.number({
+-    invalid_type_error: "`retryCount` must be a number."
++    error: (issue) => issue.input === undefined ? "Required" : "`retryCount` must be a number."
+   }).positive({
+     message: "`retryCount` must be a positive number."
+-  }).int({
++  }).refine(Number.isInteger, {
+     message: "`retryCount` must be an integer."
+   }).default(3),
+   enableBundleAnalysis: z.boolean({
+-    invalid_type_error: "`enableBundleAnalysis` must be a boolean."
++    error: (issue) => issue.input === undefined ? "Required" : "`enableBundleAnalysis` must be a boolean."
+   }).default(false),
+-  uploadToken: z.string({ invalid_type_error: "`uploadToken` must be a string." }).optional(),
++  uploadToken: z.string({ error: (issue) => issue.input === undefined ? "Required" : "`uploadToken` must be a string." }).optional(),
+   uploadOverrides: UploadOverridesSchema.optional(),
+   debug: z.boolean({
+-    invalid_type_error: "`debug` must be a boolean."
++    error: (issue) => issue.input === undefined ? "Required" : "`debug` must be a boolean."
+   }).default(false),
+   /**
+    * Using an enum here, as custom error messages for union types seem to be broken currently.
+@@ -251,11 +250,11 @@
+       "gitlab_enterprise",
+       "bitbucket_server"
+     ],
+-    { invalid_type_error: "`gitService` must be a valid git service." }
++    { error: (issue) => issue.input === undefined ? "Required" : "`gitService` must be a valid git service." }
+   ).optional(),
+   oidc: OIDCSchema.optional(),
+   telemetry: z.boolean({
+-    invalid_type_error: "`telemetry` must be a boolean."
++    error: (issue) => issue.input === undefined ? "Required" : "`telemetry` must be a boolean."
+   }).default(true)
+ });
+ const normalizeOptions = (userOptions) => {
+@@ -43446,7 +43445,7 @@
+ 
+ const literalSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
+ const jsonSchema = z.lazy(
+-  () => z.union([literalSchema, z.array(jsonSchema), z.record(jsonSchema)])
++  () => z.union([literalSchema, z.array(jsonSchema), z.record(z.string(), jsonSchema)])
+ );
+ 
+ function detect$b(envs) {
+diff --git a/dist/index.cjs b/dist/index.cjs
+--- a/dist/index.cjs
++++ b/dist/index.cjs
+@@ -216,32 +216,32 @@
+     zod.z.literal("gitlab_enterprise"),
+     zod.z.literal("bitbucket_server")
+   ],
+-  { invalid_type_error: "`gitService` must be a valid git service." }
++  { error: (issue) => issue.input === undefined ? "Required" : "`gitService` must be a valid git service." }
+ );
+ const UploadOverridesSchema = zod.z.object({
+   branch: zod.z.string({
+-    invalid_type_error: "`branch` must be a string."
++    error: (issue) => issue.input === undefined ? "Required" : "`branch` must be a string."
+   }).optional(),
+   build: zod.z.string({
+-    invalid_type_error: "`build` must be a string."
++    error: (issue) => issue.input === undefined ? "Required" : "`build` must be a string."
+   }).optional(),
+   compareSha: zod.z.string({
+-    invalid_type_error: "`compareSha` must be a string."
++    error: (issue) => issue.input === undefined ? "Required" : "`compareSha` must be a string."
+   }).optional(),
+   pr: zod.z.string({
+-    invalid_type_error: "`pr` must be a string."
++    error: (issue) => issue.input === undefined ? "Required" : "`pr` must be a string."
+   }).optional(),
+   sha: zod.z.string({
+-    invalid_type_error: "`sha` must be a string."
++    error: (issue) => issue.input === undefined ? "Required" : "`sha` must be a string."
+   }).optional(),
+   slug: zod.z.string({
+-    invalid_type_error: "`slug` must be a string."
++    error: (issue) => issue.input === undefined ? "Required" : "`slug` must be a string."
+   }).optional()
+ });
+ const OIDCSchema = zod.z.object(
+   {
+     useGitHubOIDC: zod.z.boolean({
+-      invalid_type_error: "`useGitHubOIDC` must be a boolean."
++      error: (issue) => issue.input === undefined ? "Required" : "`useGitHubOIDC` must be a boolean."
+     }).default(false),
+     /**
+      * Following along with how we handle this in our GH Action.
+@@ -249,40 +249,39 @@
+      * See: https://github.com/codecov/codecov-action/blob/main/src/buildExec.ts#L53-L58
+      */
+     gitHubOIDCTokenAudience: zod.z.string({
+-      invalid_type_error: "`gitHubOIDCTokenAudience` must be a string."
++      error: (issue) => issue.input === undefined ? "Required" : "`gitHubOIDCTokenAudience` must be a string."
+     }).optional().default("https://codecov.io")
+   },
+-  { invalid_type_error: "`oidc` must be an object." }
++  { error: (issue) => issue.input === undefined ? "Required" : "`oidc` must be an object." }
+ );
+ const optionsSchemaFactory = (options) => zod.z.object({
+   apiUrl: zod.z.string({
+-    invalid_type_error: "`apiUrl` must be a string."
++    error: (issue) => issue.input === undefined ? "Required" : "`apiUrl` must be a string."
+   }).url({
+     message: `apiUrl: \`${options?.apiUrl}\` is not a valid URL.`
+   }).default(DEFAULT_API_URL),
+   bundleName: zod.z.string({
+-    invalid_type_error: "`bundleName` must be a string.",
+-    required_error: "`bundleName` is required for uploading bundle analysis information."
++    error: (issue) => issue.input === undefined ? "`bundleName` is required for uploading bundle analysis information." : "`bundleName` must be a string."
+   }).regex(validBundleName, {
+     message: `bundleName: \`${options?.bundleName}\` does not match format: \`/^[wd_:/@.{}[]$-]+$/\`.`
+   }),
+   dryRun: zod.z.boolean({
+-    invalid_type_error: "`dryRun` must be a boolean."
++    error: (issue) => issue.input === undefined ? "Required" : "`dryRun` must be a boolean."
+   }).default(false),
+   retryCount: zod.z.number({
+-    invalid_type_error: "`retryCount` must be a number."
++    error: (issue) => issue.input === undefined ? "Required" : "`retryCount` must be a number."
+   }).positive({
+     message: "`retryCount` must be a positive number."
+-  }).int({
++  }).refine(Number.isInteger, {
+     message: "`retryCount` must be an integer."
+   }).default(3),
+   enableBundleAnalysis: zod.z.boolean({
+-    invalid_type_error: "`enableBundleAnalysis` must be a boolean."
++    error: (issue) => issue.input === undefined ? "Required" : "`enableBundleAnalysis` must be a boolean."
+   }).default(false),
+-  uploadToken: zod.z.string({ invalid_type_error: "`uploadToken` must be a string." }).optional(),
++  uploadToken: zod.z.string({ error: (issue) => issue.input === undefined ? "Required" : "`uploadToken` must be a string." }).optional(),
+   uploadOverrides: UploadOverridesSchema.optional(),
+   debug: zod.z.boolean({
+-    invalid_type_error: "`debug` must be a boolean."
++    error: (issue) => issue.input === undefined ? "Required" : "`debug` must be a boolean."
+   }).default(false),
+   /**
+    * Using an enum here, as custom error messages for union types seem to be broken currently.
+@@ -298,11 +297,11 @@
+       "gitlab_enterprise",
+       "bitbucket_server"
+     ],
+-    { invalid_type_error: "`gitService` must be a valid git service." }
++    { error: (issue) => issue.input === undefined ? "Required" : "`gitService` must be a valid git service." }
+   ).optional(),
+   oidc: OIDCSchema.optional(),
+   telemetry: zod.z.boolean({
+-    invalid_type_error: "`telemetry` must be a boolean."
++    error: (issue) => issue.input === undefined ? "Required" : "`telemetry` must be a boolean."
+   }).default(true)
+ });
+ const normalizeOptions = (userOptions) => {
+@@ -43493,7 +43492,7 @@
+ 
+ const literalSchema = zod.z.union([zod.z.string(), zod.z.number(), zod.z.boolean(), zod.z.null()]);
+ const jsonSchema = zod.z.lazy(
+-  () => zod.z.union([literalSchema, zod.z.array(jsonSchema), zod.z.record(jsonSchema)])
++  () => zod.z.union([literalSchema, zod.z.array(jsonSchema), zod.z.record(zod.z.string(), jsonSchema)])
+ );
+ 
+ function detect$b(envs) {
+diff --git a/dist/index.d.ts b/dist/index.d.ts
+--- a/dist/index.d.ts
++++ b/dist/index.d.ts
+@@ -1,64 +1,7 @@
+ import { Client, Scope } from '@sentry/core';
+ export { Client as SentryClient, Scope as SentryScope } from '@sentry/core';
+ import { UnpluginContextMeta, UnpluginOptions } from 'unplugin';
+-import { z } from 'zod';
+-
+-type NormalizedOptions = z.infer<ReturnType<typeof optionsSchemaFactory>> & Options;
+-type ValidGitService = z.infer<typeof ValidGitServiceSchema>;
+-declare const ValidGitServiceSchema: z.ZodUnion<[z.ZodLiteral<"github">, z.ZodLiteral<"gitlab">, z.ZodLiteral<"bitbucket">, z.ZodLiteral<"github_enterprise">, z.ZodLiteral<"gitlab_enterprise">, z.ZodLiteral<"bitbucket_server">]>;
+-declare const optionsSchemaFactory: (options: Options) => z.ZodObject<{
+-    apiUrl: z.ZodDefault<z.ZodString>;
+-    bundleName: z.ZodString;
+-    dryRun: z.ZodDefault<z.ZodBoolean>;
+-    retryCount: z.ZodDefault<z.ZodNumber>;
+-    enableBundleAnalysis: z.ZodDefault<z.ZodBoolean>;
+-    uploadToken: z.ZodOptional<z.ZodString>;
+-    uploadOverrides: z.ZodOptional<z.ZodObject<{
+-        branch: z.ZodOptional<z.ZodString>;
+-        build: z.ZodOptional<z.ZodString>;
+-        compareSha: z.ZodOptional<z.ZodString>;
+-        pr: z.ZodOptional<z.ZodString>;
+-        sha: z.ZodOptional<z.ZodString>;
+-        slug: z.ZodOptional<z.ZodString>;
+-    }, "strip", z.ZodTypeAny, {
+-        branch?: string | undefined;
+-        build?: string | undefined;
+-        compareSha?: string | undefined;
+-        pr?: string | undefined;
+-        sha?: string | undefined;
+-        slug?: string | undefined;
+-    }, {
+-        branch?: string | undefined;
+-        build?: string | undefined;
+-        compareSha?: string | undefined;
+-        pr?: string | undefined;
+-        sha?: string | undefined;
+-        slug?: string | undefined;
+-    }>>;
+-    debug: z.ZodDefault<z.ZodBoolean>;
+-    /**
+-     * Using an enum here, as custom error messages for union types seem to be broken currently.
+-     *
+-     * Issue: https://github.com/colinhacks/zod/issues/3675
+-     */
+-    gitService: z.ZodOptional<z.ZodEnum<["github", "gitlab", "bitbucket", "github_enterprise", "gitlab_enterprise", "bitbucket_server"]>>;
+-    oidc: z.ZodOptional<z.ZodObject<{
+-        useGitHubOIDC: z.ZodDefault<z.ZodBoolean>;
+-        /**
+-         * Following along with how we handle this in our GH Action.
+-         *
+-         * See: https://github.com/codecov/codecov-action/blob/main/src/buildExec.ts#L53-L58
+-         */
+-        gitHubOIDCTokenAudience: z.ZodDefault<z.ZodOptional<z.ZodString>>;
+-    }, "strip", z.ZodTypeAny, {
+-        useGitHubOIDC: boolean;
+-        gitHubOIDCTokenAudience: string;
+-    }, {
+-        useGitHubOIDC?: boolean | undefined;
+-        gitHubOIDCTokenAudience?: string | undefined;
+-    }>>;
+-    telemetry: z.ZodDefault<z.ZodBoolean>;
+-}, "strip", z.ZodTypeAny, {
++type NormalizedOptions = {
+     retryCount: number;
+     apiUrl: string;
+     bundleName: string;
+@@ -80,29 +23,8 @@
+         useGitHubOIDC: boolean;
+         gitHubOIDCTokenAudience: string;
+     } | undefined;
+-}, {
+-    bundleName: string;
+-    apiUrl?: string | undefined;
+-    dryRun?: boolean | undefined;
+-    retryCount?: number | undefined;
+-    enableBundleAnalysis?: boolean | undefined;
+-    uploadToken?: string | undefined;
+-    uploadOverrides?: {
+-        branch?: string | undefined;
+-        build?: string | undefined;
+-        compareSha?: string | undefined;
+-        pr?: string | undefined;
+-        sha?: string | undefined;
+-        slug?: string | undefined;
+-    } | undefined;
+-    debug?: boolean | undefined;
+-    gitService?: "github" | "gitlab" | "bitbucket" | "github_enterprise" | "gitlab_enterprise" | "bitbucket_server" | undefined;
+-    oidc?: {
+-        useGitHubOIDC?: boolean | undefined;
+-        gitHubOIDCTokenAudience?: string | undefined;
+-    } | undefined;
+-    telemetry?: boolean | undefined;
+-}>;
++} & Options;
++type ValidGitService = "github" | "gitlab" | "bitbucket" | "github_enterprise" | "gitlab_enterprise" | "bitbucket_server";
+ interface NormalizedOptionsFailure {
+     success: false;
+     errors: string[];
+diff --git a/dist/index.d.mts b/dist/index.d.mts
+--- a/dist/index.d.mts
++++ b/dist/index.d.mts
+@@ -1,64 +1,7 @@
+ import { Client, Scope } from '@sentry/core';
+ export { Client as SentryClient, Scope as SentryScope } from '@sentry/core';
+ import { UnpluginContextMeta, UnpluginOptions } from 'unplugin';
+-import { z } from 'zod';
+-
+-type NormalizedOptions = z.infer<ReturnType<typeof optionsSchemaFactory>> & Options;
+-type ValidGitService = z.infer<typeof ValidGitServiceSchema>;
+-declare const ValidGitServiceSchema: z.ZodUnion<[z.ZodLiteral<"github">, z.ZodLiteral<"gitlab">, z.ZodLiteral<"bitbucket">, z.ZodLiteral<"github_enterprise">, z.ZodLiteral<"gitlab_enterprise">, z.ZodLiteral<"bitbucket_server">]>;
+-declare const optionsSchemaFactory: (options: Options) => z.ZodObject<{
+-    apiUrl: z.ZodDefault<z.ZodString>;
+-    bundleName: z.ZodString;
+-    dryRun: z.ZodDefault<z.ZodBoolean>;
+-    retryCount: z.ZodDefault<z.ZodNumber>;
+-    enableBundleAnalysis: z.ZodDefault<z.ZodBoolean>;
+-    uploadToken: z.ZodOptional<z.ZodString>;
+-    uploadOverrides: z.ZodOptional<z.ZodObject<{
+-        branch: z.ZodOptional<z.ZodString>;
+-        build: z.ZodOptional<z.ZodString>;
+-        compareSha: z.ZodOptional<z.ZodString>;
+-        pr: z.ZodOptional<z.ZodString>;
+-        sha: z.ZodOptional<z.ZodString>;
+-        slug: z.ZodOptional<z.ZodString>;
+-    }, "strip", z.ZodTypeAny, {
+-        branch?: string | undefined;
+-        build?: string | undefined;
+-        compareSha?: string | undefined;
+-        pr?: string | undefined;
+-        sha?: string | undefined;
+-        slug?: string | undefined;
+-    }, {
+-        branch?: string | undefined;
+-        build?: string | undefined;
+-        compareSha?: string | undefined;
+-        pr?: string | undefined;
+-        sha?: string | undefined;
+-        slug?: string | undefined;
+-    }>>;
+-    debug: z.ZodDefault<z.ZodBoolean>;
+-    /**
+-     * Using an enum here, as custom error messages for union types seem to be broken currently.
+-     *
+-     * Issue: https://github.com/colinhacks/zod/issues/3675
+-     */
+-    gitService: z.ZodOptional<z.ZodEnum<["github", "gitlab", "bitbucket", "github_enterprise", "gitlab_enterprise", "bitbucket_server"]>>;
+-    oidc: z.ZodOptional<z.ZodObject<{
+-        useGitHubOIDC: z.ZodDefault<z.ZodBoolean>;
+-        /**
+-         * Following along with how we handle this in our GH Action.
+-         *
+-         * See: https://github.com/codecov/codecov-action/blob/main/src/buildExec.ts#L53-L58
+-         */
+-        gitHubOIDCTokenAudience: z.ZodDefault<z.ZodOptional<z.ZodString>>;
+-    }, "strip", z.ZodTypeAny, {
+-        useGitHubOIDC: boolean;
+-        gitHubOIDCTokenAudience: string;
+-    }, {
+-        useGitHubOIDC?: boolean | undefined;
+-        gitHubOIDCTokenAudience?: string | undefined;
+-    }>>;
+-    telemetry: z.ZodDefault<z.ZodBoolean>;
+-}, "strip", z.ZodTypeAny, {
++type NormalizedOptions = {
+     retryCount: number;
+     apiUrl: string;
+     bundleName: string;
+@@ -80,29 +23,8 @@
+         useGitHubOIDC: boolean;
+         gitHubOIDCTokenAudience: string;
+     } | undefined;
+-}, {
+-    bundleName: string;
+-    apiUrl?: string | undefined;
+-    dryRun?: boolean | undefined;
+-    retryCount?: number | undefined;
+-    enableBundleAnalysis?: boolean | undefined;
+-    uploadToken?: string | undefined;
+-    uploadOverrides?: {
+-        branch?: string | undefined;
+-        build?: string | undefined;
+-        compareSha?: string | undefined;
+-        pr?: string | undefined;
+-        sha?: string | undefined;
+-        slug?: string | undefined;
+-    } | undefined;
+-    debug?: boolean | undefined;
+-    gitService?: "github" | "gitlab" | "bitbucket" | "github_enterprise" | "gitlab_enterprise" | "bitbucket_server" | undefined;
+-    oidc?: {
+-        useGitHubOIDC?: boolean | undefined;
+-        gitHubOIDCTokenAudience?: string | undefined;
+-    } | undefined;
+-    telemetry?: boolean | undefined;
+-}>;
++} & Options;
++type ValidGitService = "github" | "gitlab" | "bitbucket" | "github_enterprise" | "gitlab_enterprise" | "bitbucket_server";
+ interface NormalizedOptionsFailure {
+     success: false;
+     errors: string[];
+diff --git a/dist/index.d.cts b/dist/index.d.cts
+--- a/dist/index.d.cts
++++ b/dist/index.d.cts
+@@ -1,64 +1,7 @@
+ import { Client, Scope } from '@sentry/core';
+ export { Client as SentryClient, Scope as SentryScope } from '@sentry/core';
+ import { UnpluginContextMeta, UnpluginOptions } from 'unplugin';
+-import { z } from 'zod';
+-
+-type NormalizedOptions = z.infer<ReturnType<typeof optionsSchemaFactory>> & Options;
+-type ValidGitService = z.infer<typeof ValidGitServiceSchema>;
+-declare const ValidGitServiceSchema: z.ZodUnion<[z.ZodLiteral<"github">, z.ZodLiteral<"gitlab">, z.ZodLiteral<"bitbucket">, z.ZodLiteral<"github_enterprise">, z.ZodLiteral<"gitlab_enterprise">, z.ZodLiteral<"bitbucket_server">]>;
+-declare const optionsSchemaFactory: (options: Options) => z.ZodObject<{
+-    apiUrl: z.ZodDefault<z.ZodString>;
+-    bundleName: z.ZodString;
+-    dryRun: z.ZodDefault<z.ZodBoolean>;
+-    retryCount: z.ZodDefault<z.ZodNumber>;
+-    enableBundleAnalysis: z.ZodDefault<z.ZodBoolean>;
+-    uploadToken: z.ZodOptional<z.ZodString>;
+-    uploadOverrides: z.ZodOptional<z.ZodObject<{
+-        branch: z.ZodOptional<z.ZodString>;
+-        build: z.ZodOptional<z.ZodString>;
+-        compareSha: z.ZodOptional<z.ZodString>;
+-        pr: z.ZodOptional<z.ZodString>;
+-        sha: z.ZodOptional<z.ZodString>;
+-        slug: z.ZodOptional<z.ZodString>;
+-    }, "strip", z.ZodTypeAny, {
+-        branch?: string | undefined;
+-        build?: string | undefined;
+-        compareSha?: string | undefined;
+-        pr?: string | undefined;
+-        sha?: string | undefined;
+-        slug?: string | undefined;
+-    }, {
+-        branch?: string | undefined;
+-        build?: string | undefined;
+-        compareSha?: string | undefined;
+-        pr?: string | undefined;
+-        sha?: string | undefined;
+-        slug?: string | undefined;
+-    }>>;
+-    debug: z.ZodDefault<z.ZodBoolean>;
+-    /**
+-     * Using an enum here, as custom error messages for union types seem to be broken currently.
+-     *
+-     * Issue: https://github.com/colinhacks/zod/issues/3675
+-     */
+-    gitService: z.ZodOptional<z.ZodEnum<["github", "gitlab", "bitbucket", "github_enterprise", "gitlab_enterprise", "bitbucket_server"]>>;
+-    oidc: z.ZodOptional<z.ZodObject<{
+-        useGitHubOIDC: z.ZodDefault<z.ZodBoolean>;
+-        /**
+-         * Following along with how we handle this in our GH Action.
+-         *
+-         * See: https://github.com/codecov/codecov-action/blob/main/src/buildExec.ts#L53-L58
+-         */
+-        gitHubOIDCTokenAudience: z.ZodDefault<z.ZodOptional<z.ZodString>>;
+-    }, "strip", z.ZodTypeAny, {
+-        useGitHubOIDC: boolean;
+-        gitHubOIDCTokenAudience: string;
+-    }, {
+-        useGitHubOIDC?: boolean | undefined;
+-        gitHubOIDCTokenAudience?: string | undefined;
+-    }>>;
+-    telemetry: z.ZodDefault<z.ZodBoolean>;
+-}, "strip", z.ZodTypeAny, {
++type NormalizedOptions = {
+     retryCount: number;
+     apiUrl: string;
+     bundleName: string;
+@@ -80,29 +23,8 @@
+         useGitHubOIDC: boolean;
+         gitHubOIDCTokenAudience: string;
+     } | undefined;
+-}, {
+-    bundleName: string;
+-    apiUrl?: string | undefined;
+-    dryRun?: boolean | undefined;
+-    retryCount?: number | undefined;
+-    enableBundleAnalysis?: boolean | undefined;
+-    uploadToken?: string | undefined;
+-    uploadOverrides?: {
+-        branch?: string | undefined;
+-        build?: string | undefined;
+-        compareSha?: string | undefined;
+-        pr?: string | undefined;
+-        sha?: string | undefined;
+-        slug?: string | undefined;
+-    } | undefined;
+-    debug?: boolean | undefined;
+-    gitService?: "github" | "gitlab" | "bitbucket" | "github_enterprise" | "gitlab_enterprise" | "bitbucket_server" | undefined;
+-    oidc?: {
+-        useGitHubOIDC?: boolean | undefined;
+-        gitHubOIDCTokenAudience?: string | undefined;
+-    } | undefined;
+-    telemetry?: boolean | undefined;
+-}>;
++} & Options;
++type ValidGitService = "github" | "gitlab" | "bitbucket" | "github_enterprise" | "gitlab_enterprise" | "bitbucket_server";
+ interface NormalizedOptionsFailure {
+     success: false;
+     errors: string[];

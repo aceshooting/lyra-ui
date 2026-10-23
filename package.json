@@ -41,7 +41,7 @@
     "check:architecture": "pnpm --filter @aceshooting/lyra-ui run check:architecture",
     "check:dead-code": "knip --production --no-progress && knip --no-progress",
     "check:secrets": "node scripts/check-secrets.mjs",
-    "check:dependency-security": "node --test scripts/check-dependency-security.test.mjs scripts/dependency-security-braces.test.mjs scripts/dependency-security-sprintf.test.mjs && node scripts/check-dependency-security.mjs",
+    "check:dependency-security": "node --test scripts/check-dependency-security.test.mjs scripts/dependency-security-braces.test.mjs scripts/dependency-security-sprintf.test.mjs scripts/dependency-security-codecov.test.mjs && node scripts/check-dependency-security.mjs",
     "check:workflows": "./scripts/check-workflows.sh",
     "check:workflow-security": "node scripts/check-workflow-security.mjs",
     "check:spelling": "node scripts/check-spelling.mjs",
