@@ -382,3 +382,31 @@ it('keeps an explicit pair projection current when its descriptor changes only t
   expect(labels).to.equal(1); expect(element.shadowRoot!.querySelector('[part="selection-retry"]') === null).to.equal(true);
   expect(element.sourcePage).to.equal(1); expect(element.selectedRunId).to.equal('r5');
 });
+
+
+it('passes original provider rows to rendered footers and revokes retained footer callbacks', async () => {
+  const original = Object.freeze({ ...record(0).value });
+  const source: EvalResultSource = { revision: 1,
+    query: async () => ({ total: 1, rows: [{ key: 'r0', order: 0, value: original }] }),
+    lookup: async () => [{ key: 'r0', order: 0, value: original }], locate: async () => null,
+  };
+  const seen: (readonly EvalRunResult[])[] = [];
+  let replaceDuringFooter = false;
+  const el = await fixture<LyraEvalResult>(html`<lr-eval-result></lr-eval-result>`);
+  el.columns = [{ key: 'label', label: 'Run', cell: row => row.label, footer: rows => {
+    seen.push(rows);
+    if (replaceDuringFooter) el.dataSource = undefined;
+    return 'Provider footer';
+  } }];
+  el.dataSource = source;
+  const grid = await table(el, 'r0');
+  expect(grid.shadowRoot!.querySelector('[part="footer-cell"]')!.textContent).to.contain('Provider footer');
+  expect(seen.length).to.be.greaterThan(0);
+  expect(seen.every(rows => rows.length === 1 && rows[0] === original)).to.equal(true);
+  const footer = grid.columns[0]!.footer!;
+  replaceDuringFooter = true;
+  expect(footer(grid.rows)).to.equal(undefined);
+  const acceptedCalls = seen.length;
+  expect(footer(grid.rows)).to.equal(undefined);
+  expect(seen.length).to.equal(acceptedCalls);
+});

@@ -215,13 +215,7 @@ function snapshotJsonArray(
     projected[index] = child;
   }
   projected.length = retainedLength;
-  try {
-    return Object.freeze(projected);
-  } catch {
-    copies.delete(source);
-    budget.truncated = true;
-    return OMIT_JSON_SNAPSHOT;
-  }
+  return Object.freeze(projected);
 }
 
 function snapshotJsonObject(

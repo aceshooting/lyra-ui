@@ -1,4 +1,4 @@
-import { aTimeout, expect, fixture, nextFrame, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, fixture, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import { focusAfterPointer, focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sendKeys } from '@web/test-runner-commands';
@@ -50,6 +50,43 @@ const leave = (node: Element, relatedTarget: Element | null = null): void => {
 };
 
 describe('lr-popover trigger modes', () => {
+  it('preserves an authored autofocus removal across transient reveal and later click opening', async () => {
+    const el = await build('trigger="hover"', '<button autofocus="caller-value">Inside</button>');
+    const inside = el.querySelector<HTMLButtonElement>('button[autofocus]')!;
+    const outside = document.createElement('button');
+    el.parentElement!.append(outside);
+    await focusByKeyboard(outside);
+    const shown = oneEvent(el, 'lr-after-show');
+    enter(triggerOf(el));
+    inside.removeAttribute('autofocus');
+    await shown;
+    expect(inside.hasAttribute('autofocus')).to.equal(false);
+    expect(document.activeElement === outside).to.equal(true);
+    await el.hide();
+    expect(inside.hasAttribute('autofocus')).to.equal(false);
+    await focusByKeyboard(outside);
+    const clicked = oneEvent(el, 'lr-after-show');
+    triggerOf(el).click();
+    await clicked;
+    expect(inside.hasAttribute('autofocus')).to.equal(false);
+    expect(document.activeElement === outside).to.equal(true);
+  });
+
+  it('cancels a transient reveal before placement without publishing after-show', async () => {
+    const el = await build('trigger="hover"', '<button autofocus="caller-value">Inside</button>');
+    const inside = el.querySelector<HTMLButtonElement>('button[autofocus]')!;
+    let shown = 0;
+    el.addEventListener('lr-after-show', () => { shown++; });
+    enter(triggerOf(el));
+    await el.updateComplete;
+    await el.hide();
+    await settlePointer();
+    expect(el.open).to.equal(false);
+    expect(popupOf(el).hidden).to.equal(true);
+    expect(shown).to.equal(0);
+    expect(inside.getAttribute('autofocus')).to.equal('caller-value');
+  });
+
   it('defaults to click and keeps today’s toggle behaviour', async () => {
     const el = await build('');
     expect(el.trigger).to.equal('click');

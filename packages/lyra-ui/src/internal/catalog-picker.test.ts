@@ -372,3 +372,55 @@ it('returns frozen row copies, so a later caller mutation never reaches the pick
   expect(Object.isFrozen(row)).to.equal(true);
   expect(row).to.not.equal(source);
 });
+
+
+it('contains revoked and freezing-refusing caller catalogs without reading rows', () => {
+  const revoked = Proxy.revocable<LyraCatalogEntry[]>([], {});
+  revoked.revoke();
+  expect(normalizeCatalog(revoked.proxy)).to.deep.equal([]);
+  let rowReads = 0;
+  const refusing = new Proxy<LyraCatalogEntry[]>([{ id: 'a', label: 'Alpha' }], {
+    isExtensible() { throw new Error('catalog unavailable'); },
+    getOwnPropertyDescriptor(target, key) {
+      if (key === '0') rowReads++;
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  expect(normalizeCatalog(refusing)).to.deep.equal([]);
+  expect(rowReads).to.equal(0);
+  expect(normalizeCatalog(['recovered']).map(row => row.id)).to.deep.equal(['recovered']);
+});
+
+it('clamps a missing active row to the filtered allocation and clears it when none remain', () => {
+  const { controller } = pickerController([
+    { id: 'a', label: 'Alpha' }, { id: 'b', label: 'Beta' }, { id: 'c', label: 'Gamma' },
+  ]);
+  controller.setActiveIndex(2);
+  controller.setQuery('Alpha');
+  controller.reconcileRows('c', false);
+  expect(controller.visibleEntries.map(row => row.id)).to.deep.equal(['a']);
+  expect(controller.activeIndex).to.equal(0);
+  controller.setQuery('no matching row');
+  controller.reconcileRows('a', false);
+  expect(controller.visibleEntries).to.have.length(0);
+  expect(controller.activeIndex).to.equal(-1);
+});
+
+for (const handler of ['handleInputFocus', 'handleControlFocus'] as const) {
+  it(`suppresses ${handler} during a caller control handoff and resumes native focus relay afterwards`, () => {
+    const { controller, host } = pickerController();
+    let relayed = 0;
+    host.addEventListener('focus', () => { relayed++; });
+    controller.setQuery('retained query');
+    controller.suppressControlEvents = true;
+    const suppressed = new FocusEvent('focus');
+    controller[handler](suppressed);
+    expect(suppressed.cancelBubble).to.equal(true);
+    expect(controller.open).to.equal(false);
+    expect(controller.query).to.equal('retained query');
+    expect(relayed).to.equal(0);
+    controller.suppressControlEvents = false;
+    controller.handleControlFocus(new FocusEvent('focus'));
+    expect(relayed).to.equal(1);
+  });
+}

@@ -409,14 +409,6 @@ function snapshotNode(
   depth: number,
   snapshot: SnapshotContext
 ): SnapshotNode | typeof INVALID | null {
-  if (depth > WIDGET_MAX_DEPTH) {
-    warnOnce(
-      snapshot.resolve,
-      '__depth-cap__',
-      `stopped resolving after the ${WIDGET_MAX_DEPTH}-level depth cap was reached`
-    );
-    return null;
-  }
   if (!consumeNodeBudget(snapshot)) return null;
   if (input === null || typeof input !== 'object' || Array.isArray(input))
     return INVALID;

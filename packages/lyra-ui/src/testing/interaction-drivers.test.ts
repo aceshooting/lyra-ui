@@ -2,7 +2,7 @@ import { getLyraLocale, setLyraLocale } from '../internal/localization.js';
 import '../translations/fr/forms.js';
 import '../translations/fr/shared.js';
 import { setFlagUrlResolver } from '../components/media/flag/flag.class.js';
-import { fixtureCleanup, fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixtureCleanup, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import '../components/forms/combobox/combobox.js';
 import '../components/forms/select/select.js';
 import '../components/forms/locale-picker/locale-picker.js';
@@ -525,4 +525,72 @@ describe('openPopover / closePopover', () => {
     expect(String(error)).to.include('disabled');
     expect(el.open).to.equal(false);
   });
+});
+
+
+describe('popover driver failure recovery', () => {
+  it('rejects a missing interaction target and succeeds after a trigger is supplied', async () => {
+    const el = await fixture<LyraPopover>(html`<lr-popover style="--show-duration: 0ms; --hide-duration: 0ms"><p>Details</p></lr-popover>`);
+    let error: unknown;
+    try { await openPopover(el); } catch (caught) { error = caught; }
+    expect(error).to.be.instanceOf(Error);
+    expect(String(error)).to.include('no slotted trigger or for target');
+    expect(el.open).to.equal(false);
+
+    const trigger = document.createElement('button');
+    trigger.slot = 'trigger';
+    trigger.textContent = 'Open details';
+    el.append(trigger);
+    await waitUntil(() => trigger.hasAttribute('aria-expanded'));
+    await openPopover(el);
+    expect(el.open).to.equal(true);
+    await closePopover(el, { via: 'trigger' });
+    expect(el.open).to.equal(false);
+  });
+
+  it('rejects trigger dismissal for a virtual anchor while Escape still closes it', async () => {
+    const el = await fixture<LyraPopover>(html`<lr-popover style="--show-duration: 0ms; --hide-duration: 0ms"><p>Virtual details</p></lr-popover>`);
+    const shown = oneEvent(el, 'lr-after-show');
+    el.showAt({ x: 40, y: 40, width: 20, height: 20 });
+    await shown;
+    let error: unknown;
+    try { await closePopover(el, { via: 'trigger' }); } catch (caught) { error = caught; }
+    expect(error).to.be.instanceOf(Error);
+    expect(String(error)).to.include('no slotted trigger or for target');
+    expect(el.open).to.equal(true);
+    await closePopover(el);
+    expect(el.open).to.equal(false);
+  });
+
+  for (const phase of ['show', 'hide'] as const) {
+    it(`times out when a consumer intercepts lr-after-${phase}, then supports another interaction`, async function () {
+      this.timeout(10_000);
+      const el = await fixture<LyraPopover>(html`
+        <lr-popover style="--show-duration: 0ms; --hide-duration: 0ms">
+          <button slot="trigger">Open details</button><p>Details</p>
+        </lr-popover>
+      `);
+      if (phase === 'hide') await openPopover(el);
+      let intercepted = 0;
+      el.addEventListener(`lr-after-${phase}`, event => {
+        intercepted++;
+        event.stopImmediatePropagation();
+      }, { capture: true, once: true });
+      let error: unknown;
+      try {
+        if (phase === 'show') await openPopover(el, { timeoutMs: 1_000 });
+        else await closePopover(el, { via: 'trigger', timeoutMs: 1_000 });
+      } catch (caught) { error = caught; }
+      expect(error).to.be.instanceOf(Error);
+      expect(String(error)).to.include(`lr-after-${phase} did not fire within 1000ms`);
+      expect(intercepted).to.equal(1);
+      expect(el.open).to.equal(phase === 'show');
+
+      if (el.open) await closePopover(el, { via: 'trigger' });
+      await openPopover(el);
+      expect(el.open).to.equal(true);
+      await closePopover(el, { via: 'trigger' });
+      expect(el.open).to.equal(false);
+    });
+  }
 });

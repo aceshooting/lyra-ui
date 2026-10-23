@@ -30,16 +30,20 @@ image-catalog and interaction/drawing work, opt-in WebGL views and `lr-chart-3d`
 `lr-model-viewer`, GPU-side graph projection, deprecated-API removal with migration support,
 repository hygiene and Lit template checks, and the Quality tools gates. The release remains
 unpublished. Recorded real-GPU measurements meet the point targets (100k and 1M points at 60 fps)
-and the graph target (10k nodes and 30k edges at 60 fps) on the measured hardware. Live-map
-changes, the document-engine upgrade and highlighter asset mitigation are in progress; source
-integration does not establish release qualification. The remaining work, in order:
+and the graph target (10k nodes and 30k edges at 60 fps) on the measured hardware. Map APIs and
+migration documentation, the dependency refresh, the document-engine upgrade to 2.32.0, and the
+highlighter asset mitigation are implemented. Focused document-engine and highlighter checks
+passed across three browsers.
+The highlighter defaults to JavaScript, with Oniguruma available through an explicit factory.
+These checkpoint results do not establish final-candidate release qualification. The remaining
+work, in order:
 
 1. Complete and qualify the map release gate ([map adoption](roadmap/map-adoption.md)):
-   live image/canvas updates and transactional layer changes, module composition, control order and
-   linked attribution, GeoJSON row ordering and zoom ranges, vector styling, migration documentation
-   and application prototypes. In-progress work is not evidence of completed qualification.
-2. Complete and qualify the dependency refresh, document-engine upgrade and unused highlighter
-   asset mitigation. Close remaining test and tooling findings, including the existing video hover
+   installed-package application prototypes, native font and label rendering, representative
+   right-to-left and locale/mobile behavior, visual review and request acceptance. Existing
+   component and native tests supply only the behavior they exercise.
+2. Qualify the final candidate with the integrated dependency, document-engine and highlighter
+   changes. Close remaining test and tooling findings, including the existing video hover
    quarantine; complete CI timing and per-package coverage reporting and reduce delivery cost
    where supported.
 3. Review the complete 30.0.0 change set, close every finding and verify every roadmap item against

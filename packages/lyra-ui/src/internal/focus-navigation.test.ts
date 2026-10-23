@@ -1,4 +1,5 @@
-import { expect, fixture, html } from '@open-wc/testing';
+import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { focusByKeyboard } from '../../test/wtr-focus.js';
 import {
   applyComposedFocusRepair,
   captureComposedFocusRepair,
@@ -1283,4 +1284,54 @@ it('is a safe no-op for an empty, all-nullish or nullish target list', async () 
   expect(focusFirstAvailable(undefined)).to.equal(false);
   expect(focusFirstAvailable(() => [])).to.equal(false);
   expect(root.ownerDocument.activeElement?.id, 'focus is left exactly where it was').to.equal('held');
+});
+
+
+it('contains a throwing deferred return-focus resolver and keeps the parked focus usable', async () => {
+  const root = await fixture<HTMLDivElement>(html`
+    <div><section id="throw-owner"><button id="throw-bridge">Bridge</button></section><button id="throw-next">Next</button></div>
+  `);
+  const owner = root.querySelector<HTMLElement>('#throw-owner')!;
+  const bridge = root.querySelector<HTMLButtonElement>('#throw-bridge')!;
+  const next = root.querySelector<HTMLButtonElement>('#throw-next')!;
+  await focusByKeyboard(bridge);
+  let calls = 0;
+  deferComposedFocusRepair(owner, bridge, () => {
+    calls++;
+    throw new Error('return target unavailable');
+  });
+  await waitUntil(() => calls === 1, 'the deferred resolver was actually invoked');
+  await nextHostUpdateOpportunity();
+  expect(document.activeElement?.id).to.equal('throw-bridge');
+  await focusByKeyboard(next);
+  expect(document.activeElement?.id).to.equal('throw-next');
+  expect(calls).to.equal(1);
+});
+
+it('reports a closed details summary beyond the depth bound and includes it when admitted', async () => {
+  const details = await fixture<HTMLDetailsElement>(html`
+    <details><summary id="bounded-summary">Summary</summary><button id="hidden-detail">Hidden</button></details>
+  `);
+  const limited = collectComposedFocusTargets(details, { maxDepth: 0, skipRootAncestorValidation: true });
+  expect(limited.elements.map(element => element.id)).to.deep.equal([]);
+  expect(limited.truncationReasons).to.include('depth');
+  const admitted = collectComposedFocusTargets(details, { maxDepth: 1, skipRootAncestorValidation: true });
+  expect(admitted.elements.map(element => element.id)).to.deep.equal(['bounded-summary']);
+  expect(admitted.truncationReasons).to.not.include('depth');
+  expect(details.open).to.equal(false);
+});
+
+it('bounds assigned slot traversal before admitting its real focusable child', async () => {
+  const host = await fixture<HTMLDivElement>(html`<div><button id="bounded-slotted">Slotted action</button></div>`);
+  const shadow = host.attachShadow({ mode: 'open' });
+  const slot = document.createElement('slot');
+  shadow.append(slot);
+  const button = host.querySelector<HTMLButtonElement>('button')!;
+  expect(button.assignedSlot === slot).to.equal(true);
+  const limited = collectComposedFocusTargets(shadow, { maxDepth: 0, skipRootAncestorValidation: true });
+  expect(limited.elements.map(element => element.id)).to.deep.equal([]);
+  expect(limited.truncationReasons).to.include('depth');
+  const admitted = collectComposedFocusTargets(shadow, { maxDepth: 1, skipRootAncestorValidation: true });
+  expect(admitted.elements.map(element => element.id)).to.deep.equal(['bounded-slotted']);
+  expect(admitted.truncationReasons).to.not.include('depth');
 });

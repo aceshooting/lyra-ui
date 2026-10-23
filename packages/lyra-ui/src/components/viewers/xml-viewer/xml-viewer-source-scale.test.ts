@@ -523,3 +523,15 @@ describe('provider copy clipboard failures', () => {
     });
   }
 });
+
+
+it('keeps source rows readable when the optional copy capability getter throws', async () => {
+  const { provider } = source(1);
+  let reads = 0;
+  Object.defineProperty(provider, 'copy', { get() { reads++; throw new Error('Copy capability unavailable'); } });
+  const el = await fixture<LyraXmlViewer>(html`<lr-xml-viewer copyable .strings=${strings} .treeSource=${provider}></lr-xml-viewer>`);
+  await ready(el);
+  expect(reads).to.be.greaterThan(0);
+  expect(el.shadowRoot!.querySelector('[part~="source-row"]')!.textContent).to.contain('Value 0');
+  expect(el.shadowRoot!.querySelectorAll('[part="copy-button"]').length).to.equal(0);
+});

@@ -78,10 +78,10 @@ it('does not measure resize handles on a selection-only update', async () => {
   const el = await table();
   el.columns = [{ key: 'name', label: 'Name', resizable: true, cell: row => row.name }];
   await el.updateComplete;
-  const seam = el as unknown as { syncResizeHandleValues(): void };
+  const seam = el as unknown as { syncResizeHandleValues(writes: (() => void)[]): void };
   const original = seam.syncResizeHandleValues;
   let passes = 0;
-  seam.syncResizeHandleValues = () => { passes++; original.call(el); };
+  seam.syncResizeHandleValues = writes => { passes++; original.call(el, writes); };
   try {
     el.selectedRowKeys = new Set([1]);
     await el.updateComplete;

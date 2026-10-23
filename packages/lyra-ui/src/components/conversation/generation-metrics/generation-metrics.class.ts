@@ -107,11 +107,6 @@ const GENERATION_METRICS_STATUS = {
   fromAttribute: normalizeGenerationMetricsStatus,
   toAttribute: normalizeGenerationMetricsStatus,
   normalize: normalizeGenerationMetricsStatus,
-  normalizeReflected(host: Element, attribute: string, value: unknown): GenerationMetricsStatus {
-    const normalized = normalizeGenerationMetricsStatus(value);
-    if (host.hasAttribute(attribute) && host.getAttribute(attribute) !== normalized) host.setAttribute(attribute, normalized);
-    return normalized;
-  },
 };
 /**
  * `<lr-generation-metrics>` — a compact, ticking status readout shown

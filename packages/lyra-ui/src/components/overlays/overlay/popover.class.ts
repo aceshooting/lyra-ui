@@ -29,6 +29,7 @@ import {
   waitForDeferredPlacement,
   type DeferredOperationHandle,
 } from '../../../internal/anchored-overlay-runtime.js';
+import { OwnerAnimationFrameWaiter } from '../../../internal/owner-animation-frame.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { finiteDuration, finiteNumber } from '../../../internal/numbers.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
@@ -571,6 +572,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   /** Explicit light-dismiss containment for the current virtual anchor, without trigger ownership. */
   private virtualInteractionBoundary?: Element;
   private cleanup?: DeferredOperationHandle;
+  private readonly transientRevealFrame = new OwnerAnimationFrameWaiter(this);
   private positioningGeneration = 0;
   /** Registered with the shared overlay manager while every popover is open, so one topmost stack
    *  owns Escape and focus restoration. */
@@ -1080,7 +1082,23 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     if (anchor !== this.positionedAnchor) {
       this.anchorPositioned = false;
     }
-    this.startPositioning(this.positioningGeneration, anchor, popup, arrowElement, bridgeElement);
+    const generation = this.positioningGeneration;
+    if (this.openedByInteraction && !this.anchorPositioned) {
+      // A rendering update processes queued document autofocus before animation-frame callbacks.
+      // Keep newly revealed hover/focus content hidden through that step, so its native candidates
+      // are discarded without changing caller attributes or moving the caller's current focus.
+      // Placement readiness includes this barrier; closing or disconnecting cancels its frame.
+      this.cleanup = Object.assign(() => this.transientRevealFrame.cancel(), {
+        ready: this.transientRevealFrame.wait().then(current => {
+          if (!current || generation !== this.positioningGeneration || !this.open ||
+            this.resolveAnchor() !== anchor) return false;
+          this.startPositioning(generation, anchor, popup, arrowElement, bridgeElement);
+          return this.cleanup?.ready ?? false;
+        }),
+      });
+      return;
+    }
+    this.startPositioning(generation, anchor, popup, arrowElement, bridgeElement);
   }
 
   private invalidatePositioning(): void {
@@ -1585,6 +1603,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     this.overlayHandle = undefined;
     this.positionedAnchor = undefined;
     this.anchorPositioned = false;
+    this.popupHidden = true;
     this.returnFocusTo = undefined;
     this.setOpen(false);
     this.syncOpenAttribute();
@@ -1599,6 +1618,9 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       this.overlayHandle = undefined;
     }
     this.cancelTransitionAnimation();
+    // A popup concealed for placement has no visible exit to preserve. Keep its pending
+    // autofocus candidates non-focusable when closing cancels the reveal barrier.
+    if (!this.anchorPositioned) this.popupHidden = true;
     if (this.isConnected) this.setAttribute('data-closing', '');
     this.setOpen(false);
     return this.settleTransition('lr-after-hide');
@@ -1685,6 +1707,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       <div id=${this.popupId} part=${this.popupPartNames} role=${popupRole ?? nothing}
         aria-label=${popupRole ? this.effectivePopupLabel : nothing}
         ?hidden=${this.popupHidden}
+        ?inert=${this.popupHidden || (this.open && !this.anchorPositioned)}
         ?data-hidden=${!this.open || !this.anchorPositioned} ?data-has-arrow=${this.rendersArrow}
         @mouseenter=${this.onPopupPointerEnter} @mouseleave=${this.onPopupPointerLeave}
         @click=${this.onPopupClick}>

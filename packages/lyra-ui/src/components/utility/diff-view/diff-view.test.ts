@@ -2218,3 +2218,68 @@ it('does not search diff operations rejected by the render ceiling', async () =>
   expect(el.shadowRoot!.querySelectorAll('[data-active-match]').length).to.equal(0);
   expect(Boolean(el.shadowRoot!.querySelector('[part="limit"]'))).to.equal(true);
 });
+
+
+let lazyDiffFailureRun = 0;
+it('keeps a readable diff after a public lazy grammar rejects and highlights a supported replacement', async function () {
+  this.timeout(20000);
+  const name = `diff-recovery-${++lazyDiffFailureRun}`;
+  const unavailable = `${name}-unavailable`;
+  const grammar = { name, scopeName: `source.${name}`, patterns: [{ match: 'new', name: 'keyword.control' }] };
+  let calls = 0;
+  const warningKey = 'lyra-shiki-lazy-language-source-failed';
+  const warningSet = (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings;
+  const wasIssued = warningSet?.has(warningKey) ?? false;
+  warningSet?.delete(warningKey);
+  const originalWarn = console.warn;
+  const warnings: string[] = [];
+  console.warn = (...args: unknown[]) => {
+    if (String(args[0]).includes('could not load a lazy `languages` grammar loader')) warnings.push(String(args[0]));
+    else originalWarn(...args);
+  };
+  try {
+    const el = await fixture<LyraDiffView>(html`<lr-diff-view
+      .oldText=${'old'} .newText=${'new'} .language=${unavailable}
+      .languages=${{ [name]: grammar }}
+      .languageLoaders=${{ [unavailable]: () => { calls++; return Promise.reject(new Error('grammar unavailable')); } }}
+    ></lr-diff-view>`);
+    await waitUntil(() => warnings.length === 1, 'the real lazy grammar failure completed', { timeout: 8000 });
+    await el.updateComplete;
+    expect(calls).to.equal(1);
+    const removed = el.shadowRoot!.querySelector('[part="line"][data-type="remove"]')!;
+    const added = el.shadowRoot!.querySelector('[part="line"][data-type="add"]')!;
+    expect(removed.textContent).to.include('old');
+    expect(added.textContent).to.include('new');
+    expect(added.querySelectorAll('span[style]').length).to.equal(0);
+    el.language = name;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="line"][data-type="add"] span[style]') !== null,
+      'the supported replacement grammar paints the actual changed line', { timeout: 8000 });
+    expect(el.shadowRoot!.querySelector('[part="line"][data-type="add"]')!.textContent).to.include('new');
+    expect(calls).to.equal(1);
+    expect(warnings.length).to.equal(1);
+  } finally {
+    console.warn = originalWarn;
+    const currentWarnings = (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings;
+    if (wasIssued) currentWarnings?.add(warningKey);
+    else currentWarnings?.delete(warningKey);
+  }
+});
+
+it('reports an inexact search when admitted Unicode text exceeds the folding work budget, then recovers', async () => {
+  const text = '\u0130'.repeat(800_001);
+  const el = await fixture<LyraDiffView>(html`<lr-diff-view .newText=${text}></lr-diff-view>`);
+  let detail: { matchCount: number; matchCountExact: boolean } | undefined;
+  el.addEventListener('lr-search-change', event => { detail = event.detail; });
+  expect(Boolean(el.shadowRoot!.querySelector('[part="limit"]'))).to.equal(false);
+  expect(await el.search('i')).to.equal(0);
+  expect(detail?.matchCount).to.equal(0);
+  expect(detail?.matchCountExact).to.equal(false);
+  expect(el.shadowRoot!.querySelectorAll('[data-active-match]').length).to.equal(0);
+
+  el.newText = '\u0130';
+  await el.updateComplete;
+  expect(await el.search('i')).to.equal(1);
+  expect(detail?.matchCount).to.equal(1);
+  expect(detail?.matchCountExact).to.equal(true);
+});

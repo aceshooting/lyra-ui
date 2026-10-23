@@ -1,4 +1,6 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './pan-zoom.js';
 import type { LyraPanZoom } from './pan-zoom.js';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
@@ -453,4 +455,24 @@ describe('anchored overlays in zoomed content', () => {
     await expectAligned(popup, trigger);
     await tooltip.hide();
   });
+});
+
+
+it('zooms out and resets from the focused viewport keyboard controls', async () => {
+  const el = await fixture<LyraPanZoom>(html`<lr-pan-zoom zoom="2" zoom-step="0.25"></lr-pan-zoom>`);
+  const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part="viewport"]')!;
+  const changes: number[] = [];
+  el.addEventListener('lr-zoom-change', event => { changes.push(event.detail.zoom); });
+  await focusByKeyboard(viewport);
+
+  await sendKeys({ press: '-' });
+  await el.updateComplete;
+  expect(el.zoom).to.equal(1.75);
+  expect(el.shadowRoot!.querySelector('[part="content"]')!.getAttribute('data-zoom')).to.equal('1.75');
+  await sendKeys({ press: '0' });
+  await el.updateComplete;
+  expect(el.zoom).to.equal(1);
+  expect(el.shadowRoot!.querySelector('[part="content"]')!.getAttribute('data-zoom')).to.equal('1');
+  expect(changes).to.deep.equal([1.75, 1]);
+  expect(el.shadowRoot!.activeElement === viewport).to.equal(true);
 });

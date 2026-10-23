@@ -579,6 +579,37 @@ describe('map camera', () => {
   });
 
   describe('lr-map-view-change bounds', () => {
+
+    it('normalizes a peer viewport spanning the world before publishing reusable bounds', async () => {
+      const { el, engine } = await liveScriptedMap();
+      engine.getBounds = () => ({
+        getWest: () => -220, getSouth: () => -40,
+        getEast: () => 220, getNorth: () => 50,
+      });
+      const [change] = await collect(el, 'lr-map-view-change', () => el.jumpTo({ zoom: 3 }));
+      expect(change!['bounds']).to.deep.equal([[-180, -40], [180, 50]]);
+      expect(el.fitBounds(change!['bounds'] as [[number, number], [number, number]])).to.equal(true);
+      expect(engine.fitCalls.at(-1)!.bounds).to.deep.equal([[-180, -40], [180, 50]]);
+    });
+
+    it('keeps camera commands available after a peer refuses padding and accepts a later padding change', async () => {
+      const { el, engine } = await liveScriptedMap();
+      const apply = engine.setPadding.bind(engine);
+      let refusals = 0;
+      engine.setPadding = () => { refusals++; throw new Error('peer padding unavailable'); };
+      el.cameraPadding = { top: 12 };
+      await el.updateComplete;
+      expect(refusals).to.equal(1);
+      expect(el.map === engine).to.equal(true);
+      expect(el.jumpTo({ center: [10, 20] })).to.equal(true);
+      expect(engine.center).to.deep.equal({ lng: 10, lat: 20 });
+      engine.setPadding = apply;
+      el.cameraPadding = { top: 24, left: 8 };
+      await el.updateComplete;
+      expect(engine.paddingCalls).to.deep.equal([{ top: 24, right: 0, bottom: 0, left: 8 }]);
+      expect(el.map === engine).to.equal(true);
+    });
+
     it('reports the visible bounds for user, fit and command moves', async () => {
       const { el, engine } = await liveScriptedMap();
       const changes = await collect(el, 'lr-map-view-change', async () => {

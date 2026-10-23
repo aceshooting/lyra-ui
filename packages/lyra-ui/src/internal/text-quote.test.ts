@@ -2211,3 +2211,19 @@ it('retains a folded match when suffix overlap lands inside a case expansion', (
     expect([...index.search('i\u0307a')]).deep.equal([...createTextQuoteIndex(scopeFromElement(root), 'en').search('i\u0307a')]);
   } finally { builder.disconnect(); }
 });
+
+
+it('preserves raw quote ranges across a normalized long-text chunk boundary', () => {
+  const root = document.createElement('div');
+  root.textContent = 'e\u0301' + 'x'.repeat(4_097) + 'A\u030a tail';
+  document.body.append(root);
+  try {
+    const scope = scopeFromElement(root);
+    expect(scope.truncated).to.equal(false);
+    expect(scope.text).to.equal('é' + 'x'.repeat(4_097) + 'Å tail');
+    const range = resolveTextQuote(scope, { quote: 'xxxÅ tail' });
+    expect(range?.toString()).to.equal('xxxA\u030a tail');
+    expect(range?.startOffset).to.equal(4_096);
+    expect(range?.endOffset).to.equal(root.textContent.length);
+  } finally { root.remove(); }
+});

@@ -2043,3 +2043,30 @@ it('joins the top layer above an already open lr-dialog instead of opening benea
   await el.updateComplete;
   expect(el.matches(':popover-open'), 'closing leaves the top layer').to.equal(false);
 });
+
+
+it('closes coherently when its native carrier is closed outside the component', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div>
+    <dialog><button>Open tools</button></dialog>
+    <lr-tool-select-dialog .tools=${TOOLS}></lr-tool-select-dialog>
+  </div>`);
+  const native = wrapper.querySelector('dialog')!;
+  const el = wrapper.querySelector<LyraToolSelectDialog>('lr-tool-select-dialog')!;
+  try {
+    native.showModal();
+    el.show();
+    await el.updateComplete;
+    const carrier = el.shadowRoot!.querySelector('dialog')!;
+    expect(carrier.open).to.equal(true);
+    const closed = oneEvent(el, 'lr-close');
+    carrier.close();
+    expect((await closed).detail).to.deep.equal({ reason: 'api' });
+    await el.updateComplete;
+    expect(el.open).to.equal(false);
+    expect(native.open).to.equal(true);
+    el.show();
+    await el.updateComplete;
+    expect(el.open).to.equal(true);
+    expect(el.shadowRoot!.querySelector('dialog')!.open).to.equal(true);
+  } finally { el.close(); await el.updateComplete; native.close(); }
+});

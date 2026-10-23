@@ -3,6 +3,7 @@ import { LitElement, type PropertyValues } from 'lit';
 import './qr-code.js';
 import { LyraQrCode, type LyraQrCodeErrorCorrection } from './qr-code.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 
 function assertiveAnnouncements(): string[] {
   const sink = document.querySelector<HTMLElement>(
@@ -1747,4 +1748,102 @@ describe('lr-qr-code', () => {
     await waitUntil(() => document.querySelector(assertive) !== null && document.querySelector(polite) !== null, 'both regions mount when encoding starts');
     el.remove();
   });
+});
+
+
+it('keeps eager QR painting usable when observer setup and cleanup both fail', async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(window, 'IntersectionObserver');
+  let disconnects = 0;
+  Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: class {
+    observe(): void { throw new Error('Observer setup unavailable'); }
+    disconnect(): void { disconnects++; throw new Error('Observer cleanup unavailable'); }
+  } });
+  let el: LyraQrCode | undefined;
+  try {
+    el = await fixture<LyraQrCode>(html`<lr-qr-code size="40"></lr-qr-code>`);
+    installFakeLoader(el, fakeApi(() => ({ modules: fakeModules(true) })));
+    el.value = 'eager fallback';
+    await waitForInitialPaint(el);
+    expect(disconnects).to.equal(1);
+    expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.equal(true);
+    el.size = 60;
+    await waitForInitialPaint(el);
+  } finally { el?.remove(); restoreOwnProperty(window, 'IntersectionObserver', descriptor); }
+});
+
+it('retires observer callbacks despite cleanup failure and paints after reconnect', async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(window, 'IntersectionObserver');
+  const NativeObserver = window.IntersectionObserver;
+  const observers: FailingCleanupObserver[] = [];
+  class FailingCleanupObserver extends NativeObserver {
+    constructor(private readonly callback: IntersectionObserverCallback) { super(callback); observers.push(this); }
+    override observe(target: Element): void { this.deliver(target, true); }
+    deliver(target: Element, isIntersecting: boolean): void {
+      const rect = new DOMRectReadOnly(0, 0, 40, 40);
+      const entry: IntersectionObserverEntry = { target, isIntersecting, boundingClientRect: rect,
+        intersectionRect: rect, rootBounds: rect, intersectionRatio: isIntersecting ? 1 : 0, time: performance.now() };
+      this.callback([entry], this);
+    }
+    override disconnect(): void { throw new Error('Observer cleanup unavailable'); }
+  }
+  Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: FailingCleanupObserver });
+  let el: LyraQrCode | undefined;
+  try {
+    el = await fixture<LyraQrCode>(html`<lr-qr-code size="40"></lr-qr-code>`);
+    installFakeLoader(el, fakeApi(() => ({ modules: fakeModules(true) })));
+    el.value = 'reconnected code';
+    await waitForInitialPaint(el);
+    const first = observers[0]!;
+    const parent = el.parentElement!;
+    el.remove();
+    parent.append(el);
+    expect(observers.length).to.equal(2);
+    first.deliver(el, false);
+    el.size = 60;
+    await waitForInitialPaint(el);
+    expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.equal(true);
+  } finally { el?.remove(); restoreOwnProperty(window, 'IntersectionObserver', descriptor); }
+});
+
+it('paints an adopted QR code without a browsing context and resumes in its original document', async () => {
+  const el = await fixture<LyraQrCode>(html`<lr-qr-code size="40" fill="#000000" background="#ffffff"></lr-qr-code>`);
+  installFakeLoader(el, fakeApi(() => ({ modules: fakeModules(true) })));
+  const parent = el.parentElement!;
+  const detachedDocument = document.implementation.createHTMLDocument('QR preview');
+  try {
+    // A document without a view deliberately uses concrete color fallbacks.
+    expectDevWarning('lyra-qr-code-invalid-color');
+    detachedDocument.body.append(detachedDocument.adoptNode(el));
+    el.value = 'standalone document';
+    await waitForInitialPaint(el);
+    expect(Array.from(el.canvas.getContext('2d')?.getImageData(40, 40, 1, 1).data ?? [])).to.deep.equal([0, 0, 0, 255]);
+    expect(el.ownerDocument.defaultView === null).to.equal(true);
+    expect(el.isConnected).to.equal(true);
+    parent.append(document.adoptNode(el));
+    el.size = 60;
+    await waitForInitialPaint(el);
+  } finally { el.remove(); }
+});
+
+it('keeps the QR symbol usable when a platform image source setter rejects its logo', async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(window, 'Image');
+  let attempts = 0;
+  class RejectedImage extends EventTarget {
+    naturalWidth = 0;
+    naturalHeight = 0;
+    set src(_value: string) { attempts++; throw new Error('Image assignment unavailable'); }
+    removeAttribute(_name: string): void {}
+  }
+  Object.defineProperty(window, 'Image', { configurable: true, value: RejectedImage });
+  let el: LyraQrCode | undefined;
+  try {
+    el = await fixture<LyraQrCode>(html`<lr-qr-code size="40"></lr-qr-code>`);
+    installFakeLoader(el, fakeApi(() => ({ modules: fakeModules(true) })));
+    el.image = RED_IMAGE_DATA;
+    el.value = 'logo fallback';
+    await waitForInitialPaint(el);
+    expect(attempts).to.equal(1);
+    expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.equal(true);
+    expect(el.canvas.getContext('2d')!.getImageData(40, 40, 1, 1).data[3]).to.equal(255);
+  } finally { el?.remove(); restoreOwnProperty(window, 'Image', descriptor); }
 });

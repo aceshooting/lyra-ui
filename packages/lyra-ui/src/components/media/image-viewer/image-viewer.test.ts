@@ -2495,3 +2495,42 @@ it('normalizes region highlights once across renders until the array is replaced
   await el.updateComplete;
   expect(Reflect.get(el, 'canonicalRegionHighlights').call(el)).to.not.equal(first);
 });
+
+
+it('completes a new annotation after pointer capture fails and an earlier draft is cancelled', async () => {
+  const el = await fixture<LyraImageViewer>(html`<lr-image-viewer src=${PNG_SRC} annotatable></lr-image-viewer>`);
+  await stubImageLoad(el);
+  const wrapper = stubWrapperRect(el);
+  let attempts = 0;
+  wrapper.setPointerCapture = () => { attempts++; throw new DOMException('Pointer capture unavailable', 'NotFoundError'); };
+  wrapper.dispatchEvent(primaryPointerEvent('pointerdown', { pointerId: 31, clientX: 20, clientY: 10, bubbles: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="annotation-box"]').length).to.equal(1);
+  wrapper.dispatchEvent(primaryPointerEvent('pointercancel', { pointerId: 31, bubbles: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="annotation-box"]').length).to.equal(0);
+  wrapper.dispatchEvent(primaryPointerEvent('pointerdown', { pointerId: 32, clientX: 20, clientY: 10, bubbles: true }));
+  wrapper.dispatchEvent(primaryPointerEvent('pointermove', { pointerId: 32, clientX: 100, clientY: 50, bubbles: true }));
+  const created = oneEvent(el, 'lr-annotation-create');
+  wrapper.dispatchEvent(primaryPointerEvent('pointerup', { pointerId: 32, bubbles: true }));
+  expect((await created).detail.anchor).to.deep.equal({ kind: 'region', rect: { x: 10, y: 10, width: 40, height: 40 } });
+  await el.updateComplete;
+  expect(attempts).to.equal(2);
+  expect(el.shadowRoot!.querySelectorAll('[part="annotation-box"]').length).to.equal(0);
+});
+
+it('keeps the first highlight keyboard target when an oversized collection has no active id', async () => {
+  const highlights: LyraHighlight[] = Array.from({ length: 201 }, (_, index) => ({
+    id: `bounded-${index}`, anchor: { kind: 'region', rect: { x: index % 90, y: 0, width: 1, height: 1 } },
+  }));
+  const el = await fixture<LyraImageViewer>(html`<lr-image-viewer src=${PNG_SRC} .highlights=${highlights}></lr-image-viewer>`);
+  await stubImageLoad(el);
+  await el.updateComplete;
+  const layer = el.shadowRoot!.querySelector<HTMLElement>('[part="highlight-layer"]')!;
+  const buttons = [...layer.querySelectorAll<HTMLButtonElement>('[part="highlight"]')];
+  expect(layer.hasAttribute('data-truncated')).to.equal(true);
+  expect(buttons.length).to.equal(200);
+  expect(buttons[0]!.dataset['highlightId']).to.equal('bounded-0');
+  expect(buttons.filter(button => button.tabIndex === 0).map(button => button.dataset['highlightId'])).to.deep.equal(['bounded-0']);
+  expect(buttons.some(button => button.dataset['highlightId'] === 'bounded-200')).to.equal(false);
+});

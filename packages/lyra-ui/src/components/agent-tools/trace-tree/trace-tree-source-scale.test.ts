@@ -478,3 +478,31 @@ it('names a provider row with token and cost metrics only when those columns are
   expect(name()).to.contain('Cost: $0.0021');
   expect(name(), 'a negative token count is not announced').to.not.contain('Tokens out');
 });
+
+
+it('restores the focused key through an asynchronous ranged lookup after provider order changes', async () => {
+  let reversed = false;
+  const lookedUp: string[] = [];
+  const source: Source = { revision: 1, async project() {
+    const order = reversed ? [1, 0] : [0, 1];
+    return { state: reversed ? 'reordered' : 'initial', total: 2, summary: { startMs: 100, endMs: 200 }, rows: {
+      count: 2,
+      async read(request) { return order.slice(request.offset, request.offset + request.limit).map(index => ({ ...row(index), setSize: 2 })); },
+      async indexOfKey(key: string) {
+        lookedUp.push(key);
+        await Promise.resolve();
+        return order.findIndex(index => `span${index}` === key);
+      },
+    } };
+  } };
+  const el = await fixture<Tree>(html`<lr-trace-tree .treeSource=${source}></lr-trace-tree>`);
+  await ready(el);
+  await focusByKeyboard(el.shadowRoot!.querySelector<HTMLElement>('[data-source-key="span0"]')!);
+  reversed = true;
+  el.requestUpdate();
+  await waitUntil(() => lookedUp.length === 1, 'refresh resolves the focused provider key');
+  await waitUntil(() => el.shadowRoot!.activeElement?.getAttribute('data-source-key') === 'span0', 'focus follows the key after reordering');
+  expect(lookedUp).to.deep.equal(['span0']);
+  expect([...el.shadowRoot!.querySelectorAll<HTMLElement>('[data-source-key]')].map(item => item.dataset['sourceKey'])).to.deep.equal(['span1', 'span0']);
+  expect(el.shadowRoot!.querySelector('[data-source-key="span0"]')!.getAttribute('tabindex')).to.equal('0');
+});

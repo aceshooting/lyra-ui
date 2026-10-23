@@ -1705,7 +1705,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     ></span>`;
   }
 
-  private syncResizeHandleValues(writes?: (() => void)[]): void {
+  private syncResizeHandleValues(writes: (() => void)[]): void {
     const measurements: { handle: HTMLElement; width: number }[] = [];
     for (const handle of this.renderRoot.querySelectorAll<HTMLElement>('[part="resize-handle"]')) {
       const key = handle.dataset['colKey'];
@@ -1726,8 +1726,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
         handle.setAttribute('aria-valuetext', this.resizeValueText(width));
       }
     };
-    if (writes) writes.push(apply);
-    else apply();
+    writes.push(apply);
   }
 
   private onResizePointerEnd = (event: PointerEvent): void => {
@@ -1911,15 +1910,14 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  absorbs CSSOM's integer rounding of fractional layouts, matching the library's other
    *  overflow-aware controls. The existing `'self'` mode never retains this internal
    *  measurement marker, so their established CSS remains authoritative. */
-  private syncAutoScrollMode(writes?: (() => void)[]): void {
+  private syncAutoScrollMode(writes: (() => void)[]): void {
     const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
     if (!base) return;
     const overflows =
       (this.scrollMode === 'auto' || this.scrollMode === 'page') &&
       base.scrollWidth - base.clientWidth > TABLE_SCROLL_OVERFLOW_TOLERANCE_PX;
     const apply = () => base.toggleAttribute('data-scroll-overflow', overflows);
-    if (writes) writes.push(apply);
-    else apply();
+    writes.push(apply);
   }
 
   private observeHeaders(): void {
@@ -1970,7 +1968,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  `columns`/`rows`/`priorityColumnsVisible` rather than a container resize) and
    *  from the `ResizeObserver` callback (covers a container resize with no
    *  Lit-tracked property change at all). */
-  private recomputeHiddenPriorityColumns(writes?: (() => void)[]): void {
+  private recomputeHiddenPriorityColumns(writes: (() => void)[]): void {
     const hasLowColumn = this.columns.some((col) => col.priority === 'low');
     const hasMediumColumn = this.columns.some((col) => col.priority === 'medium');
     const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
@@ -1986,8 +1984,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
         base?.removeAttribute('data-hide-priority-medium');
         this.rehomeFocusedColumn(visible);
       };
-      if (writes) writes.push(apply);
-      else apply();
+      writes.push(apply);
       if (this.priorityToggleAvailable) this.priorityToggleAvailable = false;
       if (this.hasHiddenPriorityColumns) this.hasHiddenPriorityColumns = false;
       return;
@@ -2072,8 +2069,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
         !(header.dataset['priority'] === 'low' && needsLow) &&
         !(header.dataset['priority'] === 'medium' && needsMedium));
       const apply = () => this.rehomeFocusedColumn(visible);
-      if (writes) writes.push(apply);
-      else apply();
+      writes.push(apply);
     }
 
     // The rendered state the two writes above produce: `[part='base'][data-force-visible]` (rendered
@@ -2101,7 +2097,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     measured: boolean,
     actuallyHidden: boolean,
     allocation: number,
-    writes?: (() => void)[]
+    writes: (() => void)[]
   ): boolean {
     const attribute = tier === 'low' ? 'data-hide-priority-low' : 'data-hide-priority-medium';
     const wasMarked = base.hasAttribute(attribute);
@@ -2120,8 +2116,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
       if (wasMarked && actuallyHidden) this.priorityTierRevealAllocation.set(tier, allocation);
     }
     const apply = () => base.toggleAttribute(attribute, hide);
-    if (writes) writes.push(apply);
-    else apply();
+    writes.push(apply);
     return hide;
   }
 
@@ -2803,7 +2798,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     return `${(t * 100).toFixed(2)}%`;
   }
 
-  private applyStickyOffsets(writes?: (() => void)[]): void {
+  private applyStickyOffsets(writes: (() => void)[]): void {
     if (!this.columns.some((c) => c.sticky)) return;
     const offsets = this.stickyOffsets();
     const cells = this.renderRoot.querySelectorAll<HTMLElement>('th[data-col-key], td[data-col-key]');
@@ -2812,8 +2807,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
       if (key !== undefined && offsets.has(key))
         el.style.setProperty('--lr-table-sticky-offset', `${offsets.get(key)}px`);
     });
-    if (writes) writes.push(apply);
-    else apply();
+    writes.push(apply);
   }
 
   /** Applies stickyOffsets()'s measured per-column offsets as an inline

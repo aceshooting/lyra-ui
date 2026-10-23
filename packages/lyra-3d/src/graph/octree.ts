@@ -75,6 +75,10 @@ export function graphChargeForces(tree: GraphOctree, strength: number, theta: nu
   const result = new Float64Array(tree.positions.length);
   if (!tree.root || strength === 0) return result;
   const count = tree.positions.length / 3;
+  // Float32 coordinate differences can be squared safely in Number. Keep the scaled
+  // norm for softening values whose square could overflow the Number range.
+  const directSoftening = softening <= 1e150;
+  const softeningSquared = directSoftening ? softening * softening : 0;
   for (let target = 0; target < count; target += 1) {
     const x = tree.positions[target * 3]!;
     const y = tree.positions[target * 3 + 1]!;
@@ -86,15 +90,18 @@ export function graphChargeForces(tree: GraphOctree, strength: number, theta: nu
       let dx = x - cx;
       let dy = y - cy;
       let dz = z - cz;
-      let distance = Math.hypot(dx, dy, dz);
-      if (distance === 0) {
+      const coincident = dx === 0 && dy === 0 && dz === 0;
+      let distanceSquared = dx * dx + dy * dy + dz * dz;
+      if (coincident) {
         const direction = graphCoincidentDirection(target, salt);
         dx = direction[0] * softening;
         dy = direction[1] * softening;
         dz = direction[2] * softening;
-        distance = softening;
+        distanceSquared = softeningSquared;
       }
-      const denominator = Math.hypot(distance, softening);
+      const denominator = directSoftening
+        ? Math.sqrt(distanceSquared + softeningSquared)
+        : Math.hypot(coincident ? softening : Math.hypot(dx, dy, dz), softening);
       const force = strength * mass / (denominator * denominator);
       fx += force * dx / denominator;
       fy += force * dy / denominator;

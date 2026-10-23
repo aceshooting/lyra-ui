@@ -74,10 +74,6 @@ const MAX_DIFF_CHARACTERS = 1_000_000;
 const MAX_DIFF_COMPARISONS = 4_000_000;
 const MAX_DIFF_LANGUAGES = 10_000;
 const MAX_DIFF_LANGUAGE_INSPECTIONS = MAX_DIFF_LANGUAGES * 2;
-/** A search match currently identifies a rendered line (diff op), not a character range within
- *  it -- mirrors `<lr-csv-viewer>`'s per-cell match granularity. Keeps retained matches bounded
- *  independent of how many times a query recurs within one adversarially long line. */
-const MAX_SEARCH_MATCHES = 10_000;
 /** Bounds `highlights` resolution work independent of how many entries a host supplies. */
 const MAX_PAINTED_HIGHLIGHTS = 100;
 
@@ -800,12 +796,9 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
     let matchCountExact = boundedQuery.accepted;
     if (boundedQuery.accepted && needle) {
       const budget = new ViewerSearchWorkBudget();
+      // One match per admitted diff op keeps retained matches within the rendered-line cap.
       for (let index = 0; index < this.diffOps.length; index++) {
         if (budget.includes(this.diffOps[index]!.text, needle, this.effectiveLocale)) {
-          if (matches.length === MAX_SEARCH_MATCHES) {
-            matchCountExact = false;
-            break;
-          }
           matches.push({ opIndex: index });
         }
         if (!budget.complete) {

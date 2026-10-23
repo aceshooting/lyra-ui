@@ -1838,3 +1838,36 @@ describe('DOM moves', () => {
     }
   });
 });
+
+
+it('rejects a text node beyond the parsed XML depth ceiling and recovers on replacement', async () => {
+  const el = await fixture<LyraXmlViewer>(html`<lr-xml-viewer .strings=${{ xmlViewerTooManyNodes: 'XML depth limit reached' }}></lr-xml-viewer>`);
+  const failed = oneEvent(el, 'lr-render-error');
+  el.xml = '<node>'.repeat(256) + 'deep text' + '</node>'.repeat(256);
+  await failed;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal('XML depth limit reached');
+  expect(el.shadowRoot!.querySelectorAll('[part="node"]').length).to.equal(0);
+  el.xml = '<root><item>recovered</item></root>';
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.equal(true);
+  expect(await el.search('recovered')).to.equal(1);
+});
+
+it('retains an unmatched public search issued while a remote XML document is loading', async () => {
+  let resolveResponse!: (response: Response) => void;
+  let requested = false;
+  const restore = stubFetch(() => { requested = true; return new Promise<Response>(resolve => { resolveResponse = resolve; }); });
+  try {
+    const el = await fixture<LyraXmlViewer>(html`<lr-xml-viewer src="https://example.test/search.xml"></lr-xml-viewer>`);
+    await waitUntil(() => requested);
+    expect(await el.search('missing')).to.equal(0);
+    const changed = oneEvent(el, 'lr-search-change');
+    resolveResponse(new Response('<root><item>present</item></root>'));
+    const event = await changed;
+    await el.updateComplete;
+    expect(event.detail).to.deep.include({ query: 'missing', matchCount: 0, activeIndex: -1 });
+    expect(el.shadowRoot!.querySelectorAll('[data-active-match]').length).to.equal(0);
+    expect(await el.search('present')).to.equal(1);
+  } finally { restore(); }
+});

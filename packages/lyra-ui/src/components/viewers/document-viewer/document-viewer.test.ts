@@ -1644,3 +1644,60 @@ describe("loading and error treatment", () => {
     );
   });
 });
+
+
+it('repeats fallback highlight jumps through scrollToAnchor and reports missing targets', async () => {
+  const highlight = {
+    id: 'region-target',
+    anchor: { kind: 'region' as const, rect: { x: 10, y: 20, width: 30, height: 40 } },
+  };
+  const el = await fixture<LyraDocumentViewer>(html`
+    <lr-document-viewer open name="chart.png" mime-type="image/png"
+      src="data:image/png;base64,iVBORw0KGgo=" .highlights=${[highlight]}></lr-document-viewer>
+  `);
+  await waitUntil(() => Boolean(el.shadowRoot!.querySelector('lr-document-preview')?.shadowRoot?.querySelector('[part~="region-highlight"]')));
+  const results: boolean[] = [];
+  el.addEventListener('lr-anchor-result', event => { results.push(event.detail.found); });
+  expect(await el.scrollToAnchor('region-target')).to.equal(true);
+  expect(await el.scrollToAnchor(highlight.anchor)).to.equal(true);
+  expect(await el.scrollToAnchor('missing-target')).to.equal(false);
+  expect(results).to.deep.equal([true, true, false]);
+});
+
+it('delegates repeated anchor jumps only to a capable open renderer', async () => {
+  if (!customElements.get('x-document-anchor-target')) {
+    customElements.define('x-document-anchor-target', class extends HTMLElement {
+      readonly requests: unknown[] = [];
+      async scrollToAnchor(target: unknown): Promise<boolean> {
+        this.requests.push(target);
+        const found = target === 'found';
+        this.dispatchEvent(new CustomEvent('lr-anchor-result', { detail: { found }, bubbles: true, composed: true }));
+        return found;
+      }
+    });
+  }
+  const registry = new Map([
+    ['text/x-anchor-target', {
+      capabilities: { anchors: ['page' as const] },
+      render: () => html`<x-document-anchor-target></x-document-anchor-target>`,
+    }],
+  ]);
+  const el = await fixture<LyraDocumentViewer>(html`
+    <lr-document-viewer open name="example.txt" mime-type="text/x-anchor-target"
+      src="https://example.test/example.txt" .registry=${registry}></lr-document-viewer>
+  `);
+  await waitUntil(() => Boolean(el.shadowRoot!.querySelector('x-document-anchor-target')));
+  const renderer = el.shadowRoot!.querySelector<HTMLElement & { requests: unknown[] }>('x-document-anchor-target')!;
+  const results: boolean[] = [];
+  el.addEventListener('lr-anchor-result', event => { results.push(event.detail.found); });
+  expect(await el.scrollToAnchor('found')).to.equal(true);
+  expect(await el.scrollToAnchor('missing')).to.equal(false);
+  expect(await el.scrollToAnchor({ kind: 'region', rect: { x: 0, y: 0, width: 10, height: 10 } })).to.equal(false);
+  expect(renderer.requests).to.deep.equal(['found', 'missing']);
+  expect(results).to.deep.equal([true, false, false]);
+
+  el.open = false;
+  expect(await el.scrollToAnchor('found')).to.equal(false);
+  expect(renderer.requests).to.deep.equal(['found', 'missing']);
+  expect(results).to.deep.equal([true, false, false]);
+});
