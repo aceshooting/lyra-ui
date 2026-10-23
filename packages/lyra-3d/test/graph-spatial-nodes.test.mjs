@@ -6,7 +6,8 @@ import { createGraphSpatialNodes } from '../dist/graph/spatial-nodes.js';
 import { DEFAULT_ORBIT_CAMERA, projectOrbitPoint } from '../dist/core/orbit.js';
 import { resolveLyra3dStyle } from '../dist/core/style.js';
 import { decodePickId } from '../dist/core/picking.js';
-import { GRAPH_EDGE_DEPTH_BIAS, graphEye, graphNdcDepth, graphNodeExtents, graphSpatialView } from '../dist/graph/spatial-paths.js';
+import { graphSpatialView } from '../dist/graph/spatial-paths.js';
+import { GRAPH_EDGE_DEPTH_BIAS, graphEye, graphNdcDepth, graphNodeExtents } from './graph-spatial-reference.mjs';
 
 const state = (extra = {}) => ({ selected: new Set(), dimmed: new Set(), hover: -1, focus: -1, ...extra });
 const viewport = (style = {}) => ({ width: 640, height: 480, orbit: DEFAULT_ORBIT_CAMERA, style: resolveLyra3dStyle(style) });

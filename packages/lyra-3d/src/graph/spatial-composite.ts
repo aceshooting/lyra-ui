@@ -14,7 +14,7 @@ import { graphSpatialEdgeVertexChunk, graphSpatialNodeVertexChunk, graphSpatialP
  * Opaque scenes never sort: they draw in a fixed order with depth writes, and depth testing
  * resolves occlusion per pixel.
  */
-export const GRAPH_RESORT_ANGLE = 0.02;
+const GRAPH_RESORT_ANGLE = 0.02;
 const SETTLE_MS = 100;
 const RESORT_COSINE = Math.cos(GRAPH_RESORT_ANGLE);
 const INDEX_BITS = 2 ** 22;

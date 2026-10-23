@@ -3,7 +3,8 @@ import test from 'node:test';
 import { createGraphSpatialEdges } from '../dist/graph/spatial-edges.js';
 import { DEFAULT_ORBIT_CAMERA, projectOrbitPoint } from '../dist/core/orbit.js';
 import { resolveLyra3dStyle } from '../dist/core/style.js';
-import { graphArrowScreen, graphEye, graphSegmentScreen, graphSpatialView } from '../dist/graph/spatial-paths.js';
+import { graphSpatialView } from '../dist/graph/spatial-paths.js';
+import { graphArrowScreen, graphEye, graphSegmentScreen } from './graph-spatial-reference.mjs';
 
 const state = (extra = {}) => ({ selected: new Set(), dimmed: new Set(), hover: -1, focus: -1, ...extra });
 const viewport = { width: 640, height: 480, orbit: DEFAULT_ORBIT_CAMERA, style: resolveLyra3dStyle(), project(point) { return projectOrbitPoint(point, this.orbit, this); } };

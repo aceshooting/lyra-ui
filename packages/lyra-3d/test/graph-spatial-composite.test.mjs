@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DoubleSide } from 'three';
-import { GRAPH_RESORT_ANGLE, createGraphSpatialComposite } from '../dist/graph/spatial-composite.js';
+import { createGraphSpatialComposite } from '../dist/graph/spatial-composite.js';
 import { createGraphSpatialNodes } from '../dist/graph/spatial-nodes.js';
 import { createGraphSpatialEdges } from '../dist/graph/spatial-edges.js';
 import { DEFAULT_ORBIT_CAMERA, projectOrbitPoint } from '../dist/core/orbit.js';
-import { graphEye, graphPathPoint, graphSpatialView } from '../dist/graph/spatial-paths.js';
+import { graphSpatialView } from '../dist/graph/spatial-paths.js';
 import { decodePickId } from '../dist/core/picking.js';
 import { resolveLyra3dStyle } from '../dist/core/style.js';
+import { GRAPH_RESORT_ANGLE, graphEye, graphPathPoint } from './graph-spatial-reference.mjs';
 
 function fixture(alpha = 0.5) {
   const data = { nodeCount: 3, source: new Uint32Array([1]), target: new Uint32Array([2]), sizes: new Float32Array([40, 0, 0]),

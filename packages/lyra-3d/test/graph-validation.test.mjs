@@ -7,7 +7,8 @@ import { createGraphTaskKernel } from '../dist/graph/layout-task.js';
 import { buildGraphOctree, graphChargeForces } from '../dist/graph/octree.js';
 import { admitGraphSpatialAppearance } from '../dist/graph/spatial-appearance.js';
 import { createGraphSpatialNodes } from '../dist/graph/spatial-nodes.js';
-import { graphEye, graphNodeExtents, graphSpatialView, spatialEdgePoint, spatialNodeWorldRadius } from '../dist/graph/spatial-paths.js';
+import { graphSpatialView, spatialEdgePoint, spatialNodeWorldRadius } from '../dist/graph/spatial-paths.js';
+import { graphEye, graphNodeExtents } from './graph-spatial-reference.mjs';
 
 const state = (extra = {}) => ({ selected: new Set(), dimmed: new Set(), hover: -1, focus: -1, ...extra });
 

@@ -1,12 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DEFAULT_ORBIT_CAMERA, orbitNearPlane, projectOrbitPoint } from '../dist/core/orbit.js';
-import {
-  GRAPH_EDGE_DEPTH_BIAS, graphArrowScreen, graphClipSegment, graphEye, graphNdcDepth, graphNodeExtents, graphPathPoint, graphScale, graphScreen,
-  graphSegmentScreen, graphSpatialEdgeVertexChunk, graphSpatialNodeVertexChunk, graphSpatialProjectionChunk, graphSpatialView, graphViewForward,
-} from '../dist/graph/spatial-paths.js';
+import { graphScale, graphSpatialEdgeVertexChunk, graphSpatialNodeVertexChunk, graphSpatialProjectionChunk, graphSpatialView, graphViewForward } from '../dist/graph/spatial-paths.js';
+import { GRAPH_EDGE_DEPTH_BIAS, graphArrowScreen, graphClipSegment, graphEye, graphNdcDepth, graphNodeExtents, graphPathPoint, graphScreen, graphSegmentScreen } from './graph-spatial-reference.mjs';
 
-// The shader-side camera math has a TypeScript twin; these tests pin that twin to the CPU projection
+// The test-only CPU mirror of shader camera math is pinned to the CPU projection
 // used by picking, labels and the public `project()`, so the GPU path cannot drift from it.
 const cameras = [DEFAULT_ORBIT_CAMERA, { yaw: 0.4, pitch: 0.3, distance: 1900, target: { x: 12, y: -40, z: 7 } }, { yaw: Math.PI, pitch: -1.2, distance: 80, target: { x: 0, y: 0, z: 0 } }];
 const points = [{ x: 0, y: 0, z: 0 }, { x: 120, y: -45, z: 300 }, { x: -600, y: 600, z: -250 }, { x: 3, y: 5, z: 7 }];

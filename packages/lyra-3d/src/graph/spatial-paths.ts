@@ -39,22 +39,17 @@ export function spatialPrimitiveCount(data: GraphSpatialData): number {
 }
 
 /**
- * Camera math shared by the spatial graph shaders and their CPU mirror. The GLSL below and the
- * functions in this module are line-for-line equivalents: the vertex shaders project every glyph and
- * stroke from world positions and camera uniforms, so a pure camera change uploads no attribute, and
- * the TypeScript twin lets unit tests pin that math against `projectOrbitPoint`.
- *
- * Eye space here is the orbit camera space: `x` right, `y` down, `z` the positive distance along the
- * view. Screen points are CSS pixels from the top-left of the full viewport plus an NDC depth.
+ * Camera math for the spatial graph shaders. Vertices project world positions with camera uniforms,
+ * so a pure camera change uploads no geometry attributes. Eye space has x right, y down and z the
+ * positive distance along the view; screen points are CSS pixels from the viewport top-left.
+ * Full viewport size is in CSS pixels, with its perspective depth range.
  */
-export interface GraphEyePoint { readonly x: number; readonly y: number; readonly z: number }
-/** Full viewport size in CSS pixels and the perspective depth range. */
 export interface GraphSpatialView { readonly width: number; readonly height: number; readonly near: number; readonly far: number }
 
 const TAN_HALF_FOV = Math.tan(LYRA_3D_FIELD_OF_VIEW / 2);
 /** Window-depth bias that makes an edge lose an exact depth tie against a node glyph, in both the
  * pick pass and the opaque paint pass, independently of GPU rounding. About eight 24-bit ULPs. */
-export const GRAPH_EDGE_DEPTH_BIAS = 2 ** -21;
+const GRAPH_EDGE_DEPTH_BIAS = 2 ** -21;
 /** Arrow heads are isosceles triangles whose half-angle is this many radians. */
 export const GRAPH_ARROW_HALF_ANGLE = 0.45;
 
@@ -67,30 +62,6 @@ export function graphSpatialView(width: number, height: number, camera: Lyra3dOr
 export function graphScale(depth: number, view: GraphSpatialView): number {
   return view.height / (2 * TAN_HALF_FOV * depth);
 }
-/** Perspective NDC depth in [-1, 1] of eye depth `depth`; window depth is `ndc * 0.5 + 0.5`. */
-export function graphNdcDepth(depth: number, view: GraphSpatialView): number {
-  const { near, far } = view;
-  return (far + near) / (far - near) - (2 * far * near) / ((far - near) * depth);
-}
-export function graphScreen(eye: GraphEyePoint, view: GraphSpatialView): GraphEyePoint {
-  const scale = graphScale(eye.z, view);
-  return { x: view.width * 0.5 + eye.x * scale, y: view.height * 0.5 + eye.y * scale, z: graphNdcDepth(eye.z, view) };
-}
-/** Clips an eye-space segment at the near plane; `null` when it lies wholly behind it. */
-export function graphClipSegment(a: GraphEyePoint, b: GraphEyePoint, near: number): [GraphEyePoint, GraphEyePoint] | null {
-  if (a.z < near && b.z < near) return null;
-  const toward = (from: GraphEyePoint, to: GraphEyePoint) => {
-    const t = (near - from.z) / (to.z - from.z);
-    return { x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t, z: near };
-  };
-  return [a.z < near ? toward(a, b) : a, b.z < near ? toward(b, a) : b];
-}
-/** Orbit eye space of a world point, matching the shader's model-view transform. */
-export function graphEye(point: GraphEyePoint, camera: Lyra3dOrbitCamera): GraphEyePoint {
-  const dx = point.x - camera.target.x, dy = point.y - camera.target.y, dz = point.z - camera.target.z;
-  const x = Math.cos(camera.yaw) * dx - Math.sin(camera.yaw) * dz, z = Math.sin(camera.yaw) * dx + Math.cos(camera.yaw) * dz;
-  return { x, y: Math.cos(camera.pitch) * dy - Math.sin(camera.pitch) * z, z: camera.distance - (Math.sin(camera.pitch) * dy + Math.cos(camera.pitch) * z) };
-}
 /** Unit vector along which eye depth decreases: painter order is ascending `dot(point, forward)`. */
 export function graphViewForward(camera: Pick<Lyra3dOrbitCamera, 'yaw' | 'pitch'>): [number, number, number] {
   const cp = Math.cos(camera.pitch);
@@ -99,41 +70,6 @@ export function graphViewForward(camera: Pick<Lyra3dOrbitCamera, 'yaw' | 'pitch'
 
 const SQUARE = Math.sqrt(Math.PI) / 2;
 const DIAMOND = Math.sqrt(Math.PI / 2);
-/** Glyph radius and quad half-extents (paint, pick) for a node; all zero behind the near plane. */
-export function graphNodeExtents(eye: GraphEyePoint, size: number, shape: number, selected: boolean, expanded: boolean, worldSizes: boolean, markerArm: number, view: GraphSpatialView) {
-  if (eye.z < view.near) return { radius: 0, paint: 0, pick: 0 };
-  const radius = Math.min(Math.max(view.width, view.height) * 2, worldSizes ? size * graphScale(eye.z, view) : size);
-  const body = shape > 1.5 ? radius * DIAMOND : shape > 0.5 ? radius * SQUARE : radius;
-  const pick = shape > 1.5 ? Math.max(12, radius) * DIAMOND : shape > 0.5 ? Math.max(12, radius * SQUARE) : Math.max(12, radius);
-  return { radius, paint: Math.max(body, selected ? radius + 5 : 0, expanded ? radius + markerArm : 0), pick };
-}
-/** World point `t` of a straight (`loopRadius <= 0`) or self-loop path; loop radii in CSS pixels
- * resolve at the loop centre's depth. */
-export function graphPathPoint(start: GraphEyePoint, end: GraphEyePoint, loopRadius: number, t: number, centreDepth: number, worldSizes: boolean, view: GraphSpatialView): GraphEyePoint {
-  if (loopRadius <= 0) return t <= 0 ? start : t >= 1 ? end : { x: start.x + (end.x - start.x) * t, y: start.y + (end.y - start.y) * t, z: start.z + (end.z - start.z) * t };
-  if (t <= 0 || t >= 1) return start;
-  const radius = worldSizes ? loopRadius : centreDepth < view.near ? 0 : loopRadius / graphScale(centreDepth, view);
-  const angle = t * Math.PI * 2;
-  return { x: start.x + Math.sin(angle) * radius, y: start.y - (1 - Math.cos(angle)) * radius, z: start.z };
-}
-/** Screen endpoints of a stroke segment, or `null` when it is behind the camera. */
-export function graphSegmentScreen(a: GraphEyePoint, b: GraphEyePoint, view: GraphSpatialView): [GraphEyePoint, GraphEyePoint] | null {
-  const clip = graphClipSegment(a, b, view.near);
-  return clip ? [graphScreen(clip[0], view), graphScreen(clip[1], view)] : null;
-}
-/** Arrow quad (tail, tip) for the terminal segment `a`→`b`, inset by a node radius in CSS pixels
- * (`worldSizes`: world units at the tip's depth), or `null` when hidden. */
-export function graphArrowScreen(a: GraphEyePoint, b: GraphEyePoint, inset: number, width: number, worldSizes: boolean, view: GraphSpatialView): [GraphEyePoint, GraphEyePoint] | null {
-  if (b.z < view.near) return null;
-  const clip = graphClipSegment(a, b, view.near)!;
-  const tail = graphScreen(clip[0], view), head = graphScreen(b, view);
-  const dx = head.x - tail.x, dy = head.y - tail.y, span = Math.hypot(dx, dy);
-  if (!(span > 0)) return null;
-  const height = width / (2 * Math.tan(GRAPH_ARROW_HALF_ANGLE)), pixels = worldSizes ? inset * graphScale(b.z, view) : inset;
-  const tipX = head.x - dx / span * pixels, tipY = head.y - dy / span * pixels;
-  return [{ x: tipX - dx / span * height, y: tipY - dy / span * height, z: head.z }, { x: tipX, y: tipY, z: head.z }];
-}
-
 const glsl = (value: number) => { const text = String(value); return /[.e]/u.test(text) ? text : `${text}.0`; };
 /** Shared uniforms and helpers; `lyraView` is (width, height, near, far) of the full viewport. */
 export const graphSpatialProjectionChunk = `
