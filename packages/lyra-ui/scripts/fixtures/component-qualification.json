@@ -27243,6 +27243,12 @@
             },
             {
               "file": "src/components/utility/icon/icon.test.ts",
+              "test": "keeps native SVG text and its updates when cloning caller-supplied custom glyphs",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/utility/icon/icon.test.ts",
               "test": "names a fetched icon through label and stays hidden without one",
               "target": "el",
               "state": "populated"

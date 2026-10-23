@@ -1,4 +1,5 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './condition-builder.js';
 import type { LyraConditionBuilder, ConditionBuilderField, ConditionBuilderValue } from './condition-builder.js';
 import type { LyraSelect } from '../../forms/select/select.class.js';
@@ -1241,4 +1242,42 @@ describe('lr-condition-builder contains the composed controls\' lr-activate', ()
     button.dispatchEvent(new CustomEvent('lr-activate', { bubbles: true, composed: true }));
     expect(observed).to.equal(1);
   });
+});
+
+
+for (const example of [
+  { name: 'missing field', condition: { id: 'invalid', field: 'retired', operator: 'eq', value: 'x' }, part: 'field-select', code: 'field-unavailable' },
+  { name: 'invalid scalar type', condition: { id: 'invalid', field: 'active', operator: 'eq', value: 'not a boolean' }, part: 'value', code: 'value-type' },
+  { name: 'unary operator with a stale value', condition: { id: 'invalid', field: 'name', operator: 'isEmpty', value: 'stale' }, part: 'operator-select', code: 'operator-arity' },
+]) {
+  it(`reports ${example.name} on its actionable recovery control without rewriting the caller model`, async () => {
+    const model = { combinator: 'and', conditions: [example.condition] };
+    const root = await fixture<HTMLDivElement>(html`<div><button>Apply</button><lr-condition-builder .fields=${FIELDS} .value=${model}></lr-condition-builder></div>`);
+    const el = root.querySelector<LyraConditionBuilder>('lr-condition-builder')!;
+    await el.updateComplete;
+    await focusByKeyboard(root.querySelector<HTMLButtonElement>('button')!);
+    expect(el.validationIssues).to.deep.equal([{ conditionId: 'invalid', code: example.code }]);
+    expect(el.reportValidity()).to.equal(false);
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal(example.part);
+    expect(el.value).to.deep.equal(model);
+    el.value = { combinator: 'and', conditions: [{ id: 'invalid', field: 'active', operator: 'eq', value: true }] };
+    await el.updateComplete;
+    expect(el.checkValidity()).to.equal(true);
+    expect(el.reportValidity()).to.equal(true);
+  });
+}
+
+it('normalizes an unknown public operator to the empty choice and accepts a later supported operator', async () => {
+  const el = await fixture<LyraConditionBuilder>(html`<lr-condition-builder .fields=${FIELDS}></lr-condition-builder>`);
+  const caller = { combinator: 'and', conditions: [{ id: 'row', field: 'name', operator: 'future-operator', value: 'kept' }] };
+  Reflect.set(el, 'value', caller);
+  await el.updateComplete;
+  expect(el.value.conditions[0]?.operator).to.equal('');
+  expect(el.value.conditions[0]?.value).to.equal('kept');
+  expect(caller.conditions[0]!.operator).to.equal('future-operator');
+  expect(el.checkValidity()).to.equal(false);
+  el.value = { combinator: 'and', conditions: [{ id: 'row', field: 'name', operator: 'eq', value: 'kept' }] };
+  await el.updateComplete;
+  expect(el.value.conditions[0]?.operator).to.equal('eq');
+  expect(el.checkValidity()).to.equal(true);
 });

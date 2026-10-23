@@ -3546,3 +3546,78 @@ describe("loading treatment", () => {
     expect(spinner?.querySelector(".viewer-loading-label")?.textContent).to.equal("Loading document…");
   });
 });
+
+
+it('recovers from a synchronous optional-peer display exception using a fresh book', async () => {
+  const failed = fakeBook();
+  failed.book.renderTo().display = () => { throw new Error('untrusted synchronous display detail'); };
+  __setEpubJsForTesting(() => ({ ...failed.book, load: async () => undefined }));
+  const restore = stubFetch();
+  try {
+    const el = await fixture<LyraEbookViewer>(html`<lr-ebook-viewer .strings=${{ ebookViewerLoadError: 'Book could not render' }}></lr-ebook-viewer>`);
+    const error = oneEvent(el, 'lr-render-error');
+    el.src = 'https://example.test/failed-book.epub';
+    await error;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal('Book could not render');
+    expect(el.shadowRoot!.textContent?.includes('untrusted synchronous display detail')).to.equal(false);
+    const fresh = fakeBook();
+    __setEpubJsForTesting(() => ({ ...fresh.book, load: async () => undefined }));
+    el.src = 'https://example.test/fresh-book.epub';
+    await waitUntil(() => el.shadowRoot!.querySelector<HTMLButtonElement>('[part="next-button"]')?.disabled === false);
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="next-button"]')!.click();
+    await waitUntil(() => fresh.calls.next === 1);
+    expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.equal(true);
+  } finally { restore(); __setEpubJsForTesting(undefined); }
+});
+
+it('contains a revoked peer navigation array while keeping the actual rendition usable', async () => {
+  const fake = fakeBook();
+  const toc = Proxy.revocable([{ href: 'chapter.xhtml', label: 'Chapter' }], {});
+  toc.revoke();
+  __setEpubJsForTesting(() => ({ ...fake.book, load: async () => undefined, navigation: { toc: toc.proxy } }));
+  const restore = stubFetch();
+  try {
+    const el = await fixture<LyraEbookViewer>(html`<lr-ebook-viewer></lr-ebook-viewer>`);
+    el.src = 'https://example.test/revoked-navigation.epub';
+    await waitUntil(() => el.shadowRoot!.querySelector<HTMLButtonElement>('[part="next-button"]')?.disabled === false);
+    expect(await el.getToc()).to.deep.equal([]);
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="next-button"]')!.click();
+    await waitUntil(() => fake.calls.next === 1);
+    expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.equal(true);
+  } finally { restore(); __setEpubJsForTesting(undefined); }
+});
+
+it('installs chapter network policy in a genuine headless XHTML chapter through the peer content hook', async () => {
+  const fake = fakeBook();
+  let contentHook: ((chapter: Document) => void) | undefined;
+  const chapter = document.implementation.createDocument('http://www.w3.org/1999/xhtml', 'html');
+  const body = chapter.createElementNS('http://www.w3.org/1999/xhtml', 'body');
+  chapter.documentElement.append(body);
+  const hint = chapter.createElementNS('http://www.w3.org/1999/xhtml', 'link');
+  hint.setAttribute('rel', 'preconnect');
+  hint.setAttribute('href', 'https://example.test/');
+  body.append(hint);
+  const book = { ...fake.book, load: async () => undefined, spine: { spineItems: [], hooks: { content: {
+    register(hook: (chapter: Document) => void) { contentHook = hook; },
+  } } } };
+  book.renderTo = () => {
+    if (!contentHook) throw new Error('Expected the peer content hook before rendition creation');
+    contentHook(chapter);
+    return fake.book.renderTo();
+  };
+  __setEpubJsForTesting(() => book);
+  const restore = stubFetch();
+  try {
+    const el = await fixture<LyraEbookViewer>(html`<lr-ebook-viewer></lr-ebook-viewer>`);
+    el.src = 'https://example.test/headless-chapter.epub';
+    await waitUntil(() => el.shadowRoot!.querySelector<HTMLButtonElement>('[part="next-button"]')?.disabled === false);
+    const head = chapter.querySelector('head');
+    expect(head?.namespaceURI).to.equal('http://www.w3.org/1999/xhtml');
+    expect(chapter.documentElement.firstElementChild === head).to.equal(true);
+    expect(head?.firstElementChild?.getAttribute('http-equiv')).to.equal('Content-Security-Policy');
+    expect(head?.firstElementChild?.getAttribute('content')).to.include("default-src 'none'");
+    expect(chapter.querySelector('link[rel="preconnect"]') === null).to.equal(true);
+    expect(fake.calls.destroy).to.equal(0);
+  } finally { restore(); __setEpubJsForTesting(undefined); }
+});

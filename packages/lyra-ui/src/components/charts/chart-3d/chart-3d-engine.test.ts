@@ -715,6 +715,62 @@ describe('lr-chart-3d optional renderer', () => {
     });
   });
 
+  it('retires a throwing renderer disposer once and constructs a usable successor on reconnect', async () => {
+    const el = await chart('engine=webgl');
+    await ready(el);
+    const parent = el.parentElement!;
+    const retired = peer.host!;
+    peer.disposeHook = () => { throw new Error('untrusted peer disposal detail'); };
+    try {
+      el.remove();
+      expect(peer.disposed).to.equal(1);
+      retired.hover(1);
+      retired.restored?.();
+      expect(peer.disposed).to.equal(1);
+      parent.append(el);
+      await waitUntil(() => peer.creates === 2, 'reconnect constructs the successor renderer');
+      await ready(el);
+      expect(peer.creates).to.equal(2);
+      expect(has(el, 'engine-notice')).to.equal(false);
+      expect(has(el, 'fit-button')).to.equal(true);
+    } finally { peer.disposeHook = undefined; }
+  });
+
+  for (const failure of ['hover-state', 'restore-style'] as const) {
+    it(`reports each fallback transition after the actual peer ${failure} callback encounters a rejected write`, async () => {
+      const el = await chart('engine=webgl');
+      await ready(el);
+      const host = peer.host!;
+      const fallbacks: unknown[] = [];
+      el.addEventListener('lr-engine-fallback', event => fallbacks.push((event as CustomEvent).detail));
+      if (failure === 'hover-state') {
+        peer.stateError = true;
+        host.hover(1);
+      } else {
+        host.lost('context-lost');
+        await el.updateComplete;
+        peer.styleError = true;
+        host.restored?.();
+      }
+      await waitUntil(() => peer.disposed === 1, 'the failed renderer is retired');
+      await el.updateComplete;
+      expect(fallbacks).to.deep.equal(failure === 'hover-state'
+        ? [{ from: 'webgl', to: 'list', reason: 'error' }]
+        : [
+            { from: 'webgl', to: 'list', reason: 'context-lost' },
+            { from: 'webgl', to: 'list', reason: 'error' },
+          ]);
+      expect(has(el, 'fit-button')).to.equal(false);
+      expect(has(el, 'engine-notice')).to.equal(true);
+      expect(el.shadowRoot!.textContent?.includes('rejected')).to.equal(false);
+      host.hover(0);
+      host.restored?.();
+      await el.updateComplete;
+      expect(peer.disposed).to.equal(1);
+      expect(fallbacks).to.have.length(failure === 'hover-state' ? 1 : 2);
+    });
+  }
+
   describe('terminal failures release every resource', () => {
     for (const duringMount of [false, true]) {
       it(`after a ${duringMount ? 'rejected initial state' : 'rejected live style'} without descending twice`, async () => {

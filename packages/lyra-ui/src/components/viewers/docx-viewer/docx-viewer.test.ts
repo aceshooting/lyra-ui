@@ -2220,3 +2220,36 @@ it('case-folds a text-quote ANCHOR with the effective locale, matching search()'
     });
   } finally { restore(); }
 });
+
+
+it('fails closed on revoked converter diagnostics and renders a subsequent valid source', async () => {
+  const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
+  const messages = Proxy.revocable([], {});
+  messages.revoke();
+  let first = true;
+  useLibrary(el, {
+    mammoth: { convertToHtml: () => {
+      const result = first
+        ? { value: '<p>Unadmitted conversion</p>', messages: messages.proxy }
+        : { value: '<p>Recovered conversion</p>', messages: [] };
+      first = false;
+      return Promise.resolve(result);
+    } },
+    DOMPurify: { sanitize: (value: string) => value },
+  });
+  const restore = stubFetch(BUFFER);
+  try {
+    let errors = 0;
+    el.addEventListener('lr-render-error', () => { errors++; });
+    const failed = oneEvent(el, 'lr-render-error');
+    el.src = 'https://example.test/revoked-diagnostics.docx';
+    await failed;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+    expect(errors).to.equal(1);
+    expect(el.shadowRoot!.textContent).not.to.contain('Unadmitted conversion');
+    el.src = 'https://example.test/recovered-diagnostics.docx';
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]')?.textContent?.includes('Recovered conversion') === true);
+    expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.equal(true);
+    expect(errors).to.equal(1);
+  } finally { restore(); }
+});

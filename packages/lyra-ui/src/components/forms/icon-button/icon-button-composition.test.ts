@@ -170,3 +170,24 @@ describe('lr-icon-button: slotted glyph glow', () => {
     });
   }
 });
+
+
+it('preserves authored native tabindex takeover through further toolbar writes and release', async () => {
+  const el = await fixture<LyraIconButton>(html`<lr-icon-button label="Close"></lr-icon-button>`);
+  const control = nativeControl(el);
+  const action = el.getToolbarActions()[0]!;
+  control.setAttribute('tabindex', '2');
+  action.setTabIndex(-1);
+  expect(control.getAttribute('tabindex')).to.equal('-1');
+  control.setAttribute('tabindex', '3');
+  action.setTabIndex(0);
+  expect(control.getAttribute('tabindex')).to.equal('3');
+  action.setTabIndex(-1);
+  expect(control.getAttribute('tabindex')).to.equal('3');
+  action.releaseTabIndex?.();
+  expect(control.getAttribute('tabindex')).to.equal('3');
+  action.setTabIndex(0);
+  expect(control.getAttribute('tabindex')).to.equal('0');
+  action.releaseTabIndex?.();
+  expect(control.getAttribute('tabindex')).to.equal('3');
+});

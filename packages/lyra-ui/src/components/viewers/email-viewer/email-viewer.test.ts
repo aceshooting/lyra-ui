@@ -1988,3 +1988,43 @@ describe('message content and Lyra chrome', () => {
     }
   });
 });
+
+
+it('omits detached and unsupported peer attachment bytes while preserving usable siblings', async () => {
+  const detachedView = new Uint8Array([1, 2]);
+  const detachedBuffer = new Uint8Array([3, 4]).buffer;
+  structuredClone(detachedView.buffer, { transfer: [detachedView.buffer] });
+  structuredClone(detachedBuffer, { transfer: [detachedBuffer] });
+  const valid = new Uint8Array([5, 6]);
+  __setEmailDepsForTesting({
+    PostalMime: { parse: () => Promise.resolve({
+      text: 'The message remains readable.',
+      attachments: [
+        { filename: 'detached-view.bin', content: detachedView },
+        { filename: 'detached-buffer.bin', content: detachedBuffer },
+        { filename: 'unsupported.bin', content: 42 },
+        { filename: 'valid.bin', mimeType: 'application/octet-stream', content: valid },
+      ],
+    } as unknown as PostalMessageApi) },
+    DOMPurify: undefined,
+  });
+  const restore = stubFetch(TEXT_EML);
+  try {
+    const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer src="https://example.test/detached.eml"></lr-email-viewer>`);
+    await untilRendered(el, '[part="attachment-button"]');
+    expect(el.shadowRoot!.querySelector('[part="body"]')!.textContent).to.contain('The message remains readable.');
+    expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.equal(true);
+    const buttons = el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="attachment-button"]');
+    expect(buttons.length).to.equal(1);
+    expect(el.shadowRoot!.querySelector('[part="attachment-name"]')!.textContent).to.equal('valid.bin');
+    valid.fill(9);
+    const opened = oneEvent(el, 'lr-attachment-open');
+    buttons[0]!.click();
+    const event = await opened as CustomEvent<{ attachment: { filename: string; content: Blob } }>;
+    expect(event.detail.attachment.filename).to.equal('valid.bin');
+    expect(Array.from(new Uint8Array(await event.detail.attachment.content.arrayBuffer()))).to.deep.equal([5, 6]);
+  } finally {
+    restore();
+    __setEmailDepsForTesting(undefined);
+  }
+});

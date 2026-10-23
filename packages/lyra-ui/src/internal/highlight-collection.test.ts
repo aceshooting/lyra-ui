@@ -120,3 +120,32 @@ describe('snapshotLyraHighlights', () => {
     expect(snapshotLyraHighlights(hostile)).to.deep.equal([]);
   });
 });
+
+
+it('contains revoked collection and row values without losing later valid highlights', () => {
+  const root = Proxy.revocable<unknown[]>([], {});
+  root.revoke();
+  expect(snapshotLyraHighlights(root.proxy)).to.deep.equal([]);
+  const row = Proxy.revocable({ id: 'retired', anchor: { kind: 'page', page: 1 } }, {});
+  row.revoke();
+  const anchor = { kind: 'page' as const, page: 2 };
+  const kept = snapshotLyraHighlights([row.proxy, { id: 'survivor', anchor }]);
+  expect(kept.map(highlight => highlight.id)).to.deep.equal(['survivor']);
+  expect(kept[0]!.anchor === anchor).to.equal(true);
+  expect(snapshotLyraHighlights([{ id: 'healthy', anchor }]).map(highlight => highlight.id)).to.deep.equal(['healthy']);
+});
+
+it('contains a caller descriptor trap for a computed id while retaining an ordinary sibling', () => {
+  let idDescriptors = 0;
+  const hostile = new Proxy({ id: 'unreadable', anchor: { kind: 'page', page: 1 } }, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === 'id') { idDescriptors++; throw new Error('caller descriptor unavailable'); }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const anchor = { kind: 'page' as const, page: 2 };
+  const kept = snapshotLyraHighlights([hostile, { id: 'survivor', anchor }]);
+  expect(idDescriptors).to.equal(1);
+  expect(kept.map(highlight => highlight.id)).to.deep.equal(['survivor']);
+  expect(kept[0]!.anchor === anchor).to.equal(true);
+});

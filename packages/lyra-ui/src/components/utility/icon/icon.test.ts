@@ -1363,3 +1363,26 @@ describe('lr-icon presentation knobs', () => {
     }
   });
 });
+
+
+it('keeps native SVG text and its updates when cloning caller-supplied custom glyphs', async () => {
+  const el = await fixture<LyraIcon>(html`<lr-icon label="Count"></lr-icon>`);
+  const namespace = 'http://www.w3.org/2000/svg';
+  const group = document.createElementNS(namespace, 'g');
+  const text = document.createElementNS(namespace, 'text');
+  text.setAttribute('x', '2');
+  text.setAttribute('y', '16');
+  text.textContent = '42';
+  group.append(text);
+  el.append(group);
+  await waitUntil(() => el.shadowRoot!.querySelector('svg > g > text')?.textContent === '42');
+  const copy = el.shadowRoot!.querySelector('svg > g > text')!;
+  expect(copy.namespaceURI).to.equal(namespace);
+  expect(copy === text).to.equal(false);
+  expect(text.parentNode === group).to.equal(true);
+  expect(copy.getAttribute('x')).to.equal('2');
+  text.textContent = '43';
+  await waitUntil(() => el.shadowRoot!.querySelector('svg > g > text')?.textContent === '43');
+  expect(el.shadowRoot!.querySelector('.semantic-owner')?.getAttribute('aria-label')).to.equal('Count');
+  await expect(el).to.be.accessible();
+});

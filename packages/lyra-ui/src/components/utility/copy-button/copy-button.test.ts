@@ -1322,3 +1322,41 @@ describe('dense-row hit-area override and its coarse-pointer safety net', () => 
     }
   });
 });
+
+
+it('keeps an authored custom-trigger tabindex when a toolbar writes again during its lease', async () => {
+  const el = await fixture<LyraCopyButton>(html`<lr-copy-button value="leased"><button tabindex="7">Copy</button></lr-copy-button>`);
+  await waitUntil(() => el.getToolbarActions()[0]?.matchesEventPath([el.querySelector('button')!]) === true);
+  const trigger = el.querySelector<HTMLButtonElement>('button')!;
+  const action = el.getToolbarActions()[0]!;
+  action.setTabIndex(-1);
+  expect(trigger.tabIndex).to.equal(-1);
+  trigger.setAttribute('tabindex', '5');
+  action.setTabIndex(0);
+  expect(trigger.getAttribute('tabindex')).to.equal('5');
+  action.setTabIndex(-1);
+  expect(trigger.getAttribute('tabindex')).to.equal('5');
+  action.releaseTabIndex?.();
+  expect(trigger.getAttribute('tabindex')).to.equal('5');
+});
+
+it('releases a removed custom trigger before its slotchange and leases its replacement normally', async () => {
+  const el = await fixture<LyraCopyButton>(html`<lr-copy-button value="leased"><button tabindex="7">Copy</button></lr-copy-button>`);
+  const trigger = el.querySelector<HTMLButtonElement>('button')!;
+  await waitUntil(() => el.getToolbarActions()[0]?.matchesEventPath([trigger]) === true);
+  const action = el.getToolbarActions()[0]!;
+  action.setTabIndex(-1);
+  trigger.remove();
+  action.setTabIndex(0);
+  expect(trigger.getAttribute('tabindex')).to.equal('7');
+  expect(action.disabled).to.equal(true);
+  const replacement = document.createElement('button');
+  replacement.textContent = 'Replacement copy';
+  replacement.setAttribute('tabindex', '9');
+  el.append(replacement);
+  await waitUntil(() => action.matchesEventPath([replacement]));
+  action.setTabIndex(0);
+  expect(replacement.tabIndex).to.equal(0);
+  action.releaseTabIndex?.();
+  expect(replacement.getAttribute('tabindex')).to.equal('9');
+});

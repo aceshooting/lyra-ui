@@ -1904,3 +1904,87 @@ it("validates maxHeight before assigning the base custom property", async () => 
     "calc(10rem + 2px)"
   );
 });
+
+
+async function loadDeck(el: LyraPptxViewer, src: string, calls: { open: number }): Promise<void> {
+  let cleanup = () => {};
+  const outcome = new Promise<void>((resolve, reject) => {
+    const loaded = () => { cleanup(); resolve(); };
+    const failed = (event: CustomEvent<{ error: unknown }>) => {
+      cleanup();
+      const error = event.detail.error;
+      reject(new Error(JSON.stringify({
+        errorName: error instanceof Error ? error.name : typeof error,
+        errorMessage: error instanceof Error ? error.message : typeof error,
+        peerOpenCalls: calls.open,
+        status: el.pageViewerSnapshot.status,
+      })));
+    };
+    cleanup = () => {
+      el.removeEventListener('lr-load', loaded);
+      el.removeEventListener('lr-render-error', failed);
+    };
+    el.addEventListener('lr-load', loaded);
+    el.addEventListener('lr-render-error', failed);
+  });
+  try {
+    el.src = src;
+    await outcome;
+  } finally { cleanup(); }
+}
+
+it('reports an anchor-search peer exception without leaking it into the view and supports the next anchor', async () => {
+  const fake = fakeModule(2);
+  const restore = stubFetch();
+  try {
+    const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+    el.loadRenderer = async () => fake.module;
+    await loadDeck(el, 'https://example.test/anchor-peer-failure.pptx', fake.calls);
+    expect(fake.calls.open).to.equal(1);
+    const timing = el as unknown as {
+      anchorTimeoutMs: number;
+      anchorRetryIntervalMs: number;
+    };
+    timing.anchorTimeoutMs = 20;
+    timing.anchorRetryIntervalMs = 2;
+    const container = el.shadowRoot!.querySelector<HTMLElement>('[part="container"]')!;
+    const goToSlide = fake.viewer.goToSlide;
+    fake.viewer.goToSlide = async (index) => {
+      await goToSlide(index);
+      const paragraph = document.createElement('p');
+      paragraph.textContent = index === 1 ? 'needle' : 'First slide';
+      container.replaceChildren(paragraph);
+    };
+    fake.viewer.searchText = () => { throw new Error('private peer search detail'); };
+    const diagnostic = oneEvent(el, 'lr-viewer-diagnostic');
+    expect(await el.scrollToAnchor({ kind: 'text-quote', quote: 'needle' })).to.equal(false);
+    expect((await diagnostic).detail.diagnostic).to.deep.include({ code: 'pptx-search-error', fatal: false, source: 'pptx-renderer' });
+    expect(el.shadowRoot!.textContent?.includes('private peer search detail')).to.equal(false);
+    fake.viewer.searchText = () => [{ slideIndex: 1, nodeId: 'found', matchStart: 0, matchEnd: 6, text: 'needle' }];
+    expect(await el.scrollToAnchor({ kind: 'text-quote', quote: 'needle' })).to.equal(true);
+    expect(el.page).to.equal(2);
+    expect(fake.calls.goToSlide).to.equal(1);
+    expect(container.textContent).to.equal('needle');
+  } finally { restore(); }
+});
+
+it('removes a previous thumbnail placeholder only after a real replacement handle becomes ready', async () => {
+  const fake = fakeModule(2);
+  const restore = stubFetch();
+  try {
+    const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+    el.loadRenderer = async () => fake.module;
+    await loadDeck(el, 'https://example.test/thumbnail-replacement.pptx', fake.calls);
+    const target = await fixture<HTMLDivElement>(html`<div><span>Previous preview</span></div>`);
+    const previous = target.firstElementChild!;
+    const handle = await el.renderPageThumbnailToContainer(1, target, { width: 80 });
+    if (!handle) throw new Error('Expected the public preview handle');
+    try {
+      expect(previous.isConnected).to.equal(false);
+      expect(target.children.length).to.equal(1);
+      expect(target.firstElementChild?.getAttribute('data-slide-index')).to.equal('0');
+      expect(target.firstElementChild?.getAttribute('data-width')).to.equal('80');
+    } finally { handle.dispose(); }
+    expect(target.children.length).to.equal(0);
+  } finally { restore(); }
+});
