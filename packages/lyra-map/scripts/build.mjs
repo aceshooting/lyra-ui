@@ -89,9 +89,11 @@ const build = await rolldown({
           code: code.replace(
             expression,
             `function defaultWorkerUrl(): string {
-        const url = new URL('__LYRA_MODULAR_WORKER_BRIDGE__', import.meta.url);
-        if (url.pathname.endsWith('__LYRA_MODULAR_WORKER_BRIDGE__')) throw new Error('Configure lyraMapWorkerPlugin() in the application build, or call setWorkerUrl() before creating a map.');
-        return url.href;
+        return requireConfiguredModularWorkerUrl('__LYRA_MODULAR_WORKER_BRIDGE__');
+      }
+      function requireConfiguredModularWorkerUrl(url: string): string {
+        if (url.startsWith('__LYRA_MODULAR_WORKER_')) throw new Error('Configure lyraMapWorkerPlugin() in the application build, or call setWorkerUrl() before creating a map.');
+        return url;
       }`
           )
         };

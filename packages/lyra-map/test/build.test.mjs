@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { access, readFile, readdir, writeFile } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test, { after, before } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { build as buildVite, createLogger } from 'vite';
 import { createScratchPackage } from '../scripts/scratch-package.mjs';
 import { CHANGED_SOURCE_FILES, upstreamRoot } from './pinned-upstream.mjs';
 import { relocateUpstream } from './relocated-upstream.mjs';
@@ -51,6 +53,39 @@ test('the root and worker entries point into the content-addressed module graph'
   assert.ok(root && files.has(root[1]), 'the root re-exports a generated module');
   const worker = /^import '\.\/(modules\/worker-[\w-]+\.mjs)';\n$/u.exec(await text(built.directory, 'dist/worker.mjs'));
   assert.ok(worker && files.has(worker[1]), 'the worker entry imports a generated module');
+});
+
+test('an unused renderer loader needs no worker plugin and emits no asset warnings', async () => {
+  const consumerRoot = await mkdtemp(join(tmpdir(), 'lyra-map-unused-consumer-'));
+  try {
+    const scope = join(consumerRoot, 'node_modules/@aceshooting');
+    await mkdir(scope, { recursive: true });
+    await symlink(built.directory, join(scope, 'lyra-map'), 'dir');
+    await writeFile(join(consumerRoot, 'package.json'), JSON.stringify({ private: true, type: 'module' }));
+    await writeFile(join(consumerRoot, 'index.html'), '<script type="module" src="/main.js"></script>');
+    await writeFile(join(consumerRoot, 'renderer.js'),
+      "export const loadRenderer = () => import('@aceshooting/lyra-map');\n");
+    await writeFile(join(consumerRoot, 'main.js'),
+      "import { loadRenderer } from './renderer.js';\nglobalThis.unusedRendererProbe = true;\n");
+    const warnings = [];
+    const logger = createLogger('silent');
+    logger.warn = logger.warnOnce = message => warnings.push(message);
+    const consumer = await buildVite({
+      configFile: false, root: consumerRoot, customLogger: logger,
+      build: { write: false },
+    });
+    assert.deepEqual(warnings, [], 'an unconfigured, unused renderer has no asset request to resolve');
+    assert.ok(!Array.isArray(consumer) && consumer.output);
+    assert.deepEqual(consumer.output.filter(item => item.type === 'asset').map(item => item.fileName), ['index.html']);
+    const entry = consumer.output.find(item => item.type === 'chunk' && item.isEntry);
+    assert.ok(entry, 'the consumer entry is emitted');
+    assert.match(entry.code, /unusedRendererProbe/u);
+    assert.deepEqual(entry.imports, [], 'the entry does not load a renderer or worker');
+    assert.deepEqual(entry.dynamicImports, [], 'the unused loader is removed from the entry');
+    assert.ok(!entry.code.includes('__LYRA_MODULAR_WORKER_BRIDGE__'));
+  } finally {
+    await rm(consumerRoot, { recursive: true, force: true });
+  }
 });
 
 test('each control has a granular entry and a declaration that reuses the root types', async () => {

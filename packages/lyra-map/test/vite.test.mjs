@@ -54,6 +54,23 @@ test('uses Vite worker URL handling during development without a document preloa
   assert.deepEqual(server.config.server.fs.allow, ['/app', '/engine']);
 });
 
+test('supplies the deferred worker marker as an absolute URL in development and production', () => {
+  const deferred = "const url = requireConfiguredModularWorkerUrl('__LYRA_MODULAR_WORKER_BRIDGE__');";
+  for (const command of ['serve', 'build']) {
+    const plugin = lyraMapWorkerPlugin({ workerEntry: '/engine/worker.mjs' });
+    plugin.configResolved({ command });
+    const emitted = [];
+    const result = plugin.transform.call({ emitFile(chunk) { emitted.push(chunk); return 'paired'; } }, deferred);
+    assert.ok(result, `${command} resolves the deferred marker`);
+    assert.ok(!result.code.includes('__LYRA_MODULAR_WORKER_BRIDGE__'));
+    assert.match(result.code, /requireConfiguredModularWorkerUrl\(new URL\([^]*?import\.meta\.url\)\.href\)/u);
+    assert.equal(emitted.length, command === 'build' ? 1 : 0);
+    if (command === 'serve') assert.match(result.code, /worker\.mjs\?worker&url/u);
+    else assert.match(result.code, /import\.meta\.ROLLUP_FILE_URL_paired/u);
+    assert.doesNotThrow(() => plugin.generateBundle());
+  }
+});
+
 test('leaves unrelated modules unchanged', () => {
   assert.equal(lyraMapWorkerPlugin().transform('export const value = 1;'), undefined);
 });

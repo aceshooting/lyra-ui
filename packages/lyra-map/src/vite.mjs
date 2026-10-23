@@ -1,7 +1,7 @@
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 export const workerBridgeToken = '__LYRA_MODULAR_WORKER_BRIDGE__';
-// The generated companion carries this token only in defaultWorkerUrl's URL constructor.
+// The generated companion passes this token to its configured-worker guard, not to an asset URL.
 // A single consumer graph owns the renderer, module worker, and their shared chunks.
 export function lyraMapWorkerPlugin({
   workerEntry = new URL('./worker.mjs', import.meta.url),
@@ -32,14 +32,14 @@ export function lyraMapWorkerPlugin({
       if (!server.config.server.fs.allow.includes(directory)) server.config.server.fs.allow.push(directory);
     },
     transform(code) {
-      const pattern = /new URL\((['"])__LYRA_MODULAR_WORKER_BRIDGE__\1\s*,\s*import\.meta\.url\)/g;
+      const pattern = /(['"])__LYRA_MODULAR_WORKER_BRIDGE__\1/g;
       if (!pattern.test(code)) return;
       if (command === 'serve') {
         pattern.lastIndex = 0;
         return {
           code:
             `import __lyraModularDevWorkerUrl from ${JSON.stringify(workerPath + '?worker&url')};\n` +
-            code.replace(pattern, 'new URL(__lyraModularDevWorkerUrl, import.meta.url)'),
+            code.replace(pattern, 'new URL(__lyraModularDevWorkerUrl, import.meta.url).href'),
           map: null
         };
       }
@@ -47,7 +47,7 @@ export function lyraMapWorkerPlugin({
       hits++;
       pattern.lastIndex = 0;
       return {
-        code: code.replace(pattern, `new URL(import.meta.ROLLUP_FILE_URL_${reference}, import.meta.url)`),
+        code: code.replace(pattern, `new URL(import.meta.ROLLUP_FILE_URL_${reference}, import.meta.url).href`),
         map: null
       };
     },
