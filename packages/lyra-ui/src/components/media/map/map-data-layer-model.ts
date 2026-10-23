@@ -1,3 +1,7 @@
+import { projectMapVectorStyle, resolveMapVectorStyle, type CanonicalMapVectorStyle,
+  type LyraMapVectorPaint, type LyraMapVectorLayout, type LyraMapVectorStyleExpression } from './map-vector-style.js';
+export type { LyraMapVectorPaintProperty, LyraMapVectorLayoutProperty, LyraMapVectorStyleExpression,
+  LyraMapVectorNumericValue, LyraMapVectorColorValue, LyraMapVectorPaint, LyraMapVectorLayout } from './map-vector-style.js';
 import { projectMapLocalImageUrl } from './map-local-image-url.js';
 import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR, readOwnArrayLength, UNSAFE_OWN_DATA_DESCRIPTOR, type OwnDataDescriptorResult } from '../../../internal/data-descriptors.js';
 import { projectMapInteractionOptions, type LyraMapInteractionOptions, type CanonicalMapInteraction } from './map-interaction-options.js';
@@ -7,11 +11,18 @@ import type { LyraMapOverlayLayer, LyraMapOverlaySource } from './map-overlay-ad
 /** Four native corners, ordered top-left, top-right, bottom-right, bottom-left. */
 export type LyraMapSourceCoordinates = readonly [readonly [number, number], readonly [number, number], readonly [number, number], readonly [number, number]];
 export type LyraMapLabelValue = null | boolean | number | string | readonly LyraMapLabelValue[] | { readonly [key: string]: LyraMapLabelValue };
+/** Physical native text anchor, independent of the surrounding UI direction. */
+export type LyraMapLabelAnchor = 'center' | 'left' | 'right' | 'top' | 'bottom' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 /** Text labels require a style with a glyph provider. Set exactly one of field or expression. */
 export interface LyraMapLabelOptions {
   readonly field?: string;
   readonly expression?: readonly LyraMapLabelValue[];
   readonly placement?: 'point' | 'line';
+  /** Physical native anchor. Omission preserves the native center default. */
+  readonly anchor?: LyraMapLabelAnchor;
+  /** Native text-size ems; positive x is right and y down in label coordinates. Not mirrored in RTL.
+   * Each finite coordinate is within [-16,16]. Omission preserves native [0,0]. */
+  readonly offset?: readonly [number, number];
   readonly size?: number;
   readonly color?: string;
   readonly haloColor?: string;
@@ -49,6 +60,12 @@ export interface LyraMapVectorDataLayer extends LyraMapExternalDataLayerOptions 
   readonly width?: number;
   readonly radius?: number;
   readonly categoryField?: string;
+  /** Render-specific bounded paint; explicit values override the flat defaults. Row opacity remains separate. */
+  readonly paint?: LyraMapVectorPaint;
+  /** Render-specific bounded layout. Icon-only symbols do not require glyphs. */
+  readonly layout?: LyraMapVectorLayout;
+  /** Bounded boolean expression applied to the primary layer and its optional label. */
+  readonly filter?: LyraMapVectorStyleExpression;
   readonly label?: LyraMapLabelOptions;
 }
 export interface LyraMapRasterDataLayer extends LyraMapExternalDataLayerOptions {
@@ -75,6 +92,8 @@ export type LyraMapExternalDataLayer = LyraMapVectorDataLayer | LyraMapRasterDat
 export interface CanonicalMapLabel {
   readonly expression: readonly LyraMapLabelValue[];
   readonly placement: 'point' | 'line';
+  readonly anchor?: LyraMapLabelAnchor;
+  readonly offset?: readonly [number, number];
   readonly size: number;
   readonly color?: string;
   readonly haloColor?: string;
@@ -85,6 +104,7 @@ export interface CanonicalMapLabel {
   readonly ignorePlacement: boolean;
 }
 export interface CanonicalMapExternalLayer extends CanonicalMapInteraction {
+  readonly style?: CanonicalMapVectorStyle;
   readonly sourceId: string;
   readonly kind: LyraMapExternalDataLayer['kind'];
   readonly source: Readonly<Record<string, unknown>>;
@@ -144,7 +164,8 @@ function dense(value: unknown, limit: number): readonly unknown[] {
   const prototype = Object.getPrototypeOf(value) as object | null;
   const constructor = prototype && Object.getOwnPropertyDescriptor(prototype, 'constructor');
   if (!constructor || !Object.hasOwn(constructor, 'value') || typeof constructor.value !== 'function' ||
-    Function.prototype.toString.call(constructor.value) !== Function.prototype.toString.call(Array)) return invalid();
+    Function.prototype.toString.call(constructor.value) !== Function.prototype.toString.call(Array) ||
+    Object.getOwnPropertyDescriptor(constructor.value, 'prototype')?.value !== prototype) return invalid();
   const length = readOwnArrayLength(value);
   if (length === undefined || length > limit || Reflect.ownKeys(value).length !== length + 1) return invalid();
   const output: unknown[] = [];
@@ -199,6 +220,25 @@ function zoomRange(value: object): readonly [number, number] {
   const max = numeric(authoredMax, 24, 0, 24);
   return min <= max ? [min, max] : invalid();
 }
+export interface CanonicalMapRowPlacement {
+  readonly before?: string;
+  readonly minZoom: number;
+  readonly maxZoom: number;
+  readonly requested: boolean;
+}
+
+/** Own-data projection shared by legacy GeoJSON rows and explicit source families. */
+export function projectMapRowPlacement(value: unknown): CanonicalMapRowPlacement | undefined {
+  try {
+    if (value === null || typeof value !== 'object') return undefined;
+    const [minZoom, maxZoom] = zoomRange(value);
+    const before = own(value, 'before');
+    const requested = ['before', 'minZoom', 'maxZoom'].some(key => getOwnDataDescriptor(value, key) !== MISSING_OWN_DATA_DESCRIPTOR);
+    return Object.freeze({ minZoom, maxZoom, requested,
+      ...(before === undefined ? {} : { before: id(before) }) });
+  } catch { return undefined; }
+}
+
 function tileSource(value: unknown, kind: 'vector' | 'raster', base: string): Readonly<Record<string, unknown>> {
   const source = record(value, ['url', 'tiles', 'minZoom', 'maxZoom', 'attribution', 'scheme', ...(kind === 'raster' ? ['tileSize'] : [])]);
   const sourceUrl = own(source, 'url'); const tiles = own(source, 'tiles');
@@ -225,7 +265,7 @@ function tileSource(value: unknown, kind: 'vector' | 'raster', base: string): Re
 /** Bounded native expression data, with no accessors, executable values, cycles or handles. */
 export function projectMapLabelOptions(value: unknown): CanonicalMapLabel | undefined {
   try {
-    const input = record(value, ['field', 'expression', 'placement', 'size', 'color', 'haloColor', 'haloWidth', 'minZoom', 'font', 'allowOverlap', 'ignorePlacement']);
+    const input = record(value, ['field', 'expression', 'placement', 'anchor', 'offset', 'size', 'color', 'haloColor', 'haloWidth', 'minZoom', 'font', 'allowOverlap', 'ignorePlacement']);
     const field = own(input, 'field'); const expression = own(input, 'expression');
     if ((field === undefined) === (expression === undefined)) return undefined;
     let count = 0; let bytes = 0; const path = new WeakSet<object>(); const encoder = new TextEncoder();
@@ -257,11 +297,19 @@ export function projectMapLabelOptions(value: unknown): CanonicalMapLabel | unde
     const authoredPlacement = own(input, 'placement');
     const placement = authoredPlacement === undefined ? 'point' : authoredPlacement;
     if (placement !== 'point' && placement !== 'line') return undefined;
+    const anchor = own(input, 'anchor');
+    if (Object.hasOwn(input, 'anchor') && (typeof anchor !== 'string' ||
+      !['center', 'left', 'right', 'top', 'bottom', 'top-left', 'top-right', 'bottom-left', 'bottom-right'].includes(anchor))) return undefined;
+    const offsetInput = own(input, 'offset');
+    const offset = Object.hasOwn(input, 'offset') ? dense(offsetInput, 2) : undefined;
+    if (offset && (offset.length !== 2 || offset.some(value => typeof value !== 'number' || !Number.isFinite(value) || Math.abs(value) > 16))) return undefined;
     const size = numeric(own(input, 'size'), 12, 1, 128);
     const fonts = own(input, 'font');
     const font = fonts === undefined ? undefined : Object.freeze(dense(fonts, 8).map(entry => text(entry, 128)));
     if (font?.length === 0) return undefined;
     return Object.freeze({ expression: projected as readonly LyraMapLabelValue[], placement, size,
+      ...(anchor === undefined ? {} : { anchor: anchor as LyraMapLabelAnchor }),
+      ...(offset === undefined ? {} : { offset: Object.freeze([offset[0], offset[1]]) as readonly [number, number] }),
       color: optionalText(own(input, 'color')), haloColor: optionalText(own(input, 'haloColor')),
       haloWidth: numeric(own(input, 'haloWidth'), 0, 0, size / 4), minZoom: numeric(own(input, 'minZoom'), 0, 0, 24),
       font, allowOverlap: boolean(own(input, 'allowOverlap'), false), ignorePlacement: boolean(own(input, 'ignorePlacement'), false) });
@@ -271,7 +319,7 @@ export function projectMapLabelOptions(value: unknown): CanonicalMapLabel | unde
 function external(value: unknown, base: string, ownerOrigin: string, kind: unknown): CanonicalMapExternalLayer {
   if (!isPlainDataRecord(value)) return invalid();
   if (typeof kind !== 'string' || !EXTERNAL_KINDS.has(kind)) return invalid();
-  const extra = kind === 'vector' ? ['source', 'sourceLayer', 'render', 'color', 'strokeColor', 'width', 'radius', 'categoryField', 'label']
+  const extra = kind === 'vector' ? ['source', 'sourceLayer', 'render', 'color', 'strokeColor', 'width', 'radius', 'categoryField', 'label', 'paint', 'layout', 'filter']
     : kind === 'raster' ? ['source'] : kind === 'image' ? ['url', 'coordinates'] : ['canvas', 'coordinates', 'animate', 'redrawRevision'];
   const input = record(value, [...COMMON_KEYS, ...extra], kind);
   const [minZoom, maxZoom] = zoomRange(input);
@@ -286,7 +334,13 @@ function external(value: unknown, base: string, ownerOrigin: string, kind: unkno
   if (kind === 'vector' && render === 'raster') return invalid();
   const labelInput = own(input, 'label');
   const label = labelInput === undefined ? undefined : projectMapLabelOptions(labelInput);
-  if ((labelInput !== undefined && !label) || (render === 'symbol' && !label)) return invalid();
+  if (labelInput !== undefined && !label) return invalid();
+  const style = kind === 'vector' && render !== 'raster' ? projectMapVectorStyle({ render, hasLabel: label !== undefined,
+    ...(Object.hasOwn(input, 'paint') ? { paint: own(input, 'paint') } : {}),
+    ...(Object.hasOwn(input, 'layout') ? { layout: own(input, 'layout') } : {}),
+    ...(Object.hasOwn(input, 'filter') ? { filter: own(input, 'filter') } : {}),
+  }) : undefined;
+  if (kind === 'vector' && !style) return invalid();
   if (label && Math.max(minZoom, label.minZoom) > maxZoom) return invalid();
   return Object.freeze({ ...projectMapInteractionOptions(input), sourceId: id(own(input, 'sourceId')), kind: kind as CanonicalMapExternalLayer['kind'], source,
     ...(revision === undefined ? {} : { redrawRevision: revision as number }),
@@ -295,7 +349,7 @@ function external(value: unknown, base: string, ownerOrigin: string, kind: unkno
     minZoom, maxZoom, opacity: numeric(own(input, 'opacity'), 1, 0, 1), category: optionalText(own(input, 'category'), 128),
     categoryField: optionalText(own(input, 'categoryField'), 128), color: optionalText(own(input, 'color')),
     strokeColor: optionalText(own(input, 'strokeColor')), width: numeric(own(input, 'width'), 2, 0, 100),
-    radius: numeric(own(input, 'radius'), 4, 0, 200), label });
+    radius: numeric(own(input, 'radius'), 4, 0, 200), label, ...(style ? { style } : {}) });
 }
 export type MapDataLayerModel<T> = { readonly ok: true; readonly geojson: readonly T[]; readonly external: readonly CanonicalMapExternalLayer[] } | { readonly ok: false };
 
@@ -304,6 +358,7 @@ export function projectMapDataLayerModel<T extends { readonly sourceId: string }
   readonly baseUrl: string; readonly ownerOrigin?: string; readonly projectGeoJson: (row: unknown, kind: OwnDataDescriptorResult) => T | undefined;
 }): MapDataLayerModel<T> {
   let requestedExternal = false;
+  let invalidPlacement = false;
   try {
     const geojson: T[] = []; const sources: CanonicalMapExternalLayer[] = []; const seen = new Set<string>();
     if (!Array.isArray(value)) return Object.freeze({ ok: true, geojson: Object.freeze(geojson), external: Object.freeze(sources) });
@@ -322,13 +377,16 @@ export function projectMapDataLayerModel<T extends { readonly sourceId: string }
         if (sources.length >= 32) return { ok: false };
         seen.add(layer.sourceId); sources.push(layer);
       } else {
+        if (row !== null && typeof row === 'object' &&
+          ['before', 'minZoom', 'maxZoom'].some(key => getOwnDataDescriptor(row, key) !== MISSING_OWN_DATA_DESCRIPTOR) &&
+          !projectMapRowPlacement(row)) { invalidPlacement = true; return { ok: false }; }
         const layer = options.projectGeoJson(row, descriptor);
         if (!layer || seen.has(layer.sourceId)) continue;
         seen.add(layer.sourceId); geojson.push(layer);
       }
     }
     return Object.freeze({ ok: true, geojson: Object.freeze(geojson), external: Object.freeze(sources) });
-  } catch { return requestedExternal ? { ok: false } : { ok: true, geojson: Object.freeze([]), external: Object.freeze([]) }; }
+  } catch { return requestedExternal || invalidPlacement ? { ok: false } : { ok: true, geojson: Object.freeze([]), external: Object.freeze([]) }; }
 }
 
 export function buildMapLabelLayer(id: string, source: string, label: CanonicalMapLabel,
@@ -336,7 +394,9 @@ export function buildMapLabelLayer(id: string, source: string, label: CanonicalM
   return { id, type: 'symbol', source, minzoom: label.minZoom,
     layout: { 'text-field': label.expression, 'text-size': label.size, 'symbol-placement': label.placement,
       'text-allow-overlap': label.allowOverlap, 'text-ignore-placement': label.ignorePlacement,
-      ...(label.font ? { 'text-font': label.font } : {}) },
+      ...(label.font ? { 'text-font': label.font } : {}),
+      ...(label.anchor === undefined ? {} : { 'text-anchor': label.anchor }),
+      ...(label.offset === undefined ? {} : { 'text-offset': label.offset }) },
     paint: { 'text-color': color(label.color), 'text-halo-color': color(label.haloColor), 'text-halo-width': label.haloWidth } };
 }
 
@@ -344,6 +404,8 @@ export function buildMapLabelLayer(id: string, source: string, label: CanonicalM
 export function buildMapExternalLayers(rows: readonly CanonicalMapExternalLayer[], context: {
   readonly nativeId: (row: CanonicalMapExternalLayer) => string;
   readonly color: (value: string | undefined) => string;
+  /** Strict resolution for authored typed color leaves; invalid colors must throw. */
+  readonly styleColor?: (value: string) => string;
   readonly hidden: ReadonlySet<string>;
   readonly glyphs: boolean;
   readonly mutedOpacity?: number;
@@ -360,8 +422,12 @@ export function buildMapExternalLayers(rows: readonly CanonicalMapExternalLayer[
     const alpha = !(row.category && context.hidden.has(row.category)) && row.categoryField && context.hidden.size ? ['case', ['in', ['to-string', ['get', row.categoryField]],
       ['literal', [...context.hidden]]], opacity * muted, opacity] : opacity;
     const sourceLayer = row.sourceLayer ? { 'source-layer': row.sourceLayer } : {};
+    const style = row.style ? resolveMapVectorStyle(row.style, context.styleColor ?? (() => { throw new Error('Strict map color resolution is unavailable.'); })) : undefined;
     const push = (layer: LyraMapOverlayLayer['layer']): void => {
-      layers.push({ layer: { ...layer, ...sourceLayer, minzoom: Math.max(row.minZoom, typeof layer['minzoom'] === 'number' ? layer['minzoom'] : 0), maxzoom: row.maxZoom },
+      const filter = style?.filter;
+      const filtered = filter === undefined ? layer : { ...layer,
+        filter: layer['filter'] === undefined ? filter : ['all', layer['filter'], filter] };
+      layers.push({ layer: { ...filtered, ...sourceLayer, minzoom: Math.max(row.minZoom, typeof layer['minzoom'] === 'number' ? layer['minzoom'] : 0), maxzoom: row.maxZoom },
         ...(row.before ? { before: row.before } : {}) });
       if (row.sourceLayer) hits.set(layer.id, { sourceId: row.sourceId, sourceLayer: row.sourceLayer });
     };
@@ -370,7 +436,9 @@ export function buildMapExternalLayers(rows: readonly CanonicalMapExternalLayer[
       const paint = row.render === 'line' ? { 'line-color': color, 'line-width': row.width, 'line-opacity': alpha }
         : row.render === 'circle' ? { 'circle-color': color, 'circle-radius': row.radius, 'circle-stroke-color': stroke, 'circle-stroke-width': row.width, 'circle-opacity': alpha, 'circle-stroke-opacity': alpha }
           : row.render === 'fill' ? { 'fill-color': color, 'fill-outline-color': stroke, 'fill-opacity': alpha } : { 'raster-opacity': opacity };
-      push({ id: `${sourceId}-render`, type: row.render, source: sourceId, paint });
+      push({ id: `${sourceId}-render`, type: row.render, source: sourceId,
+        paint: style ? { ...paint, ...style.paint } : paint,
+        ...(style && Object.keys(style.layout).length ? { layout: style.layout } : {}) });
       if ((row.kind === 'image' || row.kind === 'canvas') && row.interactive) {
         const corners = row.source['coordinates'] as LyraMapSourceCoordinates;
         const ring = Object.freeze([...corners.map(point => Object.freeze([...point])), Object.freeze([...corners[0]!])]);
@@ -382,8 +450,18 @@ export function buildMapExternalLayers(rows: readonly CanonicalMapExternalLayer[
         hits.set(hitLayer, Object.freeze({ sourceId: row.sourceId }));
       }
     }
-    if (row.label) {
-      const layer = buildMapLabelLayer(`${sourceId}-${row.render === 'symbol' ? 'render' : 'label'}`, sourceId, row.label, context.color);
+    if (row.render === 'symbol') {
+      const icon = style?.layout['icon-image'] !== undefined;
+      const layer: LyraMapOverlayLayer['layer'] = row.label
+        ? buildMapLabelLayer(`${sourceId}-render`, sourceId, row.label, context.color)
+        : { id: `${sourceId}-render`, type: 'symbol', source: sourceId };
+      push({ ...layer,
+        layout: { ...layer['layout'] as Record<string, unknown>,
+          ...(icon ? { 'icon-size': 1, 'icon-allow-overlap': false, 'icon-ignore-placement': false } : {}), ...style?.layout },
+        paint: { ...layer['paint'] as Record<string, unknown>, ...style?.paint,
+          ...(row.label ? { 'text-opacity': alpha } : {}), ...(icon ? { 'icon-opacity': alpha } : {}) } });
+    } else if (row.label) {
+      const layer = buildMapLabelLayer(`${sourceId}-label`, sourceId, row.label, context.color);
       push({ ...layer, paint: { ...layer['paint'] as Record<string, unknown>, 'text-opacity': alpha } });
     }
     if (layers.length > 128) throw new Error('Map data layer limit exceeded.');

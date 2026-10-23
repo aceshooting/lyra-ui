@@ -244,3 +244,124 @@ describe('canvas redraw revision admission', () => {
   });
 
 });
+
+
+describe('map row bounds and physical label placement', () => {
+  it('rejects invalid new GeoJSON bounds atomically without invoking descriptors', () => {
+    let reads = 0;
+    const rows = [
+      { sourceId: 'geo', minZoom: 12, maxZoom: 3 },
+      { sourceId: 'geo', minZoom: Infinity },
+      { sourceId: 'geo', before: '' },
+      { sourceId: 'geo', get maxZoom() { reads++; return 8; } },
+    ];
+    for (const row of rows) expect(project([row]).ok).to.equal(false);
+    expect(reads).to.equal(0);
+    expect(project([{ sourceId: 'geo', minZoom: 5, maxZoom: 5 }]).ok).to.equal(true);
+  });
+  it('projects frozen label placement and omits native defaults when not requested', () => {
+    const offset = [0, 1.25];
+    const label = projectMapLabelOptions({ field: 'name', anchor: 'top', offset });
+    expect(label !== undefined).to.equal(true);
+    if (!label) return;
+    offset[1] = 9;
+    const layer = buildMapLabelLayer('label', 'source', label, value => value ?? '#000');
+    expect(layer['layout']).to.include({ 'text-anchor': 'top' });
+    expect((layer['layout'] as Record<string, unknown>)['text-offset']).to.deep.equal([0, 1.25]);
+    expect(Object.isFrozen((layer['layout'] as Record<string, unknown>)['text-offset'])).to.equal(true);
+    const plain = projectMapLabelOptions({ field: 'name' });
+    if (!plain) throw new Error('Expected label');
+    const layout = buildMapLabelLayer('label', 'source', plain, value => value ?? '#000')['layout'] as object;
+    expect(Object.hasOwn(layout, 'text-anchor')).to.equal(false);
+    expect(Object.hasOwn(layout, 'text-offset')).to.equal(false);
+  });
+  it('rejects unsafe placement tuples and exact-token violations without reading getters', () => {
+    let reads = 0;
+    const getter = [0, 1]; Object.defineProperty(getter, '1', { get() { reads++; return 1; } });
+    const extra = Object.assign([0, 1], { extra: true });
+    for (const offset of [[], [0], [0, 1, 2], new Array(2), [NaN, 0], [0, Infinity], [17, 0], [0, -17], getter, extra]) {
+      expect(projectMapLabelOptions({ field: 'name', offset }) === undefined).to.equal(true);
+    }
+    for (const anchor of ['TOP', ' top', 'top ', 'start', '', null]) {
+      expect(projectMapLabelOptions({ field: 'name', anchor }) === undefined).to.equal(true);
+    }
+    expect(reads).to.equal(0);
+    for (const anchor of ['center', 'left', 'right', 'top', 'bottom', 'top-left', 'top-right', 'bottom-left', 'bottom-right']) {
+      expect(projectMapLabelOptions({ field: 'name', anchor, offset: [-16, 16], placement: 'line' }) !== undefined).to.equal(true);
+    }
+  });
+});
+
+
+describe('typed vector style integration', () => {
+  it('admits explicit vector paint and resolves only typed color outputs', () => {
+    const model = project([{ ...vector, paint: {
+      'line-color': ['match', ['get', 'var(--feature-key)'], 'var(--match-label)', 'var(--line-color)', '#0000ff'],
+      'line-width': ['step', ['zoom'], 1, 4, 3],
+    }, layout: { 'line-cap': 'round' }, filter: ['==', ['get', 'kind'], 'road'] }]);
+    expect(model.ok).to.equal(true);
+    if (!model.ok) return;
+    const colors: string[] = [];
+    const built = buildMapExternalLayers(model.external, { nativeId: () => 'native', glyphs: false, hidden: new Set(),
+      color: value => value ?? '#000', styleColor: value => { colors.push(value); return value === 'var(--line-color)' ? '#ff0000' : value; } });
+    expect(colors).to.deep.equal(['var(--line-color)', '#0000ff']);
+    const layer = built.layers[0]!.layer;
+    expect(JSON.stringify(layer['paint'])).to.include('var(--feature-key)').and.include('var(--match-label)').and.not.include('var(--line-color)');
+    expect(layer['layout']).to.deep.equal({ 'line-cap': 'round' });
+    expect(layer['filter']).to.deep.equal(['==', ['get', 'kind'], 'road']);
+  });
+
+  it('supports finite icon-only symbols without glyphs and retains category alpha', () => {
+    const model = project([{ ...vector, render: 'symbol', category: 'quiet', opacity: 0.5,
+      layout: { 'icon-image': ['match', ['get', 'kind'], 'road', 'road-icon', 'default-icon'], 'icon-size': 2 },
+      paint: { 'icon-color': '#ff0000' } }]);
+    expect(model.ok).to.equal(true);
+    if (!model.ok) return;
+    const built = buildMapExternalLayers(model.external, { nativeId: () => 'native', glyphs: false, hidden: new Set(['quiet']), color: value => value ?? '#000', styleColor: value => value });
+    expect(built.layers.length).to.equal(1);
+    const layer = built.layers[0]!.layer;
+    expect(layer.type).to.equal('symbol');
+    expect(layer['layout']).to.include({ 'icon-size': 2, 'icon-allow-overlap': false, 'icon-ignore-placement': false });
+    expect(Object.hasOwn(layer['layout'] as object, 'text-field')).to.equal(false);
+    expect((layer['paint'] as Record<string, unknown>)['icon-opacity']).to.equal(0.075);
+  });
+
+  it('applies the user filter to primary and secondary labels and restores flat defaults on omission', () => {
+    const row = { ...vector, label: { field: 'name', anchor: 'top', offset: [0, 1.25] },
+      paint: { 'line-width': 7 }, filter: ['==', ['get', 'kind'], 'road'] };
+    const model = project([row]);
+    expect(model.ok).to.equal(true);
+    if (!model.ok) return;
+    const context = { nativeId: () => 'native', glyphs: true, hidden: new Set<string>(), color: (value: string | undefined) => value ?? '#000' };
+    const built = buildMapExternalLayers(model.external, context);
+    expect(built.layers.length).to.equal(2);
+    for (const entry of built.layers) expect(entry.layer['filter']).to.deep.equal(['==', ['get', 'kind'], 'road']);
+    expect(built.layers[1]!.layer['layout']).to.include({ 'text-anchor': 'top' });
+    expect(Object.hasOwn(built.layers[1]!.layer['paint'] as object, 'line-width')).to.equal(false);
+    const plain = project([{ ...vector }]);
+    if (!plain.ok) throw new Error('Expected default vector');
+    const original = buildMapExternalLayers(plain.external, context).layers[0]!.layer;
+    expect((original['paint'] as Record<string, unknown>)['line-width']).to.equal(2);
+    expect(Object.hasOwn(original, 'filter')).to.equal(false);
+    expect(Object.hasOwn(original, 'layout')).to.equal(false);
+  });
+
+  it('requires strict resolution for explicit colors without changing no-style compatibility', () => {
+    const model = project([{ ...vector, paint: { 'line-color': 'not-a-color' } }]);
+    if (!model.ok) throw new Error('Expected structural color admission');
+    const context = { nativeId: () => 'native', glyphs: false, hidden: new Set<string>(), color: () => '#000' };
+    expect(() => buildMapExternalLayers(model.external, context)).to.throw();
+    expect(() => buildMapExternalLayers(model.external, { ...context, styleColor: () => { throw new Error('Invalid authored color'); } })).to.throw();
+    const plain = project([vector]);
+    if (!plain.ok) throw new Error('Expected default vector');
+    expect(() => buildMapExternalLayers(plain.external, context)).not.to.throw();
+  });
+
+  it('rejects style keys, explicit undefined and malformed icon symbols before construction', () => {
+    for (const extra of [{ paint: undefined }, { layout: undefined }, { filter: undefined },
+      { paint: { 'line-opacity': 0.5 } }, { layout: { 'text-anchor': 'top' } },
+      { paint: { 'line-width': ['+', 1, 2] } }, { render: 'symbol', layout: { 'icon-size': 2 } }]) {
+      expect(project([{ ...vector, ...extra }]).ok).to.equal(false);
+    }
+  });
+});

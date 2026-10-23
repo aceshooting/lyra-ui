@@ -1,12 +1,13 @@
 # WebGL 3D views (`@aceshooting/lyra-3d`)
 
-Status (2026-10-22): phase 0 and the shared foundation are complete. The four companion engines
-are implemented, with 217 passing unit tests and 80 passing browser cases in each of Chromium,
-Firefox and WebKit. Component integration in phases 2 to 5, real-GPU performance, application
-coverage and release qualification remain pending. Nothing has shipped. Today `lr-graph`
-`view="3d"` is a zero-dependency Canvas 2D perspective mode with no 3D force solver, intended for low
-hundreds of nodes; `lr-embedding-explorer` draws an SVG scatter that renders at most 1,000 points (an
-evenly spaced sample of larger inputs); no component shows 3D models, point clouds or 360° media.
+Status (2026-10-23): the shared foundation, four companion engines and component integrations
+are implemented, including graph and point views, 360° image/video modes, the model viewer and
+its document-viewer integration. Integrated browser, package and fallback checks have passed on
+previous candidates. Real-GPU measurements on an integrated candidate met the 10k-node/30k-edge
+and 100k-point rendering targets. Final-candidate qualification after dependency and toolchain
+updates, the remaining performance and application acceptance checks, and first publication are
+pending. Nothing has shipped to npm. The optional WebGL views retain their documented built-in
+or text alternatives.
 
 ## Objective and boundaries
 
@@ -91,8 +92,8 @@ The existing `nodes`, `edges` and `points` properties and their limits stay unch
   supports. Lyra UI lists it as an optional peer.
 - Every opt-in and the new `lr-model-viewer` are additive; they ship in 30.0.0 together with the
   release's breaking changes.
-- A new npm package needs its trusted-publisher entry configured before the first publish; without
-  it the publish fails with E404.
+- A new npm package uses the protected first-publication bootstrap. After it exists on npm,
+  configure its trusted publisher for subsequent releases.
 
 ## Targets and budgets
 
@@ -137,8 +138,9 @@ Exit: written contract, measured spike, and a go or narrow decision.
 - [x] Lyra UI side: shared engine loader and capability validation, the `engine` property helper,
   typed-column validation and localized foundation strings.
 - [x] Size gates prove Three.js is unreachable from every Lyra UI entry point.
-- [ ] Connect component opt-ins and fallback notices in the later view phases.
-- [ ] Configure the trusted publisher before the companion's first publication.
+- [x] Connect component opt-ins and fallback notices in the later view phases.
+- [ ] Complete the protected first-publication bootstrap, then configure the trusted publisher
+  for subsequent releases.
 
 ### 2. Graph engine (L)
 
@@ -158,7 +160,7 @@ Exit: the fallback chain works in all three engines and meets the 10k-node targe
 - [x] `lr-embedding-explorer`: `engine`, optional `z` coordinate, a keyboard cursor and paginated
   list for large point sets, every point rendered up to the documented limit.
 - [x] `lr-chart-3d`: 3D scatter, bubble and line charts with axes, gridlines and tick labels.
-- [ ] Point-cloud files (PLY, XYZ, PCD) through the model viewer's file pipeline.
+- [x] Point-cloud files (PLY, XYZ, PCD) through the model viewer's file pipeline.
 
 Exit: meets the 100k-point target; the fallback chain works in all three engines.
 
@@ -173,12 +175,13 @@ Exit: meets the 100k-point target; the fallback chain works in all three engines
 
 - [x] `lyra-3d/model`: bounded model-file admission and rendering for glTF/GLB, STL, OBJ, PLY,
   XYZ and PCD, embedded-resource handling, orbit camera, picking and owned-resource disposal.
-- [ ] New `lr-model-viewer` tag (viewers family): glTF/GLB, STL, OBJ and point-cloud files, orbit,
+- [x] New `lr-model-viewer` tag (viewers family): glTF/GLB, STL, OBJ and point-cloud files, orbit,
   fit, lighting from tokens, progress, loading and error states, a text alternative and a download
   link.
-- [ ] Remote files through `safeFetchUrl()`, byte ceilings and a generation guard after every await;
+- [x] Remote files through the shared owner-aware safe URL resolver, byte ceilings and generation
+  guards after asynchronous reads;
   no script or external resource execution from model files.
-- [ ] Registered in `lr-document-viewer`'s MIME registry so model attachments open in place.
+- [x] Registered in `lr-document-viewer`'s MIME registry so model attachments open in place.
 
 ### 6. Release qualification
 

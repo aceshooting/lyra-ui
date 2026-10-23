@@ -88,7 +88,7 @@ export class MapImageExportController {
             try {
               if (typeof map.getStyle !== 'function') throw new LyraMapImageExportError('attribution-failed');
               const normalized = normalizeMapControlOptions(element.controls);
-              const customAttribution = normalized.controls.get('attribution')?.options['customAttribution'];
+              const customAttribution = normalized.controls.get('attribution')?.attributionText;
               attribution = await collectMapExportAttribution({ getStyle: () => map.getStyle!(), getSource: id => map.getSource(id) },
                 { document: element.ownerDocument, customAttribution, signal, current });
             } catch (error) {

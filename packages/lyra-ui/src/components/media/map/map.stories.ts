@@ -1,3 +1,4 @@
+import { createMapModule, createMapModuleDemo, createMapModulePublisher } from '../../../../test/map-module-composition.js';
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import { ref } from 'lit/directives/ref.js';
@@ -1634,4 +1635,104 @@ export const CanvasRedrawAndLocalImage: Story = {
         .mapStyle=${LYRA_MAP_EMPTY_STYLE} .dataLayers=${rows()}></lr-map>
     `;
   },
+};
+
+
+/** Eight independent controllers publish through one application-owned aggregator. */
+export const IndependentModules: Story = {
+  render: () => {
+    let map: LyraMap | undefined, status: HTMLElement | undefined;
+    let modules = createMapModuleDemo(storyColor('brand'));
+    const publish = createMapModulePublisher(value => { if (map) map.overlays = value; });
+    return html`
+      <p>Eight city layers. Click an area to highlight it; change the roads or remove alerts independently.</p>
+      <lr-button @click=${() => {
+        modules = Object.freeze({ ...modules, roads: createMapModule('roads', modules.roads!.sources[0]!.source['data'] as object, storyColor('warning')) });
+        publish(modules);
+      }}>Change roads</lr-button>
+      <lr-button @click=${() => {
+        const { alerts: _removed, ...remaining } = modules; modules = Object.freeze(remaining); publish(modules);
+      }}>Remove alerts</lr-button>
+      <lr-button @click=${() => {
+        if (map) map.mapStyle = { ...LYRA_MAP_EMPTY_STYLE };
+      }}>Reload base style</lr-button>
+      <lr-button @click=${() => {
+        try { publish({ ...modules, selection: modules.districts }); }
+        catch { if (status) status.textContent = 'Duplicate layer rejected. The city layers are unchanged.'; }
+      }}>Try conflicting module</lr-button>
+      <lr-map ${ref(node => {
+        map = node as LyraMap | undefined;
+        if (map) publish(modules);
+      })} label="Independent city layers" center="[0, 0]" zoom="4" style="block-size: 24rem"
+        .mapStyle=${LYRA_MAP_EMPTY_STYLE}
+        @lr-map-click=${(event: CustomEvent<{ sourceId?: string; hit?: { origin: string; id?: string | number } }>) => {
+          const { sourceId, hit } = event.detail;
+          if (map && hit?.origin === 'overlay' && sourceId && hit.id !== undefined) {
+            map.setFeatureState({ origin: 'overlay', source: sourceId, id: hit.id }, { color: storyColor('danger') });
+            if (status) status.textContent = `Selected ${sourceId}`;
+          }
+        }}></lr-map>
+      <p role="status" ${ref(node => { status = node as HTMLElement | undefined; })}>Click a city area.</p>
+    `;
+  },
+};
+
+
+/** All four controls share one corner, retaining keyboard focus when their corner changes. */
+export const OrderedLinkedControls: Story = {
+  render: () => {
+    let map: LyraMap | undefined;
+    let top = false;
+    const controls = () => {
+      const position = top ? 'top-right' as const : 'bottom-left' as const;
+      return { navigation: { position }, scale: { position }, geolocate: { position },
+        attribution: { position, compact: false, customAttribution: [
+          'Local survey', { label: 'Data contributors', url: 'https://www.openstreetmap.org/copyright' },
+        ] } };
+    };
+    return html`<div style="display: grid; gap: var(--lr-space-s)">
+      <lr-button @click=${() => { top = !top; if (map) map.controls = controls(); }}>Move controls</lr-button>
+      <lr-map ${ref(node => { map = node as LyraMap | undefined; })}
+        style="height: 24rem" label="Map credits and navigation" center="[2.3522, 48.8566]" zoom="9"
+        .controls=${controls()} .mapStyle=${OFFLINE_RASTER_STYLE}></lr-map>
+    </div>`;
+  },
+};
+
+
+export const GeoJsonRowBoundsAndOrder: Story = {
+  render: () => {
+    let map: LyraMap | undefined;
+    let visible = true;
+    const geojson = { type: 'FeatureCollection' as const, features: [{ type: 'Feature' as const, properties: {},
+      geometry: { type: 'Polygon' as const, coordinates: [[[-8, -6], [8, -6], [8, 6], [-8, 6], [-8, -6]]] } }] };
+    const rows = (): readonly LyraMapGeoJsonDataLayer[] => [{ sourceId: 'area', geojson,
+      minZoom: 2, maxZoom: visible ? 8 : 2, before: 'reference-line', color: storyColor('brand') }];
+    return html`
+      <p>The area is visible from zoom 2 to zoom 8, below the reference outline.</p>
+      <button type="button" @click=${() => { visible = !visible; if (map) map.dataLayers = rows(); }}>Toggle area</button>
+      <lr-map label="Area visibility and layer order" style="block-size:22rem" zoom="3"
+        ${ref(node => { map = node as LyraMap | undefined; })}
+        .mapStyle=${LYRA_MAP_EMPTY_STYLE} .dataLayers=${rows()}
+        .overlays=${{ sources: [{ id: 'reference', source: { type: 'geojson', data: geojson } }],
+          layers: [{ layer: { id: 'reference-line', type: 'line', source: 'reference',
+            paint: { 'line-color': storyColor('danger'), 'line-width': 4 } } }] }}></lr-map>
+    `;
+  },
+};
+
+/** Finite primary vector styling with row-owned opacity and a property filter. */
+export const TypedVectorStyle: Story = {
+  render: () => html`
+    <p>Vector country polygons use a typed fill style. This example loads public demonstration tiles.</p>
+    <lr-map label="Typed vector polygons" center="[0, 20]" zoom="1" style="block-size: 24rem"
+      .mapStyle=${LYRA_MAP_EMPTY_STYLE}
+      .dataLayers=${[{
+        kind: 'vector', sourceId: 'countries', source: { url: 'https://demotiles.maplibre.org/tiles/tiles.json' },
+        sourceLayer: 'countries', render: 'fill', opacity: 0.7,
+        paint: { 'fill-color': storyColor('brand'), 'fill-outline-color': storyColor('border') },
+        filter: ['has', 'name'],
+      }]}>
+    </lr-map>
+  `,
 };

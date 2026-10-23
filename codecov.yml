@@ -60,6 +60,24 @@ flags:
   lyra-ui:
     paths:
       - packages/lyra-ui/src/**
+  lyra-3d:
+    paths:
+      - packages/lyra-3d/**
+  lyra-map:
+    paths:
+      - packages/lyra-map/**
+  lyra-docs:
+    paths:
+      - packages/lyra-docs/**
+  lyra-flags:
+    paths:
+      - packages/lyra-flags/**
+  lyra-ide:
+    paths:
+      - packages/lyra-ide/**
+  lyra-translations:
+    paths:
+      - packages/lyra-translations/**
 
 # Separate product from the coverage config above. Two bundles are reported per commit:
 # `lyra-ui-dist` -- the published package's six representative entry points, esbuild-bundled by

@@ -1,7 +1,9 @@
+import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { mapGeolocationErrorCode, type LyraMapGeolocationErrorCode, type MapOwnedControlKind, type LyraMapControlPosition,
   type NormalizedMapControlOptions } from './map-control-options.js';
 
 export interface MapManagedControl {
+  onAdd?(...args: unknown[]): HTMLElement;
   on?(type: string, callback: (event: unknown) => void): unknown;
   off?(type: string, callback: (event: unknown) => void): unknown;
 }
@@ -9,6 +11,8 @@ export type MapManagedControlConstructor = new (options?: Record<string, unknown
 export interface MapControlLifecyclePeer {
   addControl(control: MapManagedControl, position: LyraMapControlPosition): unknown;
   removeControl(control: MapManagedControl): unknown;
+  /** Native corner containers, used to move owned roots without recreating controls. */
+  controlContainer?(position: LyraMapControlPosition): HTMLElement | undefined;
 }
 export type MapControlLifecycleEvent =
   { readonly kind: 'geolocate-error'; readonly code: LyraMapGeolocationErrorCode } |
@@ -36,7 +40,8 @@ function geolocatedPosition(event: unknown): { readonly lngLat: readonly [number
 }
 interface Entry {
   readonly map: MapControlLifecyclePeer;
-  readonly options: NormalizedMapControlOptions;
+  options: NormalizedMapControlOptions;
+  root?: HTMLElement;
   context: MapControlLifecycleContext;
   control?: MapManagedControl;
   installed: boolean;
@@ -68,21 +73,77 @@ export class MapControlsLifecycle {
     // rather than stranded when the same desired configuration is synchronized again.
     for (const [kind, entry] of this.entries) {
       const next = desired.get(kind);
-      if (entry.map === map && entry.installed && next?.key === entry.options.key) entry.context = context;
+      if (entry.map === map && entry.installed && next && (next.key === entry.options.key ||
+        (entry.root && map.controlContainer && JSON.stringify(next.options) === JSON.stringify(entry.options.options)))) {
+        entry.context = context; entry.options = next;
+      }
       else { this.entries.delete(kind); retired.push(entry); }
     }
     for (const entry of retired) this.retire(entry);
     if (generation !== this.generation || !this.validContext(context) || generation !== this.generation) return;
-    const work: Promise<void>[] = [];
+    const pending: Entry[] = [];
+    // Start every import together, but never let completion order determine native insertion.
     for (const [kind, options] of desired) {
       if (generation !== this.generation) break;
       if (this.entries.has(kind)) continue;
       const entry: Entry = { map, options, context, installed: false, attempted: false, adding: false, subscribing: false,
         removed: false, retired: false, subscriptions: [] };
-      this.entries.set(kind, entry);
-      work.push(this.install(entry));
+      this.entries.set(kind, entry); pending.push(entry);
     }
-    await Promise.all(work);
+    const loaded = await Promise.all(pending.map(async entry => {
+      try { return await this.load(entry.options.kind); } catch { return undefined; }
+    }));
+    if (generation !== this.generation || !this.validContext(context)) return;
+    const constructors = new Map(pending.map((entry, index) => [entry, loaded[index]]));
+    const priority: readonly MapOwnedControlKind[] = ['navigation', 'scale', 'geolocate', 'attribution'];
+    for (const corner of ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const) {
+      const order = corner.startsWith('bottom') ? [...priority].reverse() : priority;
+      for (const kind of order) {
+        if (generation !== this.generation || !this.validContext(context)) return;
+        const entry = this.entries.get(kind);
+        if (entry?.options.position === corner && constructors.has(entry)) this.install(entry, constructors.get(entry));
+      }
+    }
+    // Native bottom corners prepend; the resulting DOM and keyboard order is always top-to-bottom.
+    for (const corner of ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const) {
+      if (generation !== this.generation || !this.validContext(context)) return;
+      const entries = priority.map(kind => this.entries.get(kind)).filter((entry): entry is Entry =>
+        entry !== undefined && entry.installed && entry.options.position === corner);
+      for (let index = entries.length - 1; index >= 0; index--) {
+        const entry = entries[index]!;
+        if (generation !== this.generation || !this.current(entry)) return;
+        try {
+          const parent = map.controlContainer?.(corner);
+          if (generation !== this.generation || !this.current(entry)) return;
+          if (!parent || !entry.root) continue;
+          const before = entries.slice(index + 1).find(next => next.root?.parentNode === parent)?.root ?? null;
+          const root = entry.root;
+          if (root.parentNode === parent && (before ? root.nextSibling === before : root.nextSibling === null)) continue;
+          const tree = root.getRootNode() as Document | ShadowRoot;
+          const active = tree.activeElement;
+          const focus = active instanceof HTMLElement && root.contains(active) ? active : undefined;
+          if (generation !== this.generation || !this.current(entry)) return;
+          const document = root.ownerDocument;
+          let focusTransferred = false;
+          const trackFocus = (): void => { focusTransferred = true; };
+          if (focus) document.addEventListener('focus', trackFocus, true);
+          try { parent.insertBefore(root, before); }
+          finally { if (focus) document.removeEventListener('focus', trackFocus, true); }
+          if (generation !== this.generation || !this.current(entry)) return;
+          const remaining = deepActiveElementIn(document);
+          const lostFocus = remaining === null || remaining === document.body || remaining === document.documentElement;
+          // Repair only removal-induced loss; a callback's new focus target takes precedence.
+          if (focus?.isConnected && root.contains(focus) && focus.ownerDocument === document && !focusTransferred && lostFocus) {
+            focus.focus({ preventScroll: true });
+          }
+          if (generation !== this.generation || !this.current(entry)) return;
+        } catch {
+          if (generation === this.generation && this.current(entry)) {
+            try { entry.context.onFailure({ kind: entry.options.kind, code: 'control-failed' }); } catch { /* Caller owns feedback. */ }
+          }
+        }
+      }
+    }
   }
 
   /** Retire subscriptions before the caller removes the native map. Reusable after reconnect. */
@@ -101,9 +162,8 @@ export class MapControlsLifecycle {
     return owned() && this.validContext(entry.context) && owned();
   }
 
-  private async install(entry: Entry): Promise<void> {
+  private install(entry: Entry, Constructor: MapManagedControlConstructor | null | undefined): void {
     try {
-      const Constructor = await this.load(entry.options.kind);
       if (!this.current(entry)) { this.release(entry); return; }
       if (typeof Constructor !== 'function') throw new Error('Map control is unavailable.');
       const control: unknown = new Constructor(entry.options.options);
@@ -130,12 +190,29 @@ export class MapControlsLifecycle {
         });
         if (!this.current(entry)) { this.release(entry); return; }
       }
-      entry.attempted = true; entry.adding = true;
-      try { entry.map.addControl(entry.control, entry.options.position); }
-      finally {
-        entry.adding = false;
-        // Reentrant teardown during addControl cannot assume native installation has finished.
-        if (entry.retired) this.retire(entry);
+      const onAdd = entry.control.onAdd;
+      if (!this.current(entry)) { this.release(entry); return; }
+      const descriptor = Object.getOwnPropertyDescriptor(entry.control, 'onAdd');
+      if (!this.current(entry)) { this.release(entry); return; }
+      try {
+        // Public native lifecycle hook yields the exact owned root; no private peer fields are read.
+        if (onAdd) entry.control.onAdd = function (...args: unknown[]): HTMLElement {
+          const root = onAdd.apply(this, args); entry.root = root; return root;
+        };
+        if (!this.current(entry)) { this.release(entry); return; }
+        entry.attempted = true; entry.adding = true;
+        entry.map.addControl(entry.control, entry.options.position);
+      } finally {
+        try {
+          if (onAdd) {
+            if (descriptor) Object.defineProperty(entry.control, 'onAdd', descriptor);
+            else delete entry.control.onAdd;
+          }
+        } finally {
+          entry.adding = false;
+          // Reentrant teardown during addControl cannot assume native installation has finished.
+          if (entry.retired) this.retire(entry);
+        }
       }
       if (!this.current(entry)) { this.release(entry); return; }
       entry.installed = true;

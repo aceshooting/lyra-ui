@@ -1319,11 +1319,11 @@ test('requires complete fail-closed coverage shards before the stable build gate
   const aggregateJob = workflow.slice(aggregateStart, packedStart);
   assert.match(
     shardJob,
-    /name: build-and-coverage \/ coverage \/ shard \$\{\{ matrix\.shard \}\}\/4/u
+    /name: build-and-coverage \/ coverage \/ shard \$\{\{ matrix\.shard \}\}\/5/u
   );
   assert.match(shardJob, /needs: \[build_and_coverage_build, changes\]/u);
   assert.match(shardJob, /fail-fast: false/u);
-  assert.match(shardJob, /shard: \[1, 2, 3, 4\]/u);
+  assert.match(shardJob, /shard: \[1, 2, 3, 4, 5\]/u);
   assert.match(
     shardJob,
     /image: mcr\.microsoft\.com\/playwright:v[0-9.]+-noble/u
@@ -1353,7 +1353,7 @@ test('requires complete fail-closed coverage shards before the stable build gate
 
   assert.match(mergeJob, /if: \$\{\{ always\(\) && needs\.changes\.outputs\.runtime != 'false' \}\}/u);
   assert.match(mergeJob, /- build_and_coverage_coverage_shard\b/u);
-  for (const shard of [1, 2, 3, 4]) {
+  for (const shard of [1, 2, 3, 4, 5]) {
     assert.match(
       mergeJob,
       new RegExp(
@@ -1364,8 +1364,8 @@ test('requires complete fail-closed coverage shards before the stable build gate
   }
   assert.equal(
     [...mergeJob.matchAll(/uses: actions\/download-artifact@/gu)].length,
-    4,
-    'the merge job must download exactly four individually named shard artifacts'
+    5,
+    'the merge job must download exactly five individually named shard artifacts'
   );
   assert.doesNotMatch(mergeJob, /pattern:|merge-multiple:/u);
   assert.match(mergeJob, /node scripts\/coverage-shard-runner\.mjs --merge/u);
@@ -3213,7 +3213,7 @@ test('static and local CI run the release-tooling self-tests and package-manager
   const toolingCommand = rootPackage.scripts['check:release-tooling'];
   assert.equal(
     toolingCommand,
-    'node --test scripts/release-prepare.test.mjs scripts/release-integrity.test.mjs scripts/check-peer-compatibility.test.mjs scripts/check-node-version.test.mjs scripts/sync-package-manager-docs.test.mjs scripts/sync-playwright-images.test.mjs scripts/update-framework-recipe-versions.test.mjs scripts/ci-workflow-policy.test.mjs scripts/quality-tools.test.mjs scripts/release-sbom.test.mjs && node scripts/sync-package-manager-docs.mjs --check',
+    'node --test scripts/release-prepare.test.mjs scripts/release-integrity.test.mjs scripts/check-peer-compatibility.test.mjs scripts/check-node-version.test.mjs scripts/sync-package-manager-docs.test.mjs scripts/sync-playwright-images.test.mjs scripts/update-framework-recipe-versions.test.mjs scripts/ci-workflow-policy.test.mjs scripts/prepare-codecov-lcov.test.mjs scripts/prepare-codecov-lcov.property.test.mjs scripts/quality-tools.test.mjs scripts/release-sbom.test.mjs && node scripts/sync-package-manager-docs.mjs --check',
     'one root command must keep all release-tooling unit tests and synchronized package-manager prose together',
   );
 

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
 import test from 'node:test';
 
 const read = (file) => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
@@ -18,6 +19,123 @@ test('the coverage shard step runs under the strict console gate', () => {
   const at = step.indexOf('name: Run coverage shard');
   assert(at >= 0);
   assert.match(step.slice(at, at + 400), /WTR_STRICT_CONSOLE: "1"/u);
+});
+
+test('the complete DOCX group runs once per engine with Firefox owned by platform shard 2', () => {
+  const platform = job(read('.github/workflows/ci.yml'), 'platform-contracts');
+  const matrix = platform.slice(platform.indexOf('        include:\n'), platform.indexOf('    runs-on:'));
+  const rows = [...matrix.matchAll(/^ {10}- browser: ([^\n]+)\n([\s\S]*?)(?=^ {10}- browser:|$(?![\s\S]))/gmu)]
+    .map(([, browser, body]) => ({
+      browser,
+      install_browser: body.match(/^ {12}install_browser: (\S+)$/mu)?.[1],
+      shard_index: Number(body.match(/^ {12}shard_index: (\d+)$/mu)?.[1]),
+    }));
+  assert.deepEqual(rows.map((row) => `${row.browser}/${row.shard_index}`), [
+    'chromium/1', 'chrome/1', 'edge/1', 'firefox/1', 'firefox/2', 'safari/1',
+  ], 'evaluate the live complete platform matrix');
+  const steps = platform.split(/\n(?= {6}- )/u);
+  for (const name of [
+    "Download this run's lyra-ui build for the DOCX editor",
+    'Qualify the experimental DOCX editor',
+    'Archive DOCX editor qualification',
+  ]) {
+    const matches = steps.filter((step) => step.startsWith(`      - name: ${name}\n`));
+    assert.equal(matches.length, 1, `${name} exists exactly once`);
+    const expression = matches[0].match(/^ {8}if: (.+)$/mu)?.[1];
+    assert.ok(expression, `${name} has an explicit owner condition`);
+    // These conditions use the common JavaScript/GitHub expression subset: comparisons,
+    // parentheses, boolean operators and always(). Evaluate each real row independently.
+    const owners = rows.filter((row) => runInNewContext(expression, {
+      matrix: row, always: () => true,
+    }, { timeout: 100 })).map((row) => `${row.install_browser}/${row.shard_index}`);
+    assert.deepEqual(owners, ['chromium/1', 'firefox/2', 'webkit/1'], `${name} keeps the same owners`);
+    if (name.startsWith('Archive')) {
+      assert.match(expression, /^always\(\) &&/u, 'failed DOCX runs still archive evidence');
+      assert.match(matches[0], /name: docx-editor-\$\{\{ matrix\.install_browser \}\}/u);
+    }
+    if (name.startsWith('Qualify')) {
+      assert.match(matches[0], /DOCX_BROWSERS: \$\{\{ matrix\.install_browser \}\}/u);
+      assert.match(matches[0], /pnpm --filter @aceshooting\/lyra-docs test:coverage/u);
+      assert.match(matches[0], /pnpm --filter @aceshooting\/lyra-docs test:browser/u);
+    }
+  }
+});
+
+test('each of the seven coverage flags owns one complete package report and a scoped README badge', () => {
+  const packages = ['lyra-ui', 'lyra-3d', 'lyra-map', 'lyra-docs', 'lyra-flags', 'lyra-ide', 'lyra-translations'];
+  const config = read('codecov.yml');
+  const flags = config.slice(config.indexOf('\nflags:\n'), config.indexOf('\n# Separate product'));
+  const entries = [...flags.matchAll(/^ {2}([\w-]+):\n {4}paths:\n((?: {6}- [^\n]+\n)+)/gmu)];
+  assert.deepEqual(entries.map(([, name]) => name).sort(), [...packages].sort());
+  for (const [, name, paths] of entries) {
+    assert.equal(paths.trim(), `- packages/${name}/${name === 'lyra-ui' ? 'src/' : ''}**`, `${name} cannot absorb another package's data`);
+    const badge = `https://codecov.io/gh/aceshooting/lyra-ui/branch/main/graph/badge.svg?flag=${name}`;
+    for (const file of [`packages/${name}/README.md`, ...(name === 'lyra-ui' ? ['README.md'] : [])]) {
+      const urls = [...read(file).matchAll(/https:\/\/codecov\.io\/[^\s)]+\/graph\/badge\.svg(?:\?[^\s)]+)?/gu)].map(([url]) => url);
+      assert.deepEqual(urls, [badge], `${file} must show exactly its own flag`);
+    }
+  }
+
+  const workflow = read('.github/workflows/ci.yml');
+  const producer = job(workflow, 'companion_coverage');
+  const matrix = producer.match(/^ {8}package: \[([^\]]+)\]$/mu)?.[1].split(',').map((name) => name.trim());
+  assert.deepEqual(matrix, ['lyra-3d', 'lyra-map', 'lyra-flags', 'lyra-ide', 'lyra-translations']);
+  assert.deepEqual(['lyra-ui', ...matrix, 'lyra-docs'].sort(), [...packages].sort(), 'one coverage producer per flag');
+  assert.match(workflow, /# release-qualification: matrix\n {2}companion_coverage:/u);
+  assert.match(producer, /^ {4}needs: build_and_coverage_build$/mu);
+  assert.match(producer, /fail-fast: false/u);
+  assert.match(producer, /node-version-file: \.nvmrc/u);
+  assert.match(producer, /image: mcr\.microsoft\.com\/playwright:v[\d.]+-noble/u);
+  assert.match(producer, /pnpm --filter "@aceshooting\/\$COVERAGE_PACKAGE" test:coverage/u);
+  assert.match(producer, /node scripts\/prepare-codecov-lcov\.mjs "\$COVERAGE_PACKAGE"/u);
+  assert.doesNotMatch(producer, /continue-on-error|COVERAGE_BROWSER: ['"]?0|test:coverage --/u, 'the existing complete browser and 100% floor commands stay enabled');
+  assert.match(producer, /LYRA_MAP_COVERAGE_BROWSER: '1'/u);
+  assert.match(producer, /LYRA_3D_COVERAGE_BROWSER: '1'/u);
+  assert.match(producer, /name: lyra-ui-dist\n {10}path: packages\/lyra-ui\/dist/u);
+  assert.match(producer, /name: Archive companion coverage\n {8}if: always\(\)/u);
+  assert.match(producer, /if-no-files-found: error/u);
+  for (const report of ['coverage-summary.json', 'coverage-metadata.json', 'lcov.info', 'codecov.lcov']) {
+    assert.ok(producer.includes('packages/${{ matrix.package }}/coverage/' + report), `${report} is archived per package`);
+  }
+
+  const local = read('scripts/ci.sh');
+  assert.match(local, /for coverage_package in lyra-3d lyra-map lyra-docs lyra-flags lyra-ide lyra-translations; do/u);
+  assert.match(local, /pnpm --filter "@aceshooting\/\$coverage_package" test:coverage/u);
+  assert.match(local, /LYRA_MAP_COVERAGE_BROWSER=1 LYRA_3D_COVERAGE_BROWSER=1 pnpm/u);
+  assert.match(local, /node scripts\/prepare-codecov-lcov\.mjs "\$coverage_package"/u);
+  assert.match(job(workflow, 'static-checks'), /pnpm --filter '!@aceshooting\/lyra-ui' -r test/u, 'ordinary companion test gates remain');
+  const floors = JSON.parse(read('packages/lyra-ui/scripts/coverage-floors.json'));
+  assert.ok(floors.lines >= 99.74 && floors.statements >= 99.74, 'the flagged UI report retains its coverage floor');
+});
+
+test('Codecov uploads only the canonical report matching its one explicit flag', () => {
+  const workflow = read('.github/workflows/ci.yml');
+  const uploads = workflow.split(/\n(?= {6}- )/u).filter((step) => /uses: codecov\/codecov-action@/u.test(step));
+  assert.equal(uploads.length, 3, 'UI, five-leg companion matrix and Chromium DOCX');
+  const actual = uploads.map((step) => {
+    assert.match(step, /disable_search: true/u, 'do not discover other packages or duplicate reports');
+    assert.match(step, /disable_file_fixes: true/u, 'keep the locally measured line counters');
+    assert.match(step, /plugins: noop/u, 'LCOV is already complete');
+    assert.match(step, /fail_ci_if_error: false/u, 'Codecov availability is informational; coverage commands are blocking');
+    const file = step.match(/^ {10}files: (.+)$/mu)?.[1];
+    const flag = step.match(/^ {10}flags: (.+)$/mu)?.[1];
+    return { file, flag };
+  });
+  assert.deepEqual(actual, [
+    { file: 'packages/lyra-ui/coverage/codecov.lcov', flag: 'lyra-ui' },
+    { file: 'packages/${{ matrix.package }}/coverage/codecov.lcov', flag: '${{ matrix.package }}' },
+    { file: 'packages/lyra-docs/coverage/codecov.lcov', flag: 'lyra-docs' },
+  ]);
+  assert.match(uploads[0], /steps\.prepare_ui_coverage\.outcome == 'success'/u, 'a failed path preparation cannot upload a stale UI report');
+  const platform = job(workflow, 'platform-contracts');
+  const qualification = platform.slice(platform.indexOf('- name: Qualify the experimental DOCX editor'), platform.indexOf('- name: Upload DOCX coverage'));
+  assert.match(qualification, /if \[ "\$DOCX_BROWSERS" = 'chromium' \]; then\n {12}pnpm --filter @aceshooting\/lyra-docs test:coverage\n {12}node scripts\/prepare-codecov-lcov\.mjs lyra-docs\n {10}else/u);
+  const docxUpload = uploads.at(-1);
+  assert.match(docxUpload, /^ {8}if: matrix\.install_browser == 'chromium' && matrix\.shard_index == 1$/mu);
+  assert.match(platform, /name: Archive DOCX coverage\n {8}if: always\(\) && matrix\.install_browser == 'chromium' && matrix\.shard_index == 1/u);
+  const merged = job(workflow, 'build_and_coverage_coverage');
+  assert.ok(merged.indexOf('name: Prepare the lyra-ui Codecov report') > merged.indexOf('name: Check merged coverage floors'));
+  assert.match(merged, /node scripts\/prepare-codecov-lcov\.mjs lyra-ui/u);
 });
 
 test('complete browser suites receive the built Map and 3D companions before their shards run', () => {

@@ -1,3 +1,4 @@
+import { normalizeMapControlOptions } from './map-control-options.js';
 import { expect } from '@open-wc/testing';
 import { collectMapExportAttribution, type MapExportAttributionContext } from './map-export-attribution.js';
 import { LyraMapImageExportError } from './map-image-export.js';
@@ -78,4 +79,13 @@ describe('map export attribution collection', () => {
     expect(result).not.to.include('unsafe-credit-script');
     expect(result).not.to.include('<');
   });
+  it('exports normalized link labels as text with both provider credit sources', async () => {
+    const normalized = normalizeMapControlOptions({ attribution: { customAttribution: [
+      { label: 'Survey <team> & contributors', url: 'https://example.com/credits' }, 'Other credit',
+    ] } });
+    const result = await collectMapExportAttribution(peer(), context({ customAttribution: normalized.controls.get('attribution')!.attributionText }));
+    expect(result).to.equal('Provider | Resolved TileJSON | Survey <team> & contributors | Other credit');
+    expect(result).not.to.include('https://'); expect(result).not.to.include('<a');
+  });
+
 });

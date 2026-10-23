@@ -261,4 +261,18 @@ describe('lr-map controls and named URL ownership', () => {
     await element.updateComplete; expect(button.getAttribute('aria-label')).to.equal('Locate here'); expect(scale.textContent).to.equal('10 kilometres');
     button.disabled = true; await waitUntil(() => button.getAttribute('aria-label') === 'Unavailable here');
   });
+  it('retains provider attribution and localized diagnostics when one custom link is invalid', async () => {
+    const { element, peer } = await mount(el => {
+      el.strings = { mapControlUnavailable: 'Credit unavailable' };
+      el.controls = { attribution: { customAttribution: ['Allowed', { label: 'Blocked', url: 'javascript:alert(1)' }] } };
+    });
+    await waitUntil(() => peer.controls.size === 1);
+    expect([...peer.controls][0]!.options?.['customAttribution']).to.equal(undefined);
+    await waitUntil(() => element.shadowRoot!.textContent!.includes('Credit unavailable'));
+    element.controls = { attribution: { customAttribution: { label: 'Linked', url: 'https://example.com/credits' } } };
+    await element.updateComplete;
+    await waitUntil(() => peer.controls.size === 1 && String([...peer.controls][0]!.options?.['customAttribution']).includes('https://example.com/credits'));
+    expect(element.shadowRoot!.textContent).not.to.include('javascript:');
+  });
+
 });

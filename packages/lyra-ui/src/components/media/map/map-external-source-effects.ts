@@ -50,7 +50,8 @@ export class MapExternalSourceEffects {
 
   async reconcile(map: MapLibreMapCapability, style: unknown, sources: readonly LyraMapOverlaySource[],
     revisions: ReadonlyMap<string, number>, context: MapExternalSourceContext,
-    apply: (sources: readonly LyraMapOverlaySource[]) => Promise<void>): Promise<void> {
+    apply: (sources: readonly LyraMapOverlaySource[]) => Promise<void>,
+    preflight?: (sources: readonly LyraMapOverlaySource[]) => Promise<void>): Promise<void> {
     const epoch = ++this.epoch;
     const check = () => { if (epoch !== this.epoch || context.signal.aborted || !context.isCurrent()) failed(); };
     check();
@@ -102,6 +103,8 @@ export class MapExternalSourceEffects {
         prepared.push(Object.freeze({ ...entry, source: Object.freeze({ ...entry.source, url: local.image.url }) }));
       }
       check();
+      // Admission sees actual owned URLs before exposing any prepared resource to native writes.
+      if (preflight) { await preflight(prepared); check(); }
       // A callback may throw after the native source has accepted a URL. Retain it until native
       // retirement is proved, rather than revoking a URL whose request might still be pending.
       this.nativeApplications.add(application);

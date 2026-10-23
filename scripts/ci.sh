@@ -516,6 +516,16 @@ pnpm --filter @aceshooting/lyra-ui test:coverage
 step "lyra-ui check:coverage-floors"
 pnpm --filter @aceshooting/lyra-ui check:coverage-floors
 
+# Mirror the hosted companion reports, including Chromium in the Map, 3D and DOCX commands.
+# Codecov uploads remain hosted-only; report preparation is a blocking local path contract too.
+step "lyra-ui Codecov source paths"
+node scripts/prepare-codecov-lcov.mjs lyra-ui
+for coverage_package in lyra-3d lyra-map lyra-docs lyra-flags lyra-ide lyra-translations; do
+  step "$coverage_package complete coverage"
+  LYRA_MAP_COVERAGE_BROWSER=1 LYRA_3D_COVERAGE_BROWSER=1 pnpm --filter "@aceshooting/$coverage_package" test:coverage
+  node scripts/prepare-codecov-lcov.mjs "$coverage_package"
+done
+
 step "manifest freshness"
 pnpm manifest
 freshness_diff "custom-elements.json (pnpm manifest)" packages/lyra-ui/custom-elements.json

@@ -24,6 +24,30 @@ describe('external source effects', () => {
       settle: () => { settled = true; for (const callback of listeners) callback(); },
       cancel: () => { current = false; }, retire: () => { live = false; }, retired: () => retired };
   }
+  it('admits prepared URLs before exposure and disposes a rejected preparation exactly once', async () => {
+    const state = await setup(); let applied = 0;
+    const input = [{ id: 'image', source: { type: 'image', url: `data:image/png;base64,${'A'.repeat(1_100_000)}`, coordinates } }];
+    let seen = '';
+    try {
+      await state.effects.reconcile(state.map, 1, input, new Map(), state.context,
+        async () => { applied++; }, async sources => {
+          seen = sources[0]!.source['url'] as string;
+          expect(seen.startsWith('blob:')).to.equal(true);
+          throw new Error('Complete descriptor proposal exceeds admission limits.');
+        });
+    } catch { /* Pure admission rejects before exposure. */ }
+    expect(applied).to.equal(0); expect(state.disposed).to.deep.equal([seen]);
+    state.effects.dispose(); expect(state.disposed).to.deep.equal([seen]);
+  });
+  it('finishes prepared admission before application and retains accepted URLs until disposal', async () => {
+    const state = await setup(); const order: string[] = [];
+    await state.effects.reconcile(state.map, 1,
+      [{ id: 'image', source: { type: 'image', url: 'data:image/png;base64,AAAA', coordinates } }], new Map(), state.context,
+      async () => { order.push('apply'); expect(state.disposed).to.deep.equal([]); },
+      async () => { order.push('preflight'); await Promise.resolve(); order.push('admitted'); });
+    expect(order).to.deep.equal(['preflight', 'admitted', 'apply']);
+    expect(state.disposed).to.deep.equal([]); state.effects.dispose(); expect(state.disposed).to.have.length(1);
+  });
   it('keeps initial/unset and equal revisions quiet, coalescing moved coordinates before one upload', async () => {
     const state = await setup(); const canvas = document.createElement('canvas');
     const sources = [{ id: 'canvas', source: { type: 'canvas', canvas, coordinates, animate: false } }];

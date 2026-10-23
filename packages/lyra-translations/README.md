@@ -1,5 +1,7 @@
 # @aceshooting/lyra-translations
 
+[![Coverage](https://codecov.io/gh/aceshooting/lyra-ui/branch/main/graph/badge.svg?flag=lyra-translations)](https://codecov.io/gh/aceshooting/lyra-ui)
+
 [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-translations)](https://www.npmjs.com/package/@aceshooting/lyra-translations)
 [![Node.js](https://img.shields.io/node/v/%40aceshooting%2Flyra-translations)](https://www.npmjs.com/package/@aceshooting/lyra-translations)
 

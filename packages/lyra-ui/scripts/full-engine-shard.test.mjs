@@ -273,7 +273,7 @@ test('balances the live test inventory by measured time across the CI shard coun
     files.filter((file) => costs.has(file)).length / files.length >= 0.85,
     'scripts/fixtures/test-file-costs.json is stale; regenerate it with ci-costs.mjs from the lyra-ui-test-timing artifacts',
   );
-  for (const total of [4, 8]) {
+  for (const total of [5, 8]) {
     const shards = Array.from({ length: total }, (_value, index) => shardTestFiles(files, index + 1, total));
     assert.deepEqual(shards.flat().sort(), [...files].sort());
     const loads = shards.map((shard) => shard.reduce((sum, file) => sum + (costs.get(file) ?? fallback), 0));

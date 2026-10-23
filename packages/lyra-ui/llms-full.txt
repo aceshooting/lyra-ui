@@ -33299,6 +33299,178 @@ mapEl.overlays = {
 mapEl.setFeatureState({ origin: 'overlay', source: 'communes', id: 'LU0101' }, { color: '#0d6efd' });
 ```
 
+### Composing independent map modules
+
+Keep one application owner of `overlays`. For example, publish eight module snapshots in this
+explicit bottom-to-top order: districts, parcels, roads, transit, water, sensors, alerts, selection.
+Each controller returns immutable `sources` and `layers` arrays with globally unique stable IDs
+such as `city:roads:data` and `city:roads:fill`. These are application IDs; the aggregator never
+prefixes or rewrites them. Freeze nested descriptor values too and treat retained GeoJSON as
+immutable; create fresh descriptors when a controller changes. Keep large `data` objects by
+reference instead of cloning or serializing them.
+
+The tested **Independent Modules** story uses the following pure composition pattern (trusted
+application snapshots, not an admission boundary for untrusted objects):
+
+```ts
+import type { LyraMapOverlays } from '@aceshooting/lyra-ui/components/media/map/map.class.js';
+
+/** Application example, shared by the composition story and its tests. */
+export const MAP_MODULE_ORDER = Object.freeze([
+  'districts', 'parcels', 'roads', 'transit', 'water', 'sensors', 'alerts', 'selection',
+] as const);
+export type MapModuleName = typeof MAP_MODULE_ORDER[number];
+export type MapModuleSnapshot = Required<LyraMapOverlays>;
+export type MapModules = Readonly<Partial<Record<MapModuleName, MapModuleSnapshot>>>;
+
+/** Match descriptor admission limits before publication, without visiting GeoJSON contents.
+ * This example accepts plain immutable application descriptors, not canvas/other native objects. */
+function validateDescriptors(sources: NonNullable<LyraMapOverlays['sources']>, layers: NonNullable<LyraMapOverlays['layers']>): void {
+  if (sources.length > 128 || layers.length > 128) throw new Error('limit');
+  let values = 0, text = 0;
+  const visiting = new WeakSet<object>();
+  const fail = (): never => { throw new Error('invalid-descriptor'); };
+  const plain = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' &&
+    (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null);
+  const plainArray = (value: unknown): value is unknown[] => Array.isArray(value) && Object.getPrototypeOf(value) === Array.prototype;
+  const own = (value: object, key: string): unknown => {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor) return undefined;
+    if (!Object.hasOwn(descriptor, 'value')) return fail();
+    return descriptor.value;
+  };
+  const safeKey = (key: string): void => { if (['__proto__', 'prototype', 'constructor'].includes(key)) fail(); };
+  const addText = (value: string): void => { text += value.length; if (text > 1_048_576) throw new Error('limit'); };
+  const walk = (value: unknown, depth: number): void => {
+    values += 1;
+    if (values > 50_000 || depth > 24) throw new Error('limit');
+    if (value === null || typeof value === 'boolean') return;
+    if (typeof value === 'string') { addText(value); return; }
+    if (typeof value === 'number') { if (!Number.isFinite(value)) fail(); return; }
+    if (typeof value !== 'object' || visiting.has(value)) return fail();
+    visiting.add(value);
+    try {
+      if (plainArray(value)) {
+        if (value.length > 10_000) throw new Error('limit');
+        for (let i = 0; i < value.length; i++) walk(own(value, String(i)), depth + 1);
+      } else {
+        if (!plain(value)) fail();
+        const keys = Object.keys(value);
+        if (keys.length > 10_000) throw new Error('limit');
+        for (const key of keys) {
+          safeKey(key);
+          const descriptor = Object.getOwnPropertyDescriptor(value, key);
+          if (!descriptor || !Object.hasOwn(descriptor, 'value')) fail();
+          addText(key); walk(descriptor!.value, depth + 1);
+        }
+      }
+    } finally { visiting.delete(value); }
+  };
+  for (const { source } of sources) {
+    if (!plain(source)) fail();
+    const type = own(source, 'type');
+    if (typeof type !== 'string' || !/^[a-z][a-z0-9-]{0,63}$/u.test(type)) fail();
+    const data = own(source, 'data');
+    const envelope = plain(data) && (own(data, 'type') === 'FeatureCollection' && plainArray(own(data, 'features')) ||
+      own(data, 'type') === 'Feature' && (own(data, 'geometry') === null || plain(own(data, 'geometry'))));
+    if (type === 'geojson' && envelope) {
+      const keys = Object.keys(source);
+      if (keys.length > 10_000) throw new Error('limit');
+      for (const key of keys) {
+        safeKey(key); addText(key);
+        const value = own(source, key);
+        if (key !== 'data') walk(value, 1);
+      }
+      continue;
+    }
+    walk(source, 0);
+  }
+  for (const { layer } of layers) {
+    if (typeof layer.type !== 'string' || !/^[a-z][a-z0-9-]{0,63}$/u.test(layer.type)) fail();
+    if (layer['source'] !== undefined && typeof layer['source'] !== 'string') fail();
+    walk(layer, 0);
+  }
+}
+function canonicalId(id: string): string {
+  if (!id || id !== id.trim() || id.length > 128 || ['__proto__', 'prototype', 'constructor'].includes(id))
+    throw new Error('noncanonical-id');
+  return id;
+}
+
+/** Compose trusted application snapshots. IDs are never rewritten. External dependencies are
+ * declared explicitly; callers must refresh those inventories when their basemap changes. */
+export function composeMapModules(modules: MapModules, external: {
+  readonly sources: readonly string[]; readonly layers: readonly string[];
+} = { sources: [], layers: [] }): LyraMapOverlays {
+  const sources = MAP_MODULE_ORDER.flatMap(name => modules[name]?.sources ?? []);
+  const layers = MAP_MODULE_ORDER.flatMap(name => modules[name]?.layers ?? []);
+  validateDescriptors(sources, layers);
+  const sourceIds = new Set(external.sources.map(canonicalId)), layerIds = new Set(external.layers.map(canonicalId));
+  for (const entry of sources) {
+    canonicalId(entry.id);
+    if (sourceIds.has(entry.id)) throw new Error(`duplicate-source:${entry.id}`);
+    sourceIds.add(entry.id);
+  }
+  for (const entry of layers) {
+    canonicalId(entry.layer.id);
+    if (layerIds.has(entry.layer.id)) throw new Error(`duplicate-layer:${entry.layer.id}`);
+    layerIds.add(entry.layer.id);
+  }
+  for (const entry of layers) {
+    const source = entry.layer['source'];
+    if (typeof source === 'string') canonicalId(source);
+    if (entry.before !== undefined) canonicalId(entry.before);
+    if (typeof source === 'string' && !sourceIds.has(source)) throw new Error(`missing-source:${source}`);
+    if (entry.before !== undefined && !layerIds.has(entry.before)) throw new Error(`missing-layer:${entry.before}`);
+  }
+  const before = new Map(layers.map(entry => [entry.layer.id, entry.before]));
+  for (const { layer } of layers) {
+    const seen = new Set<string>(); let next: string | undefined = layer.id;
+    while (next !== undefined && before.has(next)) {
+      if (seen.has(next)) throw new Error(`cycle:${next}`);
+      seen.add(next); next = before.get(next);
+    }
+  }
+  // The component remains responsible for native order planning and bounded descriptor admission.
+  return Object.freeze({ sources: Object.freeze(sources), layers: Object.freeze(layers) });
+}
+
+/** An application controller calls this once after batching its module changes. Validation runs
+ * before the sole assignment; failures leave both the map and the last successful input intact. */
+export function createMapModulePublisher(assign: (overlays: LyraMapOverlays) => void) {
+  let previous: MapModules | undefined;
+  return (modules: MapModules): boolean => {
+    if (previous && MAP_MODULE_ORDER.every(name => previous?.[name] === modules[name])) return false;
+    const overlays = composeMapModules(modules);
+    assign(overlays);
+    previous = Object.freeze({ ...modules });
+    return true;
+  };
+}
+
+const publish = createMapModulePublisher(value => { mapEl.overlays = value; });
+try { publish(moduleSnapshots); }
+catch (error) { reportCompositionDiagnostic(error); }
+```
+
+Collect all IDs before checking dependencies so modules can reference another module's source or
+`before` layer regardless of publication order. If referencing basemap IDs, explicitly supply their
+current source/layer inventories to validation, check collisions with them, and refresh those
+inventories when changing styles. The self-contained example needs no external inventories.
+This application preflight rejects noncanonical IDs (including surrounding whitespace), duplicate IDs, missing dependencies, cycles and the same aggregate descriptor budgets before assignment. It accepts trusted plain immutable native descriptors; canvas/native-object sources need their own validated application adapter. GeoJSON envelopes retain opaque data by identity outside the descriptor walk. Native option semantics remain the selected engine's responsibility. The map repeats bounded admission and native order planning; splitting resources into modules does not raise its limits.
+
+A publisher can retain the last successful module references and skip publication when all eight
+references are unchanged. Publish a fresh module snapshot on each change, then compose and make
+exactly one assignment for the batch. Only update that reference cache after successful composition
+and assignment. Duplicate IDs or missing dependencies reject the whole composition with a stable
+application diagnostic; the last assigned aggregate remains intact. Remove a module by omitting its
+snapshot, and resolve any dependent descriptors in the same batch. Unrelated module snapshots,
+descriptors and GeoJSON retain their identity. Composition does not replace the map's native
+lifecycle: resources replay after style changes, clicks keep `hit.origin === 'overlay'` and their
+`sourceId`, and `setFeatureState({ origin: 'overlay', source: sourceId, id }, patch)` keeps the normal
+identity and retirement rules described below. The story demonstrates style replay, attributed
+selection, a module update/removal and a rejected conflicting module.
+
 `images: readonly LyraMapImage[] = []` registers bounded image descriptors (`id`, `source`,
 `width`, `height`, `pixelRatio`, `sdf?`), with SVG markup or a safe URL as the source: up to 1,024
 images within an aggregate budget of 16,777,216 backing pixels and 8 MiB of encoded input, so a
@@ -33976,7 +34148,7 @@ intensity?: LyraMapHeatmapZoomValue; opacity?: number }`, where `LyraMapHeatmapZ
   `LyraMapScaleControlOptions { position?: LyraMapControlPosition; unit?: LyraMapScaleUnit }`,
   `LyraMapControlPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'` and
   `LyraMapScaleUnit = 'metric' | 'imperial'`. The element adds the engine's standard controls once
-  the map exists, replaces one whose options changed, keeps an unchanged one and removes one that
+  the map exists, moves one whose corner changes, replaces one whose other options change and removes one that
   is dropped, so an application no longer imports control classes and calls `map.addControl()`.
   `true` takes the defaults (navigation `'top-right'`, scale `'bottom-left'` and `'metric'`); an
   unknown navigation/scale position or unit falls back to its default. Malformed geolocate or
@@ -33984,7 +34156,32 @@ intensity?: LyraMapHeatmapZoomValue; opacity?: number }`, where `LyraMapHeatmapZ
   engine (`maplibre-gl`, or the companion's granular control entries). Requested controls load
   on demand; unavailable controls show localized feedback while the map remains usable. Geolocation
   starts only on user activation. Attribution is enabled by default; set `attribution: false` to
-  disable it. Attribution options accept `position`, `compact`, and plain-text `customAttribution`.
+  disable it. Attribution options accept `position`, `compact`, and `customAttribution` as a string,
+  `LyraMapAttributionLink { readonly label: string; readonly url: string }`, or a readonly array of
+  either. Labels are escaped text; links open in a new tab with `rel="noopener noreferrer"`.
+  Link URLs must be absolute HTTP(S), no longer than 2,048 characters, with no credentials or
+  control characters. At most 32 credits and 16 KiB of label/URL text are accepted, with each label
+  limited to 4,096 characters. Admission snapshots own data properties without invoking accessors.
+  An invalid item rejects the whole custom option and shows localized feedback while retaining
+  provider credits. Image exports include link labels as text alongside provider credits, without
+  the link URLs or markup. For example:
+
+  ```js
+  mapElement.controls = {
+    navigation: { position: 'bottom-left' },
+    scale: { position: 'bottom-left' },
+    geolocate: { position: 'bottom-left' },
+    attribution: { position: 'bottom-left', customAttribution: [
+      'Survey team', { label: 'Data contributors', url: 'https://example.com/credits' }
+    ] }
+  };
+  ```
+
+  Within each corner the visual and keyboard order is navigation, scale, geolocate, attribution,
+  including when constructors load in a different order or one fails. A subset keeps that relative
+  order. Changing only a corner moves the existing controls and retains focused buttons. Corners
+  continue to follow text direction under RTL. Geolocation is never activated by reconfiguration
+  or reconnect.
   Button names come from `zoomIn`, `zoomOut` and `mapResetNorth`
   and are re-applied whenever `lang`, `locale` or `strings` change, so they follow a live language
   switch. Controls survive a `mapStyle` swap and are dropped with the map on disconnect, then added
@@ -34451,6 +34648,85 @@ var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-acti
   control group), `--lr-color-border-subtle` (popup, legend and legend-limit rule edges),
   `--lr-shadow`, `--lr-radius`.
 
+### Migrating a raw engine map to `lr-map`
+
+Move the map's desired state into the component before connecting it. Keep `mapStyle` for the
+basemap and `overlays` for application-owned native sources and layers. The component prepares the
+modular features, installs those resources and restores them after each style replacement.
+
+| Raw engine operation | Component-owned equivalent |
+| --- | --- |
+| `new Map({ style, center, zoom })` | `mapStyle`, `center`, `zoom` and the element's allocation |
+| `addSource()` / `addLayer()` and style-load replay | `overlays.sources` / `overlays.layers`, or `dataLayers` for the documented data-layer models |
+| `addImage()` / missing-image listener | `images` / `imageProvider` |
+| Basemap `setPaintProperty()` / `setLayoutProperty()` | `styleOverrides` with the basemap `layerId` |
+| Camera moves and fitting | `flyTo()`, `easeTo()`, `jumpTo()`, `fitBounds()` and `fitToData()` |
+| Polling `isStyleLoaded()` and installing a style-load listener | `whenStyleReady()` for style restoration; `whenIdle()` for subsequent resource/render work |
+
+For example, this overlay remains owned when the basemap changes:
+
+```ts
+import {
+  LYRA_MAP_EMPTY_STYLE,
+  type LyraMapStyleSpecification,
+} from '@aceshooting/lyra-ui/components/lr-map.js';
+
+const mapEl = document.createElement('lr-map');
+mapEl.setAttribute('aria-label', 'Locations');
+mapEl.style.blockSize = '24rem';
+mapEl.initialization = 'eager';
+mapEl.mapStyle = LYRA_MAP_EMPTY_STYLE;
+mapEl.center = [2.35, 48.85];
+mapEl.zoom = 10;
+mapEl.overlays = {
+  sources: [{
+    id: 'locations-source',
+    source: {
+      type: 'geojson',
+      data: {
+        type: 'FeatureCollection',
+        features: [{
+          type: 'Feature', id: 'location-1', properties: {},
+          geometry: { type: 'Point', coordinates: [2.35, 48.85] },
+        }],
+      },
+    },
+  }],
+  layers: [{
+    interactive: true,
+    layer: {
+      id: 'locations-circles', type: 'circle', source: 'locations-source',
+      paint: { 'circle-color': 'var(--lr-color-brand)', 'circle-radius': 6 },
+    },
+  }],
+};
+document.body.append(mapEl);
+await mapEl.whenStyleReady();
+
+async function replaceBasemap(style: LyraMapStyleSpecification): Promise<void> {
+  mapEl.mapStyle = style;
+  await mapEl.whenStyleReady();
+  // The component has restored locations-source and locations-circles.
+}
+```
+
+Configure the companion worker as shown below before running this example. Handle rejected
+readiness promises when navigation disconnects the element, a newer style supersedes the request,
+or resource preparation fails. After reassigning overlay data or mutable paint/layout on the same
+style, await `whenIdle()` before relying on the rendered result.
+
+Keep the application snapshot authoritative and assign fresh `overlays`, `images` and
+`styleOverrides` values when they change. An incremental `updateSourceData()` call does not rewrite
+that snapshot: the next style replacement restores the controlled source data. Keep source, layer
+and image IDs distinct from the basemap and component-generated resources. A `before` anchor must
+be valid for the replacement basemap too; omit it when no shared anchor exists.
+
+Remove the old callbacks that re-add these same resources on every style load. Use
+`lr-map-style-load` to observe completed restoration. Direct mutations through the `map` getter
+remain outside declarative ownership; move resources that must survive basemap changes into the
+properties above. Retain application selection state across source identity changes, and check
+boolean admission when applying it through `setFeatureState()`.
+
 **Optional peer deps:** the default is `@aceshooting/lyra-map` `^1.0.0` (lazy-loaded). Install and
 configure the companion's Vite plugin so the engine and module worker share the same emitted
 feature graph:
@@ -34462,9 +34738,21 @@ import { lyraMapWorkerPlugin } from '@aceshooting/lyra-map/vite';
 export default defineConfig({ plugins: [lyraMapWorkerPlugin()] });
 ```
 
-The plugin needs no runtime pre-import or readiness gate. Use `LyraMap.preload()` to warm the
-selected engine without constructing a map. Configure one plugin instance per application build,
-including when a workspace re-exports it.
+The plugin configures the worker as the selected renderer is bundled; application startup needs
+no companion pre-import or readiness gate. Configure one plugin instance per application build,
+including when a workspace re-exports it. For an optional warm-up when navigation intent is known:
+
+```ts
+import { LyraMap } from '@aceshooting/lyra-ui/components/lr-map.js';
+
+void LyraMap.preload();
+```
+
+`preload()` starts the selected engine import without constructing a map, creating a WebGL context
+or waiting for a style. It is optional and does not replace worker configuration or an element's
+`whenStyleReady()` / `whenIdle()` promises. Await its boolean result only when the application needs
+to choose its own fallback; `false` means that the selected engine could not load. For an element
+that will use `engine="maplibre"`, warm that engine with `LyraMap.preload('maplibre')` instead.
 
 The plugin disables document module-preload helpers for chunks also imported by workers. See the
 companion README for Rollup/Rolldown integration or the explicit `setWorkerUrl()` override. Missing
@@ -34507,10 +34795,44 @@ With the default companion configured:
 </script>
 ```
 
-For the explicit canonical engine, configure its worker before connecting the element. For example,
-Vite with MapLibre v6 uses `setWorkerUrl` from `maplibre-gl` with a URL imported from
-`maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url`. Other bundlers use different forms; see
-https://maplibre.org/maplibre-gl-js/docs/#esm.
+### Moving from full MapLibre to the modular engine
+
+For an existing `lr-map`, install the compatible `@aceshooting/lyra-map` companion, add
+`lyraMapWorkerPlugin()` to the Vite configuration above, and set `engine="modular"` before the
+element connects (or omit `engine`, whose default is `modular`). Existing style descriptors and
+component-owned overlays keep the same shape. Changing `engine` on a connected element takes
+effect only after disconnect/reconnect.
+
+Register custom protocols through `@aceshooting/lyra-map` when using the modular engine; protocol
+registrations on `maplibre-gl` belong to that other engine. Declarative component resources prepare
+their required feature families automatically. Any remaining direct `map.addSource()` /
+`map.addLayer()` / projection / terrain mutations must await the modular map's
+`prepareFeatures()` with their real descriptors first, as described above.
+
+The modular plugin does not configure full MapLibre's worker. If an element still explicitly uses
+`engine="maplibre"`, retain that engine's setup. For Vite and MapLibre v6:
+
+```ts
+import { setWorkerUrl } from 'maplibre-gl';
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+import {
+  LYRA_MAP_EMPTY_STYLE,
+} from '@aceshooting/lyra-ui/components/lr-map.js';
+
+setWorkerUrl(workerUrl);
+const nativeMapEl = document.createElement('lr-map');
+nativeMapEl.engine = 'maplibre';
+nativeMapEl.mapStyle = LYRA_MAP_EMPTY_STYLE;
+nativeMapEl.style.blockSize = '24rem';
+document.body.append(nativeMapEl);
+```
+
+Run worker setup before connecting any full-engine element. MapLibre v5's standard build includes
+its worker; other build variants and bundlers have their own setup (see
+https://maplibre.org/maplibre-gl-js/docs/#esm). Remove the full-engine worker import and dependency
+only when no remaining consumer uses them. The component styles its own shadow DOM for either
+engine; keep a page-level engine stylesheet only for raw maps that still need it. Deploy the
+modular renderer, worker and every emitted feature chunk together.
 
 **Known gotchas:**
 
@@ -37507,6 +37829,9 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraMapGeoJsonDataLayer {
     readonly sourceId: string;
     readonly geojson: Feature | FeatureCollection;
+    readonly before?: string;
+    readonly minZoom?: number;
+    readonly maxZoom?: number;
     readonly tone?: 'accent' | 'success' | 'warning' | 'danger' | 'neutral';
     readonly color?: string;
     readonly strokeColor?: string;
@@ -37812,6 +38137,8 @@ particular country. Representative language mappings also include `lb` (Luxembou
     readonly field?: string;
     readonly expression?: readonly LyraMapLabelValue[];
     readonly placement?: 'point' | 'line';
+    readonly anchor?: LyraMapLabelAnchor;
+    readonly offset?: readonly [number, number];
     readonly size?: number;
     readonly color?: string;
     readonly haloColor?: string;
@@ -37851,6 +38178,9 @@ particular country. Representative language mappings also include `lb` (Luxembou
     readonly width?: number;
     readonly radius?: number;
     readonly categoryField?: string;
+    readonly paint?: LyraMapVectorPaint;
+    readonly layout?: LyraMapVectorLayout;
+    readonly filter?: LyraMapVectorStyleExpression;
     readonly label?: LyraMapLabelOptions;
     readonly sourceId: string;
     readonly before?: string;
@@ -37860,6 +38190,34 @@ particular country. Representative language mappings also include `lb` (Luxembou
     readonly category?: string;
     readonly interactive?: boolean;
     readonly priority?: number;
+  }`
+  `LyraMapVectorPaint {
+    readonly 'line-color'?: LyraMapVectorColorValue;
+    readonly 'line-width'?: LyraMapVectorNumericValue;
+    readonly 'circle-color'?: LyraMapVectorColorValue;
+    readonly 'circle-radius'?: LyraMapVectorNumericValue;
+    readonly 'circle-stroke-color'?: LyraMapVectorColorValue;
+    readonly 'circle-stroke-width'?: LyraMapVectorNumericValue;
+    readonly 'fill-color'?: LyraMapVectorColorValue;
+    readonly 'fill-outline-color'?: LyraMapVectorColorValue;
+    readonly 'icon-color'?: LyraMapVectorColorValue;
+    readonly 'icon-halo-color'?: LyraMapVectorColorValue;
+    readonly 'icon-halo-width'?: LyraMapVectorNumericValue;
+    readonly 'text-color'?: LyraMapVectorColorValue;
+    readonly 'text-halo-color'?: LyraMapVectorColorValue;
+    readonly 'text-halo-width'?: LyraMapVectorNumericValue;
+  }`
+  `LyraMapVectorLayout {
+    readonly 'line-cap'?: 'butt' | 'round' | 'square';
+    readonly 'line-join'?: 'bevel' | 'round' | 'miter';
+    readonly 'icon-image'?: string | LyraMapVectorStyleExpression;
+    readonly 'icon-size'?: LyraMapVectorNumericValue;
+    readonly 'icon-allow-overlap'?: boolean;
+    readonly 'icon-ignore-placement'?: boolean;
+    readonly 'text-size'?: LyraMapVectorNumericValue;
+    readonly 'text-allow-overlap'?: boolean;
+    readonly 'text-ignore-placement'?: boolean;
+    readonly 'symbol-placement'?: 'point' | 'line';
   }`
   `LyraMapDrawingMetrics {
     readonly length: number;
@@ -37986,10 +38344,11 @@ particular country. Representative language mappings also include `lb` (Luxembou
     readonly positionOptions?: { readonly enableHighAccuracy?: boolean; readonly timeout?: number; readonly maximumAge?: number };
     readonly fitBoundsOptions?: { readonly maxZoom?: number };
   }`
+  `LyraMapAttributionLink { readonly label: string; readonly url: string }`
   `LyraMapAttributionControlOptions {
     readonly position?: LyraMapControlPosition;
     readonly compact?: boolean;
-    readonly customAttribution?: string | readonly string[];
+    readonly customAttribution?: string | LyraMapAttributionLink | readonly (string | LyraMapAttributionLink)[];
   }`
   `LyraMapGeolocateOutOfBoundsDetail {
     readonly code: 'out-of-bounds';
@@ -38047,6 +38406,95 @@ particular country. Representative language mappings also include `lb` (Luxembou
     readonly index: number;
   }`
   Selection identifies the admitted hotspot and its row in the viewer's current hotspot data.
+
+### GeoJSON row order, zoom bounds and label placement
+
+A GeoJSON `dataLayers` row accepts `before`, `minZoom` and `maxZoom`, matching external
+source rows. `before` names another row's public `sourceId` or a native layer; a concrete member
+of a generated row anchors its whole group. Fill, outline, point/icon, cluster/count, heatmap and
+label members keep their internal order. Missing anchors append with a development diagnostic;
+self-anchors and cycles reject the proposed assignment before native mutation. While an ordering
+anchor is active, the complete mixed proposal must fit the existing planner limits: 128 logical
+groups and 1,024 characters per group identifier. An authored `before` target is limited to
+128 characters. These ordering limits do not apply to otherwise-default rows after all anchors
+have been removed and their default order restored.
+
+Finite zoom bounds are clamped to `[0,24]`. Omitted bounds use `0` and `24`; the minimum is
+inclusive and maximum exclusive. Equal bounds describe an empty interval. A reversed authored
+range or invalid new field rejects the whole proposal while the previous accepted map remains
+installed. Changing only order or zoom bounds retains source identity and feature state. The
+row range applies to every generated member, including count labels and point icons. A label's
+effective minimum is the greater of its own `minZoom` and the row minimum. Native clustering's
+`cluster.maxZoom` is a source clustering threshold and does not replace the row's visibility range.
+
+`label.anchor` accepts `center`, `left`, `right`, `top`, `bottom`, `top-left`, `top-right`,
+`bottom-left` or `bottom-right`. `label.offset` is a frozen copy of two finite numbers in
+`[-16,16]`, measured in ems of the effective native text size. Omission preserves the native
+center anchor and `[0,0]` offset. These are physical native coordinates: positive x points right
+and positive y down in label coordinates. RTL changes text shaping, not these coordinates.
+Bearing, pitch and line placement follow native symbol rotation/alignment; down does not always
+mean geographic south or viewport down. Collision rules can still suppress a label.
+
+```ts
+import '@aceshooting/lyra-ui/components/lr-map.js';
+import type { LyraMapGeoJsonDataLayer } from '@aceshooting/lyra-ui/components/media/map/map.class.js';
+
+// Use a glyph-capable mapStyle and localized name properties in the GeoJSON.
+const places: LyraMapGeoJsonDataLayer = {
+  sourceId: 'places', geojson: placeFeatures, before: 'roads', minZoom: 3, maxZoom: 18,
+  label: { field: 'name', anchor: 'top', offset: [0, 1.25] },
+};
+map.dataLayers = [places, roads];
+```
+
+A top anchor with positive y offset places the label below its feature anchor. Choose enough
+offset for the authored icon and text sizes; there is no implicit icon measurement. The same
+label options apply to vector and GeoJSON point/line label routes. Removing an authored anchor
+or offset restores native defaults without replacing a compatible label layer.
+
+### Typed vector row styling
+
+A `kind: 'vector'` row accepts optional `paint`, `layout` and `filter` objects. Their finite
+vocabulary depends on `render`: line color/width and cap/join; circle color/radius/stroke;
+fill color/outline; or symbol icon/text color, halo, size, overlap and placement. Row `opacity`
+and category muting own alpha. Explicit primary paint/layout entries override defaults;
+secondary labels on line/circle/fill rows continue to use `label` options. A row filter applies
+to both its primary layer and secondary label. Omission restores defaults without replacing
+an unchanged source. Unsupported properties/operators and explicitly supplied `undefined`
+reject the proposed assignment before native mutation.
+
+Expressions admit bounded `case`, `match`, `step` and linear `interpolate`, with finite numeric
+or string feature reads and zoom inputs. Filters admit bounded boolean combinations, property
+presence and scalar comparisons. Arithmetic, arbitrary native operators and feature-state
+expressions are not accepted here; use `overlays` for the broader native descriptor API.
+Only color outputs resolve CSS values against the map element. Property names, match labels,
+filter strings and image IDs remain data, even when they resemble CSS tokens.
+
+An icon-only symbol needs `layout['icon-image']` and does not require glyphs. Text symbols
+require the existing glyph-capable style and `label`. Icon IDs are finite literal leaves or
+bounded conditional outputs, supplied by `images` or the existing missing-image provider.
+Icon color and halo affect SDF images; ordinary raster icons retain their original colors.
+Neither symbols nor labels render HTML.
+
+The compiled per-row ceilings (65,536 values, depth 20 and 8 MiB of text) are upper bounds,
+subject to the existing complete native proposal admission limits: 50,000 values and 1 MiB of
+text shared by owned overlays and external rows. Compilation, resolved colors, concrete order
+anchors and prepared local-image URLs are checked together before generated or native writes.
+
+```ts
+import type { LyraMapVectorDataLayer } from '@aceshooting/lyra-ui/components/media/map/map.class.js';
+
+const roads: LyraMapVectorDataLayer = {
+  kind: 'vector', sourceId: 'roads', source: { url: tileJsonUrl }, sourceLayer: 'roads', render: 'line',
+  paint: {
+    'line-color': ['match', ['get', 'class'], 'primary', 'var(--lr-color-brand-600)', '#667788'],
+    'line-width': ['interpolate', ['linear'], ['zoom'], 4, 1, 14, 8],
+  },
+  layout: { 'line-cap': 'round', 'line-join': 'round' },
+  filter: ['has', 'class'],
+};
+map.dataLayers = [roads];
+```
 
 # Charts (`components/charts/`)
 

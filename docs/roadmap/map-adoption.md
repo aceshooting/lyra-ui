@@ -85,7 +85,8 @@ items let them move to `lr-map`, or at least drop their workarounds on the engin
 
 ## Documentation
 
-- [ ] Migration guide from the raw engine to `lr-map`, and the supported overlay-persistence pattern.
+- [ ] Migration guide from the raw engine to `lr-map`, and the supported overlay-persistence pattern
+  ([authored guide](../../packages/lyra-ui/llms/media.md#migrating-a-raw-engine-map-to-lr-map)).
 
 - [ ] State that `lyraMapWorkerPlugin()` needs no pre-import or readiness gate, and that `LyraMap.preload()`
   is the supported warm-up.

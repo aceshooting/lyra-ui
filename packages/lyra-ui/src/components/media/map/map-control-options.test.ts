@@ -57,4 +57,38 @@ describe('map control option projection', () => {
     expect([1, 2, 3, 0, Infinity].map(mapGeolocationErrorCode)).to.deep.equal(['permission-denied', 'position-unavailable', 'timeout', 'unknown', 'unknown']);
     let reads = 0; expect(mapGeolocationErrorCode({ get code() { reads++; return 1; } })).to.equal('unknown'); expect(reads).to.equal(0);
   });
+  it('snapshots guarded linked credits and exports only escaped labels', () => {
+    const link = { label: '<img src=x> & "credits"', url: 'HTTPS://EXAMPLE.COM:443/credits?a=1&b=2' };
+    const entry = normalizeMapControlOptions({ attribution: { customAttribution: [link, 'Text'] } }).controls.get('attribution')!;
+    link.label = 'changed'; link.url = 'javascript:alert(1)';
+    const target = document.createElement('template');
+    target.innerHTML = (entry.options['customAttribution'] as readonly string[]).join(' | ');
+    const anchor = target.content.querySelector('a')!;
+    expect(anchor.textContent).to.equal('<img src=x> & "credits"');
+    expect(anchor.href).to.equal('https://example.com/credits?a=1&b=2');
+    expect(anchor.target).to.equal('_blank'); expect(anchor.rel).to.equal('noopener noreferrer');
+    expect(target.content.querySelectorAll('img').length).to.equal(0);
+    expect(entry.attributionText).to.deep.equal(['&lt;img src=x&gt; &amp; &quot;credits&quot;', 'Text']);
+    expect(Object.isFrozen(entry.attributionText)).to.equal(true);
+    expect(Object.isFrozen(entry.options['customAttribution'])).to.equal(true);
+  });
+  it('rejects one invalid linked item atomically and never invokes label or URL accessors', () => {
+    let reads = 0;
+    const getter = Object.defineProperty({ label: 'Credits' }, 'url', { get() { reads++; return 'https://example.com'; } });
+    const revoked = Proxy.revocable({}, {}); revoked.revoke();
+    const invalid = [getter, revoked.proxy, Object.create({ label: 'Credits', url: 'https://example.com' }),
+      { label: 'x'.repeat(4097), url: 'https://example.com' },
+      ...['javascript:alert(1)', 'data:text/plain,x', 'blob:https://example.com/x', 'file:///x', '/credits',
+        'https://user:password@example.com', 'https://example.com/\ncredits', 'https://example.com/' + 'x'.repeat(2048)]
+        .map(url => ({ label: 'Credits', url }))];
+    for (const value of invalid) {
+      const result = normalizeMapControlOptions({ navigation: true, attribution: { customAttribution: ['Valid', value] } });
+      expect(result.controls.has('attribution')).to.equal(false); expect(result.controls.has('navigation')).to.equal(true);
+      expect(result.diagnostics).to.deep.equal([{ kind: 'attribution', code: 'invalid-options' }]);
+    }
+    expect(reads).to.equal(0);
+    expect(normalizeMapControlOptions({ attribution: { customAttribution: Array(5).fill({ label: 'x'.repeat(4000), url: 'https://example.com' }) } }).controls.size).to.equal(0);
+    expect(normalizeMapControlOptions({ attribution: { customAttribution: new Array(2) } }).controls.size).to.equal(0);
+  });
+
 });

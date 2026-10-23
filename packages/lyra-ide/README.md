@@ -1,5 +1,7 @@
 # @aceshooting/lyra-ide
 
+[![Coverage](https://codecov.io/gh/aceshooting/lyra-ui/branch/main/graph/badge.svg?flag=lyra-ide)](https://codecov.io/gh/aceshooting/lyra-ui)
+
 [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-ide)](https://www.npmjs.com/package/@aceshooting/lyra-ide)
 [![Node.js](https://img.shields.io/node/v/%40aceshooting%2Flyra-ide)](https://www.npmjs.com/package/@aceshooting/lyra-ide)
 

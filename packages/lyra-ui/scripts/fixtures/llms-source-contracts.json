@@ -9902,7 +9902,7 @@
       "module": "src/components/media/map/map-data-layer-model.ts",
       "exportName": "LyraMapLabelOptions",
       "kind": "interface",
-      "fingerprint": "c5938f84194739e4aa36",
+      "fingerprint": "fb78a9e49ac9472c46ee",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -9968,7 +9968,7 @@
       "module": "src/components/media/map/map-data-layer-model.ts",
       "exportName": "LyraMapVectorDataLayer",
       "kind": "interface",
-      "fingerprint": "59845c879837dc1f09b5",
+      "fingerprint": "3034f52c41fe6e30513c",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -10385,7 +10385,7 @@
       "module": "src/components/media/map/map.class.ts",
       "exportName": "LyraMapGeoJsonDataLayer",
       "kind": "interface",
-      "fingerprint": "b1b36a3110b8e50294b5",
+      "fingerprint": "4d3ae6539708b8706805",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -20953,7 +20953,7 @@
       "module": "src/components/media/map/map.class.ts",
       "exportName": "LyraMapControls",
       "kind": "interface",
-      "fingerprint": "3469ac1307ce267de948",
+      "fingerprint": "2ddbbeb53073b33304cd",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -21041,7 +21041,7 @@
       "module": "src/components/media/map/map-control-options.ts",
       "exportName": "LyraMapAttributionControlOptions",
       "kind": "interface",
-      "fingerprint": "8129ec267b5bb1b5f80c",
+      "fingerprint": "acf709931364e7168a67",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -21646,6 +21646,72 @@
         "kind": "utility",
         "name": "components-conversation-code-block-shiki-oniguruma-contracts",
         "declaration": "createShikiOnigurumaEngine"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-control-options.ts",
+      "exportName": "LyraMapAttributionLink",
+      "kind": "interface",
+      "fingerprint": "18795e6b7085fb172398",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapAttributionLink"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-vector-style.ts",
+      "exportName": "LyraMapVectorLayout",
+      "kind": "interface",
+      "fingerprint": "d9d66ab698482d7eaa21",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapVectorLayout"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-vector-style.ts",
+      "exportName": "LyraMapVectorPaint",
+      "kind": "interface",
+      "fingerprint": "60939b074f999f652822",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapVectorPaint"
       }
     }
   ],

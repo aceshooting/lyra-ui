@@ -1,3 +1,4 @@
+import { createMapModule, createMapModuleDemo, createMapModulePublisher } from '../../../../test/map-module-composition.js';
 import { expect, fixture, fixtureCleanup, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { getWorkerUrl, setWorkerUrl } from '@aceshooting/lyra-map';
 import { sendKeys } from '@web/test-runner-commands';
@@ -5,7 +6,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { LyraMap, LYRA_MAP_EMPTY_STYLE } from './map.js';
 import { loadMapControlRuntime, loadMapDrawingRuntime, loadMapFeatureStateRuntime, loadMapHashRuntime, loadMapOwnedFeatureRuntime } from './map-feature-loader.js';
-import type { LyraMapInstance, LyraMapOverlays, LyraMapPickDetail, LyraMapDrawingSnapshot, LyraMapInteractionDetail, LyraMapPointerDetail } from './map.class.js';
+import type { LyraMapGeoJsonDataLayer, LyraMapInstance, LyraMapOverlays, LyraMapPickDetail, LyraMapDrawingSnapshot, LyraMapInteractionDetail, LyraMapPointerDetail } from './map.class.js';
 void LyraMap;
 
 /** Only real native methods, reached through the documented map getter. */
@@ -103,13 +104,13 @@ async function keyboardAction(el: LyraMap, part: string): Promise<void> {
   await focusByKeyboard(target); await sendKeys({ press: 'Enter' }); await el.updateComplete;
 }
 /** Read synchronously inside an actual fresh render event; no retained drawing buffer needed. */
-async function centerPixel(el: LyraMap): Promise<number[]> {
+async function centerPixel(el: LyraMap, x = 0.5, y = 0.5): Promise<number[]> {
   await el.whenIdle(); const map = peer(el), canvas = map.getCanvas();
   return new Promise(resolve => {
     const rendered = () => {
       map.off('render', rendered);
       const gl = canvas.getContext('webgl2')!, rgba = new Uint8Array(4);
-      gl.readPixels(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, rgba);
+      gl.readPixels(Math.floor(canvas.width * x), Math.floor(canvas.height * (1 - y)), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, rgba);
       resolve(Array.from(rgba));
     };
     map.on('render', rendered); map.triggerRepaint();
@@ -597,7 +598,13 @@ describe('lr-map actual modular companion integration', function () {
     });
     color(await centerPixel(el), [0, 160, 0, 255]);
     wrapper.style.setProperty('--unused', '1'); el.style.setProperty('--native-overlay', 'oklch(0.45 0.3 264)');
-    await waitUntil(async () => (await centerPixel(el))[2]! > 150, 'theme change repaints the overlay');
+    let lastPixel: number[] = [];
+    try {
+      await waitUntil(async () => { lastPixel = await centerPixel(el); return lastPixel[2]! > 150; }, 'theme change repaints the overlay');
+    } catch (error) {
+      throw new Error(`Theme repaint failed: ${JSON.stringify({ lastPixel,
+        token: getComputedStyle(el).getPropertyValue('--native-overlay'), layer: peer(el).getStyle().layers.find(layer => layer.id === 'local-fill') })}`, { cause: error });
+    }
   });
 
   it('closes a polygon on its first vertex, measures it, keeps it across a style swap and edits by keyboard', async () => {
@@ -682,4 +689,135 @@ describe('lr-map actual modular companion integration', function () {
       if (own) Object.defineProperty(geolocation, 'getCurrentPosition', own); else Reflect.deleteProperty(geolocation, 'getCurrentPosition');
     }
   });
+
+
+  it('replays eight modules with attributed hits and feature state while updating and removing independently', async () => {
+    let modules = createMapModuleDemo('#ff0000');
+    // Place districts at the existing native harness's center for deterministic picking.
+    modules = Object.freeze({ ...modules, districts: createMapModule('districts', geometry(7), '#ff0000') });
+    const { el } = await mount(map => { map.overlays = {}; });
+    const publish = createMapModulePublisher(value => { el.overlays = value; });
+    publish(modules); await el.updateComplete; await el.whenIdle();
+    const source = peer(el).getSource('city:districts:data');
+    const target = { origin: 'overlay' as const, source: 'city:districts:data', id: 7 };
+    color(await centerPixel(el, 0.49, 0.51), [255, 0, 0, 255]);
+    expect(el.setFeatureState(target, { color: '#0000ff' })).to.equal(true);
+    await el.whenIdle();
+    color(await centerPixel(el, 0.49, 0.51), [0, 0, 255, 255]);
+    // Districts cover the center; other modules do not cover this interior coordinate.
+    const clicked = oneEvent(el, 'lr-map-click'); await clickCanvas(el, 0.49, 0.51);
+    const detail = (await clicked).detail;
+    expect(detail.hit?.origin).to.equal('overlay'); expect(detail.sourceId).to.equal('city:districts:data');
+    expect(detail.hit?.id).to.equal(7);
+    const roads = createMapModule('roads', modules.roads!.sources[0]!.source['data'] as object, '#00ff00');
+    const { alerts: _removed, ...remaining } = modules;
+    modules = Object.freeze({ ...remaining, roads }); publish(modules); await el.updateComplete; await el.whenIdle();
+    expect(peer(el).getSource('city:districts:data') === source).to.equal(true);
+    expect(el.getFeatureState(target)).to.deep.equal({ color: '#0000ff' });
+    expect(peer(el).getSource('city:alerts:data')).to.equal(undefined);
+    expect(peer(el).getLayer('city:alerts:fill')).to.equal(undefined);
+    const assigned = el.overlays;
+    expect(() => publish({ ...modules, selection: modules.districts })).to.throw('duplicate-source:city:districts:data');
+    expect(el.overlays === assigned).to.equal(true);
+    el.mapStyle = localStyle(); await el.updateComplete; await el.whenIdle();
+    expect(peer(el).getStyle().layers.filter(layer => layer.id.startsWith('city:')).length).to.equal(7);
+    expect(el.getFeatureState(target)).to.deep.equal({ color: '#0000ff' });
+    color(await centerPixel(el, 0.49, 0.51), [0, 0, 255, 255]);
+    const replayed = oneEvent(el, 'lr-map-click'); await clickCanvas(el, 0.49, 0.51);
+    expect((await replayed).detail.sourceId).to.equal('city:districts:data');
+  });
+
+  it('orders linked native controls, moves focused roots and reconnects in both peers and directions', async () => {
+    for (const engine of ['modular', 'maplibre'] as const) for (const direction of ['ltr', 'rtl']) {
+      const controls = (position: 'top-right' | 'bottom-left') => ({
+        navigation: { position }, scale: { position }, geolocate: { position },
+        attribution: { position, compact: true, customAttribution: { label: 'Survey <team>', url: 'https://example.com/credits' } },
+      });
+      const { el, wrapper } = await mount(map => { map.engine = engine; map.dir = direction; map.controls = controls('bottom-left'); });
+      const roots = () => [
+        el.shadowRoot!.querySelector<HTMLElement>('[part~="navigation"]'),
+        el.shadowRoot!.querySelector<HTMLElement>('[part~="scale"]'),
+        el.shadowRoot!.querySelector<HTMLElement>('[part~="geolocate"]')?.closest<HTMLElement>('.maplibregl-ctrl'),
+        el.shadowRoot!.querySelector<HTMLElement>('[part~="attribution"]'),
+      ];
+      try {
+        try {
+          await waitUntil(() => roots().every(root => root?.isConnected), `${engine}/${direction} controls connected`);
+        } catch (error) {
+          throw new Error(`Control setup failed: ${JSON.stringify({ engine, direction, connected: roots().map(root => root?.isConnected ?? false),
+            nativeControls: [...el.shadowRoot!.querySelectorAll('.maplibregl-ctrl')].map(root => root.className) })}`, { cause: error });
+        }
+        const assertOrder = () => {
+          const boxes = roots().map(root => root!.getBoundingClientRect());
+          for (let index = 1; index < boxes.length; index++) expect(boxes[index]!.top).to.be.at.least(boxes[index - 1]!.bottom);
+        };
+        assertOrder();
+        const initial = roots();
+        const zoom = button(el, 'zoom-in'); await focusByKeyboard(zoom);
+        el.controls = controls('top-right'); await el.updateComplete;
+        await waitUntil(() => roots().every(root => root?.parentElement?.classList.contains('maplibregl-ctrl-top-right')));
+        expect(roots().every((root, index) => root === initial[index])).to.equal(true);
+        expect(el.shadowRoot!.activeElement === zoom).to.equal(true); assertOrder();
+        const mapBox = el.getBoundingClientRect(), navBox = roots()[0]!.getBoundingClientRect();
+        expect(navBox.left < mapBox.left + mapBox.width / 2).to.equal(direction === 'rtl');
+        const attribution = roots()[3] as HTMLDetailsElement;
+        const disclosure = button(el, 'attribution-toggle'); await focusByKeyboard(disclosure);
+        // Compact native attribution can start expanded. Establish the closed state with the keyboard.
+        if (attribution.open) {
+          await sendKeys({ press: 'Enter' });
+          await waitUntil(() => !attribution.open, 'keyboard closes compact attribution');
+        }
+        const link = attribution.querySelector<HTMLAnchorElement>('a[href="https://example.com/credits"]')!;
+        expect(link !== null).to.equal(true); expect(link.textContent).to.equal('Survey <team>');
+        expect(link.target).to.equal('_blank'); expect(link.rel).to.equal('noopener noreferrer');
+        expect(roots()[3]!.textContent).to.include('Local test geometry');
+        expect(link.getClientRects().length, 'closed attribution hides its link').to.equal(0);
+        await sendKeys({ press: 'Enter' });
+        await waitUntil(() => attribution.open && link.getBoundingClientRect().width > 0 &&
+          link.getBoundingClientRect().height > 0, 'keyboard opens a visible attribution link');
+        await sendKeys({ press: 'Tab' });
+        expect(el.shadowRoot!.activeElement === link, 'Tab reaches the visible attribution link').to.equal(true);
+        el.remove(); const loaded = oneEvent(el, 'lr-map-load'); wrapper.append(el); await loaded;
+        await waitUntil(() => roots().every(root => root?.isConnected));
+        for (const part of ['navigation', 'scale', 'geolocate', 'attribution']) expect(el.shadowRoot!.querySelectorAll(`[part~="${part}"]`).length).to.equal(1);
+        assertOrder();
+      } finally { el.remove(); }
+    }
+  });
+
+
+  for (const engine of ['modular', 'maplibre'] as const) it(`retains GeoJSON source identity while ordering groups and changing row bounds (${engine})`, async () => {
+    const data = geometry(44);
+    const row: LyraMapGeoJsonDataLayer = { sourceId: 'bounded-area', geojson: data as LyraMapGeoJsonDataLayer['geojson'], minZoom: 2, maxZoom: 5, before: 'local-fill', color: '#00ff00' };
+    const { el } = await mount(map => { map.engine = engine; map.dataLayers = [row]; });
+    const map = peer(el);
+    const sourceId = Object.entries(map.getStyle().sources).find(([id, value]) => id !== 'local-area' &&
+      (value as Record<string, unknown>)['type'] === 'geojson')![0];
+    const source = map.getSource(sourceId), fill = `${sourceId}-fill`;
+    expect(map.getStyle().layers.findIndex(layer => layer.id === fill)).to.be.lessThan(map.getStyle().layers.findIndex(layer => layer.id === 'local-fill'));
+    expect(map.getLayer(fill)).to.include({ minzoom: 2, maxzoom: 5 });
+    const clicked = oneEvent(el, 'lr-map-click'); await clickCanvas(el);
+    expect((await clicked).detail.sourceId).to.equal('local-area');
+    el.dataLayers = [{ ...row, before: undefined, minZoom: 3, maxZoom: 6 }];
+    await el.updateComplete; await el.whenIdle();
+    expect(map.getSource(sourceId) === source).to.equal(true);
+    expect(map.getLayer(fill)).to.include({ minzoom: 3, maxzoom: 6 });
+    // Unanchored generated groups follow their explicit declaration order, ahead of owned overlays.
+    el.overlays = {}; await el.updateComplete; await el.whenIdle();
+    const visible = oneEvent(el, 'lr-map-click'); await clickCanvas(el);
+    expect((await visible).detail.sourceId).to.equal(row.sourceId);
+    el.dataLayers = [{ ...row, before: undefined, minZoom: 3, maxZoom: 3 }];
+    await el.updateComplete; await el.whenIdle();
+    const hidden = oneEvent(el, 'lr-map-click'); await clickCanvas(el);
+    expect((await hidden).detail.hit).to.equal(undefined);
+    expect(map.getSource(sourceId) === source).to.equal(true);
+    for (let index = 0; index < 3; index++) {
+      el.mapStyle = localStyle(); await el.updateComplete; await el.whenStyleReady(); await el.whenIdle();
+      const current = peer(el), layers = current.getStyle().layers.filter(layer => layer.id.startsWith('lr-data-layer-'));
+      expect(layers.length).to.equal(3);
+      for (const layer of layers) expect(current.getLayer(layer.id)).to.include({ minzoom: 3, maxzoom: 3 });
+      const absent = oneEvent(el, 'lr-map-click'); await clickCanvas(el); expect((await absent).detail.hit).to.equal(undefined);
+    }
+  });
+
 });

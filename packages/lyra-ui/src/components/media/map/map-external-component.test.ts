@@ -2,10 +2,14 @@ import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testi
 import { captureReentrantUpdateWarning } from '../../../../test/expected-lit-update.js';
 import './map.js';
 import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from './map.js';
+import { admitMapOverlays } from './map-overlay-admission.js';
 import { loadMapFeatureStateRuntime } from './map-feature-loader.js';
 
 class OwnedMap {
   sourceWrites = 0;
+  stateWrites: { source: string; sourceLayer?: string; id: string | number }[] = [];
+  setFeatureState(target: { source: string; sourceLayer?: string; id: string | number }): void { this.stateWrites.push(target); }
+  removeFeatureState(): void {}
   hits: unknown[] = [];
   static initialReady = false;
   static prepare: ((requirements: unknown) => Promise<void>) | undefined;
@@ -83,12 +87,25 @@ class OwnedMap {
   }
   removeSource(id: string): this { this.sources.delete(id); return this; }
   getLayer(id: string): unknown { return this.layers.get(id); }
-  addLayer(layer: { id: string }, before?: string): this { this.layers.set(layer.id, layer); this.order.splice(before ? this.order.indexOf(before) : this.order.length, 0, layer.id); return this; }
+  addLayer(layer: { id: string }, before?: string): this { this.layers.set(layer.id, structuredClone(layer)); this.order.splice(before ? this.order.indexOf(before) : this.order.length, 0, layer.id); return this; }
   removeLayer(id: string): this { this.layers.delete(id); this.order = this.order.filter(value => value !== id); return this; }
   setPaintProperty(id: string, key: string, value: unknown): this { this.paint.set(`${id}:${key}`, value); return this; }
   getPaintProperty(id: string, key: string): unknown { return this.paint.get(`${id}:${key}`); }
   getLayoutProperty(): unknown { return undefined; }
-  setLayoutProperty(): this { return this; }
+  setLayoutProperty(id: string, key: string, value: unknown): this {
+    const layer = this.layers.get(id) as Record<string, unknown>;
+    const layout = (layer['layout'] ??= {}) as Record<string, unknown>;
+    if (value === null) delete layout[key]; else layout[key] = value;
+    return this;
+  }
+  setFilter(id: string, value: unknown): this {
+    const layer = this.layers.get(id) as Record<string, unknown>;
+    if (value === null) delete layer['filter']; else layer['filter'] = value;
+    return this;
+  }
+  setLayerZoomRange(id: string, minzoom: number, maxzoom: number): this {
+    Object.assign(this.layers.get(id) as object, { minzoom, maxzoom }); return this;
+  }
   repaints = 0;
   triggerRepaint(): void { this.repaints++; }
   getStyle() { return { layers: this.order.map(id => ({ id })) }; }
@@ -135,6 +152,328 @@ describe('lr-map external data layers and labels', () => {
     fixtureCleanup();
     Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: originalObserver });
     HTMLCanvasElement.prototype.getContext = originalContext;
+  });
+
+  it('updates every GeoJSON member range without replacing the source or layers', async () => {
+    const row = { sourceId: 'bounded', geojson: POINTS, minZoom: 3, maxZoom: 9 };
+    const { element, peer } = await mount(el => { el.dataLayers = [row]; });
+    await load(element, peer); await element.whenIdle();
+    const sources = [...peer.sources.values()], layers = [...peer.layers.values()];
+    expect(layers.length).to.equal(3);
+    for (const layer of layers) expect(layer).to.include({ minzoom: 3, maxzoom: 9 });
+    element.dataLayers = [{ ...row, minZoom: 5, maxZoom: 5 }];
+    await element.updateComplete; await element.whenIdle();
+    expect([...peer.sources.values()][0] === sources[0]).to.equal(true);
+    expect([...peer.layers.values()].every((layer, index) => layer === layers[index])).to.equal(true);
+    for (const layer of peer.layers.values()) expect(layer).to.include({ minzoom: 5, maxzoom: 5 });
+    element.dataLayers = [{ sourceId: row.sourceId, geojson: POINTS }];
+    await element.updateComplete; await element.whenIdle();
+    for (const layer of peer.layers.values()) expect(layer).to.include({ minzoom: 0, maxzoom: 24 });
+  });
+
+  for (const rejectBudget of [false, true]) {
+    it(`${rejectBudget ? 'disposes refused' : 'accepts'} large local image preparation before generated writes`, async () => {
+      const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 448;
+      const pixels = new ImageData(canvas.width, canvas.height); let seed = 0x12345678;
+      for (let index = 0; index < pixels.data.length; index++) {
+        seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; pixels.data[index] = seed >>> 24;
+      }
+      canvas.getContext('2d')!.putImageData(pixels, 0, 0);
+      const input = canvas.toDataURL('image/png');
+      expect(input.length).to.be.greaterThan(1_048_576);
+      expect(atob(input.split(',')[1]!).length).to.be.at.most(1_048_576);
+      const { element, peer } = await mount(el => { el.dataLayers = [{ sourceId: 'geo', geojson: POINTS }]; });
+      await load(element, peer); await element.whenIdle();
+      const writes = peer.sourceWrites, sources = [...peer.sources.values()], order = [...peer.order];
+      const create = URL.createObjectURL, revoke = URL.revokeObjectURL;
+      const created: string[] = [], revoked: string[] = [];
+      try {
+        URL.createObjectURL = value => { const url = create.call(URL, value); created.push(url); return url; };
+        URL.revokeObjectURL = url => { revoked.push(url); revoke.call(URL, url); };
+        if (rejectBudget) element.overlays = { sources: [], layers: [{ layer: { id: 'large', type: 'background', metadata: { text: 'x'.repeat(1_048_500) } } }] };
+        element.dataLayers = [{ sourceId: 'replacement', geojson: POINTS },
+          { kind: 'image', sourceId: 'image', url: input, coordinates: [[-10, 10], [10, 10], [10, -10], [-10, -10]] }];
+        await element.updateComplete;
+        try { await element.whenIdle(); } catch { if (!rejectBudget) throw new Error('Valid prepared image was rejected.'); }
+        expect(created.length).to.be.greaterThan(0);
+        if (rejectBudget) {
+          expect(peer.sourceWrites).to.equal(writes); expect(peer.order).to.deep.equal(order);
+          expect([...peer.sources.values()].every((value, index) => value === sources[index])).to.equal(true);
+          expect(created.every(url => revoked.includes(url))).to.equal(true);
+        } else {
+          const image = [...peer.sourceDescriptors.values()].find(value => (value as Record<string, unknown>)['type'] === 'image') as Record<string, unknown>;
+          expect((image['url'] as string).startsWith('blob:')).to.equal(true);
+          expect(revoked.includes(image['url'] as string)).to.equal(false);
+        }
+      } finally { element.remove(); URL.createObjectURL = create; URL.revokeObjectURL = revoke; }
+    });
+  }
+
+  it('installs catalog images before icon-only vector symbols without glyphs', async () => {
+    const { element, peer } = await mount(); await load(element, peer);
+    // An empty style reaches native idle without a source mutation to drive the fake peer.
+    peer.idle = true; peer.fire('idle'); await element.whenIdle();
+    const add = peer.addLayer.bind(peer); let readyAtAdd = false;
+    peer.addLayer = (layer, before) => {
+      if ((layer as { type?: string }).type === 'symbol') readyAtAdd = peer.hasImage('pin');
+      return add(layer, before);
+    };
+    element.images = [{ id: 'pin', width: 8, height: 8, pixelRatio: 1, sdf: true,
+      source: { kind: 'svg', markup: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" fill="black"/></svg>' } }];
+    element.dataLayers = [{ kind: 'vector', sourceId: 'icons', source: { url: 'https://example.test/vector.json' },
+      sourceLayer: 'points', render: 'symbol', layout: { 'icon-image': 'pin' }, paint: { 'icon-color': '#123456' } }];
+    await element.updateComplete; await element.whenIdle();
+    expect(readyAtAdd).to.equal(true); expect(peer.removed).to.equal(false);
+    const symbol = [...peer.layers.values()].find(value => (value as { type?: string }).type === 'symbol') as Record<string, unknown>;
+    expect(symbol !== undefined).to.equal(true);
+    expect(Object.hasOwn(symbol['layout'] as object, 'text-field')).to.equal(false);
+  });
+
+  it('resolves only typed vector color outputs and retains source identity across style omission', async () => {
+    const row = { kind: 'vector' as const, sourceId: 'roads', source: { url: 'https://example.test/vector.json' }, sourceLayer: 'roads', render: 'line' as const };
+    const { element, peer } = await mount(el => {
+      el.style.setProperty('--route-color', '#123456');
+      el.dataLayers = [{ ...row, paint: { 'line-color': ['match', ['get', 'var(--field)'], 'var(--label)', 'var(--route-color)', '#abcdef'], 'line-width': 4 },
+        layout: { 'line-cap': 'round' as const }, filter: ['has', 'var(--filter-field)'] }];
+    });
+    await load(element, peer); await element.whenIdle();
+    const [id, source] = [...peer.sources][0]!;
+    const layer = peer.getLayer(`${id}-render`) as Record<string, unknown>;
+    const paint = layer['paint'] as Record<string, unknown>;
+    const color = JSON.stringify(paint['line-color']);
+    expect(color).to.include('var(--field)'); expect(color).to.include('var(--label)');
+    expect(color).not.to.include('var(--route-color)');
+    expect(JSON.stringify(layer['filter'])).to.include('var(--filter-field)');
+    element.dataLayers = [row]; await element.updateComplete; await element.whenIdle();
+    expect(peer.getSource(id) === source).to.equal(true);
+    expect(peer.getLayer(`${id}-render`) === layer).to.equal(true);
+    expect(Object.hasOwn(layer, 'filter')).to.equal(false);
+    expect(Object.hasOwn(layer['layout'] as object, 'line-cap')).to.equal(false);
+  });
+
+  it('keeps accepted native identities after a rejected proposal reserves their names', async () => {
+    const row = { kind: 'vector' as const, sourceId: 'roads', source: { url: 'https://example.test/vector.json' }, sourceLayer: 'roads', render: 'line' as const };
+    const { element, peer } = await mount(el => { el.dataLayers = [row, { sourceId: 'geo', geojson: POINTS }]; });
+    await load(element, peer); await element.whenIdle();
+    const internal = element as unknown as { externalSourceIds: Map<string, string> };
+    const id = internal.externalSourceIds.get('roads')!, source = peer.getSource(id);
+    const target = { origin: 'data-layer' as const, source: 'roads', sourceLayer: 'roads', id: 7 };
+    expect(element.setFeatureState(target, { selected: true })).to.equal(true);
+    expect(peer.stateWrites.at(-1)?.source).to.equal(id);
+    const writes = peer.sourceWrites, order = [...peer.order];
+    element.overlays = { sources: [], layers: [{ layer: { id, type: 'background' }, before: 'roads' }] };
+    element.dataLayers = [{ ...row, before: id }, { sourceId: 'geo', geojson: POINTS }];
+    await element.updateComplete;
+    try { await element.whenIdle(); } catch { /* Rejected proposal. */ }
+    expect(internal.externalSourceIds.get('roads')).to.equal(id);
+    expect(peer.getSource(id) === source).to.equal(true);
+    expect(peer.sourceWrites).to.equal(writes); expect(peer.order).to.deep.equal(order);
+    expect(element.getFeatureState(target)).to.deep.equal({ selected: true });
+    element.overlays = { sources: [], layers: [] }; element.dataLayers = [row, { sourceId: 'geo', geojson: POINTS }];
+    await element.updateComplete; await element.whenIdle();
+    expect(internal.externalSourceIds.get('roads')).to.equal(id);
+    expect(peer.getSource(id) === source).to.equal(true);
+    expect(element.setFeatureState(target, { selected: false })).to.equal(true);
+    expect(peer.stateWrites.at(-1)?.source).to.equal(id);
+  });
+
+  it('rejects one text unit beyond the complete compiled descriptor boundary before GeoJSON writes', async () => {
+    const row = { kind: 'vector' as const, sourceId: 'roads', source: { url: 'https://example.test/vector.json' }, sourceLayer: 'roads', render: 'line' as const };
+    const { element, peer } = await mount(el => { el.dataLayers = [row, { sourceId: 'g', geojson: POINTS }]; });
+    await load(element, peer); await element.whenIdle();
+    const id = [...peer.sourceDescriptors].find(([, value]) => (value as { type?: string }).type === 'vector')![0];
+    const external = { sources: [{ id, source: peer.sourceDescriptors.get(id) }], layers: [{ layer: peer.getLayer(`${id}-render`) }] };
+    const layer = (length: number) => ({ layer: { id: 'overlay', type: 'background', metadata: { text: 'x'.repeat(length) } } });
+    const complete = (length: number) => ({ sources: external.sources, layers: [...external.layers, layer(length)] });
+    let low = 0, high = 1_048_577;
+    while (low + 1 < high) {
+      const middle = Math.floor((low + high) / 2);
+      if (admitMapOverlays(complete(middle)).ok) low = middle; else high = middle;
+    }
+    expect(admitMapOverlays(complete(low)).ok).to.equal(true);
+    expect(admitMapOverlays(complete(low + 1)).ok).to.equal(false);
+    expect(admitMapOverlays({ sources: [], layers: [layer(low + 1)] }).ok).to.equal(true);
+    const source = [...peer.sources].find(([key]) => key !== id)![1]; let updates = 0;
+    source.setData = () => { updates++; };
+    const order = [...peer.order];
+    element.overlays = { sources: [], layers: [layer(low + 1)] };
+    element.dataLayers = [row, { sourceId: 'g', geojson: { ...POINTS, features: [] } }];
+    await element.updateComplete;
+    try { await element.whenIdle(); } catch { /* Complete descriptor proposal exceeds admission. */ }
+    expect(updates).to.equal(0); expect(peer.order).to.deep.equal(order); expect(peer.removed).to.equal(false);
+  });
+
+  it('rejects the combined resolved descriptor budget before changing GeoJSON', async () => {
+    const row = { kind: 'vector' as const, sourceId: 'roads', source: { url: 'https://example.test/vector.json' }, sourceLayer: 'roads', render: 'line' as const };
+    const { element, peer } = await mount(el => { el.dataLayers = [row, { sourceId: 'geo', geojson: POINTS }]; });
+    await load(element, peer); await element.whenIdle();
+    const writes = peer.sourceWrites, order = [...peer.order];
+    const source = [...peer.sources.values()];
+    element.overlays = { sources: [], layers: [{ layer: { id: 'large', type: 'background', metadata: { text: 'x'.repeat(1_048_500) } } }] };
+    element.dataLayers = [{ ...row, paint: { 'line-width': 5 } }, { sourceId: 'replacement', geojson: POINTS }];
+    await element.updateComplete;
+    try { await element.whenIdle(); } catch { /* Rejected proposal. */ }
+    expect(peer.sourceWrites).to.equal(writes); expect(peer.order).to.deep.equal(order);
+    expect([...peer.sources.values()].every((value, index) => value === source[index])).to.equal(true);
+    expect(peer.removed).to.equal(false);
+  });
+
+  it('orders mixed logical groups and rejects cycles before touching accepted resources', async () => {
+    const geo = { sourceId: 'geo', geojson: POINTS, before: 'roads' };
+    const vector = { kind: 'vector' as const, sourceId: 'roads', source: { tiles: ['https://example.test/{z}/{x}/{y}.pbf'] }, sourceLayer: 'roads', render: 'line' as const };
+    const { element, peer } = await mount(el => { el.dataLayers = [vector, geo]; });
+    await load(element, peer); await element.whenIdle();
+    const nativeGeo = [...peer.sourceDescriptors.entries()].find(([, source]) => (source as Record<string, unknown>)['type'] === 'geojson')![0];
+    const nativeVector = [...peer.sourceDescriptors.entries()].find(([, source]) => (source as Record<string, unknown>)['type'] === 'vector')![0];
+    expect(peer.order.slice(0, 3)).to.deep.equal([`${nativeGeo}-fill`, `${nativeGeo}-line`, `${nativeGeo}-circle`]);
+    expect(peer.order[3]).to.equal(`${nativeVector}-render`);
+    const order = [...peer.order], writes = peer.sourceWrites;
+    element.dataLayers = [geo, { ...vector, before: 'geo' }];
+    await element.updateComplete;
+    try { await element.whenIdle(); } catch { /* Rejected proposal. */ }
+    expect(peer.removed).to.equal(false);
+    expect(peer.sourceWrites).to.equal(writes);
+    expect(peer.order).to.deep.equal(order);
+    await waitUntil(() => Boolean(element.shadowRoot?.querySelector('[part="configuration-error"]')?.textContent?.trim()), 'rejected proposal feedback');
+  });
+
+  it('keeps positioned labels and sources installed across updates, removal and RTL', async () => {
+    const row = { sourceId: 'places', geojson: POINTS, minZoom: 2, maxZoom: 8,
+      label: { field: 'name', anchor: 'top' as const, offset: [0, 1.25] as const } };
+    const { element, peer } = await mount(el => {
+      el.mapStyle = { ...LYRA_MAP_EMPTY_STYLE, glyphs: 'https://example.test/{fontstack}/{range}.pbf' };
+      el.dataLayers = [row];
+    });
+    await load(element, peer); await element.whenIdle();
+    const label = [...peer.layers.values()].find(layer => (layer as Record<string, unknown>)['type'] === 'symbol') as Record<string, unknown>;
+    expect(label !== undefined).to.equal(true);
+    const source = [...peer.sources.values()][0];
+    expect(label['layout']).to.include({ 'text-anchor': 'top' });
+    expect((label['layout'] as Record<string, unknown>)['text-offset']).to.deep.equal([0, 1.25]);
+    element.dir = 'rtl';
+    element.dataLayers = [{ ...row, label: { ...row.label, offset: [-1, 2] as const } }];
+    await element.updateComplete; await element.whenIdle();
+    expect(peer.layers.get(label['id'] as string) === label).to.equal(true);
+    expect((label['layout'] as Record<string, unknown>)['text-offset']).to.deep.equal([-1, 2]);
+    element.dataLayers = [{ ...row, label: { field: 'name' } }];
+    await element.updateComplete; await element.whenIdle();
+    expect(peer.layers.get(label['id'] as string) === label).to.equal(true);
+    expect([...peer.sources.values()][0] === source).to.equal(true);
+    expect(Object.hasOwn(label['layout'] as object, 'text-anchor')).to.equal(false);
+    expect(Object.hasOwn(label['layout'] as object, 'text-offset')).to.equal(false);
+  });
+
+  it('rejects an invalid live GeoJSON range before changing native state, then recovers', async () => {
+    const row = { sourceId: 'bounded', geojson: POINTS, minZoom: 2, maxZoom: 8 };
+    const { element, peer } = await mount(el => { el.dataLayers = [row]; });
+    await load(element, peer); await element.whenIdle();
+    const source = [...peer.sources.values()][0], writes = peer.sourceWrites, order = [...peer.order];
+    element.dataLayers = [{ ...row, minZoom: 9, maxZoom: 1 }];
+    await element.updateComplete;
+    try { await element.whenIdle(); } catch { /* Rejected proposal. */ }
+    expect(peer.removed).to.equal(false); expect(peer.sourceWrites).to.equal(writes);
+    expect(peer.order).to.deep.equal(order);
+    element.dataLayers = [{ ...row, minZoom: 3 }];
+    await element.updateComplete; await element.whenIdle();
+    expect([...peer.sources.values()][0] === source).to.equal(true);
+    for (const layer of peer.layers.values()) expect(layer).to.include({ minzoom: 3, maxzoom: 8 });
+  });
+
+  it('resolves an owned anchor to a default GeoJSON group without another ordering opt-in', async () => {
+    const { element, peer } = await mount(el => {
+      el.dataLayers = [{ sourceId: 'geo', geojson: POINTS }];
+      el.overlays = { sources: [{ id: 'owned', source: { type: 'geojson', data: POINTS } }],
+        layers: [{ before: 'geo', layer: { id: 'owned-circle', type: 'circle', source: 'owned' } }] };
+    });
+    await load(element, peer); await element.whenIdle();
+    expect(peer.order[0]).to.equal('owned-circle');
+    expect(peer.order.slice(1).every(id => id.startsWith('lr-data-layer-'))).to.equal(true);
+  });
+
+  it('recovers a corrected overlay proposal without requiring a new dataLayers array', async () => {
+    const dataLayers = [{ sourceId: 'geo', geojson: POINTS, minZoom: 1, maxZoom: 9 }];
+    const { element, peer } = await mount(el => { el.dataLayers = dataLayers; });
+    await load(element, peer); await element.whenIdle();
+    const retainedRows = element.dataLayers;
+    const layer = { id: 'owned-circle', type: 'circle', source: 'owned' };
+    const sources = [{ id: 'owned', source: { type: 'geojson', data: POINTS } }];
+    element.overlays = { sources, layers: [{ layer }, { layer }] };
+    await element.updateComplete; try { await element.whenIdle(); } catch { /* Rejected duplicate. */ }
+    expect(peer.removed).to.equal(false);
+    element.overlays = { sources, layers: [{ layer }] };
+    await element.updateComplete; await element.whenIdle();
+    expect(peer.layers.has(layer.id)).to.equal(true);
+    expect(element.dataLayers === retainedRows).to.equal(true);
+    expect(peer.removed).to.equal(false);
+  });
+
+  it('routes a final mixed-order move failure through settled resource failure', async () => {
+    const first = { sourceId: 'first', geojson: POINTS, minZoom: 1, before: 'owned-circle' };
+    const second = { sourceId: 'second', geojson: POINTS, minZoom: 1, before: 'owned-circle' };
+    const { element, peer } = await mount(el => {
+      el.dataLayers = [first, second];
+      el.overlays = { sources: [{ id: 'owned', source: { type: 'geojson', data: POINTS } }],
+        layers: [{ layer: { id: 'owned-circle', type: 'circle', source: 'owned' } }] };
+    });
+    await load(element, peer); await element.whenIdle();
+    let moves = 0;
+    peer.moveLayer = () => { moves++; throw new Error('Native order failure'); };
+    element.dataLayers = [second, first]; await element.updateComplete;
+    try { await element.whenIdle(); } catch { /* Expected sanitized resource failure. */ }
+    await waitUntil(() => peer.removed, 'failed final order did not retire peer');
+    expect(moves).to.be.greaterThan(0);
+    expect(element.shadowRoot?.textContent?.includes('Native order failure')).to.equal(false);
+  });
+
+  for (const removeLabel of [false, true]) it(`stops obsolete label and range work when a layout callback ${removeLabel ? 'removes labels' : 'replaces rows'}`, async () => {
+    const row = { sourceId: 'places', geojson: POINTS, minZoom: 1, maxZoom: 9,
+      label: { field: 'name', anchor: 'top' as const, offset: [0, 1] as const } };
+    const { element, peer } = await mount(el => {
+      el.mapStyle = { ...LYRA_MAP_EMPTY_STYLE, glyphs: 'https://example.test/{fontstack}/{range}.pbf' };
+      el.dataLayers = [row];
+    });
+    await load(element, peer); await element.whenIdle();
+    const layout = peer.setLayoutProperty.bind(peer), range = peer.setLayerZoomRange.bind(peer);
+    let interrupted = false; const ranges: number[] = [];
+    peer.setLayoutProperty = (id, key, value) => {
+      layout(id, key, value);
+      if (!interrupted && key === 'text-anchor') {
+        interrupted = true;
+        element.dataLayers = [{ ...row, minZoom: 4, maxZoom: 6, ...(removeLabel ? { label: undefined } : {}) }];
+      }
+      return peer;
+    };
+    peer.setLayerZoomRange = (id, min, max) => { if (interrupted) ranges.push(max); return range(id, min, max); };
+    await captureReentrantUpdateWarning(element.localName, async () => {
+      element.dataLayers = [{ ...row, minZoom: 2, maxZoom: 8, label: { ...row.label, anchor: 'bottom' as const } }];
+      await element.updateComplete; await element.whenIdle();
+    });
+    expect(interrupted).to.equal(true);
+    expect(ranges.includes(8)).to.equal(false);
+    expect(ranges.length).to.be.greaterThan(0);
+    expect(ranges.every(value => value === 6)).to.equal(true);
+    expect(peer.removed).to.equal(false);
+    for (const layer of peer.layers.values()) expect(layer).to.include({ minzoom: 4, maxzoom: 6 });
+    expect([...peer.layers.values()].filter(layer => (layer as Record<string, unknown>)['type'] === 'symbol').length).to.equal(removeLabel ? 0 : 1);
+  });
+
+  it('releases ordering limits after restoring a proposal with no anchors', async () => {
+    const { element, peer } = await mount(el => {
+      el.dataLayers = [{ sourceId: 'geo', geojson: POINTS, before: 'owned-circle' }];
+      el.overlays = { sources: [{ id: 'owned', source: { type: 'geojson', data: POINTS } }],
+        layers: [{ layer: { id: 'owned-circle', type: 'circle', source: 'owned' } }] };
+    });
+    await load(element, peer); await element.whenIdle();
+    element.dataLayers = [{ sourceId: 'geo', geojson: POINTS }];
+    await element.updateComplete; await element.whenIdle();
+    const previous = [...peer.sources.keys()].find(id => id !== 'owned')!;
+    element.dataLayers = [{ sourceId: 'g'.repeat(1025), geojson: POINTS, minZoom: 1, maxZoom: 7 }];
+    await element.updateComplete; await element.whenIdle();
+    expect(peer.sources.has(previous)).to.equal(false);
+    expect(peer.removed).to.equal(false);
+    const generated = [...peer.layers.entries()].filter(([id]) => id.startsWith('lr-data-layer-'));
+    expect(generated.length).to.equal(3);
+    for (const [, layer] of generated) expect(layer).to.include({ minzoom: 1, maxzoom: 7 });
   });
 
   it('coalesces generated paint changes and keeps equal snapshots repaint-free', async () => {

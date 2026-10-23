@@ -107,7 +107,7 @@ import { MAP_HASH_UNNAMED } from './map-hash-option.js';
 import { normalizeMapControlOptions, type LyraMapGeolocateControlOptions, type LyraMapAttributionControlOptions, type LyraMapGeolocationErrorCode,
   type LyraMapNavigationControlOptions, type LyraMapScaleControlOptions } from './map-control-options.js';
 export type { LyraMapControlPosition, LyraMapScaleUnit, LyraMapNavigationControlOptions, LyraMapScaleControlOptions,
-  LyraMapGeolocateControlOptions, LyraMapAttributionControlOptions, LyraMapGeolocationErrorCode } from './map-control-options.js';
+  LyraMapGeolocateControlOptions, LyraMapAttributionControlOptions, LyraMapAttributionLink, LyraMapGeolocationErrorCode } from './map-control-options.js';
 import type { MapControlLifecyclePeer, MapControlsLifecycle } from './map-controls-lifecycle.js';
 import { MapEngineEvents } from './map-engine-events.js';
 import { MapReadiness } from './map-readiness.js';
@@ -126,9 +126,12 @@ import type { MapOwnedOverlaySnapshot, LyraMapOverlaySource, LyraMapOverlayLayer
 import type { LyraMapImage } from './map-image-admission.js';
 import type { LyraMapImageProvider } from './map-image-provider.js';
 export type { LyraMapImageProvider } from './map-image-provider.js';
-import { projectMapDataLayerModel, projectMapLabelOptions, buildMapLabelLayer, buildMapExternalLayers,
+import { planMapLayerOrder, type MapLayerOrderGroup } from './map-layer-order.js';
+import { projectMapDataLayerModel, projectMapRowPlacement, projectMapLabelOptions, buildMapLabelLayer, buildMapExternalLayers,
   type CanonicalMapExternalLayer, type CanonicalMapLabel, type LyraMapExternalDataLayer, type LyraMapLabelOptions } from './map-data-layer-model.js';
-export type { LyraMapSourceCoordinates, LyraMapLabelValue, LyraMapLabelOptions, LyraMapTileSource,
+export type { LyraMapVectorPaintProperty, LyraMapVectorLayoutProperty, LyraMapVectorStyleExpression,
+  LyraMapVectorNumericValue, LyraMapVectorColorValue, LyraMapVectorPaint, LyraMapVectorLayout } from './map-vector-style.js';
+export type { LyraMapSourceCoordinates, LyraMapLabelValue, LyraMapLabelOptions, LyraMapLabelAnchor, LyraMapTileSource,
   LyraMapExternalDataLayerOptions, LyraMapVectorDataLayer, LyraMapRasterDataLayer, LyraMapImageDataLayer,
   LyraMapCanvasDataLayer, LyraMapExternalDataLayer } from './map-data-layer-model.js';
 /** Existing GeoJSON overlays and explicitly discriminated native external-source families. */
@@ -1004,6 +1007,12 @@ export interface LyraMapGeoJsonDataLayer extends LyraMapInteractionOptions {
    * blank or later duplicate `sourceId` records. */
   readonly sourceId: string;
   readonly geojson: Feature | FeatureCollection;
+  /** Logical data-layer sourceId or native layer anchor. Missing targets append; cycles reject the proposal. */
+  readonly before?: string;
+  /** Finite native minimum, clamped to [0,24], inclusive. Defaults to zero. */
+  readonly minZoom?: number;
+  /** Finite native maximum, clamped to [0,24], exclusive. Defaults to 24. Equal bounds are empty. */
+  readonly maxZoom?: number;
   readonly tone?: 'accent' | 'success' | 'warning' | 'danger' | 'neutral';
 
   /**
@@ -1123,7 +1132,19 @@ function markerPopupText(host: Element, markup: unknown): string {
 
 
 /** Immutable descriptor projection used exclusively after a layer reaches the map boundary. */
+interface MapLayerIdentityDraft {
+  readonly geojson: Map<string, string>;
+  readonly external: Map<string, string>;
+  nextGeojson: number;
+  nextExternal: number;
+  externalStyle: number;
+}
+
 interface CanonicalMapDataLayer extends CanonicalMapInteraction {
+  readonly before?: string;
+  readonly minZoom: number;
+  readonly maxZoom: number;
+  readonly placementRequested: boolean;
   readonly sourceId: string;
   readonly geojson: Feature | FeatureCollection;
   readonly geojsonProjection: CanonicalGeoJsonProjection;
@@ -1182,6 +1203,8 @@ function projectMapDataLayer(value: unknown, kindDescriptor: OwnDataDescriptorRe
     )
       return undefined;
 
+    const placement = projectMapRowPlacement(value);
+    if (!placement) return undefined;
     const tone = mapTone(optionalDescriptorValue(toneDescriptor));
     const colorValue = optionalDescriptorValue(colorDescriptor);
     const strokeColorValue = optionalDescriptorValue(strokeColorDescriptor);
@@ -1194,9 +1217,10 @@ function projectMapDataLayer(value: unknown, kindDescriptor: OwnDataDescriptorRe
     const label = labelValue === undefined ? undefined : projectMapLabelOptions(labelValue);
     const cluster = kind === 'auto' ? normalizedClusterOptions(clusterValue) : undefined;
     const invalidLabel = labelDescriptor === UNSAFE_OWN_DATA_DESCRIPTOR || (labelValue !== undefined &&
-      (!label || kind === 'heatmap' || Boolean(cluster && label.placement === 'line')));
+      (!label || kind === 'heatmap' || Boolean(cluster && label.placement === 'line') || Math.max(placement.minZoom, label.minZoom) > placement.maxZoom));
     return Object.freeze({
       sourceId: sourceId.trim(), ...projectMapInteractionOptions(value),
+      before: placement.before, minZoom: placement.minZoom, maxZoom: placement.maxZoom, placementRequested: placement.requested,
       // GeoJSON is deliberately retained as one opaque identity. MapLibre owns its validation and
       // may accept a runtime payload broader than this component's type declaration.
       geojson: geojson as Feature | FeatureCollection,
@@ -1927,6 +1951,7 @@ export interface LyraMapControls {
   readonly navigation?: boolean | LyraMapNavigationControlOptions;
   readonly scale?: boolean | LyraMapScaleControlOptions;
   readonly geolocate?: boolean | LyraMapGeolocateControlOptions;
+  /** Text or guarded linked credits. Controls in a corner read navigation, scale, geolocate, attribution from top to bottom. */
   readonly attribution?: boolean | LyraMapAttributionControlOptions;
 }
 
@@ -2281,7 +2306,6 @@ const DRAWING_COLOR_TOKEN = '--lr-map-drawing-color';
 const EMPTY_STYLE_LAYERS: readonly LyraMapStyleLayer[] = Object.freeze([]);
 const EMPTY_STYLE_SOURCES: readonly LyraMapStyleSource[] = Object.freeze([]);
 /** Any theme-dependent color inside serialized overlay paint. */
-const OVERLAY_THEME_PAINT = /\x22\s*(?:var\(|currentcolor\s*\x22|(?:color-mix|color|oklch|oklab|lch|lab|hwb|light-dark)\()/iu;
 const paintColorCache = new WeakMap<Element, Map<string, string | undefined>>();
 function resolvedMapPaintColor(host: Element, color: string | undefined, preserveLegacy: boolean): string | undefined {
   let cache = paintColorCache.get(host);
@@ -3002,11 +3026,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     super();
     new ThemeWatcher(this, () => {
       if (!this.syncPaintTheme()) return;
-      this.refreshThemePaint();
-      // Overrides are applied only after their runtime loaded; a pending reconcile reads the new theme.
-      if ((loadMapOwnedFeatureRuntime.loaded?.projectMapStyleOverrides(this.styleOverrides)?.length || this.overlayThemePaint) && this._styleLoaded) void this.reconcileGeneratedLayers();
+      const coordinated = this.refreshThemePaint();
       this.legendIsLine = this.legendDescribesLine();
-      this.drawingController?.repaint();
+      if (!coordinated) this.drawingController?.repaint();
     });
     new GlassScrollLayer(this, '[part="legend"]');
   }
@@ -3148,7 +3170,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   /**
    * Standard controls to add, `{ navigation, scale, geolocate, attribution }`, each `true`, `false`
    * or an options object with a `position` corner (and, for `scale`, a `unit` of `'metric'` or `'imperial'`). The
-   * element adds the control once the map exists, replaces it when its options change and removes
+   * element adds the control once the map exists, moves it when only its corner changes, replaces
+   * it for other option changes and removes
    * it when it is dropped, instead of an application importing the engine's control classes and
    * calling `map.addControl()` itself.
    *
@@ -3157,7 +3180,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * `zoomOut` and `mapResetNorth` strings and are re-applied when `lang`, `locale` or `strings`
    * change, so they follow a live language switch. Geolocation starts only from user activation;
    * failures emit sanitized codes and localized feedback. Attribution is enabled by default;
-   * explicit false disables it, and custom attribution accepts plain text. A requested control
+   * explicit false disables it. Custom attribution accepts escaped text or guarded HTTP(S) links;
+   * invalid custom credits leave provider attribution visible. The visual and keyboard order within
+   * each corner is navigation, scale, geolocate, attribution, regardless of import completion order.
+   * A requested control
    * whose code cannot load leaves localized feedback while the map remains usable.
    */
   @property({ attribute: false }) controls?: Readonly<LyraMapControls>;
@@ -3760,6 +3786,22 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private _canonicalDataLayersOrigin = '';
   private _canonicalExternalLayers: readonly CanonicalMapExternalLayer[] = [];
   private invalidDataLayerModel = false;
+  @state() private dataLayerIssue = false;
+  private pendingDataLayerIssue = false;
+
+  private setDataLayerIssue(issue: boolean): void {
+    this.pendingDataLayerIssue = issue;
+    this.scheduleAfterUpdate(() => {
+      const next = this.pendingDataLayerIssue;
+      if (next === this.dataLayerIssue) return;
+      this.dataLayerIssue = next;
+      if (next && this.isConnected) this.announcements.announceAssertive(this.localize('mapInitializationFailed'));
+    }, 'map-data-layer-feedback');
+  }
+  private committedDataLayers: readonly CanonicalMapDataLayer[] = EMPTY_CANONICAL_MAP_DATA_LAYERS;
+  private committedExternalLayers: readonly CanonicalMapExternalLayer[] = [];
+  private groupOrderActive = false;
+  private readonly plannedDataLayerIds = new Map<string, string>();
   private _canonicalDataLayers: readonly CanonicalMapDataLayer[] = EMPTY_CANONICAL_MAP_DATA_LAYERS;
   private _canonicalMarkersSource: unknown = UNPROJECTED_MAP_VALUE;
   private _canonicalMarkers: readonly CanonicalMapMarker[] = EMPTY_CANONICAL_MAP_MARKERS;
@@ -3781,8 +3823,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this._canonicalDataLayersBase = base; this._canonicalDataLayersOrigin = origin;
     const model = projectMapDataLayerModel(source, { baseUrl: base, ownerOrigin: origin, projectGeoJson: projectMapDataLayer });
     this.invalidDataLayerModel = !model.ok;
-    this._canonicalDataLayers = model.ok ? model.geojson : EMPTY_CANONICAL_MAP_DATA_LAYERS;
-    this._canonicalExternalLayers = model.ok ? model.external : [];
+    if (model.ok) {
+      this._canonicalDataLayers = model.geojson;
+      this._canonicalExternalLayers = model.external;
+    }
     return this._canonicalDataLayers;
   }
 
@@ -4539,12 +4583,13 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const attribution = isRuntimeRecord(input) ? getOwnDataDescriptor(input, 'attribution') : MISSING_OWN_DATA_DESCRIPTOR;
     const defaultAttribution = attribution === MISSING_OWN_DATA_DESCRIPTOR ||
       (attribution !== UNSAFE_OWN_DATA_DESCRIPTOR && attribution.value === undefined);
-    if (defaultAttribution) wanted.set('attribution', normalizeMapControlOptions({ attribution: true }).controls.get('attribution')!);
+    if (defaultAttribution || projected.diagnostics.some(issue => issue.kind === 'attribution')) wanted.set('attribution', normalizeMapControlOptions({ attribution: true }).controls.get('attribution')!);
     this.setControlIssue(projected.diagnostics.length ? 'mapControlUnavailable' : undefined);
     const current = () => this.isConnected && this._map === map && this.controls === input && this._connectGeneration === connection;
     if (this.controlPeer?.map !== map) this.controlPeer = { map, adapter: {
       addControl: (control, position) => map.addControl!(control, position),
       removeControl: control => map.removeControl!(control),
+      controlContainer: position => this.containerEl?.querySelector<HTMLElement>(`.maplibregl-ctrl-${position}`) ?? undefined,
     } };
     const peer = this.controlPeer.adapter;
     const run = ({ MapControlsLifecycle }: NonNullable<typeof loadMapControlRuntime.loaded>): Promise<void> => (this.controlLifecycle ??=
@@ -5152,6 +5197,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.externalSourceEffects?.dispose(); this.externalSourceEffects = undefined;
     this.externalFeatureWorkStarted = false;
     this.externalSourceIds.clear();
+    this.plannedDataLayerIds.clear(); this.appliedRowRanges.clear(); this.dataLayerIssue = false; this.pendingDataLayerIssue = false; this.groupOrderActive = false; this.pendingDrawingTheme = false;
     this.setControlIssue(undefined);
     this.anchorController?.dispose();
     this.cancelMoveReport();
@@ -5391,6 +5437,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       this._appliedFillLayerId = undefined;
       this.appliedChoroplethPaintKey = undefined;
       this._appliedDataLayerIds.clear();
+      this.plannedDataLayerIds.clear();
+      this.appliedRowRanges.clear();
       this._appliedDataLayerShapes.clear();
       this.appliedLayerPaintKeys.clear();
       this.appliedPointPaint.clear();
@@ -5631,8 +5679,6 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private paintThemeKey?: string;
   private paintThemeSources?: readonly unknown[];
   private paintThemeTokens: string[] = [];
-  /** Whether admitted overlay paint names theme-dependent colors, re-resolved on theme change. */
-  private overlayThemePaint = false;
   private syncPaintTheme(): boolean {
     // The ownership runtime is part of the key: override tokens are discovered once it can admit them.
     const sources = [this.dataLayers, this.choropleth, this.styleOverrides, this.overlays, loadMapOwnedFeatureRuntime.loaded];
@@ -5645,7 +5691,6 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         loadMapOwnedFeatureRuntime.loaded?.projectMapStyleOverrides(this.styleOverrides),
         this._canonicalExternalLayers.map(({ source: _source, ...paint }) => paint)]);
       const overlayPaint = loadMapOwnedFeatureRuntime.loaded?.overlayPaintText(this.overlays) ?? '';
-      this.overlayThemePaint = OVERLAY_THEME_PAINT.test(overlayPaint);
       for (const match of overlayPaint.matchAll(/var\(\s*(--[\w-]+)/g)) tokens.add(match[1]!);
       for (const match of inputs.matchAll(/var\(\s*(--[\w-]+)/g)) tokens.add(match[1]!);
       this.paintThemeTokens = [...tokens];
@@ -5708,9 +5753,18 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     else this.withMapPaintBatch(() => { this.mapPaintBatch.write(id, property, value); });
   }
 
-  private refreshThemePaint(): void {
-    if (!this.withMapPaintBatch(() => this.refreshThemePaintBatch())) return;
-    if (this._canonicalExternalLayers.length || this.externalFeatureWorkStarted) void this.reconcileGeneratedLayers();
+  private pendingDrawingTheme = false;
+  private refreshThemePaint(): boolean {
+    if (this._canonicalExternalLayers.length || this.externalFeatureWorkStarted || this.optionalFeatureWorkStarted ||
+      ownedFeaturesRequested(this.overlays, this.images, this.styleOverrides)) {
+      paintColorCache.delete(this);
+      this.appliedLayerPaintKeys.clear(); this.appliedChoroplethPaintKey = undefined;
+      this.pendingDrawingTheme = true;
+      void this.reconcileGeneratedLayers();
+      return true;
+    }
+    this.withMapPaintBatch(() => this.refreshThemePaintBatch());
+    return false;
   }
 
   private refreshThemePaintBatch(): void {
@@ -6235,7 +6289,13 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       const result = queryMapHit({ getLayer: id => {
         const layer = map.getLayer(id);
         // Generated data-layer hit footprints are transparent by design; author layers are not.
-        const origin = rules.find(rule => rule.layerId === id)?.origin;
+        const rule = rules.find(rule => rule.layerId === id);
+        const origin = rule?.origin;
+        if (origin === 'data-layer' && Number.isFinite(zoom)) {
+          const row = this.committedDataLayers.find(row => row.sourceId === rule?.source) ??
+            this.committedExternalLayers.find(row => row.sourceId === rule?.source);
+          if (row && (zoom < row.minZoom || zoom >= row.maxZoom)) return undefined;
+        }
         return layer && mapLayerHittable(map, id, layer, zoom, origin === 'overlay' || origin === 'basemap') ? layer : undefined;
       }, queryRenderedFeatures: (point, options) => {
         features = map.queryRenderedFeatures([point.x, point.y], { layers: [...options.layers] }); return features;
@@ -6316,10 +6376,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   private externalSourceEffects?: MapExternalSourceEffects;
 
-  private externalLayerInput(owned: MapOwnedOverlaySnapshot): ReturnType<typeof buildMapExternalLayers> {
-    if (this.externalIdStyle !== this._styleGeneration) {
-      this.externalIdStyle = this._styleGeneration;
-      this.externalSourceIds.clear();
+  private externalLayerInput(owned: MapOwnedOverlaySnapshot, identities: MapLayerIdentityDraft): ReturnType<typeof buildMapExternalLayers> {
+    if (identities.externalStyle !== this._styleGeneration) {
+      identities.externalStyle = this._styleGeneration;
+      identities.external.clear();
     }
     const reserved = new Set([...owned.sources.map(source => source.id), ...owned.layers.map(layer => layer.layer.id)]);
     const available = (id: string, retained: boolean): boolean => !reserved.has(id) &&
@@ -6328,23 +6388,86 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       (retained || (!this._map?.getSource(id) && !this._map?.getLayer(`${id}-render`) && !this._map?.getLayer(`${id}-label`)));
     return buildMapExternalLayers(this._canonicalExternalLayers, {
       nativeId: row => {
-        const previous = this.externalSourceIds.get(row.sourceId);
+        const previous = identities.external.get(row.sourceId);
         if (previous && available(previous, this.externalFeatures?.ownsLayer(`${previous}-render`) === true)) return previous;
         for (let index = 0; index < 512; index++) {
-          const id = `lr-external-layer-${this.externalIdCounter++}`;
+          const id = `lr-external-layer-${identities.nextExternal++}`;
           if (!available(id, false)) continue;
-          this.externalSourceIds.set(row.sourceId, id); return id;
+          identities.external.set(row.sourceId, id); return id;
         }
         throw new Error('Map source identity is unavailable.');
       },
-      color: value => resolvedLayerColor(this, value, 'accent'), hidden: new Set(this.hiddenCategories),
+      color: value => resolvedLayerColor(this, value, 'accent'),
+      styleColor: value => {
+        const color = resolvedMapPaintColor(this, value, true);
+        if (!color) throw new Error('Map color could not be resolved.');
+        return color;
+      }, hidden: new Set(this.hiddenCategories),
       glyphs: this.styleProvidesGlyphs(), mutedOpacity: hiddenCategoryOpacity(this),
     });
+  }
+
+  /** A shared logical view; native resource registries continue owning all mutations. */
+  private dataLayerOrderGroups(owned: MapOwnedOverlaySnapshot, external: ReturnType<typeof buildMapExternalLayers>, identities: MapLayerIdentityDraft): readonly MapLayerOrderGroup[] {
+    const groups: MapLayerOrderGroup[] = [];
+    for (const row of this.canonicalDataLayers) {
+      const native = this.resolveDataLayerSourceId(row.sourceId, identities);
+      const suffixes = row.kind === 'heatmap' ? ['-heatmap'] : row.cluster
+        ? ['-cluster', ...(this.styleProvidesGlyphs() ? ['-cluster-count'] : []), '-circle'] : ['-fill', '-line', '-circle'];
+      if (row.kind !== 'heatmap' && row.point?.iconField && row.point.icons.length) suffixes.push('-point-icon');
+      if (row.label) suffixes.push('-label');
+      groups.push({ id: row.sourceId, layerIds: suffixes.map(suffix => `${native}${suffix}`), ...(row.before ? { before: row.before } : {}) });
+    }
+    for (const row of this._canonicalExternalLayers) {
+      const source = identities.external.get(row.sourceId);
+      const layerIds = external.layers.filter(entry => entry.layer['source'] === source || entry.layer['source'] === `${source}-hit-source`).map(entry => entry.layer.id);
+      groups.push({ id: row.sourceId, layerIds, ...(row.before ? { before: row.before } : {}) });
+    }
+    for (const entry of owned.layers) groups.push({ id: entry.layer.id, layerIds: [entry.layer.id], ...(entry.before ? { before: entry.before } : {}) });
+    return groups;
+  }
+
+  private nativeLayerOrder(map: MapLibreMapCapability): string[] {
+    const layers = mapOwnValue(map.getStyle?.(), 'layers');
+    if (!Array.isArray(layers)) return [];
+    return layers.map(layer => mapOwnValue(layer, 'id')).filter((id): id is string => typeof id === 'string');
+  }
+
+  private applyDataLayerOrder(groups: readonly MapLayerOrderGroup[], current: () => boolean): void {
+    const map = this._map;
+    if (!map || !current()) return;
+    const original = this.nativeLayerOrder(map);
+    if (!current()) return;
+    const present = new Set(original);
+    const active = groups.map(group => ({ ...group, layerIds: group.layerIds.filter(id => present.has(id)) })).filter(group => group.layerIds.length);
+    const plan = planMapLayerOrder(original, active);
+    if (!plan.valid || plan.operations.some(operation => operation.kind !== 'move') || plan.operations.length && !map.moveLayer) {
+      throw new Error('Map layer order is unavailable.');
+    }
+    try {
+      for (const operation of plan.operations) {
+        if (!current()) return;
+        map.moveLayer!(operation.id, operation.before);
+        if (!current()) return;
+      }
+    } catch (error) {
+      // Restoring only still-owned groups leaves unrelated native resources untouched.
+      const members = new Set(active.flatMap(group => group.layerIds));
+      for (let index = original.length - 1; index >= 0; index--) {
+        if (!current()) break;
+        const id = original[index]!;
+        if (!members.has(id)) continue;
+        try { map.moveLayer!(id, original[index + 1]); } catch { break; }
+      }
+      throw error;
+    }
   }
 
   private reconcileGeneratedLayers(): Promise<void> {
     const map = this._map;
     if (!map || !this._styleLoaded) return Promise.resolve();
+    // A corrected sibling input can make a rejected mixed proposal valid without changing rows.
+    if (this.dataLayerIssue || this.pendingDataLayerIssue) this._canonicalDataLayersSource = UNPROJECTED_MAP_VALUE;
     this.cancelFeaturePreparation();
     if (this._map !== map || !this.isConnected) return Promise.resolve();
     this.readiness.invalidate();
@@ -6365,6 +6488,17 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const interactiveBasemapLayers = this.interactiveBasemapLayers;
     let ownedInput!: MapOwnedFeatureInput;
     let externalInput!: ReturnType<typeof buildMapExternalLayers>;
+    let orderGroups: readonly MapLayerOrderGroup[] | undefined;
+    let retainGroupOrder = false;
+    let mutationStarted = false;
+    let preparedExternal = false;
+    let finishApplication: (() => void) | undefined;
+    let settleApplication: (() => void) | undefined;
+    let rejectApplication: (() => void) | undefined;
+    const identities: MapLayerIdentityDraft = {
+      geojson: new Map(this.plannedDataLayerIds), external: new Map(this.externalSourceIds),
+      nextGeojson: this._nextDataLayerId, nextExternal: this.externalIdCounter, externalStyle: this.externalIdStyle,
+    };
     const controller = new AbortController();
     this.featureAbort = controller;
     this.preparingFeatures = true;
@@ -6376,6 +6510,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       ((!externalInput?.sources.length && !this.externalFeatureWorkStarted) || hiddenCategories === this.hiddenCategories);
     const apply = (): void => {
       if (!current() || controller.signal.aborted) return;
+      mutationStarted = true;
+      this.plannedDataLayerIds.clear(); for (const [key, value] of identities.geojson) this.plannedDataLayerIds.set(key, value);
+      this.externalSourceIds.clear(); for (const [key, value] of identities.external) this.externalSourceIds.set(key, value);
+      this._nextDataLayerId = identities.nextGeojson; this.externalIdCounter = identities.nextExternal; this.externalIdStyle = identities.externalStyle;
       this.prepareStateRetirement(ownedInput.overlays as MapOwnedOverlaySnapshot);
       if (!current() || controller.signal.aborted) return;
       const next = this.canonicalChoropleth;
@@ -6385,15 +6523,20 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       if (!this.withMapPaintBatch(() => {
         if (this.rebuildGeneratedLayers) {
           this.applyChoropleth();
-          this.applyDataLayers();
+          this.applyDataLayers(current);
           this.rebuildGeneratedLayers = false;
         } else {
-          this.applyDataLayers();
+          this.applyDataLayers(current);
           this.applyChoropleth();
         }
       })) return;
       const complete = (): void => {
         if (!current() || controller.signal.aborted) return;
+        if (orderGroups) { this.applyDataLayerOrder(orderGroups, current); if (!current()) return; this.groupOrderActive = retainGroupOrder; }
+        if (!current()) return;
+        this.committedDataLayers = this._canonicalDataLayers;
+        this.committedExternalLayers = this._canonicalExternalLayers;
+        this.setDataLayerIssue(false);
         this.configureMapInteractions(ownedInput.overlays as MapOwnedOverlaySnapshot, externalInput);
         if (!current() || controller.signal.aborted) return;
         this.replayFeatureStates(map, current, controller.signal);
@@ -6401,23 +6544,33 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         this.featureAbort = undefined;
         this.preparingFeatures = false;
         this.syncDrawing(); this.syncMapCursor();
+        if (this.pendingDrawingTheme && current()) {
+          this.pendingDrawingTheme = false;
+          this.drawingController?.repaint();
+        }
+        if (!current()) return;
         this.flushMapLoad(map);
         finish();
         this.readiness.check();
       };
+      finishApplication = complete;
+      const completeResources = (): void => { if (preparedExternal) settleApplication?.(); else complete(); };
       // Default optional inputs preserve the native peer's synchronous generated-layer contract.
       // Once resources have been requested, even an empty snapshot must reconcile their removal.
       const admittedOverlays = ownedInput.overlays as { readonly sources: readonly unknown[]; readonly layers: readonly unknown[] };
       if (!this.optionalFeatureWorkStarted && !this.externalFeatureWorkStarted && externalInput.sources.length === 0 && admittedOverlays.sources.length === 0 && admittedOverlays.layers.length === 0 &&
         (ownedInput.images as readonly unknown[]).length === 0 && (ownedInput.styleOverrides as readonly unknown[]).length === 0) {
-        complete(); return;
+        try { complete(); } catch { fail(); } return;
       }
       this.optionalFeatureWorkStarted = true;
-      const failure = (): void => { if (current() && !controller.signal.aborted) fail(); };
+      const failure = (): void => {
+        if (preparedExternal) rejectApplication?.();
+        else if (current() && !controller.signal.aborted) fail();
+      };
       const external = this.externalFeatureWorkStarted || externalInput.sources.length > 0;
       if (external) this.externalFeatureWorkStarted = true;
       // Native resource ownership loads on demand, inside this same feature transaction.
-      const reconcileOwned = ({ MapOwnedFeatures, MapExternalSourceEffects }: NonNullable<typeof loadMapOwnedFeatureRuntime.loaded>): void => {
+      const reconcileOwned = ({ MapOwnedFeatures }: NonNullable<typeof loadMapOwnedFeatureRuntime.loaded>): void => {
         if (!current() || controller.signal.aborted) return;
         const owned = this.ownedFeatures ??= new MapOwnedFeatures();
         const applyOwned = (): Promise<void> => owned.reconcile(map, styleGeneration, ownedInput, {
@@ -6429,29 +6582,18 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
           styleLayers: () => this._styleLayers,
         });
         if (external) {
-          const effects = this.externalSourceEffects ??= new MapExternalSourceEffects();
-          const revisions = new Map(this._canonicalExternalLayers.filter(row => row.kind === 'canvas').map(row =>
-            [this.externalSourceIds.get(row.sourceId)!, row.redrawRevision ?? 0] as const));
-          const live = () => this.isConnected && this._map === map && this._styleGeneration === styleGeneration &&
-            this._connectGeneration === connection && this.mapStyle === style;
-          void effects.reconcile(map, styleGeneration, externalInput.sources, revisions, {
-            owner: this, signal: controller.signal, isCurrent: current, isLive: live,
-            canPauseCanvas: id => {
-              void this.canonicalDataLayers;
-              return !this.invalidDataLayerModel && this._canonicalExternalLayers.some(row =>
-                row.kind === 'canvas' && this.externalSourceIds.get(row.sourceId) === id && row.source['animate'] === false);
-            },
-            retire: () => { if (live()) this.failInitialization('initialization-failed'); },
-          }, sources => (this.externalFeatures ??= new MapOwnedFeatures()).reconcile(map, styleGeneration,
-            { overlays: { sources, layers: externalInput.layers }, images: [], styleOverrides: [] }, {
+          const applyExternal = (): Promise<void> => (this.externalFeatures ??= new MapOwnedFeatures()).reconcile(map, styleGeneration,
+            { overlays: { sources: externalInput.sources, layers: externalInput.layers }, images: [], styleOverrides: [] }, {
             owner: this, signal: controller.signal, isCurrent: current, isGeneratedLayer: () => false,
             beforeSourceChange: change => { this.featureStates?.refreshNative('data-layer', change.id); },
-            resolve: (value, property) => this.resolveStyleOverride(value, property),
-          })).then(() => {
-            if (!current() || controller.signal.aborted) return;
-            return applyOwned().then(complete);
-          }).catch(failure);
-        } else void applyOwned().then(complete, failure);
+            resolve: value => value,
+          });
+          const iconSymbols = this._canonicalExternalLayers.some(row => Boolean(row.style?.iconIds.length));
+          const run = iconSymbols
+            ? applyOwned().then(() => current() && !controller.signal.aborted ? applyExternal() : undefined)
+            : applyExternal().then(() => current() && !controller.signal.aborted ? applyOwned() : undefined);
+          void run.then(completeResources).catch(failure);
+        } else void applyOwned().then(completeResources).catch(failure);
       };
       const runtime = loadMapOwnedFeatureRuntime.loaded;
       if (runtime) reconcileOwned(runtime);
@@ -6460,38 +6602,115 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const fail = (): void => {
       if (!current()) return;
       this.preparingFeatures = false;
-      this.readiness.fail();
       finish();
+      if (!mutationStarted && this.mapLoadEmitted && !this.pendingMapLoad) {
+        this._canonicalDataLayers = this.committedDataLayers;
+        this._canonicalExternalLayers = this.committedExternalLayers;
+        this.setDataLayerIssue(true);
+        this.readiness.check();
+        return;
+      }
+      this.readiness.fail();
       if (!this.mapLoadEmitted || this.pendingMapLoad) { this.failInitialization('initialization-failed'); return; }
       this.scheduleAfterUpdate(() => {
         if (current()) this.failInitialization('initialization-failed');
       }, `map-feature-failure-${generation}`);
     };
     const begin = (input: MapOwnedFeatureInput): void => {
-      ownedInput = input;
-      externalInput = this.externalLayerInput(ownedInput.overlays as MapOwnedOverlaySnapshot);
+      this.syncPaintTheme();
       if (!current() || controller.signal.aborted) { finish(); return; }
-      // Canonical peers keep their synchronous mutation contract. The modular loader validates
-      // prepareFeatures before a real module can reach this point.
-      if (typeof map.prepareFeatures !== 'function') { apply(); return; }
-      const requirements = this.generatedFeatureRequirements();
-      const signature = JSON.stringify([
-        Object.values(requirements.sources ?? {}).map(source => (source as { type: string; cluster?: boolean }).type),
-        (requirements.layers ?? []).map(layer => (layer as { type: string }).type),
-      ]);
-      if (signature === this.preparedFeatureSignature) { apply(); return; }
-      void (async () => {
-        try {
-          await map.prepareFeatures!(requirements, { signal: controller.signal });
-          if (!current() || controller.signal.aborted) return;
-          this.preparedFeatureSignature = signature;
-          apply();
-        } catch {
-          if (!current() || controller.signal.aborted) return;
-          this.preparingFeatures = false;
-          fail();
+      const runtime = loadMapOwnedFeatureRuntime.loaded;
+      const owned = runtime ? runtime.resolveMapOwnedOverlayPaint(input.overlays as MapOwnedOverlaySnapshot,
+        (value, property) => this.resolveStyleOverride(value, property)) : input.overlays as MapOwnedOverlaySnapshot;
+      ownedInput = { ...input, overlays: owned };
+      // Allocate namespaces only in this transaction; rejected proposals cannot retarget accepted state.
+      const reserved = new Set([...owned.sources.map(source => source.id), ...owned.layers.map(entry => entry.layer.id)]);
+      for (const row of this.canonicalDataLayers) {
+        const id = this.resolveDataLayerSourceId(row.sourceId, identities);
+        if (reserved.has(id) || DATA_LAYER_SUFFIXES.some(suffix => reserved.has(`${id}${suffix}`))) throw new Error('Map resource identity conflicts.');
+      }
+      externalInput = this.externalLayerInput(owned, identities);
+      if (!current() || controller.signal.aborted) { finish(); return; }
+      retainGroupOrder = this.canonicalDataLayers.some(row => row.before !== undefined) ||
+        this._canonicalExternalLayers.some(row => row.before !== undefined) || owned.layers.some(row => row.before !== undefined);
+      if (this.groupOrderActive || retainGroupOrder) {
+        if (typeof map.getStyle !== 'function' || typeof map.moveLayer !== 'function') throw new Error('Map layer order is unavailable.');
+        orderGroups = this.dataLayerOrderGroups(owned, externalInput, identities);
+        const planned = planMapLayerOrder(this.nativeLayerOrder(map), orderGroups);
+        if (!planned.valid) throw new Error('Map layer order is invalid.');
+        if (planned.diagnostics.some(issue => issue.code === 'missing-anchor')) devWarnOnce('lyra-map-missing-layer-anchor', `<${this.localName}>: a missing layer anchor appends its group.`);
+        if (!current()) { finish(); return; }
+        // Existing registries receive concrete anchors; a final guarded group plan resolves forward cross-owner edges.
+        const anchors = new Map(orderGroups.map(group => [group.id, group.layerIds[0]!]));
+        for (const group of orderGroups) for (const id of group.layerIds) if (!anchors.has(id)) anchors.set(id, group.layerIds[0]!);
+        const translate = (entry: LyraMapOverlayLayer): LyraMapOverlayLayer => entry.before && anchors.has(entry.before)
+          ? { ...entry, before: anchors.get(entry.before)! } : entry;
+        ownedInput = { ...ownedInput, overlays: { sources: owned.sources, layers: owned.layers.map(translate) } };
+        externalInput = { ...externalInput, layers: externalInput.layers.map(translate) };
+      }
+      const preflight = (): void => {
+        // Count actual source URLs, concrete anchors and resolved/compiled paint together.
+        const finalOwned = ownedInput.overlays as MapOwnedOverlaySnapshot;
+        if (externalInput.sources.length || finalOwned.sources.length || finalOwned.layers.length) {
+          if (!runtime) throw new Error('Map resources are unavailable.');
+          runtime.snapshotMapOwnedFeatureInput({ overlays: {
+            sources: [...finalOwned.sources, ...externalInput.sources], layers: [...finalOwned.layers, ...externalInput.layers],
+          }, images: ownedInput.images, styleOverrides: ownedInput.styleOverrides });
         }
-      })();
+        if (this.canonicalDataLayers.some(row => row.placementRequested) && typeof map.setLayerZoomRange !== 'function') {
+          throw new Error('Map layer bounds are unavailable.');
+        }
+      };
+      const prepare = (): Promise<void> | undefined => {
+        if (!current() || controller.signal.aborted || typeof map.prepareFeatures !== 'function') return;
+        const requirements = this.generatedFeatureRequirements();
+        const signature = JSON.stringify([
+          Object.values(requirements.sources ?? {}).map(source => (source as { type: string; cluster?: boolean }).type),
+          (requirements.layers ?? []).map(layer => (layer as { type: string }).type),
+        ]);
+        if (signature === this.preparedFeatureSignature) return;
+        return map.prepareFeatures(requirements, { signal: controller.signal }).then(() => {
+          if (current() && !controller.signal.aborted) this.preparedFeatureSignature = signature;
+        });
+      };
+      if (externalInput.sources.length || this.externalFeatureWorkStarted) {
+        if (!runtime) throw new Error('Map resources are unavailable.');
+        const effects = this.externalSourceEffects ??= new runtime.MapExternalSourceEffects();
+        const revisions = new Map(this._canonicalExternalLayers.filter(row => row.kind === 'canvas').map(row =>
+          [identities.external.get(row.sourceId)!, row.redrawRevision ?? 0] as const));
+        const live = () => this.isConnected && this._map === map && this._styleGeneration === styleGeneration &&
+          this._connectGeneration === connection && this.mapStyle === style;
+        void effects.reconcile(map, styleGeneration, externalInput.sources, revisions, {
+          owner: this, signal: controller.signal, isCurrent: current, isLive: live,
+          canPauseCanvas: id => {
+            void this.canonicalDataLayers;
+            return !this.invalidDataLayerModel && this._canonicalExternalLayers.some(row =>
+              row.kind === 'canvas' && this.externalSourceIds.get(row.sourceId) === id && row.source['animate'] === false);
+          },
+          retire: () => { if (live()) this.failInitialization('initialization-failed'); },
+        }, () => new Promise<void>((resolve, reject) => {
+          const aborted = (): void => { reject(new Error('Map resource application was superseded.')); };
+          const clear = (): void => { controller.signal.removeEventListener('abort', aborted); };
+          preparedExternal = true;
+          settleApplication = () => { clear(); resolve(); };
+          rejectApplication = () => { clear(); reject(new Error('Map resources could not be applied.')); };
+          controller.signal.addEventListener('abort', aborted, { once: true });
+          if (controller.signal.aborted) { clear(); aborted(); return; }
+          try { apply(); } catch (error) { clear(); reject(error); }
+        }), async sources => {
+          externalInput = { ...externalInput, sources };
+          preflight();
+          await prepare();
+        }).then(() => { if (current() && !controller.signal.aborted) finishApplication?.(); }).catch(() => {
+          if (current() && !controller.signal.aborted) fail();
+        });
+        return;
+      }
+      preflight();
+      if (!current() || controller.signal.aborted) { finish(); return; }
+      const preparation = prepare();
+      if (preparation) void preparation.then(apply).catch(() => { if (current() && !controller.signal.aborted) fail(); });
+      else apply();
     };
     try {
       const geojson = this.canonicalDataLayers;
@@ -6501,7 +6720,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       // ownership runtime, loaded once on demand inside this same feature transaction.
       const runtime = loadMapOwnedFeatureRuntime.loaded;
       if (runtime) begin(runtime.snapshotMapOwnedFeatureInput({ overlays, images, styleOverrides }));
-      else if (!ownedFeaturesRequested(overlays, images, styleOverrides) && !projectMapBasemapInteractions(interactiveBasemapLayers)?.length) begin(NO_OWNED_FEATURES);
+      else if (!this._canonicalExternalLayers.length && !ownedFeaturesRequested(overlays, images, styleOverrides) && !projectMapBasemapInteractions(interactiveBasemapLayers)?.length) begin(NO_OWNED_FEATURES);
       else void loadMapOwnedFeatureRuntime().then(loaded => {
         if (current() && !controller.signal.aborted) begin(loaded.snapshotMapOwnedFeatureInput({ overlays, images, styleOverrides }));
       }).catch(fail);
@@ -6699,8 +6918,15 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    */
   private readonly appliedLayerPaintKeys = new Map<string, string>();
 
-  private applyDataLayers(): void {
+  private readonly appliedRowRanges = new Map<string, string>();
+
+  private applyDataLayers(transactionCurrent?: () => boolean): void {
     if (!this._map) return;
+    const map = this._map, dataLayers = this.dataLayers, style = this.mapStyle, generation = this.featureGeneration;
+    const current = transactionCurrent ?? (() => this.isConnected && this._map === map && dataLayers === this.dataLayers &&
+      style === this.mapStyle && generation === this.featureGeneration);
+    const check = (): void => { if (!current()) throw new DOMException('Map update superseded.', 'AbortError'); };
+    check();
     this.syncPaintTheme();
     const layers = this.canonicalDataLayers;
     const nextIds = new Set(layers.map((layer) => layer.sourceId));
@@ -6708,6 +6934,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       if (!nextIds.has(publicSourceId)) this.removeDataLayer(publicSourceId);
     }
     for (const layer of layers) {
+      check();
       const { sourceId: publicSourceId, geojson, geojsonProjection } = layer;
       const shape = dataLayerShape(layer);
       const appliedShape = this._appliedDataLayerShapes.get(publicSourceId);
@@ -6719,6 +6946,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       warnOnUntileableProperties(geojsonProjection, publicSourceId);
       const cluster = layer.cluster;
       const existingSource = this._map.getSource(sourceId) as MapLibreGeoJsonSource | undefined;
+      check();
       if (existingSource) {
         this.pushGeoJson(existingSource, sourceId, geojson, geojsonProjection);
       } else {
@@ -6733,16 +6961,54 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
               }
             : {}),
         });
+        check();
         this._appliedGeoJson.set(sourceId, geojsonProjection);
       }
+      check();
       const { geojson: _geojson, geojsonProjection: _projection, ...paint } = layer;
       const paintKey = JSON.stringify(paint);
       if (!existingSource || this.appliedLayerPaintKeys.get(sourceId) !== paintKey) {
-        this.applyDataLayerRendering(sourceId, layer);
+        this.applyDataLayerRendering(sourceId, layer, current);
+        check();
+        this.applyDataLayerRange(sourceId, layer, current);
+        check();
         this.appliedLayerPaintKeys.set(sourceId, paintKey);
       }
       this._appliedDataLayerIds.set(publicSourceId, sourceId);
       this._appliedDataLayerShapes.set(publicSourceId, shape);
+    }
+  }
+
+  /** Apply bounds to every installed member, retaining native source and layer identity. */
+  private applyDataLayerRange(sourceId: string, layer: CanonicalMapDataLayer, current: () => boolean): void {
+    const map = this._map;
+    if (!map || !layer.placementRequested && !this.appliedRowRanges.has(sourceId)) return;
+    const changes: { id: string; min: number; max: number; oldMin: number; oldMax: number }[] = [];
+    for (const suffix of DATA_LAYER_SUFFIXES) {
+      const id = `${sourceId}${suffix}`, native = map.getLayer(id);
+      if (!current()) throw new DOMException('Map update superseded.', 'AbortError');
+      if (!native) continue;
+      const min = Math.max(layer.minZoom, suffix === '-label' ? layer.label?.minZoom ?? 0 : 0), max = layer.maxZoom;
+      const rawMin = mapOwnValue(native, 'minzoom'), rawMax = mapOwnValue(native, 'maxzoom');
+      const oldMin = typeof rawMin === 'number' ? rawMin : 0, oldMax = typeof rawMax === 'number' ? rawMax : 24;
+      if (min !== oldMin || max !== oldMax) changes.push({ id, min, max, oldMin, oldMax });
+    }
+    if (changes.length && typeof map.setLayerZoomRange !== 'function') throw new Error('Map layer bounds are unavailable.');
+    const journal: typeof changes = [];
+    try {
+      for (const change of changes) {
+        if (!current()) throw new DOMException('Map update superseded.', 'AbortError');
+        journal.push(change);
+        map.setLayerZoomRange!(change.id, change.min, change.max);
+        if (!current()) throw new DOMException('Map update superseded.', 'AbortError');
+      }
+      this.appliedRowRanges.set(sourceId, `${layer.minZoom}:${layer.maxZoom}`);
+    } catch (error) {
+      for (const change of journal.reverse()) {
+        if (!current()) break;
+        try { map.setLayerZoomRange!(change.id, change.oldMin, change.oldMax); } catch { break; }
+      }
+      throw error;
     }
   }
 
@@ -6751,7 +7017,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * from source management above so a theme change can re-run exactly the paint half of it without
    * touching sources, data, or map geometry.
    */
-  private applyDataLayerRendering(sourceId: string, layer: CanonicalMapDataLayer): void {
+  private applyDataLayerRendering(sourceId: string, layer: CanonicalMapDataLayer, current: () => boolean): void {
     if (layer.kind === 'heatmap') {
       this.applyHeatmapLayer(sourceId, layer);
       return;
@@ -6762,8 +7028,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     } else {
       this.applyGeometryLayers(sourceId, layer);
     }
+    if (!current()) throw new DOMException('Map update superseded.', 'AbortError');
     this.applyPointIcons(sourceId, layer);
-    this.applyGeoLabel(sourceId, layer);
+    if (!current()) throw new DOMException('Map update superseded.', 'AbortError');
+    this.applyGeoLabel(sourceId, layer, current);
   }
 
   /**
@@ -6790,20 +7058,63 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     }
   }
 
-  private applyGeoLabel(sourceId: string, layer: CanonicalMapDataLayer): void {
+  private applyGeoLabel(sourceId: string, layer: CanonicalMapDataLayer, current: () => boolean): void {
     const map = this._map;
     if (!map) return;
+    const check = (): void => { if (!current()) throw new DOMException('Map update superseded.', 'AbortError'); };
+    check();
     const id = `${sourceId}-label`;
+    const existing = map.getLayer(id);
+    check();
     if (!layer.label) {
-      if (this.appliedGeoLabels.delete(sourceId) && map.getLayer(id)) map.removeLayer(id);
+      this.appliedGeoLabels.delete(sourceId);
+      if (existing) { map.removeLayer(id); check(); }
       return;
     }
     const descriptor = buildMapLabelLayer(id, sourceId, layer.label, value => resolvedLayerColor(this, value, layer.tone));
-    const native = layer.cluster ? { ...descriptor, filter: ['all', ['!', ['has', 'point_count']], ['==', ['geometry-type'], 'Point']] } : descriptor;
+    const native: LyraMapOverlayLayer['layer'] = layer.cluster ? { ...descriptor, filter: ['all', ['!', ['has', 'point_count']], ['==', ['geometry-type'], 'Point']] } : descriptor;
     const key = JSON.stringify(native);
     if (this.appliedGeoLabels.get(sourceId) === key) return;
-    if (map.getLayer(id)) map.removeLayer(id);
-    map.addLayer(native); this.appliedGeoLabels.set(sourceId, key);
+    const previousKey = this.appliedGeoLabels.get(sourceId);
+    if (existing && previousKey && typeof map.setLayoutProperty === 'function' &&
+      typeof map.setFilter === 'function' && typeof map.setLayerZoomRange === 'function') {
+      const previous = JSON.parse(previousKey) as Record<string, unknown>;
+      const journal: (() => void)[] = [];
+      const write = (apply: () => void, restore: () => void): void => {
+        if (!current()) throw new DOMException('Map update superseded.', 'AbortError');
+        // A callback may replace the proposal after changing native state; do not retain a success key.
+        this.appliedGeoLabels.delete(sourceId);
+        journal.push(restore); apply();
+        if (!current()) throw new DOMException('Map update superseded.', 'AbortError');
+      };
+      try {
+        for (const kind of ['layout', 'paint'] as const) {
+          const before = (previous[kind] ?? {}) as Record<string, unknown>;
+          const after = (native[kind] ?? {}) as Record<string, unknown>;
+          for (const property of new Set([...Object.keys(before), ...Object.keys(after)])) {
+            if (JSON.stringify(before[property]) === JSON.stringify(after[property])) continue;
+            const setter = kind === 'layout' ? map.setLayoutProperty! : map.setPaintProperty;
+            write(() => { setter.call(map, id, property, after[property] ?? null); },
+              () => { setter.call(map, id, property, before[property] ?? null); });
+          }
+        }
+        if (JSON.stringify(previous['filter']) !== JSON.stringify(native['filter'])) {
+          write(() => { map.setFilter!(id, native['filter'] ?? null); }, () => { map.setFilter!(id, previous['filter'] ?? null); });
+        }
+        if (previous['minzoom'] !== native['minzoom']) {
+          write(() => { map.setLayerZoomRange!(id, Math.max(layer.minZoom, layer.label!.minZoom), layer.maxZoom); },
+            () => { map.setLayerZoomRange!(id, typeof previous['minzoom'] === 'number' ? previous['minzoom'] : 0, layer.maxZoom); });
+        }
+        if (!current()) throw new DOMException('Map update superseded.', 'AbortError');
+      } catch (error) {
+        for (const restore of journal.reverse()) { if (!current()) break; try { restore(); } catch { break; } }
+        throw error;
+      }
+    } else {
+      if (existing) { map.removeLayer(id); check(); }
+      map.addLayer(native); check();
+    }
+    this.appliedGeoLabels.set(sourceId, key);
   }
 
   /** The pre-existing geometry split: polygons filled, lines/outlines stroked, points circled. */
@@ -7297,16 +7608,18 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   /** Allocates a private source/layer namespace that cannot overwrite base-style resources. */
-  private resolveDataLayerSourceId(publicSourceId: string): string {
-    const applied = this._appliedDataLayerIds.get(publicSourceId);
+  private resolveDataLayerSourceId(publicSourceId: string, identities?: MapLayerIdentityDraft): string {
+    const planned = identities?.geojson ?? this.plannedDataLayerIds;
+    const applied = this._appliedDataLayerIds.get(publicSourceId) ?? planned.get(publicSourceId);
     if (applied) return applied;
     let sourceId: string;
     do {
-      sourceId = `lr-data-layer-${this._nextDataLayerId++}`;
+      sourceId = `lr-data-layer-${identities ? identities.nextGeojson++ : this._nextDataLayerId++}`;
     } while (
       this._map?.getSource(sourceId) ||
       DATA_LAYER_SUFFIXES.some((suffix) => this._map?.getLayer(`${sourceId}${suffix}`))
     );
+    planned.set(publicSourceId, sourceId);
     return sourceId;
   }
 
@@ -7319,6 +7632,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.removePointIcons(sourceId);
     this.appliedPointPaint.delete(sourceId);
     this.appliedGeoLabels.delete(sourceId);
+    this.appliedRowRanges.delete(sourceId);
     for (const suffix of DATA_LAYER_SUFFIXES) {
       const layerId = `${sourceId}${suffix}`;
       this.appliedPointMuting.delete(layerId);
@@ -8084,6 +8398,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         </div>` : nothing}
         ${this.hashIssue || this.controlIssue ? html`<div part="configuration-error">${this.localize(MAP_CONFIGURATION_MESSAGE[this.hashIssue ?? this.controlIssue!])}</div>` : nothing}
         ${this.exportIssue ? html`<div part="configuration-error">${this.localize('mapExportUnavailable')}</div>` : nothing}
+        ${this.dataLayerIssue ? html`<div part="configuration-error">${this.localize('mapInitializationFailed')}</div>` : nothing}
         ${this.featureStateIssue ? html`<div part="configuration-error">${this.localize('mapFeatureStateUnavailable')}</div>` : nothing}
         ${this.pickMode && !this.failure && !this.loading ? html`<div part="pick-controls">
           <button type="button" part="pick-center" ?disabled=${this.interactionBlocked} @click=${this.pickMapCenter}>${this.localize('mapPickAtCenter')}</button>

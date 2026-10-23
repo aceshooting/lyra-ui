@@ -205,16 +205,16 @@ real data dependencies, so a red check names the phase to reproduce:
 3. **`build-and-coverage`** shares one build and fans out: `build_and_coverage_build` (`pnpm build`)
    uploads `dist/`; `_quality` (`check:component-quality:built`, `check:bundle-size`,
    `codecov:bundle`), `_ssr` (`test:ssr`) and `_hydration` (`test:hydration`) consume it;
-   `_coverage_shard` is a four-leg matrix, each worker running
+   `_coverage_shard` is a five-leg matrix, each worker running
    `node scripts/coverage-shard-runner.mjs --shard N` in the pinned Playwright image and uploading one
    `coverage/shards/coverage-shard-N` artifact (`if-no-files-found: error`); `_coverage` runs with
    `always()`, merges (`--merge`), enforces `check:coverage-floors` on the merged report, and does the
    non-fatal Codecov uploads. The runner refuses a missing `coverage-final.json`, `junit.xml` or
-   `test-files.json` and proves the four test manifests are disjoint, exhaustive and the
+   `test-files.json` and proves the five test manifests are disjoint, exhaustive and the
    deterministic partition of the inventory; the job separately rejects any non-success shard.
-   Each worker runs one browser file at a time (determinism); only workers run concurrently, and four
-   is the useful split (finer shards add a runner bootstrap each). Local
-   `pnpm --filter @aceshooting/lyra-ui test:coverage` stays complete and sequential (all four shards,
+   Each worker runs one browser file at a time (determinism); only workers run concurrently. Each
+   shard also bounds its browser sessions to 140 files and merges their raw reports. Local
+   `pnpm --filter @aceshooting/lyra-ui test:coverage` stays complete and sequential (all five shards,
    merge, cleanup); `scripts/ci.sh` and `scripts/test.sh` use that default. This is the one run of
    lyra-ui's own Chromium suite in push CI. Browser lanes use the Playwright image pinned in the
    workflow.
@@ -258,14 +258,41 @@ Firefox in two shards, and Chromium, Chrome, Edge and Safari (WebKit) in one eac
 pinned Playwright image; branded Chrome and Edge use the runner VM with bounded browser setup. Every
 leg installs with `--frozen-lockfile` and enables strict browser console checking. The packed-consumer
 jobs cover the Node floor, declarations, tree shaking and framework recipes without repeating that
-matrix per browser. Node 22 uses `package.json#packageManager` (`pnpm@12.15.0`).
+matrix per browser. DOCX qualification runs on Firefox shard 2, leaving the map and 3D companions
+on Firefox shard 1; Chromium and WebKit qualify DOCX on their single shard.
+Node 22 uses `package.json#packageManager` (`pnpm@12.15.0`).
+
+### Package coverage reporting
+
+`companion_coverage` is a release-required five-leg matrix for lyra-3d, lyra-map, lyra-flags,
+lyra-ide and lyra-translations. Each runs its existing complete `test:coverage` command and its
+whole-source floors; the Map and 3D commands include their Chromium portions. The Chromium DOCX
+platform leg owns the sixth companion report. Ordinary companion tests and package checks remain
+separate gates. Reports and metadata are retained per package, and missing report artifacts fail.
+
+Each of the seven packages has one explicit Codecov flag in `codecov.yml`. UI's flag covers its
+`src/`; companion flags cover their own package trees, with their existing coverage censuses
+deciding which original runtime and tooling files are measured. Generated catalog, asset and
+renderer data do not become measured code merely because their package has a flag.
+`scripts/prepare-codecov-lcov.mjs <package-name>` writes a separate `coverage/codecov.lcov` whose
+source paths are canonical repository-relative package paths. It rejects missing or outside
+sources, duplicate aliases, incomplete records and inconsistent line counts, preserving every
+coverage counter. This avoids confusing identical package-local paths such as
+`scripts/check-package.mjs` across packages.
+
+Every upload names only that prepared report and its matching flag, disables report discovery and
+file fixes, and leaves Codecov outages informational. Local coverage commands and floors remain
+blocking. Root and UI README badges use `?flag=lyra-ui`; each companion badge uses its own flag.
+The UI badge must remain at least 99.74%, independently of the repository-wide combined percentage;
+the existing local UI line and statement floors remain stronger. Check the complete merged report
+and the same commit's flagged Codecov result before claiming that metric.
 
 ## Scheduled full Firefox/WebKit suite
 
 `.github/workflows/full-engine.yml` runs the complete non-coverage `src/**/*.test.ts` suite in
 Firefox and WebKit weekly and on `workflow_dispatch`, each browser in eight cost-balanced shards
 under Node 22. The runner discovers and lexically sorts the live inventory, so every file runs
-exactly once without a second allowlist. Shards (these and the four coverage shards) are packed
+exactly once without a second allowlist. Shards (these and the five coverage shards) are packed
 longest-first onto the least-loaded shard from the committed per-file seconds in
 `scripts/fixtures/test-file-costs.json`; a file it does not list costs the table's median. Regenerate
 the table from several runs' `lyra-ui-test-timing` artifacts (median per file, so one slow runner
@@ -367,6 +394,9 @@ before they measure); re-rolling to get past a broken test or a benchmark interv
 
 `./scripts/ci.sh` consolidates the six primary jobs into one Node 22/Chromium run. It requires the exact Node patch recorded in `.nvmrc` and pnpm to match `package.json#packageManager`, so a green run under another patch is not mistaken for CI; run `nvm use` first. It reuses one install, one library build and one Storybook build, and omits the external Codecov and artifact-upload actions (the blocking local equivalents of bundle-size, coverage and visual regression still run; `codecov:bundle` is reporting only). It includes the networked, content-addressed pinned-upstream-manifest check (an unavailable registry or changed artifact fails the run rather than falling back to a clone-generated manifest), the checksum-pinned actionlint workflow gate and the [repository hygiene checks](#repository-hygiene-checks).
 
+The local aggregate also runs all six complete companion coverage commands and prepares all seven
+Codecov reports to check source ownership; it does not upload them.
+
 - `./scripts/ci.sh --platform` adds the unsharded `test:platform` browser sweep under the active
   Node 22/pnpm 12 toolchain. The 5-browser Node 22 sweep is Firefox, Chromium, Chrome, Edge, and
   Safari. It covers every installed browser in an unsharded run.
@@ -404,7 +434,7 @@ and a failing lane's log is printed in full at the end.
 The `firefox`/`webkit` lanes run `test:full-engine-shard` with `WTR_SHARD_INDEX=1 WTR_SHARD_TOTAL=1`
 (the complete suite in one process) when the host affords one engine shard. The sweep budgets every
 core but two at two cores (and 1 GiB of available memory) per browser page; unset, it splits each
-engine into as many shard lanes as that budget leaves after the four coverage shards, which run
+engine into as many shard lanes as that budget leaves after the five coverage shards, which run
 concurrently and are merged as in CI (`--serial` keeps one of each). `TEST_SH_ENGINE_SHARDS=<n>`
 pins `n` shard lanes, mirroring `full-engine.yml`, so a failing CI shard reproduces as the
 same-numbered local one; raising `WTR_LANE_CONCURRENCY` instead reintroduces the hover/paint

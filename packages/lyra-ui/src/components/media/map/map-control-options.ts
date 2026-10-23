@@ -1,3 +1,4 @@
+import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
 
 export type MapOwnedControlKind = 'navigation' | 'scale' | 'geolocate' | 'attribution';
@@ -26,12 +27,19 @@ export interface LyraMapGeolocateControlOptions extends LyraMapNavigationControl
   readonly positionOptions?: { readonly enableHighAccuracy?: boolean; readonly timeout?: number; readonly maximumAge?: number };
   readonly fitBoundsOptions?: { readonly maxZoom?: number };
 }
+/** A text credit linked to an absolute HTTP(S) URL; admission takes an immutable own-data snapshot. */
+export interface LyraMapAttributionLink {
+  /** Escaped display text, at most 4,096 characters. */
+  readonly label: string;
+  /** Absolute HTTP(S) URL, at most 2,048 characters, without credentials or control characters. */
+  readonly url: string;
+}
 /** Options of the declarative attribution control. */
 export interface LyraMapAttributionControlOptions extends LyraMapNavigationControlOptions {
   /** Omission retains the peer's automatic compact layout. */
   readonly compact?: boolean;
-  /** Plain text only; escaped before forwarding to the peer's HTML attribution sink. */
-  readonly customAttribution?: string | readonly string[];
+  /** Text or guarded links; at most 32 items and 16 KiB of labels and URLs. Caller HTML is never interpreted. */
+  readonly customAttribution?: string | LyraMapAttributionLink | readonly (string | LyraMapAttributionLink)[];
 }
 export interface NormalizedMapControlOptions {
   readonly kind: MapOwnedControlKind;
@@ -39,6 +47,8 @@ export interface NormalizedMapControlOptions {
   readonly unit: LyraMapScaleUnit | undefined;
   readonly options: Readonly<Record<string, unknown>>;
   readonly key: string;
+  /** Escaped labels only, for text export without URLs or link markup. */
+  readonly attributionText?: readonly string[];
 }
 export interface MapControlOptionsResult {
   readonly controls: ReadonlyMap<MapOwnedControlKind, NormalizedMapControlOptions>;
@@ -66,17 +76,33 @@ function position(input: object, fallback: LyraMapControlPosition): LyraMapContr
   if (!positions.has(value as LyraMapControlPosition)) throw new TypeError('Invalid control position'); return value as LyraMapControlPosition;
 }
 const escapeText = (value: string) => value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
-function attributionText(input: unknown): string | readonly string[] {
+function attributionText(input: unknown): { readonly html: string | readonly string[]; readonly text: readonly string[] } {
   let total = 0;
+  const labels: string[] = [];
   const text = (value: unknown): string => {
     if (typeof value !== 'string' || value.length > 4096 || (total += value.length) > 16384) throw new RangeError('Attribution text limit');
     return escapeText(value);
   };
-  if (typeof input === 'string') return text(input);
-  if (!Array.isArray(input)) throw new TypeError('Invalid attribution text');
-  const length = own(input, 'length'); if (typeof length !== 'number' || !Number.isSafeInteger(length) || length < 0 || length > 32) throw new RangeError('Attribution count limit');
-  const result: string[] = []; for (let index = 0; index < length; index++) result.push(text(own(input, String(index))));
-  return Object.freeze(result);
+  const item = (value: unknown): string => {
+    if (typeof value === 'string') { const label = text(value); labels.push(label); return label; }
+    const record = plain(value);
+    const label = text(own(record, 'label')), raw = own(record, 'url');
+    if (typeof raw !== 'string' || raw.length > 2048 || /[\u0000-\u0020\u007f-\u009f]/.test(raw)) throw new TypeError('Invalid attribution URL');
+    const url = new URL(raw);
+    if ((url.protocol !== 'http:' && url.protocol !== 'https:') || url.username || url.password ||
+      url.href.length > 2048 || (total += url.href.length) > 16384) throw new TypeError('Invalid attribution URL');
+    const snapshot = Object.freeze({ label, url: url.href });
+    labels.push(snapshot.label);
+    return `<a href="${escapeText(snapshot.url)}" target="_blank" rel="${resolveGuardedRel(undefined, '_blank')}">${snapshot.label}</a>`;
+  };
+  let html: string | readonly string[];
+  if (!Array.isArray(input)) html = item(input);
+  else {
+    const length = own(input, 'length'); if (typeof length !== 'number' || !Number.isSafeInteger(length) || length < 0 || length > 32) throw new RangeError('Attribution count limit');
+    const result: string[] = []; for (let index = 0; index < length; index++) result.push(item(own(input, String(index))));
+    html = Object.freeze(result);
+  }
+  return Object.freeze({ html, text: Object.freeze(labels) });
 }
 /**
  * Detached constructor options only. No permission requests, geolocation calls, DOM work or
@@ -105,6 +131,7 @@ export function normalizeMapControlOptions(input: unknown): MapControlOptionsRes
       const entry = value === true ? {} : plain(value);
       const corner = position(entry, kind === 'geolocate' ? 'top-right' : 'bottom-right');
       let options: Readonly<Record<string, unknown>>;
+      let attributionLabels: readonly string[] | undefined;
       if (kind === 'geolocate') {
         const rawPosition = own(entry, 'positionOptions'), rawFit = own(entry, 'fitBoundsOptions');
         const positionOptions = rawPosition === undefined ? {} : plain(rawPosition), fit = rawFit === undefined ? {} : plain(rawFit);
@@ -119,9 +146,11 @@ export function normalizeMapControlOptions(input: unknown): MapControlOptionsRes
       } else {
         const compact = own(entry, 'compact'), custom = own(entry, 'customAttribution');
         if (compact !== undefined && typeof compact !== 'boolean') throw new TypeError('Invalid attribution mode');
-        options = Object.freeze({ ...(compact === undefined ? {} : { compact }), ...(custom === undefined ? {} : { customAttribution: attributionText(custom) }) });
+        const credits = custom === undefined ? undefined : attributionText(custom);
+        attributionLabels = credits?.text;
+        options = Object.freeze({ ...(compact === undefined ? {} : { compact }), ...(credits === undefined ? {} : { customAttribution: credits.html }) });
       }
-      controls.set(kind, Object.freeze({ kind, position: corner, unit: undefined, options, key: `${corner}:${JSON.stringify(options)}` }));
+      controls.set(kind, Object.freeze({ kind, position: corner, unit: undefined, options, ...(attributionLabels ? { attributionText: attributionLabels } : {}), key: `${corner}:${JSON.stringify(options)}` }));
     } catch { diagnostics.push({ kind, code: 'invalid-options' }); }
   }
   return done();

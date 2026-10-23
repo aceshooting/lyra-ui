@@ -1,5 +1,7 @@
 # Lyra Map
 
+[![Coverage](https://codecov.io/gh/aceshooting/lyra-ui/branch/main/graph/badge.svg?flag=lyra-map)](https://codecov.io/gh/aceshooting/lyra-ui)
+
 `@aceshooting/lyra-map` provides a modular renderer derived from MapLibre GL JS. It keeps the
 Map, Marker, Popup, control, source, event, and helper APIs available while loading rendering
 features as a style needs them. The renderer and its module worker share content-addressed

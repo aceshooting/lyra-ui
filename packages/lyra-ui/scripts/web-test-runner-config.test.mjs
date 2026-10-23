@@ -731,11 +731,11 @@ test('sizes engine and coverage shards from the host page budget', () => {
   const sizing = script.slice(start, end);
   // [page budget, TEST_SH_ENGINE_SHARDS, serial, engine shards, concurrent coverage shards]
   for (const [budget, requested, serial, shards, coverage] of [
-    [1, '', 0, 1, 1], [7, '', 0, 1, 2], [29, '', 0, 5, 4], [29, '', 1, 1, 1],
-    [7, '8', 0, 1, 2], [29, '8', 0, 5, 4], [39, '8', 0, 7, 4], [39, '2', 0, 2, 4], [4, '1', 0, 1, 1],
+    [1, '', 0, 1, 1], [7, '', 0, 1, 2], [29, '', 0, 4, 5], [29, '', 1, 1, 1],
+    [7, '8', 0, 1, 2], [29, '8', 0, 5, 4], [39, '8', 0, 7, 4], [39, '2', 0, 2, 5], [4, '1', 0, 1, 1],
   ]) {
     const result = spawnSync('bash', ['-c', `
-      PAGE_BUDGET=${budget} PER_SHARD_PAGES=5 COVERAGE_SHARDS=4 SERIAL=${serial}
+      PAGE_BUDGET=${budget} PER_SHARD_PAGES=5 COVERAGE_SHARDS=${COVERAGE_SHARD_TOTAL} SERIAL=${serial}
       TEST_SH_ENGINE_SHARDS='${requested}'
       ${sizing}
       printf '%s %s\n' "$ENGINE_SHARDS" "$COVERAGE_PARALLEL"

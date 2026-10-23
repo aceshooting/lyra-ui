@@ -204,7 +204,7 @@ PAGE_BUDGET="$(node packages/lyra-ui/scripts/local-parallelism.mjs --cores-per-w
 PER_SHARD_PAGES="$(( WTR_LANE_CONCURRENCY[firefox] + WTR_LANE_CONCURRENCY[webkit] ))"
 # Coverage runs its fixed shards (one page each) concurrently out of the same budget; this is
 # coverage-shard-runner.mjs's COVERAGE_SHARD_TOTAL (a tooling test keeps them equal).
-COVERAGE_SHARDS=4
+COVERAGE_SHARDS=5
 
 # Shards MULTIPLY, they do not divide. In CI each shard owns its own runner, so its
 # WTR_CONCURRENCY is all that machine runs; here every shard is another process on the SAME host,

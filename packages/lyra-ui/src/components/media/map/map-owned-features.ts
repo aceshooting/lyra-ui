@@ -67,6 +67,14 @@ function resolveOverlayPaint(overlays: MapOwnedOverlaySnapshot, resolve: MapOwne
   return changed ? Object.freeze({ sources: overlays.sources, layers: Object.freeze(layers) }) : overlays;
 }
 
+/** Resolve theme paint and re-admit its final bytes before any peer work. */
+export function resolveMapOwnedOverlayPaint(overlays: MapOwnedOverlaySnapshot,
+  resolve: MapOwnedFeatureContext['resolve']): MapOwnedOverlaySnapshot {
+  const admitted = admitMapOverlays(resolveOverlayPaint(overlays, resolve));
+  if (!admitted.ok) failed();
+  return admitted.overlays;
+}
+
 /**
  * The admitted paint of `overlays.layers` as text, so the element can discover the theme tokens it
  * names without snapshotting overlay source data. Empty for unusable input.
@@ -170,7 +178,7 @@ export class MapOwnedFeatures {
       const overrides = projectMapStyleOverrides(input.styleOverrides);
       check();
       if (!overlays.ok || !images.ok || !overrides) failed();
-      const overlaySnapshot = resolveOverlayPaint(overlays.overlays, context.resolve);
+      const overlaySnapshot = resolveMapOwnedOverlayPaint(overlays.overlays, context.resolve);
       check();
       const hasResources = overlays.overlays.sources.length > 0 || overlays.overlays.layers.length > 0 || images.images.length > 0;
       const hasOverrides = overrides.length > 0;

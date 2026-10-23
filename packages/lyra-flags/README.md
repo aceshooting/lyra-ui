@@ -1,5 +1,7 @@
 # @aceshooting/lyra-flags
 
+[![Coverage](https://codecov.io/gh/aceshooting/lyra-ui/branch/main/graph/badge.svg?flag=lyra-flags)](https://codecov.io/gh/aceshooting/lyra-ui)
+
 [![CI](https://github.com/aceshooting/lyra-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/aceshooting/lyra-ui/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-flags)](https://www.npmjs.com/package/@aceshooting/lyra-flags)
 [![npm downloads](https://img.shields.io/npm/dm/%40aceshooting%2Flyra-flags)](https://www.npmjs.com/package/@aceshooting/lyra-flags)
