@@ -1,5 +1,6 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
 import './map.js';
+import { captureDevWarnings } from '../../../../test/expected-dev-warnings.js';
 import type { LyraMap, LyraMapStyleSpecification } from './map.js';
 import {
   emptyExtent,
@@ -43,6 +44,8 @@ class ScriptedCameraMap {
     const [lng, lat] = options['center'] as [number, number];
     this.center = { lng, lat };
     this.zoom = options['zoom'] as number;
+    if (typeof options['minZoom'] === 'number') this.minZoom = options['minZoom'];
+    if (typeof options['maxZoom'] === 'number') this.maxZoom = options['maxZoom'];
     ScriptedCameraMap.instances.push(this);
   }
 
@@ -150,6 +153,29 @@ class ScriptedCameraMap {
 
   isMoving(): boolean {
     return false;
+  }
+
+  readonly limitCalls: string[] = [];
+  private minZoom = 0;
+  private maxZoom = 22;
+
+  /** Mirrors the engine: a limit that excludes the camera moves it inside. */
+  setMinZoom(zoom: number): this {
+    if (zoom > this.maxZoom) throw new Error('minZoom must be less than or equal to maxZoom');
+    this.limitCalls.push(`min:${zoom}`); this.minZoom = zoom;
+    if (this.zoom < zoom) this.setZoom(zoom);
+    return this;
+  }
+
+  setMaxZoom(zoom: number): this {
+    if (zoom < this.minZoom) throw new Error('maxZoom must be greater than or equal to minZoom');
+    this.limitCalls.push(`max:${zoom}`); this.maxZoom = zoom;
+    if (this.zoom > zoom) this.setZoom(zoom);
+    return this;
+  }
+
+  getMaxZoom(): number {
+    return this.maxZoom;
   }
 
   resize(): void {}
@@ -290,6 +316,8 @@ describe('map camera helpers', () => {
     expect(normalizeCameraOptions(null)).to.equal(undefined);
     expect(normalizeCameraOptions({ zoom: 3, duration: -1 })).to.deep.equal({ zoom: 3 });
     expect(normalizeCameraOptions({ zoom: 3, duration: 250 })).to.deep.equal({ zoom: 3, duration: 250 });
+    expect(normalizeCameraOptions({ zoom: 30 }, [4, 24])).to.deep.equal({ zoom: 24 });
+    expect(normalizeCameraOptions({ zoom: 1 }, [4, 12])).to.deep.equal({ zoom: 4 });
   });
 
   it('measures the extent of nested GeoJSON, skipping non-finite positions', () => {
@@ -797,6 +825,142 @@ describe('map camera', () => {
       await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
       await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
       expect(moves).to.have.length(0);
+    });
+  });
+
+  describe('zoom limits', () => {
+    it('leaves construction and fits unchanged when neither limit is set', async () => {
+      const { el, engine } = await liveScriptedMap((map) => { map.zoom = 30; });
+      expect('minZoom' in engine.options).to.equal(false); expect('maxZoom' in engine.options).to.equal(false);
+      expect(engine.options['zoom']).to.equal(22);
+      el.fitBounds([[0, 0], [1, 1]]);
+      expect('maxZoom' in engine.fitCalls[0]!.options).to.equal(false);
+      expect(engine.limitCalls).to.deep.equal([]);
+    });
+
+    it('forwards both limits at construction and clamps the initial zoom into them', async () => {
+      const { el, engine } = await liveScriptedMap((map) => { map.minZoom = 5; map.maxZoom = 12; map.zoom = 2; });
+      expect(engine.options['minZoom']).to.equal(5); expect(engine.options['maxZoom']).to.equal(12);
+      expect(engine.options['zoom']).to.equal(5);
+      el.setAttribute('max-zoom', '24'); await el.updateComplete;
+      expect(el.maxZoom).to.equal(24); expect(engine.limitCalls).to.deep.equal(['min:5', 'max:24']);
+    });
+
+    it('clamps camera commands, assigned zoom and fit ceilings into the limits', async () => {
+      const { el, engine } = await liveScriptedMap((map) => { map.minZoom = 3; map.maxZoom = 10; });
+      el.jumpTo({ zoom: 18 }); expect(engine.commandCalls.at(-1)!.options['zoom']).to.equal(10);
+      el.easeTo({ zoom: 0 }); expect(engine.commandCalls.at(-1)!.options['zoom']).to.equal(3);
+      el.zoom = 20; await el.updateComplete; expect(engine.setZoomCalls.at(-1)).to.equal(10);
+      el.fitBounds([[0, 0], [1, 1]], { maxZoom: 16 }); expect(engine.fitCalls.at(-1)!.options['maxZoom']).to.equal(10);
+      el.fitBounds([[0, 0], [1, 1]]); expect(engine.fitCalls.at(-1)!.options['maxZoom']).to.equal(10);
+      el.markers = [{ lngLat: [1, 1] }]; await el.updateComplete;
+      expect(el.fitToData()).to.equal(true); expect(engine.fitCalls.at(-1)!.options['maxZoom']).to.equal(10);
+    });
+
+    it('applies live limits in a valid order, clamps the camera and writes the clamp back without a report', async () => {
+      const { el, engine } = await liveScriptedMap((map) => { map.zoom = 4; });
+      const reports = await collect(el, 'lr-map-view-change', async () => {
+        el.minZoom = 8; el.maxZoom = 15; await el.updateComplete;
+      });
+      expect(reports).to.deep.equal([]);
+      expect(engine.limitCalls).to.deep.equal(['min:8', 'max:15']);
+      expect(engine.zoom).to.equal(8); expect(el.zoom).to.equal(8);
+      engine.limitCalls.length = 0;
+      el.minZoom = 18; el.maxZoom = 20; await el.updateComplete;
+      expect(engine.limitCalls).to.deep.equal(['max:20', 'min:18']); expect(el.zoom).to.equal(18);
+      engine.limitCalls.length = 0;
+      el.minZoom = undefined; el.maxZoom = undefined; await el.updateComplete;
+      expect(engine.limitCalls).to.deep.equal(['min:0', 'max:22']); expect(el.zoom).to.equal(18);
+    });
+
+    it('applies native bounds immediately and publishes their clamp after the update', async () => {
+      const { el, engine } = await liveScriptedMap((map) => { map.zoom = 4; });
+      let between: readonly [number, number] | undefined;
+      const reports = await collect(el, 'lr-map-view-change', () => {
+        el.minZoom = 8; el.maxZoom = 15;
+        queueMicrotask(() => { between = [engine.zoom, el.zoom]; });
+      });
+      expect(between).to.deep.equal([8, 4]);
+      expect(engine.limitCalls).to.deep.equal(['min:8', 'max:15']);
+      expect(el.zoom).to.equal(8);
+      expect(reports).to.deep.equal([]);
+    });
+
+    for (const [authoredZoom, shownZoom] of [[4, 8], [12, 12], [20, 15]] as const) {
+      it(`preserves a newer authored zoom ${authoredZoom} over a queued limit clamp`, async () => {
+        const { el, engine } = await liveScriptedMap((map) => { map.zoom = 4; });
+        const reports = await collect(el, 'lr-map-view-change', () => {
+          el.minZoom = 8; el.maxZoom = 15;
+          // This runs after the limit update but before its queued reactive publication.
+          queueMicrotask(() => { el.zoom = authoredZoom; });
+        });
+        expect(el.zoom).to.equal(authoredZoom);
+        expect(engine.zoom).to.equal(shownZoom);
+        expect(reports).to.deep.equal([]);
+      });
+    }
+
+    it('does not publish a clamp from superseded limits before applying the latest limits', async () => {
+      const { el, engine } = await liveScriptedMap((map) => { map.zoom = 4; });
+      let between: number | undefined;
+      const reports = await collect(el, 'lr-map-view-change', () => {
+        el.minZoom = 8; el.maxZoom = 15;
+        queueMicrotask(() => {
+          el.minZoom = 12; el.maxZoom = 20;
+          queueMicrotask(() => { between = el.zoom; });
+        });
+      });
+      expect(between).to.equal(4);
+      expect(engine.limitCalls).to.deep.equal(['min:8', 'max:15', 'min:12', 'max:20']);
+      expect(el.zoom).to.equal(12);
+      expect(engine.zoom).to.equal(12);
+      expect(reports).to.deep.equal([]);
+    });
+
+    it('discards a queued clamp when its style is replaced', async () => {
+      const { el, engine } = await liveScriptedMap((map) => { map.zoom = 4; });
+      const reports = await collect(el, 'lr-map-view-change', () => {
+        el.minZoom = 8; el.maxZoom = 15;
+        queueMicrotask(() => { el.mapStyle = undefined; });
+      });
+      expect(engine.zoom).to.equal(8);
+      expect(el.map === undefined).to.equal(true);
+      expect(el.zoom).to.equal(4);
+      expect(reports).to.deep.equal([]);
+    });
+
+    it('discards a detached clamp when the element reconnects with a fresh peer', async () => {
+      const { el, engine } = await liveScriptedMap((map) => { map.zoom = 4; });
+      const parent = el.parentNode!;
+      const reports = await collect(el, 'lr-map-view-change', async () => {
+        el.minZoom = 8; el.maxZoom = 15;
+        queueMicrotask(() => { el.remove(); });
+        await el.updateComplete;
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        parent.appendChild(el);
+        await waitUntil(() => ScriptedCameraMap.instances.length === 2 && el.map !== undefined, 'reconnected camera peer never initialized');
+      });
+      const replacement = ScriptedCameraMap.instances[1]!;
+      expect(replacement === engine).to.equal(false);
+      expect(replacement.options['zoom']).to.equal(8);
+      expect(el.zoom).to.equal(4);
+      expect(reports).to.deep.equal([]);
+    });
+
+    it('ignores an inverted explicit pair and non-finite limits', async () => {
+      let mounted!: Awaited<ReturnType<typeof liveScriptedMap>>;
+      const warnings = await captureDevWarnings(async () => {
+        mounted = await liveScriptedMap((map) => { map.minZoom = 14; map.maxZoom = 6; map.zoom = 20; });
+        mounted.el.minZoom = Number.NaN; mounted.el.maxZoom = 6;
+      });
+      const { el, engine } = mounted;
+      expect(warnings.filter(message => message.includes('minZoom 14 exceeds maxZoom 6'))).to.have.length(1);
+      expect(engine.options['minZoom']).to.equal(0); expect(engine.options['maxZoom']).to.equal(22);
+      expect(engine.options['zoom']).to.equal(20);
+      await el.updateComplete;
+      expect(engine.limitCalls).to.deep.equal(['min:0', 'max:6']); expect(el.zoom).to.equal(6);
+      el.minZoom = 23; el.maxZoom = undefined; await el.updateComplete;
+      expect(engine.limitCalls.slice(-2)).to.deep.equal(['max:23', 'min:23']);
     });
   });
 });

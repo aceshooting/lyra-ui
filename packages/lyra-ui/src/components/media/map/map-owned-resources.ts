@@ -1,8 +1,9 @@
 import { isPlainDataRecord } from '../../../internal/data-descriptors.js';
 import type { LyraMapFeatureRequirements } from './map-loader.js';
 import type { PreparedMapImage } from './map-images.js';
-import type { LyraMapOverlayLayer, LyraMapOverlaySource, MapOwnedOverlaySnapshot } from './map-overlay-admission.js';
+import { isIdentityGeoJsonData, type LyraMapOverlayLayer, type LyraMapOverlaySource, type MapOwnedOverlaySnapshot } from './map-overlay-admission.js';
 import { planMapLayerOrder } from './map-layer-order.js';
+import { MAP_IMAGE_LIMITS } from './map-image-admission.js';
 
 export { admitMapOverlays } from './map-overlay-admission.js';
 export type { MapOwnedOverlaySnapshot } from './map-overlay-admission.js';
@@ -19,13 +20,15 @@ export interface MapOwnedResourcePeer {
   removeLayer(id: string): unknown;
   moveLayer(id: string, before?: string): unknown;
   hasImage(id: string): boolean;
-  addImage(id: string, image: ImageData, options: { readonly pixelRatio: number }): unknown;
+  addImage(id: string, image: ImageData, options: { readonly pixelRatio: number; readonly sdf?: boolean }): unknown;
   removeImage(id: string): unknown;
 }
 export interface MapOwnedResourceContext {
   readonly isCurrent: () => boolean;
   readonly prepare: (requirements: LyraMapFeatureRequirements, signal: AbortSignal) => Promise<void>;
   /** Synchronous ownership notification, after admission and before source-dependent retirement. */
+  readonly beforeMutation?: () => void;
+  readonly afterMutation?: (safeToRestore: boolean) => void;
   readonly beforeSourceChange?: (change: MapOwnedSourceChange) => void;
 }
 export interface MapOwnedSourceChange {
@@ -42,6 +45,8 @@ interface State {
   readonly layers: Map<string, LyraMapOverlayLayer>;
   readonly images: Map<string, PreparedMapImage>;
 }
+const imageOptions = (image: PreparedMapImage): { readonly pixelRatio: number; readonly sdf?: boolean } =>
+  image.sdf ? { pixelRatio: image.pixelRatio, sdf: true } : { pixelRatio: image.pixelRatio };
 const state = (): State => ({ sources: new Map(), layers: new Map(), images: new Map() });
 const copy = (value: State): State => ({ sources: new Map(value.sources), layers: new Map(value.layers), images: new Map(value.images) });
 const failure = (code: MapOwnedResourceError, rollbackFailed = false): MapOwnedResourceResult => Object.freeze({ ok: false, code, rollbackFailed });
@@ -50,6 +55,7 @@ class ResourceFailure extends Error {
 }
 function equal(left: unknown, right: unknown): boolean {
   if (Object.is(left, right)) return true;
+  if (isIdentityGeoJsonData(left) || isIdentityGeoJsonData(right)) return false;
   if (Array.isArray(left) && Array.isArray(right)) return left.length === right.length && left.every((entry, index) => equal(entry, right[index]));
   if (!isPlainDataRecord(left) || !isPlainDataRecord(right)) return false;
   const keys = Object.keys(left);
@@ -78,8 +84,13 @@ export class MapOwnedResources {
   private uncertain = false;
   private disposing = false;
   private readonly interruptedSourceUpdates = new Set<string>();
+  /** Image IDs owned under an earlier style of the same peer. A diffed style swap keeps the
+   *  engine's runtime images, so these may still be installed; they are replaced, not collisions. */
+  private carriedImages = new Set<string>();
 
   ownsLayer(id: string): boolean { return this.applied.layers.has(id); }
+  /** Whether `id` is an applied GeoJSON source of this registry. */
+  ownsGeoJsonSource(id: string): boolean { return this.applied.sources.get(id)?.source['type'] === 'geojson'; }
 
   async reconcile(
     peer: MapOwnedResourcePeer,
@@ -110,12 +121,13 @@ export class MapOwnedResources {
     const notify = (change: MapOwnedSourceChange): void => {
       guard(); context.beforeSourceChange?.(Object.freeze(change)); guard();
     };
-    let started = false; let locked = false; let original: State | undefined;
+    let started = false; let locked = false; let original: State | undefined; let safeToRestore = false;
     try {
       // Aborting an older request can synchronously start a newer one. Do not replace that
       // newer request's peer/style ownership while the interrupted outer call resumes.
       if (this.active !== transaction || transaction.abort.signal.aborted) throw new ResourceFailure('aborted');
       if (this.peer !== peer || !Object.is(this.style, style)) {
+        this.carriedImages = this.peer === peer ? new Set([...this.carriedImages, ...this.applied.images.keys()]) : new Set();
         this.peer = peer; this.style = style; this.applied = state(); this.uncertain = false;
         this.interruptedSourceUpdates.clear();
       }
@@ -124,7 +136,7 @@ export class MapOwnedResources {
       const desired = state();
       for (const source of overlays.sources) desired.sources.set(source.id, source);
       for (const layer of overlays.layers) desired.layers.set(layer.layer.id, layer);
-      if (images.length > 64) throw new ResourceFailure('invalid-image');
+      if (images.length > MAP_IMAGE_LIMITS.count) throw new ResourceFailure('invalid-image');
       for (const image of images) {
         if (!image.image || desired.images.has(image.id)) throw new ResourceFailure('invalid-image');
         desired.images.set(image.id, image);
@@ -158,7 +170,7 @@ export class MapOwnedResources {
         guard();
       }
       for (const [id] of desired.images) {
-        if (!original.images.has(id) && peer.hasImage(id)) throw new ResourceFailure('collision');
+        if (!original.images.has(id) && !this.carriedImages.has(id) && peer.hasImage(id)) throw new ResourceFailure('collision');
         guard();
       }
       const changedSources = new Set([...original.sources].filter(([id, entry]) =>
@@ -175,7 +187,8 @@ export class MapOwnedResources {
       const changedImages = new Set([...original.images].filter(([id, entry]) => entry !== desired.images.get(id)).map(([id]) => id));
       const removedLayers = new Set([...original.layers].filter(([id, entry]) => {
         const next = desired.layers.get(id);
-        return !next || !equal(entry.layer, next.layer) || changedImages.size > 0 ||
+        // Images change in place: the engine re-resolves icons for every layer that uses them.
+        return !next || !equal(entry.layer, next.layer) ||
           typeof entry.layer['source'] === 'string' && changedSources.has(entry.layer['source']);
       }).map(([id]) => id));
       for (const entry of desired.layers.values()) {
@@ -196,7 +209,7 @@ export class MapOwnedResources {
         previous: original.sources.get(id)!.source, next: desired.sources.get(id)?.source });
       for (const id of sourceUpdates.keys()) notify({ id, reason: 'update',
         previous: original.sources.get(id)!.source, next: desired.sources.get(id)!.source });
-      guard(); started = true;
+      guard(); context.beforeMutation?.(); guard(); started = true;
       this.applied = copy(original);
       for (const id of [...existing].reverse()) if (removedLayers.has(id)) {
         guard(); this.applied.layers.delete(id); peer.removeLayer(id); guard();
@@ -210,8 +223,9 @@ export class MapOwnedResources {
         this.applied.images.delete(id); if (exists) peer.removeImage(id); guard();
       }
       for (const [id, image] of desired.images) if (!this.applied.images.has(id)) {
+        if (this.carriedImages.has(id)) { guard(); const carried = peer.hasImage(id); guard(); if (carried) peer.removeImage(id); guard(); }
         guard(); this.applied.images.set(id, image);
-        peer.addImage(id, image.image!, { pixelRatio: image.pixelRatio }); guard();
+        peer.addImage(id, image.image!, imageOptions(image)); guard();
       }
       for (const [id, source] of desired.sources) if (!this.applied.sources.has(id)) {
         guard(); this.applied.sources.set(id, source); peer.addSource(id, source.source); guard();
@@ -232,6 +246,14 @@ export class MapOwnedResources {
       }
       this.applied = desired;
       this.interruptedSourceUpdates.clear();
+      // Retired carried images that the engine still holds stay ours to remove later.
+      for (const id of [...this.carriedImages]) {
+        if (desired.images.has(id)) { this.carriedImages.delete(id); continue; }
+        guard(); const held = peer.hasImage(id); guard();
+        if (held) peer.removeImage(id);
+        this.carriedImages.delete(id); guard();
+      }
+      safeToRestore = true;
       return Object.freeze({ ok: true });
     } catch (error) {
       const code = error instanceof ResourceFailure ? error.code : 'peer';
@@ -250,12 +272,13 @@ export class MapOwnedResources {
         this.peer === peer && Object.is(this.style, style)) {
         rollbackFailed = true; this.uncertain = true;
       }
+      safeToRestore = !rollbackFailed && code !== 'aborted';
       return failure(code, rollbackFailed);
     } finally {
       if (locked) this.mutating = false;
       this.transactions.delete(transaction);
       if (this.active === transaction) this.active = undefined;
-      this.sweep();
+      try { this.sweep(); } finally { context.afterMutation?.(safeToRestore); }
     }
   }
 
@@ -272,6 +295,7 @@ export class MapOwnedResources {
     this.disposing = true;
     try {
       this.cancel(); this.peer = undefined; this.style = undefined; this.applied = state(); this.uncertain = false;
+      this.carriedImages = new Set();
       this.interruptedSourceUpdates.clear();
       for (const transaction of [...this.transactions]) transaction.abort.abort();
       this.transactions.clear();
@@ -307,7 +331,7 @@ export class MapOwnedResources {
       guard(); const exists = peer.hasImage(id); guard(); if (exists) peer.removeImage(id); guard();
     }
     for (const [id, image] of original.images) {
-      guard(); peer.addImage(id, image.image!, { pixelRatio: image.pixelRatio }); guard();
+      guard(); peer.addImage(id, image.image!, imageOptions(image)); guard();
     }
     for (const [id, source] of original.sources) { guard(); peer.addSource(id, source.source); guard(); }
     const remaining = peer.layerIds(); guard();

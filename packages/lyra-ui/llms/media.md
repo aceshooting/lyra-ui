@@ -405,8 +405,9 @@ splits chunks keeps them out of the initial bundle. Drawing and vertex editing l
 becomes `line` or `polygon` or `editDrawing()` is first called; `exportImage()` loads export
 capture; `hash` loads URL ownership when it is anything but `false`, `null` or `undefined`;
 `overlays`, `images`, `styleOverrides`, external data layers and `interactiveBasemapLayers` load
-resource ownership when they are not the empty defaults, with image preparation and basemap
-override ownership loading only for non-empty `images` and `styleOverrides`; `anchorLngLat` loads
+resource ownership when they are not the empty defaults; an `imageProvider` function loads
+resource ownership too. Image preparation and basemap override ownership load only for
+non-empty `images` and `styleOverrides`; `anchorLngLat` loads
 anchor placement; the first native control (default attribution included) loads control
 ownership; and the first `setFeatureState()`/`removeFeatureState()` loads feature state. Each
 runtime is imported once per page and every element shares it. `whenStyleReady()` and
@@ -427,11 +428,63 @@ ownership after reconnection, controls when they next change, export on its next
 anchor for a new coordinate.
 
 `overlays: LyraMapOverlays = {}` owns native `sources` (`{ id, source }`) and `layers`
-(`{ layer, before?, interactive?, priority? }`). `images: readonly LyraMapImage[] = []` registers
-bounded image descriptors (`id`, `source`, `width`, `height`, `pixelRatio`), with SVG markup or a
-safe URL as the source. These resources are restored after style replacement; keep IDs distinct
-from basemap and generated resources. `styleOverrides: readonly LyraMapStyleOverride[] = []`
-applies `paint` and `layout` records by `layerId` to existing unowned style layers. Reassign fresh
+(`{ layer, before?, interactive?, priority? }`). Descriptors are snapshotted as bounded plain data:
+at most 128 sources and 128 layers, 50,000 values, 10,000 entries per array or record and 1 MiB of
+text; a rejected assignment shows the localized initialization failure. A `geojson` source whose
+`data` is a `Feature` or `FeatureCollection` object is the exception: that object is kept by
+identity (its envelope is checked, its contents are left to the engine, as for `dataLayers`), so
+large data stays outside that budget. That is the supported way to draw large styled GeoJSON with
+native paint and layout expressions (`match`, `interpolate` on `["zoom"]`,
+`["coalesce", ["feature-state", "x"], ["get", "x"]]`), `filter`, `minzoom`/`maxzoom`, symbol layers,
+`before` ordering, interaction and feature state, all replayed after a `mapStyle` swap. Assign a new
+`data` object (in a new `overlays` value) to update the native source in place with `setData`: its
+layers stay, and its feature state is retired as for any data change. Mutating the retained object is
+not observed; `updateSourceData(sourceId, diff)` also accepts an overlay GeoJSON source ID for
+incremental diffs (re-applied from `data` after the next style swap). Hits skip an interactive layer
+outside its `minzoom`/`maxzoom` at the fractional camera zoom, with `visibility: 'none'`, or whose
+every opacity (a constant or a `["zoom"]`-driven `interpolate`/`step`) is `0`, so a hidden tier never
+shadows a visible one.
+
+```js
+mapEl.overlays = {
+  sources: [{ id: 'communes', source: { type: 'geojson', data: communes /* 600k values */, promoteId: 'code' } }],
+  layers: [{ interactive: true, before: 'place-labels', layer: {
+    id: 'communes-fill', type: 'fill', source: 'communes', minzoom: 9, maxzoom: 14,
+    filter: ['==', ['get', 'level'], 'commune'],
+    paint: {
+      'fill-color': ['coalesce', ['feature-state', 'color'], ['get', 'color']],
+      'fill-opacity': ['interpolate', ['linear'], ['zoom'], 9, 0, 10, 0.6],
+    },
+  } }],
+};
+mapEl.setFeatureState({ origin: 'overlay', source: 'communes', id: 'LU0101' }, { color: '#0d6efd' });
+```
+
+`images: readonly LyraMapImage[] = []` registers bounded image descriptors (`id`, `source`,
+`width`, `height`, `pixelRatio`, `sdf?`), with SVG markup or a safe URL as the source: up to 1,024
+images within an aggregate budget of 16,777,216 backing pixels and 8 MiB of encoded input, so a
+sprite catalog fits. `sdf: true` registers a signed-distance-field image that `icon-color` and
+`icon-halo-color` recolor. Reassigning `images` adds, replaces and removes images in place, without
+removing or re-adding the layers that use them. These resources are restored after style
+replacement; keep IDs distinct from basemap and generated resources.
+
+`imageProvider?: LyraMapImageProvider` (attribute: false) supplies images on demand:
+`(id) => LyraMapImage | null | undefined` (or a promise of one), called through the engine's
+missing-image hook for an image ID a layer needs that neither `images` nor the basemap sprite has.
+Return a descriptor with the same `id`; it is sanitized and rasterized like an `images` entry and
+shares their count and pixel budget. A declined, invalid, failing or over-budget image stays missing
+(development-mode warning) without failing the map. Each ID is asked once per provider and its
+pixels are re-added after a style swap; an ID later assigned through `images` is handed over to it,
+and replacing or clearing the provider removes what it supplied. The engine waits for the provider
+before laying out the symbols that need it, so `whenIdle()` covers it.
+
+```js
+mapEl.imageProvider = async (id) => id.startsWith('poi-')
+  ? { id, source: { kind: 'url', url: `/sprites/${id}.svg` }, width: 32, height: 32, pixelRatio: 2 }
+  : undefined;
+```
+
+`styleOverrides: readonly LyraMapStyleOverride[] = []` applies `paint` and `layout` records by `layerId` to existing unowned style layers. Reassign fresh
 descriptors to change desired state; unsupported or conflicting resources fail closed.
 
 `LyraMapDataLayer` includes GeoJSON and explicitly discriminated `vector`, `raster`, `image`, and
@@ -453,8 +506,17 @@ use stable source/feature IDs and an optional `origin` (`choropleth`, `data-laye
 `basemap`). Check boolean admission and retain application state across source identity changes;
 the first write returns `false` while the feature-state runtime loads (see **On-demand runtimes**).
 `hash = false` opts out of URL camera synchronization; use true or a distinct string key to opt in.
-An enabled `hash` delays map construction until URL ownership has loaded, so a valid initial hash
-still sets the first camera.
+With `hashFormat: LyraMapHashFormat = 'named'` (attribute `hash-format`) the camera is the
+`#map=zoom/lat/lng[/bearing[/pitch]]` field (or the given key); other `&`-separated tokens are
+preserved. `hashFormat = 'unnamed'` with `hash = true` reads and writes the raw engine's unnamed
+form, `#zoom/lat/lng[/bearing[/pitch]]`, so existing deep links keep working: the camera is the
+leading token without `=`, named fields after it are kept, and a fragment of named fields only gets
+the camera prepended. A string `hash` under `'unnamed'` is invalid and shows the localized hash
+message. An enabled `hash` delays map construction until URL ownership has loaded, so a valid
+initial hash still sets the first camera, and it takes precedence over a queued initial
+`fitBounds()`/`fitToData()`. Only a valid camera in the owned field or token suppresses that fit: an
+absent, unrelated (`#section`) or malformed fragment leaves the fit to run, and a malformed owned
+value is left untouched (no camera is written over it) until navigation replaces it.
 `controls` also supports `geolocate` and `attribution` options; geolocation errors are sanitized in
 `lr-map-geolocate-error`, and out-of-bounds reports use `lr-map-geolocate-out-of-bounds`.
 
@@ -523,6 +585,19 @@ cannot load rejects with `capture-failed`.
   fit or camera command, so it never pulls the map back over the user's pan. Assign a different
   value to move the map, or call `jumpTo({ center })` to re-centre on the value already assigned.
   **Behavior change:** an equal re-assignment used to re-centre the map after a pan.
+- `minZoom?: number` (attribute `min-zoom`) and `maxZoom?: number` (attribute `max-zoom`) — camera
+  zoom limits in `[0, 24]`, forwarded to the engine at construction and whenever they change.
+  Unset keeps the engine's `[0, 22]` (`maxZoom` defaults to `minZoom` when that is above 22).
+  Gestures, `zoom`, the URL `hash`, `flyTo()`/`easeTo()`/`jumpTo()`, and the `maxZoom` of
+  `fitBounds()`/`fitToData()` are all clamped into them. Raising `minZoom` above the camera (or
+  lowering `maxZoom` below it) moves the camera inside and writes the clamped value into `zoom`,
+  without an `lr-map-view-change`. A non-finite value counts as unset; an explicit
+  `minZoom > maxZoom` pair is ignored as a whole, with a development-mode warning.
+
+  ```js
+  mapEl.minZoom = 5;   // country view at most
+  mapEl.maxZoom = 21;  // building level at least
+  ```
 - `cameraPadding?: LyraMapPadding` (attribute: false) — screen pixels (`top`, `right`, `bottom`,
   `left`; an omitted, negative or non-finite side is `0`) the camera is measured inside, applied to
   the engine persistently. Every fit (`fitBounds()`, `fitToData()`) frames inside it, and the
@@ -1101,7 +1176,8 @@ settles, the element writes it into `center`/`zoom` and emits `lr-map-view-chang
   both text directions, because the map's projected space is physical. A negative or non-finite
   side counts as `0`. Defaults to `0`.
 - `options.maxZoom` — the highest zoom the fit may reach, so one marker or a tight cluster does not
-  zoom to the street. Clamped into `[0, 22]`; a non-finite value sets no ceiling.
+  zoom to the street. Clamped into the zoom limits (`minZoom`/`maxZoom`, `[0, 22]` by default) when
+  the fit runs; a non-finite value sets no ceiling beyond `maxZoom`.
 - `options.animate` — defaults to `true`. The camera never animates under
   `prefers-reduced-motion: reduce`.
 - Latitudes lie in `[-90, 90]`, with `south <= north`, and longitudes in `[-180, 180]`. A box
@@ -1151,7 +1227,8 @@ calling the same methods through `map`, which the element neither knows about no
   what it just wrote. `jumpTo()` is the explicit re-centre (an equal `center` re-assignment is a
   no-op).
 - Every option is optional and an unusable one is ignored: `center` must be a finite
-  `[longitude, latitude]` (clamped into range), `zoom` is clamped into `[0, 22]`, `pitch` into
+  `[longitude, latitude]` (clamped into range), `zoom` is clamped into the zoom limits
+  (`minZoom`/`maxZoom`, `[0, 22]` by default), `pitch` into
   `[0, 85]`, and a negative or non-finite `duration` means the engine's default. With nothing
   usable the call returns `false` (and warns in development) without moving anything.
 - Callable before the map exists: the most recent request (or `fitBounds()` call) is queued and
@@ -4373,6 +4450,9 @@ These named interfaces and helper signatures are available to typed integrations
     setCenter(center: [number, number]): unknown;
     setZoom(zoom: number): unknown;
     resize(): unknown;
+    setMinZoom?(zoom: number): unknown;
+    setMaxZoom?(zoom: number): unknown;
+    getMaxZoom?(): number;
     setMaxBounds?(bounds: readonly [readonly [number, number], readonly [number, number]] | null): unknown;
     fitBounds?( bounds: [[number, number], [number, number]], options: Record<string, unknown>, eventData: Record<string, unknown>, ): unknown;
     isMoving?(): boolean;
@@ -4414,7 +4494,8 @@ These named interfaces and helper signatures are available to typed integrations
     removeLayer(id: string): this;
     setPaintProperty(layerId: string, name: string, value: unknown): this;
     hasImage?(id: string): boolean;
-    addImage?(id: string, image: ImageData, options: { pixelRatio: number }): unknown;
+    addImage?(id: string, image: ImageData, options: { pixelRatio: number; sdf?: boolean }): unknown;
+    setMissingStyleImageResolver?(resolver: ((id: string) => void | Promise<void>) | null): unknown;
     updateImage?(id: string, image: ImageData): unknown;
     removeImage?(id: string): unknown;
     queryRenderedFeatures(point: unknown, options?: { layers?: string[] }): unknown[];
@@ -4882,6 +4963,7 @@ particular country. Representative language mappings also include `lb` (Luxembou
     readonly width: number;
     readonly height: number;
     readonly pixelRatio: number;
+    readonly sdf?: boolean;
   }`
   `LyraMapStyleOverride {
     readonly layerId: string;

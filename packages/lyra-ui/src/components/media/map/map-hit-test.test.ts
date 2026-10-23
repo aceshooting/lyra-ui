@@ -1,5 +1,5 @@
 import { expect, fixture } from '@open-wc/testing';
-import { admitMapHitRules, queryMapHit, selectMapHit, type MapHitRule } from './map-hit-test.js';
+import { admitMapHitRules, mapLayerHittable, queryMapHit, selectMapHit, zoomPaintValue, type MapHitRule } from './map-hit-test.js';
 
 const rules: readonly MapHitRule[] = [
   { layerId: 'area', owner: 'overlay', interactive: true, priority: 0 },
@@ -192,4 +192,40 @@ it('rejects native query rows outside its exact live enabled request while stand
     expect(queryMapHit(service, { x: 0, y: 0 }, rules)).to.deep.equal({ status: 'invalid', reason: 'features' });
     expect(selectMapHit([feature(id), feature('point')], rules, ['point']).status).to.equal('hit');
   }
+});
+
+describe('map hit eligibility', () => {
+  it('evaluates constant and zoom-driven interpolate/step opacity, and nothing else', () => {
+    const fade = ['interpolate', ['linear'], ['zoom'], 6, 0, 8, 1];
+    expect(zoomPaintValue(0.4, 3)).to.equal(0.4);
+    expect(zoomPaintValue(fade, 5)).to.equal(0); expect(zoomPaintValue(fade, 7)).to.equal(0.5); expect(zoomPaintValue(fade, 9)).to.equal(1);
+    expect(zoomPaintValue(['interpolate', ['exponential', 2], ['zoom'], 4, 1, 10, 0], 12)).to.equal(0);
+    const steps = ['step', ['zoom'], 0, 5, 0.8, 9, 0];
+    expect(zoomPaintValue(steps, 4)).to.equal(0); expect(zoomPaintValue(steps, 5)).to.equal(0.8); expect(zoomPaintValue(steps, 9.5)).to.equal(0);
+    for (const unknown of [['get', 'opacity'], ['interpolate', ['linear'], ['get', 'v'], 0, 0, 1, 1], ['coalesce', ['feature-state', 'o'], 1],
+      ['step', ['zoom'], ['get', 'x'], 6, 1], ['interpolate', ['linear'], ['zoom']], Number.NaN, '0', undefined]) {
+      expect(zoomPaintValue(unknown, 5), JSON.stringify(unknown)).to.equal(undefined);
+    }
+  });
+
+  it('skips layers outside their fractional zoom range, hidden, or transparent in every opacity', () => {
+    const paint = new Map<string, unknown>(); const layout = new Map<string, unknown>();
+    const reader = { getPaintProperty: (id: string, key: string) => paint.get(`${id}:${key}`), getLayoutProperty: (id: string, key: string) => layout.get(`${id}:${key}`) };
+    const ranged = { id: 'tier', type: 'fill', minzoom: 10.5, maxzoom: 14 };
+    expect(mapLayerHittable(reader, 'tier', ranged, 10.2)).to.equal(false);
+    expect(mapLayerHittable(reader, 'tier', ranged, 10.5)).to.equal(true);
+    expect(mapLayerHittable(reader, 'tier', ranged, 14)).to.equal(false);
+    paint.set('tier:fill-opacity', ['interpolate', ['linear'], ['zoom'], 11, 0, 12, 1]);
+    expect(mapLayerHittable(reader, 'tier', ranged, 10.8)).to.equal(false); expect(mapLayerHittable(reader, 'tier', ranged, 11.5)).to.equal(true);
+    layout.set('tier:visibility', 'none'); expect(mapLayerHittable(reader, 'tier', ranged, 12)).to.equal(false);
+    const symbol = { id: 'poi', type: 'symbol' };
+    paint.set('poi:icon-opacity', 0); expect(mapLayerHittable(reader, 'poi', symbol, 5)).to.equal(true);
+    paint.set('poi:text-opacity', 0); expect(mapLayerHittable(reader, 'poi', symbol, 5)).to.equal(false);
+    paint.set('dyn:circle-opacity', ['get', 'o']);
+    expect(mapLayerHittable(reader, 'dyn', { id: 'dyn', type: 'circle' }, 5)).to.equal(true);
+    expect(mapLayerHittable({}, 'bare', { id: 'bare', type: 'line', minzoom: 2 }, 3)).to.equal(true);
+    expect(mapLayerHittable(reader, 'tier', ranged, Number.NaN)).to.equal(true);
+    const throwing = { getPaintProperty: () => { throw new Error('gone'); } };
+    expect(mapLayerHittable(throwing, 'x', { id: 'x', type: 'fill' }, 3)).to.equal(true);
+  });
 });

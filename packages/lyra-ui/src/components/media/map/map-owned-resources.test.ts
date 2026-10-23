@@ -118,6 +118,38 @@ describe('owned map overlay admission', () => {
     expect(result.sources[0]!.source['type']).to.equal('geojson');
   });
 
+  it('retains GeoJSON envelopes by identity outside the value budget and snapshots the rest', () => {
+    const features = Array.from({ length: 30_000 }, (_, index) => ({ type: 'Feature', id: index, properties: { v: index },
+      geometry: { type: 'Point', coordinates: [index % 180, 0] } }));
+    const data = { type: 'FeatureCollection', features };
+    const input = { sources: [{ id: 'big', source: { type: 'geojson', data, promoteId: 'v', cluster: false } }] };
+    const result = admission(input);
+    expect(result.sources[0]!.source['data'] === data).to.equal(true);
+    expect(result.sources[0]!.source['promoteId']).to.equal('v');
+    expect(Object.isFrozen(result.sources[0]!.source)).to.equal(true); expect(Object.isFrozen(data)).to.equal(false);
+    const feature = { type: 'Feature', geometry: null, properties: {} };
+    expect(admission({ sources: [{ id: 'one', source: { type: 'geojson', data: feature } }] }).sources[0]!.source['data'] === feature).to.equal(true);
+    // Anything else under data keeps the bounded copy, and non-geojson sources never retain identity.
+    expect(admitMapOverlays({ sources: [{ id: 'x', source: { type: 'vector', data } }] }).ok).to.equal(false);
+    let reads = 0;
+    const hostile = { type: 'FeatureCollection', get features() { reads += 1; return []; } };
+    expect(admitMapOverlays({ sources: [{ id: 'x', source: { type: 'geojson', data: hostile } }] }).ok).to.equal(false);
+    expect(reads).to.equal(0);
+  });
+
+  it('updates identity GeoJSON in place by reference and replaces it for metadata changes', () => {
+    const calls: unknown[] = [];
+    const source = { setData(value: unknown) { calls.push(value); } };
+    const first = { type: 'FeatureCollection', features: [] }, second = { type: 'FeatureCollection', features: [] };
+    const before = admission({ sources: [{ id: 's', source: { type: 'geojson', data: first } }] }).sources[0]!.source;
+    const after = admission({ sources: [{ id: 's', source: { type: 'geojson', data: second } }] }).sources[0]!.source;
+    const plan = planMapSourceUpdate(source, before, after);
+    expect(typeof plan).to.equal('function'); plan!(); expect(calls.length).to.equal(1); expect(calls[0] === second).to.equal(true);
+    expect(planMapSourceUpdate(source, before, before)).to.equal(undefined);
+    const promoted = admission({ sources: [{ id: 's', source: { type: 'geojson', data: second, promoteId: 'id' } }] }).sources[0]!.source;
+    expect(planMapSourceUpdate(source, before, promoted)).to.equal(undefined);
+  });
+
   it('does not retain arbitrary DOM handles or invoke a canvas-shaped accessor', () => {
     let reads = 0;
     const fake = { get ownerDocument() { reads += 1; return document; } };
@@ -380,7 +412,11 @@ describe('owned map resource reconciliation', () => {
     expect(requirements).to.deep.equal({ sources: { points: wanted.sources[0]!.source }, layers: [wanted.layers[0]!.layer] });
     expect(peer.operations).to.deep.equal(['image+pin', 'source+points', 'layer+dots']);
     const source = peer.getSource('points'); peer.operations.length = 0;
-    expect((await registry.reconcile(peer, 1, overlay(), [image.resource], context())).ok).to.equal(true);
+    const equalDescriptors = admission({
+      sources: wanted.sources.map(entry => ({ ...entry, source: { ...entry.source } })),
+      layers: structuredClone(wanted.layers),
+    });
+    expect((await registry.reconcile(peer, 1, equalDescriptors, [image.resource], context())).ok).to.equal(true);
     expect(peer.operations).to.deep.equal([]); expect(peer.getSource('points') === source).to.equal(true);
     await registry.reconcile(peer, 1, empty(), [], context());
     expect(peer.operations).to.deep.equal(['layer-dots', 'source-points', 'image-pin']);
@@ -401,20 +437,59 @@ describe('owned map resource reconciliation', () => {
     }
   });
 
-  it('retains prepared images across style replay and disposes replaced images only after dependent layers are removed', async () => {
+  it('retains prepared images across style replay and replaces a changed image in place, keeping its layers', async () => {
     const peer = new ResourcePeer(); const registry = new MapOwnedResources(); const image = prepared('pin');
-    await registry.reconcile(peer, 1, overlay(), [image.resource], context());
+    const wanted = overlay();
+    await registry.reconcile(peer, 1, wanted, [image.resource], context());
     peer.sources.clear(); peer.layers.clear(); peer.images.clear(); peer.order = []; peer.operations.length = 0;
-    await registry.reconcile(peer, 2, overlay(), [image.resource], context());
+    await registry.reconcile(peer, 2, wanted, [image.resource], context());
     expect(peer.operations).to.deep.equal(['image+pin', 'source+points', 'layer+dots']);
     expect(image.disposals).to.equal(0);
     const replacement = prepared('pin'); peer.operations.length = 0;
     peer.after = operation => {
-      if (operation === 'image-pin') { expect(peer.layers.size).to.equal(0); expect(image.disposals).to.equal(0); }
+      if (operation === 'image-pin') { expect(peer.layers.size).to.equal(1); expect(image.disposals).to.equal(0); }
     };
-    await registry.reconcile(peer, 2, overlay(), [replacement.resource], context());
+    await registry.reconcile(peer, 2, wanted, [replacement.resource], context());
+    expect(peer.operations).to.deep.equal(['image-pin', 'image+pin']);
     expect(image.disposals).to.equal(1); expect(replacement.disposals).to.equal(0);
     registry.dispose(); expect(replacement.disposals).to.equal(1);
+  });
+
+  it('replaces its own images that a diffed style swap kept, instead of reporting a collision', async () => {
+    const peer = new ResourcePeer(); const registry = new MapOwnedResources(); const pin = prepared('pin'), flag = prepared('flag');
+    await registry.reconcile(peer, 1, overlay(), [pin.resource, flag.resource], context());
+    // The engine diffed the style: runtime sources and layers went, runtime images stayed.
+    peer.sources.clear(); peer.layers.clear(); peer.order = []; peer.operations.length = 0;
+    const result = await registry.reconcile(peer, 2, overlay(), [pin.resource], context());
+    expect(result.ok).to.equal(true);
+    expect(peer.operations).to.deep.equal(['image-pin', 'image+pin', 'source+points', 'layer+dots', 'image-flag']);
+    expect(peer.images.has('flag')).to.equal(false);
+    peer.images.set('stranger', new ImageData(1, 1));
+    const collision = await registry.reconcile(peer, 3, overlay(), [pin.resource, prepared('stranger').resource], context());
+    expect(collision.ok).to.equal(false); registry.dispose();
+  });
+
+  it('adds and removes images incrementally without touching unrelated or dependent layers', async () => {
+    const peer = new ResourcePeer(); const registry = new MapOwnedResources();
+    const pin = prepared('pin'), flag = prepared('flag');
+    const wanted = overlay();
+    await registry.reconcile(peer, 1, wanted, [pin.resource], context()); peer.operations.length = 0;
+    expect((await registry.reconcile(peer, 1, wanted, [pin.resource, flag.resource], context())).ok).to.equal(true);
+    expect(peer.operations).to.deep.equal(['image+flag']);
+    peer.operations.length = 0;
+    expect((await registry.reconcile(peer, 1, wanted, [flag.resource], context())).ok).to.equal(true);
+    expect(peer.operations).to.deep.equal(['image-pin']); expect(pin.disposals).to.equal(1);
+    expect(peer.layers.has('dots')).to.equal(true); registry.dispose();
+  });
+
+  it('registers signed-distance-field images with the sdf option', async () => {
+    const options: unknown[] = [];
+    const peer = new ResourcePeer();
+    peer.addImage = (id: string, image: ImageData, value?: unknown) => { peer.images.set(id, image); options.push(value); };
+    const registry = new MapOwnedResources(); const body = prepared('body');
+    const sdf: PreparedMapImage = { ...body.resource, sdf: true, get image() { return body.resource.image; }, dispose: () => body.resource.dispose() };
+    expect((await registry.reconcile(peer, 1, empty(), [sdf, prepared('plain').resource], context())).ok).to.equal(true);
+    expect(options).to.deep.equal([{ pixelRatio: 1, sdf: true }, { pixelRatio: 1 }]); registry.dispose();
   });
 
   it('keeps previous resources usable on preparation rejection and sanitizes the result', async () => {
@@ -555,5 +630,29 @@ describe('owned map resource reconciliation', () => {
     const pending = registry.reconcile(peer, 1, overlay(), [image.resource], { isCurrent: current, prepare: () => work.promise });
     registry.dispose(); expect((await pending).ok).to.equal(false); expect(image.disposals).to.equal(1);
     work.resolve();
+  });
+});
+
+
+describe('owned source identity reconciliation', () => {
+  it('updates distinct equal-content GeoJSON references without removing their layer', async () => {
+    const registry = new MapOwnedResources(); const peer = new ResourcePeer();
+    const first = { type: 'FeatureCollection', features: [] }, second = { type: 'FeatureCollection', features: [] };
+    const input = (data: unknown) => admission({ sources: [{ id: 'points', source: { type: 'geojson', data } }],
+      layers: [{ layer: { id: 'dots', type: 'circle', source: 'points' } }] });
+    const calls: unknown[] = []; const changes: string[] = [];
+    const native = { setData(value: unknown) { calls.push(value); } };
+    peer.planSourceUpdate = (id, previous, next, check) => planMapSourceUpdate(peer.getSource(id), previous, next, check);
+    const ctx = { ...context(), beforeSourceChange: (change: MapOwnedSourceChange) => { changes.push(change.reason); } };
+    try {
+      expect((await registry.reconcile(peer, 1, input(first), [], ctx)).ok).to.equal(true);
+      peer.sources.set('points', native); const layer = peer.getLayer('dots'); peer.operations.length = 0;
+      expect((await registry.reconcile(peer, 1, input(second), [], ctx)).ok).to.equal(true);
+      expect(calls.length).to.equal(1); expect(calls[0] === second).to.equal(true);
+      expect(changes).to.deep.equal(['update']); expect(peer.operations).to.deep.equal([]);
+      expect(peer.getLayer('dots') === layer).to.equal(true); expect(peer.getSource('points') === native).to.equal(true);
+      expect((await registry.reconcile(peer, 1, input(second), [], ctx)).ok).to.equal(true);
+      expect(calls.length).to.equal(1); expect(changes).to.deep.equal(['update']);
+    } finally { registry.dispose(); }
   });
 });

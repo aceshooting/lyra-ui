@@ -81622,6 +81622,16 @@
             "default": "modular"
           },
           {
+            "name": "hash-format",
+            "property": "hashFormat",
+            "type": "LyraMapHashFormat",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "named"
+          },
+          {
             "name": "initialization",
             "property": "initialization",
             "type": "LyraMapInitialization",
@@ -81708,6 +81718,24 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "max-zoom",
+            "property": "maxZoom",
+            "type": "number | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "min-zoom",
+            "property": "minZoom",
+            "type": "number | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "pick-mode",
@@ -81855,9 +81883,28 @@
             "default": false
           },
           {
+            "name": "hashFormat",
+            "attribute": "hash-format",
+            "type": "LyraMapHashFormat",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "named"
+          },
+          {
             "name": "hiddenCategories",
             "attribute": null,
             "type": "readonly string[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "imageProvider",
+            "attribute": null,
+            "type": "LyraMapImageProvider | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -82053,6 +82100,24 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "maxZoom",
+            "attribute": "max-zoom",
+            "type": "number | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "minZoom",
+            "attribute": "min-zoom",
+            "type": "number | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "overlays",

@@ -15,6 +15,8 @@ interface NativeMap extends LyraMapInstance {
   triggerRepaint(): void;
   getSource(id: string): unknown;
   getStyle(): { sources: Record<string, unknown>; layers: { id: string }[] };
+  getLayer(id: string): unknown;
+  hasImage(id: string): boolean;
   project(coordinates: [number, number]): { x: number; y: number };
   queryRenderedFeatures(point: { x: number; y: number }, options: { layers: string[] }): { layer: { id: string } }[];
   doubleClickZoom: { isEnabled(): boolean };
@@ -30,6 +32,44 @@ function overlays(data = geometry()): LyraMapOverlays {
     { interactive: true, layer: { id: 'local-fill', type: 'fill', source: 'local-area', paint: {
       'fill-color': ['case', ['boolean', ['feature-state', 'selected'], false], '#0000ff', '#ff0000'], 'fill-opacity': 1,
     } } },
+  ] };
+}
+/** Every node an admission walk would visit: containers, strings, numbers and booleans alike. */
+function countValues(root: unknown): number {
+  let count = 0; const stack: unknown[] = [root];
+  while (stack.length) {
+    const value = stack.pop(); count += 1;
+    if (Array.isArray(value)) stack.push(...value);
+    else if (value !== null && typeof value === 'object') stack.push(...Object.values(value));
+  }
+  return count;
+}
+/** A 100 x 71 grid of 2-degree cells with 25-vertex rings; cell (50, 35), id 3550, is centred on 0,0. */
+function largeGrid(color: string) {
+  const features = [];
+  for (let j = 0; j < 71; j++) for (let i = 0; i < 100; i++) {
+    const x = (i - 50) * 2, y = (j - 35) * 2, ring: number[][] = [];
+    const corners = [[x - 1, y - 1], [x + 1, y - 1], [x + 1, y + 1], [x - 1, y + 1]];
+    for (let side = 0; side < 4; side++) {
+      const [ax, ay] = corners[side]!, [bx, by] = corners[(side + 1) % 4]!;
+      for (let step = 0; step < 6; step++) ring.push([ax! + (bx! - ax!) * step / 6, ay! + (by! - ay!) * step / 6]);
+    }
+    ring.push([...ring[0]!]);
+    features.push({ type: 'Feature', id: j * 100 + i, properties: { kind: i === 49 && j === 35 ? 'excluded' : 'cell', color },
+      geometry: { type: 'Polygon', coordinates: [ring] } });
+  }
+  return { type: 'FeatureCollection', features };
+}
+function largeOverlays(data: unknown): LyraMapOverlays {
+  return { sources: [{ id: 'grid', source: { type: 'geojson', data } },
+    { id: 'marker', source: { type: 'geojson', data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [[40, -10], [40, 10]] } } } }], layers: [
+    { interactive: false, layer: { id: 'marker-line', type: 'line', source: 'marker', paint: { 'line-color': '#00ff00', 'line-width': 4 } } },
+    { interactive: true, before: 'marker-line', layer: { id: 'grid-fill', type: 'fill', source: 'grid', minzoom: 2, maxzoom: 6,
+      filter: ['!=', ['get', 'kind'], 'excluded'],
+      paint: {
+        'fill-color': ['coalesce', ['feature-state', 'color'], ['match', ['get', 'kind'], 'cell', ['get', 'color'], '#000000']],
+        'fill-opacity': ['interpolate', ['linear'], ['zoom'], 2, 1, 5, 1, 5.5, 0],
+      } } },
   ] };
 }
 async function mount(configure: (el: LyraMap, wrapper: HTMLElement) => void = () => {}): Promise<{ el: LyraMap; wrapper: HTMLDivElement; outside: HTMLButtonElement }> {
@@ -297,6 +337,74 @@ describe('lr-map actual modular companion integration', function () {
     expect(map.doubleClickZoom.isEnabled()).to.equal(zoom); expect(map.dragPan.isEnabled()).to.equal(pan);
     expect(el.shadowRoot!.querySelector('[part="drawing-vertex"]') === null).to.equal(true);
   });
+  it('M09 renders a 600,000-value GeoJSON overlay with native paint, filter, zoom gating, order, picking and state across style swaps', async () => {
+    const data = largeGrid('#ff0000');
+    expect(countValues(data)).to.be.greaterThan(600_000);
+    const { el } = await mount(map => { map.overlays = largeOverlays(data); });
+    const map = peer(el); const clicks: { origin?: string; sourceId?: string; hit?: { id?: unknown; source: string } }[] = [];
+    el.addEventListener('lr-map-click', event => { clicks.push(event.detail); });
+    const ids = map.getStyle().layers.map(layer => layer.id);
+    expect(ids.indexOf('grid-fill')).to.be.lessThan(ids.indexOf('marker-line'));
+    color(await centerPixel(el), [255, 0, 0, 255]);
+    await clickCanvas(el); await waitUntil(() => clicks.length === 1);
+    expect(clicks[0]!.origin).to.equal('overlay'); expect(clicks[0]!.sourceId).to.equal('grid');
+    expect(clicks[0]!.hit!.id).to.equal(3550); expect(clicks[0]!.hit!.source).to.equal('grid');
+    const excluded = map.project([-2, 0]), box = map.getCanvas().getBoundingClientRect();
+    await sendMouse({ type: 'click', position: [Math.round(box.left + excluded.x), Math.round(box.top + excluded.y)] });
+    await waitUntil(() => clicks.length === 2); expect(clicks[1]!.hit).to.equal(undefined);
+    const target = { origin: 'overlay' as const, source: 'grid', id: 3550 };
+    expect(el.setFeatureState(target, { color: '#0000ff' })).to.equal(true); await el.whenIdle();
+    color(await centerPixel(el), [0, 0, 255, 255]);
+    for (const [zoom, painted] of [[5.75, false], [6.5, false], [3, true]] as const) {
+      expect(el.jumpTo({ zoom })).to.equal(true); await el.whenIdle();
+      if (!painted) color(await centerPixel(el), [255, 255, 255, 255]);
+      const count = clicks.length; await clickCanvas(el); await waitUntil(() => clicks.length > count);
+      expect(clicks.at(-1)!.hit === undefined, `zoom ${zoom}`).to.equal(!painted);
+    }
+    for (let swap = 0; swap < 3; swap++) {
+      el.mapStyle = localStyle(); await el.updateComplete; await el.whenIdle();
+      expect(map.getSource('grid') !== undefined, `swap ${swap}`).to.equal(true);
+      const order = map.getStyle().layers.map(layer => layer.id);
+      expect(order.indexOf('grid-fill')).to.be.lessThan(order.indexOf('marker-line'));
+      color(await centerPixel(el), [0, 0, 255, 255]);
+    }
+    const source = map.getSource('grid');
+    el.overlays = largeOverlays(largeGrid('#00ff00')); await el.updateComplete; await el.whenIdle();
+    expect(map.getSource('grid') === source).to.equal(true); expect(el.getFeatureState(target)).to.equal(undefined);
+    color(await centerPixel(el), [0, 255, 0, 255]);
+  });
+
+  it('M10 supplies lazy SDF icons, takes a sprite catalog beyond 64 and changes images without re-adding layers', async () => {
+    const square = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="#ffffff"/></svg>';
+    const catalog = Array.from({ length: 100 }, (_, index) => ({ id: `poi-${index}`, width: 8, height: 8, pixelRatio: 1,
+      source: { kind: 'svg' as const, markup: square.replace('#ffffff', '#ff0000') } }));
+    const asked: string[] = [];
+    const pins: LyraMapOverlays = { sources: [{ id: 'pins', source: { type: 'geojson', data: { type: 'FeatureCollection', features: [
+      { type: 'Feature', id: 1, properties: { icon: 'station-body' }, geometry: { type: 'Point', coordinates: [0, 0] } }] } } }],
+    layers: [{ interactive: true, layer: { id: 'pins-icon', type: 'symbol', source: 'pins',
+      layout: { 'icon-image': ['get', 'icon'], 'icon-allow-overlap': true }, paint: { 'icon-color': '#0000ff' } } }] };
+    const { el } = await mount(map => {
+      map.overlays = pins; map.images = catalog;
+      map.imageProvider = async id => { asked.push(id); return { id, width: 32, height: 32, pixelRatio: 1, sdf: true, source: { kind: 'svg', markup: square } }; };
+    });
+    const map = peer(el);
+    await waitUntil(() => map.hasImage('station-body'), 'provider image added'); await el.whenIdle();
+    expect(asked).to.deep.equal(['station-body']); expect(map.hasImage('poi-99')).to.equal(true);
+    color(await centerPixel(el), [0, 0, 255, 255]);
+    const clicked = oneEvent(el, 'lr-map-click'); await clickCanvas(el);
+    const detail = (await clicked).detail; expect(detail.sourceId).to.equal('pins'); expect(detail.hit?.id).to.equal(1);
+    const layer = map.getLayer('pins-icon');
+    el.images = [...catalog.slice(1), { ...catalog[0]!, id: 'poi-extra' }]; await el.updateComplete; await el.whenIdle();
+    expect(map.hasImage('poi-0')).to.equal(false); expect(map.hasImage('poi-extra')).to.equal(true);
+    expect(map.getLayer('pins-icon') === layer).to.equal(true);
+    el.mapStyle = localStyle(); await el.updateComplete; await el.whenIdle();
+    await waitUntil(() => map.hasImage('station-body'), 'provider image re-added after a style swap');
+    expect(asked).to.deep.equal(['station-body']); color(await centerPixel(el), [0, 0, 255, 255]);
+    el.overlays = {}; await el.updateComplete; await el.whenIdle();
+    el.imageProvider = undefined; await el.updateComplete; await el.whenIdle();
+    expect(map.hasImage('station-body')).to.equal(false);
+  });
+
   it('M08 queries real canvas footprints through priority, zoom, category, update, replay and removal', async () => {
     const canvas = document.createElement('canvas'); canvas.width = canvas.height = 8;
     const context = canvas.getContext('2d')!; context.fillStyle = '#0000ff'; context.fillRect(0, 0, 2, 8);

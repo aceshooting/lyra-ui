@@ -190,15 +190,15 @@ describe('lr-map drawing integration', () => {
       expect(starts.length).to.equal(0); expect(element.drawMode).to.equal(kind === 'mode' ? 'polygon' : 'none'); expect(peer.sources.size).to.equal(0); element.remove();
     }
   });
-  it('publishes accepted first-vertex events before a native source callback cancels drawing', async () => {
-    for (const addSource of [false, true]) {
+  for (const addSource of [false, true]) {
+    it(`publishes accepted first-vertex events before a native ${addSource ? 'addSource' : 'getSource'} callback cancels drawing`, async () => {
       const { element, peer } = await drawing(); const order: string[] = [];
       for (const type of ['start', 'change', 'cancel']) element.addEventListener(`lr-map-draw-${type}`, () => { order.push(type); });
       const cancel = () => { peer.beforeGetSource = undefined; peer.afterAddSource = undefined; element.cancelDrawing(); };
       if (addSource) peer.afterAddSource = cancel; else peer.beforeGetSource = cancel;
       click(peer, 1, 2); await settle(element, peer); expect(order).to.deep.equal(['start', 'change', 'cancel']); expect(element.drawMode).to.equal('none'); expect(peer.sources.size).to.equal(0); element.remove();
-    }
-  });
+    });
+  }
   it('publishes accepted undo before a native source callback cancels its resource update', async () => {
     const { element, peer } = await drawing(); await vertex(element, peer, 0, 0); await vertex(element, peer, 1, 0); const order: string[] = [];
     element.addEventListener('lr-map-draw-change', () => { order.push('change'); }); element.addEventListener('lr-map-draw-cancel', () => { order.push('cancel'); });

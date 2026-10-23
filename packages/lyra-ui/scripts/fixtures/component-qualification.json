@@ -31500,6 +31500,7 @@
           "src/components/media/map/map-hit-test.test.ts",
           "src/components/media/map/map-image-export.test.ts",
           "src/components/media/map/map-image-metadata.test.ts",
+          "src/components/media/map/map-image-provider.test.ts",
           "src/components/media/map/map-images-browser.test.ts",
           "src/components/media/map/map-images.test.ts",
           "src/components/media/map/map-interaction-component.test.ts",

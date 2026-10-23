@@ -45,7 +45,7 @@ import {
   type MaplibreModule,
 } from './map-loader.js';
 import { styles } from './map.styles.js';
-import { queryMapHit, type MapHitRule, type LyraMapFeatureValue } from './map-hit-test.js';
+import { mapLayerHittable, queryMapHit, type MapHitRule, type LyraMapFeatureValue } from './map-hit-test.js';
 export type { LyraMapFeatureValue } from './map-hit-test.js';
 import { flattenedParentElement } from '../../../internal/composed-tree.js';
 import { MapFeatureStateRouter, type MapFeatureStateRoute, type LyraMapFeatureOrigin, type LyraMapFeatureStateTarget,
@@ -59,6 +59,9 @@ import type { MapDrawingController, MapDrawingHost } from './map-drawing-control
 export type { LyraMapDrawingSnapshot, LyraMapDrawingMetrics, LyraMapDrawingMode, LyraMapDrawingPoint, LyraMapDrawingCancelReason,
   LyraMapDrawingCancelDetail } from './map-drawing.js';
 const DRAW_MODE = literalSetConverter<LyraMapDrawingMode>(['none', 'line', 'polygon'], 'none');
+/** URL fragment form that `hash` reads and writes: a `key=` field, or the engine's unnamed token. */
+export type LyraMapHashFormat = 'named' | 'unnamed';
+const HASH_FORMAT = literalSetConverter<LyraMapHashFormat>(['named', 'unnamed'], 'named');
 // Closed message-key sets: each table lists exactly the keys its feedback can show.
 const MAP_CONFIGURATION_MESSAGE = {
   mapHashConflict: 'mapHashConflict', mapHashInvalid: 'mapHashInvalid', mapControlUnavailable: 'mapControlUnavailable',
@@ -95,6 +98,7 @@ import { projectMapInteractionOptions, projectMapBasemapInteractions, type LyraM
 export type { LyraMapInteractionOptions, LyraMapBasemapInteraction } from './map-interaction-options.js';
 import type { MapHashOwner } from './map-hash-owner.js';
 import type { MapHashCamera } from './map-hash.js';
+import { MAP_HASH_UNNAMED } from './map-hash-option.js';
 import { normalizeMapControlOptions, type LyraMapGeolocateControlOptions, type LyraMapAttributionControlOptions, type LyraMapGeolocationErrorCode,
   type LyraMapNavigationControlOptions, type LyraMapScaleControlOptions } from './map-control-options.js';
 export type { LyraMapControlPosition, LyraMapScaleUnit, LyraMapNavigationControlOptions, LyraMapScaleControlOptions,
@@ -115,6 +119,8 @@ import type { MapOwnedFeatures } from './map-owned-features.js';
 import type { MapOwnedFeatureInput } from './map-owned-feature-input.js';
 import type { MapOwnedOverlaySnapshot, LyraMapOverlaySource, LyraMapOverlayLayer } from './map-overlay-admission.js';
 import type { LyraMapImage } from './map-image-admission.js';
+import type { LyraMapImageProvider } from './map-image-provider.js';
+export type { LyraMapImageProvider } from './map-image-provider.js';
 import { projectMapDataLayerModel, projectMapLabelOptions, buildMapLabelLayer, buildMapExternalLayers,
   type CanonicalMapExternalLayer, type CanonicalMapLabel, type LyraMapExternalDataLayer, type LyraMapLabelOptions } from './map-data-layer-model.js';
 export type { LyraMapSourceCoordinates, LyraMapLabelValue, LyraMapLabelOptions, LyraMapTileSource,
@@ -1971,7 +1977,8 @@ export interface LyraMapFitBoundsOptions {
    *  or non-finite side counts as `0`. Defaults to `0`. */
   readonly padding?: number | LyraMapPadding;
   /** Highest zoom the fit may reach, so a single point or a tight cluster does not zoom to the
-   *  street. Clamped into `[0, 22]`; a non-finite value sets no ceiling. */
+   *  street. Clamped into the map's zoom limits (`minZoom`/`maxZoom`, `[0, 22]` by default); a
+   *  non-finite value sets no ceiling beyond `maxZoom`. */
   readonly maxZoom?: number;
   /** Whether the camera animates to the box. Defaults to `true`. It never animates under
    *  `prefers-reduced-motion: reduce`, or when the fit was queued before the map existed. */
@@ -2043,6 +2050,8 @@ const ZERO_CAMERA_PADDING: Readonly<Required<LyraMapPadding>> = Object.freeze({
 /** The ceiling `fitToData()` applies unless told otherwise, so a single marker does not zoom to the
  *  street. */
 const FIT_TO_DATA_MAX_ZOOM = 16;
+/** The engine's own default zoom limits, used when neither `minZoom` nor `maxZoom` is usable. */
+const DEFAULT_ZOOM_LIMITS: readonly [number, number] = Object.freeze([0, 22] as const);
 
 type MapCommandKind = 'flyTo' | 'easeTo' | 'jumpTo';
 
@@ -2469,6 +2478,17 @@ interface AppliedMapInteraction extends MapHitRule {
   readonly source: string;
   readonly sourceLayer?: string;
   readonly cluster?: boolean;
+}
+/**
+ * Feature-state identity of a native source: its GeoJSON `data` object by reference when the
+ * descriptor holds one (large data is never serialized), otherwise the serialized descriptor.
+ * The second member is the rest of the descriptor and the source layers, compared as text.
+ */
+function sourceIdentity(source: Readonly<Record<string, unknown>>, layers: readonly string[]): [unknown, string] {
+  const data = source['data'];
+  if (typeof data !== 'object' || data === null) return [JSON.stringify(source), JSON.stringify(layers)];
+  const { data: _data, ...rest } = source;
+  return [data, JSON.stringify([rest, layers])];
 }
 function featureStatePeer(map: MapLibreMapCapability): map is MapLibreMapCapability & MapFeatureStatePeer {
   try {
@@ -2916,8 +2936,43 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private hasAssignedCenter = false;
   private _center: readonly [number, number] = Object.freeze([0, 0] as [number, number]);
   /** Initial and controlled map zoom level. Tracks the settled camera and reconciles the same way
-   * as `center`. */
+   * as `center`. Clamped into the zoom limits (`minZoom`/`maxZoom`, `[0, 22]` by default). */
   @property({ type: Number }) zoom = 2;
+
+  /**
+   * Lowest zoom level the camera may reach, in `[0, 24]`. Unset leaves the engine's own floor, `0`.
+   * Forwarded to the engine at construction and live: gestures, `zoom`, `fitBounds()`,
+   * `fitToData()`, the URL `hash` and the camera commands all stay inside the limits. Raising it
+   * above the camera moves the camera to the limit and writes the clamped value into `zoom`,
+   * without an `lr-map-view-change`. A non-finite value counts as unset; when both limits are set
+   * and `minZoom` exceeds `maxZoom`, both are ignored (with a dev-mode warning).
+   */
+  @property({ type: Number, attribute: 'min-zoom' }) minZoom?: number;
+
+  /**
+   * Highest zoom level the camera may reach, in `[0, 24]`. Unset leaves the engine's own ceiling,
+   * `22` (or `minZoom` when that is higher). Forwarded and enforced exactly like `minZoom`; a
+   * `fitBounds()`/`fitToData()` `maxZoom` above it is lowered to it.
+   */
+  @property({ type: Number, attribute: 'max-zoom' }) maxZoom?: number;
+
+  /** Whether either zoom limit is set to a usable value, so construction forwards them. */
+  private get zoomLimitsRequested(): boolean {
+    return [this.minZoom, this.maxZoom].some(value => typeof value === 'number' && Number.isFinite(value));
+  }
+
+  /** `[min, max]` zoom limits, normalized into `[0, 24]`; an inverted explicit pair is ignored. */
+  private get zoomLimits(): readonly [number, number] {
+    const explicit = (value: unknown): number | undefined =>
+      typeof value === 'number' && Number.isFinite(value) ? finiteRange(value, 0, 0, 24) : undefined;
+    const min = explicit(this.minZoom), max = explicit(this.maxZoom);
+    if (min !== undefined && max !== undefined && min > max) {
+      devWarnOnce('lyra-map-zoom-limits-inverted', `<${this.localName}>: minZoom ${min} exceeds maxZoom ${max}; both limits are ignored.`);
+      return DEFAULT_ZOOM_LIMITS;
+    }
+    const lower = min ?? 0;
+    return [lower, max ?? Math.max(22, lower)];
+  }
 
   /** Screen padding kept clear on each side of the viewport: the camera centre, and every fit, are
    *  measured inside it, so a panel or toolbar covering part of the map does not hide what the map
@@ -2938,6 +2993,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   /** Set while the settled camera is being written into `center`/`zoom`: that write is the
    *  engine's own state, which the update it schedules does not push back. */
   private reflectingCamera = false;
+  /** Invalidates a deferred limit clamp when a newer authored zoom or limit update wins. */
+  private zoomLimitRevision = 0;
   /** Whether a `center`/`zoom` write is waiting for the update that pushes it to the peer. */
   private cameraUpdatePending = false;
   /** Camera work waiting for that update, so it applies after the assigned camera, not before. */
@@ -3004,13 +3061,34 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    */
   @property({ attribute: false }) controls?: Readonly<LyraMapControls>;
 
-  /** Named URL field ownership. `true` owns `map`; unset does not read or write the URL.
-   * A valid initial hash takes precedence over a queued initial fit. Disabling leaves the URL
-   * intact. Two connected maps cannot own the same window/key; the first owner keeps it.
+  /** URL fragment ownership of the camera. With the default `hashFormat`, `true` owns the named
+   * field `map` (`#map=zoom/lat/lng[/bearing[/pitch]]`) and a string owns that field name; unset
+   * does not read or write the URL. Other `&`-separated fragment tokens are preserved.
+   *
+   * A valid camera in the URL when the map is constructed takes precedence over a queued initial
+   * fit. An absent, unrelated or malformed fragment does not suppress the fit: only a valid camera
+   * in the owned field or token counts. A malformed owned value is left untouched, and the camera
+   * is not written over it until navigation replaces it. Disabling leaves the URL intact. Two
+   * connected maps cannot own the same window/key; the first owner keeps it.
    * Any value other than false, null or undefined loads the URL ownership runtime on demand. The
    * map is constructed once it has loaded, and URL feedback appears then; whenIdle() covers it.
    * If that runtime cannot be loaded, the URL is left untouched with localized control feedback. */
   @property({ attribute: false }) hash: boolean | string = false;
+
+  /** Fragment form that `hash` reads and writes. `'named'` (default) uses a `key=` field.
+   * `'unnamed'` uses the raw engine's unnamed form, `#zoom/lat/lng[/bearing[/pitch]]`, so existing
+   * deep links keep working: the camera is the leading token without `=`, named fields after it
+   * are preserved, and a fragment made only of named fields gets the camera prepended. `'unnamed'`
+   * takes `hash = true`; a string `hash` is invalid and shows the localized hash feedback. Two
+   * maps cannot own the unnamed token of one window, but one may own it beside named owners. */
+  @property({ attribute: 'hash-format', converter: HASH_FORMAT }) hashFormat: LyraMapHashFormat = 'named';
+
+  /** The option the URL owner receives: `hash` itself, or the internal unnamed-form selector. */
+  private get hashOption(): unknown {
+    if (this.hashFormat !== 'unnamed' || !this.hashRequested()) return this.hash;
+    // An empty string is never a valid field name, so a named key under `'unnamed'` is invalid.
+    return this.hash === true ? MAP_HASH_UNNAMED : '';
+  }
   private hashOwner?: MapHashOwner;
   private hashRuntimePending = false;
   private hashRuntimeFailed = false;
@@ -3061,7 +3139,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private syncHash(): void {
     if (!this.isConnected) return;
     const owner = this.hashRuntime();
-    const status = owner ? owner.configure(this.ownerDocument.defaultView, this.hash, () => this.applyHash()) : undefined;
+    const status = owner ? owner.configure(this.ownerDocument.defaultView, this.hashOption, () => this.applyHash()) : undefined;
     const issue = status === 'conflict' ? 'mapHashConflict' : status === 'invalid' ? 'mapHashInvalid'
       : !owner && this.hashRuntimeFailed && this.hashRequested() ? 'mapControlUnavailable' : undefined;
     this.pendingHashIssue = issue;
@@ -3079,8 +3157,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       this.scheduleAfterUpdate(() => this.applyHash(), 'map-apply-hash');
       return;
     }
-    const map = this._map, connection = this._connectGeneration, option = this.hash;
-    const current = () => this.isConnected && this._map === map && this._connectGeneration === connection && this.hash === option;
+    const map = this._map, connection = this._connectGeneration, option = this.hashOption;
+    const current = () => this.isConnected && this._map === map && this._connectGeneration === connection && this.hashOption === option;
     const owner = this.hashOwner;
     if (!owner) return;
     const result = owner.read();
@@ -3101,8 +3179,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   private writeHash(map: MapLibreMapCapability): void {
-    const connection = this._connectGeneration, option = this.hash;
-    const current = () => this.isConnected && this._map === map && this._connectGeneration === connection && this.hash === option;
+    const connection = this._connectGeneration, option = this.hashOption;
+    const current = () => this.isConnected && this._map === map && this._connectGeneration === connection && this.hashOption === option;
     if (!current() || this.applyingHash) return;
     try {
       const camera = readPeerCamera(map); if (!camera || !current()) return;
@@ -3497,18 +3575,41 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   @property({ attribute: false }) dataLayers: readonly LyraMapDataLayer[] = [];
 
   /** Immutable native source/layer descriptors with stable IDs. Up to 128 sources and 128 layers
-   * are snapshotted as bounded plain data. Canvas sources retain only source.canvas by identity.
+   * are snapshotted as bounded plain data (50,000 values, 10,000 entries per container and 1 MiB of
+   * text in total); a rejected assignment shows the localized initialization failure. Canvas
+   * sources retain only source.canvas by identity. A `geojson` source's `Feature` or
+   * `FeatureCollection` `data` object is retained by identity instead, outside that budget, so
+   * large data keeps native paint and layout expressions, filters, `minzoom`/`maxzoom`, symbol
+   * layers, feature state and `before` ordering. Assigning a new data object updates the native
+   * source in place (`setData`), keeping its layers and retiring its feature state; mutating the
+   * retained object is not observed, and `updateSourceData()` forwards an incremental diff.
    * IDs must not collide with basemap/generated resources. Images, sources and layers replay in
    * dependency order after style changes; before targets refer to native layer IDs. A missing
-   * target appends the layer. Direct mutation of registered peer IDs is unsupported. */
+   * target appends the layer.
+   * Hits skip a layer outside its zoom range, hidden, or with every opacity known to be `0`.
+   * Direct mutation of registered peer IDs is unsupported. */
   @property({ attribute: false }) overlays: LyraMapOverlays = {};
 
-  /** Immutable portable atlas images, prepared before registered symbol layers. Up to 64 stable
-   * IDs accept sanitized inline SVG or CORS-readable SVG/PNG/JPEG/WebP URLs. Explicit width/height
-   * describe bounded backing pixels; pixelRatio changes logical size. Unchanged descriptors reuse
-   * prepared pixels across updates and styles. Reassign to update/remove. Preparation failures
-   * reject readiness and show the localized initialization fallback. */
+  /** Immutable portable atlas images, prepared before registered symbol layers. Up to 1,024 stable
+   * IDs accept sanitized inline SVG or CORS-readable SVG/PNG/JPEG/WebP URLs, within an aggregate
+   * budget of 16,777,216 backing pixels and 8 MiB of encoded input. Explicit width/height
+   * describe bounded backing pixels; pixelRatio changes logical size; `sdf: true` registers a
+   * signed-distance-field image that `icon-color` recolors. Unchanged descriptors reuse
+   * prepared pixels across updates and styles. Reassign to update/remove: an added, changed or
+   * removed image is applied in place, without removing or re-adding the layers that use it.
+   * Preparation failures reject readiness and show the localized initialization fallback. */
   @property({ attribute: false }) images: readonly LyraMapImage[] = [];
+
+  /** Lazy atlas images: called with an image ID that a style layer needs and that neither
+   * `images` nor the basemap sprite provides, through the engine's missing-image hook. Return (or
+   * resolve to) an `images`-style descriptor with that same `id`, or nothing to leave it missing.
+   * The descriptor is sanitized and rasterized like an `images` entry and shares its count, pixel
+   * and byte budget; an image over budget, invalid or rejected stays missing (dev-mode warning)
+   * without failing the map. Each ID is asked once per provider: its pixels are kept and re-added
+   * after a `mapStyle` swap. Assigning `images` an ID the provider supplied hands it over to
+   * `images`. Replacing or clearing the provider removes the images it supplied. The engine waits
+   * for the provider before laying out the symbols that need the image, so `whenIdle()` covers it. */
+  @property({ attribute: false }) imageProvider?: LyraMapImageProvider;
 
   /** Immutable paint/layout overrides for existing basemap layer IDs only. Generated and
    * registered layers own their own paint. Removing an override restores its original value;
@@ -3791,8 +3892,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this._appliedGeoJson.set(resolvedSourceId, projection);
   }
 
-  /** Forwards a caller-authored diff to an applied dataLayers or choropleth public sourceId.
-   * Returns false before the source is ready, after disconnect, or if the engine lacks updateData.
+  /** Forwards a caller-authored diff to an applied dataLayers or choropleth public sourceId, or to
+   * an applied `overlays` GeoJSON source ID. Returns false before the source is ready, after
+   * disconnect, or if the engine lacks updateData. An overlay source replays its assigned `data`
+   * after a `mapStyle` swap, so fold the diff into that data before the next swap or assignment.
    * The diff is passed through without cloning; the caller owns feature IDs and validity. This
    * route bypasses the automatic 10,000-feature comparison ceiling. It does not rewrite public
    * properties; reassigning controlled GeoJSON later replaces this imperative state in full. */
@@ -3800,7 +3903,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (!this._map || !this._styleLoaded || !this.isConnected || typeof sourceId !== 'string') return false;
     const publicId = sourceId.trim();
     const resolved = this._appliedDataLayerIds.get(publicId) ??
-      (this.canonicalChoropleth?.sourceId === publicId ? this._appliedChoroplethSourceId : undefined);
+      (this.canonicalChoropleth?.sourceId === publicId ? this._appliedChoroplethSourceId : undefined) ??
+      (this.ownedFeatures?.ownsGeoJsonSource(publicId) ? publicId : undefined);
     if (!resolved) return false;
     const source = this._map.getSource(resolved) as MapLibreGeoJsonSource | undefined;
     if (typeof source?.updateData !== 'function') return false;
@@ -3905,6 +4009,58 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     }
   }
 
+  /**
+   * Forwards `minZoom`/`maxZoom` to a live engine. The order keeps the engine's own `min <= max`
+   * invariant at every step. A camera the new limits move is written back into `zoom`, without a
+   * view-change report: the host assigned the limits, so the clamp is its own intent.
+   */
+  private applyZoomLimits(): void {
+    const map = this._map;
+    if (!map || typeof map.setMinZoom !== 'function' || typeof map.setMaxZoom !== 'function') return;
+    const revision = ++this.zoomLimitRevision;
+    const authoredZoom = this.zoom, minZoom = this.minZoom, maxZoom = this.maxZoom;
+    const connection = this._connectGeneration, generation = this._styleGeneration, style = this.mapStyle;
+    const [min, max] = this.zoomLimits;
+    const current = (): boolean => this.isConnected && this._map === map && this.zoomLimitRevision === revision &&
+      this._connectGeneration === connection && this._styleGeneration === generation && this.mapStyle === style &&
+      Object.is(this.zoom, authoredZoom) && Object.is(this.minZoom, minZoom) && Object.is(this.maxZoom, maxZoom);
+    this.writeCamera(() => {
+      try {
+        const currentMax = map.getMaxZoom?.();
+        if (typeof currentMax === 'number' && min > currentMax) { map.setMaxZoom!(max); map.setMinZoom!(min); }
+        else { map.setMinZoom!(min); map.setMaxZoom!(max); }
+      } catch { /* A peer that rejects the limits keeps its previous ones. */ }
+    });
+    if (!current() || (this.zoom >= min && this.zoom <= max)) return;
+    // Native constraints apply immediately; reactive normalization waits until Lit has finished.
+    this.scheduleAfterUpdate(() => {
+      if (!current()) return;
+      const shown = readPeerCamera(map);
+      if (!current() || !shown || this.zoom === shown.zoom) return;
+      this.reflectedCamera = { center: shown.center, zoom: shown.zoom };
+      this.reflectingCamera = true;
+      try { this.zoom = shown.zoom; } finally { this.reflectingCamera = false; }
+    }, `map-zoom-limits-${revision}`);
+  }
+
+  /** Installs the current `imageProvider` on the live engine, loading the owned-resource runtime
+   *  once a provider is first assigned; a map that never sets one never loads it. */
+  private syncImageProvider(): void {
+    const map = this._map, provider = this.imageProvider;
+    if (!map) return;
+    const apply = (runtime: NonNullable<typeof loadMapOwnedFeatureRuntime.loaded>): void => {
+      if (this._map !== map || !this.isConnected || this.imageProvider !== provider) return;
+      if (typeof provider !== 'function' && !this.ownedFeatures) return;
+      (this.ownedFeatures ??= new runtime.MapOwnedFeatures()).configureImageProvider(map, provider, this);
+    };
+    const runtime = loadMapOwnedFeatureRuntime.loaded;
+    if (runtime) { apply(runtime); return; }
+    if (typeof provider !== 'function') { this.ownedFeatures?.configureImageProvider(map, undefined, this); return; }
+    this.trackFeatureLoad(loadMapOwnedFeatureRuntime().then(apply, () => {
+      devWarnOnce('lyra-map-image-provider-runtime', `<${this.localName}>: the imageProvider runtime could not be loaded; missing images stay missing.`);
+    }));
+  }
+
   /** Retries a rejected constraint from zoom 1, then restores the zoom and centre that were shown. */
   private constrainFromWholeZoom(
     map: MapLibreMapCapability,
@@ -3924,12 +4080,13 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     }
   }
 
-  /** `zoom` normalized to a finite value clamped into `[0, 22]` -- maplibre-gl's own default
-   *  `minZoom`/`maxZoom` (this component passes neither option to `new maplibregl.Map()`, so
-   *  those are the bounds the underlying map itself enforces). A non-finite value would otherwise
+  /** `zoom` normalized to a finite value clamped into the zoom limits -- `minZoom`/`maxZoom` when
+   *  set, otherwise maplibre-gl's own defaults `[0, 22]`, the bounds the underlying map itself
+   *  enforces when neither option is passed. A non-finite value would otherwise
    *  reach the constructor's initial `zoom` option or a live `setZoom()` call unnormalized. */
   private get safeZoom(): number {
-    return finiteRange(this.zoom, 2, 0, 22);
+    const [min, max] = this.zoomLimits;
+    return finiteRange(this.zoom, 2, min, max);
   }
 
   /** Longitude/latitude normalized before reaching MapLibre's constructor or live setter. */
@@ -3993,7 +4150,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const fit: MapFitRequest = Object.freeze({
       bounds: box,
       padding: normalizeFitPadding(settings.padding),
-      maxZoom: isFiniteCoordinate(maxZoom) ? finiteRange(maxZoom, 22, 0, 22) : undefined,
+      maxZoom: isFiniteCoordinate(maxZoom) ? finiteRange(maxZoom, 24, 0, 24) : undefined,
       animate: settings.animate !== false,
     });
     this.clusterZoomToken += 1;
@@ -4068,7 +4225,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   private runCameraCommand(kind: MapCommandKind, options: LyraMapCameraOptions): boolean {
-    const target = normalizeCameraOptions(options);
+    const target = normalizeCameraOptions(options, this.zoomLimits);
     if (!target) {
       devWarnOnce(
         'lyra-map-camera-command-rejected',
@@ -4561,6 +4718,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private applyFit(map: MapLibreMapCapability, fit: MapFitRequest, animate: boolean): boolean {
     if (typeof map.fitBounds !== 'function') return false;
     const [[west, south], [east, north]] = fit.bounds;
+    // Limits apply when the fit runs: a queued fit honours limits assigned after it was requested.
+    const [minZoom, maxZoom] = this.zoomLimits;
+    const fitMaxZoom = fit.maxZoom !== undefined ? finiteRange(fit.maxZoom, maxZoom, minZoom, maxZoom)
+      : this.zoomLimitsRequested ? maxZoom : undefined;
     this.readiness.invalidate();
     try {
       map.fitBounds(
@@ -4570,7 +4731,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         ],
         {
           padding: { ...fit.padding },
-          ...(fit.maxZoom === undefined ? {} : { maxZoom: fit.maxZoom }),
+          ...(fitMaxZoom === undefined ? {} : { maxZoom: fitMaxZoom }),
           animate,
         },
         { [FIT_EVENT_KEY]: this.fitToken },
@@ -4901,7 +5062,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // `painter`, which would crash disconnectedCallback()'s `this._map.remove()`), so this must
     // stay a precondition rather than a try/catch around the constructor below.
     const mod = this._maplibreModule;
-    const authoredCenter = this.center, authoredZoom = this.zoom, option = this.hash;
+    const authoredCenter = this.center, authoredZoom = this.zoom, option = this.hashOption;
     this.syncHash();
     // A requested URL field is read before construction, so wait for its ownership runtime.
     if (!this.hashOwner && this.hashRequested() && !this.hashRuntimeFailed) return;
@@ -4913,7 +5074,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         container: this.containerEl,
         style: this.mapStyle as never,
         center: hashCamera ? [...hashCamera.center] : this.safeCenter,
-        zoom: hashCamera?.zoom ?? this.safeZoom,
+        zoom: hashCamera ? finiteRange(hashCamera.zoom, this.safeZoom, ...this.zoomLimits) : this.safeZoom,
+        ...(this.zoomLimitsRequested ? { minZoom: this.zoomLimits[0], maxZoom: this.zoomLimits[1] } : {}),
         ...(hashCamera ? { bearing: hashCamera.bearing, pitch: hashCamera.pitch } : {}),
         attributionControl: false,
         ...(typeof this.renderWorldCopies === 'boolean'
@@ -5011,11 +5173,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       const connection = this._connectGeneration;
       const shown = readPeerCamera(this._map!);
       if (!this.isConnected || this._map !== candidate || this._connectGeneration !== connection) return;
-      if (shown && this.hash === option && this.center === authoredCenter && this.zoom === authoredZoom) {
+      if (shown && this.hashOption === option && this.center === authoredCenter && this.zoom === authoredZoom) {
         this.reflectedCamera = { center: shown.center, zoom: shown.zoom };
         this.scheduleAfterUpdate(() => {
           if (!this.isConnected || this._map !== candidate || this._connectGeneration !== connection ||
-            this.hash !== option || this.center !== authoredCenter || this.zoom !== authoredZoom) return;
+            this.hashOption !== option || this.center !== authoredCenter || this.zoom !== authoredZoom) return;
           this.reflectingCamera = true;
           try { this.center = shown.center; this.zoom = shown.zoom; }
           finally { this.reflectingCamera = false; }
@@ -5025,6 +5187,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.applyCameraPadding();
     this.syncControls();
     this.syncAnchor();
+    this.syncImageProvider();
     // Deferred rather than applied here: this can run inside `updated()`, and the fit settles
     // synchronously, writing `center`/`zoom` -- a property write the update cycle must not see.
     const initialized = this._map;
@@ -5140,6 +5303,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
     if (args[0] === undefined) this.geoJsonRefreshRequested = true;
+    if (args[0] === 'zoom' && !this.reflectingCamera) this.zoomLimitRevision = (this.zoomLimitRevision ?? 0) + 1;
     super.requestUpdate(...args);
     const valueChanged = args[0] === undefined || !Object.is(args[1], Reflect.get(this, args[0]));
     if (valueChanged && (args[0] === undefined || ['mapStyle', 'dataLayers', 'choropleth', 'overlays', 'images', 'styleOverrides', 'interactiveBasemapLayers'].includes(String(args[0])))) {
@@ -5165,7 +5329,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     }
     if (valueChanged && this.readiness && this.isConnected && this.isUpdatePending) {
       if (args[0] === 'mapStyle' && !Object.is(args[1], this.mapStyle)) this.readiness.reset();
-      else if (args[0] === undefined || ['center', 'zoom', 'cameraPadding', 'maxBounds', 'dataLayers',
+      else if (args[0] === undefined || ['center', 'zoom', 'minZoom', 'maxZoom', 'cameraPadding', 'maxBounds', 'dataLayers',
         'choropleth', 'markers', 'hiddenCategories', 'overlays', 'images', 'styleOverrides', 'interactiveBasemapLayers'].includes(String(args[0]))) this.readiness.invalidate();
     }
     if ((args[0] === 'center' || args[0] === 'zoom') && this.isUpdatePending && !this.reflectingCamera) {
@@ -5238,9 +5402,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (changed.has('cameraPadding') && this._map) this.applyCameraPadding();
     this.pushCamera(changed);
     if (changed.has('maxBounds') && this._map) this.writeCamera(() => this.applyMaxBounds());
+    if ((changed.has('minZoom') || changed.has('maxZoom')) && this._map) this.applyZoomLimits();
+    if (changed.has('imageProvider') && this._map) this.syncImageProvider();
     if (changed.has('controls') && this._map) this.syncControls();
     if (changed.has('pickMode') || changed.has('interactionBlocked')) { this.clearMapHover(); this.syncMapCursor(); }
-    if (changed.has('hash')) { this.syncHash(); this.applyHash(); }
+    if (changed.has('hash') || changed.has('hashFormat')) { this.syncHash(); this.applyHash(); }
     if (this._map && (this.anchorSyncRequested || ['anchorLngLat', 'anchorBoundary', 'anchorSafeArea', 'anchorClosable', 'dir', 'strings', 'lang', 'locale'].some(name => changed.has(name)))) { this.anchorSyncRequested = false; this.syncAnchor(); }
     if (changed.has('markers') && this._map) this.applyMarkers();
     if (this.semanticsStale) {
@@ -5479,7 +5645,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       const type = source.source['type'];
       const layers = [...new Set(owned.layers.filter(row => row.layer['source'] === source.id)
         .map(row => row.layer['source-layer']).filter((value): value is string => typeof value === 'string'))].sort();
-      if (type === 'geojson' || type === 'vector' && layers.length) add('overlay', source.id, source.id, JSON.stringify(source.source), JSON.stringify(layers), type === 'vector' ? layers : undefined);
+      if (type === 'geojson' || type === 'vector' && layers.length) add('overlay', source.id, source.id, ...sourceIdentity(source.source, layers), type === 'vector' ? layers : undefined);
     }
     const opted = projectMapBasemapInteractions(this.interactiveBasemapLayers);
     if (opted?.length && this.stateRoutingAvailable) {
@@ -5509,7 +5675,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         if (!current()) return [];
         const source = (snapshot.overlays as MapOwnedOverlaySnapshot).sources[0]?.source;
         const type = source?.['type'], layers = [...group].sort();
-        if (source && (type === 'geojson' || type === 'vector' && layers.length)) add('basemap', id, id, JSON.stringify(source), JSON.stringify(layers), type === 'vector' ? layers : undefined);
+        if (source && (type === 'geojson' || type === 'vector' && layers.length)) add('basemap', id, id, ...sourceIdentity(source, layers), type === 'vector' ? layers : undefined);
       }
     }
     return this.stateRoutingAvailable ? routes : [];
@@ -5770,7 +5936,15 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       if (kind === 'click' && drawing?.active && !this.pickMode) { if (!drawing.editing) drawing.add(lngLat); return; }
       let features: unknown;
       const rules = this.interactions;
-      const result = queryMapHit({ getLayer: id => map.getLayer(id), queryRenderedFeatures: (point, options) => {
+      // A layer outside its zoom range, hidden or fully transparent cannot shadow a visible one.
+      let zoom = Number.NaN;
+      try { zoom = map.getZoom(); } catch { /* An unknown zoom keeps every layer eligible. */ }
+      const result = queryMapHit({ getLayer: id => {
+        const layer = map.getLayer(id);
+        // Generated data-layer hit footprints are transparent by design; author layers are not.
+        const origin = rules.find(rule => rule.layerId === id)?.origin;
+        return layer && mapLayerHittable(map, id, layer, zoom, origin === 'overlay' || origin === 'basemap') ? layer : undefined;
+      }, queryRenderedFeatures: (point, options) => {
         features = map.queryRenderedFeatures([point.x, point.y], { layers: [...options.layers] }); return features;
       } }, mapOwnValue(event, 'point') as { readonly x: number; readonly y: number }, rules.map(({ layerId, owner, interactive, priority }) => ({ layerId, owner, interactive, priority })), { current });
       if (!current() || result.status !== 'hit' && result.status !== 'none') return;

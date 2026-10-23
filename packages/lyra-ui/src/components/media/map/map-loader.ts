@@ -83,6 +83,10 @@ export interface MapLibreMapCapability {
   setCenter(center: [number, number]): unknown;
   setZoom(zoom: number): unknown;
   resize(): unknown;
+  /** Optional zoom limits; `minZoom`/`maxZoom` feature-detect them before a live update. */
+  setMinZoom?(zoom: number): unknown;
+  setMaxZoom?(zoom: number): unknown;
+  getMaxZoom?(): number;
   /** Optional: absent on peers predating it, and the caller feature-detects before use. */
   setMaxBounds?(bounds: readonly [readonly [number, number], readonly [number, number]] | null): unknown;
   /** Optional for the same reason; `LyraMap.fitBounds()` feature-detects it. The peer merges
@@ -146,7 +150,9 @@ export interface MapLibreMapCapability {
   setPaintProperty(layerId: string, name: string, value: unknown): this;
   /** Optional image-atlas capabilities; point circles remain usable when a partial peer lacks these. */
   hasImage?(id: string): boolean;
-  addImage?(id: string, image: ImageData, options: { pixelRatio: number }): unknown;
+  addImage?(id: string, image: ImageData, options: { pixelRatio: number; sdf?: boolean }): unknown;
+  /** Optional lazy image hook: the engine awaits it before treating a style image as missing. */
+  setMissingStyleImageResolver?(resolver: ((id: string) => void | Promise<void>) | null): unknown;
   updateImage?(id: string, image: ImageData): unknown;
   removeImage?(id: string): unknown;
   queryRenderedFeatures(point: unknown, options?: { layers?: string[] }): unknown[];

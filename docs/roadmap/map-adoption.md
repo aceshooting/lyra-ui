@@ -101,12 +101,12 @@ regional site, whose map package is a separate fork of the main site's):
 - [x] Re-audit each application's map code against the final `lr-map` API and record, per need,
   the `lr-map` feature that covers it (with evidence: a test, story or prototype), or why it stays
   application-specific. The 2026-10-22 audit recorded 122 needs; the open ones follow.
-- [ ] Large styled GeoJSON overlays: native paint expressions, zoom ranges, `before` ordering and
+- [x] Large styled GeoJSON overlays: native paint expressions, zoom ranges, `before` ordering and
   symbol layers on data beyond the current `overlays` admission limits.
-- [ ] `minZoom`/`maxZoom` camera limits.
-- [ ] `hash` compatibility with the engine's unnamed `#zoom/lat/lng` fragment, and a documented
+- [x] `minZoom`/`maxZoom` camera limits.
+- [x] `hash` compatibility with the engine's unnamed `#zoom/lat/lng` fragment, and a documented
   rule for whether any fragment suppresses the initial fit.
-- [ ] Image capacity for sprite catalogs (more than 64 images, `sdf`, a missing-image provider)
+- [x] Image capacity for sprite catalogs (more than 64 images, `sdf`, a missing-image provider)
   without re-adding every owned layer on an image change.
 - [ ] Lazy construction on first interaction or after a delay, with an interactive placeholder.
 - [ ] Theme tokens in `overlays` paint.

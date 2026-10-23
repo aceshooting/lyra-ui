@@ -1,4 +1,5 @@
 import { isPlainDataRecord } from '../../../internal/data-descriptors.js';
+import { MAP_HASH_UNNAMED } from './map-hash-option.js';
 
 export interface MapHashCamera {
   readonly zoom: number;
@@ -37,10 +38,13 @@ function cameraOf(value: unknown): MapHashCamera | undefined {
   if (!number(zoom, 0, 24) || !center || !number(center[0], -180, 180) || !number(center[1], -90, 90) || !number(bearing, -360, 360) || !number(pitch, 0, 85)) return undefined;
   return Object.freeze({ zoom, center: Object.freeze([center[0], center[1]] as const), bearing, pitch });
 }
-/** Named fragment fields only; native unnamed map hashes remain opaque and untouched. */
+/** The admitted key of the unnamed form: the leading `&`-separated token that has no `=`. */
+const UNNAMED = '';
+/** A named fragment field, or `MAP_HASH_UNNAMED` for the engine's leading unnamed camera token. */
 export function admitMapHashOption(value: unknown): MapHashOptionResult {
   if (value === false || value === undefined || value === null) return Object.freeze({ status: 'disabled' });
   if (value === true) return Object.freeze({ status: 'enabled', key: 'map' });
+  if (value === MAP_HASH_UNNAMED) return Object.freeze({ status: 'enabled', key: UNNAMED });
   return typeof value === 'string' && /^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(value) ? Object.freeze({ status: 'enabled', key: value }) : Object.freeze({ status: 'invalid' });
 }
 interface Fragment { readonly prefix: string; readonly tokens: readonly string[]; readonly owned: readonly number[]; }
@@ -48,6 +52,8 @@ function fragmentOf(fragment: unknown, key: string): Fragment | undefined {
   if (typeof fragment !== 'string' || fragment.length > MAX_FRAGMENT) return undefined;
   const prefix = fragment.startsWith('#') ? '#' : '', body = fragment.slice(prefix.length);
   const tokens = body ? body.split('&') : []; if (tokens.length > MAX_TOKENS) return undefined;
+  // The unnamed form owns only a leading bare token; named fields after it stay opaque.
+  if (key === UNNAMED) return { prefix, tokens, owned: tokens[0] && !tokens[0].includes('=') ? [0] : [] };
   const owned: number[] = [];
   for (let index = 0; index < tokens.length; index++) {
     const token = tokens[index]!, separator = token.indexOf('=');
@@ -57,8 +63,9 @@ function fragmentOf(fragment: unknown, key: string): Fragment | undefined {
   }
   return { prefix, tokens, owned };
 }
-function cameraAt(fragment: Fragment, index: number): MapHashCamera | undefined {
-  const token = fragment.tokens[index]!, separator = token.indexOf('='); if (separator < 0) return undefined;
+function cameraAt(fragment: Fragment, index: number, key: string): MapHashCamera | undefined {
+  const token = fragment.tokens[index]!, separator = key === UNNAMED ? -1 : token.indexOf('=');
+  if (key !== UNNAMED && separator < 0) return undefined;
   let decoded: string; try { decoded = decodeURIComponent(token.slice(separator + 1)); } catch { return undefined; }
   const parts = decoded.split('/'); if (parts.length < 3 || parts.length > 5 || !parts.every((part) => /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$/.test(part))) return undefined;
   const values = parts.map((part) => Number(part));
@@ -68,7 +75,7 @@ export function readMapHash(fragment: string, option: unknown): MapHashReadResul
   const enabled = admitMapHashOption(option); if (enabled.status !== 'enabled') return Object.freeze({ status: enabled.status });
   const parsed = fragmentOf(fragment, enabled.key); if (!parsed || parsed.owned.length > 1) return Object.freeze({ status: 'invalid' });
   if (!parsed.owned.length) return Object.freeze({ status: 'none' });
-  const camera = cameraAt(parsed, parsed.owned[0]!); return camera ? Object.freeze({ status: 'camera', camera }) : Object.freeze({ status: 'invalid' });
+  const camera = cameraAt(parsed, parsed.owned[0]!, enabled.key); return camera ? Object.freeze({ status: 'camera', camera }) : Object.freeze({ status: 'invalid' });
 }
 function unchanged(fragment: string, status: 'disabled' | 'invalid'): MapHashWriteResult { return Object.freeze({ status, fragment: typeof fragment === 'string' ? fragment : '' }); }
 function written(fragment: string): MapHashWriteResult { return Object.freeze({ status: 'written', fragment }); }
@@ -85,12 +92,16 @@ function decimal(value: number): string {
 export function replaceMapHash(fragment: string, option: unknown, cameraInput: unknown): MapHashWriteResult {
   const enabled = admitMapHashOption(option); if (enabled.status !== 'enabled') return unchanged(fragment, enabled.status);
   const parsed = fragmentOf(fragment, enabled.key), camera = cameraOf(cameraInput);
-  if (!parsed || !camera || parsed.owned.length > 1 || parsed.owned.length === 1 && !cameraAt(parsed, parsed.owned[0]!)) return unchanged(fragment, 'invalid');
+  if (!parsed || !camera || parsed.owned.length > 1 || parsed.owned.length === 1 && !cameraAt(parsed, parsed.owned[0]!, enabled.key)) return unchanged(fragment, 'invalid');
   const values = [camera.zoom, camera.center[1], camera.center[0]];
   if (camera.bearing !== 0 || camera.pitch !== 0) values.push(camera.bearing);
   if (camera.pitch !== 0) values.push(camera.pitch);
-  const token = `${enabled.key}=${values.map(decimal).join('/')}`, tokens = [...parsed.tokens];
-  if (parsed.owned.length) tokens[parsed.owned[0]!] = token; else tokens.push(token);
+  const value = values.map(decimal).join('/'), tokens = [...parsed.tokens];
+  const token = enabled.key === UNNAMED ? value : `${enabled.key}=${value}`;
+  if (parsed.owned.length) tokens[parsed.owned[0]!] = token;
+  // The unnamed camera leads the fragment, as the engine reads it; an empty leading slot is reused.
+  else if (enabled.key === UNNAMED) { if (tokens[0] === '') tokens[0] = token; else tokens.unshift(token); }
+  else tokens.push(token);
   const output = `${parsed.prefix || '#'}${tokens.join('&')}`;
   return output.length <= MAX_FRAGMENT && tokens.length <= MAX_TOKENS ? written(output) : unchanged(fragment, 'invalid');
 }

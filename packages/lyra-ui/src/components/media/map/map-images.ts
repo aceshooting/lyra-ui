@@ -38,6 +38,8 @@ export interface PreparedMapImage {
   readonly width: number;
   readonly height: number;
   readonly pixelRatio: number;
+  /** Registered as a signed-distance-field image. */
+  readonly sdf?: boolean;
   readonly image: ImageData | null;
   dispose(): void;
 }
@@ -207,6 +209,7 @@ export async function prepareMapImages(value: unknown, context: MapImagePreparat
         pendingRaster.image.data.length !== descriptor.width * descriptor.height * 4) return fail('decode');
       let raster: RasterizedMapImage | undefined = pendingRaster; pendingRaster = undefined;
       prepared.push(Object.freeze({ encodedBytes: encoded.length, decodedPixels: input.intrinsicWidth * input.intrinsicHeight, id: descriptor.id, width: descriptor.width, height: descriptor.height, pixelRatio: descriptor.pixelRatio,
+        ...(descriptor.sdf ? { sdf: true } : {}),
         get image() { return raster?.image ?? null; },
         dispose() {
           const previous = raster; raster = undefined;

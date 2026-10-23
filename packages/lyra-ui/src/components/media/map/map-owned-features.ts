@@ -4,11 +4,13 @@ import { admitMapImages, MAP_IMAGE_LIMITS, type LyraMapImage } from './map-image
 import type { prepareMapImages, PreparedMapImage } from './map-images.js';
 import type { MapLibreMapCapability } from './map-loader.js';
 import { failMapResources as failed, type MapOwnedFeatureInput } from './map-owned-feature-input.js';
-import { admitMapOverlays, type MapOwnedOverlaySnapshot } from './map-overlay-admission.js';
+import { admitMapOverlays, isIdentityGeoJsonData, type MapOwnedOverlaySnapshot } from './map-overlay-admission.js';
 import { MapOwnedResources, type MapOwnedResourcePeer, type MapOwnedSourceChange } from './map-owned-resources.js';
 import { projectMapStyleOverrides, type LyraMapStyleValue } from './map-style-override-admission.js';
 import type { MapStyleOverridePeer, MapStyleOverrides } from './map-style-overrides.js';
 import { planMapSourceUpdate } from './map-source-updates.js';
+
+import { MapImageProvider } from './map-image-provider.js';
 
 // Admission runs here too, so a map without overlays, images or overrides never loads it.
 export { snapshotMapOwnedFeatureInput } from './map-owned-feature-input.js';
@@ -28,6 +30,7 @@ const imageKey = (descriptor: LyraMapImage): string => JSON.stringify(descriptor
 /** Compare admitted data only; native canvas handles match by identity. */
 function sameSnapshot(left: unknown, right: unknown): boolean {
   if (Object.is(left, right)) return true;
+  if (isIdentityGeoJsonData(left) || isIdentityGeoJsonData(right)) return false;
   if (Array.isArray(left) && Array.isArray(right)) return left.length === right.length &&
     left.every((entry, index) => sameSnapshot(entry, right[index]));
   if (!isPlainDataRecord(left) || !isPlainDataRecord(right)) return false;
@@ -43,6 +46,7 @@ const prepareOnDemand: typeof prepareMapImages = async (value, context, services
 /** Coordinates admitted resources and portable image preparation for one component owner. */
 export class MapOwnedFeatures {
   private readonly resources = new MapOwnedResources();
+  private readonly provider = new MapImageProvider();
   private overrides?: MapStyleOverrides;
   private cache = new Map<string, CachedImage>();
   private peer?: MapLibreMapCapability;
@@ -60,11 +64,28 @@ export class MapOwnedFeatures {
   constructor(private readonly prepareImages: typeof prepareMapImages = prepareOnDemand) {}
 
   ownsLayer(id: string): boolean { return this.resources.ownsLayer(id); }
+  ownsGeoJsonSource(id: string): boolean { return this.resources.ownsGeoJsonSource(id); }
+
+  /** Installs, replaces or removes the lazy `imageProvider` for one live engine. */
+  configureImageProvider(map: MapLibreMapCapability | undefined, provider: unknown, owner: Element): void {
+    this.provider.configure(map, provider, {
+      owner, prepare: this.prepareImages,
+      ownedIds: () => new Set(this.cache.keys()),
+      ownedUsage: () => {
+        let encodedBytes = 0, decodedPixels = 0;
+        for (const entry of this.cache.values()) {
+          encodedBytes += entry.image.encodedBytes ?? MAP_IMAGE_LIMITS.totalBytes;
+          decodedPixels += entry.image.decodedPixels ?? MAP_IMAGE_LIMITS.totalPixels;
+        }
+        return { count: this.cache.size, encodedBytes, decodedPixels };
+      },
+    });
+  }
 
   cancel(): void {
     const abort = this.abort;
     this.abort = undefined; this.epoch += 1;
-    this.resources.cancel();
+    this.resources.cancel(); this.provider.cancelOwnedUpdate();
     if (this.overriding) this.overrides?.reset();
     abort?.abort();
   }
@@ -74,7 +95,7 @@ export class MapOwnedFeatures {
     if (this.disposing) return;
     this.disposing = true;
     try {
-      this.cancel(); this.resources.dispose(); this.overrides?.reset(); this.cache.clear();
+      this.provider.dispose(); this.cancel(); this.resources.dispose(); this.overrides?.reset(); this.cache.clear();
       this.peer = undefined; this.resourcePeer = undefined; this.overridePeer = undefined;
       this.hasResources = false; this.hasOverrides = false; this.committedResources = undefined;
     } finally { this.disposing = false; }
@@ -97,8 +118,9 @@ export class MapOwnedFeatures {
     };
     context.signal.addEventListener('abort', cancel, { once: true });
     this.resources.cancel();
-    previous?.abort();
+    previous?.abort(); this.provider.cancelOwnedUpdate();
     const created: PreparedMapImage[] = []; let transferred = false;
+    let imageUpdate: ReturnType<MapImageProvider['beginOwnedUpdate']> | undefined;
     try {
       check();
       const overlays = admitMapOverlays(input.overlays);
@@ -117,6 +139,7 @@ export class MapOwnedFeatures {
         this.overrides ??= new runtime.MapStyleOverrides();
       }
       this.bind(map);
+      imageUpdate = this.provider.beginOwnedUpdate(images.images.map(descriptor => descriptor.id));
       const desired = new Map<string, CachedImage>();
       const changed = images.images.filter(descriptor => {
         const cached = this.cache.get(descriptor.id);
@@ -138,7 +161,8 @@ export class MapOwnedFeatures {
       const encodedBytes = [...desired.values()].reduce((total, entry) => total + (entry.image.encodedBytes ?? MAP_IMAGE_LIMITS.totalBytes), 0);
       const decodedPixels = [...desired.values()].reduce((total, entry) => total + (entry.image.decodedPixels ?? MAP_IMAGE_LIMITS.totalPixels), 0);
       if (!Number.isFinite(encodedBytes) || encodedBytes < 0 || encodedBytes > MAP_IMAGE_LIMITS.totalBytes ||
-        !Number.isFinite(decodedPixels) || decodedPixels < 0 || decodedPixels > MAP_IMAGE_LIMITS.totalPixels) failed();
+        !Number.isFinite(decodedPixels) || decodedPixels < 0 || decodedPixels > MAP_IMAGE_LIMITS.totalPixels ||
+        !imageUpdate.budget({ count: desired.size, encodedBytes, decodedPixels })) failed();
       check();
       const desiredImages = images.images.map(descriptor => desired.get(descriptor.id)!.image);
       const committed = this.committedResources;
@@ -152,9 +176,14 @@ export class MapOwnedFeatures {
         if (images.images.length > 0 || this.cache.size > 0) {
           if (typeof map.hasImage !== 'function' || typeof map.addImage !== 'function' || typeof map.removeImage !== 'function') failed();
         }
+        // An ID that `images` now owns replaces its lazily provided copy instead of colliding.
+        imageUpdate.detach(); check();
         transferred = true; this.hasResources = true; this.committedResources = undefined;
         const result = await this.resources.reconcile(this.resourcePeer!, style, overlays.overlays, desiredImages, {
             isCurrent: current,
+            beforeMutation: () => { check(); imageUpdate!.beforeNativeMutation(); check(); },
+            // Release the native lease before callback-queued work runs, not after this await.
+            afterMutation: safeToRestore => { imageUpdate!.settleNative(safeToRestore); },
             beforeSourceChange: context.beforeSourceChange,
             prepare: async (requirements, signal) => {
               if (typeof map.prepareFeatures === 'function') await map.prepareFeatures(requirements, { signal });
@@ -164,6 +193,7 @@ export class MapOwnedFeatures {
         if (!result.ok) failed();
         const layerIds = this.resourcePeer!.layerIds(); check();
         this.cache = desired; this.hasResources = hasResources;
+        imageUpdate.commit(); check();
         this.committedResources = { map, style, overlays: overlays.overlays, images: desiredImages, layerIds };
       }
       if (hasOverrides || this.hasOverrides) {
@@ -189,9 +219,11 @@ export class MapOwnedFeatures {
       if (!current() || error instanceof DOMException && error.name === 'AbortError') aborted();
       failed();
     } finally {
+      const restorationFailed = imageUpdate?.rollback() === false && current();
       context.signal.removeEventListener('abort', cancel);
       if (!transferred) for (const image of created) image.dispose();
       if (this.abort === controller) this.abort = undefined;
+      if (restorationFailed) failed();
     }
   }
 

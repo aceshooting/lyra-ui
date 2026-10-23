@@ -283,7 +283,8 @@ describe('lr-map interaction and retained state integration', () => {
     const { element, peer } = await mount(); const layers = [];
     for (let index = 0; index < 18; index++) {
       const source = `large-${index}`, layerId = `large-layer-${index}`;
-      const data = { type: 'FeatureCollection', features: [{ type: 'Feature', id: 0, properties: { text: 'x'.repeat(63_000) }, geometry: { type: 'Point', coordinates: [1, 2] } }] };
+      // A URL is retained as serialized text; GeoJSON objects are retained by identity (below).
+      const data = `https://example.test/${'x'.repeat(63_000)}.geojson`;
       peer.addSource(source, { type: 'geojson', data }); peer.addLayer({ id: layerId, type: 'circle', source } as { id: string }); layers.push({ layerId });
     }
     element.interactiveBasemapLayers = layers; await restore(element);
@@ -291,6 +292,16 @@ describe('lr-map interaction and retained state integration', () => {
     expect(element.setFeatureState({ origin: 'basemap', source: 'large-17', id: 0 }, { selected: true })).to.equal(false);
     const clicks = capture(element, 'lr-map-click'); peer.hits = [hit(peer, 'large-layer-0')]; fire(peer);
     expect(peer.removed).to.equal(false); expect(peer.queryCount).to.equal(1); expect((clicks[0] as { hit: { source: string } }).hit.source).to.equal('large-0');
+  });
+  it('routes state for large basemap GeoJSON by data identity, outside the retained-text aggregate', async () => {
+    const { element, peer } = await mount(); const layers = [];
+    for (let index = 0; index < 18; index++) {
+      const source = `object-${index}`, layerId = `object-layer-${index}`;
+      const data = { type: 'FeatureCollection', features: [{ type: 'Feature', id: 0, properties: { text: 'x'.repeat(63_000) }, geometry: { type: 'Point', coordinates: [1, 2] } }] };
+      peer.addSource(source, { type: 'geojson', data }); peer.addLayer({ id: layerId, type: 'circle', source } as { id: string }); layers.push({ layerId });
+    }
+    element.interactiveBasemapLayers = layers; await restore(element);
+    expect(element.setFeatureState({ origin: 'basemap', source: 'object-17', id: 0 }, { selected: true })).to.equal(true);
   });
   it('rejects accessors and oversized state atomically and returns frozen detached snapshots', async () => {
     const { element } = await mount(el => { el.dataLayers = [row()]; }); let reads = 0; const state = { nested: { values: [1, 2] } };

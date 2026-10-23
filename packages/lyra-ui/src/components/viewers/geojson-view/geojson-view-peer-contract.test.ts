@@ -40,7 +40,8 @@ it('uses the admitted native MapLibre peer for its nested map', async () => {
   }
 });
 
-it('renders admitted GeoJSON through a real native MapLibre map and module worker', async () => {
+it('renders admitted GeoJSON through a real native MapLibre map and module worker', async function () {
+  if (!document.createElement('canvas').getContext('webgl2')) this.skip();
   const originalFetch = window.fetch;
   const previousWorkerUrl = getWorkerUrl();
   // Source tests serve the installed peer's matching self-contained worker asset directly.

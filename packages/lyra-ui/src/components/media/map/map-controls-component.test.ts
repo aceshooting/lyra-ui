@@ -165,6 +165,36 @@ describe('lr-map controls and named URL ownership', () => {
     const next = await mount(el => { el.hash = true; el.fitBounds([[1, 2], [3, 4]]); });
     await waitUntil(() => next.peer.fits === 1); expect(location.hash).to.equal('#map=bad');
   });
+  it('reads and writes the engine unnamed fragment, which beats a queued fit and keeps named fields', async () => {
+    history.replaceState({}, '', '#9/40/20&layer=solar');
+    const { element, peer } = await mount(el => { el.hashFormat = 'unnamed'; el.hash = true; el.fitBounds([[1, 2], [3, 4]]); });
+    await element.updateComplete;
+    expect(element.getAttribute('hash-format')).to.equal(null); expect(element.hashFormat).to.equal('unnamed');
+    expect(peer.fits).to.equal(0); expect(peer.zoom).to.equal(9); expect(peer.center).to.deep.equal({ lng: 20, lat: 40 });
+    peer.zoom = 7; peer.fire('moveend', { originalEvent: {} });
+    expect(location.hash).to.equal('#7/40/20&layer=solar');
+    history.replaceState({}, '', '#5/1/2&layer=solar'); window.dispatchEvent(new HashChangeEvent('hashchange'));
+    expect(peer.zoom).to.equal(5); expect(peer.center).to.deep.equal({ lng: 2, lat: 1 });
+  });
+  it('keeps the initial fit and leaves an unrelated or malformed unnamed fragment untouched', async () => {
+    for (const fragment of ['#section', '#9/40', '#layer=solar']) {
+      history.replaceState({}, '', fragment);
+      const { element, peer } = await mount(el => { el.setAttribute('hash-format', 'unnamed'); el.hash = true; el.fitBounds([[1, 2], [3, 4]]); });
+      await waitUntil(() => peer.fits === 1, fragment);
+      peer.zoom = 6; peer.fire('moveend', { originalEvent: {} });
+      expect(location.hash, fragment).to.equal(fragment === '#layer=solar' ? `#6/${peer.center.lat}/${peer.center.lng}&layer=solar` : fragment);
+      element.remove();
+    }
+  });
+  it('rejects a named key under the unnamed format with localized feedback and no URL change', async () => {
+    history.replaceState({}, '', '#9/40/20');
+    const { element, peer } = await mount(el => { el.hashFormat = 'unnamed'; el.hash = 'camera'; el.strings = { mapHashInvalid: 'Invalid URL field' }; });
+    await element.updateComplete;
+    await waitUntil(() => element.shadowRoot!.textContent!.includes('Invalid URL field')); expect(peer.zoom).not.to.equal(9);
+    peer.zoom = 4; peer.fire('moveend', { originalEvent: {} }); expect(location.hash).to.equal('#9/40/20');
+    element.hash = true; await element.updateComplete; expect(peer.zoom).to.equal(9);
+    await waitUntil(() => !element.shadowRoot!.textContent!.includes('Invalid URL field'));
+  });
   it('owns one connected window/key and exposes localized conflict without takeover', async () => {
     const first = await mount(el => { el.hash = true; });
     const second = await mount(el => { el.hash = true; el.strings = { mapHashConflict: 'URL field occupied' }; });

@@ -1,4 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { MapFeatureStateRoutes } from './map-feature-state-routes.js';
+import type { MapFeatureStatePeer } from './map-feature-state.js';
+import { MAP_IMAGE_LIMITS } from './map-image-admission.js';
 import { MapOwnedFeatures } from './map-owned-features.js';
 import type { LyraMapImage, MapImagePreparationContext, MapImagePreparationResult, PreparedMapImage } from './map-images.js';
 import type { MapLibreMapCapability } from './map-loader.js';
@@ -65,6 +68,57 @@ async function harness() {
 }
 
 describe('map owned feature integration controller', () => {
+  for (const opaque of [false, true]) {
+    it(`replaces equal-content GeoJSON identities without traversing payloads (opaque=${opaque})`, async () => {
+      const h = await harness(); const states = new MapFeatureStateRoutes();
+      let reads = 0;
+      const data = () => {
+        const properties = opaque ? Object.defineProperty({}, 'nested', {
+          enumerable: true, get() { reads += 1; throw new Error('Payload must stay opaque'); },
+        }) : { label: 'same' };
+        return { type: 'FeatureCollection', features: [{ type: 'Feature', id: 1, geometry: null, properties }] };
+      };
+      const first = data(), second = data();
+      const input = (value: unknown) => ({ overlays: {
+        sources: [{ id: 'points', source: { type: 'geojson', data: value } }],
+        layers: [{ layer: { id: 'dots', type: 'circle', source: 'points' } }],
+      }, images: [], styleOverrides: [] });
+      const updates: unknown[] = []; const order: string[] = [];
+      const native = { setData(value: unknown) { order.push('setData'); updates.push(value); } };
+      const stateCalls: string[] = [];
+      const statePeer: MapFeatureStatePeer = {
+        getSource: id => h.peer.getSource(id),
+        setFeatureState: () => { stateCalls.push('set'); },
+        removeFeatureState: (_target, key) => { stateCalls.push(`remove:${key}`); },
+      };
+      const context = { ...h.context, beforeSourceChange: (change: MapOwnedSourceChange) => {
+        order.push(change.reason); states.refreshNative('overlay', change.id);
+      } };
+      const run = (value: unknown) => h.features.reconcile(h.peer as unknown as MapLibreMapCapability, 1, input(value), context);
+      try {
+        await run(first); h.peer.sources.set('points', native);
+        const layer = h.peer.getLayer('dots'); h.peer.calls.length = 0;
+        const route = { origin: 'overlay', source: 'points', nativeSource: 'points', identity: first };
+        expect(states.configure([route]).accepted).to.equal(true);
+        const target = { origin: 'overlay', source: 'points', id: 1 };
+        expect(states.set(target, { selected: true }).accepted).to.equal(true);
+        expect(states.replay(statePeer, 1).accepted).to.equal(true);
+        await run(second);
+        expect(reads).to.equal(0);
+        expect(updates.length).to.equal(1); expect(updates[0] === second).to.equal(true);
+        expect(order).to.deep.equal(['update', 'setData']);
+        expect(h.peer.getSource('points') === native).to.equal(true);
+        expect(h.peer.getLayer('dots') === layer).to.equal(true); expect(h.peer.calls).to.deep.equal([]);
+        // The component changes the route identity after owned-source reconciliation.
+        expect(states.configure([{ ...route, identity: second }]).accepted).to.equal(true);
+        expect(states.replay(statePeer, 1).accepted).to.equal(true);
+        expect(states.get(target)).to.equal(undefined);
+        expect(stateCalls).to.deep.equal(['set', 'remove:selected']);
+        await run(second); expect(updates.length).to.equal(1); expect(reads).to.equal(0);
+      } finally { states.dispose(); h.features.dispose(); }
+    });
+  }
+
   const imageOverlay = (url = 'https://example.test/a.png', offset = 0) => ({
     sources: [{ id: 'coverage', source: { type: 'image', url,
       coordinates: [[offset, 1], [offset + 1, 1], [offset + 1, 0], [offset, 0]] } }],
@@ -190,10 +244,12 @@ describe('map owned feature integration controller', () => {
     h.features.dispose(); expect(h.prepare.disposals).to.equal(1);
   });
 
-  it('skips native preparation and writes for structurally equal admitted resource assignments', async () => {
+  it('skips native preparation and writes for equal descriptors retaining GeoJSON identity', async () => {
     const h = await harness(); const input = { overlays, images: [descriptor()], styleOverrides: [] };
     await h.run(input); const preparations = h.peer.requirements.length; h.peer.calls.length = 0;
-    await h.run({ overlays: structuredClone(overlays), images: [descriptor()], styleOverrides: [] });
+    const equalDescriptors = structuredClone(overlays);
+    equalDescriptors.sources[0]!.source.data = overlays.sources[0]!.source.data;
+    await h.run({ overlays: equalDescriptors, images: [descriptor()], styleOverrides: [] });
     expect(h.peer.requirements.length).to.equal(preparations); expect(h.peer.calls).to.deep.equal([]);
     expect(h.prepare.calls).to.equal(1); h.features.dispose();
   });
@@ -286,4 +342,169 @@ describe('map owned feature integration controller', () => {
     expect((await work as Error).name).to.equal('AbortError');
     expect(h.peer.images.size).to.equal(0); expect(h.prepare.disposals).to.equal(1); features.dispose(); h.features.dispose();
   });
+});
+
+
+describe('map shared declarative/provider image ownership', () => {
+  for (const dimension of ['count', 'bytes', 'pixels']) {
+    it(`preserves the valid catalog when declarative growth exceeds the shared ${dimension} budget`, async () => {
+      const h = await harness(); let resolver!: ((id: string) => void | Promise<void>) | null;
+      Object.assign(h.peer, { setMissingStyleImageResolver(value: typeof resolver) { resolver = value; } });
+      const features = new MapOwnedFeatures(async (input, context) => {
+        const result = await h.prepare.prepare(input, context);
+        if (!result.ok) return result;
+        return { ...result, images: result.images.map(image => ({ ...image,
+          encodedBytes: dimension === 'bytes' ? Math.floor(MAP_IMAGE_LIMITS.totalBytes / 3) + 1 : 16,
+          decodedPixels: dimension === 'pixels' ? Math.floor(MAP_IMAGE_LIMITS.totalPixels / 3) + 1 : 1,
+        })) };
+      });
+      const peer = h.peer as unknown as MapLibreMapCapability;
+      const run = (images: readonly LyraMapImage[]) => features.reconcile(peer, 1, { overlays: {}, images, styleOverrides: [] }, h.context);
+      try {
+        await run([descriptor('existing')]); const existing = h.peer.images.get('existing');
+        features.configureImageProvider(peer, (id: string) => descriptor(id), h.owner);
+        await resolver!('provided'); const retained = h.peer.images.get('provided');
+        const declared = dimension === 'count' ? [descriptor('existing'), ...Array.from({ length: MAP_IMAGE_LIMITS.count - 1 }, (_, index) => descriptor(`declared-${index}`))] : [descriptor('existing'), descriptor('declared')];
+        let failure: unknown; try { await run(declared); } catch (error) { failure = error; }
+        expect((failure as Error | undefined)?.name).to.equal('MapResourceError');
+        expect(h.peer.images.size).to.equal(2); expect(h.peer.images.get('provided') === retained).to.equal(true);
+        expect(h.peer.images.get('existing') === existing).to.equal(true);
+        expect(h.peer.images.has('declared')).to.equal(false);
+      } finally { features.dispose(); h.features.dispose(); }
+    });
+  }
+
+  it('reserves declarative IDs while native preparation awaits and ignores older provider responses', async () => {
+    const h = await harness(); let resolver!: ((id: string) => void | Promise<void>) | null;
+    Object.assign(h.peer, { setMissingStyleImageResolver(value: typeof resolver) { resolver = value; } });
+    let resolveImage!: (image: LyraMapImage) => void;
+    const peer = h.peer as unknown as MapLibreMapCapability;
+    h.features.configureImageProvider(peer, () => new Promise<LyraMapImage>(resolve => { resolveImage = resolve; }), h.owner);
+    const pending = resolver!('pin');
+    let release!: () => void; let entered!: () => void;
+    const preparing = new Promise<void>(resolve => { entered = resolve; });
+    const barrier = new Promise<void>(resolve => { release = resolve; });
+    h.peer.prepareFeatures = async () => { entered(); await barrier; };
+    const updating = h.run({ overlays: {}, images: [descriptor('pin')], styleOverrides: [] });
+    try {
+      await preparing; resolveImage(descriptor('pin')); await pending;
+      expect(h.peer.images.has('pin')).to.equal(false);
+      release(); await updating;
+      const declared = h.peer.images.get('pin'); expect(declared !== undefined).to.equal(true);
+      h.features.configureImageProvider(peer, undefined, h.owner);
+      expect(h.peer.images.get('pin') === declared).to.equal(true);
+    } finally { release(); await updating.catch(() => undefined); h.features.dispose(); }
+  });
+
+  it('restores a displaced provider image if native declarative reconciliation rejects', async () => {
+    const h = await harness(); let resolver!: ((id: string) => void | Promise<void>) | null;
+    Object.assign(h.peer, { setMissingStyleImageResolver(value: typeof resolver) { resolver = value; } });
+    const peer = h.peer as unknown as MapLibreMapCapability;
+    h.features.configureImageProvider(peer, (id: string) => descriptor(id), h.owner);
+    try {
+      await resolver!('pin'); const retained = h.peer.images.get('pin');
+      h.peer.prepareFeatures = async () => { throw new Error('Rejected native preparation'); };
+      let failure: unknown;
+      try { await h.run({ overlays: {}, images: [descriptor('pin')], styleOverrides: [] }); } catch (error) { failure = error; }
+      expect((failure as Error | undefined)?.name).to.equal('MapResourceError');
+      expect(h.peer.images.get('pin') === retained).to.equal(true);
+      h.features.configureImageProvider(peer, undefined, h.owner);
+      expect(h.peer.images.has('pin')).to.equal(false);
+    } finally { h.features.dispose(); }
+  });
+});
+
+for (const interruptedBy of ['newer-update', 'reset', 'disconnect']) {
+  it(`does not restore obsolete provider ownership after ${interruptedBy}`, async () => {
+    const h = await harness(); let resolver!: ((id: string) => void | Promise<void>) | null;
+    Object.assign(h.peer, { setMissingStyleImageResolver(value: typeof resolver) { resolver = value; } });
+    const peer = h.peer as unknown as MapLibreMapCapability;
+    h.features.configureImageProvider(peer, (id: string) => descriptor(id), h.owner);
+    await resolver!('pin'); const retained = h.peer.images.get('pin');
+    let release!: () => void; let entered!: () => void; let attempts = 0;
+    const preparing = new Promise<void>(resolve => { entered = resolve; });
+    const barrier = new Promise<void>(resolve => { release = resolve; });
+    h.peer.prepareFeatures = async () => {
+      if (attempts++ === 0) { entered(); await barrier; throw new Error('Interrupted preparation'); }
+    };
+    const older = h.run({ overlays: {}, images: [descriptor('pin')], styleOverrides: [] }).catch(error => error as Error);
+    try {
+      await preparing;
+      if (interruptedBy === 'newer-update') {
+        await h.run({ overlays: {}, images: [descriptor('other')], styleOverrides: [] });
+      } else if (interruptedBy === 'reset') {
+        h.features.configureImageProvider(peer, undefined, h.owner);
+      } else { h.owner.remove(); }
+      release(); const result = await older; expect(result instanceof Error).to.equal(true);
+      if (interruptedBy === 'newer-update') {
+        expect(h.peer.images.get('pin') === retained).to.equal(true);
+        const declared = h.peer.images.get('other'); expect(declared !== undefined).to.equal(true);
+        h.features.configureImageProvider(peer, undefined, h.owner);
+        expect(h.peer.images.has('pin')).to.equal(false); expect(h.peer.images.get('other') === declared).to.equal(true);
+      } else { expect(h.peer.images.has('pin')).to.equal(false); }
+    } finally { release(); await older; h.features.dispose(); }
+  });
+}
+
+
+describe('map provider resource rollback boundaries', () => {
+  it('stops a detached-image loop after a native callback cancels it', async () => {
+    const h = await harness(); let resolver!: ((id: string) => void | Promise<void>) | null;
+    Object.assign(h.peer, { setMissingStyleImageResolver(value: typeof resolver) { resolver = value; } });
+    const peer = h.peer as unknown as MapLibreMapCapability;
+    h.features.configureImageProvider(peer, (id: string) => descriptor(id), h.owner);
+    try {
+      await resolver!('a'); await resolver!('b'); const a = h.peer.images.get('a'), b = h.peer.images.get('b');
+      const removeImage = h.peer.removeImage.bind(h.peer); let once = true;
+      h.peer.removeImage = id => { removeImage(id); if (once) { once = false; h.features.cancel(); } };
+      let failure: unknown;
+      try { await h.run({ overlays: {}, images: [descriptor('a'), descriptor('b')], styleOverrides: [] }); } catch (error) { failure = error; }
+      expect((failure as Error | undefined)?.name).to.equal('AbortError');
+      expect(h.peer.images.get('a') === a).to.equal(true); expect(h.peer.images.get('b') === b).to.equal(true);
+    } finally { h.features.dispose(); }
+  });
+
+  it('does not claim or remove a proposed image left behind by failed resource rollback', async () => {
+    const h = await harness(); let resolver!: ((id: string) => void | Promise<void>) | null;
+    Object.assign(h.peer, { setMissingStyleImageResolver(value: typeof resolver) { resolver = value; } });
+    const peer = h.peer as unknown as MapLibreMapCapability;
+    h.features.configureImageProvider(peer, (id: string) => descriptor(id), h.owner);
+    try {
+      await resolver!('pin'); const supplied = h.peer.images.get('pin');
+      const addImage = h.peer.addImage.bind(h.peer), removeImage = h.peer.removeImage.bind(h.peer);
+      let removals = 0;
+      h.peer.addImage = (id, image) => { addImage(id, image); throw new Error('Mutation then failure'); };
+      h.peer.removeImage = id => { if (++removals > 1) throw new Error('Rollback removal rejected'); removeImage(id); };
+      let failure: unknown;
+      try { await h.run({ overlays: {}, images: [descriptor('pin')], styleOverrides: [] }); } catch (error) { failure = error; }
+      expect((failure as Error | undefined)?.name).to.equal('MapResourceError');
+      const uncertain = h.peer.images.get('pin'); expect(uncertain !== undefined && uncertain !== supplied).to.equal(true);
+      const priorRemovals = removals;
+      h.features.configureImageProvider(peer, undefined, h.owner);
+      expect(removals).to.equal(priorRemovals); expect(h.peer.images.get('pin') === uncertain).to.equal(true);
+    } finally { h.features.dispose(); }
+  });
+});
+
+
+it('settles native image ownership before callback-queued cancellation cleanup starts', async () => {
+  const h = await harness(); const addSource = h.peer.addSource.bind(h.peer);
+  let successor!: Promise<void>; let queued!: () => void;
+  const ready = new Promise<void>(resolve => { queued = resolve; });
+  h.peer.addSource = (id, source) => {
+    addSource(id, source); h.features.cancel();
+    queueMicrotask(() => {
+      successor = h.run({ overlays: {}, images: [], styleOverrides: [] });
+      queued();
+    });
+  };
+  const interrupted = h.run({ overlays, images: [], styleOverrides: [] }).catch(error => error as Error);
+  try {
+    await ready;
+    const successorError = await successor.then(() => undefined, (error: unknown) => error);
+    expect(successorError === undefined).to.equal(true);
+    expect((await interrupted as Error).name).to.equal('AbortError');
+    expect(h.peer.sources.size).to.equal(0);
+    expect(h.peer.layers.has('icons')).to.equal(false);
+  } finally { await interrupted; h.features.dispose(); }
 });

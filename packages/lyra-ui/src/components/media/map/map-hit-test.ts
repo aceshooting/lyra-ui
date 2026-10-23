@@ -166,3 +166,71 @@ function queryCurrentMapHit(service: MapHitQueryService, point: { readonly x: nu
     return current() ? result : status('stale');
   } catch { return current() ? status('query-error') : status('stale'); }
 }
+
+/** Numeric value of a constant or a zoom-driven `interpolate`/`step` paint value; undefined otherwise. */
+export function zoomPaintValue(value: unknown, zoom: number): number | undefined {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+  const count = length(value, 512);
+  if (count === undefined || count < 3) return undefined;
+  const entry = (index: number): unknown => own(value, String(index));
+  const input = entry(1), operator = entry(0);
+  const zoomInput = (candidate: unknown): boolean => length(candidate, 1) === 1 && own(candidate, '0') === 'zoom';
+  if (operator === 'step') {
+    if (!zoomInput(input)) return undefined;
+    let output = entry(2);
+    for (let index = 3; index + 1 < count; index += 2) {
+      const stop = entry(index); if (typeof stop !== 'number') return undefined;
+      if (zoom < stop) break;
+      output = entry(index + 1);
+    }
+    return typeof output === 'number' && Number.isFinite(output) ? output : undefined;
+  }
+  if (operator !== 'interpolate' || !zoomInput(entry(2)) || count < 5) return undefined;
+  const stops: [number, number][] = [];
+  for (let index = 3; index + 1 < count; index += 2) {
+    const stop = entry(index), output = entry(index + 1);
+    if (typeof stop !== 'number' || typeof output !== 'number' || !Number.isFinite(stop) || !Number.isFinite(output)) return undefined;
+    stops.push([stop, output]);
+  }
+  if (!stops.length) return undefined;
+  if (zoom <= stops[0]![0]) return stops[0]![1];
+  for (let index = 1; index < stops.length; index++) {
+    const [z1, v1] = stops[index]!, [z0, v0] = stops[index - 1]!;
+    // Linear in place of the authored curve: every curve this engine offers keeps the sign of the
+    // linear value between two stops, and the sign is all that hit eligibility needs.
+    if (zoom <= z1) return z1 === z0 ? v1 : v0 + (v1 - v0) * (zoom - z0) / (z1 - z0);
+  }
+  return stops.at(-1)![1];
+}
+
+const OPACITY_PROPERTIES: Readonly<Record<string, readonly string[]>> = Object.freeze({
+  fill: ['fill-opacity'], line: ['line-opacity'], circle: ['circle-opacity'], symbol: ['icon-opacity', 'text-opacity'],
+  'fill-extrusion': ['fill-extrusion-opacity'], raster: ['raster-opacity'], heatmap: ['heatmap-opacity'],
+});
+/** The style reads a layer needs to decide whether it is drawn at this zoom. */
+export interface MapLayerStyleReader {
+  getLayoutProperty?(id: string, property: string): unknown;
+  getPaintProperty?(id: string, property: string): unknown;
+}
+/**
+ * Whether a style layer can take a hit at `zoom`: inside its `minzoom`/`maxzoom` range (the
+ * fractional camera zoom, where the engine's own query works per integer tile zoom), visible, and
+ * not fully transparent (unless `checkOpacity` is false, for the element's own transparent hit
+ * footprints). Every opacity it paints with must be known to be `0` for it to be
+ * skipped; a data-driven or otherwise unknown opacity keeps it eligible.
+ */
+export function mapLayerHittable(reader: MapLayerStyleReader, id: string, layer: unknown, zoom: number, checkOpacity = true): boolean {
+  if (!Number.isFinite(zoom)) return true;
+  try {
+    const minzoom = own(layer, 'minzoom'), maxzoom = own(layer, 'maxzoom');
+    if (typeof minzoom === 'number' && zoom < minzoom) return false;
+    if (typeof maxzoom === 'number' && zoom >= maxzoom) return false;
+    if (typeof reader.getLayoutProperty === 'function' && reader.getLayoutProperty(id, 'visibility') === 'none') return false;
+    const type = own(layer, 'type'), properties = typeof type === 'string' ? OPACITY_PROPERTIES[type] : undefined;
+    if (!checkOpacity || !properties || typeof reader.getPaintProperty !== 'function') return true;
+    return !properties.every((property) => {
+      const opacity = zoomPaintValue(reader.getPaintProperty!(id, property), zoom);
+      return opacity !== undefined && opacity <= 0;
+    });
+  } catch { return true; }
+}

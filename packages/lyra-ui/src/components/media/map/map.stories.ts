@@ -1163,6 +1163,120 @@ export const AnchoredFeatureDetails: Story = {
  * `maxBounds` applies even while the map shows the whole world at a fractional zoom below 1, where
  * the engine rejects the same box, and restores the camera afterwards.
  */
+/** Builds a regular grid of square polygons with `count` cells per side, centred on 0,0. */
+function cellGrid(count: number, size: number) {
+  const features = [];
+  for (let row = 0; row < count; row++) for (let column = 0; column < count; column++) {
+    const x = (column - count / 2) * size, y = (row - count / 2) * size;
+    features.push({ type: 'Feature' as const, id: row * count + column,
+      properties: { tier: (row + column) % 3 === 0 ? 'district' : 'commune', share: ((row * 7 + column * 13) % 100) / 100 },
+      geometry: { type: 'Polygon' as const, coordinates: [[[x, y], [x + size, y], [x + size, y + size], [x, y + size], [x, y]]] } });
+  }
+  return { type: 'FeatureCollection' as const, features };
+}
+
+/** Large GeoJSON overlay: data kept by identity, native expressions, a filter, a zoom range,
+ *  `before` ordering under the outline, picking and feature state. */
+export const LargeStyledGeoJson: Story = {
+  render: () => {
+    const grid = cellGrid(120, 0.25);
+    let map: LyraMap | undefined;
+    let status: HTMLElement | undefined;
+    let selected: string | number | undefined;
+    return html`
+      <p>14,400 polygons in one GeoJSON overlay, painted by native expressions between zoom 2 and 9.</p>
+      <lr-map ${ref(node => { map = node as LyraMap | undefined; })}
+        label="Large styled GeoJSON overlay" center="[0, 0]" zoom="4" style="block-size: 24rem"
+        .mapStyle=${LYRA_MAP_EMPTY_STYLE}
+        .overlays=${{
+          sources: [
+            { id: 'cells', source: { type: 'geojson', data: grid } },
+            { id: 'outline', source: { type: 'geojson', data: { type: 'Feature', properties: {}, geometry: {
+              type: 'LineString', coordinates: [[-15, -15], [15, -15], [15, 15], [-15, 15], [-15, -15]] } } } },
+          ],
+          layers: [
+            { layer: { id: 'outline-line', type: 'line', source: 'outline', paint: { 'line-color': storyColor('danger'), 'line-width': 3 } } },
+            { interactive: true, before: 'outline-line', layer: {
+              id: 'cells-fill', type: 'fill', source: 'cells', minzoom: 2, maxzoom: 9,
+              filter: ['==', ['get', 'tier'], 'commune'],
+              paint: {
+                'fill-color': ['coalesce', ['feature-state', 'color'],
+                  ['interpolate', ['linear'], ['get', 'share'], 0, storyColor('success'), 1, storyColor('warning')]],
+                'fill-opacity': ['interpolate', ['linear'], ['zoom'], 2, 0.3, 6, 0.8],
+              },
+            } },
+          ],
+        }}
+        @lr-map-click=${(event: CustomEvent<{ sourceId?: string; hit?: { id?: string | number } }>) => {
+          if (!map) return;
+          if (selected !== undefined) map.removeFeatureState({ origin: 'overlay', source: 'cells', id: selected });
+          selected = event.detail.hit?.id;
+          if (selected !== undefined) map.setFeatureState({ origin: 'overlay', source: 'cells', id: selected }, { color: storyColor('brand') });
+          if (status) status.textContent = selected === undefined ? 'Map background' : `${event.detail.sourceId} cell ${selected}`;
+        }}
+      ></lr-map>
+      <p role="status" ${ref(node => { status = node as HTMLElement | undefined; })}>Click a cell to select it.</p>
+    `;
+  },
+};
+
+/** `minZoom`/`maxZoom` clamp gestures, commands and fits. */
+export const ZoomLimits: Story = {
+  render: () => {
+    let map: LyraMap | undefined;
+    return html`
+      <lr-button @click=${() => map?.flyTo({ zoom: 22 })}>Zoom in fully</lr-button>
+      <lr-button @click=${() => map?.flyTo({ zoom: 0 })}>Zoom out fully</lr-button>
+      <lr-map ${ref(node => { map = node as LyraMap | undefined; })}
+        label="Zoom limited to levels 3 to 8" center="[10, 50]" zoom="4" min-zoom="3" max-zoom="8"
+        style="block-size: 20rem" .mapStyle=${OFFLINE_RASTER_STYLE} .controls=${{ navigation: true }}></lr-map>
+    `;
+  },
+};
+
+/** The engine's unnamed `#zoom/lat/lng` fragment, so existing deep links keep working. Disabled in
+ *  this embedded demo unless switched on, because Storybook owns its frame's URL. */
+export const UnnamedHash: Story = {
+  render: () => {
+    let map: LyraMap | undefined;
+    return html`
+      <lr-button @click=${() => { if (map) map.hash = map.hash === true ? false : true; }}>Toggle URL camera</lr-button>
+      <lr-map ${ref(node => { map = node as LyraMap | undefined; })}
+        label="Camera in the unnamed URL fragment" hash-format="unnamed" center="[6.13, 49.61]" zoom="8"
+        style="block-size: 20rem" .mapStyle=${OFFLINE_RASTER_STYLE}></lr-map>
+      <p>With the URL camera on, the frame URL reads <code>#zoom/lat/lng</code>; a valid one there beats the initial fit.</p>
+    `;
+  },
+};
+
+/** More than 64 atlas images, a signed-distance-field icon recolored by `icon-color`, and icons
+ *  supplied on demand by `imageProvider`. */
+export const SpriteCatalogAndLazyImages: Story = {
+  render: () => {
+    const shape = (fill: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="${fill}"/></svg>`;
+    const catalog = Array.from({ length: 96 }, (_, index) => ({ id: `poi-${index}`, width: 24, height: 24, pixelRatio: 1,
+      source: { kind: 'svg' as const, markup: shape(index % 2 ? storyColor('success') : storyColor('warning')) } }));
+    const points = Array.from({ length: 12 }, (_, index) => ({ type: 'Feature' as const, id: index,
+      properties: { icon: index < 6 ? `poi-${index * 16}` : `station-${index}` },
+      geometry: { type: 'Point' as const, coordinates: [(index % 6) * 4 - 10, index < 6 ? 3 : -3] } }));
+    return html`
+      <p>The top row uses the 96-image catalog; the bottom row is supplied on demand as SDF icons.</p>
+      <lr-map label="Sprite catalog and lazy icons" center="[0, 0]" zoom="4" style="block-size: 20rem"
+        .mapStyle=${LYRA_MAP_EMPTY_STYLE} .images=${catalog}
+        .imageProvider=${(id: string) => id.startsWith('station-')
+          ? { id, width: 32, height: 32, pixelRatio: 1, sdf: true, source: { kind: 'svg', markup: shape(storyColor('text')) } }
+          : undefined}
+        .overlays=${{
+          sources: [{ id: 'places', source: { type: 'geojson', data: { type: 'FeatureCollection', features: points } } }],
+          layers: [{ interactive: true, layer: { id: 'places-icon', type: 'symbol', source: 'places',
+            layout: { 'icon-image': ['get', 'icon'], 'icon-allow-overlap': true },
+            paint: { 'icon-color': storyColor('brand') } } }],
+        }}
+      ></lr-map>
+    `;
+  },
+};
+
 export const BoundsAtWholeWorldZoom: Story = {
   render: () => html`
     <lr-map

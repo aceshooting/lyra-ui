@@ -1,3 +1,4 @@
+import { isIdentityGeoJsonData } from './map-overlay-admission.js';
 import { getInheritedPropertyDescriptor, getOwnDataDescriptor, isObjectValue, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR, readOwnArrayLength, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
 
 type NativeMethod = (...args: unknown[]) => unknown;
@@ -137,6 +138,13 @@ export function planMapSourceUpdate(
     const type = before.get('type');
     if (type === 'geojson') {
       const previousData = before.get('data'); const nextData = after.get('data');
+      // Identity-admitted data is replaced in place by reference; it is never walked here.
+      if (isIdentityGeoJsonData(nextData) || isIdentityGeoJsonData(previousData)) {
+        if (previousData === nextData || (!isIdentityGeoJsonData(nextData) && typeof nextData !== 'string') ||
+          !sameMetadata(before, after, new Set(['data']))) return undefined;
+        const setData = method(source, 'setData');
+        return setData ? () => { checkCurrent?.(); Reflect.apply(setData, source, [nextData]); } : undefined;
+      }
       if (!sameData(previousData, previousData) || !sameData(nextData, nextData) ||
         !geoJsonData(previousData) || !geoJsonData(nextData) ||
         !sameMetadata(before, after, new Set(['data'])) || sameData(before.get('data'), after.get('data'))) return undefined;

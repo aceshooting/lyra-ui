@@ -8,10 +8,10 @@ export interface MapHashWindow {
 }
 export type MapHashOwnerStatus = 'enabled' | 'disabled' | 'invalid' | 'conflict';
 const owners = new WeakMap<MapHashWindow, Map<string, object>>();
-/** Owns one named fragment without changing the URL on release or taking over another owner. */
+/** Owns one named fragment field, or the leading unnamed camera token, without changing the URL
+ * on release or taking over another owner. */
 export class MapHashOwner {
   private view?: MapHashWindow;
-  private key?: string;
   private option: unknown;
   private status: MapHashOwnerStatus = 'disabled';
   private cleanup?: () => void;
@@ -28,7 +28,7 @@ export class MapHashOwner {
     let registry = owners.get(view); if (!registry) owners.set(view, registry = new Map());
     if (registry.has(admitted.key)) return this.status = 'conflict';
     const token = {}, epoch = this.epoch;
-    registry.set(admitted.key, token); this.key = admitted.key;
+    registry.set(admitted.key, token);
     const current = () => this.epoch === epoch && this.view === view && registry.get(admitted.key) === token;
     const listener = () => { if (current()) this.onNavigation?.(); };
     let registering = false, retired = false;
@@ -59,13 +59,13 @@ export class MapHashOwner {
   }
   read(): MapHashReadResult {
     if (this.status !== 'enabled' || !this.view) return { status: 'disabled' };
-    try { return readMapHash(this.view.location.hash, this.key); } catch { return { status: 'invalid' }; }
+    try { return readMapHash(this.view.location.hash, this.option); } catch { return { status: 'invalid' }; }
   }
   write(camera: unknown): boolean {
     const view = this.view, epoch = this.epoch;
     if (this.status !== 'enabled' || !view) return false;
     try {
-      const result = replaceMapHash(view.location.hash, this.key, camera);
+      const result = replaceMapHash(view.location.hash, this.option, camera);
       if (result.status !== 'written' || this.epoch !== epoch) return false;
       if (result.fragment !== view.location.hash) view.history.replaceState(view.history.state, '', `${view.location.pathname}${view.location.search}${result.fragment}`);
       return true;
@@ -73,7 +73,7 @@ export class MapHashOwner {
   }
   dispose(): void {
     const cleanup = this.cleanup; this.cleanup = undefined; this.epoch++;
-    this.view = undefined; this.key = undefined; this.option = undefined; this.status = 'disabled'; this.onNavigation = undefined;
+    this.view = undefined; this.option = undefined; this.status = 'disabled'; this.onNavigation = undefined;
     cleanup?.();
   }
 }

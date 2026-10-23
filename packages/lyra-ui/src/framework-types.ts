@@ -7402,7 +7402,9 @@ export interface LyraComponentTypeMap {
       | 'drawMode'
       | 'engine'
       | 'hash'
+      | 'hashFormat'
       | 'hiddenCategories'
+      | 'imageProvider'
       | 'images'
       | 'initialization'
       | 'interactiveBasemapLayers'
@@ -7421,6 +7423,8 @@ export interface LyraComponentTypeMap {
       | 'mapStyle'
       | 'markers'
       | 'maxBounds'
+      | 'maxZoom'
+      | 'minZoom'
       | 'overlays'
       | 'pickMode'
       | 'renderWorldCopies'
@@ -7463,12 +7467,15 @@ export interface LyraComponentTypeMap {
       'anchor-closable'?: LyraMap['anchorClosable'];
       'choropleth-legend'?: LyraMap['choroplethLegend'];
       'draw-mode'?: LyraMap['drawMode'];
+      'hash-format'?: LyraMap['hashFormat'];
       'legend-collapsible'?: LyraMap['legendCollapsible'];
       'legend-control-role'?: LyraMap['legendControlRole'];
       'legend-gradient-hi-label'?: LyraMap['legendGradientHiLabel'];
       'legend-gradient-lo-label'?: LyraMap['legendGradientLoLabel'];
       'legend-interactive'?: LyraMap['legendInteractive'];
       'legend-open'?: LyraMap['legendOpen'];
+      'max-zoom'?: LyraMap['maxZoom'];
+      'min-zoom'?: LyraMap['minZoom'];
       'pick-mode'?: LyraMap['pickMode'];
     };
   };

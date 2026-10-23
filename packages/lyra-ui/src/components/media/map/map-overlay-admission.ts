@@ -1,7 +1,8 @@
 import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR, readOwnArrayLength, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
 import { projectMapInteractionOptions, type LyraMapInteractionOptions } from './map-interaction-options.js';
 
-/** A detached native source descriptor. A canvas source alone may retain its canvas identity. */
+/** A detached native source descriptor. A canvas source retains its canvas identity, and a
+ * `geojson` source retains a `Feature`/`FeatureCollection` `data` object by identity. */
 export interface LyraMapOverlaySource {
   readonly id: string;
   readonly source: Readonly<Record<string, unknown>>;
@@ -41,6 +42,28 @@ function canvas(input: unknown): input is HTMLCanvasElement {
     return typeof read?.call(input) === 'number';
   } catch { return false; }
 }
+/** GeoJSON `data` objects this module admitted by identity, without a deep copy. */
+const identityGeoJson = new WeakSet<object>();
+/** Whether `value` is GeoJSON source data admitted by identity (a validated envelope). */
+export function isIdentityGeoJsonData(value: unknown): boolean {
+  return typeof value === 'object' && value !== null && identityGeoJson.has(value);
+}
+/**
+ * A `Feature` or `FeatureCollection` envelope, read through own data descriptors only. Its contents
+ * are the engine's to validate, exactly as for `dataLayers` GeoJSON; they are neither walked nor
+ * copied, so their size is bounded by the engine and not by the overlay value budget.
+ */
+function geoJsonEnvelope(value: unknown): value is object {
+  if (!isPlainDataRecord(value)) return false;
+  const type = own(value, 'type');
+  if (type === 'Feature') {
+    const geometry = own(value, 'geometry');
+    return geometry === null || isPlainDataRecord(geometry);
+  }
+  if (type !== 'FeatureCollection') return false;
+  const features = own(value, 'features');
+  return plainArray(features) && readOwnArrayLength(features) !== undefined;
+}
 function plainArray(input: unknown): input is unknown[] {
   if (!Array.isArray(input)) return false;
   const prototype = Object.getPrototypeOf(input) as object | null;
@@ -54,6 +77,7 @@ function plainArray(input: unknown): input is unknown[] {
  * Snapshot bounded plain native descriptors without executing accessors. Unknown native source and
  * layer options remain data for the selected engine's validation; no callbacks/custom-layer code
  * are admitted. Provider URLs use that engine's transport contract, not the image-fetch pipeline.
+ * GeoJSON `Feature`/`FeatureCollection` data is retained by identity outside the value budget.
  */
 export function admitMapOverlays(input: unknown): MapOverlayAdmission {
   try {
@@ -120,6 +144,19 @@ export function admitMapOverlays(input: unknown): MapOverlayAdmission {
         }
         if (!Object.hasOwn(output, 'canvas')) return reject('invalid-input');
         snapshot = Object.freeze({ ...output, type });
+      } else if (type === 'geojson' && geoJsonEnvelope(own(source, 'data'))) {
+        // Large GeoJSON keeps its identity: the rest of the descriptor is snapshotted as usual.
+        const data = own(source, 'data') as object;
+        const output: Record<string, unknown> = {};
+        const keys = Object.keys(source);
+        if (keys.length > LIMITS.entries) return reject('limit');
+        for (const key of keys) {
+          if (key === '__proto__' || key === 'prototype' || key === 'constructor') return reject('invalid-input');
+          text += key.length; if (text > LIMITS.text) return reject('limit');
+          if (key !== 'data') output[key] = clone(own(source, key), 1);
+        }
+        identityGeoJson.add(data);
+        snapshot = Object.freeze({ ...output, data, type });
       } else snapshot = Object.freeze({ ...clone(source, 0) as Readonly<Record<string, unknown>>, type });
       sourceIds.add(id); sources.push(Object.freeze({ id, source: snapshot }));
     }

@@ -8,7 +8,7 @@ export type MapCameraBounds = readonly [readonly [number, number], readonly [num
 export interface LyraMapCameraOptions {
   /** `[longitude, latitude]`; longitude is clamped into `[-180, 180]`, latitude into `[-90, 90]`. */
   readonly center?: readonly [number, number];
-  /** Zoom level, clamped into `[0, 22]`. */
+  /** Zoom level, clamped into the map's zoom limits (`minZoom`/`maxZoom`, `[0, 22]` by default). */
   readonly zoom?: number;
   /** Bearing in degrees, clockwise from north. */
   readonly bearing?: number;
@@ -33,7 +33,7 @@ function isFiniteNumber(value: unknown): value is number {
 }
 
 /** Validates a camera command's options, or returns `undefined` when nothing in them is usable. */
-export function normalizeCameraOptions(options: unknown): MapCameraTarget | undefined {
+export function normalizeCameraOptions(options: unknown, zoomLimits: readonly [number, number] = [0, 22]): MapCameraTarget | undefined {
   if (typeof options !== 'object' || options === null) return undefined;
   const source = options as Record<string, unknown>;
   const target: {
@@ -47,7 +47,7 @@ export function normalizeCameraOptions(options: unknown): MapCameraTarget | unde
   if (Array.isArray(center) && center.length === 2 && isFiniteNumber(center[0]) && isFiniteNumber(center[1])) {
     target.center = [finiteRange(center[0], 0, -180, 180), finiteRange(center[1], 0, -90, 90)];
   }
-  if (isFiniteNumber(source['zoom'])) target.zoom = finiteRange(source['zoom'], 0, 0, 22);
+  if (isFiniteNumber(source['zoom'])) target.zoom = finiteRange(source['zoom'], zoomLimits[0], zoomLimits[0], zoomLimits[1]);
   if (isFiniteNumber(source['bearing'])) target.bearing = source['bearing'];
   if (isFiniteNumber(source['pitch'])) target.pitch = finiteRange(source['pitch'], 0, 0, 85);
   if (

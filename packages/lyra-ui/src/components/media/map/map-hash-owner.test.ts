@@ -1,5 +1,6 @@
 import { expect } from '@open-wc/testing';
 import { MapHashOwner, type MapHashWindow } from './map-hash-owner.js';
+import { MAP_HASH_UNNAMED } from './map-hash-option.js';
 
 function fixture() {
   const listeners = new Map<string, Set<() => void>>();
@@ -19,6 +20,19 @@ describe('map named hash ownership', () => {
     a.dispose(); expect(listeners.get('hashchange')?.size).to.equal(0); expect(b.read().status).to.equal('disabled');
     expect(b.configure(view, true, () => undefined)).to.equal('conflict');
     b.dispose(); expect(b.configure(view, true, () => undefined)).to.equal('enabled'); b.dispose();
+  });
+  it('owns the unnamed token once per window beside named owners', () => {
+    const { view } = fixture(); view.location.hash = '#4/2/1&map=3/2/1';
+    const named = new MapHashOwner(), first = new MapHashOwner(), second = new MapHashOwner();
+    expect(named.configure(view, true, () => undefined)).to.equal('enabled');
+    expect(first.configure(view, MAP_HASH_UNNAMED, () => undefined)).to.equal('enabled');
+    expect(second.configure(view, MAP_HASH_UNNAMED, () => undefined)).to.equal('conflict');
+    const read = first.read(); expect(read.status).to.equal('camera');
+    if (read.status === 'camera') expect(read.camera.zoom).to.equal(4);
+    expect(first.write({ zoom: 6, center: [3, 4], bearing: 0, pitch: 0 })).to.equal(true);
+    expect(named.write({ zoom: 7, center: [5, 6], bearing: 0, pitch: 0 })).to.equal(true);
+    expect(view.location.hash).to.equal('#6/4/3&map=7/6/5');
+    named.dispose(); first.dispose(); second.dispose();
   });
   it('reads current navigation, preserves unrelated fields and releases listeners on disable', () => {
     const { view, fire, listeners } = fixture(); const owner = new MapHashOwner(); let calls = 0;

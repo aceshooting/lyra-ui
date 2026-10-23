@@ -1,5 +1,6 @@
 import { expect } from '@open-wc/testing';
 import { admitMapHashOption, chooseMapInitialView, normalizeMapInitialBounds, readMapHash, removeMapHash, replaceMapHash } from './map-hash.js';
+import { MAP_HASH_UNNAMED } from './map-hash-option.js';
 
 const camera = { zoom: 5, center: [12, 34] as const, bearing: 20, pitch: 30 };
 describe('map named hash ownership', () => {
@@ -83,6 +84,35 @@ describe('map named hash ownership', () => {
     expect(replaceMapHash('#anchor', true, proxy).status).to.equal('invalid');
     expect(replaceMapHash('#anchor', true, { ...camera, pitch: 86 }).status).to.equal('invalid');
     expect(replaceMapHash('#anchor', true, { ...camera, center: Array(2) }).status).to.equal('invalid');
+  });
+});
+
+describe('map unnamed engine hash compatibility', () => {
+  const unnamed = MAP_HASH_UNNAMED;
+  it('reads the leading bare token in the engine grammar, and only that token', () => {
+    expect(admitMapHashOption(unnamed)).to.deep.equal({ status: 'enabled', key: '' });
+    expect(readMapHash('#5/34/12/20/30', unnamed)).to.deep.equal({ status: 'camera', camera });
+    expect(readMapHash('#5/34/12&layer=solar', unnamed)).to.deep.equal({ status: 'camera', camera: { ...camera, bearing: 0, pitch: 0 } });
+    expect(readMapHash('5%2F34%2F12', unnamed).status).to.equal('camera');
+    for (const fragment of ['', '#', '#layer=solar', '#&5/34/12', '#map=5/34/12']) expect(readMapHash(fragment, unnamed).status, fragment).to.equal('none');
+    for (const fragment of ['#section', '#5/34', '#5/34/12/1/2/3', '#5/91/12', '#a/b/c', '#%xx']) expect(readMapHash(fragment, unnamed).status, fragment).to.equal('invalid');
+    // A named owner never reads the unnamed token, and the reverse.
+    expect(readMapHash('#5/34/12', true).status).to.equal('none');
+  });
+
+  it('writes the leading token, preserving named fields, and never overwrites an unrelated anchor', () => {
+    expect(replaceMapHash('', unnamed, camera)).to.deep.equal({ status: 'written', fragment: '#5/34/12/20/30' });
+    expect(replaceMapHash('#1/2/3&layer=solar', unnamed, camera).fragment).to.equal('#5/34/12/20/30&layer=solar');
+    expect(replaceMapHash('#layer=solar&map=1/2/3', unnamed, camera).fragment).to.equal('#5/34/12/20/30&layer=solar&map=1/2/3');
+    expect(replaceMapHash('#&layer=solar', unnamed, camera).fragment).to.equal('#5/34/12/20/30&layer=solar');
+    for (const fragment of ['#section', '#section&layer=solar', '#5/34']) expect(replaceMapHash(fragment, unnamed, camera)).to.deep.equal({ status: 'invalid', fragment });
+    expect(removeMapHash('#1/2/3&layer=solar', unnamed).fragment).to.equal('#layer=solar');
+  });
+
+  it('lets a valid unnamed camera beat the initial fit, and nothing else', () => {
+    const bounds = [[0, 0], [10, 10]];
+    expect(chooseMapInitialView({ fragment: '#3/4/5', hash: unnamed, bounds }).kind).to.equal('hash');
+    for (const fragment of ['#section', '#layer=solar', '#3/4', '']) expect(chooseMapInitialView({ fragment, hash: unnamed, bounds }).kind, fragment).to.equal('bounds');
   });
 });
 

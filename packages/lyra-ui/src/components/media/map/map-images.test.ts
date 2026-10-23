@@ -47,6 +47,29 @@ describe('map image descriptor admission', () => {
   });
 });
 
+describe('map image catalogs and signed distance fields', () => {
+  it('admits a sprite catalog beyond 64 images within the shared budget', () => {
+    const catalog = Array.from({ length: 300 }, (_, index) => row(`poi-${index}`));
+    const result = admitMapImages(catalog);
+    expect(result.ok).to.equal(true);
+    if (result.ok) expect(result.images.length).to.equal(300);
+    expect(MAP_IMAGE_LIMITS.count).to.equal(1024);
+    // The aggregate pixel budget still binds well before the count does.
+    expect(admitMapImages(Array.from({ length: 300 }, (_, index) => ({ ...row(`big-${index}`), width: 256, height: 256 }))).ok).to.equal(false);
+  });
+
+  it('admits an optional boolean sdf flag and carries it to the prepared image', async () => {
+    const admitted = admitMapImages([{ ...row('body'), sdf: true }, { ...row('plain'), sdf: false }, row('unset')]);
+    expect(admitted.ok).to.equal(true);
+    if (!admitted.ok) return;
+    expect(admitted.images.map(image => image.sdf)).to.deep.equal([true, undefined, undefined]);
+    for (const sdf of ['true', 1, null]) expect(admitMapImages([{ ...row(), sdf }]).ok, String(sdf)).to.equal(false);
+    const prepared = await prepareMapImages([{ ...row('body'), sdf: true }, row('plain')], await context(), fakeServices());
+    expect(prepared.ok).to.equal(true);
+    if (prepared.ok) { expect(prepared.images.map(image => image.sdf)).to.deep.equal([true, undefined]); prepared.dispose(); }
+  });
+});
+
 describe('map image preparation ownership', () => {
   it('always sanitizes SVG, removes secondary resources, and owns idempotent disposal', async () => {
     const ctx = await context();
