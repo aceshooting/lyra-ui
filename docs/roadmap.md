@@ -40,13 +40,14 @@ locale/mobile behavior, visual review and request acceptance are complete within
 [map adoption](roadmap/map-adoption.md). Application migration follows the release. The video
 hover quarantine is removed with browser verification; CI timing and per-package coverage
 reporting are implemented. Complete coverage at `ed580b4d0` reached 99.800335%, above the 99.80%
-target. These checkpoint results do not establish final-candidate release qualification.
-The remaining work, in order:
+target. The mutation-test worklist is resolved with additional behavioural tests and reviewed
+equivalence reasons. Matched runtime measurements retain an advisory chart tail increase and
+other timing changes, documented in the release changeset. These checkpoint results do not
+establish final-candidate release qualification. The remaining work, in order:
 
-1. Resolve the remaining mutation-test findings and review material runtime-comparison changes
-   before preparing the release.
-2. Review the complete 30.0.0 release output, prepare versions and budgets, and pass CI, all
-   browser, full-engine and Quality tools gates on the exact versioned release commit.
+1. Prepare versions and budgets, review the complete 30.0.0 release output, and verify the updated
+   CI reporting on GitHub.
+2. Pass CI, all browser, full-engine and Quality tools gates on the exact versioned release commit.
 3. Complete protected publication, including the new companion's first-publication bootstrap
    and trusted publisher configuration. Publication access is configured; publication itself
    has not occurred.
