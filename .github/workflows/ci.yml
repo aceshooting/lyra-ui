@@ -524,9 +524,11 @@ jobs:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       - name: Upload test results to Codecov
         if: ${{ !cancelled() && steps.merge_coverage.outcome == 'success' }}
-        uses: codecov/test-results-action@0fa95f0e1eeaafde2c782583b36b28ad0d8c77d3 # v1.2.1
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
-          file: packages/lyra-ui/coverage/junit.xml
+          report_type: test_results
+          files: packages/lyra-ui/coverage/junit.xml
+          disable_search: true
           flags: lyra-ui
           fail_ci_if_error: false
         env:

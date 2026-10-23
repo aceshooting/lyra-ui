@@ -110,7 +110,9 @@ test('each of the seven coverage flags owns one complete package report and a sc
 
 test('Codecov uploads only the canonical report matching its one explicit flag', () => {
   const workflow = read('.github/workflows/ci.yml');
-  const uploads = workflow.split(/\n(?= {6}- )/u).filter((step) => /uses: codecov\/codecov-action@/u.test(step));
+  const allUploads = workflow.split(/\n(?= {6}- )/u).filter((step) => /uses: codecov\/codecov-action@/u.test(step));
+  assert.equal(allUploads.length, 4, 'three coverage uploads and one separate JUnit upload');
+  const uploads = allUploads.filter((step) => !/report_type: test_results/u.test(step));
   assert.equal(uploads.length, 3, 'UI, five-leg companion matrix and Chromium DOCX');
   const actual = uploads.map((step) => {
     assert.match(step, /disable_search: true/u, 'do not discover other packages or duplicate reports');
@@ -136,6 +138,28 @@ test('Codecov uploads only the canonical report matching its one explicit flag',
   const merged = job(workflow, 'build_and_coverage_coverage');
   assert.ok(merged.indexOf('name: Prepare the lyra-ui Codecov report') > merged.indexOf('name: Check merged coverage floors'));
   assert.match(merged, /node scripts\/prepare-codecov-lcov\.mjs lyra-ui/u);
+});
+
+test('Codecov test analytics uploads only merged JUnit through the supported pinned action', () => {
+  const workflow = read('.github/workflows/ci.yml');
+  assert.doesNotMatch(workflow, /uses: codecov\/test-results-action@/u);
+  const merged = job(workflow, 'build_and_coverage_coverage');
+  const uploads = merged.split(/\n(?= {6}- )/u).filter((step) => /uses: codecov\/codecov-action@/u.test(step));
+  assert.equal(uploads.length, 2, 'coverage and test analytics remain separate uploads');
+  const [coverage, analytics] = uploads;
+  assert.match(analytics, /name: Upload test results to Codecov/u);
+  const ref = (step) => step.match(/uses: codecov\/codecov-action@([0-9a-f]{40})\b/u)?.[1];
+  assert.ok(ref(coverage), 'coverage action uses a complete immutable commit');
+  assert.equal(ref(analytics), ref(coverage), 'analytics reuses the approved coverage action pin');
+  assert.match(analytics, /^ {8}if: \$\{\{ !cancelled\(\) && steps\.merge_coverage\.outcome == 'success' \}\}$/mu);
+  assert.match(analytics, /^ {10}report_type: test_results$/mu);
+  assert.match(analytics, /^ {10}files: packages\/lyra-ui\/coverage\/junit\.xml$/mu);
+  assert.match(analytics, /^ {10}disable_search: true$/mu);
+  assert.match(analytics, /^ {10}flags: lyra-ui$/mu);
+  assert.match(analytics, /^ {10}fail_ci_if_error: false$/mu);
+  assert.match(analytics, /CODECOV_TOKEN: \$\{\{ secrets\.CODECOV_TOKEN \}\}/u);
+  assert.doesNotMatch(analytics, /^ {10}(?:file|use_oidc):/mu, 'no obsolete singular file input or authentication change');
+  assert.doesNotMatch(coverage, /report_type: test_results/u, 'LCOV stays a coverage report');
 });
 
 test('complete browser suites receive the built Map and 3D companions before their shards run', () => {

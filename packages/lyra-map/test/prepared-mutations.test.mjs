@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { getEventListeners } from 'node:events';
 import { addPreparedFeatures } from '../scripts/prepared-mutations.mjs';
 
 const source = () => ({ type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
@@ -294,4 +295,371 @@ test('the pinned platform accepts a transparent signal wrapper and its actual ab
   await Promise.resolve(); assert.equal(started, true);
   controller.abort(); await assert.rejects(work, { name: 'AbortError' });
   assert.equal(map._modularMutation, undefined); assert.equal(map.sources.size, 0);
+});
+test('releases real caller abort listeners after both success and descriptor rejection', async () => {
+  for (const invalid of [false, true]) {
+    const map = harness(), signal = new AbortController().signal;
+    const baseline = getEventListeners(signal, 'abort').length;
+    if (invalid) await assert.rejects(addPreparedFeatures(map, { layers: [{ layer: { type: 'background' } }] }, { signal }), { code: 'invalid-descriptor' });
+    else await addPreparedFeatures(map, batch(), { signal });
+    assert.equal(getEventListeners(signal, 'abort').length, baseline);
+  }
+});
+
+test('already-cancelled requests do not inspect caller descriptors or register native map listeners', async () => {
+  const map = harness(), controller = new AbortController();
+  controller.abort();
+  let descriptorReads = 0, offCalls = 0;
+  const input = new Proxy({}, { ownKeys() { descriptorReads++; return []; } });
+  const off = map.off;
+  map.off = (...args) => { offCalls++; return off(...args); };
+  await assert.rejects(addPreparedFeatures(map, input, { signal: controller.signal }), { name: 'AbortError' });
+  assert.equal(descriptorReads, 0);
+  assert.equal(offCalls, 0);
+  assert.deepEqual(map.calls, []);
+});
+
+test('descriptor rejection never unregisters a native map listener that was not registered', async () => {
+  const map = harness();
+  const registrations = [], removals = [];
+  map.on = (...args) => { registrations.push(args); };
+  map.off = (...args) => { removals.push(args); };
+  await assert.rejects(addPreparedFeatures(map, { layers: [{ layer: { type: 'background' } }] }), { code: 'invalid-descriptor' });
+  assert.deepEqual(registrations, []);
+  assert.deepEqual(removals, []);
+});
+
+test('preserves nullable leaves and mutable owned data descriptors in the prepared source snapshot', async () => {
+  const map = harness(), input = source();
+  input.data.extra = { empty: null, absent: undefined, enabled: false, label: 'original' };
+  await addPreparedFeatures(map, { sources: { points: input } });
+  const copied = map.sources.get('points').data.extra;
+  assert.deepEqual(copied, input.data.extra);
+  assert.notEqual(copied, input.data.extra);
+  assert.equal(Object.hasOwn(copied, 'absent'), true);
+  for (const key of ['empty', 'absent', 'enabled', 'label']) {
+    const descriptor = Object.getOwnPropertyDescriptor(copied, key);
+    assert.equal(descriptor.enumerable, true);
+    assert.equal(descriptor.writable, true);
+    assert.equal(descriptor.configurable, true);
+  }
+  copied.label = 'native update';
+  assert.equal(delete copied.enabled, true);
+  assert.equal(input.data.extra.label, 'original');
+  assert.equal(input.data.extra.enabled, false);
+});
+
+test('rejects nested symbol members and callable values rather than silently converting them', async () => {
+  const symbolRecord = { label: 'visible', [Symbol('unsupported')]: 'hidden' };
+  const callable = Object.setPrototypeOf(() => {}, null);
+  for (const extra of [symbolRecord, callable]) {
+    const map = harness(), input = source(); input.data.extra = extra;
+    await assert.rejects(addPreparedFeatures(map, { sources: { points: input } }), { code: 'invalid-descriptor' });
+    assert.deepEqual(map.calls, []);
+  }
+});
+
+test('keeps nested canvas-shaped ordinary data separate from a source canvas capability', async () => {
+  const map = harness(), input = source();
+  input.data.extra = { type: 'canvas', canvas: { label: 'ordinary nested data' } };
+  await addPreparedFeatures(map, { sources: { points: input } });
+  const copied = map.sources.get('points').data.extra;
+  assert.deepEqual(copied, input.data.extra);
+  assert.notEqual(copied.canvas, input.data.extra.canvas);
+});
+
+test('rejects an oversized nested array before traversing any of its entries', async () => {
+  const map = harness(), input = source();
+  let entryInspections = 0;
+  const entry = new Proxy({ value: 1 }, { ownKeys(target) { entryInspections++; return Reflect.ownKeys(target); } });
+  input.data.extra = Array(100001).fill(entry);
+  await assert.rejects(addPreparedFeatures(map, { sources: { points: input } }), { code: 'invalid-descriptor' });
+  assert.equal(entryInspections, 0);
+  assert.deepEqual(map.calls, []);
+});
+
+test('rejects a missing layer id before preparation or native resource lookup', async () => {
+  const map = harness(); let queries = 0;
+  map.getLayer = () => { queries++; return undefined; };
+  map.getSource = () => { queries++; return undefined; };
+  await assert.rejects(addPreparedFeatures(map, { layers: [{ layer: { type: 'background' } }] }), { name: 'MapMutationError', code: 'invalid-descriptor' });
+  assert.equal(queries, 0);
+  assert.deepEqual(map.calls, []);
+});
+
+test('rollback queries only declared or preexisting resources and leaves unrelated resources intact', async () => {
+  const map = harness(), queried = [];
+  const getSource = map.getSource, getLayer = map.getLayer;
+  map.sources.set('unrelated-source', source());
+  map.layers.set('unrelated-layer', { id: 'unrelated-layer', type: 'background' });
+  map.order.push('unrelated-layer');
+  map.getSource = id => { queried.push(id); return getSource(id); };
+  map.getLayer = id => { queried.push(id); return getLayer(id); };
+  map.addLayer = () => { throw new Error('native insertion failed'); };
+  await assert.rejects(addPreparedFeatures(map, batch()), { code: 'native-failure' });
+  const allowed = new Set(['points', 'dots', 'labels', 'unrelated-layer']);
+  assert.equal(queried.every(id => allowed.has(id)), true);
+  assert.equal(map.sources.has('unrelated-source'), true);
+  assert.equal(map.layers.has('unrelated-layer'), true);
+  assert.equal(map.sources.has('points'), false);
+});
+
+test('cancellation at native validation boundaries prevents subsequent native inspection', async () => {
+  for (const boundary of ['snapshot', 'initialize', 'source', 'layer', 'dependency', 'anchor', 'order']) {
+    const map = harness(), controller = new AbortController();
+    let input = { sources: { first: source(), second: source() }, layers: [
+      { layer: { id: 'first-layer', type: 'circle', source: 'existing' }, before: 'labels' },
+      { layer: { id: 'second-layer', type: 'background' } }
+    ] };
+    map.sources.set('existing', source());
+    let cancelled = false;
+    const subsequent = [];
+    const cancel = () => { cancelled = true; controller.abort(); };
+    const observe = label => { if (cancelled) subsequent.push(label); };
+    map._lazyInitEmptyStyle = () => { observe('initialize'); if (boundary === 'initialize') cancel(); };
+    const getSource = map.getSource, getLayer = map.getLayer, getOrder = map.getLayersOrder;
+    map.getSource = function(key) {
+      observe(`source:${key}`);
+      if ((boundary === 'source' && key === 'first') || (boundary === 'dependency' && key === 'existing')) cancel();
+      return getSource.call(this, key);
+    };
+    map.getLayer = function(key) {
+      observe(`layer:${key}`);
+      if ((boundary === 'layer' && key === 'first-layer') || (boundary === 'anchor' && key === 'labels')) cancel();
+      return getLayer.call(this, key);
+    };
+    map.getLayersOrder = function() {
+      observe('order');
+      const result = getOrder.call(this);
+      if (boundary !== 'order') return result;
+      cancel();
+      return new Proxy(result, { get(target, key, receiver) { observe(`order:${String(key)}`); return Reflect.get(target, key, receiver); } });
+    };
+    if (boundary === 'snapshot') input = new Proxy(input, { ownKeys(target) { cancel(); return Reflect.ownKeys(target); } });
+    await assert.rejects(addPreparedFeatures(map, input, { signal: controller.signal }), { name: 'AbortError' });
+    assert.deepEqual(subsequent, [], boundary);
+    assert.equal(map.calls.length, 0, boundary);
+    assert.deepEqual(map.order, ['labels'], boundary);
+  }
+});
+
+test('stable layer order prioritizes a newly available earlier descriptor over waiting siblings', async () => {
+  const map = harness();
+  await addPreparedFeatures(map, { layers: [
+    { layer: { id: 'a', type: 'background' }, before: 'labels' },
+    { layer: { id: 'b', type: 'background' }, before: 'a' },
+    { layer: { id: 'c', type: 'background' }, before: 'labels' },
+    { layer: { id: 'd', type: 'background' }, before: 'labels' }
+  ] });
+  assert.deepEqual(map.order, ['b', 'a', 'c', 'd', 'labels']);
+});
+
+test('unanchored layers stay above all existing layers despite later descriptors targeting an early anchor', async () => {
+  const map = harness();
+  map.addLayer({ id: 'existing-top', type: 'background' });
+  await addPreparedFeatures(map, { layers: [
+    { layer: { id: 'unanchored', type: 'background' } },
+    { layer: { id: 'early', type: 'background' }, before: 'labels' }
+  ] });
+  assert.deepEqual(map.order, ['early', 'labels', 'existing-top', 'unanchored']);
+});
+
+test('reentrant successor cancellation stops abandoned options admission', async () => {
+  const map = harness(); let preparationSignal, newest;
+  map.prepareFeatures = (_requirements, { signal }) => { preparationSignal = signal; return new Promise(() => {}); };
+  const first = addPreparedFeatures(map, batch());
+  const firstCancelled = assert.rejects(first, { name: 'AbortError' });
+  await Promise.resolve();
+  preparationSignal.addEventListener('abort', () => {
+    map.prepareFeatures = async () => {};
+    newest = addPreparedFeatures(map, {});
+  }, { once: true });
+  let inspections = 0;
+  const abandoned = new Proxy({}, { ownKeys() { inspections++; return []; } });
+  await assert.rejects(addPreparedFeatures(map, {}, abandoned), { name: 'AbortError' });
+  await firstCancelled; await newest;
+  assert.equal(inspections, 0);
+});
+
+test('rejects an array length descriptor with coercible data without invoking caller coercion', async () => {
+  const map = harness(); let coercions = 0;
+  const length = { valueOf() { coercions++; throw Error('caller coercion'); } };
+  const layers = new Proxy([], { getOwnPropertyDescriptor(target, key) {
+    const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
+    return key === 'length' ? { ...descriptor, value: length } : descriptor;
+  } });
+  await assert.rejects(addPreparedFeatures(map, { layers }), { name: 'MapMutationError', code: 'invalid-descriptor' });
+  assert.equal(coercions, 0);
+  assert.deepEqual(map.calls, []);
+});
+
+test('releases external and preparation abort listeners after success and preparation failure', async () => {
+  for (const fails of [false, true]) {
+    const map = harness(), caller = new AbortController();
+    let preparationSignal;
+    map.prepareFeatures = async (_requirements, { signal }) => {
+      preparationSignal = signal;
+      assert.equal(getEventListeners(caller.signal, 'abort').length, 1);
+      assert.equal(getEventListeners(signal, 'abort').length, 1);
+      if (fails) throw Error('preparation failed');
+    };
+    const work = addPreparedFeatures(map, batch(), { signal: caller.signal });
+    if (fails) await assert.rejects(work, /preparation failed/); else await work;
+    assert.equal(getEventListeners(caller.signal, 'abort').length, 0);
+    assert.equal(getEventListeners(preparationSignal, 'abort').length, 0);
+    caller.abort();
+    assert.equal(preparationSignal.aborted, false, 'finished work is no longer connected to caller cancellation');
+  }
+});
+
+test('asynchronous cancellation retains its public error message', async () => {
+  const map = harness(), caller = new AbortController();
+  map.prepareFeatures = () => new Promise(() => {});
+  const work = addPreparedFeatures(map, batch(), { signal: caller.signal });
+  await Promise.resolve();
+  caller.abort();
+  await assert.rejects(work, { name: 'AbortError', message: 'Prepared map mutation cancelled.' });
+});
+
+test('a preparation that replaces the style never invokes validation on the new style', async () => {
+  const map = harness(), read = map.getSource;
+  let replacement = false, staleReads = 0;
+  map.prepareFeatures = async () => { map.style = {}; replacement = true; };
+  map.getSource = id => { if (replacement) staleReads++; return read.call(map, id); };
+  await assert.rejects(addPreparedFeatures(map, batch()), { name: 'AbortError' });
+  assert.equal(staleReads, 0);
+  assert.equal(map.sources.size, 0);
+});
+
+test('native listener registration that replaces a style cannot start a source or layer commit', async () => {
+  for (const input of [{ sources: { points: source() } }, { layers: [{ layer: { id: 'plain', type: 'background' } }] }]) {
+    const map = harness(), on = map.on;
+    map.on = function(type, listener) { on.call(this, type, listener); this.style = {}; };
+    await assert.rejects(addPreparedFeatures(map, input), { name: 'AbortError' });
+    assert.equal(map.calls.some(([kind]) => kind === 'source' || kind === 'layer'), false);
+    assert.equal(map.listenerCount(), 0);
+  }
+});
+
+test('style replacement during native addition prevents subsequent resource reads', async () => {
+  for (const kind of ['Source', 'Layer']) {
+    const map = harness(), add = map[`add${kind}`], read = map[`get${kind}`];
+    let replacement = false, staleReads = 0;
+    map[`add${kind}`] = function(...args) { add.apply(this, args); this.style = {}; replacement = true; return this; };
+    map[`get${kind}`] = function(id) { if (replacement) staleReads++; return read.call(this, id); };
+    await assert.rejects(addPreparedFeatures(map, batch()), { name: 'AbortError' });
+    assert.equal(staleReads, 0);
+    assert.equal(map.listenerCount(), 0);
+  }
+});
+
+test('style replacement during the final native presence check rejects rather than publishing success', async () => {
+  for (const kind of ['Source', 'Layer']) {
+    const map = harness(), read = map[`get${kind}`];
+    map[`get${kind}`] = function(id) { const value = read.call(this, id); if (value && id !== 'labels') this.style = {}; return value; };
+    const input = kind === 'Source' ? { sources: { points: source() } } : { layers: [{ layer: { id: 'plain', type: 'background' } }] };
+    await assert.rejects(addPreparedFeatures(map, input), { name: 'AbortError' });
+    assert.equal(map.listenerCount(), 0);
+  }
+});
+
+test('cleanup skips native resources that failed before they were registered', async () => {
+  const map = harness();
+  map.addSource = () => { throw Error('not registered'); };
+  await assert.rejects(addPreparedFeatures(map, { sources: { points: source() } }), { code: 'native-failure' });
+  assert.equal(map.calls.some(([kind]) => kind === 'source-'), false);
+});
+
+test('rollback reports silently retained resources independently of emitted errors', async () => {
+  for (const kind of ['Source', 'Layer']) {
+    const map = harness(), add = map.addLayer;
+    map.addLayer = function(...args) { add.apply(this, args); throw Error('commit failed'); };
+    map[`remove${kind}`] = function() { return this; };
+    await assert.rejects(addPreparedFeatures(map, batch()), { code: 'rollback-failure' });
+    assert.equal(kind === 'Source' ? map.sources.has('points') : map.layers.has('dots'), true);
+    assert.equal(map.listenerCount(), 0);
+  }
+});
+
+test('rollback reports an emitted error even when the native resource was removed', async () => {
+  const map = harness(), add = map.addLayer, remove = map.removeSource;
+  map.addLayer = function(...args) { add.apply(this, args); throw Error('commit failed'); };
+  map.removeSource = function(id) { remove.call(this, id); this.fireError(); return this; };
+  await assert.rejects(addPreparedFeatures(map, batch()), { code: 'rollback-failure' });
+  assert.equal(map.sources.size, 0);
+  assert.equal(map.layers.has('dots'), false);
+  assert.equal(map.listenerCount(), 0);
+});
+
+test('rollback stops before touching a replacement style reached by a presence read or removal', async () => {
+  for (const point of ['read', 'remove']) {
+    const map = harness(), add = map.addLayer, read = map.getLayer, remove = map.removeLayer;
+    let rollback = false, replaced = false, readsAfterReplacement = 0, removesAfterReplacement = 0;
+    map.addLayer = function(...args) { add.apply(this, args); rollback = true; throw Error('commit failed'); };
+    map.getLayer = function(id) {
+      if (replaced) readsAfterReplacement++;
+      const value = read.call(this, id);
+      if (rollback && point === 'read' && id === 'dots') { this.style = {}; replaced = true; }
+      return value;
+    };
+    map.removeLayer = function(id) {
+      if (replaced) removesAfterReplacement++;
+      remove.call(this, id);
+      if (point === 'remove') { this.style = {}; replaced = true; }
+      return this;
+    };
+    await assert.rejects(addPreparedFeatures(map, batch()), { name: 'AbortError' });
+    assert.equal(readsAfterReplacement, 0);
+    assert.equal(removesAfterReplacement, 0);
+    assert.equal(map.sources.has('points'), true, 'old work does not remove sources after replacement');
+  }
+});
+
+test('rollback releases layer and source acquisitions in reverse order', async () => {
+  const map = harness(), add = map.addLayer;
+  map.addLayer = function(layer, before) { add.call(this, layer, before); if (layer.id === 'first') throw Error('commit failed'); return this; };
+  await assert.rejects(addPreparedFeatures(map, {
+    sources: { one: source(), two: source() },
+    layers: [{ layer: { id: 'first', type: 'circle', source: 'one' } }, { layer: { id: 'second', type: 'circle', source: 'two' } }],
+  }), { code: 'native-failure' });
+  assert.deepEqual(map.calls.filter(([kind]) => kind.endsWith('-')), [['layer-', 'first'], ['layer-', 'second'], ['source-', 'two'], ['source-', 'one']]);
+  assert.deepEqual(map.order, ['labels']);
+  assert.equal(map.sources.size, 0);
+});
+
+test('retirement during commit skips even reading rollback capabilities on the replacement style', async () => {
+  const map = harness(), add = map.addLayer, remove = map.removeLayer;
+  let capabilityReads = 0;
+  Object.defineProperty(map, 'removeLayer', { get() { capabilityReads++; return remove; } });
+  map.addLayer = function(...args) { add.apply(this, args); this.style = {}; throw Error('retired commit'); };
+  await assert.rejects(addPreparedFeatures(map, batch()), { name: 'AbortError' });
+  assert.equal(capabilityReads, 0);
+});
+
+test('rollback capability resolution that retires the style prevents calling its presence probe', async () => {
+  const map = harness(), add = map.addLayer, remove = map.removeLayer, read = map.getLayer;
+  let retired = false, staleReads = 0;
+  map.addLayer = function(...args) { add.apply(this, args); throw Error('commit failed'); };
+  Object.defineProperty(map, 'removeLayer', { get() { this.style = {}; retired = true; return remove; } });
+  map.getLayer = function(id) { if (retired) staleReads++; return read.call(this, id); };
+  await assert.rejects(addPreparedFeatures(map, batch()), { name: 'AbortError' });
+  assert.equal(staleReads, 0);
+});
+
+test('retirement at the end of layer rollback prevents reading source cleanup capabilities', async () => {
+  for (const point of ['confirmation', 'throw']) {
+    const map = harness(), add = map.addLayer, remove = map.removeLayer, read = map.getLayer, removeSource = map.removeSource;
+    let removed = false, sourceCapabilityReads = 0;
+    map.addLayer = function(...args) { add.apply(this, args); throw Error('commit failed'); };
+    map.removeLayer = function(id) {
+      remove.call(this, id); removed = true;
+      if (point === 'throw') { this.style = {}; throw Error('retired removal'); }
+      return this;
+    };
+    map.getLayer = function(id) { if (removed && point === 'confirmation') this.style = {}; return read.call(this, id); };
+    Object.defineProperty(map, 'removeSource', { get() { sourceCapabilityReads++; return removeSource; } });
+    await assert.rejects(addPreparedFeatures(map, batch()), { name: 'AbortError' });
+    assert.equal(sourceCapabilityReads, 0);
+    assert.equal(map.sources.has('points'), true);
+  }
 });

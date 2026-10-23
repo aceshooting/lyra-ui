@@ -1,10 +1,11 @@
 # Test health: coverage, speed and flakiness
 
-Status (2026-10-24): complete coverage from the successful main CI run at `f56acab97` covered
-524,783 of 525,881 UI lines (99.7912%) across 1,501 ordinary test files. New behavioural tests
-at `ed580b4d0` pass in Chromium, Firefox and WebKit; their full coverage result is pending.
-The stored line and statement floor is 99.75%. The 99.80% coverage target and sustained speed
-work remain open. The earlier successful 13m53s CI observation is recorded below.
+Status (2026-10-24): the successful main CI run at `ed580b4d0` covered 524,831 of 525,881 UI
+lines (99.800335%) across 1,502 ordinary test files. All five coverage shards and the merged
+coverage gate passed. The 99.80% target is achieved on this development candidate; the final
+versioned release commit still needs its own qualification. The stored line and statement
+floor is 99.75%. Sustained speed work continues; the earlier successful 13m53s CI observation
+is recorded below.
 The baseline below is from the last green main commit before 30.0.0 work (Codecov and GitHub Actions data).
 
 ## Baseline
@@ -24,6 +25,8 @@ The baseline below is from the last green main commit before 30.0.0 work (Codeco
 
 ### Coverage (target: at least 99.80% of lines)
 
+- [x] Reach 99.80% with behavioural tests: the complete `ed580b4d0` run covered 48 more lines
+  than `f56acab97` at the same denominator, reaching 99.800335%.
 - [x] Restore coverage strictly above 99.74% after the collections and map camera work. A complete
   successful main run covered 505,798 of 506,953 UI lines (99.7722%) in 1,415 ordinary test files
   plus the native-scrollbar check.

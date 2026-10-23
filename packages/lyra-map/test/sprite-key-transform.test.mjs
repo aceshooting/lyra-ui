@@ -80,7 +80,7 @@ test('worker codec preserves custom static serializers, builtins, typed-array tr
   assert.throws(() => codec.serialize({ $name: 'Object' }), /reserved/);
 });
 
-async function imageManagerHarness() {
+async function imageManagerHarness(renderStyleImage = () => false) {
   class Evented { fire() {} }
   class RGBAImage {
     constructor(size, data = new Uint8Array(size.width * size.height * 4)) { Object.assign(this, size, { data }); }
@@ -88,7 +88,7 @@ async function imageManagerHarness() {
   }
   const module = await moduleHarness('render/image_manager.ts', ['ImageManager'], {
     Evented, ErrorEvent: class {}, MapStyleImageMissingEvent: class {}, RGBAImage,
-    renderStyleImage: () => false, warnOnce: () => {}
+    renderStyleImage, warnOnce: () => {}
   });
   return { manager: new module.ImageManager(), RGBAImage };
 }
@@ -135,4 +135,114 @@ test('sprite key transform source anchors fail closed', async () => {
     assert.throws(() => transformSpriteKeys(original + original, path), /anchor changed/);
   }
   assert.equal(transformSpriteKeys('unrelated', 'unrelated.ts'), undefined);
+});
+
+test('style image changes drain once and retain special names after each reset', async () => {
+  const { Style } = await moduleHarness('style/style.ts', ['Style'], {
+    Evented: class {}, emptyStyle: () => ({ version: 8, sources: {}, layers: [] })
+  });
+  const style = Object.create(Style.prototype), reloads = [];
+  style.tileManagers = { tile: { reloadTilesForDependencies: (...args) => reloads.push(args) } };
+  style._resetUpdates();
+  for (let cycle = 0; cycle < 2; cycle++) {
+    assert.equal(Object.getPrototypeOf(style._changedImages), null);
+    style._markImagesChanged(specialNames);
+    style._updateTilesForChangedImages();
+    assert.deepEqual(reloads.at(-1), [['icons', 'patterns'], specialNames]);
+    assert.deepEqual(Object.keys(style._changedImages), []);
+    style._updateTilesForChangedImages();
+    assert.equal(reloads.length, cycle + 1);
+  }
+});
+
+test('worker tile requests own icon and pattern dependency names', async () => {
+  const { WorkerTile } = await moduleHarness('source/worker_tile.ts', ['WorkerTile'], {
+    CollisionBoxArray: class {}, FeatureIndex: class {}, EvaluationParameters: class {},
+    DictionaryCoder: class { encode() { return 0; } },
+    mapObject: (record, map) => Object.fromEntries(Object.entries(record).map(([key, value]) => [key, map(value)])),
+    MessageType: { getImages: 'images' },
+    GlyphAtlas: class { constructor() { this.positions = {}; } },
+    ImageAtlas: class { constructor() { this.iconPositions = {}; this.patternPositions = {}; } }
+  });
+  const bucket = {
+    populate(_features, options) {
+      for (const dependencies of [options.iconDependencies, options.patternDependencies]) {
+        assert.equal(Object.getPrototypeOf(dependencies), null);
+        for (const name of specialNames) dependencies[name] = true;
+      }
+    },
+    isEmpty: () => false
+  };
+  const layer = { id: 'symbols', source: 'source', isHidden: () => false, recalculate() {}, createBucket: () => bucket };
+  const tile = Object.assign(Object.create(WorkerTile.prototype), {
+    source: 'source', tileID: { canonical: {} }, zoom: 0, inFlightDependencies: []
+  });
+  const requests = [];
+  const result = await tile.parse({ layers: { places: { version: 2, length: 0 } } }, {
+    familiesBySource: { source: { places: [[layer]] } }
+  }, specialNames, { async sendAsync(request) { requests.push(request); return {}; } }, {});
+  assert.deepEqual(requests.map(request => [request.type, request.data.type, request.data.icons]), [
+    ['images', 'icons', specialNames], ['images', 'patterns', specialNames]
+  ]);
+  assert.deepEqual(result.buckets, [bucket]);
+});
+
+test('image atlas allocates independent own-name position dictionaries', async () => {
+  const { ImageAtlas } = await moduleHarness('render/image_atlas.ts', ['ImageAtlas'], {
+    register() {}, RGBAImage: class { constructor(size) { Object.assign(this, size); } },
+    potpack(bins) { assert.equal(bins.length, 0); return { w: 0, h: 0 }; }
+  });
+  const atlas = new ImageAtlas({}, {});
+  const images = Object.fromEntries(specialNames.map(name => [name, { data: { width: 1, height: 1 }, pixelRatio: 1, version: 0 }]));
+  for (const positions of [atlas.iconPositions, atlas.patternPositions]) {
+    assert.equal(Object.getPrototypeOf(positions), null);
+    const bins = [];
+    atlas.addImages(images, positions, bins);
+    assert.deepEqual(Object.keys(positions), specialNames);
+    assert.equal(bins.length, specialNames.length);
+    for (const name of specialNames) assert.deepEqual(positions[name].displaySize, [1, 1]);
+  }
+  assert.notEqual(atlas.iconPositions, atlas.patternPositions);
+});
+
+test('worker codec excludes enumerable inherited payload fields', async () => {
+  const codec = await codecHarness();
+  class Record { constructor() { this.own = 3; } }
+  Record.prototype.inherited = 7;
+  codec.register('SpriteKeyInheritedRecord', Record);
+  const serialized = codec.serialize(new Record());
+  assert.equal(Object.hasOwn(serialized, 'inherited'), false);
+  assert.equal(serialized.own, 3);
+  const result = codec.deserialize(structuredClone(serialized));
+  assert.ok(result instanceof Record);
+  assert.equal(Object.hasOwn(result, 'inherited'), false);
+  assert.equal(result.inherited, 7);
+});
+
+test('image manager rejects duplicates and advances replacement versions for special names', async () => {
+  const { manager, RGBAImage } = await imageManagerHarness();
+  const image = () => ({ data: new RGBAImage({ width: 1, height: 1 }), pixelRatio: 1, sdf: false, version: 0 });
+  for (const name of specialNames) {
+    const first = image(), replacement = image();
+    manager.addImage(name, first);
+    assert.throws(() => manager.addImage(name, replacement), /already exist/);
+    assert.equal(manager.getImage(name), first);
+    manager.updateImage(name, replacement);
+    assert.equal(manager.getImage(name), replacement);
+    assert.equal(replacement.version, 1);
+  }
+  assert.equal(manager.updateVersion, specialNames.length);
+});
+
+test('image render callbacks run once per name per frame and resume next frame', async () => {
+  const calls = [];
+  const { manager, RGBAImage } = await imageManagerHarness(image => { calls.push(image); return false; });
+  const images = specialNames.map(() => ({ data: new RGBAImage({ width: 1, height: 1 }), pixelRatio: 1, sdf: false, version: 0 }));
+  specialNames.forEach((name, index) => manager.addImage(name, images[index]));
+  manager.dispatchRenderCallbacks([...specialNames, ...specialNames]);
+  manager.dispatchRenderCallbacks(specialNames);
+  assert.deepEqual(calls, images);
+  manager.beginFrame();
+  manager.dispatchRenderCallbacks(specialNames);
+  assert.deepEqual(calls, [...images, ...images]);
 });

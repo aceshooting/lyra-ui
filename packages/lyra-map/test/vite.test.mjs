@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { lyraMapWorkerPlugin } from '../src/vite.mjs';
+import { fileURLToPath } from 'node:url';
+import { lyraMapWorkerPlugin, workerBridgeToken } from '../src/vite.mjs';
 
 const bridge = "const worker = new URL('__LYRA_MODULAR_WORKER_BRIDGE__', import.meta.url);";
 
@@ -94,4 +95,32 @@ test('resets worker bridge state for each watch rebuild without hiding same-buil
   }
   plugin.transform.call(context, bridge);
   assert.throws(() => plugin.generateBundle(), /found 2/);
+});
+
+
+test('the exported worker marker participates in the build transform', () => {
+  const plugin = lyraMapWorkerPlugin({ workerEntry: '/engine/worker.mjs' });
+  plugin.configResolved({ command: 'build' });
+  const emitted = [];
+  const result = plugin.transform.call(
+    { emitFile(chunk) { emitted.push(chunk); return 'exportedMarker'; } },
+    `const workerUrl = requireConfiguredModularWorkerUrl(${JSON.stringify(workerBridgeToken)});`
+  );
+  assert.ok(result, 'Consumers of the exported marker receive a worker URL');
+  assert.equal(result.code, 'const workerUrl = requireConfiguredModularWorkerUrl(new URL(import.meta.ROLLUP_FILE_URL_exportedMarker, import.meta.url).href);');
+  assert.deepEqual(emitted, [{ type: 'chunk', id: '/engine/worker.mjs', name: 'map-worker' }]);
+});
+
+test('the named plugin resolves its default worker beside its own module', () => {
+  const plugin = lyraMapWorkerPlugin();
+  assert.equal(typeof plugin.name, 'string');
+  assert.ok(plugin.name.trim().length > 0, 'Vite diagnostics can identify the worker plugin');
+  plugin.configResolved({ command: 'build' });
+  const emitted = [];
+  plugin.transform.call({ emitFile(chunk) { emitted.push(chunk); return 'defaultWorker'; } }, bridge);
+  assert.deepEqual(emitted, [{
+    type: 'chunk',
+    id: fileURLToPath(new URL('../src/worker.mjs', import.meta.url)),
+    name: 'map-worker'
+  }]);
 });
