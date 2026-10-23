@@ -22,7 +22,7 @@ const manifest = JSON.parse(
 
 test('checks every live typed export while preserving blocked retired routes', () => {
   const entrypoints = attwEntrypoints(manifest);
-  assert.equal(entrypoints.length, 757, 'the reviewed package has 757 live typed exports (the locale catalogs publish from @aceshooting/lyra-translations)');
+  assert.equal(entrypoints.length, 758, 'the reviewed package has 758 live typed exports (the locale catalogs publish from @aceshooting/lyra-translations)');
   assert.ok(entrypoints.includes('.'));
   assert.ok(entrypoints.includes('./package.json'));
   assert.ok(entrypoints.includes('./theme/*'));
@@ -34,6 +34,7 @@ test('checks every live typed export while preserving blocked retired routes', (
   assert.ok(entrypoints.includes('./components/lr-model-viewer.js'), 'the model-viewer registration is checked');
   assert.ok(entrypoints.includes('./components/viewers/model-viewer/model-viewer.class.js'), 'the model-viewer class is checked');
   assert.ok(entrypoints.includes('./components/viewers/model-viewer/model-viewer-register.js'), 'the model-viewer document adapter registration is checked');
+  assert.ok(entrypoints.includes('./components/conversation/code-block/shiki-oniguruma.js'), 'the explicit Oniguruma factory is checked');
   for (const name of ['country-picker', 'time-zone-picker', 'unit-picker']) {
     assert.ok(entrypoints.includes(`./components/lr-${name}.js`), `${name} stable registration is checked`);
     assert.ok(entrypoints.includes(`./components/forms/${name}/${name}.class.js`), `${name} class is checked`);
