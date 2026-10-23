@@ -1,9 +1,10 @@
 # Test health: coverage, speed and flakiness
 
-Status (2026-10-22): the complete successful main CI run at `39d0cf0e0` covered 505,798 of
-506,953 UI lines (99.7722%) across 1,415 ordinary test files plus a separate native-scrollbar
-check, and finished in 13m53s. The stored line and statement floor is 99.75%. The 99.80%
-coverage target and sustained speed work remain open.
+Status (2026-10-24): complete coverage from the successful main CI run at `f56acab97` covered
+524,783 of 525,881 UI lines (99.7912%) across 1,501 ordinary test files. New behavioural tests
+at `ed580b4d0` pass in Chromium, Firefox and WebKit; their full coverage result is pending.
+The stored line and statement floor is 99.75%. The 99.80% coverage target and sustained speed
+work remain open. The earlier successful 13m53s CI observation is recorded below.
 The baseline below is from the last green main commit before 30.0.0 work (Codecov and GitHub Actions data).
 
 ## Baseline

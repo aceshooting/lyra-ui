@@ -25,7 +25,7 @@ still open.
 
 ## 30.0.0 preparation checkpoint
 
-As of 2026-10-23, main carries the immutable identity collections, map adoption through the
+As of 2026-10-24, main carries the immutable identity collections, map adoption through the
 image-catalog and interaction/drawing work, opt-in WebGL views and `lr-chart-3d`,
 `lr-model-viewer`, GPU-side graph projection, deprecated-API removal with migration support,
 repository hygiene and Lit template checks, and the Quality tools gates. The release remains
@@ -35,21 +35,20 @@ migration documentation, the dependency refresh, the document-engine upgrade to 
 highlighter asset mitigation are implemented. Focused document-engine and highlighter checks
 passed across three browsers.
 The highlighter defaults to JavaScript, with Oniguruma available through an explicit factory.
-These checkpoint results do not establish final-candidate release qualification. The remaining
-work, in order:
+Installed map prototypes, native font and label rendering, representative right-to-left and
+locale/mobile behavior, visual review and request acceptance are complete within the scope of
+[map adoption](roadmap/map-adoption.md). Application migration follows the release. The video
+hover quarantine is removed with browser verification; CI timing and per-package coverage
+reporting are implemented. These checkpoint results do not establish final-candidate release
+qualification. The remaining work, in order:
 
-1. Complete and qualify the map release gate ([map adoption](roadmap/map-adoption.md)):
-   installed-package application prototypes, native font and label rendering, representative
-   right-to-left and locale/mobile behavior, visual review and request acceptance. Existing
-   component and native tests supply only the behavior they exercise.
-2. Qualify the final candidate with the integrated dependency, document-engine and highlighter
-   changes. Close remaining test and tooling findings, including the existing video hover
-   quarantine; complete CI timing and per-package coverage reporting and reduce delivery cost
-   where supported.
-3. Review the complete 30.0.0 change set, close every finding and verify every roadmap item against
-   its source, tests, stories and documentation. Configure first-publication access for the new
-   companion, prepare versions and budgets, and pass all browser, full-engine, Quality tools and
-   exact-commit release gates.
+1. Confirm the 99.80% coverage target from the new behavioural tests and resolve any findings
+   from the current CI, full browser and Quality tools runs.
+2. Review the complete 30.0.0 release output, prepare versions and budgets, and pass CI, all
+   browser, full-engine and Quality tools gates on the exact versioned release commit.
+3. Complete protected publication, including the new companion's first-publication bootstrap
+   and trusted publisher configuration. Publication access is configured; publication itself
+   has not occurred.
 
 ## Shipped
 

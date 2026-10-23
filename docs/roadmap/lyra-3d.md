@@ -1,13 +1,16 @@
 # WebGL 3D views (`@aceshooting/lyra-3d`)
 
-Status (2026-10-23): the shared foundation, four companion engines and component integrations
+Status (2026-10-24): the shared foundation, four companion engines and component integrations
 are implemented, including graph and point views, 360° image/video modes, the model viewer and
 its document-viewer integration. Integrated browser, package and fallback checks have passed on
-previous candidates. Real-GPU measurements on an integrated candidate met the 10k-node/30k-edge
-and 100k-point rendering targets. Final-candidate qualification after dependency and toolchain
-updates, the remaining performance and application acceptance checks, and first publication are
-pending. Nothing has shipped to npm. The optional WebGL views retain their documented built-in
-or text alternatives.
+previous candidates. Real-GPU measurements on an integrated candidate met the 10k-node/30k-edge,
+100k-point and 1M-point rendering targets. Additional initial-render, graph-convergence,
+input-to-draw and retained main-isolate heap observations are recorded for the 10k-node/30k-edge
+and 100k-point workloads. These results describe the measured hardware and scenes; the heap
+measurements exclude worker, native and GPU allocations. Qualification of the final versioned
+candidate and first publication remain pending.
+Nothing has shipped to npm. The optional WebGL views retain their documented built-in or text
+alternatives.
 
 ## Objective and boundaries
 

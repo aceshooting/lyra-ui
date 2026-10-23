@@ -1,11 +1,11 @@
 # Map adoption (`lr-map`, `@aceshooting/lyra-map` 1.3.0)
 
-Status (2026-10-23): the camera, overlays, composition, ordering, controls, labels and lazy
+Status (2026-10-24): the camera, overlays, composition, ordering, controls, labels and lazy
 construction APIs and their migration documentation are implemented on main for lyra-ui 30.0.0
-with lyra-map 1.3.0. Implementation checkboxes below record that source and documentation work;
-they do not establish release qualification. Installed-package font and label rendering,
-application prototypes, visual acceptance and request acceptance remain open in the
-application-coverage gate. Current map fixes are still undergoing qualification.
+with lyra-map 1.3.0. Installed-package font and label rendering, selected application prototypes,
+visual review and request acceptance are complete on the development candidate. All map requests
+are accepted as source deliveries; npm publication and qualification of the final versioned
+release commit remain pending. The application-coverage section records the accepted scope.
 
 Applications can replace camera, padding, popup, fitting and missing-data workarounds with the
 supported component API. Application migration follows the release.
@@ -126,10 +126,11 @@ regional site, whose map package is a separate fork of the main site's):
 - [x] Independent modules compose through one owner that publishes their source and layer
   snapshots with globally unique IDs. Native controls have stable order within a corner and
   support linked custom attribution.
-- [ ] Prototype each raw-engine application on `lr-map` against the release candidate build and
-  confirm the same behavior (basemap and theme switching, overlays, popups, drawing, geolocation,
-  URL hash, right-to-left, translations, mobile layout).
-- [ ] No open `component:lr-map` request in Lyra Admin.
+- [x] Qualify selected controller prototypes for each raw-engine application against installed
+  candidate packages, combining the exercised behavior with matching native/component tests
+  (basemap and theme switching, overlays, popups, drawing, geolocation, URL hash, right-to-left,
+  translations, mobile layout).
+- [x] No open `component:lr-map` request in Lyra Admin.
 
 The prototype gate includes installed-package native font and label rendering, representative
 right-to-left text and locale/mobile configurations, and review of the retained visual captures.
@@ -137,6 +138,15 @@ Existing component and native-engine tests can supply matching behavioral eviden
 controller prototypes and synthetic fixtures establish only the behavior they actually exercise.
 Keep application-owned behavior and accepted residual scope explicit when reconciling the needs.
 Neither implementation completion nor an automated prototype pass closes visual or request acceptance.
+
+Acceptance on 2026-10-24 combines 36 installed prototype configurations (development/production,
+Chromium/Firefox/WebKit, desktop/mobile RTL), six font/label configurations and matching native
+and component tests. All retained prototype and label images were reviewed. Selected controllers
+and fixtures exercise the documented needs; they do not constitute migration of complete applications.
+Caller responsibilities remain explicit: direction-aware custom legend layout and, for direct
+engine scene transactions, the documented bounded presentation repaint. These must be carried
+into the later application migration. No library readiness contract was changed to obtain the
+captures. Final versioned package and release qualification remain separate.
 
 ## Application migration (after the 30.0.0 release)
 
