@@ -51,6 +51,10 @@ it('resolves the maplibre-gl module', async () => {
   expect(mod!.Map).to.equal(peer.Map);
   expect(mod!.Marker).to.equal(peer.Marker);
   expect(mod!.Popup).to.equal(peer.Popup);
+  expect(mod!.NavigationControl).to.equal(peer.NavigationControl);
+  expect(mod!.ScaleControl).to.equal(peer.ScaleControl);
+  expect(mod!.GeolocateControl).to.equal(peer.GeolocateControl);
+  expect(mod!.AttributionControl).to.equal(peer.AttributionControl);
   const runtime = mod as unknown as { setWorkerUrl: unknown; getVersion(): string };
   expect(runtime.setWorkerUrl).to.be.a('function');
   expect(runtime.getVersion()).to.match(/^6\./);

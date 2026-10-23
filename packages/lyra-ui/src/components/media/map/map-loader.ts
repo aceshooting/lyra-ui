@@ -265,6 +265,8 @@ export async function loadMaplibreModule(
       get Popup() { return source.Popup; },
       get NavigationControl() { return source.NavigationControl; },
       get ScaleControl() { return source.ScaleControl; },
+      get GeolocateControl() { return source.GeolocateControl; },
+      get AttributionControl() { return source.AttributionControl; },
       get setWorkerUrl() { return source.setWorkerUrl; },
       get getVersion() { return source.getVersion; },
       get default() { return (source as unknown as { readonly default?: unknown }).default; },
