@@ -1,10 +1,14 @@
 # Map adoption (`lr-map`, `@aceshooting/lyra-map` 1.3.0)
 
-Status (2026-10-22): camera, overlays and most raw-engine items are on main for lyra-ui 30.0.0
-with lyra-map 1.3.0; the application-coverage gate below records the remaining gaps. Applications using `lr-map` still reach into
-the engine through the `map` getter, or keep workaround code, for camera moves, padding, popups,
-fitting and missing data. This plan closes those gaps so map screens share one accessible, themed
-component and applications delete their workarounds.
+Status (2026-10-23): the camera, overlays, composition, ordering, controls, labels and lazy
+construction APIs and their migration documentation are implemented on main for lyra-ui 30.0.0
+with lyra-map 1.3.0. Implementation checkboxes below record that source and documentation work;
+they do not establish release qualification. Installed-package font and label rendering,
+application prototypes, visual acceptance and request acceptance remain open in the
+application-coverage gate. Current map fixes are still undergoing qualification.
+
+Applications can replace camera, padding, popup, fitting and missing-data workarounds with the
+supported component API. Application migration follows the release.
 
 ## Breaking change
 
@@ -48,9 +52,9 @@ items let them move to `lr-map`, or at least drop their workarounds on the engin
   load.
 - [x] A readiness primitive: `whenStyleReady()` / `whenIdle()` and matching `lr-map-style-load` and
   `lr-map-idle` events, instead of guarding `isStyleLoaded()` and racing style loads.
-- [ ] Data-layer ordering: a band or `before` option on data layers instead of a hand-maintained
-  z-order table re-applied after each style swap. Owned overlays and external data layers accept
-  `before`; GeoJSON `dataLayers` entries still append in array order.
+- [x] Data-layer ordering through `before` on GeoJSON and external data layers and owned overlays,
+  with logical group ordering restored after style swaps. Unanchored groups retain their input
+  order; invalid ordering is rejected before native changes.
 - [x] `styleOverrides`: paint and layout overrides for basemap style layers, re-applied after style
   loads.
 - [x] `images` property accepting SVG markup or URLs, rasterized portably (engines cannot decode SVG
@@ -73,24 +77,24 @@ items let them move to `lr-map`, or at least drop their workarounds on the engin
 - [x] Interactive data layers: hit priority across overlays (topmost wins; background click only
   when nothing is hit), a hover cursor that yields to pick mode, a feature-state API, and opt-in of
   basemap style layers (for example building footprints) into `lr-map-click`.
-- [ ] Per-data-layer `minZoom`/`maxZoom` and symbol text labels (line-placed labels, point names,
-  halo, colors from theme tokens). External data layers and labels are done; GeoJSON `dataLayers`
-  entries still lack a zoom range.
+- [x] Per-data-layer `minZoom`/`maxZoom` on GeoJSON and external data layers, and symbol text
+  labels (line placement, point names, halo and colors from theme tokens). Native installed-font
+  rendering and visual acceptance remain part of release qualification below.
 - [x] Repaint after paint changes applied through data layers on every engine (WebKit otherwise
   skips a frame).
-- [ ] First-class lazy construction (build on visibility or idle with a built-in control
+- [x] First-class lazy construction (build on visibility or idle with a built-in control
   placeholder), so applications stop deferring the map behind timers.
 - [x] Worker plugin defaults for chunk naming, and documentation of the single-instance requirement
   when a workspace re-exports the plugin.
 
 ## Documentation
 
-- [ ] Migration guide from the raw engine to `lr-map`, and the supported overlay-persistence pattern
+- [x] Migration guide from the raw engine to `lr-map`, and the supported overlay-persistence pattern
   ([authored guide](../../packages/lyra-ui/llms/media.md#migrating-a-raw-engine-map-to-lr-map)).
 
-- [ ] State that `lyraMapWorkerPlugin()` needs no pre-import or readiness gate, and that `LyraMap.preload()`
+- [x] State that `lyraMapWorkerPlugin()` needs no pre-import or readiness gate, and that `LyraMap.preload()`
   is the supported warm-up.
-- [ ] Migration notes for the full-`maplibre-gl` engine to the modular engine, including the worker
+- [x] Migration notes for the full-`maplibre-gl` engine to the modular engine, including the worker
   setup the full engine still needs.
 
 ## Release gate: application coverage
@@ -119,11 +123,20 @@ regional site, whose map package is a separate fork of the main site's):
 - [x] Canvas redraw signal and bounded `data:`/`blob:` image URLs for image layers, with retained
   source identity and replay after style changes.
 - [x] In-place updates of owned layers, preserving feature state and rolling back failed changes.
-- [ ] Owner-scoped composition; control order within a corner and linked custom attribution.
+- [x] Independent modules compose through one owner that publishes their source and layer
+  snapshots with globally unique IDs. Native controls have stable order within a corner and
+  support linked custom attribution.
 - [ ] Prototype each raw-engine application on `lr-map` against the release candidate build and
   confirm the same behavior (basemap and theme switching, overlays, popups, drawing, geolocation,
   URL hash, right-to-left, translations, mobile layout).
 - [ ] No open `component:lr-map` request in Lyra Admin.
+
+The prototype gate includes installed-package native font and label rendering, representative
+right-to-left text and locale/mobile configurations, and review of the retained visual captures.
+Existing component and native-engine tests can supply matching behavioral evidence; selected
+controller prototypes and synthetic fixtures establish only the behavior they actually exercise.
+Keep application-owned behavior and accepted residual scope explicit when reconciling the needs.
+Neither implementation completion nor an automated prototype pass closes visual or request acceptance.
 
 ## Application migration (after the 30.0.0 release)
 

@@ -1,4 +1,4 @@
-import { expect, nextFrame } from '@open-wc/testing';
+import { expect, oneEvent } from '@open-wc/testing';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import './streaming-text.js';
 import './streaming-text-core.js';
@@ -7,13 +7,15 @@ for (const tag of ['lr-streaming-text', 'lr-streaming-text-core'] as const) {
     const el = document.createElement(tag); el.contentMode = 'plain'; el.coalesceMs = 0;
     el.content = 'x'.repeat(10000); document.body.append(el);
     try {
-      await el.updateComplete; await nextFrame(); await el.updateComplete;
+      await el.updateComplete;
       const node = [...el.shadowRoot!.querySelector('.plain')!.childNodes].find(node => node.nodeType === 3) as Text;
       const range = document.createRange(); range.setStart(node, 100); range.setEnd(node, 200);
       let appended = 0; const original = node.appendData.bind(node);
       node.appendData = value => { appended += value.length; original(value); };
-      el.content += 'y'.repeat(1000); await el.updateComplete; await nextFrame(); await el.updateComplete;
-      expect(range.startOffset).equal(100); expect(appended).equal(1000);
+      const settled = oneEvent(el, 'lr-content-settled');
+      el.content += 'y'.repeat(1000); await settled;
+      expect(range.startOffset).equal(100); expect(range.endOffset).equal(200);
+      expect(node.data).equal(el.content); expect(appended).equal(1000);
       recordScaleMeasurement(tag, 'n=10000 plain prefix append1000', { appended });
     } finally { el.remove(); }
   });
@@ -28,7 +30,8 @@ for (const tag of ['lr-streaming-text', 'lr-streaming-text-core'] as const) {
     patterns.forEach((pattern, index) => { pattern.test = function (source: string) { scanned += source.length; return originals[index]!.call(this, source); }; });
     try {
       for (let index = 0; index < 20; index++) {
-        el.content += 'plain '.repeat(1000); await el.updateComplete; await nextFrame(); await el.updateComplete;
+        const settled = oneEvent(el, 'lr-content-settled');
+        el.content += 'plain '.repeat(1000); await settled;
       }
       expect(scanned).at.most(el.content.length * 10);
       const units = (el as unknown as { markdownDetector: { scannedCodeUnits: number } }).markdownDetector.scannedCodeUnits;

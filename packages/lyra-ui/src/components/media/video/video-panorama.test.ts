@@ -4,11 +4,17 @@ import type { LyraVideo } from './video.class.js';
 import type { Engine3dHost, Engine3dInstance } from '../../../internal/engine-3d-loader.js';
 import { panoramaLoader, panoramaEnvironment } from '../image-viewer/image-viewer-panorama.js';
 
+const urls: string[] = [];
 async function ready(el: LyraVideo): Promise<HTMLVideoElement> {
   const video = el.getVideoElement()!;
-  el.src = new URL('../media-card/fixtures/sample.mp4', import.meta.url).href;
+  const response = await fetch(new URL('../media-card/fixtures/sample.mp4', import.meta.url));
+  expect(response.ok).to.equal(true);
+  const blob = new Blob([await response.arrayBuffer()], { type: 'video/mp4' });
+  const url = URL.createObjectURL(blob); urls.push(url);
+  el.src = url;
   await waitUntil(() => video.readyState >= 2 && video.videoWidth > 0, 'Native media must decode before panorama admission', { timeout: 15000 });
   expect(video.error === null).to.equal(true);
+  expect(video.duration, 'The complete MP4 fixture must expose its two-second timeline').to.equal(2);
   video.pause();
   return video;
 }
@@ -29,6 +35,7 @@ describe('lr-video panorama', () => {
     } }));
   });
   afterEach(() => { panoramaEnvironment.available = available; panoramaLoader.override(undefined); });
+  afterEach(() => { for (const url of urls.splice(0)) URL.revokeObjectURL(url); });
 
   it('does not import an engine under default settings', async () => {
     const el = await fixture<LyraVideo>(html`<lr-video style="inline-size:480px;block-size:320px"></lr-video>`);
@@ -41,7 +48,14 @@ describe('lr-video panorama', () => {
     const video = await ready(el);
     const nativeVolume = video.volume; expect(nativeVolume).to.be.closeTo(0.4, 0.000001);
     const track = video.addTextTrack('captions', 'English', 'en'); track.mode = 'hidden';
+    await waitUntil(() => {
+      for (let index = 0; index < video.seekable.length; index++) {
+        if (video.seekable.start(index) <= 0.7 && video.seekable.end(index) >= 0.7) return true;
+      }
+      return false;
+    }, 'The native fixture must expose the requested position as seekable');
     const sought = oneEvent(video, 'seeked'); el.currentTime = 0.7; await sought;
+    expect(Math.abs(video.currentTime - 0.7) < 0.01, 'The native seek must finish before switching engines').to.equal(true);
     expect(video.paused).to.equal(true);
     el.engine = 'webgl'; el.projection = 'equirectangular';
     await el.updateComplete;

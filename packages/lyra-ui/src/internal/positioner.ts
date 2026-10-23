@@ -166,10 +166,6 @@ interface PlacementStyleTransaction {
   commit(): void;
   rollback(): void;
 }
-interface StagedPlacementStyles {
-  availableInline?: string;
-  availableBlock?: string;
-}
 interface PlacementRunState {
   generation: number;
   nextUpdateGeneration: number;
@@ -641,7 +637,6 @@ function placeImpl(
   // omitted the array below is exactly `[offset, flip, shift, arrow?, size]`.
   const middlewareFor = (
     styleTransaction: PlacementStyleTransaction,
-    stagedStyles: StagedPlacementStyles,
     isCurrent: () => boolean,
   ) =>
     [
@@ -698,28 +693,47 @@ function placeImpl(
       size({
         boundary: opts.boundary as Boundary | undefined,
         padding,
-        apply({ availableWidth, availableHeight }) {
+        apply({ availableWidth, availableHeight, elements }) {
           if (!isCurrent()) return;
-          // Available-size variables do not affect middleware measurement, so keep them off the
-          // live element until every later geometry read has succeeded. Synced dimensions cannot
-          // be staged because flip and shift must measure the resized box; those writes stay in
-          // the rollback journal above.
-          stagedStyles.availableInline = `${Math.max(0, finiteGeometry(availableWidth, 'place() available width'))}px`;
-          stagedStyles.availableBlock = `${Math.max(0, finiteGeometry(availableHeight, 'place() available height'))}px`;
+          // Consumers use these variables to constrain the popup. Write through the rollback
+          // journal now so size() can remeasure and reset coordinates before publishing them.
+          // Each axis has one sizing owner, avoiding conflicting base/auto-size reset loops.
+          if (autoSize !== 'horizontal' && autoSize !== 'both') {
+            styleTransaction.set(
+              elements.floating,
+              '--lr-positioner-available-inline-size',
+              `${Math.max(0, finiteGeometry(availableWidth, 'place() available width'))}px`,
+            );
+          }
+          if (autoSize !== 'vertical' && autoSize !== 'both') {
+            styleTransaction.set(
+              elements.floating,
+              '--lr-positioner-available-block-size',
+              `${Math.max(0, finiteGeometry(availableHeight, 'place() available height'))}px`,
+            );
+          }
         },
       }),
-      // Runs last so it overwrites the shared measurement above, and only on the axes it names.
+      // Owns only the requested axes; the shared measurement above handles the others.
       autoSize
         ? size({
             boundary: (opts.autoSizeBoundary ?? opts.boundary) as Boundary | undefined,
             padding: opts.autoSizePadding ?? 0,
-            apply({ availableWidth, availableHeight }) {
+            apply({ availableWidth, availableHeight, elements }) {
               if (!isCurrent()) return;
               if (autoSize === 'horizontal' || autoSize === 'both') {
-                stagedStyles.availableInline = `${Math.max(0, finiteGeometry(availableWidth, 'place() auto-size available width'))}px`;
+                styleTransaction.set(
+                  elements.floating,
+                  '--lr-positioner-available-inline-size',
+                  `${Math.max(0, finiteGeometry(availableWidth, 'place() auto-size available width'))}px`,
+                );
               }
               if (autoSize === 'vertical' || autoSize === 'both') {
-                stagedStyles.availableBlock = `${Math.max(0, finiteGeometry(availableHeight, 'place() auto-size available height'))}px`;
+                styleTransaction.set(
+                  elements.floating,
+                  '--lr-positioner-available-block-size',
+                  `${Math.max(0, finiteGeometry(availableHeight, 'place() auto-size available height'))}px`,
+                );
               }
             },
           })
@@ -745,7 +759,6 @@ function placeImpl(
     }
     const updateRun = placementSyncOwnership.beginUpdate(placementRun);
     const styleTransaction = createPlacementStyleTransaction();
-    const stagedStyles: StagedPlacementStyles = {};
     openStyleTransactions.add(styleTransaction);
     const rollback = () => {
       styleTransaction.rollback();
@@ -813,7 +826,7 @@ function placeImpl(
     void computePosition(anchor, popup, {
       strategy,
       placement: opts.placement ?? 'bottom-start',
-      middleware: middlewareFor(styleTransaction, stagedStyles, isCurrent),
+      middleware: middlewareFor(styleTransaction, isCurrent),
       // Use the same containing-block coordinates for middleware and the eventual inset writes.
       platform: placementPlatform,
     }).then(
@@ -870,20 +883,6 @@ function placeImpl(
           if (!isCurrent()) {
             rollback();
             return;
-          }
-          if (stagedStyles.availableInline !== undefined) {
-            styleTransaction.set(
-              popup,
-              '--lr-positioner-available-inline-size',
-              stagedStyles.availableInline,
-            );
-          }
-          if (stagedStyles.availableBlock !== undefined) {
-            styleTransaction.set(
-              popup,
-              '--lr-positioner-available-block-size',
-              stagedStyles.availableBlock,
-            );
           }
           styleTransaction.set(popup, 'left', `${finiteGeometry(x, 'place() resolved x')}px`);
           styleTransaction.set(popup, 'top', `${finiteGeometry(y, 'place() resolved y')}px`);

@@ -1,7 +1,8 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
 import './map.js';
 import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from './map.js';
-import { loadMapHashRuntime } from './map-feature-loader.js';
+import { loadMapControlRuntime, loadMapHashRuntime } from './map-feature-loader.js';
+import { MapControlsLifecycle } from './map-controls-lifecycle.js';
 
 class Control {
   readonly listeners = new Map<string, Set<(event: unknown) => void>>();
@@ -123,6 +124,36 @@ describe('lr-map controls and named URL ownership', () => {
     fixtureCleanup(); history.replaceState(originalState, '', originalUrl);
     Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: originalObserver });
     HTMLCanvasElement.prototype.getContext = originalContext;
+  });
+  it('keeps readiness pending until requested native controls finish installation', async () => {
+    await loadMapControlRuntime();
+    const { element, peer } = await mount(el => { el.controls = { attribution: false }; });
+    peer.idle = true; peer.fire('idle'); await element.whenIdle();
+    let release!: (constructor: typeof Control) => void;
+    const pending = new Promise<typeof Control>(resolve => { release = resolve; });
+    let requested = false;
+    // Delay only this instance's native constructor load, leaving readiness and lifecycle real.
+    (element as unknown as { controlLifecycle: MapControlsLifecycle }).controlLifecycle =
+      new MapControlsLifecycle(() => { requested = true; return pending; });
+    element.controls = { navigation: true, attribution: false };
+    await element.updateComplete;
+    await waitUntil(() => requested);
+    let resolved = false;
+    const idle = element.whenIdle().then(() => { resolved = true; });
+    peer.fire('idle');
+    try {
+      // Cross the microtask checkpoint where an untracked control load would publish idle.
+      await new Promise<void>(resolve => setTimeout(resolve, 0));
+      expect(peer.controls.size).to.equal(0);
+      expect(resolved).to.equal(false);
+      release(Control);
+      await idle;
+      expect(peer.controls.size).to.equal(1);
+      expect([...peer.controls][0] instanceof Control).to.equal(true);
+    } finally {
+      release(Control);
+      await idle;
+    }
   });
   it('keeps hash unset and default attribution singular without triggering location', async () => {
     history.replaceState({}, '', '#section&map=9/40/20');

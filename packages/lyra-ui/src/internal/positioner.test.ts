@@ -45,6 +45,45 @@ it('positions the popup relative to the anchor', async () => {
   stop();
 });
 
+for (const autoSize of [undefined, 'vertical', 'horizontal', 'both'] as const) {
+  it(`positions the CSS-constrained box before its first callback with autoSize ${String(autoSize)}`, async () => {
+    const wrap = await fixture(html`
+      <div>
+        <div id="anchor" style="position:fixed;top:150px;left:100px;width:50px;height:20px"></div>
+        <div id="popup" style="width:100px;height:300px;
+          max-height:var(--lr-positioner-available-block-size,300px)">pop</div>
+      </div>
+    `);
+    const anchor = wrap.querySelector<HTMLElement>('#anchor')!;
+    const popup = wrap.querySelector<HTMLElement>('#popup')!;
+    let first: { top: number; bottom: number; height: number } | undefined;
+    const stop = place(anchor, popup, {
+      placement: 'top-start',
+      flip: false,
+      shift: false,
+      padding: 8,
+      autoSize,
+      autoSizePadding: 12,
+      onPlaced() {
+        // Preserve the first publication; a later resize delivery cannot repair this evidence.
+        if (first) return;
+        const { top, bottom, height } = popup.getBoundingClientRect();
+        first = { top, bottom, height };
+      },
+    });
+    try {
+      const bounds = await waitFor(() => first, (value) => value !== undefined);
+      if (!bounds) throw new Error('The first placement did not publish geometry');
+      const expectedPadding = autoSize === 'vertical' || autoSize === 'both' ? 12 : 8;
+      expect(bounds.top).to.be.at.least(expectedPadding - 1);
+      expect(bounds.bottom).to.be.closeTo(anchor.getBoundingClientRect().top - 4, 1);
+      expect(bounds.height).to.be.lessThan(300);
+    } finally {
+      stop();
+    }
+  });
+}
+
 it('refreshes available space when the visual viewport changes', async () => {
   const wrap = await fixture(html`
     <div>
@@ -72,6 +111,45 @@ it('refreshes available space when the visual viewport changes', async () => {
   expect(p.style.getPropertyValue('--lr-positioner-available-block-size')).to.match(/^\d+(?:\.\d+)?px$/);
   stop();
 });
+
+for (const autoSize of [undefined, 'vertical', 'horizontal', 'both'] as const) {
+  it(`positions the width-constrained box before its first callback with autoSize ${String(autoSize)}`, async () => {
+    const wrap = await fixture(html`
+      <div>
+        <div id="anchor" style="position:fixed;top:100px;left:150px;width:20px;height:50px"></div>
+        <div id="popup" style="width:300px;height:100px;
+          max-width:var(--lr-positioner-available-inline-size,300px)">pop</div>
+      </div>
+    `);
+    const anchor = wrap.querySelector<HTMLElement>('#anchor')!;
+    const popup = wrap.querySelector<HTMLElement>('#popup')!;
+    let first: { left: number; right: number; width: number } | undefined;
+    const stop = place(anchor, popup, {
+      placement: 'left-start',
+      flip: false,
+      shift: false,
+      padding: 8,
+      autoSize,
+      autoSizePadding: 12,
+      onPlaced() {
+        // Preserve the first publication; a later resize delivery cannot repair this evidence.
+        if (first) return;
+        const { left, right, width } = popup.getBoundingClientRect();
+        first = { left, right, width };
+      },
+    });
+    try {
+      const bounds = await waitFor(() => first, (value) => value !== undefined);
+      if (!bounds) throw new Error('The first placement did not publish geometry');
+      const expectedPadding = autoSize === 'horizontal' || autoSize === 'both' ? 12 : 8;
+      expect(bounds.left).to.be.at.least(expectedPadding - 1);
+      expect(bounds.right).to.be.closeTo(anchor.getBoundingClientRect().left - 4, 1);
+      expect(bounds.width).to.be.lessThan(300);
+    } finally {
+      stop();
+    }
+  });
+}
 
 it('tracks visual viewport rect changes until its cleanup runs', async () => {
   const target = await fixture<HTMLElement>(html`<div style="inline-size: 80px; block-size: 30px"></div>`);
@@ -712,8 +790,10 @@ it('synchronously restores open middleware writes when placement is disposed', a
 
   expect(beforeStop?.width).to.deep.equal(['50px', '']);
   expect(beforeStop?.height).to.deep.equal(['20px', '']);
-  expect(beforeStop?.availableInline).to.deep.equal(sentinel.availableInline);
-  expect(beforeStop?.availableBlock).to.deep.equal(sentinel.availableBlock);
+  expect(beforeStop?.availableInline[0]).to.match(/^\d+(?:\.\d+)?px$/);
+  expect(beforeStop?.availableInline[1]).to.equal('');
+  expect(beforeStop?.availableBlock[0]).to.match(/^\d+(?:\.\d+)?px$/);
+  expect(beforeStop?.availableBlock[1]).to.equal('');
   expect(afterStop).to.deep.equal(sentinel);
 
   await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));

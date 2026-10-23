@@ -4627,7 +4627,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       this.setControlIssue('mapControlUnavailable');
       this.announcements.announceAssertive(this.localize('mapControlUnavailable'));
     });
-    void sync.then(() => { if (current()) this.syncPeerChromeParts(); });
+    this.trackFeatureLoad(sync.then(() => { if (current()) this.syncPeerChromeParts(); }));
   }
 
   /** Placement and close ownership, once a requested coordinate has loaded the anchor runtime. */

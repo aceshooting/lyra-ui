@@ -104,14 +104,15 @@ describe('lr-popover trigger modes', () => {
     const el = await build('trigger="hover"', '<button autofocus>Inside</button>');
     const outside = document.createElement('button');
     el.parentElement!.append(outside);
-    outside.focus();
+    await focusByKeyboard(outside);
+    expect(document.activeElement === outside).to.equal(true, 'outside owns focus before hover');
     enter(triggerOf(el));
     await waitUntil(() => el.open, 'hovering opens it');
     await settlePointer();
     expect(document.activeElement === outside).to.equal(true, 'focus stayed outside');
     leave(triggerOf(el));
     await waitUntil(() => !el.open, 'leaving closes it');
-    outside.focus();
+    await focusByKeyboard(outside);
     triggerOf(el).click();
     await waitUntil(
       () => el.contains(document.activeElement),

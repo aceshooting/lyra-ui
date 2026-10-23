@@ -107,14 +107,56 @@ describe('lr-video actual native panorama companion integration', function () {
       video.removeEventListener('seeking', onSeeking);
       draws.stop();
       // Context restoration is a separate explicit-redraw assertion after passive playback evidence.
+      const beforeSeek = draws.latest ? {
+        sequence: draws.latest.sequence, mediaTime: draws.latest.mediaTime, rgb: center(canvas, draws.latest.pixels)
+      } : undefined;
       video.pause(); await seekNative(video, 1.4);
       // WebKit can still hand WebGL the previous decoded frame briefly after a paused seek, so redraw
       // until the panorama shows the frame the video element presents.
       let expected = nativeSample(video, 0.5, 0.8);
-      await waitUntil(async () => {
-        expected = nativeSample(video, 0.5, 0.8);
-        return matches(center(canvas, await capture(el, canvas, () => redrawPanorama(el))), expected, 45);
-      }, 'The paused seek frame did not reach the panorama texture', { timeout: 3000 });
+      let lastActual: number[] = [];
+      let lastFrame: Uint8Array | undefined;
+      const firstExpected = expected;
+      let samples = 0;
+      try {
+        await waitUntil(async () => {
+          expected = nativeSample(video, 0.5, 0.8);
+          lastFrame = await capture(el, canvas, () => redrawPanorama(el));
+          lastActual = center(canvas, lastFrame);
+          samples++;
+          return matches(lastActual, expected, 45);
+        }, 'The paused seek frame did not reach the panorama texture', { timeout: 3000 });
+      } catch (error) {
+        // Read extra pixels only after failure, keeping the successful sampling path unchanged.
+        const neighborhood = (pixels: Uint8Array | Uint8ClampedArray, width: number, height: number, x: number, y: number): number[][] => {
+          const values: number[][] = [];
+          for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+            const xx = Math.max(0, Math.min(width - 1, x + dx));
+            const yy = Math.max(0, Math.min(height - 1, y + dy));
+            const offset = (yy * width + xx) * 4;
+            values.push(Array.from(pixels.slice(offset, offset + 3)));
+          }
+          return values;
+        };
+        let sourceNeighborhood: number[][] | undefined;
+        try {
+          sourceNeighborhood = neighborhood(nativePixels(video, video.videoWidth, video.videoHeight),
+            video.videoWidth, video.videoHeight, Math.floor(video.videoWidth * 0.5), Math.floor(video.videoHeight * 0.8));
+        } catch { /* A decoder read failure must not replace the original assertion. */ }
+        const diagnostic = {
+          samples, beforeSeek, firstExpected, expected, actual: lastActual, sourceNeighborhood,
+          sourceReadFailed: sourceNeighborhood === undefined,
+          framebufferNeighborhood: lastFrame ? neighborhood(lastFrame, canvas.width, canvas.height,
+            Math.floor(canvas.width / 2), Math.floor(canvas.height / 2)) : undefined,
+          videoWidth: video.videoWidth, videoHeight: video.videoHeight, canvasWidth: canvas.width, canvasHeight: canvas.height,
+          camera: { yaw: el.panoramaCamera.yaw, pitch: el.panoramaCamera.pitch, fieldOfView: el.panoramaCamera.fieldOfView },
+          currentTime: video.currentTime, duration: video.duration, readyState: video.readyState, networkState: video.networkState,
+          paused: video.paused, ended: video.ended, seeking: video.seeking, mediaError: video.error?.code,
+          visibility: document.visibilityState, contextLost: canvas.getContext('webgl2')?.isContextLost()
+        };
+        const message = error instanceof Error ? error.message.slice(0, 500) : 'Paused panorama sampling failed';
+        throw new Error(`${message}; panoramaFrame=${JSON.stringify(diagnostic)}`);
+      }
       expect(expected.some(channel => channel > 100)).to.equal(true);
       const restore = await loseContext(el, canvas); await restore(); await ready(el);
       const after = center(canvas, await capture(el, canvas, () => redrawPanorama(el)));
