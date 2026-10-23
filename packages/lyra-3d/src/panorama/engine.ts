@@ -13,7 +13,12 @@ interface Admitted { input: PanoramaData; media: PanoramaMedia; angles: Float32A
 /** Uses native video uploads; watchPanoramaVideo exclusively owns frame observation. */
 class ObservedVideoTexture extends Texture {
   readonly isVideoTexture = true;
-  update(): void { /* The owned watcher marks decoded frames dirty, including paused seeks. */ }
+  update(): void {
+    const video = this.image as HTMLVideoElement;
+    // A paused seek can become uploadable after its last presentation notification.
+    // Refresh on an already requested render without scheduling stationary playback.
+    if (video.paused && video.readyState >= 2 && !video.seeking) this.needsUpdate = true;
+  }
 }
 function admit(input: PanoramaData, inspect: typeof inspectPanoramaMedia, probe: typeof probePanoramaMedia): Admitted {
   const angles = input.hotspotAngles ?? new Float32Array();

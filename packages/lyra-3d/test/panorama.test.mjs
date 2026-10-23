@@ -74,13 +74,33 @@ test('native video textures use video upload without owning dimensions or frame 
   assert.equal(texture.image, video); assert.equal(texture.isVideoTexture, true);
   assert.equal(material.defines.PANORAMA_VIDEO, 1);
   const version = texture.version;
-  texture.update(); assert.equal(texture.version, version); assert.equal(video.frames.size, 0);
+  texture.update(); assert.ok(texture.version > version); assert.equal(video.frames.size, 0, 'a renderer refresh never schedules stationary playback');
+  const beforeSeek = texture.version;
   video.dispatchEvent(new Event('seeked'));
-  assert.ok(texture.version > version); assert.equal(video.frames.size, 1, 'one request for the frame the seek presents');
+  assert.ok(texture.version > beforeSeek); assert.equal(video.frames.size, 1, 'one request for the frame the seek presents');
   const seeked = texture.version; const [[id, presented]] = video.frames; video.frames.delete(id); presented();
   assert.ok(texture.version > seeked); assert.equal(video.frames.size, 0, 'a paused video never starts a frame loop');
   assert.equal(video.width, 0); assert.equal(video.height, 0); assert.equal(video.paused, true);
   engine.dispose(); assert.equal(video.frames.size, 0); assert.equal(video.paused, true);
+});
+
+test('renderer-requested paused video uploads stay fresh without owning playback or new frames', async () => {
+  const { engine, viewport, host } = harness();
+  const video = new Video(); video.ownerDocument = new OwnerDocument(); video.paused = true;
+  video.currentTime = 1.4; video.seeking = false;
+  engine.setData({ source: { kind: 'video', video } }, 0);
+  await engine.mount({}, host);
+  const texture = viewport.scene.children[0].material.uniforms.panorama.value;
+  const playback = video.currentTime;
+  let version = texture.version;
+  // This is the renderer hook: repeated requested paints must retry a late-uploadable paused image.
+  texture.update(); assert.ok(texture.version > version); version = texture.version;
+  texture.update(); assert.ok(texture.version > version); version = texture.version;
+  assert.equal(video.frames.size, 0); assert.equal(video.paused, true); assert.equal(video.currentTime, playback);
+  video.seeking = true; texture.update(); assert.equal(texture.version, version);
+  video.seeking = false; video.readyState = 1; texture.update(); assert.equal(texture.version, version);
+  video.readyState = 2; video.paused = false; texture.update(); assert.equal(texture.version, version, 'playing uploads remain owned by frame observation');
+  engine.dispose();
 });
 
 test('video scheduling cancels on pause/hidden/dispose and ignores retired frame callbacks', () => {
