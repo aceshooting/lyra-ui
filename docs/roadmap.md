@@ -19,28 +19,33 @@ still open.
   the optional `@aceshooting/lyra-3d` companion, [map adoption](roadmap/map-adoption.md) for
   `lr-map` and lyra-map 1.3.0, and [immutable identity collections](roadmap/immutable-collections.md); plus
   [test health](roadmap/test-health.md) (coverage, speed, flakiness).
+- **After 30.0.0:** [geospatial scenes and synchronized playback](roadmap/geospatial-scenes.md).
+  Planned and unstarted; outside the 30.0.0 release gate, with no assigned version or date.
 - **Rationale for the style-axis, token and migration designs:** the [RFCs](rfcs/).
 
 ## 30.0.0 preparation checkpoint
 
-As of 2026-10-22 evening, main carries the immutable identity collections, the map adoption work with
-lr-map's optional features loaded on demand, the opt-in WebGL views (graph, knowledge-graph explorer,
-embedding explorer, image and video panoramas), `lr-chart-3d`, full line coverage of every companion
-package, and the oxlint, dependency-cruiser, fast-check, Stryker and Quality tools gates. The release
-remains unpublished. Real-GPU measurements meet the point targets (100k and 1M points at 60 fps); the
-graph target (10k nodes and 30k edges at 60 fps) is not met yet. The remaining work, in order:
+As of 2026-10-23, main carries the immutable identity collections, map adoption through the
+image-catalog and interaction/drawing work, opt-in WebGL views and `lr-chart-3d`,
+`lr-model-viewer`, GPU-side graph projection, deprecated-API removal with migration support,
+repository hygiene and Lit template checks, and the Quality tools gates. The release remains
+unpublished. Recorded real-GPU measurements meet the point targets (100k and 1M points at 60 fps)
+and the graph target (10k nodes and 30k edges at 60 fps) on the measured hardware. Live-map
+changes, the document-engine upgrade and highlighter asset mitigation are in progress; source
+integration does not establish release qualification. The remaining work, in order:
 
-1. Integrate the prepared work: the supply-chain and spelling checks with Lit template linting,
-   `lr-model-viewer`, GPU-side graph projection, the removal of every deprecated API with migration
-   rewrites, and the map release-gate items below.
-2. Close the map release gate ([map adoption](roadmap/map-adoption.md)): large styled GeoJSON,
-   zoom limits, hash compatibility, image capacity, then the interaction, theming, geolocation,
-   drawing, pointer and basemap items, the remaining items, documentation and application prototypes.
-3. Speed up CI and report per-package coverage; reduce bundle size where code can load on demand;
-   upgrade all dependencies.
-4. Review the complete 30.0.0 change set, close every finding and verify every roadmap item against
-   its tests, stories and documentation; then prepare versions and budgets and pass all browser,
-   full-engine, Quality tools and exact-commit release gates.
+1. Complete and qualify the map release gate ([map adoption](roadmap/map-adoption.md)):
+   live image/canvas updates and transactional layer changes, module composition, control order and
+   linked attribution, GeoJSON row ordering and zoom ranges, vector styling, migration documentation
+   and application prototypes. In-progress work is not evidence of completed qualification.
+2. Complete and qualify the dependency refresh, document-engine upgrade and unused highlighter
+   asset mitigation. Close remaining test and tooling findings, including the existing video hover
+   quarantine; complete CI timing and per-package coverage reporting and reduce delivery cost
+   where supported.
+3. Review the complete 30.0.0 change set, close every finding and verify every roadmap item against
+   its source, tests, stories and documentation. Configure first-publication access for the new
+   companion, prepare versions and budgets, and pass all browser, full-engine, Quality tools and
+   exact-commit release gates.
 
 ## Shipped
 
@@ -193,3 +198,11 @@ packages version independently. A target moves only when scope changes, never to
 5. **Additional full catalogs (last):** `sk`, `bg`, `lt`, `lv`, `et`, `ca`, `ga`, `mt`, Serbian
    Cyrillic and Latin (script-aware coverage), about 1,600 messages each, in minor releases;
    Luxembourgish (`lb`) only when a reviewer and application demand exist.
+
+## After 30.0.0: geospatial scenes
+
+The [geospatial scenes plan](roadmap/geospatial-scenes.md) builds on the existing globe and terrain
+engine support and `lr-sequence-playback`. P1 covers typed globe/terrain settings and controls,
+altitude-aware geometry and models, and a shared simulation clock. P2 covers custom 3D layers,
+camera tours and tracking, and a generic network-monitoring showcase. All six items are planned
+and unstarted, with no assigned release version or date; none blocks 30.0.0.
