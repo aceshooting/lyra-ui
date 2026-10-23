@@ -83,6 +83,9 @@ describe('lr-video actual native panorama companion integration', function () {
     el.engine = 'webgl'; el.projection = 'equirectangular'; const canvas = await ready(el);
     expect(getComputedStyle(video).opacity).to.equal('0');
     const draws = observeNativeDraws(canvas, video);
+    let unsolicitedSeeks = 0;
+    const onSeeking = () => { unsolicitedSeeks += 1; };
+    video.addEventListener('seeking', onSeeking);
     try {
       await video.play();
       await waitUntil(() => !!draws.latest && draws.latest.mediaTime > 0.35,
@@ -100,6 +103,8 @@ describe('lr-video actual native panorama companion integration', function () {
         }
       }
       expect(transitions).to.be.at.least(2); expect(video.currentTime).to.be.greaterThan(1);
+      expect(unsolicitedSeeks, 'normal playback must not seek').to.equal(0);
+      video.removeEventListener('seeking', onSeeking);
       draws.stop();
       // Context restoration is a separate explicit-redraw assertion after passive playback evidence.
       video.pause(); await seekNative(video, 1.4);
@@ -116,6 +121,6 @@ describe('lr-video actual native panorama companion integration', function () {
       expect(matches(after, expected, 45)).to.equal(true);
       expect(el.getVideoElement() === video).to.equal(true); expect(video.paused).to.equal(true);
       expect(Math.abs(video.currentTime - 1.4) < 0.01).to.equal(true);
-    } finally { draws.stop(); video.pause(); }
+    } finally { video.removeEventListener('seeking', onSeeking); draws.stop(); video.pause(); }
   });
 });

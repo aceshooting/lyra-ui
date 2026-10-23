@@ -590,27 +590,126 @@ describe('lr-video public contract', () => {
     }
   });
 
-  it('mirrors native playback into currentTime without seeking the media element', async () => {
+  it('mirrors advancing native playback without turning snapshots into seeks', async () => {
     const el = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
     const media = nativeVideo(el);
     let position = 0;
-    let writes = 0;
+    const writes: number[] = [];
+    const descriptor = Object.getOwnPropertyDescriptor(media, 'currentTime');
     Object.defineProperty(media, 'currentTime', {
       configurable: true,
       get: () => position,
-      set: (value: number) => { writes += 1; position = value; },
+      set: (value: number) => { writes.push(value); position = value; },
     });
-    for (const type of ['timeupdate', 'seeked', 'durationchange']) {
-      position += 1;
-      media.dispatchEvent(new Event(type));
-      await el.updateComplete;
+    try {
+      for (const [index, type] of ['timeupdate', 'seeked', 'durationchange', 'loadedmetadata'].entries()) {
+        const snapshot = index + 1;
+        position = snapshot;
+        media.dispatchEvent(new Event(type));
+        // Native playback continues before Lit processes the mirrored snapshot.
+        position += 0.125;
+        await el.updateComplete;
+        expect(el.currentTime, type).to.equal(snapshot);
+        expect(position, `${type} must preserve native progress`).to.equal(snapshot + 0.125);
+        expect(writes, `${type} must not seek`).to.deep.equal([]);
+      }
+    } finally {
+      restoreOwnProperty(media, 'currentTime', descriptor);
     }
-    expect(el.currentTime).to.equal(3);
-    expect(writes).to.equal(0);
-    el.currentTime = 9;
-    await el.updateComplete;
-    expect(position).to.equal(9);
-    expect(writes).to.equal(1);
+  });
+
+  it('does not replay a stale native snapshot over a later direct native seek', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
+    const media = nativeVideo(el);
+    let position = 3;
+    const writes: number[] = [];
+    const descriptor = Object.getOwnPropertyDescriptor(media, 'currentTime');
+    Object.defineProperty(media, 'currentTime', {
+      configurable: true,
+      get: () => position,
+      set: (value: number) => { writes.push(value); position = value; },
+    });
+    try {
+      expect(media.paused).to.be.true;
+      media.dispatchEvent(new Event('timeupdate'));
+      // Direct native seeks need not deliver their next event before Lit flushes.
+      media.currentTime = 7;
+      await el.updateComplete;
+      expect(position).to.equal(7);
+      expect(writes).to.deep.equal([7]);
+      media.dispatchEvent(new Event('seeked'));
+      await el.updateComplete;
+      expect(el.currentTime).to.equal(7);
+      expect(writes).to.deep.equal([7]);
+    } finally {
+      restoreOwnProperty(media, 'currentTime', descriptor);
+    }
+  });
+
+  it('preserves same-batch authored time overrides, including the native snapshot value', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
+    const media = nativeVideo(el);
+    let position = 0;
+    const writes: number[] = [];
+    const descriptor = Object.getOwnPropertyDescriptor(media, 'currentTime');
+    Object.defineProperty(media, 'currentTime', {
+      configurable: true,
+      get: () => position,
+      set: (value: number) => { writes.push(value); position = value; },
+    });
+    try {
+      for (const kind of ['property', 'attribute', 'same-value']) {
+        position = 3;
+        media.dispatchEvent(new Event('timeupdate'));
+        position = 3.125;
+        const target = kind === 'same-value' ? 3 : kind === 'attribute' ? 8 : 9;
+        if (kind === 'attribute') el.setAttribute('currenttime', String(target));
+        else el.currentTime = target;
+        await el.updateComplete;
+        expect(position, kind).to.equal(target);
+        expect(writes.splice(0), kind).to.deep.equal([target]);
+      }
+    } finally {
+      restoreOwnProperty(media, 'currentTime', descriptor);
+    }
+  });
+
+  it('applies API seeks once while native playback advances, preserving clamping and the host event', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
+    const media = nativeVideo(el);
+    let position = 0;
+    const writes: number[] = [];
+    const timeDescriptor = Object.getOwnPropertyDescriptor(media, 'currentTime');
+    const durationDescriptor = Object.getOwnPropertyDescriptor(media, 'duration');
+    Object.defineProperty(media, 'currentTime', {
+      configurable: true,
+      get: () => position,
+      set: (value: number) => { writes.push(value); position = value; },
+    });
+    Object.defineProperty(media, 'duration', { configurable: true, get: () => 12 });
+    let events = 0;
+    const onTimeupdate = () => { events += 1; };
+    el.addEventListener('timeupdate', onTimeupdate);
+    try {
+      for (const [requested, target] of [[5, 5], [-1, 0], [100, 12], [Number.NaN, 0]] as const) {
+        el.seek(requested);
+        expect(writes.splice(0)).to.deep.equal([target]);
+        expect(events).to.equal(1);
+        position = target + 0.125;
+        await el.updateComplete;
+        expect(position).to.equal(target + 0.125);
+        expect(writes).to.deep.equal([]);
+        media.dispatchEvent(new Event('timeupdate'));
+        media.dispatchEvent(new Event('seeked'));
+        await el.updateComplete;
+        expect(events, 'native seek completion must not duplicate the host event').to.equal(1);
+        events = 0;
+      }
+    } finally {
+      el.removeEventListener('timeupdate', onTimeupdate);
+      restoreOwnProperty(media, 'currentTime', timeDescriptor);
+      restoreOwnProperty(media, 'duration', durationDescriptor);
+    }
   });
 
   it('keeps playing read-only: the media drives it, a write throws and an authored attribute starts nothing', async () => {

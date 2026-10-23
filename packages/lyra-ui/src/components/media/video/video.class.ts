@@ -353,7 +353,13 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   }
   private get panoramaEnabled(): boolean { return this.projection === 'equirectangular' && this.engine === 'webgl'; }
 
+  private synchronizingCurrentTime = false;
+  private currentTimeFromMedia = false;
+
   override requestUpdate(name?: PropertyKey, oldValue?: unknown, options?: Parameters<LyraElement['requestUpdate']>[2]): void {
+    // Lit calls requestUpdate even for same-value assignments: an author can override a
+    // pending native snapshot with that exact value and still request a seek.
+    if (name === 'currentTime') this.currentTimeFromMedia = this.synchronizingCurrentTime;
     if (name === 'src' && this.panorama && !Object.is(this.src, oldValue)) { this.panoramaVideoReady = false; this.panoramaRevision++; this.panorama.invalidate(); }
     super.requestUpdate(name, oldValue, options);
   }
@@ -552,7 +558,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     if (changed.has('muted')) this.mediaController.muted = this.muted;
     if (changed.has('autoplayMuted') && this.autoplayMuted) this.forceAutoplayMuted();
 
-    if (changed.has('currentTime')) {
+    if (changed.has('currentTime') && !this.currentTimeFromMedia) {
       const max = this.mediaController.duration > 0
         ? this.mediaController.duration
         : Number.POSITIVE_INFINITY;
@@ -710,12 +716,23 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
       : Number.POSITIVE_INFINITY;
     const next = finiteRange(time, 0, 0, max);
     this.mediaController.currentTime = next;
-    this.currentTime = this.mediaController.currentTime;
+    this.synchronizeCurrentTime();
     // The real native 'timeupdate' the HTML seeking algorithm queues once this seek actually
     // completes is suppressed by `pendingNativeEcho.timeupdate` (see onNativeMediaEvent()) so a
     // caller only ever sees this one synchronous, immediate event per seek() call.
     this.pendingNativeEcho.timeupdate = true;
     this.dispatchHostTimeupdate();
+  }
+
+  private synchronizeCurrentTime(): void {
+    // Playback can advance between a native event and the reactive update. Mirroring that
+    // snapshot must never write it back to the media element as a new seek.
+    this.synchronizingCurrentTime = true;
+    try {
+      this.currentTime = this.mediaController.currentTime;
+    } finally {
+      this.synchronizingCurrentTime = false;
+    }
   }
 
   private dispatchHostTimeupdate(): void {
@@ -791,7 +808,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
       case 'loadedmetadata':
       case 'durationchange':
         this.duration = this.mediaController.duration;
-        this.currentTime = this.mediaController.currentTime;
+        this.synchronizeCurrentTime();
         this.bindCaptionTracks();
         break;
       case 'play':
@@ -808,7 +825,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
         this.currentTime = 0;
         break;
       case 'timeupdate':
-        this.currentTime = this.mediaController.currentTime;
+        this.synchronizeCurrentTime();
         // Consume a pending seek()'s own echo instead of relaying this real native event too --
         // see seek()/the mediaController construction above. A 'timeupdate' arriving with nothing
         // pending is a genuine, externally-driven update and is relayed as usual.
@@ -816,7 +833,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
         else this.dispatchHostTimeupdate();
         break;
       case 'seeked':
-        this.currentTime = this.mediaController.currentTime;
+        this.synchronizeCurrentTime();
         // The HTML seeking algorithm always queues 'timeupdate' before 'seeked' for the same
         // completed seek, so 'seeked' arriving is this seek's final confirmation -- clear any
         // still-pending echo guard rather than leaving it armed indefinitely (e.g. a seek issued

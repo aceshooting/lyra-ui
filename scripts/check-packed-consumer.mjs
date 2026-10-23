@@ -153,19 +153,18 @@ const optionalPeerFamilyTags = componentInventory.components
 // tags. Imperative helpers register the exact elements they need only when the helper is invoked.
 const rootHelperRegisteredTags = [];
 
-// Packed core/all.js measures 5,614,630 non-asset raw bytes plus one required
-// 466,610-byte Oniguruma binary across 58 files, after the 30.0.0 optional WebGL views and the
-// lr-map owned resources, interactions, drawing, lazy feature loading, lr-chart-3d and lr-model-viewer.
-// The non-asset ceiling is 5,614,690 bytes with 60 bytes of headroom; the total derives from
-// that ceiling plus the exact binary
-// allowance, yielding 6,081,300 bytes. The prior non-asset measurement was 5,596,366 bytes.
+// Packed core/all.js measures 5,614,871 non-asset raw bytes plus one required
+// 466,610-byte Oniguruma binary across 58 files. Native video time synchronization adds
+// 241 bytes to the prior non-asset measurement of 5,614,630 bytes.
+// The non-asset ceiling is 5,614,931 bytes with 60 bytes of headroom; the total derives from
+// that ceiling plus the exact binary allowance, yielding 6,081,541 bytes.
 // The binary allowance requires one emitted asset identical to the installed package;
 // it cannot fund non-asset growth. Peer exclusions and the complete file sum stay fixed.
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/7859878f724ef4237ee93a5414fa6b54f204313a/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'The bounded model viewer and shared document renderer contracts measure 5,614,630 non-asset raw bytes; the core ceiling retains exactly 60 bytes of regression headroom and the separate exact binary allowance.',
-  reviewedCoreMeasurementBytes: 5_614_630,
+  $comment: 'Preventing native video progress from causing seeks measures 5,614,871 non-asset raw bytes; the core ceiling retains exactly 60 bytes of regression headroom and the separate exact binary allowance.',
+  reviewedCoreMeasurementBytes: 5_614_871,
   reviewedRequiredShikiAssetBytes: 466_610,
   selectedRegressionHeadroomBytes: 60,
 };
