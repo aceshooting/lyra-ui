@@ -1,5 +1,6 @@
 import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
-import { safeValue, MAX_NODES, MAX_TEXT, type LyraMapStyleValue } from './map-style-override-admission.js';
+import { safeValue, MAX_NODES, MAX_TEXT } from './map-style-value.js';
+import type { LyraMapStyleValue } from './map-style-override-admission.js';
 
 /** Finite vector paint vocabulary; row opacity remains owned by the data layer. */
 export type LyraMapVectorPaintProperty = 'line-color' | 'line-width' | 'circle-color' | 'circle-radius' | 'circle-stroke-color' | 'circle-stroke-width' | 'fill-color' | 'fill-outline-color' | 'icon-color' | 'icon-halo-color' | 'icon-halo-width' | 'text-color' | 'text-halo-color' | 'text-halo-width';

@@ -126,7 +126,7 @@ import type { MapOwnedOverlaySnapshot, LyraMapOverlaySource, LyraMapOverlayLayer
 import type { LyraMapImage } from './map-image-admission.js';
 import type { LyraMapImageProvider } from './map-image-provider.js';
 export type { LyraMapImageProvider } from './map-image-provider.js';
-import { planMapLayerOrder, type MapLayerOrderGroup } from './map-layer-order.js';
+import type { MapLayerOrderGroup } from './map-layer-order.js';
 import { projectMapDataLayerModel, projectMapRowPlacement, projectMapLabelOptions, buildMapLabelLayer, buildMapExternalLayers,
   type CanonicalMapExternalLayer, type CanonicalMapLabel, type LyraMapExternalDataLayer, type LyraMapLabelOptions } from './map-data-layer-model.js';
 export type { LyraMapVectorPaintProperty, LyraMapVectorLayoutProperty, LyraMapVectorStyleExpression,
@@ -6411,7 +6411,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private dataLayerOrderGroups(owned: MapOwnedOverlaySnapshot, external: ReturnType<typeof buildMapExternalLayers>, identities: MapLayerIdentityDraft): readonly MapLayerOrderGroup[] {
     const groups: MapLayerOrderGroup[] = [];
     for (const row of this.canonicalDataLayers) {
-      const native = this.resolveDataLayerSourceId(row.sourceId, identities);
+      const native = this.resolveDataLayerSourceId(row, identities);
       const suffixes = row.kind === 'heatmap' ? ['-heatmap'] : row.cluster
         ? ['-cluster', ...(this.styleProvidesGlyphs() ? ['-cluster-count'] : []), '-circle'] : ['-fill', '-line', '-circle'];
       if (row.kind !== 'heatmap' && row.point?.iconField && row.point.icons.length) suffixes.push('-point-icon');
@@ -6440,7 +6440,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (!current()) return;
     const present = new Set(original);
     const active = groups.map(group => ({ ...group, layerIds: group.layerIds.filter(id => present.has(id)) })).filter(group => group.layerIds.length);
-    const plan = planMapLayerOrder(original, active);
+    const runtime = loadMapOwnedFeatureRuntime.loaded;
+    if (!runtime) throw new Error('Map layer order is unavailable.');
+    const plan = runtime.planMapLayerOrder(original, active);
     if (!plan.valid || plan.operations.some(operation => operation.kind !== 'move') || plan.operations.length && !map.moveLayer) {
       throw new Error('Map layer order is unavailable.');
     }
@@ -6626,7 +6628,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       // Allocate namespaces only in this transaction; rejected proposals cannot retarget accepted state.
       const reserved = new Set([...owned.sources.map(source => source.id), ...owned.layers.map(entry => entry.layer.id)]);
       for (const row of this.canonicalDataLayers) {
-        const id = this.resolveDataLayerSourceId(row.sourceId, identities);
+        const id = this.resolveDataLayerSourceId(row, identities);
         if (reserved.has(id) || DATA_LAYER_SUFFIXES.some(suffix => reserved.has(`${id}${suffix}`))) throw new Error('Map resource identity conflicts.');
       }
       externalInput = this.externalLayerInput(owned, identities);
@@ -6634,9 +6636,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       retainGroupOrder = this.canonicalDataLayers.some(row => row.before !== undefined) ||
         this._canonicalExternalLayers.some(row => row.before !== undefined) || owned.layers.some(row => row.before !== undefined);
       if (this.groupOrderActive || retainGroupOrder) {
-        if (typeof map.getStyle !== 'function' || typeof map.moveLayer !== 'function') throw new Error('Map layer order is unavailable.');
+        if (!runtime || typeof map.getStyle !== 'function' || typeof map.moveLayer !== 'function') throw new Error('Map layer order is unavailable.');
         orderGroups = this.dataLayerOrderGroups(owned, externalInput, identities);
-        const planned = planMapLayerOrder(this.nativeLayerOrder(map), orderGroups);
+        const planned = runtime.planMapLayerOrder(this.nativeLayerOrder(map), orderGroups);
         if (!planned.valid) throw new Error('Map layer order is invalid.');
         if (planned.diagnostics.some(issue => issue.code === 'missing-anchor')) devWarnOnce('lyra-map-missing-layer-anchor', `<${this.localName}>: a missing layer anchor appends its group.`);
         if (!current()) { finish(); return; }
@@ -6720,7 +6722,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       // ownership runtime, loaded once on demand inside this same feature transaction.
       const runtime = loadMapOwnedFeatureRuntime.loaded;
       if (runtime) begin(runtime.snapshotMapOwnedFeatureInput({ overlays, images, styleOverrides }));
-      else if (!this._canonicalExternalLayers.length && !ownedFeaturesRequested(overlays, images, styleOverrides) && !projectMapBasemapInteractions(interactiveBasemapLayers)?.length) begin(NO_OWNED_FEATURES);
+      else if (!this._canonicalExternalLayers.length && !this.groupOrderActive && !geojson.some(layer => layer.before !== undefined) &&
+        !ownedFeaturesRequested(overlays, images, styleOverrides) && !projectMapBasemapInteractions(interactiveBasemapLayers)?.length) begin(NO_OWNED_FEATURES);
       else void loadMapOwnedFeatureRuntime().then(loaded => {
         if (current() && !controller.signal.aborted) begin(loaded.snapshotMapOwnedFeatureInput({ overlays, images, styleOverrides }));
       }).catch(fail);
@@ -6941,8 +6944,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       // A source's cluster options cannot be mutated after `addSource()`, and a kind change swaps
       // the whole layer set, so a changed shape tears this entry down and rebuilds it (see
       // `_appliedDataLayerShapes`). Every other update still reuses its source and layers.
+      const sourceId = this.resolveDataLayerSourceId(layer);
       if (appliedShape !== undefined && appliedShape !== shape) this.removeDataLayer(publicSourceId);
-      const sourceId = this.resolveDataLayerSourceId(publicSourceId);
       warnOnUntileableProperties(geojsonProjection, publicSourceId);
       const cluster = layer.cluster;
       const existingSource = this._map.getSource(sourceId) as MapLibreGeoJsonSource | undefined;
@@ -7608,10 +7611,16 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   /** Allocates a private source/layer namespace that cannot overwrite base-style resources. */
-  private resolveDataLayerSourceId(publicSourceId: string, identities?: MapLayerIdentityDraft): string {
+  private resolveDataLayerSourceId(layer: CanonicalMapDataLayer, identities?: MapLayerIdentityDraft): string {
+    const publicSourceId = layer.sourceId;
     const planned = identities?.geojson ?? this.plannedDataLayerIds;
-    const applied = this._appliedDataLayerIds.get(publicSourceId) ?? planned.get(publicSourceId);
-    if (applied) return applied;
+    const applied = this._appliedDataLayerIds.get(publicSourceId);
+    const pending = planned.get(publicSourceId);
+    const appliedShape = this._appliedDataLayerShapes.get(publicSourceId);
+    const changedShape = appliedShape !== undefined && appliedShape !== dataLayerShape(layer);
+    // Reserve the replacement before ordering/preparation; never reuse a retired worker identity.
+    const retained = changedShape ? (pending !== applied ? pending : undefined) : applied ?? pending;
+    if (retained) return retained;
     let sourceId: string;
     do {
       sourceId = `lr-data-layer-${identities ? identities.nextGeojson++ : this._nextDataLayerId++}`;
@@ -7640,6 +7649,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     }
     if (this._map.getSource(sourceId)) this._map.removeSource(sourceId);
     this._appliedDataLayerIds.delete(publicSourceId);
+    if (this.plannedDataLayerIds.get(publicSourceId) === sourceId) this.plannedDataLayerIds.delete(publicSourceId);
     this._appliedDataLayerShapes.delete(publicSourceId);
     this._appliedGeoJson.delete(sourceId);
     this.appliedLayerPaintKeys.delete(sourceId);

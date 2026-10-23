@@ -6619,6 +6619,32 @@ describe('dataLayers clustering and heatmap', () => {
     expect(sources.get(secondId)!['clusterRadius']).to.equal(30);
   });
 
+  it('keeps compatible cluster updates stable and never reuses a removed row identity', async () => {
+    const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
+    const { sources, layers } = stubMaplibreMap(el);
+    el.dataLayers = entry({ cluster: { radius: 30 } });
+    await el.updateComplete;
+    const firstId = dataLayerResourceId(el, 'pins');
+    el.dataLayers = entry({ cluster: { radius: 30 }, color: '#123456' });
+    await el.updateComplete;
+    expect(dataLayerResourceId(el, 'pins')).to.equal(firstId);
+    el.dataLayers = entry({ cluster: { radius: 60 } });
+    await el.updateComplete;
+    const secondId = dataLayerResourceId(el, 'pins');
+    expect(secondId === firstId).to.equal(false);
+    expect(sources.has(firstId)).to.equal(false);
+    expect(suffixes(layers, firstId)).to.deep.equal([]);
+    expect(sources.get(secondId)!['clusterRadius']).to.equal(60);
+    el.dataLayers = [];
+    await el.updateComplete;
+    expect(sources.has(secondId)).to.equal(false);
+    el.dataLayers = entry({ cluster: { radius: 60 } });
+    await el.updateComplete;
+    const thirdId = dataLayerResourceId(el, 'pins');
+    expect([firstId, secondId].includes(thirdId)).to.equal(false);
+    expect(sources.get(thirdId)!['clusterRadius']).to.equal(60);
+  });
+
   it('repaints heatmap and cluster layers on a theme change without touching layers they never created', async () => {
     const el = (await fixture(html`<lr-map engine="maplibre"></lr-map>`)) as LyraMap;
     const { layers } = stubMaplibreMap(el);

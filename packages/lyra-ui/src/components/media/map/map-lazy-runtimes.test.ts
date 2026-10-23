@@ -253,6 +253,24 @@ describe('lr-map on-demand runtimes', () => {
     peer.zoom = 5; peer.fire('moveend', { originalEvent: {} }); expect(location.hash).to.equal('#map=9/40/20');
   });
 
+  it('loads layer ordering before GeoJSON placement mutates native resources', async () => {
+    const gate = hold(loadMapOwnedFeatureRuntime, ownedRuntime);
+    const { element, peer } = await mountWithBasemap(el => {
+      el.dataLayers = [{ sourceId: 'points', before: 'water', geojson: { type: 'FeatureCollection', features: [] } }];
+    }, peer => {
+      Object.assign(peer, { setLayerZoomRange: (id: string, minzoom: number, maxzoom: number) => {
+        const layer = peer.layers.get(id); if (layer) Object.assign(layer, { minzoom, maxzoom });
+      } });
+    });
+    let ready = false; void element.whenStyleReady().then(() => { ready = true; }, () => undefined);
+    await waitUntil(() => gate.imports === 1); await tick();
+    expect(ready).to.equal(false); expect(peer.sources.size).to.equal(0);
+    gate.release(); await waitUntil(() => ready);
+    expect(peer.sources.size).to.equal(1);
+    expect(peer.order.indexOf('water')).to.equal(peer.order.length - 1);
+    expect(gate.imports).to.equal(1);
+  });
+
   it('restores overlays through the on-demand ownership runtime before style readiness settles', async () => {
     const gate = hold(loadMapOwnedFeatureRuntime, ownedRuntime);
     const { element, peer } = await mount(el => { el.overlays = overlay; });

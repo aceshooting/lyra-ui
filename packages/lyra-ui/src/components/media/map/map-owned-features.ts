@@ -1,3 +1,4 @@
+export { planMapLayerOrder } from './map-layer-order.js';
 export { MapExternalSourceEffects } from './map-external-source-effects.js';
 import { getInheritedPropertyDescriptor, getOwnDataDescriptor, isPlainDataRecord } from '../../../internal/data-descriptors.js';
 import { loadMapImageRuntime, loadMapStyleOverrideRuntime } from './map-resource-feature-loaders.js';

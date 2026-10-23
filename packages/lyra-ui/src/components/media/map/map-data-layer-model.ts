@@ -1,7 +1,5 @@
 import { projectMapVectorStyle, resolveMapVectorStyle, type CanonicalMapVectorStyle,
   type LyraMapVectorPaint, type LyraMapVectorLayout, type LyraMapVectorStyleExpression } from './map-vector-style.js';
-export type { LyraMapVectorPaintProperty, LyraMapVectorLayoutProperty, LyraMapVectorStyleExpression,
-  LyraMapVectorNumericValue, LyraMapVectorColorValue, LyraMapVectorPaint, LyraMapVectorLayout } from './map-vector-style.js';
 import { projectMapLocalImageUrl } from './map-local-image-url.js';
 import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR, readOwnArrayLength, UNSAFE_OWN_DATA_DESCRIPTOR, type OwnDataDescriptorResult } from '../../../internal/data-descriptors.js';
 import { projectMapInteractionOptions, type LyraMapInteractionOptions, type CanonicalMapInteraction } from './map-interaction-options.js';

@@ -20,11 +20,12 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   statSync,
   writeFileSync,
 } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import libCoverage from 'istanbul-lib-coverage';
 import libReport from 'istanbul-lib-report';
@@ -332,18 +333,67 @@ function loadShardCoverage(coverageDirectory, shardIndex) {
   }
 }
 
-function mergeCoverageMap(coverageDirectory, indices) {
+function isCanonicalCoveragePath(value) {
+  return typeof value === 'string' && isAbsolute(value) && !/[\0\\]/u.test(value) &&
+    resolve(value) === value;
+}
+
+function insideCoverageRoot(root, file) {
+  const suffix = relative(root, file);
+  return suffix !== '' && suffix !== '..' && !suffix.startsWith(`..${sep}`) && !isAbsolute(suffix);
+}
+
+/** Rebase only an explicitly declared checkout root before Istanbul serializes relative SF paths. */
+export function relocateCoverageSources(
+  coverage,
+  { sourceRepositoryRoot, repositoryRoot = resolve(packageDir, '../..') },
+) {
+  for (const root of [sourceRepositoryRoot, repositoryRoot]) {
+    if (!isCanonicalCoveragePath(root) || root === resolve(root, '..')) {
+      throw new Error('Coverage checkout roots must be canonical absolute paths.');
+    }
+  }
+  const targetRoot = resolve(repositoryRoot, 'packages/lyra-ui');
+  if (realpathSync(repositoryRoot) !== repositoryRoot || realpathSync(targetRoot) !== targetRoot) {
+    throw new Error('Coverage checkout roots must be canonical absolute paths.');
+  }
+  const sourceRoot = resolve(sourceRepositoryRoot, 'packages/lyra-ui');
+  if (!coverage || typeof coverage !== 'object' || Array.isArray(coverage)) {
+    throw new Error('Invalid coverage map.');
+  }
+  const mapped = {};
+  for (const [name, entry] of Object.entries(coverage)) {
+    if (!isCanonicalCoveragePath(name) || !entry || entry.path !== name) {
+      throw new Error('Coverage source path must be canonical and match its map key.');
+    }
+    const candidate = insideCoverageRoot(sourceRoot, name)
+      ? resolve(targetRoot, relative(sourceRoot, name))
+      : insideCoverageRoot(targetRoot, name) ? name : undefined;
+    if (!candidate) throw new Error('Coverage source is outside the declared package checkout.');
+    const file = realpathSync(candidate);
+    if (file !== candidate || !insideCoverageRoot(targetRoot, file) || !statSync(file).isFile()) {
+      throw new Error('Coverage source must be a canonical regular file inside its package.');
+    }
+    if (Object.hasOwn(mapped, file)) throw new Error('Duplicate mapped coverage source.');
+    mapped[file] = { ...entry, path: file };
+  }
+  return mapped;
+}
+
+function mergeCoverageMap(coverageDirectory, indices, sourceOptions) {
   const map = libCoverage.createCoverageMap({});
   for (const shardIndex of indices) {
-    map.merge(loadShardCoverage(coverageDirectory, shardIndex));
+    const coverage = loadShardCoverage(coverageDirectory, shardIndex);
+    map.merge(sourceOptions.sourceRepositoryRoot === undefined
+      ? coverage : relocateCoverageSources(coverage, sourceOptions));
   }
   return map;
 }
 
-function writeMergedCoverageReport(coverageDirectory, map) {
+function writeMergedCoverageReport(coverageDirectory, map, repositoryRoot) {
   mkdirSync(coverageDirectory, { recursive: true });
   const context = libReport.createContext({ dir: coverageDirectory, coverageMap: map });
-  reports.create('lcovonly', {}).execute(context);
+  reports.create('lcovonly', { projectRoot: resolve(repositoryRoot, 'packages/lyra-ui') }).execute(context);
   reports.create('json-summary', {}).execute(context);
 }
 
@@ -370,14 +420,22 @@ function mergeJunitReports(coverageDirectory, indices) {
   );
 }
 
-export function mergeCoverageReports(testFiles, { coverageDirectory = coverageDir } = {}) {
+export function mergeCoverageReports(
+  testFiles,
+  {
+    coverageDirectory = coverageDir,
+    repositoryRoot = resolve(packageDir, '../..'),
+    sourceRepositoryRoot = process.env.LYRA_COVERAGE_SOURCE_ROOT,
+  } = {},
+) {
   for (const shardIndex of shardIndices()) {
     requiredShardFile(coverageDirectory, shardIndex, 'coverage-final.json');
     requiredShardFile(coverageDirectory, shardIndex, 'junit.xml');
     requiredShardFile(coverageDirectory, shardIndex, SHARD_MANIFEST);
   }
   const indices = validateCoverageShardManifests(testFiles, { coverageDirectory });
-  writeMergedCoverageReport(coverageDirectory, mergeCoverageMap(coverageDirectory, indices));
+  const map = mergeCoverageMap(coverageDirectory, indices, { repositoryRoot, sourceRepositoryRoot });
+  writeMergedCoverageReport(coverageDirectory, map, repositoryRoot);
   mergeJunitReports(coverageDirectory, indices);
 }
 

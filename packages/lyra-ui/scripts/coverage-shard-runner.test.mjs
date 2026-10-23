@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync, symlinkSync } from 'node:fs';
 import { mkdtemp, mkdir, readFile, rm, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -11,11 +11,13 @@ import {
   coverageShardDirectory,
   executeCoverageCommand,
   mergeCoverageReports,
+  relocateCoverageSources,
   parseCoverageArguments,
   runCoverageShard,
   validateCoverageShardManifests,
 } from './coverage-shard-runner.mjs';
 import { shardTestFiles } from './full-engine-shard.mjs';
+import { normalizeLcov } from '../../../scripts/prepare-codecov-lcov.mjs';
 
 const inventory = Array.from({ length: 12 }, (_value, index) =>
   `src/component-${String(index + 1).padStart(2, '0')}.test.ts`,
@@ -413,6 +415,158 @@ test('splits an oversized shard into bounded sessions and merges their raw repor
     const junit = await readFile(join(directory, 'junit.xml'), 'utf8');
     assert.equal((junit.match(/<testsuite name=/gu) ?? []).length, calls.length);
     assert.equal(existsSync(join(directory, 'part-1')), false, 'session directories are folded away');
+  } finally {
+    await rm(fixture, { recursive: true, force: true });
+  }
+});
+
+function detailedCoverage(source, hits) {
+  const location = { start: { line: 1, column: 0 }, end: { line: 1, column: 1 } };
+  return {
+    ...fileCoverage(source, hits),
+    fnMap: { 0: { name: 'run', line: 1, decl: location, loc: location } },
+    branchMap: { 0: { type: 'if', line: 1, loc: location, locations: [location, location] } },
+    f: { 0: hits },
+    b: { 0: [hits, 0] },
+  };
+}
+
+test('declared checkout relocation preserves counters, maps and inputs, and rejects duplicate identities', async () => {
+  const fixture = await mkdtemp(join(tmpdir(), 'lyra-coverage-checkout-'));
+  try {
+    const local = join(fixture, 'packages/lyra-ui/src');
+    await mkdir(local, { recursive: true });
+    const target = join(local, 'shared.ts');
+    await writeFile(target, 'export {};\n');
+    const sourceRepositoryRoot = '/__w/lyra-ui/lyra-ui';
+    const source = `${sourceRepositoryRoot}/packages/lyra-ui/src/shared.ts`;
+    const entry = detailedCoverage(source, 7);
+    const original = JSON.stringify(entry);
+    const options = { sourceRepositoryRoot, repositoryRoot: fixture };
+    assert.deepEqual(
+      relocateCoverageSources({ [source]: entry }, options),
+      { [target]: { ...entry, path: target } },
+    );
+    assert.equal(JSON.stringify(entry), original, 'input report is untouched');
+    const localEntry = { ...entry, path: target };
+    assert.deepEqual(relocateCoverageSources({ [target]: localEntry }, options), { [target]: localEntry });
+    assert.throws(
+      () => relocateCoverageSources({ [source]: entry, [target]: localEntry }, options),
+      /Duplicate mapped/u,
+    );
+  } finally {
+    await rm(fixture, { recursive: true, force: true });
+  }
+});
+
+test('declared checkout relocation rejects traversal, wrong roots, missing sources and symlink aliases', async () => {
+  const fixture = await mkdtemp(join(tmpdir(), 'lyra-coverage-checkout-reject-'));
+  try {
+    const local = join(fixture, 'packages/lyra-ui/src');
+    await mkdir(local, { recursive: true });
+    await writeFile(join(local, 'shared.ts'), 'export {};\n');
+    const outside = join(fixture, 'outside.ts');
+    await writeFile(outside, 'export {};\n');
+    symlinkSync(outside, join(local, 'escape.ts'));
+    symlinkSync(join(local, 'shared.ts'), join(local, 'alias.ts'));
+    const sourceRepositoryRoot = '/__w/lyra-ui/lyra-ui';
+    const options = { sourceRepositoryRoot, repositoryRoot: fixture };
+    for (const source of [
+      '../../../../../../../__w/lyra-ui/lyra-ui/packages/lyra-ui/src/shared.ts',
+      `${sourceRepositoryRoot}/packages/lyra-ui/src/../src/shared.ts`,
+      `${sourceRepositoryRoot}/packages/lyra-ui/src/./shared.ts`,
+      `${sourceRepositoryRoot}/packages/lyra-ui/src//shared.ts`,
+      `${sourceRepositoryRoot}/packages/lyra-ui/src/shared.ts/`,
+      `${sourceRepositoryRoot}/packages/lyra-ui/src/sha\\red.ts`,
+      `${sourceRepositoryRoot}/packages/lyra-ui/src/sha\0red.ts`,
+      `${sourceRepositoryRoot}/packages/lyra-map/src/shared.ts`,
+      '/unrelated/packages/lyra-ui/src/shared.ts',
+      `${sourceRepositoryRoot}-other/packages/lyra-ui/src/shared.ts`,
+      `${sourceRepositoryRoot}/packages/lyra-ui-other/src/shared.ts`,
+      `${sourceRepositoryRoot}/packages/lyra-ui/src/missing.ts`,
+      `${sourceRepositoryRoot}/packages/lyra-ui/src/escape.ts`,
+      `${sourceRepositoryRoot}/packages/lyra-ui/src/alias.ts`,
+      `${sourceRepositoryRoot}/packages/lyra-ui/src`,
+    ]) {
+      assert.throws(() => relocateCoverageSources({ [source]: fileCoverage(source) }, options), undefined, source);
+    }
+    const source = `${sourceRepositoryRoot}/packages/lyra-ui/src/shared.ts`;
+    assert.throws(
+      () => relocateCoverageSources({ [source]: fileCoverage(source + '.different') }, options),
+      /match its map key/u,
+    );
+    const coverage = { [source]: fileCoverage(source) };
+    for (const badRoot of ['/', '../checkout', '/__w/lyra-ui/../lyra-ui/lyra-ui', `${sourceRepositoryRoot}/`]) {
+      assert.throws(
+        () => relocateCoverageSources(coverage, { ...options, sourceRepositoryRoot: badRoot }),
+        /canonical/u,
+      );
+    }
+    for (const repositoryRoot of ['.', `${fixture}/`, `${fixture}/../${fixture.split('/').at(-1)}`]) {
+      assert.throws(
+        () => relocateCoverageSources(coverage, { ...options, repositoryRoot }),
+        /canonical/u,
+      );
+    }
+    symlinkSync(fixture, join(fixture, 'checkout-alias'));
+    assert.throws(
+      () => relocateCoverageSources(coverage, { ...options, repositoryRoot: join(fixture, 'checkout-alias') }),
+      /canonical/u,
+    );
+    for (const malformed of [null, [], 'coverage']) {
+      assert.throws(() => relocateCoverageSources(malformed, options), /Invalid coverage map/u);
+    }
+  } finally {
+    await rm(fixture, { recursive: true, force: true });
+  }
+});
+
+test('host merge rebases container sources before LCOV emission and sums shared-source counters', async () => {
+  const fixture = await mkdtemp(join(tmpdir(), 'lyra-coverage-checkout-merge-'));
+  try {
+    const repositoryRoot = join(fixture, 'checkout');
+    const coverageDirectory = join(fixture, 'coverage');
+    const sourceRepositoryRoot = '/__w/lyra-ui/lyra-ui';
+    const local = join(repositoryRoot, 'packages/lyra-ui/src');
+    await mkdir(local, { recursive: true });
+    await writeCompleteFixture(coverageDirectory);
+    await writeFile(join(local, 'shared.ts'), 'export {};\n');
+    const sharedSource = `${sourceRepositoryRoot}/packages/lyra-ui/src/shared.ts`;
+    for (let shard = 1; shard <= COVERAGE_SHARD_TOTAL; shard += 1) {
+      await writeFile(join(local, `source-${shard}.ts`), 'export {};\n');
+      const source = `${sourceRepositoryRoot}/packages/lyra-ui/src/source-${shard}.ts`;
+      await writeFile(
+        join(coverageShardDirectory(coverageDirectory, shard), 'coverage-final.json'),
+        JSON.stringify({
+          [source]: fileCoverage(source, shard),
+          [sharedSource]: detailedCoverage(sharedSource, shard),
+        }),
+      );
+    }
+    mergeCoverageReports(inventory, { coverageDirectory, repositoryRoot, sourceRepositoryRoot });
+    const lcov = await readFile(join(coverageDirectory, 'lcov.info'), 'utf8');
+    const upload = normalizeLcov(lcov, { packageName: 'lyra-ui', repositoryRoot });
+    assert.equal((upload.match(/^SF:packages\/lyra-ui\/src\/source-\d+\.ts$/gmu) ?? []).length, COVERAGE_SHARD_TOTAL);
+    assert.equal((upload.match(/^SF:packages\/lyra-ui\/src\/shared\.ts$/gmu) ?? []).length, 1);
+    assert.equal(
+      upload.replace(/^SF:[^\r\n]+/gmu, 'SF:<source>'),
+      lcov.replace(/^SF:[^\r\n]+/gmu, 'SF:<source>'),
+    );
+    const sharedRecord = upload.split('end_of_record').find((record) => record.includes('SF:packages/lyra-ui/src/shared.ts'));
+    const hits = COVERAGE_SHARD_TOTAL * (COVERAGE_SHARD_TOTAL + 1) / 2;
+    assert.ok(sharedRecord.split('\n').includes(`DA:1,${hits}`));
+    assert.ok(sharedRecord.split('\n').includes(`FNDA:${hits},run`));
+    assert.ok(sharedRecord.split('\n').includes(`BRDA:1,0,0,${hits}`));
+    assert.ok(sharedRecord.split('\n').includes('BRDA:1,0,1,0'));
+    const summary = JSON.parse(await readFile(join(coverageDirectory, 'coverage-summary.json'), 'utf8'));
+    assert.equal(summary.total.statements.total, COVERAGE_SHARD_TOTAL + 1);
+    assert.equal(summary.total.statements.covered, COVERAGE_SHARD_TOTAL + 1);
+    assert.equal(summary.total.functions.total, 1);
+    assert.equal(summary.total.functions.covered, 1);
+    assert.equal(summary.total.branches.total, 2);
+    assert.equal(summary.total.branches.covered, 1);
+    const raw = JSON.parse(await readFile(join(coverageShardDirectory(coverageDirectory, 1), 'coverage-final.json'), 'utf8'));
+    assert.deepEqual(raw[sharedSource], detailedCoverage(sharedSource, 1), 'downloaded reports are untouched');
   } finally {
     await rm(fixture, { recursive: true, force: true });
   }

@@ -337,6 +337,30 @@ describe('lr-map external data layers and labels', () => {
     await waitUntil(() => Boolean(element.shadowRoot?.querySelector('[part="configuration-error"]')?.textContent?.trim()), 'rejected proposal feedback');
   });
 
+  it('keeps rejected cluster identities private and orders the fresh group on recovery', async () => {
+    const geo = { sourceId: 'geo', geojson: POINTS, before: 'roads' };
+    const vector = { kind: 'vector' as const, sourceId: 'roads', source: { tiles: ['https://example.test/{z}/{x}/{y}.pbf'] }, sourceLayer: 'roads', render: 'line' as const };
+    const { element, peer } = await mount(el => { el.dataLayers = [vector, geo]; });
+    await load(element, peer); await element.whenIdle();
+    const first = [...peer.sourceDescriptors].find(([, source]) => (source as Record<string, unknown>)['type'] === 'geojson')![0];
+    const vectorId = [...peer.sourceDescriptors].find(([, source]) => (source as Record<string, unknown>)['type'] === 'vector')![0];
+    const handle = peer.sources.get(first), vectorHandle = peer.sources.get(vectorId), order = [...peer.order], writes = peer.sourceWrites;
+    const clustered = { ...geo, cluster: { radius: 30 } };
+    element.dataLayers = [clustered, { ...vector, before: 'geo' }];
+    await element.updateComplete;
+    try { await element.whenIdle(); } catch { /* Mixed-order cycle rejects the replacement. */ }
+    expect(peer.sources.get(first) === handle).to.equal(true);
+    expect(peer.sourceWrites).to.equal(writes); expect(peer.order).to.deep.equal(order);
+    element.dataLayers = [vector, clustered];
+    await element.updateComplete; await element.whenIdle();
+    const second = [...peer.sourceDescriptors].find(([id, source]) => peer.sources.has(id) && (source as Record<string, unknown>)['type'] === 'geojson')![0];
+    expect(second === first).to.equal(false); expect(peer.sources.has(first)).to.equal(false);
+    expect(peer.order.some(id => id.startsWith(`${first}-`))).to.equal(false);
+    expect(peer.order).to.deep.equal([`${second}-cluster`, `${second}-circle`, `${vectorId}-render`]);
+    expect((peer.sourceDescriptors.get(second) as Record<string, unknown>)['clusterRadius']).to.equal(30);
+    expect(peer.sources.get(vectorId) === vectorHandle).to.equal(true);
+  });
+
   it('keeps positioned labels and sources installed across updates, removal and RTL', async () => {
     const row = { sourceId: 'places', geojson: POINTS, minZoom: 2, maxZoom: 8,
       label: { field: 'name', anchor: 'top' as const, offset: [0, 1.25] as const } };

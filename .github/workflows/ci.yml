@@ -488,6 +488,9 @@ jobs:
         id: merge_coverage
         if: ${{ !cancelled() }}
         working-directory: packages/lyra-ui
+        env:
+          # Coverage shards run in the container checkout; this job merges on the host.
+          LYRA_COVERAGE_SOURCE_ROOT: /__w/${{ github.event.repository.name }}/${{ github.event.repository.name }}
         run: node scripts/coverage-shard-runner.mjs --merge
       # The per-metric floors in packages/lyra-ui/scripts/coverage-floors.json are what
       # gate the merged whole-suite report. They only protect anything while they sit just under
