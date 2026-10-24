@@ -1,5 +1,19 @@
 # @aceshooting/lyra-ide
 
+## 30.1.0
+
+### Patch Changes
+
+- Updated dependencies [b187543]
+- Updated dependencies [fcafba2]
+- Updated dependencies [8a52322]
+- Updated dependencies [b187543]
+- Updated dependencies [b187543]
+- Updated dependencies [1ca5671]
+- Updated dependencies [752b267]
+- Updated dependencies [b187543]
+  - @aceshooting/lyra-ui@30.1.0
+
 ## 30.0.0
 
 ### Patch Changes

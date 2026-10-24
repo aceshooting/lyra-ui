@@ -1,5 +1,28 @@
 # Changelog
 
+## 30.1.0
+
+### Minor Changes
+
+- 1ca5671: Add the opt-in `shiftCrossAxis` positioning option to keep a popup inside its clipping boundary along both axes. Map anchors use it to stay fully inside changing safe areas and custom boundaries, keeping their close actions reachable without moving the map camera.
+- b187543: Expose `geolocate-control` and `attribution-content` map parts so applications can offset the geolocation group and position bounded credits independently of the compact attribution toggle.
+
+  The map readiness, layout and safe-area corrections measure 343,439 gzip bytes for the media family; its reviewed ceiling advances to 343,488 bytes, the next 64-byte boundary. Other entry budgets remain unchanged.
+
+  The generated editor archive retains all four editor formats and measures 1,701,215 packed and 10,541,676 unpacked bytes with the new parts and safe-area documentation. Its two exceeded limits advance to the next 64-byte boundaries at 1,701,248 and 10,541,696 bytes; file-count and other package limits remain unchanged.
+
+### Patch Changes
+
+- b187543: Preserve scoped theme ownership when an element is frozen after its first theme application, so later theme changes still restore the original attributes and token values when the scope is removed.
+
+  The theme entry measures 13,514 gzip bytes with the ownership correction. Its reviewed ceiling advances to 13,568 bytes, the next 64-byte boundary. Other entry budgets remain unchanged.
+- fcafba2: Wait for URL style replacements to commit before reporting map readiness and restoring owned overlays, images and style overrides. URL replacements now rebuild the native basemap instead of diffing it, so unchanged responses also have a reliable completion event. This trades the native style-diff optimization for correct replacement readiness. Pending replacements can also be superseded repeatedly by inline styles without attempting to diff an unloaded basemap.
+- 8a52322: Retain advisory runtime observations from the maintenance comparison with 30.0.0. The initial quick Chromium run showed higher chart and combobox tail latency. A controlled published/current/current/published comparison retained stable assignment medians and did not consistently reproduce those total-time increases, but three of four comparisons still flagged smaller wait-related metrics. The chart's complete runtime import graph is byte-identical; the fixture's changed positioning option is outside the closed-combobox operation. No algorithmic cause was identified. These mixed timing observations do not establish a performance pass; the automated A/B benchmark and its regression threshold remain unchanged release requirements.
+- b187543: Remove redundant closing whitespace from single-line declaration documentation, reducing the unpacked package by 4,076 bytes while preserving public types and editor documentation.
+- b187543: Keep closed and offscreen map anchors hidden when applications customize their public part's display layout, including important consumer declarations. Visible anchors retain the application's display styling when restored.
+- 752b267: Prevent an open, closable map anchor from repeatedly updating when inherited text direction changes. Anchors remain responsive when switching between left-to-right and right-to-left layouts.
+- @aceshooting/lyra-translations@30.1.0
+
 ## 30.0.0
 
 ### Major Changes
