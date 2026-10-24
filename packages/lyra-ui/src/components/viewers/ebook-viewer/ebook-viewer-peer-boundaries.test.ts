@@ -122,3 +122,42 @@ for (const boundary of ['descriptor', 'prototype', 'ready-thenable', 'display-th
     expect(element.shadowRoot!.querySelector<HTMLButtonElement>('[part="next-button"]')?.disabled).to.equal(true);
   });
 }
+
+for (const boundary of ['book value', 'rendition value', 'display', 'prev', 'next', 'on', 'highlight', 'remove'] as const) {
+  it(`fails closed on an unusable EPUB ${boundary} and opens a subsequent valid book`, async () => {
+    const { book, rendition, callbacks, displayed } = peer();
+    let destroys = 0;
+    book.destroy = () => { destroys++; };
+    if (boundary === 'rendition value') Reflect.set(book, 'renderTo', () => null);
+    else if (boundary === 'highlight' || boundary === 'remove') Reflect.deleteProperty(rendition.annotations, boundary);
+    else if (boundary !== 'book value') Reflect.deleteProperty(rendition, boundary);
+    provide(boundary === 'book value' ? null as unknown as EpubBook : book);
+    const message = `Cannot open this book (${boundary}).`;
+    const element = await fixture<LyraEbookViewer>(html`<lr-ebook-viewer
+      .strings=${{ ebookViewerLoadError: message }}
+    ></lr-ebook-viewer>`);
+    const pending = oneEvent(element, 'lr-render-error');
+    element.src = 'https://example.test/unusable-peer.epub';
+    const failure = await pending;
+    await element.updateComplete;
+    expect(failure.bubbles && failure.composed).to.equal(true);
+    expect(element.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal(message);
+    expect(element.shadowRoot!.querySelectorAll('[part="error"][role], [part="error"][aria-live]').length).to.equal(0);
+    expect(element.shadowRoot!.textContent).not.to.contain('EPUB peer returned');
+    expect(element.shadowRoot!.querySelector<HTMLButtonElement>('[part="next-button"]')?.disabled).to.equal(true);
+    expect(element.shadowRoot!.querySelector<HTMLButtonElement>('[part="previous-button"]')?.disabled).to.equal(true);
+    expect(callbacks.size).to.equal(0);
+    expect(displayed.length).to.equal(0);
+    expect(destroys).to.equal(boundary === 'book value' ? 0 : 1);
+    await waitUntil(() => document.querySelector('[data-lr-live-region="assertive"]')?.textContent?.includes(message) === true);
+
+    const replacement = peer();
+    provide(replacement.book);
+    element.src = 'https://example.test/usable-peer.epub';
+    await waitUntil(() => element.shadowRoot!.querySelector<HTMLButtonElement>('[part="next-button"]')?.disabled === false);
+    expect(element.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
+    expect(await element.scrollToAnchor({ kind: 'cfi', cfi: 'replacement-cfi' })).to.equal(true);
+    expect(replacement.displayed.at(-1)).to.equal('replacement-cfi');
+    element.remove();
+  });
+}

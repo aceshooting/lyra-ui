@@ -133,3 +133,63 @@ it('steps source matches in both directions and clears them without another prov
   expect(searches).to.equal(1);
   expect(errors.length).to.equal(0);
 });
+
+for (const malformedRow of ['not an array', 'missing cell', 'extra cell'] as const) {
+  it(`rejects a malformed rectangular source row (${malformedRow}) and recovers on source replacement`, async () => {
+    const errors: unknown[] = [];
+    const data: LyraTabularSource = {
+      revision: 1, rowCount: 3, columnCount: 2,
+      columnAt: index => ({ key: String(index), label: `Column ${index}` }),
+      readCells: async request => {
+        const rows = Array.from({ length: request.rowCount }, () =>
+          Array.from({ length: request.columnCount }, () => 'Provider content'));
+        const first = rows[0]!;
+        if (malformedRow === 'not an array') Reflect.set(rows, 0, 'Provider content');
+        else if (malformedRow === 'missing cell') first.pop();
+        else first.push('Unexpected column');
+        return rows;
+      },
+    };
+    const viewer = await fixture<LyraCsvViewer>(html`<lr-csv-viewer
+      .dataSource=${data} .rows=${[['Legacy content']]} .strings=${strings}
+      @lr-render-error=${(event: CustomEvent<{ error: unknown }>) => errors.push(event.detail.error)}
+    ></lr-csv-viewer>`);
+    await waitUntil(() => viewer.shadowRoot!.querySelector('[part="error"]') !== null);
+    expect(errors.length).to.equal(1);
+    const error = viewer.shadowRoot!.querySelector('[part="error"]')!;
+    expect(error.textContent).to.equal('Source rejected');
+    expect(error.hasAttribute('role') || error.hasAttribute('aria-live')).to.equal(false);
+    expect(viewer.shadowRoot!.querySelectorAll('[role="table"]').length).to.equal(0);
+    expect(viewer.shadowRoot!.textContent).not.to.contain('Legacy content');
+
+    viewer.dataSource = source();
+    await waitUntil(() => viewer.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.textContent?.includes('Cell 0:0') === true);
+    expect(viewer.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
+    expect(await viewer.scrollToAnchor({ kind: 'cell-range', range: 'A2' })).to.equal(true);
+    expect(errors.length).to.equal(1);
+    viewer.remove();
+  });
+}
+
+it('rejects cumulative retained cell text before reading an otherwise bounded source window in full', async () => {
+  const errors: unknown[] = [];
+  const text = 'x'.repeat(50_000);
+  let reads = 0;
+  const data: LyraTabularSource = {
+    revision: 1, rowCount: 64, columnCount: 2,
+    columnAt: index => ({ key: String(index), label: `Column ${index}` }),
+    cellAt: () => { reads++; return text; },
+  };
+  const viewer = await fixture<LyraCsvViewer>(html`<lr-csv-viewer
+    .dataSource=${data} .rows=${[['Legacy content']]} .strings=${strings}
+    @lr-render-error=${(event: CustomEvent<{ error: unknown }>) => errors.push(event.detail.error)}
+  ></lr-csv-viewer>`);
+  await waitUntil(() => viewer.shadowRoot!.querySelector('[part="error"]') !== null);
+  expect(viewer.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Source exceeds limits');
+  expect(errors.length).to.equal(1);
+  expect(reads).to.be.greaterThan(1);
+  expect(reads).to.be.at.most(40);
+  expect(viewer.shadowRoot!.querySelectorAll('[role="table"]').length).to.equal(0);
+  expect(viewer.shadowRoot!.textContent).not.to.contain('Legacy content');
+  expect(viewer.rows).to.deep.equal([['Legacy content']]);
+});

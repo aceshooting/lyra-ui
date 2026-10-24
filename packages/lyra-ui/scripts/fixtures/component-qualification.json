@@ -5200,6 +5200,7 @@
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-prepared-data-scale.test.ts",
           "src/components/charts/chart/chart-prepared-data.test.ts",
+          "src/components/charts/chart/chart-prepared-protocol.test.ts",
           "src/components/charts/chart/chart-preprocessing.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
@@ -5223,6 +5224,7 @@
           "src/components/charts/chart/lite-chart-performance-scale.test.ts",
           "src/components/charts/chart/lite-chart-prepared-data-scale.test.ts",
           "src/components/charts/chart/lite-chart-prepared-data.test.ts",
+          "src/components/charts/chart/lite-chart-sampled-gap.test.ts",
           "src/components/charts/chart/lite-chart-scale.test.ts",
           "src/components/charts/chart/lite-chart-stream-table-scale.test.ts",
           "src/components/charts/chart/lite-chart-table-updates.test.ts",
@@ -5481,6 +5483,7 @@
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-prepared-data-scale.test.ts",
           "src/components/charts/chart/chart-prepared-data.test.ts",
+          "src/components/charts/chart/chart-prepared-protocol.test.ts",
           "src/components/charts/chart/chart-preprocessing.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
@@ -5504,6 +5507,7 @@
           "src/components/charts/chart/lite-chart-performance-scale.test.ts",
           "src/components/charts/chart/lite-chart-prepared-data-scale.test.ts",
           "src/components/charts/chart/lite-chart-prepared-data.test.ts",
+          "src/components/charts/chart/lite-chart-sampled-gap.test.ts",
           "src/components/charts/chart/lite-chart-scale.test.ts",
           "src/components/charts/chart/lite-chart-stream-table-scale.test.ts",
           "src/components/charts/chart/lite-chart-table-updates.test.ts",
@@ -6495,6 +6499,7 @@
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-prepared-data-scale.test.ts",
           "src/components/charts/chart/chart-prepared-data.test.ts",
+          "src/components/charts/chart/chart-prepared-protocol.test.ts",
           "src/components/charts/chart/chart-preprocessing.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
@@ -6518,6 +6523,7 @@
           "src/components/charts/chart/lite-chart-performance-scale.test.ts",
           "src/components/charts/chart/lite-chart-prepared-data-scale.test.ts",
           "src/components/charts/chart/lite-chart-prepared-data.test.ts",
+          "src/components/charts/chart/lite-chart-sampled-gap.test.ts",
           "src/components/charts/chart/lite-chart-scale.test.ts",
           "src/components/charts/chart/lite-chart-stream-table-scale.test.ts",
           "src/components/charts/chart/lite-chart-table-updates.test.ts",
@@ -8812,6 +8818,7 @@
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-prepared-data-scale.test.ts",
           "src/components/charts/chart/chart-prepared-data.test.ts",
+          "src/components/charts/chart/chart-prepared-protocol.test.ts",
           "src/components/charts/chart/chart-preprocessing.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
@@ -8835,6 +8842,7 @@
           "src/components/charts/chart/lite-chart-performance-scale.test.ts",
           "src/components/charts/chart/lite-chart-prepared-data-scale.test.ts",
           "src/components/charts/chart/lite-chart-prepared-data.test.ts",
+          "src/components/charts/chart/lite-chart-sampled-gap.test.ts",
           "src/components/charts/chart/lite-chart-scale.test.ts",
           "src/components/charts/chart/lite-chart-stream-table-scale.test.ts",
           "src/components/charts/chart/lite-chart-table-updates.test.ts",
@@ -18733,6 +18741,7 @@
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-prepared-data-scale.test.ts",
           "src/components/charts/chart/chart-prepared-data.test.ts",
+          "src/components/charts/chart/chart-prepared-protocol.test.ts",
           "src/components/charts/chart/chart-preprocessing.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
@@ -18756,6 +18765,7 @@
           "src/components/charts/chart/lite-chart-performance-scale.test.ts",
           "src/components/charts/chart/lite-chart-prepared-data-scale.test.ts",
           "src/components/charts/chart/lite-chart-prepared-data.test.ts",
+          "src/components/charts/chart/lite-chart-sampled-gap.test.ts",
           "src/components/charts/chart/lite-chart-scale.test.ts",
           "src/components/charts/chart/lite-chart-stream-table-scale.test.ts",
           "src/components/charts/chart/lite-chart-table-updates.test.ts",
@@ -21999,8 +22009,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/utility/export-button/export-button.test.ts",
-              "test": "closes on Escape and returns focus to the trigger",
+              "file": "src/components/utility/export-button/export-button-collection-boundaries.test.ts",
+              "test": "skips sparse and accessor-owned format entries without evaluating them, preserving the later custom choice",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -22123,6 +22133,7 @@
         "tests": [
           "src/components/utility/export-button/csv.test.ts",
           "src/components/utility/export-button/export-button-closed-layout.test.ts",
+          "src/components/utility/export-button/export-button-collection-boundaries.test.ts",
           "src/components/utility/export-button/export-button.test.ts",
           "src/components/utility/export-button/positioning-strategy.test.ts"
         ],
@@ -26445,8 +26456,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/heatmap/heatmap-coverage-boundaries.test.ts",
-              "test": "navigates exact source page and row endpoints with physical horizontal keys in ${direction}",
+              "file": "src/components/data/heatmap/heatmap-canvas-selection.test.ts",
+              "test": "uses calendar date identity for a canvas drag crossing excluded and missing days",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -26473,8 +26484,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/heatmap/heatmap-coverage-boundaries.test.ts",
-              "test": "navigates exact source page and row endpoints with physical horizontal keys in ${direction}",
+              "file": "src/components/data/heatmap/heatmap-canvas-selection.test.ts",
+              "test": "uses calendar date identity for a canvas drag crossing excluded and missing days",
               "kind": "320px allocation test signal"
             }
           ]
@@ -26587,6 +26598,7 @@
           "src/components/data/heatmap/calendar-grid.test.ts",
           "src/components/data/heatmap/heatmap-allocation-interaction.test.ts",
           "src/components/data/heatmap/heatmap-calendar-spacing.test.ts",
+          "src/components/data/heatmap/heatmap-canvas-selection.test.ts",
           "src/components/data/heatmap/heatmap-coverage-boundaries.test.ts",
           "src/components/data/heatmap/heatmap-coverage.test.ts",
           "src/components/data/heatmap/heatmap-export-boundaries.test.ts",
@@ -27014,6 +27026,7 @@
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-prepared-data-scale.test.ts",
           "src/components/charts/chart/chart-prepared-data.test.ts",
+          "src/components/charts/chart/chart-prepared-protocol.test.ts",
           "src/components/charts/chart/chart-preprocessing.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
@@ -27037,6 +27050,7 @@
           "src/components/charts/chart/lite-chart-performance-scale.test.ts",
           "src/components/charts/chart/lite-chart-prepared-data-scale.test.ts",
           "src/components/charts/chart/lite-chart-prepared-data.test.ts",
+          "src/components/charts/chart/lite-chart-sampled-gap.test.ts",
           "src/components/charts/chart/lite-chart-scale.test.ts",
           "src/components/charts/chart/lite-chart-stream-table-scale.test.ts",
           "src/components/charts/chart/lite-chart-table-updates.test.ts",
@@ -30464,6 +30478,7 @@
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-prepared-data-scale.test.ts",
           "src/components/charts/chart/chart-prepared-data.test.ts",
+          "src/components/charts/chart/chart-prepared-protocol.test.ts",
           "src/components/charts/chart/chart-preprocessing.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
@@ -30487,6 +30502,7 @@
           "src/components/charts/chart/lite-chart-performance-scale.test.ts",
           "src/components/charts/chart/lite-chart-prepared-data-scale.test.ts",
           "src/components/charts/chart/lite-chart-prepared-data.test.ts",
+          "src/components/charts/chart/lite-chart-sampled-gap.test.ts",
           "src/components/charts/chart/lite-chart-scale.test.ts",
           "src/components/charts/chart/lite-chart-stream-table-scale.test.ts",
           "src/components/charts/chart/lite-chart-table-updates.test.ts",
@@ -30755,6 +30771,7 @@
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-prepared-data-scale.test.ts",
           "src/components/charts/chart/chart-prepared-data.test.ts",
+          "src/components/charts/chart/chart-prepared-protocol.test.ts",
           "src/components/charts/chart/chart-preprocessing.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
@@ -30778,6 +30795,7 @@
           "src/components/charts/chart/lite-chart-performance-scale.test.ts",
           "src/components/charts/chart/lite-chart-prepared-data-scale.test.ts",
           "src/components/charts/chart/lite-chart-prepared-data.test.ts",
+          "src/components/charts/chart/lite-chart-sampled-gap.test.ts",
           "src/components/charts/chart/lite-chart-scale.test.ts",
           "src/components/charts/chart/lite-chart-stream-table-scale.test.ts",
           "src/components/charts/chart/lite-chart-table-updates.test.ts",
@@ -31565,6 +31583,7 @@
           "src/components/media/map/map-owned-resources.test.ts",
           "src/components/media/map/map-paint-batch.test.ts",
           "src/components/media/map/map-peer-recovery.test.ts",
+          "src/components/media/map/map-public-boundaries-coverage.test.ts",
           "src/components/media/map/map-public-boundaries.test.ts",
           "src/components/media/map/map-readiness.test.ts",
           "src/components/media/map/map-remediation.test.ts",
@@ -36207,6 +36226,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/layout/navigation-menu-item/navigation-menu-item-transitions.test.ts",
+              "test": "settles a disabled hide animation, then allows the same disclosure to open again",
+              "target": "menu",
+              "state": "populated"
+            },
+            {
               "file": "src/components/layout/navigation-menu-item/navigation-menu-item.test.ts",
               "test": "opens in flow when unowned, without positioning or hover, and passes axe while open",
               "target": "el",
@@ -36220,8 +36245,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/navigation-menu-item/navigation-menu-item.test.ts",
-              "test": "closes an unowned in-flow panel on Escape and returns focus to the trigger",
+              "file": "src/components/layout/navigation-menu-item/navigation-menu-item-transitions.test.ts",
+              "test": "switches equal-sized disclosures in both directions without constraining their natural size",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -36356,6 +36381,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/navigation-menu-item/navigation-menu-item-coverage.test.ts",
+          "src/components/layout/navigation-menu-item/navigation-menu-item-transitions.test.ts",
           "src/components/layout/navigation-menu-item/navigation-menu-item.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -39487,6 +39513,7 @@
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-prepared-data-scale.test.ts",
           "src/components/charts/chart/chart-prepared-data.test.ts",
+          "src/components/charts/chart/chart-prepared-protocol.test.ts",
           "src/components/charts/chart/chart-preprocessing.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
@@ -39510,6 +39537,7 @@
           "src/components/charts/chart/lite-chart-performance-scale.test.ts",
           "src/components/charts/chart/lite-chart-prepared-data-scale.test.ts",
           "src/components/charts/chart/lite-chart-prepared-data.test.ts",
+          "src/components/charts/chart/lite-chart-sampled-gap.test.ts",
           "src/components/charts/chart/lite-chart-scale.test.ts",
           "src/components/charts/chart/lite-chart-stream-table-scale.test.ts",
           "src/components/charts/chart/lite-chart-table-updates.test.ts",
@@ -39742,6 +39770,7 @@
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-prepared-data-scale.test.ts",
           "src/components/charts/chart/chart-prepared-data.test.ts",
+          "src/components/charts/chart/chart-prepared-protocol.test.ts",
           "src/components/charts/chart/chart-preprocessing.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
@@ -39765,6 +39794,7 @@
           "src/components/charts/chart/lite-chart-performance-scale.test.ts",
           "src/components/charts/chart/lite-chart-prepared-data-scale.test.ts",
           "src/components/charts/chart/lite-chart-prepared-data.test.ts",
+          "src/components/charts/chart/lite-chart-sampled-gap.test.ts",
           "src/components/charts/chart/lite-chart-scale.test.ts",
           "src/components/charts/chart/lite-chart-stream-table-scale.test.ts",
           "src/components/charts/chart/lite-chart-table-updates.test.ts",
@@ -42448,6 +42478,7 @@
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-prepared-data-scale.test.ts",
           "src/components/charts/chart/chart-prepared-data.test.ts",
+          "src/components/charts/chart/chart-prepared-protocol.test.ts",
           "src/components/charts/chart/chart-preprocessing.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
@@ -42471,6 +42502,7 @@
           "src/components/charts/chart/lite-chart-performance-scale.test.ts",
           "src/components/charts/chart/lite-chart-prepared-data-scale.test.ts",
           "src/components/charts/chart/lite-chart-prepared-data.test.ts",
+          "src/components/charts/chart/lite-chart-sampled-gap.test.ts",
           "src/components/charts/chart/lite-chart-scale.test.ts",
           "src/components/charts/chart/lite-chart-stream-table-scale.test.ts",
           "src/components/charts/chart/lite-chart-table-updates.test.ts",
@@ -46272,6 +46304,12 @@
               "state": "populated"
             },
             {
+              "file": "src/components/forms/rubric-form/rubric-form-schema-boundaries.test.ts",
+              "test": "rejects an accessor-backed ${type} ${member} without reading it or losing another answer",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/forms/rubric-form/rubric-form.test.ts",
               "test": "is accessible",
               "target": "el",
@@ -46409,6 +46447,7 @@
         "tests": [
           "src/components/forms/rubric-form/rubric-form-remediation.test.ts",
           "src/components/forms/rubric-form/rubric-form-runtime-values.test.ts",
+          "src/components/forms/rubric-form/rubric-form-schema-boundaries.test.ts",
           "src/components/forms/rubric-form/rubric-form.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -46636,6 +46675,7 @@
           "src/components/charts/chart/chart-preload.test.ts",
           "src/components/charts/chart/chart-prepared-data-scale.test.ts",
           "src/components/charts/chart/chart-prepared-data.test.ts",
+          "src/components/charts/chart/chart-prepared-protocol.test.ts",
           "src/components/charts/chart/chart-preprocessing.test.ts",
           "src/components/charts/chart/chart-remediation.test.ts",
           "src/components/charts/chart/chart-render-cost.test.ts",
@@ -46659,6 +46699,7 @@
           "src/components/charts/chart/lite-chart-performance-scale.test.ts",
           "src/components/charts/chart/lite-chart-prepared-data-scale.test.ts",
           "src/components/charts/chart/lite-chart-prepared-data.test.ts",
+          "src/components/charts/chart/lite-chart-sampled-gap.test.ts",
           "src/components/charts/chart/lite-chart-scale.test.ts",
           "src/components/charts/chart/lite-chart-stream-table-scale.test.ts",
           "src/components/charts/chart/lite-chart-table-updates.test.ts",
@@ -50176,6 +50217,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/agent-tools/stack-trace/stack-trace-parse.test.ts",
+          "src/components/agent-tools/stack-trace/stack-trace-pattern-boundaries.test.ts",
           "src/components/agent-tools/stack-trace/stack-trace-remediation.test.ts",
           "src/components/agent-tools/stack-trace/stack-trace-scale.test.ts",
           "src/components/agent-tools/stack-trace/stack-trace.test.ts"
@@ -53924,6 +53966,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/test-results/test-results-admission-boundaries.test.ts",
           "src/components/agent-tools/test-results/test-results-ingestion-scale.test.ts",
           "src/components/agent-tools/test-results/test-results-source-scale.test.ts",
           "src/components/agent-tools/test-results/test-results-source.test.ts",

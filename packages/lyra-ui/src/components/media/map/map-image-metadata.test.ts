@@ -97,6 +97,46 @@ describe('inspectMapImageMetadata', () => {
   });
 
   describe('PNG', () => {
+    it('admits color-appropriate transparency and rejects palette or transparency ordering violations', () => {
+      const palette = pngChunk('PLTE', [0, 0, 0, 255, 255, 255]);
+      const transparency = (values: number[]) => pngChunk('tRNS', values);
+      const data = pngChunk('IDAT', [0x78, 1, 0, 0, 0, 0, 0]);
+      const make = (color: number, depth: number, chunks: number[][]) => new Uint8Array([
+        137, 80, 78, 71, 13, 10, 26, 10,
+        ...pngChunk('IHDR', [...be32(1), ...be32(1), depth, color, 0, 0, 0]),
+        ...chunks.flat(), ...pngChunk('IEND'),
+      ]);
+      for (const image of [
+        make(0, 8, [transparency([0, 0]), data]),
+        make(2, 8, [palette, transparency([0, 0, 0, 0, 0, 0]), data]),
+        make(3, 1, [palette, transparency([0, 255]), data]),
+      ]) expect(inspectMapImageMetadata(image, 'image/png')).to.deep.equal({ ok: true, mime: 'image/png', width: 1, height: 1 });
+
+      const invalid: readonly [string, Uint8Array][] = [
+        ['duplicate palette', make(3, 1, [palette, palette, data])],
+        ['palette after transparency', make(2, 8, [transparency([0, 0, 0, 0, 0, 0]), palette, data])],
+        ['palette after pixels', make(2, 8, [data, palette])],
+        ['grayscale palette', make(0, 8, [palette, data])],
+        ['grayscale-alpha palette', make(4, 8, [palette, data])],
+        ['empty palette', make(3, 1, [pngChunk('PLTE'), data])],
+        ['incomplete palette entry', make(3, 1, [pngChunk('PLTE', [0, 0]), data])],
+        ['palette exceeds indexed depth', make(3, 1, [pngChunk('PLTE', Array<number>(9).fill(0)), data])],
+        ['palette exceeds 256 entries', make(2, 8, [pngChunk('PLTE', Array<number>(771).fill(0)), data])],
+        ['duplicate transparency', make(3, 1, [palette, transparency([0]), transparency([255]), data])],
+        ['transparency after pixels', make(3, 1, [palette, data, transparency([0])])],
+        ['indexed transparency before palette', make(3, 1, [transparency([0]), palette, data])],
+        ['empty indexed transparency', make(3, 1, [palette, transparency([]), data])],
+        ['transparency exceeds palette', make(3, 1, [palette, transparency([0, 0, 0]), data])],
+        ['truncated grayscale key', make(0, 8, [transparency([0]), data])],
+        ['truncated truecolor key', make(2, 8, [transparency([0, 0]), data])],
+        ['redundant grayscale alpha', make(4, 8, [transparency([0, 0]), data])],
+        ['redundant truecolor alpha', make(6, 8, [transparency([0, 0, 0, 0, 0, 0]), data])],
+      ];
+      for (const [name, image] of invalid) {
+        expect(inspectMapImageMetadata(image, 'image/png'), name).to.deep.equal({ ok: false, issue: 'malformed' });
+      }
+    });
+
     it('rejects all APNG control/data chunks even without an animation declaration', () => {
       for (const chunk of ['acTL', 'fcTL', 'fdAT']) {
         expect(inspectMapImageMetadata(png(1, 1, [pngChunk(chunk, [0])]), 'image/png')).to.deep.equal({ ok: false, issue: 'animated' });
@@ -160,6 +200,51 @@ describe('inspectMapImageMetadata', () => {
   });
 
   describe('JPEG', () => {
+    it('validates component sampling and progressive scan relationships before decoder admission', () => {
+      const components = [[1, 0x22, 0], [2, 0x11, 1], [3, 0x11, 1]];
+      const frame = (entries = components, marker = 0xc0, precision = 8) =>
+        jpegSegment(marker, [precision, ...be16(2), ...be16(3), entries.length, ...entries.flat()]);
+      const scan = (ids = [1, 2, 3], spectral = [0, 63, 0], table = 0) =>
+        jpegSegment(0xda, [ids.length, ...ids.flatMap(id => [id, table]), ...spectral]);
+      const make = (header: number[], scans: number[][], middle: number[][] = []) =>
+        new Uint8Array([255, 216, ...header, ...middle.flat(), ...scans.flatMap(value => [...value, 42]), 255, 217]);
+      for (const image of [
+        make(frame(), [scan()], [jpegSegment(0xdd, [0, 1])]),
+        make(frame(components, 0xc1), [scan()]),
+        make(frame(components, 0xc2), [scan([1, 2, 3], [0, 0, 0]), scan([1], [1, 63, 0]), scan([1], [1, 63, 0x10])]),
+      ]) expect(inspectMapImageMetadata(image, 'image/jpeg')).to.deep.equal({ ok: true, mime: 'image/jpeg', width: 3, height: 2 });
+
+      const invalid: readonly [string, Uint8Array][] = [
+        ['duplicate frame component', make(frame([[1, 0x11, 0], [1, 0x11, 0]]), [scan([1])])],
+        ['invalid vertical sampling', make(frame([[1, 0x15, 0]]), [scan([1])])],
+        ['invalid horizontal sampling', make(frame([[1, 0x51, 0]]), [scan([1])])],
+        ['invalid quantization table', make(frame([[1, 0x11, 4]]), [scan([1])])],
+        ['unsupported sample precision', make(frame(components, 0xc0, 12), [scan()])],
+        ['duplicate scan component', make(frame(), [scan([1, 1])])],
+        ['empty scan', make(frame(), [scan([])])],
+        ['scan exceeds frame components', make(frame(), [scan([1, 2, 3, 4])])],
+        ['invalid DC table', make(frame(), [scan([1], [0, 63, 0], 0x40)])],
+        ['invalid AC table', make(frame(), [scan([1], [0, 63, 0], 0x04)])],
+        ['interleaved sampling exceeds ten blocks', make(frame([[1, 0x41, 0], [2, 0x41, 0], [3, 0x41, 0]]), [scan()])],
+        ['sequential spectral selection', make(frame(), [scan([1], [1, 63, 0])])],
+        ['progressive DC with AC coefficients', make(frame(components, 0xc2), [scan([1], [0, 1, 0])])],
+        ['interleaved progressive AC', make(frame(components, 0xc2), [scan([1, 2], [1, 63, 0])])],
+        ['reversed spectral range', make(frame(components, 0xc2), [scan([1], [2, 1, 0])])],
+        ['spectral range exceeds block', make(frame(components, 0xc2), [scan([1], [1, 64, 0])])],
+        ['refinement skips a bit plane', make(frame(components, 0xc2), [scan([1], [1, 63, 0x20])])],
+        ['refinement precision exceeds limit', make(frame(components, 0xc2), [scan([1], [1, 63, 0xe0])])],
+        ['initial precision exceeds limit', make(frame(components, 0xc2), [scan([1], [1, 63, 0x0e])])],
+        ['invalid restart interval', make(frame(), [scan()], [jpegSegment(0xdd, [0])])],
+        ['unknown coding marker', make(frame(), [scan()], [jpegSegment(0xc8, [])])],
+        ['empty entropy scan', new Uint8Array([255, 216, ...frame(), ...scan(), 255, 217])],
+      ];
+      for (const [name, image] of invalid) {
+        expect(inspectMapImageMetadata(image, 'image/jpeg'), name).to.deep.equal({ ok: false, issue: 'malformed' });
+      }
+      expect(inspectMapImageMetadata(make(frame(components, 0xc3), [scan()]), 'image/jpeg'))
+        .to.deep.equal({ ok: false, issue: 'unsupported-format' });
+    });
+
     it('accepts progressive multiscan data and stuffed/restart entropy bytes', () => {
       const data = new Uint8Array([255, 216, ...jpegFrame(8, 9, 0xc2), ...jpegScan([0, 0, 0]), 12, 255, 0, 23, 255, 0xd0,
         ...jpegScan([1, 63, 0]), 42, 255, 217]);
@@ -188,6 +273,51 @@ describe('inspectMapImageMetadata', () => {
   });
 
   describe('WebP', () => {
+    it('requires extended alpha and metadata chunks to agree with their canvas flags and frame', () => {
+      const alpha = (payload = [0, 1, 2, 3, 4]) => webpChunk('ALPH', payload);
+      const profile = webpChunk('ICCP', [1]);
+      const exif = webpChunk('EXIF', [1]);
+      const xmp = webpChunk('XMP ', [1]);
+      for (const chunks of [
+        [vp8x(2, 2, 16), alpha(), vp8(2, 2)],
+        [vp8x(2, 2, 16), alpha([1, 42]), vp8(2, 2)],
+        [vp8x(2, 2, 44), profile, vp8l(2, 2), exif, xmp],
+      ]) expect(inspectMapImageMetadata(webp(chunks), 'image/webp')).to.deep.equal({ ok: true, mime: 'image/webp', width: 2, height: 2 });
+
+      const invalid: readonly [string, number[][]][] = [
+        ['extended header after another chunk', [webpChunk('JUNK', []), vp8x(), vp8l()]],
+        ['short extended header', [webpChunk('VP8X', Array<number>(9).fill(0)), vp8l()]],
+        ['mixed frame types', [vp8(), vp8l()]],
+        ['short lossy frame', [webpChunk('VP8 ', Array<number>(10).fill(0))]],
+        ['short lossless frame', [webpChunk('VP8L', [0x2f, 0, 0, 0, 0])]],
+        ['invalid lossless signature', [webpChunk('VP8L', [0x2e, 0, 0, 0, 0, 0])]],
+        ['alpha without extended header', [alpha(), vp8(2, 2)]],
+        ['alpha after frame', [vp8x(2, 2, 16), vp8(2, 2), alpha()]],
+        ['alpha without flag', [vp8x(2, 2), alpha(), vp8(2, 2)]],
+        ['alpha with no payload', [vp8x(2, 2, 16), alpha([0]), vp8(2, 2)]],
+        ['reserved alpha bits', [vp8x(2, 2, 16), alpha([0x40, 42]), vp8(2, 2)]],
+        ['unknown alpha compression', [vp8x(2, 2, 16), alpha([2, 42]), vp8(2, 2)]],
+        ['unknown alpha preprocessing', [vp8x(2, 2, 16), alpha([0x20, 42]), vp8(2, 2)]],
+        ['raw alpha does not fill canvas', [vp8x(2, 2, 16), alpha([0, 42]), vp8(2, 2)]],
+        ['separate alpha with lossless frame', [vp8x(2, 2, 16), alpha(), vp8l(2, 2)]],
+        ['metadata without extended header', [profile, vp8l(2, 2)]],
+        ['profile after frame', [vp8x(2, 2, 32), vp8l(2, 2), profile]],
+        ['profile after alpha', [vp8x(2, 2, 48), alpha(), profile, vp8(2, 2)]],
+        ['empty profile', [vp8x(2, 2, 32), webpChunk('ICCP', []), vp8l(2, 2)]],
+      ];
+      for (const [name, chunks] of invalid) {
+        expect(inspectMapImageMetadata(webp(chunks), 'image/webp'), name).to.deep.equal({ ok: false, issue: 'malformed' });
+      }
+      for (const [flag, chunk] of [[32, profile], [8, exif], [4, xmp]] as const) {
+        expect(inspectMapImageMetadata(webp([vp8x(2, 2, flag), vp8l(2, 2)]), 'image/webp'), `missing flag ${flag} chunk`)
+          .to.deep.equal({ ok: false, issue: 'malformed' });
+        expect(inspectMapImageMetadata(webp([vp8x(2, 2), chunk, vp8l(2, 2)]), 'image/webp'), `undeclared flag ${flag} chunk`)
+          .to.deep.equal({ ok: false, issue: 'malformed' });
+      }
+      expect(inspectMapImageMetadata(webp([vp8x(2049, 1), vp8l(2049, 1)]), 'image/webp'))
+        .to.deep.equal({ ok: false, issue: 'dimension-limit' });
+    });
+
     it('accepts VP8 and extended static VP8L with consistent canvas dimensions', () => {
       expect(inspectMapImageMetadata(webp([vp8(5, 6)]), 'image/webp')).to.deep.equal({ ok: true, mime: 'image/webp', width: 5, height: 6 });
       expect(inspectMapImageMetadata(webp([vp8x(5, 6), vp8l(5, 6)]), 'image/webp').ok).to.equal(true);
