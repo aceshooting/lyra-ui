@@ -2362,6 +2362,77 @@ it('projects parts onto peer chrome added after map construction', async () => {
   );
 });
 
+it('lets public CSS offset the geolocation control group without enlarging its button', async () => {
+  const { wrapper, el } = await connectedMapWithoutMaplibre();
+  el.classList.add('offset-geolocation');
+  const style = document.createElement('style');
+  style.textContent = 'lr-map.offset-geolocation::part(geolocate-control) { margin-block-end: 56px; }';
+  wrapper.append(style);
+  const internals = el as unknown as { loading: boolean; observePeerChrome(): void };
+  internals.loading = false;
+  el.requestUpdate();
+  await el.updateComplete;
+  internals.observePeerChrome();
+  const group = document.createElement('div');
+  group.className = 'maplibregl-ctrl maplibregl-ctrl-group';
+  group.setAttribute('part', 'peer-group');
+  const button = document.createElement('button');
+  button.className = 'maplibregl-ctrl-geolocate';
+  group.append(button);
+  el.shadowRoot!.querySelector('[part="container"]')!.append(group);
+
+  await waitUntil(() => getComputedStyle(group).marginBlockEnd === '56px', 'the public part offsets the whole geolocation control');
+  expect(group.getAttribute('part')?.split(/\s+/)).to.include('peer-group');
+  expect(button.getAttribute('part')?.split(/\s+/)).to.include('geolocate');
+  expect(getComputedStyle(button).marginBlockEnd).to.equal('0px');
+  expect(group.getBoundingClientRect().height).to.be.closeTo(button.getBoundingClientRect().height + 2 * parseFloat(getComputedStyle(group).borderTopWidth), 1);
+});
+
+for (const direction of ['ltr', 'rtl'] as const) {
+  it(`lets public CSS bound expanded attribution independently of its compact toggle in ${direction}`, async () => {
+    const { wrapper, el } = await connectedMapWithoutMaplibre();
+    wrapper.dir = direction;
+    el.classList.add('bounded-attribution');
+    el.style.cssText = 'inline-size: 320px; block-size: 240px';
+    const style = document.createElement('style');
+    style.textContent = `lr-map.bounded-attribution::part(attribution-content) {
+      position: absolute; inset-inline-end: 0; inset-block-end: calc(100% + 8px);
+      inline-size: 200px; max-block-size: 64px; overflow: auto;
+    }`;
+    wrapper.append(style);
+    const internals = el as unknown as { loading: boolean; observePeerChrome(): void };
+    internals.loading = false;
+    el.requestUpdate();
+    await el.updateComplete;
+    internals.observePeerChrome();
+    const attribution = document.createElement('details');
+    attribution.className = 'maplibregl-ctrl maplibregl-ctrl-attrib maplibregl-compact';
+    const toggle = document.createElement('summary');
+    toggle.className = 'maplibregl-ctrl-attrib-button';
+    const credits = document.createElement('div');
+    credits.className = 'maplibregl-ctrl-attrib-inner';
+    credits.setAttribute('part', 'peer-credits');
+    credits.textContent = 'Map data contributors and detailed licensing information. '.repeat(20);
+    attribution.append(toggle, credits);
+    el.shadowRoot!.querySelector('[part="container"]')!.append(attribution);
+    await waitUntil(() => getComputedStyle(credits).position === 'absolute', 'the public part positions the credits independently');
+    const closedHeight = attribution.getBoundingClientRect().height;
+    const closedToggle = toggle.getBoundingClientRect();
+    expect(attribution.open).to.be.false;
+    attribution.open = true;
+    attribution.classList.add('maplibregl-compact-show');
+
+    expect(credits.getAttribute('part')?.split(/\s+/)).to.include('peer-credits');
+    expect(getComputedStyle(credits).overflowY).to.equal('auto');
+    expect(credits.getBoundingClientRect().height).to.be.closeTo(64, 1);
+    expect(credits.scrollHeight).to.be.greaterThan(credits.clientHeight);
+    expect(credits.getBoundingClientRect().bottom).to.be.at.most(attribution.getBoundingClientRect().top - 7);
+    expect(attribution.getBoundingClientRect().height).to.be.closeTo(closedHeight, 1);
+    expect(toggle.getBoundingClientRect().top).to.be.closeTo(closedToggle.top, 1);
+    expect(toggle.getBoundingClientRect().width).to.be.closeTo(closedToggle.width, 1);
+  });
+}
+
 it('paints a theme-aware compact attribution glyph while preserving native disclosure and compact hit targets', async function () {
   if (!hasWebGL2) this.skip();
   let loaded = false;
@@ -9385,9 +9456,10 @@ describe('fitBounds and lr-map-view-change', () => {
     it('reports a real drag as a user camera change and keeps it on the next update', async function () {
       if (!hasWebGL2) this.skip();
       const el = (await fixture(
-        html`<lr-map engine="maplibre" style="inline-size: 32rem; block-size: 20rem" .mapStyle=${EMPTY_STYLE}></lr-map>`,
+        html`<lr-map engine="maplibre" style="inline-size: 32rem; block-size: 20rem" .zoom=${4} .mapStyle=${EMPTY_STYLE}></lr-map>`,
       )) as LyraMap;
       await waitUntil(() => el.map != null, 'map never initialized', { timeout: 4000 });
+      await el.whenIdle();
       const map = el.map!;
       const setCenterCalls: unknown[] = [];
       const setCenter = map.setCenter.bind(map);

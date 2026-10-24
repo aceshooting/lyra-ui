@@ -1474,6 +1474,7 @@ let stylePersistenceFailed = false;
 let styleModeCleanup: (() => void) | undefined;
 let styleModeRoot: WeakRef<Element> | undefined;
 const styleOwnershipFallback = new WeakMap<Element, StyleOwnership>();
+const detachedStyleOwnership = new WeakMap<Element, { source: unknown; ownership: StyleOwnership }>();
 const scopeModes = new WeakMap<Element, () => void>();
 
 function ownField(value: object, key: string): unknown {
@@ -1651,13 +1652,29 @@ function persistStyle(state: StyleState): void {
   catch { stylePersistenceFailed = true; }
   lastStyle = state;
 }
+function publishStyleOwnership(element: Element, ownership: StyleOwnership): boolean {
+  const descriptor = Object.getOwnPropertyDescriptor(element, STYLE_OWNERSHIP);
+  if (descriptor && (!('value' in descriptor) || !descriptor.writable)) return false;
+  // Do not expose the mutable ownership record to application-defined accessor setters.
+  return Reflect.defineProperty(element, STYLE_OWNERSHIP, {
+    value: ownership, writable: true,
+    enumerable: descriptor?.enumerable ?? true, configurable: descriptor?.configurable ?? true,
+  });
+}
 function ownershipFor(element: Element): StyleOwnership {
   const node = element as unknown as Record<symbol, unknown>;
   try {
-    const existing = readStyleOwnership(node[STYLE_OWNERSHIP]);
+    const source = node[STYLE_OWNERSHIP];
+    const detached = detachedStyleOwnership.get(element);
+    // A read-only expando cannot hold the validated copy as its attributes and tokens change.
+    if (detached && detached.source === source) return detached.ownership;
+    detachedStyleOwnership.delete(element);
+    const existing = readStyleOwnership(source);
     if (existing) {
       styleOwnershipFallback.set(element, existing);
-      try { node[STYLE_OWNERSHIP] = existing; } catch { /* Retain the validated local copy. */ }
+      try {
+        if (!publishStyleOwnership(element, existing)) detachedStyleOwnership.set(element, { source, ownership: existing });
+      } catch { detachedStyleOwnership.set(element, { source, ownership: existing }); }
       return existing;
     }
   } catch { /* A hostile getter cannot prevent applying or restoring a style. */ }
@@ -1665,7 +1682,7 @@ function ownershipFor(element: Element): StyleOwnership {
   if (fallback) return fallback;
   const record: StyleOwnership = { attributes: new Map(), properties: new Map() };
   styleOwnershipFallback.set(element, record);
-  try { node[STYLE_OWNERSHIP] = record; } catch { /* The local weak map retains ownership. */ }
+  try { publishStyleOwnership(element, record); } catch { /* The local weak map retains ownership. */ }
   return record;
 }
 function writeStyleAttributes(element: Element, desired: Readonly<Record<string, string>>): void {

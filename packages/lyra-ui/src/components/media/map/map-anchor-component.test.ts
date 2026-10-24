@@ -78,6 +78,41 @@ describe('lr-map anchor placement and close ownership', () => {
     peer.projected = { x: -50, y: 20 }; peer.fire('move'); await waitUntil(() => anchor(element).hidden); expect(element.focusAnchor()).to.equal(false);
     peer.projected = undefined; peer.fire('move'); await nextFrame(); await placed(element); wrapper.inert = true; expect(element.focusAnchor()).to.equal(false);
   });
+  for (const priority of ['', ' !important']) {
+    it(`keeps offscreen and closed anchors hidden under consumer display styling${priority}`, async () => {
+      const { element, peer, wrapper } = await open(el => { el.anchorClosable = true; });
+      element.classList.add('consumer-anchor');
+      const style = document.createElement('style');
+      style.textContent = `lr-map.consumer-anchor::part(anchor) { display: flex${priority}; }`;
+      wrapper.append(style);
+      const panel = anchor(element);
+      expect(getComputedStyle(panel).display).to.equal('flex');
+      expect(panel.getClientRects().length).to.be.greaterThan(0);
+
+      peer.projected = { x: -50, y: 20 };
+      peer.fire('move');
+      await waitUntil(() => panel.hidden, 'offscreen anchor receives its hidden state');
+      expect(getComputedStyle(panel).display).to.equal('none');
+      expect(panel.getClientRects().length).to.equal(0);
+
+      peer.projected = undefined;
+      peer.fire('move');
+      await placed(element);
+      expect(getComputedStyle(panel).display).to.equal('flex');
+      expect(panel.getClientRects().length).to.be.greaterThan(0);
+
+      expect(element.closeAnchor()).to.equal(true);
+      await element.updateComplete;
+      expect(panel.hidden).to.equal(true);
+      expect(getComputedStyle(panel).display).to.equal('none');
+      expect(panel.getClientRects().length).to.equal(0);
+
+      element.anchorLngLat = [0, 0];
+      await placed(element);
+      expect(getComputedStyle(panel).display).to.equal('flex');
+      expect(panel.getClientRects().length).to.be.greaterThan(0);
+    });
+  }
   it('closes exactly once through the API with frozen reason and restores its previous focus owner', async () => {
     const outside = await fixture<HTMLButtonElement>(html`<button>Return here</button>`); await focusByKeyboard(outside);
     const { element } = await open(el => { el.anchorClosable = true; }); const closes = capture(element); expect(element.focusAnchor()).to.equal(true);

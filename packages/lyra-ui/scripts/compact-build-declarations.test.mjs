@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { ts } from '@custom-elements-manifest/analyzer';
 import {
   compactBuildDeclarations,
   compactDeclarationText,
@@ -51,6 +52,85 @@ value:{nested:string;};template:\`first
 `;
 assert.equal(compactDeclarationText(source), expected);
 assert.equal(compactDeclarationText(expected), expected, 'declaration compaction is idempotent');
+
+function documentationSnapshot(text) {
+  const parsed = ts.createSourceFile('documented.d.ts', text, ts.ScriptTarget.Latest, true);
+  assert.equal(parsed.parseDiagnostics.length, 0);
+  const documents = [];
+  function visit(node) {
+    for (const doc of node.jsDoc ?? []) {
+      documents.push({
+        comment: ts.getTextOfJSDocComment(doc.comment),
+        tags: [...doc.tags ?? []].map(tag => ({
+          tag: tag.tagName.text,
+          name: tag.name?.getText(parsed),
+          type: tag.typeExpression?.getText(parsed),
+          comment: ts.getTextOfJSDocComment(tag.comment),
+        })),
+      });
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(parsed);
+  return documents;
+}
+
+function declarationTokens(text) {
+  const scanner = ts.createScanner(ts.ScriptTarget.Latest, true, ts.LanguageVariant.Standard, text);
+  const tokens = [];
+  while (scanner.scan() !== ts.SyntaxKind.EndOfFileToken) tokens.push(scanner.getTokenText());
+  return tokens;
+}
+
+const documented = `/** Public class with {@link Other} and a final marker *. */
+export declare class Documented {
+  /** Public value documentation. */
+  value: string;
+  /** Protected extension documentation. */
+  protected extension(): void;
+  /** @deprecated Use value instead. */
+  oldValue: string;
+  /** @example const result = item.run('input'); */
+  run(value: string): string;
+  /** @returns The current result. */
+  result(): string;
+}
+/** @param value Input with {@link Documented} documentation. */
+export declare function read(value: Documented): string;
+/** @see Documented */
+export declare class Other {}
+`;
+const compactedDocumentation = compactDeclarationText(documented);
+const framingSpaces = documented.match(/ \*\//gu).length;
+assert.equal(framingSpaces, 8);
+assert.equal(compactedDocumentation.includes(' */'), false);
+assert.deepEqual(documentationSnapshot(compactedDocumentation), documentationSnapshot(documented),
+  'the TypeScript compiler must retain all public/protected JSDoc text, links and tags');
+assert.equal(documentationSnapshot(compactedDocumentation).length, 8);
+assert.deepEqual(declarationTokens(compactedDocumentation), declarationTokens(documented),
+  'documentation compaction must retain every declaration token');
+assert.equal(compactDeclarationText(compactedDocumentation), compactedDocumentation);
+
+const preservedComments = `/** */
+export declare const empty: string;
+/** Two trailing spaces.  */
+export declare const trailing: string;
+/** Multiple lines.
+ * Preserve this closing line. */
+export declare const multiline: string;
+/* Ordinary comment. */
+export declare const ordinary: string;
+export declare const literal: '/** Literal content. */';
+export declare const template: \`/** Template content. */\`;
+`;
+const preserved = compactDeclarationText(preservedComments);
+for (const text of ['/** */', '/** Two trailing spaces.  */', '* Preserve this closing line. */',
+  '/* Ordinary comment. */', "'/** Literal content. */'", '`/** Template content. */`']) {
+  assert.ok(preserved.includes(text), `preserves ${text}`);
+}
+assert.deepEqual(documentationSnapshot(preserved), documentationSnapshot(preservedComments));
+assert.deepEqual(declarationTokens(preserved), declarationTokens(preservedComments));
+assert.equal(compactDeclarationText(preserved), preserved);
 
 const fixture = await mkdtemp(path.join(tmpdir(), 'lyra-compact-declarations-'));
 try {

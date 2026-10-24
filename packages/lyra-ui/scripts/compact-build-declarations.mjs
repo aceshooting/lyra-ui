@@ -89,6 +89,8 @@ export function compactDeclarationText(source, filename = 'module.d.ts') {
   let state = 'code';
   let quote = '';
   let jsdoc = false;
+  let commentStart = 0;
+  let multilineComment = false;
 
   while (index < source.length) {
     const character = source[index];
@@ -96,6 +98,11 @@ export function compactDeclarationText(source, filename = 'module.d.ts') {
 
     if (state === 'block-comment') {
       if (character === '*' && next === '/') {
+        // A single framing space is not part of a one-line JSDoc's parsed documentation.
+        if (jsdoc && !multilineComment && index > commentStart + 4 &&
+          source[index - 1] === ' ' && !/\s/u.test(source[index - 2])) {
+          output = output.slice(0, -1);
+        }
         output += '*/';
         index += 2;
         state = 'code';
@@ -104,17 +111,20 @@ export function compactDeclarationText(source, filename = 'module.d.ts') {
         continue;
       }
       if (character === '\r' && next === '\n') {
+        multilineComment = true;
         output += '\n';
         index += 2;
         while (source[index] === ' ' || source[index] === '\t') index += 1;
         continue;
       }
       if (character === '\n') {
+        multilineComment = true;
         output += '\n';
         index += 1;
         while (source[index] === ' ' || source[index] === '\t') index += 1;
         continue;
       }
+      if (character === '\r') multilineComment = true;
       output += character;
       index += 1;
       continue;
@@ -141,6 +151,8 @@ export function compactDeclarationText(source, filename = 'module.d.ts') {
 
     if (character === '/' && next === '*') {
       jsdoc = source[index + 2] === '*';
+      commentStart = index;
+      multilineComment = false;
       if (jsdoc && output.length > 0 && !output.endsWith('\n')) output += '\n';
       output += '/*';
       index += 2;

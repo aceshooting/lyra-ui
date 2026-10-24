@@ -70,6 +70,32 @@ export const CompactAttribution: StoryObj = {
       style="inline-size: min(100%, 24rem); block-size: 18rem"></lr-map>
   `,
 };
+
+export const IndependentControlParts: StoryObj = {
+  parameters: { docs: { description: { story: 'Public parts can offset the whole geolocation group and bound expanded credits above the attribution toggle. Opening credits keeps the compact control footprint unchanged.' } } },
+  render: () => html`
+    <style>
+      lr-map.independent-control-parts::part(geolocate-control) { margin-block-end: var(--lr-space-2xl); }
+      lr-map.independent-control-parts::part(attribution-content) {
+        position: absolute;
+        inset-inline-end: 0;
+        inset-block-end: calc(100% + var(--lr-space-xs));
+        inline-size: var(--lr-size-16rem);
+        max-block-size: var(--lr-size-8rem);
+        overflow: auto;
+        padding: var(--lr-space-s);
+        border-radius: var(--lr-radius);
+        background: var(--lr-color-surface);
+        box-shadow: var(--lr-shadow);
+      }
+    </style>
+    <lr-map class="independent-control-parts" label="Independent map control layout" .mapStyle=${OFFLINE_RASTER_STYLE}
+      .controls=${{ geolocate: true, attribution: { compact: true, customAttribution: [
+        'Local survey contributors. Detailed licensing information is retained with these credits. '.repeat(6),
+      ] } }} style="inline-size: min(100%, 20rem); block-size: 18rem"></lr-map>
+  `,
+};
+
 const longRtlLegend = 'أطولتسميةوسيلةإيضاحمتصلةلخريطةضيقة'.repeat(10);
 const longLtrPopup = 'LongMarkerPopupContentWithoutSpaces'.repeat(10);
 const longRtlPopup = 'محتوىنافذةعلامةطويلمتصل'.repeat(12);

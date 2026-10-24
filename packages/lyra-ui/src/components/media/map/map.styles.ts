@@ -316,6 +316,8 @@ export const styles = css`
     box-shadow: var(--lr-shadow-m);
     overflow-wrap: anywhere;
   }
+  /* Placement and close state must survive consumer display rules on the public part. */
+  [part='anchor']:where([hidden]) { display: none !important; }
   [part='legend'] {
     position: absolute;
     inset-block-end: calc(var(--lr-space-s) + var(--_lr-map-controls-bottom, calc(var(--lr-space-xs) * 0)));

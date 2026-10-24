@@ -39,6 +39,96 @@ function setup<S = undefined>(extra: Partial<SourcePageOptions<Row, Query, S>> =
 }
 
 describe('SourcePageController', () => {
+  it('rejects missing page fields and non-array row collections without retaining an earlier page', async () => {
+    const test = setup();
+    const source = provider(1);
+    test.bind(source);
+    expect(await test.control.request({ search: '' }, 0, 1)).to.equal(true);
+    const malformed: unknown[] = [null, 1, {}, { total: 1, rows: {} }, { total: 1, rows: [{ key: 'key-0', order: 0 }] }];
+    for (const raw of malformed) {
+      source.query = async () => raw as LyraPageResult<Row>;
+      expect(await test.control.request({ search: '' }, 0, 1)).to.equal(false);
+      expect(test.control.state.result).to.equal(undefined);
+      expect(test.control.state.pending).to.equal(false);
+      expect(test.control.state.error).to.be.instanceOf(TypeError);
+    }
+    test.disconnect();
+  });
+
+  it('rejects selected records with duplicate global orders without caching the failed lookup', async () => {
+    const test = setup();
+    const source = provider(2);
+    let calls = 0;
+    source.lookup = async () => {
+      calls += 1;
+      return calls === 1 ? [record(0), { ...record(1), order: 0 }] : [record(0), record(1)];
+    };
+    test.bind(source);
+    expect(await test.control.resolveSelection(['key-0', 'key-1'])).to.equal(undefined);
+    expect(test.control.state.selectionError).to.be.instanceOf(TypeError);
+    expect(test.control.state.selectionPending).to.equal(false);
+    expect((await test.control.resolveSelection(['key-0', 'key-1']))?.map(row => row.order)).to.deep.equal([0, 1]);
+    expect(calls).to.equal(2);
+    expect(test.control.state.selectionError).to.equal(undefined);
+    test.disconnect();
+  });
+
+  it('rejects facets that are both available and unavailable, or whose total is smaller than their values', async () => {
+    const test = setup();
+    const source = provider(1);
+    test.bind(source);
+    const values = [{ key: 'tag', label: 'Tag' }];
+    for (const tags of [
+      { total: 1, values, unavailableSelected: ['tag'] },
+      { total: 0, values, unavailableSelected: [] },
+    ]) {
+      source.query = async () => ({ total: 1, rows: [record(0)], tags });
+      expect(await test.control.request({ search: '' }, 0, 1)).to.equal(false);
+      expect(test.control.state.result).to.equal(undefined);
+      expect(test.control.state.error).to.be.instanceOf(Error);
+    }
+    test.disconnect();
+  });
+
+  it('does not locate without an active page intent and rejects empty keys before calling the provider', async () => {
+    const test = setup();
+    const source = provider(1);
+    let calls = 0;
+    source.locate = async () => { calls += 1; return 1; };
+    expect(await test.control.locate('key-0')).to.equal(null);
+    test.bind(source);
+    expect(await test.control.locate('key-0')).to.equal(null);
+    expect(await test.control.request({ search: '' }, 0, 1)).to.equal(true);
+    expect(await test.control.locate('')).to.equal(null);
+    expect(calls).to.equal(0);
+    expect(await test.control.locate('key-1')).to.equal(null);
+    expect(calls).to.equal(1);
+    expect(test.control.state.error).to.equal(undefined);
+    expect(test.control.state.result?.total).to.equal(1);
+    test.disconnect();
+  });
+
+  it('does not commit a page whose summary projection or metadata validation replaces its source', async () => {
+    for (const stage of ['summary', 'metadata'] as const) {
+      const source = { ...provider(1), query: async () => ({ total: 1, rows: [record(0)], summary: { count: 1 } }) };
+      const replacement = { ...provider(1), query: async () => ({ total: 1, rows: [record(0)], summary: { count: 2 } }) };
+      const test = setup<{ count: number }>({
+        normalizeSummary: () => {
+          if (stage === 'summary') test.bind(replacement);
+          return { count: 1 };
+        },
+        validateMetadata: () => {
+          if (stage === 'metadata') test.bind(replacement);
+        },
+      });
+      test.bind(source);
+      expect(await test.control.request({ search: '' }, 0, 1)).to.equal(false);
+      expect(test.control.state.result).to.equal(undefined);
+      expect(test.control.state.pending).to.equal(false);
+      test.disconnect();
+    }
+  });
+
   it('loads first, middle and final logical pages with bounded row projection', async () => {
     let projections = 0;
     const test = setup({ normalizeRecord: value => { projections++; return { ...value, value: value.value as Row }; } });

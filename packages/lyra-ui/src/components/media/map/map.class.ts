@@ -2778,6 +2778,7 @@ export interface LyraMapEventMap {
  *   map library loads and contains ordinary, non-live localized loading text.
  * @csspart configuration-error - Localized control or URL configuration feedback.
  * @csspart geolocate - Native user-activated geolocation button.
+ * @csspart geolocate-control - Native geolocation control wrapper, for group-level layout offsets.
  * @csspart container - The MapLibre container. Its generated canvas is the actual focusable map
  *   region and receives the host-first accessible name and effective locale.
  * @slot anchor - Content placed at `anchorLngLat`: above the point, flipped below near the top edge
@@ -2830,6 +2831,7 @@ export interface LyraMapEventMap {
  * @csspart popup-close-button - The MapLibre-generated button that closes an open marker popup.
  * @csspart attribution - MapLibre-generated map attribution.
  * @csspart attribution-toggle - MapLibre's compact-attribution disclosure control with a decorative information glyph.
+ * @csspart attribution-content - Native attribution credits, independently positionable from the compact disclosure control.
  * @csspart navigation - Standard peer NavigationControl group, added through `controls` or the map getter.
  * @csspart zoom-in - Peer zoom-in button with a localized accessible name and tokenized target.
  * @csspart zoom-out - Peer zoom-out button.
@@ -7982,11 +7984,13 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       ['.maplibregl-popup-close-button', 'popup-close-button'],
       ['.maplibregl-ctrl-attrib', 'attribution'],
       ['.maplibregl-ctrl-attrib-button', 'attribution-toggle'],
+      ['.maplibregl-ctrl-attrib-inner', 'attribution-content'],
       ['.maplibregl-ctrl-group:has(.maplibregl-ctrl-zoom-in, .maplibregl-ctrl-compass)', 'navigation'],
       ['.maplibregl-ctrl-zoom-in', 'zoom-in'],
       ['.maplibregl-ctrl-zoom-out', 'zoom-out'],
       ['.maplibregl-ctrl-compass', 'compass'],
       ['.maplibregl-ctrl-scale', 'scale'],
+      ['.maplibregl-ctrl:has(.maplibregl-ctrl-geolocate)', 'geolocate-control'],
       ['.maplibregl-ctrl-geolocate', 'geolocate'],
     ];
     for (const [selector, part] of selectors) {

@@ -26,12 +26,12 @@ function setup(payload?: HierarchySourceOptions<string>['payload']) {
     requestUpdate: () => {}, updateComplete: Promise.resolve(true),
   }) satisfies HTMLElement & ReactiveControllerHost;
   document.body.append(host);
+  const disconnect = () => { host.remove(); controllers.forEach(c => c.hostDisconnected?.()); };
+  fixtures.push(disconnect);
   const control = new HierarchySourceController(host, { normalize: value => {
     if (typeof value !== 'string') throw new TypeError('Expected string');
     return value;
   }, onChange: () => {}, accepted: () => {}, ...(payload ? { payload } : {}) });
-  const disconnect = () => { host.remove(); controllers.forEach(c => c.hostDisconnected?.()); };
-  fixtures.push(disconnect);
   return { control, host, disconnect };
 }
 afterEach(() => { fixtures.splice(0).forEach(disconnect => disconnect()); });
@@ -69,7 +69,8 @@ describe('hierarchy inspection authority', () => {
     control.update(source, 'en'); await control.whenReady();
     let getters = 0;
     const invalid = { get search() { getters++; return ''; }, hiddenKinds: [] };
-    for (const query of [invalid, { search: 'x'.repeat(4097), hiddenKinds: [] }, { search: '', hiddenKinds: ['x'.repeat(65)] }]) {
+    for (const query of [invalid, { search: 'x'.repeat(4097), hiddenKinds: [] }, { search: '', hiddenKinds: ['x'.repeat(65)] },
+      { search: '', hiddenKinds: Array.from({ length: 65 }, (_, index) => `kind-${index}`) }]) {
       control.update(source, 'en', false, query);
       expect(control.error).to.equal(true);
       expect(control.projection === undefined).to.equal(true);
@@ -124,6 +125,10 @@ describe('hierarchy inspection authority', () => {
     ];
     for (const value of malformed) { source.search = async () => value; expect((await control.search()).status).to.equal('error'); }
     expect(getters).to.equal(0);
+    for (const hits of [null, {}, 'not an array']) {
+      Reflect.set(source, 'search', async () => ({ hits, total: 0, exhaustive: true }));
+      expect((await control.search()).status).to.equal('error');
+    }
   });
 
   it('settles obsolete search promptly while keeping one physical call and only the latest queued intent', async () => {
@@ -340,6 +345,163 @@ describe('hierarchy inspection authority', () => {
     expect(query).to.equal('newest'); expect(control.error).to.equal(false);
     expect(control.projection !== undefined).to.equal(true);
     pending.resolve(empty());
+  });
+
+
+  it('rejects invalid payload budgets before registering a usable controller', () => {
+    for (const payload of [
+      { maxUnits: 65_557, maxRowUnits: 20, unitsOf: (value: string) => value.length },
+      { maxUnits: 65_556, maxRowUnits: 20, unitsOf: (value: string) => value.length },
+      { maxUnits: Infinity, maxRowUnits: 20, unitsOf: (value: string) => value.length },
+      { maxUnits: 100_000, maxRowUnits: 0, unitsOf: (value: string) => value.length },
+      { maxUnits: 100_000, maxRowUnits: 1.5, unitsOf: (value: string) => value.length },
+    ]) {
+      if (payload.maxUnits === 65_557) expect(setup(payload).control.error).to.equal(false);
+      else expect(() => setup(payload)).to.throw(RangeError);
+    }
+    const payload = { maxUnits: 100_000, maxRowUnits: 20, unitsOf: (value: string) => value.length };
+    Reflect.set(payload, 'unitsOf', undefined);
+    expect(() => setup(payload)).to.throw(RangeError);
+  });
+
+  it('rejects disabled, invalid-weight and reentrantly replaced focused snapshots', async () => {
+    let units = 1;
+    let duringWeight = () => {};
+    const { control } = setup({ maxUnits: 100_000, maxRowUnits: 20,
+      unitsOf: () => { duringWeight(); return units; } });
+    const source = provider();
+    control.update(source, 'en'); await control.whenReady();
+    control.focusRow(0, row(0));
+    expect(control.activeKey).to.equal('k0');
+    control.focusRow(1, { ...row(1), disabled: true });
+    expect(control.activeKey).to.equal('k0');
+    for (units of [-1, NaN, Infinity, 1.5, 21]) {
+      control.focusRow(1, row(1));
+      expect(control.activeKey).to.equal('k0');
+    }
+    units = 1;
+    duringWeight = () => { duringWeight = () => {}; control.update(provider(), 'fr'); };
+    control.focusRow(1, row(1));
+    expect(control.activeKey === undefined).to.equal(true);
+    expect(await control.whenReady()).to.equal(true);
+    expect(control.activeKey === undefined).to.equal(true);
+  });
+
+  it('validates selection metadata while retaining all documented selection states', async () => {
+    const { control } = setup();
+    for (const selectionState of ['none', 'partial', 'all', 'unknown', 1]) {
+      const source = provider();
+      const candidate = row(0);
+      Reflect.set(candidate, 'selectionState', selectionState);
+      source.project = async () => ({ state: 'state', total: 1,
+        rows: { count: 1, keyAt: () => 'k0', indexOfKey: () => 0, itemAt: () => candidate } });
+      control.update(source, 'en');
+      expect(await control.whenReady()).to.equal(true);
+      const slot = control.slot(0);
+      const valid = selectionState === 'none' || selectionState === 'partial' || selectionState === 'all';
+      expect(slot.state).to.equal(valid ? 'ready' : 'error');
+      if (slot.state === 'ready') expect(slot.value.selectionState).to.equal(selectionState);
+    }
+  });
+
+  it('rejects missing projections, out-of-range focus and invalid reveal keys', async () => {
+    const { control } = setup();
+    control.cancelPending();
+    expect(await control.navigate(0)).to.equal(false);
+    expect(await control.reveal('')).to.equal(false);
+    for (const malformed of [null, { state: 'state', total: 0, focusIndex: 0,
+      rows: { count: 0, keyAt: () => '', indexOfKey: () => -1, itemAt: () => row(0) } }]) {
+      const source = provider();
+      Reflect.set(source, 'project', async () => malformed);
+      control.update(source, 'en');
+      expect(await control.whenReady()).to.equal(false);
+      expect(control.error).to.equal(true);
+      expect(control.projection === undefined).to.equal(true);
+      expect(await control.project({ type: 'reset' }, true)).to.equal(false);
+    }
+  });
+
+  it('keeps newer source authority when a capability getter replaces its provider', async () => {
+    for (const capability of ['search', 'copy'] as const) {
+      const { control } = setup();
+      const source = provider();
+      const next = provider();
+      let invoked = 0;
+      Object.defineProperty(source, capability, { get() {
+        control.update(next, 'fr');
+        return () => { invoked++; return capability === 'search' ? empty() : 'text'; };
+      } });
+      control.update(source, 'en'); await control.whenReady();
+      const result = capability === 'search' ? await control.search() : await control.copy(null, 'document', 4);
+      expect(result.status).to.equal('stale');
+      expect(invoked).to.equal(0);
+      expect(await control.whenReady()).to.equal(true);
+      expect(control.error).to.equal(false);
+      expect((await control.search()).status).to.equal('unavailable');
+    }
+  });
+
+  it('preserves replacements triggered by capability abort during cancellation and new requests', async () => {
+    for (const operation of ['cancel', 'search', 'copy'] as const) {
+      for (const channel of ['search', 'copy'] as const) {
+        if (operation === 'copy' && channel === 'search') continue;
+        const { control } = setup();
+        const source = provider();
+        const next = provider();
+        const pending = deferred<LyraSourceSearchResult<{ key: string }>>();
+        const copied = deferred<string>();
+        let invoked = false;
+        const onSignal = (signal: AbortSignal) => {
+          invoked = true;
+          signal.addEventListener('abort', () => control.update(next, 'fr'), { once: true });
+        };
+        source.search = request => { onSignal(request.signal); return pending.promise; };
+        source.copy = request => { onSignal(request.signal); return copied.promise; };
+        control.update(source, 'en'); await control.whenReady();
+        const first = channel === 'search' ? control.search() : control.copy(null, 'document', 4);
+        await waitUntil(() => invoked);
+        if (operation === 'cancel') control.cancelSearch();
+        else {
+          const result = operation === 'search' ? await control.search() : await control.copy(null, 'document', 4);
+          expect(result.status).to.equal('stale');
+        }
+        expect((await first).status).to.equal('stale');
+        pending.resolve(empty()); copied.resolve('late');
+        expect(await control.whenReady()).to.equal(true);
+        expect(control.error).to.equal(false);
+        expect((await control.copy(null, 'document', 4)).status).to.equal('unavailable');
+      }
+    }
+  });
+
+  it('routes hierarchy expansion, collapse and parent navigation in both text directions', () => {
+    for (const rtl of [false, true]) {
+      const { control } = setup();
+      const actions: unknown[] = [];
+      control.project = async action => { actions.push(action); return true; };
+      control.navigate = async (index, step) => { actions.push({ index, step }); return true; };
+      control.reveal = async key => { actions.push({ reveal: key }); return true; };
+      const dispatch = (key: string, candidate: LyraHierarchyRow<string>) => {
+        const event = new KeyboardEvent('keydown', { key, cancelable: true });
+        control.keydown(event, candidate, 2, rtl, value => actions.push({ select: value.key }));
+        expect(event.defaultPrevented).to.equal(true);
+      };
+      const expand = rtl ? 'ArrowLeft' : 'ArrowRight';
+      const collapse = rtl ? 'ArrowRight' : 'ArrowLeft';
+      dispatch(expand, { ...row(2), childCount: 1 });
+      dispatch(expand, { ...row(2), childCount: 1, expanded: true });
+      dispatch(expand, row(2));
+      dispatch(collapse, { ...row(2), childCount: 1, expanded: true });
+      dispatch(collapse, { ...row(2), parentKey: 'k0' });
+      dispatch(collapse, row(2));
+      dispatch('ArrowUp', row(2));
+      dispatch('Enter', row(2));
+      expect(actions).to.deep.equal([
+        { type: 'toggle', key: 'k2', expanded: true }, { index: 3, step: 1 },
+        { type: 'toggle', key: 'k2', expanded: false }, { reveal: 'k0' },
+        { index: 1, step: -1 }, { select: 'k2' },
+      ]);
+    }
   });
 
 });
