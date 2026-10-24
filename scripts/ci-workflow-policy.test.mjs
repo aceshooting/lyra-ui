@@ -470,16 +470,21 @@ if [[ "$*" == *"commits/main"* ]]; then printf '%s\\n' "$MAIN_SHA"; exit; fi
 paginate=false
 slurp=false
 query=''
+formatted=false
 while (( $# )); do
   case "$1" in
     --paginate) paginate=true ;;
     --slurp) slurp=true ;;
-    --jq) shift; query="$1" ;;
+    --jq|-q|--template|-t) formatted=true; shift; query="$1" ;;
   esac
   shift
 done
+if [[ "$slurp" == true && "$formatted" == true ]]; then
+  echo 'the --slurp option is not supported with --jq or --template' >&2
+  exit 1
+fi
 if [[ "$paginate" == true && "$slurp" == true ]]; then
-  jq "$query" "$ARTIFACT_PAGES"
+  cat "$ARTIFACT_PAGES"
 else
   jq ".[0] | $query" "$ARTIFACT_PAGES"
 fi

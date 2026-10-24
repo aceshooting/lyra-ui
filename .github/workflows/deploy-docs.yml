@@ -65,7 +65,7 @@ jobs:
         run: |
           set -euo pipefail
           head="$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)"
-          built="$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts" --jq '[.[].artifacts[] | select(.name == "storybook-static" and .expired == false)] | length')"
+          built="$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts" | jq '[.[].artifacts[] | select(.name == "storybook-static" and .expired == false)] | length')"
           if [[ "$head" == "$RUN_SHA" && "$built" == "1" ]]; then current=true; else current=false; fi
           echo "current=$current" >> "$GITHUB_OUTPUT"
       - if: steps.head.outputs.current == 'true'
