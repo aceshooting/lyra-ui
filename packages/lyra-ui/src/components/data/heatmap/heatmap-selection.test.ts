@@ -357,3 +357,22 @@ it('supports multiple selection from the canvas keyboard surface without accessi
   expect(el.shadowRoot!.querySelectorAll('[part="cell"]').length).to.equal(0);
   expect(canvas.getAttribute('role')).to.equal('application');
 });
+
+describe('lr-heatmap selection entries that name no cell', () => {
+  it('ignores matrix entries that are not records or that name a date instead of a cell', async () => {
+    const el = await matrix();
+    el.selectedCells = [null, 3, 'cell', { row: 0, col: 0 }, { date: '2026-03-02' }] as unknown as HeatmapSelectedCell[];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[aria-selected="true"]').length).to.equal(1);
+    expect(cell(el, 0, 0).getAttribute('aria-selected')).to.equal('true');
+  });
+
+  it('matches calendar entries by their text date and ignores coordinates and non-text dates', async () => {
+    const el = await fixture<LyraHeatmap>(html`<lr-heatmap accessible-cells multiple style="inline-size: 320px"
+      .data=${{ kind: 'calendar', days: [{ date: '2026-03-02', value: 1 }, { date: '2026-03-03', value: 2 }] }}></lr-heatmap>`);
+    el.selectedCells = [{ row: 0, col: 0 }, { date: 20260303 }, { date: '2026-03-02' }, { date: '1999-01-01' }] as unknown as HeatmapSelectedCell[];
+    await el.updateComplete;
+    const selected = [...el.shadowRoot!.querySelectorAll('[aria-selected="true"]')].map((node) => node.getAttribute('data-cell-identity'));
+    expect(selected).to.deep.equal(['2026-03-02']);
+  });
+});

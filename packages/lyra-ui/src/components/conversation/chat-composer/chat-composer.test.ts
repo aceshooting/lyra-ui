@@ -1941,6 +1941,22 @@ it("keeps native selection and range-editing methods safe before first connectio
   }
 });
 
+it("moves and resets the textarea selection bounds through the host setters", async () => {
+  const el = (await fixture(
+    html`<lr-chat-composer value="hello world"></lr-chat-composer>`
+  )) as LyraChatComposer;
+  const ta = textareaOf(el);
+
+  el.selectionStart = 2;
+  el.selectionEnd = 7;
+  expect([ta.selectionStart, ta.selectionEnd]).to.deep.equal([2, 7]);
+  expect([el.selectionStart, el.selectionEnd]).to.deep.equal([2, 7]);
+
+  el.selectionStart = null;
+  el.selectionEnd = null;
+  expect([ta.selectionStart, ta.selectionEnd]).to.deep.equal([0, 0]);
+});
+
 it("reads and writes the textarea selection direction through the host", async () => {
   const el = (await fixture(
     html`<lr-chat-composer></lr-chat-composer>`

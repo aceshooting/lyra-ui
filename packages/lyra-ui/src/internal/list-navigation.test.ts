@@ -28,6 +28,15 @@ describe('list navigation', () => {
     expect(resolveListMove(new KeyboardEvent('keydown', { key: 'ArrowDown', ctrlKey: true }), options)).to.equal(null);
   });
 
+  it('reports no target when a nonwrapping clamp finds no available edge to enter', () => {
+    const options = {
+      count: 3, current: -1, orientation: 'vertical' as const, wrap: false, clamp: true, backwardFromMissing: 'first' as const,
+    };
+    expect(resolveListMove('ArrowUp', { ...options, isAvailable: () => false })).to.equal(null);
+    expect(resolveListMove('ArrowUp', { ...options, isAvailable: index => index === 1 })).to.equal(1);
+    expect(resolveListMove('ArrowUp', options)).to.equal(0);
+  });
+
   it('rejects disabled, hidden, and inert targets', () => {
     const wrapper = document.createElement('div');
     const item = document.createElement('button');

@@ -169,3 +169,40 @@ it('rejects non-serializable nested records without retaining provider aliases',
     { Text: 'text' },
   )).to.equal(null);
 });
+
+describe('A2UI component validation', () => {
+  const surface = (component: Record<string, unknown>) => ({
+    rootId: 'root',
+    components: [{ id: 'root', type: 'Box', ...component }],
+  });
+  const types = { Box: 'box' };
+
+  it('rejects a surface whose root component carries malformed props, text or action data', () => {
+    expect(adaptA2UiSurface(surface({}), types)?.root.type).to.equal('box');
+    for (const component of [
+      { props: 'loud' },
+      { props: ['loud'] },
+      { text: 42 },
+      { action: 'open' },
+      { action: {} },
+      { action: { id: 7 } },
+    ]) {
+      expect(adaptA2UiSurface(surface(component), types), JSON.stringify(component)).to.equal(null);
+    }
+  });
+
+  it('keeps an action payload only when the component declares one', () => {
+    const bare = adaptA2UiSurface(surface({ action: { id: 'open' } }), types)?.root as unknown as Record<string, unknown>;
+    expect(bare['actionId']).to.equal('open');
+    expect(Object.hasOwn(bare, 'payload')).to.equal(false);
+    const withPayload = adaptA2UiSurface(surface({ action: { id: 'open', payload: { target: 'doc-1' } } }), types)?.root as unknown as Record<string, unknown>;
+    expect(withPayload['payload']).to.deep.equal({ target: 'doc-1' });
+  });
+
+  it('fails closed when the type map cannot be snapshotted or holds a non-string target', () => {
+    expect(adaptA2UiSurface(surface({}), { Box: () => 'box' })).to.equal(null);
+    expect(adaptA2UiSurface(surface({}), { Box: 7 })).to.equal(null);
+    expect(adaptA2UiSurface(surface({}), null)).to.equal(null);
+    expect(adaptA2UiSurface(surface({}), types)).to.not.equal(null);
+  });
+});

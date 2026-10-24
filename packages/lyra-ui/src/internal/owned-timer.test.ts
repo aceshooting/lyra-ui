@@ -1,4 +1,4 @@
-import { expect } from '@open-wc/testing';
+import { expect, waitUntil } from '@open-wc/testing';
 import { OwnedFrame, OwnedInterval, OwnedTimeout } from './owned-timer.js';
 
 describe('realm-owned schedules', () => {
@@ -84,6 +84,42 @@ describe('realm-owned schedules', () => {
       window.clearInterval = originalClearInterval;
       window.requestAnimationFrame = originalFrame;
       window.cancelAnimationFrame = originalCancelFrame;
+    }
+  });
+});
+
+describe('realm-owned schedules without a usable owner', () => {
+  it('schedules nothing for a disconnected host or a document without a browsing context', async () => {
+    const detached = document.createElement('div');
+    const ownerless = document.implementation.createHTMLDocument('ownerless');
+    const inert = ownerless.body.appendChild(ownerless.createElement('div'));
+    const connected = document.body.appendChild(document.createElement('div'));
+    let ran = 0;
+    try {
+      for (const host of [detached, inert]) {
+        const timeout = new OwnedTimeout(host);
+        const interval = new OwnedInterval(host);
+        const frame = new OwnedFrame(host);
+        timeout.schedule(0, () => { ran += 1; });
+        interval.schedule(1, () => { ran += 1; });
+        frame.schedule(() => { ran += 1; });
+        expect([timeout.pending, interval.pending, frame.pending], host.isConnected ? 'ownerless document' : 'disconnected').to.deep.equal([false, false, false]);
+      }
+
+      const timeout = new OwnedTimeout(connected);
+      const interval = new OwnedInterval(connected);
+      const frame = new OwnedFrame(connected);
+      timeout.schedule(0, () => { ran += 100; });
+      interval.schedule(1_000_000, () => {});
+      frame.schedule(() => {});
+      expect([timeout.pending, interval.pending, frame.pending], 'a connected host schedules').to.deep.equal([true, true, true]);
+      await waitUntil(() => ran >= 100);
+      interval.cancel();
+      frame.cancel();
+      await new Promise<void>((resolve) => { window.setTimeout(resolve, 30); });
+      expect(ran, 'nothing scheduled for the unusable hosts ever ran').to.equal(100);
+    } finally {
+      connected.remove();
     }
   });
 });

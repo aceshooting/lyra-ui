@@ -132,6 +132,27 @@ describe('PopupController', () => {
     expect(p.pointers).to.equal(0);
   });
 
+  it('release() frees only the named lifecycle direction without emitting it', async () => {
+    const p = await probe();
+    const shown = p.controller.wait(true);
+    p.controller.release('lr-after-hide');
+    expect(await settled(shown), 'the opposite direction leaves the caller waiting').to.equal(false);
+    p.controller.release('lr-after-show');
+    expect(await settled(shown)).to.equal(true);
+    expect(p.emitted).to.deep.equal([]);
+  });
+
+  it('settles a host that supplies no popup element', async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div></div>`);
+    const host = Object.assign(wrapper, { updateComplete: Promise.resolve() });
+    const emitted: string[] = [];
+    const controller = new PopupController({ host, emit: (name) => { emitted.push(name); return false; }, onPointer: () => {} });
+    const hidden = controller.wait(false);
+    await controller.settle('lr-after-hide');
+    await hidden;
+    expect(emitted).to.deep.equal(['lr-after-hide']);
+  });
+
   it('serves pointer-only hosts that supply no popup or emit', async () => {
     const wrapper = await fixture<HTMLElement>(html`<div><span id="host"></span><button id="outside"></button></div>`);
     const host = wrapper.querySelector('#host') as Probe['host'];

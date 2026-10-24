@@ -8,6 +8,7 @@ import {
   readResponseArrayBuffer,
   readResponseText,
   resolveOwnerFetchTarget,
+  yieldViewerTask,
 } from './resource-loader.js';
 
 function responseWithReader(
@@ -174,4 +175,35 @@ it('recognizes abort errors created in another browsing context', async () => {
   const iframe = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
   const ownerError = new iframe.contentWindow!.DOMException('cancelled', 'AbortError');
   expect(isAbortError(ownerError)).to.equal(true);
+});
+
+it('treats a bodyless response that offers neither arrayBuffer() nor text() as empty', async () => {
+  const response = { headers: new Headers(), body: null } as unknown as Response;
+  expect((await readResponseArrayBuffer(response, 10)).byteLength).to.equal(0);
+  expect(await readResponseText(response, 10)).to.equal('');
+});
+
+describe('yieldViewerTask', () => {
+  it('prefers scheduler.yield, then requestIdleCallback, then a timer, then the ambient timer', async () => {
+    const calls: string[] = [];
+    const withScheduler = { scheduler: { yield: async () => { calls.push('yield'); } } } as unknown as Window;
+    const withIdle = {
+      requestIdleCallback: (callback: () => void) => { calls.push('idle'); callback(); },
+    } as unknown as Window;
+    const timerOnly = {
+      setTimeout: (callback: () => void) => { calls.push('timer'); return window.setTimeout(callback, 0); },
+    } as unknown as Window;
+    for (const view of [withScheduler, withIdle, timerOnly, null]) await yieldViewerTask(view, () => true);
+    expect(calls).to.deep.equal(['yield', 'idle', 'timer']);
+  });
+
+  it('rejects with an AbortError once the viewer source is no longer current', async () => {
+    let error: unknown;
+    try {
+      await yieldViewerTask(null, () => false);
+    } catch (caught) {
+      error = caught;
+    }
+    expect(error instanceof DOMException && error.name).to.equal('AbortError');
+  });
 });

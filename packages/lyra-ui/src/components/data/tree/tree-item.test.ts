@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './tree-item.js';
 import './tree.js';
 import { LyraTreeItem } from './tree-item.js';
+import type { LyraTree } from './tree.class.js';
 import {
   configureTreeItemOwner,
   setTreeItemSelection,
@@ -1334,4 +1335,19 @@ it('keeps the themed checked and indeterminate checkbox border under the pointer
       await resetMouse();
     }
   }
+});
+
+describe('lr-tree-item activation before its first render', () => {
+  it('selects through the same request as a pointer click even before the row exists', async () => {
+    const tree = (await fixture(html`<lr-tree label="Files"></lr-tree>`)) as LyraTree;
+    const item = document.createElement('lr-tree-item') as LyraTreeItem;
+    item.setAttribute('label', 'Late row');
+    const requests: unknown[] = [];
+    tree.addEventListener('lr-node-select', (event) => requests.push((event as CustomEvent<{ nodeId: string }>).detail.nodeId));
+    tree.append(item);
+    item.click();
+    expect(requests.length).to.equal(1);
+    expect(requests[0]).to.equal(item.nodeId);
+    await tree.updateComplete;
+  });
 });

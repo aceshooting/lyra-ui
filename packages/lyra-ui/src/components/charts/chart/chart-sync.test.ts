@@ -6,10 +6,13 @@ import './histogram.js';
 import type { LyraChart } from './chart.class.js';
 import type { LyraLiteChart } from './lite-chart.class.js';
 import type { LyraHistogram } from './histogram.class.js';
+import { ChartSyncController, type ChartSyncPresentation } from './chart-sync.js';
 import { LazyChartSyncController } from './chart-sync-lazy.js';
 import { adoptChartSyncStyles } from './chart-sync-style-adoption.js';
+import { preloadCharts } from './chart-preload.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse, hoverUntilMatched } from '../../../../test/wtr-mouse.js';
+import { twoFrames } from '../../../../test/frames.js';
 
 type SyncChart = LyraChart | LyraLiteChart;
 function hasSyncStyles(root: ShadowRoot): boolean {
@@ -647,6 +650,9 @@ describe('chart synchronization', () => {
 });
 
 it('clears active synchronization when an accepted dataset legend action hides its owner series', async () => {
+  // This root-level test runs before the suite's other charts; finish the cold peer import before
+  // the allocation/synchronization waits, whose budgets cover rendering and interaction.
+  expect((await preloadCharts()).core).to.equal(true);
   const host = await fixture<HTMLDivElement>(html`<div style="width:600px">
     <lr-chart without-animation height="8rem" sync-group="legend-owner" .labels=${['A']}
       .datasets=${[{ label: 'Owner', data: [1] }]}></lr-chart>
@@ -663,4 +669,179 @@ it('clears active synchronization when an accepted dataset legend action hides i
   await waitUntil(() => !crosshair(recipient));
   expect(tooltip(recipient)).to.equal('');
   expect(owner.hiddenDatasets).to.deep.equal([0]);
+});
+
+describe('chart synchronization controller boundaries', () => {
+  function stage(): { host: HTMLElement; container: HTMLElement; release(): void } {
+    const host = document.createElement('div');
+    host.attachShadow({ mode: 'open' });
+    const container = document.createElement('div');
+    container.style.cssText = 'position:relative;inline-size:200px;block-size:100px';
+    host.shadowRoot!.append(container);
+    document.body.append(host);
+    return { host, container, release: () => host.remove() };
+  }
+  const parts = (container: HTMLElement, part: string): number => container.querySelectorAll(`[part="${part}"]`).length;
+
+  it('leaves its group when the name is cleared, the chart becomes incompatible or the host detaches', () => {
+    const { host, container, release } = stage();
+    const controller = new ChartSyncController(host, () => ({ container, x: 10, top: 0, height: 50 }));
+    try {
+      controller.update('  ', true);
+      expect(controller.enabled).to.equal(false);
+      controller.update('leave-group', false);
+      expect(controller.enabled).to.equal(false);
+      controller.update('leave-group', true);
+      expect(controller.enabled).to.equal(true);
+      controller.update('', true);
+      expect(controller.enabled).to.equal(false);
+      controller.update(' leave-group ', true);
+      expect(controller.enabled).to.equal(true);
+      controller.update(42, true);
+      expect(controller.enabled).to.equal(false);
+      controller.update('leave-group', true);
+      expect(controller.enabled).to.equal(true);
+      release();
+      controller.update('leave-group', true);
+      expect(controller.enabled).to.equal(false);
+    } finally {
+      controller.disconnect();
+      release();
+    }
+  });
+
+  it('cancels a pending presentation when the active category is cleared within the same frame', async () => {
+    const { host, container, release } = stage();
+    const projected: string[] = [];
+    const controller = new ChartSyncController(host, (label) => {
+      projected.push(label);
+      return { container, x: 10, top: 0, height: 50 };
+    });
+    try {
+      controller.update('cancel-group', true);
+      controller.publish('Q1', 0);
+      controller.clear();
+      await twoFrames();
+      expect(projected).to.deep.equal([]);
+      expect(parts(container, 'sync-crosshair')).to.equal(0);
+      controller.publish('Q2', 1);
+      await waitUntil(() => parts(container, 'sync-crosshair') === 1, 'a later category presents normally');
+      expect(projected).to.deep.equal(['Q2']);
+    } finally {
+      controller.disconnect();
+      release();
+    }
+  });
+
+  it('draws no overlay when the projected geometry cannot be placed', async () => {
+    const { host, container, release } = stage();
+    let presentation: ChartSyncPresentation = { container, x: 10, top: 0, height: 50 };
+    const controller = new ChartSyncController(host, () => presentation);
+    try {
+      controller.update('unplaceable-group', true);
+      const attempts: [string, ChartSyncPresentation][] = [
+        ['non-finite x', { container, x: Number.NaN, top: 0, height: 50 }],
+        ['non-finite top', { container, x: 10, top: Number.POSITIVE_INFINITY, height: 50 }],
+        ['empty height', { container, x: 10, top: 0, height: 0 }],
+      ];
+      for (const [name, candidate] of attempts) {
+        presentation = candidate;
+        controller.publish(name, 0);
+        await twoFrames();
+        expect(parts(container, 'sync-crosshair'), name).to.equal(0);
+      }
+      container.style.inlineSize = '0px';
+      presentation = { container, x: 10, top: 0, height: 50 };
+      controller.publish('collapsed', 0);
+      await twoFrames();
+      expect(parts(container, 'sync-crosshair'), 'collapsed container').to.equal(0);
+      container.style.inlineSize = '200px';
+      controller.publish('placeable', 0);
+      await waitUntil(() => parts(container, 'sync-crosshair') === 1, 'a placeable geometry draws the crosshair');
+    } finally {
+      controller.disconnect();
+      release();
+    }
+  });
+
+  it('renders only the non-empty lines of a synchronized tooltip', async () => {
+    const { host, container, release } = stage();
+    let tooltip: ChartSyncPresentation['tooltip'] = { title: '', rows: ['first', 'second'] };
+    const controller = new ChartSyncController(host, () => ({ container, x: 10, top: 0, height: 50, tooltip }));
+    const lines = (): string => [...container.querySelectorAll('[part="sync-tooltip"] bdi')].map((line) => line.textContent).join('|');
+    try {
+      controller.update('lines-group', true);
+      controller.publish('A', 0);
+      await waitUntil(() => lines() === 'first|second', 'rows without a title');
+      tooltip = { title: 'Only title', rows: [] };
+      controller.publish('B', 1);
+      await waitUntil(() => lines() === 'Only title', 'a title without rows');
+      tooltip = { title: '', rows: [] };
+      controller.publish('C', 2);
+      await waitUntil(() => parts(container, 'sync-tooltip') === 0, 'an empty tooltip is not drawn');
+      expect(parts(container, 'sync-crosshair')).to.equal(1);
+    } finally {
+      controller.disconnect();
+      release();
+    }
+  });
+});
+
+describe('lazy chart synchronization loading boundaries', () => {
+  it('creates no controller when the owner leaves or the host detaches while the module is loading', async () => {
+    const module = await import('./chart-sync.js');
+    for (const leave of ['disconnect', 'detach'] as const) {
+      const host = document.createElement('div');
+      document.body.append(host);
+      let finish!: (value: typeof module) => void;
+      const loading = new Promise<typeof module>((resolve) => { finish = resolve; });
+      let ready = 0;
+      const controller = new LazyChartSyncController(host, () => undefined, undefined, undefined, () => { ready += 1; }, () => loading);
+      try {
+        controller.update('loading-group', true);
+        if (leave === 'disconnect') controller.disconnect();
+        else host.remove();
+        finish(module);
+        await aTimeout(20);
+        expect(controller.enabled, leave).to.equal(false);
+        expect(ready, leave).to.equal(0);
+      } finally {
+        controller.disconnect();
+        host.remove();
+      }
+    }
+  });
+});
+
+describe('chart synchronization style nonce', () => {
+  it('uses the page nonce when the owner window has none and omits it when neither exists', async () => {
+    const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+    const doc = frame.contentDocument!;
+    const host = doc.createElement('div');
+    const root = host.attachShadow({ mode: 'open' });
+    doc.body.append(host);
+    Object.defineProperty(root, 'adoptedStyleSheets', {
+      configurable: true,
+      get: () => [],
+      set: () => { throw new TypeError('stylesheet adoption unavailable'); },
+    });
+    const pageNonce = Object.getOwnPropertyDescriptor(globalThis, 'litNonce');
+    let release: (() => void) | undefined;
+    try {
+      Reflect.deleteProperty(globalThis, 'litNonce');
+      release = adoptChartSyncStyles(host);
+      expect(root.querySelectorAll('style').length).to.equal(1);
+      expect(root.querySelector('style')!.hasAttribute('nonce')).to.equal(false);
+      release();
+      Object.defineProperty(globalThis, 'litNonce', { configurable: true, value: 'page-nonce' });
+      release = adoptChartSyncStyles(host);
+      expect(root.querySelector('style')!.nonce).to.equal('page-nonce');
+    } finally {
+      release?.();
+      Reflect.deleteProperty(root, 'adoptedStyleSheets');
+      if (pageNonce) Object.defineProperty(globalThis, 'litNonce', pageNonce);
+      else Reflect.deleteProperty(globalThis, 'litNonce');
+      host.remove();
+    }
+  });
 });

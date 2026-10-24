@@ -324,6 +324,33 @@ describe('lr-context-meter interactive mode', () => {
     expect(seen.map((detail) => detail.index), 'Space activates a focused arc').to.deep.equal([1]);
   });
 
+  it('ignores keys other than Enter and Space on a ring arc', async () => {
+    const el = await meter({ interactive: true, shape: 'ring' });
+    const seen = activations(el);
+    const arc = segments(el)[1]!;
+    for (const key of ['a', 'ArrowRight', 'Tab', 'Escape']) {
+      const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+      arc.dispatchEvent(event);
+      expect(event.defaultPrevented, key).to.equal(false);
+    }
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+    arc.dispatchEvent(enter);
+    expect(enter.defaultPrevented).to.equal(true);
+    expect(seen.map((detail) => detail.index)).to.deep.equal([1]);
+  });
+
+  it('does not activate a segment that was disabled or removed after it last rendered', async () => {
+    const el = await meter({ interactive: true });
+    const seen = activations(el);
+    const [first, second] = segments(el);
+    el.segments = SEGMENTS.map((segment, index) => (index === 0 ? { ...segment, disabled: true } : segment));
+    first!.click();
+    el.segments = [];
+    second!.click();
+    expect(seen).to.deep.equal([]);
+    expect([...el.selectedIndices]).to.deep.equal([]);
+  });
+
   it('paints the control affordance the interactive stylesheet promises', async () => {
     const el = await meter({ interactive: true, legend: true });
     el.selectedIndices = [0];

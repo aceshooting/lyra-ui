@@ -8,6 +8,7 @@ import {
   canonicalIdentityList,
   firstByRetrievalIdentity,
   isNonBlankIdentity,
+  isValidRetrievalChunk,
 } from '../retrieval-identity.js';
 
 const alwaysExpanded = () => true;
@@ -35,6 +36,18 @@ describe('retrieval identity helpers', () => {
 
     expect(firstByRetrievalIdentity(invalid, (value) => value)).to.deep.equal([]);
     expect(canonicalIdentityList(invalid)).to.deep.equal([]);
+  });
+
+  it('admits only records with a nonblank id, text, numeric score and a named source document', () => {
+    const chunk = { id: 'c1', text: 'Body', score: 0.5, source: { id: 'doc', name: 'Doc' } };
+
+    expect(isValidRetrievalChunk(chunk)).to.equal(true);
+    for (const value of [null, undefined, 'c1', 7, [chunk]]) {
+      expect(isValidRetrievalChunk(value), String(value)).to.equal(false);
+    }
+    expect(isValidRetrievalChunk({ ...chunk, id: '  ' })).to.equal(false);
+    expect(isValidRetrievalChunk({ ...chunk, source: 'doc' })).to.equal(false);
+    expect(isValidRetrievalChunk({ ...chunk, source: { id: 'doc' } })).to.equal(false);
   });
 
   it('returns one frozen canonical projection for repeated reads of the same list', () => {
@@ -301,6 +314,19 @@ describe('decimateMindMapLayout', () => {
     const bigSurvivors = result.placed.filter((node) => node.id.startsWith('big-')).length;
     const smallSurvivors = result.placed.filter((node) => node.id.startsWith('small-')).length;
     expect(bigSurvivors).to.be.greaterThan(smallSurvivors * 5);
+  });
+
+  it('keeps nothing when no placed node is a root instead of promoting one', () => {
+    const { placed, links } = layoutOf([
+      { id: 'root', label: 'Root', children: [{ id: 'c1', label: 'C1' }, { id: 'c2', label: 'C2' }] },
+    ]);
+    const detached = placed.map((node) => ({ ...node, parentId: node.parentId ?? 'ghost' }));
+    const result = decimateMindMapLayout(detached, links, 2);
+
+    expect(result.truncated).to.equal(true);
+    expect(result.totalCount).to.equal(3);
+    expect(result.placed).to.deep.equal([]);
+    expect(result.links).to.deep.equal([]);
   });
 
   it('is deterministic across repeated calls with the same input', () => {

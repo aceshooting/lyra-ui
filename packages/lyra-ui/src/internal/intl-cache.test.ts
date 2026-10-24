@@ -272,3 +272,29 @@ it('passes inherited and hidden options through each formatter family', () => {
   getSegmenter('en-US', {});
   expect([...getSegmenter('en-US', segment).segment('one two')].length).to.equal(3);
 });
+
+it('captures a null-prototype options bag by value and shares it with an ordinary equal bag', () => {
+  const bag = Object.assign(Object.create(null) as Record<string, unknown>, { style: 'percent' }) as Intl.NumberFormatOptions;
+  expect(getNumberFormat('en-US', bag).format(0.5)).to.equal('50%');
+  expect(getNumberFormat('en-US', bag) === getNumberFormat('en-US', { style: 'percent' })).to.equal(true);
+});
+
+it('hands a primitive options argument straight to Intl and never caches the result', () => {
+  const primitive = true as unknown as Intl.NumberFormatOptions;
+  const formatter = getNumberFormat('en-US', primitive);
+  expect(formatter.format(1234.5)).to.equal('1,234.5');
+  expect(formatter === getNumberFormat('en-US', primitive)).to.equal(false);
+  expect(() => getNumberFormat('en-US', null as unknown as Intl.NumberFormatOptions)).to.throw(TypeError);
+});
+
+it('hands an options proxy that rejects reflection straight to Intl', () => {
+  let reads = 0;
+  const options = new Proxy({ style: 'percent' }, {
+    getPrototypeOf() { throw new Error('reflection rejected'); },
+    get(target, key, receiver) { reads += 1; return Reflect.get(target, key, receiver); },
+  }) as Intl.NumberFormatOptions;
+  const formatter = getNumberFormat('en-US', options);
+  expect(formatter.format(0.5)).to.equal('50%');
+  expect(reads, 'the constructor itself read the options').to.be.greaterThan(0);
+  expect(formatter === getNumberFormat('en-US', options)).to.equal(false);
+});

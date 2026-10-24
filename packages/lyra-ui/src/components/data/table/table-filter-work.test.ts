@@ -91,3 +91,61 @@ it('keeps custom callback text, ordering and locale-sensitive default matching u
   expect(calls).to.deep.equal(['a:MiXeD', 'b:MiXeD']);
   expect(el.pageRows.map(row => row.id)).to.deep.equal(['b']);
 });
+
+describe('search text reuse by row mutability', () => {
+  /** A row whose hidden `data` text is counted whenever the default filter reads it. */
+  function counted(base: FilterRow, counter: { reads: number }): FilterRow {
+    return new Proxy(base, {
+      get(target, key, receiver) {
+        if (key === 'data') counter.reads += 1;
+        return Reflect.get(target, key, receiver);
+      },
+    });
+  }
+  class Entry implements FilterRow {
+    constructor(readonly id: string, readonly name: string, readonly data: string) {}
+  }
+
+  it('serializes a frozen plain record once and again for every query on a mutable one', async () => {
+    const frozen = { reads: 0 }, mutable = { reads: 0 };
+    const el = await table([
+      counted(Object.freeze({ id: 'f', name: 'Frozen', data: 'needle frozen' }), frozen),
+      counted({ id: 'm', name: 'Mutable', data: 'needle mutable' }, mutable),
+    ]);
+    el.filterText = 'needle';
+    await el.updateComplete;
+    expect(el.viewRows.map(row => row.id)).to.deep.equal(['f', 'm']);
+    const firstFrozen = frozen.reads, firstMutable = mutable.reads;
+    expect([firstFrozen, firstMutable].every(count => count > 0)).to.equal(true);
+    el.filterText = 'frozen';
+    await el.updateComplete;
+    expect(el.viewRows.map(row => row.id)).to.deep.equal(['f']);
+    expect(frozen.reads, 'a frozen record keeps its serialized text').to.equal(firstFrozen);
+    expect(mutable.reads, 'a mutable record is read again').to.be.greaterThan(firstMutable);
+  });
+
+  it('does not trust a frozen instance of a class, a record with toJSON or a record that cannot be inspected', async () => {
+    const instance = { reads: 0 }, serialized = { reads: 0 }, opaque = { reads: 0 };
+    const hidden = new Proxy(Object.freeze({ id: 'o', name: 'Opaque', data: 'needle opaque' }), {
+      isExtensible() { throw new Error('unreadable'); },
+      get(target, key, receiver) {
+        if (key === 'data') opaque.reads += 1;
+        return Reflect.get(target, key, receiver);
+      },
+    });
+    const el = await table([
+      counted(Object.freeze(new Entry('c', 'Instance', 'needle instance')), instance),
+      counted(Object.freeze({ id: 't', name: 'Serialized', data: 'needle serialized', toJSON() { return { text: 'needle serialized' }; } }), serialized),
+      hidden,
+    ]);
+    el.filterText = 'needle';
+    await el.updateComplete;
+    expect(el.viewRows.map(row => row.id)).to.deep.equal(['c', 't', 'o']);
+    const before = { instance: instance.reads, opaque: opaque.reads };
+    el.filterText = 'instance';
+    await el.updateComplete;
+    expect(el.viewRows.map(row => row.id)).to.deep.equal(['c']);
+    expect(instance.reads, 'a frozen class instance is read again').to.be.greaterThan(before.instance);
+    expect(opaque.reads, 'a record that cannot be inspected is read again').to.be.greaterThan(before.opaque);
+  });
+});

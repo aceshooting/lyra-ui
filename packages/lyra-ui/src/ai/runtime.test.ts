@@ -5,6 +5,7 @@ import {
   reduceAgentStream,
   reduceAgentStreamEvents,
   type AgentStreamEvent,
+  type AgentStreamState,
 } from './runtime.js';
 
 it('reduces an interleaved streaming message without mutating prior state', () => {
@@ -1359,4 +1360,41 @@ it('does not mark older completed or already-interrupted parts as active', () =>
   });
   const resumed = reduceAgentStream(interrupted, { type: 'stream-resume', generation: 1, sequence: 5, runId: 'run-1' });
   expect(resumed.messages[0]?.parts?.map(part => part.state)).to.deep.equal(['complete', 'streaming', 'interrupted']);
+});
+
+describe('restored state that cannot be re-owned', () => {
+  const unownable = (): number => 1;
+  const base = createAgentStreamState({ maxRetainedBytes: 4096 });
+  const nextMessage: AgentStreamEvent = {
+    type: 'message-start', generation: 0, sequence: 1, message: { id: 'm2', role: 'assistant', parts: [] },
+  };
+
+  it('charges an unownable retained message, tool or shared state the whole retained budget', () => {
+    const states: Array<[string, AgentStreamState]> = [
+      ['message', { ...base, messages: [{ id: 'm1', role: 'assistant', parts: [], metadata: { unownable } }] } as unknown as AgentStreamState],
+      ['tool', { ...base, tools: [{ id: 't1', name: 'search', args: { unownable }, status: 'running' }] } as unknown as AgentStreamState],
+      ['shared state', { ...base, sharedState: { unownable } } as unknown as AgentStreamState],
+    ];
+    for (const [label, state] of states) {
+      const result = reduceAgentStream(state, nextMessage);
+      expect(result.error?.code, label).to.equal('stream_limit_exceeded');
+      expect(result.messages.map((message) => message.id), `${label}: the retained prefix is preserved`).to.deep.equal(state.messages.map((message) => message.id));
+    }
+    expect(reduceAgentStream({ ...base }, nextMessage).error, 'a valid restored state accepts the same event').to.equal(undefined);
+  });
+
+  it('refuses a shared-state patch when the retained shared state cannot be re-owned', () => {
+    const state = { ...base, sharedState: { unownable } } as unknown as AgentStreamState;
+    const result = reduceAgentStream(state, {
+      type: 'state-delta', generation: 0, sequence: 1, patch: [{ op: 'add', path: '/count', value: 1 }],
+    });
+    expect(result.error).to.deep.equal({ message: 'Retained shared state is invalid.', code: 'invalid_stream_event' });
+    expect(result.status).to.deep.equal({ kind: 'error', message: 'Retained shared state is invalid.' });
+  });
+});
+
+it('leaves shared state untouched when a patch path runs through a missing key', () => {
+  const original = { filters: { year: 2025 } };
+  expect(applySharedStatePatch(original, [{ op: 'replace', path: '/missing/year', value: 2026 }])).to.deep.equal(original);
+  expect(applySharedStatePatch(original, [{ op: 'add', path: '/filters/month', value: 7 }])).to.deep.equal({ filters: { year: 2025, month: 7 } });
 });

@@ -34,6 +34,38 @@ describe('formatBoundedRetrievalValue', () => {
     expect(formatBoundedRetrievalValue(value, valueFormatOptions)).to.equal('[invalid]');
   });
 
+  it('rejects a runtime array whose reported length is not a safe non-negative integer', () => {
+    for (const reported of ['many', -1, 1.5, Number.MAX_SAFE_INTEGER + 2]) {
+      const value = new Proxy([], {
+        getOwnPropertyDescriptor(target, key) {
+          const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
+          return key === 'length' && descriptor ? { ...descriptor, value: reported } : descriptor;
+        },
+      });
+
+      expect(formatBoundedRetrievalValue(value, valueFormatOptions), `length ${String(reported)}`).to.equal('[invalid]');
+    }
+  });
+
+  it('renders array holes as empty items and skips enumerable inherited object keys', () => {
+    const sparse: string[] = [];
+    sparse[0] = 'first';
+    sparse[2] = 'third';
+    const inherited = Object.assign(Object.create({ inherited: 'hidden' }) as Record<string, unknown>, {
+      own: 'shown',
+    });
+
+    expect(formatBoundedRetrievalValue(sparse, valueFormatOptions)).to.equal('first, , and third');
+    expect(formatBoundedRetrievalValue(inherited, valueFormatOptions)).to.equal('{own: shown}');
+  });
+
+  it('stops scanning an object once the total value budget is spent and marks the cut', () => {
+    expect(formatBoundedRetrievalValue({ a: 1, b: 2, c: 3, d: 4 }, {
+      ...valueFormatOptions,
+      maxValues: 3,
+    })).to.equal('{a: 1, b: 2, c: [truncated], [truncated]}');
+  });
+
   it('does not invoke nested object or array getters while formatting metadata', () => {
     let getterCalls = 0;
     const nested = Object.defineProperty({ safe: 'shown' }, 'secret', {

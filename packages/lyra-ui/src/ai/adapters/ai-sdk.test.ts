@@ -365,3 +365,16 @@ it('maps AI SDK tool denials to denied instead of a running call', () => {
   expect(message.parts?.[2]).to.deep.nested.include({ state: 'streaming', 'invocation.status': 'running' });
   expect(message.parts?.[3]).to.deep.nested.include({ state: 'streaming', 'invocation.status': 'running' });
 });
+
+it('drops a tool part without a name and keeps partial output beside a tool error', () => {
+  const message = requireAdaptedMessage({
+    id: 'message-tools',
+    role: 'assistant',
+    parts: [
+      { type: 'tool-' },
+      { type: 'tool-search', toolCallId: 'call-1', state: 'output-error', errorText: 'Timed out', output: { partial: true } },
+    ],
+  });
+  expect(message.parts?.map((part) => part.type)).to.deep.equal(['tool-call', 'tool-result']);
+  expect(message.parts?.[1]).to.deep.include({ type: 'tool-result', error: 'Timed out', result: { partial: true } });
+});

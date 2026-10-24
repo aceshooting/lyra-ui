@@ -98,6 +98,19 @@ it('rejects invalid explicit totals and derives a truthful count from known reco
   }
 });
 
+it('names a member chip by its id when the member has no label', async () => {
+  const el = (await fixture(
+    html`<lr-community-card></lr-community-card>`
+  )) as LyraCommunityCard;
+  el.community = community;
+  el.members = [{ id: 'e9' }, { id: 'e10', label: 'Labeled member' }] as unknown as LyraEntity[];
+  await el.updateComplete;
+
+  expect(
+    [...el.shadowRoot!.querySelectorAll('[part="member"] lr-chip')].map((chip) => chip.textContent?.trim())
+  ).to.deep.equal(['e9', 'Labeled member']);
+});
+
 it('renders up to maxMembers chips and a +N overflow chip', async () => {
   const el = (await fixture(
     html`<lr-community-card max-members="2"></lr-community-card>`

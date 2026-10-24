@@ -95,3 +95,36 @@ it('rejects collection metadata and budgets before copying partial data', () => 
     createProviderSnapshotBudget({ maxBytes: 8 }),
   )).to.deep.include({ ok: false, failure: 'limit' });
 });
+
+it('names the exact reason each unsafe shape is rejected', () => {
+  const exhausted = createProviderSnapshotBudget({ maxNodes: 1 });
+  expect(snapshotProviderValue(1, exhausted).ok).to.equal(true);
+  expect(snapshotProviderValue(2, exhausted)).to.deep.include({
+    ok: false, failure: 'limit', reason: 'provider snapshot node limit exceeded',
+  });
+
+  expect(snapshotProviderValue(new Date(Number.NaN))).to.deep.include({
+    ok: false, failure: 'invalid', reason: 'provider snapshot contains an invalid date',
+  });
+
+  const accessorArray: unknown[] = [];
+  Object.defineProperty(accessorArray, 0, { enumerable: true, get: () => 1 });
+  expect(snapshotProviderValue(accessorArray)).to.deep.include({
+    ok: false, failure: 'invalid', reason: 'provider snapshot contains an accessor',
+  });
+
+  expect(snapshotProviderValue({ [Symbol('key')]: 1 })).to.deep.include({
+    ok: false, failure: 'invalid', reason: 'provider snapshot contains a symbol key',
+  });
+
+  expect(snapshotProviderValue({ ['k'.repeat(100)]: 1 }, createProviderSnapshotBudget({ maxBytes: 64 }))).to.deep.include({
+    ok: false, failure: 'limit', reason: 'provider snapshot byte limit exceeded',
+  });
+});
+
+it('skips non-enumerable properties instead of copying them', () => {
+  const source = Object.defineProperty({ shown: 1 }, 'hidden', { value: 2, enumerable: false });
+  const result = snapshotProviderValue(source);
+  expect(result.ok).to.equal(true);
+  if (result.ok) expect({ ...(result.value as Record<string, unknown>) }).to.deep.equal({ shown: 1 });
+});

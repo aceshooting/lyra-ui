@@ -13,6 +13,7 @@ import { preloadMarkdown as preloadMarkdownCore } from "./markdown-core.js";
 import type { LyraMarkdownCore, MarkdownHeadingItem } from "./markdown-core.js";
 import { LyraMarkdownCore as LyraMarkdownCoreClass } from "./markdown-core.class.js";
 import { loadMarkdownDeps } from "./markdown-loader.js";
+import { loadShikiHighlighterCore, type ShikiLanguageInput } from '../code-block/shiki-types.js';
 import { assertMarkdownTemplateWhitespace } from '../../../../test/contracts/markdown-template-whitespace.js';
 import { assertMarkdownSanitizerDiagnostics } from '../../../../test/contracts/markdown-diagnostics.js';
 import { assertMarkdownHighlightActivation } from '../../../../test/contracts/markdown-highlight-activation.js';
@@ -687,6 +688,15 @@ describe("table header theming hook (shared stylesheet, lr-markdown-core)", () =
 });
 
 describe("languages (build-lean shiki, no full-bundle fallback)", () => {
+  let typeScriptLanguages: Record<string, ShikiLanguageInput>;
+  before(async function () {
+    // Building the regex engine and seed themes is cold peer setup, independent of DOM upgrade.
+    this.timeout(120_000);
+    const grammar = await import('shiki/langs/typescript.mjs');
+    typeScriptLanguages = { typescript: grammar.default };
+    expect(await loadShikiHighlighterCore(typeScriptLanguages)).not.to.equal(null);
+  });
+
   it("defaults languages to an empty object, withoutSyntaxHighlighting to false", async () => {
     const el = (await fixture(
       html`<lr-markdown-core></lr-markdown-core>`
@@ -697,12 +707,10 @@ describe("languages (build-lean shiki, no full-bundle fallback)", () => {
 
   it("highlights a fenced block whose language is a key in languages", async function () {
     this.timeout(20_000);
-    const tsLang = await import("shiki/langs/typescript.mjs").catch(() => null);
-    if (!tsLang) return; // shiki not installed in this environment -- covered elsewhere
     const el = (await fixture(
       html`<lr-markdown-core></lr-markdown-core>`
     )) as LyraMarkdownCore;
-    el.languages = { typescript: tsLang.default };
+    el.languages = typeScriptLanguages;
     el.content = "```typescript\nconst x = 1;\n```";
     await el.updateComplete;
     await waitUntil(
@@ -2083,6 +2091,39 @@ describe("scrollToAnchor / highlights (text-quote)", () => {
     (el as unknown as { onContentClick(event: MouseEvent): void }).onContentClick(event);
 
     expect(activations).to.deep.equal([{ highlightId: 'linked-highlight' }]);
+  });
+
+  it("does not activate a highlight from a pointer click on a link outside every highlighted range", async () => {
+    const el = (await fixture(
+      html`<lr-markdown-core content=${"[linked text](https://example.com) and plain words"}></lr-markdown-core>`
+    )) as LyraMarkdownCore;
+    el.highlights = [
+      { id: "plain-highlight", anchor: { kind: "text-quote", quote: "plain words" } },
+    ];
+    await waitUntil(() => el.shadowRoot!.querySelector("a") !== null);
+    await waitUntil(() => highlightPainted(el));
+    const anchor = el.shadowRoot!.querySelector("a")!;
+    const rect = anchor.getBoundingClientRect();
+    const activations: unknown[] = [];
+    el.addEventListener("lr-highlight-activate", (event) =>
+      activations.push((event as CustomEvent).detail)
+    );
+
+    const observed = await observeLinkDefault(anchor, () => {
+      anchor.dispatchEvent(
+        new MouseEvent("click", {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          detail: 1,
+          clientX: rect.left + rect.width / 2,
+          clientY: rect.top + rect.height / 2,
+        })
+      );
+    });
+
+    expect(observed.seen).to.be.true;
+    expect(activations).to.deep.equal([]);
   });
 
   it("activates an overlapping external link highlight without suppressing native navigation", async () => {

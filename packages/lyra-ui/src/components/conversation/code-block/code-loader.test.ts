@@ -271,3 +271,18 @@ describe('loadShikiHighlighter diagnostics', () => {
     }
   });
 });
+
+it('accepts a callable shiki module that exposes the highlighter factory', async () => {
+  const highlighter = {
+    codeToHtml: () => '<pre></pre>',
+    getLoadedLanguages: () => [] as string[],
+    loadLanguage: async () => undefined,
+  };
+  const callableModule = Object.assign(() => undefined, { createHighlighter: async () => highlighter });
+  __setShikiModuleLoaderForTesting(async () => callableModule);
+  try {
+    expect(await loadShikiHighlighter()).to.equal(highlighter);
+  } finally {
+    __setShikiModuleLoaderForTesting(undefined);
+  }
+});

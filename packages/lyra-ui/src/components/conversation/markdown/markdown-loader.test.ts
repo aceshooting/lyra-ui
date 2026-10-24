@@ -56,6 +56,18 @@ describe('loadMarkdownAndSanitizer (independent marked / dompurify loading)', ()
     expect(deps.marked).to.equal(wrappedModule.default);
   });
 
+  it('accepts a callable module that carries a usable Marked constructor', async () => {
+    class CallableMarked extends UsableMarked {}
+    const callableModule = Object.assign(() => undefined, { Marked: CallableMarked });
+
+    const deps = await loadMarkdownAndSanitizer(
+      () => Promise.resolve(callableModule),
+      () => Promise.resolve({ sanitize: (html: string) => html }),
+    );
+
+    expect(deps.marked).to.equal(callableModule);
+  });
+
   it('prefers a usable Marked capability on the module namespace over its default export', async () => {
     class NamespaceMarked extends UsableMarked {}
     class DefaultMarked extends UsableMarked {}

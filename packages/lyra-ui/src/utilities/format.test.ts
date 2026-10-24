@@ -112,6 +112,30 @@ it('formatBytes returns undefined for a non-finite or unparseable value instead 
   expect(formatBytes(Infinity, 'en-US')).to.equal(undefined);
 });
 
+describe('formatBytes exact scaling of negative and whole-number results', () => {
+  const kilobytes = (value: number, maximumFractionDigits: number): string =>
+    new Intl.NumberFormat('en-US', { style: 'unit', unit: 'kilobyte', unitDisplay: 'short', maximumFractionDigits }).format(value);
+
+  it('keeps the sign of a negative bigint or decimal string and scales by its magnitude', () => {
+    expect(formatBytes(1500n, 'en-US')).to.equal(kilobytes(1.5, 1));
+    expect(formatBytes(-1500n, 'en-US')).to.equal(kilobytes(-1.5, 1));
+    expect(formatBytes('-1500', 'en-US')).to.equal(kilobytes(-1.5, 1));
+  });
+
+  it('omits the fraction at zero decimals and rounds half away from zero in both directions', () => {
+    expect(formatBytes(1500n, 'en-US', { decimals: 0 })).to.equal(kilobytes(2, 0));
+    expect(formatBytes(-1500n, 'en-US', { decimals: 0 })).to.equal(kilobytes(-2, 0));
+    expect(formatBytes(1499n, 'en-US', { decimals: 0 })).to.equal(kilobytes(1, 0));
+    expect(formatBytes(-1499n, 'en-US', { decimals: 0 })).to.equal(kilobytes(-1, 0));
+  });
+});
+
+it('formatRelativeTime measures from the current instant and defaults to numeric "auto"', () => {
+  const tomorrow = Date.now() + 86_400_000 + 5 * 60_000;
+  expect(formatRelativeTime(tomorrow, 'en-US', { unit: 'day' })).to.equal('tomorrow');
+  expect(formatRelativeTime(tomorrow, 'en-US', { unit: 'day', numeric: 'always' })).to.equal('in 1 day');
+});
+
 it('formats dates like a direct Intl.DateTimeFormat call and resolves the same date sources <lr-format-date> accepts', () => {
   const date = new Date(2020, 0, 15);
   expect(formatDate(date, 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })).to.equal('January 15, 2020');

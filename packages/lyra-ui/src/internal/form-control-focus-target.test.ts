@@ -59,4 +59,38 @@ describe('composed form-control focus targets', () => {
       Reflect.deleteProperty(legacy, 'checkVisibility');
     }
   });
+
+  it('returns a tabindex=1 target at once, ahead of earlier targets in document order', async () => {
+    const host = await fixture<HTMLElement>(html`<div>
+      <button id="natural">Natural</button><button id="late" tabindex="2">Second</button>
+      <button id="first" tabindex="1">First</button><button id="after" tabindex="1">Also first</button>
+    </div>`);
+    expect(firstFormControlFocusTarget(host)?.id).to.equal('first');
+  });
+
+  it('puts positive tabindex targets ahead of natural order and keeps the lowest positive one', async () => {
+    const host = await fixture<HTMLElement>(html`<div>
+      <button id="natural">Natural</button><button id="three" tabindex="3">Three</button>
+      <button id="two" tabindex="2">Two</button><button id="four" tabindex="4">Four</button>
+    </div>`);
+    expect(firstFormControlFocusTarget(host)?.id).to.equal('two');
+    const naturalOnly = await fixture<HTMLElement>(html`<div><button id="a">A</button><button id="b" tabindex="0">B</button></div>`);
+    expect(firstFormControlFocusTarget(naturalOnly)?.id, 'document order decides among natural targets').to.equal('a');
+  });
+
+  it('inspects an element reported twice by its slot only once', async () => {
+    const host = await fixture<HTMLElement>(html`<div><button id="only">Only</button></div>`);
+    const root = host.attachShadow({ mode: 'open' });
+    const slot = root.appendChild(document.createElement('slot'));
+    const button = host.querySelector('button')!;
+    let reads = 0;
+    Object.defineProperty(button, 'tabIndex', { configurable: true, get() { reads += 1; return 0; } });
+    Object.defineProperty(slot, 'assignedElements', { value: () => [button, button] });
+    try {
+      expect(firstFormControlFocusTarget(host)?.id).to.equal('only');
+      expect(reads, 'the repeated reference is skipped before a second tab-order read').to.equal(1);
+    } finally {
+      Reflect.deleteProperty(button, 'tabIndex');
+    }
+  });
 });

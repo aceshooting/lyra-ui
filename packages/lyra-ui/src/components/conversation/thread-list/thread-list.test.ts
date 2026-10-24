@@ -555,6 +555,22 @@ describe("data mode", () => {
     expect(renderedThreadIds(el)).to.deep.equal(["invalid-date", "older"]);
   });
 
+  it("treats a timestamp that is neither text, a number, nor an object as absent", async () => {
+    const el = (await fixture(html`
+      <lr-thread-list
+        .threads=${[
+          { id: "boolean-date", title: "Boolean date", timestamp: true },
+          { id: "symbol-date", title: "Symbol date", timestamp: Symbol("when") },
+          { id: "null-date", title: "Null date", timestamp: null },
+        ] as unknown as LyraThreadList['threads']}
+      ></lr-thread-list>
+    `)) as LyraThreadList;
+    await el.updateComplete;
+
+    expect(renderedGroupLabels(el)).to.deep.equal(["Previous 30 days"]);
+    expect(renderedThreadIds(el)).to.deep.equal(["boolean-date", "symbol-date", "null-date"]);
+  });
+
   it("falls back safely when a timestamp-like object's getTime throws", async () => {
     const el = (await fixture(html`
       <lr-thread-list

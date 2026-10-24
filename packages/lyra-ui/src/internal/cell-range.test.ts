@@ -79,3 +79,13 @@ describe('parseCellRange', () => {
     });
   });
 });
+
+describe('parseCellRange second endpoint', () => {
+  it('returns null when the second endpoint is empty, not a cell, or longer than a cell reference can be', () => {
+    expect(parseCellRange('A1:B2')).to.deep.equal({ startRow: 0, startCol: 0, endRow: 1, endCol: 1 });
+    expect(parseCellRange('A1:')).to.equal(null);
+    expect(parseCellRange('A1:B')).to.equal(null);
+    expect(parseCellRange('A1:3')).to.equal(null);
+    expect(parseCellRange(`A1:${'B'.repeat(70)}1`)).to.equal(null);
+  });
+});

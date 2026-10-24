@@ -369,3 +369,62 @@ it('mounts and retires the visible WebGL surface when IntersectionObserver is un
     else Reflect.deleteProperty(window, 'IntersectionObserver');
   }
 });
+
+describe('graph optional engine lifecycle edges', () => {
+  it('stops waiting for an unhidden surface once the view leaves 3d', async () => {
+    const value = setup(); value.graph.engine = 'webgl'; value.graph.view = '3d';
+    const wrapper = document.createElement('div'); wrapper.hidden = true; wrapper.append(value.graph);
+    await fixture(wrapper); await settle(value.graph);
+    expect(value.loads(), 'the hidden graph stays cold').to.equal(0);
+
+    value.graph.view = 'list'; await settle(value.graph);
+    wrapper.hidden = false; await settle(value.graph);
+
+    expect(value.loads(), 'a list view never creates a WebGL companion when the fence clears').to.equal(0);
+    expect(value.graph.shadowRoot!.querySelector('[data-webgl-host]') === null).to.equal(true);
+  });
+
+  it('reports a lost context once and ignores a repeated loss while on the fallback', async () => {
+    const value = setup(); value.graph.engine = 'webgl'; value.graph.view = '3d';
+    const descents: unknown[] = []; value.graph.addEventListener('lr-engine-fallback', (event) => descents.push(event.detail));
+    await fixture(value.graph); const engine = await mounted(value);
+
+    engine.callbacks().lost('context-lost'); await settle(value.graph);
+    engine.callbacks().lost('context-lost'); await settle(value.graph);
+
+    expect(descents).to.deep.equal([{ from: 'webgl', to: 'builtin', reason: 'context-lost' }]);
+  });
+
+  it('drops a pending fallback notice when the graph leaves the document before it is delivered', async () => {
+    const value = setup(); value.graph.engine = 'webgl'; value.graph.view = '3d';
+    const descents: unknown[] = []; value.graph.addEventListener('lr-engine-fallback', (event) => descents.push(event.detail));
+    await fixture(value.graph); const engine = await mounted(value);
+
+    engine.callbacks().lost('context-lost');
+    value.graph.remove();
+    await settle(value.graph); await nextFrame();
+
+    expect(descents).to.deep.equal([]);
+  });
+
+  it('falls back with an error when a label color cannot be resolved through a canvas', async () => {
+    const original = HTMLCanvasElement.prototype.getContext;
+    const value = setup(); value.graph.engine = 'webgl'; value.graph.view = '3d';
+    const descents: { reason: string }[] = []; value.graph.addEventListener('lr-engine-fallback', (event) => descents.push(event.detail));
+    HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, ...args: unknown[]) {
+      // The 1x1 scratch canvas resolves CSS colors for the engine; labels use a separate canvas.
+      if (this.width === 1 && this.height === 1) return null;
+      return (original as (...rest: unknown[]) => unknown).apply(this, args);
+    } as typeof HTMLCanvasElement.prototype.getContext;
+    try {
+      await fixture(value.graph);
+      await waitUntil(() => descents.length > 0, 'the unusable color canvas retires the engine', { timeout: 3000 });
+
+      expect(descents[0]!.reason).to.equal('error');
+      expect(value.graph.shadowRoot!.querySelectorAll('canvas[part="spatial-canvas"]').length).to.equal(1);
+      expect(value.graph.shadowRoot!.textContent).not.to.include('Color canvas unavailable');
+    } finally {
+      HTMLCanvasElement.prototype.getContext = original;
+    }
+  });
+});

@@ -98,6 +98,40 @@ describe('waitForLyraElement', () => {
     expect(message).to.contain('found 1 element');
     expect(message).to.contain('match()');
   });
+  it('names the missing upgrade when candidates exist, no match() is given and the tag is never defined', async () => {
+    const tagName = nextProbeTag();
+    mountProbe(tagName, 'never upgraded');
+
+    let error: unknown;
+    try {
+      await waitForLyraElement(tagName, { timeoutMs: 50 });
+    } catch (caught) {
+      error = caught;
+    }
+    expect(error).to.be.instanceOf(Error);
+    const message = (error as Error).message;
+    expect(message).to.contain('found 1 element');
+    expect(message).to.contain('finished upgrading');
+    expect(message).to.not.contain('match()');
+  });
+
+  it('settles once when a pending tag upgrades after another matching element already resolved the wait', async () => {
+    const pendingTag = nextProbeTag();
+    const readyTag = nextProbeTag();
+    customElements.define(readyTag, class extends HTMLElement {});
+    mountProbe(pendingTag, 'pending');
+
+    const waiting = waitForLyraElement<HTMLElement>(`${pendingTag}, ${readyTag}`);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    mountProbe(readyTag, 'ready');
+    const found = await waiting;
+    expect(found.localName).to.equal(readyTag);
+
+    customElements.define(pendingTag, class extends HTMLElement {});
+    await customElements.whenDefined(pendingTag);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(found.textContent, 'the late upgrade changed nothing').to.equal('ready');
+  });
 });
 
 describe('waitForToast', () => {

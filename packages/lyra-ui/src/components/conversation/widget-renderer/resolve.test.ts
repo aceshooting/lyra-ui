@@ -1,4 +1,5 @@
 import { expect } from "@open-wc/testing";
+import { captureDevWarnings } from "../../../../test/expected-dev-warnings.js";
 import {
   createWidgetDocument,
   resolveTree,
@@ -873,5 +874,45 @@ describe("string-length ceiling", () => {
     });
     expect(document.root.props?.["note"]).to.equal(exact);
     expect(document.root.children?.[0]).to.equal(exact);
+  });
+});
+
+describe("resolver boundaries", () => {
+  it("keeps an authored slot on a document node", () => {
+    const document = createWidgetDocument({ type: "col", slot: "aside" });
+
+    expect(document.root.slot).to.equal("aside");
+    expect(createWidgetDocument({ type: "col" }).root.slot).to.equal(undefined);
+  });
+
+  it("resolves a container with an empty children list to an empty container", () => {
+    const resolved = resolvedElement(
+      resolveTree({ type: "row", children: [] }, ctx(createWidgetTypeRegistry(), []))
+    );
+
+    expect(resolved.kind).to.equal("builtin-row");
+    expect(resolved.children).to.deep.equal([]);
+  });
+
+  it("sends the diagnostics ceiling summary through the development warning channel when no callback is supplied", async () => {
+    const messages = await captureDevWarnings(() => {
+      const context: ResolveContext = {
+        registry: createWidgetTypeRegistry(),
+        bindingState: {},
+        warned: new Set(),
+      };
+      resolveTree(
+        {
+          type: "row",
+          children: Array.from({ length: WIDGET_MAX_WARNINGS + 5 }, (_, index) => ({
+            type: `unknown-${index}`,
+          })),
+        },
+        context
+      );
+    });
+
+    expect(messages).to.have.lengthOf(WIDGET_MAX_WARNINGS + 1);
+    expect(messages.at(-1)).to.include("suppressed further diagnostics");
   });
 });

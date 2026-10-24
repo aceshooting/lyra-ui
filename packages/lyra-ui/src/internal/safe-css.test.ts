@@ -265,3 +265,80 @@ describe('sanitizeCssDeclarationValue', () => {
     expect(sanitizeCssDeclarationValue('not-a-css-property', 'red')).to.equal(undefined);
   });
 });
+
+describe('environments without CSS.supports()', () => {
+  /** Runs `body` with the native feature test removed and restores it even when `body` throws. */
+  function withoutCssSupports<T>(body: () => T): T {
+    const original = Object.getOwnPropertyDescriptor(CSS, 'supports');
+    Object.defineProperty(CSS, 'supports', { value: undefined, configurable: true, writable: true });
+    try {
+      return body();
+    } finally {
+      if (original) Object.defineProperty(CSS, 'supports', original);
+      else Reflect.deleteProperty(CSS, 'supports');
+    }
+  }
+
+  it('falls back to the conservative color grammar', () => {
+    withoutCssSupports(() => {
+      for (const color of ['#fff', '#ffffff80', 'red', 'rgb(1, 2, 3)', 'oklch(0.7 0.1 200)', 'var(--lr-color-brand)', 'var(--lr-color-brand, #fff)']) {
+        expect(sanitizeCssColor(color), color).to.equal(color);
+      }
+      // Structurally safe, yet not a single recognizable color token.
+      for (const color of ['red blue', '12px', '#12', 'bright-red', 'var(brand)']) {
+        expect(sanitizeCssColor(color), color).to.equal(undefined);
+      }
+    });
+    expect(sanitizeCssColor('red blue'), 'the native check is back after the fallback run').to.equal(undefined);
+    expect(sanitizeCssColor('red')).to.equal('red');
+  });
+
+  it('falls back to the conservative length and inset grammars', () => {
+    withoutCssSupports(() => {
+      for (const length of ['auto', '12px', '-1.5rem', '.5em', '50%', 'calc(10rem + 2px)', 'var(--chart-height)', 'min(10px, 2vw)']) {
+        expect(sanitizeCssLength(length, 'height'), length).to.equal(length);
+      }
+      for (const length of ['tall', '12', '12 px', '1e3px']) expect(sanitizeCssLength(length), length).to.equal(undefined);
+
+      for (const inset of ['auto', '1px 2px', '1px 2px 3px 4px', 'var(--lr-space-l) 4px']) {
+        expect(sanitizeCssInset(inset), inset).to.equal(inset);
+      }
+      for (const inset of ['foo', '1px 2px 3px 4px 5px', '12']) expect(sanitizeCssInset(inset), inset).to.equal(undefined);
+    });
+    expect(sanitizeCssLength('12px')).to.equal('12px');
+    expect(sanitizeCssLength('tall')).to.equal(undefined);
+  });
+
+  it('leaves a standard declaration value with the structural guard alone', () => {
+    withoutCssSupports(() => {
+      expect(sanitizeCssDeclarationValue('width', 'red')).to.equal('red');
+      expect(sanitizeCssDeclarationValue('width', 'red; position: fixed')).to.equal(undefined);
+    });
+    expect(sanitizeCssDeclarationValue('width', 'red')).to.equal(undefined);
+  });
+});
+
+describe('inputs the browser rejects after the structural guard', () => {
+  it('drops an inset shorthand with too many values or an unknown keyword', () => {
+    expect(sanitizeCssInset('1px 2px 3px 4px')).to.equal('1px 2px 3px 4px');
+    expect(sanitizeCssInset('1px 2px 3px 4px 5px')).to.equal(undefined);
+    expect(sanitizeCssInset('sideways')).to.equal(undefined);
+  });
+});
+
+describe('sanitizePercentRect inputs that are not plain records', () => {
+  it('returns undefined for primitives, null and arrays and still accepts a real rectangle', () => {
+    for (const value of [undefined, null, 7, 'x', true, [], [0, 0, 1, 1]]) {
+      expect(sanitizePercentRect(value), String(value)).to.equal(undefined);
+    }
+    expect(sanitizePercentRect({ x: 1, y: 2, width: 3, height: 4 })).to.deep.equal({ x: 1, y: 2, width: 3, height: 4 });
+  });
+
+  it('contains a revoked proxy instead of throwing', () => {
+    const { proxy, revoke } = Proxy.revocable({ x: 0, y: 0, width: 1, height: 1 }, {});
+    expect(sanitizePercentRect(proxy)).to.deep.equal({ x: 0, y: 0, width: 1, height: 1 });
+    revoke();
+    expect(() => sanitizePercentRect(proxy)).not.to.throw();
+    expect(sanitizePercentRect(proxy)).to.equal(undefined);
+  });
+});

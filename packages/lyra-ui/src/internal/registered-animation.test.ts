@@ -191,4 +191,23 @@ describe('animateRegistered()', () => {
       restore();
     }
   });
+
+  it('uses the declared fallback timing for an element of a document without a browsing context', () => {
+    const ownerless = document.implementation.createHTMLDocument('ownerless');
+    const target = ownerless.body.appendChild(ownerless.createElement('div'));
+    const animation = animateRegistered(target, target, 'test.show.inert-document', 'ltr', {
+      keyframes: [{ opacity: 0 }, { opacity: 1 }],
+      durationProperties: ['--show-duration'],
+      easingProperties: ['--lr-easing-standard'],
+      fallbackDuration: 240,
+      fallbackEasing: 'ease-in',
+    });
+    // An element of an inert document may not be animatable in every engine; when it is, the
+    // component fallback is the only timing source because there is no computed style to read.
+    if (animation) {
+      const timing = timingOf(animation);
+      expect([timing.duration, timing.easing]).to.deep.equal([240, 'ease-in']);
+      animation.cancel();
+    }
+  });
 });

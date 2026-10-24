@@ -41,6 +41,14 @@ describe('message action provider boundaries', () => {
     expect(survivor.tabIndex).to.equal(0);
   });
 
+  it('skips entries that are not objects and an action whose disabled flag has no getter', async () => {
+    const setterOnly = { id: 'setter-only', focus() {}, setTabIndex() {}, matchesEventPath() { return false; } };
+    Object.defineProperty(setterOnly, 'disabled', { enumerable: true, get: undefined, set() {} });
+    const { survivor } = await toolbarWithProvider([null, 'text', 42, setterOnly]);
+    expect(survivor.disabled).to.equal(false);
+    expect(survivor.tabIndex).to.equal(0);
+  });
+
   it('contains provider tab-index and release exceptions so a following native action still works', async () => {
     let sets = 0;
     let releases = 0;

@@ -1883,3 +1883,63 @@ it('names memory promotion from its complete visible localized label and retains
   await expectValidAriaRules(button, ['label-content-name-mismatch']);
   expect(accessibleName(button)).to.equal('Ajouter à la mémoire');
 });
+
+it('leaves a populated panel to its host-authored name without a second shadow role or label', async () => {
+  const el = await fixture<LyraMemoryPanel>(html`
+    <lr-memory-panel
+      aria-label="Authored memory name"
+      .shortTerm=${shortTermItems}
+      .longTerm=${longTermItems}
+    ></lr-memory-panel>
+  `);
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+
+  expect(el.shadowRoot!.querySelectorAll('[part="item"]')).to.have.lengthOf(4);
+  expect(base.getAttribute('role')).to.equal(null);
+  expect(base.getAttribute('aria-label')).to.equal(null);
+  expect(el.getAttribute('aria-label')).to.equal('Authored memory name');
+});
+
+describe('lr-memory-panel hostile memory rows', () => {
+  it('omits rows that are not records, cannot be read, or hide a field behind an accessor', async () => {
+    const unreadable = Proxy.revocable({ id: 'revoked', text: 'Revoked memory' }, {});
+    unreadable.revoke();
+    const accessor = { id: 'accessor', text: 'Accessor memory' } as LyraMemoryItem;
+    Object.defineProperty(accessor, 'confidence', {
+      enumerable: true,
+      get: () => {
+        throw new Error('confidence accessor must not run');
+      },
+    });
+    const el = await fixture<LyraMemoryPanel>(html`
+      <lr-memory-panel
+        .shortTerm=${[
+          null,
+          'text',
+          ['array'],
+          unreadable.proxy,
+          accessor,
+          { id: 'valid', text: 'Valid memory' },
+        ] as unknown as LyraMemoryItem[]}
+      ></lr-memory-panel>
+    `);
+
+    expect(
+      [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]')].map(
+        (row) => row.dataset['id']
+      )
+    ).to.deep.equal(['valid']);
+  });
+
+  it('treats collections that are not objects as empty', async () => {
+    const el = await fixture<LyraMemoryPanel>(html`
+      <lr-memory-panel
+        .shortTerm=${undefined as unknown as LyraMemoryItem[]}
+        .longTerm=${'memories' as unknown as LyraMemoryItem[]}
+      ></lr-memory-panel>
+    `);
+
+    expect(el.shadowRoot!.querySelectorAll('[part="item"]')).to.have.lengthOf(0);
+    expect(el.shadowRoot!.querySelector('lr-empty') === null).to.equal(false);
+  });
+});

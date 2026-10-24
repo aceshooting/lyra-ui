@@ -334,6 +334,32 @@ describe('lr-env-list', () => {
     }
   });
 
+  it('neither writes the secret nor reports an outcome once the list has left the document', async () => {
+    const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    const writes: string[] = [];
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: async (text: string) => { writes.push(text); } },
+    });
+    try {
+      const el = (await fixture(
+        html`<lr-env-list .entries=${[{ name: 'API_KEY', value: 'secretvalue', secret: true }]}></lr-env-list>`,
+      )) as LyraEnvList;
+      const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+      const outcomes: string[] = [];
+      for (const name of ['lr-copy', 'lr-copy-error']) el.addEventListener(name, () => outcomes.push(name));
+      el.remove();
+      button.click();
+      await el.updateComplete;
+      await Promise.resolve();
+      expect(writes, 'a detached list has no owner window to copy through').to.deep.equal([]);
+      expect(outcomes).to.deep.equal([]);
+    } finally {
+      if (clipboardDescriptor) Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
+  });
+
   it('prunes reveal state for names no longer present', async () => {
     const el = (await fixture(
       html`<lr-env-list .entries=${[{ name: 'A', value: '1', secret: true }]}></lr-env-list>`,

@@ -153,6 +153,16 @@ describe('scrollbar-width gutter compensation', () => {
     expect(root.style.getPropertyPriority('padding-inline-end')).to.equal('important');
   });
 
+  it('keeps compensating when the root padding is externally reset to zero while locked', async () => {
+    root.style.paddingInlineEnd = '12px';
+    const release = lockScroll();
+    root.style.setProperty('padding-inline-end', '0px');
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+    expect(parseFloat(root.style.paddingInlineEnd)).to.be.closeTo(FAKE_SCROLLBAR_WIDTH, 0.5);
+    release();
+    expect(root.style.paddingInlineEnd).to.equal('0px');
+  });
+
   it('does not add padding when there is no scrollbar to compensate for', () => {
     Object.defineProperty(root, 'clientWidth', {
       configurable: true,
@@ -258,4 +268,13 @@ it('ref-counts each document independently, so locking one does not affect anoth
   expect(document.documentElement.style.overflow).to.equal('');
 
   iframe.remove();
+});
+
+it('locks a document without a browsing context without measuring a scrollbar', () => {
+  const ownerless = document.implementation.createHTMLDocument('ownerless');
+  const release = lockScroll(ownerless);
+  expect(ownerless.documentElement.style.overflow).to.equal('hidden');
+  expect(ownerless.documentElement.style.paddingInlineEnd).to.equal('');
+  release();
+  expect(ownerless.documentElement.style.overflow).to.equal('');
 });

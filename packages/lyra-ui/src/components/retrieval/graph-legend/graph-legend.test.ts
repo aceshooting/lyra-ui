@@ -162,6 +162,21 @@ it('toggles hiddenTypes and emits lr-visibility-change with the full updated arr
   expect(event2.detail.hiddenTypes).to.deep.equal([]);
 });
 
+it('ignores an activation that lands after interaction was switched off', async () => {
+  const el = await fixture<LyraGraphLegend>(html`<lr-graph-legend .types=${types}></lr-graph-legend>`);
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="item"]')!;
+  const requests: string[] = [];
+  el.addEventListener('lr-visibility-change-request', () => requests.push('request'));
+
+  el.withoutInteraction = true;
+  button.click();
+
+  expect(requests).to.deep.equal([]);
+  expect(el.hiddenTypes).to.deep.equal([]);
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('button[part~="item"]') === null).to.equal(true);
+});
+
 it('emits a frozen cancelable proposal before assigning, announcing, and posting an accepted visibility change', async () => {
   const el = await fixture<LyraGraphLegend>(html`<lr-graph-legend .types=${types}></lr-graph-legend>`);
   const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="item"]')!;

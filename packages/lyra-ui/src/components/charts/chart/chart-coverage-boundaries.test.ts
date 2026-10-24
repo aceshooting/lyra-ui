@@ -433,3 +433,17 @@ describe('chart public configuration reuse', () => {
     expect(element.config?.data?.datasets?.[0]?.data).to.deep.equal([null, 7, null]);
   });
 });
+
+describe('chart spatial activation authority', () => {
+  it('does not report a point activation from a table control after the chart left the document', async () => {
+    const element = await mountSpatial();
+    const events: string[] = [];
+    for (const name of ['lr-spatial-point-select', 'lr-point-activate', 'lr-datum-activate']) {
+      element.addEventListener(name, () => events.push(name));
+    }
+    const control = tablePoint(element, 'first');
+    element.remove();
+    control.click();
+    expect(events).to.deep.equal([]);
+  });
+});

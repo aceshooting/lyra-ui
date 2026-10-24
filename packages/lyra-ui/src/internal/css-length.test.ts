@@ -150,3 +150,31 @@ it('resolves zero, signed, and fractional lengths faithfully', () => {
   expect(resolveCssLength('-5px')).to.equal(-5);
   expect(resolveCssLength('-2rem')).to.equal(-32);
 });
+
+it('treats an unusable computed font size as the CSS initial size for rem and em', () => {
+  document.documentElement.style.fontSize = '0px';
+  expect(resolveCssLength('2rem')).to.equal(32);
+  expect(resolveCssLength('3em')).to.equal(48);
+
+  document.documentElement.style.fontSize = '20px';
+  expect(resolveCssLength('2rem')).to.equal(40);
+});
+
+it('returns undefined for a number too large to be a finite length', () => {
+  expect(resolveCssLength(`${'9'.repeat(400)}px`)).to.be.undefined;
+  expect(resolveCssLength(`${'9'.repeat(400)}rem`)).to.be.undefined;
+  expect(resolveCssLength('900px')).to.equal(900);
+});
+
+it('leaves viewport units unresolved without a window or basis, and rejects a non-finite basis dimension', () => {
+  const ownerless = document.implementation.createHTMLDocument('ownerless');
+  const host = ownerless.createElement('div');
+  ownerless.body.append(host);
+  expect(resolveCssLength('10vw', { host })).to.be.undefined;
+  expect(resolveCssLength('10vh', { host })).to.be.undefined;
+  expect(resolveCssLength('10vw', { host, viewportBasis: { inlineSize: 500, blockSize: 100 } })).to.equal(50);
+
+  expect(resolveCssLength('10vw', { viewportBasis: { inlineSize: Number.NaN, blockSize: 100 } })).to.be.undefined;
+  expect(resolveCssLength('10vh', { viewportBasis: { inlineSize: 500, blockSize: Number.POSITIVE_INFINITY } })).to.be.undefined;
+  expect(resolveCssLength('10vh', { viewportBasis: { inlineSize: 500, blockSize: 100 } })).to.equal(10);
+});

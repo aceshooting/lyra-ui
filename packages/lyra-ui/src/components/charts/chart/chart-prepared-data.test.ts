@@ -1,6 +1,6 @@
 import { expect } from '@open-wc/testing';
-import { prepareChartModel, withPreparedPoint } from './chart-prepared-data.js';
-import type { LyraPreparedSeriesData } from '../../../utilities/data-preparation.js';
+import { prepareChartModel, preparedResponse, withPreparedPoint, withPreparedRange } from './chart-prepared-data.js';
+import type { LyraPreparedCategoryData, LyraPreparedSeriesData, LyraSeriesRangeRequest } from '../../../utilities/data-preparation.js';
 
 function source(): LyraPreparedSeriesData {
   return { kind: 'series', revision: 'r', series: [{ id: 's', label: 'S', counts: { sourceCount: 1000, validCount: 999, invalidCount: 1 }, xDomain: { min: 0, max: 999 }, yDomain: { min: -5, max: 8 }, samples: [
@@ -63,4 +63,50 @@ it('rejects aggregate category overflow before copying discarded series values',
   };
   expect(() => prepareChartModel(prepared, 'bar', 1000)).to.throw(/budget|capacity/i);
   expect(inspected).to.be.at.most(1000);
+});
+
+function categories(): LyraPreparedCategoryData {
+  return { kind: 'categories', revision: 'c', aggregation: 'count', counts: { sourceCount: 30, validCount: 30, invalidCount: 0 },
+    categories: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }], categoryCounts: [10, 20],
+    series: [{ id: 's', label: 'Count', values: [10, 20] }] };
+}
+
+it('refuses to overlay an exact point on category data or on an unknown series, and keeps a known point as is', () => {
+  const model = prepareChartModel(source(), 'line', 1000);
+  const grouped = prepareChartModel(categories(), 'bar', 1000);
+  expect(() => withPreparedPoint(grouped, { seriesId: 's', sourceIndex: 0 }, { x: 0, y: 1 })).to.throw(TypeError, 'Exact points require prepared series');
+  expect(() => withPreparedPoint(model, { seriesId: 'missing', sourceIndex: 500 }, { x: 500, y: 3 })).to.throw(RangeError, 'Unknown prepared series');
+  expect(withPreparedPoint(model, { seriesId: 's', sourceIndex: 200 }, { x: 200, y: -5 }) === model).to.equal(true);
+});
+
+it('refuses a range refinement for category data or an unknown series and replaces only the requested series samples', () => {
+  const model = prepareChartModel(source(), 'line', 1000);
+  const request = (seriesId: string): LyraSeriesRangeRequest => ({
+    signal: new AbortController().signal, seriesId, startIndex: 100, endIndex: 300, maxPoints: 10,
+  });
+  const refinement = [{ x: 150, y: 2, sourceIndex: 150, breakBefore: true }];
+  expect(() => withPreparedRange(prepareChartModel(categories(), 'bar', 1000), request('s'), refinement)).to.throw(TypeError, 'Refinement requires prepared series');
+  expect(() => withPreparedRange(model, request('missing'), refinement)).to.throw(RangeError, 'Unknown prepared series');
+  const refined = withPreparedRange(model, request('s'), refinement);
+  expect(refined.series[0]!.samples.map(point => point?.sourceIndex ?? null)).to.deep.equal([150]);
+  expect(refined.validCount).to.equal(model.validCount);
+  expect(refined.series[0]!.xDomain).to.deep.equal(model.series[0]!.xDomain);
+  expect(() => withPreparedRange(model, request('s'), [{ x: 400, y: 2, sourceIndex: 400, breakBefore: true }])).to.throw(RangeError, 'Refinement outside requested range');
+});
+
+describe('preparedResponse', () => {
+  it('settles with a host reply that finishes before cancellation', async () => {
+    expect(await preparedResponse(Promise.resolve(7), new AbortController().signal)).to.equal(7);
+    expect(await preparedResponse(5, new AbortController().signal)).to.equal(5);
+  });
+
+  it('rejects promptly with the abort reason even when the host reader ignores its signal', async () => {
+    const reason = new Error('replaced');
+    const controller = new AbortController();
+    const outcome = preparedResponse(new Promise<number>(() => undefined), controller.signal).then(() => 'resolved', error => error === reason ? 'reason' : 'other');
+    controller.abort(reason);
+    expect(await outcome).to.equal('reason');
+    const early = await preparedResponse(new Promise<number>(() => undefined), AbortSignal.abort(reason)).then(() => 'resolved', error => error === reason ? 'reason' : 'other');
+    expect(early).to.equal('reason');
+  });
 });

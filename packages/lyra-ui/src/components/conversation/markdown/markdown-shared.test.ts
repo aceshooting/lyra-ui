@@ -1,17 +1,22 @@
 import { aTimeout, expect } from '@open-wc/testing';
+import { render as litRender } from 'lit';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { loadMarkdownDeps } from './markdown-loader.js';
-import type { MarkedModule } from './markdown-loader.js';
+import type { MarkdownDeps, MarkedModule } from './markdown-loader.js';
 import {
   addFailedHighlightKey,
   applyMarkdownFragmentAnchor,
   createMarkdownParser,
   FAILED_HIGHLIGHT_MAX,
+  finishMarkdownHtml,
   getCachedHighlight,
   HIGHLIGHT_CACHE_MAX,
   HIGHLIGHT_CACHE_MAX_BYTES,
   hitTestHighlightRanges,
   internalLinkHrefFrom,
+  labelMarkdownTableWrappers,
+  markdownHasTableWrappers,
+  MarkdownOwnedAnimationFrameController,
   markdownHighlightKey,
   markdownAnchorFromTarget,
   markdownHighlightConfigChanged,
@@ -22,6 +27,7 @@ import {
   MarkdownParserController,
   parseMarkdownDocument,
   processPendingHighlights,
+  renderMarkdownContent,
   renderMarkdownDocument,
   tokenizeMarkdownHighlight,
   watchMarkdownDarkTheme,
@@ -874,5 +880,267 @@ describe('markdownAnchorFromTarget', () => {
     for (const candidate of [undefined, null, 'a', 5, true, {}, lookalike, document.createElement('div'), document.createElementNS('http://www.w3.org/2000/svg', 'a')]) {
       expect(markdownAnchorFromTarget(candidate) === undefined, String(candidate)).to.equal(true);
     }
+  });
+});
+
+describe('MarkdownOwnedAnimationFrameController', () => {
+  function frameOwner(): { owner: Window; callbacks: Map<number, FrameRequestCallback>; cancelled: number[] } {
+    const callbacks = new Map<number, FrameRequestCallback>();
+    const cancelled: number[] = [];
+    let next = 1;
+    const owner = {
+      requestAnimationFrame: (callback: FrameRequestCallback): number => {
+        const handle = next++;
+        callbacks.set(handle, callback);
+        return handle;
+      },
+      cancelAnimationFrame: (handle: number): void => {
+        cancelled.push(handle);
+      },
+    } as unknown as Window;
+    return { owner, callbacks, cancelled };
+  }
+
+  it('coalesces overlapping requests onto the first frame and runs the callback once', () => {
+    const controller = new MarkdownOwnedAnimationFrameController();
+    const { owner, callbacks } = frameOwner();
+    let runs = 0;
+
+    const first = controller.request(owner, () => runs++);
+    const second = controller.request(owner, () => runs++);
+
+    expect(second).to.equal(first);
+    expect(callbacks.size).to.equal(1);
+    callbacks.get(first!)!(0);
+    expect(runs).to.equal(1);
+    expect(controller.handle).to.equal(undefined);
+  });
+
+  it('keeps a frame delivered after cancellation inert while still settling waiters', async () => {
+    const controller = new MarkdownOwnedAnimationFrameController();
+    const { owner, callbacks, cancelled } = frameOwner();
+    let runs = 0;
+    const handle = controller.request(owner, () => runs++)!;
+    const settled = controller.settled!;
+
+    expect(controller.cancel()).to.equal(true);
+    await settled;
+    callbacks.get(handle)!(0);
+
+    expect(cancelled).to.deep.equal([handle]);
+    expect(runs).to.equal(0);
+    expect(controller.cancel()).to.equal(false);
+  });
+});
+
+describe('Markdown highlight cache accounting', () => {
+  it('stops evicting from a cache emptied behind its byte accounting and still stores the entry', () => {
+    const cache = new Map<string, string>();
+    expect(setCachedHighlight(cache, 'k1', 'v1', 100, 16)).to.equal(true);
+    expect(setCachedHighlight(cache, 'k2', 'v2', 100, 16)).to.equal(true);
+
+    // The cache documents that callers replace it rather than clear it; the stale total must not spin.
+    cache.clear();
+
+    expect(setCachedHighlight(cache, 'k3', 'v3', 100, 16)).to.equal(true);
+    expect([...cache.keys()]).to.deep.equal(['k3']);
+  });
+});
+
+describe('finishMarkdownHtml fail-closed guards', () => {
+  const noPeers = { marked: undefined, DOMPurify: undefined } as MarkdownDeps;
+
+  it('rejects markup that is not text before any sanitizer or link guard sees it', () => {
+    expect(() => finishMarkdownHtml(noPeers, null, 42 as unknown as string)).to.throw(TypeError, 'non-string markup');
+  });
+
+  it('refuses sanitize-policy markup when no sanitizer is available', () => {
+    expect(() => finishMarkdownHtml(noPeers, { ADD_ATTR: ['target'] }, '<p>unsafe?</p>')).to.throw('The HTML sanitizer is unavailable.');
+  });
+
+  it('turns only a well-formed palette color into a style and leaves a malformed one inert', () => {
+    const valid = finishMarkdownHtml(noPeers, null, '<span data-lr-shiki-light="#a1b2c3">x</span>', false);
+    const malformed = finishMarkdownHtml(noPeers, null, '<span data-lr-shiki-light="#12345">x</span>', false);
+
+    expect(valid).to.equal('<span style="color:#a1b2c3">x</span>');
+    expect(malformed).to.equal('<span data-lr-shiki-light="#12345">x</span>');
+  });
+});
+
+describe('Markdown content helpers on absent input', () => {
+  it('names no table wrappers under a missing root and reports none', () => {
+    expect(() => labelMarkdownTableWrappers(null, 'Table')).not.to.throw();
+    expect(markdownHasTableWrappers(null)).to.equal(false);
+  });
+
+  it('names exactly the styled table wrappers, including a root that is itself one', () => {
+    const root = document.createElement('div');
+    root.innerHTML = '<div part="table-wrapper" role="group"><table></table></div><div part="table-wrapper"><table></table></div>';
+    const wrapper = root.firstElementChild as HTMLElement;
+    const self = document.createElement('div');
+    self.setAttribute('part', 'table-wrapper');
+    self.setAttribute('role', 'group');
+
+    expect(markdownHasTableWrappers(root)).to.equal(true);
+    expect(markdownHasTableWrappers(self)).to.equal(true);
+    labelMarkdownTableWrappers(root, 'Data table');
+    labelMarkdownTableWrappers(self, 'Data table');
+
+    expect(wrapper.getAttribute('aria-label')).to.equal('Data table');
+    expect(root.lastElementChild!.hasAttribute('aria-label'), 'a wrapper without the group role stays unnamed').to.equal(false);
+    expect(self.getAttribute('aria-label')).to.equal('Data table');
+  });
+
+  it('renders progressive blocks without a revision or changed-from hint', () => {
+    const host = document.createElement('div');
+    litRender(
+      renderMarkdownContent({
+        content: '',
+        sanitized: true,
+        renderedHtml: null,
+        progressive: { blocks: [{ html: '<p part="paragraph">Settled</p>' }], tail: { kind: 'text', text: ' live' } },
+        hostAriaLabel: null,
+        isDarkTheme: false,
+        onClick: () => undefined,
+        liveRegion: undefined,
+        maxHeight: '',
+      }),
+      host,
+    );
+
+    expect(host.querySelector('[part="paragraph"]')?.textContent).to.equal('Settled');
+    expect(host.querySelector('[part="streaming-tail"]')?.textContent).to.equal(' live');
+
+    litRender(
+      renderMarkdownContent({
+        content: '',
+        sanitized: true,
+        renderedHtml: null,
+        progressive: { blocks: [{ html: '<p part="paragraph">Settled</p>' }], tail: null },
+        hostAriaLabel: null,
+        isDarkTheme: false,
+        onClick: () => undefined,
+        liveRegion: undefined,
+        maxHeight: '',
+      }),
+      host,
+    );
+    expect(host.querySelector('[part="paragraph"]')?.textContent).to.equal('Settled');
+    expect(host.querySelector('[part="streaming-tail"]') === null, 'no live tail once everything settled').to.equal(true);
+  });
+});
+
+describe('source-tab pairing with a parser that declines', () => {
+  const raw = '```make\n\tbuild\n```';
+  type Configure = (instance: Record<string, unknown> & { use(options: object): void }) => void;
+
+  async function copiedSource(document: string, configure: Configure): Promise<string[]> {
+    const base = (await loadMarkdownDeps()).marked!;
+    const configured = {
+      ...base,
+      Marked: class extends base.Marked {
+        constructor() {
+          super();
+          configure(this as unknown as Parameters<Configure>[0]);
+        }
+      },
+    } as MarkedModule;
+    const records: MarkdownCodeBlockRecord[] = [];
+    parseMarkdownDocument({
+      marked: configured,
+      content: normalizeMarkdownLeadingTabs(document, 4),
+      rawContent: document,
+      tabSize: 4,
+      gfm: true,
+      linkTarget: null,
+      headingOffset: 0,
+      escapeHtmlOption: false,
+      trustedHtmlOption: false,
+      highlightCodeOption: false,
+      getCachedHighlight: () => undefined,
+      failedHighlightKeys: new Set(),
+      headingAnchorsOption: false,
+      mathOption: false,
+      cachedKatex: null,
+      pendingKeys: [],
+      headingTreeOut: [],
+      codeBlockHeaderOption: true,
+      codeFrameNonce: 'n',
+      codeBlocksOut: records,
+    });
+    return records.map((record) => record.source);
+  }
+
+  it('restores the original tab when the parser can pair its source', async () => {
+    expect(await copiedSource(raw, () => undefined)).to.deep.equal(['\tbuild']);
+  });
+
+  it('keeps the displayed spaces when the parser exposes no lexer or token walker', async () => {
+    expect(await copiedSource(raw, (instance) => { instance['lexer'] = undefined; })).to.deep.equal(['    build']);
+    expect(await copiedSource(raw, (instance) => { instance['walkTokens'] = undefined; })).to.deep.equal(['    build']);
+  });
+
+  it('keeps the displayed spaces when a hook hands the second pass something it cannot use', async () => {
+    let preprocessed = 0;
+    expect(await copiedSource(raw, (instance) => {
+      instance.use({ hooks: { preprocess: (source: string) => (++preprocessed > 1 ? (42 as unknown as string) : source) } });
+    })).to.deep.equal(['    build']);
+
+    let processed = 0;
+    expect(await copiedSource(raw, (instance) => {
+      instance.use({ hooks: { processAllTokens: (tokens: unknown[]) => (++processed > 1 ? (null as unknown as unknown[]) : tokens) } });
+    })).to.deep.equal(['    build']);
+  });
+
+  it('keeps the displayed spaces when the second lex throws or finds a different block count', async () => {
+    let lexed = 0;
+    expect(await copiedSource(raw, (instance) => {
+      instance['lexer'] = () => {
+        lexed += 1;
+        throw new Error('declined');
+      };
+    })).to.deep.equal(['    build']);
+    expect(lexed).to.equal(1);
+
+    const extra = `${raw}\n\nextra`;
+    expect(await copiedSource(extra, (instance) => {
+      instance.use({
+        walkTokens: (token: { type: string; text?: string; lang?: string; escaped?: boolean }) => {
+          if (token.type === 'paragraph' && token.text === 'extra') Object.assign(token, { type: 'code', lang: '', escaped: false });
+        },
+      });
+    })).to.deep.equal(['    build', 'extra']);
+  });
+
+  it('treats a code token without source text, or content that no longer lines up, as tab-indented', async () => {
+    expect(await copiedSource(raw, (instance) => {
+      instance.use({ walkTokens: (token: { type: string; raw?: string }) => { if (token.type === 'code') delete token.raw; } });
+    })).to.deep.equal(['\tbuild']);
+
+    const base = (await loadMarkdownDeps()).marked!;
+    const records: MarkdownCodeBlockRecord[] = [];
+    parseMarkdownDocument({
+      marked: base,
+      content: `${normalizeMarkdownLeadingTabs(raw, 4)}\nextra`,
+      rawContent: raw,
+      tabSize: 4,
+      gfm: true,
+      linkTarget: null,
+      headingOffset: 0,
+      escapeHtmlOption: false,
+      trustedHtmlOption: false,
+      highlightCodeOption: false,
+      getCachedHighlight: () => undefined,
+      failedHighlightKeys: new Set(),
+      headingAnchorsOption: false,
+      mathOption: false,
+      cachedKatex: null,
+      pendingKeys: [],
+      headingTreeOut: [],
+      codeBlockHeaderOption: true,
+      codeFrameNonce: 'n',
+      codeBlocksOut: records,
+    });
+    expect(records.map((record) => record.source)).to.deep.equal(['\tbuild']);
   });
 });

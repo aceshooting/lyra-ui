@@ -158,3 +158,22 @@ it('bins full-range and subnormal finite endpoints without overflowing derived b
   expect(subnormal.map((bucket) => bucket.count)).to.deep.equal([1, 2]);
   expect(subnormal.every((bucket) => bucket.label.length > 0)).to.be.true;
 });
+
+it('finds the lowest sample wherever it appears in an unsorted list', () => {
+  const buckets = binValues([5, 1, 9, 3], 2);
+  expect(buckets.map((bucket) => bucket.count)).to.deep.equal([2, 2]);
+  expect(buckets[0]!.label).to.contain('1');
+  expect(buckets[1]!.label).to.contain('9');
+});
+
+it('joins the range endpoints itself when the engine has no range formatter', () => {
+  const prototype = Intl.NumberFormat.prototype as { formatRange?: unknown };
+  const original = Object.getOwnPropertyDescriptor(prototype, 'formatRange');
+  try {
+    Reflect.deleteProperty(prototype, 'formatRange');
+    const labels = binValues([0, 10], 2, 'en').map((bucket) => bucket.label);
+    expect(labels).to.deep.equal(['\u20660–5\u2069', '\u20665–10\u2069']);
+  } finally {
+    if (original) Object.defineProperty(prototype, 'formatRange', original);
+  }
+});

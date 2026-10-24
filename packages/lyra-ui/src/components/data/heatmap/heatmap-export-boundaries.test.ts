@@ -93,3 +93,24 @@ it('distinguishes absent untyped legend entries while keeping repeated bindings 
   await element.updateComplete;
   expect(element.shadowRoot!.querySelector('[part="legend-stop-label"]')?.textContent).to.equal('Recovered');
 });
+
+it('returns an empty snapshot when the browser cannot provide a surface to compose the frozen label bands', async () => {
+  const element = await fixture<LyraHeatmap>(html`<lr-heatmap style="width: 400px" sticky-labels="both" .data=${{
+    kind: 'matrix', rowLabels: ['Row'], colLabels: ['Column'], values: [[7]],
+  }}></lr-heatmap>`);
+  await waitUntil(() => element.exportData('png').startsWith('data:image/png'), 'matrix was not painted');
+  const csv = element.exportData('csv');
+  const prototype = HTMLCanvasElement.prototype;
+  const original = prototype.getContext;
+  // Only a canvas that is not part of the document (the composite built for the export) is refused.
+  prototype.getContext = function (this: HTMLCanvasElement, ...args: Parameters<typeof original>) {
+    return this.isConnected ? original.apply(this, args) : null;
+  } as typeof original;
+  try {
+    expect(element.exportData('png')).to.equal('');
+    expect(element.exportData('csv')).to.equal(csv);
+  } finally {
+    prototype.getContext = original;
+  }
+  expect(element.exportData('png')).to.match(/^data:image\/png/);
+});

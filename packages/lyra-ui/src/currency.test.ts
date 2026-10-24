@@ -246,6 +246,13 @@ describe('convertCurrency', () => {
     expect(convertCurrency(1e308, 'AAA', 'BBB', input)).to.equal(1e-15);
     expect(convertCurrency(-1e308, 'AAA', 'BBB', input)).to.equal(-1e-15);
   });
+
+  it('retries a normal-ratio conversion divide-first and still rejects a result outside the numeric range', () => {
+    const input = snapshot({ AAA: 1e300, BBB: 1e10 });
+    expect(convertCurrency(1, 'AAA', 'BBB', input) / 1e-290).to.be.closeTo(1, 1e-9);
+    expect(() => convertCurrency(1e-40, 'AAA', 'BBB', input)).to.throw(RangeError, 'outside the numeric range');
+    expect(() => convertCurrency(1e30, 'BBB', 'AAA', input)).to.throw(RangeError, 'outside the numeric range');
+  });
 });
 
 describe('loadCurrencyRates', () => {
@@ -374,6 +381,48 @@ describe('loadCurrencyRates', () => {
       },
     });
     expect(await rejection(loadCurrencyRates(source, { signal: during.signal }))).to.equal(reason);
+  });
+
+  it('rejects with the abort reason when the signal aborts while its listener is being registered', async () => {
+    const controller = new AbortController();
+    const reason = new Error('aborted during registration');
+    const add = controller.signal.addEventListener.bind(controller.signal);
+    Object.defineProperty(controller.signal, 'addEventListener', {
+      configurable: true,
+      value: (...args: Parameters<AbortSignal['addEventListener']>) => {
+        controller.abort(reason);
+        add(...args);
+      },
+    });
+    let calls = 0;
+    expect(await rejection(loadCurrencyRates(() => { calls++; return Promise.resolve(snapshot()); }, { signal: controller.signal }))).to.equal(reason);
+    expect(calls, 'the provider is never asked once cancellation won').to.equal(0);
+  });
+
+  it('lets cancellation win over a provider result that arrives after an unobserved abort', async () => {
+    const controller = new AbortController();
+    const reason = new Error('aborted without a delivered event');
+    Object.defineProperty(controller.signal, 'addEventListener', { configurable: true, value: () => undefined });
+    let deliver!: (value: LyraCurrencyRateSnapshot) => void;
+    const late = new Promise<LyraCurrencyRateSnapshot>((resolve) => { deliver = resolve; });
+    const loading = loadCurrencyRates(() => late, { signal: controller.signal });
+    controller.abort(reason);
+    deliver(snapshot());
+    expect(await rejection(loading)).to.equal(reason);
+  });
+
+  it('prefers the abort reason over a normalization failure raised after cancellation', async () => {
+    const controller = new AbortController();
+    const reason = new Error('cancelled first');
+    const source = new Proxy(snapshot(), {
+      getOwnPropertyDescriptor() {
+        controller.abort(reason);
+        throw new Error('later normalization failure');
+      },
+    });
+    expect(await rejection(loadCurrencyRates(source, { signal: controller.signal }))).to.equal(reason);
+    const failure = await rejection(loadCurrencyRates({ base: 'EUR', date: 5, rates: {} } as unknown as LyraCurrencyRateSnapshot));
+    expect(failure instanceof TypeError, 'without cancellation the validation error stays authoritative').to.equal(true);
   });
 
   it('keeps concurrent calls independent and creates distinct signals when omitted', async () => {

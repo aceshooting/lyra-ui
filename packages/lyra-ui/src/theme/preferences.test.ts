@@ -2,7 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { css } from 'lit';
 import { LyraElement } from '../internal/lyra-element.js';
 import { tag } from '../internal/prefix.js';
-import { applyLyraPreferences, getLyraPreferences, lyraPreferenceAttributes } from './preferences.js';
+import { applyLyraPreferences, getLyraPreferences, lyraPreferenceAttributes, type LyraPreferences } from './preferences.js';
 import { applyLyraStyleScope } from './theme.js';
 import { setReducedMotion } from '../../test/wtr-media.js';
 import '../components/overlays/spinner/spinner.js';
@@ -53,6 +53,16 @@ describe('independent accessibility preferences', () => {
     expect(() => applyLyraPreferences(scope, { contrast: 'more', motion: 'full' as 'reduce' })).to.throw(TypeError);
     expect(scope.getAttribute('data-lr-contrast')).to.equal('system');
     expect(scope.hasAttribute('data-lr-motion')).to.equal(false);
+  });
+
+  it('rejects a preference argument that is not an object', () => {
+    for (const bad of [null, undefined, 'more', 3, ['more']]) {
+      expect(() => lyraPreferenceAttributes(bad as unknown as LyraPreferences), String(bad)).to.throw(TypeError, 'Expected a Lyra preference object.');
+    }
+    const scope = document.createElement('section');
+    expect(() => applyLyraPreferences(scope, 'more' as unknown as LyraPreferences)).to.throw(TypeError, 'Expected a Lyra preference object.');
+    expect(scope.getAttributeNames()).to.deep.equal([]);
+    expect(lyraPreferenceAttributes({})).to.deep.equal({});
   });
 
   it('restores owned values while retaining a later application write and the five style axes', () => {
@@ -170,6 +180,21 @@ describe('independent accessibility preferences', () => {
     expect(getComputedStyle(text).outlineWidth).to.equal('5px');
     applyLyraPreferences(inner, null);
     expect(getComputedStyle(inner).color).to.equal('rgb(17, 23, 29)');
+  });
+
+  it('reads the document root when no scope is given', () => {
+    const root = document.documentElement;
+    const before = getLyraPreferences();
+    expect(before).to.deep.equal(getLyraPreferences(root));
+    applyLyraPreferences(root, { contrast: 'more', motion: 'reduce' });
+    try {
+      const applied = getLyraPreferences();
+      expect([applied.contrast, applied.motion, applied.increasedContrast, applied.reducedMotion]).to.deep.equal(['more', 'reduce', true, true]);
+      expect(applied).to.deep.equal(getLyraPreferences(root));
+    } finally {
+      applyLyraPreferences(root, null);
+    }
+    expect(getLyraPreferences()).to.deep.equal(before);
   });
 
   it('stops CSS loops and an already-playing image when an ancestor opts into reduction', async () => {

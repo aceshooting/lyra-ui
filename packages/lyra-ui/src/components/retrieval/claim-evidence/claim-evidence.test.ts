@@ -456,6 +456,71 @@ it('rejects accessor rows before duplicate reservation and never rereads admitte
   );
 });
 
+it('omits citation rows that are not records, are unreadable, or hide a field behind an accessor', async () => {
+  const revoked = Proxy.revocable({ id: 'revoked', label: 'Revoked evidence' }, {});
+  revoked.revoke();
+  const accessor = { id: 'accessor', label: 'Accessor evidence' } as Citation;
+  Object.defineProperty(accessor, 'quote', {
+    enumerable: true,
+    get: () => {
+      throw new Error('citation quote accessor must not run');
+    },
+  });
+  const valid: Citation = { id: 'valid', label: 'Readable evidence', quote: 'Readable quote' };
+  const el = await fixture<LyraClaimEvidence>(html`
+    <lr-claim-evidence
+      .claims=${[{ id: 'claim', text: 'Claim', status: 'supported', citationIds: ['revoked', 'accessor', 'valid'] }]}
+      .citations=${[null, 'text', ['valid'], revoked.proxy, accessor, valid] as unknown as Citation[]}
+    ></lr-claim-evidence>
+  `);
+
+  const badges = [...el.shadowRoot!.querySelectorAll<HTMLElement & { index: number; label: string }>('lr-citation-badge')];
+  expect(badges.map((badge) => [badge.index, badge.label])).to.deep.equal([[1, 'Readable evidence']]);
+  expect(el.shadowRoot!.querySelector('q')?.textContent).to.equal('Readable quote');
+});
+
+it('omits claim rows that are not records and renders a claim without a text status as the unknown state', async () => {
+  (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings?.delete('lr-claim-evidence:unknown-status');
+  const originalWarn = console.warn;
+  const warnings: string[] = [];
+  console.warn = (...args: unknown[]) => warnings.push(args.join(' '));
+  let el: LyraClaimEvidence;
+  try {
+    el = await fixture<LyraClaimEvidence>(html`
+      <lr-claim-evidence
+        .claims=${[
+          null,
+          'claim',
+          [{ id: 'nested' }],
+          { id: 'statusless', text: 'No status was supplied', citationIds: [] },
+        ] as unknown as GroundedClaim[]}
+      ></lr-claim-evidence>
+    `);
+  } finally {
+    console.warn = originalWarn;
+  }
+
+  expect(el.shadowRoot!.querySelectorAll('[part~="claim"]')).to.have.lengthOf(1);
+  expect(el.shadowRoot!.querySelector('lr-badge[part="status"]')?.textContent?.trim()).to.equal('Unknown');
+  expect(warnings.some((warning) => warning.includes('unknown claim status'))).to.equal(true);
+});
+
+it('renders the empty state when the claim and citation collections are not objects', async () => {
+  const el = await fixture<LyraClaimEvidence>(html`
+    <lr-claim-evidence
+      .claims=${null as unknown as GroundedClaim[]}
+      .citations=${'citations' as unknown as Citation[]}
+    ></lr-claim-evidence>
+  `);
+  expect(el.shadowRoot!.querySelector('[part="empty"]') === null).to.equal(false);
+  expect(el.shadowRoot!.querySelectorAll('[part~="claim"]')).to.have.lengthOf(0);
+  el.claims = claims;
+  el.citations = undefined as unknown as Citation[];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part~="claim"]')).to.have.lengthOf(2);
+  expect(el.shadowRoot!.querySelectorAll('lr-citation-badge')).to.have.lengthOf(0);
+});
+
 describe('lr-claim-evidence render cap', () => {
   it('caps rendered claim rows at 500 and shows a localized truncation notice', async () => {
     const manyClaims: GroundedClaim[] = Array.from({ length: 520 }, (_unused, index) => ({

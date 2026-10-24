@@ -131,4 +131,60 @@ describe('SourceRequestController', () => {
     expect(control.begin('page', 'en')).to.equal(undefined);
     fixture.disconnect();
   });
+
+  it('rejects empty, non-string and duplicate channel names at enrollment', () => {
+    const fixture = makeHost();
+    for (const channels of [[''], ['page', 'page'], [7 as unknown as string]]) {
+      expect(() => new SourceRequestController(fixture.host, { channels }), JSON.stringify(channels)).to.throw(TypeError, 'Invalid source channel');
+    }
+    expect(() => new SourceRequestController(fixture.host, { channels: [] })).to.throw(RangeError, 'Invalid source channels');
+    expect(new SourceRequestController(fixture.host, { channels: ['page', 'lookup'] }).epoch).to.equal(0);
+    fixture.disconnect();
+  });
+
+  it('refuses a revision without a source and a source that is not an object, retaining no authority', () => {
+    const fixture = makeHost();
+    const control = new SourceRequestController(fixture.host, { channels: ['page'] });
+    control.setSource({}, 1);
+    const lease = control.begin('page', 'en')!;
+    expect(() => control.setSource(undefined, 3)).to.throw(TypeError, 'Revision requires a source');
+    expect(lease.isCurrent()).to.equal(false);
+    expect(control.begin('page', 'en')).to.equal(undefined);
+
+    control.setSource({}, 2);
+    expect(() => control.setSource(5 as unknown as object, 1)).to.throw(TypeError, 'Invalid source');
+    expect(control.begin('page', 'en')).to.equal(undefined);
+    control.setSource({}, 3);
+    expect(() => control.setSource(null as unknown as object, 1)).to.throw(TypeError, 'Invalid source');
+    expect(control.begin('page', 'en')).to.equal(undefined);
+
+    control.setSource(function provider() {} as unknown as object, 4);
+    expect(control.begin('page', 'en')?.isCurrent(), 'a function is a valid source owner').to.equal(true);
+    fixture.disconnect();
+  });
+
+  it('rejects an unknown channel on invalidate and begin', () => {
+    const fixture = makeHost();
+    const control = new SourceRequestController(fixture.host, { channels: ['page'] });
+    control.setSource({}, 1);
+    expect(() => control.invalidate('unknown' as 'page')).to.throw(TypeError, 'Unknown source channel');
+    expect(() => control.begin('unknown' as 'page', 'en')).to.throw(TypeError, 'Unknown source channel');
+    control.invalidate('page');
+    expect(control.begin('page', 'en')?.isCurrent()).to.equal(true);
+    fixture.disconnect();
+  });
+
+  it('aborts the previous lease when the host leaves the document without notifying the controller', () => {
+    const fixture = makeHost();
+    const control = new SourceRequestController(fixture.host, { channels: ['page'] });
+    control.setSource({}, 1);
+    const lease = control.begin('page', 'en')!;
+    fixture.host.remove();
+    expect(control.begin('page', 'en')).to.equal(undefined);
+    expect(lease.context.signal.aborted).to.equal(true);
+    expect(lease.isCurrent()).to.equal(false);
+    fixture.connect();
+    expect(control.begin('page', 'en')?.isCurrent()).to.equal(true);
+    fixture.disconnect();
+  });
 });

@@ -53,6 +53,37 @@ class AliasChild extends AliasDemo {
 const childTag = tag('alias-child');
 customElements.define(childTag, AliasChild);
 
+class AliasOverride extends AliasDemo {
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    legend: ['mode', (value) => (value ? 'legend' : 'plain'), (mode) => mode === 'legend'],
+  };
+
+  @property({ reflect: true }) mode = 'plain';
+}
+const overrideTag = tag('alias-override');
+customElements.define(overrideTag, AliasOverride);
+
+class AliasCleared extends AliasDemo {
+  // An explicitly cleared table: the runtime must treat it as empty and keep walking the ancestry.
+  protected static override deprecatedAliases = undefined as unknown as LyraDeprecatedAliases;
+}
+class AliasLeaf extends AliasCleared {
+  protected static override deprecatedAliases: LyraDeprecatedAliases = { compact: ['size', (v) => (v ? 's' : 'm'), (v) => v === 's'] };
+
+  @property({ reflect: true }) size = 'm';
+
+  /** @deprecated */
+  @property({ type: Boolean }) compact = false;
+}
+const leafTag = tag('alias-leaf');
+customElements.define(leafTag, AliasLeaf);
+
+class AliasFree extends LyraElement {
+  @property() label = '';
+}
+const freeTag = tag('alias-free');
+customElements.define(freeTag, AliasFree);
+
 const mount = <T extends HTMLElement>(markup: string): Promise<T> => fixture<T>(markup);
 
 describe('deprecated alias sync', () => {
@@ -149,6 +180,49 @@ describe('deprecated alias sync', () => {
       el.withLegend = true;
       await el.updateComplete;
     });
+    expect(warnings.length).to.equal(0);
+  });
+
+  it('lets a subclass table redefine an alias its ancestor also declares', async () => {
+    let el!: AliasOverride;
+    await captureDeprecationWarnings([{ tag: overrideTag, kind: 'property', name: 'legend' }], async () => {
+      el = await mount<AliasOverride>(`<${overrideTag}></${overrideTag}>`);
+      el.legend = true;
+      await el.updateComplete;
+    });
+    expect(el.mode, 'the redefined alias drives the subclass partner').to.equal('legend');
+    expect(el.withLegend, 'the ancestor mapping for the same alias is superseded').to.equal(false);
+    el.mode = 'plain';
+    await el.updateComplete;
+    expect(el.legend).to.equal(false);
+    await captureDeprecationWarnings([{ tag: overrideTag, kind: 'property', name: 'showLegend' }], async () => {
+      el.showLegend = true;
+      await el.updateComplete;
+    });
+    expect(el.withLegend, 'aliases the subclass does not redefine still follow the ancestor').to.equal(true);
+  });
+
+  it('keeps inherited aliases across an ancestor whose own table was cleared', async () => {
+    let el!: AliasLeaf;
+    await captureDeprecationWarnings([{ tag: leafTag, kind: 'property', name: 'closable' }], async () => {
+      el = await mount<AliasLeaf>(`<${leafTag} closable="false"></${leafTag}>`);
+    });
+    expect(el.withoutCloseButton).to.equal(true);
+    await captureDeprecationWarnings([{ tag: leafTag, kind: 'property', name: 'compact' }], async () => {
+      el.compact = true;
+      await el.updateComplete;
+    });
+    expect(el.size).to.equal('s');
+  });
+
+  it('ignores attribute changes on a class that declares no aliases', async () => {
+    let el!: AliasFree;
+    const warnings = await captureDeprecationWarnings([], async () => {
+      el = await mount<AliasFree>(`<${freeTag}></${freeTag}>`);
+      el.setAttribute('label', 'named');
+      await el.updateComplete;
+    });
+    expect(el.label).to.equal('named');
     expect(warnings.length).to.equal(0);
   });
 });

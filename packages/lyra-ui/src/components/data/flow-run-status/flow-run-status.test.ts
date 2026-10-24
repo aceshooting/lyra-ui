@@ -494,6 +494,27 @@ it('announces a repeated identical transition twice instead of silently rewritin
   ).to.equal(2);
 });
 
+it('announces nothing when a reassigned decoration set changes no step status', async () => {
+  const wrapper = (await fixture(html`
+    <lr-flow-canvas>
+      <lr-flow-run-status
+        slot="top-end"
+        .decorations=${{ fetch: { status: 'running' } } as FlowRunDecorations}
+      ></lr-flow-run-status>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  const overlay = wrapper.querySelector('lr-flow-run-status') as LyraFlowRunStatus;
+  await overlay.updateComplete;
+  overlay.decorations = { fetch: { status: 'running', detail: 'Still working' } };
+  await overlay.updateComplete;
+  expect(sinkTexts('polite'), 'a new detail on the same status is not a transition').to.deep.equal([]);
+  overlay.decorations = { fetch: { status: 'success' } };
+  await overlay.updateComplete;
+  expect(sinkTexts('polite')).to.deep.equal(['Fetch data: Success']);
+});
+
 it('ref-counts the shared sink away once the last overlay disconnects', async () => {
   const first = (await fixture(
     html`<lr-flow-run-status></lr-flow-run-status>`,

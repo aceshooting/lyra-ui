@@ -509,6 +509,43 @@ describe("lr-widget-renderer", () => {
     expect((await changed).detail.value).to.equal('Grace');
   });
 
+  it("renders a bound value for a control that registers no change event and never requests a state change from it", async () => {
+    const registry = createWidgetTypeRegistry([
+      [
+        "field",
+        {
+          tag: "lr-input",
+          props: { value: "string" },
+          interaction: "control",
+        },
+      ],
+    ]);
+    const el = await fixture<LyraWidgetRenderer>(
+      html`<lr-widget-renderer
+        .registry=${registry}
+        .bindingState=${{ name: "Ada" }}
+        .document=${documentFor({
+          id: "readonly-field",
+          type: "field",
+          props: { value: { $bind: "/name" } },
+        })}
+      ></lr-widget-renderer>`
+    );
+    const input = el.shadowRoot!.querySelector("lr-input") as HTMLElement & {
+      value: string;
+    };
+    expect(input.value).to.equal("Ada");
+    let requests = 0;
+    el.addEventListener("lr-widget-state-change", () => requests++);
+
+    input.dispatchEvent(new CustomEvent("lr-input", { bubbles: true, composed: true, detail: { value: "Grace" } }));
+
+    expect(requests).to.equal(0);
+    el.bindingState = { name: "Grace" };
+    await el.updateComplete;
+    expect(input.value).to.equal("Grace");
+  });
+
   it("detaches obsolete binding/action callbacks when nodes disappear", async () => {
     const registry = createWidgetTypeRegistry([
       [

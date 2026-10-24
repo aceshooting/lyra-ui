@@ -135,3 +135,12 @@ it('preserves frozen-axis offsets in canvas and last-painted accessibility recta
     padTop: 18,
   })).to.deep.equal({ x: 28, y: 38, w: 8, h: 8 });
 });
+
+it('falls back to the grid padding outside the measured calendar axes and yields no cell for an empty matrix', () => {
+  const geometry = { weekCount: 1, cellSize: 8, columnPositions: [30], rowPositions: [18, 28], padLeft: 12, padTop: 6 };
+  expect(calendarCellRect(0, 0, geometry)).to.deep.equal({ x: 30, y: 18, w: 8, h: 8 });
+  expect(calendarCellRect(5, 1, geometry)).to.deep.equal({ x: 12, y: 28, w: 8, h: 8 });
+  expect(calendarCellRect(0, 6, geometry)).to.deep.equal({ x: 30, y: 6, w: 8, h: 8 });
+  expect(hitTestMatrix(45, 25, { ...matrixGeometry, rows: 0 }, () => true)).to.equal(null);
+  expect(hitTestMatrix(45, 25, { ...matrixGeometry, cols: 0 }, () => true)).to.equal(null);
+});

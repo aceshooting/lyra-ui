@@ -3,6 +3,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './tree.js';
 import type { LyraTree, LyraTreeNodeData } from './tree.class.js';
+import type { LyraTreeItem } from './tree-item.js';
 import type { LyraHierarchySource, LyraHierarchyQuery } from '../../../data-sources.js';
 
 function source(count = 1_000_000): LyraHierarchySource<LyraTreeNodeData, LyraHierarchyQuery> {
@@ -255,4 +256,21 @@ it('keeps initial malformed rows quiet while displaying the localized failure', 
   await el.updateComplete;
   await new Promise(resolve => requestAnimationFrame(resolve));
   expect([...document.querySelectorAll('[data-lr-live-region] > div')].filter(node => node.textContent === 'Initial row unavailable').length).to.equal(0);
+});
+
+it('leaves expandAll and collapseAll as no-ops while a source owns the rows', async () => {
+  const provider = source(3);
+  const el = await fixture<LyraTree>(html`<lr-tree label="Source tree" style="height: 300px" .treeSource=${provider}></lr-tree>`);
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part~="source-row"]').length === 3, 'source rows', { timeout: 3000 });
+  await el.expandAll();
+  await el.collapseAll();
+  expect(el.shadowRoot!.querySelectorAll('[part~="source-row"]').length).to.equal(3);
+  el.treeSource = undefined;
+  el.data = [{ id: 'parent', label: 'Parent', children: [{ id: 'child', label: 'Child' }] }];
+  await el.updateComplete;
+  const parent = el.querySelector<LyraTreeItem>('lr-tree-item')!;
+  await el.expandAll();
+  expect(parent.expanded).to.equal(true);
+  await el.collapseAll();
+  expect(parent.expanded).to.equal(false);
 });

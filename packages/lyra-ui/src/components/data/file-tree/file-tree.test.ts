@@ -609,3 +609,39 @@ it('keeps unchanged rows on their existing item objects when the selection moves
   const changed = src.childItems().filter((item) => before.get(item.nodeId) !== item.item).map((item) => item.nodeId);
   expect(changed).to.deep.equal(['src/f3.ts']);
 });
+
+describe('lr-file-tree bulk and reveal boundaries', () => {
+  it('expandAll() opens every loaded directory and collapseAll() closes them again', async () => {
+    const el = await fixture<LyraFileTree>(html`<lr-file-tree .nodes=${nodes}></lr-file-tree>`);
+    const tree = el.shadowRoot!.querySelector<LyraTree>('lr-tree')!;
+    const directory = () => tree.querySelector<LyraTreeItem>('lr-tree-item')!;
+    expect(directory().expanded).to.equal(false);
+    await el.expandAll();
+    await tree.updateComplete;
+    expect(directory().expanded).to.equal(true);
+    el.collapseAll();
+    await tree.updateComplete;
+    expect(directory().expanded).to.equal(false);
+  });
+
+  it('setChildren() ignores a path that is not in the listing', async () => {
+    const el = await fixture<LyraFileTree>(html`<lr-file-tree .nodes=${nodes}></lr-file-tree>`);
+    const before = el.nodes;
+    el.setChildren('missing/directory', [{ path: 'missing/directory/file.ts' }]);
+    await el.updateComplete;
+    expect(el.nodes === before).to.equal(true);
+  });
+
+  it('revealPath() resolves false while the inner tree has not rendered yet', async () => {
+    const el = document.createElement('lr-file-tree') as LyraFileTree;
+    el.nodes = nodes;
+    document.body.append(el);
+    try {
+      expect(await el.revealPath('src/app.ts')).to.equal(false);
+      await el.updateComplete;
+      expect(await el.revealPath('src/app.ts')).to.equal(true);
+    } finally {
+      el.remove();
+    }
+  });
+});

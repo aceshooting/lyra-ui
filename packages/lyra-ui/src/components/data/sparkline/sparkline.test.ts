@@ -198,6 +198,24 @@ it('keeps the documented naming precedence across the host attribute and both pr
   expect(svg.getAttribute('aria-label')).to.equal('Authored host name');
 });
 
+it('leaves a decorative sparkline unnamed when the host authors an empty aria-label', async () => {
+  const el = (await fixture(
+    `<lr-sparkline aria-label="" label="Visible-series label"></lr-sparkline>`,
+  )) as LyraSparkline;
+  el.values = [1, 3, 2, 5];
+  await el.updateComplete;
+
+  const svg = el.shadowRoot!.querySelector('svg')!;
+  expect(svg.hasAttribute('role')).to.equal(false);
+  expect(svg.hasAttribute('aria-label')).to.equal(false);
+  expect(el.shadowRoot!.querySelectorAll('[part="line"]').length).to.equal(1);
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(svg.getAttribute('role')).to.equal('img');
+  expect(svg.getAttribute('aria-label')).to.equal('Visible-series label');
+});
+
 it('renders one bar per value in bar mode', async () => {
   const el = (await fixture(`<lr-sparkline mark="bar"></lr-sparkline>`)) as LyraSparkline;
   el.values = [4, 8, 2];

@@ -332,3 +332,37 @@ it('rejects an event whose snapshotted type differs from its inspected type', ()
 
   expect(new AgUiStreamAdapter().push(unstable)).to.deep.equal([]);
 });
+
+it('ignores run, tool and snapshot events whose optional fields have the wrong type, and maps the well-typed forms', () => {
+  const adapter = new AgUiStreamAdapter();
+  for (const event of [
+    { type: 'RUN_FINISHED', runId: 42 },
+    { type: 'RUN_ERROR', message: 42 },
+    { type: 'RUN_ERROR', code: 42 },
+    { type: 'RUN_ERROR', runId: 42 },
+    { type: 'TOOL_CALL_START', toolCallId: 'call-1', toolCallName: 42 },
+    { type: 'MESSAGES_SNAPSHOT', messages: 'not an array' },
+  ]) {
+    expect(adapter.push(event), JSON.stringify(event)).to.deep.equal([]);
+  }
+  expect(adapter.push({ type: 'RUN_FINISHED', runId: 'run-1' })).to.have.lengthOf(1);
+  expect(adapter.push({ type: 'RUN_ERROR', message: 'Failed', code: 'bad', runId: 'run-1' })).to.have.lengthOf(2);
+  expect(adapter.push({ type: 'TOOL_CALL_START', toolCallId: 'call-1', toolCallName: 'search' })).to.have.lengthOf(1);
+  expect(adapter.push({ type: 'MESSAGES_SNAPSHOT', messages: [] })).to.have.lengthOf(1);
+});
+
+it('keeps the previous tool arguments when the parsed argument object exceeds the snapshot budget', () => {
+  const wide = `{"items":[${Array.from({ length: 15 }, (_, index) => index).join(',')}]}`;
+  const limited = new AgUiStreamAdapter({ maxNodes: 12 });
+  limited.push({ type: 'TOOL_CALL_START', toolCallId: 'call-1', toolCallName: 'search' });
+  const rejected = limited.push({ type: 'TOOL_CALL_ARGS', toolCallId: 'call-1', delta: wide });
+  expect(rejected[0]).to.deep.nested.include({ 'invocation.args': {} });
+
+  const unrestricted = new AgUiStreamAdapter();
+  unrestricted.push({ type: 'TOOL_CALL_START', toolCallId: 'call-1', toolCallName: 'search' });
+  const accepted = unrestricted.push({ type: 'TOOL_CALL_ARGS', toolCallId: 'call-1', delta: wide });
+  const tool = accepted[0];
+  expect(tool?.type).to.equal('tool-upsert');
+  if (tool?.type !== 'tool-upsert') throw new Error('Expected a tool argument update');
+  expect(tool.invocation.args).to.deep.equal({ items: Array.from({ length: 15 }, (_, index) => index) });
+});

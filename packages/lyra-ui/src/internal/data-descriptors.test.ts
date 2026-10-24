@@ -154,3 +154,46 @@ describe('descriptor-safe projections', () => {
     expect(projectStringList(['a', 'b'], 1, { rejectOversized: true })).to.equal(undefined);
   });
 });
+
+describe('descriptor-safe projections of holes, unsafe lengths and accessors', () => {
+  const project = (entry: unknown): string | undefined => (typeof entry === 'string' ? entry : undefined);
+  const hostileArray = (): unknown[] => new Proxy(['a', 'b'], {
+    getOwnPropertyDescriptor() { throw new Error('descriptor reflection failed'); },
+  });
+
+  it('skips array holes and accessor-backed rows while keeping their neighbours', () => {
+    let calls = 0;
+    const rows: unknown[] = ['first', undefined, 'third'];
+    delete rows[1];
+    Object.defineProperty(rows, 3, { enumerable: true, get() { calls += 1; return 'fourth'; } });
+    const empty: readonly string[] = Object.freeze([]);
+    expect(projectFrozenRows(rows, project, 10, empty)).to.deep.equal(['first', 'third']);
+    expect(calls).to.equal(0);
+    expect(projectFrozenRows(['only'], project, 10, empty), 'a dense array keeps every row').to.deep.equal(['only']);
+  });
+
+  it('answers the shared empty fallback when the length cannot be read safely', () => {
+    const empty: readonly string[] = Object.freeze([]);
+    expect(projectFrozenRows(hostileArray(), project, 10, empty) === empty).to.equal(true);
+    expect(projectFrozenRows('not an array', project, 10, empty) === empty).to.equal(true);
+    expect(projectFrozenRows(['kept'], project, 10, empty) === empty).to.equal(false);
+  });
+
+  it('rejects a string list with an accessor-backed entry without running it', () => {
+    let calls = 0;
+    const list: unknown[] = ['a'];
+    Object.defineProperty(list, 1, { enumerable: true, get() { calls += 1; return 'b'; } });
+    expect(projectStringList(list, 10)).to.equal(undefined);
+    expect(projectStringList(list, 10, { strict: true })).to.equal(undefined);
+    expect(calls).to.equal(0);
+    expect(projectStringList(['a', 'b'], 10)).to.deep.equal(['a', 'b']);
+  });
+
+  it('rejects a string list whose length cannot be read safely or whose array is revoked', () => {
+    expect(projectStringList(hostileArray(), 10)).to.equal(undefined);
+    const { proxy, revoke } = Proxy.revocable(['a'], {});
+    revoke();
+    expect(projectStringList(proxy, 10)).to.equal(undefined);
+    expect(projectFrozenRows(proxy, project, 10, Object.freeze([]))).to.deep.equal([]);
+  });
+});

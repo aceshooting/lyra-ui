@@ -16,6 +16,7 @@ import type {
 } from "./prompt-input.class.js";
 import { styles } from "./prompt-input.styles.js";
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 // Removed-attribute regression tests below deliberately author these; see the helper.
 expectStaleAttribute('lr-prompt-input', 'name');
@@ -356,7 +357,12 @@ it("detects mention triggers, anchors the popover to the real textarea, and inse
   expect(composer.input?.getAttribute("aria-haspopup")).to.equal("listbox");
   expect(composer.input?.getAttribute("aria-autocomplete")).to.equal("list");
 
-  composer.input!.focus();
+  // Real option focus waits for the deferred positioning runtime to place the listbox.
+  await waitUntil(() => {
+    const listbox = popover.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]');
+    return !!listbox?.style.left && getComputedStyle(listbox).visibility === 'visible';
+  }, 'the mention listbox is positioned before keyboard navigation', { timeout: 5000 });
+  await focusByKeyboard(composer.input!);
   const firstArrow = new KeyboardEvent("keydown", {
     key: "ArrowUp",
     bubbles: true,
@@ -404,6 +410,29 @@ it("detects mention triggers, anchors the popover to the real textarea, and inse
     trigger: "@",
   });
   expect(el.value).to.equal("Hello @Ada ");
+});
+
+it('opens no suggestion session for a trigger whose item list is empty', async () => {
+  const el = (await fixture(html`
+    <lr-prompt-input .mentionItems=${[]} .commandItems=${[{ suggestionId: 'summarize', label: 'Summarize' }]}></lr-prompt-input>
+  `)) as LyraPromptInput;
+  const composer = el.shadowRoot!.querySelector('lr-chat-composer') as LyraChatComposer;
+  const textarea = composer.input!;
+
+  textarea.value = '@a';
+  textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+  textarea.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  const popovers = [...el.shadowRoot!.querySelectorAll<LyraMentionPopover>('lr-mention-popover')];
+  expect(popovers.some((popover) => popover.open)).to.equal(false);
+
+  textarea.value = '/s';
+  textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+  textarea.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  const commandPopover = el.shadowRoot!.querySelector('lr-mention-popover') as LyraMentionPopover;
+  await commandPopover.updateComplete;
+  expect(commandPopover.open).to.equal(true);
 });
 
 it('closes a textarea mention instead of treating another prompt control as focus ownership', async () => {
@@ -474,7 +503,12 @@ it('keeps an adopted textarea-to-popover Arrow transfer in its owner realm', asy
     const initialGeneration = (
       el as unknown as { suggestionNavigationGeneration: number }
     ).suggestionNavigationGeneration;
-    textarea.focus();
+    // Adoption opens a new positioning session in the destination document.
+    await waitUntil(() => {
+      const listbox = popover.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]');
+      return !!listbox?.style.left && ownerWindow.getComputedStyle(listbox).visibility === 'visible';
+    }, 'the adopted mention listbox is positioned before keyboard navigation', { timeout: 5000 });
+    await focusByKeyboard(textarea);
     const arrow = new ownerWindow.KeyboardEvent('keydown', {
       key: 'ArrowDown',
       bubbles: true,

@@ -126,6 +126,25 @@ describe('deferred conversation announcements', () => {
     expect(announcements()).to.deep.equal(['Following successful reply']);
   });
 
+  it('treats an update promise that is absent or not thenable as nothing to wait for and still announces the next message', async () => {
+    const viewport = await fixture<LyraChatViewport>(html`<lr-chat-viewport live="polite"></lr-chat-viewport>`);
+    for (const pending of [null, 7, {}, () => undefined]) {
+      const message = document.createElement('deferred-conversation-message') as DeferredMessage;
+      message.attachShadow({ mode: 'open' });
+      Object.defineProperty(message, 'updateComplete', { configurable: true, writable: true, value: pending });
+      viewport.append(message);
+    }
+    await aTimeout(0);
+    await aTimeout(0);
+    expect(announcements()).to.deep.equal([]);
+
+    const next = document.createElement('div');
+    next.textContent = 'Plain reply after odd update promises';
+    viewport.append(next);
+    await waitUntil(() => announcements().includes(next.textContent!), 'a later reply remains announceable');
+    expect(announcements()).to.deep.equal(['Plain reply after odd update promises']);
+  });
+
   for (const property of ['updateComplete', 'then'] as const) {
     it(`contains a throwing ${property} getter without preventing later announcements`, async () => {
       const viewport = await fixture<LyraChatViewport>(html`<lr-chat-viewport live="polite"></lr-chat-viewport>`);

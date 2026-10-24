@@ -3037,6 +3037,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       }
       this.loadFailed = false;
       this.chartJsModule = mod;
+      this.requestFeaturesAssignedWhileLoading();
       this.drawIfVisible();
     });
     // `data-labels`/`stack-totals` need the optional `chartjs-plugin-datalabels`
@@ -3192,6 +3193,19 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       messages.push(this.localize('chartAnnotationsUnavailable'));
     }
     return messages;
+  }
+
+  /**
+   * `updated()` returns before it requests an opt-in feature while the core module is loading, and
+   * `connectedCallback()` requests only what was already set when the chart connected. A feature
+   * property assigned in between was therefore never requested: the plugin stayed unloaded and no
+   * warning explained why. A feature that is needed yet still `idle` once loading ends is requested
+   * here; one requested earlier is `loading`, `available` or `unavailable` and is left alone.
+   */
+  private requestFeaturesAssignedWhileLoading(): void {
+    if (this.zoomable && this.zoomFeatureState === 'idle') this.requestZoomFeature();
+    if (this.needsDataLabels && this.dataLabelsFeatureState === 'idle') this.requestDataLabelsFeature();
+    if (this.needsAnnotations && this.annotationFeatureState === 'idle') this.requestAnnotationFeature();
   }
 
   private requestZoomFeature(): void {

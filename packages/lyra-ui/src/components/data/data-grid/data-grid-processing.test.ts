@@ -645,3 +645,29 @@ it("treats date-only range bounds and date-only cells as calendar days in the lo
     )
   ).to.deep.equal([2, 3, 4, 5]);
 });
+
+describe("data-grid processing boundaries", () => {
+  interface Dated {
+    id: number;
+    day: string;
+  }
+  const byDay: DataGridColumn<Dated> = { id: "day", field: "day", filterType: "date-range" };
+
+  it("never places an impossible calendar day inside an unrelated date range", () => {
+    const days: Dated[] = [{ id: 1, day: "2024-02-31" }, { id: 2, day: "2030-06-15" }];
+    const filter = [{ id: "day", value: ["2030-01-01", "2030-12-31"] }];
+    expect(filterRows(days, [byDay], filter, "en").map((row) => row.id)).to.deep.equal([2]);
+    expect(matchesFilter(days[0]!, byDay, ["2030-01-01", "2030-12-31"], "en")).to.equal(false);
+  });
+
+  it("ignores a filter that names no column", () => {
+    expect(filterRows(rows, columns, [{ id: "missing", value: "x" }], "en").map((row) => row.id)).to.deep.equal([1, 2, 3]);
+  });
+
+  it("reduces values that are all zero to zero without rescaling", () => {
+    const zeros = [0, 0, 0];
+    const asRows = zeros.map((value) => ({ value }));
+    expect(aggregateValues("sum", asRows, zeros)).to.equal(0);
+    expect(aggregateValues("mean", asRows, zeros)).to.equal(0);
+  });
+});

@@ -289,6 +289,108 @@ describe('SlotPresenceController', () => {
       frame.remove();
     }
   });
+  it('fails closed on a crafted assignment cycle between forwarding slots', async () => {
+    let registered: ReactiveController | undefined;
+    let updates = 0;
+    const host = Object.assign(document.createElement('div'), {
+      hasUpdated: false,
+      addController(controller: ReactiveController): void {
+        registered = controller;
+      },
+      removeController(): void {},
+      requestUpdate(): void {
+        updates += 1;
+      },
+      updateComplete: Promise.resolve(true),
+    });
+    const first = document.createElement('slot');
+    first.slot = 'label';
+    const second = document.createElement('slot');
+    host.append(first);
+    Object.defineProperty(first, 'assignedNodes', { value: () => [second] });
+    Object.defineProperty(second, 'assignedNodes', { value: () => [first] });
+    const root = host.attachShadow({ mode: 'open' });
+    root.innerHTML = '<slot name="label"></slot>';
+    Object.defineProperty(host, 'renderRoot', { value: root });
+    document.body.append(host);
+
+    const slots = new SlotPresenceController(host);
+    try {
+      registered?.hostConnected?.();
+      expect(slots.has('label'), 'the progressive light-DOM seed sees the forwarding element').to.equal(true);
+      updates = 0;
+      host.hasUpdated = true;
+      registered?.hostUpdated?.();
+      await Promise.resolve();
+      expect(slots.has('label'), 'a cycle resolves to no consumer content').to.equal(false);
+      expect(updates).to.equal(1);
+    } finally {
+      registered?.hostDisconnected?.();
+      host.remove();
+    }
+  });
+
+  it('ignores a non-HTML slot in the render root and reads light DOM when no render root exists', () => {
+    let registered: ReactiveController | undefined;
+    const host = Object.assign(document.createElement('div'), {
+      hasUpdated: true,
+      addController(controller: ReactiveController): void {
+        registered = controller;
+      },
+      removeController(): void {},
+      requestUpdate(): void {},
+      updateComplete: Promise.resolve(true),
+    });
+    const label = document.createElement('span');
+    label.slot = 'label';
+    host.append(label);
+    const root = host.attachShadow({ mode: 'open' });
+    root.innerHTML = '<svg><slot name="label"></slot></svg><slot name="hint"></slot>';
+    expect(root.querySelector('svg slot')!.localName, 'the fixture really holds a foreign slot element').to.equal('slot');
+    Object.defineProperty(host, 'renderRoot', { value: root, configurable: true });
+    document.body.append(host);
+
+    const slots = new SlotPresenceController(host);
+    try {
+      registered?.hostConnected?.();
+      expect(slots.has('label'), 'the foreign slot does not stand in for the consumer content').to.equal(true);
+      expect(slots.has('hint')).to.equal(false);
+      registered?.hostDisconnected?.();
+      Object.defineProperty(host, 'renderRoot', { value: undefined, configurable: true });
+      label.remove();
+      registered?.hostConnected?.();
+      expect(slots.has('label'), 'without a render root the light DOM answers: the label is gone').to.equal(false);
+      host.append(label);
+      registered?.hostUpdate?.();
+      expect(slots.has('label'), 'and it sees the label return').to.equal(true);
+    } finally {
+      registered?.hostDisconnected?.();
+      host.remove();
+    }
+  });
+
+  it('answers false for rendered slots of a host without DOM child surfaces', () => {
+    let registered: ReactiveController | undefined;
+    const host = {
+      hasUpdated: true,
+      renderRoot: {
+        addEventListener(): void {},
+        removeEventListener(): void {},
+        querySelectorAll: () => [{ nodeType: 1, localName: 'slot', name: 'label', assignedNodes: () => [] }],
+      },
+      addController(controller: ReactiveController): void {
+        registered = controller;
+      },
+      removeController(): void {},
+      requestUpdate(): void {},
+      updateComplete: Promise.resolve(true),
+    };
+    const slots = new SlotPresenceController(host as never);
+
+    expect(() => registered?.hostConnected?.()).to.not.throw();
+    expect(slots.has('label')).to.equal(false);
+    expect(() => registered?.hostDisconnected?.()).to.not.throw();
+  });
 });
 
 class ConditionalSlotPresenceFixture extends LyraElement {

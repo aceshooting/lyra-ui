@@ -2,6 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse } from '../../../../test/wtr-mouse.js';
+import { twoFrames } from '../../../../test/frames.js';
 import type { LyraLiteChart } from './lite-chart.class.js';
 import './lite-chart.js';
 
@@ -83,4 +84,44 @@ it('renders logarithmic subnormal values with bounded finite ticks and preserves
   expect(ticks.length).to.be.at.most(8);
   const csv = element.exportData('csv');
   for (let index = 0; index < values.length; index++) expect(csv).to.include(`${['First', 'Middle', 'Last'][index]},${values[index]}`);
+});
+
+it('treats datasets that are not a list as no data and recovers when a list is assigned again', async () => {
+  const element = await fixture<LyraLiteChart>(html`<lr-lite-chart type="bar" .labels=${['A', 'B']}
+    .datasets=${[{ label: 'S', data: [1, 2] }]}></lr-lite-chart>`);
+  await marks(element, 2);
+  for (const value of [null, { label: 'S', data: [1] }, 'series'] as unknown[]) {
+    element.datasets = value as LyraLiteChart['datasets'];
+    await element.updateComplete;
+    expect(element.datasets, String(value)).to.deep.equal([]);
+    expect(element.shadowRoot!.querySelectorAll('[part="bar"], [part="point"]').length, String(value)).to.equal(0);
+  }
+  element.datasets = [{ label: 'S', data: [3, 4] }];
+  await marks(element, 2);
+  expect(element.exportData('csv')).to.include('A,3');
+});
+
+it('draws a synchronized presentation only in charts that show the focused category', async () => {
+  const host = await fixture<HTMLDivElement>(html`<div style="inline-size:500px">
+    <lr-lite-chart sync-group="partial" height="10rem" .labels=${['Alpha', 'Beta']}
+      .datasets=${[{ label: 'First', data: [3, 7] }]}></lr-lite-chart>
+    <lr-lite-chart sync-group="partial" height="10rem" .labels=${['Gamma']}
+      .datasets=${[{ label: 'Second', data: [5] }]}></lr-lite-chart>
+    <lr-lite-chart sync-group="partial" height="10rem" .labels=${['Alpha', 'Beta']}
+      .datasets=${[{ label: 'Third', data: [1, 2] }]}></lr-lite-chart>
+  </div>`);
+  const [owner, missing, hidden] = [...host.querySelectorAll<LyraLiteChart>('lr-lite-chart')];
+  if (!owner || !missing || !hidden) throw new Error('Synchronized charts missing');
+  const ownerMarks = await marks(owner, 2);
+  await marks(missing, 1);
+  await marks(hidden, 2);
+  hidden.style.display = 'none';
+  await twoFrames();
+  await focusByKeyboard(ownerMarks[0] as unknown as HTMLElement);
+  await waitUntil(() => owner.shadowRoot!.querySelectorAll('[part="sync-crosshair"]').length === 1, 'the focused chart shows its own crosshair');
+  await twoFrames();
+  for (const [name, chart] of [['a chart without the category', missing], ['a chart that is not displayed', hidden]] as const) {
+    expect(chart.shadowRoot!.querySelectorAll('[part="sync-crosshair"]').length, name).to.equal(0);
+    expect(chart.shadowRoot!.querySelectorAll('[part="sync-tooltip"]').length, name).to.equal(0);
+  }
 });

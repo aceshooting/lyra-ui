@@ -297,6 +297,58 @@ it('shows an empty message when path is empty', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('skips entries that are not keyed path elements while keeping original occurrence indexes', async () => {
+  const el = await fixture<LyraPathStrip>(html`
+    <lr-path-strip
+      .path=${[
+        null,
+        { kind: 'mystery' },
+        { kind: 'edge', relation: '   ' },
+        { kind: 'node', node: { id: ' ' } },
+        { kind: 'node', node: { id: 'only-id' } },
+        { kind: 'edge', relation: 'cites' },
+      ] as unknown as LyraPathElement[]}
+    ></lr-path-strip>
+  `);
+  const controls = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="node"], [part="relation"]')];
+
+  expect(controls.map((control) => [control.getAttribute('part'), control.textContent?.trim()])).to.deep.equal([
+    ['node', 'only-id'],
+    ['relation', 'cites'],
+  ]);
+  const entity = oneEvent(el, 'lr-entity-select');
+  controls[0]!.click();
+  expect((await entity).detail).to.deep.equal({ entityId: 'only-id', occurrenceIndex: 4 });
+  const relation = oneEvent(el, 'lr-relation-activate');
+  controls[1]!.click();
+  const detail = (await relation).detail;
+  expect([detail.relation, detail.sourceNodeId, detail.targetNodeId, detail.occurrenceIndex]).to.deep.equal([
+    'cites',
+    'only-id',
+    undefined,
+    5,
+  ]);
+});
+
+it('never announces a removed entry when focus lands on its stale control and settles on the survivor', async () => {
+  const el = await fixture<LyraPathStrip>(html`<lr-path-strip .path=${path}></lr-path-strip>`);
+  const controls = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="node"], [part="relation"]')];
+  const stale = controls[2]!;
+  const before = sinkTexts().length;
+
+  // The replacement lands before Lit re-renders, so the old third control can still take focus.
+  // Moving focus is itself the subject, and it has to happen in the same task as the assignment.
+  el.path = path.slice(0, 1);
+  stale.focus();
+  await el.updateComplete;
+  await waitUntil(() => sinkTexts().length > before, 'the surviving node is announced');
+
+  expect(sinkTexts().slice(before), 'only the surviving node is announced').to.deep.equal(['Marie Curie, node 1 of 1']);
+  const survivors = el.shadowRoot!.querySelectorAll('[part="node"], [part="relation"]');
+  expect(survivors.length).to.equal(1);
+  expect(el.shadowRoot!.activeElement === survivors[0], 'focus settles on the surviving control').to.equal(true);
+});
+
 it('announces node focus through a .strings override for pathNodeStatus, interpolating its placeholders', async () => {
   const el = (await fixture(
     html`<lr-path-strip

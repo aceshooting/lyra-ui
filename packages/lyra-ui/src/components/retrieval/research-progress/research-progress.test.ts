@@ -69,6 +69,37 @@ describe('lr-research-progress', () => {
     expect(step.querySelector('[part="status"]')?.textContent).to.equal('Inconnu');
   });
 
+  it('renders no steps for a runtime value that is not an array', async () => {
+    const el = await fixture<LyraResearchProgress>(html`<lr-research-progress
+      .steps=${null as unknown as ResearchStep[]}
+    ></lr-research-progress>`);
+    expect(el.shadowRoot!.querySelectorAll('[part="step"]')).to.have.lengthOf(0);
+
+    el.steps = steps;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="step"]')).to.have.lengthOf(4);
+  });
+
+  it('shows a step whose status is not text as the localized unknown state', async () => {
+    (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings?.delete('lr-research-progress:unknown-status');
+    const originalWarn = console.warn;
+    const warnings: string[] = [];
+    console.warn = (...args: unknown[]) => warnings.push(args.join(' '));
+    let el: LyraResearchProgress;
+    try {
+      el = await fixture<LyraResearchProgress>(html`<lr-research-progress
+        .steps=${[{ id: 'numeric', label: 'Numeric status', status: 7 }] as unknown as ResearchStep[]}
+      ></lr-research-progress>`);
+    } finally {
+      console.warn = originalWarn;
+    }
+
+    expect(warnings.some((warning) => warning.includes('unknown step status "number"'))).to.equal(true);
+    const step = el.shadowRoot!.querySelector('[data-step-id="numeric"]')!;
+    expect(step.getAttribute('data-status')).to.equal('unknown');
+    expect(step.querySelector('[part="status"]')?.textContent).to.equal('Unknown');
+  });
+
   it('accepts shared terminal spellings while preserving research-specific labels and counts', async () => {
     const aliases: ResearchStep[] = [
       { id: 'a', label: 'A', status: 'success' },

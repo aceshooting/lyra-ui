@@ -82,6 +82,19 @@ it('keeps the compact inline entity target at the live hit-area token override',
   expect(bounds.height).to.be.at.least(52);
 });
 
+it('ignores an open request while the entity id is blank', async () => {
+  const el = (await fixture(
+    html`<lr-entity-chip entity-id="   " text="Unresolved"></lr-entity-chip>`
+  )) as LyraEntityChip;
+  const button = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+  const opened: string[] = [];
+  el.addEventListener('lr-entity-open', () => opened.push('lr-entity-open'));
+
+  button.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+  expect(opened).to.deep.equal([]);
+});
+
 it('emits lr-entity-open on dblclick, and on Space while focused', async () => {
   const el = (await fixture(
     html`<lr-entity-chip entity-id="e17" text="Marie Curie"></lr-entity-chip>`

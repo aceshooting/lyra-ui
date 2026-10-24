@@ -16,6 +16,11 @@ describe('loadKatex', () => {
     expect(result).to.equal(fakeKatex);
   });
 
+  it('accepts a callable module that carries renderToString', async () => {
+    const callableKatex = Object.assign(() => undefined, { renderToString: () => '<math></math>' });
+    expect(await loadKatex(() => Promise.resolve(callableKatex))).to.equal(callableKatex);
+  });
+
   it('uses a fixed, bounded development diagnostic when the optional peer fails and stays silent in production', async () => {
     const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
     const originalIssuedWarnings = runtime.litIssuedWarnings;

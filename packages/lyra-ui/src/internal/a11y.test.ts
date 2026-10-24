@@ -10,6 +10,7 @@ import {
   isAccessibilityVisibilityHidden,
   nextId,
   resolveAccessibleTrigger,
+  sharedRealmRegistry,
   srOnly,
 } from './a11y.js';
 import { tag } from './prefix.js';
@@ -103,6 +104,30 @@ it('retains the highest successfully reached window when the next parent is inac
   const child = { document, parent: reachableParent } as unknown as Window;
 
   expect(highestReachableWindow(child) === reachableParent).to.equal(true);
+});
+
+it('shares one registry per key and falls back to the caller copy when none can be installed on the host window', () => {
+  const host = highestReachableWindow(window);
+  const open = Symbol('writable registry');
+  const fallback = { counter: 7 };
+  const first = sharedRealmRegistry(open, () => ({ counter: 0 }), fallback);
+  expect(first === fallback, 'a writable host installs the created registry').to.equal(false);
+  expect(sharedRealmRegistry(open, () => ({ counter: 99 }), fallback) === first, 'later callers share it').to.equal(true);
+
+  const blocked = Symbol('unwritable registry');
+  let created = 0;
+  const defineProperty = Object.defineProperty;
+  Object.defineProperty = (target, key, descriptor) => {
+    if (target === host && key === blocked) throw new TypeError('Registry host is not writable');
+    return defineProperty(target, key, descriptor);
+  };
+  try {
+    const result = sharedRealmRegistry(blocked, () => { created += 1; return { counter: 0 }; }, fallback);
+    expect(result === fallback).to.equal(true);
+    expect(created).to.equal(1);
+  } finally {
+    Object.defineProperty = defineProperty;
+  }
 });
 
 describe('hasRealContent', () => {

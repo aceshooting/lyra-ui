@@ -113,6 +113,16 @@ it('renders the confidence lr-stat with every field forwarded when confidence is
   expect(stat.caption).to.equal('From 3 sources');
 });
 
+it('gives a minimal confidence a blank unit and caption and the neutral variant', async () => {
+  const el = (await fixture(html`<lr-entity-dossier></lr-entity-dossier>`)) as LyraEntityDossier;
+  el.entity = entity;
+  el.confidence = { label: 'Confidence', value: '71%' };
+  await el.updateComplete;
+  const stat = el.shadowRoot!.querySelector('[part="confidence"]') as LyraStat;
+
+  expect([stat.label, stat.value, stat.unit, stat.caption, stat.variant]).to.deep.equal(['Confidence', '71%', '', '', 'neutral']);
+});
+
 it('renders three tabs labelled Relationships, Retrieved chunks, and Grounding, reusing the composed children\'s own default strings', async () => {
   const el = await populated();
   const tabs = el.shadowRoot!.querySelector('lr-tab-group') as LyraTabGroup;

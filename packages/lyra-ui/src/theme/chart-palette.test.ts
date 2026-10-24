@@ -150,3 +150,58 @@ describe('optional chart palettes', () => {
     expect(Object.isFrozen(cues[0]!.dash)).to.equal(true);
   });
 });
+
+describe('chart palette resolution without a token layer or with non-concrete stops', () => {
+  const computedColor = (scope: Element, css: string): string => {
+    const probe = document.createElement('span');
+    probe.style.color = css;
+    scope.append(probe);
+    try {
+      return getComputedStyle(probe).color;
+    } finally {
+      probe.remove();
+    }
+  };
+
+  it('uses the requested built-in palette for every token the scope does not define', async () => {
+    // A fresh browsing context has no adopted token layer, whatever the page under test installed.
+    const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+    const frameDocument = frame.contentDocument!;
+    const scope = frameDocument.body.appendChild(frameDocument.createElement('section'));
+    expect(frame.contentWindow!.getComputedStyle(scope).getPropertyValue('--lr-color-chart-1').trim(), 'precondition: no chart token layer').to.equal('');
+    expect(frame.contentWindow!.getComputedStyle(scope).getPropertyValue('--lr-theme-color-chart-sequential-1').trim()).to.equal('');
+    const palette = resolveLyraChartPalette(scope, { mode: 'dark', palette: 'material' });
+    expect(palette.categorical).to.deep.equal(LYRA_CHART_PALETTES.material.dark.categorical);
+    expect(palette.sequential).to.deep.equal(LYRA_CHART_PALETTES.material.dark.sequential);
+    expect(palette.diverging).to.deep.equal(LYRA_CHART_PALETTES.material.dark.diverging);
+    scope.style.setProperty('--lr-color-chart-2', 'rgb(7, 8, 9)');
+    const mixed = resolveLyraChartPalette(scope, { mode: 'dark', palette: 'material' });
+    expect(mixed.categorical[1], 'a defined token still wins').to.equal('rgb(7, 8, 9)');
+    expect(mixed.categorical[0], 'its undefined neighbour keeps the built-in color').to.equal(LYRA_CHART_PALETTES.material.dark.categorical[0]);
+  });
+
+  it('returns the nearest stop of a scale of named colors when no live scope can mix them', () => {
+    const scale = ['red', 'lime', 'blue'] as const;
+    expect(sampleLyraChartScale(null, scale, 0.2)).to.equal('red');
+    expect(sampleLyraChartScale(null, scale, 0.4)).to.equal('lime');
+    expect(sampleLyraChartScale(null, scale, 0.6)).to.equal('lime');
+    expect(sampleLyraChartScale(null, scale, 0.9)).to.equal('blue');
+    expect(sampleLyraChartScale(null, ['#000000', '#808080', '#ffffff'] as const, 0.25), 'concrete stops still interpolate').to.equal('rgb(64, 64, 64)');
+  });
+
+  it('mixes named-color stops in the live scope exactly as the browser mixes them', async () => {
+    const scope = await fixture<HTMLElement>(html`<section></section>`);
+    const scale = ['red', 'lime', 'blue'] as const;
+    expect(sampleLyraChartScale(scope, scale, 0.25)).to.equal(computedColor(scope, 'color-mix(in srgb, red 50%, lime)'));
+    expect(sampleLyraChartScale(scope, scale, 0.75)).to.equal(computedColor(scope, 'color-mix(in srgb, lime 50%, blue)'));
+  });
+
+  it('resolves an exact stop in the live scope instead of returning its authored text', async () => {
+    const scope = await fixture<HTMLElement>(html`<section style="--stop: rgb(10, 20, 30)"></section>`);
+    const scale = ['var(--stop)', 'lime', 'blue'] as const;
+    expect(sampleLyraChartScale(scope, scale, 0)).to.equal('rgb(10, 20, 30)');
+    expect(sampleLyraChartScale(scope, scale, 0.5)).to.equal(computedColor(scope, 'lime'));
+    expect(sampleLyraChartScale(scope, scale, 1)).to.equal(computedColor(scope, 'blue'));
+    expect(sampleLyraChartScale(null, scale, 0), 'without a scope the authored stop is returned verbatim').to.equal('var(--stop)');
+  });
+});

@@ -4,8 +4,11 @@ import type { LyraLiteChart } from './lite-chart.js';
 import {
   automaticCategoryLabelIndexes,
   categoryLabelGrowth,
+  hasCategoryLabelText,
   sparseCategoryLabelExtent,
   visibleCategoryLabelIndexes,
+  widestEstimatedCategoryLabel,
+  type CategoryLabelMax,
   type CategoryLabelSelectionBounds,
 } from './lite-chart-axis-layout.js';
 
@@ -270,6 +273,50 @@ describe('pure category-axis layout math', () => {
     expect(sparseCategoryLabelExtent(
       ['month', '', '', 'next'], [0, 20, 40, 60], 0, categoryLabelGrowth(0, 4), 20, 10, 4, 1_000_000,
     )).to.equal(26);
+  });
+
+  it('treats a missing, null or blank category text as unpainted', () => {
+    expect(hasCategoryLabelText(undefined)).to.equal(false);
+    expect(hasCategoryLabelText(null)).to.equal(false);
+    expect(hasCategoryLabelText('   ')).to.equal(false);
+    expect(hasCategoryLabelText(' Q1 ')).to.equal(true);
+  });
+
+  it('estimates the widest label from rendered indexes only, counting an absent label as empty', () => {
+    expect(widestEstimatedCategoryLabel(['ab', 'abcd'], [0, 1], 7)).to.equal(28);
+    expect(widestEstimatedCategoryLabel(['ab', 'abcd'], [0], 7)).to.equal(14);
+    expect(widestEstimatedCategoryLabel(['ab'], [0, 5], 7)).to.equal(14);
+    expect(widestEstimatedCategoryLabel([], [3], 7)).to.equal(0);
+  });
+
+  it('keeps every label when a cap is unset or is neither a count nor automatic', () => {
+    const indexes = [0, 1, 2, 3, 4];
+    const labels = indexes.map((index) => `Category ${index}`);
+    expect(visibleCategoryLabelIndexes(5, 100, indexes, labels, undefined, undefined, SELECTION_BOUNDS))
+      .to.equal(undefined);
+    expect(visibleCategoryLabelIndexes(5, 100, indexes, labels, null, undefined, SELECTION_BOUNDS))
+      .to.equal(undefined);
+    expect(visibleCategoryLabelIndexes(5, 100, indexes, labels, 'widest' as CategoryLabelMax, undefined, SELECTION_BOUNDS))
+      .to.equal(undefined);
+    expect(visibleCategoryLabelIndexes(5, 100, indexes, labels, 2, undefined, SELECTION_BOUNDS))
+      .to.deep.equal(new Set([0, 4]));
+  });
+
+  it('declines anchored selection with a single category, no painted text or fewer than three ticks', () => {
+    expect(automaticCategoryLabelIndexes(1, [0], [0], ['solo'], SELECTION_BOUNDS)).to.equal(undefined);
+    expect(automaticCategoryLabelIndexes(3, [0, 1, 2], [0, 40, 80], ['', '', ''], SELECTION_BOUNDS))
+      .to.equal(undefined);
+    expect(automaticCategoryLabelIndexes(3, [0, 1, 2], [0, 40], ['alpha', 'beta', 'gamma'], SELECTION_BOUNDS))
+      .to.equal(undefined);
+  });
+
+  it('gives a label the width of its own slot when no neighbor limits it toward the plot edge', () => {
+    const labels = ['', '', 'last'];
+    const xs = [0, 20, 40];
+    // A middle-anchored label on the final slot has nothing after it: only the leading blanks bound it.
+    expect(sparseCategoryLabelExtent(labels, xs, 2, 'middle', 20, 10, 4, 1_000_000)).to.equal(96);
+    // Growing toward an edge with no slot beyond it keeps the label's own width.
+    expect(sparseCategoryLabelExtent(['first', '', ''], xs, 0, 'left', 20, 10, 4, 1_000_000)).to.equal(10);
   });
 });
 

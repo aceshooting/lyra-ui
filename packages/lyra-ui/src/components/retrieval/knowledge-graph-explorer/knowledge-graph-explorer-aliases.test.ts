@@ -3,12 +3,18 @@ import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import './knowledge-graph-explorer.js';
 import type { LyraKnowledgeGraphExplorer } from './knowledge-graph-explorer.js';
 import type { LyraGraph, LyraGraphEdge, LyraGraphNode } from '../graph/graph.class.js';
+import { loadD3 } from '../graph/graph-loader.js';
 import {
   captureDeprecationWarnings,
   type DeprecatedUsage,
 } from '../../../../test/expected-deprecations.js';
 
 const TIMEOUT = 5000;
+before(async function () {
+  // Resolve the cold optional renderer before timing its composed event behavior.
+  this.timeout(120_000);
+  expect(await loadD3()).not.to.equal(null);
+});
 const nodes: LyraGraphNode[] = [
   { id: 'marie', label: 'Marie Curie', communityId: 'lab' },
   { id: 'pierre', label: 'Pierre Curie', communityId: 'lab' },
@@ -115,6 +121,17 @@ describe('lr-knowledge-graph-explorer CSS-length width and height', () => {
       '20rem',
     ]);
     expect([graph.width, graph.height]).to.deep.equal([500, '20rem']);
+  });
+
+  it('forwards a CSS-length width verbatim beside a plain-number height', async () => {
+    const el = await fixture<LyraKnowledgeGraphExplorer>(html`<lr-knowledge-graph-explorer
+      width="30rem"
+      height="400"
+    ></lr-knowledge-graph-explorer>`);
+    await el.updateComplete;
+    const graph = graphOf(el);
+    expect([el.width, el.height]).to.deep.equal(['30rem', 400]);
+    expect([graph.getAttribute('width'), graph.getAttribute('height')]).to.deep.equal(['30rem', '400']);
   });
 
   it('keeps forwarding the defaults for a value it cannot resolve', async () => {

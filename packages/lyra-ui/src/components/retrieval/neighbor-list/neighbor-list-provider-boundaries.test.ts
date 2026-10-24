@@ -151,3 +151,32 @@ describe('neighbor-list provider admission boundaries', () => {
     expect(selected).to.deep.equal(['second', 'first']);
   });
 });
+
+describe('neighbor-list reveal against a provider that turns hostile mid-reveal', () => {
+  it('reports a failed reveal instead of throwing when the revision stops being readable', async () => {
+    let hostile = false;
+    const source: GraphSource = {
+      get revision(): number {
+        if (hostile) throw new Error('revision unavailable');
+        return 1;
+      },
+      records: {
+        revision: 1,
+        query: async () => page(),
+        lookup: async () => [],
+        locate: async () => {
+          hostile = true;
+          return 0;
+        },
+      },
+      scene: async () => { throw new Error('A neighborhood list does not request a scene'); },
+    };
+    const el = await fixture<LyraNeighborList>(html`<lr-neighbor-list .graphSource=${source}
+      .centerKey=${'node:center'}></lr-neighbor-list>`);
+    await ready(el);
+
+    const revealed = await el.revealSourceKey('node:current');
+
+    expect(revealed).to.equal(false);
+  });
+});

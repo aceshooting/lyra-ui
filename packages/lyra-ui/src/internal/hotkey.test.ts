@@ -22,6 +22,13 @@ describe('shared hotkeys', () => {
     expect(match('ctrl+shift+1', { key: '!', code: 'Digit1', ctrlKey: true, shiftKey: true })).to.equal(false);
     expect(matchesHotkey(null, new KeyboardEvent('keydown', { key: 'b' }), false)).to.equal(false);
   });
+  it('falls back to the physical digit key for a non-ASCII character on a digit chord', () => {
+    const match = (chord: string, init: KeyboardEventInit) => matchesHotkey(parseHotkey(chord), new KeyboardEvent('keydown', init), false);
+    expect(match('ctrl+1', { key: '١', code: 'Digit1', ctrlKey: true })).to.equal(true);
+    expect(match('ctrl+1', { key: '٢', code: 'Digit2', ctrlKey: true })).to.equal(false);
+    expect(match('ctrl+1', { key: '١', code: 'KeyB', ctrlKey: true })).to.equal(false);
+    expect(match('ctrl+1', { key: '1', code: 'Digit1', ctrlKey: true })).to.equal(true);
+  });
   it('serializes machine ARIA names and ignores unusable keyboard events', () => {
     expect(hotkeyAriaKeyShortcuts(parseHotkey('mod+b'), false)).to.equal('Control+B');
     expect(hotkeyAriaKeyShortcuts(parseHotkey('mod+b'), true)).to.equal('Meta+B');

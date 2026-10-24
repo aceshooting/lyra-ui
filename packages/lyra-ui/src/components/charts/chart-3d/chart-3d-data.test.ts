@@ -208,3 +208,27 @@ describe('chart-3d untrusted values', () => {
     expect([chart3dAxisTitle({ label: 'Height', unit: 'm' }), chart3dAxisTitle({ label: 'Height' }), chart3dAxisTitle({})]).to.deep.equal(['Height (m)', 'Height', '']);
   });
 });
+
+describe('chart-3d hostile input shapes', () => {
+  it('reports a string column whose length is not a safe count as unusable input', () => {
+    const ids = new Proxy(['a', 'b', 'c'], {
+      getOwnPropertyDescriptor(target, key) {
+        if (key === 'length') return { value: '3', writable: true, enumerable: false, configurable: false };
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    });
+    expect(issueOf({ ...columns(), ids })).to.deep.equal({ code: 'not-an-object', column: '' });
+  });
+
+  it('falls back to the default camera when reading the camera input throws', () => {
+    const hostile = new Proxy({}, { getOwnPropertyDescriptor() { throw new Error('trap'); } });
+    expect(normalizeChart3dCamera(hostile)).to.deep.equal({ yaw: 0, pitch: 0, distance: 5, target: { x: 0, y: 0, z: 0 } });
+  });
+
+  it('frames a single point at the default distance instead of collapsing onto it', () => {
+    const rows = new Chart3dRows(admitted({ ids: ['only'], x: new Float32Array([4]), y: new Float32Array([5]), z: new Float32Array([6]) }));
+    const camera = rows.fitCamera(300, 200);
+    expect([camera.yaw, camera.pitch, camera.distance]).to.deep.equal([0, 0, 5]);
+    expect(camera.target).to.deep.equal({ x: 0, y: 0, z: 0 });
+  });
+});

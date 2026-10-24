@@ -173,3 +173,48 @@ describe('typed-columns', () => {
     expect(LARGE_DATA_DEFAULT_STRINGS.largeDataInvalid).to.contain('{column}');
   });
 });
+
+describe('typed-columns malformed and hostile input', () => {
+  it('reports a column that is not a typed array at all, including null and primitives', () => {
+    expect(issueOf(validateGraphColumns(graph({ x: 5 })))).to.deep.equal({ code: 'wrong-type', column: 'x' });
+    expect(issueOf(validateGraphColumns(graph({ y: 'text' })))).to.deep.equal({ code: 'wrong-type', column: 'y' });
+    expect(issueOf(validateGraphColumns(graph({ size: null })))).to.deep.equal({ code: 'wrong-type', column: 'size' });
+    expect(issueOf(validatePointColumns(points({ x: 7 })))).to.deep.equal({ code: 'wrong-type', column: 'x' });
+    expect(validateGraphColumns(graph()).ok, 'real typed arrays still pass').to.equal(true);
+  });
+
+  it('reports name and id columns that are not arrays', () => {
+    expect(issueOf(validateGraphColumns(graph({ categories: 'red' })))).to.deep.equal({ code: 'wrong-type', column: 'categories' });
+    expect(issueOf(validateGraphColumns(graph({ labels: { length: 3 } })))).to.deep.equal({ code: 'wrong-type', column: 'labels' });
+    expect(issueOf(validatePointColumns(points({ clusters: new Set(['only']) })))).to.deep.equal({ code: 'wrong-type', column: 'clusters' });
+    expect(issueOf(validateGraphColumns(graph({ ids: 'abc' })))).to.deep.equal({ code: 'wrong-type', column: 'ids' });
+    expect(issueOf(validatePointColumns(points({ ids: new Set(['p0', 'p1']) })))).to.deep.equal({ code: 'wrong-type', column: 'ids' });
+    expect(validateGraphColumns(graph({ categories: ['red', 'blue'], ids: ['a', 'b', 'c'] })).ok).to.equal(true);
+  });
+
+  it('lets a failure that is not a validation issue reach the caller untouched', () => {
+    const failure = new Error('reflection trap failed');
+    const hostile = new Proxy({}, { getOwnPropertyDescriptor() { throw failure; } });
+    let thrown: unknown;
+    try {
+      validateGraphColumns(hostile);
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown === failure).to.equal(true);
+    thrown = undefined;
+    try {
+      validatePointColumns(hostile);
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown === failure).to.equal(true);
+    expect(issueOf(validateGraphColumns(null)), 'an ordinary rejection stays a reported issue').to.deep.equal({ code: 'not-an-object', column: '' });
+  });
+
+  it('falls back to the default page size when the requested size is not finite', () => {
+    expect({ ...largeDataPage(450, 0, Number.NaN) }).to.deep.equal({ page: 0, pageCount: 3, start: 0, end: 200 });
+    expect({ ...largeDataPage(450, 1, Number.POSITIVE_INFINITY) }).to.deep.equal({ page: 1, pageCount: 3, start: 200, end: 400 });
+    expect({ ...largeDataPage(450, 1, 100) }).to.deep.equal({ page: 1, pageCount: 5, start: 100, end: 200 });
+  });
+});

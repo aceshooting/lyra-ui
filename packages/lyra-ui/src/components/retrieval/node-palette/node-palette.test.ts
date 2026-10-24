@@ -1377,6 +1377,44 @@ describe('reorderable', () => {
     ]);
   });
 
+  it('ignores a reorder request from a row that the host already replaced', async () => {
+    const el = (await fixture(
+      html`<lr-node-palette reorderable .items=${items}></lr-node-palette>`
+    )) as LyraNodePalette;
+    await el.updateComplete;
+    const stale = el.shadowRoot!.querySelector('[part="item"]') as HTMLElement; // "HTTP Request"
+    stale.focus();
+    const requests: unknown[] = [];
+    el.addEventListener('lr-reorder', (event) => requests.push((event as CustomEvent).detail));
+
+    // The replacement lands before Lit re-renders, so the old row can still receive the key.
+    el.items = items.map((item) => ({ ...item }));
+    pressReorder(stale, 'ArrowDown');
+    await el.updateComplete;
+
+    expect(requests).to.deep.equal([]);
+  });
+
+  it('clears a pending reorder without announcing when the host removes the whole category', async () => {
+    const el = (await fixture(
+      html`<lr-node-palette reorderable .items=${items}></lr-node-palette>`
+    )) as LyraNodePalette;
+    await el.updateComplete;
+    const before = sinkTexts().length;
+    const first = el.shadowRoot!.querySelector('[part="item"]') as HTMLElement; // "HTTP Request"
+    first.focus();
+    pressReorder(first, 'ArrowDown');
+    await el.updateComplete;
+
+    el.items = items.filter((item) => item.category !== 'Data');
+    await el.updateComplete;
+    // wait-reason: negative assertion, margined past the 500ms Announcer throttle so a bogus reorder confirmation would flush and be counted
+    await new Promise((r) => setTimeout(r, 600));
+
+    expect(sinkTexts().length - before, 'only the result-count announcement fires').to.equal(1);
+    expect(sinkTexts().at(-1)).to.not.include('Moved');
+  });
+
   it('clears a pending reorder without announcing a move when the pending item is removed instead of swapped', async () => {
     const el = (await fixture(
       html`<lr-node-palette reorderable .items=${items}></lr-node-palette>`
@@ -1400,5 +1438,71 @@ describe('reorderable', () => {
     // change itself -- and it is never the reorder-confirmation text.
     expect(sinkTexts().length - before).to.equal(1);
     expect(sinkTexts().at(-1)).to.not.include('Moved');
+  });
+});
+
+describe('item admission and input boundaries', () => {
+  it('omits rows whose optional fields have the wrong type or cannot be read and keeps later valid rows', async () => {
+    const unreadable = Proxy.revocable({ type: 'revoked', label: 'Revoked row' }, {});
+    unreadable.revoke();
+    const el = await fixture<LyraNodePalette>(html`
+      <lr-node-palette
+        .items=${[
+          { type: 'bad-description', label: 'Bad description', description: 42 },
+          { type: 'bad-category', label: 'Bad category', category: {} },
+          { type: 'bad-disabled', label: 'Bad disabled', disabled: 'yes' },
+          unreadable.proxy,
+          { type: 'valid', label: 'Valid node', description: 'Kept', disabled: false },
+        ] as unknown as LyraPaletteItem[]}
+      ></lr-node-palette>
+    `);
+
+    expect(
+      [...el.shadowRoot!.querySelectorAll('[part="item-label"]')].map((label) => label.textContent)
+    ).to.deep.equal(['Valid node']);
+  });
+
+  it('names the listbox from a non-blank label property', async () => {
+    const el = await fixture<LyraNodePalette>(
+      html`<lr-node-palette label="Automation blocks" .items=${items}></lr-node-palette>`
+    );
+    const listbox = el.shadowRoot!.querySelector('[role="listbox"]')!;
+
+    expect(listbox.getAttribute('aria-label')).to.equal('Automation blocks');
+    el.label = 'Renamed blocks';
+    await el.updateComplete;
+    expect(listbox.getAttribute('aria-label')).to.equal('Renamed blocks');
+    await expect(el).to.be.accessible();
+  });
+
+  it('requests a reorder from Cmd+Arrow exactly like Ctrl+Arrow', async () => {
+    const el = await fixture<LyraNodePalette>(
+      html`<lr-node-palette reorderable .items=${items}></lr-node-palette>`
+    );
+    const first = el.shadowRoot!.querySelector<HTMLElement>('[part="item"]')!;
+    first.focus();
+
+    const pending = oneEvent(el, 'lr-reorder');
+    first.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowDown', metaKey: true, bubbles: true, cancelable: true })
+    );
+    expect(((await pending) as CustomEvent).detail).to.deep.equal({
+      type: 'http-request',
+      category: 'Data',
+      fromIndex: 0,
+      toIndex: 1,
+    });
+  });
+
+  it('ignores a dragstart that carries no data transfer', async () => {
+    const el = await fixture<LyraNodePalette>(
+      html`<lr-node-palette .items=${items}></lr-node-palette>`
+    );
+    const item = el.shadowRoot!.querySelector<HTMLElement>('[part="item"]')!;
+    const dragStart = new DragEvent('dragstart', { bubbles: true, cancelable: true });
+
+    expect(dragStart.dataTransfer === null).to.equal(true);
+    expect(() => item.dispatchEvent(dragStart)).not.to.throw();
+    expect(item.getAttribute('aria-disabled')).to.equal('false');
   });
 });

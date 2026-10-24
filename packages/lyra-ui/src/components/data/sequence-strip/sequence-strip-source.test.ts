@@ -1,11 +1,12 @@
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { twoFrames } from '../../../../test/frames.js';
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './sequence-strip.js';
 import '../../../translations/fr/data.js';
 import '../../../translations/fr/shared.js';
 import type { LyraSequenceStrip, SequenceStripItem } from './sequence-strip.class.js';
-import type { LyraSequenceSource } from './sequence-strip-source.js';
+import { sequenceItem, sequenceSnapshot, type LyraSequenceSource } from './sequence-strip-source.js';
 
 const item = (index: number): SequenceStripItem => ({ id: `item-${index}`, categoryId: 'a', label: `Item ${index}`, marker: index === 999999 });
 const source = (): LyraSequenceSource<SequenceStripItem> => ({ revision: 1, length: 1000000,
@@ -362,4 +363,88 @@ describe('sequence source range-cell keyboard', () => {
     await sendKeys({ press: 'ArrowRight' });
     await waitUntil(() => el.shadowRoot!.activeElement === cellsOf(el)[0]);
   });
+});
+
+describe('sequence source validators', () => {
+  const live = (): boolean => true;
+  const range = (overrides: Record<string, unknown> = {}) => ({
+    startIndex: 0, endIndex: 3, categoryCounts: { a: 3 }, markerCount: 0, enabledCount: 2, ...overrides,
+  });
+
+  it('totals a complete partition and freezes the result', () => {
+    const snapshot = sequenceSnapshot([
+      range({ endIndex: 2, categoryCounts: { a: 1, b: 1 }, markerCount: 1, enabledCount: 2 }),
+      range({ startIndex: 2, endIndex: 3, categoryCounts: { a: 1 }, markerCount: 0, enabledCount: 0 }),
+    ], 3, live);
+    expect([...snapshot.counts]).to.deep.equal([['a', 2], ['b', 1]]);
+    expect([snapshot.markerCount, snapshot.enabledCount]).to.deep.equal([1, 2]);
+    expect(Object.isFrozen(snapshot) && Object.isFrozen(snapshot.ranges)).to.equal(true);
+  });
+
+  it('rejects summaries that are not arrays and entries that are not records', () => {
+    expect(() => sequenceSnapshot({ length: 1, 0: range() }, 3, live)).to.throw(TypeError, 'Invalid sequence ranges');
+    expect(() => sequenceSnapshot([5], 3, live)).to.throw(TypeError, 'Invalid sequence record');
+    expect(() => sequenceSnapshot([null], 3, live)).to.throw(TypeError, 'Invalid sequence record');
+  });
+
+  it('rejects category maps that are missing, scalar or array-shaped', () => {
+    for (const categoryCounts of [undefined, null, 4, 'a', [3]]) {
+      expect(() => sequenceSnapshot([range({ categoryCounts })], 3, live), String(categoryCounts)).to.throw(TypeError, 'Invalid sequence categories');
+    }
+  });
+
+  it('stops reading as soon as the owner revokes the operation', () => {
+    let revoked = false;
+    const categoryCounts = new Proxy({ a: 3 }, { ownKeys(target) { revoked = true; return Reflect.ownKeys(target); } });
+    expect(() => sequenceSnapshot([range({ categoryCounts })], 3, () => !revoked)).to.throw(Error, 'Sequence operation revoked');
+  });
+
+  it('rejects a zero category count, too many categories overall and an unfinished partition', () => {
+    expect(() => sequenceSnapshot([range({ categoryCounts: { a: 0, b: 3 } })], 3, live)).to.throw(RangeError, 'Invalid sequence category count');
+    const wide = (prefix: string) => Object.fromEntries(Array.from({ length: 150 }, (_, index) => [`${prefix}${index}`, 1]));
+    expect(() => sequenceSnapshot([
+      range({ endIndex: 150, categoryCounts: wide('a') }),
+      range({ startIndex: 150, endIndex: 300, categoryCounts: wide('b') }),
+    ], 300, live)).to.throw(RangeError, 'Too many sequence categories');
+    expect(() => sequenceSnapshot([range({ endIndex: 2, categoryCounts: { a: 2 } })], 3, live)).to.throw(RangeError, 'Incomplete sequence partition');
+  });
+
+  it('copies a valid item and rejects malformed records, field types and text', () => {
+    expect(sequenceItem(null, live)).to.equal(null);
+    expect(sequenceItem({ id: 'i', categoryId: 'c' }, live)).to.deep.equal({ id: 'i', categoryId: 'c' });
+    expect(sequenceItem({ id: 'i', categoryId: 'c', label: 'L', marker: true, disabled: false }, live))
+      .to.deep.equal({ id: 'i', categoryId: 'c', label: 'L', marker: true, disabled: false });
+    expect(() => sequenceItem(7, live)).to.throw(TypeError, 'Invalid sequence record');
+    expect(() => sequenceItem('item', live)).to.throw(TypeError, 'Invalid sequence record');
+    for (const bad of [{ marker: 'yes' }, { disabled: 1 }, { label: 3 }, { id: 5 }, { categoryId: null }]) {
+      expect(() => sequenceItem({ id: 'i', categoryId: 'c', ...bad }, live), JSON.stringify(bad)).to.throw(TypeError, 'Invalid sequence item');
+    }
+    for (const bad of [{ id: '   ' }, { categoryId: '   ' }, { label: 'x'.repeat(65_536) }]) {
+      expect(() => sequenceItem({ id: 'i', categoryId: 'c', ...bad }, live), JSON.stringify(bad).slice(0, 40)).to.throw(RangeError, 'Invalid sequence item text');
+    }
+  });
+});
+
+describe('sequence source exact-control keyboard', () => {
+  for (const [direction, forward, backward] of [['ltr', 'ArrowRight', 'ArrowLeft'], ['rtl', 'ArrowLeft', 'ArrowRight']] as const) {
+    it(`starts from the first item, steps with the ${direction} arrows and jumps with Home and End`, async () => {
+      const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip dir=${direction} .source=${smallSource()}></lr-sequence-strip>`);
+      await ready(el);
+      const exact = () => el.shadowRoot!.querySelector<HTMLButtonElement>('[part="source-exact"]')!;
+      // Each press is made only after the previous inspection has rendered, because the control
+      // ignores keys that arrive while it still shows the item being replaced.
+      const press = async (key: string, shown: number) => {
+        exact().dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+        await waitUntil(() => exact().getAttribute('aria-busy') === 'false' && (exact().textContent ?? '').includes(`Exact ${shown}`), `${key} did not inspect item ${shown}`);
+        await twoFrames();
+      };
+      await press(forward, 1);
+      await press('End', 2);
+      // Stepping past the last item inspects it again rather than moving beyond the source.
+      await press(forward, 2);
+      await press('Home', 0);
+      await press(backward, 0);
+      await press('Escape', 0);
+    });
+  }
 });

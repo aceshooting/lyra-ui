@@ -33,4 +33,21 @@ describe('lr-box-plot formatted tooltip', () => {
       .to.deep.equal(['min', 'q1', 'median', 'q3', 'max'].map((statistic) => [statistic, 0, 1_499, 'c1499']));
     expect(text).to.deep.equal(['A', 'Min: 1499 ms', 'Q1: 1500 ms', 'Median: 1501 ms', 'Q3: 1502 ms', 'Max: 1503 ms']);
   });
+
+  it('omits the category label from the formatter context when the hovered category has none', () => {
+    const el = document.createElement('lr-box-plot') as LyraBoxPlot;
+    const seen: LyraChartFormatterContext[] = [];
+    el.formatter = (context) => {
+      seen.push(context);
+      return String(context.value);
+    };
+    el.labels = ['', 'Named'];
+    el.datasets = [{ label: 'A', data: [box(0), box(10)] }];
+    const label = tooltipLabel(el);
+    label({ raw: box(0), datasetIndex: 0, dataIndex: 0, dataset: { label: 'A' } });
+    label({ raw: box(10), datasetIndex: 0, dataIndex: 1, dataset: { label: 'A' } });
+    const byIndex = (index: number) => seen.filter((context) => context.index === index).map((context) => context.label);
+    expect(byIndex(0)).to.deep.equal([undefined, undefined, undefined, undefined, undefined]);
+    expect(byIndex(1)).to.deep.equal(['Named', 'Named', 'Named', 'Named', 'Named']);
+  });
 });

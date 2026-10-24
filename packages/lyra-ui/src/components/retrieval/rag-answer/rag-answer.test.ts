@@ -1010,4 +1010,12 @@ describe('lr-rag-answer heading level', () => {
     await el.updateComplete;
     expect([...el.shadowRoot!.querySelectorAll('[part="section-heading"]')].map((heading) => heading.getAttribute('role'))).to.deep.equal([null]);
   });
+
+  it('drops heading semantics from the citation heading under heading-level="none"', async () => {
+    const el = await fixture<LyraRagAnswer>(html`<lr-rag-answer heading-level="none" .citations=${[{ id: 'a' }]}></lr-rag-answer>`);
+    const heading = el.shadowRoot!.querySelector('[part="citations"] [part="section-heading"]')!;
+
+    expect([heading.getAttribute('role'), heading.getAttribute('aria-level')]).to.deep.equal([null, null]);
+    expect(heading.textContent?.trim().length).to.be.greaterThan(0);
+  });
 });

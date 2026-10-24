@@ -1639,3 +1639,42 @@ it('measures text and reads tokens through its owner document after adoption int
     iframe.remove();
   }
 });
+
+describe('lr-word-cloud cleared by a synchronous relayout', () => {
+  it('ignores pointer and keyboard input that arrives before the empty state renders', async () => {
+    const el = await fixture<LyraWordCloud>(html`<lr-word-cloud .words=${WORDS}></lr-word-cloud>`);
+    const svg = svgEl(el);
+    const fired: string[] = [];
+    el.addEventListener('lr-word-activate', () => fired.push('activate'));
+    el.words = [];
+    // The public synchronous refresh lays the cloud out again right now, while the words that were
+    // drawn stay on screen until the update it requests renders the empty state.
+    el.refreshTheme();
+    svg.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 10, clientY: 10 }));
+    svg.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 10, clientY: 10 }));
+    svg.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 10, clientY: 10 }));
+    const key = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+    svg.dispatchEvent(key);
+    await el.updateComplete;
+    expect(fired).to.deep.equal([]);
+    expect(key.defaultPrevented).to.equal(false);
+    expect(el.shadowRoot!.querySelectorAll('[part="word"]').length).to.equal(0);
+    expect(el.shadowRoot!.querySelector('[part="empty"]') !== null).to.equal(true);
+  });
+});
+
+describe('lr-word-cloud legend input', () => {
+  it('treats a legend that is not a list as an empty legend', async () => {
+    const el = await fixture<LyraWordCloud>(html`<lr-word-cloud with-legend .words=${WORDS}
+      .legend=${[{ label: 'Kept', color: 'red' }]}></lr-word-cloud>`);
+    expect(el.shadowRoot!.querySelectorAll('[part="legend-label"]').length).to.equal(1);
+    for (const value of [null, undefined, 'Kept', { length: 1, 0: { label: 'Kept', color: 'red' } }, 7]) {
+      el.legend = [{ label: 'Kept', color: 'red' }];
+      await el.updateComplete;
+      el.legend = value as unknown as LyraWordCloud['legend'];
+      await el.updateComplete;
+      expect(el.legend.length, String(value)).to.equal(0);
+      expect(el.shadowRoot!.querySelectorAll('[part="legend-label"]').length, String(value)).to.equal(0);
+    }
+  });
+});

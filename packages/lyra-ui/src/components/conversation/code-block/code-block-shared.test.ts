@@ -12,7 +12,9 @@ import {
   renderCodeBlockPlainCode,
   restoreCodeBlockLineFocus,
   scrollCodeBlockToAnchor,
+  tokenizeCodeBlock,
 } from "./code-block-shared.js";
+import { SHIKI_SOURCE_MAX_CODE_UNITS, type ShikiHighlighterCore } from './shiki-types.js';
 import type { LyraHighlight } from '../../viewers/document-viewer/anchors.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
@@ -687,6 +689,96 @@ describe('CodeBlockHeaderActionsController', () => {
     } finally {
       leanHost.remove();
       fullHost.remove();
+    }
+  });
+});
+
+describe('line-range anchors that cannot be trusted', () => {
+  const valid = { id: 'target', anchor: { kind: 'line-range', start: 2, end: 3 } } as LyraHighlight;
+
+  it('keeps looking past a highlight whose anchor or identity cannot be read', () => {
+    const unreadableAnchor = { id: 'target', get anchor(): never { throw new Error('anchor denied'); } };
+    const unreadableIdentity = { get id(): never { throw new Error('identity denied'); } };
+    const highlights = [unreadableIdentity, unreadableAnchor, valid] as unknown as readonly LyraHighlight[];
+
+    expect([...codeBlockActiveHighlightLineSet(highlights, 'target', 10)]).to.deep.equal([2, 3]);
+  });
+
+  it('draws no active range for a non-finite span or a block without lines', () => {
+    for (const anchor of [
+      { kind: 'line-range', start: Number.NaN, end: 3 },
+      { kind: 'line-range', start: 1, end: Number.POSITIVE_INFINITY },
+    ]) {
+      const highlights = [{ id: 'target', anchor }] as unknown as readonly LyraHighlight[];
+      expect(codeBlockActiveHighlightLineSet(highlights, 'target', 10).size, JSON.stringify(anchor)).to.equal(0);
+    }
+    expect(codeBlockActiveHighlightLineSet([valid], 'target', 0).size).to.equal(0);
+  });
+
+  it('declines to scroll to a line when the host has no code or the line is out of range', async () => {
+    const host = {
+      code: undefined as unknown as string,
+      highlights: [] as readonly LyraHighlight[],
+      renderRoot: document.createElement('div'),
+      updateComplete: Promise.resolve(true),
+    };
+
+    expect(await scrollCodeBlockToAnchor(host, { kind: 'line-range', start: 99 })).to.equal(false);
+    expect(await scrollCodeBlockToAnchor({ ...host, code: 'one\ntwo' }, { kind: 'line-range', start: 0 })).to.equal(false);
+    expect(await scrollCodeBlockToAnchor({ ...host, code: 'one\ntwo' }, { kind: 'line-range', start: 3 })).to.equal(false);
+  });
+});
+
+describe('tokenizeCodeBlock source ceiling', () => {
+  const options = {
+    lang: 'ts',
+    lineNumbers: false,
+    activatableLines: false,
+    focusedLine: 1,
+    highlightedLines: new Set<number>(),
+    activeLines: new Set<number>(),
+    lineLabel: (line: number) => String(line),
+    lineNumberText: (line: number) => String(line),
+  };
+
+  it('declines source beyond the synchronous limit without invoking the highlighter', () => {
+    let calls = 0;
+    const highlighter = {
+      codeToHtml: () => {
+        calls += 1;
+        return '<pre></pre>';
+      },
+      getLoadedLanguages: () => [],
+      loadLanguage: async () => undefined,
+    } as ShikiHighlighterCore;
+
+    expect(tokenizeCodeBlock(highlighter, { ...options, code: 'x'.repeat(SHIKI_SOURCE_MAX_CODE_UNITS + 1) })).to.equal(null);
+    expect(calls).to.equal(0);
+    expect(tokenizeCodeBlock(highlighter, { ...options, code: 'x'.repeat(SHIKI_SOURCE_MAX_CODE_UNITS) })).to.equal('<pre></pre>');
+    expect(calls).to.equal(1);
+  });
+});
+
+describe('CodeBlockHeaderActionsController repeated observation', () => {
+  it('ignores a second observe() instead of syncing or observing again', async () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    const reported: boolean[] = [];
+    const controller = new CodeBlockHeaderActionsController({ host, setHasHeaderActions: (value) => reported.push(value) });
+    try {
+      controller.observe();
+      controller.observe();
+      expect(reported).to.deep.equal([false]);
+
+      const action = document.createElement('button');
+      action.slot = 'header-actions';
+      host.append(action);
+      await waitUntil(() => reported.length >= 2, 'the append is reported once');
+      await Promise.resolve();
+      expect(reported).to.deep.equal([false, true]);
+    } finally {
+      controller.disconnect();
+      host.remove();
     }
   });
 });

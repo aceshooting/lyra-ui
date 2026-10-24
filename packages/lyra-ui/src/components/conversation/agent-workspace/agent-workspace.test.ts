@@ -385,6 +385,26 @@ it('gates built-in detail sections on canonical nonblank collection identities',
   expect(el.shadowRoot!.querySelector('lr-context-inspector') === null).to.be.true;
 });
 
+it('keeps tool entries that reuse an invocation id under different source keys and drops a repeat within one source', async () => {
+  const el = await fixture<LyraAgentWorkspace>(html`
+    <lr-agent-workspace
+      .tools=${[
+        { id: 'call', name: 'search', args: {}, status: 'success', sourceKey: 'run-a' },
+        { id: 'call', name: 'search', args: {}, status: 'success', sourceKey: 'run-b' },
+        { id: 'call', name: 'search', args: {}, status: 'error', sourceKey: 'run-a' },
+        { id: 'plain', name: 'lookup', args: {}, status: 'success' },
+      ] satisfies ToolTimelineEntry[]}
+    ></lr-agent-workspace>
+  `);
+  const timeline = el.shadowRoot!.querySelector<LyraToolTimeline>('lr-tool-timeline')!;
+
+  expect(timeline.entries.map((entry) => [entry.sourceKey ?? null, entry.id, entry.status])).to.deep.equal([
+    ['run-a', 'call', 'success'],
+    ['run-b', 'call', 'success'],
+    [null, 'plain', 'success'],
+  ]);
+});
+
 it('lets a host retry a rejected built-in tool approval without entering the workspace shadow tree', async () => {
   const entry: ToolTimelineEntry = {
     id: 'call-1', name: 'write', args: { path: '/draft' }, status: 'pending', needsApproval: true,

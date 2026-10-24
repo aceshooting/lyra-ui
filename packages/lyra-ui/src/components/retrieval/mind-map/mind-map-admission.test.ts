@@ -84,3 +84,40 @@ it('keeps shared topic occurrences until the existing depth-first identity norma
   const layout = compute('Topics', { ringGap: 20, rtl: false, isExpanded: () => true });
   expect(layout.placed.find(topic => topic.id === 'shared')?.parentId).to.equal('first');
 });
+
+it('admits no topics from a root that is not a readable array', () => {
+  const unreadable = Proxy.revocable([], {});
+  unreadable.revoke();
+  const el = new LyraMindMap();
+  const roots: unknown[] = [undefined, 'topics', { 0: { id: 'a', label: 'A' }, length: 1 }, unreadable.proxy];
+  roots.forEach((value, index) => {
+    el.topics = value as LyraTopic[];
+    expect(el.topics.length, `root ${index}`).to.equal(0);
+  });
+});
+
+it('skips rows that are not topic objects and keeps a topic with unreadable children as a leaf', () => {
+  const unreadable = Proxy.revocable([], {});
+  unreadable.revoke();
+  const el = new LyraMindMap();
+  el.topics = [
+    null,
+    'text',
+    7,
+    { id: 'revoked-children', label: 'Revoked', children: unreadable.proxy },
+    { id: 'text-children', label: 'Text', children: 'nope' },
+    { id: 'parent', label: 'Parent', children: [{ id: 'kid', label: 'Kid' }] },
+  ] as unknown as LyraTopic[];
+  expect(el.topics.map(topic => topic.id)).to.deep.equal(['revoked-children', 'text-children', 'parent']);
+  expect(el.topics.map(topic => topic.children?.length ?? null)).to.deep.equal([null, null, 1]);
+});
+
+it('stops at the inspection budget before reading child lists queued behind it and discloses the omission', async () => {
+  const roots: unknown[] = [];
+  roots[0] = { id: 'first', label: 'First', children: [{ id: 'queued', label: 'Queued' }] };
+  roots.length = 50_000;
+  const el = await fixture<LyraMindMap>(html`<lr-mind-map .topics=${roots as LyraTopic[]}></lr-mind-map>`);
+  expect(el.topics.map(topic => topic.id)).to.deep.equal(['first']);
+  expect(el.topics[0]!.children?.length).to.equal(0);
+  expect(el.shadowRoot!.querySelector('[part="input-limit"]')?.textContent).to.include('Some topics were omitted');
+});

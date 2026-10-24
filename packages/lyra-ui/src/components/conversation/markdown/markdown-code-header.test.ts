@@ -659,3 +659,29 @@ describe('code-block header: forgery, fallback highlights and focus restore', ()
     });
   }
 });
+
+describe('code-block header frame nonce without Web Crypto', () => {
+  it('frames blocks with a distinct 128-bit nonce per instance when getRandomValues is unavailable', async () => {
+    const original = Object.getOwnPropertyDescriptor(crypto, 'getRandomValues');
+    Object.defineProperty(crypto, 'getRandomValues', { configurable: true, value: undefined });
+    try {
+      const frames: string[] = [];
+      for (let count = 0; count < 2; count += 1) {
+        const host = await fixture<HTMLElement>(html`<div></div>`);
+        const el = document.createElement('lr-markdown') as LyraMarkdown;
+        el.codeBlockHeader = true;
+        el.withoutSyntaxHighlighting = true;
+        el.content = '```js\nconst answer = 42;\n```';
+        host.append(el);
+        await waitUntil(() => Boolean(el.shadowRoot?.querySelector('[data-lr-code-frame]')));
+        frames.push(el.shadowRoot!.querySelector('[data-lr-code-frame]')!.getAttribute('data-lr-code-frame')!);
+      }
+
+      for (const frame of frames) expect(frame).to.match(/^[0-9a-f]{32}:0$/);
+      expect(frames[0]).not.to.equal(frames[1]);
+    } finally {
+      if (original) Object.defineProperty(crypto, 'getRandomValues', original);
+      else Reflect.deleteProperty(crypto, 'getRandomValues');
+    }
+  });
+});

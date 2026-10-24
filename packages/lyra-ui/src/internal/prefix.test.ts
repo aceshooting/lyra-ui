@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { defineElement, defineElementForPackageVersion, tag } from './prefix.js';
+import { defineElement, defineElementForPackageVersion, isRegisteredLyraElement, tag } from './prefix.js';
 
 let sequence = 0;
 function uniqueName(label: string): string {
@@ -120,5 +120,42 @@ describe('defineElement registration diagnostics', () => {
     const before = Reflect.ownKeys(RegisteredConstructor);
     defineElement(name, RegisteredConstructor);
     expect(Reflect.ownKeys(RegisteredConstructor)).to.deep.equal(before);
+  });
+});
+
+describe('anonymous constructors in registration diagnostics', () => {
+  it('names an anonymous constructor in the conflict message', () => {
+    const name = uniqueName('anonymous');
+    const originalWarn = console.warn;
+    const calls: unknown[][] = [];
+    console.warn = (...args: unknown[]) => calls.push(args);
+    try {
+      defineElementForPackageVersion(name, class extends HTMLElement {}, '7.8.1');
+      defineElementForPackageVersion(name, class extends HTMLElement {}, '8.0.0');
+      expect(calls).to.have.lengthOf(1);
+      expect(String(calls[0]?.[0]).split('(anonymous constructor)')).to.have.lengthOf(3);
+    } finally {
+      console.warn = originalWarn;
+    }
+  });
+});
+
+describe('isRegisteredLyraElement', () => {
+  it('recognizes instances of registered constructors only', () => {
+    const name = uniqueName('registered');
+    class Registered extends HTMLElement {}
+    defineElement(name, Registered);
+    expect(isRegisteredLyraElement(document.createElement(tag(name)))).to.equal(true);
+
+    const outsider = uniqueName('outsider');
+    class Outsider extends HTMLElement {}
+    customElements.define(`app-${outsider}`, Outsider);
+    expect(isRegisteredLyraElement(document.createElement(`app-${outsider}`)), 'an application element is not a Lyra one').to.equal(false);
+    expect(isRegisteredLyraElement(document.createElement('div')), 'a non-custom element is never registered').to.equal(false);
+  });
+
+  it('answers false for a custom-named element of a document without a browsing context', () => {
+    const ownerless = document.implementation.createHTMLDocument('ownerless');
+    expect(isRegisteredLyraElement(ownerless.createElement('x-widget'))).to.equal(false);
   });
 });

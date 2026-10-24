@@ -373,6 +373,26 @@ it("omits reasoning parts while without-reasoning is set", async () => {
   expect(el.shadowRoot!.querySelectorAll('[data-type="reasoning"]').length).to.equal(0);
 });
 
+it("never asks a custom part renderer about a reasoning part it will not show", async () => {
+  const asked: string[] = [];
+  const el = (await fixture(
+    html`<lr-message-parts
+      content-mode="plain"
+      without-reasoning
+      .parts=${parts.slice(0, 2)}
+      .renderPart=${(part: MessagePart) => {
+        asked.push(part.type);
+        return undefined;
+      }}
+    ></lr-message-parts>`
+  )) as LyraMessageParts;
+
+  expect(asked).to.deep.equal(["text"]);
+  el.withoutReasoning = false;
+  await el.updateComplete;
+  expect(asked).to.include("reasoning");
+});
+
 it("canonicalizes unsupported content modes to reflected markdown across direct, attribute, and lifecycle writes", async () => {
   expect(declaredMessagePartsContentModes).to.deep.equal(["plain", "markdown"]);
 
@@ -1159,6 +1179,18 @@ describe('tool-display', () => {
     await timed.updateComplete;
     const viewer = timed.shadowRoot!.querySelector('lr-json-viewer') as HTMLElement & { data: Record<string, unknown> };
     expect(viewer.data['apiKey']).to.equal('Value hidden');
+  });
+
+  it('omits the duration when the call timestamps do not form a finite span', async () => {
+    const el = (await fixture(html`<lr-message-parts tool-display="block" .parts=${[
+      call('reversed-nan', { startedAt: Number.NaN, endedAt: 2500 }),
+      call('infinite', { id: 'call-2', startedAt: 1000, endedAt: Number.POSITIVE_INFINITY }),
+    ]}></lr-message-parts>`)) as LyraMessageParts;
+    const [nan, infinite] = blocks(el) as [LyraToolCallBlock, LyraToolCallBlock];
+
+    expect([nan.durationMs, infinite.durationMs]).to.deep.equal([undefined, undefined]);
+    expect(nan.shadowRoot!.querySelector('[part="duration"]') === null).to.equal(true);
+    expect(infinite.shadowRoot!.querySelector('[part="duration"]') === null).to.equal(true);
   });
 
   it('masks a later block for the same invocation with the paths its first call promised', async () => {

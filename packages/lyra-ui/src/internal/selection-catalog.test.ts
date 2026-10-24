@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { snapshotSelectionCatalog } from './selection-catalog.js';
+import { normalizeSelectionValue, snapshotSelectionCatalog } from './selection-catalog.js';
 
 describe('selection catalog snapshots', () => {
   it('preserves ordered first occurrences and clone-owns display configuration', () => {
@@ -30,5 +30,34 @@ describe('selection catalog snapshots', () => {
     expect(snapshotSelectionCatalog([], (code) => code)).to.deep.equal([]);
     expect(snapshotSelectionCatalog({}, (code) => code)).to.deep.equal([]);
     expect(snapshotSelectionCatalog(['', ' '], (code) => code.trim())).to.deep.equal([]);
+  });
+});
+
+describe('selection catalog snapshots of mixed and hostile inputs', () => {
+  const identity = (code: string): string => code;
+
+  it('skips rows that are not strings or objects, and objects whose code is not a string', () => {
+    const rows = snapshotSelectionCatalog(['US', null, 5, undefined, { code: 7 }, { label: 'no code' }, { code: 'FR' }], identity);
+    expect(rows?.map((row) => row.code)).to.deep.equal(['US', 'FR']);
+  });
+
+  it('treats an array whose length cannot be read safely as an empty catalog', () => {
+    const hostile = new Proxy(['US'], { getOwnPropertyDescriptor() { throw new Error('descriptor reflection failed'); } });
+    expect(snapshotSelectionCatalog(hostile, identity)).to.deep.equal([]);
+    expect(snapshotSelectionCatalog(['US'], identity)?.map((row) => row.code)).to.deep.equal(['US']);
+  });
+
+  it('treats a revoked proxy as an empty catalog instead of throwing', () => {
+    const { proxy, revoke } = Proxy.revocable([] as string[], {});
+    revoke();
+    expect(() => snapshotSelectionCatalog(proxy, identity)).not.to.throw();
+    expect(snapshotSelectionCatalog(proxy, identity)).to.deep.equal([]);
+  });
+
+  it('normalizes a selection value by trimming strings and emptying everything else', () => {
+    expect(normalizeSelectionValue('  gb ')).to.equal('gb');
+    expect(normalizeSelectionValue(42)).to.equal('');
+    expect(normalizeSelectionValue(null)).to.equal('');
+    expect(normalizeSelectionValue({ code: 'GB' })).to.equal('');
   });
 });

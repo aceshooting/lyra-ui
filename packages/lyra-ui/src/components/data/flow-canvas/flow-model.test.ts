@@ -448,3 +448,24 @@ describe('snapshotFlowDecorations', () => {
     expect(Object.keys(result).length).to.equal(MAX_FLOW_COLLECTION_ENTRIES);
   });
 });
+
+describe('flow snapshot hostile keys', () => {
+  it('drops symbol keys and keys whose descriptor cannot be read from node data', () => {
+    const hidden = Symbol('hidden');
+    const data = new Proxy({ kept: 1, unreadable: 2, [hidden]: 3 } as Record<PropertyKey, unknown>, {
+      getOwnPropertyDescriptor(target, key) {
+        if (key === 'unreadable') throw new Error('descriptor trap');
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    });
+    const [node] = snapshotFlowNodes([{ id: 'n', data }]);
+    expect(Object.keys(node!.data!)).to.deep.equal(['kept']);
+    expect(Object.getOwnPropertySymbols(node!.data!)).to.have.length(0);
+  });
+
+  it('drops symbol keys from run decorations', () => {
+    const decorations = snapshotFlowDecorations({ [Symbol('hidden')]: { status: 'success' }, a: { status: 'running' } });
+    expect(Object.keys(decorations)).to.deep.equal(['a']);
+    expect(Object.getOwnPropertySymbols(decorations)).to.have.length(0);
+  });
+});

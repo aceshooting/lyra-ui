@@ -1429,3 +1429,29 @@ describe('slotted item allocation in scale="time"', () => {
     ).to.be.at.most(base.clientWidth + 0.5);
   });
 });
+
+describe('scale="time" timestamps that are not instants', () => {
+  const offsets = (el: LyraTimeline): number[] =>
+    Array.from(el.querySelectorAll('lr-timeline-item')).map((item) =>
+      Number.parseFloat((item as HTMLElement).style.getPropertyValue('--_lr-timeline-item-offset')),
+    );
+
+  it('spreads an unparseable string or invalid Date by position and places valid instants by time', async () => {
+    const el = (await fixture(html`
+      <lr-timeline scale="time">
+        <lr-timeline-item .timestamp=${new Date('2000-01-01T00:00:00Z')}>First</lr-timeline-item>
+        <lr-timeline-item .timestamp=${'not a date'}>Unparseable</lr-timeline-item>
+        <lr-timeline-item .timestamp=${Date.UTC(2050, 0, 1)}>Numeric</lr-timeline-item>
+        <lr-timeline-item .timestamp=${new Date(Number.NaN)}>Invalid</lr-timeline-item>
+        <lr-timeline-item .timestamp=${new Date('2100-01-01T00:00:00Z')}>Last</lr-timeline-item>
+      </lr-timeline>
+    `)) as LyraTimeline;
+    await el.updateComplete;
+    const [first, unparseable, numeric, invalid, last] = offsets(el);
+    expect(first).to.equal(0);
+    expect(last).to.equal(100);
+    expect(numeric, 'a numeric instant lands by time').to.be.closeTo(50, 0.1);
+    expect(unparseable, 'an unparseable string keeps its position').to.equal(25);
+    expect(invalid, 'an invalid Date keeps its position').to.equal(75);
+  });
+});

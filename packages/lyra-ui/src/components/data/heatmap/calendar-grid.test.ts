@@ -211,3 +211,51 @@ describe('quartileBucket', () => {
     expect(quartileBucket(4, sorted, 5)).to.equal(2);
   });
 });
+
+describe('buildCalendarGrid untrusted input', () => {
+  it('keeps only records that carry an own string date and an own numeric value', () => {
+    const days: unknown[] = [
+      { date: '2026-03-02', value: 4 },
+      { date: 20260303, value: 5 },
+      { date: '2026-03-04', value: '6' },
+      { value: 7 },
+      null,
+      12,
+      'text',
+      { date: '2026-03-05', value: 8 },
+    ];
+    const grid = buildCalendarGrid(days as unknown as Parameters<typeof buildCalendarGrid>[0]);
+    expect(grid.cells.map((cell) => cell.date)).to.deep.equal(['2026-03-02', '2026-03-05']);
+    expect(grid.truncated).to.equal(false);
+  });
+
+  it('never invokes an accessor on a record or on the collection length', () => {
+    let reads = 0;
+    const record = { date: '2026-03-02' };
+    Object.defineProperty(record, 'value', { enumerable: true, get() { reads++; return 3; } });
+    const withRecordAccessor = buildCalendarGrid(
+      [record, { date: '2026-03-03', value: 1 }] as unknown as Parameters<typeof buildCalendarGrid>[0],
+    );
+    expect(withRecordAccessor.cells.map((cell) => cell.date)).to.deep.equal(['2026-03-03']);
+    const lengthAccessor = { 0: { date: '2026-03-02', value: 1 } };
+    Object.defineProperty(lengthAccessor, 'length', { get() { reads++; return 1; } });
+    const withLengthAccessor = buildCalendarGrid(lengthAccessor as unknown as Parameters<typeof buildCalendarGrid>[0]);
+    expect(withLengthAccessor.cells.length).to.equal(0);
+    expect(reads).to.equal(0);
+  });
+
+  it('treats a missing, non-numeric or non-object collection as no days', () => {
+    for (const input of [null, undefined, 5, 'abc', {}, { length: '3' }]) {
+      const grid = buildCalendarGrid(input as unknown as Parameters<typeof buildCalendarGrid>[0]);
+      expect(grid.cells.length, String(input)).to.equal(0);
+      expect(grid.weekCount, String(input)).to.equal(0);
+      expect(grid.truncated, String(input)).to.equal(false);
+    }
+  });
+
+  it('reads an array-like collection by its own indexed entries', () => {
+    const arrayLike = { length: 2, 0: { date: '2026-03-02', value: 1 }, 1: { date: '2026-03-09', value: 2 } };
+    const grid = buildCalendarGrid(arrayLike as unknown as Parameters<typeof buildCalendarGrid>[0]);
+    expect(grid.cells.map((cell) => [cell.date, cell.week])).to.deep.equal([['2026-03-02', 0], ['2026-03-09', 1]]);
+  });
+});

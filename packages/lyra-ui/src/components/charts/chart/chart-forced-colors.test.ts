@@ -2,6 +2,7 @@ import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import { forcedColorsMatchMedia } from '../../../../test/chart-forced-colors-media.js';
 import './chart.js';
 import type { LyraChart } from './chart.js';
+import { FORCED_COLOR_ENCODINGS, forcedColorEncoding } from './chart-forced-colors.js';
 
 describe('chart forced-colors encodings', () => {
   it('gives eight repeated-color series distinct dashes, point shapes, fill patterns, and legend patterns', async () => {
@@ -83,6 +84,23 @@ describe('chart forced-colors encodings', () => {
     } finally {
       document.createElement = originalCreateElement;
       window.matchMedia = originalMatchMedia;
+    }
+  });
+});
+
+describe('forced-colors encoding lookup', () => {
+  it('cycles through the encodings for any integer index, negative included', () => {
+    const count = FORCED_COLOR_ENCODINGS.length;
+    expect(forcedColorEncoding(0).name).to.equal('solid');
+    expect(forcedColorEncoding(count).name).to.equal('solid');
+    expect(forcedColorEncoding(count + 2).name).to.equal(FORCED_COLOR_ENCODINGS[2].name);
+    expect(forcedColorEncoding(-1).name).to.equal(FORCED_COLOR_ENCODINGS[count - 1]!.name);
+    expect(forcedColorEncoding(-count - 3).name).to.equal(FORCED_COLOR_ENCODINGS[count - 3]!.name);
+  });
+
+  it('uses the first encoding when the index is not a finite number', () => {
+    for (const index of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+      expect(forcedColorEncoding(index).name, String(index)).to.equal('solid');
     }
   });
 });

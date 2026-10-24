@@ -493,7 +493,8 @@ export class MarkdownProgressiveSession {
       if (this.planIndex >= this.plan.length) this.preparePlan(eof);
       if (this.sluggerDirty) {
         this.slugger = new Slugger();
-        const end = this.recomputeFrom ?? this.blocks.length;
+        // An edit can truncate the committed groups after a recompute was queued behind them.
+        const end = Math.min(this.recomputeFrom ?? this.blocks.length, this.blocks.length);
         for (let index = 0; index < end; index++) {
           for (const heading of this.blocks[index]!.headings) this.slugger.slug(heading.label);
         }

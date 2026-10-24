@@ -1,4 +1,4 @@
-import { expect, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, waitUntil } from '@open-wc/testing';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { HeatmapMatrixSourceController } from './heatmap-matrix-source-controller.js';
 import type { LyraHeatmapMatrixSource, HeatmapSourceCell } from './heatmap-matrix-source.js';
@@ -100,5 +100,69 @@ it('rejects an exact-window provider failure and recovers only with a new source
     test.control.configure(source(), null, false, 10); await ready(test.control);
     expect(await test.control.ensureWindow(0, 0)).to.equal(true);
     expect(test.control.cells.length).to.equal(4); expect(test.control.error).to.equal(false);
+  } finally { test.dispose(); }
+});
+
+it('refuses an exact window for a coordinate outside the matrix', async () => {
+  const test = setup();
+  try {
+    test.control.configure(source(), null, false, 10); await ready(test.control);
+    for (const [row, col] of [[-1, 0], [0, -1], [2, 0], [0, 2], [0.5, 0], [Number.NaN, 0]] as const) {
+      expect(await test.control.ensureWindow(row, col), `${row},${col}`).to.equal(false);
+    }
+    expect(test.control.cells.length).to.equal(0); expect(test.control.error).to.equal(false);
+  } finally { test.dispose(); }
+});
+
+it('holds an exact focus on a coordinate the window is already reading until that read settles', async () => {
+  const test = setup(); const provider = source();
+  const reads: { row: number; col: number; resolve(value: HeatmapSourceCell): void }[] = [];
+  provider.getCell = (row, col) => new Promise(resolve => reads.push({ row, col, resolve }));
+  try {
+    test.control.configure(provider, null, false, 10); await ready(test.control);
+    const window = test.control.ensureWindow(0, 0);
+    expect(reads.map(read => [read.row, read.col])).to.deep.equal([[0, 0], [0, 1]]);
+    const focused = test.control.exact(0, 0);
+    // A different coordinate settles first: the focus keeps waiting for the window's own read of
+    // (0, 0) instead of reading it again, and the window starts nothing new in the meantime.
+    reads[1]!.resolve({ value: 1, rowLabel: 'Neighbor', columnLabel: 'One' });
+    await aTimeout(0);
+    expect(reads.length).to.equal(2);
+    reads[0]!.resolve({ value: 1, rowLabel: 'Shared', columnLabel: 'Zero' });
+    expect(await focused).to.deep.equal({ row: 0, col: 0, value: 1, rowLabel: 'Shared', columnLabel: 'Zero' });
+    // The window carries on with the rest of its rectangle once the shared read has settled.
+    await waitUntil(() => reads.length === 4, 'the window did not continue after the shared read settled');
+    test.control.cancelExact(); expect(await window).to.equal(false);
+    reads.slice(2).forEach(read => read.resolve({ value: 1, rowLabel: '', columnLabel: '' }));
+  } finally { test.dispose(); }
+});
+
+it('abandons a pending window when a coordinate outside it is requested', async () => {
+  const test = setup(); const provider = source(40, 40);
+  const reads: ((value: HeatmapSourceCell) => void)[] = [];
+  provider.getCell = () => new Promise(resolve => reads.push(resolve));
+  try {
+    test.control.configure(provider, null, false, 10); await ready(test.control);
+    const first = test.control.ensureWindow(0, 0);
+    const second = test.control.ensureWindow(39, 39);
+    expect(await first).to.equal(false);
+    test.control.cancelExact(); expect(await second).to.equal(false);
+    reads.forEach(resolve => resolve({ value: 1, rowLabel: '', columnLabel: '' }));
+    expect(test.control.cells.length).to.equal(0);
+  } finally { test.dispose(); }
+});
+
+it('releases a pending window when the source detaches', async () => {
+  const test = setup(); const provider = source();
+  const reads: ((value: HeatmapSourceCell) => void)[] = [];
+  provider.getCell = () => new Promise(resolve => reads.push(resolve));
+  try {
+    test.control.configure(provider, null, false, 10); await ready(test.control);
+    const pending = test.control.ensureWindow(0, 0);
+    test.control.detach();
+    expect(await pending).to.equal(false);
+    reads.forEach(resolve => resolve({ value: 1, rowLabel: '', columnLabel: '' }));
+    await Promise.resolve(); await Promise.resolve();
+    expect(test.control.cells.length).to.equal(0); expect(test.control.error).to.equal(false);
   } finally { test.dispose(); }
 });

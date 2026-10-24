@@ -63,3 +63,21 @@ it('returns an empty array for empty input without probing at all', () => {
     dispose();
   }
 });
+
+it('resolves currentColor, inherit and unset to the scope\'s own computed color without probing', () => {
+  const { scope, probes, dispose } = countingScope();
+  try {
+    scope.style.color = 'rgb(10, 20, 30)';
+    for (const keyword of ['currentColor', ' INHERIT ', 'unset']) {
+      expect(resolveCanvasColor(scope, keyword, 'transparent'), keyword).to.equal('rgb(10, 20, 30)');
+    }
+    expect(probes()).to.equal(0);
+  } finally {
+    dispose();
+  }
+});
+
+it('uses the fallback for a color keyword when the scope has no computed style', () => {
+  const detached = document.createElement('div');
+  expect(resolveCanvasColor(detached, 'currentColor', '#123456')).to.equal('#123456');
+});

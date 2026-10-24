@@ -85,6 +85,18 @@ describe('Markdown fallback scanner contract', () => {
     expect(segmentMarkdownFallback(`${fences}\`\`\`js`)!.at(-1)).to.deep.equal({ kind: 'prose', text: '```js' });
   });
 
+  it('gives up on a partial line indented past the probe window but classifies the completed line', () => {
+    const shallow = ' '.repeat(63);
+    const deep = ' '.repeat(64);
+    expect(kinds(`${shallow}\`\`\`js`)).to.deep.equal([['block', `${shallow}\`\`\`js`]]);
+    expect(kinds(`${deep}\`\`\`js`)).to.equal(null);
+    expect(kinds(`${deep}\`\`\`js\ncode\n`)).to.deep.equal([['block', `${deep}\`\`\`js\ncode\n`]]);
+  });
+
+  it('pairs an inline span whose opening run starts with an escaped backtick', () => {
+    expect(kinds('x \\``a` y\n')).to.deep.equal([['prose', 'x \\`'], ['inline', '`a`'], ['prose', ' y\n']]);
+  });
+
   it('caps block and inline runs independently', () => {
     const fences = '```\nx\n```\n'.repeat(128);
     const blocks = segmentMarkdownFallback(`${fences}\`\`\`\ny\n\`\`\`\n`)!;

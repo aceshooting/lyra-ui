@@ -124,3 +124,64 @@ describe('MarkdownStreamingBuffer', () => {
     expect(completed.tail).to.equal('Next\n');
   });
 });
+
+describe('MarkdownStreamingBuffer with unusual peer tokens', () => {
+  it('settles nothing from an empty or space-only lex and keeps the text in the live tail', async () => {
+    const lex = await getLexer();
+    const blank = new MarkdownStreamingBuffer().update('\n\n', lex);
+    expect(blank.settledBlocks).to.deep.equal([]);
+    expect(blank.tail).to.equal('\n\n');
+
+    const empty = new MarkdownStreamingBuffer().update('', () => []);
+    expect(empty.settledBlocks).to.deep.equal([]);
+    expect(empty.tail).to.equal('');
+  });
+
+  it('skips tokens that carry no source text instead of committing phantom blocks', () => {
+    const buffer = new MarkdownStreamingBuffer();
+    const spaced = buffer.update('One\n\nTwo', () => [
+      { type: 'space', raw: '' },
+      { type: 'paragraph', raw: 'One\n\n' },
+      { type: 'paragraph', raw: 'Two' },
+    ]);
+    expect(spaced.newSettledBlocks).to.deep.equal(['One\n\n']);
+    expect(spaced.tail).to.equal('Two');
+
+    const malformed = new MarkdownStreamingBuffer().update('Alpha\n\nBeta', () => [
+      { type: 'paragraph' } as unknown as MarkdownBlockToken,
+      { type: 'paragraph', raw: 'Alpha\n\n' },
+      { type: 'paragraph', raw: 'Beta' },
+    ]);
+    expect(malformed.newSettledBlocks).to.deep.equal(['Alpha\n\n']);
+    expect(malformed.tail).to.equal('Beta');
+  });
+
+  it('keeps a lone token without source text live instead of settling it', () => {
+    const snapshot = new MarkdownStreamingBuffer().update('Only text', () => [
+      { type: 'paragraph' } as unknown as MarkdownBlockToken,
+    ]);
+    expect(snapshot.settledBlocks).to.deep.equal([]);
+    expect(snapshot.tail).to.equal('Only text');
+
+    const trailing = new MarkdownStreamingBuffer().update('Alpha\n\nBeta', () => [
+      { type: 'paragraph', raw: 'Alpha\n\n' },
+      { type: 'paragraph' } as unknown as MarkdownBlockToken,
+    ]);
+    expect(trailing.newSettledBlocks).to.deep.equal(['Alpha\n\n']);
+    expect(trailing.tail).to.equal('Beta');
+  });
+
+  it('settles a closed fence even when the peer reports it under another token type', () => {
+    const fence = '```text\nbody\n```\n';
+    const alone = new MarkdownStreamingBuffer().update(fence, () => [{ type: 'html', raw: fence }]);
+    expect(alone.settledBlocks).to.deep.equal([fence]);
+    expect(alone.tail).to.equal('');
+
+    const afterProse = new MarkdownStreamingBuffer().update(`Intro\n\n${fence}`, () => [
+      { type: 'paragraph', raw: 'Intro\n\n' },
+      { type: 'html', raw: fence },
+    ]);
+    expect(afterProse.settledBlocks).to.deep.equal(['Intro\n\n', fence]);
+    expect(afterProse.tail).to.equal('');
+  });
+});

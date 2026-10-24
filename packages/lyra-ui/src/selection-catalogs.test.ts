@@ -78,6 +78,39 @@ describe('public selection catalogs', () => {
     expect(resolveUnitNames([], 'en')).to.deep.equal([]);
   });
 
+  it('resolves an omitted catalog to no rows', () => {
+    expect(resolveCountryNames(undefined as unknown as readonly string[], 'en')).to.deep.equal([]);
+    expect(resolveCountryNames(null as unknown as readonly string[], 'en')).to.deep.equal([]);
+    expect(resolveUnitNames(undefined as unknown as readonly string[], 'en')).to.deep.equal([]);
+    expect(resolveUnitNames(null as unknown as readonly string[], 'en')).to.deep.equal([]);
+    expect(resolveCountryNames(['DE'], 'en').length).to.equal(1);
+  });
+
+  it('keeps each country code as its name when region names are unavailable', () => {
+    const descriptor = Object.getOwnPropertyDescriptor(Intl, 'DisplayNames');
+    Object.defineProperty(Intl, 'DisplayNames', {
+      configurable: true,
+      writable: true,
+      value: class { constructor() { throw new RangeError('region names unavailable'); } },
+    });
+    try {
+      const rows = resolveCountryNames([{ code: 'DE' }, { code: 'FR', label: 'Custom' }], 'is-IS');
+      expect(rows.map((row) => row.label)).to.deep.equal(['DE', 'Custom']);
+      expect(rows.map((row) => row.searchText)).to.deep.equal(['DE DE DE', 'FR FR Custom']);
+    } finally {
+      if (descriptor) Object.defineProperty(Intl, 'DisplayNames', descriptor);
+    }
+    expect(resolveCountryNames(['DE'], 'is-IS')[0]!.label, 'the failure was not cached').to.not.equal('DE');
+  });
+
+  it('keeps resolving unit names after the per-locale name cache reaches its bound', () => {
+    const labels = new Set<string>();
+    for (let index = 0; index < 1100; index++) labels.add(resolveUnitNames(['meter'], `bad_${index}`)[0]!.label);
+    expect([...labels]).to.deep.equal(['meter']);
+    expect(resolveUnitNames(['meter'], 'fr')[0]!.label).to.equal('mètre');
+    expect(resolveUnitNames(['meter'], 'en')[0]!.symbol).to.equal('m');
+  });
+
   it('returns UTC and runtime time zones without duplicates or current-zone inference', () => {
     const codes = getTimeZoneCodes();
     expect(codes[0]).to.equal('UTC');

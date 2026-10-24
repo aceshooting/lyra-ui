@@ -179,3 +179,107 @@ describe('installJsdomFormAssociatedShim', () => {
     }
   });
 });
+
+describe('jsdom shim environment detection and partial targets', () => {
+  /** Replaces `window.navigator` for the duration of `body`, restoring the original afterwards. */
+  function withNavigator<T>(navigatorLike: () => unknown, body: () => T): T {
+    const original = Object.getOwnPropertyDescriptor(window, 'navigator');
+    Object.defineProperty(window, 'navigator', { configurable: true, get: navigatorLike });
+    try {
+      return body();
+    } finally {
+      if (original) Object.defineProperty(window, 'navigator', original);
+      else Reflect.deleteProperty(window, 'navigator');
+    }
+  }
+  const emptyTargets = () => ({ documentPrototype: {}, shadowRootPrototype: {}, styleSheetPrototype: {} });
+
+  it('detects jsdom from the navigator user agent by default, and only then installs', () => {
+    const outside = emptyTargets();
+    installJsdomAdoptedStyleSheetsShim(outside)();
+    expect('adoptedStyleSheets' in outside.documentPrototype, 'a real browser user agent is not jsdom').to.equal(false);
+
+    const inside = emptyTargets();
+    const restore = withNavigator(
+      () => ({ userAgent: 'Mozilla/5.0 (linux) AppleWebKit/537.36 (KHTML, like Gecko) jsdom/27.0.0' }),
+      () => installJsdomAdoptedStyleSheetsShim(inside),
+    );
+    expect('adoptedStyleSheets' in inside.documentPrototype).to.equal(true);
+    restore();
+    expect('adoptedStyleSheets' in inside.documentPrototype).to.equal(false);
+  });
+
+  it('treats an unreadable or user-agent-less navigator as not jsdom', () => {
+    for (const navigatorLike of [() => { throw new Error('navigator unavailable'); }, () => undefined, () => ({})]) {
+      const targets = emptyTargets();
+      withNavigator(navigatorLike, () => installJsdomAdoptedStyleSheetsShim(targets)());
+      expect('adoptedStyleSheets' in targets.documentPrototype).to.equal(false);
+    }
+  });
+
+  it('returns a no-op without touching the platform when a prototype to patch is unavailable', () => {
+    const documentDescriptor = Object.getOwnPropertyDescriptor(Document.prototype, 'adoptedStyleSheets');
+    const sheetDescriptor = Object.getOwnPropertyDescriptor(window, 'CSSStyleSheet');
+    Object.defineProperty(window, 'CSSStyleSheet', { configurable: true, writable: true, value: undefined });
+    try {
+      installJsdomAdoptedStyleSheetsShim({ isJsdom: () => true })();
+    } finally {
+      if (sheetDescriptor) Object.defineProperty(window, 'CSSStyleSheet', sheetDescriptor);
+      else Reflect.deleteProperty(window, 'CSSStyleSheet');
+    }
+    expect(Object.getOwnPropertyDescriptor(Document.prototype, 'adoptedStyleSheets')).to.deep.equal(documentDescriptor);
+
+    const bare = { internalsPrototype: {}, elementPrototype: {}, isJsdom: () => true };
+    installJsdomFormAssociatedShim(bare)();
+    expect('setFormValue' in bare.internalsPrototype).to.equal(false);
+  });
+
+  it('patches only the prototype that lacks adoptedStyleSheets and restores only what it added', () => {
+    const native = [] as unknown[];
+    const shadowRootPrototype = Object.defineProperty({}, 'adoptedStyleSheets', { configurable: true, value: native });
+    const targets = { ...jsdomLikeTargets(), shadowRootPrototype };
+    const restore = installJsdomAdoptedStyleSheetsShim(targets);
+    expect('adoptedStyleSheets' in targets.documentPrototype).to.equal(true);
+    expect(Object.getOwnPropertyDescriptor(shadowRootPrototype, 'adoptedStyleSheets')?.value === native).to.equal(true);
+    restore();
+    expect('adoptedStyleSheets' in targets.documentPrototype).to.equal(false);
+    expect(Object.getOwnPropertyDescriptor(shadowRootPrototype, 'adoptedStyleSheets')?.value === native, 'a native property is never removed').to.equal(true);
+  });
+
+  it('rejects the inert replace() when the platform replaceSync() throws', async () => {
+    const failure = new SyntaxError('invalid stylesheet text');
+    const styleSheetPrototype: { replaceSync(text: string): void; replace?: (text: string) => Promise<unknown> } = {
+      replaceSync(): void { throw failure; },
+    };
+    const restore = installJsdomAdoptedStyleSheetsShim({ ...jsdomLikeTargets(), styleSheetPrototype });
+    try {
+      const sheet = Object.create(styleSheetPrototype) as Required<typeof styleSheetPrototype>;
+      let rejection: unknown;
+      try {
+        await sheet.replace(':host{');
+      } catch (error) {
+        rejection = error;
+      }
+      expect(rejection === failure).to.equal(true);
+    } finally {
+      restore();
+    }
+    expect('replace' in styleSheetPrototype).to.equal(false);
+    expect('replaceSync' in styleSheetPrototype).to.equal(true);
+  });
+
+  it('keeps form-association members the platform already provides', () => {
+    const setFormValue = (): void => {};
+    const internalsPrototype: Record<string, unknown> = { setFormValue, get labels() { return []; } };
+    const elementPrototype = { attachInternals(this: object): object { return Object.create(internalsPrototype); } };
+    const restore = installJsdomFormAssociatedShim({ internalsPrototype, elementPrototype, isJsdom: () => true });
+    try {
+      expect(internalsPrototype['setFormValue'] === setFormValue, 'an existing member is not replaced').to.equal(true);
+      expect('validity' in internalsPrototype, 'a missing member is added').to.equal(true);
+    } finally {
+      restore();
+    }
+    expect(internalsPrototype['setFormValue'] === setFormValue, 'restore leaves the platform member alone').to.equal(true);
+    expect('validity' in internalsPrototype).to.equal(false);
+  });
+});

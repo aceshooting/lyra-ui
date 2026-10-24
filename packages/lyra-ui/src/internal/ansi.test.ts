@@ -310,6 +310,17 @@ describe('createAnsiParser', () => {
     expect(background[0]!.styles.bg).to.equal('var(--lr-terminal-bg-black)');
   });
 
+  it('fails a malformed 256-color index closed to the same role-matching default token', () => {
+    const foreground = createAnsiParser().push('\x1b[38;5;1:2mtext');
+    const background = createAnsiParser().push('\x1b[48;5;99999999999999999999mtext');
+
+    expect(foreground[0]!.styles.fg).to.equal('var(--lr-terminal-color-black)');
+    expect(background[0]!.styles.bg).to.equal('var(--lr-terminal-bg-black)');
+    expect(createAnsiParser().push('\x1b[38;5;1mtext')[0]!.styles.fg, 'a valid index still resolves its own color').to.equal(
+      'var(--lr-terminal-color-red)',
+    );
+  });
+
   it('resumes after an overlong OSC terminated by ST in a later chunk', () => {
     const parser = createAnsiParser();
     expect(parser.push(`\x1b]0;${'x'.repeat(5_000)}`)).to.deep.equal([]);

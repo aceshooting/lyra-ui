@@ -401,3 +401,14 @@ describe('collecting already-slotted marker-icon/timestamp/description content w
     }
   });
 });
+
+it('re-reflects a valid variant over a different authored attribute immediately', async () => {
+  const el = (await fixture(html`<lr-timeline-item variant="success">Event</lr-timeline-item>`)) as LyraTimelineItem;
+  expect(el.getAttribute('variant')).to.equal('success');
+  el.variant = 'danger';
+  expect(el.getAttribute('variant'), 'the attribute follows the property without waiting for an update').to.equal('danger');
+  await el.updateComplete;
+  expect(el.variant).to.equal('danger');
+  el.variant = 'neutral';
+  expect(el.hasAttribute('variant')).to.equal(false);
+});

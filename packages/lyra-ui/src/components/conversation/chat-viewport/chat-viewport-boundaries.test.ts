@@ -72,4 +72,27 @@ describe('chat viewport composed and directional boundaries', () => {
       Reflect.deleteProperty(scroll, 'clientWidth');
     }
   });
+
+  it('keeps following when a scroll gesture reaches a viewport adopted into a window-less document', async () => {
+    const viewport = await fixture<LyraChatViewport>(html`<lr-chat-viewport style="height:100px">
+      <div style="height:300px">Message</div>
+    </lr-chat-viewport>`);
+    const windowless = document.implementation.createHTMLDocument('windowless');
+    const changes: boolean[] = [];
+    viewport.addEventListener('lr-follow-change', (event) => changes.push((event as CustomEvent<{ following: boolean }>).detail.following));
+
+    viewport.remove();
+    windowless.body.append(windowless.adoptNode(viewport));
+    await viewport.updateComplete;
+    const scroll = viewport.shadowRoot!.querySelector<HTMLElement>('[part="scroll"]')!;
+
+    expect(() => scroll.dispatchEvent(new WheelEvent('wheel', { deltaY: -40 }))).not.to.throw();
+    // `TouchEvent` does not exist in every engine; the viewport listens by event name only.
+    scroll.dispatchEvent(new Event('touchmove'));
+    await aTimeout(0);
+
+    expect(viewport.follow).to.equal(true);
+    expect(changes).to.deep.equal([]);
+    viewport.remove();
+  });
 });

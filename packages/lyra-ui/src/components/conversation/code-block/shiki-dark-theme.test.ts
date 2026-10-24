@@ -281,3 +281,131 @@ it("watches and cleans the exact owner theme resources while rejecting stale cal
     frame.remove();
   }
 });
+
+it('classifies a fully transparent modern surface as unresolvable rather than light or dark', async () => {
+  const host = await fixture<HTMLElement>(html`<div></div>`);
+  host.setAttribute('data-lr-theme-scope', '');
+  host.style.setProperty('--lr-color-text', 'oklch(95% 0 0)');
+  host.style.setProperty('--lr-color-surface', 'oklch(10% 0 0)');
+  expect(resolveIsDarkTheme(host), 'an opaque dark surface').to.equal(true);
+
+  host.style.setProperty('--lr-color-surface', 'oklch(10% 0 0 / 0)');
+  expect(resolveIsDarkTheme(host), 'the same surface with zero alpha').to.equal(false);
+});
+
+describe('platform failures around the resolved theme', () => {
+  async function ownerFrame(): Promise<{ frame: HTMLIFrameElement; view: Window; host: HTMLElement }> {
+    const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+    const view = frame.contentWindow;
+    const frameDocument = frame.contentDocument;
+    if (!view || !frameDocument) throw new Error('The iframe realm was unavailable.');
+    const host = frameDocument.createElement('div');
+    frameDocument.body.append(host);
+    return { frame, view, host };
+  }
+
+  function override(target: object, key: string, value: unknown): () => void {
+    const descriptor = Object.getOwnPropertyDescriptor(target, key);
+    Object.defineProperty(target, key, { configurable: true, writable: true, value });
+    return () => {
+      if (descriptor) Object.defineProperty(target, key, descriptor);
+      else Reflect.deleteProperty(target, key);
+    };
+  }
+
+  it('reports a light theme for a host whose document has no window or no style resolver', async () => {
+    const detached = document.implementation.createHTMLDocument('');
+    expect(resolveIsDarkTheme(detached.createElement('div'))).to.equal(false);
+
+    const { frame, view, host } = await ownerFrame();
+    const restore = override(view, 'getComputedStyle', undefined);
+    try {
+      expect(resolveIsDarkTheme(host)).to.equal(false);
+    } finally {
+      restore();
+      frame.remove();
+    }
+  });
+
+  it('reports a light theme and removes its probe when computed style throws', async () => {
+    const { frame, view, host } = await ownerFrame();
+    const restore = override(view, 'getComputedStyle', () => {
+      throw new Error('style unavailable');
+    });
+    try {
+      expect(resolveIsDarkTheme(host)).to.equal(false);
+      expect(host.childElementCount).to.equal(0);
+    } finally {
+      restore();
+      frame.remove();
+    }
+  });
+
+  it('reports a light theme for modern colors when the owner document has no canvas context to resolve them', async () => {
+    const { frame, view, host } = await ownerFrame();
+    const proto = (view as Window & typeof globalThis).HTMLCanvasElement.prototype;
+    const restore = override(proto, 'getContext', () => null);
+    try {
+      host.setAttribute('style', '--lr-color-text: oklch(95% 0 0); --lr-color-surface: oklch(10% 0 0)');
+
+      expect(resolveIsDarkTheme(host), 'the same palette resolves dark where a canvas exists').to.equal(false);
+    } finally {
+      restore();
+    }
+    // A fresh owner document resolves the identical palette through its own canvas.
+    const second = await ownerFrame();
+    second.host.setAttribute('style', '--lr-color-text: oklch(95% 0 0); --lr-color-surface: oklch(10% 0 0)');
+    expect(resolveIsDarkTheme(second.host)).to.equal(true);
+    frame.remove();
+    second.frame.remove();
+  });
+
+  it('keeps watching theme attributes when the color-scheme query is unavailable', async () => {
+    const { frame, view, host } = await ownerFrame();
+    const restore = override(view, 'matchMedia', () => {
+      throw new Error('media queries unavailable');
+    });
+    let changes = 0;
+    const cleanup = watchDarkTheme(host, () => changes++);
+    try {
+      host.setAttribute('data-lr-theme', 'dark');
+      await aTimeout(0);
+      expect(changes).to.equal(1);
+    } finally {
+      cleanup();
+      restore();
+      frame.remove();
+    }
+  });
+
+  it('returns a safe cleanup when the owner observer cannot be created or cannot observe', async () => {
+    for (const mode of ['construct', 'observe'] as const) {
+      const { frame, view, host } = await ownerFrame();
+      const NativeObserver = (view as Window & typeof globalThis).MutationObserver;
+      const Hostile = mode === 'construct'
+        ? class {
+            constructor() {
+              throw new Error('observer unavailable');
+            }
+          }
+        : class extends NativeObserver {
+            override observe(): void {
+              throw new Error('observation unavailable');
+            }
+          };
+      const restore = override(view, 'MutationObserver', Hostile);
+      let changes = 0;
+      try {
+        const cleanup = watchDarkTheme(host, () => changes++);
+        host.setAttribute('data-lr-theme', 'dark');
+        await aTimeout(0);
+        expect(changes, mode).to.equal(0);
+        expect(() => cleanup(), mode).not.to.throw();
+        expect(() => cleanup(), mode).not.to.throw();
+      } finally {
+        restore();
+        frame.remove();
+      }
+    }
+  });
+});
