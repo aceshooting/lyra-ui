@@ -82406,6 +82406,10 @@
             "deprecated": null
           },
           {
+            "name": "attribution-content",
+            "deprecated": null
+          },
+          {
             "name": "attribution-toggle",
             "deprecated": null
           },
@@ -82475,6 +82479,10 @@
           },
           {
             "name": "geolocate",
+            "deprecated": null
+          },
+          {
+            "name": "geolocate-control",
             "deprecated": null
           },
           {

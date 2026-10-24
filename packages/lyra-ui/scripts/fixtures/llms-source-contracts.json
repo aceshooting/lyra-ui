@@ -10144,7 +10144,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "loadMaplibre",
       "kind": "function",
-      "fingerprint": "ed02b16dca63ad8542aa",
+      "fingerprint": "6d4edcc5144ca4996d37",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -10192,7 +10192,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MapLibreMapCapability",
       "kind": "interface",
-      "fingerprint": "a619c0e683fa5584d344",
+      "fingerprint": "49a22d379d83775b042f",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -10208,7 +10208,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MapLibreMarkerCapability",
       "kind": "interface",
-      "fingerprint": "afecdda9542687cdee42",
+      "fingerprint": "fe308310dfe5d807cdfa",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -10224,7 +10224,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MaplibreModule",
       "kind": "interface",
-      "fingerprint": "9ea980526685e7da6f80",
+      "fingerprint": "b1c17d4f0922c42bae00",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -18742,7 +18742,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "loadModularMap",
       "kind": "function",
-      "fingerprint": "6ef6aa49a6c3b9141f7f",
+      "fingerprint": "0da301354974678b03b4",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -18781,7 +18781,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "ModularMapModule",
       "kind": "interface",
-      "fingerprint": "919a2798c1c9c8023188",
+      "fingerprint": "ca27f174271fed67c6b6",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],

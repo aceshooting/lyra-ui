@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecations** none
 - **Optional peers** `@aceshooting/lyra-map`, `dompurify`, `maplibre-gl` — see `llms/peers.md`
-- **Themeable via** 50 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 52 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -62,6 +62,13 @@ style, await `whenIdle()` for the current resource and rendering work. Observe
 `lr-map-style-load` and `lr-map-idle` for lifecycle notifications. Await these promises and handle
 rejection when replacing styles or disconnecting; a returned `true` from a synchronous command
 means admission, not asynchronous completion.
+
+Replacing `mapStyle` with a URL rebuilds the native basemap with `setStyle(style, { diff: false })`
+and waits for the replacement's committed `style.load` before restoring owned layers, images and
+style overrides or reporting readiness. A style that supersedes an unfinished replacement also
+uses a full replacement. This gives unchanged URL responses a reliable completion event, at the
+cost of the peer's style-diff optimization. Inline replacements of an already loaded style keep
+the peer's default diff behavior. These replacements preserve the map instance and camera.
 
 **On-demand runtimes:** optional `lr-map` features load their code on first use, so a bundler that
 splits chunks keeps them out of the initial bundle. Drawing and vertex editing load when `drawMode`
@@ -1360,7 +1367,8 @@ which only reaches rows projected from `legend`.
 `legend-toggle-hidden`, `legend-gradient`, `legend-lo`,
 `legend-hi`, `legend-ticks`, `legend-tick`, `legend-derived`, `legend-limit`, `anchor`,
 `anchor-close`, `marker`, `popup`, `popup-content`, `popup-close-button`, `attribution`,
-`attribution-toggle`, `navigation`, `zoom-in`, `zoom-out`, `compass`, `scale`, `geolocate`,
+`attribution-toggle`, `attribution-content`, `navigation`, `zoom-in`, `zoom-out`, `compass`, `scale`,
+`geolocate`, `geolocate-control`,
 `configuration-error`, `error`.
 Before native construction, `initialization-placeholder` is the stable surface,
 `initialization-control` outlines each requested control and, for `initialization="interaction"`,
@@ -1379,6 +1387,27 @@ lr-map::part(attribution) { --lr-icon-button-size: var(--lr-size-24px); }
 ```
 
 Keep that target at least 24px in both axes. This leaves navigation controls at their existing size.
+
+`geolocate-control` targets the native geolocation control's whole wrapper; `geolocate` remains its
+button. Apply layout offsets to the wrapper to avoid enlarging the button's painted group.
+`attribution-content` targets the credits inside `attribution`, separately from `attribution-toggle`.
+For example, a host can place a bounded, scrollable credits panel above the compact toggle without
+changing the control's footprint when it opens:
+
+```css
+lr-map::part(geolocate-control) { margin-block-end: var(--lr-space-2xl); }
+lr-map::part(attribution-content) {
+  position: absolute;
+  inset-inline-end: 0;
+  inset-block-end: calc(100% + var(--lr-space-xs));
+  inline-size: var(--lr-size-16rem);
+  max-block-size: var(--lr-size-8rem);
+  overflow: auto;
+  background: var(--lr-color-surface);
+}
+```
+
+Choose panel bounds that fit the map's allocation and keep required provider credits reachable.
 
 `legend` is a localized `role="group"` containing a real list associated to the map canvas with
 `aria-describedby`; each entry is a `listitem`, decorative swatches are inert/accessibility-hidden,
