@@ -117,7 +117,7 @@ const sameAxis = (left: LyraChart3dAxis, right: LyraChart3dAxis): boolean =>
  * @cssprop [--lr-chart-3d-point-size=0.5rem] - Diameter of uniform scatter and line points.
  * @cssprop [--lr-chart-3d-line-width=1px] - Width of graphical lines.
  * @status experimental
- * @since unreleased
+ * @since 30.0.0
  */
 export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START

@@ -5,7 +5,7 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-chart-3d.js';` (stable tag alias; registers the tag)
 - **Class** `LyraChart3d`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart-3d/chart-3d.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
-- **Status** `experimental` since `unreleased` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `experimental` since `30.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md)
 - **Deprecations** none
 - **Optional peers** `@aceshooting/lyra-3d` — see `llms/peers.md`

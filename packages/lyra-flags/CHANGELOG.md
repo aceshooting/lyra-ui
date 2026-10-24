@@ -1,5 +1,13 @@
 # @aceshooting/lyra-flags
 
+## 2.3.1
+
+### Patch Changes
+
+- d84c719: Validate constrained message, notebook, form, calendar, formatter and provider inputs before rendering or emitting state. Preserve documented fallbacks for unknown lookup keys and reject forged restored files. Bound signature restoration by inspected input positions.
+
+  Validate map resource metadata before rendering, keep explicit source and protocol registration authoritative, and preserve arbitrary valid sprite identifiers across worker transport. Unknown flag codes now consistently resolve to undefined across package entry points.
+
 ## 2.3.0
 
 ### Minor Changes

@@ -62,7 +62,7 @@ const KEY_ACTIONS: Readonly<Record<string, ModelAction>> = Object.freeze({
  * @event lr-camera-change - The user moved the camera with a pointer, key or toolbar button. Assigning `camera` is silent. `detail: { camera }`.
  * @event lr-engine-fallback - WebGL stopped rendering and the text alternative remains. `detail: { from, to, reason }`.
  * @status experimental
- * @since unreleased
+ * @since 30.0.0
  */
 export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START

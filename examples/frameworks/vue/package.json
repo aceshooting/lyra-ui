@@ -9,7 +9,7 @@
     "build": "pnpm run check && vite build"
   },
   "dependencies": {
-    "@aceshooting/lyra-ui": "^29.2.2",
+    "@aceshooting/lyra-ui": "^30.0.0",
     "vue": "3.5.44"
   },
   "devDependencies": {

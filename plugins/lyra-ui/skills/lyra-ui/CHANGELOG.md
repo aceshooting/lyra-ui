@@ -1,123 +1,143 @@
 # Changelog
 
-## 29.2.2
-
-### Patch Changes
-
-- e020642: Preserve per-datum border colors across all Chart.js chart types when a series supplies a color array. Keep repeating series and point color palettes aligned with their original data indexes when the chart samples rows for display.
-
-  The chart-family gzip ceiling and unpacked package ceilings advance only to the next 64-byte boundary where the color correction and release notes exceed their previous limits; other size limits and measurement settings stay unchanged.
-
-  The matched quick Chromium comparison against 29.2.1 passed all semantic checks. Chart assignment settlement increased from 22.1 to 25.6 ms median, while total chart assignment remained 63.5 to 64.1 ms median. Seven additional timing metrics exceeded the advisory threshold in unchanged document, table, and select workloads, including no-op paint waits; fourteen metrics improved. These seven-sample observations include scheduling variation and do not establish a causal performance change.
-- @aceshooting/lyra-translations@29.2.2
-
-## 29.2.1
-
-### Patch Changes
-
-- b7262ed: The `lr-map` guide now documents that, on WebKit, a paint change made directly on the `map` engine instance can stay unpresented until another frame is requested (a MapLibre and WebKit behavior, reproducible without `lr-map`), and that calling the engine's `triggerRepaint()` once afterwards presents it.
-- 0ef480e: The README and `llms.txt` now explain why pnpm 12.14 and later list `@aceshooting/lyra-ui` under "Agent skills awaiting approval" after an install: the package ships its agent skills. Nothing runs at install time and `npx lyra-ui init-agents` works either way; `pnpm approve @aceshooting/lyra-ui` (or `pnpm approve '!@aceshooting/lyra-ui'`) records the decision once.
-- @aceshooting/lyra-translations@29.2.1
-
-## 29.2.0
-
-### Minor Changes
-
-- 58eb5b2: Add four regional locale catalogs as small difference catalogs: `en-GB` (British English, over the built-in English), `es-419` (Latin American Spanish, over `es`), `fr-CA` (Canadian French, over `fr`) and `zh-HK` (Hong Kong Traditional Chinese, over `zh-TW`). Each registers only the messages that differ for the region and resolves every other message through its parent, so importing one also loads its parent catalog. They ship in `@aceshooting/lyra-translations` as `en-GB.js`, `es-419.js`, `fr-CA.js` and `zh-HK.js` (plus per-family slices), appear in `locales.json` and the optional locale loader, and are recorded as AI-assisted reviews with no human or native-speaker claim. An exact `zh-HK` tag now selects the `zh-HK` catalog instead of falling back to `zh-TW`.
-
-### Patch Changes
-
-- d756bce: `lr-code-block` and `lr-code-block-core` no longer throw in DOM implementations without `Element.part`, such as Happy DOM test environments, so consumers need no shim; highlighted lines keep their `line-highlight` part wherever CSS parts exist.
-- 2fd9f5c: Moving an `lr-conversation-item` (for example inside `lr-thread-list`) into another document or iframe before it has rendered no longer throws from `adoptedCallback`. The same guard now protects every component that mirrors an authored `aria-describedby` onto its inner control (`lr-image-viewer`, `lr-map`, `lr-lightbox`, `lr-textarea`, `lr-input` and others).
-
-  `lr-avatar-group` also no longer throws when moved into another document before its first render.
-- d3725d2: Pressing Tab on a control that has an open keyboard-focus `lr-tooltip` (or an open `lr-popover`) inside an `lr-dialog` or `lr-drawer` now moves focus to the next control instead of getting stuck. While such a hint was open, the other controls in the dialog were made inert; they stay interactive now. Focus also no longer jumps back to the first control of the dialog when the tooltip closes as focus moves on.
-- 5dd23d3: Anchored surfaces (`lr-tooltip`, `lr-popover`, `lr-dropdown`, `lr-popup`, `lr-select`, `lr-combobox` and the other popup users) now take the resolved positioning strategy, such as `--lr-positioning-strategy: fixed`, the moment they open instead of after the first placement pass, so a tooltip that opens or closes quickly no longer lays out at an unresolved position or briefly widens an `overflow: auto` ancestor and makes the page horizontally scrollable.
-- Updated dependencies [5112ff8]
-  - @aceshooting/lyra-map@1.2.0
-  - @aceshooting/lyra-translations@29.2.0
-
-## 29.1.0
-
-### Minor Changes
-
-- 3807e35: Improve large-collection rendering, search, interaction and streaming.
-
-  - Cache unchanged projections, indexes, geometry and content; limit focus, selection, pointer and scroll work to affected or visible content.
-  - Expose bounded limits and omitted-content notices. Tail feeds retain newest entries; virtual lists support large logical scroll extents.
-  - Add host-owned collection sources, bounded tabular access and staged numeric preparation preserving counts, domains, distributions and source indices.
-  - Reuse markdown/highlighting, bound viewer input before parsing and accept in-memory tabular data.
-  - Load optional graph features on demand; add `lr-map.updateSourceData()` for source diffs.
-  - Add scale-regression checks alongside behavior and accessibility tests.
-  - Preserve styles when elements change documents.
-
-  Paging, hierarchy, graph/spatial controllers and numeric utilities expand bundles, alongside localized loading/error/coverage messages. Declarations, docs and locale catalogs increase unpacked size; see component references for limits and input ownership.
-
-  Matched Chromium benchmarks (software rendering, 15 workloads, seven samples each) against 29.0.2 found 12/150 phase/control series above both 15% and 1 ms; no operation-total median or p95 did. Queue projection shifts cost from assignment to update, reducing their combined cost. Table sort/filter settlement rose; totals stayed near 44 ms. Frame waits and no-op controls also rose; they include scheduling, not only CPU work. One chart tail raised update/settlement p95; its cause is unresolved. With seven samples, p95 is the maximum, not a field tail-latency estimate.
-
-### Patch Changes
-
-- b603b71: Correct and tighten the shipped documentation and agent skills.
-
-  - The README upgrade guidance is one table covering every major release since v22, with the matching `lyra-ui-migrate` profile for each.
-  - The exported TypeScript contracts in `llms/shared/events-and-types.md` now print their real member, parameter and return types instead of `unknown` placeholders.
-  - Relative links in generated `llms/shared.md`, `llms/components/<tag>.md` and `llms-full.txt` now resolve from their published location.
-  - Accessible-name guidance no longer describes `accessibleLabel` compatibility properties that were already removed.
-  - `lyra-ui-migrate --help` describes the `lyra-v25` profile.
-  - The bundled agent skills drop guidance for past upgrades, list `@aceshooting/lyra-map` among independently versioned companions, name every rename profile, and prefer the installed package's `llms/` reference over the plugin copy.
-- 88c3542: Reduce remaining large-collection costs.
-
-  - `lr-tool-timeline` keeps the processed form of every unchanged call when a replaced collection appends or updates a few calls, instead of rebuilding all retained calls.
-  - Currency and unit pickers resolve a new locale's names and symbols without evicting number formatters other components share.
-  - Theme-aware components no longer receive style and class mutations from inside their own shadow root, such as map marker movement, unless a nested theme-aware component needs them.
-
-  These changes add up to 128 gzip bytes to the complete registration, family barrels, root entry and scoped-registry loader route, and 295 raw bytes to the packed core bundle. Only the breached size ceilings advance, each to the next 64-byte boundary above its measurement (raw core: 40 bytes of headroom).
-- @aceshooting/lyra-translations@29.1.0
-
-## 29.0.2
-
-### Patch Changes
-
-- Keep color-format, subagent retry, and memory action names aligned with their visible labels while retaining localized context in accessible descriptions.
-
-- cb8c8c5: Refresh dependency resolutions and security overrides, and bound nested pattern processing and numeric formatting in development dependencies. The dependency upgrade command now refreshes transitive dependencies and verifies that required security patches are installed.
-
-  Update the map renderer's GeoJSON tiling dependency, including its optional `worldCoordinates` option and clipping fixes.
-
-  Refresh the document editor's bundled numeric parsing dependency for corrected nonnumeric and leading-zero handling.
-- Updated dependencies [cb8c8c5]
-  - @aceshooting/lyra-map@1.1.0
-  - @aceshooting/lyra-translations@29.0.2
-
-## 29.0.1
-
-### Patch Changes
-
-- 6590e5d: Keep labeled controls in widget headers readable at narrow widths by wrapping header items before scrolling actions that genuinely overflow.
-
-  The fix adds 18 gzip bytes to the complete registration barrel. The six affected bundle-size limits advance to the next 64-byte boundary; passing limits remain unchanged.
-- @aceshooting/lyra-translations@29.0.1
-
-## 29.0.0
+## 30.0.0
 
 ### Major Changes
 
-- 919bd25: Load map and document editing features on demand while preserving their rendering capabilities.
+- 6e32333: Use the JavaScript regex engine by default for fine-grained highlighting. Import the explicit Oniguruma factory and pass it to setShikiCoreEngine in place of the oniguruma string preset when custom grammars require its behavior. Full automatic language highlighting retains its existing engine.
+- d60e64e: Item-identity collections now ignore an assignment of the array they already hold. Assign a new array to update; mutating an array or one of its items and assigning the same array again no longer re-renders.
 
-  `lr-map` now defaults to the optional `@aceshooting/lyra-map` companion. Install the companion and configure `lyraMapWorkerPlugin()` from `@aceshooting/lyra-map/vite`, or provide an explicit worker URL. Applications retaining the full `maplibre-gl` engine must set `engine="maplibre"` before connecting the component and keep their existing worker configuration. Before imperative mutations on the modular engine, await `map.prepareFeatures()` with the required source and layer descriptors. Declarative map properties prepare their features automatically.
+  This applies to `lr-activity-feed` `entries`, `lr-agent-trace`, `lr-span-waterfall` and `lr-trace-tree` `spans`, `lr-calendar` `events`, `lr-claim-evidence` `claims` and `citations`, `lr-command-palette` `commands`, `lr-date-picker` `presets`, `lr-eval-dataset` and `lr-eval-run` `examples`, `lr-grounding-summary` `citations`, `lr-ingestion-queue`, `lr-node-palette`, `lr-prompt-queue`, `lr-task-list`, `lr-virtual-list`, `lr-mention-popover` and `lr-swatch-picker` `items`, `lr-map` `markers` and `dataLayers`, `lr-memory-panel` `shortTerm` and `longTerm`, `lr-retrieval-results` `chunks`, `lr-test-results` `suites`, `lr-thread-list` `threads` (unchanged) and `lr-tool-timeline` `entries`. Write `el.items = [...el.items, item]` instead of `el.items.push(item); el.items = el.items`. Opaque provider sources (`lr-virtual-list` `source`, `treeSource`, `dataSource`) keep refreshing when the same object is assigned again or `requestUpdate()` is called.
 
-  The document editor now bundles its reviewed engine internally, so applications no longer need the `@docx-editor.dev/core` runtime peer. Import editor styles from `@aceshooting/lyra-docs/docx/editor.css`. Document editing commands now return promises: await `execute()` before reading the resulting revision or issuing a dependent command. Selection ownership remains held during feature loading, and commands from replaced or disconnected sessions cannot update the current editor.
+  The protected static `immutableSourceCollectionProperties` on `LyraElement` is removed; the rule is the default for every identity collection. `lyra-ui-migrate --rule=immutable-collections` reports in-place array changes and same-array reassignments on these properties with the `IMMUTABLE_COLLECTION_REVIEW` code (reports only, acknowledged with `lyra-migrate-reviewed: IMMUTABLE_COLLECTION_REVIEW:<property>`). See `llms/shared/v29-to-v30-migration.md`.
+- d60e64e: `lr-map` gains camera commands and compares `center` by value.
 
-  Table and data-grid collection setters now track caller identities weakly. Repeated bindings still preserve their owned snapshots, while original arrays and any rows excluded by the table's processing limit can be collected when no other owner retains them.
+  - **Breaking:** assigning a new `center` array with the same coordinates is now a no-op instead of re-centring the map over the user's pan. Call `jumpTo()` to re-centre explicitly.
+  - `flyTo()`, `easeTo()` and `jumpTo()` honor reduced motion, queue until the engine exists and write the resulting camera back to `center` and `zoom`.
+  - `lr-map-view-change` reports programmatic moves with `source: 'command'` and the visible `bounds`.
+  - `cameraPadding` applies persistent camera padding, also used when fitting.
+  - `fitToData()` frames markers, data layers and the choropleth; `fitBounds()` and camera commands no longer get interrupted by a same-tick `center` or `zoom` update.
+  - `project()`, `unproject()` and a frame-throttled `lr-map-move` event.
+- 5b83018: Remove the 36 deprecated public names whose compatibility window has ended. Each has a replacement that already works in 29.x.
 
-  Explicit option-label updates avoid unchanged option renders and state writes while preserving change notifications and accessible-label observation. Closed selects skip navigation scans when they have no active option or single-option shortcut. Sampled charts normalize only plotted values and reuse admitted semantic data while keeping full summaries and exports. Table filtering reuses per-query serialization bookkeeping without caching mutable row text across queries.
+  - Event aliases (the canonical event already fired first; listen to it instead): `lr-agent-run` and `lr-subagent-panel` `lr-cancel` -> `lr-run-cancel`; `lr-agent-eval-dashboard` and `lr-rag-eval-dashboard` `lr-metric-change` -> `lr-metric-change-request`; `lr-background-runs` `lr-run-open` -> `lr-run-activate`; `lr-change-review` `lr-change-decision` -> `lr-change-decision-request`; `lr-community-card`, `lr-path-strip`, `lr-entity-dossier`, `lr-memory-panel` and `lr-provenance-panel` `lr-entity-activate` -> `lr-entity-select`; `lr-chunk-inspector` `lr-chunk-toggle`, `lr-memory-panel` `lr-memory-toggle`, `lr-source-card` `lr-expand`, `lr-retrieval-trace` `lr-stage-toggle`, `lr-navigation-menu` `lr-expanded-change`, `lr-dock-panel` and `lr-widget` `lr-collapse-change` -> `lr-toggle` (the disclosure events carry `expanded`; the collapse events carried the opposite `collapsed`); `lr-dock-panel` and `lr-widget` `lr-collapse-request` -> `lr-toggle-request`; `lr-rag-eval-dashboard` `lr-run-change` -> `lr-run-activate` and `lr-slice-change` -> `lr-slice-change-request`; `lr-retrieval-results` `lr-select` -> `lr-selection-change`; `lr-source-picker` `lr-sources-change` -> `lr-selection-change`.
+  - `icon` slot aliases: `lr-app-rail-item`, `lr-flow-node` and `lr-widget` content moves from `slot="icon"` to `slot="start"`, and `lr-tool-call-chip` content to `slot="status-icon"`. Content left in `icon` is no longer projected.
+  - Parts that Web Awesome itself deprecated: the `base` part of `lr-accordion-item` (use `::part(accordion-item)`), `lr-file-input` (`file-input`), `lr-qr-code` (`qr-code`), `lr-sparkline` (`sparkline`) and `lr-video-playlist` (`video-playlist`); the `label` part of `lr-file-input` and `lr-known-date` (`form-control-label`).
+  - `lr-icon` `autoWidth` / `auto-width`: use `canvas="auto"`.
 
-  Scroll-driven popup positioning now runs in the owning window's animation frame and cancels obsolete placements and queued work. Initial and resize positioning remain immediate. This prevents tooltip and arrow layout writes during Firefox scroll dispatch.
+  Migration: `npx lyra-ui-migrate --origin=lyra-v25` applies safe event renames and reports slot content, changed event details, and listeners whose reach would widen; the `wa-*`/`sl-*` migration maps the removed part names and `auto-width`. `wa-file-input` remains warning-required; apply its part replacements after reviewing the reported component differences. See the v29 to v30 upgrade guide.
 
-  Bundle limits account for the added map-engine selection and feature-loading adapter, frame-scheduled popup positioning, accessible-label updates, weak collection identity tracking, and chart/table preprocessing changes. Only the 28 breached JavaScript entry, component aggregate, and initial-route ceilings advance to their exact measured gzip sizes, with no added headroom. The increases range from 1 to 1,458 bytes; passing ceilings, CSS budgets, shell imports, optional-peer exclusions, and measurement settings remain unchanged.
+### Minor Changes
+
+- 955817c: Add `<lr-chart-3d>`, a bounded three-dimensional scatter, bubble and line chart over immutable typed columns of up to one million rows. It always renders an accessible, paginated data table with a keyboard cursor, and loads the optional `@aceshooting/lyra-3d` points renderer only for an explicit `engine="webgl"`, falling back to the table with a localized notice and `lr-engine-fallback`.
+- 3c2bace: Add opt-in WebGL rendering to graph and embedding views and equirectangular panorama rendering to image and video views. Preserve built-in defaults and accessible alternatives, and expose typed-column inputs and localized panorama controls.
+- 9c55bdd: `lr-map` covers more of what map applications build by hand:
+
+  - `initialization="interaction"` builds the map on the first press, touch, wheel or key on the element, behind a localized `initialization-activate` button; `initializationDelay` also builds it after a delay.
+  - Overlay layer paint and `styleOverrides` accept theme tokens, `currentColor` and CSS color functions, converted to sRGB and re-resolved when the theme changes. Overlay layers may target a source of the basemap style.
+  - `lr-map-geolocate` reports `{ lngLat, accuracy }` after the user-activated geolocate control locates the user.
+  - Drawing closes a polygon from a press on its first vertex, shows a rubber band to the pointer, offers localized on-map measurements (`drawingMeasurements`), completes on Enter and undoes on Backspace while the map has focus, survives a `mapStyle` swap, reports `lr-map-draw-vertex-end` when a vertex drag ends, and takes its color from `--lr-map-drawing-color`. A vertex drag now follows every pointer move instead of stopping after the first.
+  - `lr-map-pointer-move` and `lr-map-pointer-leave` report the pointer position once per frame, and hover, context-menu and pick events carry the hit as a frozen GeoJSON `feature` with geometry.
+  - `interactiveBasemapLayers` and `styleOverrides` select basemap layers by `source`, `sourceLayer` and `layerType`, and the read-only `styleLayers` and `styleSources` list the current style.
+- afc026a: `lr-map` image capacity for sprite catalogs: `images` admits up to 1,024 entries within the unchanged pixel and byte budget, accepts `sdf: true` for signed-distance-field icons recolored by `icon-color`, and adds, replaces or removes images in place without removing and re-adding the layers that use them. The new `imageProvider` supplies missing images on demand through the engine's missing-image hook, sharing the same budget and re-adding them after a style swap.
+- afc026a: `lr-map` renders large styled GeoJSON through `overlays`: a `geojson` source's `Feature` or `FeatureCollection` `data` object is kept by identity, outside the overlay value budget, so data of any size keeps native paint and layout expressions, filters, `minzoom`/`maxzoom`, symbol layers, `before` ordering, interaction and feature state across `mapStyle` swaps. A new data object updates the native source in place with `setData`, and `updateSourceData()` accepts overlay GeoJSON source IDs. Hits now skip a layer outside its zoom range at the fractional camera zoom, hidden, or with every opacity known to be `0`, so a hidden tier never shadows a visible one.
+- 2e3e192: `lr-map` loads drawing, image export, URL hash ownership, owned resources, images, style overrides, anchors, controls and feature state on demand, cutting its initial download by about a quarter. Calls made while a feature loads return `false`; await `whenIdle()` and call again.
+- 5c4824f: `lr-map` overlays and data.
+
+  - `anchor` slot positioned at `anchorLngLat`: follows the camera, flips and shifts to stay inside the map, hidden while the point is off screen.
+  - `choropleth.noData` (`color`, `strokeColor`, `label`): features without a numeric value paint with it, and a click on one reports `noData: true` in the `lr-map-click` detail.
+  - `choroplethLegend` derives the legend from the choropleth (step bands, or a gradient bar with ticks, plus a no-data swatch); `legendGradientTicks` adds labelled marks to the gradient bar.
+  - `cluster.zoomOnClick` eases into a clicked cluster.
+  - Declarative `controls` (`navigation`, `scale` with a corner and a scale `unit`); button names follow `lang` changes live.
+  - `LYRA_MAP_EMPTY_STYLE`, a frozen basemap-free style.
+  - `maxBounds` now applies at a fractional zoom below 1 instead of being dropped.
+  - The `immutable-collections` migration rule reports `lr-map` `center` assignments for review (`MAP_CENTER_REVIEW`), and the v29 → v30 guide has a Map section.
+- afc026a: `lr-map` gains `hashFormat` (attribute `hash-format`). `'unnamed'` makes `hash = true` read and write the raw engine's unnamed `#zoom/lat/lng[/bearing[/pitch]]` fragment, so existing deep links keep working, while preserving named fields after it. Only a valid camera in the owned field or token suppresses the initial fit; an unrelated or malformed fragment leaves the fit to run and is not overwritten.
+- afc026a: `lr-map` gains `minZoom` and `maxZoom` (attributes `min-zoom`, `max-zoom`): camera zoom limits forwarded to the engine at construction and live, clamping gestures, `zoom`, the URL `hash`, the camera commands and the `maxZoom` of `fitBounds()`/`fitToData()`.
+- 38a734c: Add `<lr-model-viewer>`, a bounded static preview for glTF, GLB, STL, OBJ, PLY, XYZ and PCD files that renders with the optional `@aceshooting/lyra-3d/model` engine.
+
+  - The companion loads lazily and only for a nonempty, supported source. A persistent text alternative and a guarded download link stay visible when the source, the companion or WebGL is unavailable.
+  - Sources pass the shared URL policy and are read through a bounded reader with a fixed 64 MiB ceiling; model files cannot load external resources or run code.
+  - The camera surface has keyboard orbit, zoom and fit (mirrored under RTL) and native toolbar buttons. `camera` is a copied, finite-checked property; user movement emits `lr-camera-change`.
+  - `<lr-document-viewer>` opens model attachments in place through the new `kind: 'model'` payload and `model-viewer-register.js`. The registry also accepts lazy payload adapters (`rendererKind: 'adapted'`).
+
+  The viewers-family gzip budget includes the new component with the reviewed 2% allowance. Package ceilings follow the measured model-viewer code, editor metadata and 13 translated controls, rounded to 64-byte boundaries; the UI archive retains its existing companion-pack allowance. The packed core registration graph retains 60 bytes of regression headroom above its measured non-asset size, with the required binary measured separately. The look-composition documentation route ceiling follows its measured UTF-8 size.
+- 166f12c: Introduce `@aceshooting/lyra-3d`, the optional companion that will hold the WebGL engines behind Lyra UI's 3D views, with `three` as a regular dependency.
+
+  - `@aceshooting/lyra-3d/core` exports the engine contract (`contract: 1`, `Lyra3dHost`, `Lyra3dEngine`, `Lyra3dStyle`) and the shared engine core: a WebGL2 viewport with software-rendering detection, an orbit camera that uses Lyra UI's camera values with fit and focus, GPU id picking, style validation, resizing, context-loss recovery that re-applies renderer state, reduced-motion camera transitions, disposal that releases the WebGL context, and module-worker tasks with a main-thread fallback.
+  - Lyra UI lists `@aceshooting/lyra-3d` as an optional peer dependency. Graph, embedding, chart, model and panorama views load the corresponding companion engines lazily when their WebGL rendering is opted into; built-in defaults and accessible alternatives remain available.
+- ff668f9: Extend declarative map composition and data-layer styling.
+
+  - Document owner-scoped overlay composition, preserve control order within each corner, and support guarded links in custom attribution.
+  - Add `before`, `minZoom` and `maxZoom` to GeoJSON data-layer rows, preserving generated-layer group order and applying visibility ranges to labels too.
+  - Add physical label anchors and bounded text-size-relative offsets for point and line labels.
+  - Add validated vector-layer paint, layout and filter options with a supported expression subset, theme-token colors and atomic admission before native updates.
+
+  Existing map camera and immutable-collection changes already require the next major release; these additions introduce no further breaking change.
+
+  The deferred map additions increase direct bundles that inline every reachable feature: both autoloaders, the viewers family through GeoJSON viewer, and SSR/all. Their measured gzip sizes are 1,651,344, 1,651,180, 419,654 and 1,661,479 bytes; only these four exceeded ceilings are refreshed with 2% headroom rounded up to a whole byte. Initial-load, CSS, component aggregate and other direct-entry ceilings stay unchanged.
+- 6e32333: Add an explicit redraw revision for retained map canvases and bounded local image URLs for image data layers. Paint-only changes repaint idle maps, while mutable owned-layer updates preserve native source, layer and feature-state identity with guarded rollback.
+
+  Keep native source options separate from immutable admitted snapshots so image URL updates can succeed without mutating caller data.
+- f5b4bde: Add owned map resources and readiness, external data layers and labels, controls and feature interactions, drawing and vertex editing, anchored content options, image export, and lazy construction.
+- aae417a: Declare `lr-menubar` and `lr-menubar-item` in `HTMLElementTagNameMap`, as every other component does, so `document.createElement()`, `querySelector()` and `closest()` return the typed classes.
 
 ### Patch Changes
 
-- @aceshooting/lyra-translations@29.0.0
+- bdc75cc: Fix three rendering and accessibility defects.
+
+  - `lr-terminal` and `lr-notebook-viewer`: an unterminated escape string (OSC, DCS, APC, PM or SOS) no longer swallows the rest of the output. A string now ends at BEL, CAN, SUB or the next ESC, and `ESC \` still terminates it.
+  - `lr-color-picker`: `hsl()` and `hsla()` values resolve to the same 8-bit channels the browser computes, so `hsl(0, 100%, 95%)` formats as `#ffe6e6` (it was `#ffe5e5`). Hex, `rgb()` and `hsv()` input are unchanged.
+  - `lr-eval-run`: the live region now announces examples that become `queued`, `collecting` or take an application-defined status ("{label}: {status}"); they were silent before.
+- 52792ec: Use patched Zod 4 for Codecov build tooling, removing its remaining Zod 3 dependency. Preserve configuration validation, build-stopping errors, and normalized option types through a scoped compatibility patch. Verify both module formats and the GitHub job metadata/upload flow without contacting external services.
+- 7fa4f02: Fit the embedding explorer's WebGL camera after measuring its viewport so initial point clouds fill the available space instead of appearing as a small central cluster.
+- 30ca106: Preserve geolocation and attribution control constructors when loading the full MapLibre engine, so requested controls mount alongside navigation and scale controls.
+- daaf791: Allocate a fresh native source identity when a map data layer changes its clustering configuration or rendering shape. Reserve the replacement before validating layer order, preserve existing resources when a proposal is rejected, and retain source identity for compatible data and paint updates.
+- daaf791: Refresh the package size ceilings for map composition, lazy feature boundaries and source replacement. The UI archive measures 21,799,151 unpacked bytes (21,799,763 estimated bytes including the existing manifest allowance); translations measure 6,187,763 unpacked bytes, and editor metadata measures 1,700,103 packed and 10,535,164 unpacked bytes. Only the four exceeded ceilings advance to their next 64-byte boundaries. Download, file-count and other companion limits remain unchanged.
+- 631a5d5: Wait for requested native map controls to finish loading and installing before resolving `whenIdle()`.
+- 7fa4f02: Keep image catalog updates and lazy image-provider changes in the same map resource transaction. Updating both after initialization, or replacing a provider while images are preparing, now preserves the live map and waits for the current resources.
+- daaf791: Keep map layer ordering and style overrides behind their existing lazy feature loader. GeoJSON placement waits for the ordering helper before changing native resources; bounded style-value validation is shared without importing override handling eagerly.
+- ba97350: Allow bundlers to remove unused map feature loaders from an unused manual autoloader import while preserving lazy loading, shared caching, and retries for requested map features.
+- 7fa4f02: Preserve ordinary font-family records when snapshotting map styles so the full MapLibre engine accepts native font declarations on initial load and style replacement. Font descriptors remain detached and immutable, including family names that match inherited object properties.
+- c9a3891: Record the measured delivery cost of map resource and control-readiness handling, constrained popup placement, and cancellable autofocus-safe popover reveals. The direct media, overlays and popover bundles measure 343,322, 152,436 and 60,237 gzip bytes; popover's initial marginal payload measures 18,090 bytes. Advance only these breached ceilings to the next 64-byte boundaries: 343,360, 152,448, 60,288 and 18,112 bytes.
+
+  The UI package's estimated unpacked payload measures 21,799,880 bytes; its ceiling advances to 21,799,936 bytes. Preserve all passing limits, the compressed-download ceiling, historical unpacked reduction target, file-count allowance, companion limits, shared-shell imports, optional-peer exclusions and measurement settings.
+- 5c66e18: Record the observed limits of the release's runtime benchmarks. A matched quick Chromium
+  comparison against 29.2.2 passed all 15 semantic workloads with unchanged workload counts, but
+  12 of 150 timing metrics exceeded both the 15% and 1 ms material-regression thresholds. These
+  include document filtering paint, table assignment and sorting paint/no-op phases, chart
+  assignment, select metadata paint, and combobox metadata updates. For 1,000-record chart
+  assignment, observed p95 rose from 112.7 to 148.3 ms while the median remained 77.7 versus
+  77.5 ms; update and settlement tails increased in the same sample. Each run contained seven
+  samples, so its reported p95 is the largest observation.
+
+  One matched diagnostic trace pair recorded frame waiting in the scheduling control and real
+  layout and garbage-collection work in both chart implementations. The largest chart tail did
+  not recur in that pair, and its cause remains unestablished. The original comparison remains
+  a documented performance limitation. The traced workloads and unchanged counts do not establish
+  equivalent performance for every workload or device.
+- 3cc71c2: Keep mention caret measurements explicitly text-only, avoid excessive backtracking when parsing malformed 3D color values, and escape embedded values when generating map modules.
+- 631a5d5: Measure CSS-constrained popup dimensions before reporting their initial position, keeping large select menus and other overlays inside the available space.
+- 7fa4f02: Simplify overlay activation when an open tooltip changes its interactive content, removing an unreachable closed-tooltip branch while preserving focus management.
+- 1c49a93: Preserve focus when hover and focus triggers reveal popover content with autofocus. Keep pending popups inert and cancel their pending reveal when closing or disconnecting.
+- d84c719: Validate constrained message, notebook, form, calendar, formatter and provider inputs before rendering or emitting state. Preserve documented fallbacks for unknown lookup keys and reject forged restored files. Bound signature restoration by inspected input positions.
+
+  Validate map resource metadata before rendering, keep explicit source and protocol registration authoritative, and preserve arbitrary valid sprite identifiers across worker transport. Unknown flag codes now consistently resolve to undefined across package entry points.
+- 04a9d6f: Prevent native video playback updates from causing unintended seeks, while preserving explicit playback-position changes.
+- Updated dependencies [e2701e9]
+- Updated dependencies [6da5b00]
+- Updated dependencies [5e6b131]
+- Updated dependencies [1c49a93]
+- Updated dependencies [166f12c]
+- Updated dependencies [8087f55]
+- Updated dependencies [27d9e64]
+- Updated dependencies [ffb5c06]
+- Updated dependencies [3cc71c2]
+- Updated dependencies [96ac5e7]
+- Updated dependencies [d84c719]
+  - @aceshooting/lyra-3d@1.0.0
+  - @aceshooting/lyra-map@1.3.0
+  - @aceshooting/lyra-flags@2.3.1
+  - @aceshooting/lyra-translations@30.0.0
 
 Older major versions: [release history archive](https://github.com/aceshooting/lyra-ui/tree/main/docs/changelog).

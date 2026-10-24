@@ -5,7 +5,7 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-model-viewer.js';` (stable tag alias; registers the tag)
 - **Class** `LyraModelViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/model-viewer/model-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
-- **Status** `experimental` since `unreleased` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `experimental` since `30.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `@aceshooting/lyra-3d` — see `llms/peers.md`

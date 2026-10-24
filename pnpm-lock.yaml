@@ -471,7 +471,7 @@ importers:
         specifier: workspace:*
         version: link:../lyra-3d
       '@aceshooting/lyra-flags':
-        specifier: workspace:^2.3.0
+        specifier: workspace:^2.3.1
         version: link:../lyra-flags
       '@aceshooting/lyra-map':
         specifier: workspace:*

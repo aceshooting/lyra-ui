@@ -64,7 +64,7 @@ has the full rules, and `--check` lists what's left without changing any files.
 | To | What breaks | Migration help |
 | --- | --- | --- |
 | **v30** | Item-identity collections (feeds, queues, traces, task lists, virtual lists) ignore a same-array assignment: assign a new array to update | `--rule=immutable-collections`, [v29→v30 guide](./llms/shared/v29-to-v30-migration.md) |
-| **v29** | `lr-map` now uses the optional `@aceshooting/lyra-map` renderer (or set `engine="maplibre"`); the DOCX editor bundles its engine and `execute()` returns a promise | [Changelog](CHANGELOG.md#2900), [map setup](../lyra-map/README.md) |
+| **v29** | `lr-map` now uses the optional `@aceshooting/lyra-map` renderer (or set `engine="maplibre"`); the DOCX editor bundles its engine and `execute()` returns a promise | [notes](../../docs/changelog/v29.md#2900), [map setup](../lyra-map/README.md) |
 | **v28** | Shared `--lr-*` tokens are declared once per document; a `--lr-theme-*` input set on a plain element needs `data-lr-theme-scope` | `--rule=theme-scopes`, [notes](../../docs/changelog/v28.md) |
 | **v27** | Locales moved to `@aceshooting/lyra-translations`, editor data to `@aceshooting/lyra-ide`; one `ToolStatus` union; some changed defaults | `--origin=lyra-v26`, [notes](../../docs/changelog/v27.md) |
 | **v26** | Form events use native `input`/`change` plus typed `lr-input`/`lr-change`; resize, focus and viewer-diagnostic events changed | `--origin=lyra-v25`, [notes](../../docs/changelog/v26.md) |

@@ -1,5 +1,20 @@
 # @aceshooting/lyra-map
 
+## 1.3.0
+
+### Minor Changes
+
+- ffb5c06: Add bounded, cancellable prepared source and layer mutations with best-effort rollback, and reset worker bridge tracking for watch rebuilds.
+
+### Patch Changes
+
+- e2701e9: Remove unreachable guards and fallbacks found while bringing the companion packages to full test coverage. Behavior is unchanged.
+- 6da5b00: Keep an unused modular renderer import free of worker asset warnings. The Vite plugin supplies the actual worker URL only for configured map consumers; constructing a map without worker setup still reports the configuration error.
+- 3cc71c2: Keep mention caret measurements explicitly text-only, avoid excessive backtracking when parsing malformed 3D color values, and escape embedded values when generating map modules.
+- d84c719: Validate constrained message, notebook, form, calendar, formatter and provider inputs before rendering or emitting state. Preserve documented fallbacks for unknown lookup keys and reject forged restored files. Bound signature restoration by inspected input positions.
+
+  Validate map resource metadata before rendering, keep explicit source and protocol registration authoritative, and preserve arbitrary valid sprite identifiers across worker transport. Unknown flag codes now consistently resolve to undefined across package entry points.
+
 ## 1.2.0
 
 ### Minor Changes

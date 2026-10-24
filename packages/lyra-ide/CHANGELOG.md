@@ -1,5 +1,49 @@
 # @aceshooting/lyra-ide
 
+## 30.0.0
+
+### Patch Changes
+
+- Updated dependencies [bdc75cc]
+- Updated dependencies [955817c]
+- Updated dependencies [52792ec]
+- Updated dependencies [7fa4f02]
+- Updated dependencies [3c2bace]
+- Updated dependencies [6e32333]
+- Updated dependencies [30ca106]
+- Updated dependencies [d60e64e]
+- Updated dependencies [9c55bdd]
+- Updated dependencies [d60e64e]
+- Updated dependencies [afc026a]
+- Updated dependencies [afc026a]
+- Updated dependencies [2e3e192]
+- Updated dependencies [5c4824f]
+- Updated dependencies [afc026a]
+- Updated dependencies [afc026a]
+- Updated dependencies [38a734c]
+- Updated dependencies [166f12c]
+- Updated dependencies [daaf791]
+- Updated dependencies [ff668f9]
+- Updated dependencies [daaf791]
+- Updated dependencies [631a5d5]
+- Updated dependencies [7fa4f02]
+- Updated dependencies [daaf791]
+- Updated dependencies [6e32333]
+- Updated dependencies [ba97350]
+- Updated dependencies [7fa4f02]
+- Updated dependencies [f5b4bde]
+- Updated dependencies [c9a3891]
+- Updated dependencies [5c66e18]
+- Updated dependencies [aae417a]
+- Updated dependencies [5b83018]
+- Updated dependencies [3cc71c2]
+- Updated dependencies [631a5d5]
+- Updated dependencies [7fa4f02]
+- Updated dependencies [1c49a93]
+- Updated dependencies [d84c719]
+- Updated dependencies [04a9d6f]
+  - @aceshooting/lyra-ui@30.0.0
+
 ## 29.2.2
 
 ### Patch Changes
