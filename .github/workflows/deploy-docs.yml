@@ -7,6 +7,25 @@ name: Deploy docs
 # load-bearing: `build` accepts only a successful `push` run of CI on `main` whose head commit
 # lives in this repository (never a pull request, a fork or a tag), checks nothing out, and
 # consumes only the artifact that exact run uploaded.
+#
+# The README coverage badges are shields.io endpoint files published beside the Storybook
+# (`badges/coverage-<flag>.json`, one per flag in codecov.yml), not Codecov's own badge images:
+# GitHub serves README images through a proxy that gives up after about four seconds, and Codecov
+# needs longer to render a flagged badge (it recomputes the flag on every request), so that image
+# never loaded. `build` waits (at most 15 minutes) for Codecov to merge the uploads of the CI run's
+# head commit, reads each flag's totals from Codecov's public REST API once, and writes
+#   {"schemaVersion":1,"label":"coverage","message":"<hits / lines, truncated>%","color":"<band>"}
+# into the artifact before it becomes the Pages artifact. The percentage is truncated to two
+# decimals, never rounded, so a badge cannot claim a target the report misses. Colour bands:
+#   >= 99.74 brightgreen (the lyra-ui target in docs/agents/ci-and-gates.md), >= 99.00 green,
+#   >= 98.00 yellowgreen, >= 95.00 yellow, >= 90.00 orange, below that red; lightgrey "unknown"
+#   when no figure has ever been published for the flag.
+# Codecov stays informational: a flag with no merged upload (a docs-only push skips the lyra-ui
+# coverage job), an unreachable API or an unusable answer republishes the figure the live site
+# already serves, and the Codecov step cannot fail the deploy. The two steps that do this stay
+# inside the guards above: they add no checkout, secret or action; the SHA reaches the shell
+# through `env:` only and is validated; the JSON is built by jq from text that matched a strict
+# pattern.
 on:
   workflow_run:
     workflows: [CI]
@@ -31,6 +50,9 @@ jobs:
     permissions:
       actions: read
       contents: read
+    env:
+      # The flags declared in codecov.yml; scripts/ci-workflow-policy.test.mjs keeps the two lists equal.
+      BADGE_FLAGS: lyra-ui lyra-map lyra-3d lyra-docs lyra-flags lyra-ide lyra-translations
     outputs:
       current: ${{ steps.head.outputs.current }}
     steps:
@@ -53,6 +75,134 @@ jobs:
           path: storybook-static
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ github.token }}
+      # `continue-on-error` keeps any failure or timeout of this step from failing the deploy; the
+      # next step then publishes the live site's previous figure for every flag it has no value for.
+      - name: Wait for Codecov and read the coverage totals
+        if: steps.head.outputs.current == 'true'
+        continue-on-error: true
+        timeout-minutes: 25
+        env:
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          WAIT_SECONDS: '900'
+          POLL_SECONDS: '30'
+          ABSENT_SECONDS: '60'
+        run: |
+          set -euo pipefail
+          [[ "$RUN_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo '::error::The CI run head SHA is not 40 lowercase hex characters.'; exit 1; }
+          read -r -a flags <<< "$BADGE_FLAGS"
+          api="https://api.codecov.io/api/v2/github/${GITHUB_REPOSITORY%%/*}/repos/${GITHUB_REPOSITORY#*/}"
+          out="$RUNNER_TEMP/codecov"
+          mkdir -p "$out"
+
+          # fetch URL FILE SECONDS: saves the body and prints the HTTP status (000 when the transfer failed).
+          fetch() {
+            curl --silent --show-error --proto '=https' --max-time "$3" --output "$2" --write-out '%{http_code}' "$1" || true
+          }
+          # state FLAG: ready (an upload is merged into the commit's report), failed (every upload
+          # errored), absent (no coverage upload) or pending, from this commit's uploads. A
+          # test-results upload carries the same flag but never merges: it is not a coverage upload.
+          state() {
+            jq -r --arg flag "$1" '
+              [.results[]? | select(any((.flags // [])[]; . == $flag))
+                | select((.storage_path // "") | startswith("test_results/") | not)] as $uploads
+              | if any($uploads[]; .state == "merged" or .state_name == "MERGED") then "ready"
+                elif ($uploads | length) == 0 then "absent"
+                elif all($uploads[]; .state == "error" or .state_name == "ERROR") then "failed"
+                else "pending" end' "$out/uploads.json" 2>/dev/null || true
+          }
+
+          start="$(date +%s)"
+          while :; do
+            # 404: Codecov has no upload for this commit at all, so every flag is absent.
+            case "$(fetch "$api/commits/$RUN_SHA/uploads/?page_size=100" "$out/uploads.json" 30)" in
+              200) ;;
+              404) echo '{"results":[]}' > "$out/uploads.json" ;;
+              *) : > "$out/uploads.json" ;;
+            esac
+            ready='' waiting='' line=''
+            for flag in "${flags[@]}"; do
+              status="$(state "$flag")"
+              line+=" $flag=${status:-unreadable}"
+              case "$status" in
+                ready) ready+=" $flag" ;;
+                failed) ;;
+                # CI has finished, so every upload it sends already exists: a flag with none is not
+                # coming (a docs-only push skips the lyra-ui coverage job). Allow a minute to list it.
+                absent) if (( $(date +%s) - start < ABSENT_SECONDS )); then waiting+=" $flag"; fi ;;
+                *) waiting+=" $flag" ;;
+              esac
+            done
+            echo "Codecov uploads for $RUN_SHA:$line"
+            [[ -z "$waiting" ]] && break
+            if (( $(date +%s) - start >= WAIT_SECONDS )); then
+              echo "::warning::Codecov had not merged the uploads for:$waiting"
+              break
+            fi
+            sleep "$POLL_SECONDS"
+          done
+
+          for flag in "${flags[@]}"; do
+            [[ " $ready " == *" $flag "* ]] || continue
+            status="$(fetch "$api/totals/?sha=$RUN_SHA&flag=$flag" "$out/totals.json" 60)"
+            counts=''
+            if [[ "$status" == 200 ]]; then
+              counts="$(jq -r '.totals | select((.hits | type) == "number" and (.lines | type) == "number") | "\(.hits) \(.lines)"' "$out/totals.json" 2>/dev/null || true)"
+            fi
+            if [[ "$counts" =~ ^([0-9]{1,12})\ ([1-9][0-9]{0,11})$ ]] && (( BASH_REMATCH[1] <= BASH_REMATCH[2] )); then
+              # Integer arithmetic on digits that matched the pattern: whole basis points never round up.
+              basis=$(( BASH_REMATCH[1] * 10000 / BASH_REMATCH[2] ))
+              printf '%d.%02d\n' "$((basis / 100))" "$((basis % 100))" > "$out/$flag"
+            else
+              echo "::warning::Codecov returned no usable totals for $flag (HTTP $status)."
+            fi
+          done
+      - name: Write the coverage badges
+        if: steps.head.outputs.current == 'true'
+        run: |
+          set -euo pipefail
+          read -r -a flags <<< "$BADGE_FLAGS"
+          site="https://${GITHUB_REPOSITORY%%/*}.github.io/${GITHUB_REPOSITORY#*/}/badges"
+          # Start from an empty directory so the published files are exactly the ones written here.
+          rm -rf storybook-static/badges
+          mkdir storybook-static/badges
+          for flag in "${flags[@]}"; do
+            origin=Codecov percent=''
+            if [[ -f "$RUNNER_TEMP/codecov/$flag" ]]; then
+              percent="$(< "$RUNNER_TEMP/codecov/$flag")"
+            else
+              # No figure for this commit: keep the one the live site serves. GitHub redirects the
+              # github.io address to the account's custom domain, currently over plain http, so that
+              # answer is untrusted: only a bare NN.NN percentage passes the pattern below, and the
+              # JSON is rebuilt from it.
+              origin='the previous deploy'
+              status="$(curl --silent --show-error --location --max-redirs 3 --proto '=https,http' --proto-redir '=https,http' --max-time 20 --output "$RUNNER_TEMP/previous.json" --write-out '%{http_code}' "$site/coverage-$flag.json" || true)"
+              if [[ "$status" == 200 ]]; then
+                percent="$(jq -r '.message // empty' "$RUNNER_TEMP/previous.json" 2>/dev/null || true)"
+                percent="${percent%\%}"
+              fi
+            fi
+            if [[ "$percent" =~ ^(100\.00|[0-9]{1,2}\.[0-9]{2})$ ]]; then
+              basis=$(( 10#${percent/./} ))
+              if (( basis >= 9974 )); then
+                color=brightgreen
+              elif (( basis >= 9900 )); then
+                color=green
+              elif (( basis >= 9800 )); then
+                color=yellowgreen
+              elif (( basis >= 9500 )); then
+                color=yellow
+              elif (( basis >= 9000 )); then
+                color=orange
+              else
+                color=red
+              fi
+              message="$percent%"
+            else
+              origin=nothing message=unknown color=lightgrey
+            fi
+            [[ "$origin" == Codecov ]] || echo "::warning::Codecov gave no figure for $flag; publishing $message from $origin."
+            jq -nc --arg message "$message" --arg color "$color" '{schemaVersion: 1, label: "coverage", message: $message, color: $color}' > "storybook-static/badges/coverage-$flag.json"
+          done
       - if: steps.head.outputs.current == 'true'
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:

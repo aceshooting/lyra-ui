@@ -1,6 +1,6 @@
 # @aceshooting/lyra-docs
 
-[![Coverage](https://codecov.io/gh/aceshooting/lyra-ui/branch/main/graph/badge.svg?flag=lyra-docs)](https://codecov.io/gh/aceshooting/lyra-ui)
+[![Coverage](https://img.shields.io/endpoint?url=https://aceshooting.github.io/lyra-ui/badges/coverage-lyra-docs.json)](https://codecov.io/gh/aceshooting/lyra-ui)
 
 `@aceshooting/lyra-docs` is a public, experimental companion package for the
 native Lyra DOCX editor. It ships an internal engine derived from the Apache-2.0

@@ -1,6 +1,6 @@
 # Lyra 3D
 
-[![Coverage](https://codecov.io/gh/aceshooting/lyra-ui/branch/main/graph/badge.svg?flag=lyra-3d)](https://codecov.io/gh/aceshooting/lyra-ui)
+[![Coverage](https://img.shields.io/endpoint?url=https://aceshooting.github.io/lyra-ui/badges/coverage-lyra-3d.json)](https://codecov.io/gh/aceshooting/lyra-ui)
 
 `@aceshooting/lyra-3d` holds the WebGL engines behind Lyra UI's 3D views. A Lyra UI component that
 supports one loads it on demand, only when an application opts in on that element, so an

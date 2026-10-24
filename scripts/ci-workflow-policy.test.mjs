@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { runInNewContext } from 'node:vm';
 import test from 'node:test';
 
@@ -69,10 +72,19 @@ test('each of the seven coverage flags owns one complete package report and a sc
   assert.deepEqual(entries.map(([, name]) => name).sort(), [...packages].sort());
   for (const [, name, paths] of entries) {
     assert.equal(paths.trim(), `- packages/${name}/${name === 'lyra-ui' ? 'src/' : ''}**`, `${name} cannot absorb another package's data`);
-    const badge = `https://codecov.io/gh/aceshooting/lyra-ui/branch/main/graph/badge.svg?flag=${name}`;
+    // GitHub's image proxy gives up after about four seconds and Codecov's flag badge takes longer, so the badge is a
+    // shields.io endpoint over the file deploy-docs.yml publishes for the flag; the link still opens the Codecov report.
+    // The target stays unencoded: a URL is valid inside a query string as long as it holds no `&`, `#`, `%`, `+` or
+    // space, and the package READMEs ship in tarballs whose size ceilings leave only a few bytes of headroom.
+    const target = `https://aceshooting.github.io/lyra-ui/badges/coverage-${name}.json`;
+    assert.doesNotMatch(target, /[&#%+\s]/u, `${name}: the unencoded endpoint target must need no escaping`);
+    const badge = `https://img.shields.io/endpoint?url=${target}`;
     for (const file of [`packages/${name}/README.md`, ...(name === 'lyra-ui' ? ['README.md'] : [])]) {
-      const urls = [...read(file).matchAll(/https:\/\/codecov\.io\/[^\s)]+\/graph\/badge\.svg(?:\?[^\s)]+)?/gu)].map(([url]) => url);
+      const readme = read(file);
+      const urls = [...readme.matchAll(/https:\/\/img\.shields\.io\/endpoint\?url=[^\s)]+/gu)].map(([url]) => url);
       assert.deepEqual(urls, [badge], `${file} must show exactly its own flag`);
+      assert.ok(readme.includes(`[![Coverage](${badge})](https://codecov.io/gh/aceshooting/lyra-ui)`), `${file} keeps its alt text and Codecov link`);
+      assert.doesNotMatch(readme, /codecov\.io\/[^\s)]*\/graph\/badge\.svg/u, `${file} must not request Codecov's own badge image`);
     }
   }
 
@@ -271,4 +283,410 @@ test('mocha retries stay at their default in the test lanes; only the flake hunt
     assert.doesNotMatch(read(`.github/workflows/${file}`), /WTR_RETRIES/u, `${file} keeps the retry`);
   }
   assert.match(job(read('.github/workflows/quality-tools.yml'), 'flake-hunt'), /scripts\/flake-hunt\.mjs/u);
+});
+
+// The coverage badges deploy-docs.yml publishes beside the Storybook.
+//
+// The privileged deploy job checks nothing out, so waiting for Codecov and writing the badge files is inline shell and jq. The
+// tests run the scripts the workflow really contains, under bash, against a scripted Codecov API and Pages site: a fake `curl`
+// answers from a scenario while `sleep` and `date` drive a virtual clock, so the 15-minute bound costs milliseconds.
+
+const DEPLOY_DOCS = '.github/workflows/deploy-docs.yml';
+const WAIT_STEP = 'Wait for Codecov and read the coverage totals';
+const WRITE_STEP = 'Write the coverage badges';
+const HEAD_SHA = '0ac8355c5975ef41eeac3ca3514512dda410d104';
+const CLOCK_START = 1_700_000_000;
+const hasJq = spawnSync('jq', ['--version']).status === 0;
+const needsJq = { skip: !hasJq && 'jq is not installed' };
+
+const deployFlags = () => job(read(DEPLOY_DOCS), 'build').match(/^ {6}BADGE_FLAGS: (.+)$/mu)?.[1].split(' ') ?? [];
+
+// A step of the deploy build job: its text, its literal `run:` script and its `env:` values.
+function stepText(workflow, name) {
+  const matches = job(workflow, 'build').split(/\n(?= {6}- )/u).filter((step) => step.startsWith(`      - name: ${name}\n`));
+  assert.equal(matches.length, 1, `${name} exists exactly once`);
+  return matches[0];
+}
+
+function stepRun(step) {
+  const lines = step.split('\n');
+  const start = lines.indexOf('        run: |');
+  assert.ok(start >= 0, 'the step has a literal run script');
+  const body = [];
+  for (const line of lines.slice(start + 1)) {
+    if (line !== '' && !line.startsWith('          ')) break;
+    body.push(line.slice(10));
+  }
+  return `${body.join('\n').replace(/\n+$/u, '')}\n`;
+}
+
+function stepEnv(step) {
+  const lines = step.split('\n');
+  const env = {};
+  for (const line of lines.slice(lines.indexOf('        env:') + 1)) {
+    const entry = /^ {10}([A-Z_]+): (.+)$/u.exec(line);
+    if (!entry) break;
+    env[entry[1]] = entry[2].replace(/^'(.*)'$/u, '$1');
+  }
+  return env;
+}
+
+// Runs as the `curl` of the scripts under test (serialized into the shim): answers from the scenario and records each request.
+function fakeCurl() {
+  const fs = process.getBuiltinModule('node:fs');
+  const args = process.argv.slice(2);
+  const url = args.at(-1);
+  const option = (name) => (args.includes(name) ? args[args.indexOf(name) + 1] : undefined);
+  const scenario = JSON.parse(fs.readFileSync(process.env.BADGE_SCENARIO, 'utf8'));
+  const at = Number(fs.readFileSync(process.env.BADGE_CLOCK, 'utf8'));
+  fs.appendFileSync(process.env.BADGE_CALLS, `${JSON.stringify({ url, args: args.slice(0, -1), at })}\n`);
+  const uploads = /^https:\/\/api\.codecov\.io\/api\/v2\/github\/aceshooting\/repos\/lyra-ui\/commits\/[0-9a-f]{40}\/uploads\/\?page_size=100$/u;
+  const totals = /^https:\/\/api\.codecov\.io\/api\/v2\/github\/aceshooting\/repos\/lyra-ui\/totals\/\?sha=[0-9a-f]{40}&flag=([\w-]+)$/u.exec(url);
+  const live = /^https:\/\/aceshooting\.github\.io\/lyra-ui\/badges\/coverage-([\w-]+)\.json$/u.exec(url);
+  let reply = { status: 0 };
+  if (uploads.test(url)) {
+    const counter = `${process.env.BADGE_CALLS}.uploads`;
+    const polled = fs.existsSync(counter) ? Number(fs.readFileSync(counter, 'utf8')) : 0;
+    fs.writeFileSync(counter, String(polled + 1));
+    reply = scenario.uploads[Math.min(polled, scenario.uploads.length - 1)];
+  } else if (totals) {
+    reply = scenario.totals[totals[1]] ?? { status: 404, body: '' };
+  } else if (live) {
+    reply = scenario.live[live[1]] ?? { status: 404, body: '<html>Not Found</html>' };
+  }
+  if (reply.status === 0) {
+    process.stderr.write('curl: (28) Operation timed out\n');
+    if (args.includes('--write-out')) process.stdout.write('000');
+    process.exit(28);
+  }
+  const body = typeof reply.body === 'string' ? reply.body : JSON.stringify(reply.body);
+  if (option('--output')) fs.writeFileSync(option('--output'), body);
+  else process.stdout.write(body);
+  if (args.includes('--write-out')) process.stdout.write(String(reply.status));
+}
+
+/**
+ * Runs both badge steps in order, as the job does, in a scratch workspace that already holds a downloaded artifact.
+ * `uploads` is the list of replies to successive polls of the commit's uploads (the last one repeats).
+ */
+function runBadgeSteps({ uploads, totals = {}, live = {}, sha = HEAD_SHA, waitEnv = {} }) {
+  const workflow = read(DEPLOY_DOCS);
+  const flags = deployFlags();
+  const dir = mkdtempSync(join(tmpdir(), 'deploy-docs-badges-'));
+  try {
+    const paths = {
+      bin: join(dir, 'bin'),
+      runnerTemp: join(dir, 'runner-temp'),
+      workspace: join(dir, 'workspace'),
+      scenario: join(dir, 'scenario.json'),
+      calls: join(dir, 'calls.jsonl'),
+      sleeps: join(dir, 'sleeps.txt'),
+      clock: join(dir, 'clock.txt'),
+    };
+    const badgeDirectory = join(paths.workspace, 'storybook-static', 'badges');
+    mkdirSync(paths.bin);
+    mkdirSync(paths.runnerTemp);
+    mkdirSync(badgeDirectory, { recursive: true });
+    writeFileSync(join(badgeDirectory, 'stale.txt'), 'left behind by the downloaded artifact');
+    writeFileSync(paths.scenario, JSON.stringify({ uploads: Array.isArray(uploads) ? uploads : [uploads], totals, live }));
+    writeFileSync(paths.calls, '');
+    writeFileSync(paths.sleeps, '');
+    writeFileSync(paths.clock, String(CLOCK_START));
+    const shims = {
+      curl: `#!${process.execPath}\n(${fakeCurl.toString()})();\n`,
+      sleep: '#!/bin/sh\necho "$1" >> "$BADGE_SLEEPS"\necho $(( $(cat "$BADGE_CLOCK") + $1 )) > "$BADGE_CLOCK"\n',
+      date: '#!/bin/sh\ncat "$BADGE_CLOCK"\n',
+    };
+    for (const [name, source] of Object.entries(shims)) {
+      writeFileSync(join(paths.bin, name), source);
+      chmodSync(join(paths.bin, name), 0o755);
+    }
+    const environment = {
+      PATH: `${paths.bin}:${process.env.PATH}`,
+      HOME: dir,
+      GITHUB_REPOSITORY: 'aceshooting/lyra-ui',
+      RUNNER_TEMP: paths.runnerTemp,
+      BADGE_FLAGS: flags.join(' '),
+      BADGE_SCENARIO: paths.scenario,
+      BADGE_CALLS: paths.calls,
+      BADGE_SLEEPS: paths.sleeps,
+      BADGE_CLOCK: paths.clock,
+    };
+    const run = (name, extra) => {
+      const step = stepText(workflow, name);
+      const script = join(dir, `${name.replace(/\W+/gu, '-')}.sh`);
+      writeFileSync(script, stepRun(step));
+      const { status, stdout, stderr } = spawnSync('bash', [script], {
+        cwd: paths.workspace,
+        encoding: 'utf8',
+        timeout: 120_000,
+        env: { ...environment, ...stepEnv(step), ...extra },
+      });
+      return { status, stdout, stderr };
+    };
+    const wait = run(WAIT_STEP, { RUN_SHA: sha, ...waitEnv });
+    const write = run(WRITE_STEP, {});
+    const text = (file) => readFileSync(file, 'utf8');
+    const badge = (flag) => join(badgeDirectory, `coverage-${flag}.json`);
+    return {
+      wait,
+      write,
+      raw: Object.fromEntries(flags.map((flag) => [flag, existsSync(badge(flag)) ? text(badge(flag)) : null])),
+      published: readdirSync(badgeDirectory).sort(),
+      calls: text(paths.calls).split('\n').filter(Boolean).map((line) => JSON.parse(line)),
+      sleeps: text(paths.sleeps).split('\n').filter(Boolean).map(Number),
+      elapsed: Number(text(paths.clock)) - CLOCK_START,
+      tree: readdirSync(dir, { recursive: true }),
+    };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+// What Codecov lists for a commit: a merged coverage upload per flag, the test-results upload that carries the lyra-ui flag but
+// never merges, and the carried-forward placeholder that carries no flag.
+const record = (flags, state = 'merged', extra = {}) => ({
+  flags, state, state_name: state.toUpperCase(), storage_path: 'shelter/github/aceshooting::::lyra-ui/upload.txt', upload_type: 'uploaded', totals: null, ...extra,
+});
+const NOISE = [
+  record(['lyra-ui'], 'processed', { state_name: 'UPLOADED', storage_path: 'test_results/v1/raw/github/upload.txt' }),
+  record([], 'processed', { upload_type: 'carriedforward', storage_path: '' }),
+];
+const listing = (...records) => ({ status: 200, body: { count: records.length + NOISE.length, next: null, previous: null, results: [...records, ...NOISE] } });
+const merged = (flags) => listing(...flags.map((flag) => record([flag])));
+const totalsReply = (hits, lines) => ({ status: 200, body: { totals: { files: 3, lines, hits, misses: lines - hits, partials: 0, coverage: 0 }, files: [] } });
+const priorReply = (message, color = 'blue') => ({ status: 200, body: { schemaVersion: 1, label: 'coverage', message, color } });
+const shield = (message, color) => ({ schemaVersion: 1, label: 'coverage', message, color });
+const badgesOf = (run) => Object.fromEntries(Object.entries(run.raw).map(([flag, text]) => [flag, text === null ? null : JSON.parse(text)]));
+const unknown = shield('unknown', 'lightgrey');
+
+test('the docs deploy publishes the coverage badges without loosening its privileged guards', () => {
+  const workflow = read(DEPLOY_DOCS);
+  const build = job(workflow, 'build');
+  const order = ['uses: actions/download-artifact@', `name: ${WAIT_STEP}`, `name: ${WRITE_STEP}`, 'uses: actions/upload-pages-artifact@']
+    .map((marker) => build.indexOf(marker));
+  assert.ok(order.every((at, index) => at >= 0 && (index === 0 || at > order[index - 1])), 'badges are written after the artifact download and before the Pages upload');
+
+  // The job checks nothing out, so it cannot read codecov.yml: the two flag lists are kept equal here instead.
+  const config = read('codecov.yml');
+  const declared = [...config.slice(config.indexOf('\nflags:\n'), config.indexOf('\n# Separate product')).matchAll(/^ {2}([\w-]+):\n {4}paths:/gmu)].map(([, flag]) => flag);
+  assert.deepEqual([...deployFlags()].sort(), [...declared].sort(), 'one badge per Codecov flag');
+
+  // No new action, secret or checkout: the only `uses:` are the two pinned ones, and the guards at the top stay.
+  assert.deepEqual([...build.matchAll(/^ {8}uses: (\S+)/gmu)].map(([, action]) => action.replace(/@[0-9a-f]{40}$/u, '@<sha>')),
+    ['actions/download-artifact@<sha>', 'actions/upload-pages-artifact@<sha>']);
+  assert.doesNotMatch(build, /secrets\.|actions\/checkout|persist-credentials/u);
+  assert.match(build, /^ {4}permissions:\n {6}actions: read\n {6}contents: read\n/mu);
+
+  const waiting = stepText(workflow, WAIT_STEP);
+  const writing = stepText(workflow, WRITE_STEP);
+  for (const step of [waiting, writing]) {
+    assert.match(step, /^ {8}if: steps\.head\.outputs\.current == 'true'$/mu, 'only the head of main gets badges');
+    assert.doesNotMatch(stepRun(step), /\$\{\{/u, 'event values reach the shell through env only');
+  }
+  assert.match(waiting, /^ {8}continue-on-error: true$/mu, 'Codecov stays informational: a failing or hanging step cannot fail the deploy');
+  assert.doesNotMatch(writing, /continue-on-error/u, 'the step that writes the files is not allowed to fail silently');
+  const env = stepEnv(waiting);
+  assert.equal(env.RUN_SHA, '${{ github.event.workflow_run.head_sha }}');
+  assert.deepEqual([env.WAIT_SECONDS, env.POLL_SECONDS, env.ABSENT_SECONDS], ['900', '30', '60'], 'waits at most 15 minutes, polling every 30 seconds');
+  const timeout = Number(waiting.match(/^ {8}timeout-minutes: (\d+)$/mu)?.[1]);
+  assert.ok(timeout * 60 > Number(env.WAIT_SECONDS) + deployFlags().length * 60, 'the step timeout covers the wait plus one full totals request per flag');
+
+  const script = stepRun(waiting);
+  assert.match(script, /^\[\[ "\$RUN_SHA" =~ \^\[0-9a-f\]\{40\}\$ \]\] \|\| \{ echo '::error::[^']+'; exit 1; \}$/mu, 'the SHA is exactly 40 lowercase hex characters');
+  assert.ok(script.indexOf('[[ "$RUN_SHA" =~') < script.indexOf('curl'), 'the SHA is validated before any request');
+  assert.equal([...script.matchAll(/curl /gu)].length, 1, 'one curl wrapper for every Codecov request');
+  assert.match(script, /curl --silent --show-error --proto '=https' --max-time/u, 'Codecov is only requested over https');
+  assert.match(script, /api\.codecov\.io\/api\/v2\/github\/\$\{GITHUB_REPOSITORY%%\/\*\}\/repos\/\$\{GITHUB_REPOSITORY#\*\/\}/u);
+
+  // The JSON is built by jq from text that matched a strict pattern, with the bands below (the documented 99.74 target on top).
+  const output = stepRun(writing);
+  assert.match(output, /jq -nc --arg message "\$message" --arg color "\$color" '\{schemaVersion: 1, label: "coverage", message: \$message, color: \$color\}'/u);
+  assert.match(output, /\[\[ "\$percent" =~ \^\(100\\\.00\|\[0-9\]\{1,2\}\\\.\[0-9\]\{2\}\)\$ \]\]/u);
+  const bands = [...output.matchAll(/(?:if|elif) \(\( basis >= (\d+) \)\); then\n\s+color=(\w+)/gu)].map(([, floor, color]) => [Number(floor), color]);
+  assert.deepEqual(bands, [[9974, 'brightgreen'], [9900, 'green'], [9800, 'yellowgreen'], [9500, 'yellow'], [9000, 'orange']]);
+  assert.match(output, /else\n\s+color=red\n/u);
+  for (const [floor, color] of bands) assert.ok(workflow.includes(`>= ${(floor / 100).toFixed(2)} ${color}`), `the workflow header documents the ${color} band`);
+  assert.ok(read('docs/agents/ci-and-gates.md').replace(/\s+/gu, ' ').includes(
+    'brightgreen from 99.74%, then green from 99, yellowgreen from 98, yellow from 95, orange from 90 and red below'), 'the contributor guide documents the same bands');
+});
+
+test('the badge steps publish each flag\'s Codecov figure truncated to two decimals, banded, as compact endpoint JSON', needsJq, () => {
+  const figures = {
+    'lyra-ui': [521842, 526131], // 99.1847: green
+    'lyra-map': [1629, 1630], // 99.9386: 99.93 truncated, 99.94 if it were rounded
+    'lyra-3d': [99740, 100000], // exactly 99.74: meets the target
+    'lyra-ide': [99739, 100000], // 99.739: must not claim the 99.74 target
+    'lyra-docs': [11202, 11223], // 99.8129
+    'lyra-flags': [834, 834], // 100.00
+    'lyra-translations': [9500, 10000], // 95.00: yellow
+  };
+  const flags = deployFlags();
+  assert.deepEqual(Object.keys(figures).sort(), [...flags].sort());
+  const run = runBadgeSteps({
+    uploads: merged(flags),
+    totals: Object.fromEntries(Object.entries(figures).map(([flag, [hits, lines]]) => [flag, totalsReply(hits, lines)])),
+  });
+  assert.deepEqual([run.wait.status, run.write.status], [0, 0], `${run.wait.stderr}${run.write.stderr}`);
+  assert.deepEqual(badgesOf(run), {
+    'lyra-ui': shield('99.18%', 'green'),
+    'lyra-map': shield('99.93%', 'brightgreen'),
+    'lyra-3d': shield('99.74%', 'brightgreen'),
+    'lyra-ide': shield('99.73%', 'green'),
+    'lyra-docs': shield('99.81%', 'brightgreen'),
+    'lyra-flags': shield('100.00%', 'brightgreen'),
+    'lyra-translations': shield('95.00%', 'yellow'),
+  });
+  assert.equal(run.raw['lyra-ui'], '{"schemaVersion":1,"label":"coverage","message":"99.18%","color":"green"}\n');
+  assert.deepEqual(run.published, flags.map((flag) => `coverage-${flag}.json`).sort(), 'exactly one file per flag, and nothing the artifact held under badges/');
+
+  // Everything is already merged: no waiting, one poll, one totals request per flag, all over https and never through a redirect.
+  assert.deepEqual([run.sleeps, run.elapsed], [[], 0]);
+  const api = 'https://api.codecov.io/api/v2/github/aceshooting/repos/lyra-ui';
+  assert.deepEqual(run.calls.map((call) => call.url), [
+    `${api}/commits/${HEAD_SHA}/uploads/?page_size=100`,
+    ...flags.map((flag) => `${api}/totals/?sha=${HEAD_SHA}&flag=${flag}`),
+  ]);
+  for (const call of run.calls) {
+    assert.equal(call.args[call.args.indexOf('--proto') + 1], '=https');
+    assert.ok(!call.args.includes('--location'));
+  }
+});
+
+test('the badge step waits for a flag Codecov has not merged yet, then republishes the previous figure when it never is', needsJq, () => {
+  const flags = deployFlags();
+  const others = flags.filter((flag) => flag !== 'lyra-ui');
+  const pending = listing(...others.map((flag) => record([flag])), record(['lyra-ui'], 'processed'));
+  const ready = merged(flags);
+  const figures = { 'lyra-ui': totalsReply(521842, 526131) };
+
+  const arrives = runBadgeSteps({ uploads: [pending, pending, ready], totals: figures });
+  assert.deepEqual([arrives.wait.status, arrives.write.status], [0, 0]);
+  assert.deepEqual(arrives.sleeps, [30, 30], 'polls every 30 seconds');
+  assert.deepEqual(arrives.calls.filter((call) => call.url.includes('/uploads/')).map((call) => call.at - CLOCK_START), [0, 30, 60]);
+  assert.deepEqual(badgesOf(arrives)['lyra-ui'], shield('99.18%', 'green'));
+
+  // Never merged: at the bound the previously deployed figure is republished, banded again (the old colour is not trusted).
+  // A shorter bound keeps this fast; the outage test below runs the real 15 minutes.
+  const stuck = runBadgeSteps({ uploads: [pending], totals: figures, live: { 'lyra-ui': priorReply('98.98%', 'blue') }, waitEnv: { WAIT_SECONDS: '120' } });
+  assert.deepEqual([stuck.wait.status, stuck.write.status], [0, 0]);
+  assert.deepEqual([stuck.sleeps, stuck.elapsed], [[30, 30, 30, 30], 120]);
+  assert.match(stuck.wait.stdout, /::warning::Codecov had not merged the uploads for: lyra-ui\n/u);
+  assert.equal(stuck.calls.filter((call) => call.url.includes('/totals/?')).some((call) => call.url.endsWith('flag=lyra-ui')), false, 'no totals are read for an unmerged flag');
+  assert.deepEqual(badgesOf(stuck)['lyra-ui'], shield('98.98%', 'yellowgreen'));
+  const prior = stuck.calls.find((call) => call.url.startsWith('https://aceshooting.github.io/'));
+  assert.equal(prior.url, 'https://aceshooting.github.io/lyra-ui/badges/coverage-lyra-ui.json');
+  assert.ok(prior.args.includes('--location'), 'the github.io address redirects to the account domain');
+});
+
+test('a flag with no upload for the commit (a docs-only push) is not waited for beyond a minute', needsJq, () => {
+  const flags = deployFlags();
+  const withoutUi = merged(flags.filter((flag) => flag !== 'lyra-ui'));
+  const totals = Object.fromEntries(flags.map((flag) => [flag, totalsReply(100, 100)]));
+  const run = runBadgeSteps({ uploads: [withoutUi], totals, live: { 'lyra-ui': priorReply('99.18%') } });
+  assert.deepEqual([run.wait.status, run.write.status], [0, 0]);
+  assert.deepEqual([run.sleeps, run.elapsed], [[30, 30], 60]);
+  const badges = badgesOf(run);
+  assert.deepEqual(badges['lyra-ui'], shield('99.18%', 'green'), 'the figure of the last commit that had coverage stays');
+  assert.deepEqual(badges['lyra-map'], shield('100.00%', 'brightgreen'));
+  assert.equal(run.calls.some((call) => call.url.endsWith('flag=lyra-ui')), false, 'the empty answer Codecov gives for an absent flag is never read');
+  assert.match(run.write.stdout, /::warning::Codecov gave no figure for lyra-ui; publishing 99.18% from the previous deploy\./u);
+
+  // Codecov has not heard of the commit at all (HTTP 404): every flag is absent, the same minute applies.
+  const unheard = runBadgeSteps({ uploads: [{ status: 404, body: { detail: 'The commit is not in our records.' } }], live: { 'lyra-ide': priorReply('100.00%') } });
+  assert.deepEqual([unheard.wait.status, unheard.write.status, unheard.elapsed], [0, 0, 60]);
+  assert.deepEqual(badgesOf(unheard)['lyra-ide'], shield('100.00%', 'brightgreen'));
+  assert.deepEqual(badgesOf(unheard)['lyra-ui'], unknown);
+});
+
+test('a Codecov outage never fails the deploy: previous figures stay, "unknown" on grey when there are none', needsJq, () => {
+  const live = { 'lyra-ui': priorReply('99.18%'), 'lyra-3d': priorReply('100.00%') };
+  const expected = (run) => {
+    assert.deepEqual([run.wait.status, run.write.status], [0, 0], `${run.wait.stderr}${run.write.stderr}`);
+    assert.deepEqual(badgesOf(run), {
+      'lyra-ui': shield('99.18%', 'green'),
+      'lyra-map': unknown,
+      'lyra-3d': shield('100.00%', 'brightgreen'),
+      'lyra-docs': unknown,
+      'lyra-flags': unknown,
+      'lyra-ide': unknown,
+      'lyra-translations': unknown,
+    });
+  };
+  const down = runBadgeSteps({ uploads: [{ status: 503, body: 'Service Unavailable' }], live });
+  expected(down);
+  assert.equal(down.elapsed, 900, 'an unreachable API is retried until the 15-minute bound');
+  assert.equal(down.calls.filter((call) => call.url.includes('/totals/?')).length, 0);
+  // The same end state when the transfer itself fails or the answer is not the API's JSON (faster: shorter bound).
+  for (const uploads of [{ status: 0 }, { status: 200, body: '<html>maintenance</html>' }, { status: 200, body: '{"results":' }]) {
+    expected(runBadgeSteps({ uploads: [uploads], live, waitEnv: { WAIT_SECONDS: '60' } }));
+  }
+});
+
+test('totals that cannot be a percentage are never published as one', needsJq, () => {
+  const flags = deployFlags();
+  const run = runBadgeSteps({
+    uploads: merged(flags),
+    totals: {
+      'lyra-ui': totalsReply(0, 0), // what Codecov answers for a flag without data: zero lines
+      'lyra-map': totalsReply(1631, 1630), // more hits than lines
+      'lyra-3d': { status: 200, body: { totals: { hits: '5044', lines: '5050' } } }, // strings
+      'lyra-docs': { status: 500, body: 'Internal Server Error' },
+      'lyra-flags': { status: 200, body: '<html>maintenance</html>' },
+      'lyra-ide': { status: 200, body: { totals: { hits: 89.5, lines: 89 } } }, // not whole numbers
+      'lyra-translations': totalsReply(133, 133),
+    },
+    live: { 'lyra-ui': priorReply('99.18%'), 'lyra-map': priorReply('99.93%') },
+  });
+  assert.deepEqual([run.wait.status, run.write.status], [0, 0], `${run.wait.stderr}${run.write.stderr}`);
+  assert.deepEqual(badgesOf(run), {
+    'lyra-ui': shield('99.18%', 'green'),
+    'lyra-map': shield('99.93%', 'brightgreen'),
+    'lyra-3d': unknown,
+    'lyra-docs': unknown,
+    'lyra-flags': unknown,
+    'lyra-ide': unknown,
+    'lyra-translations': shield('100.00%', 'brightgreen'),
+  });
+  assert.match(run.wait.stdout, /::warning::Codecov returned no usable totals for lyra-ui \(HTTP 200\)\./u);
+  assert.match(run.wait.stdout, /::warning::Codecov returned no usable totals for lyra-docs \(HTTP 500\)\./u);
+  assert.doesNotMatch(Object.values(run.raw).join(''), /NaN|Infinity|null|"0(?:\.00)?%"/u, 'no figure was invented from empty or malformed totals');
+});
+
+test('a previously deployed figure is untrusted input: only a bare percentage survives, and nothing is evaluated', needsJq, () => {
+  const marker = 'PWNED';
+  const live = {
+    'lyra-ui': priorReply(`a[$(touch ${marker})]%`), // would run in a bash arithmetic context
+    'lyra-map': priorReply('100.01%'),
+    'lyra-3d': priorReply('99.18% <img src=x>'),
+    'lyra-docs': priorReply('-1.00%'),
+    'lyra-flags': priorReply('99.1%'),
+    'lyra-ide': { status: 200, body: { schemaVersion: 1, label: 'coverage', message: { nested: true }, color: `$(touch ${marker})` } },
+    'lyra-translations': priorReply('100.00%', `$(touch ${marker})`),
+  };
+  const run = runBadgeSteps({ uploads: [{ status: 404, body: {} }], live, waitEnv: { WAIT_SECONDS: '60' } });
+  assert.deepEqual([run.wait.status, run.write.status], [0, 0], `${run.wait.stderr}${run.write.stderr}`);
+  assert.deepEqual(badgesOf(run), {
+    'lyra-ui': unknown,
+    'lyra-map': unknown,
+    'lyra-3d': unknown,
+    'lyra-docs': unknown,
+    'lyra-flags': unknown,
+    'lyra-ide': unknown,
+    'lyra-translations': shield('100.00%', 'brightgreen'),
+  });
+  assert.equal(run.tree.some((entry) => entry.endsWith(marker)), false, 'nothing from the answer was executed');
+});
+
+test('a head SHA that is not exactly 40 lowercase hex characters stops the Codecov step before any request, and the badges are still written', needsJq, () => {
+  for (const sha of [HEAD_SHA.toUpperCase(), HEAD_SHA.slice(1), `${HEAD_SHA}0`, `${HEAD_SHA}\n`, `$(touch PWNED)${HEAD_SHA.slice(14)}`, '']) {
+    const run = runBadgeSteps({ uploads: [merged(deployFlags())], sha, live: { 'lyra-ui': priorReply('99.18%') } });
+    assert.equal(run.wait.status, 1, JSON.stringify(sha));
+    assert.match(run.wait.stdout, /^::error::The CI run head SHA is not 40 lowercase hex characters\.$/mu);
+    assert.deepEqual(run.calls.filter((call) => call.url.startsWith('https://api.codecov.io/')), [], 'no request is built from an unvalidated SHA');
+    assert.equal(run.write.status, 0);
+    assert.deepEqual(badgesOf(run)['lyra-ui'], shield('99.18%', 'green'));
+    assert.deepEqual(badgesOf(run)['lyra-map'], unknown);
+    assert.equal(run.tree.some((entry) => entry.endsWith('PWNED')), false);
+  }
 });

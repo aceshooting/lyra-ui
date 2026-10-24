@@ -282,10 +282,30 @@ coverage counter. This avoids confusing identical package-local paths such as
 
 Every upload names only that prepared report and its matching flag, disables report discovery and
 file fixes, and leaves Codecov outages informational. Local coverage commands and floors remain
-blocking. Root and UI README badges use `?flag=lyra-ui`; each companion badge uses its own flag.
-The UI badge must remain at least 99.74%, independently of the repository-wide combined percentage;
-the existing local UI line and statement floors remain stronger. Check the complete merged report
-and the same commit's flagged Codecov result before claiming that metric.
+blocking.
+
+README badges never request Codecov's own badge image: GitHub serves README images through a proxy
+that gives up after about four seconds, and Codecov needs longer than that to render a flagged badge
+(it recomputes the flag on every request), so those images rendered broken. The `Deploy docs`
+workflow (`.github/workflows/deploy-docs.yml`) instead waits up to fifteen minutes for Codecov to
+merge the CI run's uploads, reads each flag's `hits` and `lines` for that commit from Codecov's REST
+API, and publishes `badges/coverage-<flag>.json` (a shields.io endpoint document) beside the
+Storybook. The root README and `packages/lyra-ui/README.md` point `img.shields.io/endpoint` at the
+`lyra-ui` file; each companion README points at its own flag's file. The percentage is
+`hits / lines` truncated to two decimals, never rounded up; colour is brightgreen from 99.74%, then
+green from 99, yellowgreen from 98, yellow from 95, orange from 90 and red below. A flag without a
+merged upload for the commit (a docs-only push skips the lyra-ui coverage job), an unreachable API
+or an unusable answer republishes the figure the live site already serves (`unknown` on lightgrey
+when there is none) and annotates the run with the flag; the step cannot fail the deploy. The
+workflow's flag list must equal `codecov.yml`'s (`scripts/ci-workflow-policy.test.mjs` checks it).
+A badge can therefore repeat an earlier figure: it is never evidence for a particular commit.
+
+A release commit's complete Codecov `lyra-ui` flag result must be at least the previous release
+commit's (30.0.0 shipped at 98.98%, 520,554 of 525,881 lines), independently of the repository-wide
+combined percentage; each release aims to add about 0.1 percentage point, and 99.74%, then 99.80%,
+remain the long-term targets. The existing local UI line and statement floors remain stronger. Check
+the complete merged report and the same commit's flagged Codecov result before claiming that
+metric.
 
 ## Scheduled full Firefox/WebKit suite
 
