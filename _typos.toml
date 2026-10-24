@@ -128,6 +128,7 @@ Diagramm = "Diagramm"
 Referenz = "Referenz"
 Horizontale = "Horizontale"
 elementy = "elementy"
+ein = "ein"                      # German article in the date-input localization fixture
 ist = "ist"                      # German word, and the id of the Istanbul catalog entry
 
 # Partial words typed as search input, escape-sequence text and short variable names.
