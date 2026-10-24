@@ -13,6 +13,7 @@ import './box-plot.js';
 import type { LyraChart } from './chart.class.js';
 import type { LyraHistogram } from './histogram.class.js';
 import type { LyraBoxPlot } from './box-plot.class.js';
+import { preloadCharts } from './chart-preload.js';
 import { countCalls, recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 
 type ChartProbe = { chartDescription(): string; summarizeSeries(value: unknown): unknown; renderDataTableRows(): unknown; effectiveData(): unknown };
@@ -106,6 +107,8 @@ it('discloses admission loss separately from rendered sampling and clears it on 
   const { fixture, html, waitUntil } = await import('@open-wc/testing');
   const { expectDevWarning } = await import('../../../../test/expected-dev-warnings.js');
   expectDevWarning('lr-chart-input-cap');
+  // Admission notices use the loaded chart surface; settle the optional peer before its render wait.
+  expect((await preloadCharts()).core).to.equal(true);
   const el = await fixture<LyraChart>(html`<lr-chart .strings=${{ chartInputLimit: 'Input cap reached' }}></lr-chart>`);
   await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'));
   el.datasets = [{ label: 'Series', data: Array.from({ length: 100_000 }, (_, i) => i) }];

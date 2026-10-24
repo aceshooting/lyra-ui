@@ -1,6 +1,7 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './box-plot.js';
 import type { LyraBoxPlot } from './box-plot.class.js';
+import { preloadCharts } from './chart-preload.js';
 import { forcedColorsMatchMedia } from '../../../../test/chart-forced-colors-media.js';
 import { countCalls, recordScaleMeasurement, renderedNodeCount } from '../../../../test/scale-budgets.js';
 import { aggregateMillionObservations } from '../../../../test/aggregate-observations.js';
@@ -25,7 +26,13 @@ it('reuses forced-color tiles and one surface-token read across repeated series 
 });
 
 it('renders complete million-observation group summaries with exact host provenance and a late maximum', async () => {
-  const aggregates = await aggregateMillionObservations();
+  // Host aggregation and optional peer loading are independent setup work. Start both before
+  // mounting the measured component, so the rendering/keyboard scenario has a ready peer.
+  const [peers, aggregates] = await Promise.all([
+    preloadCharts({ boxPlot: true }),
+    aggregateMillionObservations(),
+  ]);
+  expect(peers).deep.equal({ core: true, boxPlot: true });
   const { prefix, complete } = aggregates;
   expect(aggregates.sourceReads).equal(1_000_000);
   expect(prefix.sourceCount).equal(999_999);

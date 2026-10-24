@@ -4,7 +4,27 @@ import './markdown.js';
 import './markdown-core.js';
 import type { LyraMarkdown } from './markdown.class.js';
 import jsonGrammar from 'shiki/langs/json.mjs';
+// Resolve the core's module graph before timing authored grammar and DOM behavior.
+import 'shiki/core';
+import 'shiki/engine/javascript';
+import 'shiki/themes/github-light.mjs';
+import 'shiki/themes/github-dark.mjs';
 import { markdownHighlightKey, type PendingHighlight } from './markdown-shared.js';
+import { combineShikiLanguageSources } from '../../../internal/shiki-language-sources.js';
+import { loadShikiHighlighterCore, resolvedShikiLanguages } from '../code-block/shiki-types.js';
+
+let requestedGrammarLoads = 0;
+const authoredLanguageLoaders = {
+  json: async () => { requestedGrammarLoads++; return { default: jsonGrammar }; },
+  unused: async () => { throw new Error('Unused grammar must stay lazy'); },
+};
+
+before(async () => {
+  // Preload the exact empty core used by this lazy-only map, retaining its authored loader.
+  const sources = combineShikiLanguageSources(undefined, authoredLanguageLoaders)!;
+  expect(await loadShikiHighlighterCore(resolvedShikiLanguages(sources))).not.equal(null);
+  expect(requestedGrammarLoads).equal(0);
+});
 
 async function settleProgressiveHighlightRepaint(el: LyraMarkdown): Promise<void> {
   const seam = el as unknown as {
@@ -42,13 +62,12 @@ it('full markdown resolves a lazy authored grammar exactly once', async () => {
   const el = document.createElement('lr-markdown') as LyraMarkdown;
   document.body.append(el);
   try {
-    await el.updateComplete; let loads = 0;
-    const languages = { json: async () => { loads++; return { default: jsonGrammar }; }, unused: async () => { throw new Error('Unused grammar must stay lazy'); } };
+    await el.updateComplete;
     const code = '{"lazy":true}\n'; const pending = { key: markdownHighlightKey('json', code), lang: 'json', code };
     const seam = el as unknown as { tokenizePendingHighlight(pending: PendingHighlight, languages: unknown, current: () => boolean): Promise<string | null | undefined> };
-    el.languageLoaders = languages;
+    el.languageLoaders = authoredLanguageLoaders;
     const output = await seam.tokenizePendingHighlight(pending, el.languages, () => true);
-    expect(typeof output).equal('string'); expect(loads).equal(1);
+    expect(typeof output).equal('string'); expect(requestedGrammarLoads).equal(1);
   } finally { el.remove(); }
 });
 

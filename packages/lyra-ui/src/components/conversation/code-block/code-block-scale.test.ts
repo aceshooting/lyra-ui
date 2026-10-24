@@ -2,8 +2,39 @@ import { registerLyraLocale } from '../../../internal/localization.js';
 import { expect, nextFrame, waitUntil } from '@open-wc/testing';
 import { recordScaleMeasurement } from '../../../../test/scale-budgets.js';
 import jsonGrammar from 'shiki/langs/json.mjs';
+// Resolve the core's module graph before timing authored grammar and DOM behavior.
+import 'shiki/core';
+import 'shiki/engine/javascript';
+import 'shiki/themes/github-light.mjs';
+import 'shiki/themes/github-dark.mjs';
+import { combineShikiLanguageSources } from '../../../internal/shiki-language-sources.js';
+import { loadShikiHighlighterCore, resolvedShikiLanguages } from './shiki-types.js';
 import './code-block.js';
 import './code-block-core.js';
+
+const concreteLanguages = { json: jsonGrammar };
+let requestedGrammarCalls = 0;
+let unusedGrammarCalls = 0;
+const requestedLanguageLoaders = {
+  json: async () => { requestedGrammarCalls++; return { default: jsonGrammar }; },
+  unused: async () => { unusedGrammarCalls++; return { default: jsonGrammar }; },
+};
+let priorityGrammarCalls = 0;
+const priorityLanguageLoaders = { json: async () => { priorityGrammarCalls++; return jsonGrammar; } };
+
+before(async () => {
+  // Core construction is cached by the resolved grammar map's identity. Resolve each tested
+  // concrete/loader pair once; taking its concrete subset never invokes an authored loader.
+  const maps = [
+    concreteLanguages,
+    resolvedShikiLanguages(combineShikiLanguageSources(undefined, requestedLanguageLoaders)!),
+    resolvedShikiLanguages(combineShikiLanguageSources(concreteLanguages, priorityLanguageLoaders)!),
+    resolvedShikiLanguages(combineShikiLanguageSources(undefined, priorityLanguageLoaders)!),
+  ];
+  const highlighters = await Promise.all(maps.map(loadShikiHighlighterCore));
+  expect(highlighters.every(highlighter => highlighter !== null)).equal(true);
+  expect([requestedGrammarCalls, unusedGrammarCalls, priorityGrammarCalls]).deep.equal([0, 0, 0]);
+});
 
 for (const tag of ['lr-code-block', 'lr-code-block-core'] as const) {
   it(`${tag} moves the active gutter without rebuilding one thousand plain lines`, async () => {
@@ -87,15 +118,15 @@ for (const tag of ['lr-code-block', 'lr-code-block-core'] as const) {
   });
 }
 it('full code block resolves only a requested lazy grammar', async () => {
-  const el = document.createElement('lr-code-block'); let calls = 0; let unused = 0;
-  el.languageLoaders = { json: async () => { calls++; return { default: jsonGrammar }; }, unused: async () => { unused++; return { default: jsonGrammar }; } };
+  const el = document.createElement('lr-code-block');
+  el.languageLoaders = requestedLanguageLoaders;
   el.language = 'json'; el.code = '{"lazy":true}'; document.body.append(el);
   try {
     await el.updateComplete;
-    await waitUntil(() => calls === 1, 'lazy grammar did not resolve', { timeout: 2500 });
-    await waitUntil(() => Boolean(el.shadowRoot?.querySelector('code .line')), 'highlighted code not rendered');
-    expect(calls).equal(1);
-    expect(unused).equal(0);
+    await waitUntil(() => requestedGrammarCalls === 1, 'lazy grammar did not resolve', { timeout: 2500 });
+    await waitUntil(() => Boolean(el.shadowRoot?.querySelector('pre.shiki code .line')), 'highlighted code not rendered');
+    expect(requestedGrammarCalls).equal(1);
+    expect(unusedGrammarCalls).equal(0);
   } finally { el.remove(); }
 });
 
@@ -132,7 +163,7 @@ for (const tag of ['lr-code-block', 'lr-code-block-core'] as const) {
       registerLyraLocale(locale, { codeBlockLineLabel: 'Catalog first {line}' });
       const el = document.createElement(tag); el.locale = locale;
       el.code = '{"value":1}'; el.lineNumbers = true; el.activatableLines = true;
-      if (highlighted) { el.languages = { json: jsonGrammar }; el.language = 'json'; }
+      if (highlighted) { el.languages = concreteLanguages; el.language = 'json'; }
       document.body.append(el);
       const label = () => el.shadowRoot?.querySelector('[part~="line-button"][data-line="1"]')?.getAttribute('aria-label');
       try {
@@ -181,21 +212,20 @@ for (const tag of ['lr-code-block', 'lr-code-block-core'] as const) {
 it('keeps concrete code grammars readable and gives them priority over opt-in loaders', async () => {
   const el = document.createElement('lr-code-block');
   expect(el.languageLoaders).equal(undefined);
-  let calls = 0;
-  const languages = { json: jsonGrammar };
+  const languages = concreteLanguages;
   el.languages = languages;
   el.language = 'json'; el.code = '{"concrete":true}'; document.body.append(el);
   try {
     const seam = el as unknown as { highlightedHtml: string | null };
     await waitUntil(() => seam.highlightedHtml !== null, 'concrete grammar did not highlight');
     expect(el.languages).equal(languages);
-    el.languageLoaders = { json: async () => { calls++; return jsonGrammar; } };
+    el.languageLoaders = priorityLanguageLoaders;
     await el.updateComplete;
     await waitUntil(() => seam.highlightedHtml !== null, 'concrete grammar lost priority');
-    expect(calls).equal(0);
+    expect(priorityGrammarCalls).equal(0);
     el.languages = undefined;
     await el.updateComplete;
-    await waitUntil(() => calls === 1, 'loader did not become active after removing concrete grammar');
+    await waitUntil(() => priorityGrammarCalls === 1, 'loader did not become active after removing concrete grammar');
   } finally { el.remove(); }
 });
 
