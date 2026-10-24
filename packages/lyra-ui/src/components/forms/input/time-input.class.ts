@@ -429,6 +429,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   private inputDigitMap?: Map<string, string>;
   private pendingSegmentFocus?: SegmentName;
   private restoringSegmentFocus = false;
+  private restoringPopupFocus = false;
   private cleanupPositioner?: DeferredOperationHandle;
   private overlayHandle?: OverlayHandle;
   private restoreFocusOnClose = true;
@@ -971,13 +972,13 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     if (this.liveDisabled) return;
     const target = event.target as HTMLElement;
     const focusedSegment = (target.dataset['segment'] as SegmentName) ?? this.activeSegment;
-    if (this.restoringSegmentFocus) {
+    if (this.restoringSegmentFocus || this.restoringPopupFocus) {
       queueMicrotask(() => {
-        if (this.isConnected && this.segmentOrder.includes(focusedSegment)) {
+        if (this.isConnected && this.segmentOrder.includes(focusedSegment) && shadowFocusTarget(this) === target) {
           this.activeSegment = focusedSegment;
         }
       });
-      return;
+      if (this.restoringSegmentFocus) return;
     } else {
       this.activeSegment = focusedSegment;
     }
@@ -1135,7 +1136,15 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   private teardownPopup(): void {
     this.cleanupPositioner?.();
     this.cleanupPositioner = undefined;
-    this.overlayHandle?.deactivate({ restoreFocus: this.restoreFocusOnClose });
+    // Closing from updated() can synchronously focus the original segment. Keep its public
+    // focus event synchronous while deferring the reactive active-segment write past this update.
+    const restoringPopupFocus = this.restoringPopupFocus;
+    this.restoringPopupFocus = true;
+    try {
+      this.overlayHandle?.deactivate({ restoreFocus: this.restoreFocusOnClose });
+    } finally {
+      this.restoringPopupFocus = restoringPopupFocus;
+    }
     this.overlayHandle = undefined;
     this.popupController.unbindPointer();
     this.restoreFocusOnClose = true;

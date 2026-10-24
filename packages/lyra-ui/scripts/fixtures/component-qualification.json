@@ -2469,6 +2469,7 @@
           "src/components/layout/app-rail/app-rail-resizer-position.test.ts",
           "src/components/layout/app-rail/app-rail-scale.test.ts",
           "src/components/layout/app-rail/app-rail-sidebar.test.ts",
+          "src/components/layout/app-rail/app-rail-width-state.test.ts",
           "src/components/layout/app-rail/app-rail.test.ts",
           "src/components/layout/app-rail/positioning-strategy.test.ts"
         ],
@@ -2920,6 +2921,7 @@
           "src/components/layout/app-rail/app-rail-resizer-position.test.ts",
           "src/components/layout/app-rail/app-rail-scale.test.ts",
           "src/components/layout/app-rail/app-rail-sidebar.test.ts",
+          "src/components/layout/app-rail/app-rail-width-state.test.ts",
           "src/components/layout/app-rail/app-rail.test.ts",
           "src/components/layout/app-rail/positioning-strategy.test.ts"
         ],
@@ -16882,6 +16884,12 @@
               "state": "open"
             },
             {
+              "file": "src/components/overlays/dialog/dialog-content-boundaries.test.ts",
+              "test": "makes horizontal-only prose overflow keyboard reachable and removes the stop after content shrinks",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/overlays/dialog/dialog.test.ts",
               "test": "is accessible while closed",
               "target": "el",
@@ -17030,6 +17038,7 @@
         "tests": [
           "src/components/overlays/dialog/confirm.test.ts",
           "src/components/overlays/dialog/dialog-close-composition.test.ts",
+          "src/components/overlays/dialog/dialog-content-boundaries.test.ts",
           "src/components/overlays/dialog/dialog-remediation.test.ts",
           "src/components/overlays/dialog/dialog-tooltip-tab.test.ts",
           "src/components/overlays/dialog/dialog.test.ts",
@@ -18837,8 +18846,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/overlays/drawer/drawer.test.ts",
-              "test": "includes a prose body in the drawer Tab order when narrowing makes it overflow",
+              "file": "src/components/overlays/drawer/drawer-heading-boundaries.test.ts",
+              "test": "refreshes a contained drawer referenced heading on opening, mutation and reconnect without acquiring modal ownership",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -18865,8 +18874,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/overlays/drawer/drawer.test.ts",
-              "test": "contains RTL unbroken body and footer content in a 320px viewport-bound drawer allocation",
+              "file": "src/components/overlays/drawer/drawer-heading-boundaries.test.ts",
+              "test": "refreshes a contained drawer referenced heading on opening, mutation and reconnect without acquiring modal ownership",
               "kind": "320px allocation test signal"
             }
           ]
@@ -18970,6 +18979,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/overlays/drawer/drawer-heading-boundaries.test.ts",
           "src/components/overlays/drawer/drawer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -22537,7 +22547,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "rtl",
-          "narrowAllocation",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -22599,9 +22608,14 @@
         },
         "narrowAllocation": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local 320px allocation assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/data/file-tree/file-tree-public-authority.test.ts",
+              "test": "revokes an over-budget legacy reveal when a provider takes ownership and leaves bulk expansion source-owned",
+              "kind": "320px allocation test signal"
+            }
+          ]
         },
         "engines": {
           "applicability": "applicable",
@@ -22681,7 +22695,6 @@
         "Recorded budgets cover the named scenarios; current pass/fail evidence comes from the Chromium scale gate.",
         "No component-local rendered RTL assertion is recorded.",
         "No component-owned motion declaration or programmatic animation was detected.",
-        "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -22693,6 +22706,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/data/file-tree/file-tree-public-authority.test.ts",
           "src/components/data/file-tree/file-tree-remediation.test.ts",
           "src/components/data/file-tree/file-tree-scale.test.ts",
           "src/components/data/file-tree/file-tree-source-scale.test.ts",
@@ -25568,6 +25582,7 @@
           "src/components/retrieval/graph/graph-accessibility.test.ts",
           "src/components/retrieval/graph/graph-aliases.test.ts",
           "src/components/retrieval/graph/graph-builtin-3d-engine.test.ts",
+          "src/components/retrieval/graph/graph-builtin-paint-boundaries.test.ts",
           "src/components/retrieval/graph/graph-canvas-coverage.test.ts",
           "src/components/retrieval/graph/graph-canvas-drag-scale.test.ts",
           "src/components/retrieval/graph/graph-canvas-scale.test.ts",
@@ -25594,6 +25609,7 @@
           "src/components/retrieval/graph/graph-source-composition.test.ts",
           "src/components/retrieval/graph/graph-source-controller-scale.test.ts",
           "src/components/retrieval/graph/graph-source-scale.test.ts",
+          "src/components/retrieval/graph/graph-spatial-boundaries.property.test.ts",
           "src/components/retrieval/graph/graph-spatial-engine-boundaries.test.ts",
           "src/components/retrieval/graph/graph-spatial-hover-scale.test.ts",
           "src/components/retrieval/graph/graph-spatial-interaction.test.ts",
@@ -26140,6 +26156,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/retrieval/grounding-summary/grounding-summary-admission-boundaries.test.ts",
           "src/components/retrieval/grounding-summary/grounding-summary-projection.test.ts",
           "src/components/retrieval/grounding-summary/grounding-summary.test.ts"
         ],
@@ -26559,7 +26576,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.class.ts",
-              "line": 2817,
+              "line": 2819,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -26616,6 +26633,7 @@
           "src/components/data/heatmap/heatmap-matrix-source-validation.test.ts",
           "src/components/data/heatmap/heatmap-no-canvas-dev-gate.test.ts",
           "src/components/data/heatmap/heatmap-no-canvas.test.ts",
+          "src/components/data/heatmap/heatmap-public-presentation-recovery.test.ts",
           "src/components/data/heatmap/heatmap-remediation.test.ts",
           "src/components/data/heatmap/heatmap-row-height.test.ts",
           "src/components/data/heatmap/heatmap-rtl.test.ts",
@@ -28575,6 +28593,7 @@
           "src/components/forms/input/number-time-input.test.ts",
           "src/components/forms/input/positioning-strategy.test.ts",
           "src/components/forms/input/time-input-closed-layout.test.ts",
+          "src/components/forms/input/time-input-picker-boundaries.test.ts",
           "src/components/forms/input/time-input-shared.test.ts",
           "src/components/forms/input/time-input.test.ts"
         ],
@@ -29480,6 +29499,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/retrieval/knowledge-base/knowledge-base-error-slot-lifecycle.test.ts",
+          "src/components/retrieval/knowledge-base/knowledge-base-menu-boundaries.test.ts",
           "src/components/retrieval/knowledge-base/knowledge-base-source-scale.test.ts",
           "src/components/retrieval/knowledge-base/knowledge-base-source.test.ts",
           "src/components/retrieval/knowledge-base/knowledge-base.test.ts"
@@ -31031,6 +31051,12 @@
               "state": "open"
             },
             {
+              "file": "src/components/forms/locale-picker/locale-picker-empty-catalog-boundaries.test.ts",
+              "test": "keeps an authoritative empty catalog uncommitted through open-menu navigation and Enter",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/forms/locale-picker/locale-picker-loader.test.ts",
               "test": "keeps keyboard selection pending and makes loading and failure states accessible",
               "target": "el",
@@ -31086,8 +31112,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/locale-picker/locale-picker-loader.test.ts",
-              "test": "catches synchronous callback failures and retries through a fresh request without exposing raw errors",
+              "file": "src/components/forms/locale-picker/locale-picker-empty-catalog-boundaries.test.ts",
+              "test": "keeps an authoritative empty catalog uncommitted through open-menu navigation and Enter",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -31228,6 +31254,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/locale-picker/locale-picker-closed-layout.test.ts",
+          "src/components/forms/locale-picker/locale-picker-empty-catalog-boundaries.test.ts",
           "src/components/forms/locale-picker/locale-picker-loader.test.ts",
           "src/components/forms/locale-picker/locale-picker-option-display.test.ts",
           "src/components/forms/locale-picker/locale-picker-remediation.test.ts",
@@ -31531,17 +31558,20 @@
           "src/components/media/map/map-composition-pattern.property.test.ts",
           "src/components/media/map/map-composition-pattern.test.ts",
           "src/components/media/map/map-construction-scheduler.test.ts",
+          "src/components/media/map/map-control-measurement-boundaries.test.ts",
           "src/components/media/map/map-control-options.property.test.ts",
           "src/components/media/map/map-control-options.test.ts",
           "src/components/media/map/map-controls-component.test.ts",
           "src/components/media/map/map-controls-lifecycle.test.ts",
           "src/components/media/map/map-coverage-boundaries.test.ts",
           "src/components/media/map/map-cursor.test.ts",
+          "src/components/media/map/map-data-layer-boundaries.test.ts",
           "src/components/media/map/map-data-layer-model.property.test.ts",
           "src/components/media/map/map-data-layer-model.test.ts",
           "src/components/media/map/map-data-layers.test.ts",
           "src/components/media/map/map-drawing-component.test.ts",
           "src/components/media/map/map-drawing-gesture.test.ts",
+          "src/components/media/map/map-drawing-keyboard-boundaries.test.ts",
           "src/components/media/map/map-drawing-pan.test.ts",
           "src/components/media/map/map-drawing-pointer.test.ts",
           "src/components/media/map/map-drawing.test.ts",
@@ -31555,6 +31585,7 @@
           "src/components/media/map/map-feature-state.test.ts",
           "src/components/media/map/map-geojson-diff-boundaries.test.ts",
           "src/components/media/map/map-geojson-diff.property.test.ts",
+          "src/components/media/map/map-geojson-projection-boundaries.test.ts",
           "src/components/media/map/map-glass.test.ts",
           "src/components/media/map/map-hash-owner.test.ts",
           "src/components/media/map/map-hash.test.ts",
@@ -31564,6 +31595,7 @@
           "src/components/media/map/map-image-provider.test.ts",
           "src/components/media/map/map-images-browser.test.ts",
           "src/components/media/map/map-images.test.ts",
+          "src/components/media/map/map-input-lifecycle-boundaries.test.ts",
           "src/components/media/map/map-interaction-component.test.ts",
           "src/components/media/map/map-interaction-options.test.ts",
           "src/components/media/map/map-large-source-replacement-scale.test.ts",
@@ -31829,6 +31861,8 @@
           "src/components/conversation/markdown/markdown-presentation.test.ts",
           "src/components/conversation/markdown/markdown-progressive-coverage.test.ts",
           "src/components/conversation/markdown/markdown-progressive.test.ts",
+          "src/components/conversation/markdown/markdown-public-parser-boundaries.test.ts",
+          "src/components/conversation/markdown/markdown-public-stream-boundaries.test.ts",
           "src/components/conversation/markdown/markdown-remediation.test.ts",
           "src/components/conversation/markdown/markdown-scale.test.ts",
           "src/components/conversation/markdown/markdown-shared.test.ts",
@@ -32055,6 +32089,8 @@
           "src/components/conversation/markdown/markdown-presentation.test.ts",
           "src/components/conversation/markdown/markdown-progressive-coverage.test.ts",
           "src/components/conversation/markdown/markdown-progressive.test.ts",
+          "src/components/conversation/markdown/markdown-public-parser-boundaries.test.ts",
+          "src/components/conversation/markdown/markdown-public-stream-boundaries.test.ts",
           "src/components/conversation/markdown/markdown-remediation.test.ts",
           "src/components/conversation/markdown/markdown-scale.test.ts",
           "src/components/conversation/markdown/markdown-shared.test.ts",
@@ -32688,8 +32724,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/utility/mention-popover/mention-popover-coverage.test.ts",
-              "test": "returns focus to the live anchor when every retained suggestion becomes disabled",
+              "file": "src/components/utility/mention-popover/mention-popover-boundary-interactions.test.ts",
+              "test": "keeps an enabled boundary selection when ${key} reaches unavailable suggestions (${String(expected)})",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -32816,6 +32852,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/utility/mention-popover/mention-popover-boundary-interactions.test.ts",
           "src/components/utility/mention-popover/mention-popover-closed-layout.test.ts",
           "src/components/utility/mention-popover/mention-popover-coverage.test.ts",
           "src/components/utility/mention-popover/mention-popover-remediation.test.ts",
@@ -33630,8 +33667,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/menubar/menubar-scale.test.ts",
-              "test": "folds a 1000-item typeahead corpus once across distinct queries",
+              "file": "src/components/layout/menubar/menubar-dynamic-ownership.test.ts",
+              "test": "restores a single native keyboard stop when a wholly unavailable menubar gains an action",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -33779,6 +33816,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/menubar/menubar-dynamic-ownership.test.ts",
           "src/components/layout/menubar/menubar-item-coverage.test.ts",
           "src/components/layout/menubar/menubar-item.test.ts",
           "src/components/layout/menubar/menubar-reconcile-cost.test.ts",
@@ -33849,8 +33887,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/menubar/menubar-scale.test.ts",
-              "test": "folds a 1000-item typeahead corpus once across distinct queries",
+              "file": "src/components/layout/menubar/menubar-dynamic-ownership.test.ts",
+              "test": "restores a single native keyboard stop when a wholly unavailable menubar gains an action",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -33996,6 +34034,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/menubar/menubar-dynamic-ownership.test.ts",
           "src/components/layout/menubar/menubar-item-coverage.test.ts",
           "src/components/layout/menubar/menubar-item.test.ts",
           "src/components/layout/menubar/menubar-reconcile-cost.test.ts",
@@ -35975,6 +36014,7 @@
           "src/components/forms/input/number-time-input.test.ts",
           "src/components/forms/input/positioning-strategy.test.ts",
           "src/components/forms/input/time-input-closed-layout.test.ts",
+          "src/components/forms/input/time-input-picker-boundaries.test.ts",
           "src/components/forms/input/time-input-shared.test.ts",
           "src/components/forms/input/time-input.test.ts"
         ],
@@ -36425,6 +36465,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/retrieval/neighbor-list/neighbor-list-provider-boundaries.test.ts",
+              "test": "uses exact IDs for unlabeled records and preserves an accessible-only name for navigation and expansion",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/retrieval/neighbor-list/neighbor-list-source-scale.test.ts",
               "test": "exposes a named populated source list with localized status and bounded narrow layout",
               "target": "list",
@@ -36585,6 +36631,7 @@
         "tests": [
           "src/components/retrieval/neighbor-list/neighbor-list-admission.test.ts",
           "src/components/retrieval/neighbor-list/neighbor-list-lazy.test.ts",
+          "src/components/retrieval/neighbor-list/neighbor-list-provider-boundaries.test.ts",
           "src/components/retrieval/neighbor-list/neighbor-list-scale.test.ts",
           "src/components/retrieval/neighbor-list/neighbor-list-sort-cost.test.ts",
           "src/components/retrieval/neighbor-list/neighbor-list-source-scale.test.ts",
@@ -37169,6 +37216,7 @@
           "src/components/forms/input/number-time-input.test.ts",
           "src/components/forms/input/positioning-strategy.test.ts",
           "src/components/forms/input/time-input-closed-layout.test.ts",
+          "src/components/forms/input/time-input-picker-boundaries.test.ts",
           "src/components/forms/input/time-input-shared.test.ts",
           "src/components/forms/input/time-input.test.ts"
         ],
@@ -37423,6 +37471,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/forms/otp-input/otp-input-rejected-edit-boundaries.test.ts",
+              "test": "leaves readonly paste native and preserves the submitted code",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/forms/otp-input/otp-input.test.ts",
               "test": "renders label, hint and error text before their slotted content, like every sibling field",
               "target": "el",
@@ -37588,6 +37642,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/otp-input/otp-input-completion-lifecycle.test.ts",
+          "src/components/forms/otp-input/otp-input-rejected-edit-boundaries.test.ts",
           "src/components/forms/otp-input/otp-input.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -47129,6 +47184,12 @@
               "state": "open"
             },
             {
+              "file": "src/components/forms/select/select-initial-and-unknown-boundaries.test.ts",
+              "test": "reconciles multiple unavailable values as their public synthetic rows are removed and replaced",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/forms/select/select-interaction.test.ts",
               "test": "is accessible with a single enabled option",
               "target": "el",
@@ -47331,6 +47392,7 @@
           "src/components/forms/select/select-change-request.test.ts",
           "src/components/forms/select/select-closed-layout.test.ts",
           "src/components/forms/select/select-form-lifecycle.test.ts",
+          "src/components/forms/select/select-initial-and-unknown-boundaries.test.ts",
           "src/components/forms/select/select-interaction.test.ts",
           "src/components/forms/select/select-occurrence-cost.test.ts",
           "src/components/forms/select/select-refresh.test.ts",
@@ -49826,6 +49888,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/split-panel/split-panel-remediation.test.ts",
+          "src/components/layout/split-panel/split-panel-snap-grammar-interactions.test.ts",
           "src/components/layout/split-panel/split-panel.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -54645,6 +54708,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/forms/input/time-input-picker-boundaries.test.ts",
+              "test": "renders the complete ${format}-hour unrestricted grid and commits its last minute",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/forms/input/time-input.test.ts",
               "test": "opens from Alt+ArrowDown and commits popup columns unless readonly",
               "target": "el",
@@ -54794,6 +54863,7 @@
           "src/components/forms/input/number-time-input.test.ts",
           "src/components/forms/input/positioning-strategy.test.ts",
           "src/components/forms/input/time-input-closed-layout.test.ts",
+          "src/components/forms/input/time-input-picker-boundaries.test.ts",
           "src/components/forms/input/time-input-shared.test.ts",
           "src/components/forms/input/time-input.test.ts"
         ],
@@ -57268,6 +57338,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/tool-param-form/tool-param-constraints-boundaries.property.test.ts",
           "src/components/agent-tools/tool-param-form/tool-param-constraints.test.ts",
           "src/components/agent-tools/tool-param-form/tool-param-form-elicitation.test.ts",
           "src/components/agent-tools/tool-param-form/tool-param-form-membership-cost.test.ts",
@@ -61471,6 +61542,7 @@
           "src/components/data/word-cloud/word-cloud-layout.test.ts",
           "src/components/data/word-cloud/word-cloud-prepared-reentrant.test.ts",
           "src/components/data/word-cloud/word-cloud-prepared.test.ts",
+          "src/components/data/word-cloud/word-cloud-public-recovery.test.ts",
           "src/components/data/word-cloud/word-cloud-remediation.test.ts",
           "src/components/data/word-cloud/word-cloud-scale.test.ts",
           "src/components/data/word-cloud/word-cloud.test.ts"
@@ -61686,6 +61758,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/xml-viewer/xml-viewer-limits.test.ts",
+          "src/components/viewers/xml-viewer/xml-viewer-public-boundaries.test.ts",
           "src/components/viewers/xml-viewer/xml-viewer-register.test.ts",
           "src/components/viewers/xml-viewer/xml-viewer-remediation.test.ts",
           "src/components/viewers/xml-viewer/xml-viewer-scale.test.ts",

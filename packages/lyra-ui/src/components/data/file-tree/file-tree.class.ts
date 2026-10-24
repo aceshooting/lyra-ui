@@ -317,6 +317,13 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
   static override styles = [LyraElement.styles, styles, hierarchySourceStyles];
 
   private sourceModeEpoch = 0;
+  private readonly pendingLegacyReveals = new Set<() => void>();
+
+  private revokeLegacyReveals(): void {
+    for (const revoke of this.pendingLegacyReveals) revoke();
+    this.pendingLegacyReveals.clear();
+  }
+
   private _treeSource: FileTreeSource | undefined = undefined;
   private sourceMode = false;
   private sourcePaintVersion = 0;
@@ -342,6 +349,7 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
   set treeSource(value: FileTreeSource | undefined) {
     const previous = this._treeSource;
     this._treeSource = value; this.sourceModeEpoch++;
+    this.revokeLegacyReveals();
     this.hierarchy?.update(value, this.effectiveLocale, true);
     this.requestUpdate('treeSource', previous);
   }
@@ -405,6 +413,7 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
     const snapshot = normalizeFileTreeSnapshot(value);
     this.lastNodesSource = value;
     this._nodes = snapshot.nodes;
+    this.revokeLegacyReveals();
     this.nodesTruncated = snapshot.truncated;
     this.nodesLimitReached = snapshot.limitReached;
     this.rebuildNodeIndexes();
@@ -548,8 +557,8 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
     super.updated(changed);
     if (this.treeSource !== undefined) this.announceSource();
   }
-  override adoptedCallback(): void { super.adoptedCallback(); this.sourceModeEpoch++; this.sourceAnnouncement = undefined; this.hierarchy.adopted(); }
-  override disconnectedCallback(): void { super.disconnectedCallback(); this.sourceModeEpoch++; this.sourceAnnouncement = undefined; }
+  override adoptedCallback(): void { super.adoptedCallback(); this.sourceModeEpoch++; this.revokeLegacyReveals(); this.sourceAnnouncement = undefined; this.hierarchy.adopted(); }
+  override disconnectedCallback(): void { super.disconnectedCallback(); this.sourceModeEpoch++; this.revokeLegacyReveals(); this.sourceAnnouncement = undefined; }
 
   private projectionKey?: readonly unknown[];
   private projectedItems: LyraTreeNodeData[] = [];
@@ -671,47 +680,58 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
   }
 
   /** Expands every ancestor of `path` and focuses its row. Resolves `false` when `path` isn't
-   *  present in `nodes` (including a still-unloaded lazy descendant). */
+   *  present in `nodes` (including a still-unloaded lazy descendant), or when the listing or
+   *  source mode changes, the element disconnects, or its document changes before focus commits.
+   *  Concurrent reveals remain valid while their shared listing and owner remain current. */
   async revealPath(path: string): Promise<boolean> {
     if (this.treeSource !== undefined) return this.revealSourceKey(path);
     const epoch = this.sourceModeEpoch;
     const owner = this.ownerDocument;
-    const current = () => this.isConnected && this.ownerDocument === owner && this.sourceModeEpoch === epoch && this.treeSource === undefined;
+    const nodes = this.nodes;
+    const current = () => this.isConnected && this.ownerDocument === owner && this.sourceModeEpoch === epoch && this.treeSource === undefined && this.nodes === nodes;
+    if (!current()) return false;
     const treeEl = this.renderRoot.querySelector(tag('tree')) as LyraTree | null;
     if (!treeEl) return false;
     const chain = this.ancestorChain(path);
     if (chain.length === 0) return false;
-    // Over the row budget, project each ancestor's children before expanding it.
-    if (!this.projectsAllNodes && chain.slice(0, -1).some((id) => !this.expandedPaths.has(id))) {
-      for (const id of chain.slice(0, -1)) this.expandedPaths.add(id);
-      this.requestUpdate();
-      await this.updateComplete;
-      if (!current()) return false;
-      await treeEl.updateComplete;
-      if (!current()) return false;
-    }
-    let container: LyraTree | LyraTreeItem = treeEl;
-    let node: LyraTreeItem | null = null;
-    for (const id of chain) {
-      const candidates = (
-        container instanceof LyraTreeItem
-          ? [...(container.shadowRoot?.querySelectorAll(tag('tree-item')) ?? [])]
-          : [...container.querySelectorAll(tag('tree-item'))]
-      ) as LyraTreeItem[];
-      node = candidates.find((n) => n.item?.id === id) ?? null;
-      if (!node) return false;
-      if (id !== chain[chain.length - 1] && !node.expanded) {
-        node.expand();
-        await node.updateComplete;
-        if (!current()) return false;
+    let revoke: () => void = () => {};
+    const revoked = new Promise<void>(resolve => { revoke = resolve; });
+    this.pendingLegacyReveals.add(revoke);
+    const settled = async (update: Promise<unknown>): Promise<boolean> => {
+      await Promise.race([update, revoked]);
+      return current();
+    };
+    try {
+      // Over the row budget, project each ancestor's children before expanding it.
+      if (!this.projectsAllNodes && chain.slice(0, -1).some((id) => !this.expandedPaths.has(id))) {
+        for (const id of chain.slice(0, -1)) this.expandedPaths.add(id);
+        this.requestUpdate();
+        if (!await settled(this.updateComplete)) return false;
+        if (!await settled(treeEl.updateComplete)) return false;
       }
-      container = node;
+      let container: LyraTree | LyraTreeItem = treeEl;
+      let node: LyraTreeItem | null = null;
+      for (const id of chain) {
+        const candidates = (
+          container instanceof LyraTreeItem
+            ? [...(container.shadowRoot?.querySelectorAll(tag('tree-item')) ?? [])]
+            : [...container.querySelectorAll(tag('tree-item'))]
+        ) as LyraTreeItem[];
+        node = candidates.find((n) => n.item?.id === id) ?? null;
+        if (!node) return false;
+        if (id !== chain[chain.length - 1]) {
+          if (!node.expanded) node.expand();
+          if (!await settled(node.updateComplete)) return false;
+        }
+        container = node;
+      }
+      // The owner must bind newly expanded rows before their focus can update its roving tab stop.
+      if (!await settled(treeEl.updateComplete)) return false;
+      node?.focus();
+      return true;
+    } finally {
+      this.pendingLegacyReveals.delete(revoke);
     }
-    // The owner must bind newly expanded rows before their focus can update its roving tab stop.
-    await treeEl.updateComplete;
-    if (!current()) return false;
-    node?.focus();
-    return true;
   }
 
   expandAll(): Promise<void> | void {

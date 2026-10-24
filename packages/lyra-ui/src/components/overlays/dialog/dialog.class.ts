@@ -482,9 +482,16 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     if (changed.has('open')) this.armHeadingObserver();
     this.syncBodyTabIndex();
     this.armBodyOverflowObserver();
-    if (changed.has('open') && this.open && this.isConnected && this.modalSurface) {
-      this.enterTopLayer();
-      this.focusInitial();
+    if (changed.has('open') && this.open && this.isConnected) {
+      if (this.modalSurface) {
+        this.enterTopLayer();
+        this.focusInitial();
+      }
+      // Referenced heading names require rendered content; the opening willUpdate still sees
+      // the closed panel. Project again after this update without bypassing exclusion checks.
+      queueMicrotask(() => {
+        if (this.open && this.isConnected) this.detectLightDomChrome();
+      });
     }
   }
 
@@ -499,14 +506,20 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     // notice `open` is still true -- restore the scroll lock/trap it dropped.
     // Top-layer membership is dropped by the browser itself on removal, so it is re-established
     // here too.
-    if (this.hasUpdated && this.open && this.modalSurface) {
-      if (this.overlay?.isActive()) {
-        this.overlay.resume();
-      } else {
-        this.activateOverlay();
+    if (this.hasUpdated && this.open) {
+      if (this.modalSurface) {
+        if (this.overlay?.isActive()) {
+          if (this.externalModalDepth === 0) this.overlay.resume();
+        } else {
+          this.activateOverlay();
+        }
+        this.enterTopLayer();
       }
-      this.enterTopLayer();
-      queueMicrotask(() => this.focusInitial());
+      queueMicrotask(() => {
+        if (!this.open || !this.isConnected) return;
+        this.detectLightDomChrome();
+        if (this.modalSurface) this.focusInitial();
+      });
     }
   }
 

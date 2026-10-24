@@ -440,6 +440,7 @@ export function activateOverlay(options: OverlayActivationOptions): OverlayHandl
   let releaseModalState: (() => void) | undefined;
   let releaseScrollLock: (() => void) | undefined;
   let renderedState: RenderedStateController | undefined;
+  let explicitlySuspended = false;
   const coreHandle = activateOverlayStack({
     ...options,
     initiallySuspended: options.suspendWhenUnrendered === true,
@@ -474,7 +475,7 @@ export function activateOverlay(options: OverlayActivationOptions): OverlayHandl
   if (options.suspendWhenUnrendered) {
     renderedState = new RenderedStateController(options.host, options.panel, (rendered) => {
       if (!coreHandle.isActive()) return;
-      if (!rendered) {
+      if (!rendered || explicitlySuspended) {
         coreHandle.suspend();
         return;
       }
@@ -496,8 +497,12 @@ export function activateOverlay(options: OverlayActivationOptions): OverlayHandl
     },
     updateRestoreFocusTo: (target) => coreHandle.updateRestoreFocusTo(target),
     deactivate: (deactivateOptions) => coreHandle.deactivate(deactivateOptions),
-    suspend: () => coreHandle.suspend(),
+    suspend: () => {
+      explicitlySuspended = true;
+      coreHandle.suspend();
+    },
     resume: () => {
+      explicitlySuspended = false;
       if (renderedState && !renderedState.check()) return;
       coreHandle.resume();
     },

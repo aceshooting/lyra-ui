@@ -875,14 +875,14 @@ export class LyraSelect<
   // A restored value must win over declarative selected markup collected by
   // the first asynchronous slotchange. Cleared by the next ordinary value write.
   private _restoredStateActive = false;
-  // `value`/`selectedOptions`/`defaultValue` all truncate to a single entry while `multiple` is
+  // `value`/`defaultValue` truncate to a single entry while `multiple` is
   // still (or defaults to) `false`. Before this element's first update, an enclosing template's
   // property bindings commit in source order -- e.g. `.value=${arr}` before a later
   // `.multiple=${true}` -- so the setter can truncate against a `multiple` that hasn't landed yet
   // for this same update. Retaining the raw pre-truncation argument here and re-applying it once
   // more from `willUpdate()`, after `multiple` has settled for this update, re-derives the correct
-  // multi-value selection without changing the synchronous, immediately-readable-back behavior a
-  // post-mount assignment already relies on. See each setter's own doc.
+  // multi-value selection without changing synchronous post-mount assignments. selectedOptions
+  // instead retains a snapshot of contained occurrences until the initial slot catalog is known.
   private _pendingInitialValue?: string | string[] | null;
   private _pendingInitialSelectedOptions?: LyraOption[];
   private _pendingInitialDefaultValue?: string | string[] | null;
@@ -993,13 +993,12 @@ export class LyraSelect<
     // -- capture that distinction here, while it's still reliable, for
     // `updated()`'s `open`-handling below to consult.
     this._isFirstUpdate = !this.hasUpdated;
-    // Re-apply a `value`/`defaultValue`/`selectedOptions` assignment that landed before this first
-    // update, now that `multiple` has settled for this update -- see each pending field's own doc.
+    // Re-apply initial values once `multiple` has settled. Occurrence-based selectedOptions
+    // requests wait for the first collected slot catalog, after its reset defaults are captured.
     if (
       this._isFirstUpdate &&
       (this._pendingInitialDefaultValue !== undefined ||
-        this._pendingInitialValue !== undefined ||
-        this._pendingInitialSelectedOptions !== undefined)
+        this._pendingInitialValue !== undefined)
     ) {
       this._resolvingPendingInitialSelection = true;
       try {
@@ -1012,11 +1011,6 @@ export class LyraSelect<
           const pending = this._pendingInitialValue;
           this._pendingInitialValue = undefined;
           this.assignValue(pending);
-        }
-        if (this._pendingInitialSelectedOptions !== undefined) {
-          const pending = this._pendingInitialSelectedOptions;
-          this._pendingInitialSelectedOptions = undefined;
-          this.selectedOptions = pending;
         }
       } finally {
         this._resolvingPendingInitialSelection = false;
@@ -1222,7 +1216,10 @@ export class LyraSelect<
     ) as LyraPickerValue<Multiple>;
   }
   set value(next: LyraPickerValue<Multiple> | null | undefined) {
-    if (!this.hasUpdated && !this._resolvingPendingInitialSelection) this._pendingInitialValue = next;
+    if (!this._resolvingPendingInitialSelection) {
+      this._pendingInitialSelectedOptions = undefined;
+      if (!this.hasUpdated) this._pendingInitialValue = next;
+    }
     this._restoredStateActive = false;
     this._valueDirty = true;
     const values = normalizeSelectionValues(next);
@@ -1270,10 +1267,15 @@ export class LyraSelect<
     return [...this._selectedOptions];
   }
   set selectedOptions(next: LyraOption[]) {
-    if (!this.hasUpdated && !this._resolvingPendingInitialSelection) this._pendingInitialSelectedOptions = next;
+    const candidates = Array.isArray(next) ? next : [];
+    if (!this._resolvingPendingInitialSelection) {
+      this._pendingInitialValue = undefined;
+      this._pendingInitialSelectedOptions = !this.hasUpdated
+        ? candidates.filter((option) => isLyraOptionElement(option) && this.contains(option))
+        : undefined;
+    }
     this._restoredStateActive = false;
     this._valueDirty = true;
-    const candidates = Array.isArray(next) ? next : [];
     const catalog = candidates.length > 1 ? new Set(this.options) : undefined;
     const seen = new Set<LyraOption>();
     const live = candidates.filter((option): option is LyraOption => {
@@ -1475,6 +1477,8 @@ export class LyraSelect<
   }
 
   formResetCallback(): void {
+    this._pendingInitialValue = undefined;
+    this._pendingInitialSelectedOptions = undefined;
     this.touched = false;
     this.hasInteracted = false;
     this._restoredStateActive = false;
@@ -1757,6 +1761,18 @@ export class LyraSelect<
         );
         return; // setSelection() already called reflectSelected()
       }
+    }
+    if (this._pendingInitialSelectedOptions !== undefined) {
+      const pending = this._pendingInitialSelectedOptions;
+      this._pendingInitialSelectedOptions = undefined;
+      const resolving = this._resolvingPendingInitialSelection;
+      this._resolvingPendingInitialSelection = true;
+      try {
+        this.selectedOptions = pending;
+      } finally {
+        this._resolvingPendingInitialSelection = resolving;
+      }
+      return;
     }
     this.reflectSelected();
   }

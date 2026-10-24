@@ -535,7 +535,7 @@ test('keeps editor data and locale catalogs out of the lyra-ui tarball and gates
   assert.equal(actualBudgets.companions['@aceshooting/lyra-translations'].maximum.unpackedBytes, 6_189_440);
   assert.deepEqual(
     [actualBudgets.companions['@aceshooting/lyra-ide'].maximum.packedBytes, actualBudgets.companions['@aceshooting/lyra-ide'].maximum.unpackedBytes],
-    [1_701_312, 10_542_016],
+    [1_701_440, 10_542_016],
   );
 
   const ide = ['custom-elements.json', 'web-types.json', 'vscode-html-data.json', 'vscode-css-data.json'].map((path) => file(path));

@@ -18525,6 +18525,10 @@ The declarative model — the same shape a renamed `wa-tree`/`sl-tree` subtree l
   `role="treeitem"` interaction target and preserves the APG keyboard model.
 - `lr-file-tree` does **not** forward `reorderable`, and deliberately so: its `LyraTreeNodeData[]` is
   derived from `nodes` and keyed by filesystem path, an order it does not own.
+- `lr-file-tree.revealPath(path)` resolves `false` without focusing an obsolete row when its
+  listing or source mode changes, it disconnects, or its document changes during expansion.
+  Cancellation settles without waiting for detached descendants to render. Concurrent reveals
+  remain valid while their shared listing and owner remain current.
 - in the declarative model, appending a child while the parent is collapsed still registers: a
   `childList` MutationObserver assigns the `children` slot and requests an update, because
   `slotchange` alone cannot see a child added to a slot that is not currently rendered. Editing a

@@ -344,6 +344,13 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     super.willUpdate(changed);
     this.syncSource();
     if (this.graphSource !== undefined) {
+      const state = this.sourcePages.state;
+      if (state.result && this.sourcePage !== state.page) {
+        this.sourceSyncing = true;
+        this.sourcePage = state.page;
+        this.sourceSyncing = false;
+        if (this.sourcePageBinding) this.sourcePageBinding = [state.page, ...this.sourcePageBinding.slice(1)];
+      }
       if (changed.has('rows') || changed.has('groupByRelation')) this.hasComputedRows = false;
       return;
     }
@@ -568,7 +575,6 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
       const state = this.sourcePages.state;
       const status = this.sourceError || state.error ? 'error' : state.pending ? 'loading' : 'ready';
       this.announcements.transition('source', status, status === 'error' ? this.localize('neighborSourceError') : status === 'loading' ? this.localize('loading') : '');
-      if (state.result && this.sourcePage !== state.page) { this.sourceSyncing = true; this.sourcePage = state.page; this.sourceSyncing = false; if (this.sourcePageBinding) this.sourcePageBinding = [state.page, ...this.sourcePageBinding.slice(1)]; }
     }
   }
 

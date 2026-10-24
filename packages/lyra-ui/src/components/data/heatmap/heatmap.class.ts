@@ -953,6 +953,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         (selected.row - viewport.rowStart) / (viewport.rowEnd - viewport.rowStart) * width,
         Math.max(1, width / (viewport.columnEnd - viewport.columnStart)), Math.max(1, width / (viewport.rowEnd - viewport.rowStart)));
     }
+    if (!this.sourceCurrent(source, epoch)) return;
+    this.drawDirty = false;
     this.canvasHasContent = true;
   }
   private renderSource(): TemplateResult {
