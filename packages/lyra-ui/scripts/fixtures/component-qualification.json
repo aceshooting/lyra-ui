@@ -62,8 +62,8 @@
     "Source-signal dimensions identify evidence locations but do not turn regex presence into a behavioral pass."
   ],
   "summary": {
-    "componentCount": 310,
-    "automatedAccessibility": 309,
+    "componentCount": 311,
+    "automatedAccessibility": 310,
     "accessibilityExemptions": 1,
     "accessibilityMissing": 0,
     "visualEnrolled": 92,
@@ -31693,6 +31693,12 @@
           "src/components/media/map/map-anchor-component.test.ts",
           "src/components/media/map/map-anchor-direction.test.ts",
           "src/components/media/map/map-anchor-options.test.ts",
+          "src/components/media/map/map-anchors-component.test.ts",
+          "src/components/media/map/map-anchors-direction.test.ts",
+          "src/components/media/map/map-anchors-focus.test.ts",
+          "src/components/media/map/map-anchors-lifecycle.test.ts",
+          "src/components/media/map/map-anchors-native.test.ts",
+          "src/components/media/map/map-anchors-scenario.test.ts",
           "src/components/media/map/map-app-parity.test.ts",
           "src/components/media/map/map-camera.test.ts",
           "src/components/media/map/map-composition-pattern.property.test.ts",
@@ -31723,6 +31729,7 @@
           "src/components/media/map/map-export-initialization-component.test.ts",
           "src/components/media/map/map-external-component.test.ts",
           "src/components/media/map/map-external-source-effects.test.ts",
+          "src/components/media/map/map-feature-state-router.test.ts",
           "src/components/media/map/map-feature-state-routes.test.ts",
           "src/components/media/map/map-feature-state.test.ts",
           "src/components/media/map/map-geojson-diff-boundaries.test.ts",
@@ -31730,9 +31737,11 @@
           "src/components/media/map/map-geojson-projection-boundaries.test.ts",
           "src/components/media/map/map-glass.test.ts",
           "src/components/media/map/map-hash-owner.test.ts",
+          "src/components/media/map/map-hash.property.test.ts",
           "src/components/media/map/map-hash.test.ts",
           "src/components/media/map/map-hit-admission-boundaries.property.test.ts",
           "src/components/media/map/map-hit-test.test.ts",
+          "src/components/media/map/map-hostile-input-boundaries.test.ts",
           "src/components/media/map/map-image-export-ownership.test.ts",
           "src/components/media/map/map-image-export.test.ts",
           "src/components/media/map/map-image-metadata.test.ts",
@@ -31744,6 +31753,7 @@
           "src/components/media/map/map-interaction-component.test.ts",
           "src/components/media/map/map-interaction-options.test.ts",
           "src/components/media/map/map-large-source-replacement-scale.test.ts",
+          "src/components/media/map/map-layer-order.property.test.ts",
           "src/components/media/map/map-layer-order.test.ts",
           "src/components/media/map/map-lazy-runtimes.test.ts",
           "src/components/media/map/map-legend-icon-border.test.ts",
@@ -31753,6 +31763,286 @@
           "src/components/media/map/map-local-image-url.property.test.ts",
           "src/components/media/map/map-local-image.test.ts",
           "src/components/media/map/map-native.test.ts",
+          "src/components/media/map/map-overlay-admission.property.test.ts",
+          "src/components/media/map/map-overlay-admission.test.ts",
+          "src/components/media/map/map-overlays-coverage.test.ts",
+          "src/components/media/map/map-overlays.test.ts",
+          "src/components/media/map/map-owned-component.test.ts",
+          "src/components/media/map/map-owned-features.test.ts",
+          "src/components/media/map/map-owned-resources.test.ts",
+          "src/components/media/map/map-paint-batch.test.ts",
+          "src/components/media/map/map-peer-recovery.test.ts",
+          "src/components/media/map/map-provider-context-transitions.test.ts",
+          "src/components/media/map/map-public-boundaries-coverage.test.ts",
+          "src/components/media/map/map-public-boundaries.test.ts",
+          "src/components/media/map/map-readiness.test.ts",
+          "src/components/media/map/map-remediation.test.ts",
+          "src/components/media/map/map-resource-lifecycle.test.ts",
+          "src/components/media/map/map-resource-transition-boundaries.test.ts",
+          "src/components/media/map/map-scale.test.ts",
+          "src/components/media/map/map-source-updates.test.ts",
+          "src/components/media/map/map-style-failure-supersession.test.ts",
+          "src/components/media/map/map-style-input.property.test.ts",
+          "src/components/media/map/map-style-input.test.ts",
+          "src/components/media/map/map-style-lifecycle.test.ts",
+          "src/components/media/map/map-style-overrides.test.ts",
+          "src/components/media/map/map-tile-source-scale.test.ts",
+          "src/components/media/map/map-vector-style-lowering.property.test.ts",
+          "src/components/media/map/map-vector-style.property.test.ts",
+          "src/components/media/map/map-vector-style.test.ts",
+          "src/components/media/map/map.test.ts"
+        ],
+        "visual": "visual-baselines/manifest.json",
+        "ssr": "src/ssr.ts"
+      }
+    },
+    {
+      "tag": "lr-map-anchor",
+      "family": "media",
+      "maturity": "experimental",
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "evidenceGaps": [
+          "scale",
+          "reducedMotion",
+          "visual",
+          "forcedColors",
+          "assistiveTechnology"
+        ]
+      },
+      "dimensions": {
+        "scale": {
+          "applicability": "applicable",
+          "status": "unmeasured",
+          "scenarios": [],
+          "measuredAt": null,
+          "evidence": [],
+          "limitation": "No deterministic scale budget has been measured for this tag."
+        },
+        "accessibility": {
+          "applicability": "applicable",
+          "status": "automated",
+          "evidence": [
+            {
+              "file": "src/components/media/map/map-anchors-component.test.ts",
+              "test": "wraps long content inside a 320px ${direction} allocation with the close action at the inline end, and two open named anchors pass axe",
+              "target": "first",
+              "state": "open"
+            }
+          ],
+          "exemption": null
+        },
+        "keyboard": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/media/map/map-anchor-component.test.ts",
+              "test": "opens declaratively without focus theft and leaves the default anchor passive on Escape",
+              "kind": "component keyboard exercise signal"
+            }
+          ]
+        },
+        "rtl": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/media/map/map-anchor-component.test.ts",
+              "test": "maps logical safe areas under RTL at 320px and wraps long slotted content inside allocation",
+              "kind": "rendered RTL test signal"
+            }
+          ]
+        },
+        "reducedMotion": {
+          "applicability": "applicable",
+          "status": "not-recorded",
+          "evidence": [],
+          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+        },
+        "narrowAllocation": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/media/map/map-anchor-component.test.ts",
+              "line": 21,
+              "kind": "320px allocation test signal"
+            }
+          ]
+        },
+        "engines": {
+          "applicability": "applicable",
+          "status": "configured-automation",
+          "evidence": [
+            {
+              "file": ".github/workflows/ci.yml",
+              "kind": "Chromium full suite and Firefox/WebKit contract subset"
+            },
+            {
+              "file": ".github/workflows/full-engine.yml",
+              "kind": "weekly/manual Firefox and WebKit full-suite shards"
+            }
+          ],
+          "limitation": "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit."
+        },
+        "ssrHydration": {
+          "applicability": "applicable",
+          "status": "declared-and-gated",
+          "mode": "render-and-hydrate",
+          "reason": null,
+          "evidence": [
+            {
+              "file": "src/ssr.ts",
+              "kind": "machine-readable SSR support matrix"
+            },
+            {
+              "file": "scripts/check-ssr.mjs",
+              "kind": "server render crawl"
+            },
+            {
+              "file": "scripts/check-hydration.mjs",
+              "kind": "browser hydration identity crawl"
+            }
+          ],
+          "limitation": "The ledger classifies the declared mode and gate ownership; CI run results are reported separately."
+        },
+        "visual": {
+          "applicability": "applicable",
+          "status": "not-enrolled",
+          "stories": [],
+          "axes": [],
+          "evidence": [],
+          "reviewer": null,
+          "reviewedAt": null,
+          "limitation": "No visual-regression story is enrolled for this tag."
+        },
+        "peerFailure": {
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "The component declares no optional peer dependencies."
+        },
+        "security": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/media/map/map-construction-scheduler.ts",
+              "line": 33,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
+        },
+        "forcedColors": {
+          "applicability": "applicable",
+          "status": "not-enrolled",
+          "stories": [],
+          "evidence": [],
+          "limitation": "No forced-colors visual capture is enrolled for this tag."
+        },
+        "assistiveTechnology": {
+          "applicability": "applicable",
+          "status": "not-verified",
+          "evidence": [],
+          "reviewer": null,
+          "reviewedAt": null,
+          "limitation": "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
+        }
+      },
+      "knownLimitations": [
+        "No deterministic scale budget has been measured for this tag.",
+        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
+        "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
+        "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
+        "No visual-regression story is enrolled for this tag.",
+        "The component declares no optional peer dependencies.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
+        "No forced-colors visual capture is enrolled for this tag.",
+        "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
+      ],
+      "provenance": {
+        "inventory": "scripts/fixtures/component-inventory.json",
+        "tests": [
+          "src/components/media/map/map-anchor-component.test.ts",
+          "src/components/media/map/map-anchor-direction.test.ts",
+          "src/components/media/map/map-anchor-options.test.ts",
+          "src/components/media/map/map-anchors-component.test.ts",
+          "src/components/media/map/map-anchors-direction.test.ts",
+          "src/components/media/map/map-anchors-focus.test.ts",
+          "src/components/media/map/map-anchors-lifecycle.test.ts",
+          "src/components/media/map/map-anchors-native.test.ts",
+          "src/components/media/map/map-anchors-scenario.test.ts",
+          "src/components/media/map/map-app-parity.test.ts",
+          "src/components/media/map/map-camera.test.ts",
+          "src/components/media/map/map-composition-pattern.property.test.ts",
+          "src/components/media/map/map-composition-pattern.test.ts",
+          "src/components/media/map/map-construction-scheduler.test.ts",
+          "src/components/media/map/map-control-measurement-boundaries.test.ts",
+          "src/components/media/map/map-control-options.property.test.ts",
+          "src/components/media/map/map-control-options.test.ts",
+          "src/components/media/map/map-controls-component.test.ts",
+          "src/components/media/map/map-controls-lifecycle.test.ts",
+          "src/components/media/map/map-coverage-boundaries.test.ts",
+          "src/components/media/map/map-cursor.test.ts",
+          "src/components/media/map/map-data-layer-boundaries.test.ts",
+          "src/components/media/map/map-data-layer-model.property.test.ts",
+          "src/components/media/map/map-data-layer-model.test.ts",
+          "src/components/media/map/map-data-layers.test.ts",
+          "src/components/media/map/map-drawing-component.test.ts",
+          "src/components/media/map/map-drawing-gesture.test.ts",
+          "src/components/media/map/map-drawing-keyboard-boundaries.test.ts",
+          "src/components/media/map/map-drawing-pan.test.ts",
+          "src/components/media/map/map-drawing-peer-recovery.test.ts",
+          "src/components/media/map/map-drawing-pointer-transitions.test.ts",
+          "src/components/media/map/map-drawing-pointer.test.ts",
+          "src/components/media/map/map-drawing.test.ts",
+          "src/components/media/map/map-engine-events.test.ts",
+          "src/components/media/map/map-engine-preparation.test.ts",
+          "src/components/media/map/map-export-attribution.test.ts",
+          "src/components/media/map/map-export-initialization-component.test.ts",
+          "src/components/media/map/map-external-component.test.ts",
+          "src/components/media/map/map-external-source-effects.test.ts",
+          "src/components/media/map/map-feature-state-router.test.ts",
+          "src/components/media/map/map-feature-state-routes.test.ts",
+          "src/components/media/map/map-feature-state.test.ts",
+          "src/components/media/map/map-geojson-diff-boundaries.test.ts",
+          "src/components/media/map/map-geojson-diff.property.test.ts",
+          "src/components/media/map/map-geojson-projection-boundaries.test.ts",
+          "src/components/media/map/map-glass.test.ts",
+          "src/components/media/map/map-hash-owner.test.ts",
+          "src/components/media/map/map-hash.property.test.ts",
+          "src/components/media/map/map-hash.test.ts",
+          "src/components/media/map/map-hit-admission-boundaries.property.test.ts",
+          "src/components/media/map/map-hit-test.test.ts",
+          "src/components/media/map/map-hostile-input-boundaries.test.ts",
+          "src/components/media/map/map-image-export-ownership.test.ts",
+          "src/components/media/map/map-image-export.test.ts",
+          "src/components/media/map/map-image-metadata.test.ts",
+          "src/components/media/map/map-image-provider.test.ts",
+          "src/components/media/map/map-images-browser.test.ts",
+          "src/components/media/map/map-images-preparation-boundaries.test.ts",
+          "src/components/media/map/map-images.test.ts",
+          "src/components/media/map/map-input-lifecycle-boundaries.test.ts",
+          "src/components/media/map/map-interaction-component.test.ts",
+          "src/components/media/map/map-interaction-options.test.ts",
+          "src/components/media/map/map-large-source-replacement-scale.test.ts",
+          "src/components/media/map/map-layer-order.property.test.ts",
+          "src/components/media/map/map-layer-order.test.ts",
+          "src/components/media/map/map-lazy-runtimes.test.ts",
+          "src/components/media/map/map-legend-icon-border.test.ts",
+          "src/components/media/map/map-legend-icon.test.ts",
+          "src/components/media/map/map-legend-scroll.test.ts",
+          "src/components/media/map/map-loader.test.ts",
+          "src/components/media/map/map-local-image-url.property.test.ts",
+          "src/components/media/map/map-local-image.test.ts",
+          "src/components/media/map/map-native.test.ts",
+          "src/components/media/map/map-overlay-admission.property.test.ts",
+          "src/components/media/map/map-overlay-admission.test.ts",
           "src/components/media/map/map-overlays-coverage.test.ts",
           "src/components/media/map/map-overlays.test.ts",
           "src/components/media/map/map-owned-component.test.ts",

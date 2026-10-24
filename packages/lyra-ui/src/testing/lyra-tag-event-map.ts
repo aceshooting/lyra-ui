@@ -174,6 +174,7 @@ import type { LyraFileInputEventMap } from '../components/media/file-input/file-
 import type { LyraImageComparerEventMap } from '../components/media/image-comparer/image-comparer.class.js';
 import type { LyraImageViewerEventMap } from '../components/media/image-viewer/image-viewer.class.js';
 import type { LyraLightboxEventMap } from '../components/media/lightbox/lightbox.class.js';
+import type { LyraMapAnchorEventMap } from '../components/media/map/map-anchor.class.js';
 import type { LyraMapEventMap } from '../components/media/map/map.class.js';
 import type { LyraMediaCardEventMap } from '../components/media/media-card/media-card.class.js';
 import type { LyraPanZoomEventMap } from '../components/media/pan-zoom/pan-zoom.class.js';
@@ -401,6 +402,7 @@ export interface LyraTagEventTypes {
   'lr-lite-chart': LyraLiteChartEventMap;
   'lr-locale-picker': LyraLocalePickerEventMap;
   'lr-map': LyraMapEventMap;
+  'lr-map-anchor': LyraMapAnchorEventMap;
   'lr-markdown': LyraMarkdownEventMap;
   'lr-markdown-core': LyraMarkdownCoreEventMap;
   'lr-mcp-app': LyraMcpAppEventMap;
@@ -599,6 +601,7 @@ export const LYRA_EVENT_CANCELABLE: {
   'lr-line-chart': { 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },
   'lr-locale-picker': { 'lr-change-request': true, 'lr-invalid': true },
   'lr-map': { 'lr-map-legend-panel-toggle-request': true, 'lr-map-legend-toggle-request': true },
+  'lr-map-anchor': { 'lr-close-request': true },
   'lr-media-card': { 'lr-media-download-request': true },
   'lr-menu': { 'lr-select': true },
   'lr-menu-item': { 'lr-menu-item-change-request': true },

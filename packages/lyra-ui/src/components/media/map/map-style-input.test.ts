@@ -72,3 +72,12 @@ describe('map style font admission', () => {
     expect(result['font-faces']).to.equal(undefined);
   });
 });
+
+describe('map style font declaration shape', () => {
+  it('drops declarations that are not records of face lists', () => {
+    for (const faces of ['font.woff2', 7, null, ['Demo'], { Demo: [null] }, { Demo: ['font.woff2'] }]) {
+      expect(snapshot({ 'font-faces': faces })['font-faces'], String(faces)).to.equal(undefined);
+    }
+    expect(snapshot({ 'font-faces': { Demo: [{ url: 'font.woff2' }] } })['font-faces']).to.deep.equal({ Demo: [{ url: 'font.woff2' }] });
+  });
+});

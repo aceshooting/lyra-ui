@@ -365,3 +365,23 @@ describe('typed vector style integration', () => {
     }
   });
 });
+
+describe('map data layer model boundaries', () => {
+  it('rejects an external row that is not a plain record and ignores a list whose length cannot be read', () => {
+    class ExternalRow { kind = 'vector'; sourceId = 'roads'; }
+    expect(project([new ExternalRow()]).ok).to.equal(false);
+    const unreadable = new Proxy<unknown[]>([vector], { getOwnPropertyDescriptor() { throw new Error('hostile length'); } });
+    expect(project(unreadable)).to.deep.equal({ ok: true, geojson: [], external: [] });
+  });
+
+  it('rejects a canvas data layer where canvas elements do not exist', () => {
+    const canvas = document.createElement('canvas');
+    const rows = [{ kind: 'canvas', sourceId: 'pixels', canvas, coordinates }];
+    expect(project(rows).ok).to.equal(true);
+    const saved = Object.getOwnPropertyDescriptor(window, 'HTMLCanvasElement')!;
+    Object.defineProperty(window, 'HTMLCanvasElement', { configurable: true, writable: true, value: undefined });
+    try { expect(project(rows).ok).to.equal(false); }
+    finally { Object.defineProperty(window, 'HTMLCanvasElement', saved); }
+    expect(project(rows).ok).to.equal(true);
+  });
+});

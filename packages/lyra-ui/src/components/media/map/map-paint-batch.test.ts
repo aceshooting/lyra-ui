@@ -41,6 +41,26 @@ describe('map paint batches', () => {
     })).to.throw();
     expect(writes).to.equal(1); expect(paints).to.equal(0);
   });
+  it('aborts a batch superseded before, during or after its repaint', () => {
+    const events: string[] = [];
+    const peer = { setPaintProperty: () => { events.push('write'); }, triggerRepaint: () => { events.push('repaint'); } };
+    expect(() => new MapPaintBatch().run(peer, 1, () => false, () => { events.push('apply'); })).to.throw(DOMException);
+    expect(events).to.deep.equal([]);
+    let current = true;
+    expect(() => new MapPaintBatch().run(peer, 1, () => current, () => { events.push('apply'); current = false; })).to.throw(DOMException);
+    expect(events).to.deep.equal(['apply']);
+    events.length = 0; current = true;
+    const repainting = { setPaintProperty: () => { events.push('write'); }, triggerRepaint: () => { events.push('repaint'); current = false; } };
+    const batch = new MapPaintBatch();
+    expect(() => batch.run(repainting, 1, () => current, () => { batch.write('fill', 'fill-color', 'red'); })).to.throw(DOMException);
+    expect(events).to.deep.equal(['write', 'repaint']);
+  });
+  it('refuses a paint write made outside a running batch', () => {
+    const writes: string[] = [];
+    const batch = new MapPaintBatch();
+    expect(() => batch.write('fill', 'fill-color', 'red')).to.throw(DOMException);
+    expect(writes).to.deep.equal([]);
+  });
   it('propagates repaint failure without recording a successful batch', () => {
     const layer = {}; let writes = 0;
     const peer = { getLayer: () => layer, setPaintProperty: () => { writes++; }, triggerRepaint: () => { throw new Error('private native detail'); } };

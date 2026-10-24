@@ -96,7 +96,7 @@ privacy rules.
 
 - **Utilities, formatting & observers** (`components/utility/`, 20) — `lr-export-button`, `lr-copy-button`, `lr-resize-observer`, `lr-intersection-observer`, `lr-mutation-observer`, `lr-json-viewer`, `lr-live-region`, `lr-poll-status`, `lr-mention-popover`, `lr-diff-view`, `lr-icon`, `lr-visually-hidden`, `lr-divider`, `lr-format-number`, `lr-format-date`, `lr-format-bytes`, `lr-relative-time`, `lr-known-date`, `lr-random-content`, `lr-tour`
 
-- **Media, files & maps** (`components/media/`, 22) — `lr-flag`, `lr-sequence-playback`, `lr-map`, `lr-drop-zone`, `lr-file-input`, `lr-image-comparer`, `lr-zoomable-frame`, `lr-pan-zoom`, `lr-attachment-chip`, `lr-file-icon`, `lr-media-card`, `lr-attachment-trigger`, `lr-avatar`, `lr-animated-image`, `lr-animation`, `lr-avatar-group`, `lr-lightbox`, `lr-qr-code`, `lr-image-viewer`, `lr-av-player`, `lr-video`, `lr-video-playlist`
+- **Media, files & maps** (`components/media/`, 23) — `lr-flag`, `lr-sequence-playback`, `lr-map`, `lr-map-anchor`, `lr-drop-zone`, `lr-file-input`, `lr-image-comparer`, `lr-zoomable-frame`, `lr-pan-zoom`, `lr-attachment-chip`, `lr-file-icon`, `lr-media-card`, `lr-attachment-trigger`, `lr-avatar`, `lr-animated-image`, `lr-animation`, `lr-avatar-group`, `lr-lightbox`, `lr-qr-code`, `lr-image-viewer`, `lr-av-player`, `lr-video`, `lr-video-playlist`
 
 - **Charts** (`components/charts/`, 13) — `lr-chart`, `lr-lite-chart`, `lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`, `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`, `lr-scatter-chart`, `lr-histogram`, `lr-box-plot`, `lr-chart-3d`
 

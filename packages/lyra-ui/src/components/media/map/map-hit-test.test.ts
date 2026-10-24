@@ -156,6 +156,15 @@ describe('map hit selection', () => {
     expect(queryMapHit(service, { x: 0, y: 0 }, rules, { current: () => current }).status).to.equal('stale'); expect(calls).to.equal(0);
   });
 
+  it('stops a query that turns stale between rule checks or right after the last one', () => {
+    for (const [staleAt, checked] of [[5, 0], [11, 3]] as const) {
+      let consulted = 0, queries = 0, layerChecks = 0;
+      const service = { getLayer() { layerChecks++; return {}; }, queryRenderedFeatures() { queries++; return [feature('point')]; } };
+      expect(queryMapHit(service, { x: 1, y: 2 }, rules, { current: () => ++consulted < staleAt }), `stale at ${staleAt}`).to.deep.equal({ status: 'stale' });
+      expect(layerChecks, `stale at ${staleAt}`).to.equal(checked); expect(queries, `stale at ${staleAt}`).to.equal(0);
+    }
+  });
+
   it('rejects aborted and reentrant queries after each external callback', () => {
     const controller = new AbortController(); controller.abort(); let queries = 0;
     const service = { getLayer: () => ({}), queryRenderedFeatures() { queries++; return [feature('point')]; } };
@@ -227,5 +236,9 @@ describe('map hit eligibility', () => {
     expect(mapLayerHittable(reader, 'tier', ranged, Number.NaN)).to.equal(true);
     const throwing = { getPaintProperty: () => { throw new Error('gone'); } };
     expect(mapLayerHittable(throwing, 'x', { id: 'x', type: 'fill' }, 3)).to.equal(true);
+  });
+
+  it('reports a query error when the query service is missing', () => {
+    for (const service of [undefined, null, 'service']) expect(queryMapHit(service as never, { x: 1, y: 2 }, rules)).to.deep.equal({ status: 'query-error' });
   });
 });

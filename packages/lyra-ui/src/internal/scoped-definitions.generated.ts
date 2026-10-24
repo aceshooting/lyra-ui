@@ -159,6 +159,7 @@ export const scopedDefinitionClosures: Readonly<Record<string, readonly string[]
   'lr-live-region': ['lr-live-region'],
   'lr-locale-picker': ['lr-flag', 'lr-locale-picker', 'lr-skeleton'],
   'lr-map': ['lr-map', 'lr-skeleton'],
+  'lr-map-anchor': ['lr-map-anchor'],
   'lr-markdown': ['lr-markdown'],
   'lr-markdown-core': ['lr-markdown-core'],
   'lr-mcp-app': ['lr-mcp-app'],

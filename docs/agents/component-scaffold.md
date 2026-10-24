@@ -32,6 +32,14 @@ test in Chromium, Firefox, and WebKit. All writes are transactional. An invalid 
 metadata result, generator failure, or browser-test failure restores every shared/generated file
 and removes only the newly created component directory.
 
+For a secondary tag sharing an existing catalogued component directory, author its matching
+`<name>.class.ts` and `<name>.ts` pair and add its maturity assignment to that family's metadata
+source. Before the first inventory generation, ownership is derived only when the class's
+`@customElement` tag, exported class, registration import and `defineElement()` call agree.
+Canonical regeneration validates the family and materializes the inventory; existing inventory
+ownership remains authoritative. Missing, ambiguous, cross-family or symlinked source pairs are
+rejected. Do not add a fictitious directory entry or edit generated metadata to bootstrap a sibling.
+
 ## Validation and follow-up
 
 The command rejects invalid/traversal names and collisions in any of the following sources before

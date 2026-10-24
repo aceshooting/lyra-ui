@@ -9,8 +9,8 @@ component’s compatibility status. The machine-readable source is
 
 ## Current evidence
 
-- Public tags: **310**
-- Exact same-test/same-instance populated or open axe evidence: **309**
+- Public tags: **311**
+- Exact same-test/same-instance populated or open axe evidence: **310**
 - Narrow reviewed axe-state exemptions: **1**
 - Missing axe qualification: **0**
 - Visual-regression enrollment: **92** tags
@@ -215,6 +215,7 @@ complete enrolled set. Axe is not assistive-technology testing.
 | [`lr-live-region`](component-integration.md#lr-live-region) | stable | automated | N/A | not recorded | N/A | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | unmeasured |
 | [`lr-locale-picker`](component-integration.md#lr-locale-picker) | stable | automated | source signal | source signal | not recorded | source signal | configured CI | render-and-hydrate | pending human | N/A | source signal | not enrolled | not verified | measured |
 | [`lr-map`](component-integration.md#lr-map) | stable | automated | source signal | source signal | not recorded | source signal | configured CI | render-and-hydrate | pending human | source signal | source signal | not enrolled | not verified | measured |
+| [`lr-map-anchor`](component-integration.md#lr-map-anchor) | experimental | automated | source signal | source signal | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | N/A | source signal | not enrolled | not verified | unmeasured |
 | [`lr-markdown`](component-integration.md#lr-markdown) | stable | automated | source signal | source signal | source signal | source signal | configured CI | render-and-hydrate | pending human | source signal | source signal | not enrolled | not verified | measured |
 | [`lr-markdown-core`](component-integration.md#lr-markdown-core) | stable | automated | source signal | source signal | source signal | source signal | configured CI | render-and-hydrate | not enrolled | source signal | source signal | not enrolled | not verified | measured |
 | [`lr-mcp-app`](component-integration.md#lr-mcp-app) | stable | automated | N/A | not recorded | N/A | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | unmeasured |

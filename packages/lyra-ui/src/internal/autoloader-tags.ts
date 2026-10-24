@@ -160,6 +160,7 @@ export const AUTOLOADER_TAGS = [
   'lr-live-region',
   'lr-locale-picker',
   'lr-map',
+  'lr-map-anchor',
   'lr-markdown',
   'lr-markdown-core',
   'lr-mcp-app',

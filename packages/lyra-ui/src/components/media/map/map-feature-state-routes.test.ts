@@ -178,3 +178,48 @@ describe('map feature-state logical routing', () => {
     expect(routes.set(reentrant, { selected: true }).accepted).to.equal(false); expect(routes.get(target({ sourceLayer: 'roads' }))).to.equal(undefined); routes.dispose();
   });
 });
+
+describe('map feature-state routing boundaries', () => {
+  it('merges the keys retired from one native feature across successive dataset replacements', () => {
+    const { routes, peer, calls } = fixture(); routes.configure([route()]); routes.set(target(), { selected: true }); routes.replay(peer, 1);
+    routes.configure([route({ identity: 'second' })]); routes.set(target(), { hover: true });
+    routes.configure([route({ identity: 'third' })]);
+    expect(routes.replay(peer, 1).accepted).to.equal(true);
+    expect(calls.filter(row => row[0] === 'remove').map(row => row[2])).to.deep.equal(['selected', 'hover']);
+    expect(routes.get(target())).to.equal(undefined); routes.dispose();
+  });
+  it('abandons a configuration whose rows are read after the routes were cancelled', () => {
+    const { routes } = fixture(); routes.configure([route()]); routes.set(target(), { selected: true });
+    const rows = new Proxy([route({ nativeSource: 'private-2' })], {
+      getOwnPropertyDescriptor(object, key) { routes.cancel(); return Reflect.getOwnPropertyDescriptor(object, key); },
+    });
+    expect(routes.configure(rows)).to.deep.equal({ accepted: false, code: 'cancelled' });
+    expect(routes.get(target())).to.deep.equal({ selected: true });
+    expect(routes.resolve(target())?.source).to.equal('roads'); routes.dispose();
+  });
+  it('preflights retirement text as well as the retained target count', () => {
+    const { routes, peer } = fixture(); const long = 'n'.repeat(1024);
+    routes.configure([route({ nativeSource: long })]);
+    for (let id = 0; id < 1015; id++) expect(routes.set(target({ id }), { a: 1 }).accepted).to.equal(true);
+    routes.replay(peer, 1);
+    expect(routes.configure([route({ nativeSource: long, identity: 'next' })])).to.deep.equal({ accepted: false, code: 'limit' });
+    expect(routes.get(target({ id: 1014 }))).to.deep.equal({ a: 1 });
+    routes.dispose();
+  });
+  it('refuses to refresh native sources after disposal', () => {
+    const { routes } = fixture(); routes.configure([route()]); routes.dispose();
+    expect(routes.refreshNative('data-layer', 'private-1')).to.deep.equal({ accepted: false, code: 'disposed' });
+  });
+  it('does not write retained state to a source layer its route no longer admits', () => {
+    for (const replacement of [['roads'], undefined]) {
+      const { routes, peer, calls } = fixture(); routes.configure([route({ sourceLayers: ['roads', 'bridges'] })]);
+      routes.set(target({ sourceLayer: 'bridges' }), { hover: true }); routes.replay(peer, 1);
+      routes.configure([route(replacement ? { sourceLayers: replacement } : {})]);
+      calls.length = 0;
+      const result = routes.replay(peer, 1);
+      expect(result.diagnostics.map(issue => issue.code)).to.deep.equal(['peer-error']);
+      expect(result.diagnostics[0]!.target).to.deep.equal({ origin: 'data-layer', source: 'roads', sourceLayer: 'bridges', id: 0 });
+      expect(calls.filter(row => row[0] === 'set').length).to.equal(0); routes.dispose();
+    }
+  });
+});

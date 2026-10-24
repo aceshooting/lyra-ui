@@ -208,6 +208,7 @@ import type { LyraFlag } from './components/media/flag/flag.class.js';
 import type { LyraImageComparer, LyraImageComparerEventMap } from './components/media/image-comparer/image-comparer.class.js';
 import type { LyraImageViewer, LyraImageViewerEventMap } from './components/media/image-viewer/image-viewer.class.js';
 import type { LyraLightbox, LyraLightboxEventMap } from './components/media/lightbox/lightbox.class.js';
+import type { LyraMapAnchor, LyraMapAnchorEventMap } from './components/media/map/map-anchor.class.js';
 import type { LyraMap, LyraMapEventMap } from './components/media/map/map.class.js';
 import type { LyraMediaCard, LyraMediaCardEventMap } from './components/media/media-card/media-card.class.js';
 import type { LyraPanZoom, LyraPanZoomEventMap } from './components/media/pan-zoom/pan-zoom.class.js';
@@ -7486,6 +7487,28 @@ export interface LyraComponentTypeMap {
       'max-zoom'?: LyraMap['maxZoom'];
       'min-zoom'?: LyraMap['minZoom'];
       'pick-mode'?: LyraMap['pickMode'];
+    };
+  };
+  'lr-map-anchor': {
+    element: LyraMapAnchor;
+    properties: LyraElementProperties<
+      LyraMapAnchor,
+      | 'boundary'
+      | 'closable'
+      | 'label'
+      | 'lngLat'
+      | 'locale'
+      | 'open'
+      | 'safeArea'
+      | 'strings',
+      {}
+    >;
+    events: LyraMapAnchorEventMap;
+    eventNames:       | 'lr-close'
+      | 'lr-close-request';
+    cssNames: never;
+    attributeAliases: {
+      'hidden'?: LyraAttributeValue<boolean | 'until-found'>;
     };
   };
   'lr-markdown': {

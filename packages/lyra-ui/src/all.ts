@@ -149,6 +149,7 @@ import './components/media/lightbox/lightbox.js';
 import './components/charts/chart/lite-chart.js';
 import './components/utility/live-region/live-region.js';
 import './components/forms/locale-picker/locale-picker.js';
+import './components/media/map/map-anchor.js';
 import './components/conversation/markdown/markdown.js';
 import './components/conversation/markdown/markdown-core.js';
 import './components/agent-tools/mcp-app/mcp-app.js';

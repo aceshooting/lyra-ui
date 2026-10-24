@@ -1,7 +1,7 @@
 # Test health: coverage, speed and flakiness
 
-Status (2026-10-24): the complete Codecov UI flag for
-[`415b370393660b6a4545dac84083f268a4b9eca2`](https://app.codecov.io/github/aceshooting/lyra-ui/commit/415b370393660b6a4545dac84083f268a4b9eca2/tree/)
+Status (2026-10-24): the complete Codecov UI flag associated with
+[the recorded CI run](https://github.com/aceshooting/lyra-ui/actions/runs/40124203530)
 contains 521,841 fully hit lines out of 526,131 (99.1846%; displayed as 99.18%), with 3,163 misses
 and 1,127 partials. The combined seven-package report has 540,772 fully hit lines out of 545,090
 (99.2078%; displayed as 99.20%). These are committed-source observations before the remaining
@@ -94,8 +94,10 @@ The baseline below predates the 30.0.0 work.
 
 ### Current 30.1.0 qualification
 
-- [ ] Finish verification of the expanded chart/map/data and conversation/retrieval/internal
-  coverage cases, including the pending chart-loading and progressive Markdown corrections.
+- [x] Verify the expanded chart/map/data and conversation/retrieval/internal coverage cases,
+  including the chart-loading and progressive Markdown corrections. The integrated map slice
+  passes 940 cases in each of Chromium, Firefox with WebGL, and WebKit; final release workflows
+  remain required below.
 - [ ] Rebuild, regenerate measured quality and all public artifacts, and measure the final budgets.
 - [ ] Verify complete coverage and all release workflows on the final versioned commit. Successful
   browser and Quality tools runs on `4a2275622` qualify only that earlier source, not later changes.

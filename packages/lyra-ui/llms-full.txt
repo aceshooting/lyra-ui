@@ -42,7 +42,7 @@ whole catalog. `llms/index.md` maps every tag to its family and entry point.
 - **Layout, navigation & structure** — 40 tags in `components/layout/`
 - **Overlays, status & feedback** — 22 tags in `components/overlays/`
 - **Utilities, formatting & observers** — 20 tags in `components/utility/`
-- **Media, files & maps** — 22 tags in `components/media/`
+- **Media, files & maps** — 23 tags in `components/media/`
 - **Charts** — 13 tags in `components/charts/`
 - **Document & file viewers** — 23 tags in `components/viewers/`
 - **Conversation & chat UI** — 34 tags in `components/conversation/`
@@ -198,7 +198,7 @@ The entry points, then:
   but it is not an exhaustive promise that every component-owned type or future export is present.
   Prefer the owning component entry in application code, both for the smallest bundle and the
   complete contract of that component.
-- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 295
+- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 296
   root-included tags — everything **except** the 15 inventory-designated optional-peer-family tags:
   `lr-chart` and its 8 typed subclasses (`lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`,
   `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`,
@@ -4901,6 +4901,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-live-region': LyraLiveRegionReactProps;
   'lr-locale-picker': LyraLocalePickerReactProps;
   'lr-map': LyraMapReactProps;
+  'lr-map-anchor': LyraMapAnchorReactProps;
   'lr-markdown': LyraMarkdownReactProps;
   'lr-markdown-core': LyraMarkdownCoreReactProps;
   'lr-mcp-app': LyraMcpAppReactProps;
@@ -5342,6 +5343,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-live-region': LyraComponentTypeMap['lr-live-region']['element'];
   'lr-locale-picker': LyraComponentTypeMap['lr-locale-picker']['element'];
   'lr-map': LyraComponentTypeMap['lr-map']['element'];
+  'lr-map-anchor': LyraComponentTypeMap['lr-map-anchor']['element'];
   'lr-markdown': LyraComponentTypeMap['lr-markdown']['element'];
   'lr-markdown-core': LyraComponentTypeMap['lr-markdown-core']['element'];
   'lr-mcp-app': LyraComponentTypeMap['lr-mcp-app']['element'];
@@ -5654,6 +5656,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-live-region': LyraLiveRegionSvelteProps;
   'lr-locale-picker': LyraLocalePickerSvelteProps;
   'lr-map': LyraMapSvelteProps;
+  'lr-map-anchor': LyraMapAnchorSvelteProps;
   'lr-markdown': LyraMarkdownSvelteProps;
   'lr-markdown-core': LyraMarkdownCoreSvelteProps;
   'lr-mcp-app': LyraMcpAppSvelteProps;
@@ -6113,6 +6116,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-live-region': LyraLiveRegionVueProps;
   'lr-locale-picker': LyraLocalePickerVueProps;
   'lr-map': LyraMapVueProps;
+  'lr-map-anchor': LyraMapAnchorVueProps;
   'lr-markdown': LyraMarkdownVueProps;
   'lr-markdown-core': LyraMarkdownCoreVueProps;
   'lr-mcp-app': LyraMcpAppVueProps;
@@ -33657,6 +33661,14 @@ content synchronously; `closeAnchor()` closes a currently visible anchor. Both r
 `lr-map-anchor-close` reports `api`, `close-button`, or `escape`; focus return respects ownership.
 The close button is exposed as `anchor-close`.
 
+**Multiple anchored panels:** when several panels must be open at once, each opened and closed by
+its own owner, use `lr-map-anchor` children (see its section below) instead of the single `anchor`
+slot. They render through the `anchors` slot, are placed exactly like the slot anchor, and use this
+element's `anchorSafeArea` and `anchorBoundary` while their own `safeArea` and `boundary` are
+`undefined`. The two kinds coexist: `closeAnchor()`, `focusAnchor()` and `lr-map-anchor-close`
+concern only the `anchor` slot, and the slot panel joins the children's paint and Escape order only
+while the map places at least one child anchor.
+
 **Initialization and image export:** `initialization: LyraMapInitialization = 'visible'` defers
 construction until visible; `idle` schedules idle construction and `eager` requests immediate
 construction. `interaction` waits for the first input on the element (pointer press, touch, wheel,
@@ -34526,6 +34538,9 @@ would any dialog or popup of your own. Positioning uses the library's shared pop
 the map's container, and the wrapper's size never depends on the placement, so it adds no layout
 loop. Typical use: `map.addEventListener('lr-map-click', (e) => { card.hidden = false;
 map.anchorLngLat = e.detail.lngLat; })`.
+`anchors` — `lr-map-anchor` children; a direct child anchor assigns itself here. An element assigned
+here may also wrap anchors (a framework component host, say); it renders inside the map, so it
+should hold only anchors.
 `legend` — custom legend content, rendered inside the legend panel's own layout so it
 stays positioned with the map instead of floating beside it. Supplying it opens the panel even
 when `legend` and `legendGradient` are both empty. `legend-start` — the same extension point at the
@@ -34929,6 +34944,156 @@ undefined`, or changing `choropleth.sourceId` to a different value, now calls `r
   the current peer's `resize()` on allocation changes. It is replaced on reconnect/adoption and
   disconnected before peer teardown, so a stale delivery cannot resize a removed map. Browsers
   without `ResizeObserver` retain MapLibre's own window-resize behavior.
+
+---
+
+## `lr-map-anchor`
+
+Experimental. An independent panel of rich, interactive content anchored to a coordinate of its
+`lr-map`. Whoever owns it opens, moves and closes it without touching the map's other anchors or
+its `anchor` slot, so several feature-detail panels, owned by separate modules, can be open at once.
+The content stays your own light-DOM nodes, never cloned, serialized or moved, so their listeners,
+component state and application CSS survive camera moves, off-screen hiding, `mapStyle`
+replacement and map reconnects. `lr-map.js` does not register it; import it as well:
+
+```js
+import '@aceshooting/lyra-ui/components/lr-map.js';
+import '@aceshooting/lyra-ui/components/lr-map-anchor.js';
+```
+
+**Attachment:** make it a direct child of `lr-map`, where it assigns itself `slot="anchors"` unless a
+`slot` is authored, or author `slot="anchors"` yourself. Author it in server-rendered and hydrated
+markup, so the server and client markup match. An element assigned to the map's `anchors` slot may
+also wrap anchors (a framework component host); it renders inside the map, so it should hold only
+anchors. An anchor outside a map, in another slot or inside another anchor's content stays hidden,
+with a development warning while it is open, and `focusContent()` returns `false`.
+
+**Properties:**
+
+- `open: boolean = false` (attribute `open`, reflected) — the owner's open request. The close
+  button, Escape and `close()` write `false`; assigning it never emits events.
+- `lngLat?: readonly [number, number] | null` (property only) — where the panel points,
+  `[longitude, latitude]`. Compared by identity like the map's `anchorLngLat`, so assign a new array
+  to move it. A missing or invalid coordinate hides the panel without closing it.
+- `closable: boolean = false` (attribute `closable`, reflected) — adds the localized close button
+  and nonmodal Escape ownership. `close()` works either way.
+- `label?: string` (attribute `label`) — names the panel, which then becomes a `role="group"`. A host
+  `aria-label` wins. Without a name the content owns its semantics; for dialog semantics, put
+  `role="dialog"` and its labelling on your content root.
+- `boundary?: LyraMapAnchorBoundary` (property only) — extra clipping elements, as for the map's
+  `anchorBoundary`, which applies while this is `undefined`; `[]` opts out of the map's.
+- `safeArea?: LyraMapAnchorSafeArea` (property only) — logical CSS-pixel insets inside the map
+  allocation, as for the map's `anchorSafeArea`, which applies while this is `undefined`; `{}` opts
+  out of the map's. Logical edges follow the map's direction, never the anchor's or the content's.
+
+**Methods:**
+
+- `close(): boolean` — requests a close with reason `'api'` whether or not the panel is shown (for
+  example an off-screen panel whose layer was switched off). Returns `true` only when it closed:
+  `false` when it was not open, when a listener vetoed the request, or when the request listener
+  changed `open`, `lngLat` or the anchor's map. The map's `closeAnchor()`, by contrast, acts only on a
+  placed slot anchor.
+- `focusContent(): boolean` — synchronously focuses the first eligible content control, else the
+  close button. Returns `false` while the panel is hidden or not yet placed, when it is inert, or when
+  nothing in it can take focus. It never queues focus.
+
+**Events:** `lr-close-request` and `lr-close` both bubble, are composed and carry a frozen
+`detail: { reason }` (`LyraMapAnchorCloseDetail`, with `reason` `'api'`, `'close-button'` or `'escape'`).
+
+- `lr-close-request` — cancelable, before a requested close; `preventDefault()` keeps the anchor
+  open.
+- `lr-close` — after an accepted close has set `open = false`. Not fired when the panel merely
+  hides, for an `open = false` assignment, or for removal or disconnect. A listener may reopen the
+  anchor (focus then stays where it is) or remove it.
+
+The names are the library's shared dismissal pair, so they also bubble through a surrounding dialog
+or drawer: an ancestor that handles only its own dismissal checks `event.target`. The map's
+`lr-map-anchor-close` never fires for these anchors.
+
+**Slots:** the default slot holds the anchored content, any light DOM. `close-icon` replaces the
+close glyph.
+
+**CSS parts:** `base` (the positioned panel surface; a `z-index` set here replaces the automatic
+ordering), `body` (the scrolling content wrapper), `close-button` (the localized icon close button),
+`close-icon` (the wrapper of the close glyph).
+
+**CSS custom states:** `placed`, while the panel is placed and shown.
+
+**Themeable custom properties:** none of its own. The close button follows the map's four
+`--lr-map-popup-close-button-*` properties (`hover-bg`, `hover-color`, `active-bg`, `active-color`),
+which inherit from `lr-map` or any ancestor.
+
+**Placement and visibility:** while `open`, with a valid `lngLat` and content, the panel sits 12px
+above the point, flips below it near the top edge and shifts on both axes to stay inside the map
+allocation minus the safe area and boundaries, with 8px padding, following the point through every
+camera move and resize without moving the camera. Its maximum size follows the available space and
+`body` scrolls. It hides, without closing and without events, while the point is off the map, the
+content is empty, the anchor is `hidden`, the map is not ready, inert or disabled, or the remaining
+area is 16px or less on either axis; it returns, without taking focus, once that changes. It stays
+placed through a `mapStyle` replacement and re-places when the new style is restored. At most 16
+open anchors of one map are placed, in document order; later ones wait, hidden and with a
+development warning, until an earlier one closes.
+
+**Stacking, focus and Escape:** anchors do not avoid each other. Overlapping panels are painted in
+the order they were last opened, focused or pressed, with the anchor containing focus in front;
+the ordering never moves the elements, so Tab keeps document order (the map, its `anchor` slot,
+these anchors, then the legend). The panels share the map's stacking context above the legend and
+controls, so a `z-index` on `lr-map-anchor::part(base)` still interleaves one panel with your page
+panels. Opening never moves focus, except to an `[autofocus]` element of the content on the first
+placement after `open` becomes true. When a shown anchor that holds focus hides, closes or is
+removed, focus returns to where it entered from, else to the map, unless it has already moved
+elsewhere. On Escape a closable anchor closes after any overlay open inside it: the anchor
+containing focus first, else the frontmost closable one.
+
+```js
+const map = document.querySelector('lr-map');
+map.anchorSafeArea = { blockStart: 72 }; // keeps every anchor clear of a search bar
+
+/** One module's panel: its own element, listeners and lifetime. */
+function openDetails(details, lngLat, label) {
+  const anchor = document.createElement('lr-map-anchor');
+  anchor.lngLat = lngLat;
+  anchor.closable = true;
+  anchor.label = label;
+  anchor.append(details); // your own live element
+  anchor.addEventListener('lr-close', () => anchor.remove(), { once: true });
+  map.append(anchor);
+  anchor.open = true;
+  return anchor;
+}
+```
+
+Declaratively, for example with Lit:
+
+```js
+html`<lr-map .mapStyle=${style}>
+  <lr-map-anchor slot="anchors" open closable label="Place details" .lngLat=${place.lngLat}
+    @lr-close=${() => { this.place = null; }}>
+    <place-card .place=${place}></place-card>
+  </lr-map-anchor>
+</lr-map>`;
+```
+
+**A fixed header over scrolling details:** turn the body into a column that does not scroll itself,
+and let a region of your content scroll instead.
+
+```css
+lr-map-anchor::part(body) { display: flex; flex-direction: column; overflow: hidden; }
+.detail-card { display: flex; flex-direction: column; min-block-size: 0; }
+.detail-card > .rows { min-block-size: 0; overflow: auto; }
+```
+
+**Frameworks:** React 19, Svelte 5, Vue 3 and Lit set the properties and listen to `lr-close`
+directly. In Vue, bind the property-only members with `.prop` when the element may upgrade after
+the first render, as for every property-only Lyra member. Angular needs `CUSTOM_ELEMENTS_SCHEMA`;
+when a component host wraps the anchor, that host carries `slot="anchors"`, or the anchor sits in an
+`ng-container`.
+
+**Known gotchas:**
+
+- `exportImage()` never includes anchors, like every other DOM overlay.
+- Two anchors at the same coordinate with the same content size cover each other exactly; Tab or a
+  press brings the covered one to the front.
 
 ---
 

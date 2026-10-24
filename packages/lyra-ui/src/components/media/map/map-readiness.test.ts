@@ -547,3 +547,98 @@ describe('lr-map public readiness', () => {
     expect((ready.error as Error).message).to.equal('Map readiness failed.');
   });
 });
+
+describe('map current readiness boundaries', () => {
+  const optionsWith = (overrides: Partial<MapReadinessOptions> = {}): MapReadinessOptions => ({
+    subscribe: () => () => undefined, restore: () => undefined, isStyleReady: () => false, ownerPending: () => false,
+    onStyleReady: () => undefined, onIdle: () => undefined, ...overrides,
+  });
+
+  it('rejects waits when no style is pending and ignores a bind without one', async () => {
+    const controller = new MapReadiness(); let subscriptions = 0;
+    controller.bind(optionsWith({ subscribe: () => { subscriptions++; return () => undefined; } }));
+    expect(subscriptions).to.equal(0);
+    const waits = [outcome(controller.whenStyleReady()), outcome(controller.whenIdle())];
+    for (const state of waits) {
+      await settled(state);
+      expect((state.error as Error).name).to.equal('AbortError');
+    }
+  });
+
+  it('binds a pending style once and never after it failed', () => {
+    const controller = new MapReadiness(); let subscriptions = 0;
+    const options = optionsWith({ subscribe: () => { subscriptions++; return () => undefined; } });
+    controller.reset(); controller.bind(options);
+    const bound = subscriptions;
+    expect(bound).to.be.greaterThan(0);
+    controller.bind(options);
+    expect(subscriptions).to.equal(bound);
+    controller.reset(); controller.fail(); controller.bind(options);
+    expect(subscriptions).to.equal(bound);
+    controller.cancel();
+  });
+
+  it('fails a style whose error is already reported while its listeners are installed', async () => {
+    const controller = new MapReadiness(); const installed: string[] = [], removed: string[] = []; let errors = 0;
+    controller.reset();
+    const ready = outcome(controller.whenStyleReady());
+    controller.bind(optionsWith({
+      subscribe(event, listener) { installed.push(event); if (event === 'error') listener(); return () => { removed.push(event); }; },
+      onError: () => { errors++; },
+    }));
+    await settled(ready);
+    expect((ready.error as Error).name).to.equal('MapReadinessError');
+    expect(installed).to.deep.equal(['error']); expect(removed).to.deep.equal(['error']); expect(errors).to.equal(1);
+    controller.cancel();
+  });
+
+  it('fails a style when the peer refuses a subscription, without exposing its message', async () => {
+    const controller = new MapReadiness(); let errors = 0;
+    controller.reset();
+    const ready = outcome(controller.whenStyleReady());
+    controller.bind(optionsWith({ subscribe(event) { if (event === 'busy') throw new Error('native detail'); return () => undefined; }, onError: () => { errors++; } }));
+    await settled(ready);
+    expect((ready.error as Error).message).to.equal('Map readiness failed.'); expect(errors).to.equal(1);
+    controller.cancel();
+  });
+
+  it('fails without leaking the message when an owner callback throws', async () => {
+    const h = scriptedReadiness({ onStyleReady: () => { throw new Error('owner detail'); } });
+    const ready = outcome(h.controller.whenStyleReady());
+    h.fire('style-ready'); await settled(ready);
+    expect((ready.error as Error).name).to.equal('MapReadinessError'); expect((ready.error as Error).message).to.equal('Map readiness failed.');
+    h.controller.cancel();
+  });
+
+  it('withholds idle while the owner starts work during the style-ready publication', async () => {
+    const h = scriptedReadiness({ onStyleReady: () => { h.setPending(true); } });
+    h.setIdle(true);
+    const idle = outcome(h.controller.whenIdle());
+    h.fire('style-ready'); await h.controller.whenStyleReady();
+    await Promise.resolve(); await Promise.resolve();
+    expect(idle.settled).to.equal(false); expect(h.idleEvents).to.equal(0);
+    h.setPending(false); h.controller.check(); await settled(idle);
+    expect(h.idleEvents).to.equal(1);
+    h.controller.cancel();
+  });
+
+  it('releases every subscription even when one remover throws', () => {
+    const controller = new MapReadiness(); const removed: string[] = [];
+    controller.reset();
+    controller.bind(optionsWith({ subscribe: (event) => () => { removed.push(event); if (event === 'busy') throw new Error('native detail'); } }));
+    expect(() => controller.cancel()).not.to.throw();
+    expect(removed).to.include.members(['error', 'busy', 'idle']);
+  });
+
+  it('keeps a style started by a subscription remover during the reset that released it', async () => {
+    const controller = new MapReadiness(); let nested = false;
+    const fresh = optionsWith({ isStyleReady: () => true, isIdle: () => true });
+    controller.reset();
+    controller.bind(optionsWith({ subscribe: () => () => { if (!nested) { nested = true; controller.reset(); controller.bind(fresh); } } }));
+    controller.reset();
+    expect(nested).to.equal(true);
+    await controller.whenStyleReady();
+    await controller.whenIdle();
+    controller.cancel();
+  });
+});

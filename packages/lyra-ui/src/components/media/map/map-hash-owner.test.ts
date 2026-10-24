@@ -82,3 +82,36 @@ describe('map named hash ownership', () => {
     expect(second.configure(b.view, true, () => undefined)).to.equal('enabled'); a.fire(); expect(owner.read().status).to.equal('disabled'); second.dispose();
   });
 });
+
+describe('map hash owner boundaries', () => {
+  it('stays disabled without a window and reports an unreadable location as invalid', () => {
+    const detached = new MapHashOwner();
+    expect(detached.configure(null, true, () => undefined)).to.equal('disabled');
+    expect(detached.read()).to.deep.equal({ status: 'disabled' });
+    const { view } = fixture(); const owner = new MapHashOwner();
+    expect(owner.configure(view, true, () => undefined)).to.equal('enabled');
+    Object.defineProperty(view.location, 'hash', { configurable: true, get() { throw new DOMException('Blocked', 'SecurityError'); } });
+    expect(owner.read()).to.deep.equal({ status: 'invalid' });
+    owner.dispose();
+  });
+
+  it('releases its claim and reports invalid when the window refuses the listeners', () => {
+    const { view } = fixture(); const failing = new MapHashOwner(), later = new MapHashOwner();
+    const add = view.addEventListener.bind(view);
+    view.addEventListener = () => { throw new Error('Listeners are unavailable'); };
+    expect(failing.configure(view, true, () => undefined)).to.equal('invalid');
+    expect(failing.read().status).to.equal('disabled');
+    view.addEventListener = add;
+    expect(later.configure(view, true, () => undefined)).to.equal('enabled');
+    later.dispose();
+  });
+
+  it('reports a rejected history write without claiming it succeeded', () => {
+    const { view } = fixture(); const owner = new MapHashOwner(); owner.configure(view, true, () => undefined);
+    const hash = view.location.hash;
+    view.history.replaceState = () => { throw new DOMException('Blocked', 'SecurityError'); };
+    expect(owner.write({ zoom: 6, center: [3, 4], bearing: 0, pitch: 0 })).to.equal(false);
+    expect(view.location.hash).to.equal(hash);
+    owner.dispose();
+  });
+});

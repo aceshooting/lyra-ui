@@ -354,6 +354,8 @@ export type LyraLocalePickerReactProps = LyraReactElementProps<'lr-locale-picker
 
 export type LyraMapReactProps = LyraReactElementProps<'lr-map'>;
 
+export type LyraMapAnchorReactProps = LyraReactElementProps<'lr-map-anchor'>;
+
 export type LyraMarkdownReactProps = LyraReactElementProps<'lr-markdown'>;
 
 export type LyraMarkdownCoreReactProps = LyraReactElementProps<'lr-markdown-core'>;
@@ -817,6 +819,7 @@ export interface LyraReactIntrinsicElements {
   'lr-live-region': LyraLiveRegionReactProps;
   'lr-locale-picker': LyraLocalePickerReactProps;
   'lr-map': LyraMapReactProps;
+  'lr-map-anchor': LyraMapAnchorReactProps;
   'lr-markdown': LyraMarkdownReactProps;
   'lr-markdown-core': LyraMarkdownCoreReactProps;
   'lr-mcp-app': LyraMcpAppReactProps;

@@ -52,14 +52,14 @@ unchanged raw coverage floors are recorded in [test health](roadmap/test-health.
 containment, map control styling parts and experimental independently owned `lr-map-anchor`
 panels. It also corrects map URL-style readiness, anchor visibility and direction changes, scoped
 theme restoration, file-tree reveal cancellation, select initialization, dialog ownership, focus
-restoration, heatmap exports, neighbor pagination and text-only agent message updates. Further
-chart loading and progressive Markdown corrections and expanded behavioral coverage are being
-verified. Implementation and focused checks do not qualify the final release candidate.
+restoration, heatmap exports, neighbor pagination and text-only agent message updates. Chart loading
+and progressive Markdown corrections and expanded behavioral coverage have passed their browser checks. The new anchor brings the source inventory to 311 components. Implementation
+and focused checks do not qualify the final release candidate.
 
-Remaining release work includes finishing the anchor lifecycle checks, rebuilding and regenerating
-API/editor/consumer artifacts, measuring delivery budgets, preparing the shared 30.1.0 version,
-and passing CI, both browser workflows and Quality tools including the A/B benchmark on that exact
-commit. The complete Codecov UI flag must retain the previous release's result; improvement of
+The integrated map suite passes 940 cases in each of Chromium, Firefox with WebGL, and WebKit.
+Remaining release work includes completing API/editor/consumer artifact checks and delivery-budget
+review, preparing the shared 30.1.0 version, and passing CI, both browser workflows and Quality tools
+including the A/B benchmark on that exact commit. The complete Codecov UI flag must retain the previous release's result; improvement of
 about 0.1 percentage point is the release aim, while 99.74% and 99.80% remain longer-term goals.
 The historical WebKit PDF timeout remains unexplained; passing focused reproductions establish no
 fix. See [test health](roadmap/test-health.md) for the evidence and remaining work. Geospatial
@@ -186,15 +186,14 @@ packages version independently. A target moves only when scope changes, never to
 
 | Target | Package versions | Scope |
 |---|---|---|
-| 30.1.0 (planned) | lyra-ui, lyra-ide and lyra-translations 30.1.0 | Experimental independent map anchors, positioning/control additions, maintenance corrections and regression coverage; qualification pending |
+| 30.1.0 (in preparation) | lyra-ui, lyra-ide and lyra-translations 30.1.0 | Experimental independent map anchors, positioning/control additions, maintenance corrections and regression coverage; qualification pending |
 | 30.x | lyra-3d 1.x | Further graph visuals and 100k-node scale |
 | independent | lyra-docs 0.7.0 to 1.0.0 | Native document editing phases 4 to 8 |
 | on demand | lyra-ui minor | Fluent-informed look |
 | last | lyra-ui minors | Additional full catalogs |
 
-1. **30.1.0:** finish and qualify experimental independent map anchors, positioning/control
-   additions and maintenance corrections; complete reviewed behavioral coverage, generated artifacts,
-   measured budgets and factual documentation. Publication follows exact-commit qualification.
+1. **30.1.0:** qualify experimental independent map anchors, positioning/control additions and
+   maintenance corrections; finish generated-artifact checks and measured-budget review. Publication follows exact-commit qualification.
    The published 30.0.0 delivery records remain the source for its
    [collections](roadmap/immutable-collections.md), [map](roadmap/map-adoption.md) and
    [WebGL views](roadmap/lyra-3d.md) scope.

@@ -129,6 +129,18 @@ describe('planMapLayerOrder', () => {
     expect(plans.every((plan) => !plan.valid && plan.operations.length === 0)).to.equal(true);
   });
 
+  it('rejects non-array inputs, invalid owned layer ids and a combined layer count above the ceiling', () => {
+    const codes = (plan: MapLayerOrderPlan) => plan.valid ? 'valid' : plan.diagnostics.map((entry) => entry.code).join();
+    expect(codes(planMapLayerOrder('base' as never, []))).to.equal('invalid-input');
+    expect(codes(planMapLayerOrder([], null as never))).to.equal('invalid-input');
+    for (const id of ['', 7, 'x'.repeat(1025)]) {
+      expect(codes(planMapLayerOrder([], [{ id: 'a', layerIds: ['ok', id as string] }]))).to.equal('invalid-input');
+    }
+    const existing = Array.from({ length: 4096 }, (_, index) => `base-${index}`);
+    expect(codes(planMapLayerOrder(existing, [{ id: 'a', layerIds: ['extra'] }]))).to.equal('limit');
+    expect(codes(planMapLayerOrder(existing.slice(1), [{ id: 'a', layerIds: ['extra'] }]))).to.equal('valid');
+  });
+
   it('does not mutate caller arrays and freezes its result', () => {
     const existing = Object.freeze(['base']);
     const groups = Object.freeze([Object.freeze({ id: 'a', layerIds: Object.freeze(['a-fill']) })]);

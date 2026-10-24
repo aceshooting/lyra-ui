@@ -124,5 +124,40 @@ describe('MapDrawingPointer', () => {
       expect(fixture.order).to.deep.equal([]); fixture.controller.dispose();
     }
   });
-
+  it('releases its capture and pan lease as soon as the owner is stale, wherever that happens during a gesture', () => {
+    const run = (staleAt: number) => {
+      let consulted = 0;
+      const { canvas, controller, order } = setup({ current: () => ++consulted < staleAt });
+      const balanced = (when: string) => {
+        expect(order.filter(value => value === 'pan').length, `pan lease ${when} at ${staleAt}`).to.equal(order.filter(value => value === 'release-pan').length);
+        expect(order.filter(value => value === 'capture').length, `capture ${when} at ${staleAt}`).to.equal(order.filter(value => value === 'release-capture').length);
+      };
+      const began = controller.begin(pointer('pointerdown'));
+      if (!began) balanced('after a refused press');
+      else {
+        canvas.dispatchEvent(pointer('pointermove', 50, 70));
+        if (consulted >= staleAt) balanced('after a move by a stale owner');
+        canvas.dispatchEvent(pointer('pointerup', 70, 90));
+        balanced('after release');
+      }
+      controller.dispose();
+      balanced('after disposal');
+      return consulted;
+    };
+    // An uninterrupted gesture shows how often the owner is consulted; turn it stale at each of those points.
+    const consultations = run(Number.POSITIVE_INFINITY);
+    expect(consultations).to.be.greaterThan(10);
+    for (let staleAt = 1; staleAt <= consultations; staleAt++) run(staleAt);
+  });
+  it('releases a pan lease whose acceptance cannot be read and starts no drag', () => {
+    let released = 0;
+    const { controller, order } = setup({ acquirePan: () => ({ get accepted(): boolean { throw new Error('Lease sentinel'); }, release: () => { released++; return true; } }) });
+    expect(controller.begin(pointer('pointerdown'))).to.equal(false);
+    expect(released).to.equal(1); expect(order).to.deep.equal([]); controller.dispose();
+  });
+  it('ignores a press whose coordinates cannot be scaled to the canvas', () => {
+    const { controller, order } = setup();
+    expect(controller.begin(pointer('pointerdown', Number.MAX_VALUE, 30))).to.equal(false);
+    expect(order).to.deep.equal([]); controller.dispose();
+  });
 });

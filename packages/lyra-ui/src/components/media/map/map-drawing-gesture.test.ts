@@ -103,4 +103,18 @@ describe('map drawing native gesture lease', () => {
     const lease = acquireMapDrawingGesture(h.peer, { current: () => current }); expect(lease.release()).to.equal(false);
     current = true; expect(lease.release()).to.equal(false); expect(h.calls.filter(call => call === 'enable').length).to.equal(1);
   });
+  it('rejects a native handler that is not an object', () => {
+    for (const value of [null, 5, 'handler']) {
+      const lease = acquireMapDrawingGesture({ doubleClickZoom: value }, { current: () => true });
+      expect(lease.accepted, String(value)).to.equal(false); expect(lease.code, String(value)).to.equal('unavailable');
+    }
+  });
+  it('answers a release requested while the native restore is running without repeating it', () => {
+    const h = fixture(); const enable = h.handler.enable; let nested: boolean | undefined;
+    let lease!: ReturnType<typeof acquireMapDrawingGesture>;
+    h.handler.enable = () => { nested = lease.release(); enable(); };
+    lease = acquireMapDrawingGesture(h.peer, { current: () => true });
+    expect(lease.release()).to.equal(true); expect(nested).to.equal(false);
+    expect(h.calls.filter(call => call === 'enable').length).to.equal(1); expect(h.enabled()).to.equal(true);
+  });
 });

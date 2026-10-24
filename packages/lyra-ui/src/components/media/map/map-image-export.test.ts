@@ -169,3 +169,79 @@ describe('map frame image export', () => {
   });
 
 });
+
+describe('map frame image export boundaries', () => {
+  /** Replaces the destination canvas the next export receives with one the caller prepares. */
+  function prepareDestination(item: ReturnType<typeof setup>, prepare: (canvas: HTMLCanvasElement) => void): void {
+    const create = item.service.createCanvas;
+    item.service.createCanvas = () => { const canvas = create(); prepare(canvas); return canvas; };
+  }
+
+  it('rejects missing or primitive services before any work starts', async () => {
+    for (const services of [undefined, null, 'services', 5]) await failure(exportMapImage({}, services as never), 'invalid-options');
+  });
+
+  it('rejects attribution containing a glyph wider than the footer line', async () => {
+    const item = setup();
+    prepareDestination(item, canvas => { canvas.getContext('2d')!.measureText = () => ({ width: 1000 }) as TextMetrics; });
+    await failure(exportMapImage({}, item.service), 'attribution-failed');
+    expect(item.cleanups()).to.equal(1); expect(item.destinations[0]!.width).to.equal(0);
+  });
+
+  it('settles with the export outcome even when removing the abort listener throws', async () => {
+    const item = setup(), controller = new AbortController();
+    Object.defineProperty(controller.signal, 'removeEventListener', { value() { throw new Error('cleanup detail'); } });
+    expect((await exportMapImage({ attribution: false }, item.service, controller.signal)).type).to.equal('image/png');
+    expect(item.cleanups()).to.equal(1);
+  });
+
+  it('reports a failed header read as an encoding failure and a superseded one as cancellation', async () => {
+    for (const supersede of [false, true]) {
+      const item = setup();
+      prepareDestination(item, canvas => {
+        canvas.toBlob = (callback) => {
+          const blob = new Blob(['x'.repeat(32)], { type: 'image/png' });
+          blob.slice = () => ({ arrayBuffer: async () => { if (supersede) item.invalidate(); throw new Error('read detail'); } }) as unknown as Blob;
+          callback(blob);
+        };
+      });
+      await failure(exportMapImage({ attribution: false }, item.service), supersede ? 'cancelled' : 'encoding-failed');
+      expect(item.cleanups()).to.equal(1);
+    }
+  });
+
+  it('cancels when the export is superseded while the frame pixels are read', async () => {
+    const item = setup();
+    prepareDestination(item, canvas => {
+      const ctx = canvas.getContext('2d')!, read = ctx.getImageData.bind(ctx) as unknown as (...args: unknown[]) => ImageData;
+      ctx.getImageData = ((...args: unknown[]) => { item.invalidate(); return read(...args); }) as unknown as typeof ctx.getImageData;
+    });
+    await failure(exportMapImage({ attribution: false }, item.service), 'cancelled');
+    expect(item.cleanups()).to.equal(1); expect(item.destinations[0]!.width).to.equal(0);
+  });
+
+  it('reports a lost 2D context after the footer resizes the canvas', async () => {
+    const item = setup();
+    prepareDestination(item, canvas => {
+      const getContext = canvas.getContext.bind(canvas) as unknown as (...args: unknown[]) => unknown; let calls = 0;
+      Object.defineProperty(canvas, 'getContext', { value: (...args: unknown[]) => ++calls === 1 ? getContext(...args) : null });
+    });
+    await failure(exportMapImage({}, item.service), 'capture-failed');
+    expect(item.cleanups()).to.equal(1);
+  });
+
+  it('cancels when the export is superseded while the footer is painted', async () => {
+    const item = setup();
+    prepareDestination(item, canvas => { canvas.getContext('2d')!.fillText = () => { item.invalidate(); }; });
+    await failure(exportMapImage({}, item.service), 'cancelled');
+    expect(item.cleanups()).to.equal(1);
+  });
+
+  it('cancels when reading the deadline supersedes the export before readiness is requested', async () => {
+    const item = setup(); let ready = 0;
+    item.service.ready = async () => { ready++; };
+    Object.defineProperty(item.service, 'timeoutMs', { configurable: true, get() { item.invalidate(); return 50; } });
+    await failure(exportMapImage({}, item.service), 'cancelled');
+    expect(ready).to.equal(0); expect(item.cleanups()).to.equal(0); expect(item.destinations.length).to.equal(0);
+  });
+});

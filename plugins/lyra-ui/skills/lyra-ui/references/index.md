@@ -2,7 +2,7 @@
 
 # Component index
 
-310 custom elements, grouped by the source family they live in.
+311 custom elements, grouped by the source family they live in.
 
 **Reading one component.** Its reference file path is derived from the tag — no search needed:
 `llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`): import path, optional peers,
@@ -190,11 +190,12 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-random-content` · lr-random-content.js · `stable` since `4.0.0` — displays a randomly (or sequentially) chosen subset of its slotted children and hides the rest, for A/B copy testing, testimonial/quote...
 - `lr-tour` · lr-tour.js · `stable` since `4.0.0` — - a spotlight-and-step guided walkthrough for first-run onboarding.
 
-## Media, files & maps — `components/media/` (22)
+## Media, files & maps — `components/media/` (23)
 
 - `lr-flag` · lr-flag.js · `stable` since `4.0.0` — a country/language flag.
 - `lr-sequence-playback` · lr-sequence-playback.js · `stable` since `9.0.0` — steps a current index through `[0, itemCount)` on a fixed interval (play/pause), the common building block behind ad-hoc play-timers in...
 - `lr-map` · lr-map.js · `stable` since `4.0.0` — a modular MapLibre-compatible wrapper with a declarative legend, choropleth GeoJSON layer, markers, and additive `dataLayers` GeoJSON...
+- `lr-map-anchor` · lr-map-anchor.js · `experimental` since `unreleased` — rich, interactive content anchored to a coordinate of its `<lr-map>`.
 - `lr-drop-zone` · lr-drop-zone.js · `experimental` since `16.0.0` — - a drag-and-drop region wrapper with no file input of its own.
 - `lr-file-input` · lr-file-input.js · `stable` since `4.0.0` — a drag-drop + click-to-browse file dropzone.
 - `lr-image-comparer` · lr-image-comparer.js · `stable` since `4.0.0` — compares two slotted surfaces with a keyboard- accessible range divider.

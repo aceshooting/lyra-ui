@@ -357,3 +357,39 @@ describe('inspectMapImageMetadata', () => {
     });
   });
 });
+
+describe('inspectMapImageMetadata container boundaries', () => {
+  const malformed = { ok: false, issue: 'malformed' };
+
+  it('rejects PNG chunks whose type is not four letters or sets the reserved bit', () => {
+    expect(inspectMapImageMetadata(png(1, 1, [pngChunk('tExt')]), 'image/png')).to.deep.equal(malformed);
+    expect(inspectMapImageMetadata(png(1, 1, [pngChunk('1234')]), 'image/png')).to.deep.equal(malformed);
+    expect(inspectMapImageMetadata(png(1, 1, [pngChunk('tEXt')]), 'image/png').ok).to.equal(true);
+  });
+
+  it('skips JPEG fill bytes before a marker but rejects any other byte there', () => {
+    const body = [...jpegFrame(), ...jpegScan(), 12, 255, 217];
+    expect(inspectMapImageMetadata(new Uint8Array([255, 216, 255, 255, 255, ...body]), 'image/jpeg')).to.deep.equal({ ok: true, mime: 'image/jpeg', width: 1, height: 1 });
+    expect(inspectMapImageMetadata(new Uint8Array([255, 216, 0, ...body]), 'image/jpeg')).to.deep.equal(malformed);
+  });
+
+  it('rejects JPEG restart markers that are not inside entropy-coded data', () => {
+    const header = [255, 216, ...jpegFrame()];
+    expect(inspectMapImageMetadata(new Uint8Array([...header, 255, 0xd0, ...jpegScan(), 12, 255, 217]), 'image/jpeg')).to.deep.equal(malformed);
+    expect(inspectMapImageMetadata(new Uint8Array([...header, ...jpegScan(), 255, 0xd0, 12, 255, 217]), 'image/jpeg')).to.deep.equal(malformed);
+  });
+
+  it('rejects a JPEG scan that precedes its frame or is too short to name components', () => {
+    expect(inspectMapImageMetadata(new Uint8Array([255, 216, ...jpegScan(), 12, 255, 217]), 'image/jpeg')).to.deep.equal(malformed);
+    expect(inspectMapImageMetadata(new Uint8Array([255, 216, ...jpegFrame(), ...jpegSegment(0xda, [1]), 12, 255, 217]), 'image/jpeg')).to.deep.equal(malformed);
+  });
+
+  it('rejects a WebP chunk header cut off inside the declared RIFF payload', () => {
+    expect(inspectMapImageMetadata(webp([vp8l(), [0, 0]]), 'image/webp')).to.deep.equal(malformed);
+    expect(inspectMapImageMetadata(webp([vp8l()]), 'image/webp').ok).to.equal(true);
+  });
+
+  it('reports malformed input for bytes it cannot read without throwing', () => {
+    expect(inspectMapImageMetadata(new Proxy(png(), {}), 'image/png')).to.deep.equal(malformed);
+  });
+});

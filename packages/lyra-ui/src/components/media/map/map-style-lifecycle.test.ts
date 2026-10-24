@@ -187,3 +187,59 @@ describe('MapStyleLifecycle', () => {
     });
   }
 });
+
+describe('MapStyleLifecycle boundaries', () => {
+  it('rejects a style whose peer error is reported while its listeners are installed', async () => {
+    const lifecycle = new MapStyleLifecycle(); const failure = new Error('style failed'); const installed: string[] = [];
+    let removals = 0;
+    lifecycle.begin({
+      subscribe(event, listener) { installed.push(event); if (event === 'error') listener(failure); return () => { removals++; }; },
+      restore: () => undefined,
+    });
+    expect((await rejection(lifecycle.whenStyleReady())) === failure).to.equal(true);
+    expect((await rejection(lifecycle.whenIdle())) === failure).to.equal(true);
+    expect(installed).to.deep.equal(['error']);
+    expect(removals).to.equal(1);
+  });
+
+  it('releases the remaining listeners when one remover throws', () => {
+    const lifecycle = new MapStyleLifecycle(); const removed: string[] = [];
+    lifecycle.begin({
+      subscribe: (event) => () => { removed.push(event); if (event === 'error') throw new Error('native detail'); },
+      restore: () => undefined,
+    });
+    expect(() => lifecycle.cancel()).not.to.throw();
+    expect([...removed].sort()).to.deep.equal(['error', 'idle', 'style-ready']);
+  });
+
+  it('rejects the idle wait when the idle callback throws', async () => {
+    const lifecycle = new MapStyleLifecycle(); const failure = new Error('owner detail');
+    const peer = harness({ isStyleReady: () => true, isIdle: () => true, onIdle: () => { throw failure; } });
+    lifecycle.begin(peer.options);
+    await lifecycle.whenStyleReady();
+    expect((await rejection(lifecycle.whenIdle())) === failure).to.equal(true);
+    expect(peer.count()).to.equal(0);
+  });
+
+  it('does not finish an idle wait that its own callback superseded', async () => {
+    const lifecycle = new MapStyleLifecycle();
+    const next = harness({ isStyleReady: () => true, isIdle: () => true });
+    const old = harness({ isStyleReady: () => true, isIdle: () => true, onIdle: () => { old.calls.push('idle'); lifecycle.begin(next.options); } });
+    lifecycle.begin(old.options);
+    const oldIdle = rejection(lifecycle.whenIdle());
+    expect((await oldIdle as Error).name).to.equal('AbortError');
+    await lifecycle.whenIdle();
+    expect(old.calls).to.deep.equal(['restore', 'ready', 'idle']);
+    expect(next.calls).to.deep.equal(['restore', 'ready', 'idle']);
+    expect(old.count() + next.count()).to.equal(0);
+  });
+
+  it('ignores an idle event raised while the idle callback is running', async () => {
+    const lifecycle = new MapStyleLifecycle(); let idles = 0;
+    const peer = harness({ isStyleReady: () => true, isIdle: () => true, onIdle: () => { idles++; peer.fire('idle'); } });
+    lifecycle.begin(peer.options);
+    await lifecycle.whenIdle();
+    expect(idles).to.equal(1);
+    expect(peer.count()).to.equal(0);
+  });
+});

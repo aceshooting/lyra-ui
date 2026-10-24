@@ -12,6 +12,7 @@ export * from './flag/flag.js';
 export * from './image-comparer/image-comparer.js';
 export * from './image-viewer/image-viewer.js';
 export * from './lightbox/lightbox.js';
+export * from './map/map-anchor.js';
 export * from './map/map.js';
 export * from './media-card/media-card.js';
 export * from './sequence-playback/sequence-playback.js';

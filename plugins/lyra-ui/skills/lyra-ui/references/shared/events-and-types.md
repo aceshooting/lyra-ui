@@ -1140,6 +1140,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-live-region': LyraLiveRegionReactProps;
   'lr-locale-picker': LyraLocalePickerReactProps;
   'lr-map': LyraMapReactProps;
+  'lr-map-anchor': LyraMapAnchorReactProps;
   'lr-markdown': LyraMarkdownReactProps;
   'lr-markdown-core': LyraMarkdownCoreReactProps;
   'lr-mcp-app': LyraMcpAppReactProps;
@@ -1581,6 +1582,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-live-region': LyraComponentTypeMap['lr-live-region']['element'];
   'lr-locale-picker': LyraComponentTypeMap['lr-locale-picker']['element'];
   'lr-map': LyraComponentTypeMap['lr-map']['element'];
+  'lr-map-anchor': LyraComponentTypeMap['lr-map-anchor']['element'];
   'lr-markdown': LyraComponentTypeMap['lr-markdown']['element'];
   'lr-markdown-core': LyraComponentTypeMap['lr-markdown-core']['element'];
   'lr-mcp-app': LyraComponentTypeMap['lr-mcp-app']['element'];
@@ -1893,6 +1895,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-live-region': LyraLiveRegionSvelteProps;
   'lr-locale-picker': LyraLocalePickerSvelteProps;
   'lr-map': LyraMapSvelteProps;
+  'lr-map-anchor': LyraMapAnchorSvelteProps;
   'lr-markdown': LyraMarkdownSvelteProps;
   'lr-markdown-core': LyraMarkdownCoreSvelteProps;
   'lr-mcp-app': LyraMcpAppSvelteProps;
@@ -2352,6 +2355,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-live-region': LyraLiveRegionVueProps;
   'lr-locale-picker': LyraLocalePickerVueProps;
   'lr-map': LyraMapVueProps;
+  'lr-map-anchor': LyraMapAnchorVueProps;
   'lr-markdown': LyraMarkdownVueProps;
   'lr-markdown-core': LyraMarkdownCoreVueProps;
   'lr-mcp-app': LyraMcpAppVueProps;

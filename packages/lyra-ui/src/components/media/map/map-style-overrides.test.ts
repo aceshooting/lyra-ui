@@ -1,5 +1,6 @@
 import { expect } from '@open-wc/testing';
 import { MapStyleOverrides, projectMapStyleOverrides, type MapStyleOverridePeer } from './map-style-overrides.js';
+import { expandMapStyleOverrides } from './map-style-override-admission.js';
 
 function harness() {
   const layers = new Map<string, { paint: Map<string, unknown>; layout: Map<string, unknown> }>();
@@ -207,5 +208,131 @@ describe('MapStyleOverrides', () => {
     expect(h.repaints()).to.equal(1);
     owner.reconcile(h.peer, 1, [], options);
     expect(h.layers.get('base0')!.paint.get('value-0')).to.equal('x'.repeat(4096));
+  });
+});
+
+describe('MapStyleOverrides boundaries', () => {
+  const red = [{ layerId: 'base', paint: { 'fill-color': 'red' } }];
+  const codes = (result: { readonly diagnostics: readonly { readonly code: string }[] }) => result.diagnostics.map(item => item.code);
+
+  it('accounts for a baseline whose write failed when a later property is retained', () => {
+    const h = harness(); const layer = h.add('base'); layer.paint.set('fill-color', 'original'); layer.paint.set('fill-opacity', 0.9);
+    const owner = new MapStyleOverrides(); const native = h.peer.setPaintProperty;
+    h.peer.setPaintProperty = (id, property, value) => { if (property === 'fill-color') throw new Error('peer detail'); native(id, property, value); };
+    const result = owner.reconcile(h.peer, 1, [{ layerId: 'base', paint: { 'fill-color': 'red', 'fill-opacity': 0.5 } }], options);
+    expect(result.diagnostics).to.deep.equal([{ code: 'peer-error', layerId: 'base', property: 'fill-color' }]);
+    expect(result.changed).to.equal(1); expect(layer.paint.get('fill-opacity')).to.equal(0.5);
+    owner.reconcile(h.peer, 1, [], options);
+    expect(layer.paint.get('fill-opacity')).to.equal(0.9); expect(layer.paint.get('fill-color')).to.equal('original');
+  });
+
+  it('abandons a write whose ownership check re-enters the owner', () => {
+    const h = harness(); h.add('base'); const owner = new MapStyleOverrides(); let checks = 0;
+    const result = owner.reconcile(h.peer, 1, red, { ...options, isOwned: () => { if (++checks === 2) owner.reset(); return false; } });
+    expect(result.accepted).to.equal(false); expect(codes(result)).to.deep.equal(['cancelled']);
+    expect(h.writes.length + h.repaints()).to.equal(0);
+  });
+
+  it('diagnoses a layer that disappears or becomes owned before its write', () => {
+    for (const mode of ['missing-layer', 'owned-layer'] as const) {
+      const h = harness(); h.add('base'); const owner = new MapStyleOverrides(); let ownership = 0, lookups = 0;
+      if (mode === 'missing-layer') h.peer.getLayer = (id) => ++lookups === 1 ? { id } : undefined;
+      const result = owner.reconcile(h.peer, 1, red, { ...options, isOwned: () => mode === 'owned-layer' && ++ownership > 1 });
+      expect(result.diagnostics, mode).to.deep.equal([{ code: mode, layerId: 'base', property: 'fill-color' }]);
+      expect(h.writes.length, mode).to.equal(0);
+    }
+  });
+
+  it('stops restoring when an availability check invalidates the owner and retains the baseline', () => {
+    const h = harness(); const layer = h.add('base'); layer.paint.set('fill-color', 'original'); const owner = new MapStyleOverrides();
+    owner.reconcile(h.peer, 1, red, options);
+    const result = owner.reconcile(h.peer, 1, [], { ...options, isOwned: () => { owner.layerRemoved('unrelated'); return false; } });
+    expect(result.accepted).to.equal(false); expect(codes(result)).to.deep.equal(['cancelled']);
+    expect(layer.paint.get('fill-color')).to.equal('red');
+    owner.reconcile(h.peer, 1, [], options);
+    expect(layer.paint.get('fill-color')).to.equal('original');
+  });
+
+  it('reports a peer failure while checking layer availability and writes nothing', () => {
+    const h = harness(); h.add('base'); const owner = new MapStyleOverrides();
+    h.peer.getLayer = () => { throw new Error('peer detail'); };
+    const result = owner.reconcile(h.peer, 1, red, options);
+    expect(result.diagnostics).to.deep.equal([{ code: 'peer-error', layerId: 'base' }]);
+    expect(result.accepted).to.equal(true); expect(h.writes.length).to.equal(0);
+  });
+
+  it('retains the baseline when reading the current value fails during restoration', () => {
+    const h = harness(); const layer = h.add('base'); layer.paint.set('fill-color', 'original'); const owner = new MapStyleOverrides();
+    owner.reconcile(h.peer, 1, red, options);
+    const read = h.peer.getPaintProperty; h.peer.getPaintProperty = () => { throw new Error('peer detail'); };
+    expect(owner.reconcile(h.peer, 1, [], options).diagnostics).to.deep.equal([{ code: 'peer-error', layerId: 'base', property: 'fill-color' }]);
+    expect(layer.paint.get('fill-color')).to.equal('red');
+    h.peer.getPaintProperty = read; owner.reconcile(h.peer, 1, [], options);
+    expect(layer.paint.get('fill-color')).to.equal('original');
+  });
+
+  it('reports an unreadable peer value before overriding and keeps the baseline when restoring', () => {
+    const h = harness(); const layer = h.add('base'); const owner = new MapStyleOverrides();
+    layer.paint.set('fill-color', Number.NaN);
+    expect(owner.reconcile(h.peer, 1, red, options).diagnostics).to.deep.equal([{ code: 'invalid-original', layerId: 'base', property: 'fill-color' }]);
+    expect(h.writes.length).to.equal(0);
+    layer.paint.set('fill-color', 'original'); owner.reconcile(h.peer, 1, red, options);
+    layer.paint.set('fill-color', Number.NaN);
+    expect(owner.reconcile(h.peer, 1, [], options).diagnostics).to.deep.equal([{ code: 'invalid-original', layerId: 'base', property: 'fill-color' }]);
+    layer.paint.set('fill-color', 'red'); owner.reconcile(h.peer, 1, [], options);
+    expect(layer.paint.get('fill-color')).to.equal('original');
+  });
+
+  it('reports a resolved value the snapshot boundary refuses', () => {
+    const h = harness(); h.add('base'); const owner = new MapStyleOverrides();
+    const result = owner.reconcile(h.peer, 1, red, { ...options, resolve: () => Number.NaN });
+    expect(result.diagnostics).to.deep.equal([{ code: 'invalid-resolution', layerId: 'base', property: 'fill-color' }]);
+    expect(h.writes.length + h.repaints()).to.equal(0);
+  });
+
+  it('stops after a setter retires the owner and does not record the interrupted write', () => {
+    const h = harness(); const layer = h.add('base'); layer.paint.set('fill-color', 'original'); layer.paint.set('fill-opacity', 0.9);
+    const owner = new MapStyleOverrides(); const native = h.peer.setPaintProperty;
+    h.peer.setPaintProperty = (id, property, value) => { native(id, property, value); owner.layerRemoved('unrelated'); };
+    const result = owner.reconcile(h.peer, 1, [{ layerId: 'base', paint: { 'fill-color': 'red', 'fill-opacity': 0.5 } }], options);
+    expect(result.accepted).to.equal(false); expect(codes(result)).to.deep.equal(['cancelled']);
+    expect(result.changed).to.equal(0); expect(h.writes.map(write => write.property)).to.deep.equal(['fill-color']);
+    expect(layer.paint.get('fill-opacity')).to.equal(0.9);
+    h.peer.setPaintProperty = native; owner.reconcile(h.peer, 1, [], options);
+    expect(layer.paint.get('fill-color')).to.equal('original');
+  });
+
+  it('stops before writing when reading the current value retires the owner', () => {
+    const h = harness(); h.add('base'); const owner = new MapStyleOverrides();
+    const read = h.peer.getPaintProperty;
+    h.peer.getPaintProperty = (id, property) => { owner.layerRemoved('unrelated'); return read(id, property); };
+    const result = owner.reconcile(h.peer, 1, red, options);
+    expect(codes(result)).to.deep.equal(['cancelled']); expect(h.writes.length).to.equal(0);
+  });
+
+  it('keeps the baseline when reading the current value retires the owner during restoration', () => {
+    const h = harness(); const layer = h.add('base'); layer.paint.set('fill-color', 'original'); const owner = new MapStyleOverrides();
+    owner.reconcile(h.peer, 1, red, options);
+    const read = h.peer.getPaintProperty;
+    h.peer.getPaintProperty = (id, property) => { owner.layerRemoved('unrelated'); return read(id, property); };
+    expect(codes(owner.reconcile(h.peer, 1, [], options))).to.deep.equal(['cancelled']);
+    expect(layer.paint.get('fill-color')).to.equal('red');
+    h.peer.getPaintProperty = read; owner.reconcile(h.peer, 1, [], options);
+    expect(layer.paint.get('fill-color')).to.equal('original');
+  });
+
+  it('reports cancellation raised by the repaint after a successful write', () => {
+    const h = harness(); const layer = h.add('base'); const owner = new MapStyleOverrides();
+    h.peer.triggerRepaint = () => { owner.reset(); };
+    const result = owner.reconcile(h.peer, 1, red, options);
+    expect(result.accepted).to.equal(false); expect(codes(result)).to.deep.equal(['cancelled']); expect(result.changed).to.equal(1);
+    expect(layer.paint.get('fill-color')).to.equal('red');
+  });
+
+  it('refuses a selector override that expands beyond the layer ceiling', () => {
+    const layers = (count: number) => Array.from({ length: count }, (_, index) => ({ id: `layer-${index}`, type: 'fill' }));
+    const selector = [{ layerType: 'fill', paint: { 'fill-opacity': 0.5 } }];
+    expect(expandMapStyleOverrides(selector, layers(1024))?.length).to.equal(1024);
+    expect(expandMapStyleOverrides(selector, layers(1025))).to.equal(undefined);
   });
 });

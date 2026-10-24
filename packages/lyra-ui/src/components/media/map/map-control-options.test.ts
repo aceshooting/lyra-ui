@@ -90,5 +90,10 @@ describe('map control option projection', () => {
     expect(normalizeMapControlOptions({ attribution: { customAttribution: Array(5).fill({ label: 'x'.repeat(4000), url: 'https://example.com' }) } }).controls.size).to.equal(0);
     expect(normalizeMapControlOptions({ attribution: { customAttribution: new Array(2) } }).controls.size).to.equal(0);
   });
-
+  it('skips a navigation or scale value that is neither enabled nor a record and flags malformed new-control members', () => {
+    const { controls, diagnostics } = normalizeMapControlOptions({ navigation: 'yes', scale: 1, geolocate: { zoomToUserAccuracy: 'yes' }, attribution: { compact: 'yes' } });
+    expect(controls.size).to.equal(0);
+    expect(diagnostics).to.deep.equal([{ kind: 'geolocate', code: 'invalid-options' }, { kind: 'attribution', code: 'invalid-options' }]);
+    expect(normalizeMapControlOptions({ attribution: { compact: false } }).controls.get('attribution')!.options).to.deep.equal({ compact: false });
+  });
 });

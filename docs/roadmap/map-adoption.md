@@ -13,7 +13,8 @@ supported component API. Consumer migration is in progress. Current unreleased m
 corrections address URL-style readiness, anchor visibility and live direction changes, boundary
 containment, and public geolocation-group and attribution-content styling parts. They still need
 qualification on the final maintenance release candidate. Multiple independently anchored content
-panels remain an open request under review, without an implementation or assigned release.
+panels are implemented as the unreleased experimental `lr-map-anchor` element and need the same
+qualification.
 
 ## Breaking change
 
@@ -73,6 +74,11 @@ items let them move to `lr-map`, or at least drop their workarounds on the engin
   `lr-map-pick`), and a polygon/line draw mode with `lr-map-draw-*` events (area, length, centroid).
 - [x] Anchored content clamps under fixed application chrome (boundary and safe-area insets),
   stacks above other popups, and has a localized close label.
+- [x] Several independently owned anchored panels (unreleased): experimental
+  `lr-map-anchor` children rendered through the `anchors` slot, each opened, moved and closed by its
+  own owner. Content stays caller-owned light DOM; safe areas and boundaries are per anchor or
+  inherited from the map; overlapping panels paint and take Escape by focus and recency; focus
+  returns when a focused anchor hides, closes or is removed.
 - [x] `exportImage({ type, attribution })` returning a `Blob` of the current view.
 - [x] Document that the modular engine shapes right-to-left text without a plugin, so applications
   drop runtime plugin fetches from third-party CDNs.

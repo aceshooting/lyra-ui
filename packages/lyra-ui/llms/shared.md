@@ -142,7 +142,7 @@ The entry points, then:
   but it is not an exhaustive promise that every component-owned type or future export is present.
   Prefer the owning component entry in application code, both for the smallest bundle and the
   complete contract of that component.
-- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 295
+- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 296
   root-included tags — everything **except** the 15 inventory-designated optional-peer-family tags:
   `lr-chart` and its 8 typed subclasses (`lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`,
   `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`,
@@ -4845,6 +4845,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-live-region': LyraLiveRegionReactProps;
   'lr-locale-picker': LyraLocalePickerReactProps;
   'lr-map': LyraMapReactProps;
+  'lr-map-anchor': LyraMapAnchorReactProps;
   'lr-markdown': LyraMarkdownReactProps;
   'lr-markdown-core': LyraMarkdownCoreReactProps;
   'lr-mcp-app': LyraMcpAppReactProps;
@@ -5286,6 +5287,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-live-region': LyraComponentTypeMap['lr-live-region']['element'];
   'lr-locale-picker': LyraComponentTypeMap['lr-locale-picker']['element'];
   'lr-map': LyraComponentTypeMap['lr-map']['element'];
+  'lr-map-anchor': LyraComponentTypeMap['lr-map-anchor']['element'];
   'lr-markdown': LyraComponentTypeMap['lr-markdown']['element'];
   'lr-markdown-core': LyraComponentTypeMap['lr-markdown-core']['element'];
   'lr-mcp-app': LyraComponentTypeMap['lr-mcp-app']['element'];
@@ -5598,6 +5600,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-live-region': LyraLiveRegionSvelteProps;
   'lr-locale-picker': LyraLocalePickerSvelteProps;
   'lr-map': LyraMapSvelteProps;
+  'lr-map-anchor': LyraMapAnchorSvelteProps;
   'lr-markdown': LyraMarkdownSvelteProps;
   'lr-markdown-core': LyraMarkdownCoreSvelteProps;
   'lr-mcp-app': LyraMcpAppSvelteProps;
@@ -6057,6 +6060,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-live-region': LyraLiveRegionVueProps;
   'lr-locale-picker': LyraLocalePickerVueProps;
   'lr-map': LyraMapVueProps;
+  'lr-map-anchor': LyraMapAnchorVueProps;
   'lr-markdown': LyraMarkdownVueProps;
   'lr-markdown-core': LyraMarkdownCoreVueProps;
   'lr-mcp-app': LyraMcpAppVueProps;

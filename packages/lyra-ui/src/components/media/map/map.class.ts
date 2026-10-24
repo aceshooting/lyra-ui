@@ -32,7 +32,9 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import type { LyraMapAnchorBoundary, LyraMapAnchorCloseDetail, LyraMapAnchorSafeArea } from './map-anchor-options.js';
-import type { MapAnchorController, MapAnchorHost } from './map-anchor-controller.js';
+import type { MapAnchorChildren, MapAnchorController, MapAnchorHost, MapAnchorMapHost } from './map-anchor-controller.js';
+import { MAP_ANCHOR_SEAM, type MapAnchorChild, type MapAnchorOwnerOperation } from './map-anchor-seam.js';
+import { tag } from '../../../internal/prefix.js';
 export type { LyraMapAnchorBoundary, LyraMapAnchorSafeArea, LyraMapAnchorCloseReason, LyraMapAnchorCloseDetail } from './map-anchor-options.js';
 import {
   loadMapControl,
@@ -2786,6 +2788,9 @@ export interface LyraMapEventMap {
  *   is off screen. The element only positions it (`part="anchor"` supplies a default surface);
  *   the slotted content owns its semantics, close control and focus.
  * @csspart anchor - The positioned wrapper of the `anchor` slot.
+ * @slot anchors - `lr-map-anchor` children: independently opened and closed panels anchored to
+ *   coordinates, each placed like the `anchor` slot. A direct child anchor assigns itself here. An
+ *   element assigned here may also wrap anchors; it renders inside the map, so it should hold only anchors.
  * @slot legend - Custom legend content, rendered inside the legend panel's own layout so it stays
  *  positioned with the map instead of floating beside it. Slotted content is never made
  *  interactive by `legendInteractive`, which only reaches rows projected from `legend`.
@@ -3334,13 +3339,15 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   @property({ attribute: false }) anchorLngLat?: readonly [number, number] | null;
   /** Additional clipping boundaries intersected with map allocation. Accepts a connected Element
    * or a dense array of at most32 connected same-document Elements. An empty array adds none.
-   * Invalid boundaries hide the anchor until corrected; caller arrays are never retained or mutated. */
+   * Invalid boundaries hide the anchor until corrected; caller arrays are never retained or mutated.
+   * Also the default of every `lr-map-anchor` child whose own `boundary` is `undefined`. */
   @property({ attribute: false }) anchorBoundary?: LyraMapAnchorBoundary;
   /** Nonnegative finite CSS-pixel logical insets inside the map allocation, in addition to the
    * existing 8px placement padding. Missing edges default to zero; invalid values/accessors hide
    * the anchor. The panel shifts inside the available area when its on-map target lies outside
    * that area, without changing the camera or coordinate. Oversized valid edges collapse available
-   * allocation and hide the anchor. Caller data is not mutated. */
+   * allocation and hide the anchor. Caller data is not mutated. Also the default of every
+   * `lr-map-anchor` child whose own `safeArea` is `undefined`. */
   @property({ attribute: false }) anchorSafeArea?: LyraMapAnchorSafeArea;
   /** Adds a localized close action and nonmodal Escape ownership. Opening never moves focus. */
   @property({ type: Boolean, attribute: 'anchor-closable' }) anchorClosable = false;
@@ -4642,6 +4649,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   /** `loading` while the anchor runtime imports; `failed` until a coordinate is requested again. */
   private anchorLoad?: 'loading' | 'failed';
   private anchorSyncRequested = false;
+  /** `lr-map-anchor` children rendered through the `anchors` slot. */
+  private readonly childAnchorSet = new Set<MapAnchorChild>();
+  /** Their placement, once one has opened and the shared anchor runtime has loaded. */
+  private childAnchors?: MapAnchorChildren;
 
   private exportController?: MapImageExportController;
   @state() private exportIssue = false;
@@ -4729,9 +4740,14 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private anchorRuntime(): MapAnchorController | undefined {
     if (this.anchorController) return this.anchorController;
     if (this.anchorLngLat === null || this.anchorLngLat === undefined) return undefined;
+    const runtime = this.anchorPlacementRuntime();
+    return runtime && (this.anchorController = new runtime.MapAnchorController(this.anchorHost()));
+  }
+
+  /** The anchor runtime, imported on first use; the slot anchor and every child anchor share one import. */
+  private anchorPlacementRuntime(): typeof loadMapAnchorRuntime.loaded {
     const runtime = loadMapAnchorRuntime.loaded;
-    if (runtime) return this.anchorController = new runtime.MapAnchorController(this.anchorHost());
-    if (this.anchorLoad) return undefined;
+    if (runtime || this.anchorLoad) return runtime;
     this.anchorLoad = 'loading';
     void loadMapAnchorRuntime().then(() => {
       this.anchorLoad = undefined;
@@ -4740,28 +4756,76 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     return undefined;
   }
 
-  private syncAnchor(): void { this.anchorRuntime()?.sync(); }
+  /** Child-anchor placement, created once a registered child opens and the runtime has loaded. */
+  private anchorChildren(): MapAnchorChildren | undefined {
+    if (this.childAnchors || ![...this.childAnchorSet].some(anchor => anchor.open)) return this.childAnchors;
+    const runtime = this.anchorPlacementRuntime();
+    return this.childAnchors = runtime && new runtime.MapAnchorChildren({
+      ...this.anchorMapHost(),
+      // Children stay placed through a same-engine style replacement and re-place once it is restored.
+      engineReady: () => this._styleLoaded || this.mapLoadEmitted,
+      canvas: () => { try { return (this._map?.getCanvas?.() as HTMLCanvasElement | undefined) ?? null; } catch { return null; } },
+    }, this.childAnchorSet);
+  }
 
-  /** Places the anchor on the next animation frame, once however many callers ask. */
-  private scheduleAnchorSync(): void { this.anchorRuntime()?.schedule(); }
+  /** @internal The registry child anchors use: attachment, changes, and their close and focus requests. */
+  [MAP_ANCHOR_SEAM](anchor: MapAnchorChild, operation: MapAnchorOwnerOperation, value?: unknown): unknown {
+    if (operation === 'attach') this.childAnchorSet.add(anchor);
+    if (operation === 'detach') this.childAnchorSet.delete(anchor);
+    // A new open request retries a runtime whose import failed.
+    if (operation === 'request' && this.anchorLoad === 'failed') this.anchorLoad = undefined;
+    return this.anchorChildren()?.run(anchor, operation, value);
+  }
+
+  private syncAnchor(): void { this.anchorRuntime()?.sync(); this.anchorChildren()?.sync(); }
+
+  /** Places the anchors on the next animation frame, once however many callers ask. */
+  private scheduleAnchorSync(): void { this.anchorRuntime()?.schedule(); this.anchorChildren()?.schedule(); }
 
   private onAnchorFocus = (event: FocusEvent): void => { this.anchorController?.focusIn(event); };
 
   private onAnchorSlotChange = (): void => { this.scheduleAnchorSync(); };
 
-  private anchorHost(): MapAnchorHost {
+  /** Re-checks registered children and lets newly assigned ones, or ones inside an assigned wrapper, attach. */
+  private onAnchorsSlotChange = (event: Event): void => {
+    const refresh = (node: Element): void => { (node as Partial<MapAnchorChild>)[MAP_ANCHOR_SEAM]?.('refresh'); };
+    this.childAnchorSet.forEach(refresh);
+    for (const node of (event.target as HTMLSlotElement).assignedElements({ flatten: true })) {
+      if (node.localName === tag('map-anchor') && !customElements.get(node.localName)) {
+        devWarnOnce('lyra-map-anchor-undefined', `<${this.localName}>: import @aceshooting/lyra-ui/components/${node.localName}.js to place <${node.localName}> children.`);
+      }
+      refresh(node); node.querySelectorAll(tag('map-anchor')).forEach(refresh);
+    }
+  };
+
+  private anchorMapHost(): MapAnchorMapHost {
     return {
       element: this,
-      wrapper: () => this.anchorEl,
       container: () => this.containerEl,
-      fence: () => this.anchorBoundaryEl,
       map: () => this._map,
-      styleLoaded: () => this._styleLoaded,
       generations: () => [this._styleGeneration, this._connectGeneration],
       updateActive: () => this.mapUpdateActive,
       afterUpdate: (callback, key) => { this.scheduleAfterUpdate(callback, key); },
       interactionBlocked: () => this.mapInteractionBlocked(),
       direction: () => this.effectiveDirection,
+    };
+  }
+
+  private anchorHost(): MapAnchorHost {
+    return {
+      ...this.anchorMapHost(),
+      key: 'map-anchor',
+      overlayHost: this,
+      wrapper: () => this.anchorEl,
+      fence: () => this.anchorBoundaryEl,
+      content: () => this.shadowRoot?.querySelector<HTMLSlotElement>('slot[name="anchor"]'),
+      styleLoaded: () => this._styleLoaded,
+      request: () => this.anchorLngLat,
+      boundary: () => this.anchorBoundary,
+      safeArea: () => this.anchorSafeArea,
+      closable: () => this.anchorClosable,
+      pending: () => this.isUpdatePending,
+      retire: () => { this.anchorLngLat = null; },
       emitClose: detail => { this.emit('lr-map-anchor-close', detail); },
     };
   }
@@ -5206,7 +5270,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.externalSourceIds.clear();
     this.plannedDataLayerIds.clear(); this.appliedRowRanges.clear(); this.dataLayerIssue = false; this.pendingDataLayerIssue = false; this.groupOrderActive = false; this.pendingDrawingTheme = false;
     this.setControlIssue(undefined);
-    this.anchorController?.dispose();
+    this.anchorController?.dispose(); this.childAnchors?.dispose();
     this.cancelMoveReport();
     this.appliedPadding = ZERO_CAMERA_PADDING;
     this._styleLoaded = false;
@@ -5339,7 +5403,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         if (this._map === candidate) this.boxZoomSettling = true;
       });
       this.peerEvents.subscribe(candidate, 'move', () => {
-        if (this._map === candidate) { this.anchorController?.stop(); this.scheduleMoveReport(candidate!); this.drawingController?.scheduleHandles(); }
+        if (this._map === candidate) { this.anchorController?.stop(); this.childAnchors?.stop(); this.scheduleMoveReport(candidate!); this.drawingController?.scheduleHandles(); }
       });
       this.peerEvents.subscribe(candidate, 'moveend', (event) => {
         if (this._map !== candidate) return;
@@ -5456,7 +5520,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       if (initial) this.applyMarkers();
       void this.reconcileGeneratedLayers();
       // An anchor requested before the style loaded is placed once its point can be projected.
-      if (this.anchorLngLat) this.scheduleAnchorSync();
+      if (this.anchorLngLat) this.scheduleAnchorSync(); else this.childAnchors?.schedule();
     };
     this.readiness.bind({
       subscribe: (event, listener) => {
@@ -5660,7 +5724,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     super.willUpdate(changed);
     // Placement reads direction after the DOM commit. Consume it during this update too so the
     // inherited-context observer commits the new baseline before overlay style writes recheck it.
-    if (this.anchorLngLat != null) void this.effectiveDirection;
+    if (this.anchorLngLat != null || [...this.childAnchorSet].some(anchor => anchor.open)) void this.effectiveDirection;
     this.refreshingGeoJson = this.geoJsonRefreshRequested;
     this.geoJsonRefreshRequested = false;
     if (this.refreshingGeoJson) {
@@ -6110,7 +6174,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.interactionObserver = new MutationObserver(() => {
       if (!current()) return;
       this.interactionBlocked = this.mapInteractionBlocked();
-      if (this.interactionBlocked) { this.cancelMapDrawing('disabled'); this.clearMapHover(); this.anchorController?.hide(); } else { this.syncMapCursor(); this.scheduleAnchorSync(); }
+      if (this.interactionBlocked) { this.cancelMapDrawing('disabled'); this.clearMapHover(); this.anchorController?.hide(); this.childAnchors?.hide(); } else { this.syncMapCursor(); this.scheduleAnchorSync(); }
     });
     for (let node: Element | null = this; node; node = flattenedParentElement(node)) this.interactionObserver.observe(node, { attributes: true, attributeFilter: ['inert', 'disabled'] });
   }
@@ -8462,6 +8526,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         <div class="anchor-boundary" aria-hidden="true"></div>
         <div part="anchor" hidden @focusin=${this.onAnchorFocus}><slot name="anchor" @slotchange=${this.onAnchorSlotChange}></slot>${this.anchorClosable
           ? html`<button type="button" part="anchor-close" @click=${() => { this.anchorController?.close('close-button'); }}>${this.localize('close')}</button>` : nothing}</div>
+        <slot name="anchors" @slotchange=${this.onAnchorsSlotChange}></slot>
         ${this.legend.length ||
         this.legendProjection.truncated ||
         this.legendGradient.length ||

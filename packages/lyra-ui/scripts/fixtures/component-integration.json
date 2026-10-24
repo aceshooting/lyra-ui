@@ -6,10 +6,10 @@
     "gzip": "esbuild bundle=true format=esm minify=true, then gzip level 9; optional peer packages and subpaths externalized. A byte-identical bundle SHA-256 retains its canonical gzip count across zlib patch versions."
   },
   "summary": {
-    "componentCount": 310,
-    "measuredGzipCount": 310,
+    "componentCount": 311,
+    "measuredGzipCount": 311,
     "missingGzipCount": 0,
-    "averageGzipKib": 57.8
+    "averageGzipKib": 57.7
   },
   "components": [
     {
@@ -3031,9 +3031,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 221614,
-        "kib": 216.4,
-        "bundleSha256": "8380a972e0b85ee8f22a4c3002a7e28f33bd4bdda8e77530dce48c1f4a9fe830",
+        "bytes": 223868,
+        "kib": 218.6,
+        "bundleSha256": "3825be001618423f33f44b2b9c965d38232004931a17c28198ff025eb3814d6d",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -3763,9 +3763,29 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 169889,
-        "kib": 165.9,
-        "bundleSha256": "3e60fe4b37bf236b5d720bfe135d16079faa7efcc395147b7f28113b8b23f542",
+        "bytes": 172190,
+        "kib": 168.2,
+        "bundleSha256": "c59331037f5454ba3272aeaada2d3ba47305aa962d5e0a2b96453f3476d18b47",
+        "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
+      }
+    },
+    {
+      "tag": "lr-map-anchor",
+      "family": "media",
+      "imports": {
+        "registration": "@aceshooting/lyra-ui/components/lr-map-anchor.js",
+        "class": "@aceshooting/lyra-ui/components/media/map/map-anchor.class.js"
+      },
+      "peers": [],
+      "dependencies": {
+        "direct": [],
+        "transitive": []
+      },
+      "gzip": {
+        "status": "measured",
+        "bytes": 24925,
+        "kib": 24.3,
+        "bundleSha256": "30fa91fc5c96ca105e55b84c49184fa2bd66fdfc7c99cf576995dfd75bb45d4c",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },

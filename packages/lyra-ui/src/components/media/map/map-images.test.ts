@@ -292,3 +292,170 @@ describe('map image PNG metadata admission before native decode', () => {
     });
   }
 });
+
+const crcTable = Array.from({ length: 256 }, (_, entry) => {
+  let value = entry;
+  for (let bit = 0; bit < 8; bit++) value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+  return value >>> 0;
+});
+
+/** A static PNG container with valid chunk checksums, optionally padded with an ancillary chunk to `paddedTo` bytes. */
+function pngContainer(width: number, height: number, paddedTo = 0): Uint8Array {
+  const chunk = (type: string, body: Uint8Array): Uint8Array => {
+    const bytes = new Uint8Array(12 + body.length), view = new DataView(bytes.buffer);
+    view.setUint32(0, body.length);
+    bytes.set([...type].map(letter => letter.charCodeAt(0)), 4);
+    bytes.set(body, 8);
+    let crc = 0xffffffff;
+    for (let index = 4; index < 8 + body.length; index++) crc = crcTable[(crc ^ bytes[index]!) & 255]! ^ (crc >>> 8);
+    view.setUint32(8 + body.length, (crc ^ 0xffffffff) >>> 0);
+    return bytes;
+  };
+  const header = new Uint8Array(13), headerView = new DataView(header.buffer);
+  headerView.setUint32(0, width); headerView.setUint32(4, height); header.set([8, 6, 0, 0, 0], 8);
+  const required = [Uint8Array.of(137, 80, 78, 71, 13, 10, 26, 10), chunk('IHDR', header), chunk('IDAT', Uint8Array.of(0x78, 1, 0, 0, 0, 0, 0)), chunk('IEND', new Uint8Array())];
+  const used = required.reduce((total, part) => total + part.length, 0);
+  const parts = paddedTo ? [...required.slice(0, 2), chunk('npAd', new Uint8Array(paddedTo - used - 12)), ...required.slice(2)] : required;
+  const container = new Uint8Array(parts.reduce((total, part) => total + part.length, 0));
+  let offset = 0;
+  for (const part of parts) { container.set(part, offset); offset += part.length; }
+  return container;
+}
+
+describe('map image budgets and decoder boundaries', () => {
+  const urlRow = (id: string) => ({ ...row(id), source: { kind: 'url', url: `https://example.invalid/${id}.png` } });
+  async function withRasterResponses<T>(bytes: Uint8Array | ((call: number) => Uint8Array), run: (fetches: () => number) => Promise<T>): Promise<T> {
+    const nativeFetch = window.fetch; let fetches = 0;
+    window.fetch = async () => {
+      const body = typeof bytes === 'function' ? bytes(fetches) : bytes;
+      fetches++;
+      const response = new Response(body.slice(), { headers: { 'content-type': 'image/png' } });
+      Object.defineProperty(response, 'type', { value: 'basic' });
+      return response;
+    };
+    try { return await run(() => fetches); } finally { window.fetch = nativeFetch; }
+  }
+  async function withImage<T>(replacement: unknown, run: () => Promise<T>): Promise<T> {
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'Image');
+    Object.defineProperty(window, 'Image', { configurable: true, value: replacement });
+    try { return await run(); } finally {
+      if (descriptor) Object.defineProperty(window, 'Image', descriptor); else Reflect.deleteProperty(window, 'Image');
+    }
+  }
+
+  it('rejects non-array catalogs, unreadable lengths, unusable ids and oversized rasters', () => {
+    const unreadable = new Proxy<unknown[]>([], { getOwnPropertyDescriptor() { throw new Error('hostile length'); } });
+    for (const [name, input] of Object.entries({ 'a string': 'icons', 'a record': {}, 'an unreadable length': unreadable })) {
+      expect(admitMapImages(input), name).to.deep.equal({ ok: false, issue: { code: 'invalid-descriptor' } });
+    }
+    for (const id of ['  ', 'x'.repeat(129)]) expect(admitMapImages([row(id)]).ok, id.length.toString()).to.equal(false);
+    expect(admitMapImages([{ ...row(), width: 2049 }])).to.deep.equal({ ok: false, issue: { code: 'limit' } });
+    expect(admitMapImages([{ ...row(), height: 2049 }])).to.deep.equal({ ok: false, issue: { code: 'limit' } });
+    expect(admitMapImages([{ ...row(), source: { kind: 'svg', markup: 'x'.repeat(MAP_IMAGE_LIMITS.svgBytes + 1) } }])).to.deep.equal({ ok: false, issue: { code: 'limit' } });
+  });
+
+  it('bounds the combined inline SVG bytes of a catalog', () => {
+    const inline = (count: number) => Array.from({ length: count }, (_, index) => ({ ...row(`inline-${index}`), source: { kind: 'svg', markup: 'x'.repeat(MAP_IMAGE_LIMITS.svgBytes) } }));
+    expect(admitMapImages(inline(32)).ok).to.equal(true);
+    expect(admitMapImages(inline(33))).to.deep.equal({ ok: false, issue: { code: 'limit' } });
+  });
+
+  it('never assigns an image source when the owner is cancelled while the decoder is created', async () => {
+    const ctx = await context(); let assigned = 0, cleared = 0;
+    class CancellingImage {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      constructor() { ctx.abort.abort(); }
+      set src(_value: string) { assigned++; }
+      removeAttribute(name: string) { if (name === 'src') cleared++; }
+    }
+    const result = await withImage(CancellingImage, () => prepareMapImages([row()], ctx, { loadSanitizer: fakeServices().loadSanitizer }));
+    expect(result.ok).to.equal(false);
+    if (!result.ok) expect(result.issue.code).to.equal('aborted');
+    expect(assigned).to.equal(0);
+    expect(cleared > 0).to.equal(true);
+  });
+
+  it('rejects a decode whose natural size matches neither the declared nor the rotated bounds', async () => {
+    const ctx = await context();
+    class MismatchedImage {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      naturalWidth = 3;
+      naturalHeight = 5;
+      set src(_value: string) { queueMicrotask(() => this.onload?.()); }
+      removeAttribute() {}
+    }
+    const result = await withImage(MismatchedImage, () => prepareMapImages([row()], ctx, { loadSanitizer: fakeServices().loadSanitizer }));
+    expect(result.ok).to.equal(false);
+    if (!result.ok) expect(result.issue).to.deep.equal({ code: 'decode', id: 'icon' });
+  });
+
+  it('reports an unavailable 2D context and a tainted canvas as distinct decode failures', async () => {
+    const ctx = await context(), services = { loadSanitizer: fakeServices().loadSanitizer };
+    const getContext = HTMLCanvasElement.prototype.getContext, getImageData = CanvasRenderingContext2D.prototype.getImageData;
+    try {
+      HTMLCanvasElement.prototype.getContext = (() => null) as unknown as typeof getContext;
+      const unavailable = await prepareMapImages([row()], ctx, services);
+      expect(unavailable.ok).to.equal(false);
+      if (!unavailable.ok) expect(unavailable.issue.code).to.equal('decode');
+    } finally { HTMLCanvasElement.prototype.getContext = getContext; }
+    try {
+      CanvasRenderingContext2D.prototype.getImageData = () => { throw new DOMException('Canvas is tainted', 'SecurityError'); };
+      const tainted = await prepareMapImages([row()], ctx, services);
+      expect(tainted.ok).to.equal(false);
+      if (!tainted.ok) expect(tainted.issue.code).to.equal('tainted');
+    } finally { CanvasRenderingContext2D.prototype.getImageData = getImageData; }
+  });
+
+  it('strips local href references from non-use SVG elements while keeping local paint servers', async () => {
+    const ctx = await context(), services = fakeServices(); let serialized = '';
+    const markup = '<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><defs><linearGradient id="base"><stop offset="0" stop-color="red"/></linearGradient>'
+      + '<linearGradient id="derived" href="#base"/></defs><rect width="8" height="8" fill="url(#derived)"/></svg>';
+    const result = await prepareMapImages([{ ...row(), source: { kind: 'svg', markup } }], ctx, {
+      ...services, rasterize: async (input) => { serialized = input.svg ?? ''; return services.rasterize!(input, ctx); },
+    });
+    expect(result.ok).to.equal(true);
+    expect(serialized).to.include('id="derived"');
+    expect(serialized).to.include('fill="url(#derived)"');
+    expect(serialized).not.to.include('href');
+    if (result.ok) result.dispose();
+  });
+
+  it('classifies a fetched raster above the dimension ceiling as a limit failure', async () => {
+    const ctx = await context();
+    const result = await withRasterResponses(pngContainer(2049, 1), () => prepareMapImages([urlRow('wide')], ctx, fakeServices()));
+    expect(result.ok).to.equal(false);
+    if (!result.ok) expect(result.issue).to.deep.equal({ code: 'limit', id: 'wide' });
+  });
+
+  it('stops when the intrinsic pixels of fetched rasters exceed the shared decode budget', async () => {
+    const ctx = await context(); let decoded = 0;
+    const services: MapImagePreparationServices = { ...fakeServices(), rasterize: async (input) => { decoded++; return { image: new ImageData(input.width, input.height), dispose() {} }; } };
+    const result = await withRasterResponses(pngContainer(2048, 2048), () => prepareMapImages(Array.from({ length: 5 }, (_, index) => urlRow(`raster-${index}`)), ctx, services));
+    expect(result.ok).to.equal(false);
+    if (!result.ok) expect(result.issue).to.deep.equal({ code: 'limit', id: 'raster-4' });
+    expect(decoded).to.equal(4);
+  });
+
+  it('stops when an inline SVG would carry the combined encoded bytes past the budget', async () => {
+    const ctx = await context(), limit = MAP_IMAGE_LIMITS.encodedBytes;
+    const rows = [...Array.from({ length: 8 }, (_, index) => urlRow(`part-${index}`)),
+      { ...row('inline'), source: { kind: 'svg', markup: 'x'.repeat(MAP_IMAGE_LIMITS.svgBytes) } }];
+    const result = await withRasterResponses(call => pngContainer(1, 1, call < 7 ? limit : Math.floor(limit * 0.9)), () => prepareMapImages(rows, ctx, fakeServices()));
+    expect(result.ok).to.equal(false);
+    if (!result.ok) expect(result.issue).to.deep.equal({ code: 'limit', id: 'inline' });
+  });
+
+  it('refuses another fetched image once the encoded-byte budget is spent', async () => {
+    const ctx = await context(), bytes = pngContainer(1, 1, MAP_IMAGE_LIMITS.encodedBytes);
+    expect(bytes.length).to.equal(MAP_IMAGE_LIMITS.encodedBytes);
+    const rows = Array.from({ length: MAP_IMAGE_LIMITS.totalBytes / MAP_IMAGE_LIMITS.encodedBytes + 1 }, (_, index) => urlRow(`budget-${index}`));
+    await withRasterResponses(bytes, async fetches => {
+      const result = await prepareMapImages(rows, ctx, fakeServices());
+      expect(result.ok).to.equal(false);
+      if (!result.ok) expect(result.issue).to.deep.equal({ code: 'limit', id: 'budget-8' });
+      expect(fetches()).to.equal(8);
+    });
+  });
+});

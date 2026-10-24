@@ -163,6 +163,7 @@ import type { LyraFileInputEventMap } from './components/media/file-input/file-i
 import type { LyraImageComparerEventMap } from './components/media/image-comparer/image-comparer.class.js';
 import type { LyraImageViewerEventMap } from './components/media/image-viewer/image-viewer.class.js';
 import type { LyraLightboxEventMap } from './components/media/lightbox/lightbox.class.js';
+import type { LyraMapAnchorEventMap } from './components/media/map/map-anchor.class.js';
 import type { LyraMapEventMap } from './components/media/map/map.class.js';
 import type { LyraMediaCardEventMap } from './components/media/media-card/media-card.class.js';
 import type { LyraPanZoomEventMap } from './components/media/pan-zoom/pan-zoom.class.js';
@@ -732,10 +733,10 @@ export type LyraClearEvent =
   | LyraTimeInputEventMap['lr-clear'];
 
 /**
- * `lr-close` — dispatched by 11 components: `<lr-callout>`, `<lr-command-palette>`, `<lr-dialog>`,
- * `<lr-document-viewer>`, `<lr-drawer>`, `<lr-lightbox>`, `<lr-responsive-panel>`, `<lr-tab>`,
- * `<lr-tool-approval-dialog>`, `<lr-tool-result-dialog>`, `<lr-tool-select-dialog>`; detail union
- * of 10, e.g. `LyraCalloutEventMap['lr-close']`.
+ * `lr-close` — dispatched by 12 components: `<lr-callout>`, `<lr-command-palette>`, `<lr-dialog>`,
+ * `<lr-document-viewer>`, `<lr-drawer>`, `<lr-lightbox>`, `<lr-map-anchor>`,
+ * `<lr-responsive-panel>`, `<lr-tab>`, `<lr-tool-approval-dialog>`, `<lr-tool-result-dialog>`,
+ * `<lr-tool-select-dialog>`; detail union of 11, e.g. `LyraCalloutEventMap['lr-close']`.
  */
 export type LyraCloseEvent =
   | LyraCalloutEventMap['lr-close']
@@ -743,6 +744,7 @@ export type LyraCloseEvent =
   | LyraDialogEventMap['lr-close']
   | LyraDocumentViewerEventMap['lr-close']
   | LyraLightboxEventMap['lr-close']
+  | LyraMapAnchorEventMap['lr-close']
   | LyraResponsivePanelEventMap['lr-close']
   | LyraTabEventMap['lr-close']
   | LyraToolApprovalDialogEventMap['lr-close']
@@ -750,15 +752,16 @@ export type LyraCloseEvent =
   | LyraToolSelectDialogEventMap['lr-close'];
 
 /**
- * `lr-close-request` — dispatched by 6 components: `<lr-callout>`, `<lr-command-palette>`,
- * `<lr-dialog>`, `<lr-drawer>`, `<lr-lightbox>`, `<lr-responsive-panel>`; detail union of 5, e.g.
- * `LyraCalloutEventMap['lr-close-request']`.
+ * `lr-close-request` — dispatched by 7 components: `<lr-callout>`, `<lr-command-palette>`,
+ * `<lr-dialog>`, `<lr-drawer>`, `<lr-lightbox>`, `<lr-map-anchor>`, `<lr-responsive-panel>`;
+ * detail union of 6, e.g. `LyraCalloutEventMap['lr-close-request']`.
  */
 export type LyraCloseRequestEvent =
   | LyraCalloutEventMap['lr-close-request']
   | LyraCommandPaletteEventMap['lr-close-request']
   | LyraDialogEventMap['lr-close-request']
   | LyraLightboxEventMap['lr-close-request']
+  | LyraMapAnchorEventMap['lr-close-request']
   | LyraResponsivePanelEventMap['lr-close-request'];
 
 /**

@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { MapDrawing, type LyraMapDrawingPoint } from './map-drawing.js';
+import { MapDrawing, measureDrawing, type LyraMapDrawingPoint } from './map-drawing.js';
 
 const RADIUS = 6_371_008.8;
 function draw(mode: 'line' | 'polygon', vertices: readonly LyraMapDrawingPoint[]) {
@@ -222,4 +222,69 @@ describe('MapDrawing', () => {
     expect(drawing.snapshot().vertices.length).to.equal(512); expect(drawing.add([61, 0]).error).to.equal('vertex-limit');
   });
 
+});
+
+type Vector = readonly [number, number, number];
+
+/** Steradians of the smaller region a simple spherical polygon bounds, from its interior angles (Girard's theorem). */
+function smallerRegion(vertices: readonly LyraMapDrawingPoint[]): number {
+  const radians = Math.PI / 180;
+  const unit = vertices.map(([longitude, latitude]): Vector => [Math.cos(latitude * radians) * Math.cos(longitude * radians), Math.cos(latitude * radians) * Math.sin(longitude * radians), Math.sin(latitude * radians)]);
+  const dot = (a: Vector, b: Vector) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const cross = (a: Vector, b: Vector): Vector => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  const toward = (from: Vector, target: Vector): Vector => {
+    const along = dot(target, from), tangent: Vector = [target[0] - along * from[0], target[1] - along * from[1], target[2] - along * from[2]];
+    const length = Math.hypot(...tangent);
+    return [tangent[0] / length, tangent[1] / length, tangent[2] / length];
+  };
+  let interior = 0;
+  unit.forEach((vertex, index) => {
+    const next = toward(vertex, unit[(index + 1) % unit.length]!), previous = toward(vertex, unit[(index + unit.length - 1) % unit.length]!);
+    const angle = Math.atan2(dot(vertex, cross(next, previous)), dot(next, previous));
+    interior += angle < 0 ? angle + 2 * Math.PI : angle;
+  });
+  const left = interior - (vertices.length - 2) * Math.PI;
+  return Math.min(left, 4 * Math.PI - left);
+}
+
+describe('MapDrawing spherical area boundaries', () => {
+  for (const [name, vertices] of [
+    ['a fan wider than a hemisphere', [[-180, -60], [-180, -30], [45, 30], [-90, 0]]],
+    ['a fan wound the other way', [[-180, -60], [-180, -30], [-90, 30], [45, 30]]],
+  ] satisfies [string, LyraMapDrawingPoint[]][]) {
+    it(`measures the smaller bounded region for ${name} in either winding`, () => {
+      const forward = draw('polygon', vertices).complete(), reversed = draw('polygon', [...vertices].reverse()).complete();
+      expect(forward.accepted && reversed.accepted).to.equal(true);
+      const expected = smallerRegion(vertices) * RADIUS * RADIUS;
+      for (const result of [forward, reversed]) expect(result.state.metrics!.area).to.be.closeTo(expected, expected * 1e-9);
+    });
+  }
+
+  it('rejects a region that is exactly a hemisphere even when its edges do not reveal it', () => {
+    const result = draw('polygon', [[-180, -45], [-180, 45], [-45, 0], [45, 0]]).complete();
+    expect(result.error).to.equal('ambiguous-region');
+    expect(result.state.phase).to.equal('drawing');
+    expect(result.state.metrics).to.equal(undefined);
+  });
+
+  it('treats a revoked coordinate proxy as an invalid coordinate without poisoning the session', () => {
+    const revoked = Proxy.revocable<number[]>([0, 0], {});
+    revoked.revoke();
+    const drawing = new MapDrawing('line');
+    expect(drawing.add(revoked.proxy).error).to.equal('invalid-coordinate');
+    expect(drawing.add([0, 0]).accepted).to.equal(true);
+  });
+
+  it('refuses to start a session in an unsupported mode', () => {
+    expect(() => new MapDrawing('circle' as never)).to.throw(TypeError, 'Unsupported drawing mode.');
+  });
+
+  it('measures an invalid polygon ring by segments without an area', () => {
+    const bowtie = measureDrawing('polygon', [[0, 0], [2, 2], [0, 2], [2, 0]]);
+    expect(bowtie.segments.length).to.equal(3);
+    expect(bowtie.closing).to.be.greaterThan(0);
+    expect(bowtie.area).to.equal(undefined);
+    expect(bowtie.centroid).to.equal(undefined);
+    expect(measureDrawing('polygon', [[0, 0], [90, 0], [0, 90]]).area).to.be.closeTo(Math.PI * RADIUS * RADIUS / 2, 0.1);
+  });
 });

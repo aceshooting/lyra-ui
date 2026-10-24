@@ -947,3 +947,109 @@ describe('owned map mutable layer transactions', () => {
   }
 
 });
+
+describe('owned map resource boundaries', () => {
+  it('sets a zoom range on a layer that had none and restores the previous range when the repaint fails', async () => {
+    const peer = new MutableResourcePeer(), registry = new MapOwnedResources();
+    await registry.reconcile(peer, 1, mutableOverlay(), [], context()); peer.operations.length = 0;
+    expect((await registry.reconcile(peer, 1, mutableOverlay({ minzoom: 3 }), [], context())).ok).to.equal(true);
+    expect(peer.operations).to.deep.equal(['zoom:dots', 'repaint']);
+    expect(peer.layers.get('dots')!['minzoom']).to.equal(3); expect(peer.layers.get('dots')!['maxzoom']).to.equal(24);
+    peer.operations.length = 0; peer.reject = 'repaint';
+    expect(await registry.reconcile(peer, 1, mutableOverlay({ maxzoom: 8 }), [], context())).to.deep.equal({ ok: false, code: 'peer', rollbackFailed: false });
+    expect(peer.operations).to.deep.equal(['zoom:dots', 'repaint', 'zoom:dots', 'repaint']);
+    expect(peer.layers.get('dots')!['minzoom']).to.equal(3); expect(peer.layers.get('dots')!['maxzoom']).to.equal(24);
+    registry.dispose();
+  });
+
+  it('replaces a layer whose paint is not a record instead of updating it property by property', async () => {
+    const peer = new MutableResourcePeer(), registry = new MapOwnedResources();
+    await registry.reconcile(peer, 1, mutableOverlay({ paint: ['legacy'] }), [], context());
+    const source = peer.getSource('points'), layer = peer.getLayer('dots'); peer.operations.length = 0;
+    expect((await registry.reconcile(peer, 1, mutableOverlay({ paint: ['replacement'] }), [], context())).ok).to.equal(true);
+    expect(peer.getSource('points') === source).to.equal(true); expect(peer.getLayer('dots') === layer).to.equal(false);
+    expect(peer.operations).to.deep.equal(['layer-dots', 'layer+dots']); registry.dispose();
+  });
+
+  it('puts the original anchored order back when a replacement fails part-way', async () => {
+    const peer = new MutableResourcePeer(), registry = new MapOwnedResources();
+    peer.addLayer({ id: 'labels', type: 'background' }); peer.addLayer({ id: 'top', type: 'background' });
+    const anchored = (type: string) => admission({ sources: [{ id: 'points', source: { type: 'geojson', data: mutableData } }],
+      layers: [{ layer: { id: 'dots', type, source: 'points' }, before: 'top' }] });
+    expect((await registry.reconcile(peer, 1, anchored('circle'), [], context())).ok).to.equal(true);
+    expect(peer.order).to.deep.equal(['labels', 'dots', 'top']);
+    peer.reject = 'layer+dots';
+    expect(await registry.reconcile(peer, 1, anchored('fill'), [], context())).to.deep.equal({ ok: false, code: 'peer', rollbackFailed: false });
+    expect(peer.order).to.deep.equal(['labels', 'dots', 'top']); expect(peer.layers.get('dots')!['type']).to.equal('circle');
+    registry.dispose();
+  });
+
+  it('refuses layers whose anchors depend on each other before touching the engine', async () => {
+    const peer = new ResourcePeer(), registry = new MapOwnedResources();
+    const cyclic = admission({ sources: [{ id: 'points', source: { type: 'geojson', data: {} } }],
+      layers: [{ layer: { id: 'a', type: 'circle', source: 'points' }, before: 'b' }, { layer: { id: 'b', type: 'circle', source: 'points' }, before: 'a' }] });
+    expect(await registry.reconcile(peer, 1, cyclic, [], context())).to.deep.equal({ ok: false, code: 'order', rollbackFailed: false });
+    expect(peer.operations).to.deep.equal([]); registry.dispose();
+  });
+
+  it('reports through afterMutation whether the engine may be restored from retained pixels', async () => {
+    const outcomes: Array<[string, boolean]> = [];
+    for (const scenario of ['success', 'superseded', 'rolled back', 'rollback failed'] as const) {
+      const peer = new ResourcePeer(), registry = new MapOwnedResources(); let settled: boolean | undefined;
+      const ctx = { ...context(), isCurrent: () => scenario !== 'superseded', afterMutation: (safe: boolean) => { settled = safe; } };
+      if (scenario === 'rolled back' || scenario === 'rollback failed') peer.reject = 'source+points';
+      if (scenario === 'rollback failed') peer.removeSource = () => { throw new Error('private peer payload'); };
+      await registry.reconcile(peer, 1, overlay(), [], ctx);
+      outcomes.push([scenario, settled!]); registry.dispose();
+    }
+    expect(outcomes).to.deep.equal([['success', true], ['superseded', false], ['rolled back', true], ['rollback failed', false]]);
+  });
+
+  it('releases images offered while the registry is mutating and keeps the ones it owns', async () => {
+    const peer = new ResourcePeer(), registry = new MapOwnedResources(), own = prepared('own'), offered = prepared('offered');
+    let nested: Promise<unknown> | undefined;
+    peer.after = operation => { if (operation === 'source+points' && !nested) nested = registry.reconcile(peer, 1, empty(), [offered.resource], context()); };
+    expect((await registry.reconcile(peer, 1, overlay(), [own.resource], context())).ok).to.equal(true);
+    expect(await nested).to.deep.equal({ ok: false, code: 'reentrant', rollbackFailed: false });
+    expect(offered.disposals).to.equal(1); expect(own.disposals).to.equal(0);
+    registry.dispose(); expect(own.disposals).to.equal(1);
+  });
+
+  it('releases images offered while the registry is being disposed', async () => {
+    const registry = new MapOwnedResources(), peer = new ResourcePeer(), owned = prepared('owned'), late = prepared('late');
+    let attempt: Promise<unknown> | undefined;
+    const closing = { ...owned.resource, dispose() { owned.resource.dispose(); attempt = registry.reconcile(peer, 1, empty(), [late.resource], context()); } } as PreparedMapImage;
+    await registry.reconcile(peer, 1, empty(), [closing], context());
+    registry.dispose();
+    expect(await attempt).to.deep.equal({ ok: false, code: 'aborted', rollbackFailed: false });
+    expect(late.disposals).to.equal(1); expect(owned.disposals).to.equal(1);
+  });
+
+  it('ignores a second disposal requested while the first is still releasing images', async () => {
+    const registry = new MapOwnedResources(), first = prepared('a'), second = prepared('b'); let released = 0;
+    const wrap = (item: ReturnType<typeof prepared>) => ({ ...item.resource, dispose() { released++; item.resource.dispose(); registry.dispose(); } }) as PreparedMapImage;
+    await registry.reconcile(new ResourcePeer(), 1, empty(), [wrap(first), wrap(second)], context());
+    expect(() => registry.dispose()).not.to.throw();
+    expect(released).to.equal(2); expect(first.disposals).to.equal(1); expect(second.disposals).to.equal(1);
+  });
+
+  it('aborts without touching the engine when the owner check itself fails and releases the image', async () => {
+    const peer = new ResourcePeer(), registry = new MapOwnedResources(), image = prepared('badge');
+    const failing = { isCurrent: () => { throw new Error('owner unavailable'); }, prepare: async () => undefined };
+    expect(await registry.reconcile(peer, 1, overlay(), [image.resource], failing)).to.deep.equal({ ok: false, code: 'aborted', rollbackFailed: false });
+    expect(peer.operations).to.deep.equal([]); expect(image.disposals).to.equal(1); registry.dispose();
+  });
+
+  it('rejects an oversized, repeated or already released image catalog and disposes what it was given', async () => {
+    const peer = new ResourcePeer(), registry = new MapOwnedResources();
+    const oversized = Array.from({ length: 1025 }, (_, index) => prepared(`icon-${index}`));
+    expect(await registry.reconcile(peer, 1, empty(), oversized.map(item => item.resource), context())).to.deep.equal({ ok: false, code: 'invalid-image', rollbackFailed: false });
+    expect(oversized.every(item => item.disposals === 1)).to.equal(true);
+    const twins = [prepared('same'), prepared('same')];
+    expect((await registry.reconcile(peer, 1, empty(), twins.map(item => item.resource), context())).ok).to.equal(false);
+    expect(twins.map(item => item.disposals)).to.deep.equal([1, 1]);
+    const released = prepared('gone'); released.resource.dispose();
+    expect(await registry.reconcile(peer, 1, empty(), [released.resource], context())).to.deep.equal({ ok: false, code: 'invalid-image', rollbackFailed: false });
+    expect(peer.operations).to.deep.equal([]); registry.dispose();
+  });
+});

@@ -269,3 +269,78 @@ describe('map source update planning', () => {
     expect(apply).to.throw('native update failed');
   });
 });
+
+describe('map source update planning boundaries', () => {
+  const native = { setCoordinates() {}, updateImage() {}, setData() {}, play() {}, pause() {} };
+  const moved = () => image({ coordinates: movedCoordinates() });
+  const feature = (geometry: unknown) => ({ type: 'Feature', properties: {}, geometry });
+  const point = (longitude: number) => ({ type: 'Point', coordinates: [longitude, 2] });
+  const nestedArray = (levels: number) => { let value: unknown = 'leaf'; for (let level = 0; level < levels; level++) value = [value]; return value; };
+
+  it('falls back for descriptors with too many fields, reserved names or symbol keys', () => {
+    const crowded = Object.fromEntries(Array.from({ length: 10_001 }, (_, index) => [`field${index}`, index]));
+    const unsafe: Record<string, object> = {
+      'too many fields': crowded, 'a constructor field': { constructor: 'x' }, 'a prototype field': { prototype: 'x' }, 'a symbol field': { [Symbol('x')]: 1 },
+    };
+    for (const [name, extra] of Object.entries(unsafe)) expect(planMapSourceUpdate(native, { ...image(), ...extra }, moved()), name).to.equal(undefined);
+    expect(typeof planMapSourceUpdate(native, image(), moved())).to.equal('function');
+  });
+
+  it('treats array, scalar and nesting changes in unchanged metadata as a change', () => {
+    const wide = () => Array.from({ length: 6 }, () => new Array<number>(10_000).fill(1));
+    const cases: Record<string, [unknown, unknown]> = {
+      'an array replaced by a record': [[1], { 0: 1 }],
+      'a number replaced by a string': [{ label: 1 }, { label: 'one' }],
+      'nesting beyond the depth limit': [nestedArray(25), nestedArray(25)],
+      'more values than the comparison budget': [wide(), wide()],
+    };
+    for (const [name, [previous, next]] of Object.entries(cases)) {
+      expect(planMapSourceUpdate(native, image({ metadata: previous }), image({ metadata: next, coordinates: movedCoordinates() })), name).to.equal(undefined);
+    }
+    expect(typeof planMapSourceUpdate(native, image({ metadata: nestedArray(5) }), image({ metadata: nestedArray(5), coordinates: movedCoordinates() }))).to.equal('function');
+  });
+
+  it('recognizes null, GeometryCollection and malformed geometry in inline GeoJSON features', () => {
+    const plan = (previous: unknown, next: unknown) => planMapSourceUpdate(native, { type: 'geojson', data: previous }, { type: 'geojson', data: next });
+    const collection = (...geometries: unknown[]) => feature({ type: 'GeometryCollection', geometries });
+    expect(typeof plan(feature(point(1)), feature(null))).to.equal('function');
+    expect(typeof plan(feature(null), feature(point(1)))).to.equal('function');
+    expect(typeof plan(collection(point(1)), collection(point(2)))).to.equal('function');
+    expect(plan(collection(point(1)), feature({ type: 'GeometryCollection', geometries: 'none' }))).to.equal(undefined);
+    for (const geometry of ['Point', [], 5]) expect(plan(feature(point(1)), feature(geometry)), String(geometry)).to.equal(undefined);
+  });
+
+  it('does not plan an update for a missing or primitive native source', () => {
+    for (const source of [undefined, null, 'source', 7]) expect(planMapSourceUpdate(source, image(), moved()), String(source)).to.equal(undefined);
+  });
+
+  it('requires a string URL on both image descriptors', () => {
+    expect(planMapSourceUpdate(native, { type: 'image', coordinates: coordinates() }, moved())).to.equal(undefined);
+    expect(planMapSourceUpdate(native, image({ url: 7 }), moved())).to.equal(undefined);
+    expect(planMapSourceUpdate(native, image(), image({ url: 7, coordinates: movedCoordinates() }))).to.equal(undefined);
+  });
+
+  it('contains hostile descriptor reflection instead of throwing', () => {
+    const hostile = new Proxy({ type: 'image' }, { ownKeys() { throw new Error('hostile keys'); } });
+    expect(planMapSourceUpdate(native, hostile, moved())).to.equal(undefined);
+    const revoked = Proxy.revocable({ type: 'image' }, {});
+    revoked.revoke();
+    expect(planMapSourceUpdate(native, image(), revoked.proxy)).to.equal(undefined);
+  });
+
+  it('rejects coordinate arrays that do not inherit from Array', () => {
+    const detached = Object.setPrototypeOf(movedCoordinates().map(pair => [...pair]), null) as unknown[];
+    expect(planMapSourceUpdate(native, image(), image({ coordinates: detached }))).to.equal(undefined);
+  });
+
+  it('declines to plan a canvas update where canvas elements do not exist', () => {
+    const canvas = document.createElement('canvas');
+    const plan = () => planMapSourceUpdate(native, canvasSource(canvas), canvasSource(canvas, { coordinates: movedCoordinates() }));
+    expect(typeof plan()).to.equal('function');
+    const saved = Object.getOwnPropertyDescriptor(window, 'HTMLCanvasElement')!;
+    Object.defineProperty(window, 'HTMLCanvasElement', { configurable: true, writable: true, value: undefined });
+    try { expect(plan()).to.equal(undefined); }
+    finally { Object.defineProperty(window, 'HTMLCanvasElement', saved); }
+    expect(typeof plan()).to.equal('function');
+  });
+});

@@ -130,4 +130,23 @@ describe('map drawing native pan lease', () => {
     expect(currentLease.release()).to.equal(true); expect(nested).to.equal(false); expect(admission?.code).to.equal('reentrant');
     expect(h.enabled()).to.equal(true);
   });
+  it('rejects a native handler that is not an object', () => {
+    for (const value of [null, 5, 'handler']) {
+      const lease = acquireMapDrawingPan({ dragPan: value }, { current: () => true });
+      expect(lease.accepted, String(value)).to.equal(false); expect(lease.code, String(value)).to.equal('unavailable');
+    }
+  });
+  it('never touches a replacement handler, wherever the swap lands after the lease captured its own', () => {
+    for (const authoredEnabled of [true, false]) {
+      let rejected = 0, accepted = 0;
+      for (let swapAt = 2; swapAt <= 40; swapAt++) {
+        const h = fixture(authoredEnabled), replacement = fixture(true); let checks = 0;
+        const lease = acquireMapDrawingPan(h.peer, { current: () => { if (++checks === swapAt) h.peer.dragPan = replacement.handler; return true; } });
+        if (lease.accepted) accepted++; else { rejected++; expect(lease.code, `swap ${swapAt}`).to.equal('stale'); }
+        lease.release();
+        expect(replacement.calls, `swap ${swapAt}`).to.deep.equal([]);
+      }
+      expect(rejected, String(authoredEnabled)).to.be.greaterThan(0); expect(accepted, String(authoredEnabled)).to.be.greaterThan(0);
+    }
+  });
 });

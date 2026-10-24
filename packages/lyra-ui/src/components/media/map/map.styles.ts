@@ -302,7 +302,8 @@ export const styles = css`
   [part='anchor-close'] { display: block; margin-inline-start: auto; margin-block-start: var(--lr-space-xs); }
   [part='anchor'] {
     position: absolute;
-    z-index: calc(var(--lr-layer-content) + 1);
+    /* The rank joins child lr-map-anchor paint order; unset, the layer is unchanged. */
+    z-index: calc(var(--lr-layer-content) + 1 + var(--_lr-map-anchor-rank, 0));
     box-sizing: border-box;
     inline-size: max-content;
     max-inline-size: var(--lr-positioner-available-inline-size, calc(100% - var(--lr-space-s) - var(--lr-space-s)));

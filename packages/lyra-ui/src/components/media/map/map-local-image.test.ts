@@ -121,3 +121,78 @@ describe('map local image preparation', () => {
   });
 
 });
+
+describe('map local image preparation boundaries', () => {
+  afterEach(fixtureCleanup);
+  const contextOf = (owner: HTMLElement, signal = new AbortController().signal) => ({ owner, signal, isCurrent: () => true });
+  async function rejected(work: Promise<unknown>): Promise<boolean> {
+    try { await work; return false; } catch { return true; }
+  }
+  function rectangle(): string {
+    const canvas = document.createElement('canvas'); canvas.width = 3; canvas.height = 2;
+    canvas.getContext('2d')!.fillRect(0, 0, 3, 2);
+    return canvas.toDataURL('image/png');
+  }
+
+  it('rejects an owner whose document has no window', async () => {
+    const owner = document.implementation.createHTMLDocument('detached').createElement('div');
+    expect(await rejected(prepareMapLocalImage('data:image/png;base64,AAAA', contextOf(owner)))).to.equal(true);
+  });
+
+  it('stops waiting when the request itself cancels the preparation', async () => {
+    const owner = await fixture<HTMLElement>(html`<div></div>`), controller = new AbortController(), original = window.fetch;
+    const input = URL.createObjectURL(new Blob(['invalid'], { type: 'image/png' }));
+    try {
+      window.fetch = () => { controller.abort(); return new Promise<Response>(() => {}); };
+      expect(await rejected(prepareMapLocalImage(input, contextOf(owner, controller.signal)))).to.equal(true);
+    } finally { window.fetch = original; URL.revokeObjectURL(input); }
+  });
+
+  it('rejects a data URL whose base64 text is not canonical before creating a native URL', async () => {
+    const owner = await fixture<HTMLElement>(html`<div></div>`), create = URL.createObjectURL;
+    let creates = 0;
+    try {
+      URL.createObjectURL = value => { creates++; return create.call(URL, value); };
+      expect(await rejected(prepareMapLocalImage('data:image/png;base64,AAB=', contextOf(owner)))).to.equal(true);
+    } finally { URL.createObjectURL = create; }
+    expect(creates).to.equal(0);
+  });
+
+  it('rejects a response that reports a foreign final URL or carries no media type', async () => {
+    const owner = await fixture<HTMLElement>(html`<div></div>`);
+    for (const mode of ['redirected', 'untyped'] as const) {
+      const input = URL.createObjectURL(new Blob(['x'])), original = window.fetch;
+      try {
+        window.fetch = async () => {
+          const response = new Response(new Uint8Array([1, 2, 3]), mode === 'untyped' ? {} : { headers: { 'content-type': 'image/png' } });
+          Object.defineProperty(response, 'type', { value: 'basic' });
+          if (mode === 'redirected') Object.defineProperty(response, 'url', { value: 'https://other.test/image.png' });
+          return response;
+        };
+        expect(await rejected(prepareMapLocalImage(input, contextOf(owner))), mode).to.equal(true);
+      } finally { window.fetch = original; URL.revokeObjectURL(input); }
+    }
+  });
+
+  it('accepts a decode with swapped axes and rejects one that matches neither orientation', async () => {
+    const owner = await fixture<HTMLElement>(html`<div></div>`), descriptor = Object.getOwnPropertyDescriptor(window, 'Image');
+    const decoding = (width: number, height: number) => class {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      naturalWidth = width;
+      naturalHeight = height;
+      set src(_value: string) { queueMicrotask(() => this.onload?.()); }
+      removeAttribute() {}
+    };
+    try {
+      Object.defineProperty(window, 'Image', { configurable: true, value: decoding(2, 3) });
+      const rotated = await prepareMapLocalImage(rectangle(), contextOf(owner));
+      expect(rotated.encodedBytes).to.be.greaterThan(0);
+      rotated.dispose();
+      Object.defineProperty(window, 'Image', { configurable: true, value: decoding(5, 5) });
+      expect(await rejected(prepareMapLocalImage(rectangle(), contextOf(owner)))).to.equal(true);
+    } finally {
+      if (descriptor) Object.defineProperty(window, 'Image', descriptor); else Reflect.deleteProperty(window, 'Image');
+    }
+  });
+});

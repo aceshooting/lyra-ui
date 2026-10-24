@@ -145,3 +145,40 @@ describe('map initial view precedence', () => {
     expect(chooseMapInitialView(Object.create({ camera })).kind).to.equal('invalid');
   });
 });
+
+describe('map hash boundaries', () => {
+  it('keeps unrelated fields with a malformed percent-encoded key opaque', () => {
+    expect(readMapHash('#%xx=1&map=1/2/3', true).status).to.equal('camera');
+    expect(replaceMapHash('#%xx=1&map=1/2/3', true, camera).fragment).to.equal('#%xx=1&map=5/34/12/20/30');
+    expect(removeMapHash('#%xx=1&map=1/2/3', true).fragment).to.equal('#%xx=1');
+  });
+
+  it('refuses to grow a fragment past the length or token ceiling', () => {
+    const nearLimit = `#${'a'.repeat(65_525)}`;
+    expect(replaceMapHash(nearLimit, true, camera)).to.deep.equal({ status: 'invalid', fragment: nearLimit });
+    const tokens = `#${Array.from({ length: 1024 }, (_, index) => `t${index}`).join('&')}`;
+    expect(replaceMapHash(tokens, true, camera)).to.deep.equal({ status: 'invalid', fragment: tokens });
+    expect(replaceMapHash(tokens.replace('t1023', 'map=1/2/3'), true, camera).status).to.equal('written');
+  });
+
+  it('leaves an oversized fragment unchanged on removal and empties the fragment when the camera was its only token', () => {
+    const oversized = `#${'x'.repeat(65_537)}`;
+    expect(removeMapHash(oversized, true)).to.deep.equal({ status: 'invalid', fragment: oversized });
+    expect(removeMapHash('#map=1/2/3', true)).to.deep.equal({ status: 'written', fragment: '' });
+    expect(removeMapHash('map=1/2/3&other', true).fragment).to.equal('other');
+  });
+
+  it('contains unreadable corner lists when normalizing initial bounds', () => {
+    const revoked = Proxy.revocable<number[][]>([[0, 0], [1, 1]], {});
+    revoked.revoke();
+    const unlistable = new Proxy([[0, 0], [1, 1]], { ownKeys() { throw new Error('hostile keys'); } });
+    expect(normalizeMapInitialBounds(revoked.proxy)).to.equal(undefined);
+    expect(normalizeMapInitialBounds(unlistable)).to.equal(undefined);
+    expect(normalizeMapInitialBounds([[0, 0], [1, 1]])).to.deep.equal([[0, 0], [1, 1]]);
+  });
+
+  it('ignores a non-string fragment when choosing the initial view', () => {
+    expect(chooseMapInitialView({ fragment: 7, hash: true, camera })).to.deep.equal({ kind: 'camera', camera });
+    expect(chooseMapInitialView({ fragment: null, hash: true, bounds: [[0, 0], [1, 1]] }).kind).to.equal('bounds');
+  });
+});

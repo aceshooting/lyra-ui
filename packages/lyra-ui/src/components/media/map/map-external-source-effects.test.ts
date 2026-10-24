@@ -289,4 +289,37 @@ describe('external source effects', () => {
     state.effects.dispose(); expect(state.disposed).to.deep.equal([forwarded[1], forwarded[0]]);
   });
 
+  it('refuses a canvas redraw when the source cannot play and pause, without touching it', async () => {
+    const state = await setup();
+    const sources = [{ id: 'canvas', source: { type: 'canvas', canvas: document.createElement('canvas'), animate: false } }];
+    await state.effects.reconcile(state.map, 1, sources, new Map(), state.context, async () => {});
+    const incapable = { play: 'play', pause: () => { state.calls.push('pause'); } };
+    state.sources.set('canvas', incapable);
+    await state.effects.reconcile(state.map, 1, sources, new Map([['canvas', 1]]), state.context, async () => {});
+    let rejected = false;
+    try { await state.effects.reconcile(state.map, 1, sources, new Map([['canvas', 2]]), state.context, async () => {}); }
+    catch { rejected = true; }
+    expect(rejected).to.equal(true); expect(state.calls).to.deep.equal([]); state.effects.dispose();
+  });
+  it('disposes cleanly when the native peer refuses to drop the settlement listener', async () => {
+    const state = await setup();
+    await state.effects.reconcile(state.map, 1, [{ id: 'image', source: { type: 'image', url: 'blob:https://example.test/input' } }], new Map(), state.context, async () => {});
+    (state.map as { off: unknown }).off = () => { throw new Error('peer already retired'); };
+    expect(() => state.effects.dispose()).not.to.throw();
+    expect(state.disposed).to.have.length(1);
+  });
+  for (const stage of ['lookup', 'loaded probe'] as const) {
+    it(`keeps retained URLs when the peer retires during the settlement ${stage}`, async () => {
+      const state = await setup();
+      const image = (url: string) => [{ id: 'image', source: { type: 'image', url, coordinates } }];
+      for (const url of ['blob:https://example.test/a', 'blob:https://example.test/b']) {
+        await state.effects.reconcile(state.map, 1, image(url), new Map(), state.context, async () => {});
+      }
+      if (stage === 'lookup') (state.map as { getSource: unknown }).getSource = (id: string) => { state.retire(); return state.sources.get(id); };
+      else state.source.loaded = () => { state.retire(); return true; };
+      state.settle();
+      expect(state.disposed).to.deep.equal([]);
+      state.effects.dispose(); expect(state.disposed).to.have.length(2);
+    });
+  }
 });

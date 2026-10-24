@@ -32683,7 +32683,7 @@
     "current": {
       "version": "30.0.0",
       "sourceCommit": null,
-      "manifestSha256": "2b066b9fab004db2d3fd387dc52c7725b8219d3d7d95408ef052044e7264afa5",
+      "manifestSha256": "d3972f244546dcf9c6e9a26cf18a5e85e1e51fd1a399c9da8982038e586e40e8",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",
@@ -32843,6 +32843,7 @@
         "lr-live-region",
         "lr-locale-picker",
         "lr-map",
+        "lr-map-anchor",
         "lr-markdown",
         "lr-markdown-core",
         "lr-mcp-app",

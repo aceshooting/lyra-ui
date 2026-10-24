@@ -69,3 +69,55 @@ describe('map peer event subscriptions', () => {
     remove(); remove(); expect(removed === native).to.equal(true);
   });
 });
+
+describe('map peer event subscription boundaries', () => {
+  it('ignores a rotation for a peer that has no subscriptions', () => {
+    let registrations = 0;
+    const peer = { on() { registrations++; return this; } };
+    new MapEngineEvents().rotate(peer);
+    expect(registrations).to.equal(0);
+  });
+
+  it('skips a subscription released by an earlier native removal during rotation', () => {
+    const events = new MapEngineEvents(); const registered: string[] = [], removed: string[] = [];
+    let release = (): void => {};
+    const peer = {
+      on(type: string) { registered.push(type); return this; },
+      off(type: string) { removed.push(type); if (type === 'load') release(); },
+    };
+    events.subscribe(peer, 'load', () => {});
+    release = events.subscribe(peer, 'idle', () => {});
+    events.rotate(peer);
+    expect(registered).to.deep.equal(['load', 'idle', 'load']);
+    expect(removed).to.deep.equal(['load', 'idle']);
+  });
+
+  it('keeps rotating when the previous native dispatcher cannot be removed', () => {
+    const events = new MapEngineEvents(); const handlers: ((event: unknown) => void)[] = []; let calls = 0;
+    const peer = { on(_type: string, listener: (event: unknown) => void) { handlers.push(listener); return this; }, off() { throw new Error('native detail'); } };
+    events.subscribe(peer, 'idle', () => { calls++; });
+    events.rotate(peer);
+    expect(handlers.length).to.equal(2);
+    handlers[0]!({}); expect(calls).to.equal(0);
+    handlers[1]!({}); expect(calls).to.equal(1);
+  });
+
+  it('releases the remaining native subscriptions when one removal throws on clear', () => {
+    const events = new MapEngineEvents(); const removed: string[] = [];
+    const peer = { on() { return this; }, off(type: string) { removed.push(type); if (type === 'load') throw new Error('native detail'); } };
+    events.subscribe(peer, 'load', () => {});
+    events.subscribe(peer, 'idle', () => {});
+    expect(() => events.clear(peer)).not.to.throw();
+    expect(removed).to.deep.equal(['load', 'idle']);
+  });
+
+  it('does not remove a native listener twice when a disposer runs after the peer was cleared', () => {
+    const events = new MapEngineEvents(); let removals = 0;
+    const peer = { on() { return this; }, off() { removals++; } };
+    const dispose = events.subscribe(peer, 'error', () => {});
+    events.clear(peer);
+    expect(removals).to.equal(1);
+    dispose();
+    expect(removals).to.equal(1);
+  });
+});

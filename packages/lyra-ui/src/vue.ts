@@ -349,6 +349,8 @@ export type LyraLocalePickerVueProps = LyraVueCustomElement<'lr-locale-picker'>;
 
 export type LyraMapVueProps = LyraVueCustomElement<'lr-map'>;
 
+export type LyraMapAnchorVueProps = LyraVueCustomElement<'lr-map-anchor'>;
+
 export type LyraMarkdownVueProps = LyraVueCustomElement<'lr-markdown'>;
 
 export type LyraMarkdownCoreVueProps = LyraVueCustomElement<'lr-markdown-core'>;
@@ -812,6 +814,7 @@ export interface LyraVueGlobalComponents {
   'lr-live-region': LyraLiveRegionVueProps;
   'lr-locale-picker': LyraLocalePickerVueProps;
   'lr-map': LyraMapVueProps;
+  'lr-map-anchor': LyraMapAnchorVueProps;
   'lr-markdown': LyraMarkdownVueProps;
   'lr-markdown-core': LyraMarkdownCoreVueProps;
   'lr-mcp-app': LyraMcpAppVueProps;

@@ -340,3 +340,85 @@ describe('map controls lifecycle', () => {
   });
 
 });
+
+describe('map controls lifecycle boundaries', () => {
+  class RootedControl extends Control {
+    readonly root = document.createElement('div');
+    constructor() { super(); this.root.append(document.createElement('button')); }
+    onAdd() { return this.root; }
+  }
+
+  it('reports a failure for every control whose module cannot be imported', async () => {
+    const h = harness(); const manager = new MapControlsLifecycle(async () => { throw new Error('import failed'); });
+    await manager.sync(h.map, options({ navigation: true, scale: true }), h.context);
+    expect(h.failures).to.deep.equal(['navigation', 'scale']); expect(h.installed.length).to.equal(0);
+    manager.dispose();
+  });
+
+  it('rejects a geolocate control that cannot subscribe to events', async () => {
+    const h = harness();
+    const manager = new MapControlsLifecycle(async () => class { onAdd() { return document.createElement('div'); } });
+    await manager.sync(h.map, options({ geolocate: true }), h.context);
+    expect(h.failures).to.deep.equal(['geolocate']); expect(h.installed.length).to.equal(0);
+    manager.dispose();
+  });
+
+  it('reports a geolocate success without a position when the event carries no coordinates', async () => {
+    const h = harness(); await h.manager.sync(h.map, options({ geolocate: true }), h.context);
+    const control = h.created[0]!;
+    control.fire('geolocate', {}); control.fire('geolocate', { coords: null }); control.fire('geolocate', null);
+    expect(h.events).to.deep.equal([{ kind: 'geolocate-success' }, { kind: 'geolocate-success' }, { kind: 'geolocate-success' }]);
+    h.manager.dispose();
+  });
+
+  it('cleans every registered subscription when disposal re-enters on a later one', async () => {
+    for (const reenterAt of [2, 3]) {
+      const h = harness(); let manager!: MapControlsLifecycle; let constructed!: Control; let registrations = 0;
+      manager = new MapControlsLifecycle(async () => class extends Control {
+        constructor() { super(); constructed = this; }
+        override on(type: string, callback: (event: unknown) => void): this {
+          super.on(type, callback);
+          if (++registrations === reenterAt) manager.dispose();
+          return this;
+        }
+      });
+      await manager.sync(h.map, options({ geolocate: true }), h.context);
+      expect(h.installed.length, `registration ${reenterAt}`).to.equal(0);
+      expect(constructed.retired, `registration ${reenterAt}`).to.deep.equal(['error', 'outofmaxbounds', 'geolocate'].slice(0, reenterAt));
+      expect(h.failures.length, `registration ${reenterAt}`).to.equal(0);
+    }
+  });
+
+  it('leaves nothing installed or subscribed after disposal, wherever the context turns stale during a rearrangement', async () => {
+    const rearrange = async (staleAt: number) => {
+      const corners = new Map(['top-right', 'bottom-left'].map(position => [position, document.createElement('div')]));
+      const created: RootedControl[] = [];
+      let additions = 0, removals = 0, checks = 0, stale = Number.POSITIVE_INFINITY;
+      const manager = new MapControlsLifecycle(async () => class extends RootedControl { constructor() { super(); created.push(this); } });
+      const map = {
+        controlContainer: (position: string) => corners.get(position),
+        addControl(control: MapManagedControl, position: string) {
+          additions++;
+          const root = control.onAdd!(); const corner = corners.get(position)!;
+          if (position.startsWith('bottom')) corner.prepend(root); else corner.append(root);
+        },
+        removeControl(control: MapManagedControl) { removals++; (control as RootedControl).root.remove(); },
+      };
+      const context = { isCurrent: () => ++checks < stale, onEvent: () => undefined, onFailure: () => undefined };
+      await manager.sync(map, options({ geolocate: { position: 'top-right' }, scale: { position: 'bottom-left' } }), context);
+      checks = 0; stale = staleAt;
+      await manager.sync(map, options({ navigation: { position: 'bottom-left' }, scale: { position: 'bottom-left' },
+        geolocate: { position: 'bottom-left' }, attribution: { position: 'bottom-left' } }), context);
+      const consulted = checks;
+      manager.dispose();
+      expect(removals, `stale at ${staleAt}`).to.equal(additions);
+      expect([...corners.values()].every(corner => corner.childElementCount === 0), `stale at ${staleAt}`).to.equal(true);
+      expect(created.every(control => [...control.listeners.values()].every(set => set.size === 0)), `stale at ${staleAt}`).to.equal(true);
+      return consulted;
+    };
+    // An uninterrupted run reveals how often the owner is consulted; turn it stale at each of those points.
+    const consultations = await rearrange(Number.POSITIVE_INFINITY);
+    expect(consultations).to.be.greaterThan(20);
+    for (let staleAt = 1; staleAt <= consultations; staleAt++) await rearrange(staleAt);
+  });
+});

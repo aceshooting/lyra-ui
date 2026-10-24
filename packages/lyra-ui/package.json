@@ -979,6 +979,10 @@
       "types": "./dist/components/forms/locale-picker/locale-picker.d.ts",
       "default": "./dist/components/lr-locale-picker.js"
     },
+    "./components/lr-map-anchor.js": {
+      "types": "./dist/components/media/map/map-anchor.d.ts",
+      "default": "./dist/components/lr-map-anchor.js"
+    },
     "./components/lr-map.js": {
       "types": "./dist/components/media/map/map.d.ts",
       "default": "./dist/components/lr-map.js"
@@ -1611,6 +1615,7 @@
     "./components/media/image-comparer/image-comparer.class.js": "./dist/components/media/image-comparer/image-comparer.class.js",
     "./components/media/image-viewer/image-viewer.class.js": "./dist/components/media/image-viewer/image-viewer.class.js",
     "./components/media/lightbox/lightbox.class.js": "./dist/components/media/lightbox/lightbox.class.js",
+    "./components/media/map/map-anchor.class.js": "./dist/components/media/map/map-anchor.class.js",
     "./components/media/map/map-loader.js": "./dist/components/media/map/map-loader.js",
     "./components/media/map/map.class.js": "./dist/components/media/map/map.class.js",
     "./components/media/media-card/media-card.class.js": "./dist/components/media/media-card/media-card.class.js",
@@ -2095,6 +2100,7 @@
     "./dist/components/media/image-viewer/image-viewer.js",
     "./dist/components/media/index.js",
     "./dist/components/media/lightbox/lightbox.js",
+    "./dist/components/media/map/map-anchor.js",
     "./dist/components/media/map/map.js",
     "./dist/components/media/media-card/media-card.js",
     "./dist/components/media/pan-zoom/pan-zoom.js",
@@ -2470,6 +2476,7 @@
     "./src/components/media/image-viewer/image-viewer.ts",
     "./src/components/media/index.ts",
     "./src/components/media/lightbox/lightbox.ts",
+    "./src/components/media/map/map-anchor.ts",
     "./src/components/media/map/map.ts",
     "./src/components/media/media-card/media-card.ts",
     "./src/components/media/pan-zoom/pan-zoom.ts",

@@ -89,3 +89,57 @@ describe('map export attribution collection', () => {
   });
 
 });
+
+describe('map export attribution boundaries', () => {
+  const styleOf = (style: unknown) => ({ getStyle: () => style, getSource: () => ({}) });
+
+  it('cancels when the owner check throws instead of continuing with stale state', async () => {
+    await failure(collectMapExportAttribution(peer(), context({ current: () => { throw new Error('native diagnostic sentinel'); } })), 'cancelled');
+  });
+
+  it('rejects styles and sources that are not objects', async () => {
+    await failure(collectMapExportAttribution(styleOf(null), context()), 'attribution-failed');
+    await failure(collectMapExportAttribution(styleOf('style'), context()), 'attribution-failed');
+    await failure(collectMapExportAttribution(styleOf({ sources: { tiles: 'raster' } }), context()), 'attribution-failed');
+  });
+
+  it('rejects credits that are not text', async () => {
+    await failure(collectMapExportAttribution(peer(5), context()), 'attribution-failed');
+    await failure(collectMapExportAttribution(peer(), context({ customAttribution: 5 })), 'attribution-failed');
+    await failure(collectMapExportAttribution(peer(), context({ customAttribution: [{ label: 'Survey' }] })), 'attribution-failed');
+  });
+
+  it('requires callable public methods that are not accessors', async () => {
+    let reads = 0;
+    const accessor = Object.defineProperty({ getSource: () => ({}) }, 'getStyle', { get() { reads++; return () => ({ sources: {} }); } });
+    await failure(collectMapExportAttribution({ getStyle: () => ({ sources: {} }) } as never, context()), 'attribution-failed');
+    await failure(collectMapExportAttribution({ getStyle: 5, getSource: () => ({}) } as never, context()), 'attribution-failed');
+    await failure(collectMapExportAttribution(accessor as never, context()), 'attribution-failed');
+    expect(reads).to.equal(0);
+  });
+
+  it('requires a record of sources with bounded text identifiers', async () => {
+    for (const sources of [undefined, 'sources', ['tiles']]) await failure(collectMapExportAttribution(styleOf({ sources }), context()), 'attribution-failed');
+    for (const id of ['', 'x'.repeat(513)]) await failure(collectMapExportAttribution(styleOf({ sources: { [id]: {} } }), context()), 'attribution-failed');
+    await failure(collectMapExportAttribution(styleOf({ sources: { [Symbol('tiles')]: {} } }), context()), 'attribution-failed');
+    expect(await collectMapExportAttribution(styleOf({ sources: { ['x'.repeat(512)]: {} } }), context())).to.equal('');
+  });
+
+  it('rejects a custom credit list above the source ceiling', async () => {
+    await failure(collectMapExportAttribution(peer(), context({ customAttribution: new Array<string>(257).fill('Credit') })), 'attribution-failed');
+    expect(await collectMapExportAttribution(peer(), context({ customAttribution: new Array<string>(256).fill('Credit') }))).to.equal('Provider | Resolved TileJSON | Credit');
+  });
+
+  it('rejects markup that leaves no readable credit after sanitizing', async () => {
+    const empty = { loadSanitizer: async () => ({ sanitize: () => '<i></i>' }) };
+    await failure(collectMapExportAttribution(peer('<b>Credit</b>'), context(empty)), 'attribution-failed');
+    expect(await collectMapExportAttribution(peer('<b>Credit</b>'), context({ loadSanitizer: async () => ({ sanitize: (value: string) => value }) }))).to.equal('Credit | Resolved TileJSON');
+  });
+
+  it('counts the separators between credits toward the text ceiling', async () => {
+    // The credits alone stay within the ceiling in both cases; only the ' | ' separators tip the second over it.
+    const joined = await collectMapExportAttribution(peer('a'.repeat(2047)), context({ customAttribution: 'b'.repeat(2026) }));
+    expect(joined.length).to.equal(4096);
+    await failure(collectMapExportAttribution(peer('a'.repeat(2047)), context({ customAttribution: 'b'.repeat(2027) })), 'attribution-failed');
+  });
+});

@@ -63,6 +63,63 @@ function snapshot(root) {
   return result;
 }
 
+function siblingFixture(t) {
+  const root = fixture(t);
+  // Enrollment tests start from the generated inventory, independently of other pending tags.
+  const tags = new Set(read(path.join(root, 'scripts/fixtures/component-inventory.json')).components.map(entry => entry.tag));
+  for (const file of fs.readdirSync(path.join(root, sourceDirectory, 'families'))) {
+    change(root, `families/${file}`, value => {
+      for (const profile of Object.keys(value.assignments)) value.assignments[profile] = value.assignments[profile].filter(tag => tags.has(tag));
+    });
+  }
+  change(root, 'families/utility.json', value => { value.assignments['new-component-experimental'].push('lr-fixture-sibling'); });
+  const stem = 'src/components/utility/icon/fixture-sibling';
+  const writePair = (relative = stem) => {
+    fs.mkdirSync(path.dirname(path.join(root, relative)), { recursive: true });
+    fs.writeFileSync(path.join(root, `${relative}.class.ts`), '/**\n * @customElement lr-fixture-sibling\n */\nexport class LyraFixtureSibling {}\n');
+    fs.writeFileSync(path.join(root, `${relative}.ts`), "import { LyraFixtureSibling } from './fixture-sibling.class.js';\nimport { defineElement } from '../../../internal/prefix.js';\ndefineElement('fixture-sibling', LyraFixtureSibling);\n");
+  };
+  writePair();
+  return { root, stem, writePair };
+}
+
+test('bootstraps a sibling tag from its exact source pair without a new directory entry', t => {
+  const { root } = siblingFixture(t);
+  const sources = readComponentMetadataSources(root);
+  assert.equal(sources.familyByTag['lr-fixture-sibling'], 'utility');
+  assert.ok(assembleComponentMetadata(sources).assignments['new-component-experimental'].includes('lr-fixture-sibling'));
+  assert.equal(read(path.join(root, 'scripts/component-families.json')).directories['fixture-sibling'], undefined);
+  assert.equal(sources.snapshots.filter(entry => entry.file.includes('fixture-sibling.')).length, 2);
+});
+
+for (const [name, mutate, pattern] of [
+  ['absent class', ({ root, stem }) => fs.unlinkSync(path.join(root, `${stem}.class.ts`)), /expected family undefined/],
+  ['absent registration', ({ root, stem }) => fs.unlinkSync(path.join(root, `${stem}.ts`)), /expected family undefined/],
+  ['mismatched tag marker', ({ root, stem }) => fs.writeFileSync(path.join(root, `${stem}.class.ts`), '/**\n * @customElement lr-other\n */\nexport class LyraFixtureSibling {}\n'), /expected family undefined/],
+  ['mismatched registration', ({ root, stem }) => fs.writeFileSync(path.join(root, `${stem}.ts`), "defineElement('other', LyraFixtureSibling);\n"), /expected family undefined/],
+  ['conflicting inventory owner', ({ root }) => {
+    const file = path.join(root, 'scripts/fixtures/component-inventory.json');
+    const inventory = read(file);
+    inventory.components.push({ tag: 'lr-fixture-sibling', family: 'media' });
+    fs.writeFileSync(file, render(inventory));
+  }, /expected family media, found utility/],
+  ['ambiguous source pairs', ({ writePair }) => writePair('src/components/utility/divider/fixture-sibling'), /ambiguous source family owner/],
+  ['cross-family assignment', ({ root }) => {
+    change(root, 'families/utility.json', value => { value.assignments['new-component-experimental'] = value.assignments['new-component-experimental'].filter(tag => tag !== 'lr-fixture-sibling'); });
+    change(root, 'families/media.json', value => { value.assignments['new-component-experimental'].push('lr-fixture-sibling'); });
+  }, /expected family utility, found media/],
+  ['symlinked source pair', ({ root, stem }) => {
+    fs.renameSync(path.join(root, `${stem}.class.ts`), path.join(root, 'outside.ts'));
+    fs.symlinkSync(path.join(root, 'outside.ts'), path.join(root, `${stem}.class.ts`));
+  }, /symlink|regular/],
+]) {
+  test(`sibling enrollment rejects ${name}`, t => {
+    const state = siblingFixture(t);
+    mutate(state);
+    assert.throws(() => readComponentMetadataSources(state.root), pattern);
+  });
+}
+
 test('authored metadata sources reproduce the aggregate bytes and detached record bodies', () => {
   const sources = readComponentMetadataSources(packageDir);
   const aggregate = assembleComponentMetadata(sources);

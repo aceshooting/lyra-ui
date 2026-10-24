@@ -162,6 +162,7 @@ export const COMPONENT_LOADERS: Readonly<Record<AutoloadableTagName, () => Promi
   'lr-live-region': () => import('../components/utility/live-region/live-region.class.js').then((module) => module.LyraLiveRegion),
   'lr-locale-picker': () => import('../components/forms/locale-picker/locale-picker.class.js').then((module) => module.LyraLocalePicker),
   'lr-map': () => import('../components/media/map/map.class.js').then((module) => module.LyraMap),
+  'lr-map-anchor': () => import('../components/media/map/map-anchor.class.js').then((module) => module.LyraMapAnchor),
   'lr-markdown': () => import('../components/conversation/markdown/markdown.class.js').then((module) => module.LyraMarkdown),
   'lr-markdown-core': () => import('../components/conversation/markdown/markdown-core.class.js').then((module) => module.LyraMarkdownCore),
   'lr-mcp-app': () => import('../components/agent-tools/mcp-app/mcp-app.class.js').then((module) => module.LyraMcpApp),

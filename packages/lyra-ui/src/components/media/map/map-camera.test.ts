@@ -350,6 +350,30 @@ describe('map camera helpers', () => {
     extendExtent(clamped, 400, -100);
     expect(extentToBounds(clamped)).to.deep.equal([[180, -90], [180, -90]]);
   });
+
+  it('keeps an authored bearing as given and ignores a non-finite one', () => {
+    expect(normalizeCameraOptions({ bearing: -30 })).to.deep.equal({ bearing: -30 });
+    expect(normalizeCameraOptions({ bearing: 450, zoom: 3 })).to.deep.equal({ bearing: 450, zoom: 3 });
+    expect(normalizeCameraOptions({ bearing: Number.NaN })).to.equal(undefined);
+  });
+
+  it('skips GeoJSON nodes, unknown geometry types and coordinate entries it cannot measure', () => {
+    const extent = emptyExtent();
+    extendExtentWithGeoJson(extent, {
+      type: 'FeatureCollection',
+      features: [
+        null, 'feature', 7,
+        { type: 'Feature', properties: {}, geometry: null },
+        { type: 'Topology', arcs: [[[99, 99]]] },
+        { type: 'Feature', properties: {}, geometry: { type: 'Circle', coordinates: [88, 88] } },
+        { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [[], 5, [1, 2], null] } },
+        { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: 'ring' } },
+      ],
+    });
+    expect(extentToBounds(extent)).to.deep.equal([[1, 2], [1, 2]]);
+    extendExtentWithGeoJson(extent, 'not geojson');
+    expect(extent.count).to.equal(1);
+  });
 });
 
 describe('map camera', () => {

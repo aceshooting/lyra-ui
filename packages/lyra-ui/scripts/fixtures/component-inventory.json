@@ -82231,6 +82231,10 @@
             "deprecated": null
           },
           {
+            "name": "anchors",
+            "deprecated": null
+          },
+          {
             "name": "legend",
             "deprecated": null
           },
@@ -83012,6 +83016,240 @@
             "deprecated": null
           }
         ],
+        "form": {
+          "associated": false,
+          "properties": [],
+          "methods": []
+        },
+        "native": {
+          "forwardedEvents": [],
+          "delegatedMethods": []
+        }
+      }
+    },
+    {
+      "tag": "lr-map-anchor",
+      "family": "media",
+      "classModule": "src/components/media/map/map-anchor.class.ts",
+      "registrationModule": "src/components/media/map/map-anchor.ts",
+      "rootIncluded": true,
+      "rootExclusion": null,
+      "optionalPeers": [],
+      "maturity": {
+        "status": "experimental",
+        "since": "unreleased",
+        "deprecated": null,
+        "profile": "new-component-experimental",
+        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
+        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "deprecations": []
+      },
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "accessibility": "automated",
+        "scale": "unmeasured",
+        "ledger": "scripts/fixtures/component-qualification.json"
+      },
+      "dependencies": {
+        "direct": [],
+        "transitive": [],
+        "ledger": "scripts/fixtures/component-integration.json"
+      },
+      "counterparts": [],
+      "surface": {
+        "attributes": [
+          {
+            "name": "closable",
+            "property": "closable",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "hidden",
+            "property": "hidden",
+            "type": "boolean | 'until-found'",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "label",
+            "property": "label",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "locale",
+            "property": "locale",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "open",
+            "property": "open",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          }
+        ],
+        "properties": [
+          {
+            "name": "boundary",
+            "attribute": null,
+            "type": "LyraMapAnchorBoundary | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "closable",
+            "attribute": "closable",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "label",
+            "attribute": "label",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "lngLat",
+            "attribute": null,
+            "type": "readonly [number, number] | null | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "locale",
+            "attribute": "locale",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "open",
+            "attribute": "open",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "safeArea",
+            "attribute": null,
+            "type": "LyraMapAnchorSafeArea | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
+        "slots": [
+          {
+            "name": "",
+            "deprecated": null
+          },
+          {
+            "name": "close-icon",
+            "deprecated": null
+          }
+        ],
+        "events": [
+          {
+            "name": "lr-close",
+            "type": "CustomEvent<LyraMapAnchorCloseDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-close-request",
+            "type": "CustomEvent<LyraMapAnchorCloseDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          }
+        ],
+        "parts": [
+          {
+            "name": "base",
+            "deprecated": null
+          },
+          {
+            "name": "body",
+            "deprecated": null
+          },
+          {
+            "name": "close-button",
+            "deprecated": null
+          },
+          {
+            "name": "close-icon",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [],
+        "cssStates": [
+          {
+            "name": "placed",
+            "deprecated": null
+          }
+        ],
+        "methods": [
+          {
+            "name": "close",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "focusContent",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "boolean"
+              }
+            ]
+          }
+        ],
+        "staticProperties": [],
+        "staticMethods": [],
+        "moduleExports": [],
         "form": {
           "associated": false,
           "properties": [],

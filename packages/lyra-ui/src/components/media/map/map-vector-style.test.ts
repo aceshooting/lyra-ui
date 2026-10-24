@@ -144,4 +144,8 @@ describe('map vector style', () => {
     expect(line({ 'line-width': ['match', ['get', 'n'], [1, 2], 1, 2, 2, 3] })).to.equal(undefined);
     expect(line({}, ['in', ['get', 'n'], ['literal', [1, '2']]])).to.equal(undefined);
   });
+  it('rejects a property name that alone exceeds the text budget', () => {
+    expect(line({ ['k'.repeat(1_048_577)]: 1 })).to.equal(undefined);
+    expect(line({ 'line-width': 4 })?.paint).to.deep.equal({ 'line-width': 4 });
+  });
 });

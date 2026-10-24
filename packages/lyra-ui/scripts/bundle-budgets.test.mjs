@@ -830,3 +830,23 @@ test('lr-map keeps every on-demand feature runtime out of its static module grap
     'lr-map must load drawing, export, URL, resource, image, override, anchor, control and feature-state runtimes on first use',
   );
 });
+
+test('lr-map-anchor reaches its map through the seam and leaves placement to the shared lazy anchor runtime', () => {
+  const mapDir = path.join(packageDir, 'src', 'components', 'media', 'map');
+  const internalDir = path.join(packageDir, 'src', 'internal');
+  const reachable = staticValueImportClosure(path.join(mapDir, 'map-anchor.class.ts'));
+  assert.ok(reachable.has(path.join(mapDir, 'map-anchor-seam.ts')), 'the element must attach through the shared seam module');
+  assert.ok(staticValueImportClosure(path.join(mapDir, 'map.class.ts')).has(path.join(mapDir, 'map-anchor-seam.ts')),
+    'lr-map must expose its child-anchor registry through the same seam');
+  const lazy = [
+    ...['map.class.ts', 'map-feature-loader.ts', 'map-anchor-controller.ts', 'map-anchor-options.ts'].map((name) => path.join(mapDir, name)),
+    ...['anchored-overlay-runtime.ts', 'focus-navigation.ts', 'nonmodal-overlay-manager.ts', 'overlay-manager.ts', 'overlay-stack.ts',
+      'positioner.ts', 'positioner-geometry.ts'].map((name) => path.join(internalDir, name)),
+  ];
+  for (const file of lazy) assert.ok(existsSync(file), `${path.relative(packageDir, file)} must exist`);
+  assert.deepEqual(
+    lazy.filter((file) => reachable.has(file)).map((file) => path.relative(packageDir, file)),
+    [],
+    'lr-map-anchor must not statically import the map, its anchor runtime or the overlay and positioner internals',
+  );
+});

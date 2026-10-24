@@ -64,6 +64,32 @@ export function readComponentMetadataSources(packageDir = defaultPackageDir) {
   invariant(policy.schemaVersion === 1 && policy.metadataSchemaVersion === 2, 'Unsupported metadata source schema');
   const families = familyNames.map(family => read(`${directory}/families/${family}.json`));
   families.forEach((value, index) => invariant(value.family === familyNames[index], `${familyNames[index]}: family file owner differs`));
+  // A secondary tag may share an existing component directory. Before its first manifest, derive
+  // only a missing owner from its exact class/registration pair and explicit custom-element tag.
+  // The generated inventory remains authoritative once that tag has been enrolled.
+  for (const entry of families) {
+    for (const tag of Object.values(entry.assignments ?? {}).flat()) {
+      if (typeof tag !== 'string' || Object.hasOwn(familyByTag, tag) || !/^lr-[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(tag)) continue;
+      const owners = [];
+      for (const [name, family] of Object.entries(catalog.directories ?? {})) {
+        const stem = `src/components/${family}/${name}/${tag.slice(3)}`;
+        const classFile = `${stem}.class.ts`;
+        const registrationFile = `${stem}.ts`;
+        if (!fs.existsSync(path.join(packageDir, classFile)) || !fs.existsSync(path.join(packageDir, registrationFile))) continue;
+        const source = readSnapshot(packageDir, classFile);
+        const registration = readSnapshot(packageDir, registrationFile);
+        if (!source.original.split('\n').some(line => line.trim() === `* @customElement ${tag}`)) continue;
+        const className = source.original.match(/^export class ([A-Za-z_$][\w$]*)\b/m)?.[1];
+        const registrationLines = registration.original.split('\n').map(line => line.trim());
+        if (!className || !registrationLines.includes(`import { ${className} } from './${tag.slice(3)}.class.js';`) ||
+          !registrationLines.includes(`defineElement('${tag.slice(3)}', ${className});`)) continue;
+        snapshots.push(source, registration);
+        owners.push(family);
+      }
+      invariant(owners.length <= 1, `${tag}: ambiguous source family owner`);
+      if (owners.length === 1) familyByTag[tag] = owners[0];
+    }
+  }
   snapshots.push(readSnapshot(packageDir, aggregate, { missing: true }));
   const sources = {
     packageDir, schemaVersion: policy.metadataSchemaVersion, policy: policy.policy,

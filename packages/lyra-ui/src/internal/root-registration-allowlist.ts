@@ -151,6 +151,7 @@ export const ROOT_BARREL_TAGS = [
   'lr-lite-chart',
   'lr-live-region',
   'lr-locale-picker',
+  'lr-map-anchor',
   'lr-markdown',
   'lr-markdown-core',
   'lr-mcp-app',

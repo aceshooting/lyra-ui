@@ -488,6 +488,14 @@ content synchronously; `closeAnchor()` closes a currently visible anchor. Both r
 `lr-map-anchor-close` reports `api`, `close-button`, or `escape`; focus return respects ownership.
 The close button is exposed as `anchor-close`.
 
+**Multiple anchored panels:** when several panels must be open at once, each opened and closed by
+its own owner, use `lr-map-anchor` children (see its section below) instead of the single `anchor`
+slot. They render through the `anchors` slot, are placed exactly like the slot anchor, and use this
+element's `anchorSafeArea` and `anchorBoundary` while their own `safeArea` and `boundary` are
+`undefined`. The two kinds coexist: `closeAnchor()`, `focusAnchor()` and `lr-map-anchor-close`
+concern only the `anchor` slot, and the slot panel joins the children's paint and Escape order only
+while the map places at least one child anchor.
+
 **Initialization and image export:** `initialization: LyraMapInitialization = 'visible'` defers
 construction until visible; `idle` schedules idle construction and `eager` requests immediate
 construction. `interaction` waits for the first input on the element (pointer press, touch, wheel,
@@ -1357,6 +1365,9 @@ would any dialog or popup of your own. Positioning uses the library's shared pop
 the map's container, and the wrapper's size never depends on the placement, so it adds no layout
 loop. Typical use: `map.addEventListener('lr-map-click', (e) => { card.hidden = false;
 map.anchorLngLat = e.detail.lngLat; })`.
+`anchors` — `lr-map-anchor` children; a direct child anchor assigns itself here. An element assigned
+here may also wrap anchors (a framework component host, say); it renders inside the map, so it
+should hold only anchors.
 `legend` — custom legend content, rendered inside the legend panel's own layout so it
 stays positioned with the map instead of floating beside it. Supplying it opens the panel even
 when `legend` and `legendGradient` are both empty. `legend-start` — the same extension point at the

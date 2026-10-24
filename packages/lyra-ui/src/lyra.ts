@@ -2014,6 +2014,7 @@ export type { LyraRadioGroupEventMap } from './components/forms/radio/radio-grou
 export type { LyraJsonViewerEventMap, JsonViewerTreeSource } from './components/utility/json-viewer/json-viewer.class.js';
 export type { LyraLiteChartEventMap } from './components/charts/chart/lite-chart.class.js';
 export type { LyraMapEventMap } from './components/media/map/map.class.js';
+export type { LyraMapAnchorEventMap } from './components/media/map/map-anchor.class.js';
 export type {
   GeoJsonTypeTag,
   LyraGeoJsonViewerEventMap,

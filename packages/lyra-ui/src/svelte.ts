@@ -356,6 +356,8 @@ export type LyraLocalePickerSvelteProps = LyraSvelteElementProps<'lr-locale-pick
 
 export type LyraMapSvelteProps = LyraSvelteElementProps<'lr-map'>;
 
+export type LyraMapAnchorSvelteProps = LyraSvelteElementProps<'lr-map-anchor'>;
+
 export type LyraMarkdownSvelteProps = LyraSvelteElementProps<'lr-markdown'>;
 
 export type LyraMarkdownCoreSvelteProps = LyraSvelteElementProps<'lr-markdown-core'>;
@@ -819,6 +821,7 @@ export interface LyraSvelteElements {
   'lr-live-region': LyraLiveRegionSvelteProps;
   'lr-locale-picker': LyraLocalePickerSvelteProps;
   'lr-map': LyraMapSvelteProps;
+  'lr-map-anchor': LyraMapAnchorSvelteProps;
   'lr-markdown': LyraMarkdownSvelteProps;
   'lr-markdown-core': LyraMarkdownCoreSvelteProps;
   'lr-mcp-app': LyraMcpAppSvelteProps;
@@ -1132,6 +1135,7 @@ export interface LyraElementTagNameMap {
   'lr-live-region': LyraComponentTypeMap['lr-live-region']['element'];
   'lr-locale-picker': LyraComponentTypeMap['lr-locale-picker']['element'];
   'lr-map': LyraComponentTypeMap['lr-map']['element'];
+  'lr-map-anchor': LyraComponentTypeMap['lr-map-anchor']['element'];
   'lr-markdown': LyraComponentTypeMap['lr-markdown']['element'];
   'lr-markdown-core': LyraComponentTypeMap['lr-markdown-core']['element'];
   'lr-mcp-app': LyraComponentTypeMap['lr-mcp-app']['element'];

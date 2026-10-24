@@ -13,6 +13,14 @@ describe('map cursor ownership', () => {
     owner.set(first, 'pick'); first.style.cursor = 'zoom-in'; owner.set(first, 'hover'); owner.set(second, 'pick');
     expect(first.style.cursor).to.equal('zoom-in'); owner.set(second, undefined); expect(second.style.cursor).to.equal('');
   });
+  it('releases the previous canvas when the owner is pointed at no canvas', () => {
+    const canvas = document.createElement('canvas'), owner = new MapCursorOwner(); canvas.style.cursor = 'grab';
+    owner.set(canvas, 'pick'); expect(canvas.style.cursor).to.equal('crosshair');
+    owner.set(undefined, 'pick'); expect(canvas.style.cursor).to.equal('grab');
+    owner.set(undefined, undefined); expect(canvas.style.cursor).to.equal('grab');
+    owner.set(canvas, 'hover'); expect(canvas.style.cursor).to.equal('pointer');
+    owner.clear(); expect(canvas.style.cursor).to.equal('grab');
+  });
   it('preserves an external same-value priority change on clear and after a mode transition', () => {
     const canvas = document.createElement('canvas'), owner = new MapCursorOwner(); canvas.style.cursor = 'grab';
     owner.set(canvas, 'hover'); canvas.style.setProperty('cursor', 'pointer', 'important'); owner.clear();

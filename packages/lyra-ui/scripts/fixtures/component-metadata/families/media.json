@@ -2,7 +2,8 @@
   "family": "media",
   "assignments": {
     "new-component-experimental": [
-      "lr-drop-zone"
+      "lr-drop-zone",
+      "lr-map-anchor"
     ],
     "published-stable": [
       "lr-animated-image",
