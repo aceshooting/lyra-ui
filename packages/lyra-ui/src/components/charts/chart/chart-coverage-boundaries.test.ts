@@ -1,8 +1,8 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
-import type { Chart } from 'chart.js';
+import type { Chart, PointElement } from 'chart.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraPreparedSeriesData, LyraSeriesPointRef, LyraSeriesSample } from '../../../utilities/data-preparation.js';
 import type { LyraSpatialChartPoint, LyraSpatialChartSource, LyraSpatialQuery } from '../../../utilities/data-spatial.js';
 import type { LyraChart, LyraChartFormatterContext, LyraChartSeries } from './chart.class.js';
@@ -95,17 +95,46 @@ describe('chart source boundary interactions', () => {
     const selected: string[] = [], regions: number[] = [];
     element.addEventListener('lr-spatial-point-select', event => selected.push((event as CustomEvent<{ point: LyraSpatialChartPoint }>).detail.point.id));
     element.addEventListener('lr-spatial-bin-select', event => regions.push((event as CustomEvent<{ count: number }>).detail.count));
-    const clickFirst = async () => {
+    const settledAllocation = async () => {
+      // The first allocation can replace the peer after the source query has settled.
+      await waitUntil(() => {
+        const allocation = element as unknown as {
+          lastObservedInlineSize?: number;
+          samplingWidth: number;
+          resizeDrawFrame?: number;
+        };
+        const width = allocation.lastObservedInlineSize;
+        const peer = element.chart as unknown as Chart | undefined;
+        const area = peer?.chartArea, surface = canvas(element), box = surface.getBoundingClientRect();
+        const point = peer?.getDatasetMeta(0).data[0] as PointElement | undefined;
+        const center = point?.getCenterPoint(true);
+        return typeof width === 'number' && Number.isFinite(width) && width > 0 &&
+          allocation.samplingWidth === Math.floor(width) && allocation.resizeDrawFrame === undefined &&
+          !element.isUpdatePending && element.getAttribute('aria-busy') === 'false' &&
+          !!peer && peer.canvas === surface && !!area && !!center &&
+          [box.width, box.height, peer.width, peer.height, area.width, area.height]
+            .every(value => Number.isFinite(value) && value > 0) &&
+          Number.isFinite(center.x) && Number.isFinite(center.y) &&
+          Math.abs(box.width - peer.width) < 1 && Math.abs(box.height - peer.height) < 1;
+      }, 'spatial chart pointer allocation did not settle', { timeout: 5000 });
+    };
+    const pointPosition = (box = canvas(element).getBoundingClientRect()): [number, number] => {
       const peer = element.chart as unknown as Chart;
-      const area = peer.chartArea, box = canvas(element).getBoundingClientRect();
-      const x = area.left + (area.right - area.left) / 12;
-      const y = area.bottom - (area.bottom - area.top) * 2 / 12;
-      await sendMouse({ type: 'click', position: [Math.round(box.left + x * box.width / peer.width), Math.round(box.top + y * box.height / peer.height)] });
+      const point = peer.getDatasetMeta(0).data[0] as PointElement;
+      const center = point.getCenterPoint(true);
+      return [Math.round(box.left + center.x * box.width / peer.width), Math.round(box.top + center.y * box.height / peer.height)];
+    };
+    const clickFirst = async () => {
+      await settledAllocation();
+      await hoverUntilMatched(canvas(element), 'representative canvas receives pointer input', pointPosition);
+      await settledAllocation();
+      await sendMouse({ type: 'click', position: pointPosition() });
     };
     try {
       await clickFirst();
       await waitUntil(() => selected.length === 1, 'representative was not activated');
       expect(selected).to.deep.equal(['first']);
+      expect(regions).to.deep.equal([]);
       element.hiddenDatasets = [0];
       await element.updateComplete;
       await waitUntil(() => !(element.chart as unknown as Chart).isDatasetVisible(0));
