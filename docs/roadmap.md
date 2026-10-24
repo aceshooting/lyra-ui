@@ -39,7 +39,7 @@ Installed map prototypes, native font and label rendering, representative right-
 locale/mobile behavior, visual review and request acceptance are complete within the scope of
 [map adoption](roadmap/map-adoption.md). Application migration follows the release. The video
 hover quarantine is removed with browser verification; CI timing and per-package coverage
-reporting are implemented. Complete coverage at `ed580b4d0` reached 99.800335%, above the 99.80%
+reporting are implemented. Complete coverage reached 99.800335%, above the 99.80%
 target. The mutation-test worklist is resolved with additional behavioural tests and reviewed
 equivalence reasons. Matched runtime measurements retain an advisory chart tail increase and
 other timing changes, documented in the release changeset. These checkpoint results do not
