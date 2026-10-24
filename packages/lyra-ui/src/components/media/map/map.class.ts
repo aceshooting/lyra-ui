@@ -5421,7 +5421,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   /** Bind readiness to this exact style before its mutation can synchronously emit events. */
-  private beginStyleReadiness(map: MapLibreMapCapability, initial: boolean, mutate?: () => void): void {
+  private beginStyleReadiness(map: MapLibreMapCapability, initial: boolean, mutate?: () => void, waitForStyleLoad = false): void {
     const connection = this._connectGeneration;
     const styleGeneration = this._styleGeneration;
     const style = this.mapStyle;
@@ -5474,6 +5474,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       },
       mutate: initial ? mutate : () => { this.peerEvents.rotate(map); if (current()) mutate?.(); },
       isStyleReady: () => {
+        // URL replacements retain the old ready style while fetching/preparing in some peers.
+        // Their full-replacement style.load event is the actual commit boundary.
+        if (waitForStyleLoad) return false;
         const ready = typeof map.isStyleLoaded === 'function' ? map.isStyleLoaded() === true
           : typeof map.loaded === 'function' && map.loaded() === true;
         if (ready) startRestoration();
@@ -5599,13 +5602,17 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     } else if (changed.has('mapStyle') && !this._map && this._maplibreModule && hasMapStyle(this.mapStyle)) {
       this.tryConstructMap();
     } else if (changed.has('mapStyle') && this._map) {
+      const replaceStyle = typeof this.mapStyle === 'string' || !this._styleLoaded;
       this._styleLoaded = false;
       this._styleLayers = EMPTY_STYLE_LAYERS; this._styleSources = EMPTY_STYLE_SOURCES;
       const map = this._map;
       this.beginStyleReadiness(map, false, () => {
         for (const sourceId of this.appliedPointIcons.keys()) this.removePointIcons(sourceId);
-        map.setStyle(this.mapStyle as never);
-      });
+        // Rebuild URL styles so even unchanged responses emit a committed style.load. A diff's
+        // transform callback precedes asynchronous modular preparation and cannot signal commit.
+        // Any superseding style replaces an unloaded basemap instead of attempting to diff it.
+        map.setStyle(this.mapStyle as never, replaceStyle ? { diff: false } : undefined);
+      }, replaceStyle);
     } else if (this._styleLoaded && (this.refreshingGeoJson || changed.has('dataLayers') || changed.has('choropleth') ||
       changed.has('overlays') || changed.has('images') || changed.has('styleOverrides') || changed.has('interactiveBasemapLayers') ||
       (changed.has('imageProvider') && this.preparingFeatures))) {

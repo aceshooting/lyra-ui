@@ -131,7 +131,7 @@ export interface MapLibreMapCapability {
     lngLat: { lng: number; lat: number };
   }) => void): this;
   once(type: 'style.load', listener: () => void): this;
-  setStyle(style: unknown): this;
+  setStyle(style: unknown, options?: { diff?: boolean }): this;
   /** Optional native style capabilities, required only for declarative owned overlays/overrides. */
   getStyle?(): { readonly layers?: readonly { readonly id: string }[] };
   moveLayer?(id: string, before?: string): unknown;

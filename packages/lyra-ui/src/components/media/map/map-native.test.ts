@@ -6,7 +6,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { LyraMap, LYRA_MAP_EMPTY_STYLE } from './map.js';
 import { loadMapControlRuntime, loadMapDrawingRuntime, loadMapFeatureStateRuntime, loadMapHashRuntime, loadMapOwnedFeatureRuntime } from './map-feature-loader.js';
-import type { LyraMapGeoJsonDataLayer, LyraMapInstance, LyraMapOverlays, LyraMapPickDetail, LyraMapDrawingSnapshot, LyraMapInteractionDetail, LyraMapPointerDetail } from './map.class.js';
+import type { LyraMapGeoJsonDataLayer, LyraMapImage, LyraMapInstance, LyraMapOverlays, LyraMapPickDetail, LyraMapDrawingSnapshot, LyraMapInteractionDetail, LyraMapPointerDetail } from './map.class.js';
 void LyraMap;
 
 /** Only real native methods, reached through the documented map getter. */
@@ -17,6 +17,8 @@ interface NativeMap extends LyraMapInstance {
   getSource(id: string): unknown;
   getStyle(): { sources: Record<string, unknown>; layers: { id: string }[] };
   getLayer(id: string): unknown;
+  getPaintProperty(id: string, property: string): unknown;
+  isStyleLoaded(): boolean;
   hasImage(id: string): boolean;
   project(coordinates: [number, number]): { x: number; y: number };
   queryRenderedFeatures(point: { x: number; y: number }, options: { layers: string[] }): { layer: { id: string } }[];
@@ -134,6 +136,163 @@ describe('lr-map actual modular companion integration', function () {
   afterEach(async () => { try { await resetMouse(); } finally { try { fixtureCleanup(); } finally { setWorkerUrl(previousWorkerUrl); } } });
 
   for (const engine of ['modular', 'maplibre'] as const) {
+    it(`rejects an invalid URL style and shows its fallback in ${engine}`, async () => {
+      const { el } = await mount(element => { element.engine = engine; element.overlays = {}; });
+      const originalFetch = window.fetch;
+      const url = new URL('/invalid-map-style.json', location.href).href;
+      window.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+        const requestedUrl = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+        if (requestedUrl === url) return Promise.resolve(new Response(JSON.stringify({ ...localStyle(), version: 99 }), {
+          headers: { 'Content-Type': 'application/json' },
+        }));
+        return originalFetch.call(window, input, init);
+      }) as typeof window.fetch;
+      try {
+        el.mapStyle = url; await el.updateComplete;
+        expect(await el.whenStyleReady().then(() => false, () => true)).to.equal(true);
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null, 'The failed style shows a fallback');
+        expect(el.map === undefined).to.equal(true);
+        const recovered = oneEvent(el, 'lr-map-load');
+        el.mapStyle = localStyle();
+        await recovered; await el.whenIdle();
+        expect(el.map !== undefined).to.equal(true);
+        expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.equal(true);
+      } finally { window.fetch = originalFetch; }
+    });
+
+    for (const supersession of ['replacement', 'successive replacements', 'reconnect'] as const) {
+      const reconnect = supersession === 'reconnect';
+      it(`cancels a pending URL style ${reconnect ? 'across reconnect' : `on ${supersession}`} in ${engine}`, async () => {
+        const { el, wrapper } = await mount(element => { element.engine = engine; element.overlays = {}; });
+        const originalFetch = window.fetch;
+        const url = new URL('/obsolete-map-style.json', location.href).href;
+        let requested = false;
+        let respond!: (response: Response) => void;
+        const response = new Promise<Response>(resolve => { respond = resolve; });
+        window.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+          const requestedUrl = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+          if (requestedUrl === url) { requested = true; return response; }
+          return originalFetch.call(window, input, init);
+        }) as typeof window.fetch;
+        try {
+          el.mapStyle = url; await el.updateComplete;
+          const abandoned = el.whenStyleReady().then(() => 'ready', (error: unknown) => (error as DOMException).name);
+          await waitUntil(() => requested, 'The obsolete style was requested');
+          if (reconnect) el.remove();
+          el.mapStyle = { ...localStyle(), layers: [{ id: 'plain-background', type: 'background', paint: { 'background-color': '#ff0000' } }] };
+          if (reconnect) wrapper.append(el);
+          await el.updateComplete;
+          if (supersession === 'successive replacements') {
+            const intermediate = el.whenStyleReady().then(() => 'ready', (error: unknown) => (error as DOMException).name);
+            const pending = !peer(el).isStyleLoaded();
+            if (engine === 'maplibre') expect(pending, 'The intermediate inline style is still pending').to.equal(true);
+            el.mapStyle = { ...localStyle(), layers: [{ id: 'plain-background', type: 'background', paint: { 'background-color': '#0000ff' } }] };
+            await el.updateComplete;
+            if (pending) expect(await intermediate).to.equal('AbortError');
+          }
+          await el.whenIdle();
+          expect(await abandoned).to.equal('AbortError');
+          const retained = el.map;
+          let lateReady = 0;
+          const onReady = () => { lateReady += 1; };
+          el.addEventListener('lr-map-style-load', onReady);
+          try {
+            const obsolete = new Response(JSON.stringify(localStyle()), { headers: { 'Content-Type': 'application/json' } });
+            respond(obsolete);
+            await waitUntil(() => obsolete.bodyUsed, 'The obsolete response was consumed');
+            await new Promise<void>(resolve => { setTimeout(resolve, 0); });
+            expect(el.map === retained).to.equal(true);
+            expect(peer(el).getPaintProperty('plain-background', 'background-color')).to.equal(supersession === 'successive replacements' ? '#0000ff' : '#ff0000');
+            expect(lateReady).to.equal(0);
+          } finally { el.removeEventListener('lr-map-style-load', onReady); }
+        } finally {
+          window.fetch = originalFetch;
+          respond(new Response(JSON.stringify(localStyle()), { headers: { 'Content-Type': 'application/json' } }));
+        }
+      });
+    }
+
+    it(`waits for an unchanged URL style response before readiness in ${engine}`, async () => {
+      const { el } = await mount(element => { element.engine = engine; element.overlays = {}; });
+      const originalFetch = window.fetch;
+      const url = new URL('/unchanged-map-style.json', location.href).href;
+      let requested = false;
+      let respond!: (response: Response) => void;
+      const response = new Promise<Response>(resolve => { respond = resolve; });
+      window.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+        const requestedUrl = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+        if (requestedUrl === url) { requested = true; return response; }
+        return originalFetch.call(window, input, init);
+      }) as typeof window.fetch;
+      let ready = false;
+      try {
+        el.mapStyle = url;
+        await el.updateComplete;
+        const settled = el.whenStyleReady().then(() => { ready = true; });
+        await waitUntil(() => requested, 'The replacement style was requested');
+        // Let already-queued readiness microtasks drain while the response is explicitly held.
+        await new Promise<void>(resolve => { setTimeout(resolve, 0); });
+        expect(ready, 'The previous style must not satisfy replacement readiness').to.equal(false);
+        respond(new Response(JSON.stringify(localStyle()), { headers: { 'Content-Type': 'application/json' } }));
+        await settled;
+        await el.whenIdle();
+        expect(peer(el).getStyle().layers.map(layer => layer.id)).to.deep.equal(['plain-background']);
+      } finally {
+        window.fetch = originalFetch;
+        respond(new Response(JSON.stringify(localStyle()), { headers: { 'Content-Type': 'application/json' } }));
+      }
+    });
+
+    it(`restores owned layers and overrides after a URL style commits in ${engine}`, async () => {
+      const style = localStyle();
+      const { el } = await mount(element => {
+        element.engine = engine;
+        element.styleOverrides = [{ layerId: 'plain-background', paint: { 'background-color': '#0000ff' } }];
+        element.images = [{ id: 'retained-icon', width: 8, height: 8, pixelRatio: 1, source: { kind: 'svg',
+          markup: '<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><rect width="8" height="8" fill="#ffffff"/></svg>' } } satisfies LyraMapImage];
+      });
+      const map = peer(el);
+      const url = new URL('/replacement-map-style.json', location.href).href;
+      const originalFetch = window.fetch;
+      let requested = false;
+      let respond!: (response: Response) => void;
+      const response = new Promise<Response>(resolve => { respond = resolve; });
+      window.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+        const requestedUrl = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+        if (requestedUrl === url) { requested = true; return response; }
+        return originalFetch.call(window, input, init);
+      }) as typeof window.fetch;
+      let committed = false;
+      const loaded = () => { committed = true; };
+      map.on('style.load', loaded);
+      try {
+        el.mapStyle = url;
+        await el.updateComplete;
+        await waitUntil(() => requested, 'The replacement style was requested');
+        await new Promise<void>(resolve => { setTimeout(resolve, 0); });
+        respond(new Response(JSON.stringify(style), { headers: { 'Content-Type': 'application/json' } }));
+        await waitUntil(() => committed, 'The native URL style commits', { timeout: 5000 });
+        let ready = false;
+        const restored = el.whenStyleReady().then(() => { ready = true; });
+        await waitUntil(() => ready, 'Owned resources reach style readiness after the native commit', { timeout: 5000 });
+        await restored;
+        await el.whenIdle();
+        expect(el.map === map).to.equal(true);
+        expect([map.getCenter().lng, map.getCenter().lat]).to.deep.equal([0, 0]);
+        expect(map.getZoom()).to.equal(3);
+        expect(map.hasImage('retained-icon')).to.equal(true);
+        expect(map.getSource('local-area') !== undefined).to.equal(true);
+        expect(map.getLayer('local-fill') !== undefined).to.equal(true);
+        expect(map.getPaintProperty('plain-background', 'background-color')).to.equal('#0000ff');
+        color(await centerPixel(el), [255, 0, 0, 255]);
+        color(await centerPixel(el, 0.1, 0.1), [0, 0, 255, 255]);
+      } finally {
+        map.off('style.load', loaded);
+        window.fetch = originalFetch;
+        respond(new Response(JSON.stringify(style), { headers: { 'Content-Type': 'application/json' } }));
+      }
+    });
+
     it(`updates retained static canvas pixels by revision in ${engine}`, async () => {
       const canvas = document.createElement('canvas'); canvas.width = canvas.height = 8;
       const draw = (fill: string) => { const context = canvas.getContext('2d')!; context.fillStyle = fill; context.fillRect(0, 0, 8, 8); };
