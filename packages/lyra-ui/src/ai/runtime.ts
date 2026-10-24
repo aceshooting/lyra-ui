@@ -622,7 +622,7 @@ export function reduceAgentStream(state: AgentStreamState, event: AgentStreamEve
       }
       const existing = index >= 0 ? state.messages[index] : undefined;
       const merged = existing
-        ? { ...existing, ...incoming.value, parts: incoming.value.parts ?? existing.parts }
+        ? { ...existing, ...incoming.value }
         : incoming.value;
       const message = ownedMessage(merged, state.limits);
       if (!message) return failEvent(state, cursor, 'Message has an invalid shape.', 'invalid_stream_event');
@@ -724,10 +724,11 @@ export function reduceAgentStream(state: AgentStreamState, event: AgentStreamEve
       const index = state.messages.findIndex((message) => message.id === source['messageId']);
       if (index < 0) return commit(state, state, usage, cursor);
       const current = state.messages[index]!;
+      const parts = current.parts?.map((part) => part.state === 'interrupted' ? part : { ...part, state: 'complete' });
       const message = ownedMessage({
         ...current,
         status: current.parts?.some((part) => part.state === 'interrupted') ? current.status : 'sent',
-        parts: current.parts?.map((part) => part.state === 'interrupted' ? part : { ...part, state: 'complete' }),
+        ...(parts ? { parts } : {}),
       }, state.limits);
       if (!message) return failEvent(state, cursor, 'Completed message has an invalid shape.', 'invalid_stream_event');
       const messages = [...state.messages];

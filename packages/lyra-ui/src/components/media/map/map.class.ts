@@ -3014,7 +3014,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   static override styles = [LyraElement.styles, styles, srOnly];
   private readonly hostDescription = new HostDescriptionController(
-    this, () => (this._map?.getCanvas?.() as HTMLCanvasElement | undefined) ?? null,
+    this, () => {
+      try { return (this._map?.getCanvas?.() as HTMLCanvasElement | undefined) ?? null; }
+      catch { return null; }
+    },
   );
 
   /** Starts the shared optional-peer import without constructing a map. Returns false when the
