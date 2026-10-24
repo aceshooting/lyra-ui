@@ -12,8 +12,9 @@ export default {
         '.storybook/**/*.mdx',
       ],
       project: ['scripts/**/*.mjs', '.storybook/**/*.{js,mdx,css}'],
-      // The hosted regression helper invokes wtr in packages/lyra-ui, which declares it.
-      ignoreBinaries: ['wtr'],
+      // The hosted regression helper invokes wtr in packages/lyra-ui, which declares it. The
+      // workflow policy test runs the docs deploy's badge steps with the runner's preinstalled jq.
+      ignoreBinaries: ['wtr', 'jq'],
       ignoreDependencies: [
         // Spawned by name or referenced as string data in packed-consumer checks.
         'publint',
