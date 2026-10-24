@@ -16383,6 +16383,7 @@
           "src/components/forms/date-picker/date-input-closed-layout.test.ts",
           "src/components/forms/date-picker/date-input-form-lifecycle.test.ts",
           "src/components/forms/date-picker/date-input-locale-parse.test.ts",
+          "src/components/forms/date-picker/date-input-public-value-boundaries.test.ts",
           "src/components/forms/date-picker/date-input-rendering-a11y.test.ts",
           "src/components/forms/date-picker/date-input.test.ts",
           "src/components/forms/date-picker/date-picker-remediation.test.ts",
@@ -16588,6 +16589,7 @@
           "src/components/forms/date-picker/date-input-closed-layout.test.ts",
           "src/components/forms/date-picker/date-input-form-lifecycle.test.ts",
           "src/components/forms/date-picker/date-input-locale-parse.test.ts",
+          "src/components/forms/date-picker/date-input-public-value-boundaries.test.ts",
           "src/components/forms/date-picker/date-input-rendering-a11y.test.ts",
           "src/components/forms/date-picker/date-input.test.ts",
           "src/components/forms/date-picker/date-picker-remediation.test.ts",
@@ -26657,6 +26659,7 @@
           "src/components/data/heatmap/heatmap-matrix-source-validation.test.ts",
           "src/components/data/heatmap/heatmap-no-canvas-dev-gate.test.ts",
           "src/components/data/heatmap/heatmap-no-canvas.test.ts",
+          "src/components/data/heatmap/heatmap-provider-presentation-boundaries.test.ts",
           "src/components/data/heatmap/heatmap-public-presentation-recovery.test.ts",
           "src/components/data/heatmap/heatmap-remediation.test.ts",
           "src/components/data/heatmap/heatmap-row-height.test.ts",
@@ -48615,6 +48618,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/slider/slider-form-lifecycle.test.ts",
+          "src/components/forms/slider/slider-pending-focus-authority.test.ts",
           "src/components/forms/slider/slider-remediation.test.ts",
           "src/components/forms/slider/slider-rendering-a11y.test.ts",
           "src/components/forms/slider/slider.test.ts"

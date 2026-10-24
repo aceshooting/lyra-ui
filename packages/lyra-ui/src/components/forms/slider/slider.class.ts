@@ -808,16 +808,29 @@ export class LyraSlider extends LyraSliderBase {
     if (!transfer) return;
     const generation = this.rangeFocusGeneration;
     this.scheduleAfterUpdate(() => {
-      if (generation !== this.rangeFocusGeneration || !this.isConnected || this.effectiveDisabled) return;
+      if (generation !== this.rangeFocusGeneration || !this.isConnected) return;
       const internalActive = shadowFocusTarget(this);
       const documentActive = activeElementIn(this.ownerDocument);
       const focusStayedAtOrigin = internalActive === transfer.origin;
       const originWasRemovedWithoutReplacement =
         internalActive === null
         && (documentActive === null || documentActive === this || documentActive === this.ownerDocument.body);
-      if (!focusStayedAtOrigin && !originWasRemovedWithoutReplacement) return;
-      const target = this.handleElement(transfer.target);
-      target?.focus();
+      if (!this.effectiveDisabled && (focusStayedAtOrigin || originWasRemovedWithoutReplacement)) {
+        this.handleElement(transfer.target)?.focus();
+      }
+      // Focus listeners can disconnect the slider or move focus to another thumb. Reconcile the
+      // rendered affordance with its current owner without reviving a superseded transfer.
+      if (generation !== this.rangeFocusGeneration || !this.isConnected) return;
+      const active = shadowFocusTarget(this);
+      const focused: SliderHandle | null = active === null ? null
+        : active === this.handleElement('min') ? 'min'
+          : active === this.handleElement('max') ? 'max'
+            : active === this.firstThumb() ? 'value' : null;
+      if (this.focusedHandle !== focused) {
+        this.focusedHandle = focused;
+        this.syncInteractionStates();
+        this.requestUpdate();
+      }
     }, 'slider-range-focus');
   }
 
