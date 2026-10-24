@@ -31903,6 +31903,7 @@
           "src/components/conversation/markdown/markdown-loader.test.ts",
           "src/components/conversation/markdown/markdown-math-delimiters.test.ts",
           "src/components/conversation/markdown/markdown-presentation.test.ts",
+          "src/components/conversation/markdown/markdown-progressive-content-boundaries.test.ts",
           "src/components/conversation/markdown/markdown-progressive-coverage.test.ts",
           "src/components/conversation/markdown/markdown-progressive.test.ts",
           "src/components/conversation/markdown/markdown-public-parser-boundaries.test.ts",
@@ -32131,6 +32132,7 @@
           "src/components/conversation/markdown/markdown-loader.test.ts",
           "src/components/conversation/markdown/markdown-math-delimiters.test.ts",
           "src/components/conversation/markdown/markdown-presentation.test.ts",
+          "src/components/conversation/markdown/markdown-progressive-content-boundaries.test.ts",
           "src/components/conversation/markdown/markdown-progressive-coverage.test.ts",
           "src/components/conversation/markdown/markdown-progressive.test.ts",
           "src/components/conversation/markdown/markdown-public-parser-boundaries.test.ts",
@@ -48109,8 +48111,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/signature-pad/signature-pad.test.ts",
-              "test": "draws with the keyboard and announces the pen state",
+              "file": "src/components/forms/signature-pad/signature-pad-public-stroke-boundaries.test.ts",
+              "test": "refuses keyboard and pointer starts at the stroke ceiling and draws again after a public clear",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -48231,6 +48233,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/signature-pad/signature-pad-public-stroke-boundaries.test.ts",
           "src/components/forms/signature-pad/signature-pad.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -61225,7 +61228,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "keyboard",
           "visual",
           "peerFailure",
           "security",
@@ -61257,17 +61259,22 @@
         },
         "keyboard": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/conversation/widget-renderer/widget-renderer-nested-columns.test.ts",
+              "test": "renders nested builtin columns at 320px in ${direction} and retains keyed native action identity",
+              "kind": "component keyboard exercise signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/conversation/widget-renderer/widget-renderer.test.ts",
-              "test": "wraps long content in a 320px RTL allocation",
+              "file": "src/components/conversation/widget-renderer/widget-renderer-nested-columns.test.ts",
+              "line": 23,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -61283,8 +61290,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/conversation/widget-renderer/widget-renderer.test.ts",
-              "test": "wraps long content in a 320px RTL allocation",
+              "file": "src/components/conversation/widget-renderer/widget-renderer-nested-columns.test.ts",
+              "test": "renders nested builtin columns at 320px in ${direction} and retains keyed native action identity",
               "kind": "320px allocation test signal"
             }
           ]
@@ -61365,7 +61372,6 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "Interactive implementation detected without a recorded component keyboard-test signal.",
         "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -61380,6 +61386,7 @@
         "tests": [
           "src/components/conversation/widget-renderer/registry.test.ts",
           "src/components/conversation/widget-renderer/resolve.test.ts",
+          "src/components/conversation/widget-renderer/widget-renderer-nested-columns.test.ts",
           "src/components/conversation/widget-renderer/widget-renderer-remediation.test.ts",
           "src/components/conversation/widget-renderer/widget-renderer.test.ts"
         ],
