@@ -5653,6 +5653,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     this.drawingConfigApplying = this.drawingConfigRevision;
     super.willUpdate(changed);
+    // Placement reads direction after the DOM commit. Consume it during this update too so the
+    // inherited-context observer commits the new baseline before overlay style writes recheck it.
+    if (this.anchorLngLat != null) void this.effectiveDirection;
     this.refreshingGeoJson = this.geoJsonRefreshRequested;
     this.geoJsonRefreshRequested = false;
     if (this.refreshingGeoJson) {
