@@ -46,6 +46,10 @@ declare const overlayOptions: OverlayActivationOptions;
 declare const overlayHandle: OverlayHandle;
 declare const adapter: FormValueAdapter<readonly string[]>;
 declare const emitArgs: LyraEmitArgs<ProbeEvents, 'lr-probe'>;
+const constrainedPlacement: PlaceOptions = { placement: 'top', shiftCrossAxis: true };
+const sidePreservingPlacement: PlaceOptions = { placement: 'top', shiftCrossAxis: false };
+// @ts-expect-error The cross-axis opt-in is boolean, not a placement-axis name.
+const invalidCrossAxis: PlaceOptions = { shiftCrossAxis: 'vertical' };
 
 void [
   nextId,
@@ -59,6 +63,9 @@ void [
   createStringArrayFormDataState,
   LyraElement,
   placeOptions,
+  constrainedPlacement,
+  sidePreservingPlacement,
+  invalidCrossAxis,
   virtualAnchor,
   overlayOptions,
   overlayHandle,

@@ -3334,8 +3334,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * Invalid boundaries hide the anchor until corrected; caller arrays are never retained or mutated. */
   @property({ attribute: false }) anchorBoundary?: LyraMapAnchorBoundary;
   /** Nonnegative finite CSS-pixel logical insets inside the map allocation, in addition to the
-   * existing8px placement padding. Missing edges default0; explicit invalid values/accessors hide
-   * the anchor. Oversized valid edges collapse available allocation. Caller data is not mutated. */
+   * existing 8px placement padding. Missing edges default to zero; invalid values/accessors hide
+   * the anchor. The panel shifts inside the available area when its on-map target lies outside
+   * that area, without changing the camera or coordinate. Oversized valid edges collapse available
+   * allocation and hide the anchor. Caller data is not mutated. */
   @property({ attribute: false }) anchorSafeArea?: LyraMapAnchorSafeArea;
   /** Adds a localized close action and nonmodal Escape ownership. Opening never moves focus. */
   @property({ type: Boolean, attribute: 'anchor-closable' }) anchorClosable = false;

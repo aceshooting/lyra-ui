@@ -1,5 +1,6 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import { platform as floatingPlatform } from '@floating-ui/dom';
+import { place as placePublic } from '../utilities/positioner.js';
 import {
   createPlacementSyncOwnershipController,
   createPlacementStyleTransaction,
@@ -44,6 +45,46 @@ it('positions the popup relative to the anchor', async () => {
   expect(p.style.getPropertyValue('--lr-positioner-available-block-size')).to.match(/^\d+(?:\.\d+)?px$/);
   stop();
 });
+
+for (const placement of ['top', 'bottom', 'left', 'right'] as const) {
+  it(`shifts across the ${placement} placement axis only when explicitly requested`, async () => {
+    const wrap = await fixture(html`<div>
+      <div id="boundary" style="position:fixed;left:100px;top:100px;width:200px;height:200px;pointer-events:none"></div>
+      <div id="popup" style="width:60px;height:60px"></div>
+    </div>`);
+    const boundary = wrap.querySelector<HTMLElement>('#boundary')!;
+    const popup = wrap.querySelector<HTMLElement>('#popup')!;
+    const vertical = placement === 'top' || placement === 'bottom';
+    const before = placement === 'top' || placement === 'left';
+    const coordinate = before ? 60 : 340;
+    const reference = virtualAnchorFromRect({ x: vertical ? 200 : coordinate, y: vertical ? coordinate : 200, contextElement: boundary });
+    let stop: (() => void) | undefined;
+    try {
+      for (const crossAxis of [undefined, false, true]) {
+        let bounds: DOMRect | undefined;
+        stop = placePublic(reference, popup, {
+          placement, flip: false, boundary, padding: 8,
+          ...(crossAxis === undefined ? {} : { shiftCrossAxis: crossAxis }),
+          onPlaced: () => { bounds ??= popup.getBoundingClientRect(); },
+        });
+        await waitFor(() => bounds, value => value !== undefined);
+        const panel = bounds!;
+        const clip = boundary.getBoundingClientRect();
+        if (crossAxis) {
+          expect(panel.left).to.be.at.least(clip.left + 7);
+          expect(panel.right).to.be.at.most(clip.right - 7);
+          expect(panel.top).to.be.at.least(clip.top + 7);
+          expect(panel.bottom).to.be.at.most(clip.bottom - 7);
+        } else if (vertical) {
+          expect(before ? panel.bottom < clip.top : panel.top > clip.bottom).to.equal(true);
+        } else {
+          expect(before ? panel.right < clip.left : panel.left > clip.right).to.equal(true);
+        }
+        stop(); stop = undefined;
+      }
+    } finally { stop?.(); }
+  });
+}
 
 for (const autoSize of [undefined, 'vertical', 'horizontal', 'both'] as const) {
   it(`positions the CSS-constrained box before its first callback with autoSize ${String(autoSize)}`, async () => {

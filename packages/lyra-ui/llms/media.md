@@ -816,7 +816,10 @@ Its first coordinate loads anchor placement; placement, already asynchronous, fo
 a dense array of at most 32). `anchorSafeArea?: LyraMapAnchorSafeArea` adds nonnegative finite
 logical CSS-pixel edges (`blockStart`, `inlineEnd`, `blockEnd`, `inlineStart`); omitted edges are
 zero, explicitly invalid edges fail closed. Placement intersects boundaries with the allocation
-and retains its 8px padding. `anchorClosable = false` leaves content passive; enabling it adds a
+and retains its 8px padding. If the geographic target remains on the map but lies outside that
+intersection, the panel shifts fully inside the available area; changing the safe area never
+moves the map camera or changes `anchorLngLat`. An off-map target or collapsed allocation hides
+the panel. `anchorClosable = false` leaves content passive; enabling it adds a
 close button and nonmodal Escape handling. `focusAnchor()` explicitly focuses eligible visible
 content synchronously; `closeAnchor()` closes a currently visible anchor. Both return booleans.
 `lr-map-anchor-close` reports `api`, `close-button`, or `escape`; focus return respects ownership.

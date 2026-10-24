@@ -205,6 +205,33 @@ describe('lr-map anchor placement and close ownership', () => {
     element.anchorSafeArea = { blockStart: -1 }; await element.updateComplete; expect(anchor(element).hidden).to.equal(true);
     element.anchorSafeArea = {}; await placed(element); expect(anchor(element).hidden).to.equal(false);
   });
+  for (const edge of ['blockStart', 'blockEnd'] as const) {
+    it(`keeps the whole anchor and close action inside a growing ${edge} safe area`, async () => {
+      const { element, peer, slot } = await open(el => { el.anchorClosable = true; el.style.blockSize = '544px'; });
+      slot.style.blockSize = '48px';
+      await placed(element);
+      const map = element.getBoundingClientRect();
+      const camera = { ...peer.center };
+      element.anchorSafeArea = { [edge]: 396 };
+      await element.updateComplete;
+      // A completed style transaction is evidence that the new fence has been measured, even
+      // when the previous placement was already visible and carried a resolved left coordinate.
+      await waitUntil(() => parseFloat(getComputedStyle(anchor(element)).maxHeight) <= 132, 'anchor resized to the new safe area');
+      await nextFrame();
+      const panel = anchor(element).getBoundingClientRect();
+      const close = element.shadowRoot!.querySelector<HTMLElement>('[part="anchor-close"]')!.getBoundingClientRect();
+      const top = map.top + (edge === 'blockStart' ? 396 : 0) + 8;
+      const bottom = map.bottom - (edge === 'blockEnd' ? 396 : 0) - 8;
+      expect(anchor(element).hidden).to.equal(false);
+      expect(panel.top).to.be.at.least(top - 1);
+      expect(panel.bottom).to.be.at.most(bottom + 1);
+      expect(close.top).to.be.at.least(top - 1);
+      expect(close.bottom).to.be.at.most(bottom + 1);
+      expect(peer.center).to.deep.equal(camera);
+      expect(element.anchorLngLat).to.deep.equal([0, 0]);
+      expect(element.closeAnchor()).to.equal(true);
+    });
+  }
   it('intersects dynamic connected custom boundaries with the real map allocation', async () => {
     const { element, peer, wrapper, slot } = await open(); slot.style.inlineSize = '400px'; const map = element.getBoundingClientRect();
     const boundary = document.createElement('div'); boundary.style.cssText = `position:fixed;left:${map.left + 80}px;top:${map.top + 20}px;width:240px;height:240px;pointer-events:none`;

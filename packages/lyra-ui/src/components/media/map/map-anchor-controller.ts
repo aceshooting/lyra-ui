@@ -266,7 +266,7 @@ export class MapAnchorController {
       const rect = container.getBoundingClientRect();
       if (!current()) return;
       const placement = place(virtualAnchorFromRect({ x: rect.left + point[0], y: rect.top + point[1], contextElement: container }), wrapper, {
-        placement: 'top', strategy: 'absolute', offset: 12, boundary: [fence, ...admitted.boundaries], padding: 8,
+        placement: 'top', strategy: 'absolute', offset: 12, boundary: [fence, ...admitted.boundaries], padding: 8, shiftCrossAxis: true,
         onPlaced: () => {
           if (!current() || !this.hasContent()) return;
           if (!this.placed) this.captureReturnTarget(wrapper);

@@ -100,6 +100,9 @@ export interface PlaceOptions {
   flipPadding?: number;
   /** Shift along the anchor's edge to stay in view. Default `true`. */
   shift?: boolean;
+  /** Also shift along the placement direction to stay inside the clipping boundary, even when
+   * the anchor lies outside it. Default `false`; may overlap the anchor. Ignored when `shift` is false. */
+  shiftCrossAxis?: boolean;
   /** Clipping context `shift()` measures overflow against. Default: the clipping ancestors. */
   shiftBoundary?: PlaceBoundary;
   /** Padding kept clear inside the shift boundary. Defaults to `padding` when omitted. */
@@ -688,6 +691,7 @@ function placeImpl(
         : shift({
             boundary: (opts.shiftBoundary ?? opts.boundary) as Boundary | undefined,
             padding: opts.shiftPadding ?? padding,
+            crossAxis: opts.shiftCrossAxis === true,
           }),
       opts.arrow ? arrow({ element: opts.arrow, padding: opts.arrowPadding ?? 0 }) : undefined,
       size({
