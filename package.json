@@ -85,7 +85,7 @@
     "dependency-cruiser": "18.7.0",
     "eslint-plugin-lit": "2.3.1",
     "eslint-plugin-wc": "3.1.0",
-    "knip": "^6.42.1",
+    "knip": "^6.43.0",
     "lit": "^3.3.3",
     "maplibre-gl": "^6.15.0",
     "oxlint": "1.89.0",

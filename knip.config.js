@@ -18,15 +18,6 @@ export default {
         // Spawned by name or referenced as string data in packed-consumer checks.
         'publint',
         '@arethetypeswrong/cli',
-        '@sgratzl/chartjs-chart-boxplot',
-        'chart.js',
-        'chartjs-plugin-zoom',
-        'd3-drag',
-        'd3-force',
-        'd3-selection',
-        'd3-zoom',
-        '@aceshooting/lyra-ui',
-        '@aceshooting/lyra-flags',
         // createRequire resolves these from the disposable consumer or the library workspace,
         // which declares Shiki; they are not imports from the repository-root installation.
         'shiki',
