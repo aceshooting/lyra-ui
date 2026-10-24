@@ -38,19 +38,32 @@ support, repository hygiene, Lit template checks and Quality tools gates. Record
 measurements meet the point targets (100k and 1M points at 60 fps) and graph target (10k nodes and
 30k edges at 60 fps) on the measured hardware. The document engine is 2.32.0. The highlighter
 defaults to JavaScript, with Oniguruma available through an explicit factory. The video hover
-quarantine was removed with browser verification. Matched runtime measurements retain an advisory
-chart tail increase and other timing changes documented in the release changelog.
+quarantine was removed with browser verification.
+
+Current maintenance runtime comparisons retain mixed advisory timing observations, recorded in the
+pending changeset. They do not establish a performance pass; the automated A/B benchmark remains
+required for the final candidate.
 
 The historical raw UI line-coverage observation reached 99.800335%; this is distinct from
 Codecov's full-hit coverage. The Codecov 99.80% goal remains open; exact-commit totals and the
 unchanged raw coverage floors are recorded in [test health](roadmap/test-health.md).
 
-30.1 is planned as a maintenance release. Current source includes corrections for URL-style
-readiness, anchor visibility and direction changes, boundary containment, native control styling
-parts and scoped theme restoration, with regression tests and documentation. These changes are
-unreleased and require qualification on the final versioned candidate. Multiple independently
-anchored content panels remain an open request under review, without an implementation or release
-commitment. Geospatial scenes remain unstarted and unassigned to a release.
+30.1.0 is an unpublished minor release in preparation. Current source adds cross-axis boundary
+containment, map control styling parts and experimental independently owned `lr-map-anchor`
+panels. It also corrects map URL-style readiness, anchor visibility and direction changes, scoped
+theme restoration, file-tree reveal cancellation, select initialization, dialog ownership, focus
+restoration, heatmap exports, neighbor pagination and text-only agent message updates. Further
+chart loading and progressive Markdown corrections and expanded behavioral coverage are being
+verified. Implementation and focused checks do not qualify the final release candidate.
+
+Remaining release work includes finishing the anchor lifecycle checks, rebuilding and regenerating
+API/editor/consumer artifacts, measuring delivery budgets, preparing the shared 30.1.0 version,
+and passing CI, both browser workflows and Quality tools including the A/B benchmark on that exact
+commit. The complete Codecov UI flag must retain the previous release's result; improvement of
+about 0.1 percentage point is the release aim, while 99.74% and 99.80% remain longer-term goals.
+The historical WebKit PDF timeout remains unexplained; passing focused reproductions establish no
+fix. See [test health](roadmap/test-health.md) for the evidence and remaining work. Geospatial
+scenes remain unstarted and unassigned to a release.
 
 ## Shipped
 
@@ -156,7 +169,7 @@ and plural/inheritance rules follow [Unicode CLDR](https://www.unicode.org/repor
 
 ### Consumer rollout after a release
 
-After each library release, upgrade `lyra-ui.com`, `lyra-admin` and every maintained consumer through
+After each library release, upgrade the public website and maintained consumers through
 supported APIs only: update ranges and lockfiles together, replace deprecated usage and application
 workarounds the library now covers, run each project's own gates, and report reusable gaps through
 the request channel rather than duplicating framework behavior. Website claims (languages,
@@ -173,16 +186,16 @@ packages version independently. A target moves only when scope changes, never to
 
 | Target | Package versions | Scope |
 |---|---|---|
-| 30.1.0 (planned) | lyra-ui, lyra-ide and lyra-translations 30.1.0 | Maintenance corrections, regression coverage and documentation; final scope and qualification remain open |
+| 30.1.0 (planned) | lyra-ui, lyra-ide and lyra-translations 30.1.0 | Experimental independent map anchors, positioning/control additions, maintenance corrections and regression coverage; qualification pending |
 | 30.x | lyra-3d 1.x | Further graph visuals and 100k-node scale |
 | independent | lyra-docs 0.7.0 to 1.0.0 | Native document editing phases 4 to 8 |
 | on demand | lyra-ui minor | Fluent-informed look |
 | last | lyra-ui minors | Additional full catalogs |
 
-1. **30.1.0 maintenance:** qualify the current map readiness, anchor/control layout, boundary
-   containment and scoped-theme corrections; complete reviewed behavioral coverage and factual
-   documentation updates. Additional requested features remain subject to separate review and
-   qualification. The published 30.0.0 delivery records remain the source for its
+1. **30.1.0:** finish and qualify experimental independent map anchors, positioning/control
+   additions and maintenance corrections; complete reviewed behavioral coverage, generated artifacts,
+   measured budgets and factual documentation. Publication follows exact-commit qualification.
+   The published 30.0.0 delivery records remain the source for its
    [collections](roadmap/immutable-collections.md), [map](roadmap/map-adoption.md) and
    [WebGL views](roadmap/lyra-3d.md) scope.
 2. **lyra-3d 1.x: further visuals and scale:** curved edges, DAG layouts, custom node rendering and
@@ -202,4 +215,4 @@ The [geospatial scenes plan](roadmap/geospatial-scenes.md) builds on the existin
 engine support and `lr-sequence-playback`. P1 covers typed globe/terrain settings and controls,
 altitude-aware geometry and models, and a shared simulation clock. P2 covers custom 3D layers,
 camera tours and tracking, and a generic network-monitoring showcase. All six items are planned
-and unstarted, with no assigned release version or date; none blocks 30.0.0.
+and unstarted, with no assigned release version or date; none is included in the 30.1.0 candidate.

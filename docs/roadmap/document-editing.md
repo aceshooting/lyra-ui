@@ -11,6 +11,10 @@ The [implementation and qualification record](document-editing-feasibility.md) r
 browser behavior, the bounded admission policy, asset measurements, and remaining qualification.
 Passing browser checks establish only the specific behaviors and corpus cases they exercise.
 
+The unpublished lyra-ui 30.1.0 candidate does not advance these editor phases. The editor remains
+at 0.6.3, with corpus, interoperability, IME, assistive-technology and retained-memory work open as
+listed below; viewer regression tests do not establish editor fidelity.
+
 ## Current state (lyra-docs 0.6.3)
 
 Evidence: `packages/lyra-docs` (published as `@aceshooting/lyra-docs@0.6.3`): 56 colocated Node

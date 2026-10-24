@@ -14,6 +14,13 @@ Evidence must include exact commit, complete run status, commands, package total
 
 `scripts/report-statement-coverage.py` is a reporting candidate. Run it from repository root with exact commit, evidence manifest and content-addressed exclusions. It reads only committed source blobs. Evidence provenance is an explicit attestation input, not something the script can establish from an arbitrary JSON map. Independent verification of commit, complete selection, shard membership, archive hashes and successful actual runs remains required before public use.
 
+## Current qualification status
+
+The unpublished 30.1.0 work has no new qualified whole-project statement report. Historical evidence
+below retains its recorded source and scope. The current UI Codecov observation and remaining
+coverage/release work are tracked in [test health](roadmap/test-health.md); neither a UI-only report
+nor passing focused tests establishes this document's whole-project evidence requirement.
+
 ## Reproduce
 
 Use Python 3 with PyYAML installed, the pinned Node/dependencies, and complete coverage reports for the same commit. Existing package commands collect the UI and docs maps; merge UI shards with the project's coverage merge tool before using this report. Independently verify successful exits, complete test selection and artifact digests first.

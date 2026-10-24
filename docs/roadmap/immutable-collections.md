@@ -1,11 +1,14 @@
 # Immutable identity collections (lyra-ui 30.0.0)
 
-Status: implemented on main for lyra-ui 30.0.0 (unreleased); breaking.
+Status (2026-10-24): shipped as a breaking change in
+[lyra-ui 30.0.0](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.0.0).
+The 30.1.0 candidate preserves this collection contract; later behavioral tests do not introduce a
+second migration or change the published defaults.
 
 Twenty-two components keep the caller's item objects (identity-preserving collections such as
-feeds, queues, traces, task lists and virtual lists). Assigning the same array again re-copies it
-today, so in-place `push` or item edits followed by a reassignment still render. Only
-`lr-thread-list` `threads` already treats a same-array assignment as a no-op. In 30.0.0 every
+feeds, queues, traces, task lists and virtual lists). Before 30.0.0, assigning the same array again
+re-copied it, so in-place `push` or item edits followed by a reassignment still rendered; only
+`lr-thread-list` `threads` treated a same-array assignment as a no-op. Since 30.0.0 every
 identity-preserving collection follows that rule: assign a new array to publish changes, or call
 `requestUpdate()` for components that read items at render time.
 

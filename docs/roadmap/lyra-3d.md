@@ -13,6 +13,10 @@ measurements exclude worker, native and GPU allocations. Version 1.0.0 was publi
 changes need their own qualification. The optional WebGL views retain their documented built-in
 or text alternatives.
 
+The unpublished lyra-ui 30.1.0 candidate does not complete the later visuals or scale targets
+listed below. The companion remains at 1.0.0; expanded integration tests do not extend the
+hardware measurements or qualify a new release.
+
 ## Objective and boundaries
 
 Add GPU-rendered views in an optional companion that only the applications using them install. The

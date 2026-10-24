@@ -1,11 +1,18 @@
 # Test health: coverage, speed and flakiness
 
-Status (2026-10-24): the
-[complete Codecov report](https://app.codecov.io/github/aceshooting/lyra-ui/commit/b18754382f5c94c0987451fcb7398b6bba69bf7a/tree/)
-contains all seven package flags. The UI flag has 520,655 fully hit lines out of 525,911
-(99.00059135%); the repository has 539,586 fully hit lines out of 544,870 (99.03022739%).
-Codecov counts partially covered lines separately: UI has 3,842 misses and 1,414 partials;
-the repository has 3,847 misses and 1,437 partials. **The Codecov 99.80% goal is not achieved.**
+Status (2026-10-24): the complete Codecov UI flag for
+[`415b370393660b6a4545dac84083f268a4b9eca2`](https://app.codecov.io/github/aceshooting/lyra-ui/commit/415b370393660b6a4545dac84083f268a4b9eca2/tree/)
+contains 521,841 fully hit lines out of 526,131 (99.1846%; displayed as 99.18%), with 3,163 misses
+and 1,127 partials. The combined seven-package report has 540,772 fully hit lines out of 545,090
+(99.2078%; displayed as 99.20%). These are committed-source observations before the remaining
+30.1.0 changes, not qualification of the final candidate. **The Codecov 99.80% goal remains open.**
+
+The published 30.0.0 UI baseline is 520,554 of 525,881 lines (98.9870%). Each release must retain
+at least its predecessor's complete UI flag result and aims to add about 0.1 percentage point.
+99.74% and then 99.80% remain longer-term goals; the combined repository percentage cannot
+substitute for the UI result. README badges publish a truncated percentage through the docs site
+and may retain a previous figure when a report is unavailable, so a badge alone is not exact-commit
+evidence. See [coverage gates](../agents/ci-and-gates.md#release-integrity).
 
 The earlier successful raw UI coverage run at `ed580b4d0` covered 524,831 of 525,881 lines
 (99.800335%) across 1,502 ordinary test files. All five raw coverage shards and their merged gate
@@ -20,8 +27,9 @@ The baseline below predates the 30.0.0 work.
 - The earlier plan reported 99.74% coverage over 504,496 lines (1,282 missed), followed by a
   99.01% observation associated with a failed coverage-shard upload. The original metric and
   source for those figures are not reproduced here. That incomplete historical report does not
-  explain the current complete, branch-aware Codecov result: all seven flags at `b18754382`
-  are verified above.
+  explain the complete, branch-aware Codecov results. The earlier complete `b18754382` report
+  had 520,655 fully hit UI lines out of 525,911 (99.00059135%), with 3,842 misses and 1,414
+  partials; the newer exact-commit result is recorded above.
 - CI wall-clock about 21 minutes. Critical path: coverage shards (8.9 to 11.3 minutes; shard 4 is
   the slowest), WebKit (9.6), lint (8.4), Firefox (8.4).
 - About 34,700 Chromium tests take about 1,300 s in total. The time is spread out: the 20 slowest
@@ -34,8 +42,8 @@ The baseline below predates the 30.0.0 work.
 
 ### Coverage (target: Codecov full-hit coverage of at least 99.80%)
 
-- [ ] Reach 99.80% Codecov full-hit coverage with behavioural tests. At the complete `b18754382`
-  report's fixed denominators, the UI needs 4,205 more fully hit lines and the repository 4,195;
+- [ ] Reach 99.80% Codecov full-hit coverage with behavioural tests. At the complete `415b37039`
+  report's fixed denominators, the UI needs 3,238 more fully hit lines and the repository 3,228;
   later source changes can change those denominators. Do not substitute a raw line report or a
   partial upload for this result.
 - [x] Record the historical raw 99.80% observation: the complete `ed580b4d0` run covered 48 more
@@ -83,3 +91,19 @@ The baseline below predates the 30.0.0 work.
   intermittently runs before the image exists.
 - [ ] Keep a weekly check of Codecov test analytics; any test that fails on two different commits
   gets fixed or quarantined with a tracked reason.
+
+### Current 30.1.0 qualification
+
+- [ ] Finish verification of the expanded chart/map/data and conversation/retrieval/internal
+  coverage cases, including the pending chart-loading and progressive Markdown corrections.
+- [ ] Rebuild, regenerate measured quality and all public artifacts, and measure the final budgets.
+- [ ] Verify complete coverage and all release workflows on the final versioned commit. Successful
+  browser and Quality tools runs on `4a2275622` qualify only that earlier source, not later changes.
+- [ ] Verify the deployed coverage endpoints after the artifact-pagination correction; a successful
+  docs workflow with its deploy step skipped does not establish that badges were published.
+- [ ] Investigate and retain the unresolved status of the historical WebKit PDF hang. The observed failure
+  included a 300-second test-file timeout and failed page shutdown. Repeated focused runs and two
+  CI-shaped 160-file replicas, each containing 40 PDF executions, passed without reproducing it.
+  Synthetic starvation can reproduce that timeout signature; this does not identify a PDF defect.
+  No PDF fix has been established. If qualification reproduces the hang, collect passive per-case
+  progress and fix the demonstrated cause before release; do not count a failed run as passing.
