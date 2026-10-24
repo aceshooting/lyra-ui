@@ -1,14 +1,19 @@
 # Map adoption (`lr-map`, `@aceshooting/lyra-map` 1.3.0)
 
 Status (2026-10-24): the camera, overlays, composition, ordering, controls, labels and lazy
-construction APIs and their migration documentation are implemented on main for lyra-ui 30.0.0
-with lyra-map 1.3.0. Installed-package font and label rendering, selected application prototypes,
-visual review and request acceptance are complete on the development candidate. All map requests
-are accepted as source deliveries; npm publication and qualification of the final versioned
-release commit remain pending. The application-coverage section records the accepted scope.
+construction APIs and their migration documentation shipped in
+[lyra-ui 30.0.0](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.0.0) with
+lyra-map 1.3.0. The published source is `578919f6a61a31612a0382c02cbae84202466837`.
+Installed-package font and label rendering, selected application prototypes, visual review and
+the release's request acceptance are complete within the scope recorded below. Versioned release
+qualification and publication are complete; complete application migration remains separate.
 
 Applications can replace camera, padding, popup, fitting and missing-data workarounds with the
-supported component API. Application migration follows the release.
+supported component API. Consumer migration is in progress. Current unreleased maintenance
+corrections address URL-style readiness, anchor visibility and live direction changes, boundary
+containment, and public geolocation-group and attribution-content styling parts. They still need
+qualification on the final maintenance release candidate. Multiple independently anchored content
+panels remain an open request under review, without an implementation or assigned release.
 
 ## Breaking change
 
@@ -99,8 +104,8 @@ items let them move to `lr-map`, or at least drop their workarounds on the engin
 
 ## Release gate: application coverage
 
-30.0.0 is not released until `lr-map` covers every map need of the maintained applications that
-use it or the raw engine (the timeline application, the main site, the world site, and the
+The 30.0.0 release gate required coverage of the recorded map needs of maintained applications that
+use `lr-map` or the raw engine (the timeline application, the main site, the world site, and the
 regional site, whose map package is a separate fork of the main site's):
 
 - [x] Re-audit each application's map code against the final `lr-map` API and record, per need,
@@ -130,7 +135,9 @@ regional site, whose map package is a separate fork of the main site's):
   candidate packages, combining the exercised behavior with matching native/component tests
   (basemap and theme switching, overlays, popups, drawing, geolocation, URL hash, right-to-left,
   translations, mobile layout).
-- [x] No open `component:lr-map` request in Lyra Admin.
+- [x] Close the release-blocking map requests recorded for the 30.0.0 prototype gate. New requests
+  after publication, including multiple independent anchors, remain open and are not covered by
+  this historical acceptance.
 
 The prototype gate includes installed-package native font and label rendering, representative
 right-to-left text and locale/mobile configurations, and review of the retained visual captures.
@@ -146,7 +153,8 @@ and fixtures exercise the documented needs; they do not constitute migration of 
 Caller responsibilities remain explicit: direction-aware custom legend layout and, for direct
 engine scene transactions, the documented bounded presentation repaint. These must be carried
 into the later application migration. No library readiness contract was changed to obtain the
-captures. Final versioned package and release qualification remain separate.
+captures. Final versioned package qualification subsequently completed for the published 30.0.0
+release; later fixes and application migrations require their own acceptance.
 
 ## Application migration (after the 30.0.0 release)
 

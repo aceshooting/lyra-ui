@@ -11,9 +11,9 @@ The [implementation and qualification record](document-editing-feasibility.md) r
 browser behavior, the bounded admission policy, asset measurements, and remaining qualification.
 Passing browser checks establish only the specific behaviors and corpus cases they exercise.
 
-## Current state (lyra-docs 0.6.2)
+## Current state (lyra-docs 0.6.3)
 
-Evidence: `packages/lyra-docs` (published as `@aceshooting/lyra-docs@0.6.2`): 35 colocated Node
+Evidence: `packages/lyra-docs` (published as `@aceshooting/lyra-docs@0.6.3`): 56 colocated Node
 test files in `src/docx/`, per-area three-engine browser scripts in `scripts/*-browser.mjs`
 (`browser-test.mjs`, formatting, tables, images, review, commands, inspection, layout), synthetic
 fixtures in `test/corpus.ts`, a Storybook story in `test/editor.stories.js`, and the package README.

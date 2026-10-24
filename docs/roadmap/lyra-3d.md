@@ -7,10 +7,11 @@ previous candidates. Real-GPU measurements on an integrated candidate met the 10
 100k-point and 1M-point rendering targets. Additional initial-render, graph-convergence,
 input-to-draw and retained main-isolate heap observations are recorded for the 10k-node/30k-edge
 and 100k-point workloads. These results describe the measured hardware and scenes; the heap
-measurements exclude worker, native and GPU allocations. Qualification of the final versioned
-candidate and first publication remain pending.
-Nothing has shipped to npm. The optional WebGL views retain their documented built-in or text
-alternatives.
+measurements exclude worker, native and GPU allocations. Version 1.0.0 was published with
+[Lyra UI 30.0.0](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.0.0) from commit
+`578919f6a61a31612a0382c02cbae84202466837`, following versioned release qualification. Later
+changes need their own qualification. The optional WebGL views retain their documented built-in
+or text alternatives.
 
 ## Objective and boundaries
 
@@ -142,8 +143,8 @@ Exit: written contract, measured spike, and a go or narrow decision.
   typed-column validation and localized foundation strings.
 - [x] Size gates prove Three.js is unreachable from every Lyra UI entry point.
 - [x] Connect component opt-ins and fallback notices in the later view phases.
-- [ ] Complete the protected first-publication bootstrap, then configure the trusted publisher
-  for subsequent releases.
+- [x] Complete the protected first-publication bootstrap for lyra-3d 1.0.0.
+- [ ] Verify trusted-publisher configuration before a subsequent release.
 
 ### 2. Graph engine (L)
 
@@ -188,8 +189,9 @@ Exit: meets the 100k-point target; the fallback chain works in all three engines
 
 ### 6. Release qualification
 
-- [ ] Three-engine tests, visual captures, performance results on real GPU hardware, size budgets,
-  `llms/` docs, stories, migration guide, changesets, and publication of lyra-3d 1.0.0.
+- [x] Complete the 1.0.0 release qualification: three-engine tests, visual captures, recorded
+  real-GPU performance results, size budgets, `llms/` docs, stories, migration guide, changesets
+  and publication. These results qualify the recorded release scope and measured hardware only.
 
 ### Later (lyra-3d 1.x)
 

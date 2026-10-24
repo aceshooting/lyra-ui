@@ -1,18 +1,27 @@
 # Test health: coverage, speed and flakiness
 
-Status (2026-10-24): the successful main CI run at `ed580b4d0` covered 524,831 of 525,881 UI
-lines (99.800335%) across 1,502 ordinary test files. All five coverage shards and the merged
-coverage gate passed. The 99.80% target is achieved on this development candidate; the final
-versioned release commit still needs its own qualification. The stored line and statement
-floor is 99.75%. Sustained speed work continues; the earlier successful 13m53s CI observation
-is recorded below.
-The baseline below is from the last green main commit before 30.0.0 work (Codecov and GitHub Actions data).
+Status (2026-10-24): the complete Codecov report for
+[`b18754382f5c94c0987451fcb7398b6bba69bf7a`](https://app.codecov.io/github/aceshooting/lyra-ui/commit/b18754382f5c94c0987451fcb7398b6bba69bf7a/tree/)
+contains all seven package flags. The UI flag has 520,655 fully hit lines out of 525,911
+(99.00059135%); the repository has 539,586 fully hit lines out of 544,870 (99.03022739%).
+Codecov counts partially covered lines separately: UI has 3,842 misses and 1,414 partials;
+the repository has 3,847 misses and 1,437 partials. **The Codecov 99.80% goal is not achieved.**
+
+The earlier successful raw UI coverage run at `ed580b4d0` covered 524,831 of 525,881 lines
+(99.800335%) across 1,502 ordinary test files. All five raw coverage shards and their merged gate
+passed. This remains a valid historical raw line metric, not evidence of Codecov full-hit coverage
+at 99.80%. The stored raw line and statement floors remain 99.75%; they are unchanged and separate
+from the Codecov goal. New candidates need complete, exact-commit reports before claiming progress.
+Sustained speed work continues; the historical successful 13m53s CI observation is recorded below.
+The baseline below predates the 30.0.0 work.
 
 ## Baseline
 
-- Coverage 99.74% of 504,496 lines (1,282 missed). The first 30.0.0 commit dropped the reported
-  figure to 99.01% because one coverage shard failed and never uploaded; that regression is fixed
-  first.
+- The earlier plan reported 99.74% coverage over 504,496 lines (1,282 missed), followed by a
+  99.01% observation associated with a failed coverage-shard upload. The original metric and
+  source for those figures are not reproduced here. That incomplete historical report does not
+  explain the current complete, branch-aware Codecov result: all seven flags at `b18754382`
+  are verified above.
 - CI wall-clock about 21 minutes. Critical path: coverage shards (8.9 to 11.3 minutes; shard 4 is
   the slowest), WebKit (9.6), lint (8.4), Firefox (8.4).
 - About 34,700 Chromium tests take about 1,300 s in total. The time is spread out: the 20 slowest
@@ -23,22 +32,30 @@ The baseline below is from the last green main commit before 30.0.0 work (Codeco
 
 ## Tasks
 
-### Coverage (target: at least 99.80% of lines)
+### Coverage (target: Codecov full-hit coverage of at least 99.80%)
 
-- [x] Reach 99.80% with behavioural tests: the complete `ed580b4d0` run covered 48 more lines
-  than `f56acab97` at the same denominator, reaching 99.800335%.
-- [x] Restore coverage strictly above 99.74% after the collections and map camera work. A complete
-  successful main run covered 505,798 of 506,953 UI lines (99.7722%) in 1,415 ordinary test files
-  plus the native-scrollbar check.
+- [ ] Reach 99.80% Codecov full-hit coverage with behavioural tests. At the complete `b18754382`
+  report's fixed denominators, the UI needs 4,205 more fully hit lines and the repository 4,195;
+  later source changes can change those denominators. Do not substitute a raw line report or a
+  partial upload for this result.
+- [x] Record the historical raw 99.80% observation: the complete `ed580b4d0` run covered 48 more
+  lines than `f56acab97` at the same denominator, reaching 99.800335% raw line coverage.
+- [x] Record the earlier plan's restoration observation after the collections and map camera
+  work: 505,798 of 506,953 UI lines (99.7722%) in 1,415 ordinary test files plus the native-scrollbar
+  check. The original metric is not reproduced here and does not establish the Codecov goal.
 - [ ] Cover the most-missed modules with behavioural tests (no forged internals). Earlier
   baseline counts identified `lr-map` (41 lines), `lr-chart` (30), `lr-graph` (26),
   `internal/aria-controls` (23), `lr-data-grid` (21), `lr-push-to-talk` (16), `ssr` (16),
   `lr-flow-canvas` (15), `lr-message-actions` (13), menu, heatmap, virtual list, multi-split,
-  graph spatial controller, knowledge-graph explorer, alert and chips. Refresh the ranking from
-  complete merged coverage before choosing the next cases.
+  graph spatial controller, knowledge-graph explorer, alert and chips. These counts describe the
+  earlier planning baseline, not the current Codecov misses. Refresh the ranking from a complete
+  exact-commit Codecov report before choosing the next cases, counting both misses and partials.
+  Reviewed examples at `b18754382` include 356 non-full lines in the main map class, 94 in the
+  graph class, 73 in theme handling and 39 in the shared table viewer; this is not a complete
+  ranking.
 - [ ] Remove code that is provably unreachable instead of testing around it; document any genuine
   exclusion.
-- [x] Raise the stored line and statement coverage floors to 99.75%.
+- [x] Raise the stored raw line and statement coverage floors to 99.75%; keep them unchanged.
 
 ### Speed (target: CI wall-clock under 15 minutes)
 

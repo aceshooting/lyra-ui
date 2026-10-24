@@ -15,7 +15,7 @@ still open.
 - **Native document editing:** [delivery sequence](roadmap/document-editing.md) and its
   [qualification record](roadmap/document-editing-feasibility.md). Experimental, in
   `@aceshooting/lyra-docs`; not part of lyra-ui release qualification.
-- **30.0.0 work plans** (task status kept in each file): [WebGL 3D views](roadmap/lyra-3d.md) in
+- **30.0.0 delivery records** (remaining follow-up status kept in each file): [WebGL 3D views](roadmap/lyra-3d.md) in
   the optional `@aceshooting/lyra-3d` companion, [map adoption](roadmap/map-adoption.md) for
   `lr-map` and lyra-map 1.3.0, and [immutable identity collections](roadmap/immutable-collections.md); plus
   [test health](roadmap/test-health.md) (coverage, speed, flakiness).
@@ -23,34 +23,34 @@ still open.
   Planned and unstarted; outside the 30.0.0 release gate, with no assigned version or date.
 - **Rationale for the style-axis, token and migration designs:** the [RFCs](rfcs/).
 
-## 30.0.0 preparation checkpoint
+## Published 30.0.0 and current maintenance
 
-As of 2026-10-24, main carries the immutable identity collections, map adoption through the
-image-catalog and interaction/drawing work, opt-in WebGL views and `lr-chart-3d`,
-`lr-model-viewer`, GPU-side graph projection, deprecated-API removal with migration support,
-repository hygiene and Lit template checks, and the Quality tools gates. The release remains
-unpublished. Recorded real-GPU measurements meet the point targets (100k and 1M points at 60 fps)
-and the graph target (10k nodes and 30k edges at 60 fps) on the measured hardware. Map APIs and
-migration documentation, the dependency refresh, the document-engine upgrade to 2.32.0, and the
-highlighter asset mitigation are implemented. Focused document-engine and highlighter checks
-passed across three browsers.
-The highlighter defaults to JavaScript, with Oniguruma available through an explicit factory.
-Installed map prototypes, native font and label rendering, representative right-to-left and
-locale/mobile behavior, visual review and request acceptance are complete within the scope of
-[map adoption](roadmap/map-adoption.md). Application migration follows the release. The video
-hover quarantine is removed with browser verification; CI timing and per-package coverage
-reporting are implemented. Complete coverage reached 99.800335%, above the 99.80%
-target. The mutation-test worklist is resolved with additional behavioural tests and reviewed
-equivalence reasons. Matched runtime measurements retain an advisory chart tail increase and
-other timing changes, documented in the release changeset. These checkpoint results do not
-establish final-candidate release qualification. The remaining work, in order:
+[30.0.0 was published on 2026-10-24](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.0.0)
+from commit `578919f6a61a31612a0382c02cbae84202466837`. It ships 310 components, with
+lyra-ui, lyra-ide and lyra-translations at 30.0.0, lyra-map at 1.3.0, lyra-3d at 1.0.0,
+lyra-flags at 2.3.1 and the experimental lyra-docs editor at 0.6.3. The versioned release
+qualification and protected publication are complete. Consumer migration follows the release;
+a completed controller prototype does not establish a completed application migration.
 
-1. Prepare versions and budgets, review the complete 30.0.0 release output, and verify the updated
-   CI reporting on GitHub.
-2. Pass CI, all browser, full-engine and Quality tools gates on the exact versioned release commit.
-3. Complete protected publication, including the new companion's first-publication bootstrap
-   and trusted publisher configuration. Publication access is configured; publication itself
-   has not occurred.
+The release includes immutable identity collections, map adoption, opt-in WebGL views,
+`lr-chart-3d`, `lr-model-viewer`, GPU-side graph projection, deprecated-API removal with migration
+support, repository hygiene, Lit template checks and Quality tools gates. Recorded real-GPU
+measurements meet the point targets (100k and 1M points at 60 fps) and graph target (10k nodes and
+30k edges at 60 fps) on the measured hardware. The document engine is 2.32.0. The highlighter
+defaults to JavaScript, with Oniguruma available through an explicit factory. The video hover
+quarantine was removed with browser verification. Matched runtime measurements retain an advisory
+chart tail increase and other timing changes documented in the release changelog.
+
+The historical raw UI line-coverage observation reached 99.800335%; this is distinct from
+Codecov's full-hit coverage. The Codecov 99.80% goal remains open; exact-commit totals and the
+unchanged raw coverage floors are recorded in [test health](roadmap/test-health.md).
+
+30.1 is planned as a maintenance release. Current source includes corrections for URL-style
+readiness, anchor visibility and direction changes, boundary containment, native control styling
+parts and scoped theme restoration, with regression tests and documentation. These changes are
+unreleased and require qualification on the final versioned candidate. Multiple independently
+anchored content panels remain an open request under review, without an implementation or release
+commitment. Geospatial scenes remain unstarted and unassigned to a release.
 
 ## Shipped
 
@@ -68,6 +68,7 @@ establish final-candidate release qualification. The remaining work, in order:
 | 29.0.0 | Map and document editing load on demand: `lr-map` defaults to the optional `@aceshooting/lyra-map` companion, and the document editor bundles its engine internally. |
 | 29.2.0 | Regional difference catalogs `en-GB`, `es-419`, `fr-CA` and `zh-HK`; `@aceshooting/lyra-map` 1.2.0 on MapLibre 6.15; code-block highlighting without `Element.part`; dialog and tooltip focus and positioning fixes; test-stability fixes. |
 | 29.2.1 | Release and quality hardening: publishing fails unless npm serves the released tarball, `pnpm release:budgets` checks size budgets before the release commit, load-tolerant scale-test budgets, broader behavioural coverage with provably dead guards removed. No public API change. |
+| 30.0.0 | 310 components; immutable identity collections and migration support; expanded map adoption with lyra-map 1.3.0; optional WebGL views, `lr-chart-3d` and `lr-model-viewer` with lyra-3d 1.0.0; document-engine and release-quality updates. |
 
 ## Standing contracts
 
@@ -172,27 +173,18 @@ packages version independently. A target moves only when scope changes, never to
 
 | Target | Package versions | Scope |
 |---|---|---|
-| 30.0.0 | lyra-ui 30.0.0; lyra-3d 1.0.0 (new); lyra-map 1.3.0 | Immutable identity collections; map adoption; WebGL 3D views (graph, points, 3D charts, panoramas, model viewer) |
+| 30.1.0 (planned) | lyra-ui, lyra-ide and lyra-translations 30.1.0 | Maintenance corrections, regression coverage and documentation; final scope and qualification remain open |
 | 30.x | lyra-3d 1.x | Further graph visuals and 100k-node scale |
 | independent | lyra-docs 0.7.0 to 1.0.0 | Native document editing phases 4 to 8 |
 | on demand | lyra-ui minor | Fluent-informed look |
 | last | lyra-ui minors | Additional full catalogs |
 
-1. **30.0.0 with lyra-3d 1.0.0 and lyra-map 1.3.0: the next major release,** delivered as one
-   release and one migration:
-   - **Immutable identity collections** ([plan](roadmap/immutable-collections.md)): assigning the
-     same array to an identity-preserving collection property becomes a no-op, as `threads` already
-     is; assign a new array to publish changes. Breaking, with a migration note and a
-     `lyra-ui-migrate` rule.
-   - **Map adoption** ([plan](roadmap/map-adoption.md)): camera commands and padding, fit to data,
-     anchored feature content, choropleth missing values and declarative controls, so applications
-     stop reaching into the engine; `center` compares by value (breaking).
-   - **WebGL 3D views** ([plan](roadmap/lyra-3d.md)): the new optional `@aceshooting/lyra-3d`
-     companion holds WebGL engines only: a 3D force graph for `lr-graph`, a points engine for
-     `lr-embedding-explorer`, 3D scatter charts and point-cloud files, 360° panoramas for
-     `lr-image-viewer` and `lr-video`, and a new `lr-model-viewer` (glTF/GLB, STL, OBJ). Tags stay
-     in Lyra UI and load an engine only when an application opts in, so applications that do not
-     use them install and download nothing new; additive.
+1. **30.1.0 maintenance:** qualify the current map readiness, anchor/control layout, boundary
+   containment and scoped-theme corrections; complete reviewed behavioral coverage and factual
+   documentation updates. Additional requested features remain subject to separate review and
+   qualification. The published 30.0.0 delivery records remain the source for its
+   [collections](roadmap/immutable-collections.md), [map](roadmap/map-adoption.md) and
+   [WebGL views](roadmap/lyra-3d.md) scope.
 2. **lyra-3d 1.x: further visuals and scale:** curved edges, DAG layouts, custom node rendering and
    optional glow, then 100k graph nodes with a performance gate.
 3. **lyra-docs 0.7.0 to 1.0.0: native document editing**, released independently: 0.7.0 phase 4
