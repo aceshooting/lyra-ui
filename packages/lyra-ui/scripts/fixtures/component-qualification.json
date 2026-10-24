@@ -7508,6 +7508,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/calendar-viewer/calendar-loader.test.ts",
+          "src/components/viewers/calendar-viewer/calendar-viewer-peer-data-boundaries.test.ts",
           "src/components/viewers/calendar-viewer/calendar-viewer-remediation.test.ts",
           "src/components/viewers/calendar-viewer/calendar-viewer.test.ts"
         ],
@@ -8033,8 +8034,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/carousel/carousel-remediation.test.ts",
-              "test": "leaves ${key} in a focused ${name} (${placement})",
+              "file": "src/components/layout/carousel/carousel-between-page-starts.test.ts",
+              "test": "keeps an exact slide start ${current} while marking its nearest page indicator",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -8159,6 +8160,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/carousel/carousel-between-page-starts.test.ts",
           "src/components/layout/carousel/carousel-item.test.ts",
           "src/components/layout/carousel/carousel-remediation.test.ts",
           "src/components/layout/carousel/carousel.test.ts"
@@ -8216,8 +8218,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/carousel/carousel-remediation.test.ts",
-              "test": "leaves ${key} in a focused ${name} (${placement})",
+              "file": "src/components/layout/carousel/carousel-between-page-starts.test.ts",
+              "test": "keeps an exact slide start ${current} while marking its nearest page indicator",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -8342,6 +8344,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/carousel/carousel-between-page-starts.test.ts",
           "src/components/layout/carousel/carousel-item.test.ts",
           "src/components/layout/carousel/carousel-remediation.test.ts",
           "src/components/layout/carousel/carousel.test.ts"
@@ -12404,8 +12407,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/command-palette/command-palette-contrast.test.ts",
-              "test": "keeps highlighted command descriptions and shortcuts readable in ${mode} mode",
+              "file": "src/components/layout/command-palette/command-palette-collection-shapes.test.ts",
+              "test": "omits sparse, accessor, array and invalid optional-field commands while preserving the usable command identity",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -12526,6 +12529,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/command-palette/command-palette-collection-shapes.test.ts",
           "src/components/layout/command-palette/command-palette-contrast.test.ts",
           "src/components/layout/command-palette/command-palette-coverage.test.ts",
           "src/components/layout/command-palette/command-palette-input-limit.test.ts",
@@ -15952,6 +15956,7 @@
           "src/components/data/data-grid/data-grid-pipeline.test.ts",
           "src/components/data/data-grid/data-grid-processing-cost.test.ts",
           "src/components/data/data-grid/data-grid-processing.test.ts",
+          "src/components/data/data-grid/data-grid-public-filter-state.test.ts",
           "src/components/data/data-grid/data-grid-remediation.test.ts",
           "src/components/data/data-grid/data-grid-render-refresh.test.ts",
           "src/components/data/data-grid/data-grid-request-authority-scale.test.ts",
@@ -19957,6 +19962,7 @@
         "tests": [
           "src/components/viewers/ebook-viewer/ebook-loader.test.ts",
           "src/components/viewers/ebook-viewer/ebook-viewer-peer-boundaries.test.ts",
+          "src/components/viewers/ebook-viewer/ebook-viewer-public-peer-data.test.ts",
           "src/components/viewers/ebook-viewer/ebook-viewer-register.test.ts",
           "src/components/viewers/ebook-viewer/ebook-viewer-remediation.test.ts",
           "src/components/viewers/ebook-viewer/ebook-viewer.test.ts",
@@ -20251,8 +20257,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/retrieval/embedding-explorer/embedding-explorer.test.ts",
-              "test": "keeps point picking at least 24px across narrow allocations",
+              "file": "src/components/retrieval/embedding-explorer/embedding-explorer-engine-lifecycle-boundaries.test.ts",
+              "line": 31,
               "kind": "320px allocation test signal"
             }
           ]
@@ -20357,6 +20363,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/retrieval/embedding-explorer/embedding-explorer-engine-lifecycle-boundaries.test.ts",
           "src/components/retrieval/embedding-explorer/embedding-explorer-engine.test.ts",
           "src/components/retrieval/embedding-explorer/embedding-explorer-focus-regression.test.ts",
           "src/components/retrieval/embedding-explorer/embedding-explorer-large-identity-scale.test.ts",
@@ -31590,10 +31597,12 @@
           "src/components/media/map/map-hash-owner.test.ts",
           "src/components/media/map/map-hash.test.ts",
           "src/components/media/map/map-hit-test.test.ts",
+          "src/components/media/map/map-image-export-ownership.test.ts",
           "src/components/media/map/map-image-export.test.ts",
           "src/components/media/map/map-image-metadata.test.ts",
           "src/components/media/map/map-image-provider.test.ts",
           "src/components/media/map/map-images-browser.test.ts",
+          "src/components/media/map/map-images-preparation-boundaries.test.ts",
           "src/components/media/map/map-images.test.ts",
           "src/components/media/map/map-input-lifecycle-boundaries.test.ts",
           "src/components/media/map/map-interaction-component.test.ts",
@@ -31615,11 +31624,13 @@
           "src/components/media/map/map-owned-resources.test.ts",
           "src/components/media/map/map-paint-batch.test.ts",
           "src/components/media/map/map-peer-recovery.test.ts",
+          "src/components/media/map/map-provider-context-transitions.test.ts",
           "src/components/media/map/map-public-boundaries-coverage.test.ts",
           "src/components/media/map/map-public-boundaries.test.ts",
           "src/components/media/map/map-readiness.test.ts",
           "src/components/media/map/map-remediation.test.ts",
           "src/components/media/map/map-resource-lifecycle.test.ts",
+          "src/components/media/map/map-resource-transition-boundaries.test.ts",
           "src/components/media/map/map-scale.test.ts",
           "src/components/media/map/map-source-updates.test.ts",
           "src/components/media/map/map-style-failure-supersession.test.ts",
@@ -31628,6 +31639,7 @@
           "src/components/media/map/map-style-lifecycle.test.ts",
           "src/components/media/map/map-style-overrides.test.ts",
           "src/components/media/map/map-tile-source-scale.test.ts",
+          "src/components/media/map/map-vector-style-lowering.property.test.ts",
           "src/components/media/map/map-vector-style.property.test.ts",
           "src/components/media/map/map-vector-style.test.ts",
           "src/components/media/map/map.test.ts"
@@ -32174,8 +32186,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/agent-tools/mcp-app/mcp-app.test.ts",
-              "test": "falls back to the defaults for an unresolvable length",
+              "file": "src/components/agent-tools/mcp-app/mcp-app-port-boundaries.test.ts",
+              "test": "rejects empty or non-string inline documents and restores default sizing when height attributes are removed",
               "kind": "320px allocation test signal"
             }
           ]
@@ -32270,6 +32282,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/mcp-app/mcp-app-port-boundaries.test.ts",
           "src/components/agent-tools/mcp-app/mcp-app.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -41576,6 +41589,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/prompt-queue/prompt-queue-attachment-admission.test.ts",
           "src/components/conversation/prompt-queue/prompt-queue-coverage.test.ts",
           "src/components/conversation/prompt-queue/prompt-queue-scale.test.ts",
           "src/components/conversation/prompt-queue/prompt-queue.test.ts"
@@ -49513,6 +49527,7 @@
         "tests": [
           "src/components/data/sparkline/sparkline-extrema-scale.test.ts",
           "src/components/data/sparkline/sparkline-prepared-scale.test.ts",
+          "src/components/data/sparkline/sparkline-public-vocabulary-recovery.test.ts",
           "src/components/data/sparkline/sparkline-remediation.test.ts",
           "src/components/data/sparkline/sparkline-scale.test.ts",
           "src/components/data/sparkline/sparkline.test.ts"
@@ -58496,6 +58511,7 @@
           "src/components/utility/tour/native-modal.test.ts",
           "src/components/utility/tour/positioning-strategy.test.ts",
           "src/components/utility/tour/svg-backdrop.test.ts",
+          "src/components/utility/tour/tour-admission-and-carrier-boundaries.test.ts",
           "src/components/utility/tour/tour.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
