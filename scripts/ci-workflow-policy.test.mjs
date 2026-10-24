@@ -460,6 +460,56 @@ const shield = (message, color) => ({ schemaVersion: 1, label: 'coverage', messa
 const badgesOf = (run) => Object.fromEntries(Object.entries(run.raw).map(([flag, text]) => [flag, text === null ? null : JSON.parse(text)]));
 const unknown = shield('unknown', 'lightgrey');
 
+test('the docs deploy finds its artifact beyond the first API page and rejects stale or unavailable builds', needsJq, () => {
+  const dir = mkdtempSync(join(tmpdir(), 'deploy-docs-head-'));
+  try {
+    const gh = join(dir, 'gh');
+    writeFileSync(gh, `#!/bin/bash
+set -euo pipefail
+if [[ "$*" == *"commits/main"* ]]; then printf '%s\\n' "$MAIN_SHA"; exit; fi
+paginate=false
+slurp=false
+query=''
+while (( $# )); do
+  case "$1" in
+    --paginate) paginate=true ;;
+    --slurp) slurp=true ;;
+    --jq) shift; query="$1" ;;
+  esac
+  shift
+done
+if [[ "$paginate" == true && "$slurp" == true ]]; then
+  jq "$query" "$ARTIFACT_PAGES"
+else
+  jq ".[0] | $query" "$ARTIFACT_PAGES"
+fi
+`);
+    chmodSync(gh, 0o755);
+    const pagesFile = join(dir, 'pages.json');
+    const output = join(dir, 'output');
+    const script = stepRun(stepText(read(DEPLOY_DOCS), 'Require the head of main and a Storybook build in that run'));
+    const first = { artifacts: Array.from({ length: 30 }, (_, index) => ({ name: `coverage-${index}`, expired: false })) };
+    for (const scenario of [
+      { artifact: { name: 'storybook-static', expired: false }, main: HEAD_SHA, expected: true },
+      { artifact: { name: 'storybook-static', expired: false }, main: '1'.repeat(40), expected: false },
+      { artifact: { name: 'storybook-static', expired: true }, main: HEAD_SHA, expected: false },
+      { artifact: { name: 'other', expired: false }, main: HEAD_SHA, expected: false },
+    ]) {
+      writeFileSync(pagesFile, JSON.stringify([first, { artifacts: [scenario.artifact] }]));
+      writeFileSync(output, '');
+      const result = spawnSync('bash', ['-c', script], {
+        encoding: 'utf8',
+        env: { ...process.env, PATH: `${dir}:${process.env.PATH}`, GITHUB_REPOSITORY: 'aceshooting/lyra-ui',
+          RUN_ID: '123', RUN_SHA: HEAD_SHA, MAIN_SHA: scenario.main, ARTIFACT_PAGES: pagesFile, GITHUB_OUTPUT: output },
+      });
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(readFileSync(output, 'utf8'), `current=${scenario.expected}\n`);
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('the docs deploy publishes the coverage badges without loosening its privileged guards', () => {
   const workflow = read(DEPLOY_DOCS);
   const build = job(workflow, 'build');
