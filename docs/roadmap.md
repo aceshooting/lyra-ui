@@ -26,7 +26,7 @@ still open.
 ## Published 30.0.0 and current maintenance
 
 [30.0.0 was published on 2026-10-24](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.0.0)
-from commit `578919f6a61a31612a0382c02cbae84202466837`. It ships 310 components, with
+and ships 310 components, with
 lyra-ui, lyra-ide and lyra-translations at 30.0.0, lyra-map at 1.3.0, lyra-3d at 1.0.0,
 lyra-flags at 2.3.1 and the experimental lyra-docs editor at 0.6.3. The versioned release
 qualification and protected publication are complete. Consumer migration follows the release;

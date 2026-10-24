@@ -1,7 +1,7 @@
 # Test health: coverage, speed and flakiness
 
-Status (2026-10-24): the complete Codecov report for
-[`b18754382f5c94c0987451fcb7398b6bba69bf7a`](https://app.codecov.io/github/aceshooting/lyra-ui/commit/b18754382f5c94c0987451fcb7398b6bba69bf7a/tree/)
+Status (2026-10-24): the
+[complete Codecov report](https://app.codecov.io/github/aceshooting/lyra-ui/commit/b18754382f5c94c0987451fcb7398b6bba69bf7a/tree/)
 contains all seven package flags. The UI flag has 520,655 fully hit lines out of 525,911
 (99.00059135%); the repository has 539,586 fully hit lines out of 544,870 (99.03022739%).
 Codecov counts partially covered lines separately: UI has 3,842 misses and 1,414 partials;
