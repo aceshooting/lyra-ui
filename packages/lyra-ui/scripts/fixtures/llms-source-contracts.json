@@ -15952,7 +15952,7 @@
       "module": "src/internal/positioner.ts",
       "exportName": "place",
       "kind": "function",
-      "fingerprint": "4c8dfa03862b55c1aec9",
+      "fingerprint": "0aa47a3f6a54c17eafd5",
       "routes": [
         "src/utilities/index.ts",
         "src/utilities/positioner.ts"
@@ -15986,7 +15986,7 @@
       "module": "src/internal/positioner.ts",
       "exportName": "PlaceOptions",
       "kind": "interface",
-      "fingerprint": "5391d7638883deb34274",
+      "fingerprint": "1137cd7ec41435544d1e",
       "routes": [
         "src/utilities/index.ts",
         "src/utilities/positioner.ts"

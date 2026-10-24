@@ -3548,15 +3548,20 @@ y?: number } }`, where `arrow`
   `getBoundingClientRect()` and optional `contextElement`; `virtualAnchorFromRect({ x, y, width?,
 height?, contextElement? })` builds one. `PlaceOptions` exposes `placement`, `strategy`, `offset`,
   `skidding`, `boundary`, `flip`, `flipFallbackPlacements`, `flipFallbackStrategy`, `flipBoundary`,
-  `flipPadding`, `shift`, `shiftBoundary`, `shiftPadding`, `padding`, `autoSize`,
+  `flipPadding`, `shift`, `shiftCrossAxis`, `shiftBoundary`, `shiftPadding`, `padding`, `autoSize`,
   `autoSizeBoundary`, `autoSizePadding`, `sync`, `arrow`, `arrowPadding`, `hoverBridge`, and
   `onPlaced(result)`.
+  `shiftCrossAxis` defaults to `false`: shifting normally preserves the chosen side of the
+  anchor. Set it to `true` to also move along the placement direction and keep a popup inside its
+  clipping boundary even when the anchor lies outside that boundary. This can overlap the anchor;
+  it has no effect when `shift` is `false`.
   Exact authoring contracts are `VirtualAnchor { getBoundingClientRect(): DOMRect;
 contextElement?: Element }`, `virtualAnchorFromRect(rect: { x: number; y: number; width?: number;
 height?: number; contextElement?: Element }): VirtualAnchor`, and `PlaceOptions { placement?:
 Placement; strategy?: PlaceStrategy; offset?: number; skidding?: number; boundary?:
 PlaceBoundary; flip?: boolean; flipFallbackPlacements?: Placement[]; flipFallbackStrategy?:
 PlaceFlipFallbackStrategy; flipBoundary?: PlaceBoundary; flipPadding?: number; shift?: boolean;
+shiftCrossAxis?: boolean;
 shiftBoundary?: PlaceBoundary; shiftPadding?: number; padding?: number; autoSize?: PlaceAutoSize;
 autoSizeBoundary?: PlaceBoundary; autoSizePadding?: number; sync?: PlaceSync; arrow?: HTMLElement;
 arrowPadding?: number; hoverBridge?: HTMLElement; onPlaced?: (result: PlacementResult) => void }`.
@@ -33639,7 +33644,10 @@ Its first coordinate loads anchor placement; placement, already asynchronous, fo
 a dense array of at most 32). `anchorSafeArea?: LyraMapAnchorSafeArea` adds nonnegative finite
 logical CSS-pixel edges (`blockStart`, `inlineEnd`, `blockEnd`, `inlineStart`); omitted edges are
 zero, explicitly invalid edges fail closed. Placement intersects boundaries with the allocation
-and retains its 8px padding. `anchorClosable = false` leaves content passive; enabling it adds a
+and retains its 8px padding. If the geographic target remains on the map but lies outside that
+intersection, the panel shifts fully inside the available area; changing the safe area never
+moves the map camera or changes `anchorLngLat`. An off-map target or collapsed allocation hides
+the panel. `anchorClosable = false` leaves content passive; enabling it adds a
 close button and nonmodal Escape handling. `focusAnchor()` explicitly focuses eligible visible
 content synchronously; `closeAnchor()` closes a currently visible anchor. Both return booleans.
 `lr-map-anchor-close` reports `api`, `close-button`, or `escape`; focus return respects ownership.

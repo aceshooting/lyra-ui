@@ -4230,6 +4230,7 @@
         "tests": [
           "src/components/media/av-player/av-cue-index-scale.test.ts",
           "src/components/media/av-player/av-cue-source.test.ts",
+          "src/components/media/av-player/av-player-cue-controller-boundaries.test.ts",
           "src/components/media/av-player/av-player-cue-index-scale.test.ts",
           "src/components/media/av-player/av-player-cue-source-controller.test.ts",
           "src/components/media/av-player/av-player-cue-source-scale.test.ts",
@@ -5181,6 +5182,7 @@
           "src/components/charts/chart/chart-canvas-unavailable.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
+          "src/components/charts/chart/chart-coverage-boundaries.test.ts",
           "src/components/charts/chart/chart-coverage.test.ts",
           "src/components/charts/chart/chart-data-lifecycle.test.ts",
           "src/components/charts/chart/chart-datum-colors.test.ts",
@@ -5461,6 +5463,7 @@
           "src/components/charts/chart/chart-canvas-unavailable.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
+          "src/components/charts/chart/chart-coverage-boundaries.test.ts",
           "src/components/charts/chart/chart-coverage.test.ts",
           "src/components/charts/chart/chart-data-lifecycle.test.ts",
           "src/components/charts/chart/chart-datum-colors.test.ts",
@@ -6474,6 +6477,7 @@
           "src/components/charts/chart/chart-canvas-unavailable.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
+          "src/components/charts/chart/chart-coverage-boundaries.test.ts",
           "src/components/charts/chart/chart-coverage.test.ts",
           "src/components/charts/chart/chart-data-lifecycle.test.ts",
           "src/components/charts/chart/chart-datum-colors.test.ts",
@@ -8552,6 +8556,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/charts/chart/chart-coverage-boundaries.test.ts",
+              "test": "keeps unlabeled scatter coordinates and original source indexes in activation and formatted CSV",
+              "target": "element",
+              "state": "populated"
+            },
+            {
               "file": "src/components/charts/chart/chart-datum-legend.test.ts",
               "test": "${type} exposes one named, color-matched category toggle per slice",
               "target": "el",
@@ -8784,6 +8794,7 @@
           "src/components/charts/chart/chart-canvas-unavailable.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
+          "src/components/charts/chart/chart-coverage-boundaries.test.ts",
           "src/components/charts/chart/chart-coverage.test.ts",
           "src/components/charts/chart/chart-data-lifecycle.test.ts",
           "src/components/charts/chart/chart-datum-colors.test.ts",
@@ -18704,6 +18715,7 @@
           "src/components/charts/chart/chart-canvas-unavailable.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
+          "src/components/charts/chart/chart-coverage-boundaries.test.ts",
           "src/components/charts/chart/chart-coverage.test.ts",
           "src/components/charts/chart/chart-data-lifecycle.test.ts",
           "src/components/charts/chart/chart-datum-colors.test.ts",
@@ -25567,9 +25579,11 @@
           "src/components/retrieval/graph/graph-scale-cost.test.ts",
           "src/components/retrieval/graph/graph-scale.test.ts",
           "src/components/retrieval/graph/graph-screen-position.test.ts",
+          "src/components/retrieval/graph/graph-source-boundaries.test.ts",
           "src/components/retrieval/graph/graph-source-composition.test.ts",
           "src/components/retrieval/graph/graph-source-controller-scale.test.ts",
           "src/components/retrieval/graph/graph-source-scale.test.ts",
+          "src/components/retrieval/graph/graph-spatial-engine-boundaries.test.ts",
           "src/components/retrieval/graph/graph-spatial-hover-scale.test.ts",
           "src/components/retrieval/graph/graph-spatial-interaction.test.ts",
           "src/components/retrieval/graph/graph-spatial-render.test.ts",
@@ -26431,8 +26445,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/heatmap/heatmap-coverage.test.ts",
-              "test": "paints the built-in palette when the theme supplies none of the tokens it derives from",
+              "file": "src/components/data/heatmap/heatmap-coverage-boundaries.test.ts",
+              "test": "navigates exact source page and row endpoints with physical horizontal keys in ${direction}",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -26442,8 +26456,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/heatmap/heatmap-legend-visibility.test.ts",
-              "test": "hides the legend under dir=\"rtl\" too, leaving the accessible summary intact",
+              "file": "src/components/data/heatmap/heatmap-coverage-boundaries.test.ts",
+              "line": 41,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -26459,8 +26473,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/heatmap/heatmap-coverage.test.ts",
-              "test": "keeps a stale fitted matrix frame contained only while it still fits, until it scrolls into view",
+              "file": "src/components/data/heatmap/heatmap-coverage-boundaries.test.ts",
+              "test": "navigates exact source page and row endpoints with physical horizontal keys in ${direction}",
               "kind": "320px allocation test signal"
             }
           ]
@@ -26573,6 +26587,7 @@
           "src/components/data/heatmap/calendar-grid.test.ts",
           "src/components/data/heatmap/heatmap-allocation-interaction.test.ts",
           "src/components/data/heatmap/heatmap-calendar-spacing.test.ts",
+          "src/components/data/heatmap/heatmap-coverage-boundaries.test.ts",
           "src/components/data/heatmap/heatmap-coverage.test.ts",
           "src/components/data/heatmap/heatmap-export-boundaries.test.ts",
           "src/components/data/heatmap/heatmap-focus-fallback.test.ts",
@@ -26580,6 +26595,7 @@
           "src/components/data/heatmap/heatmap-i18n.test.ts",
           "src/components/data/heatmap/heatmap-label-cost.test.ts",
           "src/components/data/heatmap/heatmap-legend-visibility.test.ts",
+          "src/components/data/heatmap/heatmap-matrix-controller-boundaries.test.ts",
           "src/components/data/heatmap/heatmap-matrix-presentation.test.ts",
           "src/components/data/heatmap/heatmap-matrix-source-authority.test.ts",
           "src/components/data/heatmap/heatmap-matrix-source-navigation-scale.test.ts",
@@ -26980,6 +26996,7 @@
           "src/components/charts/chart/chart-canvas-unavailable.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
+          "src/components/charts/chart/chart-coverage-boundaries.test.ts",
           "src/components/charts/chart/chart-coverage.test.ts",
           "src/components/charts/chart/chart-data-lifecycle.test.ts",
           "src/components/charts/chart/chart-datum-colors.test.ts",
@@ -30215,6 +30232,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/media/lightbox/lightbox-source-boundaries.test.ts",
           "src/components/media/lightbox/lightbox-source-lifecycle.test.ts",
           "src/components/media/lightbox/lightbox-source-reentrancy.test.ts",
           "src/components/media/lightbox/lightbox-source-scale.test.ts",
@@ -30428,6 +30446,7 @@
           "src/components/charts/chart/chart-canvas-unavailable.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
+          "src/components/charts/chart/chart-coverage-boundaries.test.ts",
           "src/components/charts/chart/chart-coverage.test.ts",
           "src/components/charts/chart/chart-data-lifecycle.test.ts",
           "src/components/charts/chart/chart-datum-colors.test.ts",
@@ -30718,6 +30737,7 @@
           "src/components/charts/chart/chart-canvas-unavailable.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
+          "src/components/charts/chart/chart-coverage-boundaries.test.ts",
           "src/components/charts/chart/chart-coverage.test.ts",
           "src/components/charts/chart/chart-data-lifecycle.test.ts",
           "src/components/charts/chart/chart-datum-colors.test.ts",
@@ -31486,6 +31506,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/media/map/map-anchor-component.test.ts",
+          "src/components/media/map/map-anchor-direction.test.ts",
           "src/components/media/map/map-anchor-options.test.ts",
           "src/components/media/map/map-app-parity.test.ts",
           "src/components/media/map/map-camera.test.ts",
@@ -31496,6 +31517,7 @@
           "src/components/media/map/map-control-options.test.ts",
           "src/components/media/map/map-controls-component.test.ts",
           "src/components/media/map/map-controls-lifecycle.test.ts",
+          "src/components/media/map/map-coverage-boundaries.test.ts",
           "src/components/media/map/map-cursor.test.ts",
           "src/components/media/map/map-data-layer-model.property.test.ts",
           "src/components/media/map/map-data-layer-model.test.ts",
@@ -39447,6 +39469,7 @@
           "src/components/charts/chart/chart-canvas-unavailable.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
+          "src/components/charts/chart/chart-coverage-boundaries.test.ts",
           "src/components/charts/chart/chart-coverage.test.ts",
           "src/components/charts/chart/chart-data-lifecycle.test.ts",
           "src/components/charts/chart/chart-datum-colors.test.ts",
@@ -39701,6 +39724,7 @@
           "src/components/charts/chart/chart-canvas-unavailable.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
+          "src/components/charts/chart/chart-coverage-boundaries.test.ts",
           "src/components/charts/chart/chart-coverage.test.ts",
           "src/components/charts/chart/chart-data-lifecycle.test.ts",
           "src/components/charts/chart/chart-datum-colors.test.ts",
@@ -42406,6 +42430,7 @@
           "src/components/charts/chart/chart-canvas-unavailable.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
+          "src/components/charts/chart/chart-coverage-boundaries.test.ts",
           "src/components/charts/chart/chart-coverage.test.ts",
           "src/components/charts/chart/chart-data-lifecycle.test.ts",
           "src/components/charts/chart/chart-datum-colors.test.ts",
@@ -46593,6 +46618,7 @@
           "src/components/charts/chart/chart-canvas-unavailable.test.ts",
           "src/components/charts/chart/chart-configuration-boundaries.test.ts",
           "src/components/charts/chart/chart-core-loader.test.ts",
+          "src/components/charts/chart/chart-coverage-boundaries.test.ts",
           "src/components/charts/chart/chart-coverage.test.ts",
           "src/components/charts/chart/chart-data-lifecycle.test.ts",
           "src/components/charts/chart/chart-datum-colors.test.ts",
@@ -47851,6 +47877,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/data/sequence-strip/sequence-strip-scale.test.ts",
+          "src/components/data/sequence-strip/sequence-strip-source-controller-boundaries.test.ts",
           "src/components/data/sequence-strip/sequence-strip-source-scale.test.ts",
           "src/components/data/sequence-strip/sequence-strip-source.test.ts",
           "src/components/data/sequence-strip/sequence-strip.test.ts"

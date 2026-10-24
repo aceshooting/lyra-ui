@@ -3493,15 +3493,20 @@ y?: number } }`, where `arrow`
   `getBoundingClientRect()` and optional `contextElement`; `virtualAnchorFromRect({ x, y, width?,
 height?, contextElement? })` builds one. `PlaceOptions` exposes `placement`, `strategy`, `offset`,
   `skidding`, `boundary`, `flip`, `flipFallbackPlacements`, `flipFallbackStrategy`, `flipBoundary`,
-  `flipPadding`, `shift`, `shiftBoundary`, `shiftPadding`, `padding`, `autoSize`,
+  `flipPadding`, `shift`, `shiftCrossAxis`, `shiftBoundary`, `shiftPadding`, `padding`, `autoSize`,
   `autoSizeBoundary`, `autoSizePadding`, `sync`, `arrow`, `arrowPadding`, `hoverBridge`, and
   `onPlaced(result)`.
+  `shiftCrossAxis` defaults to `false`: shifting normally preserves the chosen side of the
+  anchor. Set it to `true` to also move along the placement direction and keep a popup inside its
+  clipping boundary even when the anchor lies outside that boundary. This can overlap the anchor;
+  it has no effect when `shift` is `false`.
   Exact authoring contracts are `VirtualAnchor { getBoundingClientRect(): DOMRect;
 contextElement?: Element }`, `virtualAnchorFromRect(rect: { x: number; y: number; width?: number;
 height?: number; contextElement?: Element }): VirtualAnchor`, and `PlaceOptions { placement?:
 Placement; strategy?: PlaceStrategy; offset?: number; skidding?: number; boundary?:
 PlaceBoundary; flip?: boolean; flipFallbackPlacements?: Placement[]; flipFallbackStrategy?:
 PlaceFlipFallbackStrategy; flipBoundary?: PlaceBoundary; flipPadding?: number; shift?: boolean;
+shiftCrossAxis?: boolean;
 shiftBoundary?: PlaceBoundary; shiftPadding?: number; padding?: number; autoSize?: PlaceAutoSize;
 autoSizeBoundary?: PlaceBoundary; autoSizePadding?: number; sync?: PlaceSync; arrow?: HTMLElement;
 arrowPadding?: number; hoverBridge?: HTMLElement; onPlaced?: (result: PlacementResult) => void }`.
