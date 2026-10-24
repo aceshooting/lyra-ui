@@ -176,6 +176,10 @@ export const LYRA_SSR_TAG_CAPABILITIES = Object.freeze({
   [tag('map')]: {
     canvas: 'after-hydration', // paints tiles and overlays onto a 2D canvas surface
   },
+  [tag('map-anchor')]: {
+    // The owning map must project the coordinate and measure clipping bounds before revealing it.
+    layoutMeasurement: 'after-hydration',
+  },
   [tag('animated-image')]: {
     canvas: 'after-hydration', // decodes and paints animation frames onto a 2D canvas surface
   },

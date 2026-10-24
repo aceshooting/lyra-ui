@@ -36,6 +36,35 @@ describe('lr-map-anchor lifecycle and content identity', () => {
     __setMapFeatureImporterForTesting(loadMapAnchorRuntime);
   });
 
+  it('creates its slot for initial and later anchors and removes it after the final assignment leaves', async () => {
+    expectDevWarning('lyra-map-anchor-unattached:slot');
+    let initial: LyraMapAnchor | undefined;
+    const { map, wrapper } = await mountMap(element => { initial = addAnchor(element); });
+    const anchor = initial!;
+    await placed(anchor);
+    expect(anchor.slot).to.equal('anchors');
+    expect(map.shadowRoot!.querySelectorAll('slot[name="anchors"]').length).to.equal(1);
+    anchor.remove();
+    await waitUntil(() => map.shadowRoot!.querySelectorAll('slot[name="anchors"]').length === 0, 'unused anchor slot removed');
+
+    const holder = document.createElement('div'); holder.slot = 'anchors';
+    const wrapped = addAnchor(holder); map.append(holder);
+    await placed(wrapped);
+    holder.slot = 'anchor';
+    await hidden(wrapped);
+    await waitUntil(() => map.shadowRoot!.querySelectorAll('slot[name="anchors"]').length === 0, 'reassigned wrapper releases the slot');
+    holder.slot = 'anchors'; await placed(wrapped);
+    holder.remove();
+    await waitUntil(() => map.shadowRoot!.querySelectorAll('slot[name="anchors"]').length === 0, 'removed wrapper releases the slot');
+
+    map.remove();
+    const reconnected = addAnchor(map);
+    wrapper.append(map);
+    await waitUntil(() => map.map !== undefined, 'engine rebuilt after anchors were added while disconnected');
+    (map.map as unknown as AnchorMapEngine).fire('load'); await map.whenStyleReady(); await placed(reconnected);
+    expect(map.shadowRoot!.querySelectorAll('slot[name="anchors"]').length).to.equal(1);
+  });
+
   it('keeps the caller\'s content node, listeners and component state through moves, off-screen, a style swap and a reconnect', async () => {
     const { map, engine, wrapper } = await mountMap();
     const card = new AnchorProbeCard(), anchor = addAnchor(map, { content: card, closable: true });
@@ -126,7 +155,7 @@ describe('lr-map-anchor lifecycle and content identity', () => {
     expect(await noEscapeOwner()).to.equal(true);
     second.map.append(anchor); await placed(anchor);
     expect(log.order).to.deep.equal([]); expect(anchor.slot).to.equal('anchors');
-    expect(first.map.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="anchors"]')!.assignedElements().length).to.equal(0);
+    await waitUntil(() => first.map.shadowRoot!.querySelectorAll('slot[name="anchors"]').length === 0, 'the old map releases its empty anchor slot');
   });
 
   it('hides every anchor while an ancestor is inert and places them again once unblocked', async () => {

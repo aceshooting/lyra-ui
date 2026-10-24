@@ -1,11 +1,13 @@
 # Test health: coverage, speed and flakiness
 
 Status (2026-10-24): the complete Codecov UI flag associated with
-[the recorded CI run](https://github.com/aceshooting/lyra-ui/actions/runs/40124203530)
-contains 521,841 fully hit lines out of 526,131 (99.1846%; displayed as 99.18%), with 3,163 misses
-and 1,127 partials. The combined seven-package report has 540,772 fully hit lines out of 545,090
-(99.2078%; displayed as 99.20%). These are committed-source observations before the remaining
-30.1.0 changes, not qualification of the final candidate. **The Codecov 99.80% goal remains open.**
+[the recorded CI run](https://github.com/aceshooting/lyra-ui/actions/runs/40132849858)
+contains 523,467 fully hit lines out of 526,890 (99.3503%; displayed as 99.35%), with 2,570 misses
+and 853 partials. The combined seven-package report has 542,398 fully hit lines out of 545,849
+(99.3678%; displayed as 99.36%). All five UI shard artifacts were merged and uploaded; the CI run
+still failed its SSR classification assertions and other qualification checks. These are complete
+candidate coverage observations, not qualification of the final release commit.
+**The Codecov 99.80% goal remains open.**
 
 The published 30.0.0 UI baseline is 520,554 of 525,881 lines (98.9870%). Each release must retain
 at least its predecessor's complete UI flag result and aims to add about 0.1 percentage point.
@@ -95,12 +97,13 @@ The baseline below predates the 30.0.0 work.
 ### Current 30.1.0 qualification
 
 - [x] Verify the expanded chart/map/data and conversation/retrieval/internal coverage cases,
-  including the chart-loading and progressive Markdown corrections. The integrated map slice
-  passes 940 cases in each of Chromium, Firefox with WebGL, and WebKit; final release workflows
+  including the chart-loading and progressive Markdown corrections. The integrated map and SSR slice
+  passes 990 cases in each of Chromium, Firefox with WebGL, and WebKit; final release workflows
   remain required below.
 - [ ] Rebuild, regenerate measured quality and all public artifacts, and measure the final budgets.
-- [ ] Verify complete coverage and all release workflows on the final versioned commit. Successful
-  browser and Quality tools runs on `4a2275622` qualify only that earlier source, not later changes.
+- [ ] Verify complete coverage and all release workflows on the final versioned commit. The completed
+  [candidate Quality tools run](https://github.com/aceshooting/lyra-ui/actions/runs/40132881188)
+  includes the A/B benchmark; it does not qualify later commits.
 - [ ] Verify the deployed coverage endpoints after the artifact-pagination correction; a successful
   docs workflow with its deploy step skipped does not establish that badges were published.
 - [ ] Investigate and retain the unresolved status of the historical WebKit PDF hang. The observed failure

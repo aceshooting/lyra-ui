@@ -56,7 +56,7 @@ restoration, heatmap exports, neighbor pagination and text-only agent message up
 and progressive Markdown corrections and expanded behavioral coverage have passed their browser checks. The new anchor brings the source inventory to 311 components. Implementation
 and focused checks do not qualify the final release candidate.
 
-The integrated map suite passes 940 cases in each of Chromium, Firefox with WebGL, and WebKit.
+The integrated map and SSR suite passes 990 cases in each of Chromium, Firefox with WebGL, and WebKit.
 Remaining release work includes completing API/editor/consumer artifact checks and delivery-budget
 review, preparing the shared 30.1.0 version, and passing CI, both browser workflows and Quality tools
 including the A/B benchmark on that exact commit. The complete Codecov UI flag must retain the previous release's result; improvement of

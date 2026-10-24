@@ -73,6 +73,24 @@ const DOCS_DIAGNOSTIC_ALLOWLIST = Object.freeze([
     message:
       /^\[\.WebGL-[^\]]+\]GL Driver Message \(OpenGL, Performance, GL_CLOSE_PATH_NV, High\): GPU stall due to ReadPixels(?: \(this message will no longer repeat\))?$/,
   },
+  // This page embeds the same real WebGL renderer as the map docs. Only its driver
+  // performance warning is expected; renderer errors and context loss remain failures.
+  {
+    pageId: 'map-map-anchor--docs',
+    kind: 'console',
+    type: 'warning',
+    url: (value) => {
+      try {
+        const url = new URL(value);
+        return url.pathname === '/iframe.html' && url.searchParams.get('id') === 'map-map-anchor--docs' &&
+          url.searchParams.get('viewMode') === 'docs';
+      } catch {
+        return false;
+      }
+    },
+    message:
+      /^\[\.WebGL-[^\]]+\]GL Driver Message \(OpenGL, Performance, GL_CLOSE_PATH_NV, High\): GPU stall due to ReadPixels(?: \(this message will no longer repeat\))?$/,
+  },
   {
     pageId: 'map--docs',
     kind: 'console',
@@ -183,6 +201,7 @@ function normalizedDiagnostics(result) {
 
 function matches(rule, pageId, diagnostic) {
   if (rule.pageId !== pageId || rule.kind !== diagnostic.kind) return false;
+  if (rule.type !== undefined && rule.type !== diagnostic.type) return false;
   if (rule.url && !rule.url(diagnostic.url)) return false;
   if (rule.message && !rule.message.test(diagnostic.message)) return false;
   if (rule.status !== undefined) {

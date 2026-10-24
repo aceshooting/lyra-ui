@@ -31,6 +31,7 @@ import { notifyMapCanvasReady } from '../../../internal/map-canvas-ready.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import type { LyraMapAnchorBoundary, LyraMapAnchorCloseDetail, LyraMapAnchorSafeArea } from './map-anchor-options.js';
 import type { MapAnchorChildren, MapAnchorController, MapAnchorHost, MapAnchorMapHost } from './map-anchor-controller.js';
 import { MAP_ANCHOR_SEAM, type MapAnchorChild, type MapAnchorOwnerOperation } from './map-anchor-seam.js';
@@ -4651,6 +4652,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private anchorSyncRequested = false;
   /** `lr-map-anchor` children rendered through the `anchors` slot. */
   private readonly childAnchorSet = new Set<MapAnchorChild>();
+  /** Discovers assignments before the optional slot exists, without adding chrome to unused maps. */
+  private readonly anchorSlotPresence = new SlotPresenceController(this, { observeLightDom: true });
   /** Their placement, once one has opened and the shared anchor runtime has loaded. */
   private childAnchors?: MapAnchorChildren;
 
@@ -8526,7 +8529,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         <div class="anchor-boundary" aria-hidden="true"></div>
         <div part="anchor" hidden @focusin=${this.onAnchorFocus}><slot name="anchor" @slotchange=${this.onAnchorSlotChange}></slot>${this.anchorClosable
           ? html`<button type="button" part="anchor-close" @click=${() => { this.anchorController?.close('close-button'); }}>${this.localize('close')}</button>` : nothing}</div>
-        <slot name="anchors" @slotchange=${this.onAnchorsSlotChange}></slot>
+        ${this.anchorSlotPresence.has('anchors') ? html`<slot name="anchors" @slotchange=${this.onAnchorsSlotChange}></slot>` : nothing}
         ${this.legend.length ||
         this.legendProjection.truncated ||
         this.legendGradient.length ||

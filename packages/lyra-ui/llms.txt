@@ -8,8 +8,8 @@
 
 ## Which file to read
 
-Read the narrow reference for the task. `llms/index.md` is the source of truth for the current
-element count and complete tag list.
+Read the narrow reference for the task. `llms/index.md` lists the current element count and
+complete tag list.
 
 - [llms/index.md](./llms/index.md): every tag, its exact import path, and a one-line purpose —
   **start here** to pick a component.

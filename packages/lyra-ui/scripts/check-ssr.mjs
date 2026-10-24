@@ -903,6 +903,22 @@ assert.equal(globalThis.window, undefined, 'populated SVG tooltip rendering must
 assert.equal(globalThis.document, undefined, 'populated SVG tooltip rendering must not create a document shim');
 
 const { entries, inventory, loader } = await renderSsrMatrix();
+// An open anchor retains its content and controls on the server, but never paints at an
+// unmeasured coordinate. Its owning map reveals it only after browser placement can run.
+const mapAnchorHtml = replaceHtmlComments(await collectResult(render(html`<lr-map-anchor
+  open closable label="Place details" .lngLat=${[6.13, 49.61]}
+  .strings=${{ close: 'Close place details' }}
+><button data-anchor-content>Inspect &amp; compare</button></lr-map-anchor>`, {
+  elementRenderers: animatedImageContext.elementRenderers,
+})), () => '');
+assert.match(mapAnchorHtml, /<template[^>]*shadowrootmode="open"/, 'map anchors must retain declarative shadow DOM');
+assert.match(mapAnchorHtml, /part="base" hidden/, 'open SSR anchors must stay hidden before placement');
+assert.match(mapAnchorHtml, /role="group"[^>]*aria-label="Place details"/, 'SSR anchors retain their accessible group name');
+assert.match(mapAnchorHtml, /part="close-button"[^>]*aria-label="Close place details"/, 'SSR anchor controls honor caller strings');
+assert.equal((mapAnchorHtml.match(/data-anchor-content/g) ?? []).length, 1, 'SSR anchors preserve caller content exactly once');
+assert.ok(mapAnchorHtml.includes('Inspect &amp; compare'), 'SSR anchors preserve escaped caller content');
+assert.equal(globalThis.window, undefined, 'open anchor SSR must not create a window shim');
+assert.equal(globalThis.document, undefined, 'open anchor SSR must not create a document shim');
 const selectedCurrencyHtml = replaceHtmlComments(await collectResult(render(currencyPickerSsrTemplate(), {
   elementRenderers: animatedImageContext.elementRenderers,
 })), () => '');

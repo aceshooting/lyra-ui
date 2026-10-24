@@ -78,7 +78,7 @@ describe('LYRA_SSR_STATIC_SAFETY', () => {
     const staticSafeCount = values.filter((value) => value === 'static-safe').length;
     const hydrationRequiredCount = values.filter((value) => value === 'hydration-required').length;
     expect(staticSafeCount).to.equal(240);
-    expect(hydrationRequiredCount).to.equal(52);
+    expect(hydrationRequiredCount).to.equal(53);
     expect(staticSafeCount + hydrationRequiredCount).to.equal(LYRA_SSR_RENDER_AND_HYDRATE_TAGS.length);
   });
 
@@ -131,6 +131,14 @@ describe('LYRA_SSR_STATIC_SAFETY', () => {
 
   it('classifies a canvas-painted chart as hydration-required', () => {
     expect(getLyraSsrStaticSafety('lr-chart')).to.equal('hydration-required');
+  });
+
+  it('keeps map anchors server-renderable while requiring hydrated map placement', () => {
+    expect(getLyraSsrMode('lr-map-anchor')).to.equal('render-and-hydrate');
+    expect(getLyraSsrStaticSafety('lr-map-anchor')).to.equal('hydration-required');
+    expect(LYRA_SSR_TAG_CAPABILITIES['lr-map-anchor']).to.deep.equal({
+      layoutMeasurement: 'after-hydration',
+    });
   });
 
   it('classifies the WebGL-backed lr-chart-3d as hydration-required while its data table stays server-rendered', () => {

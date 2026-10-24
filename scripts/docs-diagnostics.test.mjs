@@ -100,6 +100,46 @@ test('does not allow an intentional warning from the wrong built module', () => 
   assert.equal(findUnexpectedDiagnostics(fixture).length, 1);
 });
 
+const anchorDriverWarning = {
+  type: 'warning',
+  text: '[.WebGL-0x262c001c9800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels',
+  url: 'http://127.0.0.1:6006/iframe.html?id=map-map-anchor--docs&viewMode=docs',
+};
+
+test('accepts both exact map-anchor driver performance warning forms on its docs iframe', () => {
+  for (const suffix of ['', ' (this message will no longer repeat)']) {
+    const fixture = resultWith('map-map-anchor--docs', 'console', {
+      ...anchorDriverWarning,
+      text: anchorDriverWarning.text + suffix,
+    });
+    assert.deepEqual(findUnexpectedDiagnostics(fixture), []);
+  }
+});
+
+test('rejects map-anchor driver diagnostics outside the exact warning and iframe boundary', () => {
+  const fixtures = [
+    resultWith('checkbox--docs', 'console', anchorDriverWarning),
+    resultWith('map-map-anchor--docs', 'pageError', anchorDriverWarning.text),
+    ...[
+      { type: 'error' },
+      { type: undefined },
+      { url: undefined },
+      { url: '' },
+      { url: 'not a URL' },
+      { url: 'http://127.0.0.1:6006/other.html?id=map-map-anchor--docs&viewMode=docs' },
+      { url: 'http://127.0.0.1:6006/iframe.html?viewMode=docs' },
+      { url: 'http://127.0.0.1:6006/iframe.html?id=map--docs&viewMode=docs' },
+      { url: 'http://127.0.0.1:6006/iframe.html?id=map-map-anchor--docs' },
+      { url: 'http://127.0.0.1:6006/iframe.html?id=map-map-anchor--docs&viewMode=story' },
+      { text: anchorDriverWarning.text + ' unexpected suffix' },
+      { text: anchorDriverWarning.text.replace('Performance', 'Error') },
+      { text: 'WARNING: Too many active WebGL contexts. Oldest context will be lost.' },
+      { text: 'TypeError: Failed to fetch' },
+    ].map((change) => resultWith('map-map-anchor--docs', 'console', { ...anchorDriverWarning, ...change })),
+  ];
+  for (const fixture of fixtures) assert.equal(findUnexpectedDiagnostics(fixture).length, 1);
+});
+
 test('fails a docs page with no Show code controls', () => {
   assert.match(
     structuralDocsFailure({

@@ -8,3 +8,5 @@ Add the experimental `<lr-map-anchor>` element for several independently owned p
 - A `closable` anchor gets a localized close button and closes on Escape. Escape closes the anchor that contains focus first, otherwise the frontmost one. Overlapping anchors are painted with the most recently opened, focused or pressed one in front.
 - Focus moves only to `[autofocus]` content or through `focusContent()`, and returns to where it came from when a focused anchor hides, closes or is removed.
 - `lr-map` gains an `anchors` slot, where a direct child anchor assigns itself. Import `@aceshooting/lyra-ui/components/lr-map-anchor.js` alongside `lr-map.js`; maps without child anchors render, load and behave as before, and the placement code is still loaded only when an anchor opens.
+
+The additional registration route, map runtime, declarations and consumer/editor metadata require small delivery-budget increases. Only exceeded media-family, initial scoped-loader, unpacked UI and packed/unpacked IDE ceilings advance to the next 64-byte boundary. Existing passing limits, lazy-import boundaries and measurement settings are retained.

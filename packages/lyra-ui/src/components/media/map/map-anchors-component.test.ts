@@ -58,13 +58,9 @@ describe('lr-map-anchor placement, coexistence and close ownership', () => {
     const { map } = await mountMap(element => { element.append(slotted()); element.anchorLngLat = [0, 0]; });
     const panel = map.shadowRoot!.querySelector<HTMLElement>('[part="anchor"]')!;
     await waitUntil(() => !panel.hidden && panel.style.left !== '', 'slot anchor placed');
-    const slot = map.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="anchors"]')!;
     const events: string[] = [];
     for (const type of ['lr-close-request', 'lr-close']) map.addEventListener(type, () => { events.push(type); });
-    expect(slot.assignedNodes().length).to.equal(0);
-    expect(getComputedStyle(slot).display).to.equal('contents');
-    expect(slot.getClientRects().length).to.equal(0);
-    expect(slot.hasAttribute('role') || slot.hasAttribute('tabindex')).to.equal(false);
+    expect(map.shadowRoot!.querySelectorAll('slot[name="anchors"]').length).to.equal(0);
     expect(getComputedStyle(panel).zIndex).to.equal('2');
     expect(panel.style.getPropertyValue('--_lr-map-anchor-rank')).to.equal('');
     expect(map.closeAnchor()).to.equal(true);

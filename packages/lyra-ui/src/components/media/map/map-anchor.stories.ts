@@ -22,6 +22,16 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
+/** A declarative panel anchored to a coordinate, with a localized close action. */
+export const Default: Story = {
+  render: () => html`
+    <lr-map label="Map with a place detail panel" style="block-size: 20rem" .mapStyle=${LYRA_MAP_EMPTY_STYLE}>
+      <lr-map-anchor slot="anchors" open closable label="Place details" .lngLat=${[0, 0] as const}>
+        <p>A panel of content at the center of the map.</p>
+      </lr-map-anchor>
+    </lr-map>`,
+};
+
 const DETAILS_RECIPE = html`<style>
   lr-map-anchor.details::part(body) { display: flex; flex-direction: column; overflow: hidden; }
   .detail-card { display: flex; flex-direction: column; min-block-size: 0; }
