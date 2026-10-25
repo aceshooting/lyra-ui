@@ -5,8 +5,8 @@ import { createPickColors, createPickMaterial } from '../core/picking.js';
 import { createLyra3dViewport, type Lyra3dViewport } from '../core/viewport.js';
 import { DEFAULT_LYRA_3D_STYLE } from '../core/style.js';
 import { startLyra3dTask, type Lyra3dTask, type Lyra3dTaskOptions } from '../core/worker.js';
-import { createGraphLayoutKernel } from './layout-kernel.js';
-import { createGraphTaskKernel, type GraphTaskInput, type GraphTaskOutput } from './layout-task.js';
+import { validateGraphLayoutInput } from './layout-admission.js';
+import { createGraphIncrementalTaskKernel, type GraphTaskInput, type GraphTaskOutput } from './layout-task.js';
 import type { GraphLayoutInput, GraphLayoutPinUpdate } from './types.js';
 import { admitGraphSpatialAppearance, validateGraphSpatialSizes, type GraphSpatialAppearance } from './spatial-appearance.js';
 import { createGraphSpatialNodes } from './spatial-nodes.js';
@@ -14,6 +14,9 @@ import { spatialPrimitiveCount } from './spatial-paths.js';
 import { createGraphSpatialEdges } from './spatial-edges.js';
 import { createGraphSpatialComposite } from './spatial-composite.js';
 import { admitGraphDecorations, createGraphDecorations, graphItemColor, type GraphDecorationData } from './decorations.js';
+import { changedVisualRows, snapshotVisualState, type VisualStateRows } from '../core/visual-state.js';
+import { markAttributeFull, markAttributeRows } from '../core/attribute-updates.js';
+import { createPaintColors } from '../core/paint-colors.js';
 
 /** Renderable graph inputs use the core world range: every coordinate is within ±10,000,000.
  * The standalone numerical layout kernel accepts a wider finite Float32 range. */
@@ -99,31 +102,55 @@ export function createGraphEngine(services: GraphEngineServices = {}): GraphEngi
     if (!data || !Number.isInteger(item) || item < 0 || item >= data.nodeCount) return null;
     return { x: positions[item * 3]!, y: positions[item * 3 + 1]!, z: positions[item * 3 + 2]! };
   };
-  const paint = () => {
+  const paint = (rows?: VisualStateRows) => {
     if (!viewport || !data) return;
-    if (spatialNodes) { transforms(); viewport.invalidate(); return; }
+    if (spatialNodes) { transforms(rows); viewport.invalidate(); return; }
     if (meshes.length === 0) return;
     const resolved = viewport.style;
+    const paintColor = createPaintColors(resolved);
+    const currentData = data;
     for (let kind = 0; kind < 2; kind += 1) {
       const mesh = meshes[kind * 2]!;
-      for (let index = 0; index < mesh.count; index += 1) {
-        const item = kind === 0 ? index : data.nodeCount + index;
-        const base = kind === 0 ? resolved.palette[(data.categories?.[index] ?? 0) % resolved.palette.length]! : resolved.muted;
-        mesh.setColorAt(index, graphItemColor(resolved, state, item, base, color));
+      const changed: number[] = [];
+      const paintRow = (index: number) => {
+        const item = kind === 0 ? index : currentData.nodeCount + index;
+        const base = kind === 0 ? resolved.palette[(currentData.categories?.[index] ?? 0) % resolved.palette.length]! : resolved.muted;
+        mesh.setColorAt(index, graphItemColor(resolved, state, item, base, color, paintColor));
+      };
+      if (rows === undefined || rows === null) for (let index = 0; index < mesh.count; index++) paintRow(index);
+      else for (const item of rows) {
+        const index = kind === 0 ? item : item - currentData.nodeCount;
+        if (index < 0 || index >= mesh.count) continue;
+        paintRow(index); changed.push(index);
       }
-      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      if (mesh.instanceColor) {
+        if (rows === undefined || rows === null) markAttributeFull(mesh.instanceColor);
+        else markAttributeRows(mesh.instanceColor, changed);
+      }
     }
     viewport.invalidate();
   };
-  const transforms = () => {
+  const transforms = (stateRows?: VisualStateRows) => {
     if (!viewport || !data || (!spatialNodes && meshes.length === 0)) return;
     if (spatialNodes && spatialEdges) {
-      // The spatial batches project on the GPU: a camera or viewport change only updates uniforms,
-      // and attributes are rewritten when positions, paint state or style change.
-      if (lastSpatialRevision !== positionRevision || lastTransformStyle !== viewport.style || lastTransformState !== state) {
-        lastSpatialRevision = positionRevision; lastTransformStyle = viewport.style; lastTransformState = state;
+      // Geometry, style and visual state have independent invalidations. Camera-only frames
+      // update uniforms and may reorder translucent payloads without repainting source batches.
+      if (lastTransformState === undefined) {
         spatialNodes.update(viewport, positions, state); spatialEdges.update(viewport, positionOf, state);
-      } else { spatialNodes.setView(viewport); spatialEdges.setView(viewport); }
+      } else {
+        if (lastSpatialRevision !== positionRevision) {
+          spatialNodes.updatePositions(viewport, positions); spatialEdges.updatePositions(viewport, positionOf);
+        }
+        if (lastTransformStyle !== viewport.style) {
+          spatialNodes.updateStyle(viewport, state);
+          spatialEdges.updateStyle(viewport, state, lastSpatialRevision === positionRevision);
+        } else if (lastTransformState !== state) {
+          const rows = stateRows === undefined ? changedVisualRows(lastTransformState, state, data.nodeCount + data.source.length) : stateRows;
+          spatialNodes.updateState(viewport, state, rows); spatialEdges.updateState(viewport, state, rows);
+        }
+        spatialNodes.setView(viewport); spatialEdges.setView(viewport);
+      }
+      lastSpatialRevision = positionRevision; lastTransformStyle = viewport.style; lastTransformState = state;
       spatialComposite?.update(viewport); return;
     }
     const orbit = viewport.orbit;
@@ -235,7 +262,7 @@ export function createGraphEngine(services: GraphEngineServices = {}): GraphEngi
     const current = viewport;
     const next = (services.task ?? startLyra3dTask)({
       input: { type: 'start', data: { nodeCount: data.nodeCount, source: data.source, target: data.target, options: data.options, positions: positions.slice(), pinned: pins.slice() } },
-      kernel: createGraphTaskKernel,
+      kernel: createGraphIncrementalTaskKernel,
       worker: () => new Worker(new URL('./layout.worker.js', import.meta.url), { type: 'module' }),
       onOutput(output) {
         if (disposed || generation !== active || viewport !== current || output.epoch !== epoch) return;
@@ -341,7 +368,7 @@ export function createGraphEngine(services: GraphEngineServices = {}): GraphEngi
     setData(input, nextRevision) {
       if (disposed) return;
       if (!Number.isSafeInteger(nextRevision) || nextRevision <= revision) throw new RangeError('Graph revision must increase');
-      createGraphLayoutKernel(input);
+      validateGraphLayoutInput(input);
       if (input.positions && !renderablePositions(input.positions)) throw new RangeError('Graph positions exceed the supported world range');
       const decorationData = admitGraphDecorations(input, input.nodeCount, input.source.length);
       const spatialAppearance = input.spatialAppearance === undefined ? undefined : admitGraphSpatialAppearance(input.spatialAppearance, input.nodeCount, input.source.length);
@@ -365,7 +392,12 @@ export function createGraphEngine(services: GraphEngineServices = {}): GraphEngi
       build(); if (viewport) detach = attachDrag(viewport); start();
     },
     setStyle(next) { if (!disposed) { style = next; viewport?.setStyle(next); transforms(); paint(); } },
-    setState(next) { if (!disposed) { state = { ...next, selected: new Set(next.selected), dimmed: new Set(next.dimmed) }; paint(); } },
+    setState(next) {
+      if (disposed) return;
+      const update = snapshotVisualState(next, state, data ? data.nodeCount + data.source.length : 0);
+      if (!update.changed) return;
+      state = update.state; paint(update.rows);
+    },
     setCamera(next) { if (!disposed) { camera = normalizeOrbitCamera(next); viewport?.setOrbit(camera); } },
     fit(padding) { camera = fitOrbitCamera(boundsOfPositions(positions, data?.spatialAppearance?.sizeUnits === 'world' ? Array.from({ length: data.nodeCount }, (_, row) => (data?.sizes?.[row] ?? viewport?.style.pointSize ?? 6) / 2) : undefined), viewport ?? { width: 1, height: 1 }, padding); fittedDistance = camera.distance; viewport?.setOrbit(camera); return camera; },
     focus(item, zoom) { const point = positionOf(item); if (!point) return null; camera = focusOrbitCamera(viewport?.orbit ?? camera, point, zoom); viewport?.setOrbit(camera); return camera; },

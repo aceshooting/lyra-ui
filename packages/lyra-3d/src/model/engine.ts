@@ -5,7 +5,12 @@ import { DEFAULT_LYRA_3D_STYLE, type Lyra3dRgba } from '../core/style.js';
 import { createLyra3dViewport, type Lyra3dViewport } from '../core/viewport.js';
 import { createPointsEngine } from '../points/engine.js';
 import type { PointsEngine, PointsEngineData } from '../points/types.js';
-import { admitModel } from './admission.js';
+import { admitModel, ModelAdmissionError } from './admission.js';
+import { snapshotModelInput } from './model-admission-policy.js';
+import { aborted } from './model-parser-common.js';
+import { createModelGpuAttributeWork, modelGpuAttributesNeedConversion } from './model-gpu-attributes.js';
+import { runModelWork } from './model-work-runner.js';
+import type { prepareModel } from './model-preparation.js';
 import { parseModel, type ParsedModel } from './model-parsers.js';
 import { MODEL_LIMITS } from './limits.js';
 import type { ModelEngine } from './types.js';
@@ -13,17 +18,21 @@ import type { ModelEngine } from './types.js';
 interface ModelEngineServices {
   readonly viewport?: typeof createLyra3dViewport;
   readonly parse?: typeof parseModel;
+  readonly prepare?: typeof prepareModel;
 }
 interface MaterialPaint { material: Material; highlight: Material; opacity: number; transparent: boolean }
-interface Drawable { object: Object3D; center: Lyra3dWorldPoint; paints: MaterialPaint[]; array: boolean }
-interface InstalledModel { parsed: ParsedModel; drawables: Drawable[]; points?: PointsEngine }
+interface Drawable { object: Object3D; center: Lyra3dWorldPoint; paints: MaterialPaint[]; array: boolean; original: Material | Material[] }
+interface InstalledModel { parsed: ParsedModel; drawables: Drawable[]; points?: PointsEngine; conversion?: AbortController; released?: boolean }
 const emptyState = (): Lyra3dState => ({ selected: new Set(), dimmed: new Set(), hover: -1, focus: -1 });
 function color(target: Color, value: Lyra3dRgba): void { target.setRGB(value.r, value.g, value.b, SRGBColorSpace); }
 function release(model: InstalledModel | undefined): void {
-  if (!model) return;
+  if (!model || model.released) return;
+  model.released = true; model.conversion?.abort();
   for (const drawable of model.drawables) {
-    (drawable.object as Object3D & { material: Material | Material[] }).material = drawable.array ? drawable.paints.map((saved) => saved.material) : drawable.paints[0]!.material;
-    for (const saved of drawable.paints) try { saved.highlight.dispose(); } catch { /* Continue releasing all owned materials. */ }
+    (drawable.object as Object3D & { material: Material | Material[] }).material = drawable.original;
+    for (const saved of drawable.paints) for (const material of [saved.material, saved.highlight]) {
+      try { material.dispose(); } catch { /* Continue releasing all owned materials. */ }
+    }
   }
   try { model.points?.dispose(); } catch { /* Continue releasing the parsed asset. */ }
   try { model.parsed.dispose(); } catch { /* Parsed disposal attempts every owned resource. */ }
@@ -62,13 +71,16 @@ function pointData(parsed: ParsedModel): PointsEngineData | null {
   }
   return { positions, colors, mode: '3d' };
 }
-function drawableData(parsed: ParsedModel): Drawable[] {
+function drawableData(parsed: ParsedModel): { drawables: Drawable[]; convert: boolean } {
+  let convert = false;
   const result: Drawable[] = []; const center = new Vector3();
   parsed.object.updateMatrixWorld(true);
   parsed.object.traverse((object) => {
     if (!('geometry' in object) || !('material' in object)) return;
+    convert ||= modelGpuAttributesNeedConversion(object);
     const current = object as Object3D & { material: Material | Material[] };
-    const materials = Array.isArray(current.material) ? current.material : [current.material];
+    const original = current.material;
+    const materials = Array.isArray(original) ? original : [original];
     const clones = materials.map((material) => material.clone());
     current.material = Array.isArray(current.material) ? clones : clones[0]!;
     const paints = clones.map((material): MaterialPaint => {
@@ -76,9 +88,9 @@ function drawableData(parsed: ParsedModel): Drawable[] {
       return { material, highlight, opacity: material.opacity, transparent: material.transparent };
     });
     new Box3().setFromObject(object).getCenter(center);
-    result.push({ object, center: { x: center.x, y: center.y, z: center.z }, paints, array: Array.isArray(current.material) });
+    result.push({ object, center: { x: center.x, y: center.y, z: center.z }, paints, array: Array.isArray(current.material), original });
   });
-  return result;
+  return { drawables: result, convert };
 }
 
 /** A model renderer with atomic admitted revisions and owned asynchronous parser lifetimes. */
@@ -126,8 +138,9 @@ export function createModelEngine(services: ModelEngineServices = {}): ModelEngi
     camera = current?.points?.fit?.(padding) ?? fitOrbitCamera(current?.parsed.bounds ?? null, viewport ?? { width: 1, height: 1 }, padding);
     viewport?.setOrbit(camera); return camera;
   };
-  const install = async (parsed: ParsedModel, expected: number, refreshing?: InstalledModel): Promise<void> => {
-    const candidate: InstalledModel = { parsed, drawables: [] };
+  const install = async (parsed: ParsedModel, expected: number, refreshing?: InstalledModel, completed?: () => void, signal?: AbortSignal): Promise<void> => {
+    const candidate: InstalledModel = refreshing ?? { parsed, drawables: [] };
+    let conversion: AbortController | undefined;
     let previous: InstalledModel | undefined; let committed = false;
     try {
       worldBounds(parsed);
@@ -138,14 +151,25 @@ export function createModelEngine(services: ModelEngineServices = {}): ModelEngi
           candidate.points = createPointsEngine({ viewport: () => shared });
           candidate.points.setData(data, 0); candidate.points.setStyle(style); candidate.points.setState?.(state); candidate.points.setCamera(viewport.orbit);
           await candidate.points.mount({} as HTMLElement, host!);
-        } else candidate.drawables = drawableData(parsed);
+        } else {
+          const drawing = drawableData(parsed); candidate.drawables = drawing.drawables;
+          if (drawing.convert) {
+            if (refreshing) { conversion = new AbortController(); candidate.conversion = conversion; }
+            await runModelWork(createModelGpuAttributeWork(candidate.drawables), conversion?.signal ?? signal);
+          }
+        }
       }
       if (disposed || (refreshing ? current !== refreshing : generation !== expected)) { release(candidate); return; }
       previous = current; current = candidate; committed = true;
       if (viewport && !candidate.points) viewport.world.add(parsed.object);
       if ((!previous || refreshing) && !authoredCamera && viewport) fit();
-      paint(); if (previous?.parsed !== parsed) release(previous);
-    } catch (error) { if (committed) current = previous; release(candidate); throw error; }
+      paint(); completed?.(); if (previous?.parsed !== parsed) release(previous);
+    } catch (error) {
+      if (committed) current = previous;
+      release(candidate);
+      if (refreshing && (disposed || current !== refreshing)) return;
+      throw error;
+    } finally { if (conversion && candidate.conversion === conversion) candidate.conversion = undefined; }
   };
   const positionOf = (item: number): Lyra3dWorldPoint | null => {
     if (!Number.isSafeInteger(item) || item < 0) return null;
@@ -171,7 +195,7 @@ export function createModelEngine(services: ModelEngineServices = {}): ModelEngi
       viewport.scene.add(ambient, directional);
       if (current) {
         const pending = current;
-        await install(pending.parsed, generation, pending);
+        await install(pending.parsed, generation, pending, undefined, controller?.signal);
       }
       paint();
       if (pendingProgress && !disposed) { host?.progress?.(...pendingProgress); pendingProgress = undefined; }
@@ -182,10 +206,10 @@ export function createModelEngine(services: ModelEngineServices = {}): ModelEngi
       if (!Number.isSafeInteger(nextRevision) || nextRevision <= revision) throw new RangeError('Model revision must increase');
       const admitted = admitModel(data.bytes, data.format);
       revision = nextRevision; pendingFailure = false; pendingProgress = undefined; const expected = ++generation;
-      controller?.abort(); controller = new AbortController();
-      void (services.parse ?? parseModel)(admitted, { signal: controller.signal }).then(async (parsed) => {
+      controller?.abort(); controller = new AbortController(); const signal = controller.signal;
+      void (services.parse ?? parseModel)(admitted, { signal }).then(async (parsed) => {
         if (disposed || expected !== generation) { release({ parsed, drawables: [] }); return; }
-        await install(parsed, expected);
+        await install(parsed, expected, undefined, undefined, signal);
         if (!disposed && expected === generation) {
           if (host) host.progress?.(admitted.encodedBytes, admitted.encodedBytes); else pendingProgress = [admitted.encodedBytes, admitted.encodedBytes];
         }
@@ -193,6 +217,54 @@ export function createModelEngine(services: ModelEngineServices = {}): ModelEngi
         if (!disposed && expected === generation) {
           if (host) host.lost('error', 'model-parse-failed'); else pendingFailure = true;
         }
+      });
+    },
+    async setDataAsync(data, nextRevision, options = {}) {
+      if (disposed) throw new DOMException('Model engine is disposed', 'AbortError');
+      if (!Number.isSafeInteger(nextRevision) || nextRevision <= revision) throw new RangeError('Model revision must increase');
+      const signal = options.signal;
+      aborted(signal);
+      const owned = snapshotModelInput(data.bytes, data.format);
+      if (disposed) throw new DOMException('Model engine is disposed', 'AbortError');
+      if (nextRevision <= revision) throw new RangeError('Model revision must increase');
+      aborted(signal);
+      revision = nextRevision; pendingFailure = false; pendingProgress = undefined; const expected = ++generation;
+      controller?.abort(); const active = new AbortController(); controller = active;
+      return new Promise<void>((resolve, reject) => {
+        let settled = false;
+        const cleanup = (): void => { active.signal.removeEventListener('abort', cancelled); signal?.removeEventListener('abort', external); };
+        const fail = (error: unknown): void => { if (settled) return; settled = true; cleanup(); reject(error); };
+        const cancelled = (): void => {
+          if (expected === generation) generation++;
+          fail(new DOMException('Model preparation was aborted', 'AbortError'));
+        };
+        const external = (): void => active.abort();
+        active.signal.addEventListener('abort', cancelled, { once: true }); signal?.addEventListener('abort', external, { once: true });
+        if (signal?.aborted) external();
+        const execute = async (): Promise<void> => {
+          let parsed: ParsedModel | undefined;
+          try {
+            aborted(active.signal);
+            const prepare = services.prepare ?? (await import('./model-preparation.js')).prepareModel;
+            aborted(active.signal); parsed = await prepare(owned, { signal: active.signal });
+            if (disposed || expected !== generation || active.signal.aborted) throw new DOMException('Model preparation was aborted', 'AbortError');
+            const candidate = parsed; parsed = undefined;
+            await install(candidate, expected, undefined, () => {
+              settled = true; cleanup(); resolve();
+              if (host) { try { host.progress?.(owned.bytes.length, owned.bytes.length); } catch { /* A host notification cannot undo a committed model. */ } }
+              else pendingProgress = [owned.bytes.length, owned.bytes.length];
+            }, active.signal);
+            if (!settled) throw new DOMException('Model preparation was aborted', 'AbortError');
+          } catch (error) {
+            if (parsed) release({ parsed, drawables: [] });
+            if (settled) return;
+            if (disposed || expected !== generation || active.signal.aborted) { fail(new DOMException('Model preparation was aborted', 'AbortError')); return; }
+            try { if (host) host.lost('error', 'model-parse-failed'); else pendingFailure = true; }
+            catch { /* Preserve the preparation failure if a host callback throws. */ }
+            fail(error instanceof ModelAdmissionError ? error : new ModelAdmissionError('invalid'));
+          }
+        };
+        void execute();
       });
     },
     setStyle(next) { if (!disposed) { style = next; viewport?.setStyle(next); paint(); } },

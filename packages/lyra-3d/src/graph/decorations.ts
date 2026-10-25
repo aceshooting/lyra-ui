@@ -6,6 +6,9 @@ import type { Lyra3dRgba, ResolvedLyra3dStyle } from '../core/style.js';
 
 import type { GraphSpatialAppearance } from './spatial-appearance.js';
 import { spatialEdgePoint, spatialNodeWorldRadius } from './spatial-paths.js';
+import { changedVisualRows } from '../core/visual-state.js';
+import { markAttributeFull, markAttributeRows } from '../core/attribute-updates.js';
+import { createPaintColors, type PaintColors } from '../core/paint-colors.js';
 
 export type GraphNodeLabelsMode = 'always' | 'zoom' | 'none';
 export interface GraphDecorationData {
@@ -56,9 +59,9 @@ export function admitGraphDecorations(input: GraphDecorationData, nodes: number,
   };
 }
 
-export function graphItemColor(style: ResolvedLyra3dStyle, state: Lyra3dState, item: number, base: Lyra3dRgba, color = new Color()): Color {
+export function graphItemColor(style: ResolvedLyra3dStyle, state: Lyra3dState, item: number, base: Lyra3dRgba, color = new Color(), paintColor?: PaintColors): Color {
   const value = state.focus === item ? style.focus : state.selected.has(item) || state.hover === item ? style.accent : style.forcedColors ? style.foreground : base;
-  color.setRGB(value.r, value.g, value.b, SRGBColorSpace);
+  if (paintColor) paintColor(value, color); else color.setRGB(value.r, value.g, value.b, SRGBColorSpace);
   if (!style.forcedColors && state.dimmed.has(item)) color.multiplyScalar(0.3);
   return color;
 }
@@ -85,6 +88,8 @@ export function createGraphDecorations(viewport: Lyra3dViewport, data: Decoratio
   const preparedCanvas = data.labels?.some(Boolean) || data.edgeLabels?.some(Boolean) ? createCanvas() : undefined;
   const preparedContext = preparedCanvas?.getContext('2d') ?? null;
   const edgeIndices = Uint32Array.from((data.spatialAppearance ? undefined : data.directed)?.reduce<number[]>((result, directed, edge) => { if (directed) result.push(edge); return result; }, []) ?? []);
+  const arrowRows = new Map<number, number>();
+  edgeIndices.forEach((edge, row) => arrowRows.set(edge, row));
   const arrows = new InstancedMesh(new ConeGeometry(1, 1, 6), new MeshBasicMaterial(), edgeIndices.length);
   const arrowPick = new InstancedMesh(arrows.geometry, createPickMaterial(), edgeIndices.length);
   const perEdge = data.particlesPerEdge ?? 0;
@@ -186,29 +191,42 @@ export function createGraphDecorations(viewport: Lyra3dViewport, data: Decoratio
     update(frame: GraphDecorationFrame) {
       const style = viewport.style;
       const repaint = lastPaintState !== frame.state || lastPaintStyle !== style;
+      const paintColor = repaint ? createPaintColors(style) : undefined;
+      let changedEdges: number[] | undefined;
+      if (!repaint || (edgeIndices.length === 0 && particleCount === 0)) changedEdges = [];
+      else if (lastPaintState !== undefined && lastPaintStyle === style) {
+        // Compare with the decoration's last consumed state, including coalesced engine updates.
+        const rows = changedVisualRows(lastPaintState, frame.state, data.nodeCount + data.source.length);
+        changedEdges = rows?.filter(item => item >= data.nodeCount).map(item => item - data.nodeCount);
+      }
       lastPaintState = frame.state; lastPaintStyle = style;
       const camera = viewport.orbit;
       const arrowKey = [frame.revision, viewport.width, viewport.height, camera.yaw, camera.pitch, camera.distance, camera.target.x, camera.target.y, camera.target.z].join('|');
       const transformArrows = arrowKey !== lastArrowTransforms || lastArrowStyle !== style;
       lastArrowTransforms = arrowKey; lastArrowStyle = style;
-      if (transformArrows || repaint) for (let index = 0; index < edgeIndices.length; index += 1) {
+      if (transformArrows) for (let index = 0; index < edgeIndices.length; index += 1) {
         const edge = edgeIndices[index]!;
-        if (transformArrows) {
-          const a = frame.positionOf(data.source[edge]!)!; const b = frame.positionOf(data.target[edge]!)!;
-          direction.set(b.x - a.x, b.y - a.y, b.z - a.z); const length = direction.length();
-          const projection = viewport.project(b);
-          const nodeRadius = projection ? (data.sizes?.[data.target[edge]!] ?? style.pointSize) / (2 * projection.scale) : 0;
-          const height = projection && style.lineWidth > 0 ? Math.min(Math.max(6, style.lineWidth * 3) / projection.scale, Math.max(0, length - nodeRadius)) : 0;
-          if (length) direction.divideScalar(length);
-          rotation.setFromUnitVectors(up, length ? direction : up);
-          point.set(b.x, b.y, b.z).addScaledVector(direction, -nodeRadius - height / 2);
-          scale.set(height * Math.tan(0.45), height, height * Math.tan(0.45)); matrix.compose(point, rotation, scale);
-          arrows.setMatrixAt(index, matrix); arrowPick.setMatrixAt(index, matrix);
-        }
-        if (repaint) arrows.setColorAt(index, graphItemColor(style, frame.state, data.nodeCount + edge, style.muted, color));
+        const a = frame.positionOf(data.source[edge]!)!; const b = frame.positionOf(data.target[edge]!)!;
+        direction.set(b.x - a.x, b.y - a.y, b.z - a.z); const length = direction.length();
+        const projection = viewport.project(b);
+        const nodeRadius = projection ? (data.sizes?.[data.target[edge]!] ?? style.pointSize) / (2 * projection.scale) : 0;
+        const height = projection && style.lineWidth > 0 ? Math.min(Math.max(6, style.lineWidth * 3) / projection.scale, Math.max(0, length - nodeRadius)) : 0;
+        if (length) direction.divideScalar(length);
+        rotation.setFromUnitVectors(up, length ? direction : up);
+        point.set(b.x, b.y, b.z).addScaledVector(direction, -nodeRadius - height / 2);
+        scale.set(height * Math.tan(0.45), height, height * Math.tan(0.45)); matrix.compose(point, rotation, scale);
+        arrows.setMatrixAt(index, matrix); arrowPick.setMatrixAt(index, matrix);
       }
       if (transformArrows) { arrows.instanceMatrix.needsUpdate = true; arrowPick.instanceMatrix.needsUpdate = true; }
-      if (repaint && arrows.instanceColor) arrows.instanceColor.needsUpdate = true;
+      if (repaint) {
+        const rows = changedEdges?.flatMap(edge => { const row = arrowRows.get(edge); return row === undefined ? [] : [row]; });
+        const paint = (index: number) => arrows.setColorAt(index, graphItemColor(style, frame.state, data.nodeCount + edgeIndices[index]!, style.muted, color, paintColor));
+        if (rows === undefined) for (let index = 0; index < edgeIndices.length; index++) paint(index);
+        else for (const index of rows) paint(index);
+        if (arrows.instanceColor) {
+          if (rows === undefined) markAttributeFull(arrows.instanceColor); else markAttributeRows(arrows.instanceColor, rows);
+        }
+      }
       const enabled = !style.reducedMotion && !style.forcedColors && style.lineWidth > 0;
       particles.visible = enabled;
       if (enabled && previousTime !== undefined && Number.isFinite(frame.time)) phase = (phase + Math.max(0, Math.min(100, frame.time - previousTime)) * (data.particleSpeed ?? 0.25) / 1000) % 1;
@@ -221,10 +239,17 @@ export function createGraphDecorations(viewport: Lyra3dViewport, data: Decoratio
         const projection = viewport.project(point);
         const radius = projection && (data.spatialAppearance || a.x !== b.x || a.y !== b.y || a.z !== b.z) && (data.spatialAppearance?.edgeWidths?.[edge] ?? style.lineWidth) > 0 && (data.spatialAppearance?.edgeColors?.[edge * 4 + 3] ?? 1) > 0 ? Math.max(2, style.lineWidth) / projection.scale : 0;
         rotation.identity(); scale.setScalar(radius); matrix.compose(point, rotation, scale); particles.setMatrixAt(index, matrix);
-        if (repaint) particles.setColorAt(index, graphItemColor(style, frame.state, data.nodeCount + edge, style.accent, color));
       }
       if (enabled) particles.instanceMatrix.needsUpdate = true;
-      if (repaint && particles.instanceColor) particles.instanceColor.needsUpdate = true;
+      if (enabled && repaint) {
+        const rows = changedEdges?.flatMap(edge => Array.from({ length: Math.max(0, Math.min(perEdge, particleCount - edge * perEdge)) }, (_, offset) => edge * perEdge + offset));
+        const paint = (index: number) => particles.setColorAt(index, graphItemColor(style, frame.state, data.nodeCount + Math.floor(index / perEdge), style.accent, color, paintColor));
+        if (rows === undefined) for (let index = 0; index < particleCount; index++) paint(index);
+        else for (const index of rows) paint(index);
+        if (particles.instanceColor) {
+          if (rows === undefined) markAttributeFull(particles.instanceColor); else markAttributeRows(particles.instanceColor, rows);
+        }
+      }
       drawLabels(frame);
       return enabled && particleCount > 0 && (data.particleSpeed ?? 0.25) > 0;
     },

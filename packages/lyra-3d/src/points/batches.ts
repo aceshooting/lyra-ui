@@ -3,6 +3,9 @@ import type { Lyra3dState } from '../core/contract.js';
 import { createPickColors } from '../core/picking.js';
 import type { ResolvedLyra3dStyle } from '../core/style.js';
 import type { AdmittedPointsData } from './data.js';
+import { markAttributeFull, markAttributeRows } from '../core/attribute-updates.js';
+import type { VisualStateRows } from '../core/visual-state.js';
+import { createPaintColors, type PaintColors } from '../core/paint-colors.js';
 
 function quads(count: number): InstancedBufferGeometry {
   const plane = new PlaneGeometry(2, 2);
@@ -61,27 +64,41 @@ export function createPointBatch(data: AdmittedPointsData) {
     pickMaterial.uniformsNeedUpdate = true;
   };
   const color = new Color();
+  const pointColors = geometry.getAttribute('pointColor') as InstancedBufferAttribute;
+  const paintRow = (row: number, style: ResolvedLyra3dStyle, state: Lyra3dState, paintColor: PaintColors) => {
+    const override = state.focus === row ? style.focus : state.selected.has(row) || state.hover === row ? style.accent : style.forcedColors ? style.foreground : undefined;
+    if (data.colors && !override) {
+      // Loader colors already use linear-sRGB; only style colors need the input transfer.
+      color.setRGB(data.colors[row * 3]!, data.colors[row * 3 + 1]!, data.colors[row * 3 + 2]!, LinearSRGBColorSpace);
+    } else {
+      const value = override ?? style.palette[(data.categories?.[row] ?? 0) % style.palette.length]!;
+      paintColor(value, color);
+    }
+    if (!style.forcedColors && state.dimmed.has(row)) color.multiplyScalar(0.3);
+    pointColors.setXYZ(row, color.r, color.g, color.b);
+  };
   return {
     mesh, pick,
     resize(width: number, height: number) { viewportSize.set(Math.max(1, width), Math.max(1, height)); },
     paint(style: ResolvedLyra3dStyle, state: Lyra3dState) {
+      const paintColor = createPaintColors(style);
       const colors = geometry.getAttribute('pointColor') as InstancedBufferAttribute;
       const sizes = geometry.getAttribute('pointSize') as InstancedBufferAttribute;
       for (let row = 0; row < count; row += 1) {
-        const override = state.focus === row ? style.focus : state.selected.has(row) || state.hover === row ? style.accent : style.forcedColors ? style.foreground : undefined;
-        if (data.colors && !override) {
-          // Loader vertex colors already use linear-sRGB; the fragment output applies the display
-          // transfer. Applying the style's sRGB input transfer here would darken them twice.
-          color.setRGB(data.colors[row * 3]!, data.colors[row * 3 + 1]!, data.colors[row * 3 + 2]!, LinearSRGBColorSpace);
-        } else {
-          const value = override ?? style.palette[(data.categories?.[row] ?? 0) % style.palette.length]!;
-          color.setRGB(value.r, value.g, value.b, SRGBColorSpace);
-        }
-        if (!style.forcedColors && state.dimmed.has(row)) color.multiplyScalar(0.3);
-        colors.setXYZ(row, color.r, color.g, color.b);
+        paintRow(row, style, state, paintColor);
         if (!data.sizes) sizes.setX(row, style.pointSize);
       }
-      colors.needsUpdate = true; if (!data.sizes) sizes.needsUpdate = true;
+      markAttributeFull(colors); if (!data.sizes) markAttributeFull(sizes);
+    },
+    paintState(style: ResolvedLyra3dStyle, state: Lyra3dState, rows: VisualStateRows) {
+      const paintColor = createPaintColors(style);
+      if (rows === null) {
+        for (let row = 0; row < count; row++) paintRow(row, style, state, paintColor);
+        markAttributeFull(pointColors);
+      } else {
+        for (const row of rows) if (Number.isInteger(row) && row >= 0 && row < count) paintRow(row, style, state, paintColor);
+        markAttributeRows(pointColors, rows);
+      }
     },
     dispose() { mesh.removeFromParent(); pick.removeFromParent(); material.dispose(); pickMaterial.dispose(); geometry.dispose(); },
   };

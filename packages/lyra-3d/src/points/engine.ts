@@ -6,6 +6,7 @@ import { admitPointsData, type AdmittedPointsData } from './data.js';
 import { createLineBatch, createPointBatch } from './batches.js';
 import { createPointsLabels, pointsAxes } from './axes.js';
 import type { PointsEngine } from './types.js';
+import { snapshotVisualState } from '../core/visual-state.js';
 
 export interface PointsEngineServices { viewport?: typeof createLyra3dViewport; labelCanvas?: () => HTMLCanvasElement }
 
@@ -77,7 +78,13 @@ export function createPointsEngine(services: PointsEngineServices = {}): PointsE
       data = admitted; revision = nextRevision; camera = constrain(viewport?.orbit ?? camera); viewport?.setOrbit(camera); build();
     },
     setStyle(next) { if (!disposed) { style = next; viewport?.setStyle(next); paint(); } },
-    setState(next) { if (!disposed) { state = { ...next, selected: new Set(next.selected), dimmed: new Set(next.dimmed) }; paint(); } },
+    setState(next) {
+      if (disposed) return;
+      const update = snapshotVisualState(next, state, (data?.positions.length ?? 0) / 3);
+      if (!update.changed) return;
+      state = update.state;
+      if (viewport) { points?.paintState(viewport.style, state, update.rows); frame(); viewport.invalidate(); }
+    },
     setCamera(next) { if (!disposed) { camera = constrain(next); viewport?.setOrbit(camera); } },
     fit(padding) {
       const positions = data?.positions ?? new Float32Array();

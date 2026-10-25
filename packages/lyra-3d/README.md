@@ -35,9 +35,30 @@ not fetch media or create a second player. The model engine accepts model bytes,
 external resources before parsing, and enforces the exported `MODEL_LIMITS`. Its `admitModel()`
 helper reports admission failures through `ModelAdmissionError`; it does not fetch URLs.
 
+The model engine also exposes `setDataAsync(data, revision, { signal }?)`, which always returns
+a Promise. It snapshots the bytes synchronously, then prepares and validates the model with
+bounded work, using a module worker when available and a main-thread fallback otherwise.
+The Promise resolves after atomic installation, or after storing the owned candidate when called
+before mounting. Preparation failure or cancellation retains the previously installed model.
+Snapshot copying, native image decoding and GPU upload are separate costs; the Promise does not
+make those native operations interruptible.
+Bounded scheduling improves opportunities to handle input and cancellation; it does not guarantee
+lower total loading time. Owned snapshots and validation also contribute to allocation and garbage
+collection costs, particularly for large binary inputs.
+
+`setData` and `admitModel` retain their synchronous admission errors. For `setDataAsync`, an
+invalid input envelope or revision rejects without reserving a revision. Once the input snapshot
+is accepted, the revision is reserved even if deeper validation later fails or the operation is
+aborted. Retrying then requires a higher revision. Replacement, abort and disposal reject pending
+async operations with `AbortError`; current preparation failures also use the existing host error
+notification. Hosts supporting older companion versions should check whether `setDataAsync` is
+callable and otherwise use `setData`.
+
 PLY headers must use consistent LF or CRLF line endings, exact `ply` and `end_header` lines,
 and no lone carriage returns. Header comments and metadata must not contain `end_header` text.
-Both binary byte orders and ASCII bodies are supported. OBJ
+Both binary byte orders and ASCII bodies are supported. Double-precision mesh attributes are
+rounded to finite Float32 values in bounded work before GPU installation. Values outside that
+range are rejected without replacing the current model. OBJ
 point (`p`) and line (`l`) records require single ASCII spaces between the directive and
 references; repeated internal spaces and tabs are rejected. Positive and negative references
 remain supported. These restrictions keep admission and format-loader token boundaries aligned.

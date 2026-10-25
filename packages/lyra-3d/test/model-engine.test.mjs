@@ -12,7 +12,17 @@ const input = () => ({ format: 'obj', bytes: utf8('v 0 0 0\nv 1 0 0\nv 0 1 0\nf 
 const wait = () => new Promise((resolve) => setImmediate(resolve));
 async function model() { const data = input(); return parseModel(admitModel(data.bytes, data.format)); }
 function harness(delayed = false) {
-  const events = []; const pending = []; const frames = new Set(); let callbacks; let options; let releases = 0;
+  const events = []; const pending = []; const frames = new Set(); const loadWaiters = new Set(); let completed = 0; let callbacks; let options; let releases = 0;
+  const whenLoaded = (count = 1) => {
+    if (completed >= count) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const finish = error => { clearTimeout(timer); loadWaiters.delete(waiter); if (error) reject(error); else resolve(); };
+      const waiter = { count, finish };
+      const timer = setTimeout(() => finish(new Error(`Expected host completion ${count}; observed ${completed}`)), 5000);
+      loadWaiters.add(waiter);
+      if (events.some(event => event[0] === 'lost' && event[1] === 'error')) finish(new Error('Model failed before load completion'));
+    });
+  };
   const world = new Group(); world.scale.y = -1; const scene = new Scene(); scene.add(world);
   const viewport = { world, scene, pickWorld: new Group(), canvas: {}, width: 640, height: 480, camera: new PerspectiveCamera(45, 640 / 480, 0.01, 1e8),
     orbit: DEFAULT_ORBIT_CAMERA, style: resolveLyra3dStyle(), lost: false, disposed: false,
@@ -23,14 +33,14 @@ function harness(delayed = false) {
     project(point) { return projectOrbitPoint(point, this.orbit, this); }, dispose() { releases++; this.disposed = true; },
   };
   viewport.setOrbit(DEFAULT_ORBIT_CAMERA);
-  const host = { progress(loaded, total) { events.push(['progress', loaded, total]); }, hover(value) { events.push(['hover', value]); }, pick(value) { events.push(['pick', value]); }, camera(value) { events.push(['camera', value]); }, lost(reason, detail) { events.push(['lost', reason, detail]); }, restored() { events.push(['restored']); }, rendering(value) { events.push(['rendering', value]); } };
+  const host = { progress(loaded, total) { events.push(['progress', loaded, total]); completed++; for (const waiter of [...loadWaiters]) if (completed >= waiter.count) waiter.finish(); }, hover(value) { events.push(['hover', value]); }, pick(value) { events.push(['pick', value]); }, camera(value) { events.push(['camera', value]); }, lost(reason, detail) { events.push(['lost', reason, detail]); if (reason === 'error') for (const waiter of [...loadWaiters]) waiter.finish(new Error(`Model load failed: ${detail}`)); }, restored() { events.push(['restored']); }, rendering(value) { events.push(['rendering', value]); } };
   const services = { viewport(_container, nextHost, nextOptions) { callbacks = nextHost; options = nextOptions; return viewport; } };
   if (delayed) services.parse = (receipt, options) => new Promise((resolve, reject) => pending.push({ receipt, options, resolve, reject }));
   const engine = createModelEngine(services);
-  return { engine, host, events, pending, viewport, frames, callbacks: () => callbacks, options: () => options, releases: () => releases };
+  return { engine, host, events, pending, viewport, frames, whenLoaded, callbacks: () => callbacks, options: () => options, releases: () => releases };
 }
 
-test('model engine admits synchronously and preserves its prior scene on invalid or failed replacement', async () => {
+test('model engine admits synchronously and preserves its prior scene on invalid or failed replacement', { timeout: 5000 }, async () => {
   const h = harness(true); await h.engine.mount({}, h.host);
   const first = await model(); h.engine.setData(input(), 0); h.pending[0].resolve(first); await wait();
   assert.equal(first.object.parent, h.viewport.world);
@@ -41,7 +51,7 @@ test('model engine admits synchronously and preserves its prior scene on invalid
   h.engine.dispose(); assert.equal(h.releases(), 1);
 });
 
-test('obsolete and disconnected parser completions dispose without replacing current data or emitting failures', async () => {
+test('obsolete and disconnected parser completions dispose without replacing current data or emitting failures', { timeout: 5000 }, async () => {
   const h = harness(true); await h.engine.mount({}, h.host);
   const obsolete = await model(); let obsoleteDisposed = 0; obsolete.object.children[0].geometry.addEventListener('dispose', () => obsoleteDisposed++);
   h.engine.setData(input(), 0); h.engine.setData(input(), 1); assert.equal(h.pending[0].options.signal.aborted, true);
@@ -52,8 +62,8 @@ test('obsolete and disconnected parser completions dispose without replacing cur
   assert.equal(lateDisposed, 1); assert.equal(h.releases(), 1); assert.equal(h.events.filter((event) => event[0] === 'lost').length, 0);
 });
 
-test('mesh fit, focus, selection and context restoration preserve owned model state', async () => {
-  const h = harness(); h.engine.setData(input(), 0); await wait(); await h.engine.mount({}, h.host); await wait();
+test('mesh fit, focus, selection and context restoration preserve owned model state', { timeout: 5000 }, async () => {
+  const h = harness(); h.engine.setData(input(), 0); await h.engine.mount({}, h.host); await h.whenLoaded();
   assert.deepEqual(h.engine.positionOf(0), { x: 0.5, y: 0.5, z: 0 }); assert.equal(h.engine.positionOf(1), null);
   const camera = h.engine.fit(); assert.deepEqual(camera.target, { x: 0.5, y: 0.5, z: 0 });
   assert.deepEqual(h.engine.focus(0).target, camera.target); assert.ok(h.engine.project(0));
@@ -65,26 +75,26 @@ test('mesh fit, focus, selection and context restoration preserve owned model st
   h.engine.dispose(); assert.equal(h.frames.size, 0);
 });
 
-test('pure point clouds delegate row picking and linear colors without disposing the shared viewport', async () => {
+test('pure point clouds delegate row picking and linear colors without disposing the shared viewport', { timeout: 5000 }, async () => {
   const h = harness(); await h.engine.mount({}, h.host);
-  h.engine.setData({ format: 'xyz', bytes: utf8('0 0 0 128 128 128\n1 2 3 255 0 0\n') }, 0); await wait();
+  h.engine.setData({ format: 'xyz', bytes: utf8('0 0 0 128 128 128\n1 2 3 255 0 0\n') }, 0); await h.whenLoaded();
   assert.deepEqual(h.engine.positionOf(1), { x: 1, y: 2, z: 3 }); assert.equal(h.engine.pick(0, 0), 1);
   const pointMesh = h.viewport.world.children.find((child) => child.geometry?.getAttribute('pointColor'));
   assert.ok(pointMesh); assert.ok(Math.abs(pointMesh.geometry.getAttribute('pointColor').array[0] - 0.2158605) < 1e-6);
   let pointsDisposed = 0; pointMesh.geometry.addEventListener('dispose', () => pointsDisposed++);
-  h.engine.setData(input(), 1); await wait(); assert.equal(pointsDisposed, 1); assert.equal(h.releases(), 0);
+  h.engine.setData(input(), 1); await h.whenLoaded(2); assert.equal(pointsDisposed, 1); assert.equal(h.releases(), 0);
   h.engine.dispose(); assert.equal(h.releases(), 1);
 });
 
-test('camera and revision writes stay silent and mount/dispose lifecycle is bounded', async () => {
+test('camera and revision writes stay silent and mount/dispose lifecycle is bounded', { timeout: 5000 }, async () => {
   const h = harness(); h.engine.setCamera({ ...DEFAULT_ORBIT_CAMERA, distance: 100 }); await h.engine.mount({}, h.host);
-  h.engine.setData(input(), 0); await wait(); assert.equal(h.viewport.orbit.distance, 100);
+  h.engine.setData(input(), 0); await h.whenLoaded(); assert.equal(h.viewport.orbit.distance, 100);
   assert.throws(() => h.engine.setData(input(), 0)); assert.throws(() => h.engine.setData(input(), NaN));
   await assert.rejects(h.engine.mount({}, h.host)); assert.equal(h.events.filter((event) => event[0] === 'camera').length, 0);
   h.engine.dispose(); h.engine.setData(input(), 1); assert.equal(h.releases(), 1);
 });
 
-test('indexed glTF point clouds preserve index order and linear material tint', async () => {
+test('indexed glTF point clouds preserve index order and linear material tint', { timeout: 5000 }, async () => {
   const h = harness(); await h.engine.mount({}, h.host);
   const bytes = new Uint8Array(26); bytes.set(new Uint8Array(new Float32Array([1, 2, 3, 4, 5, 6]).buffer)); bytes.set([1, 0], 24);
   const json = {
@@ -94,7 +104,7 @@ test('indexed glTF point clouds preserve index order and linear material tint', 
     materials: [{ pbrMetallicRoughness: { baseColorFactor: [0.5, 0.25, 1, 1] } }],
     meshes: [{ primitives: [{ attributes: { POSITION: 0 }, indices: 1, mode: 0, material: 0 }] }], nodes: [{ mesh: 0 }], scenes: [{ nodes: [0] }], scene: 0,
   };
-  h.engine.setData({ format: 'gltf', bytes: utf8(JSON.stringify(json)) }, 0); await wait();
+  h.engine.setData({ format: 'gltf', bytes: utf8(JSON.stringify(json)) }, 0); await h.whenLoaded();
   assert.deepEqual(h.engine.positionOf(0), { x: 4, y: 5, z: 6 }); assert.deepEqual(h.engine.positionOf(1), { x: 1, y: 2, z: 3 });
   const mesh = h.viewport.world.children.find((child) => child.geometry?.getAttribute('pointColor'));
   assert.ok(mesh); assert.deepEqual(Array.from(mesh.geometry.getAttribute('pointColor').array.slice(0, 3)), [0.5, 0.25, 1]);
@@ -102,7 +112,7 @@ test('indexed glTF point clouds preserve index order and linear material tint', 
 });
 
 
-test('pre-mount asynchronous failure reaches the eventual host and a newer revision clears it', async () => {
+test('pre-mount asynchronous failure reaches the eventual host and a newer revision clears it', { timeout: 5000 }, async () => {
   const h = harness(true); h.engine.setData(input(), 0); h.pending[0].reject(new Error('Early failure')); await wait();
   await h.engine.mount({}, h.host);
   assert.deepEqual(h.events.filter((event) => event[0] === 'lost'), [['lost', 'error', 'model-parse-failed']]); h.engine.dispose();
@@ -111,13 +121,13 @@ test('pre-mount asynchronous failure reaches the eventual host and a newer revis
   assert.equal(fresh.events.filter((event) => event[0] === 'lost').length, 0); fresh.engine.dispose();
 });
 
-test('lit meshes retain neutral illumination for black foreground styles', async () => {
+test('lit meshes retain neutral illumination for black foreground styles', { timeout: 5000 }, async () => {
   const h = harness(); await h.engine.mount({}, h.host); h.engine.setStyle({ ...DEFAULT_LYRA_3D_STYLE, foreground: '#000000' });
   for (const light of h.viewport.scene.children.filter((child) => child.isLight)) assert.deepEqual(light.color.toArray(), [1, 1, 1]);
   h.engine.dispose();
 });
 
-test('mounting an older point model cannot overwrite a queued newer mesh completion', async () => {
+test('mounting an older point model cannot overwrite a queued newer mesh completion', { timeout: 5000 }, async () => {
   const h = harness(true); const points = await parseModel(admitModel(utf8('5 6 7\n'), 'xyz'));
   h.engine.setData(input(), 0); h.pending[0].resolve(points); await wait();
   const mesh = await model(); h.engine.setData(input(), 1); h.pending[1].resolve(mesh);
@@ -126,8 +136,8 @@ test('mounting an older point model cannot overwrite a queued newer mesh complet
   assert.equal(h.viewport.world.children.some((child) => child.geometry?.getAttribute('pointColor')), false); h.engine.dispose();
 });
 
-test('immediate mesh picking uses the current logical camera before a viewport render', async () => {
-  const h = harness(); await h.engine.mount({}, h.host); h.engine.setData(input(), 0); await wait();
+test('immediate mesh picking uses the current logical camera before a viewport render', { timeout: 5000 }, async () => {
+  const h = harness(); await h.engine.mount({}, h.host); h.engine.setData(input(), 0); await h.whenLoaded();
   h.viewport.setOrbit = function (value) { this.orbit = value; };
   h.engine.setCamera({ yaw: 0, pitch: 0, distance: 4, target: { x: 0.2, y: 0.2, z: 0 } });
   assert.equal(h.engine.pick(320, 240), 0);
@@ -135,7 +145,7 @@ test('immediate mesh picking uses the current logical camera before a viewport r
   assert.equal(h.engine.pick(320, 240), null); h.engine.dispose();
 });
 
-test('indexed point expansion above the row cap stays a bounded standard drawable', async () => {
+test('indexed point expansion above the row cap stays a bounded standard drawable', { timeout: 5000 }, async () => {
   const h = harness(true); await h.engine.mount({}, h.host);
   const points = await parseModel(admitModel(utf8('5 6 7\n'), 'xyz')); points.object.geometry.setIndex([0]);
   points.object.geometry.index.count = 1_000_001;
@@ -144,7 +154,7 @@ test('indexed point expansion above the row cap stays a bounded standard drawabl
   assert.equal(h.events.filter((event) => event[0] === 'lost').length, 0); h.engine.dispose();
 });
 
-test('state overrides ignore authored paint channels and dispose every shared-image texture alias', async () => {
+test('state overrides ignore authored paint channels and dispose every shared-image texture alias', { timeout: 5000 }, async () => {
   const original = { bitmap: globalThis.createImageBitmap, self: globalThis.self }; let closed = 0;
   globalThis.self = globalThis; globalThis.createImageBitmap = async () => ({ width: 1, height: 1, close() { closed++; } });
   const h = harness();
@@ -161,7 +171,7 @@ test('state overrides ignore authored paint channels and dispose every shared-im
       meshes: [0, 1].map((material) => ({ primitives: [{ attributes: { POSITION: 0, COLOR_0: 1 }, material }] })),
       nodes: [{ mesh: 0 }, { mesh: 1, translation: [2, 0, 0] }], scenes: [{ nodes: [0, 1] }], scene: 0,
     };
-    h.engine.setData({ format: 'gltf', bytes: utf8(JSON.stringify(json)) }, 0); await wait();
+    h.engine.setData({ format: 'gltf', bytes: utf8(JSON.stringify(json)) }, 0); await h.whenLoaded();
     const meshes = []; h.viewport.world.traverse((object) => { if (object.isMesh) meshes.push(object); }); assert.equal(meshes.length, 2);
     const materials = meshes.map((mesh) => mesh.material); const maps = new Set(materials.map((material) => material.map)); assert.equal(maps.size, 2);
     const disposals = new Map(); for (const map of maps) map.addEventListener('dispose', () => disposals.set(map, (disposals.get(map) ?? 0) + 1));
@@ -181,13 +191,13 @@ test('state overrides ignore authored paint channels and dispose every shared-im
 });
 
 
-test('a pre-mount successful parse reports completion once after mounting', async () => {
+test('a pre-mount successful parse reports completion once after mounting', { timeout: 5000 }, async () => {
   const h = harness(true); h.engine.setData(input(), 0); h.pending[0].resolve(await model()); await wait();
   assert.equal(h.events.length, 0); await h.engine.mount({}, h.host);
   assert.equal(h.events.filter((event) => event[0] === 'progress').length, 1); h.engine.dispose();
 });
 
-test('glTF point vertex alpha and transparency remain on standard point materials', async () => {
+test('glTF point vertex alpha and transparency remain on standard point materials', { timeout: 5000 }, async () => {
   const h = harness(); await h.engine.mount({}, h.host);
   const bytes = new Uint8Array(new Float32Array([1, 2, 3, 1, 0, 0, 0]).buffer);
   const json = {
@@ -197,7 +207,7 @@ test('glTF point vertex alpha and transparency remain on standard point material
     materials: [{ alphaMode: 'BLEND' }], meshes: [{ primitives: [{ attributes: { POSITION: 0, COLOR_0: 1 }, material: 0, mode: 0 }] }],
     nodes: [{ mesh: 0 }], scenes: [{ nodes: [0] }], scene: 0,
   };
-  h.engine.setData({ format: 'gltf', bytes: utf8(JSON.stringify(json)) }, 0); await wait();
+  h.engine.setData({ format: 'gltf', bytes: utf8(JSON.stringify(json)) }, 0); await h.whenLoaded();
   const points = []; h.viewport.world.traverse((object) => { if (object.isPoints) points.push(object); });
   assert.equal(points.length, 1); assert.equal(points[0].geometry.getAttribute('color').getW(0), 0);
   assert.equal(points[0].material.transparent, true); assert.equal(h.viewport.world.children.some((child) => child.geometry?.getAttribute('pointColor')), false); h.engine.dispose();

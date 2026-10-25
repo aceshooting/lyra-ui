@@ -17,6 +17,7 @@ import { cleanupGraphSpatial, graphSpatialCases } from './graph-spatial.mjs';
 import { cleanupPoints, pointsCases, pointsPointerCases, pointsPointerCheckpoint, pointsGpuCases } from './points.mjs';
 import { cleanupPanorama, panoramaCases, panoramaPointerCases, panoramaPointerCheckpoint } from './panorama.mjs';
 import { cleanupModel, modelCases } from './model.mjs';
+import { cleanupModelAsync, modelAsyncCases, runModelAsyncCase } from './model-async.mjs';
 
 const WIDTH = 480;
 const HEIGHT = 320;
@@ -123,7 +124,7 @@ const cleanup = () => {
   active = undefined;
   let failed = false;
   let failure;
-  for (const release of [() => old?.viewport.dispose(), cleanupViewport, cleanupGraph, cleanupGraphSpatial, cleanupPoints, cleanupPanorama, cleanupModel]) {
+  for (const release of [() => old?.viewport.dispose(), cleanupViewport, cleanupGraph, cleanupGraphSpatial, cleanupPoints, cleanupPanorama, cleanupModel, cleanupModelAsync]) {
     try { release(); } catch (error) { if (!failed) { failed = true; failure = error; } }
   }
   if (failed) throw failure;
@@ -393,6 +394,7 @@ const pointerCases = {
   },
 };
 
+Object.assign(cases, Object.fromEntries(modelAsyncCases.map(name => [`model-async:${name}`, async () => ({ model: await runModelAsyncCase(name), passed: true })])));
 Object.assign(cases, viewportCases, graphCases, graphSpatialCases, pointsCases, panoramaCases, modelCases);
 Object.assign(performanceCases, pointsGpuCases);
 Object.assign(pointerCases, viewportPointerCases, graphPointerCases, pointsPointerCases, panoramaPointerCases);

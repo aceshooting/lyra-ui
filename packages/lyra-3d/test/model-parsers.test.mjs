@@ -113,9 +113,12 @@ test('embedded texture handler prevents fetches and closes decoded images on dis
 
 test('aborting during image decode closes the late bitmap without constructing a model', async () => {
   const original = globalThis.createImageBitmap; let complete; let closed = 0;
-  globalThis.createImageBitmap = () => new Promise((resolve) => { complete = resolve; });
+  let entered;
+  const decoding = new Promise(resolve => { entered = resolve; });
+  globalThis.createImageBitmap = () => new Promise((resolve) => { complete = resolve; entered(); });
   try {
     const controller = new AbortController(); const parsing = parseModel(texturedTriangle(), { signal: controller.signal });
+    await decoding;
     controller.abort(); complete({ width: 1, height: 1, close() { closed++; } });
     await assert.rejects(parsing, { name: 'AbortError' }); assert.equal(closed, 1);
   } finally { if (original === undefined) delete globalThis.createImageBitmap; else globalThis.createImageBitmap = original; }

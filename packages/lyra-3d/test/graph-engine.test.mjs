@@ -206,7 +206,7 @@ test('spatial appearance preserves node/edge IDs and invalid replacements retain
   engine.setData(data(), 1); assert.equal(old.stopped, true); assert.equal(nodes.parent, null); engine.dispose();
 });
 
-test('spatial camera frames update uniforms only; positions and paint state rewrite attributes', async () => {
+test('spatial camera frames update uniforms only; positions and paint have separate invalidations', async () => {
   const { engine, viewport, host } = harness();
   engine.setData({ ...data(), directed: new Uint8Array([1]), spatialAppearance: { edgeColors: new Float32Array([1, 0, 0, 0.5]) } }, 0); await engine.mount({}, host);
   const edge = viewport.pickWorld.children.find((mesh) => mesh.geometry.getAttribute('stroke'));
@@ -222,10 +222,28 @@ test('spatial camera frames update uniforms only; positions and paint state rewr
   assert.deepEqual(composite.material.uniforms.viewWindow.value.toArray(), [0, 0, 320, 200]);
   engine.setCamera({ ...DEFAULT_ORBIT_CAMERA, yaw: 1 }); viewport.tick(3);
   assert.deepEqual(versions().slice(0, 4), before.slice(0, 4)); assert.ok(versions()[4] > before[4], 'translucent strokes re-sort after a material turn');
+  const turned = versions();
+  const fill = nodes.geometry.getAttribute('nodeFill').array.slice();
+  const stroke = edge.geometry.getAttribute('stroke').array.slice();
   engine.setPins({ indices: new Uint32Array([0]), positions: new Float32Array([7, 8, 9]), pinned: new Uint8Array([1]) }); viewport.tick(4);
-  assert.ok(versions().every((value, index) => value > before[index])); assert.equal(nodes.geometry.getAttribute('nodePosition').getX(0), 7);
+  const moved = versions();
+  for (const index of [0, 2, 4]) assert.ok(moved[index] > turned[index], 'pinning uploads endpoints, node positions and composite positions');
+  for (const index of [1, 3]) assert.equal(moved[index], turned[index], 'position changes leave stroke and fill uploads intact');
+  assert.deepEqual(Array.from(nodes.geometry.getAttribute('nodePosition').array), [7, 8, 9, 10, 0, 0]);
+  assert.deepEqual(Array.from(edge.geometry.getAttribute('edgeStart').array), [7, 8, 9, 7, 8, 9]);
+  assert.deepEqual(nodes.geometry.getAttribute('nodeFill').array, fill);
+  assert.deepEqual(edge.geometry.getAttribute('stroke').array, stroke);
+  const payload = composite.geometry.getAttribute('payload0'), kind = composite.geometry.getAttribute('payload4');
+  const drawnNode = Array.from({ length: composite.geometry.instanceCount }, (_, row) => row)
+    .find(row => kind.getW(row) >= 0 && payload.getX(row) === 7 && payload.getY(row) === 8 && payload.getZ(row) === 9);
+  assert.notEqual(drawnNode, undefined, 'the final draw payload contains the pinned node');
+  const flags = nodes.geometry.getAttribute('nodeFlags'), drawFlags = composite.geometry.getAttribute('payload1');
+  const flagVersion = flags.version, drawFlagVersion = drawFlags.version;
   const pinned = versions(); engine.setState({ selected: new Set([0]), dimmed: new Set(), hover: -1, focus: -1 });
-  assert.ok(versions()[3] > pinned[3]); assert.equal(nodes.geometry.getAttribute('nodeFlags').getX(0), 1);
+  assert.deepEqual(versions(), pinned, 'selection preserves geometry, endpoints, stroke and base fill');
+  assert.ok(flags.version > flagVersion); assert.deepEqual([flags.getX(0), flags.getX(1)], [1, 0]);
+  assert.ok(drawFlags.version > drawFlagVersion); assert.equal(drawFlags.getY(drawnNode), 1, 'the selected ring flag reaches the final draw payload');
+  assert.deepEqual(nodes.geometry.getAttribute('nodeFill').array, fill);
   engine.dispose();
 });
 

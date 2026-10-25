@@ -62,6 +62,8 @@ async function mount(input = data(), extraStyle = {}) {
 async function pixels(record, selected = record.selected) {
   record.selected = selected;
   record.engine.setState(state(selected));
+  // Equal state can be a no-op. Explicitly redraw before reading the non-preserved framebuffer.
+  record.engine.resize(WIDTH, HEIGHT);
   return new Promise((resolve) => requestAnimationFrame(() => {
     const result = new Uint8Array(WIDTH * HEIGHT * 4);
     record.gl.readPixels(0, 0, WIDTH, HEIGHT, record.gl.RGBA, record.gl.UNSIGNED_BYTE, result);

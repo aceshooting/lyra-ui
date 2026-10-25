@@ -1,4 +1,7 @@
-import { DoubleSide, Color, InstancedBufferAttribute, InstancedBufferGeometry, Mesh, PerspectiveCamera, PlaneGeometry, ShaderMaterial, SRGBColorSpace, Vector2, Vector4 } from 'three';
+import { DoubleSide, Color, InstancedBufferAttribute, InstancedBufferGeometry, Mesh, PerspectiveCamera, PlaneGeometry, ShaderMaterial, Vector2, Vector4 } from 'three';
+import { markAttributeFull, markAttributeRows } from '../core/attribute-updates.js';
+import type { VisualStateRows } from '../core/visual-state.js';
+import { createPaintColors } from '../core/paint-colors.js';
 import type { Lyra3dState } from '../core/contract.js';
 import { LYRA_3D_WORLD_LIMIT } from '../core/orbit.js';
 import { createPickColors } from '../core/picking.js';
@@ -112,44 +115,86 @@ export function createGraphSpatialNodes(input: SpatialNodeData) {
     pickMaterial.uniformsNeedUpdate = true;
   };
   const color = new Color(); let disposed = false, translucent = false, revision = 0;
-  const setPaint = (target: InstancedBufferAttribute, index: number, value: Lyra3dRgba, alpha: number) => {
-    color.setRGB(value.r, value.g, value.b, SRGBColorSpace); target.setXYZW(index, color.r, color.g, color.b, value.a * alpha);
-  };
   const setView = (viewport: NodeView) => {
     const next = graphSpatialView(viewport.width, viewport.height, viewport.orbit);
     viewportSize.set(next.width, next.height); lyraView.set(next.width, next.height, next.near, next.far);
   };
+  const partialRows = new Uint8Array(count);
+  let partialCount = 0, fullChange = true, denseChange = false;
+  const changedRows = new Set<number>();
+  const paint = (viewport: NodeViewport, state: Lyra3dState, rows: VisualStateRows, full: boolean) => {
+    const style = viewport.style, dense = rows === null;
+    const paintColor = createPaintColors(style);
+    const dirty = new Map<InstancedBufferAttribute, number[]>();
+    const touched = new Set<InstancedBufferAttribute>();
+    const record = (buffer: InstancedBufferAttribute, row: number) => {
+      if (full) return;
+      touched.add(buffer);
+      if (dense) return;
+      const list = dirty.get(buffer) ?? []; list.push(row); dirty.set(buffer, list);
+      if (!fullChange && !denseChange) changedRows.add(row);
+    };
+    const write2 = (buffer: InstancedBufferAttribute, row: number, a: number, b: number) => {
+      const offset = row * 2;
+      if (!full && buffer.array[offset] === a && buffer.array[offset + 1] === b) return;
+      buffer.array[offset] = a; buffer.array[offset + 1] = b; record(buffer, row);
+    };
+    const writePaint = (buffer: InstancedBufferAttribute, row: number, value: Lyra3dRgba, alpha: number) => {
+      paintColor(value, color);
+      const offset = row * 4, r = Math.fround(color.r), g = Math.fround(color.g), b = Math.fround(color.b), a = Math.fround(value.a * alpha);
+      if (!full && buffer.array[offset] === r && buffer.array[offset + 1] === g && buffer.array[offset + 2] === b && buffer.array[offset + 3] === a) return;
+      buffer.array[offset] = r; buffer.array[offset + 1] = g; buffer.array[offset + 2] = b; buffer.array[offset + 3] = a; record(buffer, row);
+    };
+    const partial = (value: number) => value > 0 && value < 1;
+    for (let index = 0, length = rows?.length ?? count; index < length; index++) {
+      const row = rows === null ? index : rows[index]!;
+      if (!Number.isInteger(row) || row < 0 || row >= count) continue;
+      const selected = state.selected.has(row) || state.hover === row || state.focus === row;
+      const expanded = expandable?.[row] === 1;
+      const alpha = style.forcedColors || !state.dimmed.has(row) ? 1 : opacity;
+      const source = style.forcedColors ? style.foreground : colors ? { r: colors[row * 4]!, g: colors[row * 4 + 1]!, b: colors[row * 4 + 2]!, a: colors[row * 4 + 3]! } : style.palette[(categories?.[row] ?? 0) % style.palette.length]!;
+      const blends = partial(source.a * alpha) || (selected && partial(style.accent.a * alpha)) || (expanded && partial(style.foreground.a * alpha));
+      const nextPartial = blends ? 1 : 0;
+      partialCount += nextPartial - partialRows[row]!; partialRows[row] = nextPartial;
+      write2(flags, row, selected ? 1 : 0, expanded ? 1 : 0);
+      writePaint(fill, row, source, alpha); writePaint(ring, row, style.accent, alpha); writePaint(marker, row, style.foreground, alpha);
+    }
+    translucent = partialCount > 0;
+    if (material.transparent !== translucent) { material.transparent = translucent; material.needsUpdate = true; }
+    material.depthWrite = !translucent;
+    if (full) for (const buffer of [flags, fill, ring, marker]) markAttributeFull(buffer);
+    else if (dense) for (const buffer of touched) markAttributeFull(buffer);
+    else for (const [buffer, changed] of dirty) markAttributeRows(buffer, changed);
+    if (full) { fullChange = true; denseChange = false; changedRows.clear(); }
+    else if (dense && touched.size && !fullChange) { denseChange = true; changedRows.clear(); }
+    if (touched.size || full) revision++;
+  };
+  const updatePositions = (viewport: NodeView, positions: Float32Array) => {
+    if (!(positions instanceof Float32Array) || positions.length !== count * 3 || !positions.every((value) => Number.isFinite(value) && Math.abs(value) <= LYRA_3D_WORLD_LIMIT)) throw new RangeError('Invalid spatial node positions');
+    setView(viewport); (position.array as Float32Array).set(positions); markAttributeFull(position); fullChange = true; revision++;
+  };
+  const updateStyle = (viewport: NodeViewport, state: Lyra3dState) => {
+    setView(viewport); shared.markerArm.value = Math.max(3, viewport.style.fontSize / 4);
+    for (let row = 0; row < count; row++) size.setX(row, (sizes?.[row] ?? viewport.style.pointSize) / 2);
+    markAttributeFull(size); paint(viewport, state, null, true);
+  };
   return {
     mesh, pick,
-    /** True when any glyph blends; the composite then paints in back-to-front order. */
     get translucent() { return translucent; },
-    /** Increases with every attribute rewrite. */
     get revision() { return revision; },
-    /** Camera and viewport changes only touch uniforms. */
+    takeChanges(): { full: boolean; rows: VisualStateRows } {
+      const result = { full: fullChange, rows: fullChange ? [] : denseChange ? null : [...changedRows] };
+      fullChange = false; denseChange = false; changedRows.clear(); return result;
+    },
     setView(viewport: NodeView) { if (!disposed) setView(viewport); },
+    updatePositions(viewport: NodeView, positions: Float32Array) { if (!disposed) updatePositions(viewport, positions); },
+    updateStyle(viewport: NodeViewport, state: Lyra3dState) { if (!disposed) updateStyle(viewport, state); },
+    updateState(viewport: NodeViewport, state: Lyra3dState, rows: VisualStateRows) { if (!disposed) paint(viewport, state, rows, false); },
     update(viewport: NodeViewport, positions: Float32Array, state: Lyra3dState) {
       if (disposed) return;
-      if (!(positions instanceof Float32Array) || positions.length !== count * 3 || !positions.every((value) => Number.isFinite(value) && Math.abs(value) <= LYRA_3D_WORLD_LIMIT)) throw new RangeError('Invalid spatial node positions');
-      const style = viewport.style;
-      setView(viewport);
-      shared.markerArm.value = Math.max(3, style.fontSize / 4);
-      translucent = false;
-      // Only partial coverage blends: fully transparent paint is discarded by the fragment stage.
-      const partial = (value: number) => value > 0 && value < 1;
-      (position.array as Float32Array).set(positions);
-      for (let row = 0; row < count; row++) {
-        const selected = state.selected.has(row) || state.hover === row || state.focus === row;
-        const expanded = expandable?.[row] === 1;
-        const alpha = style.forcedColors || !state.dimmed.has(row) ? 1 : opacity;
-        const source = style.forcedColors ? style.foreground : colors ? { r: colors[row * 4]!, g: colors[row * 4 + 1]!, b: colors[row * 4 + 2]!, a: colors[row * 4 + 3]! } : style.palette[(categories?.[row] ?? 0) % style.palette.length]!;
-        if (partial(source.a * alpha) || (selected && partial(style.accent.a * alpha)) || (expanded && partial(style.foreground.a * alpha))) translucent = true;
-        size.setX(row, (sizes?.[row] ?? style.pointSize) / 2); flags.setXY(row, selected ? 1 : 0, expanded ? 1 : 0);
-        setPaint(fill, row, source, alpha); setPaint(ring, row, style.accent, alpha); setPaint(marker, row, style.foreground, alpha);
-      }
-      if (material.transparent !== translucent) { material.transparent = translucent; material.needsUpdate = true; }
-      material.depthWrite = !translucent;
-      for (const buffer of [position, size, shape, flags, fill, ring, marker]) buffer.needsUpdate = true;
-      revision += 1;
+      const previousRevision = revision;
+      updatePositions(viewport, positions); updateStyle(viewport, state);
+      revision = previousRevision + 1;
     },
     dispose() { if (disposed) return; disposed = true; mesh.removeFromParent(); pick.removeFromParent(); material.dispose(); pickMaterial.dispose(); geometry.dispose(); },
   };

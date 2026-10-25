@@ -38,9 +38,16 @@ export interface ModelParserInput {
   readonly bytes: Uint8Array<ArrayBuffer>;
   readonly resources: readonly ModelEmbeddedResource[];
 }
-/** Bytes are copied and admitted synchronously before this revision can replace a model. */
+/** Owned bytes and their format. setData copies and admits synchronously; setDataAsync copies before accepting its revision. */
 export interface ModelEngineData {
   readonly bytes: ArrayBuffer | Uint8Array;
   readonly format: ModelFormat;
 }
-export type ModelEngine = Lyra3dEngine<ModelEngineData, Lyra3dOrbitCamera>;
+export interface ModelEngine extends Lyra3dEngine<ModelEngineData, Lyra3dOrbitCamera> {
+  /**
+   * Prepare and atomically install owned input without changing setData's synchronous contract.
+   * Always returns a Promise. Basic refusal reserves no revision; accepted deep failure does.
+   * Abort, replacement or disposal rejects with AbortError and retains the previously installed model.
+   */
+  setDataAsync(data: ModelEngineData, revision: number, options?: { readonly signal?: AbortSignal }): Promise<void>;
+}

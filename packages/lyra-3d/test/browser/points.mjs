@@ -86,7 +86,8 @@ async function mount(input = data(), overrides = {}) {
 async function pixels(record, nextState = record.state) {
   record.state = nextState;
   record.engine.setState(nextState);
-  // setState schedules the engine render before this readback callback in the same frame.
+  // Equal state can be a no-op. Explicitly redraw before reading the non-preserved framebuffer.
+  record.engine.resize(record.width, record.height);
   return new Promise((resolve) => requestAnimationFrame(() => {
     const width = record.canvas.width;
     const height = record.canvas.height;

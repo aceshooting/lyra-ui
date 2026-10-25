@@ -1,0 +1,560 @@
+{
+  "identity": {
+    "package": "@aceshooting/lyra-3d",
+    "version": "1.0.0",
+    "node": "v22.23.2",
+    "three": "0.186.1",
+    "moduleSha256": {
+      "points/axes.js": "b0d488583ed01ba023cd78175e8a36224930aa131be917910b266f018e7b2806",
+      "points/batches.js": "0f8b42861f4e826bf181f8e77265e9354aa98c2f88501d46b302f16c41c22118",
+      "points/data.js": "52fd8f9c84e184649a7e468a407094765d802426a8e2d5c1ad7595fb49f4f019",
+      "points/engine.js": "606e9b86092f26114158cdcf83193354638369b0134fd40a8dcfa8f2e207da47",
+      "points/index.js": "2c9cb33e6063f7e4e88ca3b068288cee4d734bbfa053c930d491a9600a9d812f",
+      "points/types.js": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "panorama/camera.js": "980b50c6fa596aa3efd94f2e7dcee341d8a2556bee9d6f20c16391f156c7c9f2",
+      "panorama/engine.js": "dd772930d9f387c8b4db95cadac4458830eb4896c20bc38a41d710d337ccb75a",
+      "panorama/index.js": "66252fe7049773a7b5d6984a624d81b82c3a2d2c2c7dd0a4a8326f0f73fab631",
+      "panorama/media.js": "e4681dc3023ff7a13a2b5a3540490965592530c44d3809b3d5a4462984bbe4eb",
+      "panorama/types.js": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "panorama/video.js": "134cc54f49eb3c79fec19ad2de0f70bef2d0a52de5fc55d1ec5f30a774faae7e",
+      "model/admission.js": "9a4d02210f784c293a3aa40a391eff5abae6962c7d49a7f49a9e0863879350b3",
+      "model/embedded-texture-loader.js": "f0a0cce8cd40e8d8890bafa1709755850bc365988a5e9daea55a29462ab10f5f",
+      "model/engine.js": "9ce1a009cc2bd96acc744e4f9197fa8dd1a319e1f5347af84db93e0cb20b0a79",
+      "model/index.js": "b9bdf0ff9b9706ed132d6cffcbe2c88aeace2237d636eb82b1d57b834621bd0a",
+      "model/limits.js": "c671ea4a55f9fdcc580be60ce749e62df44b69934d053401d18e87da2a042215",
+      "model/model-parsers.js": "b99c856a7038db7046a5b4fbd780ff9ee1559755caa0fb6939482c803c30aba1",
+      "model/model-validation.js": "113ba8c9bdb679d8772125cdfd6da186a30d8a27e6de44f340320e7bcb77b679",
+      "model/types.js": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "graph/decorations.js": "842ab00df18e2bfd3a7457e318aaf307e596cee70ab62c3b813379ddda1faca7",
+      "graph/engine.js": "5da74e822523018657dd5c0d68fb8a7187c86b9d42926fdaef7bf63bd1c76440",
+      "graph/index.js": "897116df6396e098b645a17060029f5cb657a9b9d04e81966f94d16027786794",
+      "graph/layout-kernel.js": "c34e20571168271781db35d9d162d032b119d213d7aa3a08a154b9446a7a7a9a",
+      "graph/layout-task.js": "7b4cd149bd72ef56ec93a0976ac8a841e3b51b9e9329619b420ce8b17a067841",
+      "graph/layout.worker.js": "f6b766362d9622594eb42f199d285a95daa0b2745a88a005dd7b1a763fe0ca1c",
+      "graph/octree.js": "d355e00029dea35cdf965924af369800fd4cbb94e73638cde7461b342f5f888f",
+      "graph/spatial-appearance.js": "4047fc97babc1989a22cd077c6948b46d5d3c2f68c7ae7419bb51ba54f5c24e2",
+      "graph/spatial-composite.js": "24b5a83fee46cdb1a0f4eddf82293a88b1f229420ad86eeb581b089e9b1ad9c0",
+      "graph/spatial-edges.js": "bf6bd458facd68d84742b047eb7a63e8ba4240792112dd07bafedf07c253e2c2",
+      "graph/spatial-nodes.js": "994b6bfb411c6c191faecd6b4d444bb9a0eaa13a8e27eecc74e514ffebdb6cc4",
+      "graph/spatial-paths.js": "148fc9b4788eeac9eb56cf4cccc1830b6d3358e14f005b47f35c1f962abd13a2",
+      "graph/types.js": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "core/context-epoch.js": "9e20775e3567a85cd29b95f0696e60b4f8ab07708a4c621f2341390cccea774b",
+      "core/contract.js": "bf775edc35f323ea100f86e807425784a52dee250035338717b62010f3188dda",
+      "core/index.js": "5f858015404471a28717537bc119f00977f5ab6311c0654f8675f7d2b0cfc05d",
+      "core/orbit.js": "dd19a960035f85852c220c2298f1cf562f359913b76cf6e5244456d60e25fc7d",
+      "core/picking.js": "9da7ff6976e380b24ccfe36e29db634b35d78cadb350a7854693526b3496e488",
+      "core/style.js": "51a34e9ecb229fc047b93ba6107b3f9b096a30e0006bb4691cde451fa1c2aca4",
+      "core/viewport.js": "1f7663aab3840e8fad4a2521c6ae3ee4a74a61eb35b4b56d930f1f0cb862f71c",
+      "core/worker.js": "b5cf034be0a8d671083eb60a3bb0b3d53b97298db413a24443ddaacdf66e95ab"
+    },
+    "threeSha256": {
+      "package.json": "f9c474a27c920b9435353a6235968f4453436bee0444fac7e5fd289c8fa463de",
+      "build/three.module.js": "9052042d676cb0fdc1ddfefe193053f34b7ac0513a616fdac4535d49987812ea",
+      "build/three.core.js": "9edde002b066a9a05676a6127f67735b62baf399bdea529f2f7e31657da769e6",
+      "src/core/BufferAttribute.js": "d2ef1016597e2c03cb78003cb76243375f42540fba4af0b49d116671ccafc835",
+      "src/renderers/webgl/WebGLAttributes.js": "9132425f2359093927d6208ceedf7447e8157c1a3325cda45f941428b166fbf2"
+    }
+  },
+  "implementation": "legacy-complete-step",
+  "quantum": 7,
+  "baselineCompared": false,
+  "evidence": "Exact same-runtime typed bytes and scalars; pins at completed output boundaries; no timing measurement.",
+  "records": [
+    {
+      "fixture": "seeded",
+      "outputs": [
+        {
+          "iteration": 1,
+          "alpha": 0.98,
+          "maxSpeed": 6.661770342263629,
+          "epoch": 0,
+          "done": false,
+          "positionsBase64": "3z8zweqIE0Ghb6HAIg0kwZnvEEFo9t5AP1OEQQodyUDwMqpA5AyaQE7ghsGzWWPAvb2CQWuNh75WMRrBONWDQLQ7R769EKzAHySjQNcNJ0CYfJlAHahnvaB0kkFDBLrArk29wA8tMUCuA34+e9Bswe7odUGqgm1BFaBfwZiWdsF0NgNBEKQYwDuHLcGQ+UDBe3u/v2QNl8DZRhtBaWmDQWHpBcEemdbAoBCUwCwSB8GWSoJB3X5awZ48B8EH5UvBqLqbPy3mA0FOPlNBbiw+wRsZbL+YWntBwB+gwDMRNkGI+YRBWf8IQL9+GUHWySPBmjZgwZcguj8TpE3BL2vQvp1EJz/2QY3BJms6QY2PcsEmW0zBKfdAQbGc8EC9eN+/"
+        },
+        {
+          "iteration": 2,
+          "alpha": 0.9603999999999999,
+          "maxSpeed": 7.007298934734118,
+          "epoch": 0,
+          "done": false,
+          "positionsBase64": "ZmqAwYwfS0H4ZQLB4jRuwTGeSEHScf5AOpOqQX/M7UC0/PpAVNqjQPxJpcEhCjPAj56hQT0lOT/zsz/B5E+qQLr2KMBWGvrA07QBQUkZD0D0V+9AgHA9vuvnvUGhA+HAIpH+wGVL6D9//ZS+p9OTwX2klEHjkIZBZR2AwZF+ksGEWw5Be688wJSmYcGPPWjBtkgQv+jDIMG2JT5BthmkQWnjGsGdyb3A2hiOwHNES8F6QaRB432FwU3kM8HlXGzBq5mTQIO7O0FX75FBY+Z+wWOIvr+O5JlBmPOawNoGZ0FH/6tB3/4tQEHkUEGQnHDBGzGLwarfIUDCynbB0APQvp01XT+2YLTBRO9LQbbAmcF2VoDBcEKHQcobKEHTehXA"
+        },
+        {
+          "iteration": 1,
+          "alpha": 0.98,
+          "maxSpeed": 6.701291606455483,
+          "epoch": 1,
+          "done": false,
+          "positionsBase64": "AADgQAAAAEEAABBBK0OZwaq1eUHEwQdB6D7RQcMaCEESLihBR0awQKRGxcGhtAHABybBQQz82j9kBWrBHjTLQMBmlcDH6SDBGWQwQYFy5z5dhhlB6t7Ivj+650GVxQLB1zokwYR6pD+D/jm/sXuzwQh9r0FWeJZBCmWSwdtEqsHSRRlBBQdnwDX4i8HUj4nBORG4Pt5Va8FjD1xB46fGQQ1XM8HB/KLAO4OOwPyVhcEC/cdBfQSfwVEkX8FRPYbBhL32QGyHcEHvd7lBSPOcwStHAcCrprRBqD+ZwLnSikH/D9NBiWJOQJBdg0FDc5vBlamlwbercEB/UY/B3LPzvpgMjj/fvtvBZx5fQYOXusHRspvBghCqQUxxWkHzlFLA"
+        },
+        {
+          "iteration": 2,
+          "alpha": 0.9603999999999999,
+          "maxSpeed": 5.703247211962698,
+          "epoch": 1,
+          "done": false,
+          "positionsBase64": "AADgQAAAAEEAABBB/KS2wZJKkEH4OwtBwxzyQfWvFkEu7lBBHv29QMHi4sHQP6m/s1fdQa4ELEDhW4nB2ezlQCiCysAJ8T3BYjZcQRpEy7+8ozZBsUAEv10DBkK50xLBbaxHwVQGgT84EIa/F0PRwXKVyEEZUaVBnXSkwU4lv8HMOiNBgx+JwBA6pcHqH57B2XaQP9w8lcEdGXRBnTnnQbtcS8H8+onAwZeQwH7GoMETUuhB0KO2wSDfgsEKA5TBWhgnQd1zj0GJHtpBdUC0wXgKG8Cp1stBaEmZwFI6n0HVa/ZBUd5rQMmFm0G+8LfBpN67wYuCoEAfwKDBD9YFv/RWrD/cbf7Bd/hxQXOe2MH+ObXB3wXGQcuUhEF4pYrA"
+        },
+        {
+          "iteration": 3,
+          "alpha": 0.9411919999999999,
+          "maxSpeed": 4.611882358879291,
+          "epoch": 2,
+          "done": false,
+          "positionsBase64": "AADgQAAAAEEAABBBiTjPwdVgnkGHrAtBXZ0FQuogIkGJTHZBIezLQFV8/MGS5DW/R8v0QasVbEA8hpvBT5T6QN719sA1slLBcumAQXlvW8BlAE1BbLT1vtTlFEKq0SDBd2pnwe+OWD9VXqe/F3nrwVDV3kH9s7JB41q1wae9z8HaASxBIDCewBlau8HiibDBnQTVP39/r8HqDYNBPRsCQrvOYcGW32rAnNWRwCnRtsHYjQFCyv7KwR+Sk8EzrJ7BDt9LQa07o0G6YfJBs3nEwTSoKsDFEt9BQxObwNyGsEEGfgpCFh+EQDpnsEHh2szBd3vMwYgPyEA3LK/BaOT5vp1ixT+wSw3CBfyBQTKt8sHbnMvB83naQQbhmEG+D6zA"
+        },
+        {
+          "iteration": 4,
+          "alpha": 0.9223681599999999,
+          "maxSpeed": 3.9502019946756954,
+          "epoch": 2,
+          "done": false,
+          "positionsBase64": "AADgQAAAAEEAABBBRYbjwZSAp0HmjApB2EYOQkhuKkGtBYxBOm7ZQBzPCMJc90S+iKgDQiO5l0DoFKvBns4EQfu+DsEYCV/BJyuQQU7insDEdltBcqGCvk+fIEKoJy3BJmiBwY5YND+MXce/8MwAwhcA8kGimr5B2crEwbzH28GekjNBY3yywEL4zcEIVcDBw1b4P7UZxcFRK4lBJ5QOQnaUdsHGkE3AeCGRwCMbyMG+7AtC5q/bweXfocE8FqbBVrBpQYjzs0HCPgFCV+HNwdY5MMD8pe5B/xmfwIkIv0GbXhdCuG2SQC0bwkFaedrBeGLXwTia7kD8q7rBExOvvp+Q1j/A9xfCOJWKQZ5GBMK0bN7BI9jnQfPVqUEvt8zA"
+        }
+      ],
+      "callsPerOutput": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "phases": []
+    },
+    {
+      "fixture": "exact-charge",
+      "outputs": [
+        {
+          "iteration": 1,
+          "alpha": 0.98,
+          "maxSpeed": 7.835312122383979,
+          "epoch": 0,
+          "done": false,
+          "positionsBase64": "ve8AwV87UcEChHJBMN2QwVI+D8CxcoDAjK4SwYulZ0HX5ljBxWVLwWLZSUHbT1hBcY7CvxsnkcCFXGrBbcbOQCkea8GAqpi/ffBiwWZHRUBJ2AdBtpMtQEHcVMCH0lRBomdRwcmVOMEQ1RjAQrkPvDPc9ECYZP5Ams+yQDbLecDDIHzBUnInQYxcnj+lMm1BXES8wJABW0AxVXHB1eVEQaZi1kDxT5TBfEyjQMGYOkHK6s8/2JBfwUS5xUCx00HBFxeEQWww7UD+Rj1BHJBZQZttq8DfmAc/hL8ywTqlAMFAnFXBYlqjPxkkG0E7/9vAdYCpQQtnYEF7+SPBZiVIQbCUksDrcRvBPnLYQLTnYEGxDLzA9wszwYvcQEEviUY/"
+        },
+        {
+          "iteration": 2,
+          "alpha": 0.9603999999999999,
+          "maxSpeed": 7.360815187693983,
+          "epoch": 0,
+          "done": false,
+          "positionsBase64": "468OwZZGc8FrnYhB+lW2wUzc0r8LjWnAfdcqwWDJlkEdbn3Bj1Zmwavtb0FOHINBGS+Kvw82A8F5xYnBtFDiQE1zlMHXa0e/cPmFwSHAEUDOkihBo1kOQLpPqsBelYBB/P1kwTFxgcGbn42/iZIVv8/9CUG+fjNB33sCQRn+u8AdtJrBzVg/QeND1z4k2ZFBnaPJwL3FlEDYtpXBIN1lQZU0pkDu+crBcETdQDKqakHV32ZAvD6bwf+g90AYBVbBNUWiQc4UFUEnf1lBUmGEQUiF3MAemus/tL5ZwWi3N8FIQH/BHiuePlJ4MEHEqAXBM9jeQYsNiUH6PyjBGQd9QewkzsCAXS/BIo3GQLkUmEGLvHrAKkpXwaLla0HRvKg/"
+        },
+        {
+          "iteration": 1,
+          "alpha": 0.98,
+          "maxSpeed": 6.626121098253088,
+          "epoch": 1,
+          "done": false,
+          "positionsBase64": "AADgQAAAAEEAABBB9gfbwe5UyL8NWlbAXZtBwULJuEFykpHBf6WDwbgrjEF2vpxBqW+Iv58TPcF+h53BNA72QBN0tMFr+5O+jAebwV1xnT8f+EpBitrCP59t+sDhIJhByyZ6wQqgpMH66HM+yCwFwI88GUG1M2tBBa4pQTN9+sCOarjBUb9bQbtTKr8+TbBBjWjTwNHOs0DHibXB3oiEQYR3i0BEh/zB64sOQTogkEGbPKxAAY3HwdrsE0GIuWzBxx3DQYUkM0GS73hBzmScQRSRB8EOfkNArT2BwQICbcEwpJPBTm3bvoNrREFr3iDBpIEFQsn9nkF59i3BopSZQdKHBMEfOUHBPVfJQPBmw0FHsUPAADJ7wZHxjEGvNOM/"
+        },
+        {
+          "iteration": 2,
+          "alpha": 0.9603999999999999,
+          "maxSpeed": 5.607947723780762,
+          "epoch": 1,
+          "done": false,
+          "positionsBase64": "AADgQAAAAEEAABBB37j6weKL5r+AtU3AuBtTwYPu1UFuS6LBlz6UwRxjn0GvsLVB5l2av/twccHC963B0IgEQXPh0MHvB2c+cTytwTt3vD1KlmlBKjZLP0QHJsHqPa1BOVuGwTg1w8HOa8k/mW1uwAaHJUGYOo9BzfNIQY8zGcEeItPBiRp2QQ5x6r9v+MxBj4vbwNIazEDjU9TBBaCUQWylgEDuKBPCufcuQcmOqEGsmd9AryPwwf67KUEWmoHBEmbhQYkxTkGi5opBRmqxQWNzHMGjpoBA/gKUwTlMjcHBMqTBYYdRvyl3VkG4OznBZ2UWQnl6sUEl7jLBKzexQdlRHsFzt07BYzXTQNMi7EE1AjnAP/uLwRbsokE2CQVA"
+        },
+        {
+          "iteration": 3,
+          "alpha": 0.9411919999999999,
+          "maxSpeed": 4.74698014638923,
+          "epoch": 2,
+          "done": false,
+          "positionsBase64": "AADgQAAAAEEAABBBi/AJwqH6DsBgVlLAbPZdwZ377EGb0a/Bi2ujwZygsEG0UMxBK+exv5h5j8HONrrBAqoNQarK58G5jT8/UDO7wdmsh78QE4FB62fsPaR7TMG3Wb5BZHONwVuO3MGIJzlAF8GowNVCLUEtcqRBlHNeQSfrMMFQZunBBMGFQRSpQcCm4uVBuR/kwDRr30C/VfDBR0SiQYbbgkBY4yPC1TFNQaEPvEG2RgZBnqwJwl7CPEE6L4zBSyf7Qax8ZUFc0JZBtyPCQU6sKsF9ApZAL0KkwThan8E0WLDB1MVfv7pFZkGWc0zBD1giQq3EwEHWWjbBNNXDQZufM8GiT1fBxu3gQBqwB0IT6UzARnuVwV3ktkFzQw5A"
+        },
+        {
+          "iteration": 4,
+          "alpha": 0.9223681599999999,
+          "maxSpeed": 4.012341642652374,
+          "epoch": 2,
+          "done": false,
+          "positionsBase64": "AADgQAAAAEEAABBBZC8TwulwMsBbu2TA/yZiwc7y/UEc9LnBvm+wwWSEv0GQ899BA8XJv6LgosEVNsLB9I4WQWu5+MGaLaM/2qPEwTnyC8C5EIpBZfn4vkWEb8ELFMtBOiCSwXbm8MF0hIZAusTVwAIIMEGFnrRB8TZqQZ1XRMGkBfvByYuNQYuMh8BejvpB19/uwOUx70A5dATCUE2tQcgZkEBSrjDC+tJnQajxyUGIQxlBbGgYwkz7TEFe/pXBkfgHQkkUeUEX259B+F/OQd6xMcHw56FA4M6xwYG3rMFOALjBrXAhv0nbc0FsEVrBpfUpQrxazUFpGDjBBCfRQRWmRMFdR1vB747xQLsjFkJqD3jAUfmZwRSWyEGFjA5A"
+        }
+      ],
+      "callsPerOutput": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "phases": []
+    },
+    {
+      "fixture": "coincident",
+      "outputs": [
+        {
+          "iteration": 1,
+          "alpha": 0.98,
+          "maxSpeed": 10,
+          "epoch": 0,
+          "done": false,
+          "positionsBase64": "VHobwQAAAABgFRdA7mfIQJqWt8Cg6qjA9AIev7gO4UARoOJAYB/CwJPC/cBXnQ+/hYK0QOxvfz9HJQPBxnr1wG4nnEAhQIVAf8obQDniEMFdal7AqboGQIkkgkCLPA5Btx4VwWDVWcDIgJ8/BHLjQLXFO8AelczABvBZwJ6F6EB98b5AiCs8wNGPFsEGY9a/pvVJQFMU6j+H+hTBItMUwfPfAkBGK0NAY6OjQOp96MAW3pLAOMdNP0t+x0AJ4fhAoKr0wIc0zsB8tgY+Tg3TQCqakL54XfDAYGLGwGA8xUBCYJtAgbzoPtV6GcEffDLAab7sP17ZDUA6MBlBj5YbwevPpb/COfg/tePXQLkDlsDCcrbASDXSv+8i6UDnzdRA"
+        },
+        {
+          "iteration": 2,
+          "alpha": 0.9603999999999999,
+          "maxSpeed": 10,
+          "epoch": 0,
+          "done": false,
+          "positionsBase64": "EYuMwbLtsUA65qJAInAZQRKUcsGI5bPAE+muQCqHTkHxskZBxbkGwYkYjMGu+QvA6mfqQAzcAUGwPXDBnQWKwWRk80ArMqFARiDyQJRXicFw2cjALxQQQXrm7ECyA3VBF0B/wUgTLcFmf2c+3MdvQc598z5IWTjBreIvwRgvXEFTqs5AciC1wAbGl8EZpDDAts+GPpLnyUCZKY7BeO6BwWqmCUFUqcBAexrKQJCGicG/fZnA1yUFQcydDkFg11xB/MaFwVvPKMFTEYA/Wc9+QT8WDr9IljHB8EghwZwTa0GQkwVBeuYswBmimMF+nj/A5/5+QMNybsCGoYpB5LuKwVpK9sDIlXA/8WF5QYXZY8Al0SPBWzjhwKcKe0HWuORA"
+        },
+        {
+          "iteration": 1,
+          "alpha": 0.98,
+          "maxSpeed": 10,
+          "epoch": 1,
+          "done": false,
+          "positionsBase64": "AADgQAAAAEEAABBBLSabQXL5iMHMVa3Ag9AKQT+fqkFNCoZBDkGBwd2Hu8EgqyPAwHYSQaF6bUH+eafBI2LQwX2LkUBFELI/nos/QZ3auMEDJFDBpmRrQVvqoECAZLlB8TJCwaXMiMFwudHAFJtSQQVKD0FU/IPB4LKawSiMdEGnvJQ/YKwLwfo248GTcIHAqcVBwODbIEHIDczBKdSAwUDNgkE+ekVBB3WfPzp9vcEll14/BUpcQVhhgkE1GXhBSEHGwRXiQsGPH9ZAxlPLQQs6bcCaPjLBxeRCwRuNqEEEKHxBQyOmP6Gy4cFo0HDAqC24QPlbFcGkScRBF2rTwZUmYcDu8Xg/HLa3QfAQIsEZtjzBfcWhwLi/y0GyRc9A"
+        },
+        {
+          "iteration": 2,
+          "alpha": 0.9603999999999999,
+          "maxSpeed": 9.300488883819751,
+          "epoch": 1,
+          "done": false,
+          "positionsBase64": "AADgQAAAAEEAABBBgJjXQUb9lsF82ZXAjugtQVfo5kH3oKNBX7i5wflh48H2Vh3APZ4oQX1ppkHmqs7BkwMFwiwFN0DZD7m/OIBzQaFH4MGK5JXBPeubQV2rR0DoJOxB+pAYwScbpsHDx0jBlBREQSjgc0EULqDBMbfNwemAhUFDhF7A08A0wSnkFMKaHabARmq5wMiUUEFfh/3B0umEwZT0q0ERbYhB288QwHBJ38Hs39BA5HaYQfY+rkFfA4VBKPX6wUdoYMGplTlBdj4GQsWBl8DL9jHBbfRWwWQ610FQs7JBCXebQJfDEsLf5qTAIyTiQPqsW8HdqvNBrOcGwuhGgr98ChQ/2irkQW9DecFPHVbBd+lVwAAyBkIkfrdA"
+        },
+        {
+          "iteration": 3,
+          "alpha": 0.9411919999999999,
+          "maxSpeed": 7.860423290472868,
+          "epoch": 2,
+          "done": false,
+          "positionsBase64": "AADgQAAAAEEAABBBK/EAQoCuocEhTVzAzExLQfMaC0K1prpBcF3mwZFdAMI4ahLAYCA7QUQMz0FP2e3B31AawrspcEAE4ZvA7veJQfzt/cEjJLrBthu6QQ7J6z9SRQhC8iL1wKJ9ucH9mIzBHic7QS+2nUHSmq/BD6TwwRsLjkHvSebA8X1XwfvmMsILZcLAvor7wHGYdkH2ERHC7jCIwf1/xEEOE6BBPp2hwEno98Ek/TJBI0y7QRzszkHIG4hBAWURwv4gfcFNlnhB+CQgQseel8DCjS7BnkJhwcVj/0FbA95BJK7xQNOvLcLx68PA9e3+QHs+hsFQHQxCdYcdwjlS5r9vNp8/k/wBQpa9msEAIG/Br0P7v/GZHkJISqdA"
+        },
+        {
+          "iteration": 4,
+          "alpha": 0.9223681599999999,
+          "maxSpeed": 6.384939078122622,
+          "epoch": 2,
+          "done": false,
+          "positionsBase64": "AADgQAAAAEEAABBBhWsOQiZ3p8E2zwTA46NmQfiAHEIeLMtBHbgDws93CsLEjQXASkxNQYxE70GR7wHCcRQqwgAjkkDmNP7ATlGRQVBiCcJNdtXBkirRQUwxlT+E0xNCCP/JwLI/x8G9LK3BxFEyQcnot0ExCLXBNKUCwjlBk0HKjiHByAl0wetES8JNc9jAS4MTwUevikGzmh3CN+yHwV8P0UEwZ61BVY/twMd2BMIcsmxBmsLVQYn45kE4xYVBEWMfwoWSjME6a5RBMekzQob4gcCVVSfBkZZlwUP0D0KLp/5B6LIUQQQaQsIf2tPAm5oIQTOJlMHvfRlCdDMtwsbZTsDEhP0/tjQMQqPWrcEZWYHBO6JXvxmqL0If+qFA"
+        }
+      ],
+      "callsPerOutput": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "phases": []
+    },
+    {
+      "fixture": "deep-cluster",
+      "outputs": [
+        {
+          "iteration": 1,
+          "alpha": 0.98,
+          "maxSpeed": 10,
+          "epoch": 0,
+          "done": false,
+          "positionsBase64": "q3YWQa2jp0BpVDhApK0gQRWZoz+/ncG+37AawSWxGD7BqB9APsEAwaEKtsCzkde/afPJwNZag8BInNLA6gYewTvZx79Ukea9XpvGwEyA5cAK00rAt9UTwRszOMByNSFAEvQcQWsMl0BJ+RhAntcKQfBKnUCblew/mc8NwfPkfMDMtxXA79YEwZMpnsAxXCTA9xsOwRozfcDMfBXA8DkIwf39lsBCkBLANs4KwakVh8DPVSjAWOMOwS3EcsAo5RrAXXUeQYJRlUDucgVA47mwQPoT1kAhGadACjqzwDWG18BDTZnA/SUbwfD+n71fzBvAheQOwXbBhMABnt4/4fSqwB2j4sCarZPAttMfwXcn0L6nvGa+FaLkwPsHpsCeM5bA"
+        },
+        {
+          "iteration": 2,
+          "alpha": 0.9603999999999999,
+          "maxSpeed": 10,
+          "epoch": 0,
+          "done": false,
+          "positionsBase64": "klwWQeIcNkF7VCxBlFiOQVtjVcBlTJbAPS5UwVRVxEApdhpBn+/OwAwRYMEEBmlA4eWdwA7F8r+J5YHBtKCQwWjAfb+Vj7JAdHKVwMD0gsG3lOI+KShDwSAO0b8z1z9B+OaWQZIWGUAvKb5AAu8fP58L3kALXm7AJmB4wSfGTUAmoYq+48ajwJEfWsG1XMvA9qOAwZNvKEBuTRi+4KsDwaALYcF8baA/dWkdwYxrgsAr+0jBF5FqwdopikDyJGbA7+aSQb5wIUCAFzPAHk2vQHZTW0EWh0VBRLM3wMv1FcFkrGDBSFBWwY3Y9UBeXvHANLgpwbsgLMHI3BBBHo09P72WZsH4J/XAbeFpwYsEBUE2C68/PI/lwE1yzMBr8WnB"
+        },
+        {
+          "iteration": 1,
+          "alpha": 0.98,
+          "maxSpeed": 10,
+          "epoch": 1,
+          "done": false,
+          "positionsBase64": "AADgQAAAAEEAABBBhqPFQQipBsHxAw7B72OAwUcFQkFDR4lBOWNnwKdXlsFgGj9BhWwhwHv/AEBQ8sjBHprRwVc2/b/HRzVBl8SQv2fLzMGQHPo/CFVkwVe/k79/Fq5BDHzYQTDFRj9ZJB5BnFGDwNkJIEE8uwPBMk47wbEyR0EzSvU95HBmwHBqrcGr0CjB8UjEwai9BMAi3BdAp4Riwab9rcE6XzE//3Zpwfu4HMClDZ/BiB6NwbTtMEGyryXBj4bQQS8OIEBYhd3ACfi+QPkYqEEaQ5lBSmalP3dLVMGqD7LBGXV6wa3ackHhO1zBuTRLwS5yg8F/JohB2Dn4QL9upsGE7yzBHnWLwVPwjEEH3W1Agaz0wI0xFcFvWsHB"
+        },
+        {
+          "iteration": 2,
+          "alpha": 0.9603999999999999,
+          "maxSpeed": 9.980484332085927,
+          "epoch": 1,
+          "done": false,
+          "positionsBase64": "AADgQAAAAEEAABBBAC/yQTdmScFQLUPBXx+UwayFiUGiOr1BDsdkv5d0tsGxu5ZBkVydvuJ0sUAGaQHC8y4FwhDlNsBAqYNB6cXnPxScBsLycmVA3zR8wdsrVL85t+1B4XcGQm+kC7+zg1JBIuvWwEhqS0Hp5j7B7PICwV/nm0HYeS0/1+cjwMN04sG7tl/BkNv9wV4CwMAChXhA/kebwV3X38F6Y3k+ms2YwTcrnL9PjM7BuYepwYEbeUGiOHXBP9MAQnwtSUDj+iPBIjDZQMoY2UGuY8ZBxC+mQE/nhcG3q+nB7viHwWPdtUG/LKHBe4ZrwYzZqMFjN71BElBiQdC60MEjnFnBmj+jwUkIzkHtzsBAdH0HwVWIQcFhbADC"
+        },
+        {
+          "iteration": 3,
+          "alpha": 0.9411919999999999,
+          "maxSpeed": 8.373889676747076,
+          "epoch": 2,
+          "done": false,
+          "positionsBase64": "AADgQAAAAEEAABBB5w0KQtIgesHB5GrBL62kwRIlqkEgl+dBtce/Pxezz8EUl8JBKF24P5kdBkFLPRbClQ4cwj/vXsAFa6NBxFuDQDwDIcKOCaNAlsSFwenVBb9o8A1CRioaQlJG47+SvHlBt+MDwTfFakHfB2/BJfuewEvuxkHLBJc/1ofLv7W4BcJp+IPBiiQWwslZEcHCJZhAnKi9wUMIAsIEiXq9sU64wY+Pxr7LZvLBWvrEwZyvlkGISpjBfuQSQiq8g0AYEk/BBZj1QERGAEKklupB8ccGQfaHm8G0HQvC3EyMwXgj6UErEszBbW6DwWxwxsHh6ONBRYqbQbis8sG7W37BoTS4wVc1/0EJOvxASAYWwRk5aMEHCRjC"
+        },
+        {
+          "iteration": 4,
+          "alpha": 0.9223681599999999,
+          "maxSpeed": 6.602333176640591,
+          "epoch": 2,
+          "done": false,
+          "positionsBase64": "AADgQAAAAEEAABBBUF8WQiG+jMHMeYPBmPKxwVwixEE1vgRCg1piQD594sF5t+RBDKcsQMHLKEF4ZiPCktYtwt3jeMCPfLlB5dS8QJ0lNsLw5MtATq+JwZG2Or6X0hxCoiUoQgNIQcA/MIpBX38RwXHzfkFZ/orBQwz+v7pG5kE/tbw/EHcHv7rPFMJsOZHBtWIowk2+NcF63qRAPQLZwQCoDcLNUmK+a3zTwVjABj43qwXC5eHdwaKeqUG07K3BUCIfQt5DqkC5onLBYN4HQSXeD0JVpQNCpCYvQbD0qsGHdBzCPOSKwSHSCEJ08e3BRUyOwfE03cEGtfxBCmW9QWv6BsIllI3B79DJwTZtEEJKURRBOJ0kwXDWhMFu5CfC"
+        }
+      ],
+      "callsPerOutput": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "phases": []
+    },
+    {
+      "fixture": "all-pinned",
+      "outputs": [
+        {
+          "iteration": 1,
+          "alpha": 0.98,
+          "maxSpeed": 0,
+          "epoch": 0,
+          "done": true,
+          "positionsBase64": "AAAAAKuqqj6rqio/AACAP6uqqj9VVdU/AAAAQFVVFUCrqipAAABAQFVVVUCrqmpAAACAQKuqikBVVZVAAACgQKuqqkBVVbVAAADAQKuqykBVVdVAAADgQKuq6kBVVfVAAAAAQVVVBUGrqgpBAAAQQVVVFUGrqhpBAAAgQVVVJUGrqipBAAAwQVVVNUGrqjpBAABAQVVVRUGrqkpBAABQQVVVVUGrqlpBAABgQVVVZUGrqmpBAABwQVVVdUGrqnpBAACAQauqgkFVVYVBAACIQauqikFVVY1BAACQQauqkkFVVZVBAACYQauqmkFVVZ1BAACgQauqokFVVaVBAACoQauqqkFVVa1BAACwQauqskFVVbVBAAC4QauqukFVVb1B"
+        },
+        {
+          "iteration": 1,
+          "alpha": 0.98,
+          "maxSpeed": 0,
+          "epoch": 0,
+          "done": true,
+          "positionsBase64": "AAAAAKuqqj6rqio/AACAP6uqqj9VVdU/AAAAQFVVFUCrqipAAABAQFVVVUCrqmpAAACAQKuqikBVVZVAAACgQKuqqkBVVbVAAADAQKuqykBVVdVAAADgQKuq6kBVVfVAAAAAQVVVBUGrqgpBAAAQQVVVFUGrqhpBAAAgQVVVJUGrqipBAAAwQVVVNUGrqjpBAABAQVVVRUGrqkpBAABQQVVVVUGrqlpBAABgQVVVZUGrqmpBAABwQVVVdUGrqnpBAACAQauqgkFVVYVBAACIQauqikFVVY1BAACQQauqkkFVVZVBAACYQauqmkFVVZ1BAACgQauqokFVVaVBAACoQauqqkFVVa1BAACwQauqskFVVbVBAAC4QauqukFVVb1B"
+        },
+        {
+          "iteration": 1,
+          "alpha": 0.98,
+          "maxSpeed": 0,
+          "epoch": 1,
+          "done": true,
+          "positionsBase64": "AADgQAAAAEEAABBBAACAP6uqqj9VVdU/AAAAQFVVFUCrqipAAABAQFVVVUCrqmpAAACAQKuqikBVVZVAAACgQKuqqkBVVbVAAADAQKuqykBVVdVAAADgQKuq6kBVVfVAAAAAQVVVBUGrqgpBAAAQQVVVFUGrqhpBAAAgQVVVJUGrqipBAAAwQVVVNUGrqjpBAABAQVVVRUGrqkpBAABQQVVVVUGrqlpBAABgQVVVZUGrqmpBAABwQVVVdUGrqnpBAACAQauqgkFVVYVBAACIQauqikFVVY1BAACQQauqkkFVVZVBAACYQauqmkFVVZ1BAACgQauqokFVVaVBAACoQauqqkFVVa1BAACwQauqskFVVbVBAAC4QauqukFVVb1B"
+        },
+        {
+          "iteration": 1,
+          "alpha": 0.98,
+          "maxSpeed": 0,
+          "epoch": 1,
+          "done": true,
+          "positionsBase64": "AADgQAAAAEEAABBBAACAP6uqqj9VVdU/AAAAQFVVFUCrqipAAABAQFVVVUCrqmpAAACAQKuqikBVVZVAAACgQKuqqkBVVbVAAADAQKuqykBVVdVAAADgQKuq6kBVVfVAAAAAQVVVBUGrqgpBAAAQQVVVFUGrqhpBAAAgQVVVJUGrqipBAAAwQVVVNUGrqjpBAABAQVVVRUGrqkpBAABQQVVVVUGrqlpBAABgQVVVZUGrqmpBAABwQVVVdUGrqnpBAACAQauqgkFVVYVBAACIQauqikFVVY1BAACQQauqkkFVVZVBAACYQauqmkFVVZ1BAACgQauqokFVVaVBAACoQauqqkFVVa1BAACwQauqskFVVbVBAAC4QauqukFVVb1B"
+        },
+        {
+          "iteration": 1,
+          "alpha": 0.98,
+          "maxSpeed": 0,
+          "epoch": 2,
+          "done": true,
+          "positionsBase64": "AADgQAAAAEEAABBBAACAP6uqqj9VVdU/AAAAQFVVFUCrqipAAABAQFVVVUCrqmpAAACAQKuqikBVVZVAAACgQKuqqkBVVbVAAADAQKuqykBVVdVAAADgQKuq6kBVVfVAAAAAQVVVBUGrqgpBAAAQQVVVFUGrqhpBAAAgQVVVJUGrqipBAAAwQVVVNUGrqjpBAABAQVVVRUGrqkpBAABQQVVVVUGrqlpBAABgQVVVZUGrqmpBAABwQVVVdUGrqnpBAACAQauqgkFVVYVBAACIQauqikFVVY1BAACQQauqkkFVVZVBAACYQauqmkFVVZ1BAACgQauqokFVVaVBAACoQauqqkFVVa1BAACwQauqskFVVbVBAAC4QauqukFVVb1B"
+        },
+        {
+          "iteration": 1,
+          "alpha": 0.98,
+          "maxSpeed": 0,
+          "epoch": 2,
+          "done": true,
+          "positionsBase64": "AADgQAAAAEEAABBBAACAP6uqqj9VVdU/AAAAQFVVFUCrqipAAABAQFVVVUCrqmpAAACAQKuqikBVVZVAAACgQKuqqkBVVbVAAADAQKuqykBVVdVAAADgQKuq6kBVVfVAAAAAQVVVBUGrqgpBAAAQQVVVFUGrqhpBAAAgQVVVJUGrqipBAAAwQVVVNUGrqjpBAABAQVVVRUGrqkpBAABQQVVVVUGrqlpBAABgQVVVZUGrqmpBAABwQVVVdUGrqnpBAACAQauqgkFVVYVBAACIQauqikFVVY1BAACQQauqkkFVVZVBAACYQauqmkFVVZ1BAACgQauqokFVVaVBAACoQauqqkFVVa1BAACwQauqskFVVbVBAAC4QauqukFVVb1B"
+        }
+      ],
+      "callsPerOutput": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "phases": []
+    },
+    {
+      "fixture": "mixed-pins",
+      "outputs": [
+        {
+          "iteration": 1,
+          "alpha": 0.98,
+          "maxSpeed": 10,
+          "epoch": 0,
+          "done": false,
+          "positionsBase64": "IPRgwRuY88AMp6bAAAAAwAAAgL8AAAAA8W0WQDFsC0FXlyRBAACAQAAAoEAAAKDA9yMcwL0HmMCYiTvBAACAvwAAAAAAAIA/a+wpQZcEb79bSuZAAACgQAAAoMAAAIDASRU6wYaN18BWfzDAAAAAAAAAgD8AAABA9X3EQIBMLUGcfjlBAACgwAAAgMAAAEDAGAHXwHZ22UDCx4PAAACAPwAAAEAAAEBAehkgQaomS0GjPuXAAACAwAAAQMAAAADAAkEPQZuNRr85Z8k/AAAAQAAAQEAAAIBAOcTMQG1mJMG7EkbBAABAwAAAAMAAAIC/p+6AwASjsEC6VR9BAABAQAAAgEAAAKBALPe6wGrH1sC/aUnBAAAAwAAAgL8AAAAA"
+        },
+        {
+          "iteration": 2,
+          "alpha": 0.9603999999999999,
+          "maxSpeed": 10,
+          "epoch": 0,
+          "done": false,
+          "positionsBase64": "LSy2wZDGM8FPUgjBAAAAwAAAgL8AAAAAljscQENndUGDOY5BAACAQAAAoEAAAKDAzgEBPjTRsMCW16rBAACAvwAAAAAAAIA/V06XQUfMh8D9LTtBAACgQAAAoMAAAIDAGIKhwU89PMERFMa/AAAAAAAAgD8AAABAaj8oQRNji0EwrI1BAACgwAAAgMAAAEDAOWI9wdMHZ0FrpQDBAACAPwAAAEAAAEBAwRx+QfH1oUFlRSHBAACAwAAAQMAAAADAFOCWQS+aCMCxmLU/AAAAQAAAQEAAAIBAi/IRQVJJfsEliKHBAABAwAAAAMAAAIC/Zx4PwZLEFUFhMY5BAABAQAAAgEAAAKBAGYgRwfL5J8FgBqrBAAAAwAAAgL8AAAAA"
+        },
+        {
+          "iteration": 1,
+          "alpha": 0.98,
+          "maxSpeed": 9.966355702740831,
+          "epoch": 1,
+          "done": false,
+          "positionsBase64": "AADgQAAAAEEAABBBAAAAwAAAgL8AAAAAYjr2P7yYrUG7AslBAACAQAAAoEAAAKDASqkQQHBEw8AGtvTBAACAvwAAAAAAAIA/m7zWQeGH8sC37YNBAACgQAAAoMAAAIDAfEbjwbyZhMGgShO/AAAAAAAAgD8AAABAw45zQbzvvUEEdrtBAACgwAAAgMAAAEDAgPCHwVRfrkGG8j3BAACAPwAAAEAAAEBASHWoQcJ210FpVE7BAACAwAAAQMAAAADAbbLlQS+GY8AZVG8/AAAAQAAAQEAAAIBA2CM+QaQWqcHbtNfBAABAwAAAAMAAAIC/eltgwXhiTUHPespBAABAQAAAgEAAAKBAaH5Jwc9qYsGeHejBAAAAwAAAgL8AAAAA"
+        },
+        {
+          "iteration": 2,
+          "alpha": 0.9603999999999999,
+          "maxSpeed": 8.480795429225514,
+          "epoch": 1,
+          "done": false,
+          "positionsBase64": "AADgQAAAAEEAABBBAAAAwAAAgL8AAAAAItKsP6Cq2EFWBPtBAACAQAAAoEAAAKDAxfN+QEbbz8BA3xnCAACAvwAAAAAAAIA/IekFQiY4J8EpnaVBAACgQAAAoMAAAIDA0m4Nwh8vpcGLMlA+AAAAAAAAgD8AAABAxTWaQdRm50FgpOBBAACgwAAAgMAAAEDAKWOrwXbn30HJBnLBAACAPwAAAEAAAEBAiebJQa12AUJMF3TBAACAwAAAQMAAAADA3lgUQqH6mMCtYcw+AAAAQAAAQEAAAIBALAVkQQwpzMGUaQHCAABAwAAAAMAAAIC/ZIOTwY5vekFWK/1BAABAQAAAgEAAAKBAwSd6wcl2icFiIA3CAAAAwAAAgL8AAAAA"
+        },
+        {
+          "iteration": 3,
+          "alpha": 0.9411919999999999,
+          "maxSpeed": 6.750245180706041,
+          "epoch": 2,
+          "done": false,
+          "positionsBase64": "AADgQAAAAEEAABBBAAAAwAAAgL8AAAAAjHBUPy8N+0GEhBFCAACAQAAAoEAAAKDAsparQIXh18CeSjPCAACAvwAAAAAAAIA/zdcaQgk4TMFsL8FBAACgQAAAoMAAAIDAhqAjwn5Lv8HJ0k8/AAAAAAAAgD8AAABABAa0QXagA0LA+PxBAACgwAAAgMAAAEDAZ/rHwbSMA0LQ2Y3BAACAPwAAAEAAAEBAo3/jQfQ1EkJU0YjBAACAwAAAQMAAAADAyvkuQr3UuMBAdt29AAAAQAAAQEAAAIBAwBaBQe3C58EKqRHCAABAwAAAAMAAAIC/0k+wwWhmjkFlmxJCAABAQAAAgEAAAKBAGq2QwfZInME5PSDCAAAAwAAAgL8AAAAA"
+        },
+        {
+          "iteration": 4,
+          "alpha": 0.9223681599999999,
+          "maxSpeed": 5.119490965981967,
+          "epoch": 2,
+          "done": false,
+          "positionsBase64": "AADgQAAAAEEAABBBAAAAwAAAgL8AAAAAyV3GPn+pCkLZ1SBCAACAQAAAoEAAAKDA5YvOQLl13MDZ80bCAACAvwAAAAAAAIA/BZwqQj2eaMEFxNZBAACgQAAAoMAAAIDA6Js0wmhh08GK/6I/AAAAAAAAgD8AAABAOYDHQU01D0JJsAhCAACgwAAAgMAAAEDA2A7ewWFWEkJ00p3BAACAPwAAAEAAAEBAWR72QZKBHkJCwJPBAACAwAAAQMAAAADAECJDQpHH0cCBBBC/AAAAQAAAQEAAAIBA73aMQRdt/MEYQR3CAABAwAAAAMAAAIC/o87GwWXNmkHGriFCAABAQAAAgEAAAKBATKyfwegaqsEKDi7CAAAAwAAAgL8AAAAA"
+        }
+      ],
+      "callsPerOutput": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "phases": []
+    },
+    {
+      "fixture": "empty",
+      "outputs": [
+        {
+          "iteration": 0,
+          "alpha": 1,
+          "maxSpeed": 0,
+          "epoch": 0,
+          "done": true,
+          "positionsBase64": ""
+        },
+        {
+          "iteration": 0,
+          "alpha": 1,
+          "maxSpeed": 0,
+          "epoch": 0,
+          "done": true,
+          "positionsBase64": ""
+        },
+        {
+          "iteration": 0,
+          "alpha": 1,
+          "maxSpeed": 0,
+          "epoch": 1,
+          "done": true,
+          "positionsBase64": ""
+        },
+        {
+          "iteration": 0,
+          "alpha": 1,
+          "maxSpeed": 0,
+          "epoch": 1,
+          "done": true,
+          "positionsBase64": ""
+        },
+        {
+          "iteration": 0,
+          "alpha": 1,
+          "maxSpeed": 0,
+          "epoch": 2,
+          "done": true,
+          "positionsBase64": ""
+        },
+        {
+          "iteration": 0,
+          "alpha": 1,
+          "maxSpeed": 0,
+          "epoch": 2,
+          "done": true,
+          "positionsBase64": ""
+        }
+      ],
+      "callsPerOutput": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "phases": []
+    },
+    {
+      "fixture": "stable",
+      "outputs": [
+        {
+          "iteration": 1,
+          "alpha": 0.98,
+          "maxSpeed": 0,
+          "epoch": 0,
+          "done": false,
+          "positionsBase64": "AAAAAAAAAAAAAAAA"
+        },
+        {
+          "iteration": 2,
+          "alpha": 0.9603999999999999,
+          "maxSpeed": 0,
+          "epoch": 0,
+          "done": true,
+          "positionsBase64": "AAAAAAAAAAAAAAAA"
+        },
+        {
+          "iteration": 1,
+          "alpha": 0.98,
+          "maxSpeed": 0,
+          "epoch": 1,
+          "done": true,
+          "positionsBase64": "AADgQAAAAEEAABBB"
+        },
+        {
+          "iteration": 1,
+          "alpha": 0.98,
+          "maxSpeed": 0,
+          "epoch": 1,
+          "done": true,
+          "positionsBase64": "AADgQAAAAEEAABBB"
+        },
+        {
+          "iteration": 1,
+          "alpha": 0.98,
+          "maxSpeed": 0,
+          "epoch": 2,
+          "done": true,
+          "positionsBase64": "AADgQAAAAEEAABBB"
+        },
+        {
+          "iteration": 1,
+          "alpha": 0.98,
+          "maxSpeed": 0,
+          "epoch": 2,
+          "done": true,
+          "positionsBase64": "AADgQAAAAEEAABBB"
+        }
+      ],
+      "callsPerOutput": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "phases": []
+    }
+  ]
+}

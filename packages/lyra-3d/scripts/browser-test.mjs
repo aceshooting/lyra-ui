@@ -44,7 +44,7 @@ try {
   await mkdir(resolve(scratch, 'node_modules'), { recursive: true });
   await symlink(await realpath(resolve(root, 'node_modules/three')), resolve(scratch, 'node_modules/three'), 'dir');
   await writeFile(resolve(scratch, 'package.json'), JSON.stringify({ private: true, type: 'module' }));
-  for (const name of ['fixture.mjs', 'kernel.mjs', 'kernel.worker.mjs', 'viewport.mjs', 'graph.mjs', 'graph-spatial.mjs', 'points.mjs', 'panorama.mjs', 'model.mjs']) {
+  for (const name of ['fixture.mjs', 'kernel.mjs', 'kernel.worker.mjs', 'viewport.mjs', 'graph.mjs', 'graph-spatial.mjs', 'points.mjs', 'panorama.mjs', 'model.mjs', 'model-async.mjs', 'model-async-fixtures.mjs']) {
     await copyFile(resolve(root, 'test/browser', name), resolve(scratch, name));
   }
   await copyFile(resolve(root, '../lyra-ui/src/components/media/media-card/fixtures/sample.mp4'), resolve(scratch, 'panorama-video.mp4'));

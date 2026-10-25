@@ -54,16 +54,28 @@ test('meshes with several materials keep their material array through highlighti
   await waitUntil(() => engine.positionOf(0) !== null, 'the model to install');
   assert.ok(Array.isArray(mesh.material) && mesh.material.length === 2);
   const painted = mesh.material.slice();
+  const paintedDisposals = painted.map(() => 0);
+  painted.forEach((material, index) => material.addEventListener('dispose', () => paintedDisposals[index]++));
   assert.ok(painted.every((material, index) => material !== originals[index]), 'the engine draws clones, never the loader\'s own materials');
   engine.setState(state({ selected: new Set([0]) }));
   assert.ok(Array.isArray(mesh.material) && mesh.material.every((material) => material instanceof MeshBasicMaterial), 'selection swaps in flat highlight materials');
+  const highlights = mesh.material.slice();
+  const highlightDisposals = highlights.map(() => 0);
+  highlights.forEach((material, index) => material.addEventListener('dispose', () => highlightDisposals[index]++));
   engine.setState(state({ dimmed: new Set([0]) }));
   assert.ok(mesh.material.every((material, index) => material === painted[index]), 'clearing the selection restores the model\'s own look');
   assert.ok(mesh.material.every((material) => material.transparent === true && Math.abs(material.opacity - 0.3) < 1e-9), 'dimmed items fade');
   browser.flushFrames();
   engine.dispose();
   assert.equal(record.disposed, 1);
-  assert.ok(Array.isArray(mesh.material) && mesh.material.every((material, index) => material === painted[index]), 'the loader gets its drawing materials back');
+  assert.equal(mesh.material, originals, 'the loader gets its original material array back for owned disposal');
+  assert.ok(originals.every((material) => material.opacity === 1 && material.transparent === false), 'drawing-state changes never mutate loader-owned materials');
+  assert.deepEqual(paintedDisposals, [1, 1]);
+  assert.deepEqual(highlightDisposals, [1, 1]);
+  engine.dispose();
+  assert.equal(record.disposed, 1);
+  assert.deepEqual(paintedDisposals, [1, 1]);
+  assert.deepEqual(highlightDisposals, [1, 1]);
 });
 
 test('lines and textured point clouds are highlighted with materials of their own kind', async (t) => {
