@@ -10,7 +10,7 @@
 // JavaScript file must be classified here, so a new script cannot silently leave the report.
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { runNodeCoverage } from '../../lyra-docs/scripts/lib/node-coverage.mjs';
+import { runNodeCoverage } from '../../../scripts/lib/coverage/node-coverage.mjs';
 
 export const GENERATED_BANNER = '// AUTO-GENERATED FILE. Do not edit by hand.\n';
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
-import { createRequire } from 'node:module';
+import { libCoverage, libReport, reports, v8ToIstanbul } from '../../../scripts/lib/coverage/libraries.mjs';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { STAGED_RECORD_EXTENSION } from './scratch-package.mjs';
@@ -15,19 +15,6 @@ const REPORTERS = ['json', 'json-summary', 'lcovonly', 'html', 'text'];
 
 /** The files that produce or enforce coverage; they are not part of the measured product. */
 const HARNESS = new Set(['scripts/coverage.mjs', 'scripts/report-coverage.mjs']);
-
-/**
- * The coverage libraries are development tools shared by the workspace: the first package that
- * installs them supplies them, so this package declares none of its own.
- */
-function coverageLibrary(name) {
-  const anchors = ['.', '../lyra-docs', '../lyra-ui'].map((directory) => resolve(root, directory, 'package.json'));
-  for (const anchor of anchors) {
-    try { return createRequire(anchor)(name); }
-    catch (error) { if (error?.code !== 'MODULE_NOT_FOUND') throw error; }
-  }
-  throw new Error(`Cannot resolve ${name}; run pnpm install so a workspace package provides it`);
-}
 
 async function filesUnder(directory) {
   const entries = await readdir(directory, { recursive: true, withFileTypes: true });
@@ -95,7 +82,7 @@ export function originalOf(script, texts, staged) {
   return record.original;
 }
 
-async function convert({ v8ToIstanbul }, entry, original, text, eligible) {
+async function convert(entry, original, text, eligible) {
   assert.ok(Array.isArray(entry.functions) && entry.functions.length, `Missing V8 functions: ${original}`);
   // V8's module-level range spans the whole executed source, which identifies a stale copy.
   const [moduleRange] = entry.functions[0].ranges ?? [];
@@ -124,13 +111,6 @@ async function convert({ v8ToIstanbul }, entry, original, text, eligible) {
  */
 export async function reportCoverage({ base = root, unitStatus = 0, pipelineStatus = 0, browserStatus, reporters = REPORTERS } = {}) {
   base = resolve(base);
-  const libraries = {
-    v8ToIstanbul: coverageLibrary('v8-to-istanbul'),
-    libCoverage: coverageLibrary('istanbul-lib-coverage'),
-    libReport: coverageLibrary('istanbul-lib-report'),
-    reports: coverageLibrary('istanbul-reports'),
-  };
-  const { v8ToIstanbul, libCoverage, libReport, reports } = libraries;
   const output = resolve(base, 'coverage');
   const inventory = await sourceInventory(base);
   const eligible = new Set(inventory.included.map((entry) => entry.source));
@@ -148,7 +128,7 @@ export async function reportCoverage({ base = root, unitStatus = 0, pipelineStat
       if (!entry.url.startsWith('file:')) continue;
       const original = originalOf(fileURLToPath(entry.url), texts, staged);
       if (!original) continue;
-      map.merge(await convert(libraries, entry, original, texts.get(original), eligible));
+      map.merge(await convert(entry, original, texts.get(original), eligible));
       measuredScripts += 1;
     }
   }

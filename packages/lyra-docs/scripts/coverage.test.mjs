@@ -7,8 +7,8 @@ import { delimiter, dirname, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import test from 'node:test';
 import { TOOLING, runCommand, runCoverage } from './coverage.mjs';
-import { sourceInventory as scriptInventory } from './lib/node-coverage.mjs';
-import { stageScripts } from './lib/staged-script.mjs';
+import { sourceInventory as scriptInventory } from '../../../scripts/lib/coverage/node-coverage.mjs';
+import { stageScripts } from '../../../scripts/lib/coverage/staged-script.mjs';
 import {
   DOCX_LINE_COVERAGE_FLOOR, DOCX_TOOLING_COVERAGE_FLOOR, assertCoverageTarget, assertToolingTarget, reportCoverage, sourceInventory,
 } from './report-coverage.mjs';
@@ -588,13 +588,17 @@ test('commands run in the package with the extra environment and report their ex
 });
 
 test('started as a script, the entry point adopts the exit status of the run and leaves nothing behind', async context => {
-  const root = realpathSync(await mkdtemp(resolve(tmpdir(), 'lyra-docs-entry-')));
-  context.after(() => rm(root, { recursive: true, force: true }));
+  const workspace = realpathSync(await mkdtemp(resolve(tmpdir(), 'lyra-docs-entry-')));
+  const root = resolve(workspace, 'packages/lyra-docs');
+  context.after(() => rm(workspace, { recursive: true, force: true }));
   const [entry] = stageScripts({ from: packageRoot, to: root, files: [
-    'scripts/coverage.mjs', 'scripts/report-coverage.mjs', 'scripts/lib/node-coverage.mjs',
-    'scripts/lib/static-files.mjs', 'scripts/lib/staged-script.mjs',
+    'scripts/coverage.mjs', 'scripts/report-coverage.mjs', 'scripts/lib/static-files.mjs',
+  ] });
+  stageScripts({ from: resolve(packageRoot, '../..'), to: workspace, files: [
+    'scripts/lib/coverage/node-coverage.mjs', 'scripts/lib/coverage/staged-script.mjs', 'scripts/lib/coverage/libraries.mjs',
   ] });
   await symlink(resolve(packageRoot, 'node_modules'), resolve(root, 'node_modules'));
+  await symlink(resolve(packageRoot, '../../node_modules'), resolve(workspace, 'node_modules'));
   // A stand-in package manager: it records its arguments and fails the first build step.
   const log = resolve(root, 'pnpm.log');
   const pnpm = resolve(root, 'bin/pnpm');

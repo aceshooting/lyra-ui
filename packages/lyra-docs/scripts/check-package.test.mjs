@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { stageScripts } from './lib/staged-script.mjs';
+import { stageScripts } from '../../../scripts/lib/coverage/staged-script.mjs';
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repositoryRoot = resolve(packageRoot, '../..');

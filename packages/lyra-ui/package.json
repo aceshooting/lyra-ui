@@ -2678,7 +2678,7 @@
     "check:testing-event-registry": "node scripts/build-testing-event-registry.mjs --check",
     "registration-graph": "node scripts/generate-registration-graph.mjs",
     "check:registration-graph": "node scripts/generate-registration-graph.mjs --check",
-    "test:registration-graph": "node scripts/generate-registration-graph.test.mjs",
+    "test:registration-graph": "node scripts/generate-registration-graph.test.mjs && node --test scripts/lib/runtime-module-edges.test.mjs",
     "check:composed-child-contracts": "node scripts/check-composed-child-contracts.mjs",
     "test:composed-child-contracts": "node scripts/check-composed-child-contracts.test.mjs",
     "component-quality": "node scripts/generate-component-quality.mjs --write --measure-gzip",

@@ -59,7 +59,9 @@
     "test:migrate-wa": "pnpm --filter @aceshooting/lyra-ui run test:migrate-wa",
     "lint:parallel": "pnpm --filter @aceshooting/lyra-ui run lint:parallel",
     "test:theme-builder": "node --test scripts/theme-builder-model.test.mjs scripts/theme-builder-option-data.test.mjs scripts/theme-builder-recovery.test.mjs scripts/docs-load-boundaries.test.mjs",
-    "check:theme-builder": "node scripts/theme-builder-browser.mjs"
+    "check:theme-builder": "node scripts/theme-builder-browser.mjs",
+    "test:coverage-tooling:unit": "node --test scripts/lib/coverage/node-coverage.test.mjs",
+    "test:coverage-tooling": "node scripts/coverage-tooling.mjs"
   },
   "devDependencies": {
     "@aceshooting/lyra-flags": "workspace:*",
@@ -85,6 +87,9 @@
     "dependency-cruiser": "18.7.0",
     "eslint-plugin-lit": "2.3.1",
     "eslint-plugin-wc": "3.1.0",
+    "istanbul-lib-coverage": "^3.2.2",
+    "istanbul-lib-report": "^3.0.1",
+    "istanbul-reports": "^3.2.0",
     "knip": "^6.43.0",
     "lit": "^3.3.3",
     "maplibre-gl": "^6.15.0",
@@ -100,6 +105,7 @@
     "sherif": "^1.13.0",
     "storybook": "10.6.3",
     "tailwindcss": "^4.3.3",
+    "v8-to-istanbul": "^9.3.0",
     "vite": "^8.3.5"
   },
   "sherif": {

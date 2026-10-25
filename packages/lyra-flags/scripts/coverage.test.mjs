@@ -4,8 +4,8 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSyn
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
-import { sourceInventory } from '../../lyra-docs/scripts/lib/node-coverage.mjs';
-import { stageScripts } from '../../lyra-docs/scripts/lib/staged-script.mjs';
+import { sourceInventory } from '../../../scripts/lib/coverage/node-coverage.mjs';
+import { stageScripts } from '../../../scripts/lib/coverage/staged-script.mjs';
 import { GENERATED_BANNER, ROOT, SCOPE } from './coverage.mjs';
 
 const generatedRule = SCOPE.exclude.find(rule => rule.verify);
@@ -65,7 +65,7 @@ function stagedRunner(context) {
   context.after(() => rmSync(root, { recursive: true, force: true }));
   const own = join(root, 'packages', 'lyra-flags');
   mkdirSync(join(root, 'packages'));
-  symlinkSync(join(ROOT, '..', 'lyra-docs'), join(root, 'packages', 'lyra-docs'), 'junction');
+  symlinkSync(join(ROOT, '../..', 'scripts'), join(root, 'scripts'), 'junction');
   const staged = stageScripts({ from: ROOT, to: own, files: SCOPE.include });
   writeFileSync(join(own, 'package.json'), JSON.stringify({ name: 'fixture', scripts: { test: 'node --test scripts/partial.test.mjs' } }));
   writeFileSync(join(own, 'scripts/partial.test.mjs'),

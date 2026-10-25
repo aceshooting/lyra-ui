@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { stageScripts } from '../../lyra-docs/scripts/lib/staged-script.mjs';
+import { stageScripts } from '../../../scripts/lib/coverage/staged-script.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const uiDir = join(packageDir, '..', 'lyra-ui');

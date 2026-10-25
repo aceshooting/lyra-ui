@@ -6,7 +6,7 @@ import v8ToIstanbul from 'v8-to-istanbul';
 import libCoverage from 'istanbul-lib-coverage';
 import libReport from 'istanbul-lib-report';
 import reports from 'istanbul-reports';
-import { enrollUnloaded, measureNodeCoverage, sourceInventory as scriptInventory } from './lib/node-coverage.mjs';
+import { enrollUnloaded, measureNodeCoverage, sourceInventory as scriptInventory } from '../../../scripts/lib/coverage/node-coverage.mjs';
 import { filesUnder } from './lib/static-files.mjs';
 
 export const DOCX_LINE_COVERAGE_FLOOR = 100;

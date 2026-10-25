@@ -2,6 +2,8 @@ node_modules/
 dist/
 /custom-elements.json
 coverage/
+!scripts/lib/coverage/
+!scripts/lib/coverage/**
 .DS_Store
 
 *storybook.log

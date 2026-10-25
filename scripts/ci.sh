@@ -453,6 +453,9 @@ pnpm check:release-tooling
 step "dependency security patches and audit"
 pnpm check:dependency-security
 
+step "shared coverage tooling"
+pnpm test:coverage-tooling
+
 # This mirrors static-checks' networked upstream contract: direct public npm fetches are pinned by
 # package identity, exact version, tarball SHA-512 and manifest SHA-256, with no lifecycle process.
 step "pinned upstream public manifests"

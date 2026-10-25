@@ -8,7 +8,7 @@
 // leave the report.
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { runNodeCoverage } from '../../lyra-docs/scripts/lib/node-coverage.mjs';
+import { runNodeCoverage } from '../../../scripts/lib/coverage/node-coverage.mjs';
 
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const SCOPE = Object.freeze({

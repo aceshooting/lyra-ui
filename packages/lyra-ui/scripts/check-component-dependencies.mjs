@@ -44,6 +44,7 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { parseSync } from 'oxc-parser';
 import { isMainModule } from './is-main-module.mjs';
+import { runtimeModuleEdges } from './lib/runtime-module-edges.mjs';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const srcRoot = path.join(packageDir, 'src');
@@ -178,48 +179,7 @@ function visitNodes(node, visitor) {
 
 /** `[{ specifier, bindings }]` for every runtime module `source` pulls in, lazily or eagerly. */
 function moduleImports(source, file) {
-  const imports = [];
-  const program = parseSource(source, file);
-  for (const statement of program.body) {
-    if (statement.type === 'ImportDeclaration' && typeof statement.source?.value === 'string') {
-      if (statement.importKind === 'type') continue;
-      const values = statement.specifiers.filter(
-        (specifier) => specifier.type !== 'ImportSpecifier' || specifier.importKind !== 'type',
-      );
-      // An empty import (`import './x.js'` or `import {} from './x.js'`) still evaluates the
-      // target. A declaration containing only `type` specifiers is erased by TypeScript.
-      if (statement.specifiers.length > 0 && values.length === 0) continue;
-      imports.push({
-        specifier: statement.source.value,
-        bindings: values.map((specifier) => specifier.local?.name).filter(Boolean),
-      });
-    } else if (
-      (statement.type === 'ExportNamedDeclaration' || statement.type === 'ExportAllDeclaration') &&
-      typeof statement.source?.value === 'string'
-    ) {
-      if (statement.exportKind === 'type') continue;
-      if (
-        statement.type === 'ExportNamedDeclaration' &&
-        statement.specifiers.length > 0 &&
-        statement.specifiers.every((specifier) => specifier.exportKind === 'type')
-      ) continue;
-      imports.push({ specifier: statement.source.value, bindings: [] });
-    }
-  }
-
-  visitNodes(program, (node) => {
-    if (node.type !== 'ImportExpression') return;
-    if (node.source?.type === 'Literal' && typeof node.source.value === 'string') {
-      imports.push({ specifier: node.source.value, bindings: [] });
-    } else if (
-      node.source?.type === 'TemplateLiteral' &&
-      node.source.expressions.length === 0 &&
-      node.source.quasis.length === 1
-    ) {
-      imports.push({ specifier: node.source.quasis[0].value.cooked, bindings: [] });
-    }
-  });
-  return imports;
+  return runtimeModuleEdges(parseSource(source, file)).map(({ specifier, bindings }) => ({ specifier, bindings }));
 }
 
 /**

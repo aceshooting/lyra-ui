@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
-import { createRequire } from 'node:module';
+import { libCoverage, libReport, reports, v8ToIstanbul } from '../../../scripts/lib/coverage/libraries.mjs';
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -10,19 +10,6 @@ const REPORTERS = ['json', 'json-summary', 'lcovonly', 'html', 'text'];
 export const LYRA_3D_COVERAGE_FLOOR = 100;
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-
-/**
- * The coverage libraries are development tools shared by the workspace: the first package that
- * installs them supplies them, so this package declares none of its own.
- */
-function coverageLibrary(name) {
-  const anchors = ['.', '../lyra-docs', '../lyra-ui'].map((directory) => resolve(root, directory, 'package.json'));
-  for (const anchor of anchors) {
-    try { return createRequire(anchor)(name); }
-    catch (error) { if (error?.code !== 'MODULE_NOT_FOUND') throw error; }
-  }
-  throw new Error(`Cannot resolve ${name}; run pnpm install so a workspace package provides it`);
-}
 
 async function filesUnder(directory) {
   const entries = await readdir(directory, { recursive: true, withFileTypes: true });
@@ -73,7 +60,7 @@ export async function sourceInventory(base) {
   return { included, excluded };
 }
 
-async function convert({ v8ToIstanbul }, entry, script, eligible) {
+async function convert(entry, script, eligible) {
   const emitted = await readFile(script, 'utf8');
   const source = entry.source ?? emitted;
   assert.equal(source, emitted, `Stale captured script: ${script}`);
@@ -133,13 +120,6 @@ function combineCollectors(libCoverage, unit, browser) {
  */
 export async function reportCoverage({ base = root, unitStatus = 0, browserStatus, reporters = REPORTERS } = {}) {
   base = resolve(base);
-  const libraries = {
-    v8ToIstanbul: coverageLibrary('v8-to-istanbul'),
-    libCoverage: coverageLibrary('istanbul-lib-coverage'),
-    libReport: coverageLibrary('istanbul-lib-report'),
-    reports: coverageLibrary('istanbul-reports'),
-  };
-  const { v8ToIstanbul, libCoverage, libReport, reports } = libraries;
   const output = resolve(base, 'coverage');
   const inventory = await sourceInventory(base);
   const eligible = new Set(inventory.included.map((entry) => entry.source));
@@ -159,7 +139,7 @@ export async function reportCoverage({ base = root, unitStatus = 0, browserStatu
       if (!script.startsWith(`${nodeBuild}${sep}`) || !script.endsWith('.js')) continue;
       const original = resolve(base, 'src', relative(nodeBuild, script).replace(/\.js$/u, '.ts'));
       if (!eligible.has(original)) continue;
-      unitMap.merge(await convert(libraries, entry, script, eligible));
+      unitMap.merge(await convert(entry, script, eligible));
       nodeModules += 1;
     }
   }
@@ -182,7 +162,7 @@ export async function reportCoverage({ base = root, unitStatus = 0, browserStatu
         const script = resolve(assets, `.${pathname}`);
         assert.ok(script.startsWith(`${assets}${sep}`), 'Browser script escapes test output');
         if (!script.endsWith('.js')) continue;
-        const converted = await convert(libraries, entry, script, eligible);
+        const converted = await convert(entry, script, eligible);
         if (!Object.keys(converted).length) continue;
         browserMap.merge(converted);
         browserModules += 1;

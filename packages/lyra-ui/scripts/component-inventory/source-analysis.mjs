@@ -4,6 +4,7 @@ import { parseSync } from 'oxc-parser';
 import { packageDir } from './paths.mjs';
 import { familyFromModule, normalizeManifest } from '../component-inventory.mjs';
 import { htmlCommentEnd } from '../html-comments.mjs';
+import { runtimeModuleEdges } from '../lib/runtime-module-edges.mjs';
 
 function resolveTypeScriptImport(importer, specifier) {
   const target = path.resolve(path.dirname(importer), specifier);
@@ -41,41 +42,7 @@ function parseOptionalPeerProgram(source, file) {
 }
 
 function runtimeModuleSpecifiersFromProgram(program) {
-  const specifiers = [];
-  for (const statement of program.body) {
-    if (statement.type === 'ImportDeclaration' && typeof statement.source?.value === 'string') {
-      if (statement.importKind === 'type') continue;
-      const runtimeBindings = statement.specifiers.filter(
-        (specifier) => specifier.type !== 'ImportSpecifier' || specifier.importKind !== 'type'
-      );
-      if (statement.specifiers.length > 0 && runtimeBindings.length === 0) continue;
-      specifiers.push(statement.source.value);
-    } else if (
-      (statement.type === 'ExportNamedDeclaration' || statement.type === 'ExportAllDeclaration') &&
-      typeof statement.source?.value === 'string'
-    ) {
-      if (statement.exportKind === 'type') continue;
-      if (
-        statement.type === 'ExportNamedDeclaration' &&
-        statement.specifiers.length > 0 &&
-        statement.specifiers.every((specifier) => specifier.exportKind === 'type')
-      ) continue;
-      specifiers.push(statement.source.value);
-    }
-  }
-  visitNodes(program, (node) => {
-    if (node.type !== 'ImportExpression') return;
-    if (node.source?.type === 'Literal' && typeof node.source.value === 'string') {
-      specifiers.push(node.source.value);
-    } else if (
-      node.source?.type === 'TemplateLiteral' &&
-      node.source.expressions.length === 0 &&
-      node.source.quasis.length === 1
-    ) {
-      specifiers.push(node.source.quasis[0].value.cooked);
-    }
-  });
-  return specifiers;
+  return runtimeModuleEdges(program).map(({ specifier }) => specifier);
 }
 
 /** Runtime module specifiers only; comments, examples, strings and type-only edges never count. */

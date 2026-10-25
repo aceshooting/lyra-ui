@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { stageScripts } from './lib/staged-script.mjs';
+import { stageScripts } from '../../../scripts/lib/coverage/staged-script.mjs';
 
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const committedLock = JSON.parse(readFileSync(join(packageRoot, 'scripts/engine-source.lock.json'), 'utf8'));

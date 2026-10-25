@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { stageScripts } from '../../lyra-docs/scripts/lib/staged-script.mjs';
+import { stageScripts } from '../../../scripts/lib/coverage/staged-script.mjs';
 
 export const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 

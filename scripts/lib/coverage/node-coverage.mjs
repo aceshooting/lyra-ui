@@ -4,10 +4,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import libCoverage from 'istanbul-lib-coverage';
-import libReport from 'istanbul-lib-report';
-import reports from 'istanbul-reports';
-import v8ToIstanbul from 'v8-to-istanbul';
+import { libCoverage, libReport, reports, v8ToIstanbul } from './libraries.mjs';
 import { STAGED_RECORD_EXTENSION } from './staged-script.mjs';
 
 /**
@@ -206,7 +203,7 @@ const percent = counts => counts.pct === 'Unknown' ? 'n/a' : `${counts.pct}%`;
  * measurement and the exit code the calling script should adopt (non-zero for failed tests or a
  * missed floor).
  */
-export async function runNodeCoverage({ root, label, include, exclude, floor, script = 'test', environment = {} }) {
+export async function runNodeCoverage({ root, label, include, exclude, floor, script = 'test', environment = {}, directories = ['.'] }) {
   root = resolve(root);
   const output = resolve(root, 'coverage');
   const raw = resolve(output, 'node-v8');
@@ -230,7 +227,7 @@ export async function runNodeCoverage({ root, label, include, exclude, floor, sc
   }
   // Fixtures stay inside the package while tests run and never outlive the measurement.
   await rm(scratch, { recursive: true, force: true });
-  const inventory = await sourceInventory({ root, include, exclude });
+  const inventory = await sourceInventory({ root, include, exclude, directories });
   const { map, modules, stagedRuns } = await measureNodeCoverage({ directory: raw, included: inventory.included });
   assert.ok(modules > 0, `${label} tests did not execute any original source`);
   const unloaded = await enrollUnloaded(map, inventory.included);
