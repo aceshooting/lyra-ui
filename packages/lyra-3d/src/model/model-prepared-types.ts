@@ -3,12 +3,12 @@ import type { ModelEmbeddedResource, ModelFormat } from './types.js';
 import type { ModelIncrementalWork } from './model-work.js';
 
 export interface OwnedModelInput { readonly format: ModelFormat; readonly bytes: Uint8Array<ArrayBuffer> }
-export interface ModelAdmissionCounts {
+interface ModelAdmissionCounts {
   readonly encodedBytes: number; readonly decodedBytes: number; readonly vertices: number;
   readonly indices: number; readonly imagePixels: number; readonly resources: number;
 }
 export interface ModelScalarPlan { readonly bytes: 1 | 2 | 4 | 8; readonly kind: 'signed' | 'unsigned' | 'float' }
-export type ModelPlyPropertyPlan = { readonly name: string; readonly kind: 'scalar'; readonly scalar: ModelScalarPlan }
+type ModelPlyPropertyPlan = { readonly name: string; readonly kind: 'scalar'; readonly scalar: ModelScalarPlan }
   | { readonly name: string; readonly kind: 'list'; readonly count: ModelScalarPlan; readonly item: ModelScalarPlan };
 export type ModelJsonValue = null | boolean | number | string | ModelJsonString | readonly ModelJsonValue[] | ModelJsonRecord;
 export interface ModelJsonRecord { readonly [key: string]: ModelJsonValue }

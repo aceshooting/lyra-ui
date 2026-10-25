@@ -9,7 +9,7 @@ function parameter(value: number | undefined, fallback: number, min: number, max
   return result;
 }
 
-export function graphLayoutSettings(input: GraphLayoutOptions = {}): Required<GraphLayoutOptions> {
+function graphLayoutSettings(input: GraphLayoutOptions = {}): Required<GraphLayoutOptions> {
   return {
     seed: parameter(input.seed, 1, 0, 0xffffffff, true),
     charge: parameter(input.charge, 80, 0, 1e6),
@@ -69,14 +69,6 @@ export function* validateGraphLayoutInputProgress(input: GraphLayoutInput, budge
 /** Preserves synchronous rejection without constructing a numerical solver. */
 export function validateGraphLayoutInput(input: GraphLayoutInput): void {
   drainGraphProgress(validateGraphLayoutInputProgress(input, { remaining: Infinity }));
-}
-
-/** Legacy factories take their snapshot before returning to caller code. */
-export function snapshotGraphLayoutInput(input: GraphLayoutInput): GraphLayoutInput {
-  const options = drainGraphProgress(validateGraphLayoutInputProgress(input, { remaining: Infinity }));
-  return { nodeCount: input.nodeCount, options, source: input.source.slice(), target: input.target.slice(),
-    ...(input.positions ? { positions: input.positions.slice() } : {}),
-    ...(input.pinned ? { pinned: input.pinned.slice() } : {}) };
 }
 
 /** Validate and own the whole transaction before altering numerical state or epochs. */

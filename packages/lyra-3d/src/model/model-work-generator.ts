@@ -1,11 +1,11 @@
 import { ModelWorkMeter, type ModelIncrementalWork, type ModelWorkUnit } from './model-work.js';
 
-export interface ModelWorkBatch {
+interface ModelWorkBatch {
   readonly unit: ModelWorkUnit;
   /** Consume at most limit units; unfinished batches must consume at least one. */
   run(limit: number): { readonly used: number; readonly done: boolean };
 }
-export type ModelWorkRequest = ModelWorkUnit | ModelWorkBatch;
+type ModelWorkRequest = ModelWorkUnit | ModelWorkBatch;
 export type ModelWorkGenerator<T> = Generator<ModelWorkRequest, T, void>;
 
 const MAX_BATCH_UNITS = 4096;

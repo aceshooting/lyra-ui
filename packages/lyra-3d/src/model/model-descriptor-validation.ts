@@ -27,7 +27,7 @@ function component(attribute: ModelAttributeDescriptor, row: number, axis: numbe
   return value;
 }
 
-export function* validateModelDescriptor(value: unknown, admitted: AdmittedModelInput): ModelWorkGenerator<ModelDescriptor> {
+function* validateModelDescriptor(value: unknown, admitted: AdmittedModelInput): ModelWorkGenerator<ModelDescriptor> {
   yield 'records';
   const data = fields(value, ['protocol', 'roots', 'selectedRoot', 'nodes', 'geometries', 'materials', 'textures']); check(data['protocol'] === 1);
   const nodes = list(data['nodes'], LIMIT.entries * 3); const geometries = list(data['geometries'], LIMIT.entries);

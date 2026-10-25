@@ -1,6 +1,6 @@
 export interface ModelWorkBudget { readonly bytes: number; readonly scalars: number; readonly records: number }
 export interface ModelWorkUsed { readonly bytes: number; readonly scalars: number; readonly records: number }
-export type ModelWorkStep<T> = { readonly done: false; readonly used: ModelWorkUsed } | { readonly done: true; readonly used: ModelWorkUsed; readonly value: T };
+type ModelWorkStep<T> = { readonly done: false; readonly used: ModelWorkUsed } | { readonly done: true; readonly used: ModelWorkUsed; readonly value: T };
 export interface ModelIncrementalWork<T> { step(budget: ModelWorkBudget): ModelWorkStep<T>; dispose(): void }
 export type ModelWorkUnit = keyof ModelWorkBudget;
 

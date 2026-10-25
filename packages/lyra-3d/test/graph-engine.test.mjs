@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { Group } from 'three';
 import { createGraphEngine } from '../dist/graph/engine.js';
-import { createGraphTaskKernel } from '../dist/graph/layout-task.js';
+import { createGraphTaskKernel } from './graph-synchronous-fixture.mjs';
 import { DEFAULT_ORBIT_CAMERA, projectOrbitPoint } from '../dist/core/orbit.js';
 import { resolveLyra3dStyle } from '../dist/core/style.js';
 

@@ -21,11 +21,6 @@ export interface GraphProgressBudget { remaining: number }
 const LEAF_SIZE = 8;
 const MAX_DEPTH = 48;
 
-/** Builds an octree with bounded depth and a terminal bucket for coincident coordinates. */
-export function buildGraphOctree(input: Float32Array): GraphOctree {
-  return drainGraphProgress(buildGraphOctreeProgress(input, { remaining: Infinity }));
-}
-
 /** Drains the same bounded work used by asynchronous layout tasks. */
 export function drainGraphProgress<T>(work: Generator<void, T>): T {
   let result = work.next();
@@ -88,17 +83,6 @@ export function graphCoincidentDirection(first: number, second: number): readonl
   const angle = index * 2.399963229728653;
   const radius = Math.sqrt(Math.max(0, 1 - z * z));
   return [sign * radius * Math.cos(angle), sign * radius * Math.sin(angle), sign * z];
-}
-
-/**
- * Repulsive forces using softened inverse-square distance. Cells containing the target are never
- * approximated. Large terminal buckets subtract the target's mass and position before evaluation,
- * bounding work for coincident points; a deterministic direction separates exact coincidences.
- */
-export function graphChargeForces(tree: GraphOctree, strength: number, theta: number, softening: number): Float64Array {
-  const work = createGraphChargeWork(tree, strength, theta, softening);
-  work.advance({ remaining: Infinity });
-  return work.result;
 }
 
 /** Traversal can suspend inside a target, including exact-force leaf evaluation. */

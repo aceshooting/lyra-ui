@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createModelJsonWork } from '../dist/model/model-json-work.js';
+import { createModelJsonWork } from './model-json-fixture.mjs';
 import { drainModelWork } from '../dist/model/model-work.js';
 import { ModelAdmissionError } from '../dist/model/admission.js';
 

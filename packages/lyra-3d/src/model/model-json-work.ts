@@ -3,7 +3,7 @@ import { MODEL_LIMITS as LIMIT } from './limits.js';
 import { modelAdmissionCheck as check } from './model-admission-policy.js';
 import type { ModelJsonRecord, ModelJsonValue } from './model-prepared-types.js';
 import { decodeModelText, ModelTextCursor } from './model-text-work.js';
-import { createModelGeneratorWork, type ModelWorkGenerator } from './model-work-generator.js';
+import type { ModelWorkGenerator } from './model-work-generator.js';
 
 const whitespace = (value: string | undefined): boolean => value === ' ' || value === '\t' || value === '\r' || value === '\n';
 const digit = (value: string | undefined): boolean => value !== undefined && value >= '0' && value <= '9';
@@ -143,4 +143,3 @@ export function* readModelJson(bytes: Uint8Array): ModelWorkGenerator<ModelJsonR
   check(result !== null && typeof result === 'object' && !Array.isArray(result) && !(result instanceof ModelJsonString));
   return result as ModelJsonRecord;
 }
-export const createModelJsonWork = (bytes: Uint8Array) => createModelGeneratorWork(() => readModelJson(bytes));

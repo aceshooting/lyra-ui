@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildGraphOctree, graphChargeForces } from '../dist/graph/octree.js';
-import { createGraphLayoutKernel } from '../dist/graph/layout-kernel.js';
+import { buildGraphOctree, graphChargeForces } from './graph-synchronous-fixture.mjs';
+import { createGraphLayoutKernel } from './graph-synchronous-fixture.mjs';
 
 const edges = () => ({ source: new Uint32Array(), target: new Uint32Array() });
 

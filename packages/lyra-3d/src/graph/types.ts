@@ -44,8 +44,3 @@ export interface GraphLayoutOutput {
   readonly alpha: number;
   readonly maxSpeed: number;
 }
-
-export interface GraphLayoutKernel {
-  step(): { readonly done: boolean; readonly output: GraphLayoutOutput };
-  update(input: GraphLayoutPinUpdate): void;
-}

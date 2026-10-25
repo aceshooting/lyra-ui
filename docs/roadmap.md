@@ -86,9 +86,9 @@ wording and localized catalog copy are corrected in source; website production d
 pending.
 
 Shared synchronous admission, all-format asynchronous loading and UI adoption are implemented
-and reviewed. The 3D suite passes 686 unit checks and 106 packed browser cases in each of Chromium,
-Firefox and WebKit, including corrected PLY mesh and lifecycle ownership regressions. Complete
-3D coverage reaches 100% lines/statements and 97.96% branches after the five additional critical
+and reviewed. The latest 3D cleanup passes 686 unit checks and 106 packed cases in each of
+Chromium, Firefox and WebKit. Complete
+3D coverage reaches 100% lines/statements and 97.95% branches after the five additional critical
 worker-error and resource-cleanup tests. Complete UI coverage records 99.85% lines/statements,
 97.64% branches and 99.47% functions; raw coverage does not establish the Codecov full-hit result.
 

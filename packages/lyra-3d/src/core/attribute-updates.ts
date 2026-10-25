@@ -41,11 +41,6 @@ export function markAttributeRanges(attribute: BufferAttribute, ranges: { start:
   mark(attribute, ranges);
 }
 
-/** Scalar-component ranges accumulate until an upload; a full refresh dominates sparse work. */
-export function markAttributeRange(attribute: BufferAttribute, start: number, count: number): void {
-  if (count > 0) mark(attribute, [{ start, count }]);
-}
-
 /** Marks valid logical rows, coalescing adjacent rows before joining pending upload ranges. */
 export function markAttributeRows(attribute: BufferAttribute, rows: Iterable<number>): void {
   const sorted = [...new Set(rows)].filter(row => Number.isInteger(row) && row >= 0 && row < attribute.count).sort((a, b) => a - b);

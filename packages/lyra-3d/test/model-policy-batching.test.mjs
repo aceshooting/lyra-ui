@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { admitModel } from '../dist/model/admission.js';
-import { createModelAdmissionWork, createXyzAdmissionWork } from '../dist/model/model-admission-kernel.js';
+import { createModelAdmissionWork } from '../dist/model/model-admission-kernel.js';
 import { createModelResourceBudget, snapshotModelInput } from '../dist/model/model-admission-policy.js';
 import { readModelFormatPolicy } from '../dist/model/model-format-policy.js';
 import { createModelGeneratorWork } from '../dist/model/model-work-generator.js';
@@ -45,7 +45,7 @@ test('XYZ line scanning charges spans rather than invoking the meter for every c
   const original = ModelWorkMeter.prototype.take; let takes = 0;
   try {
     ModelWorkMeter.prototype.take = function (...args) { takes++; return original.apply(this, args); };
-    assert.equal(drainModelWork(createXyzAdmissionWork(input)).counts.vertices, 4000);
+    assert.equal(drainModelWork(createModelAdmissionWork(input)).counts.vertices, 4000);
   } finally { ModelWorkMeter.prototype.take = original; }
   assert.ok(takes < bytes.length / 4, `${takes} meter calls`);
 });

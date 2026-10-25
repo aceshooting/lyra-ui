@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildGraphOctree } from '../dist/graph/octree.js';
+import { buildGraphOctree } from './graph-synchronous-fixture.mjs';
 
 test('the octree accepts only finite interleaved Float32 coordinates within the supported size', () => {
   for (const [name, input] of [

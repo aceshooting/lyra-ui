@@ -125,11 +125,15 @@ do not establish Codecov full-hit coverage or a release pass.
   snapshot and verify all 33 metadata checks.
 - [x] Integrate and review shared synchronous admission, all-format asynchronous service routing
   and UI adoption; verify the corrected model lifecycle and PLY mesh cases. Model checks pass
-  686 unit tests and 106 packed browser cases per engine. UI adoption passes 82 cases in
+  686 unit tests and 106 packed cases in each of Chromium, Firefox and WebKit after cleanup.
+  UI adoption passes 82 cases in
   Chromium/WebKit and 76 with six retained skips in Firefox.
-- [x] Complete model unit and packed browser acceptance: 686 unit checks plus lint and 106 packed
-  cases in each of Chromium, Firefox and WebKit pass. Complete model coverage records all
-  7,927 lines/statements hit (100%), functions 99.7% and branches 97.96%.
+- [x] Complete refreshed model coverage: all 7,860 lines/statements hit (100%), functions
+  658/660 (99.69%) and branches 5,327/5,438 (97.95%). Moving unused internal adapters to test
+  fixtures removes covered code from the inventory; the same two functions and 111 branches
+  remain uncovered. All 686 unit checks pass.
+- [x] Complete fresh packed three-engine checks after cleanup: all 106 cases pass in each of
+  Chromium, Firefox and WebKit.
 - [x] Complete the refreshed full coverage run after five meaningful critical-branch tests were
   added; all 686 unit checks pass and runtime behavior is unchanged. Retain the required changeset
   explanation for actual public synchronous GLB cost (about 44–49 ms versus roughly 12 ms

@@ -7,7 +7,7 @@ import type { ModelIncrementalWork } from './model-work.js';
 import type { AdmittedModelInput, OwnedModelInput } from './model-prepared-types.js';
 
 /** Complete fatal UTF-8 validation before line admission, retaining the synchronous refusal order. */
-export function createXyzAdmissionWork(input: OwnedModelInput): ModelIncrementalWork<AdmittedModelInput> {
+function createXyzAdmissionWork(input: OwnedModelInput): ModelIncrementalWork<AdmittedModelInput> {
   modelAdmissionCheck(input.format === 'xyz', 'unsupported');
   return createModelGeneratorWork(function* () {
     let rows = 0;

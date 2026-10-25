@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { admitPointsData } from '../dist/points/data.js';
-import { createGraphLayoutKernel } from '../dist/graph/layout-kernel.js';
+import { createGraphLayoutKernel } from './graph-synchronous-fixture.mjs';
 import { createGraphEngine } from '../dist/graph/engine.js';
 import { admitGraphSpatialAppearance, validateGraphSpatialSizes } from '../dist/graph/spatial-appearance.js';
 import { createPanoramaEngine } from '../dist/panorama/engine.js';

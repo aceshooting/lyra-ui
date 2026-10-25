@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { admitModel, readModelAdmission, ModelAdmissionError } from '../dist/model/admission.js';
 import { snapshotModelInput, createModelResourceBudget, chargeModelGeometry } from '../dist/model/model-admission-policy.js';
-import { createXyzAdmissionWork } from '../dist/model/model-admission-kernel.js';
+import { createModelAdmissionWork } from '../dist/model/model-admission-kernel.js';
 import { drainModelWork, ModelWorkMeter } from '../dist/model/model-work.js';
 import { MODEL_LIMITS } from '../dist/model/limits.js';
 
@@ -19,7 +19,7 @@ cases.push(Uint8Array.of(0xc3), Uint8Array.from([...utf8('1 2 3 4\n'), 0xc3]), U
 test('shared sliced XYZ policy matches original counts, bytes and first refusal at every quota', () => {
   for (const bytes of cases) for (const quota of [1, 2, 7, 64, 65536]) {
     const original = outcome(() => admitModel(bytes, 'xyz'));
-    const shared = outcome(() => drainModelWork(createXyzAdmissionWork(snapshotModelInput(bytes, 'xyz')), { bytes: quota, scalars: quota, records: quota }));
+    const shared = outcome(() => drainModelWork(createModelAdmissionWork(snapshotModelInput(bytes, 'xyz')), { bytes: quota, scalars: quota, records: quota }));
     assert.equal(shared.code, original.code, `quota${quota}, bytes${bytes.length}`);
     if (original.value) {
       const { format, ...counts } = original.value;
@@ -47,17 +47,17 @@ test('work caps are independent, state survives yields and disposal cannot publi
   for (const invalid of [0, -1, 0.5, NaN, Infinity]) assert.throws(() => new ModelWorkMeter({ bytes: invalid, scalars: 1, records: 1 }), RangeError);
   const source = snapshotModelInput(utf8('# é 😀\r\n1 2 3\n4 5 6'), 'xyz');
   for (const cutoff of [0, 1, 5, 20]) {
-    const work = createXyzAdmissionWork(source);
+    const work = createModelAdmissionWork(source);
     for (let i = 0; i < cutoff; i++) { const step = work.step({ bytes: 1, scalars: 1, records: 1 }); assert.equal(step.done, false); assert.ok(step.used.bytes <= 1 && step.used.scalars <= 1 && step.used.records <= 1); }
     work.dispose(); work.dispose(); assert.throws(() => work.step({ bytes: 1, scalars: 1, records: 1 }), /no longer active/);
   }
-  const finished = createXyzAdmissionWork(source); assert.equal(drainModelWork(finished).counts.vertices, 2);
+  const finished = createModelAdmissionWork(source); assert.equal(drainModelWork(finished).counts.vertices, 2);
   assert.throws(() => finished.step({ bytes: 1, scalars: 1, records: 1 }), /no longer active/);
 });
 
 test('failed XYZ admission is terminal even when another valid record follows', () => {
   for (const source of ['1 2 3 4\n1 2 3\n', '1 2 invalid\n1 2 3\n']) {
-    const work = createXyzAdmissionWork(snapshotModelInput(utf8(source), 'xyz'));
+    const work = createModelAdmissionWork(snapshotModelInput(utf8(source), 'xyz'));
     assert.throws(() => work.step({ bytes: 65536, scalars: 65536, records: 64 }), ModelAdmissionError);
     assert.throws(() => work.step({ bytes: 65536, scalars: 65536, records: 64 }), /no longer active/);
   }

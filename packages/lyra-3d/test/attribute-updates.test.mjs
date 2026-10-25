@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { Float32BufferAttribute } from 'three';
 import { WebGLAttributes } from 'three/src/renderers/webgl/WebGLAttributes.js';
-import { markAttributeFull, markAttributeRange, markAttributeRows } from '../dist/core/attribute-updates.js';
+import { markAttributeFull, markAttributeRanges, markAttributeRows } from '../dist/core/attribute-updates.js';
 import { uploadRecorder } from './performance-fixture.mjs';
 
 test('initial allocation clears pending full ranges and preserves the upload callback', () => {
@@ -28,7 +28,7 @@ test('pending row ranges merge without losing earlier full or sparse updates', (
     assert.deepEqual(attribute.updateRanges, [{ start: 6, count: 6 }, { start: 27, count: 3 }]);
     gpu.flush(); assert.deepEqual(gpu.mirrors().color, Array.from(attribute.array));
     attribute.array.fill(4); markAttributeFull(attribute);
-    attribute.setX(15, 7); markAttributeRange(attribute, 45, 1);
+    attribute.setX(15, 7); markAttributeRanges(attribute, [{ start: 45, count: 1 }]);
     assert.deepEqual(attribute.updateRanges, [{ start: 0, count: 48 }]);
     assert.deepEqual(gpu.flush(), [{ key: 'color', offset: 0, bytes: 192 }]);
     assert.deepEqual(gpu.mirrors().color, Array.from(attribute.array));

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildGraphOctree, graphChargeForces } from '../dist/graph/octree.js';
+import { buildGraphOctree, graphChargeForces } from './graph-synchronous-fixture.mjs';
 
 test('exact charge agrees with scaled norms across Float32 coordinate and finite softening ranges', () => {
   for (const scale of [2 ** -149, 1e-20, 1, 1e20, 3e38]) {

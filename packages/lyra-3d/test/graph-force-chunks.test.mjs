@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildGraphOctree, graphChargeForces, graphChargeForcesProgress } from '../dist/graph/octree.js';
+import { buildGraphOctree, graphChargeForces } from './graph-synchronous-fixture.mjs';
+import { graphChargeForcesProgress } from '../dist/graph/octree.js';
 
 function complete(tree, theta, softening, quanta) {
   const budget = { remaining: 0 }, work = graphChargeForcesProgress(tree, 7, theta, softening, budget);

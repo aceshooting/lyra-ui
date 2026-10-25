@@ -41,7 +41,7 @@ and scene creation remain outside the resumable work.
 XYZ fixtures retain exact input/position/color/bounds parity; large Node parse cases improve, while
 empty/single-vertex startup increases about 1 ms. Shared synchronous model admission, descriptors, all-format
 asynchronous service routing and UI adoption are implemented and reviewed. Model checks pass
-686 unit tests and 106 packed browser cases per engine in Chromium, Firefox and WebKit. Lifecycle
+686 unit tests and 106 packed cases in each of Chromium, Firefox and WebKit after cleanup. Lifecycle
 ownership and bounded finite Float64-to-Float32 conversion correct the reproduced PLY mesh cases
 while preserving float meshes and double point clouds. UI adoption passes 82 cases in
 Chromium/WebKit and 76 with six retained skips in Firefox.
@@ -54,8 +54,9 @@ hardware/request boundaries. Initial artifact gzip estimate falls from 181,525 t
 loads are slower; no general loading-throughput improvement is claimed. The three-sample tiny-fixture
 comparison uses fresh documents in a shared browser/OS environment; artifact gzip estimates do
 not represent transferred compressed bytes or measure isolated CPU, allocation or GPU duration. Complete coverage
-records all 7,927 lines/statements hit (100%), functions 99.7% and branches 97.96%, with 686 unit
-checks and all 106 packed browser cases passing in each engine. The refreshed full coverage run
+records all 7,860 lines/statements hit (100%), functions 99.69% and branches 97.95%, with 686 unit
+checks and 106 packed cases passing in each of Chromium, Firefox and WebKit.
+The refreshed full coverage run
 includes the five additional meaningful critical-branch tests without runtime changes. Final
 lint/spelling and current size/budget checks pass. The final asynchronous model campaign passes
 42 hardware-browser cases for XYZ, binary PLY and OBJ at 100k/1M vertices on worker/fallback routes.

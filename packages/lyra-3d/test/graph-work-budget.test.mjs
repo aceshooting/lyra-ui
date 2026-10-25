@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildGraphOctree, buildGraphOctreeProgress, graphChargeForces, graphChargeForcesProgress } from '../dist/graph/octree.js';
+import { buildGraphOctree, graphChargeForces } from './graph-synchronous-fixture.mjs';
+import { buildGraphOctreeProgress, graphChargeForcesProgress } from '../dist/graph/octree.js';
 import { createGraphIncrementalTaskKernel } from '../dist/graph/layout-task.js';
-import { createGraphLayoutKernel } from '../dist/graph/layout-kernel.js';
+import { createGraphLayoutKernel } from './graph-synchronous-fixture.mjs';
 
 function consume(factory, quantum) {
   const budget = { remaining: 0 }, work = factory(budget);

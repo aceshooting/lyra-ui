@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { admitModel, ModelAdmissionError } from '../dist/model/admission.js';
-import { createModelJsonWork } from '../dist/model/model-json-work.js';
+import { createModelJsonWork } from './model-json-fixture.mjs';
 import { ModelJsonString } from '../dist/model/model-json-string.js';
 import { createModelAdmissionWork } from '../dist/model/model-admission-kernel.js';
 import { snapshotModelInput } from '../dist/model/model-admission-policy.js';
