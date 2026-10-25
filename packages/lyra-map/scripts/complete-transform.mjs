@@ -6,6 +6,7 @@ import { transformWorker } from './worker-transform.mjs';
 import { transformMetadata } from './metadata-transform.mjs';
 import { transformSpriteKeys } from './sprite-key-transform.mjs';
 import { addPreparedFeatures } from './prepared-mutations.mjs';
+import { snapshotFeatureRequirements } from './feature-requirements.mjs';
 
 const base = dirname(fileURLToPath(import.meta.resolve('maplibre-gl/package.json')));
 export const src = resolve(base, 'src');
@@ -62,10 +63,11 @@ import {prepareUniforms} from ${path('webgl/program/program_uniforms.ts')};
 import {prepareProjection} from ${path('geo/projection/projection_factory.ts')};
 import {prepareSymbols,prepareTerrain} from ${serializeJavaScript(runtimeId)};
 export ${addPreparedFeatures.toString()}
+${snapshotFeatureRequirements.toString()}
 export function snapshotStyle(value){if(Array.isArray(value))return value.map(snapshotStyle);if(value&&typeof value==='object'){const prototype=Object.getPrototypeOf(value);if(prototype===null||Object.getPrototypeOf(prototype)===null)return Object.fromEntries(Object.entries(value).map(([key,item])=>[key,snapshotStyle(item)]));}return value;}
 import {validateStyleAndEmit} from ${path('style/validate_style.ts')};
 export async function prepareReplacement(style,json,options,controller){const previous=options.transformStyle?style.serialize():undefined;const state=snapshotStyle(options.transformStyle?options.transformStyle(previous,json):json);if((options.validate??true)&&validateStyleAndEmit(style,state))return;await prepareTransaction(style,state,controller);return state;}
-export async function prepareMapFeatures(map,requirements,options={}){options.signal?.throwIfAborted();map._lazyInitEmptyStyle();const style=map.style;const state=snapshotStyle({version:8,sources:{},layers:[],...requirements});const controller=new AbortController();const abort=()=>controller.abort();options.signal?.addEventListener('abort',abort,{once:true});if(options.signal?.aborted)abort();(style._modularFeaturePreparations??=new Set()).add(controller);try{await abortable(Promise.resolve(style._modularReady),controller.signal);await prepareTransaction(style,state,controller);if(map.style!==style||map._removed)throw new DOMException('Map removed or style replaced','AbortError');}finally{options.signal?.removeEventListener('abort',abort);style._modularFeaturePreparations.delete(controller);}}
+export async function prepareMapFeatures(map,requirements,options={}){options.signal?.throwIfAborted();map._lazyInitEmptyStyle();const style=map.style;const state=snapshotFeatureRequirements(requirements);const controller=new AbortController();const abort=()=>controller.abort();options.signal?.addEventListener('abort',abort,{once:true});if(options.signal?.aborted)abort();(style._modularFeaturePreparations??=new Set()).add(controller);try{await abortable(Promise.resolve(style._modularReady),controller.signal);await prepareTransaction(style,state,controller);if(map.style!==style||map._removed)throw new DOMException('Map removed or style replaced','AbortError');}finally{options.signal?.removeEventListener('abort',abort);style._modularFeaturePreparations.delete(controller);}}
 export function beginPreparation(style){style._modularPreparation?.abort();return style._modularPreparation=new AbortController();}
 async function abortable(promise,signal){signal.throwIfAborted();let listener;try{return await Promise.race([promise,new Promise((_,reject)=>{listener=()=>reject(new DOMException('Style preparation aborted','AbortError'));signal.addEventListener('abort',listener,{once:true});})]);}finally{signal.removeEventListener('abort',listener);}}
 export async function prepareTransaction(style,state,controller){try{
