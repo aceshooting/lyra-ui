@@ -57,12 +57,18 @@ not represent transferred compressed bytes or measure isolated CPU, allocation o
 records all 7,927 lines/statements hit (100%), functions 99.7% and branches 97.96%, with 686 unit
 checks and all 106 packed browser cases passing in each engine. The refreshed full coverage run
 includes the five additional meaningful critical-branch tests without runtime changes. Final
-lint/spelling and current size/budget checks pass. Final end-to-end setDataAsync qualification at
-100k/1M inputs remains open for worker and fallback routes, trusted input/cancellation, total
-rendering and retained memory; existing asynchronous correctness cases do not establish it.
-Historical native endpoint/post-disposal memory counters are complete, but process-maximum RSS
-does not establish parser-only peak heap. Final version stamping, budget remeasurement and
-exact-commit release qualification remain open.
+lint/spelling and current size/budget checks pass. The final asynchronous model campaign passes
+42 hardware-browser cases for XYZ, binary PLY and OBJ at 100k/1M vertices on worker/fallback routes.
+Observed counts, bounds, coordinate samples, rendering and picks pass. All six trusted cancellations
+reject before commit and preserve the prior scene; these cancellations occur after preparation.
+
+Eight of eighteen successful 100k loads have commit-overlapping main-thread tasks of 51–74 ms;
+1M XYZ/PLY reaches 253–283 ms. Worker examples occur after the worker result, without established
+parser causation. No blanket jank-free loading or performance improvement is claimed. Sampled,
+instrumented main-realm JavaScript heap excludes worker, GPU and whole-process peaks; disposal
+observations do not prove complete native-resource reclamation. Historical native endpoint and
+post-disposal counters are complete, but process-maximum RSS does not establish parser-only peak
+heap. Final version stamping, budget remeasurement and exact-commit release qualification remain open.
 
 None of these results qualifies a new companion release. The published version remains 1.0.0;
 version-stamped package/budget verification and exact-commit release workflows remain required.

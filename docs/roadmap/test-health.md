@@ -149,10 +149,12 @@ do not establish Codecov full-hit coverage or a release pass.
 - [x] Complete the same-harness quick comparison: all 15 scenarios and functional/count assertions
   pass. Across 150 timing metrics, twelve regress and eight improve; this is advisory evidence,
   not a passed performance gate. Retain the required public changeset explanation.
-- [ ] Complete final end-to-end setDataAsync performance qualification at 100k/1M inputs, covering
-  worker and fallback routes, trusted input/cancellation, total rendering and retained memory.
-  Existing asynchronous correctness cases do not complete this campaign. Historical native
-  endpoint/post-disposal memory counters do not measure parser-only peak heap; RSS is process maximum.
+- [x] Complete the scoped asynchronous model campaign: 42 hardware-browser cases cover XYZ, binary
+  PLY and OBJ at 100k/1M vertices on worker/fallback routes. Observed counts, bounds, coordinate
+  samples, rendering and picks pass; all six trusted cancellations preserve the prior scene.
+  Eight of eighteen successful 100k loads have commit-overlapping main-thread tasks of 51–74 ms;
+  1M XYZ/PLY reaches 253–283 ms without proven parser causation. Sampled main-realm heap excludes
+  worker/GPU/whole-process peaks. Retain these limits; no blanket jank-free claim is made.
 - [ ] Stamp final package versions, regenerate version-derived artifacts and remeasure budgets;
   preserve behavioral and coverage policy.
 - [ ] Complete final companion coverage/mutation/packed checks and the exact-release CI, Test All

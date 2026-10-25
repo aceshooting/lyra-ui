@@ -111,9 +111,10 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Run complete map unit suite
+        run: pnpm --filter @aceshooting/lyra-map test
       - name: Run Stryker
-        working-directory: packages/lyra-map
-        run: pnpm exec stryker run --force
+        run: packages/lyra-map/node_modules/.bin/stryker run --force packages/lyra-map/stryker.config.mjs
       - name: Summarize the report
         if: ${{ !cancelled() }}
         working-directory: packages/lyra-map

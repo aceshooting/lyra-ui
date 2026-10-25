@@ -7,36 +7,40 @@
 // (base-transform, complete-transform, worker-transform). Their mutants are template strings that only
 // a browser run observes, so a Node-tier score would mislead; the Chromium driver
 // (`pnpm test:browser`) guards them instead.
+// Run from the monorepo root so the sandbox retains shared tooling and package-relative imports.
 export default {
   testRunner: 'tap',
-  plugins: ['@stryker-mutator/tap-runner'],
+  plugins: [import.meta.resolve('@stryker-mutator/tap-runner')],
+  // These unrelated directory links cannot be copied into the sandbox as ordinary files.
+  ignorePatterns: ['/.agents/skills'],
   tap: {
-    testFiles: ['test/*.test.mjs'],
+    // The package verifier rebuilds and imports generated code in a subprocess without TAP hooks.
+    // It observes no mutation targets here and runs in the complete ordinary-suite preflight instead.
+    testFiles: ['packages/lyra-map/test/!(check-package).test.mjs'],
     nodeArgs: ['--test-reporter=tap'],
     forceBail: true,
   },
   mutate: [
-    'src/vite.mjs',
-    'scripts/prepared-mutations.mjs',
-    'scripts/feature-requirements.mjs',
-    'scripts/preparation-runtime.mjs',
-    'scripts/code-serialization.mjs',
-    'scripts/metadata-transform.mjs',
-    'scripts/sprite-key-transform.mjs',
+    'packages/lyra-map/src/vite.mjs',
+    'packages/lyra-map/scripts/prepared-mutations.mjs',
+    'packages/lyra-map/scripts/feature-requirements.mjs',
+    'packages/lyra-map/scripts/preparation-runtime.mjs',
+    'packages/lyra-map/scripts/code-serialization.mjs',
+    'packages/lyra-map/scripts/metadata-transform.mjs',
+    'packages/lyra-map/scripts/sprite-key-transform.mjs',
   ],
   coverageAnalysis: 'perTest',
   reporters: ['clear-text', 'json', 'html'],
-  jsonReporter: { fileName: 'reports/mutation/mutation.json' },
-  htmlReporter: { fileName: 'reports/mutation/mutation.html' },
+  jsonReporter: { fileName: 'packages/lyra-map/reports/mutation/mutation.json' },
+  htmlReporter: { fileName: 'packages/lyra-map/reports/mutation/mutation.html' },
   thresholds: { high: 85, low: 65, break: null },
   timeoutMS: 30000,
   timeoutFactor: 3,
-  // Stryker copies the package into this directory; keeping it inside the package lets the sandbox
-  // resolve the workspace's node_modules by walking up.
+  // Preserve the monorepo layout; Stryker links root and package node_modules into matching locations.
   tempDirName: '.stryker-tmp',
   cleanTempDir: true,
-  disableTypeChecks: '{src,scripts}/**/*.mjs',
+  disableTypeChecks: 'packages/lyra-map/{src,scripts}/**/*.mjs',
   // Reuse earlier results so a run after a small change takes seconds (`--force` runs everything).
   incremental: true,
-  incrementalFile: 'reports/stryker-incremental.json',
+  incrementalFile: 'packages/lyra-map/reports/stryker-incremental.json',
 };

@@ -61,6 +61,7 @@ opf = "opf"                      # EPUB package document extension
 ser = "ser"                      # OOXML chart series element (`c:ser`)
 Nd = "Nd"                        # Unicode general category "decimal number" (`\p{Nd}`)
 ALPH = "ALPH"                    # WebP alpha chunk identifier
+metalness = "metalness"          # Three.js material property for metallic surface response
 
 # ISO 3166 country, ISO 4217 currency and ISO 15924 script codes.
 BA = "BA"                        # Bosnia and Herzegovina

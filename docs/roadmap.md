@@ -107,10 +107,13 @@ Final candidate lint/spelling, metadata, architecture, quality generation and UI
 package/bundle checks pass with the approved budget changes. The same-harness quick comparison
 passes all 15 scenarios and functional/count assertions but has 12 timing regressions and eight
 improvements across 150 metrics; advisory timing disclosure remains required. No selected
-implementation work remains. Final end-to-end asynchronous model qualification at 100k/1M inputs
-still requires worker/fallback trusted-input and cancellation, total-render and retained-memory
-measurements. Existing asynchronous correctness cases do not complete that campaign. Final version
-stamping, budget remeasurement and exact-commit CI and release workflows remain required before publication. No 30.2 package is published, and earlier
+implementation work remains. The final asynchronous model campaign passes 42 hardware-browser
+cases at 100k/1M vertices, including six trusted cancellations preserving the prior scene. Eight of
+eighteen successful 100k loads have commit-overlapping main-thread tasks of 51–74 ms; 1M XYZ/PLY
+reaches 253–283 ms. Parser causation is unproven, and sampled main-realm heap excludes worker, GPU
+and whole-process peaks. No blanket absence of jank or performance improvement is claimed. Final
+version stamping, budget remeasurement and exact-commit CI and release workflows remain required
+before publication. No 30.2 package is published, and earlier
 30.0/30.1 qualification does not qualify this source.
 
 ## Shipped

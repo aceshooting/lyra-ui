@@ -3,9 +3,11 @@ import test from 'node:test';
 import { join } from 'node:path';
 import { getEventListeners } from 'node:events';
 import { derefLayers } from '@maplibre/maplibre-gl-style-spec';
+import { addPreparedFeatures } from '../scripts/prepared-mutations.mjs';
 import { createPreparationRuntime } from '../scripts/preparation-runtime.mjs';
 import { snapshotFeatureRequirements } from '../scripts/feature-requirements.mjs';
 import { src, virtual } from '../scripts/complete-transform.mjs';
+import { createPreparationWiring } from './preparation-wiring.mjs';
 
 function deferred() { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; }
 function harness(generated, settings = {}) {
@@ -22,13 +24,7 @@ function harness(generated, settings = {}) {
       if (settings.failImport) throw new Error('Import refused');
     }
   };
-  let operations;
-  if (generated) {
-    const injected = { ...dependencies }; delete injected.snapshotFeatureRequirements;
-    const code = virtual.get(join(src, 'modular', 'prepare.ts'))
-      .replace(/import\s*\{[^}]*\}\s*from\s*(?:'[^']*'|"[^"]*");/gu, '').replace(/\bexport\s+/gu, '');
-    operations = new Function(...Object.keys(injected), `${code}\nreturn {snapshotStyle,prepareReplacement,prepareMapFeatures,beginPreparation,prepareTransaction,prepareStyle};`)(...Object.values(injected));
-  } else operations = createPreparationRuntime(dependencies);
+  const operations = generated ? createPreparationWiring(dependencies) : createPreparationRuntime(dependencies);
   const style = { _modularReady: settings.ready ?? Promise.resolve(), serialize() { return { old: true }; },
     dispatcher: { get actorsPromise() { actorsRead.resolve(); return settings.actors ?? Promise.resolve([{ async sendAsync(message) {
       trace.push(['worker', message]); sent.resolve(); await settings.worker;
@@ -40,17 +36,72 @@ const input = () => ({ sources: { source: { type: 'geojson', data: { coordinates
   layers: [{ id: 'points', type: 'circle' }], projection: { type: 'mercator' } });
 async function both(run) {
   const direct = await run(false), generated = await run(true);
-  assert.deepEqual(generated, direct, 'authored factory and generated entry agree');
+  assert.deepEqual(generated, direct, 'direct factory and emitted wiring with live authored functions agree');
   return direct;
 }
 
-test('direct and generated preparation retain metadata plans, worker messages and cleanup', async () => {
+test('direct preparation and emitted wiring retain metadata plans, worker messages and cleanup', async () => {
   const trace = await both(async generated => {
     const h = harness(generated); await h.operations.prepareMapFeatures(h.map, input());
     assert.equal(h.style._modularFeaturePreparations.size, 0); return h.trace;
   });
   assert.equal(trace.filter(([name]) => name === 'worker').length, 1);
   assert.deepEqual(trace.find(([name]) => name === 'worker')[1].data, { layers: [{ type: 'circle' }], sources: ['geojson'] });
+});
+
+test('preparation wiring refuses missing, duplicated or relocated authored declarations', () => {
+  const code = virtual.get(join(src, 'modular', 'prepare.ts'));
+  for (const implementation of [addPreparedFeatures, snapshotFeatureRequirements, createPreparationRuntime]) {
+    const name = implementation.name;
+    const declaration = `\n${name === 'addPreparedFeatures' ? 'export ' : ''}${implementation.toString()}\n`;
+    const missing = code.replace(declaration, '\n');
+    const duplicated = code + declaration;
+    const relocated = `${missing}\nconst relocated = ${implementation.toString()};\n`;
+    for (const malformed of [missing, duplicated, relocated])
+      assert.throws(() => createPreparationWiring({}, malformed), { message: new RegExp(`^Expected one emitted ${name} declaration(?:\\n|$)`) });
+  }
+});
+
+test('settled preparation releases internal and caller abort listeners without needing cancellation', async () => {
+  for (const failImport of [false, true]) await both(async generated => {
+    const caller = new AbortController(), h = harness(generated, { failImport });
+    const pending = h.operations.prepareMapFeatures(h.map, input(), { signal: caller.signal });
+    const [internal] = h.style._modularFeaturePreparations;
+    assert.ok(internal);
+    if (failImport) await assert.rejects(pending, { message: 'Import refused' });
+    else await pending;
+    assert.equal(internal.signal.aborted, false, 'cleanup does not depend on one-shot abort delivery');
+    assert.equal(getEventListeners(internal.signal, 'abort').length, 0);
+    assert.equal(getEventListeners(caller.signal, 'abort').length, 0);
+    assert.equal(h.style._modularFeaturePreparations.size, 0);
+    return h.trace;
+  });
+});
+
+test('feature preparation initializes an empty style before taking ownership of it', async () => {
+  await both(async generated => {
+    const h = harness(generated);
+    h.map.style = undefined;
+    let initializations = 0;
+    h.map._lazyInitEmptyStyle = () => { initializations++; h.map.style = h.style; };
+    await h.operations.prepareMapFeatures(h.map, input());
+    assert.equal(initializations, 1);
+    assert.equal(h.map.style, h.style);
+    assert.equal(h.style._modularFeaturePreparations.size, 0);
+    assert.equal(h.trace.filter(([name]) => name === 'worker').length, 1);
+    return h.trace;
+  });
+});
+
+test('source preparation receives source family names in descriptor order', async () => {
+  await both(async generated => {
+    const h = harness(generated);
+    await h.operations.prepareStyle({ sources: {
+      points: { type: 'geojson' }, pixels: { type: 'raster' }, morePoints: { type: 'geojson' }
+    } });
+    assert.deepEqual(h.trace.find(([name]) => name === 'prepareSources')[1], ['geojson', 'raster', 'geojson']);
+    return h.trace;
+  });
 });
 
 test('abort before start or during style/actor readiness cleans listeners and controller ownership', async () => {

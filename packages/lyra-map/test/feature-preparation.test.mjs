@@ -1,13 +1,10 @@
 import assert from 'node:assert/strict';
-import { join } from 'node:path';
 import test from 'node:test';
 import { derefLayers } from '@maplibre/maplibre-gl-style-spec';
-import { src, virtual } from '../scripts/complete-transform.mjs';
+import { createPreparationWiring } from './preparation-wiring.mjs';
 
-/** Executes the actual generated preparation entry with only engine dependencies stubbed. */
+/** Executes emitted preparation wiring with live authored functions and stubbed engine dependencies. */
 function runtime(ready = Promise.resolve()) {
-  const code = virtual.get(join(src, 'modular', 'prepare.ts'));
-  assert.equal(typeof code, 'string');
   const dependencies = { derefLayers, MessageType: { prepareFeatures: 'prepareFeatures' } };
   const calls = [], messages = [];
   for (const name of ['prepareStyleLayers', 'prepareSources', 'prepareDraws', 'prepareShaders',
@@ -15,9 +12,7 @@ function runtime(ready = Promise.resolve()) {
     dependencies[name] = async value => { calls.push([name, value]); };
   }
   dependencies.validateStyleAndEmit = () => false;
-  const body = code.replace(/import\s*\{[^}]*\}\s*from\s*(?:'[^']*'|"[^"]*");/gu, '')
-    .replace(/\bexport\s+/gu, '');
-  const entry = new Function(...Object.keys(dependencies), `${body}\nreturn {prepareMapFeatures,prepareReplacement};`)(...Object.values(dependencies));
+  const entry = createPreparationWiring(dependencies);
   const style = { _modularReady: ready, dispatcher: { actorsPromise: Promise.resolve([
     { async sendAsync(message) { messages.push(message); } }
   ]) } };

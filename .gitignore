@@ -22,3 +22,4 @@ storybook-static
 
 # Output of the "Quality tools" scripts (flake hunt, bundle composition).
 .quality-tools/
+/.stryker-tmp/
