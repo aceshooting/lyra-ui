@@ -109,9 +109,10 @@ The baseline below predates the 30.0.0 work.
   style replacement and native failure handling. Final exact-commit workflows remain required.
 - [x] Rebuild and regenerate measured quality, public references, editor metadata and packaged skills;
   verify Storybook documentation freshness for all 311 tags.
-- [ ] Apply the hosted update of seven reviewed public source-contract records and verify final budgets.
+- [x] Apply the hosted update of seven reviewed public source-contract records; API documentation
+  freshness, final delivery budgets and installed-consumer checks pass.
 - [ ] Verify complete coverage and all release workflows on the final versioned commit. The completed
-  [candidate Quality tools run](https://github.com/aceshooting/lyra-ui/actions/runs/40162331143)
+  [candidate Quality tools run](https://github.com/aceshooting/lyra-ui/actions/runs/40168635018)
   includes the A/B benchmark; it does not qualify later commits.
 - [x] Verify the deployed coverage JSON, rendered badge and GitHub README after the pagination
   correction: the candidate reports 99.35% UI coverage.

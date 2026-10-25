@@ -61,10 +61,10 @@ and focused checks do not qualify the final release candidate.
 The integrated map and SSR suite passes 1,940 cases in each of Chromium, Firefox with WebGL, and
 WebKit, including basemap ordering, restoration and absent-target deferral. The locale-picker suite passes 133
 cases in each engine, including vetoes, forced closes, rapid reversals and reconnects. The shared
-30.1.0 version and generated API/editor/consumer artifacts are prepared. Remaining work is the
-hosted update of seven public source-contract records, final delivery-budget validation and exact-commit
-qualification. CI, both browser workflows and Quality tools including the A/B benchmark must pass
-on the final versioned commit before publication. The complete Codecov UI flag must retain the previous release's result; improvement of
+30.1.0 version and generated API/editor/consumer artifacts are prepared. The seven reviewed public
+source-contract records have been refreshed through hosted preparation, and final delivery budgets
+and installed-consumer checks pass. CI, both browser workflows and Quality tools including the A/B
+benchmark must pass on the final versioned commit before publication. The complete Codecov UI flag must retain the previous release's result; improvement of
 about 0.1 percentage point is the release aim, while 99.74% and 99.80% remain longer-term goals.
 The historical WebKit PDF timeout remains unexplained; passing focused reproductions establish no
 fix. See [test health](roadmap/test-health.md) for the evidence and remaining work. Geospatial
