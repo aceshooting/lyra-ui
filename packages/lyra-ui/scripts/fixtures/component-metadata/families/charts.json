@@ -1,9 +1,7 @@
 {
   "family": "charts",
   "assignments": {
-    "new-component-experimental": [
-      "lr-chart-3d"
-    ],
+    "new-component-experimental": [],
     "published-stable": [
       "lr-bar-chart",
       "lr-box-plot",
@@ -18,7 +16,9 @@
       "lr-radar-chart",
       "lr-scatter-chart"
     ],
-    "published-experimental": [],
+    "published-experimental": [
+      "lr-chart-3d"
+    ],
     "mapped-experimental": [],
     "introduced-mapped-experimental": [],
     "compatibility-stable": [],

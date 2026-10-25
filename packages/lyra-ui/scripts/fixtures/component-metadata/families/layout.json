@@ -1,13 +1,7 @@
 {
   "family": "layout",
   "assignments": {
-    "new-component-experimental": [
-      "lr-app-rail-group",
-      "lr-menubar",
-      "lr-menubar-item",
-      "lr-navigation-menu",
-      "lr-navigation-menu-item"
-    ],
+    "new-component-experimental": [],
     "published-stable": [
       "lr-accordion",
       "lr-accordion-item",
@@ -38,7 +32,13 @@
       "lr-virtual-list",
       "lr-widget"
     ],
-    "published-experimental": [],
+    "published-experimental": [
+      "lr-app-rail-group",
+      "lr-menubar",
+      "lr-menubar-item",
+      "lr-navigation-menu",
+      "lr-navigation-menu-item"
+    ],
     "mapped-experimental": [],
     "introduced-mapped-experimental": [],
     "compatibility-stable": [],

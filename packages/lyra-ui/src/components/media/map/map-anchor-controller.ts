@@ -1,4 +1,4 @@
-import { deferredPlaceReady as place } from '../../../internal/anchored-overlay-runtime.js';
+import { deferredPlaceSession as place, type DeferredPlacementSession } from '../../../internal/anchored-overlay-runtime.js';
 import { getInheritedPropertyDescriptor } from '../../../internal/data-descriptors.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { applyComposedFocusRepair, captureComposedFocusRepair, focusFirstAvailable,
@@ -80,6 +80,23 @@ export interface MapAnchorHost extends MapAnchorMapHost {
   autofocus?(): boolean;
 }
 
+interface MapAnchorPlacement {
+  readonly document: Document;
+  readonly map: MapLibreMapCapability | undefined;
+  readonly wrapper: HTMLElement;
+  readonly container: HTMLElement;
+  readonly fence: HTMLElement;
+  readonly direction: 'ltr' | 'rtl';
+  readonly style: number;
+  readonly connection: number;
+  readonly boundaries: readonly Element[];
+  readonly safeArea: Readonly<Required<LyraMapAnchorSafeArea>>;
+  rect: DOMRect;
+  current(): boolean;
+  publish(): void;
+  handle?: DeferredPlacementSession;
+}
+
 /**
  * Placement, focus return and closable Escape ownership for one anchor: an element's `anchor`
  * slot, or one `lr-map-anchor` child. Loaded on demand once a coordinate is requested or a child
@@ -94,7 +111,7 @@ export class MapAnchorController {
   private returnTarget?: HTMLElement;
   private boundaryObserver?: ResizeObserver;
   private observedBoundaries: readonly Element[] = [];
-  private cleanup?: () => void;
+  private placement?: MapAnchorPlacement;
   private frame?: number;
   /** When this anchor was last raised; the most recently raised one is painted in front. */
   private raisedAt = 0;
@@ -113,17 +130,23 @@ export class MapAnchorController {
     return (this.host.element.ownerDocument as Document | undefined)?.defaultView ?? null;
   }
 
-  stop(): void {
+  /** Rejects stale geometry immediately while retaining the placement subscriptions. */
+  invalidate(): void {
     this.epoch += 1;
     this.placed = false; this.placedCoordinates = undefined;
-    const cleanup = this.cleanup; this.cleanup = undefined;
-    cleanup?.();
+    this.placement?.handle?.invalidate();
     this.overlay?.suspend();
+  }
+
+  stop(): void {
+    this.invalidate();
+    const placement = this.placement; this.placement = undefined;
+    placement?.handle?.();
   }
 
   /** Runs `sync()` on the next animation frame, once however many callers ask. */
   schedule(): void {
-    this.stop();
+    this.invalidate();
     if (this.frame !== undefined) return;
     const view = this.view();
     if (!view || typeof view.requestAnimationFrame !== 'function') {
@@ -326,6 +349,14 @@ export class MapAnchorController {
     this.boundaryObserver?.disconnect(); this.boundaryObserver = undefined; this.observedBoundaries = [];
   }
 
+  /** Overflow retains its open request and autofocus history, but owns no placement observers. */
+  suspendAdmission(): void {
+    this.cancelFrame();
+    this.hide();
+    if (this.placement || this.placed) return;
+    this.boundaryObserver?.disconnect(); this.boundaryObserver = undefined; this.observedBoundaries = [];
+  }
+
   private syncOverlay(wrapper: HTMLElement): void {
     const host = this.host, element = host.element;
     if (!host.closable()) {
@@ -378,19 +409,17 @@ export class MapAnchorController {
 
   /** The anchor's container-relative pixel position while its safe own coordinates are on screen. */
   private point(): readonly [number, number] | undefined {
-    const host = this.host, position = host.request(), container = host.container();
-    if (!container || !Array.isArray(position)) return undefined;
+    const host = this.host, position = host.request();
+    if (!Array.isArray(position)) return undefined;
     const lng = mapOwnValue(position, '0'), lat = mapOwnValue(position, '1');
     if (typeof lng !== 'number' || !Number.isFinite(lng) || typeof lat !== 'number' || !Number.isFinite(lat) || Math.abs(lat) > 90) return undefined;
-    const point = host.element.project([lng, lat]);
-    if (!point) return undefined;
-    const [x, y] = point;
-    return x >= 0 && y >= 0 && x <= container.clientWidth && y <= container.clientHeight ? point : undefined;
+    return host.element.project([lng, lat]);
   }
 
   /** Owns placement only after the current deferred positioner callback has measured the anchor. */
   sync(): void {
     const host = this.host, element = host.element;
+    this.invalidate();
     if (host.updateActive()) {
       const [generation, connection] = host.generations(), map = host.map();
       host.afterUpdate(() => {
@@ -402,10 +431,12 @@ export class MapAnchorController {
     const wrapper = host.wrapper(), container = host.container(), fence = host.fence();
     if (!wrapper || !container || !fence || !element.isConnected || !host.map() || !host.styleLoaded() ||
       host.interactionBlocked() || !this.hasContent()) { this.hide(); return; }
-    this.stop();
     const epoch = this.epoch, map = host.map(), coordinates = host.request();
+    const document = element.ownerDocument, [style, connection] = host.generations();
     const boundary = host.boundary(), safeArea = host.safeArea(), direction = host.direction();
-    const current = (): boolean => element.isConnected && host.map() === map && host.styleLoaded() &&
+    const current = (): boolean => element.isConnected && element.ownerDocument === document &&
+      host.map() === map && host.styleLoaded() && host.generations()[0] === style && host.generations()[1] === connection &&
+      host.wrapper() === wrapper && host.container() === container && host.fence() === fence &&
       epoch === this.epoch && host.request() === coordinates && host.boundary() === boundary &&
       host.safeArea() === safeArea && host.direction() === direction && !host.interactionBlocked();
     try {
@@ -415,10 +446,12 @@ export class MapAnchorController {
       const point = this.point();
       if (!current()) return;
       const width = finiteRange(container.clientWidth, 0, 0), height = finiteRange(container.clientHeight, 0, 0);
+      if (!current()) return;
       const edges = admitted.safeArea;
       const start = Math.min(width, edges.inlineStart), end = Math.min(width, edges.inlineEnd);
       const top = Math.min(height, edges.blockStart), bottom = Math.min(height, edges.blockEnd);
-      if (!point || start + end >= width || top + bottom >= height) { this.hide(); return; }
+      if (!point || !(point[0] >= 0 && point[1] >= 0 && point[0] <= width && point[1] <= height) ||
+        start + end >= width || top + bottom >= height) { this.hide(); return; }
       fence.style.insetInlineStart = `${start}px`; fence.style.insetInlineEnd = `${end}px`;
       fence.style.insetBlockStart = `${top}px`; fence.style.insetBlockEnd = `${bottom}px`;
       // A child's own `dir` styles its panel; its logical safe area still follows the map.
@@ -435,21 +468,44 @@ export class MapAnchorController {
       wrapper.hidden = false;
       const rect = container.getBoundingClientRect();
       if (!current()) return;
-      const placement = place(virtualAnchorFromRect({ x: rect.left + point[0], y: rect.top + point[1], contextElement: container }), wrapper, {
+      const pointRect = virtualAnchorFromRect({ x: rect.left + point[0], y: rect.top + point[1] }).getBoundingClientRect();
+      const publish = (): void => {
+        if (!current() || !this.hasContent()) return;
+        const first = !this.placed;
+        if (first) this.captureReturnTarget(wrapper);
+        if (!current()) return;
+        this.placed = true; this.placedCoordinates = coordinates;
+        this.syncOverlay(wrapper);
+        if (first && current()) this.enter(wrapper);
+      };
+      const previous = this.placement;
+      if (previous?.handle?.isActive() && previous.document === document && previous.map === map && previous.wrapper === wrapper &&
+        previous.container === container && previous.fence === fence && previous.direction === direction &&
+        previous.style === style && previous.connection === connection &&
+        previous.boundaries.length === admitted.boundaries.length &&
+        previous.boundaries.every((value, index) => value === admitted.boundaries[index]) &&
+        previous.safeArea.blockStart === edges.blockStart && previous.safeArea.blockEnd === edges.blockEnd &&
+        previous.safeArea.inlineStart === edges.inlineStart && previous.safeArea.inlineEnd === edges.inlineEnd) {
+        previous.rect = pointRect; previous.current = current; previous.publish = publish;
+        previous.handle?.update();
+        return;
+      }
+      this.placement = undefined;
+      previous?.handle?.();
+      if (!current()) return;
+      const placement: MapAnchorPlacement = { document, map, wrapper, container, fence, direction, style, connection,
+        boundaries: admitted.boundaries, safeArea: edges, rect: pointRect, current, publish };
+      this.placement = placement;
+      const handle = place({ contextElement: container, getBoundingClientRect: () => placement.rect }, wrapper, {
         placement: 'top', strategy: 'absolute', offset: 12, boundary: [fence, ...admitted.boundaries], padding: 8, shiftCrossAxis: true,
-        onPlaced: () => {
-          if (!current() || !this.hasContent()) return;
-          const first = !this.placed;
-          if (first) this.captureReturnTarget(wrapper);
-          if (!current()) return;
-          this.placed = true; this.placedCoordinates = coordinates;
-          this.syncOverlay(wrapper);
-          if (first && current()) this.enter(wrapper);
-        },
+        onPlaced: () => { if (this.placement === placement) placement.publish(); },
       });
-      if (!current()) { placement(); return; }
-      this.cleanup = placement;
-      void placement.ready.then(ready => { if (!ready && current()) this.hide(); });
+      if (!current() || this.placement !== placement) {
+        if (this.placement === placement) this.placement = undefined;
+        handle(); return;
+      }
+      placement.handle = handle;
+      void handle.ready.then(ready => { if (!ready && this.placement === placement && placement.current()) this.hide(); });
     } catch { if (current()) this.hide(); }
   }
 }
@@ -478,6 +534,7 @@ const CHILD_EVENTS = ['focusin', 'focusout', 'pointerdown'] as const;
 /** Placement of one map's `lr-map-anchor` children, created once one of them opens. */
 export class MapAnchorChildren {
   private readonly entries = new Map<MapAnchorChild, MapAnchorChildEntry>();
+  private readonly admittedControllers = new Set<MapAnchorController>();
   private serial = 0;
 
   constructor(private readonly host: MapAnchorChildrenHost, anchors: Iterable<MapAnchorChild>) {
@@ -518,6 +575,8 @@ export class MapAnchorChildren {
 
   schedule(): void { this.each(undefined, controller => { controller.schedule(); }); }
 
+  invalidate(): void { for (const controller of this.admittedControllers) controller.invalidate(); }
+
   stop(): void { for (const { controller } of this.entries.values()) controller.stop(); }
 
   /** Hides every open child while the map is interaction-blocked. */
@@ -530,20 +589,42 @@ export class MapAnchorChildren {
     const changed = this.admit();
     for (const [anchor, entry] of this.entries) {
       if (only && entry !== only && !changed.has(entry)) continue;
-      if (anchor.open) { entry.open = true; place(entry.controller); }
+      if (anchor.open) {
+        entry.open = true;
+        if (entry.admitted) place(entry.controller);
+        else if (changed.has(entry)) entry.controller.suspendAdmission();
+      }
       else if (entry.open) { entry.open = false; entry.controller.hide(true, true); }
     }
   }
 
   /** Admits the first open children in document order; returns those whose admission changed. */
   private admit(): Set<MapAnchorChildEntry> {
-    const open = [...this.entries.keys()].filter(anchor => anchor.open)
-      .sort((a, b) => a.compareDocumentPosition(b) & 2 ? 1 : -1);
-    if (open.length > LIMIT) devWarnOnce('lyra-map-anchor-limit', `<${this.host.element.localName}>: only the first ${LIMIT} open <${open[LIMIT]!.localName}> children are placed; later ones stay hidden until one closes.`);
+    // Only the first LIMIT candidates matter. Keeping that bounded list ordered avoids sorting
+    // every overflow child and still sees document reordering without a persistent order cache.
+    const first: MapAnchorChild[] = [];
+    let open = 0, overflow: MapAnchorChild | undefined;
+    for (const anchor of this.entries.keys()) {
+      if (!anchor.open) continue;
+      if (++open > LIMIT) overflow ??= anchor;
+      if (first.length === LIMIT && anchor.compareDocumentPosition(first[LIMIT - 1]!) & 2) continue;
+      let low = 0, high = first.length;
+      while (low < high) {
+        const middle = (low + high) >>> 1;
+        if (anchor.compareDocumentPosition(first[middle]!) & 2) low = middle + 1;
+        else high = middle;
+      }
+      first.splice(low, 0, anchor);
+      if (first.length > LIMIT) first.pop();
+    }
+    if (overflow) devWarnOnce('lyra-map-anchor-limit', `<${this.host.element.localName}>: only the first ${LIMIT} open <${overflow.localName}> children are placed; later ones stay hidden until one closes.`);
+    const selected = new Set(first);
     const changed = new Set<MapAnchorChildEntry>();
+    this.admittedControllers.clear();
     for (const [anchor, entry] of this.entries) {
-      const admitted = open.indexOf(anchor) < LIMIT && anchor.open;
+      const admitted = selected.has(anchor);
       if (admitted !== entry.admitted) { entry.admitted = admitted; changed.add(entry); }
+      if (admitted) this.admittedControllers.add(entry.controller);
     }
     return changed;
   }

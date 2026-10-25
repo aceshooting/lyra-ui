@@ -13,7 +13,7 @@ import { isAbortError, isResourceLimitError, resolveOwnerFetchTarget } from '../
 import { engine3dFailureReason, type Engine3dFallbackDetail, type Engine3dFallbackReason } from '../../../internal/engine-3d.js';
 import type { Engine3dInstance } from '../../../internal/engine-3d-loader.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
-import { modelEngineEnvironment, modelEngineLoader } from './model-viewer-loader.js';
+import { modelEngineEnvironment, modelEngineLoader, supportsAsyncModelData } from './model-viewer-loader.js';
 import { MODEL_SOURCE_MAX_BYTES, DEFAULT_MODEL_CAMERA, readModelSource, resolveModelFormat, snapshotModelCamera, type LyraModelCamera, type LyraModelFormat, type LyraModelFormatPreference } from './model-viewer-source.js';
 import { styles } from './model-viewer.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -355,7 +355,10 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
       this.watchEnvironment(current);
       this.refreshEngine();
       if (!current()) return;
-      engine.setData({ bytes, format }, generation);
+      if (supportsAsyncModelData(engine)) {
+        await engine.setDataAsync({ bytes, format }, generation, { signal: controller.signal });
+        if (!current()) return;
+      } else engine.setData({ bytes, format }, generation);
     } catch (error) {
       if (!current() || isAbortError(error)) return;
       const reason = engine3dFailureReason(error);

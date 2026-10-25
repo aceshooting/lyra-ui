@@ -423,3 +423,39 @@ it('names source tasks from their rendered label, detail and rich slot content',
   await expect(el).to.be.accessible();
   expect(accessibleName(el.shadowRoot!.querySelector('[data-source-key]')!)).to.equal('Pending Task Details Additional context');
 });
+
+for (const ranged of [false, true]) it(`preserves provider and ${ranged ? 'ranged' : 'indexed'} view method receivers`, async () => {
+  const calls: string[] = [];
+  type View = Awaited<ReturnType<TaskListSource['project']>>['rows'];
+  const rows: View = ranged ? {
+    count,
+    async read(request) {
+      calls.push(this === rows ? 'read' : 'wrong-read');
+      return Array.from({ length: request.limit }, (_, index) => row(request.offset + index));
+    },
+    async indexOfKey() { calls.push(this === rows ? 'indexOfKey' : 'wrong-indexOfKey'); return 0; },
+  } : {
+    count,
+    itemAt(index) { calls.push(this === rows ? 'itemAt' : 'wrong-itemAt'); return row(index); },
+    keyAt(index) { calls.push(this === rows ? 'keyAt' : 'wrong-keyAt'); return row(index).key; },
+    indexOfKey() { calls.push(this === rows ? 'indexOfKey' : 'wrong-indexOfKey'); return 0; },
+  };
+  const source: TaskListSource = { revision: 1, async project(request) {
+    calls.push(this === source ? 'project' : 'wrong-project');
+    return { state: 'receiver', total: count, summary: { total: count / 2, completed: 123456 }, rows,
+      ...(request.action.type === 'reveal' ? { focusIndex: 0 } : {}) };
+  } };
+  const el = await fixture<TaskList>(html`<lr-task-list .treeSource=${source}></lr-task-list>`);
+  await ready(el);
+  expect(await el.revealSourceKey('task0')).to.equal(true);
+  await ready(el);
+  const seam = el as unknown as { sourceControl: { projection: { rows: View } } };
+  const accepted = seam.sourceControl.projection.rows;
+  if ('itemAt' in accepted) { expect(accepted.keyAt(0)).to.equal('task0'); expect(accepted.indexOfKey('task0')).to.equal(0); }
+  else expect(await accepted.indexOfKey('task0', { revision: 1, locale: 'en', signal: new AbortController().signal })).to.equal(0);
+  expect(calls.filter(call => call.startsWith('wrong-'))).to.deep.equal([]);
+  expect(calls).to.include('project');
+  expect(calls).to.include('indexOfKey');
+  expect(calls).to.include(ranged ? 'read' : 'itemAt');
+  if (!ranged) expect(calls).to.include('keyAt');
+});

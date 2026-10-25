@@ -1,10 +1,7 @@
 {
   "family": "media",
   "assignments": {
-    "new-component-experimental": [
-      "lr-drop-zone",
-      "lr-map-anchor"
-    ],
+    "new-component-experimental": [],
     "published-stable": [
       "lr-animated-image",
       "lr-animation",
@@ -24,7 +21,10 @@
       "lr-qr-code",
       "lr-zoomable-frame"
     ],
-    "published-experimental": [],
+    "published-experimental": [
+      "lr-drop-zone",
+      "lr-map-anchor"
+    ],
     "mapped-experimental": [],
     "introduced-mapped-experimental": [
       "lr-video",

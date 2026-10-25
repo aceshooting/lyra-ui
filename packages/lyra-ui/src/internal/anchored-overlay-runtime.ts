@@ -1,6 +1,8 @@
 import type {
+  AnchoredSurfaceSession,
   PlaceStrategy,
   placeAnchoredSurface,
+  placeAnchoredSurfaceSession,
   releaseTopLayer,
   trackRect,
 } from './positioner.js';
@@ -9,6 +11,8 @@ import type {
 export interface AnchoredOverlayRuntime {
   /** `placeAnchoredSurface()` in the default runtime: `place()` plus the top-layer escape. */
   place: typeof placeAnchoredSurface;
+  /** Retained geometry updates; optional for injected runtimes implementing only `place()`. */
+  placeSession?: typeof placeAnchoredSurfaceSession;
   trackRect: typeof trackRect;
   /** Releases a top-layer promotion explicitly, for a surface that stops being an overlay without
    *  settling through `[hidden]`. Optional so injected test runtimes stay valid. */
@@ -17,10 +21,12 @@ export interface AnchoredOverlayRuntime {
 
 type AnchoredOverlayRuntimeLoader = () => Promise<AnchoredOverlayRuntime>;
 export type DeferredOperationHandle = (() => void) & { ready: Promise<boolean> };
+export type DeferredPlacementSession = DeferredOperationHandle & Pick<AnchoredSurfaceSession, 'invalidate' | 'update' | 'isActive'>;
 
 const defaultRuntimeLoader: AnchoredOverlayRuntimeLoader = () =>
   import('./positioner.js').then((runtime) => ({
     place: runtime.placeAnchoredSurface,
+    placeSession: runtime.placeAnchoredSurfaceSession,
     trackRect: runtime.trackRect,
     releaseTopLayer: runtime.releaseTopLayer,
   }));
@@ -154,6 +160,86 @@ export function deferredPlaceReady(
 
   dispose.ready = ready;
   return dispose;
+}
+
+/** Defers one retained placement session, including invalidation while its runtime is loading. */
+export function deferredPlaceSession(
+  ...args: Parameters<typeof placeAnchoredSurface>
+): DeferredPlacementSession {
+  const [anchor, popup, options = {}] = args;
+  const pendingVisibility = concealPendingPopup(popup, options.strategy);
+  let active = true, suspended = false, starting = false, failed = false;
+  let generation = 0;
+  let runtime: AnchoredOverlayRuntime | undefined;
+  let cleanup: (() => void) | undefined;
+  let retained: AnchoredSurfaceSession | undefined;
+  let settle: ((value: boolean) => void) | undefined;
+  const ready = new Promise<boolean>(resolve => { settle = resolve; });
+  const finish = (value: boolean): void => { settle?.(value); settle = undefined; };
+
+  const dispose = (): void => {
+    if (!active) return;
+    active = false;
+    if (activePlacementByPopup.get(popup) === dispose) activePlacementByPopup.delete(popup);
+    const stop = cleanup; cleanup = undefined; retained = undefined;
+    stop?.();
+    releasePendingPopup(popup, pendingVisibility);
+    finish(false);
+  };
+  activePlacementByPopup.set(popup, dispose);
+
+  const start = (propagateFailure = false): void => {
+    if (!active || suspended || starting || failed || cleanup || !runtime) return;
+    const installed = generation, capability = runtime.placeSession;
+    starting = true;
+    try {
+      const placementOptions: Parameters<typeof placeAnchoredSurface>[2] = {
+        ...options,
+        onPlaced: result => {
+          if (!active || suspended || !capability && installed !== generation) return;
+          if (settle) { releasePendingPopup(popup, pendingVisibility); finish(true); }
+          options.onPlaced?.(result);
+        },
+      };
+      const next = capability ? capability.call(runtime, anchor, popup, placementOptions) : runtime.place(anchor, popup, placementOptions);
+      if (!active) { next(); return; }
+      cleanup = next;
+      retained = capability ? next as AnchoredSurfaceSession : undefined;
+      // An injected runtime may publish synchronously and let that callback replace the request.
+      if (suspended || installed !== generation) {
+        if (retained) retained.invalidate();
+        else { cleanup = undefined; next(); }
+      }
+    } catch (error) {
+      failed = true; finish(false);
+      if (propagateFailure) throw error;
+    } finally { starting = false; }
+    if (active && !suspended && installed !== generation) {
+      if (retained) retained.update();
+      else start(propagateFailure);
+    }
+  };
+
+  const operation: DeferredPlacementSession = Object.assign(dispose, {
+    ready,
+    // A retained runtime may fail closed after its first successful publication. Read its live
+    // lifetime rather than treating first-placement readiness as a permanent health signal.
+    isActive(): boolean { return active && !failed && (retained?.isActive() ?? true); },
+    invalidate(): void {
+      if (!active) return;
+      suspended = true; generation++;
+      if (retained) retained.invalidate();
+      else { const stop = cleanup; cleanup = undefined; stop?.(); }
+    },
+    update(): void {
+      if (!active) return;
+      suspended = false;
+      if (retained) retained.update();
+      else start(true);
+    },
+  });
+  void loadAnchoredOverlayRuntime().then(value => { runtime = value; start(); }, () => { failed = true; finish(false); });
+  return operation;
 }
 
 /** Waits for the current placement generation; a replacement supersedes a cancelled handle. */

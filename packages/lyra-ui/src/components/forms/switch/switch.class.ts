@@ -5,6 +5,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
+import { defaultLabelForwardingSlots, isDefaultLabelNode } from '../../../internal/default-label-forwarding.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraSize } from '../../../internal/variants.js';
@@ -423,20 +424,6 @@ export class LyraSwitch extends CheckedFormAssociated(LyraSwitchBase) {
     }
   };
 
-  private isDefaultLabelNode(node: Node): boolean {
-    if (node.nodeType !== 1) return true;
-    const slotName = (node as Element).getAttribute('slot');
-    return slotName === null || slotName === '';
-  }
-
-  private labelForwardingSlots(): HTMLSlotElement[] {
-    return Array.from(this.querySelectorAll<HTMLSlotElement>('slot')).filter((slot) => {
-      let top: Node = slot;
-      while (top.parentNode && top.parentNode !== this) top = top.parentNode;
-      return top.parentNode === this && this.isDefaultLabelNode(top);
-    });
-  }
-
   private recomputeHasLabelSlot(): void {
     const renderRoot = this.renderRoot as ParentNode | undefined;
     const childNodes = (this as unknown as { childNodes?: NodeListOf<ChildNode> }).childNodes;
@@ -445,7 +432,7 @@ export class LyraSwitch extends CheckedFormAssociated(LyraSwitchBase) {
     const nodes: Node[] = slot
       ? slot.assignedNodes({ flatten: true })
       : Array.from(childNodes)
-          .filter((node) => this.isDefaultLabelNode(node))
+          .filter((node) => isDefaultLabelNode(node))
           .flatMap((node) => {
             if (node.nodeType !== 1 || (node as Element).localName !== 'slot') return [node];
             const forwardingSlot = node as HTMLSlotElement;
@@ -461,7 +448,7 @@ export class LyraSwitch extends CheckedFormAssociated(LyraSwitchBase) {
     if (target?.nodeType !== 1 || target.localName !== 'slot') return;
     if (target.getRootNode() === this.renderRoot) {
       if ((target.getAttribute('name') ?? '') !== '') return;
-    } else if (!this.labelForwardingSlots().includes(target as HTMLSlotElement)) {
+    } else if (!defaultLabelForwardingSlots(this).includes(target as HTMLSlotElement)) {
       return;
     }
     this.labelTextObserver.bind();

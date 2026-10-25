@@ -13,8 +13,9 @@ import { styles } from './span-waterfall.styles.js';
 import { normalizeLyraSpanKind, normalizeLyraSpanStatus, type LyraSpan } from '../trace-tree/span.js';
 import { projectLyraSpans } from '../trace-tree/span-projection.js';
 import type { TraceTreeSource } from '../trace-tree/trace-tree.class.js';
-import type { LyraHierarchySource, LyraHierarchyQuery, LyraHierarchyRow, LyraHierarchyView, LyraTraceSourceSummary } from '../../../data-sources.js';
+import type { LyraHierarchySource, LyraHierarchyQuery, LyraTraceSourceSummary } from '../../../data-sources.js';
 import { HierarchySourceController, hierarchyField, hierarchyKey, hierarchyText } from '../../../internal/hierarchy-source-controller.js';
+import { createHierarchySummarySource, captureHierarchySourceEffects, traceSourceSummary } from '../../../internal/hierarchy-summary-source.js';
 import { hierarchySourceView } from '../../../internal/hierarchy-source-view.js';
 import { hierarchySourceStyles } from '../../../internal/hierarchy-source-view.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -258,75 +259,17 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   }
 
   private wrapSource(source: TraceTreeSource): LyraHierarchySource<LyraSpan, LyraHierarchyQuery> {
-    const host = this;
-    return {
-      get revision() { return source.revision; },
-      async project(request) {
-        const version = host.sourceVersion;
-        const owner = host.ownerDocument;
-        const owned = () => host._treeSource === source && host.sourceVersion === version &&
-          host.ownerDocument === owner && host.isConnected && !request.signal.aborted;
-        const current = () => {
-          if (!owned()) return false;
-          const revision = source.revision;
-          return owned() && revision === request.revision;
-        };
-        const check = () => { if (!current()) throw new Error('Trace source changed'); };
-        check();
-        const project = source.project;
-        check();
-        const result = await project.call(source, request);
-        check();
-        const summary = result.summary;
-        check();
-        const startMs = hierarchyField(summary, 'startMs');
-        check();
-        const endMs = hierarchyField(summary, 'endMs');
-        check();
-        if (typeof startMs !== 'number' || typeof endMs !== 'number' || !Number.isFinite(startMs) ||
-          !Number.isFinite(endMs) || startMs < 0 || endMs < startMs || !Number.isFinite(endMs - startMs))
-          throw new TypeError('Invalid trace extent');
-        const view = result.rows;
-        check();
-        const count = view.count;
-        check();
-        const hasItemAt = 'itemAt' in view;
-        check();
-        const itemAt = hasItemAt ? (view as { itemAt?: unknown }).itemAt : undefined;
-        check();
-        let wrapped: LyraHierarchyView<LyraHierarchyRow<LyraSpan>>;
-        if (typeof itemAt === 'function') {
-          const indexed = view as Extract<typeof view, { itemAt: unknown }>;
-          wrapped = { count,
-            itemAt(index) { check(); const method = indexed.itemAt; check(); const value = method.call(indexed, index); check(); return value; },
-            keyAt(index) { check(); const method = indexed.keyAt; check(); const value = method.call(indexed, index); check(); return value; },
-            indexOfKey(key: string | number) { check(); const method = indexed.indexOfKey; check(); const value = method.call(indexed, key); check(); return value; },
-          };
-        } else {
-          const ranged = view as Extract<typeof view, { read: unknown }>;
-          wrapped = { count,
-            async read(range) {
-              const active = () => { check(); if (range.signal.aborted) throw new Error('Trace range changed'); };
-              active(); const method = ranged.read; active();
-              const value = await method.call(ranged, range); active(); return value;
-            },
-            async indexOfKey(key: string, context) {
-              const active = () => { check(); if (context.signal.aborted) throw new Error('Trace navigation changed'); };
-              active(); const method = ranged.indexOfKey; active();
-              const value = await method.call(ranged, key, context); active(); return value;
-            },
-          };
-        }
-        const state = result.state;
-        check();
-        const total = result.total;
-        check();
-        const focusIndex = result.focusIndex;
-        check();
-        host.sourceSummaries.set(wrapped, Object.freeze({ startMs, endMs, current }));
-        return { state, total, rows: wrapped, ...(focusIndex === undefined ? {} : { focusIndex }) };
+    return createHierarchySummarySource(this, source, {
+      captureBinding: () => {
+        const version = this.sourceVersion;
+        return () => this._treeSource === source && this.sourceVersion === version;
       },
-    };
+      summary: traceSourceSummary,
+      accepted: (rows, summary, current) => this.sourceSummaries.set(rows, Object.freeze({ ...summary, current })),
+      changedMessage: 'Trace source changed',
+      rangeChangedMessage: 'Trace range changed',
+      navigationChangedMessage: 'Trace navigation changed',
+    });
   }
 
   private normalizeSourceSpan(value: unknown, key: string): LyraSpan {
@@ -379,15 +322,8 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     const source = this.treeSource;
     const binding = this.sourceWrapper;
     const version = this.sourceVersion;
-    const epoch = this.sourceControl.epoch;
-    const owner = this.ownerDocument;
-    const projection = this.sourceControl.projection;
-    const { error, loading, rowError, rowsObserved } = this.sourceControl;
-    const bound = () => this.isConnected && this.ownerDocument === owner && this.treeSource === source &&
-      this.sourceWrapper === binding && this.sourceVersion === version && this.sourceControl.epoch === epoch;
-    const current = () => bound() && this.sourceControl.projection === projection &&
-      this.sourceControl.error === error && this.sourceControl.loading === loading &&
-      this.sourceControl.rowError === rowError && this.sourceControl.rowsObserved === rowsObserved;
+    const { epoch, error, loading, rowError, rowsObserved, bound, current } = captureHierarchySourceEffects(this, this.sourceControl,
+      () => this.treeSource === source && this.sourceWrapper === binding && this.sourceVersion === version);
     if (!current()) return;
     for (const row of this.renderRoot.querySelectorAll<HTMLElement>('[data-source-key]')) {
       const active = row.dataset['sourceKey'] === this.activeSpanId;

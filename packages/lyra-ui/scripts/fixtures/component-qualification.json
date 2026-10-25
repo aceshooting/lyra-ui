@@ -31698,6 +31698,7 @@
           "src/components/media/map/map-anchors-focus.test.ts",
           "src/components/media/map/map-anchors-lifecycle.test.ts",
           "src/components/media/map/map-anchors-native.test.ts",
+          "src/components/media/map/map-anchors-performance.test.ts",
           "src/components/media/map/map-anchors-scenario.test.ts",
           "src/components/media/map/map-app-parity.test.ts",
           "src/components/media/map/map-basemap-order.property.test.ts",
@@ -31979,6 +31980,7 @@
           "src/components/media/map/map-anchors-focus.test.ts",
           "src/components/media/map/map-anchors-lifecycle.test.ts",
           "src/components/media/map/map-anchors-native.test.ts",
+          "src/components/media/map/map-anchors-performance.test.ts",
           "src/components/media/map/map-anchors-scenario.test.ts",
           "src/components/media/map/map-app-parity.test.ts",
           "src/components/media/map/map-basemap-order.property.test.ts",
@@ -35847,8 +35849,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/viewers/model-viewer/model-viewer-source.test.ts",
-              "test": "refuses a disallowed source URL before any request",
+              "file": "src/components/viewers/model-viewer/model-viewer-async.test.ts",
+              "test": "reports one localized error when async preparation rejects${hostFailure ? ' after host failure' : ''}",
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -35896,6 +35898,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/viewers/model-viewer/model-viewer-async.test.ts",
           "src/components/viewers/model-viewer/model-viewer-native.test.ts",
           "src/components/viewers/model-viewer/model-viewer-register.test.ts",
           "src/components/viewers/model-viewer/model-viewer-security.test.ts",

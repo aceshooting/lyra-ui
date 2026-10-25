@@ -4,16 +4,17 @@ import type { LyraChip } from './chip.class.js';
 import type { PropertyValues } from 'lit';
 
 interface LabelObservationSeam {
-  labelTextObserver: { bind(): void; observer?: MutationObserver };
+  labelTextObserver: { bind(): void; bindObserver(): MutationRecord[]; observer?: MutationObserver };
 }
 
 it('keeps label observation bound across selected and disabled paints', async () => {
   const chip = await fixture<LyraChip>(html`<lr-chip toggleable>Stable name</lr-chip>`);
   await nextFrame();
   const observer = (chip as unknown as LabelObservationSeam).labelTextObserver;
-  const original = observer.bind;
+  const original = observer.bindObserver;
   let binds = 0;
-  observer.bind = function () { binds++; original.call(this); };
+  // Count the observation binding itself; hostUpdated defers delivery through this path.
+  observer.bindObserver = function () { binds++; return original.call(this); };
   try {
     chip.selected = true;
     await chip.updateComplete;
@@ -28,7 +29,7 @@ it('keeps label observation bound across selected and disabled paints', async ()
     expect(button.getAttribute('aria-pressed')).to.equal('false');
     expect(button.disabled).to.equal(false);
     expect(binds, 'state-only paints retain the existing label observation').to.equal(0);
-  } finally { observer.bind = original; }
+  } finally { observer.bindObserver = original; }
 });
 
 it('refreshes a pending label edit during a disabled paint and keeps subsequent edits live', async () => {
@@ -37,9 +38,10 @@ it('refreshes a pending label edit during a disabled paint and keeps subsequent 
   const label = chip.querySelector('span')!;
   const button = chip.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle-button"]')!;
   const observer = (chip as unknown as LabelObservationSeam).labelTextObserver;
-  const original = observer.bind;
+  const original = observer.bindObserver;
   let binds = 0;
-  observer.bind = function () { binds++; original.call(this); };
+  // Count the observation binding itself; hostUpdated defers delivery through this path.
+  observer.bindObserver = function () { binds++; return original.call(this); };
   try {
     // Queue the host paint first so hostUpdated must preserve the already-pending text edit.
     chip.disabled = true;
@@ -51,7 +53,7 @@ it('refreshes a pending label edit during a disabled paint and keeps subsequent 
     label.textContent = 'Still live';
     await waitUntil(() => button.getAttribute('aria-label') === 'Still live');
     expect(button.disabled).to.equal(true);
-  } finally { observer.bind = original; }
+  } finally { observer.bindObserver = original; }
 });
 
 

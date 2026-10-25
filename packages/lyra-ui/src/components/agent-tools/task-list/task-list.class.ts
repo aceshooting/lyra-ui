@@ -1,5 +1,6 @@
-import type { LyraHierarchySource, LyraHierarchyQuery, LyraHierarchyRow, LyraHierarchyView, LyraTaskSourceSummary } from '../../../data-sources.js';
+import type { LyraHierarchySource, LyraHierarchyQuery, LyraHierarchyRow, LyraTaskSourceSummary } from '../../../data-sources.js';
 import { HierarchySourceController, hierarchyField, hierarchyKey, hierarchyText } from '../../../internal/hierarchy-source-controller.js';
+import { createHierarchySummarySource, captureHierarchySourceEffects } from '../../../internal/hierarchy-summary-source.js';
 import { hierarchySourceView } from '../../../internal/hierarchy-source-view.js';
 import { hierarchySourceStyles } from '../../../internal/hierarchy-source-view.styles.js';
 import { readOwnDataValue } from '../../../internal/data-descriptors.js';
@@ -422,94 +423,49 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   }
 
   private wrapSource(source: TaskListSource): LyraHierarchySource<TaskItem, LyraHierarchyQuery> {
-    const host = this;
-    return {
-      get revision() { return source.revision; },
-      async project(request) {
-        const version = host.sourceVersion;
-        const owner = host.ownerDocument;
-        const owned = () => host._treeSource === source && host.sourceVersion === version &&
-          host.ownerDocument === owner && host.isConnected && !request.signal.aborted;
-        const current = () => {
-          if (!owned()) return false;
-          const revision = source.revision;
-          return owned() && revision === request.revision;
-        };
-        const check = () => { if (!current()) throw new Error('Task source changed'); };
-        check();
-        const project = source.project;
-        check();
-        const result = await project.call(source, request);
-        check();
-        const summary = result.summary;
-        check();
-        const taskTotal = hierarchyField(summary, 'total');
-        check();
-        const completed = hierarchyField(summary, 'completed');
-        check();
-        if (typeof taskTotal !== 'number' || typeof completed !== 'number' || !Number.isSafeInteger(taskTotal) ||
-          !Number.isSafeInteger(completed) || taskTotal < 0 || completed < 0 || completed > taskTotal)
-          throw new TypeError('Invalid task summary');
-        const validateRow = (value: unknown): LyraHierarchyRow<TaskItem> => {
-          const copy: Record<string, unknown> = {};
-          for (const name of ['key', 'parentKey', 'level', 'position', 'setSize', 'childCount', 'expanded', 'selected', 'disabled', 'selectionState', 'value']) {
-            check(); copy[name] = hierarchyField(value, name); check();
-          }
-          const { level, parentKey, childCount } = copy;
-          if (!((level === 1 && parentKey === null) || (level === 2 && typeof parentKey === 'string' && parentKey.length > 0 && childCount === 0)))
-            throw new TypeError('Invalid task depth');
-          return Object.freeze(copy) as unknown as LyraHierarchyRow<TaskItem>;
-        };
-        const view = result.rows;
-        check();
-        const count = view.count;
-        check();
-        const hasItemAt = 'itemAt' in view;
-        check();
-        const itemAt = hasItemAt ? (view as { itemAt?: unknown }).itemAt : undefined;
-        check();
-        let wrapped: LyraHierarchyView<LyraHierarchyRow<TaskItem>>;
-        if (typeof itemAt === 'function') {
-          const indexed = view as Extract<typeof view, { itemAt: unknown }>;
-          wrapped = { count,
-            itemAt(index) { check(); const method = indexed.itemAt; check(); const value = method.call(indexed, index); check(); return validateRow(value); },
-            keyAt(index) { check(); const method = indexed.keyAt; check(); const value = method.call(indexed, index); check(); return value; },
-            indexOfKey(key: string | number) { check(); const method = indexed.indexOfKey; check(); const value = method.call(indexed, key); check(); return value; },
-          };
-        } else {
-          const ranged = view as Extract<typeof view, { read: unknown }>;
-          wrapped = { count,
-            async read(range) {
-              const active = () => { check(); if (range.signal.aborted) throw new Error('Task range changed'); };
-              active(); const method = ranged.read; active();
-              const value = await method.call(ranged, range); active();
-              const length = hierarchyField(value, 'length'); active();
-              if (!Array.isArray(value) || typeof length !== 'number' || !Number.isSafeInteger(length) || length < 0 || length > range.limit)
-                throw new TypeError('Invalid task range');
-              const rows: LyraHierarchyRow<TaskItem>[] = [];
-              for (let index = 0; index < length; index++) {
-                active(); const row = hierarchyField(value, String(index)); active(); rows.push(validateRow(row));
-              }
-              active(); return rows;
-            },
-            async indexOfKey(key: string, context) {
-              const active = () => { check(); if (context.signal.aborted) throw new Error('Task navigation changed'); };
-              active(); const method = ranged.indexOfKey; active();
-              const value = await method.call(ranged, key, context); active(); return value;
-            },
-          };
-        }
-        const state = result.state;
-        check();
-        const total = result.total;
-        check();
-        if (typeof total !== 'number' || taskTotal > total) throw new TypeError('Invalid task summary total');
-        const focusIndex = result.focusIndex;
-        check();
-        host.sourceSummaries.set(wrapped, Object.freeze({ total: taskTotal, completed, current }));
-        return { state, total, rows: wrapped, ...(focusIndex === undefined ? {} : { focusIndex }) };
+    return createHierarchySummarySource(this, source, {
+      captureBinding: () => {
+        const version = this.sourceVersion;
+        return () => this._treeSource === source && this.sourceVersion === version;
       },
-    };
+      summary: (value, check) => {
+        const total = hierarchyField(value, 'total');
+        check();
+        const completed = hierarchyField(value, 'completed');
+        check();
+        if (typeof total !== 'number' || typeof completed !== 'number' || !Number.isSafeInteger(total) ||
+          !Number.isSafeInteger(completed) || total < 0 || completed < 0 || completed > total)
+          throw new TypeError('Invalid task summary');
+        return { total, completed };
+      },
+      row: (value, check) => {
+        const copy: Record<string, unknown> = {};
+        for (const name of ['key', 'parentKey', 'level', 'position', 'setSize', 'childCount', 'expanded', 'selected', 'disabled', 'selectionState', 'value']) {
+          check(); copy[name] = hierarchyField(value, name); check();
+        }
+        const { level, parentKey, childCount } = copy;
+        if (!((level === 1 && parentKey === null) || (level === 2 && typeof parentKey === 'string' && parentKey.length > 0 && childCount === 0)))
+          throw new TypeError('Invalid task depth');
+        return Object.freeze(copy) as unknown as LyraHierarchyRow<TaskItem>;
+      },
+      range: (value, range, active, validateRow) => {
+        const length = hierarchyField(value, 'length'); active();
+        if (!Array.isArray(value) || typeof length !== 'number' || !Number.isSafeInteger(length) || length < 0 || length > range.limit)
+          throw new TypeError('Invalid task range');
+        const rows: LyraHierarchyRow<TaskItem>[] = [];
+        for (let index = 0; index < length; index++) {
+          active(); const row = hierarchyField(value, String(index)); active(); rows.push(validateRow(row));
+        }
+        active(); return rows;
+      },
+      total: (summary, total) => {
+        if (typeof total !== 'number' || summary.total > total) throw new TypeError('Invalid task summary total');
+      },
+      accepted: (rows, summary, current) => this.sourceSummaries.set(rows, Object.freeze({ ...summary, current })),
+      changedMessage: 'Task source changed',
+      rangeChangedMessage: 'Task range changed',
+      navigationChangedMessage: 'Task navigation changed',
+    });
   }
 
   private normalizeSourceTask(value: unknown, key: string): TaskItem {
@@ -585,15 +541,8 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
     const source = this.treeSource;
     const binding = this.sourceWrapper;
     const version = this.sourceVersion;
-    const epoch = this.sourceControl.epoch;
-    const owner = this.ownerDocument;
-    const projection = this.sourceControl.projection;
-    const { error, loading, rowError, rowsObserved } = this.sourceControl;
-    const bound = () => this.isConnected && this.ownerDocument === owner && this.treeSource === source &&
-      this.sourceWrapper === binding && this.sourceVersion === version && this.sourceControl.epoch === epoch;
-    const current = () => bound() && this.sourceControl.projection === projection &&
-      this.sourceControl.error === error && this.sourceControl.loading === loading &&
-      this.sourceControl.rowError === rowError && this.sourceControl.rowsObserved === rowsObserved;
+    const { error, loading, rowError, rowsObserved, current } = captureHierarchySourceEffects(this, this.sourceControl,
+      () => this.treeSource === source && this.sourceWrapper === binding && this.sourceVersion === version);
     if (!current()) return;
     const status = error ? this.localize('treeSourceError') : loading ? this.localize('loading') : this.sourceSummary();
     if (!current()) return;

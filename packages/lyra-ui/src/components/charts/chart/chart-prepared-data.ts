@@ -199,6 +199,45 @@ export async function preparedResponse<T>(response: LyraSourceValue<T>, signal: 
   }
 }
 
+export type PreparedPointRevealResult =
+  | { readonly status: 'ready'; readonly model: PreparedChartModel }
+  | { readonly status: 'absent' | 'stale' };
+
+/** Resolves one exact point and optional bounded refinement without owning renderer effects. */
+export async function revealPreparedSourcePoint(
+  model: PreparedChartModel,
+  ref: LyraSeriesPointRef,
+  signal: AbortSignal,
+  isCurrent: () => boolean,
+): Promise<PreparedPointRevealResult> {
+  const series = model.series.find(series => series.id === ref.seriesId);
+  if (!series) throw new RangeError('Unknown prepared series');
+  const source = model.source;
+  if (source.kind !== 'series' || source.revision !== model.revision) throw new Error('Prepared source revision changed');
+  const response = source.getPoint(ref, { signal });
+  const point = await preparedResponse(response, signal);
+  if (!isCurrent() || source.revision !== model.revision) return { status: 'stale' };
+  if (point === null) return { status: 'absent' };
+  let next = model;
+  const refinement = Object.getOwnPropertyDescriptor(source, 'queryRange');
+  if (refinement) {
+    if (!('value' in refinement) || typeof refinement.value !== 'function') throw new TypeError('Invalid indexed refinement');
+    const otherEntries = model.peerCount - series.samples.length;
+    // Reserve separators and the isolated overlay within both peer and rectangular table budgets.
+    const entryBudget = Math.min(model.limit - otherEntries, Math.floor(1000 / model.series.length));
+    const maxPoints = Math.max(1, Math.floor((entryBudget - 1) / 2));
+    const startIndex = Math.max(0, ref.sourceIndex - maxPoints);
+    const endIndex = Math.min(series.counts.sourceCount, ref.sourceIndex + Math.min(maxPoints + 1, series.counts.sourceCount - ref.sourceIndex));
+    const request = { seriesId: ref.seriesId, startIndex, endIndex, maxPoints, signal };
+    const points = await preparedResponse(source.queryRange!(request), signal);
+    if (!isCurrent() || source.revision !== model.revision) return { status: 'stale' };
+    next = withPreparedRange(model, request, points);
+  }
+  const overlay = withPreparedPoint(next, ref, point);
+  if (!isCurrent() || source.revision !== model.revision) return { status: 'stale' };
+  return { status: 'ready', model: overlay };
+}
+
 /** Validates a bounded indexed refinement while preserving the snapshot's full domains/counts. */
 export function withPreparedRange(model: PreparedChartModel, request: LyraSeriesRangeRequest, values: readonly LyraSeriesSample[]): PreparedChartModel {
   if (model.kind !== 'series' || model.source.kind !== 'series') throw new TypeError('Refinement requires prepared series');

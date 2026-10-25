@@ -5,7 +5,7 @@ import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { activateOverlay } from '../../../internal/overlay-manager.js';
 import { __setAnchoredOverlayRuntimeLoaderForTesting } from '../../../internal/anchored-overlay-runtime.js';
-import type { PlacementResult } from '../../../internal/positioner.js';
+import type { AnchoredSurfaceOptions, PlacementResult } from '../../../internal/positioner.js';
 import './map.js';
 import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from './map.js';
 
@@ -249,9 +249,25 @@ describe('lr-map anchor placement and close ownership', () => {
     element.anchorBoundary = [boundary]; await element.updateComplete; expect(element.anchorLngLat).to.equal(null); expect(anchor(element).hidden).to.equal(true);
   });
   it('maps logical safe areas under RTL at 320px and wraps long slotted content inside allocation', async () => {
+    let placements = 0;
+    __setAnchoredOverlayRuntimeLoaderForTesting(async () => {
+      const runtime = await import('../../../internal/positioner.js');
+      const observed = (options: AnchoredSurfaceOptions = {}): AnchoredSurfaceOptions => ({
+        ...options, onPlaced: result => { placements++; options.onPlaced?.(result); },
+      });
+      return {
+        place: (reference, panel, options) => runtime.placeAnchoredSurface(reference, panel, observed(options)),
+        placeSession: (reference, panel, options) => runtime.placeAnchoredSurfaceSession(reference, panel, observed(options)),
+        trackRect: runtime.trackRect, releaseTopLayer: runtime.releaseTopLayer,
+      };
+    });
     const { element, slot } = await open(el => { el.setAttribute('dir', 'rtl'); el.style.inlineSize = '320px'; el.anchorClosable = true; el.anchorSafeArea = { inlineStart: 70, inlineEnd: 20, blockStart: 15, blockEnd: 25 }; });
+    const beforeGrowth = placements;
     slot.style.inlineSize = '600px'; slot.style.overflowWrap = 'anywhere'; slot.querySelector('button')!.textContent = 'A very long anchor action that must wrap within its current safe allocation';
     element.strings = { close: 'Close the current map anchor information' }; await placed(element);
+    // An already visible panel still has its old coordinates while its larger content is measured.
+    // Wait for that replacement publication, independently of the clipping bounds asserted below.
+    await waitUntil(() => placements > beforeGrowth, 'Grown RTL content receives a fresh placement');
     const allocation = element.getBoundingClientRect(), panel = anchor(element).getBoundingClientRect(); expect(panel.left).to.be.at.least(allocation.left + 27); expect(panel.right).to.be.at.most(allocation.right - 77);
     expect(panel.top).to.be.at.least(allocation.top + 22); expect(panel.bottom).to.be.at.most(allocation.bottom - 32); await expect(element).to.be.accessible();
   });

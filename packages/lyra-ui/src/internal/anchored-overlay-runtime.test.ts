@@ -3,6 +3,7 @@ import {
   __setAnchoredOverlayRuntimeLoaderForTesting,
   deferredPlace,
   deferredPlaceReady,
+  deferredPlaceSession,
   deferredTrackRect,
   loadAnchoredOverlayRuntime,
   PopupTransitionWaiters,
@@ -12,6 +13,7 @@ import {
   waitForDeferredPlacement,
   type AnchoredOverlayRuntime,
   type DeferredOperationHandle,
+  type DeferredPlacementSession,
 } from './anchored-overlay-runtime.js';
 
 const runtime = {
@@ -28,6 +30,108 @@ it('ignores a successful placement after a newer operation supersedes it', async
   const result = waitForDeferredPlacement(() => current);
   current = next;
   expect(await result).to.equal(false);
+});
+
+it('keeps a retained placement paused when its runtime resolves before new geometry', async () => {
+  let resolve!: (value: AnchoredOverlayRuntime) => void;
+  const pending = new Promise<AnchoredOverlayRuntime>(done => { resolve = done; });
+  __setAnchoredOverlayRuntimeLoaderForTesting(() => pending);
+  let starts = 0, stops = 0, updates = 0, invalidations = 0;
+  const popup = document.createElement('div'); popup.style.visibility = 'visible';
+  const operation = deferredPlaceSession(document.createElement('button'), popup);
+  try {
+    operation.invalidate(); operation.invalidate();
+    resolve({ ...runtime, placeSession: (_anchor, _popup, options = {}) => {
+      starts++; options.onPlaced?.({ placement: 'top' });
+      return Object.assign(() => { stops++; }, {
+        isActive: () => true,
+        invalidate() { invalidations++; },
+        update() { updates++; options.onPlaced?.({ placement: 'top' }); },
+      });
+    } });
+    await pending; await new Promise<void>(done => setTimeout(done, 0));
+    expect(starts).to.equal(0); expect(popup.style.visibility).to.equal('hidden');
+    operation.update(); expect(await operation.ready).to.equal(true);
+    expect(starts).to.equal(1); expect(popup.style.visibility).to.equal('visible');
+    operation.invalidate(); operation.update();
+    expect(starts).to.equal(1); expect(invalidations).to.equal(1); expect(updates).to.equal(1);
+    operation(); operation(); expect(stops).to.equal(1);
+  } finally { operation(); }
+});
+
+it('disposes a retained operation before import without starting its subscriptions', async () => {
+  let resolve!: (value: AnchoredOverlayRuntime) => void;
+  const pending = new Promise<AnchoredOverlayRuntime>(done => { resolve = done; });
+  __setAnchoredOverlayRuntimeLoaderForTesting(() => pending);
+  let starts = 0;
+  const operation = deferredPlaceSession(document.createElement('button'), document.createElement('div'));
+  operation(); expect(await operation.ready).to.equal(false);
+  resolve({ ...runtime, placeSession: () => {
+    starts++; return Object.assign(() => undefined, { isActive: () => true, invalidate() {}, update() {} });
+  } });
+  await pending; await new Promise<void>(done => setTimeout(done, 0));
+  operation.update(); expect(starts).to.equal(0);
+});
+
+it('reports a retained runtime that fails after first placement as retired', async () => {
+  let running = true;
+  __setAnchoredOverlayRuntimeLoaderForTesting(async () => ({ ...runtime, placeSession: (_anchor, _popup, options = {}) => {
+    options.onPlaced?.({ placement: 'top' });
+    return Object.assign(() => { running = false; }, {
+      isActive: () => running, invalidate() {}, update() {},
+    });
+  } }));
+  const operation = deferredPlaceSession(document.createElement('button'), document.createElement('div'));
+  try {
+    expect(await operation.ready).to.equal(true); expect(operation.isActive()).to.equal(true);
+    running = false;
+    expect(operation.isActive(), 'First-placement success does not conceal later runtime disposal').to.equal(false);
+  } finally { operation(); }
+});
+
+it('reports import failure as retired even when invalidation preceded its rejection', async () => {
+  let reject!: (reason: Error) => void;
+  const pending = new Promise<AnchoredOverlayRuntime>((_resolve, fail) => { reject = fail; });
+  __setAnchoredOverlayRuntimeLoaderForTesting(() => pending);
+  const operation = deferredPlaceSession(document.createElement('button'), document.createElement('div'));
+  try {
+    operation.invalidate(); expect(operation.isActive()).to.equal(true);
+    reject(new Error('Runtime unavailable'));
+    expect(await operation.ready).to.equal(false);
+    expect(operation.isActive()).to.equal(false);
+  } finally { operation(); }
+});
+
+it('restarts an injected legacy runtime and ignores callbacks from its invalidated run', async () => {
+  const callbacks: (() => void)[] = [];
+  let stops = 0;
+  __setAnchoredOverlayRuntimeLoaderForTesting(async () => ({ ...runtime, place: (_anchor, _popup, options = {}) => {
+    callbacks.push(() => options.onPlaced?.({ placement: 'top' })); return () => { stops++; };
+  } }));
+  const popup = document.createElement('div'); popup.style.visibility = 'visible';
+  const operation = deferredPlaceSession(document.createElement('button'), popup);
+  try {
+    await waitUntil(() => callbacks.length === 1);
+    operation.invalidate(); callbacks[0]!();
+    expect(stops).to.equal(1); expect(popup.style.visibility).to.equal('hidden');
+    operation.update(); expect(callbacks.length).to.equal(2);
+    callbacks[0]!(); expect(popup.style.visibility).to.equal('hidden');
+    callbacks[1]!(); expect(await operation.ready).to.equal(true); expect(popup.style.visibility).to.equal('visible');
+    operation(); expect(stops).to.equal(2);
+  } finally { operation(); }
+});
+
+it('cleans up a synchronously publishing session when its placed callback disposes the operation', async () => {
+  let stops = 0;
+  __setAnchoredOverlayRuntimeLoaderForTesting(async () => ({ ...runtime, placeSession: (_anchor, _popup, options = {}) => {
+    options.onPlaced?.({ placement: 'top' });
+    return Object.assign(() => { stops++; }, { isActive: () => true, invalidate() {}, update() {} });
+  } }));
+  const operation: DeferredPlacementSession = deferredPlaceSession(document.createElement('button'), document.createElement('div'), {
+    onPlaced: () => { operation(); },
+  });
+  await operation.ready; await waitUntil(() => stops === 1);
+  operation(); expect(stops).to.equal(1);
 });
 
 it('resolves only the superseded popup transition waiters', async () => {

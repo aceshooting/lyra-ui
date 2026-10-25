@@ -1,6 +1,6 @@
 import { expect } from '@open-wc/testing';
-import { prepareChartModel, preparedResponse, withPreparedPoint, withPreparedRange } from './chart-prepared-data.js';
-import type { LyraPreparedCategoryData, LyraPreparedSeriesData, LyraSeriesRangeRequest } from '../../../utilities/data-preparation.js';
+import { prepareChartModel, preparedResponse, revealPreparedSourcePoint, withPreparedPoint, withPreparedRange } from './chart-prepared-data.js';
+import type { LyraPreparedCategoryData, LyraPreparedSeriesData, LyraSeriesRangeRequest, LyraSeriesSample } from '../../../utilities/data-preparation.js';
 
 function source(): LyraPreparedSeriesData {
   return { kind: 'series', revision: 'r', series: [{ id: 's', label: 'S', counts: { sourceCount: 1000, validCount: 999, invalidCount: 1 }, xDomain: { min: 0, max: 999 }, yDomain: { min: -5, max: 8 }, samples: [
@@ -108,5 +108,97 @@ describe('preparedResponse', () => {
     expect(await outcome).to.equal('reason');
     const early = await preparedResponse(new Promise<number>(() => undefined), AbortSignal.abort(reason)).then(() => 'resolved', error => error === reason ? 'reason' : 'other');
     expect(early).to.equal('reason');
+  });
+});
+
+describe('prepared source point reveal', () => {
+  const ref = { seriesId: 's', sourceIndex: 500 };
+
+  it('distinguishes absent points from an obsolete reply without refining either', async () => {
+    const input = source();
+    let queries = 0;
+    input.queryRange = () => { queries++; return []; };
+    const model = prepareChartModel(input, 'line', 1000);
+    expect((await revealPreparedSourcePoint(model, ref, new AbortController().signal, () => true)).status).to.equal('absent');
+    expect((await revealPreparedSourcePoint(model, ref, new AbortController().signal, () => false)).status).to.equal('stale');
+    expect(queries).to.equal(0);
+  });
+
+  it('retains the complete summary and source identity when adding an isolated exact point', async () => {
+    const input = source();
+    input.getPoint = () => ({ x: 500, y: 3 });
+    const model = prepareChartModel(input, 'line', 1000);
+    const result = await revealPreparedSourcePoint(model, ref, new AbortController().signal, () => true);
+    if (result.status !== 'ready') throw new Error('Expected exact point');
+    expect(result.model.source === input).to.equal(true);
+    expect(result.model.series[0]!.samples.map(point => point?.sourceIndex ?? null)).to.deep.equal([0, 200, null, 800, 999, null, 500]);
+    expect(result.model.validCount).to.equal(model.validCount);
+    expect(result.model.series[0]!.xDomain).to.deep.equal(model.series[0]!.xDomain);
+    expect(model.peerCount).to.equal(5);
+  });
+
+  it('settles a canceled point even when its reader ignores the signal', async () => {
+    const input = source();
+    input.getPoint = () => new Promise<never>(() => undefined);
+    const controller = new AbortController();
+    const reason = new Error('Canceled point');
+    const pending = revealPreparedSourcePoint(prepareChartModel(input, 'line', 1000), ref, controller.signal, () => true)
+      .then(() => 'accepted', error => error === reason ? 'canceled' : 'other');
+    controller.abort(reason);
+    expect(await pending).to.equal('canceled');
+  });
+
+  it('checks revision after a refinement resolves without replacing the completed model', async () => {
+    const input = source();
+    input.getPoint = () => ({ x: 500, y: 3 });
+    let finish!: (points: readonly LyraSeriesSample[]) => void;
+    let started!: () => void;
+    const requested = new Promise<void>(resolve => { started = resolve; });
+    input.queryRange = () => { started(); return new Promise(resolve => { finish = resolve; }); };
+    const model = prepareChartModel(input, 'line', 1000);
+    const pending = revealPreparedSourcePoint(model, ref, new AbortController().signal, () => true);
+    await requested;
+    Object.defineProperty(input, 'revision', { value: 'new' });
+    finish([{ x: 500, y: 3, sourceIndex: 500, breakBefore: true }]);
+    expect((await pending).status).to.equal('stale');
+    expect(model.series[0]!.samples.map(point => point?.sourceIndex ?? null)).to.deep.equal([0, 200, null, 800, 999]);
+  });
+
+  it('preserves the validated descriptor and subsequent receiver-bound refinement lookup', async () => {
+    const original = source();
+    const calls: string[] = [];
+    original.getPoint = () => ({ x: 500, y: 3 });
+    original.queryRange = () => { calls.push('descriptor'); return []; };
+    const input = new Proxy(original, { get(target, key, receiver) {
+      if (key === 'queryRange') return function (this: unknown) {
+        calls.push(this === input ? 'lookup' : 'wrong receiver');
+        return [{ x: 200, y: -5, sourceIndex: 200, breakBefore: true }];
+      };
+      return Reflect.get(target, key, receiver);
+    } });
+    const result = await revealPreparedSourcePoint(prepareChartModel(input, 'line', 1000), ref, new AbortController().signal, () => true);
+    expect(result.status).to.equal('ready');
+    expect(calls).to.deep.equal(['lookup']);
+  });
+
+  it('keeps descriptor refusal separate from a missing refinement capability', async () => {
+    const input = source();
+    input.getPoint = () => ({ x: 500, y: 3 });
+    let reads = 0;
+    Object.defineProperty(input, 'queryRange', { get() { reads++; return () => []; } });
+    const result = await revealPreparedSourcePoint(prepareChartModel(input, 'line', 1000), ref, new AbortController().signal, () => true)
+      .then(() => 'accepted', error => error instanceof TypeError ? 'invalid' : 'other');
+    expect(result).to.equal('invalid'); expect(reads).to.equal(0);
+  });
+
+  it('rechecks authority after exact point descriptors are copied into the overlay', async () => {
+    const input = source();
+    let current = true;
+    input.getPoint = () => new Proxy({ x: 500, y: 3 }, { getOwnPropertyDescriptor(target, key) {
+      current = false;
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    } });
+    const result = await revealPreparedSourcePoint(prepareChartModel(input, 'line', 1000), ref, new AbortController().signal, () => current);
+    expect(result.status).to.equal('stale');
   });
 });

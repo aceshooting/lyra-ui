@@ -1,15 +1,7 @@
 {
   "family": "forms",
   "assignments": {
-    "new-component-experimental": [
-      "lr-country-picker",
-      "lr-currency-picker",
-      "lr-signature-pad",
-      "lr-time-zone-picker",
-      "lr-toggle",
-      "lr-toggle-group",
-      "lr-unit-picker"
-    ],
+    "new-component-experimental": [],
     "published-stable": [
       "lr-button",
       "lr-checkbox",
@@ -37,8 +29,15 @@
       "lr-token-input"
     ],
     "published-experimental": [
+      "lr-country-picker",
+      "lr-currency-picker",
       "lr-date-input",
-      "lr-date-picker"
+      "lr-date-picker",
+      "lr-signature-pad",
+      "lr-time-zone-picker",
+      "lr-toggle",
+      "lr-toggle-group",
+      "lr-unit-picker"
     ],
     "mapped-experimental": [],
     "introduced-mapped-experimental": [],

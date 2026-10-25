@@ -1,9 +1,7 @@
 {
   "family": "overlays",
   "assignments": {
-    "new-component-experimental": [
-      "lr-context-menu"
-    ],
+    "new-component-experimental": [],
     "published-stable": [
       "lr-badge",
       "lr-callout",
@@ -25,7 +23,9 @@
       "lr-toast-item",
       "lr-tooltip"
     ],
-    "published-experimental": [],
+    "published-experimental": [
+      "lr-context-menu"
+    ],
     "mapped-experimental": [],
     "introduced-mapped-experimental": [],
     "compatibility-stable": [],

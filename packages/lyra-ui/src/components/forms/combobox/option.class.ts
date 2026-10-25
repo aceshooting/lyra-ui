@@ -4,6 +4,7 @@ import { html, svg, type SVGTemplateResult, type TemplateResult, type PropertyVa
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
+import { defaultLabelForwardingSlots, isDefaultLabelNode } from '../../../internal/default-label-forwarding.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
@@ -236,7 +237,7 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
   }
 
   private computeDefaultLabel(): string {
-    const roots = Array.from(this.childNodes ?? []).filter((node) => this.isDefaultLabelNode(node));
+    const roots = Array.from(this.childNodes ?? []).filter((node) => isDefaultLabelNode(node));
     // Pickers deliberately project option hosts through a hidden data-source slot. Direct roots
     // remain readable there; composed exposure begins only when a forwarding slot crosses into
     // consumer-owned content.
@@ -251,7 +252,7 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
 
   private readonly labelTextObserver = new AccessibleTextController(
     this, [], (records) => this.handleLabelRecords([...records]), ['slot', 'title'], true, false,
-    () => this.labelForwardingSlots().length > 0,
+    () => defaultLabelForwardingSlots(this).length > 0,
   );
   private observedDefaultLabel = '';
   private cachedDefaultLabel?: string;
@@ -283,20 +284,6 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
     this.requestUpdate();
     this.emit('lr-option-change');
   };
-
-  private isDefaultLabelNode(node: Node): boolean {
-    if (node.nodeType !== 1) return true;
-    const slotName = (node as Element).getAttribute('slot');
-    return slotName === null || slotName === '';
-  }
-
-  private labelForwardingSlots(): HTMLSlotElement[] {
-    return Array.from(this.querySelectorAll<HTMLSlotElement>('slot')).filter((slot) => {
-      let top: Node = slot;
-      while (top.parentNode && top.parentNode !== this) top = top.parentNode;
-      return top.parentNode === this && this.isDefaultLabelNode(top);
-    });
-  }
 
   /** The consumer-owned ancestry where forwarded content was authored. Unlike the composed parent
    * walk used to bind observers, this deliberately ignores `assignedSlot`: a picker projects its
@@ -349,7 +336,7 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
     if (target?.nodeType !== 1 || target.localName !== 'slot') return;
     if (
       target.getRootNode() !== this.renderRoot &&
-      !this.labelForwardingSlots().includes(target as HTMLSlotElement)
+      !defaultLabelForwardingSlots(this).includes(target as HTMLSlotElement)
     ) return;
     this.cachedDefaultLabel = undefined;
     this.labelTextObserver.bind();
@@ -369,7 +356,7 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
       const release = subscribeInheritedAttributes(root, this.ownerDocument.defaultView?.MutationObserver, {
         attributes: ['inert'],
         changed: records => {
-          if (!this.labelForwardingSlots().length && records.some(record => ancestors.has(record.target as Element))) this.emit('lr-option-change');
+          if (!defaultLabelForwardingSlots(this).length && records.some(record => ancestors.has(record.target as Element))) this.emit('lr-option-change');
         },
       });
       if (release) this.inertAncestorReleases.push(release);
@@ -418,9 +405,9 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
       if (record.type === 'attributes' && record.attributeName === 'slot' && this.contains(record.target)) return true;
       let node: Node | null = record.target;
       while (node && node !== this && node.parentNode !== this) node = node.parentNode;
-      if (node && node !== this && !this.isDefaultLabelNode(node)) return true;
+      if (node && node !== this && !isDefaultLabelNode(node)) return true;
       return record.type === 'childList' && record.target === this &&
-        [...record.addedNodes, ...record.removedNodes].some((child) => !this.isDefaultLabelNode(child));
+        [...record.addedNodes, ...record.removedNodes].some((child) => !isDefaultLabelNode(child));
     });
     this.handleLabelMutation(presentationChanged);
   }

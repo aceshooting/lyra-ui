@@ -4,6 +4,7 @@ import { html, svg, nothing, type TemplateResult, type SVGTemplateResult, type P
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
+import { defaultLabelForwardingSlots, isDefaultLabelNode } from '../../../internal/default-label-forwarding.js';
 import { tag } from '../../../internal/prefix.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { setCustomState } from '../../../internal/custom-states.js';
@@ -505,26 +506,12 @@ export class LyraCheckbox extends CheckedFormAssociated(LyraCheckboxBase) {
 
   private onSlotChange = (event: Event): void => this.handleLabelSlotChange(event);
 
-  private isDefaultLabelNode(node: Node): boolean {
-    if (node.nodeType !== 1) return true;
-    const slotName = (node as Element).getAttribute('slot');
-    return slotName === null || slotName === '';
-  }
-
-  private labelForwardingSlots(): HTMLSlotElement[] {
-    return Array.from(this.querySelectorAll<HTMLSlotElement>('slot')).filter((slot) => {
-      let top: Node = slot;
-      while (top.parentNode && top.parentNode !== this) top = top.parentNode;
-      return top.parentNode === this && this.isDefaultLabelNode(top);
-    });
-  }
-
   private handleLabelSlotChange(event: Event): void {
     const target = event.target as Element | null;
     if (target?.nodeType !== 1 || target.localName !== 'slot') return;
     if (
       target.getRootNode() !== this.renderRoot &&
-      !this.labelForwardingSlots().includes(target as HTMLSlotElement)
+      !defaultLabelForwardingSlots(this).includes(target as HTMLSlotElement)
     ) return;
     this.labelTextObserver.bind();
     this.recomputeHasLabelSlot();
@@ -540,7 +527,7 @@ export class LyraCheckbox extends CheckedFormAssociated(LyraCheckboxBase) {
     const nodes: Node[] = slot
       ? slot.assignedNodes({ flatten: true })
       : Array.from(childNodes)
-          .filter((node) => this.isDefaultLabelNode(node))
+          .filter((node) => isDefaultLabelNode(node))
           .flatMap((node) => {
             if (node.nodeType !== 1 || (node as Element).localName !== 'slot') return [node];
             const forwardingSlot = node as HTMLSlotElement;

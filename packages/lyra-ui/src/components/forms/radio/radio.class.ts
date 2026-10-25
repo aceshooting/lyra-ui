@@ -4,6 +4,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
+import { defaultLabelForwardingSlots, isDefaultLabelNode } from '../../../internal/default-label-forwarding.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { tag } from '../../../internal/prefix.js';
 import { sizes } from '../../../internal/sizes.styles.js';
@@ -647,26 +648,12 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
     }
     relayNativeEvent(this, event);
   };
-  private isDefaultLabelNode(node: Node): boolean {
-    if (node.nodeType !== 1) return true;
-    const slotName = (node as Element).getAttribute('slot');
-    return slotName === null || slotName === '';
-  }
-
-  private labelForwardingSlots(): HTMLSlotElement[] {
-    return Array.from(this.querySelectorAll<HTMLSlotElement>('slot')).filter((slot) => {
-      let top: Node = slot;
-      while (top.parentNode && top.parentNode !== this) top = top.parentNode;
-      return top.parentNode === this && this.isDefaultLabelNode(top);
-    });
-  }
-
   private recomputeHasLabel(): void {
     const slot = this.renderRoot.querySelector<HTMLSlotElement>('slot:not([name])');
     const nodes: Node[] = slot
       ? slot.assignedNodes({ flatten: true })
       : Array.from(this.childNodes ?? [])
-          .filter((node) => this.isDefaultLabelNode(node))
+          .filter((node) => isDefaultLabelNode(node))
           .flatMap((node) => {
             if (node.nodeType !== 1 || (node as Element).localName !== 'slot') return [node];
             const forwardingSlot = node as HTMLSlotElement;
@@ -706,7 +693,7 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
     if (target?.nodeType !== 1 || target.localName !== 'slot') return;
     if (
       target.getRootNode() !== this.renderRoot &&
-      !this.labelForwardingSlots().includes(target as HTMLSlotElement)
+      !defaultLabelForwardingSlots(this).includes(target as HTMLSlotElement)
     ) return;
     this.labelTextObserver.bind();
     this.recomputeHasLabel();

@@ -1,9 +1,7 @@
 {
   "family": "data",
   "assignments": {
-    "new-component-experimental": [
-      "lr-funnel"
-    ],
+    "new-component-experimental": [],
     "published-stable": [
       "lr-calendar",
       "lr-context-meter",
@@ -27,7 +25,9 @@
       "lr-tree",
       "lr-word-cloud"
     ],
-    "published-experimental": [],
+    "published-experimental": [
+      "lr-funnel"
+    ],
     "mapped-experimental": [
       "lr-data-grid"
     ],

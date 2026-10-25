@@ -5417,7 +5417,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         if (this._map === candidate) this.boxZoomSettling = true;
       });
       this.peerEvents.subscribe(candidate, 'move', () => {
-        if (this._map === candidate) { this.anchorController?.stop(); this.childAnchors?.stop(); this.scheduleMoveReport(candidate!); this.drawingController?.scheduleHandles(); }
+        if (this._map === candidate) { this.anchorController?.invalidate(); this.childAnchors?.invalidate(); this.scheduleMoveReport(candidate!); this.drawingController?.scheduleHandles(); }
       });
       this.peerEvents.subscribe(candidate, 'moveend', (event) => {
         if (this._map !== candidate) return;

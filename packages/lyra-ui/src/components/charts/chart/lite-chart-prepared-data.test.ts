@@ -204,3 +204,36 @@ it('uses the same rendered logarithmic axis ticks for prepared full domains and 
   expect(ticks(element)).to.deep.equal(ticks(legacy));
   expect(ticks(element)).to.include('10');
 });
+
+it('preserves exact-reader receivers and endpoint refinement requests without accumulating overlays', async () => {
+  const calls: unknown[] = [];
+  const source: LyraPreparedSeriesData = { kind: 'series', revision: 'receiver',
+    series: [{ id: 's', label: 'Signal', counts: { sourceCount: 1000, validCount: 1000, invalidCount: 0 },
+      xDomain: { min: 0, max: 999 }, yDomain: { min: 0, max: 999 },
+      samples: [{ x: 0, y: 0, sourceIndex: 0, breakBefore: true }, { x: 999, y: 999, sourceIndex: 999, breakBefore: false }],
+    }],
+    getPoint(ref, request) {
+      calls.push(['point', this === source, ref.seriesId, ref.sourceIndex, request.signal.aborted]);
+      return { x: ref.sourceIndex, y: ref.sourceIndex };
+    },
+    queryRange(request) {
+      calls.push(['range', this === source, request.seriesId, request.startIndex, request.endIndex, request.maxPoints, request.signal.aborted]);
+      return [{ x: request.startIndex, y: request.startIndex, sourceIndex: request.startIndex, breakBefore: true }];
+    },
+  };
+  const element: PreparedLite = await mount(source);
+  element.maxRecords = 9;
+  await element.updateComplete;
+  for (const index of [0, 500, 999]) {
+    expect(await element.revealSourcePoint({ seriesId: 's', sourceIndex: index })).to.equal(true);
+    await element.updateComplete;
+  }
+  expect(calls).to.deep.equal([
+    ['point', true, 's', 0, false], ['range', true, 's', 0, 5, 4, false],
+    ['point', true, 's', 500, false], ['range', true, 's', 496, 505, 4, false],
+    ['point', true, 's', 999, false], ['range', true, 's', 995, 1000, 4, false],
+  ]);
+  const seam = element as unknown as { preparedModel: { peerCount: number; series: readonly { samples: readonly ({ sourceIndex: number } | null)[] }[] } };
+  expect(seam.preparedModel.series[0]!.samples.map(point => point?.sourceIndex ?? null)).to.deep.equal([995, null, 999]);
+  expect(seam.preparedModel.peerCount).to.equal(3);
+});

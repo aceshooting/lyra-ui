@@ -1,9 +1,7 @@
 {
   "family": "retrieval",
   "assignments": {
-    "new-component-experimental": [
-      "lr-research-progress"
-    ],
+    "new-component-experimental": [],
     "published-stable": [
       "lr-chunk-inspector",
       "lr-citation-badge",
@@ -36,7 +34,9 @@
       "lr-source-list",
       "lr-source-picker"
     ],
-    "published-experimental": [],
+    "published-experimental": [
+      "lr-research-progress"
+    ],
     "mapped-experimental": [],
     "introduced-mapped-experimental": [],
     "compatibility-stable": [],

@@ -525,8 +525,9 @@ test('root census excludes independent helper classes and rejects namespace, def
 test('checked-in metadata covers the current manifest and inventory', () => {
   const state = fixture();
   assert.deepEqual(validateComponentMetadata(state.metadata, state), []);
+  assert.equal(state.metadata.assignments['new-component-experimental'].length, 0);
   assert.equal(state.metadata.assignments['published-stable'].length, 258);
-  assert.equal(state.metadata.assignments['published-experimental'].length, 2);
+  assert.equal(state.metadata.assignments['published-experimental'].length, 30);
   assert.equal(state.metadata.assignments['mapped-experimental'].length, 1);
   assert.equal(
     state.metadata.assignments['introduced-mapped-experimental'].length,

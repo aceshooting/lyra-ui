@@ -1,5 +1,5 @@
 import { SourceRequestController } from '../../../internal/source-request-controller.js';
-import { prepareChartModel, withPreparedPoint, withPreparedRange, preparedResponse, type PreparedChartModel, type LyraChartPreparedData, type LyraChartSourcePointSelectDetail, type LyraChartSourceCategorySelectDetail } from './chart-prepared-data.js';
+import { prepareChartModel, revealPreparedSourcePoint, type PreparedChartModel, type LyraChartPreparedData, type LyraChartSourcePointSelectDetail, type LyraChartSourceCategorySelectDetail } from './chart-prepared-data.js';
 import type { LyraSeriesPointRef } from '../../../utilities/data-preparation.js';
 export type { LyraChartPreparedData, LyraChartSourcePointSelectDetail, LyraChartSourceCategorySelectDetail } from './chart-prepared-data.js';
 export type { LyraPreparedSeriesData, LyraPreparedCategoryData, LyraSeriesPointRef } from '../../../utilities/data-preparation.js';
@@ -647,31 +647,10 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     this.requestUpdate('preparedView', null);
     const signal = lease.context.signal;
     try {
-      const source = model.source;
-      if (source.kind !== 'series' || source.revision !== model.revision) throw new Error('Prepared source revision changed');
-      const response = source.getPoint(ref, { signal });
-      const point = await preparedResponse(response, signal);
-      if (!lease.isCurrent() || this.preparedBaseModel !== model || source.revision !== model.revision) return false;
-      if (point === null) return false;
-      let next = model;
-      const refinement = Object.getOwnPropertyDescriptor(source, 'queryRange');
-      if (refinement) {
-        if (!('value' in refinement) || typeof refinement.value !== 'function') throw new TypeError('Invalid indexed refinement');
-        const otherEntries = model.peerCount - series.samples.length;
-        // A line refinement can need one separator between every pair of samples, plus
-        // two entries for the isolated overlay. Every series also shares the table rows.
-        const entryBudget = Math.min(model.limit - otherEntries, Math.floor(1000 / model.series.length));
-        const maxPoints = Math.max(1, Math.floor((entryBudget - 1) / 2));
-        const startIndex = Math.max(0, ref.sourceIndex - maxPoints);
-        const endIndex = Math.min(series.counts.sourceCount, ref.sourceIndex + Math.min(maxPoints + 1, series.counts.sourceCount - ref.sourceIndex));
-        const request = { seriesId: ref.seriesId, startIndex, endIndex, maxPoints, signal };
-        const points = await preparedResponse(source.queryRange!(request), signal);
-        if (!lease.isCurrent() || this.preparedBaseModel !== model || source.revision !== model.revision) return false;
-        next = withPreparedRange(model, request, points);
-      }
-      const overlay = withPreparedPoint(next, ref, point);
-      if (!lease.isCurrent() || this.preparedBaseModel !== model || source.revision !== model.revision) return false;
-      this.preparedModel = overlay;
+      const result = await revealPreparedSourcePoint(model, ref, signal,
+        () => lease.isCurrent() && this.preparedBaseModel === model);
+      if (result.status !== 'ready' || !lease.isCurrent() || this.preparedBaseModel !== model || model.source.revision !== model.revision) return false;
+      this.preparedModel = result.model;
       this.preparedChanged = true;
       this.preparedEffective = undefined;
       this.recordSampleMemo = undefined;

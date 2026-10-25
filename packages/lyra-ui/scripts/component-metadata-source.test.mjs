@@ -13,6 +13,7 @@ import {
   readComponentMetadataSources,
 } from './component-metadata-source.mjs';
 import { nextWriteMetadata } from './generate-component-metadata.mjs';
+import { componentMetadataByTag } from './component-metadata.mjs';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sourceDirectory = 'scripts/fixtures/component-metadata';
@@ -291,4 +292,25 @@ test('concurrent source annotation and manifest edits reject all metadata change
     assert.throws(() => commitComponentMetadataWritePlan(plan), /changed while/i);
     assert.deepEqual(snapshot(root), before);
   }
+});
+
+test('published experimental entries retain their introduction history and published rationale', () => {
+  const sources = readComponentMetadataSources(packageDir);
+  const metadata = assembleComponentMetadata(sources);
+  const introduced = new Map([
+    ['lr-drop-zone', '16.0.0'],
+    ['lr-agent-question', '22.0.0'],
+    ['lr-map-anchor', '30.1.0'],
+  ]);
+  const maturity = componentMetadataByTag(metadata, { tags: [...introduced.keys()] });
+  for (const [tag, since] of introduced) {
+    const entry = maturity.get(tag);
+    assert.equal(entry.status, 'experimental', `${tag} status`);
+    assert.equal(entry.since, since, `${tag} introduction`);
+    assert.equal(entry.profile, 'published-experimental', `${tag} profile`);
+    assert.match(entry.rationale, /already appears in published Lyra versions/, `${tag} rationale`);
+    assert.doesNotMatch(entry.rationale, /unreleased|newly scaffolded/, `${tag} publication state`);
+  }
+  assert.equal(metadata.profiles['new-component-experimental'].status, 'experimental');
+  assert.match(metadata.profiles['new-component-experimental'].rationale, /unreleased/);
 });

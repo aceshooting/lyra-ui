@@ -552,12 +552,22 @@ interface PlacementEscapeHooks {
 /** Consecutive roll-back-and-rerun passes one run may take before it commits regardless. */
 const MAX_ESCAPE_RERUNS = 2;
 
+/** A library-owned placement whose geometry can change without replacing its subscriptions. */
+export type AnchoredSurfaceSession = (() => void) & {
+  /** False after disposal, including a current computation that failed closed. */
+  isActive(): boolean;
+  /** Immediately rejects pending geometry and pauses observer updates until `update()`. */
+  invalidate(): void;
+  /** Resumes placement from the current anchor rect with the existing options and observers. */
+  update(): void;
+};
+
 function placeImpl(
   anchor: Element | VirtualAnchor,
   popup: HTMLElement,
   opts: PlaceOptions,
   hooks?: PlacementEscapeHooks,
-): () => void {
+): AnchoredSurfaceSession {
   // Reject hostile JS inputs before claiming placement ownership, touching inline styles, adding
   // observers, or scheduling a callback. A valid virtual anchor can later become invalid, so each
   // update repeats the rect preflight below and disposes without committing partial coordinates.
@@ -581,6 +591,7 @@ function placeImpl(
   const autoSize = opts.autoSize;
   const hoverBridge = opts.hoverBridge;
   let disposed = false;
+  let suspended = false;
   let escapeReruns = 0;
   let stopAutoUpdate: (() => void) | undefined;
   let stopResize: (() => void) | undefined;
@@ -597,7 +608,7 @@ function placeImpl(
     scrollFrame = undefined;
   };
   const updateFromScroll = (): void => {
-    if (disposed) return;
+    if (disposed || suspended) return;
     // Invalidate promises immediately, even while the replacement waits for a frame.
     updateGeneration++;
     if (scrollFrame !== undefined) return;
@@ -620,6 +631,22 @@ function placeImpl(
     for (const transaction of [...openStyleTransactions].reverse()) transaction.rollback();
     openStyleTransactions.clear();
   };
+  const session: AnchoredSurfaceSession = Object.assign(dispose, {
+    isActive(): boolean { return !disposed; },
+    invalidate(): void {
+      if (disposed || suspended) return;
+      suspended = true;
+      updateGeneration++;
+      cancelScrollFrame();
+      for (const transaction of [...openStyleTransactions].reverse()) transaction.rollback();
+      openStyleTransactions.clear();
+    },
+    update(): void {
+      if (disposed) return;
+      suspended = false;
+      update();
+    },
+  });
 
   // `sync` is the only option here that writes inline sizing nothing else rewrites, so dropping it
   // has to release that sizing. Released on *setup* rather than in the returned cleanup: a caller
@@ -746,21 +773,23 @@ function placeImpl(
     ].filter((entry) => entry !== undefined);
 
   function update(): void {
-    if (disposed) return;
+    if (disposed || suspended) return;
     cancelScrollFrame();
     const generation = ++updateGeneration;
-    const isCurrent = () => !disposed && generation === updateGeneration;
+    const isCurrent = () => !disposed && !suspended && generation === updateGeneration;
     try {
       validatedClientRect(anchor.getBoundingClientRect(), 'place() anchor rect');
     } catch {
       dispose();
       return;
     }
+    if (!isCurrent()) return;
     try {
       hooks?.beforeCompute();
     } catch {
       // The escape is best-effort; a failure leaves the surface on the ordinary fixed path.
     }
+    if (!isCurrent()) return;
     const updateRun = placementSyncOwnership.beginUpdate(placementRun);
     const styleTransaction = createPlacementStyleTransaction();
     openStyleTransactions.add(styleTransaction);
@@ -957,7 +986,7 @@ function placeImpl(
   // autoUpdate publishes synchronously, and that update can reject a now-invalid virtual rect.
   if (disposed) {
     stop();
-    return dispose;
+    return session;
   }
   stopAutoUpdate = stop;
   stopResize = observeElementResize(anchor, popup, update);
@@ -969,7 +998,7 @@ function placeImpl(
   // and `popup` is always a real element in the same document a real `anchor` would be anyway.
   visualViewport?.addEventListener('resize', updateFromVisualViewport);
 
-  return dispose;
+  return session;
 }
 
 function isWindowLike(value: Element | Window): value is Window {
@@ -1007,6 +1036,15 @@ export function placeAnchoredSurface(
   popup: HTMLElement,
   opts: AnchoredSurfaceOptions = {},
 ): () => void {
+  return placeAnchoredSurfaceSession(anchor, popup, opts);
+}
+
+/** Retains an anchored surface's observers while its owner replaces virtual geometry. @internal */
+export function placeAnchoredSurfaceSession(
+  anchor: Element | VirtualAnchor,
+  popup: HTMLElement,
+  opts: AnchoredSurfaceOptions = {},
+): AnchoredSurfaceSession {
   // Validate before any escape write, exactly like place() itself.
   validatePlaceNumericOptions(opts);
   validateAnchorBeforeSetup(anchor);

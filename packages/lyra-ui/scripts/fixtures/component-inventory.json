@@ -2975,9 +2975,9 @@
         "status": "experimental",
         "since": "22.0.0",
         "deprecated": null,
-        "profile": "new-component-experimental",
-        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
-        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "profile": "published-experimental",
+        "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+        "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
         "deprecations": []
       },
       "qualification": {
@@ -7132,9 +7132,9 @@
         "status": "experimental",
         "since": "16.0.0",
         "deprecated": null,
-        "profile": "new-component-experimental",
-        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
-        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "profile": "published-experimental",
+        "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+        "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
         "deprecations": []
       },
       "qualification": {
@@ -11428,9 +11428,9 @@
         "status": "experimental",
         "since": "22.0.0",
         "deprecated": null,
-        "profile": "new-component-experimental",
-        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
-        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "profile": "published-experimental",
+        "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+        "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
         "deprecations": []
       },
       "qualification": {
@@ -15845,9 +15845,9 @@
         "status": "experimental",
         "since": "22.0.0",
         "deprecated": null,
-        "profile": "new-component-experimental",
-        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
-        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "profile": "published-experimental",
+        "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+        "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
         "deprecations": []
       },
       "qualification": {
@@ -19772,9 +19772,9 @@
         "status": "experimental",
         "since": "22.0.0",
         "deprecated": null,
-        "profile": "new-component-experimental",
-        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
-        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "profile": "published-experimental",
+        "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+        "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
         "deprecations": []
       },
       "qualification": {
@@ -21385,9 +21385,9 @@
         "status": "experimental",
         "since": "30.0.0",
         "deprecated": null,
-        "profile": "new-component-experimental",
-        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
-        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "profile": "published-experimental",
+        "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+        "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
         "deprecations": []
       },
       "qualification": {
@@ -34282,9 +34282,9 @@
         "status": "experimental",
         "since": "22.0.0",
         "deprecated": null,
-        "profile": "new-component-experimental",
-        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
-        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "profile": "published-experimental",
+        "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+        "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
         "deprecations": []
       },
       "qualification": {
@@ -35133,9 +35133,9 @@
         "status": "experimental",
         "since": "21.0.0",
         "deprecated": null,
-        "profile": "new-component-experimental",
-        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
-        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "profile": "published-experimental",
+        "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+        "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
         "deprecations": []
       },
       "qualification": {
@@ -36880,9 +36880,9 @@
         "status": "experimental",
         "since": "25.5.0",
         "deprecated": null,
-        "profile": "new-component-experimental",
-        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
-        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "profile": "published-experimental",
+        "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+        "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
         "deprecations": []
       },
       "qualification": {
@@ -38172,9 +38172,9 @@
         "status": "experimental",
         "since": "25.5.0",
         "deprecated": null,
-        "profile": "new-component-experimental",
-        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
-        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "profile": "published-experimental",
+        "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+        "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
         "deprecations": []
       },
       "qualification": {
@@ -51093,9 +51093,9 @@
         "status": "experimental",
         "since": "16.0.0",
         "deprecated": null,
-        "profile": "new-component-experimental",
-        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
-        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "profile": "published-experimental",
+        "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+        "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
         "deprecations": []
       },
       "qualification": {
@@ -63232,9 +63232,9 @@
         "status": "experimental",
         "since": "12.0.0",
         "deprecated": null,
-        "profile": "new-component-experimental",
-        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
-        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "profile": "published-experimental",
+        "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+        "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
         "deprecations": []
       },
       "qualification": {
@@ -83063,9 +83063,9 @@
         "status": "experimental",
         "since": "30.1.0",
         "deprecated": null,
-        "profile": "new-component-experimental",
-        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
-        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "profile": "published-experimental",
+        "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+        "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
         "deprecations": []
       },
       "qualification": {
@@ -87047,9 +87047,9 @@
         "status": "experimental",
         "since": "21.0.0",
         "deprecated": null,
-        "profile": "new-component-experimental",
-        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
-        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "profile": "published-experimental",
+        "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+        "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
         "deprecations": []
       },
       "qualification": {
@@ -87236,9 +87236,9 @@
         "status": "experimental",
         "since": "21.0.0",
         "deprecated": null,
-        "profile": "new-component-experimental",
-        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
-        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "profile": "published-experimental",
+        "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+        "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
         "deprecations": []
       },
       "qualification": {
@@ -90337,9 +90337,9 @@
         "status": "experimental",
         "since": "30.0.0",
         "deprecated": null,
-        "profile": "new-component-experimental",
-        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
-        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "profile": "published-experimental",
+        "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+        "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
         "deprecations": []
       },
       "qualification": {
@@ -93051,9 +93051,9 @@
         "status": "experimental",
         "since": "21.0.0",
         "deprecated": null,
-        "profile": "new-component-experimental",
-        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
-        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "profile": "published-experimental",
+        "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+        "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
         "deprecations": []
       },
       "qualification": {
@@ -93468,9 +93468,9 @@
         "status": "experimental",
         "since": "21.0.0",
         "deprecated": null,
-        "profile": "new-component-experimental",
-        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
-        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "profile": "published-experimental",
+        "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+        "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
         "deprecations": []
       },
       "qualification": {
@@ -101193,9 +101193,9 @@
         "status": "experimental",
         "since": "22.0.0",
         "deprecated": null,
-        "profile": "new-component-experimental",
-        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
-        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "profile": "published-experimental",
+        "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+        "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
         "deprecations": []
       },
       "qualification": {
@@ -101442,9 +101442,9 @@
         "status": "experimental",
         "since": "22.0.0",
         "deprecated": null,
-        "profile": "new-component-experimental",
-        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
-        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "profile": "published-experimental",
+        "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+        "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
         "deprecations": []
       },
       "qualification": {
@@ -117343,9 +117343,9 @@
         "status": "experimental",
         "since": "22.0.0",
         "deprecated": null,
-        "profile": "new-component-experimental",
-        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
-        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "profile": "published-experimental",
+        "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+        "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
         "deprecations": []
       },
       "qualification": {
@@ -125109,9 +125109,9 @@
         "status": "experimental",
         "since": "26.0.0",
         "deprecated": null,
-        "profile": "new-component-experimental",
-        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
-        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "profile": "published-experimental",
+        "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+        "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
         "deprecations": []
       },
       "qualification": {
@@ -131870,9 +131870,9 @@
         "status": "experimental",
         "since": "16.0.0",
         "deprecated": null,
-        "profile": "new-component-experimental",
-        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
-        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "profile": "published-experimental",
+        "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+        "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
         "deprecations": []
       },
       "qualification": {
@@ -143604,9 +143604,9 @@
         "status": "experimental",
         "since": "25.5.0",
         "deprecated": null,
-        "profile": "new-component-experimental",
-        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
-        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "profile": "published-experimental",
+        "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+        "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
         "deprecations": []
       },
       "qualification": {
@@ -145546,9 +145546,9 @@
         "status": "experimental",
         "since": "21.0.0",
         "deprecated": null,
-        "profile": "new-component-experimental",
-        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
-        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "profile": "published-experimental",
+        "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+        "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
         "deprecations": []
       },
       "qualification": {
@@ -145952,9 +145952,9 @@
         "status": "experimental",
         "since": "21.0.0",
         "deprecated": null,
-        "profile": "new-component-experimental",
-        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
-        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "profile": "published-experimental",
+        "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+        "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
         "deprecations": []
       },
       "qualification": {
@@ -147904,9 +147904,9 @@
         "status": "experimental",
         "since": "21.0.0",
         "deprecated": null,
-        "profile": "new-component-experimental",
-        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
-        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "profile": "published-experimental",
+        "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+        "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
         "deprecations": []
       },
       "qualification": {
@@ -153908,9 +153908,9 @@
         "status": "experimental",
         "since": "25.5.0",
         "deprecated": null,
-        "profile": "new-component-experimental",
-        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
-        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "profile": "published-experimental",
+        "rationale": "This exact tag already appears in published Lyra versions and remains experimental under full semver protection while its public API and usage patterns mature.",
+        "graduationCriteria": "Eligible for stable status once its documented API, populated accessibility states, cross-browser behavior, and compatibility contract demonstrate sustained reliability.",
         "deprecations": []
       },
       "qualification": {

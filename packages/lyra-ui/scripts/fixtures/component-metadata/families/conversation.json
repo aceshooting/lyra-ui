@@ -1,9 +1,7 @@
 {
   "family": "conversation",
   "assignments": {
-    "new-component-experimental": [
-      "lr-streaming-text-core"
-    ],
+    "new-component-experimental": [],
     "published-stable": [
       "lr-agent-workspace",
       "lr-audio-visualizer",
@@ -38,7 +36,9 @@
       "lr-voice-picker",
       "lr-widget-renderer"
     ],
-    "published-experimental": [],
+    "published-experimental": [
+      "lr-streaming-text-core"
+    ],
     "mapped-experimental": [],
     "introduced-mapped-experimental": [],
     "compatibility-stable": [],

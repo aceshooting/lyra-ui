@@ -1,16 +1,7 @@
 {
   "family": "agent-tools",
   "assignments": {
-    "new-component-experimental": [
-      "lr-agent-question",
-      "lr-background-runs",
-      "lr-budget-meter",
-      "lr-change-review",
-      "lr-connector-manager",
-      "lr-permission-grant",
-      "lr-permission-rules",
-      "lr-tool-call-block"
-    ],
+    "new-component-experimental": [],
     "published-stable": [
       "lr-activity-feed",
       "lr-agent-eval-dashboard",
@@ -48,7 +39,16 @@
       "lr-tool-timeline",
       "lr-trace-tree"
     ],
-    "published-experimental": [],
+    "published-experimental": [
+      "lr-agent-question",
+      "lr-background-runs",
+      "lr-budget-meter",
+      "lr-change-review",
+      "lr-connector-manager",
+      "lr-permission-grant",
+      "lr-permission-rules",
+      "lr-tool-call-block"
+    ],
     "mapped-experimental": [],
     "introduced-mapped-experimental": [],
     "compatibility-stable": [],
