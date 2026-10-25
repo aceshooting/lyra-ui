@@ -18,6 +18,8 @@ export default {
   mutate: [
     'src/vite.mjs',
     'scripts/prepared-mutations.mjs',
+    'scripts/feature-requirements.mjs',
+    'scripts/preparation-runtime.mjs',
     'scripts/code-serialization.mjs',
     'scripts/metadata-transform.mjs',
     'scripts/sprite-key-transform.mjs',
