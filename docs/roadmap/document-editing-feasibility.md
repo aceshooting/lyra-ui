@@ -10,6 +10,15 @@ The lyra-ui 30.1.0 release does not add editor qualification. Measurements and e
 this record retain their original scope; the [roadmap](document-editing.md) still tracks the open
 corpus, interoperability, input/accessibility and memory work.
 
+Unpublished image-navigation maintenance now uses a direct relationship scan for a single drawing
+and a lazy query-local index for multiple drawings. The revised path passes focused/full unit, lint and package checks. Deterministic paired fixtures
+retain exact archive/semantic hashes and targets, recovering the single-drawing regression while
+retaining higher sampled allocation for large multi-drawing relationship sets. The main editor
+browser campaign passes 236 cases per engine (708 total), plus three locked-source regressions per
+engine; source checks do not establish shipped-artifact coverage. Final version-stamped package
+and release qualification remain required. This work neither establishes general DOCX fidelity nor
+completes the [editor roadmap phases](document-editing.md#delivery-sequence).
+
 ## Current decision and boundary
 
 `@aceshooting/lyra-docs` contains the experimental `<lr-docx-editor>` component and a session API.

@@ -1999,20 +1999,6 @@
   },
   {
     "type": "dependency",
-    "from": "src/components/viewers/document-viewer/registry.ts",
-    "to": "src/components/media/av-player/av-metadata.ts",
-    "unresolvedTo": "../../media/av-player/av-metadata.js",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
     "from": "src/components/viewers/docx-viewer/docx-resource-guard.ts",
     "to": "src/components/viewers/document-viewer/ooxml-part-guard.ts",
     "unresolvedTo": "../document-viewer/ooxml-part-guard.js",

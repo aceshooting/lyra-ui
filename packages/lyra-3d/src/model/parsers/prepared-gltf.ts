@@ -102,8 +102,8 @@ export const createPreparedGltf: ModelPreparedDecoder = (input, services) => {
   function* geometry(plan: GltfPlan, primitive: ModelJsonRecord): Task<number> {
     yield 'records';
     const definitions = record(primitive['attributes']); const mode = number(primitive['mode'], 4);
-    let key = `${primitive['indices']}:${primitive['mode']}`;
-    for (const semantic of Object.keys(attributes) as (keyof typeof attributes)[]) if (definitions[semantic] !== undefined) key += `:${semantic}:${definitions[semantic]}`;
+    let key = `${String(primitive['indices'])}:${String(primitive['mode'])}`;
+    for (const semantic of Object.keys(attributes) as (keyof typeof attributes)[]) if (definitions[semantic] !== undefined) key += `:${semantic}:${String(definitions[semantic])}`;
     const existing = geometryCache.get(key); if (existing !== undefined) return existing;
     const result: Record<string, ModelAttributeDescriptor> = {};
     for (const semantic of Object.keys(attributes) as (keyof typeof attributes)[]) {
@@ -138,7 +138,7 @@ export const createPreparedGltf: ModelPreparedDecoder = (input, services) => {
     const definition = record(list(document['textures'])[number(info['index'])]);
     const source = number(definition['source']); const samplerIndex = definition['sampler'];
     const sampler: ModelJsonRecord = samplerIndex === undefined ? {} : record(list(document['samplers'])[number(samplerIndex)]);
-    const key = `${source}:${samplerIndex}`; let base = textureCache.get(key);
+    const key = `${source}:${String(samplerIndex)}`; let base = textureCache.get(key);
     if (base === undefined) {
       const image = record(list(document['images'])[source]); const minFilter = number(sampler['minFilter'], 9987) as ModelTextureDescriptor['minFilter'];
       base = textures.length; textureCache.set(key, base);
@@ -187,7 +187,7 @@ export const createPreparedGltf: ModelPreparedDecoder = (input, services) => {
     const kind = mode === 0 ? 'points' : mode <= 3 ? 'line-basic' : 'mesh-standard';
     const vertexColors = geometry.attributes['color'] !== undefined; const flatShading = geometry.attributes['normal'] === undefined;
     const derivative = geometry.attributes['tangent'] === undefined;
-    const key = `${primitive['material']}:${kind}:${vertexColors}:${flatShading}:${derivative}`;
+    const key = `${String(primitive['material'])}:${kind}:${vertexColors}:${flatShading}:${derivative}`;
     const previous = materialCache.get(key); if (previous !== undefined) return previous;
     const standard = yield* baseMaterial(document, number(primitive['material'], -1));
     const base: ModelMaterialBase = { name: standard.name, color: standard.color,

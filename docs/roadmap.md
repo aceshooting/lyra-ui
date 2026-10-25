@@ -21,7 +21,7 @@ still open.
   [test health](roadmap/test-health.md) (coverage, speed, flakiness).
 - **After 30.1.0:** [geospatial scenes and synchronized playback](roadmap/geospatial-scenes.md).
   Planned and unstarted; outside the 30.1.0 release gate, with no assigned version or date.
-- **30.2.0 maintenance target:** [corrections, performance work and consolidation](roadmap/30.2-maintenance.md). Implementation in progress; unpublished. Affected companions version independently.
+- **30.2.0 maintenance target:** [corrections, performance work and consolidation](roadmap/30.2-maintenance.md). Reviewed source includes corrections, consolidations and asynchronous model loading; candidate checks pass and final release qualification remains in progress. Unpublished; affected companions version independently.
 - **Rationale for the style-axis, token and migration designs:** the [RFCs](rfcs/).
 
 ## Published 30.0.0, 30.1.0 and current maintenance
@@ -74,6 +74,44 @@ The final versioned commit passed the complete release qualification; details an
 is 99.34%; the release retained and improved on the 30.0.0 baseline. The 99.74% and 99.80% goals
 remain open. The historical WebKit PDF timeout remains unexplained; passing focused reproductions
 establish no fix. Geospatial scenes remain unstarted and unassigned to a release.
+
+## Current 30.2 maintenance
+
+All nineteen selected items have separate source, exercised-evidence and remaining-work records in
+the [maintenance status table](roadmap/30.2-maintenance.md#implementation-status). Map metadata
+preflight and preparation-runtime changes pass focused package and three-engine checks. The
+affected UI slice passes in Chromium, Firefox and WebKit; shared coverage/import-analysis tooling
+and hierarchy, chart and label helpers retain their characterization checks. Experimental maturity
+wording and localized catalog copy are corrected in source; website production delivery remains
+pending.
+
+Shared synchronous admission, all-format asynchronous loading and UI adoption are implemented
+and reviewed. The 3D suite passes 686 unit checks and 106 packed browser cases in each of Chromium,
+Firefox and WebKit, including corrected PLY mesh and lifecycle ownership regressions. Complete
+3D coverage reaches 100% lines/statements and 97.96% branches after the five additional critical
+worker-error and resource-cleanup tests. Complete UI coverage records 99.85% lines/statements,
+97.64% branches and 99.47% functions; raw coverage does not establish the Codecov full-hit result.
+
+Actual public synchronous GLB admission still costs about 44–49 ms against a roughly 12 ms
+baseline, with the required public changeset explanation under the advisory timing policy.
+Graph fallback preserves exact paired outputs and near-baseline large-workload throughput;
+twelve trusted interruption cases preserve exact replacement/disposal behavior during initialization
+before the first completed iteration. Three model cold-load pairs retain exact pixels/positions and
+request boundaries; the initial artifact gzip estimate falls from 181,525 to 170,847 bytes, but later
+format loads are slower. Dense upload fragmentation is corrected; the
+final full GPU campaign passes 48 runs, 24 pairs and 120 exact-output stages, retaining the disclosed
+CPU overhead. Document navigation has matching deterministic paired fixtures and a completed
+three-engine browser campaign, with its allocation tradeoff retained.
+
+Final candidate lint/spelling, metadata, architecture, quality generation and UI/companion
+package/bundle checks pass with the approved budget changes. The same-harness quick comparison
+passes all 15 scenarios and functional/count assertions but has 12 timing regressions and eight
+improvements across 150 metrics; advisory timing disclosure remains required. No selected
+implementation work remains. Final end-to-end asynchronous model qualification at 100k/1M inputs
+still requires worker/fallback trusted-input and cancellation, total-render and retained-memory
+measurements. Existing asynchronous correctness cases do not complete that campaign. Final version
+stamping, budget remeasurement and exact-commit CI and release workflows remain required before publication. No 30.2 package is published, and earlier
+30.0/30.1 qualification does not qualify this source.
 
 ## Shipped
 
@@ -197,13 +235,13 @@ packages version independently. A target moves only when scope changes, never to
 
 | Target | Package versions | Scope |
 |---|---|---|
-| 30.2.0 | lyra-ui, lyra-ide and lyra-translations 30.2.0; affected companions independently | [Maintenance corrections, measured performance work and consolidation](roadmap/30.2-maintenance.md); implementation in progress, unpublished |
+| 30.2.0 | lyra-ui, lyra-ide and lyra-translations 30.2.0; affected companions independently | [Maintenance corrections, performance work and consolidation](roadmap/30.2-maintenance.md); source changes and qualification in progress, unpublished |
 | 30.x | lyra-3d 1.x | Further graph visuals and 100k-node scale |
 | independent | lyra-docs 0.7.0 to 1.0.0 | Native document editing phases 4 to 8 |
 | on demand | lyra-ui minor | Fluent-informed look |
 | last | lyra-ui minors | Additional full catalogs |
 
-1. **30.2.0 maintenance:** correct PPTX external-media policy and asynchronous object-style readiness; address source-verified performance and consolidation findings with [bounded scope and qualification](roadmap/30.2-maintenance.md). No timing improvement is claimed before measurement.
+1. **30.2.0 maintenance:** correct PPTX external-media policy and asynchronous object-style readiness; address source-verified performance and consolidation findings with [bounded scope and qualification](roadmap/30.2-maintenance.md). Source, scoped measurements and remaining performance/release gates are recorded separately; final exact-commit qualification and publication remain required for delivery.
 2. **lyra-3d 1.x: further visuals and scale:** curved edges, DAG layouts, custom node rendering and
    optional glow, then 100k graph nodes with a performance gate.
 3. **lyra-docs 0.7.0 to 1.0.0: native document editing**, released independently: 0.7.0 phase 4

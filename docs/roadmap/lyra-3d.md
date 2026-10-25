@@ -17,6 +17,56 @@ The published lyra-ui 30.1.0 release does not complete the later visuals or scal
 below. The companion remains at 1.0.0; expanded integration tests do not extend the hardware
 measurements or complete a new lyra-3d release qualification.
 
+## Unpublished maintenance
+
+The [30.2 maintenance target](30.2-maintenance.md#implementation-status) includes sparse point/graph
+visual-state updates, resumable graph fallback work, lower-allocation XYZ parsing, admitted-format
+loader boundaries and an additive asynchronous model-loading path. These changes do not complete
+the later visuals or 100k-node graph target.
+
+The final real-GPU campaign passes 48 runs, 24 pairs and 120 exact-output stages, with independent
+review of hardware/source identity, pixel/render/pick parity, worker completion and disposal. Dense
+upload fragmentation is corrected; residual CPU overhead remains disclosed under the advisory
+timing policy and required changeset explanation. Upload counts
+and two-frame paint opportunities do not measure compositor presentation or GPU duration.
+
+Paired Node graph runs preserve completed-iteration outputs and near-baseline large-workload
+throughput, retaining small exact-solver overhead. Bounded scheduler/heartbeat and cancellation
+checks supplement the passing packed three-engine cases. Twelve trusted interruption cases
+preserve exact replacement/disposal behavior during initialization before the first completed
+iteration; they do not establish mid-solver input latency. The hardware Chromium campaign has
+three trials per action, with automation-inclusive dispatch-to-handler timing; synchronous admission
+and scene creation remain outside the resumable work.
+
+XYZ fixtures retain exact input/position/color/bounds parity; large Node parse cases improve, while
+empty/single-vertex startup increases about 1 ms. Shared synchronous model admission, descriptors, all-format
+asynchronous service routing and UI adoption are implemented and reviewed. Model checks pass
+686 unit tests and 106 packed browser cases per engine in Chromium, Firefox and WebKit. Lifecycle
+ownership and bounded finite Float64-to-Float32 conversion correct the reproduced PLY mesh cases
+while preserving float meshes and double point clouds. UI adoption passes 82 cases in
+Chromium/WebKit and 76 with six retained skips in Firefox.
+
+Actual public synchronous GLB admission still measures about 44–49 ms against a roughly 12 ms
+baseline. Garbage collection contributes, but the exact cost remains unresolved. The advisory
+timing policy requires a public changeset explanation. The packed production request-boundary
+check passes for XYZ, OBJ and GLB. Three cold-load pairs preserve exact pixels/positions and
+hardware/request boundaries. Initial artifact gzip estimate falls from 181,525 to 170,847 bytes, while later format
+loads are slower; no general loading-throughput improvement is claimed. The three-sample tiny-fixture
+comparison uses fresh documents in a shared browser/OS environment; artifact gzip estimates do
+not represent transferred compressed bytes or measure isolated CPU, allocation or GPU duration. Complete coverage
+records all 7,927 lines/statements hit (100%), functions 99.7% and branches 97.96%, with 686 unit
+checks and all 106 packed browser cases passing in each engine. The refreshed full coverage run
+includes the five additional meaningful critical-branch tests without runtime changes. Final
+lint/spelling and current size/budget checks pass. Final end-to-end setDataAsync qualification at
+100k/1M inputs remains open for worker and fallback routes, trusted input/cancellation, total
+rendering and retained memory; existing asynchronous correctness cases do not establish it.
+Historical native endpoint/post-disposal memory counters are complete, but process-maximum RSS
+does not establish parser-only peak heap. Final version stamping, budget remeasurement and
+exact-commit release qualification remain open.
+
+None of these results qualifies a new companion release. The published version remains 1.0.0;
+version-stamped package/budget verification and exact-commit release workflows remain required.
+
 ## Objective and boundaries
 
 Add GPU-rendered views in an optional companion that only the applications using them install. The
@@ -128,8 +178,8 @@ lyra-3d 1.0.0.
   nodes and 90k edges on a real GPU with large headroom; the force layout is the bottleneck (about
   14 layout steps per second at 10k nodes), so layout convergence gets its own budget. CI can
   measure real-GPU frame rates in headless Chromium; Firefox and WebKit render in software there,
-  so they get functional and fallback coverage. GPU id picking costs 1-2 ms at any size; a restored
-  context needs renderer state re-applied.
+  so they get functional and fallback coverage. GPU id picking latency needs workload- and
+  hardware-specific measurement; a restored context needs renderer state re-applied.
 - [x] Engine contract, opt-in vocabulary and large-data input written and approved (2026-10-20):
   `three` as a dependency of the companion, standard module workers with a main-thread fallback,
   typed-column inputs (`graphColumns`, `pointColumns`) as immutable objects, and a dedicated

@@ -8,6 +8,10 @@ The published 30.1.0 release adds experimental independently owned map anchors a
 corrections; it does not implement any P1 or P2 item below. Their specification, ownership and
 qualification remain separate work.
 
+The unpublished [30.2 maintenance target](30.2-maintenance.md) improves existing map preparation
+and anchor placement. It does not implement the scene, altitude, playback or shared-clock work
+below; all six P1/P2 items retain their separate specification and qualification requirements.
+
 ## Existing foundation
 
 `lr-map` already accepts globe projection and terrain through `mapStyle`; the optional

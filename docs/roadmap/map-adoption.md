@@ -14,6 +14,15 @@ style. The correction now passes affected tests in Chromium, Firefox with WebGL,
 it remains unreleased. The [30.2 maintenance plan](30.2-maintenance.md) tracks integrated
 qualification and delivery.
 
+Current unpublished maintenance also replaces full feature-preflight snapshots with validated
+requirement metadata, authors the preparation runtime as directly testable code, and retains
+stable map-anchor placement sessions during camera movement. Full companion coverage records
+100% lines and statements; parity, provenance and packed three-engine checks pass for the exercised
+candidate. Production preflight and anchor measurements retain their individual fixture and source
+scope; native ingestion and full release qualification remain separate. Final version-stamped
+packages, release mutation testing and publication are still required. The independent companion
+remains published at 1.3.0. See the [maintenance status table](30.2-maintenance.md#implementation-status).
+
 Applications can replace camera, padding, popup, fitting and missing-data workarounds with the
 supported component API. Published 30.1.0 corrections cover URL-style readiness, anchor visibility
 and live direction changes, boundary containment, and public geolocation-group and

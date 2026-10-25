@@ -76,7 +76,7 @@ export const createPreparedStl: ModelPreparedDecoder = (input, services) => {
         }
         if (row[0] === 'solid') {
           groupStart = output / 3; groupNames.push(line.match(/solid\s(.+)/)?.[1] ?? '');
-          if (/solid$/.test(line)) pendingName = groupNames.length - 1;
+          if (line.endsWith('solid')) pendingName = groupNames.length - 1;
         }
         else if (row[0] === 'facet') normal = row.slice(2).map(Number);
         else if (row[0] === 'vertex') for (let axis = 0; axis < 3; axis++) {

@@ -102,6 +102,73 @@ The baseline below predates the 30.0.0 work.
 - [ ] Keep a weekly check of Codecov test analytics; any test that fails on two different commits
   gets fixed or quarantined with a tracked reason.
 
+### Current 30.2 maintenance qualification
+
+Status: unpublished; complete exact-commit qualification remains open. The 44-file affected UI
+slice passes in Chromium, Firefox with WebGL, and WebKit, retaining its engine-specific skips.
+Map preparation/runtime parity, provenance and packed three-engine checks pass; complete map
+coverage records 100% lines and statements for the exercised candidate. Shared coverage helpers
+retain 100% measured coverage without changing package-owned exclusions or floors. Complete UI
+coverage records 99.85% lines/statements, 97.64% branches and 99.47% functions. These raw totals
+do not establish Codecov full-hit coverage or a release pass.
+
+- [x] Exercise the implemented corrections, hierarchy/chart/label helpers and map-anchor changes
+  in the affected three-engine UI slice.
+- [x] Review generated metadata for removed public APIs and experimental maturity wording:
+  no removed API was found across 311 components; 28 profile changes retain experimental status.
+- [x] Complete deterministic paired image-navigation comparison with matching archive/semantic
+  hashes, targets and runtime identities. The single-drawing regression is recovered; retain the
+  higher sampled allocation for large multi-drawing relationship sets.
+- [x] Exercise 236 main editor cases per engine (708 total), plus three locked-source regressions
+  per engine (nine total); source checks retain their narrower artifact scope.
+- [x] Verify focused chip corrections: six cases per engine pass. Preserve the published metadata
+  snapshot and verify all 33 metadata checks.
+- [x] Integrate and review shared synchronous admission, all-format asynchronous service routing
+  and UI adoption; verify the corrected model lifecycle and PLY mesh cases. Model checks pass
+  686 unit tests and 106 packed browser cases per engine. UI adoption passes 82 cases in
+  Chromium/WebKit and 76 with six retained skips in Firefox.
+- [x] Complete model unit and packed browser acceptance: 686 unit checks plus lint and 106 packed
+  cases in each of Chromium, Firefox and WebKit pass. Complete model coverage records all
+  7,927 lines/statements hit (100%), functions 99.7% and branches 97.96%.
+- [x] Complete the refreshed full coverage run after five meaningful critical-branch tests were
+  added; all 686 unit checks pass and runtime behavior is unchanged. Retain the required changeset
+  explanation for actual public synchronous GLB cost (about 44–49 ms versus roughly 12 ms
+  baseline), under the advisory timing policy, and complete integrated release qualification.
+- [x] Complete the final real-GPU interaction/control campaign: 48 runs, 24 pairs and 120
+  exact-output stages pass independent review of hardware/source identity, worker completion and
+  disposal. Retain residual dense CPU cost disclosure under the advisory timing policy.
+- [x] Complete the UI coverage run: 99.85% lines/statements, 97.64% branches and 99.47% functions.
+- [x] Complete trusted graph interruption checks: twelve cases preserve exact replacement/disposal
+  behavior during initialization before the first completed iteration; mid-solver latency remains
+  outside this measurement.
+- [x] Complete three model cold-load pairs with exact pixels/positions and hardware/request
+  boundaries. The initial artifact gzip estimate falls from 181,525 to 170,847 bytes; later format
+  loads are slower.
+- [x] Complete candidate lint/spelling, metadata, architecture, 311-component quality generation,
+  UI bundle/package and companion budget checks with reviewed approved budget changes.
+- [x] Complete the same-harness quick comparison: all 15 scenarios and functional/count assertions
+  pass. Across 150 timing metrics, twelve regress and eight improve; this is advisory evidence,
+  not a passed performance gate. Retain the required public changeset explanation.
+- [ ] Complete final end-to-end setDataAsync performance qualification at 100k/1M inputs, covering
+  worker and fallback routes, trusted input/cancellation, total rendering and retained memory.
+  Existing asynchronous correctness cases do not complete this campaign. Historical native
+  endpoint/post-disposal memory counters do not measure parser-only peak heap; RSS is process maximum.
+- [ ] Stamp final package versions, regenerate version-derived artifacts and remeasure budgets;
+  preserve behavioral and coverage policy.
+- [ ] Complete final companion coverage/mutation/packed checks and the exact-release CI, Test All
+  Browsers, full browser-engine and Quality tools runs, including the A/B benchmark.
+- [ ] Record complete exact-commit UI Codecov totals against the published 30.1.0 baseline,
+  retaining the distinction between full-hit coverage and raw line/statement floors.
+- [ ] Verify protected publication, package integrity/provenance and website production delivery.
+
+The dependency-upgrade prerequisite is complete. CodeQL and Scorecard pass, but the prior complete
+CI result failed; focused repairs do not turn it into a release pass. Complete exact-source green
+qualification remains required.
+
+The [nineteen-item status table](30.2-maintenance.md#implementation-status) keeps source,
+exercised checks and remaining delivery work separate. The 99.80% Codecov goal and historical
+WebKit PDF investigation remain open; no maintenance extraction completes either.
+
 ### Current 30.1.0 qualification
 
 A later regression in 30.1.0 affects asynchronous modular object-style replacement: active

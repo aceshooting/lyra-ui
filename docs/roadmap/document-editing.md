@@ -15,6 +15,16 @@ The published lyra-ui 30.1.0 release does not advance these editor phases. The e
 0.6.3, with corpus, interoperability, IME, assistive-technology and retained-memory work open as
 listed below; viewer regression tests do not establish editor fidelity.
 
+The [unpublished maintenance work](30.2-maintenance.md#implementation-status) adds a query-local
+relationship index for multi-drawing image navigation and keeps a direct scan for a single drawing.
+The revised path passes focused/full unit, lint and package checks. Deterministic paired fixtures
+retain exact archive/semantic hashes and targets, recovering the single-drawing regression while
+retaining higher sampled allocation for large multi-drawing relationship sets. The main editor
+browser campaign passes 236 cases per engine (708 total), plus three locked-source regressions per
+engine; source checks do not establish shipped-artifact coverage. Final version-stamped package
+and release qualification remain required. This optimization does not complete any broader editor phase,
+change the experimental status or establish a new published companion version.
+
 ## Current state (lyra-docs 0.6.3)
 
 Evidence: `packages/lyra-docs` (published as `@aceshooting/lyra-docs@0.6.3`): 56 colocated Node

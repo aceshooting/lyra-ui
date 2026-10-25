@@ -336,4 +336,3 @@ export function* readGltfPolicy(bytes: Uint8Array<ArrayBuffer>, format: 'gltf' |
   return { format, document: unpacked.document as ModelJsonRecord, views: planViews, accessors: planAccessors };
 
 }
-

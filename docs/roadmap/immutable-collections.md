@@ -5,6 +5,11 @@ Status: shipped as a breaking change in
 The published 30.1.0 release preserves this collection contract; later behavioral tests do not
 introduce a second migration or change the published defaults.
 
+The unpublished [30.2 maintenance target](30.2-maintenance.md) consolidates hierarchy and chart
+source adapters while preserving this ownership/identity contract. Its affected characterization
+and three-engine checks do not introduce another collection migration or complete release
+qualification.
+
 Twenty-two components keep the caller's item objects (identity-preserving collections such as
 feeds, queues, traces, task lists and virtual lists). Before 30.0.0, assigning the same array again
 re-copied it, so in-place `push` or item edits followed by a reassignment still rendered; only
