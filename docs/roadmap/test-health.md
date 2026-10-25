@@ -8,8 +8,7 @@ displayed as 99.36%). All five UI shard artifacts were merged and uploaded; that
 still failed its SSR classification assertions and other qualification checks. These remain
 historical candidate observations, not results for the published release commit.
 
-The published 30.1.0 release commit
-[`1b275c39`](https://github.com/aceshooting/lyra-ui/commit/1b275c39c066001ac29ccc7ab55fad452b5c9a07)
+The [published 30.1.0 release commit](https://github.com/aceshooting/lyra-ui/commit/1b275c39c066001ac29ccc7ab55fad452b5c9a07)
 has a complete Codecov UI flag from [successful CI](https://github.com/aceshooting/lyra-ui/actions/runs/40169991813):
 523,710 fully hit lines out of 527,148, with 2,579 misses and 859 partials. Codecov reports
 99.34% for the flag, matching the deployed [coverage JSON](https://aceshooting.github.io/lyra-ui/badges/coverage-lyra-ui.json)
@@ -124,8 +123,7 @@ style. Its correction and qualification remain open in the [30.2 maintenance pla
   verify Storybook documentation freshness for all 311 tags.
 - [x] Apply the hosted update of seven reviewed public source-contract records; API documentation
   freshness, final delivery budgets and installed-consumer checks pass.
-- [x] Qualify and publish the exact versioned commit
-  [`1b275c39`](https://github.com/aceshooting/lyra-ui/commit/1b275c39c066001ac29ccc7ab55fad452b5c9a07).
+- [x] Qualify and publish the [versioned release source](https://github.com/aceshooting/lyra-ui/commit/1b275c39c066001ac29ccc7ab55fad452b5c9a07).
   [CI](https://github.com/aceshooting/lyra-ui/actions/runs/40169991813),
   [CodeQL](https://github.com/aceshooting/lyra-ui/actions/runs/40169991832),
   [Scorecard](https://github.com/aceshooting/lyra-ui/actions/runs/40169991805),
