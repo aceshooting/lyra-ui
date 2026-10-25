@@ -153,20 +153,18 @@ const optionalPeerFamilyTags = componentInventory.components
 // tags. Imperative helpers register the exact elements they need only when the helper is invoked.
 const rootHelperRegisteredTags = [];
 
-// Packed core/all.js measures 5,614,871 non-asset raw bytes plus one required
-// 466,610-byte Oniguruma binary across 58 files. Native video time synchronization adds
-// 241 bytes to the prior non-asset measurement of 5,614,630 bytes.
-// The non-asset ceiling is 5,614,931 bytes with 60 bytes of headroom; the total derives from
-// that ceiling plus the exact binary allowance, yielding 6,081,541 bytes.
-// The binary allowance requires one emitted asset identical to the installed package;
-// it cannot fund non-asset growth. Peer exclusions and the complete file sum stay fixed.
+// Packed core/all.js includes every non-optional registration and every emitted chunk.
+// With independent map-anchor panels it measures 5,619,706 raw bytes across 57 files;
+// the next 64-byte ceiling is 5,619,712 bytes, leaving six bytes of headroom.
+// Optional-peer exclusions and the complete file sum stay fixed. Core has no WASM allowance;
+// the explicit Oniguruma canary retains its separate exact 466,610-byte binary requirement.
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/7859878f724ef4237ee93a5414fa6b54f204313a/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'Preventing native video progress from causing seeks measures 5,614,871 non-asset raw bytes; the core ceiling retains exactly 60 bytes of regression headroom and the separate exact binary allowance.',
-  reviewedCoreMeasurementBytes: 5_614_871,
+  $comment: 'The full non-optional registration graph including independent map-anchor panels measures 5,619,706 raw bytes; its ceiling is the next 64-byte boundary with six bytes of headroom. The explicit Oniguruma canary retains its separate exact binary requirement.',
+  reviewedCoreMeasurementBytes: 5_619_706,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 60,
+  selectedRegressionHeadroomBytes: 6,
 };
 
 /**

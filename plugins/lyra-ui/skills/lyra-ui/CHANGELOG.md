@@ -1,5 +1,53 @@
 # Changelog
 
+## 30.1.0
+
+### Minor Changes
+
+- 55ec21c: Add the experimental `<lr-map-anchor>` element for several independently owned panels on one `lr-map`. Each anchor holds your own live content, which is never cloned or moved, so its listeners and component state survive camera moves, off-screen hiding, style replacement and map reconnects. Each module opens, moves and closes its own anchor with `open`, `lngLat`, `close()` and a cancelable `lr-close-request` followed by `lr-close`, without affecting other anchors or the map's `anchor` slot.
+
+  - Anchors are placed like the `anchor` slot and follow the camera. They take their own `safeArea` and `boundary`, or the map's `anchorSafeArea` and `anchorBoundary` while those are unset, and stay placed through a `mapStyle` replacement.
+  - A `closable` anchor gets a localized close button and closes on Escape. Escape closes the anchor that contains focus first, otherwise the frontmost one. Overlapping anchors are painted with the most recently opened, focused or pressed one in front.
+  - Focus moves only to `[autofocus]` content or through `focusContent()`, and returns to where it came from when a focused anchor hides, closes or is removed.
+  - `lr-map` gains an `anchors` slot, where a direct child anchor assigns itself. Import `@aceshooting/lyra-ui/components/lr-map-anchor.js` alongside `lr-map.js`; maps without child anchors render, load and behave as before, and the placement code is still loaded only when an anchor opens.
+
+  The additional registration route, map runtime, declarations and consumer/editor metadata require small delivery-budget increases. Only exceeded media-family, initial scoped-loader, unpacked UI, packed/unpacked IDE and packed consumer core ceilings advance to the next 64-byte boundary. Existing passing limits, lazy-import boundaries and measurement settings are retained. The complete non-optional packed consumer graph measures 5,619,706 raw bytes across 57 files; its ceiling advances to 5,619,712 bytes, the next 64-byte boundary, with unchanged peer exclusions and no binary allowance.
+- 1e233d8: Add the opt-in `shiftCrossAxis` positioning option to keep a popup inside its clipping boundary along both axes. Map anchors use it to stay fully inside changing safe areas and custom boundaries, keeping their close actions reachable without moving the map camera.
+- 1e233d8: Expose `geolocate-control` and `attribution-content` map parts so applications can offset the geolocation group and position bounded credits independently of the compact attribution toggle.
+
+  The map readiness, layout and safe-area corrections measure 343,439 gzip bytes for the media family; its reviewed ceiling advances to 343,488 bytes, the next 64-byte boundary. Other entry budgets remain unchanged.
+
+  The generated editor archive retains all four editor formats and measures 1,701,215 packed and 10,541,676 unpacked bytes with the new parts and safe-area documentation. Its two exceeded limits advance to the next 64-byte boundaries at 1,701,248 and 10,541,696 bytes; file-count and other package limits remain unchanged.
+
+### Patch Changes
+
+- 1e233d8: Preserve scoped theme ownership when an element is frozen after its first theme application, so later theme changes still restore the original attributes and token values when the scope is removed.
+
+  The theme entry measures 13,514 gzip bytes with the ownership correction. Its reviewed ceiling advances to 13,568 bytes, the next 64-byte boundary. Other entry budgets remain unchanged.
+- 1e233d8: Wait for URL style replacements to commit before reporting map readiness and restoring owned overlays, images and style overrides. URL replacements now rebuild the native basemap instead of diffing it, so unchanged responses also have a reliable completion event. This trades the native style-diff optimization for correct replacement readiness. Pending replacements can also be superseded repeatedly by inline styles without attempting to diff an unloaded basemap.
+- e7ed92d: Keep text-only agent messages valid when updating or completing them without structured parts. Explicit part replacements and empty-array clears retain their existing ownership and validation rules.
+- 49b43b3: Cancel obsolete file-tree reveals promptly when the listing, source mode, connection, or document changes, preventing stale focus and unresolved reveals during nested expansion.
+
+  The cancellation and selection initialization fixes measure 432,393 gzip bytes in the data family; dialog heading and overlay ownership fixes measure 152,491 in overlays; time-picker focus restoration measures 27,545 initial marginal bytes. Their three breached bundle ceilings advance to the next 64-byte boundaries (432,448, 152,512, and 27,584 bytes), preserving all passing ceilings and measurement settings.
+
+  The corresponding file-tree cancellation documentation measures 1,701,422 compressed bytes in the generated IDE package. Its packed ceiling advances to the next 64-byte boundary, 1,701,440 bytes, without changing required editor formats or any other package limit.
+- 49b43b3: Keep heatmap source PNG exports available after a completed resize or theme repaint, while continuing to withhold pending, failed, and obsolete source snapshots.
+- 49b43b3: Apply corrected neighbor-list provider pages before rendering so pagination and row actions share the current page without scheduling an unnecessary follow-up update.
+- 1e233d8: Retain the mixed runtime observations from comparisons with 30.0.0. Earlier controlled published/current/current/published measurements did not consistently reproduce the initial chart and combobox total-time increases, although three of four comparisons still flagged smaller wait-related metrics. A fresh complete quick Chromium comparison with matched metadata and dependencies reports 11 regressed and 7 improved timing metrics out of 150. Chart total p95 rises from 111.8 to 147.9 ms; table-sort update median rises from 11.5 to 13.7 ms. Additional regressions affect table no-op frame waits and select metadata-update p95. These observed regressions do not establish a performance pass.
+
+  The table's runtime import graph is unchanged. The chart's new late-feature request checks run during untimed setup, with those features disabled in the fixture. Select changes concern initial selection and reset behavior, while positioning changes affect open popups, outside the measured closed-control metadata updates. No changed algorithmic cause was identified for these operations. With seven samples, p95 is the maximum; phase timings include scheduling and frame waits. Those limits do not erase the observations. The deterministic scale checks and the separately required A/B benchmark retain their existing thresholds.
+- 1e233d8: Remove redundant closing whitespace from single-line declaration documentation, reducing the unpacked package by 4,076 bytes while preserving public types and editor documentation.
+- 1e233d8: Keep closed and offscreen map anchors hidden when applications customize their public part's display layout, including important consumer declarations. Visible anchors retain the application's display styling when restored.
+- e7ed92d: Keep map drawing failure handling responsive when the renderer temporarily cannot provide its canvas. Accessibility descriptions release the unavailable canvas and reconnect after the renderer recovers.
+- 49b43b3: Avoid a redundant reactive update while closing the time picker and restoring focus to the original segment, while preserving public focus events.
+- e487c79: Clear stale slider focus styling when a range-mode change is followed by disablement or a newer focus request, while preserving the current thumb's focus ownership.
+- 49b43b3: Keep dialogs suspended while an external modal owns focus, including when a previously hidden dialog becomes visible. Restore referenced heading names when dialogs and drawers open or reconnect without including hidden or inert headings.
+- e143d1c: Load the zoom, data-label and annotation add-ons for a chart whose `zoomable`, `data-labels`, `stack-totals` or `annotations` setting is assigned right after it connects, before its charting library has finished loading, instead of leaving them silently unloaded until the setting changes again.
+- e143d1c: Keep progressive Markdown streaming active when a rewriting edit discards committed groups while a queued recompute still points past them, instead of freezing the progressive render for the rest of that stream.
+- 49b43b3: Preserve an initial selectedOptions assignment until the select has collected its options, while honoring later value writes and retaining declarative form-reset defaults.
+- 1e233d8: Prevent an open, closable map anchor from repeatedly updating when inherited text direction changes. Anchors remain responsive when switching between left-to-right and right-to-left layouts.
+- @aceshooting/lyra-translations@30.1.0
+
 ## 30.0.0
 
 ### Major Changes

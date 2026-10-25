@@ -78,7 +78,7 @@ type MapAnchorDetachment = 'map' | 'slot' | 'nested';
  * @csspart close-icon - The wrapper of the close glyph.
  * @cssstate placed - Matches while the panel is placed and shown.
  * @status experimental
- * @since unreleased
+ * @since 30.1.0
  */
 export class LyraMapAnchor extends LyraElement<LyraMapAnchorEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START

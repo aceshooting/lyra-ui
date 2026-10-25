@@ -1,5 +1,31 @@
 # @aceshooting/lyra-translations
 
+## 30.1.0
+
+### Patch Changes
+
+- Updated dependencies [1e233d8]
+- Updated dependencies [1e233d8]
+- Updated dependencies [e7ed92d]
+- Updated dependencies [49b43b3]
+- Updated dependencies [49b43b3]
+- Updated dependencies [49b43b3]
+- Updated dependencies [55ec21c]
+- Updated dependencies [1e233d8]
+- Updated dependencies [1e233d8]
+- Updated dependencies [1e233d8]
+- Updated dependencies [1e233d8]
+- Updated dependencies [e7ed92d]
+- Updated dependencies [49b43b3]
+- Updated dependencies [e487c79]
+- Updated dependencies [49b43b3]
+- Updated dependencies [e143d1c]
+- Updated dependencies [e143d1c]
+- Updated dependencies [49b43b3]
+- Updated dependencies [1e233d8]
+- Updated dependencies [1e233d8]
+  - @aceshooting/lyra-ui@30.1.0
+
 ## 30.0.0
 
 ### Patch Changes
