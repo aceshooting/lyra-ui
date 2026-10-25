@@ -1,10 +1,10 @@
 # Geospatial scenes and synchronized playback
 
-Status: planned and unstarted, after 30.0.0. None of this work is a 30.0.0 release requirement.
+Status: planned and unstarted, after 30.1.0. None of this work was a 30.1.0 release requirement.
 P1 and P2 indicate priority, not a promised release version or date. Public API names, package
 ownership and implementation scope require a separate specification before implementation.
 
-The unpublished 30.1.0 candidate adds experimental independently owned map anchors and maintenance
+The published 30.1.0 release adds experimental independently owned map anchors and maintenance
 corrections; it does not implement any P1 or P2 item below. Their specification, ownership and
 qualification remain separate work.
 

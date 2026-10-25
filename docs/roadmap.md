@@ -19,11 +19,12 @@ still open.
   the optional `@aceshooting/lyra-3d` companion, [map adoption](roadmap/map-adoption.md) for
   `lr-map` and lyra-map 1.3.0, and [immutable identity collections](roadmap/immutable-collections.md); plus
   [test health](roadmap/test-health.md) (coverage, speed, flakiness).
-- **After 30.0.0:** [geospatial scenes and synchronized playback](roadmap/geospatial-scenes.md).
-  Planned and unstarted; outside the 30.0.0 release gate, with no assigned version or date.
+- **After 30.1.0:** [geospatial scenes and synchronized playback](roadmap/geospatial-scenes.md).
+  Planned and unstarted; outside the 30.1.0 release gate, with no assigned version or date.
+- **30.2.0 maintenance target:** [corrections, performance work and optional consolidation](roadmap/30.2-maintenance.md). Planned and unimplemented; affected companions version independently.
 - **Rationale for the style-axis, token and migration designs:** the [RFCs](rfcs/).
 
-## Published 30.0.0 and current maintenance
+## Published 30.0.0, 30.1.0 and current maintenance
 
 [30.0.0 was published on 2026-10-24](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.0.0)
 and ships 310 components, with
@@ -41,34 +42,38 @@ defaults to JavaScript, with Oniguruma available through an explicit factory. Th
 quarantine was removed with browser verification.
 
 Current maintenance runtime comparisons retain mixed advisory timing observations, recorded in the
-current changelog. They do not establish a performance pass; the automated A/B benchmark remains
-required for the final candidate.
+current changelog. They do not establish a performance pass. The automated A/B benchmark passed for
+30.1.0 and remains required for future release candidates.
 
 The historical raw UI line-coverage observation reached 99.800335%; this is distinct from
 Codecov's full-hit coverage. The Codecov 99.80% goal remains open; exact-commit totals and the
 unchanged raw coverage floors are recorded in [test health](roadmap/test-health.md).
 
-30.1.0 is an unpublished minor release in preparation. Current source adds cross-axis boundary
-containment, map control styling parts and experimental independently owned `lr-map-anchor`
-panels. It also adds popup lifecycle notifications for `lr-locale-picker` and declarative ordering
-of existing basemap layers through `styleOverrides.before`. Corrections cover map URL-style
-readiness, absent basemap override targets, anchor visibility and direction changes, scoped theme
-restoration, file-tree reveal cancellation, select initialization, dialog ownership, focus
-restoration, heatmap exports, neighbor pagination and text-only agent message updates. Chart loading
-and progressive Markdown corrections and expanded behavioral coverage have passed their browser checks. The new anchor brings the source inventory to 311 components. Implementation
-and focused checks do not qualify the final release candidate.
+lyra-ui 30.1.0, lyra-ide 30.1.0 and lyra-translations 30.1.0 were published on 2026-10-25
+from [the versioned commit](https://github.com/aceshooting/lyra-ui/commit/1b275c39c066001ac29ccc7ab55fad452b5c9a07).
+The [lyra-ui release](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.1.0),
+[lyra-ide release](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ide%4030.1.0) and
+[lyra-translations release](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-translations%4030.1.0)
+were verified against their npm packages and provenance.
 
-The integrated map and SSR suite passes 1,940 cases in each of Chromium, Firefox with WebGL, and
-WebKit, including basemap ordering, restoration and absent-target deferral. The locale-picker suite passes 133
-cases in each engine, including vetoes, forced closes, rapid reversals and reconnects. The shared
-30.1.0 version and generated API/editor/consumer artifacts are prepared. The seven reviewed public
-source-contract records have been refreshed through hosted preparation, and final delivery budgets
-and installed-consumer checks pass. CI, both browser workflows and Quality tools including the A/B
-benchmark must pass on the final versioned commit before publication. The complete Codecov UI flag must retain the previous release's result; improvement of
-about 0.1 percentage point is the release aim, while 99.74% and 99.80% remain longer-term goals.
-The historical WebKit PDF timeout remains unexplained; passing focused reproductions establish no
-fix. See [test health](roadmap/test-health.md) for the evidence and remaining work. Geospatial
-scenes remain unstarted and unassigned to a release.
+The minor release adds cross-axis boundary containment, map control styling parts and experimental
+independently owned `lr-map-anchor` panels. It also adds popup lifecycle notifications for
+`lr-locale-picker` and declarative ordering of existing basemap layers through
+`styleOverrides.before`. Maintenance corrections cover map URL-style readiness, absent basemap
+override targets, anchor visibility and direction changes, scoped theme restoration, file-tree reveal
+cancellation, select initialization, dialog ownership, focus restoration, heatmap exports, neighbor
+pagination and text-only agent message updates. Chart loading and progressive Markdown corrections
+also ship in 30.1.0. The new anchor brings the source inventory to 311 components and remains
+experimental.
+
+The integrated map and SSR suite passed 1,940 cases in each of Chromium, Firefox with WebGL, and
+WebKit, including basemap ordering, restoration and absent-target deferral. The locale-picker suite
+passed 133 cases in each engine, including vetoes, forced closes, rapid reversals and reconnects.
+The final versioned commit passed the complete release qualification; details and run links are in
+[test health](roadmap/test-health.md#current-3010-qualification). The published UI coverage value
+is 99.34%; the release retained and improved on the 30.0.0 baseline. The 99.74% and 99.80% goals
+remain open. The historical WebKit PDF timeout remains unexplained; passing focused reproductions
+establish no fix. Geospatial scenes remain unstarted and unassigned to a release.
 
 ## Shipped
 
@@ -87,6 +92,7 @@ scenes remain unstarted and unassigned to a release.
 | 29.2.0 | Regional difference catalogs `en-GB`, `es-419`, `fr-CA` and `zh-HK`; `@aceshooting/lyra-map` 1.2.0 on MapLibre 6.15; code-block highlighting without `Element.part`; dialog and tooltip focus and positioning fixes; test-stability fixes. |
 | 29.2.1 | Release and quality hardening: publishing fails unless npm serves the released tarball, `pnpm release:budgets` checks size budgets before the release commit, load-tolerant scale-test budgets, broader behavioural coverage with provably dead guards removed. No public API change. |
 | 30.0.0 | 310 components; immutable identity collections and migration support; expanded map adoption with lyra-map 1.3.0; optional WebGL views, `lr-chart-3d` and `lr-model-viewer` with lyra-3d 1.0.0; document-engine and release-quality updates. |
+| [30.1.0](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.1.0) | Experimental independent map anchors; cross-axis positioning and map-control styling; locale-picker lifecycle events; declarative basemap ordering; maintenance corrections. lyra-ui, lyra-ide and lyra-translations 30.1.0. Exact-commit qualification and verified npm publication completed 2026-10-25. |
 
 ## Standing contracts
 
@@ -191,17 +197,13 @@ packages version independently. A target moves only when scope changes, never to
 
 | Target | Package versions | Scope |
 |---|---|---|
-| 30.1.0 (in preparation) | lyra-ui, lyra-ide and lyra-translations 30.1.0 | Experimental independent map anchors, positioning/control additions, maintenance corrections and regression coverage; qualification pending |
+| 30.2.0 | lyra-ui, lyra-ide and lyra-translations 30.2.0; affected companions independently | [Maintenance corrections, measured performance work and optional consolidation](roadmap/30.2-maintenance.md); planned and unimplemented |
 | 30.x | lyra-3d 1.x | Further graph visuals and 100k-node scale |
 | independent | lyra-docs 0.7.0 to 1.0.0 | Native document editing phases 4 to 8 |
 | on demand | lyra-ui minor | Fluent-informed look |
 | last | lyra-ui minors | Additional full catalogs |
 
-1. **30.1.0:** qualify experimental independent map anchors, positioning/control additions and
-   maintenance corrections; finish generated-artifact checks and measured-budget review. Publication follows exact-commit qualification.
-   The published 30.0.0 delivery records remain the source for its
-   [collections](roadmap/immutable-collections.md), [map](roadmap/map-adoption.md) and
-   [WebGL views](roadmap/lyra-3d.md) scope.
+1. **30.2.0 maintenance:** correct PPTX external-media policy and asynchronous object-style readiness; address source-verified performance and consolidation findings with [bounded scope and qualification](roadmap/30.2-maintenance.md). No timing improvement is claimed before measurement.
 2. **lyra-3d 1.x: further visuals and scale:** curved edges, DAG layouts, custom node rendering and
    optional glow, then 100k graph nodes with a performance gate.
 3. **lyra-docs 0.7.0 to 1.0.0: native document editing**, released independently: 0.7.0 phase 4
@@ -213,10 +215,10 @@ packages version independently. A target moves only when scope changes, never to
    Cyrillic and Latin (script-aware coverage), about 1,600 messages each, in minor releases;
    Luxembourgish (`lb`) only when a reviewer and application demand exist.
 
-## After 30.0.0: geospatial scenes
+## After 30.1.0: geospatial scenes
 
 The [geospatial scenes plan](roadmap/geospatial-scenes.md) builds on the existing globe and terrain
 engine support and `lr-sequence-playback`. P1 covers typed globe/terrain settings and controls,
 altitude-aware geometry and models, and a shared simulation clock. P2 covers custom 3D layers,
 camera tours and tracking, and a generic network-monitoring showcase. All six items are planned
-and unstarted, with no assigned release version or date; none is included in the 30.1.0 candidate.
+and unstarted, with no assigned release version or date; none was included in 30.1.0.

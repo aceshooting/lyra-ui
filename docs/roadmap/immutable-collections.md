@@ -1,9 +1,9 @@
 # Immutable identity collections (lyra-ui 30.0.0)
 
-Status (2026-10-24): shipped as a breaking change in
+Status: shipped as a breaking change in
 [lyra-ui 30.0.0](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.0.0).
-The 30.1.0 candidate preserves this collection contract; later behavioral tests do not introduce a
-second migration or change the published defaults.
+The published 30.1.0 release preserves this collection contract; later behavioral tests do not
+introduce a second migration or change the published defaults.
 
 Twenty-two components keep the caller's item objects (identity-preserving collections such as
 feeds, queues, traces, task lists and virtual lists). Before 30.0.0, assigning the same array again

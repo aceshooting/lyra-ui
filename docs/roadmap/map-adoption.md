@@ -8,16 +8,19 @@ Installed-package font and label rendering, selected application prototypes, vis
 the release's request acceptance are complete within the scope recorded below. Versioned release
 qualification and publication are complete; complete application migration remains separate.
 
+A remaining regression in 30.1.0 affects asynchronous modular object-style replacement: active
+ordering overrides can reject readiness, and the public layer catalog can retain the previous
+style. The [30.2 maintenance plan](30.2-maintenance.md) tracks the correction and its qualification.
+
 Applications can replace camera, padding, popup, fitting and missing-data workarounds with the
-supported component API. Consumer migration is in progress. Current unreleased maintenance
-corrections address URL-style readiness, anchor visibility and live direction changes, boundary
-containment, and public geolocation-group and attribution-content styling parts. They still need
-qualification on the final maintenance release candidate. Multiple independently anchored content
-panels are implemented as the unreleased experimental `lr-map-anchor` element and need the same
-qualification. The current source also adds `styleOverrides.before` for ordering existing basemap
-layers relative to native layers or public overlay groups, without copying their sources or
-geometry. The integrated map and SSR suite passes 1,940 cases in each of Chromium, Firefox with
-WebGL, and WebKit. These additions remain unpublished and need final exact-commit release qualification.
+supported component API. Published 30.1.0 corrections cover URL-style readiness, anchor visibility
+and live direction changes, boundary containment, and public geolocation-group and
+attribution-content styling parts. The release adds experimental independently owned
+`lr-map-anchor` panels and `styleOverrides.before` for ordering existing basemap layers relative
+to native layers or public overlay groups, without copying their sources or geometry. The
+integrated map and SSR suite passed 1,940 cases in each of Chromium, Firefox with WebGL, and WebKit;
+the final release also passed [exact-commit qualification](test-health.md#current-3010-qualification).
+Those completed checks do not resolve the later object-style replacement regression above.
 
 ## Breaking change
 
@@ -66,14 +69,15 @@ items let them move to `lr-map`, or at least drop their workarounds on the engin
   order; invalid ordering is rejected before native changes.
 - [x] `styleOverrides`: paint and layout overrides for basemap style layers, re-applied after style
   loads.
-- [x] Existing-basemap ordering is implemented in current source (unreleased):
+- [x] Existing-basemap ordering shipped in 30.1.0:
   `styleOverrides.before` targets a native layer or public overlay group; `null` places the matched
   layers above all others. Omitting it releases ordering ownership and restores the prior relative
   position. Selector matches keep their relative order, and managed layers retain their own
-  ordering APIs. Integrated browser checks pass; final release qualification remains required.
+  ordering APIs. The asynchronous object-style replacement follow-up remains open above.
 - [x] Defer overrides for absent basemap subjects without failing readiness, then retry when a
   matching layer exists. Observed absence discards obsolete restoration ownership; invalid or
-  conflicting resources still fail. This correction remains unreleased.
+  conflicting resources still fail. This correction shipped in 30.1.0; the later replacement
+  regression remains open above.
 - [x] `images` property accepting SVG markup or URLs, rasterized portably (engines cannot decode SVG
   blobs everywhere), for symbol layers.
 - [x] Modular engine: load the feature modules implied by `addLayer`/`addSource` automatically, or a
@@ -85,7 +89,7 @@ items let them move to `lr-map`, or at least drop their workarounds on the engin
   `lr-map-pick`), and a polygon/line draw mode with `lr-map-draw-*` events (area, length, centroid).
 - [x] Anchored content clamps under fixed application chrome (boundary and safe-area insets),
   stacks above other popups, and has a localized close label.
-- [x] Several independently owned anchored panels (unreleased): experimental
+- [x] Several independently owned anchored panels shipped in 30.1.0: experimental
   `lr-map-anchor` children rendered through the `anchors` slot, each opened, moved and closed by its
   own owner. Content stays caller-owned light DOM; safe areas and boundaries are per anchor or
   inherited from the map; overlapping panels paint and take Escape by focus and recency; focus

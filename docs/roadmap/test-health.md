@@ -1,20 +1,29 @@
 # Test health: coverage, speed and flakiness
 
-Status (2026-10-24): the complete Codecov UI flag associated with
-[the recorded CI run](https://github.com/aceshooting/lyra-ui/actions/runs/40132849858)
-contains 523,467 fully hit lines out of 526,890 (99.3503%; displayed as 99.35%), with 2,570 misses
-and 853 partials. The combined seven-package report has 542,398 fully hit lines out of 545,849
-(99.3678%; displayed as 99.36%). All five UI shard artifacts were merged and uploaded; the CI run
-still failed its SSR classification assertions and other qualification checks. These are complete
-candidate coverage observations, not qualification of the final release commit.
-**The Codecov 99.80% goal remains open.**
+An earlier 30.1.0 candidate report (2026-10-24), associated with
+[the recorded CI run](https://github.com/aceshooting/lyra-ui/actions/runs/40132849858), contained
+523,467 fully hit lines out of 526,890 (99.3503%; displayed as 99.35%), with 2,570 misses and 853
+partials. The combined seven-package report had 542,398 fully hit lines out of 545,849 (99.3678%;
+displayed as 99.36%). All five UI shard artifacts were merged and uploaded; that candidate CI run
+still failed its SSR classification assertions and other qualification checks. These remain
+historical candidate observations, not results for the published release commit.
 
-The published 30.0.0 UI baseline is 520,554 of 525,881 lines (98.9870%). Each release must retain
-at least its predecessor's complete UI flag result and aims to add about 0.1 percentage point.
-99.74% and then 99.80% remain longer-term goals; the combined repository percentage cannot
-substitute for the UI result. README badges publish a truncated percentage through the docs site
-and may retain a previous figure when a report is unavailable, so a badge alone is not exact-commit
-evidence. See [coverage gates](../agents/ci-and-gates.md#release-integrity).
+The published 30.1.0 release commit
+[`1b275c39`](https://github.com/aceshooting/lyra-ui/commit/1b275c39c066001ac29ccc7ab55fad452b5c9a07)
+has a complete Codecov UI flag from [successful CI](https://github.com/aceshooting/lyra-ui/actions/runs/40169991813):
+523,710 fully hit lines out of 527,148, with 2,579 misses and 859 partials. Codecov reports
+99.34% for the flag, matching the deployed [coverage JSON](https://aceshooting.github.io/lyra-ui/badges/coverage-lyra-ui.json)
+and rendered [CodeCov badge](https://img.shields.io/endpoint?url=https%3A%2F%2Faceshooting.github.io%2Flyra-ui%2Fbadges%2Fcoverage-lyra-ui.json).
+The GitHub README places Coverage after CI and CodeQL. This is UI-flag coverage, not a whole-project
+statement-coverage report. **The Codecov 99.80% goal remains open.**
+
+The published 30.0.0 UI baseline was 520,554 of 525,881 lines (98.9870%). The 30.1.0 release
+retains and improves on that complete UI-flag result. Each release must retain at least its
+predecessor's complete UI flag result and aims to add about 0.1 percentage point; 99.74% and then
+99.80% remain longer-term goals. The combined repository percentage cannot substitute for the UI result. README badges
+publish the Codecov flag percentage through the docs site and may retain a previous figure when a
+report is unavailable, so a badge alone is not exact-commit evidence. See
+[coverage gates](../agents/ci-and-gates.md#release-integrity).
 
 The earlier successful raw UI coverage run at `ed580b4d0` covered 524,831 of 525,881 lines
 (99.800335%) across 1,502 ordinary test files. All five raw coverage shards and their merged gate
@@ -96,28 +105,41 @@ The baseline below predates the 30.0.0 work.
 
 ### Current 30.1.0 qualification
 
+A later regression in 30.1.0 affects asynchronous modular object-style replacement: active
+ordering overrides can reject readiness, and the public layer catalog can retain the previous
+style. Its correction and qualification remain open in the [30.2 maintenance plan](30.2-maintenance.md).
+
 - [x] Verify the expanded chart/map/data and conversation/retrieval/internal coverage cases,
   including the chart-loading and progressive Markdown corrections. The integrated map and SSR slice
-  passes 990 cases in each of Chromium, Firefox with WebGL, and WebKit; final release workflows
-  remain required below.
-- [x] Verify locale-picker popup lifecycle notifications: all 133 cases pass in each of Chromium,
+  passed 990 cases in each of Chromium, Firefox with WebGL, and WebKit.
+- [x] Verify locale-picker popup lifecycle notifications: all 133 cases passed in each of Chromium,
   Firefox and WebKit, including request vetoes, forced close, superseded transitions, Escape ownership
   and disconnect/reconnect. This focused result does not qualify the complete release.
-- [x] Verify declarative basemap ordering with the complete 106-file map/SSR suite: 1,940 cases pass
+- [x] Verify declarative basemap ordering with the complete 106-file map/SSR suite: 1,940 cases passed
   in each of Chromium, headed Firefox with WebGL, and WebKit, with zero retries. This includes
   restoration after owned-layer recreation, bounded selector expansion, absent provider targets,
-  style replacement and native failure handling. Final exact-commit workflows remain required.
+  style replacement and native failure handling. These focused cases supplement the full release
+  qualification below.
 - [x] Rebuild and regenerate measured quality, public references, editor metadata and packaged skills;
   verify Storybook documentation freshness for all 311 tags.
 - [x] Apply the hosted update of seven reviewed public source-contract records; API documentation
   freshness, final delivery budgets and installed-consumer checks pass.
-- [ ] Verify complete coverage and all release workflows on the final versioned commit. The completed
-  [candidate Quality tools run](https://github.com/aceshooting/lyra-ui/actions/runs/40168635018)
-  includes the A/B benchmark; it does not qualify later commits.
-- [x] Verify the deployed coverage JSON, rendered badge and GitHub README after the pagination
-  correction: the candidate reports 99.35% UI coverage.
-- [ ] Verify the final deployment retains the precise percentage and displays the CodeCov label and
-  logo, with README badges ordered CI, CodeQL, coverage.
+- [x] Qualify and publish the exact versioned commit
+  [`1b275c39`](https://github.com/aceshooting/lyra-ui/commit/1b275c39c066001ac29ccc7ab55fad452b5c9a07).
+  [CI](https://github.com/aceshooting/lyra-ui/actions/runs/40169991813),
+  [CodeQL](https://github.com/aceshooting/lyra-ui/actions/runs/40169991832),
+  [Scorecard](https://github.com/aceshooting/lyra-ui/actions/runs/40169991805),
+  [Test All Browsers](https://github.com/aceshooting/lyra-ui/actions/runs/40169997731),
+  [Full browser-engine](https://github.com/aceshooting/lyra-ui/actions/runs/40169999078) and
+  [Quality tools including the A/B benchmark](https://github.com/aceshooting/lyra-ui/actions/runs/40170000191)
+  passed. The [Release workflow](https://github.com/aceshooting/lyra-ui/actions/runs/40171843074),
+  [Docs deployment](https://github.com/aceshooting/lyra-ui/actions/runs/40171556606) and protected
+  publication of lyra-ui, lyra-ide and lyra-translations 30.1.0 completed successfully; the npm
+  tarballs and provenance were verified against the GitHub releases.
+- [x] Verify the published release's deployed coverage JSON, rendered badge and GitHub README:
+  the exact-commit Codecov UI value and live badge both show 99.34%, with the CodeCov label and logo;
+  README badges are ordered CI, CodeQL, Coverage. The earlier 99.35% candidate report above is
+  historical, not the published release value.
 - [ ] Investigate and retain the unresolved status of the historical WebKit PDF hang. The observed failure
   included a 300-second test-file timeout and failed page shutdown. Repeated focused runs and two
   CI-shaped 160-file replicas, each containing 40 PDF executions, passed without reproducing it.

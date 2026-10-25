@@ -16,10 +16,10 @@ Evidence must include exact commit, complete run status, commands, package total
 
 ## Current qualification status
 
-The unpublished 30.1.0 work has no new qualified whole-project statement report. Historical evidence
-below retains its recorded source and scope. The current UI Codecov observation and remaining
-coverage/release work are tracked in [test health](roadmap/test-health.md); neither a UI-only report
-nor passing focused tests establishes this document's whole-project evidence requirement.
+The published 30.1.0 release has no new qualified whole-project statement report. Historical
+evidence below retains its recorded source and scope. The final UI Codecov result and remaining
+coverage work are tracked in [test health](roadmap/test-health.md); neither a UI-only report nor
+passing release and focused tests establishes this document's whole-project evidence requirement.
 
 ## Reproduce
 

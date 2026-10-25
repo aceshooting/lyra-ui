@@ -5,10 +5,10 @@ specific implementation and test evidence; it is not a claim of general DOCX com
 The [document editing roadmap](document-editing.md) tracks broader phases, which remain open
 until their full exit conditions are met.
 
-Release reconciliation (2026-10-24): lyra-docs 0.6.3 remains the published experimental package.
-The lyra-ui 30.1.0 candidate does not add editor qualification. Measurements and exercised cases
-in this record retain their original scope; the [roadmap](document-editing.md) still tracks the
-open corpus, interoperability, input/accessibility and memory work.
+Release reconciliation (2026-10-25): lyra-docs 0.6.3 remains the published experimental package.
+The lyra-ui 30.1.0 release does not add editor qualification. Measurements and exercised cases in
+this record retain their original scope; the [roadmap](document-editing.md) still tracks the open
+corpus, interoperability, input/accessibility and memory work.
 
 ## Current decision and boundary
 
