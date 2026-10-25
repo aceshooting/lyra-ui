@@ -171,8 +171,8 @@ do not establish Codecov full-hit coverage or a release pass.
   in each of five browser channels; deployment and live smoke checks pass, and production catalog,
   package and changelog freshness checks confirm 30.2.0 and 311 components.
 
-Published on 2026-10-25 from commit
-[`7e47b23e71a8c8382aa614004ffc579c4f79487a`](https://github.com/aceshooting/lyra-ui/commit/7e47b23e71a8c8382aa614004ffc579c4f79487a).
+Published on 2026-10-25 from
+[the versioned release commit](https://github.com/aceshooting/lyra-ui/commit/7e47b23e71a8c8382aa614004ffc579c4f79487a).
 Version stamping and version-stamped budget checks are complete. Exact-commit
 [CI](https://github.com/aceshooting/lyra-ui/actions/runs/40228786282) (43 successful jobs),
 [Test All Browsers](https://github.com/aceshooting/lyra-ui/actions/runs/40228792306) (17 successful jobs),

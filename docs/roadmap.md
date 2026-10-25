@@ -120,8 +120,8 @@ implementation work remains. The final asynchronous model campaign passes 42 har
 cases at 100k/1M vertices, including six trusted cancellations preserving the prior scene. Eight of
 eighteen successful 100k loads have commit-overlapping main-thread tasks of 51–74 ms; 1M XYZ/PLY
 reaches 253–283 ms. Parser causation is unproven, and sampled main-realm heap excludes worker, GPU
-and whole-process peaks. No blanket absence of jank or performance improvement is claimed. Published on 2026-10-25 from commit
-[`7e47b23e71a8c8382aa614004ffc579c4f79487a`](https://github.com/aceshooting/lyra-ui/commit/7e47b23e71a8c8382aa614004ffc579c4f79487a).
+and whole-process peaks. No blanket absence of jank or performance improvement is claimed. Published on 2026-10-25 from
+[the versioned release commit](https://github.com/aceshooting/lyra-ui/commit/7e47b23e71a8c8382aa614004ffc579c4f79487a).
 Version stamping and version-stamped budget checks are complete. Exact-commit
 [CI](https://github.com/aceshooting/lyra-ui/actions/runs/40228786282) (43 successful jobs),
 [Test All Browsers](https://github.com/aceshooting/lyra-ui/actions/runs/40228792306) (17 successful jobs),

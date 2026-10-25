@@ -40,6 +40,16 @@ The first qualified catalog covers common chat outcomes, with roughly 25 compone
 planning guide rather than a fixed tag count. Composite controls may require several registered
 tags. Catalog qualification, safe property contracts and useful scenarios determine inclusion.
 
+Initial candidates to evaluate, grouped by role and not a commitment: key figures (`lr-stat`);
+bar and line charts (`lr-lite-chart`); tables (`lr-table`); grouping (`lr-card`, `lr-details`,
+`lr-tab-group`); status and emphasis (`lr-callout`, `lr-alert`, `lr-badge`, `lr-chip`,
+`lr-progress-bar`, `lr-rating`); sequences (`lr-timeline`, `lr-stepper`); media and sources
+(`lr-media-card`, `lr-source-card`, `lr-citation-badge`, `lr-code-block`); follow-ups
+(`lr-suggestion-chips`); and form controls (`lr-button`, `lr-input`, `lr-textarea`, `lr-select`
+with `lr-option`, `lr-checkbox`, `lr-radio-group`, `lr-switch`, `lr-slider`, `lr-date-input`).
+Higher-level components matter for cost as well as quality: one labelled, validated input or one
+key-figure tile replaces several primitive elements in the generated output.
+
 ### Saved dashboards inside applications
 
 Generating a dashboard must produce a reusable application artifact. A user can save a definition,
@@ -64,6 +74,22 @@ Go beyond generating a collection of charts. Planned dashboard capabilities incl
 cross-widget selection, drill-down, query reuse, live data with cancellation and backpressure,
 large-data views, layout editing and pinning, freshness and provenance indicators, revisions, undo
 and export. Benchmark generation, subsequent edits, and direct interactions independently.
+
+## Market and design references
+
+The [comparison cohorts](generative-ui-evaluation.md#two-comparison-cohorts) name the libraries
+enrolled for measured comparison. The products and patterns below are not benchmark comparators,
+but they set user expectations or offer designs worth adopting. Descriptions summarize public
+announcements and documentation; verify current behavior before relying on a detail.
+
+| Reference | Relevant behavior | Consequence for Lyra Gen |
+|---|---|---|
+| Assistant products: Claude ([interactive connectors through MCP Apps](https://claude.com/blog/interactive-tools-in-claude), interactive visuals inside replies, artifacts and reported persistent dashboards that refresh connected data), ChatGPT Intelligent UI (announced 2026-10-07) and Gemini [dynamic view](https://research.google/blog/generative-ui-a-rich-custom-visual-interactive-user-experience-for-any-prompt/) | Answers mix prose with interactive elements; some generate custom code per answer; saved dashboards refresh data without regenerating the interface | Users will expect inline interactivity, persistent screens and data refresh without a new generation. Lyra Gen answers with a constrained, accessible catalog and keeps open-ended code in a separate, conditional sandboxed tier |
+| [MCP-UI](https://mcpui.dev/guide/introduction) with [Shopify Remote DOM](https://shopify.engineering/remote-rendering-ui-extensibility) | Untrusted code runs in a sandbox and renders through the host's own component library | Basis for the conditional Remote DOM tier: open-ended flexibility rendered with Lyra components |
+| [OpenAI ChatKit widgets](https://developers.openai.com/api/docs/guides/chatkit) | Declarative widgets whose actions can update the widget in place | Identity-addressed in-place updates; a visual widget playground |
+| [Adaptive Cards templating](https://learn.microsoft.com/en-us/adaptive-cards/templating/) | Templates kept separate from data; host configuration controls styling; host-specific schema versions; plain-text fallback | Separate structure from data, negotiate host capabilities and always provide a fallback |
+| [assistant-ui](https://www.assistant-ui.com/docs/tools/generative-ui) and [LangGraph generative UI](https://docs.langchain.com/langgraph-platform/generative-ui-react) | Tool-specific renderers by tool name; allowlisted JSON-spec message parts; components loaded by name on demand | Keep tool-specific result renderers first-class beside composition; load component code by name as it appears |
+| [Flutter GenUI](https://docs.flutter.dev/ai/genui/components) | Catalog items defined by name, schema and builder; an A2UI connector | A minimal catalog-item contract for overlays |
 
 ## Starting capabilities and gaps
 
@@ -254,9 +280,32 @@ templates, functions and actions; a small structural converter is not a substitu
 the conformance and maintenance work, measures bundle/runtime costs and establishes the upstream
 version-tracking process. This ownership decision does not remove dependency/license review for
 supporting utilities or adopted fixtures. Run an OpenUI integration experiment early; a complete
-importer remains conditional on useful compatibility and demand.
+importer remains conditional on useful compatibility and demand. Record its install-time and
+runtime telemetry behavior with its license and bundle costs: at the inspected revision,
+`@openuidev/lang-core` sends
+[installation telemetry by default](https://github.com/thesysdev/openui/blob/9d73d17d2bbac565672a85e78f6eb7740cb0d9ca/packages/lang-core/src/telemetry/install.ts)
+unless an environment variable disables it.
 API argument order in an adapter is a separate schema concern, not permission to rename component
 members. Respect upstream licenses for any dependencies or adopted test fixtures.
+
+Initial mapping hypothesis for the A2UI basic catalog, to be confirmed against the pinned v0.9.1
+schemas and reference behavior before any conformance claim:
+
+| A2UI component | Candidate Lyra rendering | Note |
+|---|---|---|
+| Text | Structural text or `lr-markdown` | Markdown stays sanitized |
+| Image | `lr-media-card` or a policy-checked image | Media origin policy applies |
+| Icon | `lr-icon` | Requires an icon-name map |
+| Video, AudioPlayer | `lr-video`, `lr-av-player` | |
+| Row, Column, List | Structural layout; `lr-virtual-list` for long lists | Templates over data-model arrays |
+| Card, Divider | `lr-card`, `lr-divider` | |
+| Tabs | `lr-tab-group` with `lr-tab` and `lr-tab-panel` | |
+| Modal | `lr-dialog` | Lyra overlay focus and Escape handling |
+| Button | `lr-button` | Event actions become outbound A2UI `action` messages |
+| CheckBox, Slider | `lr-checkbox`, `lr-slider` | Two-way data-model binding |
+| TextField | `lr-input` or `lr-textarea` | Checks map to native validation plus catalog functions |
+| DateTimeInput | `lr-date-input` or `lr-date-picker` | |
+| ChoicePicker | `lr-select`, `lr-radio-group`, `lr-checkbox-group` or `lr-segmented` | Chosen by variant and option count |
 
 Official MCP Apps support needs extension negotiation, resource/tool linkage, JSON-RPC lifecycle,
 host capabilities, CSP and sandbox behavior, teardown and qualified SDK-built examples. Preserve
@@ -312,6 +361,20 @@ localization and package-generation work. Follow the standing release qualificat
 each affected package. A prototype, a local benchmark or a website recording cannot substitute for
 package release qualification. The public demo uses qualified published versions; experimental
 previews carry explicit status and do not become production capability claims.
+
+## Risks and mitigations
+
+| Risk | Mitigation |
+|---|---|
+| Limited demand: many products are well served by tool-specific result renderers | Keep tool-result renderers first-class; gate later stages on qualified scenarios and adoption evidence |
+| Format fragmentation: one more model-facing syntax | Use a restricted HTML-like syntax instead of a new language; interoperate through A2UI and MCP Apps; keep the OpenUI import experiment |
+| The hand-authored token advantage does not reproduce in model output | Treat it as a hypothesis; the stage 0 go/no-go uses model-generated results; publish mixed outcomes |
+| Model and provider drift | Pin each campaign; keep recorded replays for regressions; never substitute a model silently |
+| Competing projects iterate quickly, including A2UI's compact inference-format proposals | Compete on catalog quality, accessibility, safety and integration; re-run comparisons against current pinned versions |
+| Prompt-injected phishing or deceptive UI | Host-controlled field and action policies, provenance marking, confirmation for consequential actions and threat-model fixtures |
+| A2UI candidate-specification churn | Qualify stable v0.9.1 first; isolate candidate versions behind separate entry points |
+| Maintenance load of a specification, parsers, catalogs and evaluations | Independent 0.x companion, staged scope and named owners for fixtures and evidence |
+| Scope creep into expressions, querying or visual builders | Named functions only; data querying waits for dashboards; builders and real-time collaboration stay demand-gated |
 
 ## Decisions and open questions
 
