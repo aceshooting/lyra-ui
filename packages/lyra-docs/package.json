@@ -1,6 +1,6 @@
 {
   "name": "@aceshooting/lyra-docs",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "description": "Experimental native Lyra DOCX editor with lazy document engine loading",
   "keywords": [
     "docx",

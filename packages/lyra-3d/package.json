@@ -1,6 +1,6 @@
 {
   "name": "@aceshooting/lyra-3d",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "WebGL engines for Lyra UI's 3D views, loaded on demand by the components that opt in",
   "keywords": [
     "webgl",

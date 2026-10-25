@@ -1,5 +1,14 @@
 # @aceshooting/lyra-docs
 
+## 0.6.4
+
+### Patch Changes
+
+- 3ca0725: Index image relationships once per navigation query while preserving ambiguous-relationship, external-resource, and document-size refusals.
+- Updated dependencies [d9fe8ee]
+- Updated dependencies [6c9751f]
+  - @aceshooting/lyra-ui@30.2.0
+
 ## 0.6.3
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @aceshooting/lyra-map
 
+## 1.3.1
+
+### Patch Changes
+
+- 074e36a: Prepare map feature families from an isolated metadata snapshot without traversing GeoJSON coordinates, properties, or unused layer payloads. Full style replacement continues to snapshot the complete style.
+
 ## 1.3.0
 
 ### Minor Changes

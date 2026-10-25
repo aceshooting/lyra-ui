@@ -1,5 +1,13 @@
 # @aceshooting/lyra-translations
 
+## 30.2.0
+
+### Patch Changes
+
+- Updated dependencies [d9fe8ee]
+- Updated dependencies [6c9751f]
+  - @aceshooting/lyra-ui@30.2.0
+
 ## 30.1.0
 
 ### Patch Changes
