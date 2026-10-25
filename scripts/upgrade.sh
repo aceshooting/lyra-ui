@@ -3,8 +3,9 @@
 # resulting dependency graph, then build every workspace package. Peer dependencies are upgraded
 # separately because npm-check-updates does not include them by default. The curated
 # libphonenumber-js, MapLibre, postal-mime, Shiki and Vite peer ranges keep their compatibility bounds;
-# their dev dependencies are still upgraded by the first pass. The DOCX maintainer input stays
-# pinned to its reviewed source lock and patches; update those together before changing its version.
+# their dev dependencies are upgraded separately from peer floors. The MapLibre renderer source
+# and DOCX maintainer inputs stay pinned to their reviewed source locks and transformations; update
+# those together before changing their versions. Native MapLibre development consumers still update.
 # Set VERIFY=0 to refresh dependency manifests, lockfile, package-manager documentation, and
 # current peer versions without running artifact generators, workspace builds, or quality checks.
 # The default runs the complete existing regeneration and build workflow.
@@ -107,10 +108,22 @@ pnpm dlx npm-check-updates@latest \
   --workspaces \
   --root \
   --dep prod,dev,optional,packageManager \
-  --reject @types/node,@docx-editor.dev/core \
+  --reject @types/node,@docx-editor.dev/core,maplibre-gl \
   --target latest \
   --install never \
   --upgrade
+
+# Update native MapLibre development consumers without changing the exact renderer source input.
+for manifest in package.json packages/lyra-ui/package.json; do
+  pnpm dlx npm-check-updates@latest \
+    --packageManager pnpm \
+    --packageFile "$manifest" \
+    --dep dev \
+    --filter maplibre-gl \
+    --target latest \
+    --install never \
+    --upgrade
+done
 
 # Preserve each package's selected Node type major: runtime and tooling compatibility may require
 # different majors across the workspace. Refresh minor and patch releases within those majors.

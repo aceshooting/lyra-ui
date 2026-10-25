@@ -2842,7 +2842,7 @@ test('upgrade dependency-only mode refreshes transitive dependencies before sync
     const dependencyPasses = dependencyOnly.commands.split('\n').filter((line) => line.includes('npm-check-updates@latest'));
     const generalPass = dependencyPasses.find((line) => line.includes('--target latest') && line.includes('--dep prod,dev,optional,packageManager'));
     const nodeTypesPass = dependencyPasses.find((line) => line.includes('--filter @types/node'));
-    assert.match(generalPass ?? '', /--reject @types\/node,@docx-editor\.dev\/core(?: |$)/u);
+    assert.match(generalPass ?? '', /--reject @types\/node,@docx-editor\.dev\/core,maplibre-gl(?: |$)/u);
     assert.match(nodeTypesPass ?? '', /--target minor(?: |$)/u);
     assert.match(nodeTypesPass ?? '', /--dep prod,dev,optional(?: |$)/u);
     assert.match(nodeTypesPass ?? '', /--workspaces --root/u);
@@ -2913,6 +2913,83 @@ if (args[0] === 'dlx' && args[args.indexOf('--dep') + 1] === 'prod,dev,optional,
     assert.equal(upgraded.devDependencies['happy-dom'], '^21.0.3');
   } finally {
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('upgrade preserves the reviewed MapLibre source input and leaves ordinary dependencies upgradeable', () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'lyra-upgrade-map-source-'));
+  try {
+    for (const directory of ['scripts', 'packages/lyra-ui', 'packages/lyra-map', 'bin']) {
+      mkdirSync(path.join(root, directory), { recursive: true });
+    }
+    copyFileSync(path.join(repoRoot, 'scripts/upgrade.sh'), path.join(root, 'scripts/upgrade.sh'));
+    copyFileSync(path.join(repoRoot, '.nvmrc'), path.join(root, '.nvmrc'));
+    const authority = JSON.parse(readFileSync(path.join(repoRoot, 'packages/lyra-map/UPSTREAM.json'), 'utf8'));
+    copyFileSync(path.join(repoRoot, 'packages/lyra-map/UPSTREAM.json'), path.join(root, 'packages/lyra-map/UPSTREAM.json'));
+    const manifests = ['package.json', 'packages/lyra-ui/package.json', 'packages/lyra-map/package.json'];
+    const before = new Map(manifests.map(file => {
+      const manifest = JSON.parse(readFileSync(path.join(repoRoot, file), 'utf8'));
+      copyFileSync(path.join(repoRoot, file), path.join(root, file));
+      return [file, manifest];
+    }));
+    assert.equal(before.get('packages/lyra-map/package.json').devDependencies['maplibre-gl'], authority.version,
+      'the actual maintainer dependency must equal the reviewed source authority');
+    const nodeStub = path.join(root, 'bin/node');
+    writeFileSync(nodeStub, `#!/usr/bin/env bash\nif [[ "$1" == '-p' ]]; then cat .nvmrc; fi\n`);
+    chmodSync(nodeStub, 0o755);
+    const pnpmStub = path.join(root, 'bin/pnpm');
+    writeFileSync(pnpmStub, `#!${process.execPath}
+import fs from 'node:fs';
+const args = process.argv.slice(2);
+if (args[0] === 'dlx' && args[1] === 'npm-check-updates@latest') {
+  const sections = args[args.indexOf('--dep') + 1].split(',');
+  const rejected = args.includes('--reject') ? args[args.indexOf('--reject') + 1].split(',') : [];
+  const filter = args.includes('--filter') ? args[args.indexOf('--filter') + 1] : undefined;
+  const files = args.includes('--packageFile') ? [args[args.indexOf('--packageFile') + 1]] : ${JSON.stringify(manifests)};
+  for (const file of files) {
+    const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
+    for (const section of sections) {
+      const key = { prod: 'dependencies', dev: 'devDependencies', optional: 'optionalDependencies', peer: 'peerDependencies' }[section];
+      for (const name of Object.keys(manifest[key] ?? {})) {
+        if ((!filter || filter === name) && !rejected.includes(name)) manifest[key][name] = '99.0.0';
+      }
+    }
+    fs.writeFileSync(file, JSON.stringify(manifest));
+  }
+}
+`);
+    chmodSync(pnpmStub, 0o755);
+    const result = spawnSync('bash', ['scripts/upgrade.sh'], {
+      cwd: root, encoding: 'utf8',
+      env: { ...process.env, PATH: `${path.join(root, 'bin')}:/usr/bin:/bin`, VERIFY: '0' },
+    });
+    assert.equal(result.status, 0, result.stderr);
+    for (const file of manifests) {
+      const upgraded = JSON.parse(readFileSync(path.join(root, file), 'utf8'));
+      assert.equal(upgraded.devDependencies['maplibre-gl'], file === 'packages/lyra-map/package.json' ? authority.version : '99.0.0', file);
+    }
+    const upgradedMap = JSON.parse(readFileSync(path.join(root, 'packages/lyra-map/package.json'), 'utf8'));
+    assert.equal(upgradedMap.devDependencies['maplibre-gl'], authority.version);
+    assert.equal(upgradedMap.devDependencies.rolldown, '99.0.0', 'ordinary development inputs remain upgradeable');
+    const upgradedUi = JSON.parse(readFileSync(path.join(root, 'packages/lyra-ui/package.json'), 'utf8'));
+    assert.equal(upgradedUi.peerDependencies['maplibre-gl'], before.get('packages/lyra-ui/package.json').peerDependencies['maplibre-gl']);
+    assert.deepEqual(JSON.parse(readFileSync(path.join(root, 'packages/lyra-map/UPSTREAM.json'), 'utf8')), authority);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('MapLibre declaration overrides match the reviewed source owner and every declaration pin', () => {
+  const authority = JSON.parse(readFileSync(path.join(repoRoot, 'packages/lyra-map/UPSTREAM.json'), 'utf8'));
+  const workspace = readFileSync(path.join(repoRoot, 'pnpm-workspace.yaml'), 'utf8');
+  const overrideBlock = workspace.split(/^overrides:\s*$/mu)[1]?.split(/^\S/mu)[0];
+  assert.ok(overrideBlock, 'workspace overrides must exist');
+  const overrides = new Map([...overrideBlock.matchAll(/^  '([^']+)': ([^\s#]+)\s*$/gmu)]
+    .map(([, name, version]) => [name, version]));
+  for (const source of authority.declarationSources) {
+    assert.equal(overrides.get(`${authority.upstream}@${authority.version}>${source.package}`), source.version,
+      `${source.package} declarations must resolve under the reviewed renderer source owner`);
+    assert.equal(overrides.has(source.package), false, 'declaration pins must not constrain unrelated owners');
   }
 });
 

@@ -42,6 +42,9 @@ peerDependencyRules:
     # SheetJS CDN tarball, whose resolved version is a URL that pnpm cannot compare with a range.
     - xlsx
 overrides:
+  # Keep renderer-owned declaration sources aligned with the reviewed MapLibre source lock.
+  'maplibre-gl@6.15.0>@maplibre/geojson-vt': 6.3.0
+  'maplibre-gl@6.15.0>@maplibre/vt-pbf': 4.3.2
   # Codecov 2.0.1 uses Zod 3 schemas; its compatibility patch supports patched Zod 4.
   '@codecov/bundler-plugin-core@2.0.1>zod': 4.6.7
   # Keep the reviewed DOCX engine dependency graph aligned with its source lock.
@@ -147,7 +150,7 @@ minimumReleaseAgeExclude:
   - knip@6.32.2 || 6.34.0 || 6.36.0 || 6.38.0 || 6.39.0 || 6.40.0 || 6.41.0 || 6.42.1 || 6.43.0
   - svelte@5.56.9 || 5.57.2
   - papaparse@5.6.0
-  - maplibre-gl@6.4.0 || 6.4.1 || 6.10.0 || 6.11.1 || 6.11.2 || 6.12.0 || 6.13.0 || 6.14.0
+  - maplibre-gl@6.4.0 || 6.4.1 || 6.10.0 || 6.11.1 || 6.11.2 || 6.12.0 || 6.13.0 || 6.14.0 || 6.16.0
   - '@rolldown/binding-darwin-x64@1.2.5'
   - '@rolldown/binding-linux-arm64-gnu@1.2.5'
   - '@types/react@19.3.0'
@@ -221,6 +224,7 @@ minimumReleaseAgeExclude:
   - '@stryker-mutator/instrumenter@10.1.1'
   - '@stryker-mutator/tap-runner@10.1.1'
   - '@stryker-mutator/util@10.1.1'
+  - '@maplibre/vt-pbf@4.3.3'
 allowBuilds:
   esbuild: true
   rs-module-lexer: true

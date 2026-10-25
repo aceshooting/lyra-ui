@@ -494,8 +494,14 @@ their latest stable versions, including the latest tested optional peers. Review
 compatibility-profile and generated changes, fix compatibility failures and commit that update before
 preparing the version. Keep supported consumer peer ranges unless a reviewed, semver-appropriate
 change is needed (testing the latest peer does not justify dropping an older supported one); if a
-latest version cannot be supported, document the concrete blocker. Any dependency change after
-qualification needs a new commit and fresh qualification, and an existing tag is never rewritten.
+latest version cannot be supported, document the concrete blocker. Reviewed source inputs are an
+exception to automatic version changes: the MapLibre renderer and DOCX engine must retain the exact
+versions admitted by their source locks until their source, transformations and provenance are reviewed
+together. The upgrade script excludes those inputs; changing a package version alone is insufficient.
+Native MapLibre development consumers still update, and renderer-owned declaration dependencies use
+scoped overrides matching `packages/lyra-map/UPSTREAM.json`.
+Any dependency change after qualification needs a new commit and fresh qualification, and an existing
+tag is never rewritten.
 
 **First package publication.** Use the normal changeset flow (including any dependent bump), then
 verify packed exports and dependencies against the versions actually on npm; workspace source at a
