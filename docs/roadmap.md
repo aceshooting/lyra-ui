@@ -12,6 +12,12 @@ Release and publication state is established by the package changelog
 This page records what shipped, the standing contracts that still govern changes, and what is
 still open.
 
+- **Generative UI and shared dashboards:** [Lyra Gen program](roadmap/generative-ui.md),
+  [detailed backlog](roadmap/generative-ui-backlog.md),
+  [evaluation and performance](roadmap/generative-ui-evaluation.md), and
+  [website, showcases and live generation](roadmap/generative-ui-website.md). Planned and
+  unstarted: interactive chat first, then interoperability and persistent dashboards that users
+  can save, embed in applications, publish, share and edit with host-controlled permissions.
 - **Native document editing:** [delivery sequence](roadmap/document-editing.md) and its
   [qualification record](roadmap/document-editing-feasibility.md). Experimental, in
   `@aceshooting/lyra-docs`; not part of lyra-ui release qualification.
@@ -243,12 +249,24 @@ a competing hand-written API inventory.
 
 ## Next
 
+Generative UI is the next product workstream after maintenance follow-ups and takes priority over
+new lyra-3d and lyra-docs features. The [Lyra Gen roadmap](roadmap/generative-ui.md#delivery-sequence)
+retains existing map, 3D and document commitments while defining its own stages, qualification gates
+and independently versioned companion; correctness and security maintenance continues across packages.
+All generative capabilities and website deliveries below are planned; no benchmark superiority or
+protocol conformance is established by this roadmap.
+
 Unshipped work in delivery order, with target versions. Targets follow semantic versioning and the
 `fixed` release group (`lyra-ui`, `lyra-ide` and `lyra-translations` share one version); companion
 packages version independently. A target moves only when scope changes, never to absorb a slip.
 
 | Target | Package versions | Scope |
 |---|---|---|
+| 30.3 target / independent | lyra-ui, lyra-ide and lyra-translations minor where needed; lyra-gen 0.1–0.2 | [Foundations and interactive chat](roadmap/generative-ui.md): Lyra Markup, reviewed catalogs, forms, data references, stable state, diagnostics and measured streaming improvements |
+| following minors / independent | lyra-gen 0.3; required library changes additive | [Interoperability](roadmap/generative-ui.md#compatibility-and-safety): qualified A2UI, official MCP Apps, transport adapters and structured outputs |
+| independent | lyra-gen 0.4 toward 1.0; affected companions independently | [Persistent application dashboards](roadmap/generative-ui.md#saved-document-and-sharing-contract): live/linked data, save and embed, permissions, shared publishing, revisions, conflict handling and export |
+| alongside qualified capabilities | public website | [Marketing, demo gallery, live chat, generation playground and comparisons](roadmap/generative-ui-website.md), with reproducible evidence and explicit live/recorded modes |
+| conditional | lyra-gen later releases | [Advanced capabilities](roadmap/generative-ui-backlog.md): sandboxed execution, real-time collaboration, additional output targets and multimodal integrations after feasibility |
 | 30.x | lyra-3d 1.x | Further graph visuals and 100k-node scale |
 | independent | lyra-docs 0.7.0 to 1.0.0 | Native document editing phases 4 to 8 |
 | on demand | lyra-ui minor | Fluent-informed look |
