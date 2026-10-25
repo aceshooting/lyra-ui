@@ -1,6 +1,6 @@
 # Lyra Map
 
-[![Coverage](https://img.shields.io/endpoint?url=https://aceshooting.github.io/lyra-ui/badges/coverage-lyra-map.json)](https://codecov.io/gh/aceshooting/lyra-ui "Coverage rounded up to the next whole percent")
+[![Coverage](https://img.shields.io/endpoint?url=https://aceshooting.github.io/lyra-ui/badges/coverage-lyra-map.json)](https://codecov.io/gh/aceshooting/lyra-ui)
 
 `@aceshooting/lyra-map` provides a modular renderer derived from MapLibre GL JS. It keeps the
 Map, Marker, Popup, control, source, event, and helper APIs available while loading rendering

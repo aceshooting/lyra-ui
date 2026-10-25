@@ -1,6 +1,6 @@
 # @aceshooting/lyra-flags
 
-[![Coverage](https://img.shields.io/endpoint?url=https://aceshooting.github.io/lyra-ui/badges/coverage-lyra-flags.json)](https://codecov.io/gh/aceshooting/lyra-ui "Coverage rounded up to the next whole percent")
+[![Coverage](https://img.shields.io/endpoint?url=https://aceshooting.github.io/lyra-ui/badges/coverage-lyra-flags.json)](https://codecov.io/gh/aceshooting/lyra-ui)
 
 [![CI](https://github.com/aceshooting/lyra-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/aceshooting/lyra-ui/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-flags)](https://www.npmjs.com/package/@aceshooting/lyra-flags)
