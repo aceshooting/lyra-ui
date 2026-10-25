@@ -1,3 +1,4 @@
+export { MapBasemapOrder } from './map-basemap-order.js';
 export { planMapLayerOrder } from './map-layer-order.js';
 export { MapExternalSourceEffects } from './map-external-source-effects.js';
 import { getInheritedPropertyDescriptor, getOwnDataDescriptor, isPlainDataRecord } from '../../../internal/data-descriptors.js';
@@ -267,7 +268,7 @@ export class MapOwnedFeatures {
           } finally { this.overriding = false; }
         })();
         check();
-        if (!result.accepted || result.diagnostics.some(entry => entry.code !== 'external-change')) failed();
+        if (!result.accepted || result.diagnostics.some(entry => entry.code !== 'external-change' && entry.code !== 'missing-layer')) failed();
         this.hasOverrides = hasOverrides;
       }
     } catch (error) {

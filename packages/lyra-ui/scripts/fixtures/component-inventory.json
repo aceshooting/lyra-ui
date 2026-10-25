@@ -81095,6 +81095,18 @@
             "constructor": "Event"
           },
           {
+            "name": "lr-after-hide",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-after-show",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-change",
             "type": "CustomEvent<LyraLocaleChangeDetail>",
             "cancelable": "never",
@@ -81107,6 +81119,12 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-hide",
+            "type": "CustomEvent<null>",
+            "cancelable": "conditional",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-input",
             "type": "CustomEvent<LyraLocaleChangeDetail>",
             "cancelable": "never",
@@ -81114,6 +81132,12 @@
           },
           {
             "name": "lr-invalid",
+            "type": "CustomEvent<null>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-show",
             "type": "CustomEvent<null>",
             "cancelable": "always",
             "constructor": "CustomEvent"

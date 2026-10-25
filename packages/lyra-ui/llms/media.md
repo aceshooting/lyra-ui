@@ -682,6 +682,41 @@ mapEl.imageProvider = async (id) => id.startsWith('poi-')
 `styleOverrides: readonly LyraMapStyleOverride[] = []` applies `paint` and `layout` records by `layerId` to existing unowned style layers. Reassign fresh
 descriptors to change desired state; unsupported or conflicting resources fail closed.
 
+An override can also set `before: 'layer-or-group-id'` to move its matched basemap layers below a
+native layer or public overlay group, or `before: null` to move them above all other layers.
+Omitting `before` leaves placement unowned; removing it restores the original position relative to
+surviving unowned successors. Active managed placement takes precedence. This uses native moves
+only, without copying sources or recreating layers.
+Selector matches move as one group in their original style order; explicit-id and earlier-selector
+precedence applies to the entire entry, including placement. A concrete member used as an anchor
+names its whole managed group. Missing anchors append with a dev-mode warning; self-anchors,
+identity conflicts and cycles across basemap and owned groups reject before resource mutation.
+Ordering-enabled overrides share the 128-group and 4,096-total-layer limits with owned overlays;
+the existing 64-entry and 1,024-selector-match limits still apply.
+
+A basemap subject absent from the current style is deferred, including its paint/layout overrides,
+without failing readiness. Later reconciliation or style loading retries it, so one stable binding
+can name alternative provider layer IDs without clearing and rebinding around a style change.
+Observed absence discards the former restoration baseline. Owned subjects, invalid input, peer
+errors and ordering cycles still fail.
+
+Unrelated layers keep their relative order. Changing `before` retains the restoration baseline;
+an observed external relocation updates it while the explicit placement remains authoritative.
+An external relocation observed before the next reconciliation or just before removal wins over
+the former baseline. During owned-resource reconciliation, changes solely relative to owned IDs
+cannot be distinguished from controlled removal/recreation: controlled placement takes precedence,
+while changes across surviving unowned basemap IDs can still establish a new baseline. A new style
+captures a new baseline, and observed missing layers lose their old baseline. As with paint
+overrides, an external remove-and-recreate under the same ID without an observable absence needs a new style generation
+to distinguish the replacement. Basemap overrides cannot move generated or registered layers:
+use those layers' own `before` field.
+
+```js
+map.styleOverrides = [{ sourceLayer: 'boundary', layerType: 'line', before: null }];
+// Release placement ownership and restore surviving original positions.
+map.styleOverrides = [];
+```
+
 An overlay layer's `source` may name a source of the basemap style itself rather than one of
 `overlays.sources`, for example a vector tile source plus its `source-layer`, so you can add a
 highlight or a restyled copy of basemap features without registering the source twice; the layer is
@@ -1879,7 +1914,7 @@ modular features, installs those resources and restores them after each style re
 | `new Map({ style, center, zoom })` | `mapStyle`, `center`, `zoom` and the element's allocation |
 | `addSource()` / `addLayer()` and style-load replay | `overlays.sources` / `overlays.layers`, or `dataLayers` for the documented data-layer models |
 | `addImage()` / missing-image listener | `images` / `imageProvider` |
-| Basemap `setPaintProperty()` / `setLayoutProperty()` | `styleOverrides` with the basemap `layerId` |
+| Basemap `setPaintProperty()` / `setLayoutProperty()` / `moveLayer()` | `styleOverrides` with a basemap `layerId` or selector; `before` controls placement |
 | Camera moves and fitting | `flyTo()`, `easeTo()`, `jumpTo()`, `fitBounds()` and `fitToData()` |
 | Polling `isStyleLoaded()` and installing a style-load listener | `whenStyleReady()` for style restoration; `whenIdle()` for subsequent resource/render work |
 
@@ -5632,6 +5667,7 @@ particular country. Representative language mappings also include `lb` (Luxembou
   }`
   `LyraMapStyleOverride {
     readonly layerId?: string;
+    readonly before?: string | null;
     readonly paint?: Readonly<Record<string, LyraMapStyleValue>>;
     readonly layout?: Readonly<Record<string, LyraMapStyleValue>>;
     readonly source?: string;

@@ -1762,3 +1762,27 @@ export const TypedVectorStyle: Story = {
     </lr-map>
   `,
 };
+
+export const BasemapPlacement: Story = {
+  render: () => {
+    let map: LyraMap | undefined;
+    let raised = false;
+    const shape = { type: 'Feature', properties: {}, geometry: { type: 'Polygon',
+      coordinates: [[[-5, -5], [5, -5], [5, 5], [-5, 5], [-5, -5]]] } };
+    return html`
+      <p>Raise the existing boundary above the fill, then restore its original placement.</p>
+      <lr-button @click=${() => {
+        raised = !raised;
+        if (map) map.styleOverrides = raised ? [{ layerId: 'boundary', before: null }] : [];
+      }}>Toggle boundary placement</lr-button>
+      <lr-map ${ref(node => { map = node as LyraMap | undefined; })}
+        label="Basemap boundary placement" center="[0, 0]" zoom="3" style="block-size: 22rem"
+        .mapStyle=${{ version: 8, sources: { shape: { type: 'geojson', data: shape } }, layers: [
+          { id: 'background', type: 'background', paint: { 'background-color': storyColor('surface') } },
+          { id: 'boundary', type: 'line', source: 'shape', paint: { 'line-color': storyColor('danger'), 'line-width': 8 } },
+          { id: 'area', type: 'fill', source: 'shape', paint: { 'fill-color': storyColor('brand') } },
+        ] }}
+      ></lr-map>
+    `;
+  },
+};

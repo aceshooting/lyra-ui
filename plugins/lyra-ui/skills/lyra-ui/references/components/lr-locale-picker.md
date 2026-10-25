@@ -146,7 +146,17 @@ disconnect or adoption cancel ownership of an old completion. Dynamic imports th
 finish and register messages. No raw loader error is shown. Style the status with `load-status` and
 the retry button with `load-retry`.
 
-**Events:** `lr-change-request` is cancelable and carries `{ value, previousValue, direction }`
+**Popup lifecycle:** `lr-show` and `lr-hide` announce an ordinary change to `open` before
+rendering and are cancelable; preventing one retains the previous popup state. `lr-after-show`
+follows successful placement and the opening transition; `lr-after-hide` follows closing and
+removal from layout. All four carry `null` detail and bubble across shadow roots. Initial markup
+emits no lifecycle events. Rapid reversals suppress obsolete after-events. Disabling or removing
+an open picker forces its close: `lr-hide` is then non-cancelable. Removal cancels pending
+after-events and emits no detached `lr-after-hide`; reconnection starts closed.
+These notifications report popup visibility independently of locale value changes.
+
+**Events:** popup visibility emits `lr-show`, `lr-after-show`, `lr-hide` and `lr-after-hide`
+as described above. `lr-change-request` is cancelable and carries `{ value, previousValue, direction }`
 before the selected value, popup, or global locale changes. Prevent it to keep all three unchanged;
 a synchronous host value assignment also takes precedence. On acceptance, the component sets
 `value`, closes the popup, applies `setLyraLocale(value)`, then emits non-cancelable native `input`,

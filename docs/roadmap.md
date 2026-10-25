@@ -41,7 +41,7 @@ defaults to JavaScript, with Oniguruma available through an explicit factory. Th
 quarantine was removed with browser verification.
 
 Current maintenance runtime comparisons retain mixed advisory timing observations, recorded in the
-pending changeset. They do not establish a performance pass; the automated A/B benchmark remains
+current changelog. They do not establish a performance pass; the automated A/B benchmark remains
 required for the final candidate.
 
 The historical raw UI line-coverage observation reached 99.800335%; this is distinct from
@@ -50,16 +50,21 @@ unchanged raw coverage floors are recorded in [test health](roadmap/test-health.
 
 30.1.0 is an unpublished minor release in preparation. Current source adds cross-axis boundary
 containment, map control styling parts and experimental independently owned `lr-map-anchor`
-panels. It also corrects map URL-style readiness, anchor visibility and direction changes, scoped
-theme restoration, file-tree reveal cancellation, select initialization, dialog ownership, focus
+panels. It also adds popup lifecycle notifications for `lr-locale-picker` and declarative ordering
+of existing basemap layers through `styleOverrides.before`. Corrections cover map URL-style
+readiness, absent basemap override targets, anchor visibility and direction changes, scoped theme
+restoration, file-tree reveal cancellation, select initialization, dialog ownership, focus
 restoration, heatmap exports, neighbor pagination and text-only agent message updates. Chart loading
 and progressive Markdown corrections and expanded behavioral coverage have passed their browser checks. The new anchor brings the source inventory to 311 components. Implementation
 and focused checks do not qualify the final release candidate.
 
-The integrated map and SSR suite passes 990 cases in each of Chromium, Firefox with WebGL, and WebKit.
-Remaining release work includes completing API/editor/consumer artifact checks and delivery-budget
-review, preparing the shared 30.1.0 version, and passing CI, both browser workflows and Quality tools
-including the A/B benchmark on that exact commit. The complete Codecov UI flag must retain the previous release's result; improvement of
+The integrated map and SSR suite passes 1,940 cases in each of Chromium, Firefox with WebGL, and
+WebKit, including basemap ordering, restoration and absent-target deferral. The locale-picker suite passes 133
+cases in each engine, including vetoes, forced closes, rapid reversals and reconnects. The shared
+30.1.0 version and generated API/editor/consumer artifacts are prepared. Remaining work is the
+hosted update of seven public source-contract records, final delivery-budget validation and exact-commit
+qualification. CI, both browser workflows and Quality tools including the A/B benchmark must pass
+on the final versioned commit before publication. The complete Codecov UI flag must retain the previous release's result; improvement of
 about 0.1 percentage point is the release aim, while 99.74% and 99.80% remain longer-term goals.
 The historical WebKit PDF timeout remains unexplained; passing focused reproductions establish no
 fix. See [test health](roadmap/test-health.md) for the evidence and remaining work. Geospatial

@@ -1,6 +1,8 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
 import './map.js';
 import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from './map.js';
+import { MapBasemapOrder, type MapBasemapOrderDraft } from './map-basemap-order.js';
+import type { MapLayerOrderGroup } from './map-layer-order.js';
 
 class OwnedMap {
   static initialReady = false;
@@ -68,7 +70,7 @@ class OwnedMap {
   getLayoutProperty(): unknown { return undefined; }
   setLayoutProperty(): this { return this; }
   triggerRepaint(): void {}
-  getStyle() { return { layers: this.order.map(id => ({ id })) }; }
+  getStyle() { return { layers: this.order.map(id => ({ ...(this.layers.get(id) as Record<string, unknown>), id })) }; }
   moveLayer(id: string, before?: string): void { this.order = this.order.filter(value => value !== id); this.order.splice(before ? this.order.indexOf(before) : this.order.length, 0, id); }
   hasImage(id: string): boolean { return this.images.has(id); }
   addImage(id: string, pixels: ImageData): void { this.images.set(id, pixels); }
@@ -110,6 +112,306 @@ describe('lr-map declarative owned resources', () => {
     fixtureCleanup();
     Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: originalObserver });
     HTMLCanvasElement.prototype.getContext = originalContext;
+  });
+
+  it('moves only selected basemap layers and restores order when before is omitted', async () => {
+    const { element, peer } = await mount();
+    for (const id of ['background', 'borders', 'roads', 'labels']) peer.addLayer({ id });
+    await load(element, peer);
+    const originalLayers = [...peer.layers.values()];
+    const input = [{ layerId: 'borders', before: null, paint: { 'line-width': 2 } }];
+    element.styleOverrides = input;
+    await element.updateComplete;
+    await waitUntil(() => peer.order.at(-1) === 'borders', 'basemap order override did not append');
+    expect(peer.order).to.deep.equal(['background', 'roads', 'labels', 'borders']);
+    expect([...peer.layers.values()].every((layer, index) => layer === originalLayers[index])).to.equal(true);
+    element.styleOverrides = [{ layerId: 'borders', paint: { 'line-width': 2 } }];
+    await element.updateComplete;
+    await waitUntil(() => peer.order[1] === 'borders', 'removing before did not restore baseline');
+    expect(peer.order).to.deep.equal(['background', 'borders', 'roads', 'labels']);
+    expect(peer.paint.get('borders:line-width')).to.equal(2);
+  });
+
+  it('leaves order untouched when basemap overrides have no before field', async () => {
+    const { element, peer } = await mount();
+    for (const id of ['background', 'borders', 'labels']) peer.addLayer({ id });
+    let moves = 0;
+    peer.moveLayer = () => { moves += 1; };
+    await load(element, peer);
+    element.styleOverrides = [{ layerId: 'borders', paint: { 'line-width': 2 } }];
+    await element.updateComplete;
+    await waitUntil(() => peer.paint.get('borders:line-width') === 2);
+    expect(moves).to.equal(0);
+    expect(peer.order).to.deep.equal(['background', 'borders', 'labels']);
+  });
+
+  it('preserves an external basemap relocation when order ownership is released', async () => {
+    const { element, peer } = await mount();
+    for (const id of ['background', 'borders', 'roads', 'labels']) peer.addLayer({ id });
+    await load(element, peer);
+    const input = [{ layerId: 'borders', before: null }];
+    element.styleOverrides = input;
+    await element.updateComplete;
+    await waitUntil(() => peer.order.at(-1) === 'borders');
+    peer.moveLayer('borders', 'background');
+    element.styleOverrides = [];
+    await element.updateComplete;
+    peer.idle = true; peer.fire('idle'); await element.whenIdle();
+    expect(peer.order).to.deep.equal(['borders', 'background', 'roads', 'labels']);
+  });
+
+  it('preflights cycles between basemap placement and new owned resources before any native mutation', async () => {
+    const { element, peer } = await mount();
+    for (const id of ['base', 'borders', 'labels']) peer.addLayer({ id });
+    await load(element, peer);
+    let writes = 0;
+    const addSource = peer.addSource.bind(peer), moveLayer = peer.moveLayer.bind(peer), paint = peer.setPaintProperty.bind(peer);
+    peer.addSource = (id, source) => { writes += 1; return addSource(id, source); };
+    peer.moveLayer = (id, before) => { writes += 1; moveLayer(id, before); };
+    peer.setPaintProperty = (id, key, value) => { writes += 1; return paint(id, key, value); };
+    element.overlays = { sources: [{ id: 'areas', source: { type: 'geojson', data: POINTS } }],
+      layers: [{ layer: { id: 'areas-fill', type: 'fill', source: 'areas' }, before: 'borders' }] };
+    const overrides = [{ layerId: 'borders', before: 'areas-fill', paint: { 'line-width': 3 } }];
+    element.styleOverrides = overrides;
+    await element.updateComplete;
+    await waitUntil(() => Boolean(element.shadowRoot?.querySelector('[part="configuration-error"]')));
+    expect(writes).to.equal(0);
+    expect(peer.order).to.deep.equal(['base', 'borders', 'labels']);
+    expect(peer.sources.size).to.equal(0);
+  });
+
+  it('combines basemap anchors with owned layers without recreating basemap resources', async () => {
+    const { element, peer } = await mount();
+    for (const id of ['base', 'borders', 'labels']) peer.addLayer({ id });
+    await load(element, peer);
+    const original = peer.getLayer('borders');
+    element.overlays = { sources: [{ id: 'areas', source: { type: 'geojson', data: POINTS } }],
+      layers: [{ layer: { id: 'areas-fill', type: 'fill', source: 'areas' }, before: 'labels' }] };
+    const overrides = [{ layerId: 'borders', before: 'areas-fill' }];
+    element.styleOverrides = overrides;
+    await element.updateComplete;
+    await waitUntil(() => peer.layers.has('areas-fill'));
+    peer.idle = true; peer.fire('idle'); await element.whenIdle();
+    expect(peer.order).to.deep.equal(['base', 'borders', 'areas-fill', 'labels']);
+    expect(peer.getLayer('borders') === original).to.equal(true);
+  });
+
+  for (const failure of ['throw', 'no-op'] as const) {
+    it(`rolls back moved basemap IDs when a native move fails by ${failure}`, async () => {
+      const { element, peer } = await mount();
+      for (const id of ['base', 'a', 'b', 'labels']) peer.addLayer({ id });
+      await load(element, peer);
+      const move = peer.moveLayer.bind(peer);
+      let calls = 0;
+      peer.moveLayer = (id, before) => {
+        calls += 1;
+        if (calls === 2) { if (failure === 'throw') throw new Error('Rejected move'); return; }
+        move(id, before);
+      };
+      const overrides = [{ layerId: 'a', before: null }, { layerId: 'b', before: null }];
+      element.styleOverrides = overrides;
+      await element.updateComplete;
+      await waitUntil(() => peer.removed);
+      expect(peer.order).to.deep.equal(['base', 'a', 'b', 'labels']);
+    });
+  }
+
+  it('does not roll back a new external layer order written during a failed native move', async () => {
+    const { element, peer } = await mount();
+    for (const id of ['base', 'a', 'labels']) peer.addLayer({ id });
+    await load(element, peer);
+    peer.moveLayer = () => { peer.order = ['a', 'labels', 'base']; throw new Error('External replacement'); };
+    const overrides = [{ layerId: 'a', before: null }];
+    element.styleOverrides = overrides;
+    await element.updateComplete;
+    await waitUntil(() => peer.removed);
+    expect(peer.order).to.deep.equal(['a', 'labels', 'base']);
+  });
+
+  it('restores basemap placement after an owned same-ID layer is recreated', async () => {
+    const { element, peer } = await mount();
+    for (const id of ['base', 'borders', 'labels']) peer.addLayer({ id });
+    await load(element, peer);
+    element.overlays = { sources: [{ id: 'areas', source: { type: 'geojson', data: POINTS } }],
+      layers: [{ layer: { id: 'areas-layer', type: 'circle', source: 'areas' }, before: 'labels' }] };
+    await element.updateComplete;
+    await waitUntil(() => peer.order.join() === 'base,borders,areas-layer,labels');
+    peer.idle = true; peer.fire('idle'); await element.whenIdle();
+    element.styleOverrides = [{ layerId: 'borders', before: null }];
+    await element.updateComplete;
+    await waitUntil(() => peer.order.join() === 'base,areas-layer,labels,borders');
+    const previous = peer.getLayer('areas-layer');
+    element.overlays = { sources: [{ id: 'areas', source: { type: 'geojson', data: POINTS } }],
+      layers: [{ layer: { id: 'areas-layer', type: 'line', source: 'areas' } }] };
+    await element.updateComplete;
+    await waitUntil(() => peer.getLayer('areas-layer') !== previous);
+    peer.idle = true; peer.fire('idle'); await element.whenIdle();
+    expect(peer.order).to.deep.equal(['base', 'labels', 'areas-layer', 'borders']);
+    element.styleOverrides = [];
+    await element.updateComplete;
+    peer.idle = true; peer.fire('idle'); await element.whenIdle();
+    expect(peer.order).to.deep.equal(['base', 'borders', 'labels', 'areas-layer']);
+  });
+
+  for (const count of [12, 120]) for (const basemap of [false, true]) {
+    it(`bounds native style reads for ${count} ${basemap ? 'basemap' : 'owned-only'} moves`, async () => {
+      const { element, peer } = await mount();
+      const ids = Array.from({ length: count }, (_, index) => `layer-${index}`);
+      for (const id of ['base', ...ids, 'labels']) peer.addLayer({ id });
+      await load(element, peer);
+      element.styleOverrides = [{ layerId: 'base', paint: { 'background-opacity': 1 } }];
+      await element.updateComplete;
+      await waitUntil(() => peer.paint.get('base:background-opacity') === 1);
+      peer.idle = true; peer.fire('idle'); await element.whenIdle();
+      const nativeStyle = peer.getStyle.bind(peer), nativeMove = peer.moveLayer.bind(peer);
+      let reads = 0, moves = 0;
+      peer.getStyle = () => { reads += 1; return nativeStyle(); };
+      peer.moveLayer = (id, before) => { moves += 1; nativeMove(id, before); };
+      const draft = basemap ? new MapBasemapOrder().stage(peer.order, [{ source: 'base', before: null }],
+        ids.map(id => ({ id, type: 'line', source: 'base' })), () => false) : undefined;
+      // Isolate the final move phase from resource preparation to measure native serialization.
+      const mover = element as unknown as { applyDataLayerOrder(groups: readonly MapLayerOrderGroup[], current: () => boolean, draft?: MapBasemapOrderDraft): void };
+      mover.applyDataLayerOrder(basemap ? [] : ids.map(id => ({ id: `owned-${id}`, layerIds: [id] })), () => element.isConnected, draft);
+      expect(moves).to.equal(count);
+      expect(reads).to.equal(basemap ? 2 : 1);
+      expect(peer.order).to.deep.equal(['base', 'labels', ...ids]);
+    });
+  }
+
+  it('applies and restores selector placement beyond 256 matched basemap layers', async () => {
+    const { element, peer } = await mount();
+    const ids = Array.from({ length: 300 }, (_, index) => `boundary-${index}`);
+    for (const id of ['base', ...ids, 'labels']) {
+      const layer = { id, type: id.startsWith('boundary-') ? 'line' : 'fill', source: 'base' };
+      peer.addLayer(layer);
+    }
+    await load(element, peer);
+    element.styleOverrides = [{ source: 'base', layerType: 'line', before: null }];
+    await element.updateComplete;
+    await waitUntil(() => peer.order[1] === 'labels', 'expanded selector placement did not apply');
+    expect(peer.order).to.deep.equal(['base', 'labels', ...ids]);
+    element.styleOverrides = [];
+    await element.updateComplete;
+    await waitUntil(() => peer.order.at(-1) === 'labels');
+    expect(peer.order).to.deep.equal(['base', ...ids, 'labels']);
+  });
+
+  it('defers absent paint-only targets, retries them and tolerates removal with same-turn release', async () => {
+    const { element, peer } = await mount(el => {
+      el.styleOverrides = [{ layerId: 'provider-line', paint: { 'line-color': 'red' } }];
+    });
+    await load(element, peer);
+    expect(peer.removed).to.equal(false);
+    expect(peer.paint.has('provider-line:line-color')).to.equal(false);
+    peer.addLayer({ id: 'provider-line' });
+    element.styleOverrides = [...element.styleOverrides];
+    await element.updateComplete;
+    await waitUntil(() => peer.paint.get('provider-line:line-color') === 'red');
+    peer.idle = true; peer.fire('idle'); await element.whenIdle();
+    peer.removeLayer('provider-line');
+    element.styleOverrides = [];
+    await element.updateComplete;
+    peer.idle = true; peer.fire('idle'); await element.whenIdle();
+    expect(peer.removed).to.equal(false);
+  });
+
+  it('retains explicit overrides for mutually exclusive basemap IDs across healthy style replacement', async () => {
+    const { element, peer } = await mount();
+    const seed = (border: string) => {
+      peer.layers.clear(); peer.order = [];
+      for (const id of ['base', border, 'labels']) peer.addLayer({ id });
+    };
+    seed('boundary-country');
+    await load(element, peer);
+    element.styleOverrides = [
+      { layerId: 'boundary-country', before: null, paint: { 'line-color': 'red' } },
+      { layerId: 'boundary_country_inner', before: null, paint: { 'line-color': 'red' } },
+    ];
+    await element.updateComplete;
+    await waitUntil(() => peer.order.at(-1) === 'boundary-country');
+    peer.idle = true; peer.fire('idle'); await element.whenIdle();
+    expect(peer.paint.get('boundary-country:line-color')).to.equal('red');
+    expect(peer.removed).to.equal(false);
+    peer.setStyle = () => { seed('boundary_country_inner'); peer.fire('style.load'); return peer; };
+    element.mapStyle = { version: 8, sources: {}, layers: [] };
+    await element.whenStyleReady();
+    expect(peer.order).to.deep.equal(['base', 'labels', 'boundary_country_inner']);
+    expect(peer.paint.get('boundary_country_inner:line-color')).to.equal('red');
+    expect(peer.removed).to.equal(false);
+    element.styleOverrides = [];
+    await element.updateComplete;
+    await waitUntil(() => peer.order.join() === 'base,boundary_country_inner,labels');
+  });
+
+  it('re-matches selector placement on style replacement and restores the new style baseline', async () => {
+    const { element, peer } = await mount();
+    const seed = (ids: string[]) => {
+      peer.layers.clear(); peer.order = [];
+      for (const id of ids) {
+        const layer = { id, source: 'base', type: id.startsWith('border') ? 'line' : 'fill' };
+        peer.addLayer(layer);
+      }
+    };
+    seed(['base', 'border-a', 'fill', 'border-b', 'labels']);
+    await load(element, peer);
+    element.styleOverrides = [{ source: 'base', layerType: 'line', before: null }];
+    await element.updateComplete;
+    await waitUntil(() => peer.order.join() === 'base,fill,labels,border-a,border-b');
+    peer.setStyle = () => { seed(['border-b', 'fill', 'border-a', 'labels', 'base']); peer.fire('style.load'); return peer; };
+    element.mapStyle = { version: 8, sources: {}, layers: [] };
+    await element.whenStyleReady();
+    expect(peer.order).to.deep.equal(['fill', 'labels', 'base', 'border-b', 'border-a']);
+    element.styleOverrides = [];
+    await element.updateComplete;
+    await waitUntil(() => peer.order.join() === 'border-b,fill,border-a,labels,base');
+  });
+
+  it('retires staged basemap placement when a newer style supersedes async feature preparation', async () => {
+    const { element, peer } = await mount();
+    for (const id of ['base', 'borders', 'labels']) peer.addLayer({ id });
+    await load(element, peer);
+    let release!: () => void;
+    let preparing = false;
+    const pending = new Promise<void>(resolve => { release = resolve; });
+    OwnedMap.prepare = async requirements => {
+      if ((requirements as { sources?: Record<string, unknown> }).sources?.['data-0']) { preparing = true; await pending; }
+    };
+    const move = peer.moveLayer.bind(peer);
+    let moves = 0;
+    peer.moveLayer = (id, before) => { moves += 1; move(id, before); };
+    try {
+      element.dataLayers = [{ sourceId: 'points', geojson: POINTS }];
+      element.styleOverrides = [{ layerId: 'borders', before: null }];
+      await element.updateComplete;
+      await waitUntil(() => preparing);
+      expect(moves).to.equal(0);
+      peer.setStyle = () => {
+        peer.layers.clear(); peer.order = [];
+        for (const id of ['labels', 'borders', 'base']) peer.addLayer({ id });
+        peer.fire('style.load'); return peer;
+      };
+      element.styleOverrides = []; element.dataLayers = [];
+      element.mapStyle = { version: 8, sources: {}, layers: [] };
+      await element.whenStyleReady();
+      release();
+      peer.idle = true; peer.fire('idle'); await element.whenIdle();
+      expect(peer.order).to.deep.equal(['labels', 'borders', 'base']);
+      expect(moves).to.equal(0);
+    } finally { release(); }
+  });
+
+  it('stops native moves and rollback when a move disconnects the owning element', async () => {
+    const { element, peer } = await mount();
+    for (const id of ['base', 'a', 'b', 'labels']) peer.addLayer({ id });
+    await load(element, peer);
+    const move = peer.moveLayer.bind(peer);
+    let moves = 0;
+    peer.moveLayer = (id, before) => { moves += 1; move(id, before); element.remove(); };
+    element.styleOverrides = [{ layerId: 'a', before: null }, { layerId: 'b', before: null }];
+    await element.updateComplete;
+    await waitUntil(() => peer.removed);
+    expect(moves).to.equal(1);
+    expect(peer.order).to.deep.equal(['base', 'a', 'labels', 'b']);
   });
 
   it('restores native canvas identity and custom layers before publishing each style readiness', async () => {

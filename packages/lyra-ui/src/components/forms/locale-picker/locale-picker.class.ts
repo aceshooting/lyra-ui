@@ -13,8 +13,9 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { LyraFormControlElement } from '../../../internal/form-control-element.js';
 import {
-  deferredPlace as place,
-  awaitPopupAnimations,
+  deferredPlaceReady as place,
+  waitForDeferredPlacement,
+  type DeferredOperationHandle,
   syncTopLayerRelease,
   topLayerPlacement,
 } from '../../../internal/anchored-overlay-runtime.js';
@@ -144,6 +145,10 @@ export interface LyraLocaleChangeDetail {
 }
 
 export interface LyraLocalePickerEventMap {
+  'lr-show': CustomEvent<null>;
+  'lr-hide': CustomEvent<null>;
+  'lr-after-show': CustomEvent<null>;
+  'lr-after-hide': CustomEvent<null>;
   'lr-invalid': CustomEvent<null>;
   'lr-change-request': CustomEvent<LyraLocaleChangeDetail>;
   'lr-input': CustomEvent<LyraLocaleChangeDetail>;
@@ -204,6 +209,11 @@ export interface LyraLocalePickerEventMap {
  * Explicit locale catalogs retain the first 512 source entries; unset discovery remains live. Input loss is disclosed through the limit part.
  *
  * @customElement lr-locale-picker
+ * @event lr-show - Cancelable before an ordinary popup opening. Preventing it retains the closed state.
+ * @event lr-hide - Conditionally cancelable before closing. Disabled controls and disconnected
+ *   elements force-close with a non-cancelable notification; ordinary closes can be vetoed.
+ * @event lr-after-show - The current opening finished positioning and its transition settled.
+ * @event lr-after-hide - The current closing settled and left layout. Not emitted after disconnect.
  * @event lr-change-request - Cancelable before selection, popup, and global locale changes. Same detail as `lr-change`.
  * @event {Event} input - Native event after an accepted selection commits, before `lr-input`.
  * @event lr-input - Non-cancelable notification after an accepted selection commits. Same detail as `lr-change`.
@@ -449,10 +459,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
       if (next && !this._open && this.hasAttribute('open')) this.removeAttribute('open');
       return;
     }
-    if (!this._open) {
-      this.activeIndex = -1;
-      this.clearSearch();
-    }
+    this.openGeneration++;
     this.requestUpdate('open', old);
   }
   /** Visual size — the library-wide `2xs`–`xl` ladder shared with `lr-select`. The Web Awesome /
@@ -479,16 +486,23 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
   declare customError: string | null;
   private listId = nextId('locale-picker-list');
   private controlId = nextId('locale-picker-control');
-  private cleanup?: () => void;
+  private cleanup?: DeferredOperationHandle;
   /** Whether the last placement forced the top layer, so turning `topLayer` off demotes. */
   private placedTopLayer?: boolean;
   /** Removes the settled-closed option listbox from layout (`[hidden]{display:none}`) so its
    *  stale last-placed box stops contributing to an ancestor's scrollable overflow. Cleared
    *  synchronously in `willUpdate()` before `syncPopup()`/`place()` measures the listbox, so the
    *  first measurement still sees a real box; re-set only once the closing transition settles
-   *  (see {@link settleClosedLayout}). */
+   *  (see the current close transition). */
   @state() private listboxHidden = true;
-  private closeSettleToken = 0;
+  private openGeneration = 0;
+  private suppressedOpenGeneration?: number;
+  private openVetoed = false;
+  private openTransition?: boolean;
+  private lifecycleMounted = false;
+  private lastRenderedOpen = false;
+  private announcingHide = false;
+  private restoreFocusOnClose = false;
   private overlayHandle?: OverlayHandle;
   private readonly popupController = new PopupController({
     host: this,
@@ -593,11 +607,13 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
   }
 
   override disconnectedCallback(): void {
+    this.popupController.cancel();
+    if ((this.open || this.lastRenderedOpen) && this.hasUpdated && !this.announcingHide) emitPopupEvent(this, 'lr-hide', false);
+    this.lastRenderedOpen = false;
     this.clearSearch();
     this.cancelLocaleLoad();
     this.loadAnnouncements?.release();
     this.loadAnnouncements = undefined;
-    this.closeSettleToken++;
     this.listboxHidden = true;
     this.releaseExternalDescription();
     super.disconnectedCallback();
@@ -613,10 +629,11 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
     // `changed.has('open')` never fires again, leaving the listbox rendered open with no
     // positioning and no outside-click listener.
     this.open = false;
+    this.suppressedOpenGeneration = this.openGeneration;
   }
 
   override adoptedCallback(): void {
-    this.closeSettleToken++;
+    this.popupController.cancel();
     this.clearSearch();
     this.cancelLocaleLoad();
     this.loadAnnouncements?.release();
@@ -643,7 +660,12 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
       this.clearSearch();
       if (this.searchElement && shadowFocusTarget(this) === this.searchElement) this.focus();
     }
-    if (changed.has('open') && this.open) this.setActiveIndex(this.visibleEntries.findIndex((row) => row.tag === this._value));
+    this.announceOpenTransition(changed);
+    if (!this.openVetoed && changed.has('open') && !this.open) {
+      this.activeIndex = -1;
+      this.clearSearch();
+    }
+    if (!this.openVetoed && changed.has('open') && this.open) this.setActiveIndex(this.visibleEntries.findIndex((row) => row.tag === this._value));
     if (this.open && (this.searchable || changed.has('locales') || changed.has('registryTick')) && this.activeIndex >= 0) {
       this.activeIndex = Math.min(this.activeIndex, this.visibleEntries.length - 1);
       this.queueActiveScroll();
@@ -1013,7 +1035,6 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
   private hide(): void {
     if (!this.open) return;
     this.open = false;
-    this.setActiveIndex(-1);
   }
 
   private dismissFromEscape(): void {
@@ -1023,7 +1044,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
       this.setActiveIndex(this.visibleEntries.length ? 0 : -1);
       return;
     }
-    this.deactivatePopupOverlay(true);
+    this.restoreFocusOnClose = true;
     this.hide();
   }
 
@@ -1061,7 +1082,8 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
     this.cleanup?.();
     this.cleanup = undefined;
     if (!this.open || !this.isConnected) {
-      this.deactivatePopupOverlay(false);
+      this.deactivatePopupOverlay(this.isConnected && this.restoreFocusOnClose);
+      this.restoreFocusOnClose = false;
       return;
     }
     this.activatePopupOverlay();
@@ -1084,18 +1106,36 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
     }
   }
 
-  /** Waits for the listbox's closing opacity/transform/visibility transition (see
-   *  `[part='listbox']`'s `--lr-transition-fast`) to actually finish, then sets `listboxHidden`
-   *  so the settled-closed listbox leaves layout. A token guards against a reopen superseding an
-   *  in-flight wait -- see `updated()`'s `open`-driven caller. */
-  private async settleClosedLayout(): Promise<void> {
-    const token = ++this.closeSettleToken;
-    if (!await awaitPopupAnimations(
-      this,
-      () => this.renderRoot.querySelector('[part="listbox"]'),
-      () => this.closeSettleToken === token,
-    )) return;
-    this.listboxHidden = true;
+  private announceOpenTransition(changed: PropertyValues): void {
+    this.openVetoed = false;
+    this.openTransition = undefined;
+    if (!changed.has('open') || !this.lifecycleMounted || !this.isConnected ||
+        this.suppressedOpenGeneration === this.openGeneration || changed.get('open') === this.open) return;
+    const opening = this.open;
+    const generation = this.openGeneration;
+    this.announcingHide = !opening;
+    try {
+      if (!opening && this.liveDisabled) {
+        emitPopupEvent(this, 'lr-hide', false);
+      } else {
+        this.openVetoed = this.popupController.announce(opening, () => {
+          // Newer writes, disablement and removal own the result even if the request is vetoed.
+          if (this.isConnected && this.openGeneration === generation && (opening || !this.liveDisabled)) this._open = !opening;
+        });
+      }
+    } finally {
+      this.announcingHide = false;
+    }
+    if (!this.isConnected || generation !== this.openGeneration || opening !== this.open) {
+      this.openVetoed = this.open === changed.get('open');
+      return;
+    }
+    // A listener can disable the control while cancelling a close; the platform close still wins.
+    if (this.openVetoed && this.liveDisabled && !this.open) this.openVetoed = false;
+    if (!this.openVetoed) {
+      this.popupController.cancel();
+      this.openTransition = opening;
+    }
   }
 
   @state() private inputLimited = false;
@@ -1111,7 +1151,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
     if (previous?.id !== activeId) previous?.removeAttribute('data-active');
     if (activeId) this.renderRoot.querySelector(`[id="${activeId}"]`)?.setAttribute('data-active', '');
     const reposition =
-      changed.has('open') ||
+      (changed.has('open') && !this.openVetoed) ||
       (this.open &&
         (changed.has('locales') ||
           changed.has('registryTick') ||
@@ -1123,10 +1163,16 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
     if (reposition) {
       this.syncPopup();
     }
-    if (changed.has('open')) {
-      if (this.open) this.closeSettleToken++;
-      else void this.settleClosedLayout();
+    if (this.openTransition !== undefined && this.isConnected) {
+      void this.popupController.settle(this.openTransition ? 'lr-after-show' : 'lr-after-hide', {
+        waitForPosition: () => waitForDeferredPlacement(() => this.cleanup),
+        conceal: () => { this.listboxHidden = true; },
+      });
     }
+    if (this.openVetoed) this.restoreFocusOnClose = false;
+    this.lastRenderedOpen = this.open && this.isConnected;
+    this.lifecycleMounted = true;
+    this.suppressedOpenGeneration = undefined;
     if (this.open && this.searchable && changed.has('searchQuery') && this.searchQuery.trim() &&
         this.visibleEntries.length === 0) {
       this.searchAnnouncements ??= acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });

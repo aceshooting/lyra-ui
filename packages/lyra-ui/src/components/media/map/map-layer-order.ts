@@ -26,7 +26,7 @@ export interface MapLayerOrderPlan {
 }
 
 const MAX_GROUPS = 128;
-const MAX_GROUP_LAYERS = 32;
+const MAX_GROUP_LAYERS = 1024;
 const MAX_LAYERS = 4096;
 const MAX_ID_LENGTH = 1024;
 

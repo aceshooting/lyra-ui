@@ -122,7 +122,7 @@ describe('planMapLayerOrder', () => {
     const plans = [
       planMapLayerOrder([''], []),
       planMapLayerOrder([], [{ id: 'a', layerIds: [] }]),
-      planMapLayerOrder([], [{ id: 'a', layerIds: Array.from({ length: 33 }, (_, index) => `l${index}`) }]),
+      planMapLayerOrder([], [{ id: 'a', layerIds: Array.from({ length: 1025 }, (_, index) => `l${index}`) }]),
       planMapLayerOrder([], Array.from({ length: 129 }, (_, index) => ({ id: `g${index}`, layerIds: [`l${index}`] }))),
       planMapLayerOrder(Array.from({ length: 4097 }, (_, index) => `l${index}`), []),
     ];

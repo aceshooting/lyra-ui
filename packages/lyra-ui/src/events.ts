@@ -303,11 +303,11 @@ export type LyraAfterExpandEvent =
   | LyraTreeItemEventMap['lr-after-expand'];
 
 /**
- * `lr-after-hide` — dispatched by 16 components: `<lr-alert>`, `<lr-color-picker>`,
+ * `lr-after-hide` — dispatched by 17 components: `<lr-alert>`, `<lr-color-picker>`,
  * `<lr-combobox>`, `<lr-command-palette>`, `<lr-context-menu>`, `<lr-date-input>`, `<lr-details>`,
- * `<lr-dialog>`, `<lr-drawer>`, `<lr-dropdown>`, `<lr-lightbox>`, `<lr-popover>`, `<lr-select>`,
- * `<lr-time-input>`, `<lr-toast-item>`, `<lr-tooltip>`; detail union of 14, e.g.
- * `LyraAlertEventMap['lr-after-hide']`.
+ * `<lr-dialog>`, `<lr-drawer>`, `<lr-dropdown>`, `<lr-lightbox>`, `<lr-locale-picker>`,
+ * `<lr-popover>`, `<lr-select>`, `<lr-time-input>`, `<lr-toast-item>`, `<lr-tooltip>`; detail
+ * union of 15, e.g. `LyraAlertEventMap['lr-after-hide']`.
  */
 export type LyraAfterHideEvent =
   | LyraAlertEventMap['lr-after-hide']
@@ -319,6 +319,7 @@ export type LyraAfterHideEvent =
   | LyraDetailsEventMap['lr-after-hide']
   | LyraDialogEventMap['lr-after-hide']
   | LyraLightboxEventMap['lr-after-hide']
+  | LyraLocalePickerEventMap['lr-after-hide']
   | LyraPopoverEventMap['lr-after-hide']
   | LyraSelectEventMap['lr-after-hide']
   | LyraTimeInputEventMap['lr-after-hide']
@@ -326,11 +327,11 @@ export type LyraAfterHideEvent =
   | LyraTooltipEventMap['lr-after-hide'];
 
 /**
- * `lr-after-show` — dispatched by 16 components: `<lr-alert>`, `<lr-color-picker>`,
+ * `lr-after-show` — dispatched by 17 components: `<lr-alert>`, `<lr-color-picker>`,
  * `<lr-combobox>`, `<lr-command-palette>`, `<lr-context-menu>`, `<lr-date-input>`, `<lr-details>`,
- * `<lr-dialog>`, `<lr-drawer>`, `<lr-dropdown>`, `<lr-lightbox>`, `<lr-popover>`, `<lr-select>`,
- * `<lr-time-input>`, `<lr-toast-item>`, `<lr-tooltip>`; detail union of 14, e.g.
- * `LyraAlertEventMap['lr-after-show']`.
+ * `<lr-dialog>`, `<lr-drawer>`, `<lr-dropdown>`, `<lr-lightbox>`, `<lr-locale-picker>`,
+ * `<lr-popover>`, `<lr-select>`, `<lr-time-input>`, `<lr-toast-item>`, `<lr-tooltip>`; detail
+ * union of 15, e.g. `LyraAlertEventMap['lr-after-show']`.
  */
 export type LyraAfterShowEvent =
   | LyraAlertEventMap['lr-after-show']
@@ -342,6 +343,7 @@ export type LyraAfterShowEvent =
   | LyraDetailsEventMap['lr-after-show']
   | LyraDialogEventMap['lr-after-show']
   | LyraLightboxEventMap['lr-after-show']
+  | LyraLocalePickerEventMap['lr-after-show']
   | LyraPopoverEventMap['lr-after-show']
   | LyraSelectEventMap['lr-after-show']
   | LyraTimeInputEventMap['lr-after-show']
@@ -1395,11 +1397,11 @@ export type LyraGroupToggleRequestEvent = LyraThreadListEventMap['lr-group-toggl
 export type LyraHiddenTypesChangeEvent = LyraKnowledgeGraphExplorerEventMap['lr-hidden-types-change'];
 
 /**
- * `lr-hide` — dispatched by 18 components: `<lr-alert>`, `<lr-color-picker>`, `<lr-combobox>`,
+ * `lr-hide` — dispatched by 19 components: `<lr-alert>`, `<lr-color-picker>`, `<lr-combobox>`,
  * `<lr-command-palette>`, `<lr-context-inspector>`, `<lr-context-menu>`, `<lr-date-input>`,
  * `<lr-details>`, `<lr-dialog>`, `<lr-drawer>`, `<lr-dropdown>`, `<lr-export-button>`,
- * `<lr-lightbox>`, `<lr-popover>`, `<lr-select>`, `<lr-time-input>`, `<lr-toast-item>`,
- * `<lr-tooltip>`; detail union of 15, e.g. `LyraAlertEventMap['lr-hide']`.
+ * `<lr-lightbox>`, `<lr-locale-picker>`, `<lr-popover>`, `<lr-select>`, `<lr-time-input>`,
+ * `<lr-toast-item>`, `<lr-tooltip>`; detail union of 16, e.g. `LyraAlertEventMap['lr-hide']`.
  */
 export type LyraHideEvent =
   | LyraAlertEventMap['lr-hide']
@@ -1412,6 +1414,7 @@ export type LyraHideEvent =
   | LyraDialogEventMap['lr-hide']
   | LyraExportButtonEventMap['lr-hide']
   | LyraLightboxEventMap['lr-hide']
+  | LyraLocalePickerEventMap['lr-hide']
   | LyraPopoverEventMap['lr-hide']
   | LyraSelectEventMap['lr-hide']
   | LyraTimeInputEventMap['lr-hide']
@@ -2865,11 +2868,11 @@ export type LyraSendNowEvent =
 export type LyraSequenceStepEvent = LyraSequencePlaybackEventMap['lr-sequence-step'];
 
 /**
- * `lr-show` — dispatched by 18 components: `<lr-alert>`, `<lr-color-picker>`, `<lr-combobox>`,
+ * `lr-show` — dispatched by 19 components: `<lr-alert>`, `<lr-color-picker>`, `<lr-combobox>`,
  * `<lr-command-palette>`, `<lr-context-inspector>`, `<lr-context-menu>`, `<lr-date-input>`,
  * `<lr-details>`, `<lr-dialog>`, `<lr-drawer>`, `<lr-dropdown>`, `<lr-export-button>`,
- * `<lr-lightbox>`, `<lr-popover>`, `<lr-select>`, `<lr-time-input>`, `<lr-toast-item>`,
- * `<lr-tooltip>`; detail union of 15, e.g. `LyraAlertEventMap['lr-show']`.
+ * `<lr-lightbox>`, `<lr-locale-picker>`, `<lr-popover>`, `<lr-select>`, `<lr-time-input>`,
+ * `<lr-toast-item>`, `<lr-tooltip>`; detail union of 16, e.g. `LyraAlertEventMap['lr-show']`.
  */
 export type LyraShowEvent =
   | LyraAlertEventMap['lr-show']
@@ -2882,6 +2885,7 @@ export type LyraShowEvent =
   | LyraDialogEventMap['lr-show']
   | LyraExportButtonEventMap['lr-show']
   | LyraLightboxEventMap['lr-show']
+  | LyraLocalePickerEventMap['lr-show']
   | LyraPopoverEventMap['lr-show']
   | LyraSelectEventMap['lr-show']
   | LyraTimeInputEventMap['lr-show']

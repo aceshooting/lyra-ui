@@ -4,6 +4,11 @@
 
 ### Minor Changes
 
+- Add `lr-show`, `lr-after-show`, `lr-hide` and `lr-after-hide` lifecycle events to `lr-locale-picker`. Ordinary opening and closing requests can be vetoed; forced closes and superseded transitions retain consistent settled state.
+- Add `styleOverrides.before` to order existing basemap layers without copying their sources or geometry. Selectors retain stable relative order, placement coordinates with owned overlays, and removing the override restores its prior position among surviving unowned layers.
+
+  The locale-picker lifecycle and basemap placement logic, declarations and generated references increase the locale-picker initial route, media family and package sizes. Only exceeded ceilings advance to the next 64-byte boundary; passing budgets, peer exclusions, lazy loading and measurement settings remain unchanged.
+
 - 55ec21c: Add the experimental `<lr-map-anchor>` element for several independently owned panels on one `lr-map`. Each anchor holds your own live content, which is never cloned or moved, so its listeners and component state survive camera moves, off-screen hiding, style replacement and map reconnects. Each module opens, moves and closes its own anchor with `open`, `lngLat`, `close()` and a cancelable `lr-close-request` followed by `lr-close`, without affecting other anchors or the map's `anchor` slot.
 
   - Anchors are placed like the `anchor` slot and follow the camera. They take their own `safeArea` and `boundary`, or the map's `anchorSafeArea` and `anchorBoundary` while those are unset, and stay placed through a `mapStyle` replacement.
@@ -20,6 +25,8 @@
   The generated editor archive retains all four editor formats and measures 1,701,215 packed and 10,541,676 unpacked bytes with the new parts and safe-area documentation. Its two exceeded limits advance to the next 64-byte boundaries at 1,701,248 and 10,541,696 bytes; file-count and other package limits remain unchanged.
 
 ### Patch Changes
+
+- Keep maps ready when a style override targets a layer absent from the selected basemap. Defer its paint, layout and placement until the layer exists, discard obsolete restoration baselines, and retry after style changes while retaining rejection of invalid or conflicting resources.
 
 - 1e233d8: Preserve scoped theme ownership when an element is frozen after its first theme application, so later theme changes still restore the original attributes and token values when the scope is removed.
 

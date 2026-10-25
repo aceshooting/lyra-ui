@@ -7345,10 +7345,14 @@ export interface LyraComponentTypeMap {
       | 'change'
       | 'focus'
       | 'input'
+      | 'lr-after-hide'
+      | 'lr-after-show'
       | 'lr-change'
       | 'lr-change-request'
+      | 'lr-hide'
       | 'lr-input'
-      | 'lr-invalid';
+      | 'lr-invalid'
+      | 'lr-show';
     cssNames:       | '--lr-form-control-focus-shadow'
       | '--lr-form-control-required-color'
       | '--lr-form-control-required-content'

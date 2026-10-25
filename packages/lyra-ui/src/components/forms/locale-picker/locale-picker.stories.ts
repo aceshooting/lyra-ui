@@ -303,3 +303,18 @@ export const TopLayer: Story = {
 export const InputLimit: Story = {
   render: () => html`<lr-locale-picker label="Bounded catalog" without-flags .locales=${Array.from({length:513}, (_, i) => ({tag:`en-x-${i}`,label:`Locale ${i}`}))}></lr-locale-picker>`,
 };
+
+
+export const PopupLifecycle: Story = {
+  parameters: { docs: { description: { story: 'Open and close the language list with the pointer or keyboard. Lifecycle events report popup visibility even when the selected locale stays unchanged.' } } },
+  render: () => {
+    const report = (event: Event): void => {
+      const output = (event.currentTarget as HTMLElement).querySelector('output');
+      if (output) output.textContent = event.type;
+    };
+    return html`<div @lr-show=${report} @lr-after-show=${report} @lr-hide=${report} @lr-after-hide=${report}>
+      <lr-locale-picker label="Language" without-flags .locales=${['en', 'fr']}></lr-locale-picker>
+      <output aria-live="polite">Open the list to see its lifecycle event.</output>
+    </div>`;
+  },
+};

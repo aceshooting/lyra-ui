@@ -21,6 +21,76 @@ function harness() {
 const options = { isOwned: (_id: string) => false, resolve: (value: unknown) => value };
 
 describe('MapStyleOverrides', () => {
+  it('admits order-only overrides with distinct append and unowned states', () => {
+    const input = [{ layerId: 'roads', before: 'labels' }, { layerId: 'borders', before: null }, { layerId: 'water' }];
+    expect(projectMapStyleOverrides(input)).to.deep.equal(input);
+    for (const before of ['', ' ', 42, false, {}, 'x'.repeat(1025)]) {
+      expect(projectMapStyleOverrides([{ layerId: 'roads', before }]) === undefined).to.equal(true);
+    }
+  });
+
+  it('retains order intent through explicit-first selector expansion', () => {
+    const input = projectMapStyleOverrides([
+      { source: 'base', before: 'labels' },
+      { layerId: 'roads', before: null },
+      { source: 'base', before: 'water' },
+    ]);
+    expect(input !== undefined).to.equal(true);
+    if (!input) return;
+    const expanded = expandMapStyleOverrides(input, [
+      { id: 'water', type: 'fill', source: 'base' },
+      { id: 'roads', type: 'line', source: 'base' },
+      { id: 'borders', type: 'line', source: 'base' },
+    ]);
+    expect(expanded).to.deep.equal([
+      { layerId: 'roads', before: null },
+      { layerId: 'water', before: 'labels' },
+      { layerId: 'borders', before: 'labels' },
+    ]);
+  });
+
+  it('reconciles the full admitted 1,024-layer selector expansion', () => {
+    const h = harness(); const owner = new MapStyleOverrides();
+    const layers = Array.from({ length: 1024 }, (_, index) => {
+      const id = `layer-${index}`; h.add(id); return { id, type: 'line' };
+    });
+    const expanded = expandMapStyleOverrides([{ layerType: 'line', before: null }], layers)!;
+    expect(expanded.length).to.equal(1024);
+    const result = owner.reconcile(h.peer, 1, expanded, options);
+    expect(result.accepted).to.equal(true);
+    expect(result.diagnostics.length).to.equal(0);
+    expect(projectMapStyleOverrides([...expanded, { layerId: 'overflow' }], true) === undefined).to.equal(true);
+  });
+
+  it('keeps expanded admission nested-expression, aggregate-node and aggregate-text limits', () => {
+    const nested = [{ layerId: 'base', paint: { 'line-color': Array.from({ length: 257 }, () => 0) } }];
+    const nodes = Array.from({ length: 1024 }, (_, index) => ({ layerId: `layer-${index}`,
+      paint: { 'line-color': Array.from({ length: 12 }, () => 0) } }));
+    const text = Array.from({ length: 300 }, (_, index) => ({ layerId: `layer-${index}`, paint: { 'line-color': 'x'.repeat(4096) } }));
+    expect(projectMapStyleOverrides(nested, true) === undefined).to.equal(true);
+    expect(projectMapStyleOverrides(nodes, true) === undefined).to.equal(true);
+    expect(projectMapStyleOverrides(text, true) === undefined).to.equal(true);
+    // The authored input remains limited to 64 entries, independently of expanded admission.
+    expect(projectMapStyleOverrides(Array.from({ length: 65 }, (_, index) => ({ layerId: `layer-${index}` }))) === undefined).to.equal(true);
+  });
+
+  it('never invokes array-entry accessors while admitting expanded overrides', () => {
+    let reads = 0;
+    const input: unknown[] = [{ layerId: 'base' }];
+    Object.defineProperty(input, '0', { enumerable: true, get() { reads += 1; return { layerId: 'base' }; } });
+    expect(projectMapStyleOverrides(input, true) === undefined).to.equal(true);
+    expect(reads).to.equal(0);
+    for (const length of [-1, 1.5, Number.NaN, Infinity]) {
+      const deceptive = new Proxy([], { getOwnPropertyDescriptor(target, key) {
+        const descriptor = Object.getOwnPropertyDescriptor(target, key);
+        return key === 'length' ? { ...descriptor, value: length } : descriptor;
+      } });
+      expect(projectMapStyleOverrides(deceptive, true) === undefined).to.equal(true);
+    }
+    const sparse = new Array<unknown>(2); sparse[1] = { layerId: 'base' };
+    expect(projectMapStyleOverrides(sparse, true) === undefined).to.equal(true);
+  });
+
   it('snapshots expressions and never invokes accessor fields or accepts prototype keys', () => {
     const expression = ['case', ['has', 'value'], 'red', 'blue'];
     const input = [{ layerId: 'base', paint: { 'fill-color': expression } }];

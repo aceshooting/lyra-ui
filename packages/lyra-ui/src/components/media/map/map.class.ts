@@ -141,6 +141,7 @@ export type { LyraMapSourceCoordinates, LyraMapLabelValue, LyraMapLabelOptions, 
 export type LyraMapDataLayer = LyraMapGeoJsonDataLayer | LyraMapExternalDataLayer;
 
 import type { LyraMapStyleOverride, LyraMapStyleValue } from './map-style-override-admission.js';
+import type { MapBasemapOrder, MapBasemapOrderDraft } from './map-basemap-order.js';
 
 export type { LyraMapOverlaySource, LyraMapOverlayLayer } from './map-overlay-admission.js';
 /** Declarative native resources restored after every style replacement. */
@@ -3782,7 +3783,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * for the provider before laying out the symbols that need the image, so `whenIdle()` covers it. */
   @property({ attribute: false }) imageProvider?: LyraMapImageProvider;
 
-  /** Immutable paint/layout overrides for existing basemap layers only. Each entry names one layer
+  /** Immutable paint/layout and placement overrides for existing basemap layers only. Each entry names one layer
    * by `layerId`, or selects every current style layer whose `source`, `sourceLayer` and
    * `layerType` match the fields it gives; an explicit id wins over a selector, and an earlier
    * selector over a later one, and selectors re-match after each style swap (`styleLayers` lists
@@ -3790,7 +3791,16 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * restores its original value; changing mapStyle captures a new baseline. Color-valued strings
    * that are CSS var() tokens, currentColor or CSS color functions resolve against this host and
    * update with its theme. Up to 64 entries and 32 properties per kind are admitted, and a
-   * selector may expand to at most 1,024 layers in total. */
+   * selector may expand to at most 1,024 layers in total. `before` moves the matched layers as a
+   * stable group below a native layer or public overlay group; `null` appends above other layers.
+   * Omission releases placement relative to surviving unowned successors; active managed placement
+   * takes precedence and unrelated layers are never moved. Missing basemap subjects are deferred,
+   * including their paint/layout, until a later reconciliation or style load finds them; observed
+   * absence drops their old restoration baseline. Owned subjects remain invalid. External moves
+   * observed before reconciliation become the baseline and win on release.
+   * During resource reconciliation, changes solely relative to owned IDs follow controlled placement;
+   * changes across surviving unowned layers still update the baseline. Missing anchors append with
+   * a dev warning; self-anchors and cross-owner cycles reject before mutation. Placement shares the 128-group/4,096-layer budget with owned overlays. */
   @property({ attribute: false }) styleOverrides: readonly LyraMapStyleOverride[] = [];
 
 
@@ -3816,6 +3826,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private committedDataLayers: readonly CanonicalMapDataLayer[] = EMPTY_CANONICAL_MAP_DATA_LAYERS;
   private committedExternalLayers: readonly CanonicalMapExternalLayer[] = [];
   private groupOrderActive = false;
+  private basemapOrder?: MapBasemapOrder;
   private readonly plannedDataLayerIds = new Map<string, string>();
   private _canonicalDataLayers: readonly CanonicalMapDataLayer[] = EMPTY_CANONICAL_MAP_DATA_LAYERS;
   private _canonicalMarkersSource: unknown = UNPROJECTED_MAP_VALUE;
@@ -5271,7 +5282,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.externalSourceEffects?.dispose(); this.externalSourceEffects = undefined;
     this.externalFeatureWorkStarted = false;
     this.externalSourceIds.clear();
-    this.plannedDataLayerIds.clear(); this.appliedRowRanges.clear(); this.dataLayerIssue = false; this.pendingDataLayerIssue = false; this.groupOrderActive = false; this.pendingDrawingTheme = false;
+    this.plannedDataLayerIds.clear(); this.appliedRowRanges.clear(); this.dataLayerIssue = false; this.pendingDataLayerIssue = false; this.groupOrderActive = false; this.basemapOrder?.reset(); this.pendingDrawingTheme = false;
     this.setControlIssue(undefined);
     this.anchorController?.dispose(); this.childAnchors?.dispose();
     this.cancelMoveReport();
@@ -5661,6 +5672,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       this.drawingController?.styleChanging();
       this.drawingController?.cancelResources(true);
       this._styleGeneration += 1;
+      this.basemapOrder?.reset();
       this.cancelFeaturePreparation();
       this.preparedFeatureSignature = undefined;
       // A new style retries a feature-state runtime whose import failed.
@@ -6521,7 +6533,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     return layers.map(layer => mapOwnValue(layer, 'id')).filter((id): id is string => typeof id === 'string');
   }
 
-  private applyDataLayerOrder(groups: readonly MapLayerOrderGroup[], current: () => boolean): void {
+  private applyDataLayerOrder(groups: readonly MapLayerOrderGroup[], current: () => boolean, basemap?: MapBasemapOrderDraft): void {
     const map = this._map;
     if (!map || !current()) return;
     const original = this.nativeLayerOrder(map);
@@ -6530,24 +6542,72 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const active = groups.map(group => ({ ...group, layerIds: group.layerIds.filter(id => present.has(id)) })).filter(group => group.layerIds.length);
     const runtime = loadMapOwnedFeatureRuntime.loaded;
     if (!runtime) throw new Error('Map layer order is unavailable.');
-    const plan = runtime.planMapLayerOrder(original, active);
+    const plan = basemap ? basemap.plan(original, active) : runtime.planMapLayerOrder(original, active);
     if (!plan.valid || plan.operations.some(operation => operation.kind !== 'move') || plan.operations.length && !map.moveLayer) {
       throw new Error('Map layer order is unavailable.');
     }
+    if (!basemap) {
+      // Keep the established owned-only path: no per-move serialization of the native style.
+      try {
+        for (const operation of plan.operations) {
+          if (!current()) return;
+          map.moveLayer!(operation.id, operation.before);
+          if (!current()) return;
+        }
+      } catch (error) {
+        const members = new Set(active.flatMap(group => group.layerIds));
+        for (let index = original.length - 1; index >= 0; index--) {
+          if (!current()) break;
+          const id = original[index]!;
+          if (!members.has(id)) continue;
+          try { map.moveLayer!(id, original[index + 1]); } catch { break; }
+        }
+        throw error;
+      }
+      return;
+    }
+    const sameOrder = (left: readonly string[], right: readonly string[]) => left.length === right.length && left.every((id, index) => id === right[index]);
+    const advance = (order: string[], operation: (typeof plan.operations)[number]): void => {
+      order.splice(order.indexOf(operation.id), 1);
+      order.splice(operation.before === undefined ? order.length : order.indexOf(operation.before), 0, operation.id);
+    };
+    let attempted = 0;
     try {
       for (const operation of plan.operations) {
         if (!current()) return;
+        attempted += 1;
         map.moveLayer!(operation.id, operation.before);
         if (!current()) return;
       }
+      // One whole-style read for successful application, independent of the number of moves.
+      const shown = this.nativeLayerOrder(map);
+      if (!current()) return;
+      if (!sameOrder(shown, plan.order)) throw new Error('Map layer order was not applied.');
+      basemap.commit(plan.order);
     } catch (error) {
-      // Restoring only still-owned groups leaves unrelated native resources untouched.
-      const members = new Set(active.flatMap(group => group.layerIds));
-      for (let index = original.length - 1; index >= 0; index--) {
+      if (!current()) throw error;
+      const shown = this.nativeLayerOrder(map);
+      if (!current()) throw error;
+      // A throwing/no-op setter can leave a completed prefix. An unrecognized native order is
+      // another writer's observable change: leave it intact rather than guessing a rollback.
+      const prefix = [...original];
+      let rollbackSafe = sameOrder(shown, prefix);
+      for (const operation of plan.operations.slice(0, attempted)) {
+        advance(prefix, operation);
+        rollbackSafe ||= sameOrder(shown, prefix);
+      }
+      const members = new Set(plan.operations.slice(0, attempted).map(operation => operation.id));
+      for (let index = original.length - 1; rollbackSafe && index >= 0; index--) {
         if (!current()) break;
         const id = original[index]!;
         if (!members.has(id)) continue;
-        try { map.moveLayer!(id, original[index + 1]); } catch { break; }
+        const live = this.nativeLayerOrder(map);
+        if (!current() || !live.includes(id)) break;
+        const before = original.slice(index + 1).find(value => live.includes(value));
+        const restored = live.filter(value => value !== id);
+        restored.splice(before === undefined ? restored.length : restored.indexOf(before), 0, id);
+        try { map.moveLayer!(id, before); } catch { break; }
+        if (!current() || !sameOrder(this.nativeLayerOrder(map), restored)) break;
       }
       throw error;
     }
@@ -6580,6 +6640,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     let ownedInput!: MapOwnedFeatureInput;
     let externalInput!: ReturnType<typeof buildMapExternalLayers>;
     let orderGroups: readonly MapLayerOrderGroup[] | undefined;
+    let basemapOrderDraft: MapBasemapOrderDraft | undefined;
     let retainGroupOrder = false;
     let mutationStarted = false;
     let preparedExternal = false;
@@ -6624,7 +6685,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       })) return;
       const complete = (): void => {
         if (!current() || controller.signal.aborted) return;
-        if (orderGroups) { this.applyDataLayerOrder(orderGroups, current); if (!current()) return; this.groupOrderActive = retainGroupOrder; }
+        if (orderGroups) { this.applyDataLayerOrder(orderGroups, current, basemapOrderDraft); if (!current()) return; this.groupOrderActive = retainGroupOrder; }
         if (!current()) return;
         this.committedDataLayers = this._canonicalDataLayers;
         this.committedExternalLayers = this._canonicalExternalLayers;
@@ -6723,18 +6784,28 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       }
       externalInput = this.externalLayerInput(owned, identities);
       if (!current() || controller.signal.aborted) { finish(); return; }
-      retainGroupOrder = this.canonicalDataLayers.some(row => row.before !== undefined) ||
+      const overrideOrders = (ownedInput.styleOverrides as readonly LyraMapStyleOverride[]).some(entry => entry.before !== undefined);
+      retainGroupOrder = overrideOrders || this.canonicalDataLayers.some(row => row.before !== undefined) ||
         this._canonicalExternalLayers.some(row => row.before !== undefined) || owned.layers.some(row => row.before !== undefined);
       if (this.groupOrderActive || retainGroupOrder) {
         if (!runtime || typeof map.getStyle !== 'function' || typeof map.moveLayer !== 'function') throw new Error('Map layer order is unavailable.');
         orderGroups = this.dataLayerOrderGroups(owned, externalInput, identities);
-        const planned = runtime.planMapLayerOrder(this.nativeLayerOrder(map), orderGroups);
+        if (overrideOrders || this.basemapOrder?.active) {
+          const owner = this.basemapOrder ??= new runtime.MapBasemapOrder();
+          const generated = new Set(orderGroups.flatMap(group => group.layerIds));
+          basemapOrderDraft = owner.stage(this.nativeLayerOrder(map), ownedInput.styleOverrides as readonly LyraMapStyleOverride[], this._styleLayers,
+            id => generated.has(id) || id === this._appliedFillLayerId || this.ownedFeatures?.ownsLayer(id) === true ||
+              this.externalFeatures?.ownsLayer(id) === true || this.drawingController?.ownsLayer(id) === true);
+        }
+        const planned = basemapOrderDraft ? basemapOrderDraft.plan(this.nativeLayerOrder(map), orderGroups)
+          : runtime.planMapLayerOrder(this.nativeLayerOrder(map), orderGroups);
         if (!planned.valid) throw new Error('Map layer order is invalid.');
         if (planned.diagnostics.some(issue => issue.code === 'missing-anchor')) devWarnOnce('lyra-map-missing-layer-anchor', `<${this.localName}>: a missing layer anchor appends its group.`);
         if (!current()) { finish(); return; }
         // Existing registries receive concrete anchors; a final guarded group plan resolves forward cross-owner edges.
-        const anchors = new Map(orderGroups.map(group => [group.id, group.layerIds[0]!]));
-        for (const group of orderGroups) for (const id of group.layerIds) if (!anchors.has(id)) anchors.set(id, group.layerIds[0]!);
+        const allGroups = [...orderGroups, ...(basemapOrderDraft?.groups ?? [])];
+        const anchors = new Map(allGroups.map(group => [group.id, group.layerIds[0]!]));
+        for (const group of allGroups) for (const id of group.layerIds) if (!anchors.has(id)) anchors.set(id, group.layerIds[0]!);
         const translate = (entry: LyraMapOverlayLayer): LyraMapOverlayLayer => entry.before && anchors.has(entry.before)
           ? { ...entry, before: anchors.get(entry.before)! } : entry;
         ownedInput = { ...ownedInput, overlays: { sources: owned.sources, layers: owned.layers.map(translate) } };

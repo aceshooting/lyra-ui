@@ -1,6 +1,6 @@
 # Map adoption (`lr-map`, `@aceshooting/lyra-map` 1.3.0)
 
-Status (2026-10-24): the camera, overlays, composition, ordering, controls, labels and lazy
+Status (2026-10-25): the camera, overlays, composition, ordering, controls, labels and lazy
 construction APIs and their migration documentation shipped in
 [lyra-ui 30.0.0](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.0.0) with
 lyra-map 1.3.0. The published source is `578919f6a61a31612a0382c02cbae84202466837`.
@@ -14,7 +14,10 @@ corrections address URL-style readiness, anchor visibility and live direction ch
 containment, and public geolocation-group and attribution-content styling parts. They still need
 qualification on the final maintenance release candidate. Multiple independently anchored content
 panels are implemented as the unreleased experimental `lr-map-anchor` element and need the same
-qualification.
+qualification. The current source also adds `styleOverrides.before` for ordering existing basemap
+layers relative to native layers or public overlay groups, without copying their sources or
+geometry. The integrated map and SSR suite passes 1,940 cases in each of Chromium, Firefox with
+WebGL, and WebKit. These additions remain unpublished and need final exact-commit release qualification.
 
 ## Breaking change
 
@@ -63,6 +66,14 @@ items let them move to `lr-map`, or at least drop their workarounds on the engin
   order; invalid ordering is rejected before native changes.
 - [x] `styleOverrides`: paint and layout overrides for basemap style layers, re-applied after style
   loads.
+- [x] Existing-basemap ordering is implemented in current source (unreleased):
+  `styleOverrides.before` targets a native layer or public overlay group; `null` places the matched
+  layers above all others. Omitting it releases ordering ownership and restores the prior relative
+  position. Selector matches keep their relative order, and managed layers retain their own
+  ordering APIs. Integrated browser checks pass; final release qualification remains required.
+- [x] Defer overrides for absent basemap subjects without failing readiness, then retry when a
+  matching layer exists. Observed absence discards obsolete restoration ownership; invalid or
+  conflicting resources still fail. This correction remains unreleased.
 - [x] `images` property accepting SVG markup or URLs, rasterized portably (engines cannot decode SVG
   blobs everywhere), for symbol layers.
 - [x] Modular engine: load the feature modules implied by `addLayer`/`addSource` automatically, or a

@@ -31357,7 +31357,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.class.ts",
-              "line": 965,
+              "line": 987,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -31700,6 +31700,8 @@
           "src/components/media/map/map-anchors-native.test.ts",
           "src/components/media/map/map-anchors-scenario.test.ts",
           "src/components/media/map/map-app-parity.test.ts",
+          "src/components/media/map/map-basemap-order.property.test.ts",
+          "src/components/media/map/map-basemap-order.test.ts",
           "src/components/media/map/map-camera.test.ts",
           "src/components/media/map/map-composition-pattern.property.test.ts",
           "src/components/media/map/map-composition-pattern.test.ts",
@@ -31785,6 +31787,7 @@
           "src/components/media/map/map-style-input.property.test.ts",
           "src/components/media/map/map-style-input.test.ts",
           "src/components/media/map/map-style-lifecycle.test.ts",
+          "src/components/media/map/map-style-override-admission.property.test.ts",
           "src/components/media/map/map-style-overrides.test.ts",
           "src/components/media/map/map-tile-source-scale.test.ts",
           "src/components/media/map/map-vector-style-lowering.property.test.ts",
@@ -31978,6 +31981,8 @@
           "src/components/media/map/map-anchors-native.test.ts",
           "src/components/media/map/map-anchors-scenario.test.ts",
           "src/components/media/map/map-app-parity.test.ts",
+          "src/components/media/map/map-basemap-order.property.test.ts",
+          "src/components/media/map/map-basemap-order.test.ts",
           "src/components/media/map/map-camera.test.ts",
           "src/components/media/map/map-composition-pattern.property.test.ts",
           "src/components/media/map/map-composition-pattern.test.ts",
@@ -32063,6 +32068,7 @@
           "src/components/media/map/map-style-input.property.test.ts",
           "src/components/media/map/map-style-input.test.ts",
           "src/components/media/map/map-style-lifecycle.test.ts",
+          "src/components/media/map/map-style-override-admission.property.test.ts",
           "src/components/media/map/map-style-overrides.test.ts",
           "src/components/media/map/map-tile-source-scale.test.ts",
           "src/components/media/map/map-vector-style-lowering.property.test.ts",

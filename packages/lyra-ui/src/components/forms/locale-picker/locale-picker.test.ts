@@ -2097,3 +2097,176 @@ for (const width of [640, 320]) {
     });
   }
 }
+
+
+describe('popup lifecycle notifications', () => {
+  const names = ['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide'] as const;
+  function track(el: LyraLocalePicker): string[] {
+    const events: string[] = [];
+    for (const name of names) el.addEventListener(name, () => events.push(name));
+    return events;
+  }
+
+  it('announces direct open writes and settles both directions once', async () => {
+    const el = await fixture<LyraLocalePicker>(html`<lr-locale-picker without-flags .locales=${['en', 'fr']}></lr-locale-picker>`);
+    const events = track(el);
+    el.open = true;
+    await el.updateComplete;
+    expect(events[0]).to.equal('lr-show');
+    await waitUntil(() => events.includes('lr-after-show'));
+    el.open = false;
+    await waitUntil(() => events.includes('lr-after-hide'));
+    expect(events).to.deep.equal([...names]);
+  });
+
+  it('lets ordinary show and hide requests be vetoed before rendering', async () => {
+    const el = await fixture<LyraLocalePicker>(html`<lr-locale-picker without-flags .locales=${['en', 'fr']}></lr-locale-picker>`);
+    const veto = (event: Event) => event.preventDefault();
+    const events = track(el);
+    el.addEventListener('lr-show', veto);
+    el.open = true;
+    await el.updateComplete;
+    expect(el.open).to.equal(false);
+    expect(el.hasAttribute('open')).to.equal(false);
+    expect(events).to.deep.equal(['lr-show']);
+    el.removeEventListener('lr-show', veto);
+    el.open = true;
+    await waitUntil(() => events.includes('lr-after-show'));
+    el.addEventListener('lr-hide', veto);
+    el.open = false;
+    await el.updateComplete;
+    expect(el.open).to.equal(true);
+    expect(el.hasAttribute('open')).to.equal(true);
+    expect(events.filter(name => name === 'lr-after-hide')).to.have.length(0);
+  });
+
+  it('never emits a settled show superseded by a hide in its request listener', async () => {
+    const el = await fixture<LyraLocalePicker>(html`<lr-locale-picker without-flags .locales=${['en', 'fr']}></lr-locale-picker>`);
+    const events = track(el);
+    el.addEventListener('lr-show', () => { el.open = false; }, { once: true });
+    el.open = true;
+    await el.updateComplete;
+    expect(events[0]).to.equal('lr-show');
+    expect(el.open).to.equal(false);
+    await aTimeout(50);
+    expect(events).to.deep.equal(['lr-show']);
+  });
+
+  it('announces a forced disabled close without allowing a hide veto', async () => {
+    const el = await fixture<LyraLocalePicker>(html`<lr-locale-picker open without-flags .locales=${['en', 'fr']}></lr-locale-picker>`);
+    const events = track(el);
+    let cancelable: boolean | undefined;
+    el.addEventListener('lr-hide', event => { cancelable = event.cancelable; event.preventDefault(); });
+    el.disabled = true;
+    await el.updateComplete;
+    expect(cancelable).to.equal(false);
+    expect(el.open).to.equal(false);
+    await waitUntil(() => events.includes('lr-after-hide'));
+    expect(events).to.deep.equal(['lr-hide', 'lr-after-hide']);
+  });
+
+  it('keeps initial markup and same-task net-zero writes silent', async () => {
+    for (const initial of [false, true]) {
+      const events: string[] = [];
+      const record = (event: Event) => events.push(event.type);
+      const el = await fixture<LyraLocalePicker>(html`<lr-locale-picker ?open=${initial} without-flags .locales=${['en']}
+        @lr-show=${record} @lr-hide=${record} @lr-after-show=${record} @lr-after-hide=${record}></lr-locale-picker>`);
+      await aTimeout(30);
+      expect(events).to.deep.equal([]);
+      el.open = !initial;
+      el.open = initial;
+      await el.updateComplete;
+      expect(events).to.deep.equal([]);
+    }
+  });
+
+  it('cancels stale settled events on removal and reconnects closed', async () => {
+    const el = await fixture<LyraLocalePicker>(html`<lr-locale-picker without-flags .locales=${['en']}></lr-locale-picker>`);
+    const events = track(el);
+    const parent = el.parentNode!;
+    el.open = true;
+    await el.updateComplete;
+    expect(events[0]).to.equal('lr-show');
+    el.remove();
+    parent.appendChild(el);
+    await el.updateComplete;
+    await aTimeout(50);
+    expect(el.open).to.equal(false);
+    expect(events).to.deep.equal(['lr-show', 'lr-hide']);
+    el.open = true;
+    await waitUntil(() => events.includes('lr-after-show'));
+  });
+
+  it('does not reopen when a show listener disables and cancels the request', async () => {
+    const el = await fixture<LyraLocalePicker>(html`<lr-locale-picker without-flags .locales=${['en']}></lr-locale-picker>`);
+    const events = track(el);
+    el.addEventListener('lr-show', event => { el.disabled = true; event.preventDefault(); });
+    el.open = true;
+    await el.updateComplete;
+    expect(events[0]).to.equal('lr-show');
+    await aTimeout(50);
+    expect(el.open).to.equal(false);
+    expect(el.hasAttribute('open')).to.equal(false);
+    expect(events.includes('lr-after-show')).to.equal(false);
+  });
+
+  it('keeps search text when an ordinary hide is cancelled', async () => {
+    const el = await fixture<LyraLocalePicker>(html`<lr-locale-picker open searchable without-flags .locales=${['en', 'fr']}></lr-locale-picker>`);
+    const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
+    input.value = 'fr';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+    el.addEventListener('lr-hide', event => event.preventDefault());
+    el.open = false;
+    await el.updateComplete;
+    expect(el.open).to.equal(true);
+    expect(input.value).to.equal('fr');
+  });
+
+
+  it('lets an in-flight opening settle after an intervening hide is vetoed', async () => {
+    const el = await fixture<LyraLocalePicker>(html`<lr-locale-picker without-flags .locales=${['en', 'fr']}></lr-locale-picker>`);
+    const events = track(el);
+    el.addEventListener('lr-hide', event => event.preventDefault());
+    el.open = true;
+    await el.updateComplete;
+    expect(events).to.deep.equal(['lr-show']);
+    el.open = false;
+    await el.updateComplete;
+    expect(el.open).to.equal(true);
+    await waitUntil(() => events.includes('lr-after-show'));
+    expect(events).to.deep.equal(['lr-show', 'lr-hide', 'lr-after-show']);
+  });
+
+
+  it('retains Escape ownership when a close is vetoed', async () => {
+    const el = await fixture<LyraLocalePicker>(html`<lr-locale-picker without-flags .locales=${['en', 'fr']}></lr-locale-picker>`);
+    await focusByKeyboard(trigger(el));
+    await sendKeys({ press: 'Enter' });
+    await el.updateComplete;
+    expect(el.open).to.equal(true);
+    const veto = (event: Event) => event.preventDefault();
+    el.addEventListener('lr-hide', veto);
+    await sendKeys({ press: 'Escape' });
+    await el.updateComplete;
+    expect(el.open).to.equal(true);
+    expect(popupOverlay(el)?.isActive()).to.equal(true);
+    expect(el.shadowRoot!.activeElement === trigger(el)).to.equal(true);
+    el.removeEventListener('lr-hide', veto);
+    await sendKeys({ press: 'Escape' });
+    await el.updateComplete;
+    expect(el.open).to.equal(false);
+    expect(el.shadowRoot!.activeElement === trigger(el)).to.equal(true);
+  });
+
+  it('announces one forced hide when removal overtakes an unrendered close', async () => {
+    const el = await fixture<LyraLocalePicker>(html`<lr-locale-picker open without-flags .locales=${['en']}></lr-locale-picker>`);
+    const events = track(el);
+    el.open = false;
+    el.remove();
+    await el.updateComplete;
+    await aTimeout(30);
+    expect(events).to.deep.equal(['lr-hide']);
+  });
+
+});

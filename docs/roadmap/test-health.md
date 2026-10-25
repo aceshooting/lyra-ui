@@ -100,12 +100,23 @@ The baseline below predates the 30.0.0 work.
   including the chart-loading and progressive Markdown corrections. The integrated map and SSR slice
   passes 990 cases in each of Chromium, Firefox with WebGL, and WebKit; final release workflows
   remain required below.
-- [ ] Rebuild, regenerate measured quality and all public artifacts, and measure the final budgets.
+- [x] Verify locale-picker popup lifecycle notifications: all 133 cases pass in each of Chromium,
+  Firefox and WebKit, including request vetoes, forced close, superseded transitions, Escape ownership
+  and disconnect/reconnect. This focused result does not qualify the complete release.
+- [x] Verify declarative basemap ordering with the complete 106-file map/SSR suite: 1,940 cases pass
+  in each of Chromium, headed Firefox with WebGL, and WebKit, with zero retries. This includes
+  restoration after owned-layer recreation, bounded selector expansion, absent provider targets,
+  style replacement and native failure handling. Final exact-commit workflows remain required.
+- [x] Rebuild and regenerate measured quality, public references, editor metadata and packaged skills;
+  verify Storybook documentation freshness for all 311 tags.
+- [ ] Apply the hosted update of seven reviewed public source-contract records and verify final budgets.
 - [ ] Verify complete coverage and all release workflows on the final versioned commit. The completed
-  [candidate Quality tools run](https://github.com/aceshooting/lyra-ui/actions/runs/40132881188)
+  [candidate Quality tools run](https://github.com/aceshooting/lyra-ui/actions/runs/40162331143)
   includes the A/B benchmark; it does not qualify later commits.
-- [ ] Verify the deployed coverage endpoints after the artifact-pagination correction; a successful
-  docs workflow with its deploy step skipped does not establish that badges were published.
+- [x] Verify the deployed coverage JSON, rendered badge and GitHub README after the pagination
+  correction: the candidate reports 99.35% UI coverage.
+- [ ] Verify the final deployment retains the precise percentage and displays the CodeCov label and
+  logo, with README badges ordered CI, CodeQL, coverage.
 - [ ] Investigate and retain the unresolved status of the historical WebKit PDF hang. The observed failure
   included a 300-second test-file timeout and failed page shutdown. Repeated focused runs and two
   CI-shaped 160-file replicas, each containing 40 PDF executions, passed without reproducing it.
