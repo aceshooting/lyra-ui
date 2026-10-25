@@ -10,7 +10,9 @@ qualification and publication are complete; complete application migration remai
 
 A remaining regression in 30.1.0 affects asynchronous modular object-style replacement: active
 ordering overrides can reject readiness, and the public layer catalog can retain the previous
-style. The [30.2 maintenance plan](30.2-maintenance.md) tracks the correction and its qualification.
+style. The correction now passes affected tests in Chromium, Firefox with WebGL, and WebKit;
+it remains unreleased. The [30.2 maintenance plan](30.2-maintenance.md) tracks integrated
+qualification and delivery.
 
 Applications can replace camera, padding, popup, fitting and missing-data workarounds with the
 supported component API. Published 30.1.0 corrections cover URL-style readiness, anchor visibility

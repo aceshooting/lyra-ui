@@ -5559,7 +5559,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       },
       mutate: initial ? mutate : () => { this.peerEvents.rotate(map); if (current()) mutate?.(); },
       isStyleReady: () => {
-        // URL replacements retain the old ready style while fetching/preparing in some peers.
+        // Asynchronous replacements retain the old ready style while fetching or preparing.
         // Their full-replacement style.load event is the actual commit boundary.
         if (waitForStyleLoad) return false;
         const ready = typeof map.isStyleLoaded === 'function' ? map.isStyleLoaded() === true
@@ -5688,14 +5688,15 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     } else if (changed.has('mapStyle') && !this._map && this._maplibreModule && hasMapStyle(this.mapStyle)) {
       this.tryConstructMap();
     } else if (changed.has('mapStyle') && this._map) {
-      const replaceStyle = typeof this.mapStyle === 'string' || !this._styleLoaded;
+      const replaceStyle = typeof this._map.prepareFeatures === 'function' || typeof this.mapStyle === 'string' || !this._styleLoaded;
       this._styleLoaded = false;
       this._styleLayers = EMPTY_STYLE_LAYERS; this._styleSources = EMPTY_STYLE_SOURCES;
       const map = this._map;
       this.beginStyleReadiness(map, false, () => {
         for (const sourceId of this.appliedPointIcons.keys()) this.removePointIcons(sourceId);
-        // Rebuild URL styles so even unchanged responses emit a committed style.load. A diff's
-        // transform callback precedes asynchronous modular preparation and cannot signal commit.
+        // Use the live peer's capability: engine changes take effect only after reconnecting.
+        // Rebuild modular and URL styles so even unchanged inputs emit a committed style.load.
+        // Modular object diffs prepare asynchronously while the old style still reports ready.
         // Any superseding style replaces an unloaded basemap instead of attempting to diff it.
         map.setStyle(this.mapStyle as never, replaceStyle ? { diff: false } : undefined);
       }, replaceStyle);

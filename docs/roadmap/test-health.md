@@ -106,7 +106,8 @@ The baseline below predates the 30.0.0 work.
 
 A later regression in 30.1.0 affects asynchronous modular object-style replacement: active
 ordering overrides can reject readiness, and the public layer catalog can retain the previous
-style. Its correction and qualification remain open in the [30.2 maintenance plan](30.2-maintenance.md).
+style. Its correction now passes affected three-engine regressions but remains unreleased;
+integrated qualification is tracked in the [30.2 maintenance plan](30.2-maintenance.md).
 
 - [x] Verify the expanded chart/map/data and conversation/retrieval/internal coverage cases,
   including the chart-loading and progressive Markdown corrections. The integrated map and SSR slice

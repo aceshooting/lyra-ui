@@ -70,17 +70,17 @@ export interface LyraPptxViewerEventMap extends LyraTextViewerTargetEventMap {
 class LyraPptxViewerBase extends LyraElement<LyraPptxViewerEventMap> {}
 
 /**
- * Best-effort client-side PPTX viewer backed by `@aiden0z/pptx-renderer`.
- * The fidelity notice is intentionally always visible because animations,
- * equations, embedded OLE objects, notes, and several advanced effects are
- * not represented by the renderer.
- * Remote bytes and measured ZIP expansion are bounded before renderer-owned parsing begins; a
- * peer that does not expose a complete, safely bounded ZIP-limits capability fails closed.
- * A `text-quote` anchor resolves anywhere in the deck (preferring the hit with its `prefix`/`suffix`);
- * a `page` anchor navigates to that one-based slide.
- * Lyra assigns no fragment ids to slides. A fragment anchor can resolve only an exact DOM `id`
- * exposed in the optional renderer's currently mounted output; renderer-owned ids are not a
- * stable Lyra navigation contract. Use `page`/`goToSlide()` or a text-quote anchor instead.
+ * Best-effort client-side PPTX viewer with optional `@aiden0z/pptx-renderer`.
+ * An always-visible fidelity notice covers unrendered animations, equations, embedded OLE
+ * objects, notes, and several advanced effects.
+ * Remote bytes and measured ZIP expansion are bounded before renderer parsing. Peers lacking
+ * complete, safely bounded ZIP limits fail closed.
+ * Slides and thumbnails block external images, picture fills, audio, video, and posters linked
+ * by the presentation. Embedded package media remains; linked media is omitted or gets a placeholder.
+ * Click-driven hyperlinks are unchanged.
+ * `text-quote` searches all slides, preferring `prefix`/`suffix` matches; `page` navigates one-based slides.
+ * Lyra assigns no slide fragment IDs. Fragments require exact DOM IDs in mounted renderer output;
+ * these IDs are unstable. Use `page`/`goToSlide()` or `text-quote`.
  *
  * @customElement lr-pptx-viewer
  * @event lr-load - Fired after a presentation opens. `detail: { slideCount }`.
@@ -758,6 +758,7 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     if (!this.isConnected || generation !== this.generation || !this.containerEl) return;
     try {
       const openedViewer = await module.PptxViewer.open(buffer, this.containerEl, {
+        externalMedia: 'block',
         zipLimits: module.RECOMMENDED_ZIP_LIMITS,
         listOptions: { windowed: true },
       });

@@ -76,11 +76,14 @@ export class AccessibleTextController implements ReactiveController {
         accessibleTextRecordsMatter(observer, pending);
       const previousRoot = this.slotRoot;
       this.bindSlotRoot();
+      let records = relevant ? pending : [];
       if (!preserveBinding || pending.length > 0 || this.drainedRecords || previousRoot !== this.slotRoot)
-        this.bind();
-      if (relevant) queueMicrotask(() => {
+        records = records.concat(this.bindObserver());
+      // Rebinding can drain shared ancestor records too. Both sources notify after Lit has
+      // finished its update; explicit bind() and takeRecords() keep synchronous delivery.
+      if (records.length) queueMicrotask(() => {
         if (this.active && this.enabled && this.observer === observer && this.host.isConnected)
-          this.notify(pending);
+          this.notify(records);
       });
     }
   }
@@ -124,10 +127,15 @@ export class AccessibleTextController implements ReactiveController {
 
   /** Rebind after a render path or assigned content changes. */
   bind(): void {
+    const pending = this.bindObserver();
+    if (pending.length && this.active && this.enabled) this.notify(pending);
+  }
+
+  private bindObserver(): MutationRecord[] {
     const pending = this.takeAncestorRecords();
     bindAccessibleTextObserver(this.observer, this.host, this.extraAttributes, this.upgrades, this.references, this.ancestors);
     this.drainedRecords = false;
-    if (pending.length && this.active && this.enabled) this.notify(pending);
+    return pending;
   }
 
   /** Preserve observation for one render known not to change content or its exposure. Pending

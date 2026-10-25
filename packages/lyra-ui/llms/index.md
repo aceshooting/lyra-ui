@@ -241,7 +241,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-calendar-viewer` · lr-calendar-viewer.js · `stable` since `4.0.0` — Parses `.ics` calendars with the optional `ical.js` peer and renders each VEVENT as plain text, preserving summaries, DATE/DATE-TIME...
 - `lr-archive-viewer` · lr-archive-viewer.js · `stable` since `4.0.0` — Lists names and declared uncompressed sizes in a ZIP archive without rendering entry contents or loading an archive parser.
 - `lr-ebook-viewer` · lr-ebook-viewer.js · `stable` since `4.0.0` — Renders an EPUB with the optional `epubjs` peer.
-- `lr-pptx-viewer` · lr-pptx-viewer.js · `stable` since `4.0.0` — Best-effort client-side PPTX viewer backed by `@aiden0z/pptx-renderer`.
+- `lr-pptx-viewer` · lr-pptx-viewer.js · `stable` since `4.0.0` — Best-effort client-side PPTX viewer with optional `@aiden0z/pptx-renderer`.
 - `lr-svg-viewer` · lr-svg-viewer.js · `stable` since `4.0.0` — Fetches and safely renders an inline SVG document.
 - `lr-html-viewer` · lr-html-viewer.js · `stable` since `4.0.0` — Fetches and safely renders an inline HTML document.
 - `lr-dataset-viewer` · lr-dataset-viewer.js · `stable` since `4.0.0` — Fetches delimited text and renders a virtualized, accessible data table: a `role="table"` container with a sticky `role="row"` header...

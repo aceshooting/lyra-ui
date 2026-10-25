@@ -9,7 +9,7 @@ const meta: Meta = {
   parameters: {
     docs: {
       description: {
-        component: 'Best-effort, client-side PPTX rendering with a persistent notice about unsupported advanced PowerPoint features.',
+        component: 'Best-effort, client-side PPTX rendering with a persistent notice about unsupported advanced PowerPoint features. Embedded package media remains available; presentation-linked external media is blocked in slides and thumbnails.',
       },
     },
   },

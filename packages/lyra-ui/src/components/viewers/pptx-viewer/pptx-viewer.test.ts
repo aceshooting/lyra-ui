@@ -88,6 +88,7 @@ function fakeModule(
 ) {
   const calls = {
     open: 0,
+    openOptions: undefined as Record<string, unknown> | undefined,
     goToSlide: 0,
     destroy: 0,
     searchText: 0,
@@ -139,7 +140,8 @@ function fakeModule(
     viewer,
     module: {
       PptxViewer: {
-        open: async () => {
+        open: async (_input: ArrayBuffer, _container: HTMLElement, options?: Record<string, unknown>) => {
+          calls.openOptions = options;
           calls.open++;
           return viewer;
         },
@@ -158,6 +160,23 @@ function stubFetch(ok = true): () => void {
 }
 
 describe("lr-pptx-viewer", () => {
+  it('blocks external media in the renderer options while retaining ZIP limits and windowing', async () => {
+    const fake = fakeModule();
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      const loaded = oneEvent(el, 'lr-load');
+      el.src = 'https://example.test/presentation.pptx';
+      await loaded;
+      expect(fake.calls.openOptions?.['externalMedia']).to.equal('block');
+      expect(fake.calls.openOptions?.['zipLimits']).to.deep.equal({});
+      expect(fake.calls.openOptions?.['listOptions']).to.deep.equal({ windowed: true });
+    } finally {
+      restore();
+    }
+  });
+
   it("leaves a non-empty host aria-label on the host, then uses label, then falls through to name and a localized default when label is omitted", async () => {
     const el = (await fixture(
       html`<lr-pptx-viewer

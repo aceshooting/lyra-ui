@@ -33247,12 +33247,13 @@ style, await `whenIdle()` for the current resource and rendering work. Observe
 rejection when replacing styles or disconnecting; a returned `true` from a synchronous command
 means admission, not asynchronous completion.
 
-Replacing `mapStyle` with a URL rebuilds the native basemap with `setStyle(style, { diff: false })`
-and waits for the replacement's committed `style.load` before restoring owned layers, images and
-style overrides or reporting readiness. A style that supersedes an unfinished replacement also
-uses a full replacement. This gives unchanged URL responses a reliable completion event, at the
-cost of the peer's style-diff optimization. Inline replacements of an already loaded style keep
-the peer's default diff behavior. These replacements preserve the map instance and camera.
+URL `mapStyle` replacements and new objects on the modular peer use `setStyle(style, { diff: false })`.
+Readiness waits for the replacement's committed `style.load` before capturing its catalog and
+restoring owned layers, images and style overrides. Superseding an unfinished replacement also
+rebuilds the style. This trades style diffs for reliable completion, including unchanged URL
+responses and structurally equal new modular objects. Reassigning the exact same object is a no-op.
+Loaded native MapLibre styles retain synchronous inline diffs. The live peer determines behavior;
+`engine` changes apply after reconnect. Map and camera identity are preserved.
 
 **On-demand runtimes:** optional `lr-map` features load their code on first use, so a bundler that
 splits chunks keeps them out of the initial bundle. Drawing and vertex editing load when `drawMode`
@@ -42234,11 +42235,15 @@ wants that deferred too can instead import
 same registration lazily and exports `PPTX_VIEWER_TAG` (`'lr-pptx-viewer'`) as a stable reference to
 the tag it eventually registers.
 
-Remote resources are capped at 25 MB and measured ZIP expansion is capped at 256 MB before the
-renderer opens the archive; exceeding either ceiling surfaces the localized
-`documentPreviewResourceTooLarge` message instead of the presentation. The optional peer must also
-expose its complete recommended ZIP-limits capability within Lyra's safety ceilings. Missing,
-malformed, or more-permissive limits make the peer unavailable and the viewer fails closed.
+Before the renderer opens an archive, remote resources are capped at 25 MB and measured ZIP
+expansion at 256 MB. Exceeding either replaces the presentation with the localized
+`documentPreviewResourceTooLarge` message. The optional peer must expose complete recommended
+ZIP limits within Lyra's safety ceilings; missing, malformed, or more-permissive limits make it
+unavailable and the viewer fails closed.
+
+Initial rendering, slide navigation, and thumbnails block presentation-linked external images,
+background and shape/text picture fills, audio, video, and posters. Embedded package media remains
+available; linked media is omitted or replaced by a placeholder. Click-driven hyperlinks are unchanged.
 
 The peer instance is immediately wrapped in a validated `PptxViewerAdapter`; the component observes
 only readonly slide metadata, complete-model search/navigation/highlight/thumbnail capabilities and

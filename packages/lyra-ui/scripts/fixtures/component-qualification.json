@@ -41365,6 +41365,7 @@
         "tests": [
           "src/components/viewers/pptx-viewer/pptx-loader.test.ts",
           "src/components/viewers/pptx-viewer/pptx-resource-guard.test.ts",
+          "src/components/viewers/pptx-viewer/pptx-viewer-external-media.test.ts",
           "src/components/viewers/pptx-viewer/pptx-viewer-register.test.ts",
           "src/components/viewers/pptx-viewer/pptx-viewer.test.ts"
         ],

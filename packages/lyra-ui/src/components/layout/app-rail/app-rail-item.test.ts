@@ -6,6 +6,8 @@ import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../.
 import { sendKeys } from '@web/test-runner-commands';
 import { focusAfterPointer, focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resolvedInShadowUnshrunk as resolvedInShadow } from '../../../../test/shadow-style.js';
+import { captureReentrantUpdateWarning } from '../../../../test/expected-lit-update.js';
+import type { LyraAppRail } from './app-rail.js';
 
 if (!customElements.get('app-rail-icon-forwarder')) {
   customElements.define(
@@ -464,6 +466,48 @@ describe("current", () => {
 });
 
 describe("tooltip", () => {
+  it('keeps hover, leave and keyboard peek free of post-update warnings', async () => {
+    const warnings = await captureReentrantUpdateWarning('lr-app-rail-item', async () => {
+      const wrapper = await fixture<HTMLElement>(html`
+        <div style="display:flex;inline-size:700px;block-size:360px">
+          <lr-app-rail auto-hide resizable force-mode="icon-only" without-toggle label="Navigation"
+            peek-open-delay="120" peek-close-delay="160">
+            <span slot="header">Example</span>
+            <lr-app-rail-item tooltip href="#one"><span slot="start">A</span>One</lr-app-rail-item>
+            <lr-app-rail-item tooltip href="#two"><span slot="start">B</span>Two</lr-app-rail-item>
+          </lr-app-rail>
+          <main style="flex:1 1 auto"><button type="button">Outside</button></main>
+        </div>
+      `);
+      const rail = wrapper.querySelector<LyraAppRail>('lr-app-rail')!;
+      const item = wrapper.querySelector<LyraAppRailItem>('lr-app-rail-item')!;
+      const base = item.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+      try {
+        await hoverUntilMatched(base, 'the first rail link was not hovered');
+        // Entering alone does not open the rail. Move again inside after the boundary event,
+        // whose movement can be zero even though the pointer now matches :hover.
+        const inside = base.getBoundingClientRect();
+        await sendMouse({ type: 'move', position: [
+          Math.round(inside.left + inside.width / 2 + 4), Math.round(inside.top + inside.height / 2),
+        ] });
+        await waitUntil(() => rail.peeking, 'pointer hover did not open the rail');
+        const outside = wrapper.querySelector('main')!.getBoundingClientRect();
+        await sendMouse({ type: 'move', position: [Math.round(outside.right - 10), Math.round(outside.bottom - 10)] });
+        await waitUntil(() => !rail.peeking && item.hasAttribute('icon-only'), 'pointer leave did not restore the strip');
+        await focusByKeyboard(base);
+        await waitUntil(() => rail.peeking, 'keyboard focus did not open the rail');
+        await item.updateComplete;
+        expect(item.shadowRoot!.activeElement === base, 'the link retains keyboard focus').to.equal(true);
+        expect(base.getAttribute('href')).to.equal('#one');
+        const label = item.shadowRoot!.querySelector<HTMLElement>('[part="label"]')!;
+        expect(getComputedStyle(label).display, 'the peek exposes the link label').not.to.equal('none');
+        await focusByKeyboard(wrapper.querySelector<HTMLButtonElement>('main button')!);
+        await waitUntil(() => !rail.peeking, 'leaving keyboard focus did not close the rail');
+      } finally { await resetMouse(); }
+    });
+    expect(warnings, 'the native pointer/focus sequence must not schedule an update during post-update').to.equal(0);
+  });
+
   it("shows a flyout with the label text on hover/focus when tooltip is set and icon-only is active", async () => {
     const el = (await fixture(
       html`<lr-app-rail-item tooltip icon-only>Dashboard</lr-app-rail-item>`

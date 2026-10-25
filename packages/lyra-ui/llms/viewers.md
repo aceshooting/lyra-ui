@@ -1012,11 +1012,15 @@ wants that deferred too can instead import
 same registration lazily and exports `PPTX_VIEWER_TAG` (`'lr-pptx-viewer'`) as a stable reference to
 the tag it eventually registers.
 
-Remote resources are capped at 25 MB and measured ZIP expansion is capped at 256 MB before the
-renderer opens the archive; exceeding either ceiling surfaces the localized
-`documentPreviewResourceTooLarge` message instead of the presentation. The optional peer must also
-expose its complete recommended ZIP-limits capability within Lyra's safety ceilings. Missing,
-malformed, or more-permissive limits make the peer unavailable and the viewer fails closed.
+Before the renderer opens an archive, remote resources are capped at 25 MB and measured ZIP
+expansion at 256 MB. Exceeding either replaces the presentation with the localized
+`documentPreviewResourceTooLarge` message. The optional peer must expose complete recommended
+ZIP limits within Lyra's safety ceilings; missing, malformed, or more-permissive limits make it
+unavailable and the viewer fails closed.
+
+Initial rendering, slide navigation, and thumbnails block presentation-linked external images,
+background and shape/text picture fills, audio, video, and posters. Embedded package media remains
+available; linked media is omitted or replaced by a placeholder. Click-driven hyperlinks are unchanged.
 
 The peer instance is immediately wrapped in a validated `PptxViewerAdapter`; the component observes
 only readonly slide metadata, complete-model search/navigation/highlight/thumbnail capabilities and

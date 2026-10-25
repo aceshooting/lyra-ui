@@ -343,6 +343,52 @@ describe('lr-map declarative owned resources', () => {
     await waitUntil(() => peer.order.join() === 'base,boundary_country_inner,labels');
   });
 
+  it('waits for a modular object style commit before capturing basemap ordering and paint', async () => {
+    const { element, peer } = await mount();
+    const seed = (border: string) => {
+      peer.layers.clear(); peer.paint.clear(); peer.order = [];
+      for (const id of ['base', border, 'labels']) {
+        const layer = { id, type: id === border ? 'line' : 'background' };
+        peer.addLayer(layer);
+      }
+      peer.paint.set(`${border}:line-color`, 'black');
+    };
+    seed('boundary-country');
+    element.styleOverrides = [
+      { layerId: 'boundary-country', before: null, paint: { 'line-color': 'red' } },
+      { layerId: 'boundary_country_inner', before: null, paint: { 'line-color': 'red' } },
+    ];
+    await element.updateComplete;
+    await load(element, peer);
+    peer.idle = true; peer.fire('idle'); await element.whenIdle();
+    expect(peer.order).to.deep.equal(['base', 'labels', 'boundary-country']);
+    expect(element.styleLayers.map(layer => layer.id)).to.deep.equal(['base', 'boundary-country', 'labels']);
+    let commit!: () => void;
+    peer.setStyle = () => {
+      // Preparation retains the old ready style until this explicit commit.
+      commit = () => { seed('boundary_country_inner'); peer.fire('style.load'); };
+      return peer;
+    };
+    let ready = false;
+    // The next connection selects this engine; the current modular peer still owns the style.
+    element.engine = 'maplibre';
+    element.mapStyle = { version: 8, sources: {}, layers: [] };
+    const settled = element.whenStyleReady().then(() => { ready = true; });
+    await element.updateComplete;
+    await new Promise<void>(resolve => { setTimeout(resolve, 0); });
+    expect(ready, 'The previous style must not satisfy object replacement readiness').to.equal(false);
+    commit();
+    await settled; await element.whenIdle();
+    expect(peer.order).to.deep.equal(['base', 'labels', 'boundary_country_inner']);
+    expect(peer.paint.get('boundary_country_inner:line-color')).to.equal('red');
+    expect(element.styleLayers.map(layer => layer.id)).to.deep.equal(['base', 'boundary_country_inner', 'labels']);
+    expect(peer.removed).to.equal(false);
+    element.styleOverrides = [];
+    await element.updateComplete; await element.whenIdle();
+    expect(peer.order).to.deep.equal(['base', 'boundary_country_inner', 'labels']);
+    expect(peer.paint.get('boundary_country_inner:line-color')).to.equal('black');
+  });
+
   it('re-matches selector placement on style replacement and restores the new style baseline', async () => {
     const { element, peer } = await mount();
     const seed = (ids: string[]) => {

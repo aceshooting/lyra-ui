@@ -284,3 +284,57 @@ it('delivers queued ancestor visibility before a host rebind and synchronous rea
     expect(changes).equal(before);
   } finally { controller.hostDisconnected(); wrapper.remove(); }
 });
+
+it('delivers pending ancestor and label changes after hostUpdated returns, preserving synchronous reads', async () => {
+  const wrapper = document.createElement('div');
+  const label = document.createTextNode('Forwarded'); wrapper.append(label);
+  const host = controllerHost(() => undefined); host.append(document.createElement('slot'));
+  wrapper.attachShadow({ mode: 'open' }).append(host); document.body.append(wrapper);
+  let updating = false; let cached = '';
+  const deliveries: { duringUpdate: boolean; types: string[] }[] = [];
+  const controller = new AccessibleTextController(host, [''], records => {
+    deliveries.push({ duringUpdate: updating, types: records.map(record => record.type) });
+    cached = controller.text();
+  });
+  try {
+    controller.hostConnected(); cached = controller.text();
+    await new Promise<void>(resolve => setTimeout(resolve, 0));
+    deliveries.length = 0;
+    label.data = 'Updated'; wrapper.hidden = true;
+    updating = true;
+    try { controller.hostUpdated(); } finally { updating = false; }
+    expect(deliveries.length, 'post-update observation must not notify synchronously').to.equal(0);
+    await new Promise<void>(resolve => queueMicrotask(resolve));
+    expect(deliveries.length).to.be.greaterThan(0);
+    expect(deliveries.some(delivery => delivery.duringUpdate)).to.equal(false);
+    expect(deliveries.flatMap(delivery => delivery.types)).to.include('attributes');
+    expect(deliveries.flatMap(delivery => delivery.types)).to.include('characterData');
+    expect(cached).to.equal('');
+    wrapper.hidden = false;
+    controller.takeRecords();
+    expect(cached, 'an explicit synchronous read still observes current ancestor visibility').to.equal('Updated');
+  } finally { controller.hostDisconnected(); wrapper.remove(); }
+});
+
+for (const retirement of ['disconnect', 'disable', 'reconnect', 'adopt'] as const) {
+  it(`discards pending post-update ancestor delivery on ${retirement}`, async () => {
+    const wrapper = document.createElement('div');
+    const host = controllerHost(() => undefined); host.textContent = 'Label'; wrapper.append(host);
+    document.body.append(wrapper);
+    let changes = 0;
+    const controller = new AccessibleTextController(host, [''], () => { changes++; });
+    try {
+      controller.hostConnected();
+      await new Promise<void>(resolve => setTimeout(resolve, 0));
+      changes = 0;
+      wrapper.hidden = true;
+      controller.hostUpdated();
+      if (retirement === 'disconnect' || retirement === 'reconnect') controller.hostDisconnected();
+      if (retirement === 'disable') controller.setEnabled(false);
+      if (retirement === 'reconnect') controller.hostConnected();
+      if (retirement === 'adopt') controller.adopted();
+      await new Promise<void>(resolve => setTimeout(resolve, 0));
+      expect(changes, 'a retired observation must not notify the current host').to.equal(0);
+    } finally { controller.hostDisconnected(); wrapper.remove(); }
+  });
+}

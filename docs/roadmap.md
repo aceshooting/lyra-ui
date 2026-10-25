@@ -21,7 +21,7 @@ still open.
   [test health](roadmap/test-health.md) (coverage, speed, flakiness).
 - **After 30.1.0:** [geospatial scenes and synchronized playback](roadmap/geospatial-scenes.md).
   Planned and unstarted; outside the 30.1.0 release gate, with no assigned version or date.
-- **30.2.0 maintenance target:** [corrections, performance work and optional consolidation](roadmap/30.2-maintenance.md). Planned and unimplemented; affected companions version independently.
+- **30.2.0 maintenance target:** [corrections, performance work and consolidation](roadmap/30.2-maintenance.md). Implementation in progress; unpublished. Affected companions version independently.
 - **Rationale for the style-axis, token and migration designs:** the [RFCs](rfcs/).
 
 ## Published 30.0.0, 30.1.0 and current maintenance
@@ -197,7 +197,7 @@ packages version independently. A target moves only when scope changes, never to
 
 | Target | Package versions | Scope |
 |---|---|---|
-| 30.2.0 | lyra-ui, lyra-ide and lyra-translations 30.2.0; affected companions independently | [Maintenance corrections, measured performance work and optional consolidation](roadmap/30.2-maintenance.md); planned and unimplemented |
+| 30.2.0 | lyra-ui, lyra-ide and lyra-translations 30.2.0; affected companions independently | [Maintenance corrections, measured performance work and consolidation](roadmap/30.2-maintenance.md); implementation in progress, unpublished |
 | 30.x | lyra-3d 1.x | Further graph visuals and 100k-node scale |
 | independent | lyra-docs 0.7.0 to 1.0.0 | Native document editing phases 4 to 8 |
 | on demand | lyra-ui minor | Fluent-informed look |

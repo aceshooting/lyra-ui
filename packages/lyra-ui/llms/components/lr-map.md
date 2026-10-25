@@ -63,12 +63,13 @@ style, await `whenIdle()` for the current resource and rendering work. Observe
 rejection when replacing styles or disconnecting; a returned `true` from a synchronous command
 means admission, not asynchronous completion.
 
-Replacing `mapStyle` with a URL rebuilds the native basemap with `setStyle(style, { diff: false })`
-and waits for the replacement's committed `style.load` before restoring owned layers, images and
-style overrides or reporting readiness. A style that supersedes an unfinished replacement also
-uses a full replacement. This gives unchanged URL responses a reliable completion event, at the
-cost of the peer's style-diff optimization. Inline replacements of an already loaded style keep
-the peer's default diff behavior. These replacements preserve the map instance and camera.
+URL `mapStyle` replacements and new objects on the modular peer use `setStyle(style, { diff: false })`.
+Readiness waits for the replacement's committed `style.load` before capturing its catalog and
+restoring owned layers, images and style overrides. Superseding an unfinished replacement also
+rebuilds the style. This trades style diffs for reliable completion, including unchanged URL
+responses and structurally equal new modular objects. Reassigning the exact same object is a no-op.
+Loaded native MapLibre styles retain synchronous inline diffs. The live peer determines behavior;
+`engine` changes apply after reconnect. Map and camera identity are preserved.
 
 **On-demand runtimes:** optional `lr-map` features load their code on first use, so a bundler that
 splits chunks keeps them out of the initial bundle. Drawing and vertex editing load when `drawMode`

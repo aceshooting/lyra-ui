@@ -6,7 +6,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { LyraMap, LYRA_MAP_EMPTY_STYLE } from './map.js';
 import { loadMapControlRuntime, loadMapDrawingRuntime, loadMapFeatureStateRuntime, loadMapHashRuntime, loadMapOwnedFeatureRuntime } from './map-feature-loader.js';
-import type { LyraMapGeoJsonDataLayer, LyraMapImage, LyraMapInstance, LyraMapOverlays, LyraMapPickDetail, LyraMapDrawingSnapshot, LyraMapInteractionDetail, LyraMapPointerDetail } from './map.class.js';
+import type { LyraMapGeoJsonDataLayer, LyraMapImage, LyraMapInstance, LyraMapOverlays, LyraMapPickDetail, LyraMapDrawingSnapshot, LyraMapInteractionDetail, LyraMapPointerDetail, LyraMapStyleSpecification } from './map.class.js';
 void LyraMap;
 
 /** Only real native methods, reached through the documented map getter. */
@@ -135,7 +135,69 @@ describe('lr-map actual modular companion integration', function () {
   });
   afterEach(async () => { try { await resetMouse(); } finally { try { fixtureCleanup(); } finally { setWorkerUrl(previousWorkerUrl); } } });
 
+  it('settles an unchanged native object diff without waiting for a style event', async () => {
+    const { el } = await mount(element => { element.engine = 'maplibre'; element.overlays = {}; });
+    const map = peer(el), layer = map.getLayer('plain-background');
+    const initialCenter = { ...map.getCenter() }, initialZoom = map.getZoom();
+    let nativeStyleEvents = 0;
+    map.on('style.load', () => { nativeStyleEvents += 1; });
+    // The connected native peer still supports synchronous diffs after this configuration write.
+    el.engine = 'modular';
+    el.mapStyle = localStyle();
+    await el.whenStyleReady(); await el.whenIdle();
+    expect(nativeStyleEvents).to.equal(0);
+    expect(el.map === map).to.equal(true);
+    expect(map.getLayer('plain-background') === layer).to.equal(true);
+    expect({ ...map.getCenter() }).to.deep.equal(initialCenter);
+    expect(map.getZoom()).to.equal(initialZoom);
+    expect(el.styleLayers.map(entry => entry.id)).to.deep.equal(['plain-background']);
+  });
+
   for (const engine of ['modular', 'maplibre'] as const) {
+    it(`restores basemap ordering and paint after object style replacements in ${engine}`, async () => {
+      const style = (id: string): LyraMapStyleSpecification => ({ version: 8, sources: {
+        boundary: { type: 'geojson', data: { type: 'FeatureCollection', features: [
+          { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [[-10, 0], [10, 0]] } },
+        ] } },
+      }, layers: [
+        { id: 'background', type: 'background', paint: { 'background-color': '#ffffff' } },
+        { id, type: 'line', source: 'boundary', paint: { 'line-color': '#000000', 'line-width': 4 } },
+        { id: 'cover', type: 'line', source: 'boundary', paint: { 'line-color': '#0000ff', 'line-width': 8 } },
+      ] });
+      const { el } = await mount(element => {
+        element.engine = engine; element.mapStyle = style('boundary-country');
+        element.styleOverrides = ['boundary-country', 'boundary_country_inner'].map(layerId => ({
+          layerId, before: null, paint: { 'line-color': '#ff0000' },
+        }));
+      });
+      const map = peer(el);
+      expect(map.getStyle().layers.map(layer => layer.id)).to.deep.equal(['background', 'cover', 'local-fill', 'boundary-country']);
+      const initialCenter = { ...map.getCenter() }, initialZoom = map.getZoom();
+      let styleEvents = 0;
+      el.addEventListener('lr-map-style-load', () => { styleEvents += 1; });
+      el.mapStyle = el.mapStyle;
+      await el.updateComplete; await el.whenStyleReady(); await el.whenIdle();
+      expect(styleEvents, 'Reassigning the same style object stays idle').to.equal(0);
+      // Engine changes are deferred to reconnect, including when a new style arrives with them.
+      el.engine = engine === 'modular' ? 'maplibre' : 'modular';
+      for (const id of ['boundary_country_inner', 'boundary_country_inner', 'boundary-country']) {
+        el.mapStyle = style(id);
+        await el.whenStyleReady(); await el.whenIdle();
+        expect(el.map === map).to.equal(true);
+        expect(map.getStyle().layers.map(layer => layer.id)).to.deep.equal(['background', 'cover', 'local-fill', id]);
+        expect(Boolean(map.getSource('local-area'))).to.equal(true);
+        expect({ ...map.getCenter() }).to.deep.equal(initialCenter);
+        expect(map.getZoom()).to.equal(initialZoom);
+        expect(map.getPaintProperty(id, 'line-color')).to.equal('#ff0000');
+        expect(el.styleLayers.map(layer => layer.id)).to.deep.equal(['background', id, 'cover']);
+      }
+      expect(styleEvents).to.equal(3);
+      el.styleOverrides = [];
+      await el.updateComplete; await el.whenIdle();
+      expect(map.getStyle().layers.map(layer => layer.id)).to.deep.equal(['background', 'boundary-country', 'cover', 'local-fill']);
+      expect(map.getPaintProperty('boundary-country', 'line-color')).to.equal('#000000');
+    });
+
     it(`rejects an invalid URL style and shows its fallback in ${engine}`, async () => {
       const { el } = await mount(element => { element.engine = engine; element.overlays = {}; });
       const originalFetch = window.fetch;
