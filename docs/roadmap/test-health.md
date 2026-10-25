@@ -104,7 +104,8 @@ The baseline below predates the 30.0.0 work.
 
 ### Current 30.2 maintenance qualification
 
-Status: unpublished; complete exact-commit qualification remains open. The 44-file affected UI
+Status: package publication, exact-commit qualification and website production delivery complete
+on 2026-10-25. The 44-file affected UI
 slice passes in Chromium, Firefox with WebGL, and WebKit, retaining its engine-specific skips.
 Map preparation/runtime parity, provenance and packed three-engine checks pass; complete map
 coverage records 100% lines and statements for the exercised candidate. Shared coverage helpers
@@ -159,17 +160,48 @@ do not establish Codecov full-hit coverage or a release pass.
   Eight of eighteen successful 100k loads have commit-overlapping main-thread tasks of 51–74 ms;
   1M XYZ/PLY reaches 253–283 ms without proven parser causation. Sampled main-realm heap excludes
   worker/GPU/whole-process peaks. Retain these limits; no blanket jank-free claim is made.
-- [ ] Stamp final package versions, regenerate version-derived artifacts and remeasure budgets;
+- [x] Stamp final package versions, regenerate version-derived artifacts and remeasure budgets;
   preserve behavioral and coverage policy.
-- [ ] Complete final companion coverage/mutation/packed checks and the exact-release CI, Test All
+- [x] Complete final companion coverage/mutation/packed checks and the exact-release CI, Test All
   Browsers, full browser-engine and Quality tools runs, including the A/B benchmark.
-- [ ] Record complete exact-commit UI Codecov totals against the published 30.1.0 baseline,
+- [x] Record complete exact-commit UI Codecov totals against the published 30.1.0 baseline,
   retaining the distinction between full-hit coverage and raw line/statement floors.
-- [ ] Verify protected publication, package integrity/provenance and website production delivery.
+- [x] Verify protected package publication and package integrity/provenance.
+- [x] Verify website production delivery: 71 locale checks and 311 component examples pass
+  in each of five browser channels; deployment and live smoke checks pass, and production catalog,
+  package and changelog freshness checks confirm 30.2.0 and 311 components.
 
-The dependency-upgrade prerequisite is complete. CodeQL and Scorecard pass, but the prior complete
-CI result failed; focused repairs do not turn it into a release pass. Complete exact-source green
-qualification remains required.
+Published on 2026-10-25 from commit
+[`7e47b23e71a8c8382aa614004ffc579c4f79487a`](https://github.com/aceshooting/lyra-ui/commit/7e47b23e71a8c8382aa614004ffc579c4f79487a).
+Version stamping and version-stamped budget checks are complete. Exact-commit
+[CI](https://github.com/aceshooting/lyra-ui/actions/runs/40228786282) (43 successful jobs),
+[Test All Browsers](https://github.com/aceshooting/lyra-ui/actions/runs/40228792306) (17 successful jobs),
+[Full engine](https://github.com/aceshooting/lyra-ui/actions/runs/40228794063) (17 successful jobs), and
+[Quality tools](https://github.com/aceshooting/lyra-ui/actions/runs/40228795669) (all four jobs, including mutation testing
+and the A/B benchmark) pass. [CodeQL](https://github.com/aceshooting/lyra-ui/actions/runs/40228786249) and
+[Scorecard](https://github.com/aceshooting/lyra-ui/actions/runs/40228786316) pass.
+The [Release workflow](https://github.com/aceshooting/lyra-ui/actions/runs/40230882903) and all six package publications
+succeeded; npm package bytes match the GitHub release assets and verified provenance.
+
+The public Codecov API retrieval on 2026-10-25 reports both published commits complete:
+[30.1.0](https://app.codecov.io/gh/aceshooting/lyra-ui/commit/1b275c39c066001ac29ccc7ab55fad452b5c9a07) and
+[30.2.0](https://app.codecov.io/gh/aceshooting/lyra-ui/commit/7e47b23e71a8c8382aa614004ffc579c4f79487a).
+The table separates repository aggregate totals from totals derived by the `packages/lyra-ui/`
+path prefix. These are Codecov full-hit path totals, not raw coverage floors or flag API totals.
+
+| Scope | Release | Files | Lines | Full hits | Misses | Partials | Full-hit coverage |
+|---|---|---|---|---|---|---|---|
+| Repository aggregate | 30.1.0 | 2,605 | 546,107 | 542,641 | 2,584 | 882 | 99.36% (API) |
+| Repository aggregate | 30.2.0 | 2,644 | 548,967 | 545,399 | 2,644 | 924 | 99.35% (API) |
+| UI path prefix | 30.1.0 | 2,483 | 527,148 | 523,710 | 2,579 | 859 | 99.3478% |
+| UI path prefix | 30.2.0 | 2,485 | 527,281 | 523,835 | 2,583 | 863 | 99.3465% |
+
+The aggregate falls 0.01 percentage points at API precision; UI full-hit coverage is essentially
+flat but slightly lower, with four additional misses and four additional partials. The 3D path
+scope also changes: full-hit coverage is 98.7277% for the new scope versus 99.8812% for the old
+scope. These results do not establish a blanket coverage improvement. Earlier snapshots retain
+their capture dates and scopes. The raw 99.85% UI line/statement result is a separate metric;
+the 99.80% Codecov full-hit goal remains open.
 
 The [nineteen-item status table](30.2-maintenance.md#implementation-status) keeps source,
 exercised checks and remaining delivery work separate. The 99.80% Codecov goal and historical

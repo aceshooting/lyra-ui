@@ -1,6 +1,6 @@
 # WebGL 3D views (`@aceshooting/lyra-3d`)
 
-Status (2026-10-24): the shared foundation, four companion engines and component integrations
+Status (2026-10-25): the shared foundation, four companion engines and component integrations
 are implemented, including graph and point views, 360° image/video modes, the model viewer and
 its document-viewer integration. Integrated browser, package and fallback checks have passed on
 previous candidates. Real-GPU measurements on an integrated candidate met the 10k-node/30k-edge,
@@ -14,12 +14,12 @@ changes need their own qualification. The optional WebGL views retain their docu
 or text alternatives.
 
 The published lyra-ui 30.1.0 release does not complete the later visuals or scale targets listed
-below. The companion remains at 1.0.0; expanded integration tests do not extend the hardware
-measurements or complete a new lyra-3d release qualification.
+below. At that release the companion remained at 1.0.0; expanded integration tests do not extend the hardware
+measurements. Current [lyra-3d 1.1.0](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-3d%401.1.0) was published on 2026-10-25.
 
-## Unpublished maintenance
+## Published 1.1.0 maintenance
 
-The [30.2 maintenance target](30.2-maintenance.md#implementation-status) includes sparse point/graph
+The [30.2 maintenance delivery](30.2-maintenance.md#implementation-status) includes sparse point/graph
 visual-state updates, resumable graph fallback work, lower-allocation XYZ parsing, admitted-format
 loader boundaries and an additive asynchronous model-loading path. These changes do not complete
 the later visuals or 100k-node graph target.
@@ -69,10 +69,11 @@ parser causation. No blanket jank-free loading or performance improvement is cla
 instrumented main-realm JavaScript heap excludes worker, GPU and whole-process peaks; disposal
 observations do not prove complete native-resource reclamation. Historical native endpoint and
 post-disposal counters are complete, but process-maximum RSS does not establish parser-only peak
-heap. Final version stamping, budget remeasurement and exact-commit release qualification remain open.
+heap. Version-stamped package/budget verification and exact-commit release qualification are complete.
 
-None of these results qualifies a new companion release. The published version remains 1.0.0;
-version-stamped package/budget verification and exact-commit release workflows remain required.
+[lyra-3d 1.1.0](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-3d%401.1.0) was published on 2026-10-25; the
+[qualification record](test-health.md#current-302-maintenance-qualification) links the passing workflows.
+The measurements above retain their original scope and limitations.
 
 ## Objective and boundaries
 
@@ -205,7 +206,8 @@ Exit: written contract, measured spike, and a go or narrow decision.
 - [x] Size gates prove Three.js is unreachable from every Lyra UI entry point.
 - [x] Connect component opt-ins and fallback notices in the later view phases.
 - [x] Complete the protected first-publication bootstrap for lyra-3d 1.0.0.
-- [ ] Verify trusted-publisher configuration before a subsequent release.
+- [x] Verify trusted-publisher configuration: the 1.1.0 publication successfully used OIDC
+  trusted publishing on 2026-10-25.
 
 ### 2. Graph engine (L)
 

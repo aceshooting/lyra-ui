@@ -11,23 +11,24 @@ The [implementation and qualification record](document-editing-feasibility.md) r
 browser behavior, the bounded admission policy, asset measurements, and remaining qualification.
 Passing browser checks establish only the specific behaviors and corpus cases they exercise.
 
-The published lyra-ui 30.1.0 release does not advance these editor phases. The editor remains at
+The published lyra-ui 30.1.0 release does not advance these editor phases. The editor was then at
 0.6.3, with corpus, interoperability, IME, assistive-technology and retained-memory work open as
 listed below; viewer regression tests do not establish editor fidelity.
 
-The [unpublished maintenance work](30.2-maintenance.md#implementation-status) adds a query-local
+The [published 0.6.4 maintenance work](30.2-maintenance.md#implementation-status) adds a query-local
 relationship index for multi-drawing image navigation and keeps a direct scan for a single drawing.
 The revised path passes focused/full unit, lint and package checks. Deterministic paired fixtures
 retain exact archive/semantic hashes and targets, recovering the single-drawing regression while
 retaining higher sampled allocation for large multi-drawing relationship sets. The main editor
 browser campaign passes 236 cases per engine (708 total), plus three locked-source regressions per
-engine; source checks do not establish shipped-artifact coverage. Final version-stamped package
-and release qualification remain required. This optimization does not complete any broader editor phase,
-change the experimental status or establish a new published companion version.
+engine; source checks retain their narrower artifact scope. [lyra-docs 0.6.4](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-docs%400.6.4) was published on
+2026-10-25 after exact-commit release qualification. This optimization does not complete any broader
+editor phase or change the experimental status. See the
+[qualification record](test-health.md#current-302-maintenance-qualification).
 
-## Current state (lyra-docs 0.6.3)
+## Current state (lyra-docs 0.6.4)
 
-Evidence: `packages/lyra-docs` (published as `@aceshooting/lyra-docs@0.6.3`): 56 colocated Node
+Historical 0.6.3 evidence: `packages/lyra-docs` (published as `@aceshooting/lyra-docs@0.6.3`): 56 colocated Node
 test files in `src/docx/`, per-area three-engine browser scripts in `scripts/*-browser.mjs`
 (`browser-test.mjs`, formatting, tables, images, review, commands, inspection, layout), synthetic
 fixtures in `test/corpus.ts`, a Storybook story in `test/editor.stories.js`, and the package README.

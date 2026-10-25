@@ -5,18 +5,19 @@ specific implementation and test evidence; it is not a claim of general DOCX com
 The [document editing roadmap](document-editing.md) tracks broader phases, which remain open
 until their full exit conditions are met.
 
-Release reconciliation (2026-10-25): lyra-docs 0.6.3 remains the published experimental package.
+Release reconciliation (2026-10-25): [lyra-docs 0.6.4](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-docs%400.6.4) is the published experimental package.
 The lyra-ui 30.1.0 release does not add editor qualification. Measurements and exercised cases in
 this record retain their original scope; the [roadmap](document-editing.md) still tracks the open
 corpus, interoperability, input/accessibility and memory work.
 
-Unpublished image-navigation maintenance now uses a direct relationship scan for a single drawing
+Published 0.6.4 image-navigation maintenance now uses a direct relationship scan for a single drawing
 and a lazy query-local index for multiple drawings. The revised path passes focused/full unit, lint and package checks. Deterministic paired fixtures
 retain exact archive/semantic hashes and targets, recovering the single-drawing regression while
 retaining higher sampled allocation for large multi-drawing relationship sets. The main editor
 browser campaign passes 236 cases per engine (708 total), plus three locked-source regressions per
-engine; source checks do not establish shipped-artifact coverage. Final version-stamped package
-and release qualification remain required. This work neither establishes general DOCX fidelity nor
+engine; source checks retain their narrower artifact scope. Version-stamped package and exact-commit
+release qualification are complete; see the
+[qualification record](test-health.md#current-302-maintenance-qualification). This work neither establishes general DOCX fidelity nor
 completes the [editor roadmap phases](document-editing.md#delivery-sequence).
 
 ## Current decision and boundary

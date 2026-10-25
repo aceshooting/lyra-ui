@@ -1,4 +1,4 @@
-# Map adoption (`lr-map`, `@aceshooting/lyra-map` 1.3.0)
+# Map adoption (`lr-map`, `@aceshooting/lyra-map` 1.3.1)
 
 Status (2026-10-25): the camera, overlays, composition, ordering, controls, labels and lazy
 construction APIs and their migration documentation shipped in
@@ -8,20 +8,20 @@ Installed-package font and label rendering, selected application prototypes, vis
 the release's request acceptance are complete within the scope recorded below. Versioned release
 qualification and publication are complete; complete application migration remains separate.
 
-A remaining regression in 30.1.0 affects asynchronous modular object-style replacement: active
+A regression in 30.1.0 affects asynchronous modular object-style replacement: active
 ordering overrides can reject readiness, and the public layer catalog can retain the previous
 style. The correction now passes affected tests in Chromium, Firefox with WebGL, and WebKit;
-it remains unreleased. The [30.2 maintenance plan](30.2-maintenance.md) tracks integrated
-qualification and delivery.
+it shipped in [lyra-ui 30.2.0](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.2.0). The [30.2 maintenance record](30.2-maintenance.md) records
+exact-commit qualification and delivery.
 
-Current unpublished maintenance also replaces full feature-preflight snapshots with validated
+Published 30.2 maintenance also replaces full feature-preflight snapshots with validated
 requirement metadata, authors the preparation runtime as directly testable code, and retains
 stable map-anchor placement sessions during camera movement. Full companion coverage records
 100% lines and statements; parity, provenance and packed three-engine checks pass for the exercised
 candidate. Production preflight and anchor measurements retain their individual fixture and source
-scope; native ingestion and full release qualification remain separate. Final version-stamped
-packages, release mutation testing and publication are still required. The independent companion
-remains published at 1.3.0. See the [maintenance status table](30.2-maintenance.md#implementation-status).
+scope; native ingestion remains separate from preflight. Exact-commit release qualification,
+including mutation testing, is complete. [lyra-map 1.3.1](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-map%401.3.1) and [lyra-ui 30.2.0](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.2.0)
+were published on 2026-10-25. See the [maintenance status table](30.2-maintenance.md#implementation-status).
 
 Applications can replace camera, padding, popup, fitting and missing-data workarounds with the
 supported component API. Published 30.1.0 corrections cover URL-style readiness, anchor visibility
@@ -84,11 +84,11 @@ items let them move to `lr-map`, or at least drop their workarounds on the engin
   `styleOverrides.before` targets a native layer or public overlay group; `null` places the matched
   layers above all others. Omitting it releases ordering ownership and restores the prior relative
   position. Selector matches keep their relative order, and managed layers retain their own
-  ordering APIs. The asynchronous object-style replacement follow-up remains open above.
+  ordering APIs. The asynchronous object-style replacement follow-up shipped in 30.2.0 as recorded above.
 - [x] Defer overrides for absent basemap subjects without failing readiness, then retry when a
   matching layer exists. Observed absence discards obsolete restoration ownership; invalid or
   conflicting resources still fail. This correction shipped in 30.1.0; the later replacement
-  regression remains open above.
+  regression was corrected in 30.2.0 as recorded above.
 - [x] `images` property accepting SVG markup or URLs, rasterized portably (engines cannot decode SVG
   blobs everywhere), for symbol layers.
 - [x] Modular engine: load the feature modules implied by `addLayer`/`addSource` automatically, or a

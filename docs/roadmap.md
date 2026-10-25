@@ -21,7 +21,7 @@ still open.
   [test health](roadmap/test-health.md) (coverage, speed, flakiness).
 - **After 30.1.0:** [geospatial scenes and synchronized playback](roadmap/geospatial-scenes.md).
   Planned and unstarted; outside the 30.1.0 release gate, with no assigned version or date.
-- **30.2.0 maintenance target:** [corrections, performance work and consolidation](roadmap/30.2-maintenance.md). Reviewed source includes corrections, consolidations and asynchronous model loading; candidate checks pass and final release qualification remains in progress. Unpublished; affected companions version independently.
+- **30.2.0 published maintenance:** [corrections, performance work and consolidation](roadmap/30.2-maintenance.md). Published on 2026-10-25 with corrections, consolidations and asynchronous model loading; all nineteen selected items are delivered, including website production delivery. Affected companions version independently.
 - **Rationale for the style-axis, token and migration designs:** the [RFCs](rfcs/).
 
 ## Published 30.0.0, 30.1.0 and current maintenance
@@ -75,15 +75,18 @@ is 99.34%; the release retained and improved on the 30.0.0 baseline. The 99.74% 
 remain open. The historical WebKit PDF timeout remains unexplained; passing focused reproductions
 establish no fix. Geospatial scenes remain unstarted and unassigned to a release.
 
-## Current 30.2 maintenance
+## Published 30.2 maintenance
 
-All nineteen selected items have separate source, exercised-evidence and remaining-work records in
+Delivered versions: [lyra-ui 30.2.0](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.2.0); [lyra-ide 30.2.0](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ide%4030.2.0); [lyra-translations 30.2.0](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-translations%4030.2.0); [lyra-map 1.3.1](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-map%401.3.1); [lyra-3d 1.1.0](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-3d%401.1.0); [lyra-docs 0.6.4](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-docs%400.6.4). lyra-flags remains at 2.3.1.
+
+All nineteen selected items have separate source, exercised-evidence and retained-limit records in
 the [maintenance status table](roadmap/30.2-maintenance.md#implementation-status). Map metadata
 preflight and preparation-runtime changes pass focused package and three-engine checks. The
 affected UI slice passes in Chromium, Firefox and WebKit; shared coverage/import-analysis tooling
 and hierarchy, chart and label helpers retain their characterization checks. Experimental maturity
-wording and localized catalog copy are corrected in source; website production delivery remains
-pending.
+wording and localized catalog copy are corrected and deployed. Website qualification passes 71 locale checks and 311 component examples
+in each of five browser channels; live production and release freshness checks
+confirm 30.2.0 and 311 components.
 
 Shared synchronous admission, all-format asynchronous loading and UI adoption are implemented
 and reviewed. The latest 3D cleanup passes 686 unit checks and 106 packed cases in each of
@@ -111,10 +114,17 @@ implementation work remains. The final asynchronous model campaign passes 42 har
 cases at 100k/1M vertices, including six trusted cancellations preserving the prior scene. Eight of
 eighteen successful 100k loads have commit-overlapping main-thread tasks of 51–74 ms; 1M XYZ/PLY
 reaches 253–283 ms. Parser causation is unproven, and sampled main-realm heap excludes worker, GPU
-and whole-process peaks. No blanket absence of jank or performance improvement is claimed. Final
-version stamping, budget remeasurement and exact-commit CI and release workflows remain required
-before publication. No 30.2 package is published, and earlier
-30.0/30.1 qualification does not qualify this source.
+and whole-process peaks. No blanket absence of jank or performance improvement is claimed. Published on 2026-10-25 from commit
+[`7e47b23e71a8c8382aa614004ffc579c4f79487a`](https://github.com/aceshooting/lyra-ui/commit/7e47b23e71a8c8382aa614004ffc579c4f79487a).
+Version stamping and version-stamped budget checks are complete. Exact-commit
+[CI](https://github.com/aceshooting/lyra-ui/actions/runs/40228786282) (43 successful jobs),
+[Test All Browsers](https://github.com/aceshooting/lyra-ui/actions/runs/40228792306) (17 successful jobs),
+[Full engine](https://github.com/aceshooting/lyra-ui/actions/runs/40228794063) (17 successful jobs), and
+[Quality tools](https://github.com/aceshooting/lyra-ui/actions/runs/40228795669) (all four jobs, including mutation testing
+and the A/B benchmark) pass. [CodeQL](https://github.com/aceshooting/lyra-ui/actions/runs/40228786249) and
+[Scorecard](https://github.com/aceshooting/lyra-ui/actions/runs/40228786316) pass.
+The [Release workflow](https://github.com/aceshooting/lyra-ui/actions/runs/40230882903) and all six package publications
+succeeded; npm package bytes match the GitHub release assets and verified provenance.
 
 ## Shipped
 
@@ -134,6 +144,7 @@ before publication. No 30.2 package is published, and earlier
 | 29.2.1 | Release and quality hardening: publishing fails unless npm serves the released tarball, `pnpm release:budgets` checks size budgets before the release commit, load-tolerant scale-test budgets, broader behavioural coverage with provably dead guards removed. No public API change. |
 | 30.0.0 | 310 components; immutable identity collections and migration support; expanded map adoption with lyra-map 1.3.0; optional WebGL views, `lr-chart-3d` and `lr-model-viewer` with lyra-3d 1.0.0; document-engine and release-quality updates. |
 | [30.1.0](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.1.0) | Experimental independent map anchors; cross-axis positioning and map-control styling; locale-picker lifecycle events; declarative basemap ordering; maintenance corrections. lyra-ui, lyra-ide and lyra-translations 30.1.0. Exact-commit qualification and verified npm publication completed 2026-10-25. |
+| 30.2.0 | [lyra-ui 30.2.0](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.2.0); IDE/translations 30.2.0, map 1.3.1, 3D 1.1.0 and experimental docs 0.6.4. All nineteen selected items delivered, including website production delivery. |
 
 ## Standing contracts
 
@@ -238,13 +249,12 @@ packages version independently. A target moves only when scope changes, never to
 
 | Target | Package versions | Scope |
 |---|---|---|
-| 30.2.0 | lyra-ui, lyra-ide and lyra-translations 30.2.0; affected companions independently | [Maintenance corrections, performance work and consolidation](roadmap/30.2-maintenance.md); source changes and qualification in progress, unpublished |
 | 30.x | lyra-3d 1.x | Further graph visuals and 100k-node scale |
 | independent | lyra-docs 0.7.0 to 1.0.0 | Native document editing phases 4 to 8 |
 | on demand | lyra-ui minor | Fluent-informed look |
 | last | lyra-ui minors | Additional full catalogs |
 
-1. **30.2.0 maintenance:** correct PPTX external-media policy and asynchronous object-style readiness; address source-verified performance and consolidation findings with [bounded scope and qualification](roadmap/30.2-maintenance.md). Source, scoped measurements and remaining performance/release gates are recorded separately; final exact-commit qualification and publication remain required for delivery.
+1. **30.2.0 maintenance delivered:** [corrections, performance work and consolidation](roadmap/30.2-maintenance.md) published on 2026-10-25. Website production delivery is complete; retained measurement limits remain authoritative.
 2. **lyra-3d 1.x: further visuals and scale:** curved edges, DAG layouts, custom node rendering and
    optional glow, then 100k graph nodes with a performance gate.
 3. **lyra-docs 0.7.0 to 1.0.0: native document editing**, released independently: 0.7.0 phase 4
