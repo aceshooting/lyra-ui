@@ -14,9 +14,9 @@ name: Deploy docs
 # needs longer to render a flagged badge (it recomputes the flag on every request), so that image
 # never loaded. `build` waits (at most 15 minutes) for Codecov to merge the uploads of the CI run's
 # head commit, reads each flag's totals from Codecov's public REST API once, and writes
-#   {"schemaVersion":1,"label":"coverage","message":"<hits / lines, truncated>%","color":"<band>"}
-# into the artifact before it becomes the Pages artifact. The percentage is truncated to two
-# decimals, never rounded, so a badge cannot claim a target the report misses. Colour bands:
+#   {"schemaVersion":1,"label":"CodeCov","message":"<whole percent>%","color":"<band>","namedLogo":"codecov"}
+# into the artifact before it becomes the Pages artifact. The displayed percentage rounds UP
+# to the next whole percent, directly from the exact counts. Colour uses the measured ratio:
 #   >= 99.74 brightgreen (the lyra-ui target in docs/agents/ci-and-gates.md), >= 99.00 green,
 #   >= 98.00 yellowgreen, >= 95.00 yellow, >= 90.00 orange, below that red; lightgrey "unknown"
 #   when no figure has ever been published for the flag.
@@ -149,9 +149,12 @@ jobs:
               counts="$(jq -r '.totals | select((.hits | type) == "number" and (.lines | type) == "number") | "\(.hits) \(.lines)"' "$out/totals.json" 2>/dev/null || true)"
             fi
             if [[ "$counts" =~ ^([0-9]{1,12})\ ([1-9][0-9]{0,11})$ ]] && (( BASH_REMATCH[1] <= BASH_REMATCH[2] )); then
-              # Integer arithmetic on digits that matched the pattern: whole basis points never round up.
+              # Keep measured basis points for colour; compute display ceiling from exact counts,
+              # not from a truncated decimal (99.0001% must display 100%, not 99%).
               basis=$(( BASH_REMATCH[1] * 10000 / BASH_REMATCH[2] ))
+              whole=$(( (BASH_REMATCH[1] * 100 + BASH_REMATCH[2] - 1) / BASH_REMATCH[2] ))
               printf '%d.%02d\n' "$((basis / 100))" "$((basis % 100))" > "$out/$flag"
+              printf '%d\n' "$whole" > "$out/$flag.whole"
             else
               echo "::warning::Codecov returned no usable totals for $flag (HTTP $status)."
             fi
@@ -166,23 +169,31 @@ jobs:
           rm -rf storybook-static/badges
           mkdir storybook-static/badges
           for flag in "${flags[@]}"; do
-            origin=Codecov percent=''
+            origin=Codecov percent='' whole='' previous_color=''
             if [[ -f "$RUNNER_TEMP/codecov/$flag" ]]; then
               percent="$(< "$RUNNER_TEMP/codecov/$flag")"
+              if [[ -f "$RUNNER_TEMP/codecov/$flag.whole" ]]; then
+                whole="$(< "$RUNNER_TEMP/codecov/$flag.whole")"
+              fi
             else
               # No figure for this commit: keep the one the live site serves. GitHub redirects the
               # github.io address to the account's custom domain, currently over plain http, so that
-              # answer is untrusted: only a bare NN.NN percentage passes the pattern below, and the
-              # JSON is rebuilt from it.
+              # answer is untrusted: only a bare whole or legacy two-decimal percentage passes
+              # below. An already rounded figure retains only an allowlisted colour; recomputing
+              # colour from its display value would incorrectly promote 99.35% to brightgreen.
               origin='the previous deploy'
               status="$(curl --silent --show-error --location --max-redirs 3 --proto '=https,http' --proto-redir '=https,http' --max-time 20 --output "$RUNNER_TEMP/previous.json" --write-out '%{http_code}' "$site/coverage-$flag.json" || true)"
               if [[ "$status" == 200 ]]; then
                 percent="$(jq -r '.message // empty' "$RUNNER_TEMP/previous.json" 2>/dev/null || true)"
                 percent="${percent%\%}"
+                previous_color="$(jq -r '.color // empty' "$RUNNER_TEMP/previous.json" 2>/dev/null || true)"
               fi
             fi
             if [[ "$percent" =~ ^(100\.00|[0-9]{1,2}\.[0-9]{2})$ ]]; then
               basis=$(( 10#${percent/./} ))
+              if [[ ! "$whole" =~ ^(100|[0-9]|[1-9][0-9])$ ]]; then
+                whole=$(( (basis + 99) / 100 ))
+              fi
               if (( basis >= 9974 )); then
                 color=brightgreen
               elif (( basis >= 9900 )); then
@@ -196,12 +207,14 @@ jobs:
               else
                 color=red
               fi
-              message="$percent%"
+              message="$whole%"
+            elif [[ "$percent" =~ ^(100|[0-9]|[1-9][0-9])$ ]] && [[ "$previous_color" =~ ^(brightgreen|green|yellowgreen|yellow|orange|red|lightgrey)$ ]]; then
+              message="$percent%" color="$previous_color"
             else
               origin=nothing message=unknown color=lightgrey
             fi
             [[ "$origin" == Codecov ]] || echo "::warning::Codecov gave no figure for $flag; publishing $message from $origin."
-            jq -nc --arg message "$message" --arg color "$color" '{schemaVersion: 1, label: "coverage", message: $message, color: $color}' > "storybook-static/badges/coverage-$flag.json"
+            jq -nc --arg message "$message" --arg color "$color" '{schemaVersion: 1, label: "CodeCov", message: $message, color: $color, namedLogo: "codecov"}' > "storybook-static/badges/coverage-$flag.json"
           done
       - if: steps.head.outputs.current == 'true'
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0

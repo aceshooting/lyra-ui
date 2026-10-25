@@ -292,7 +292,9 @@ merge the CI run's uploads, reads each flag's `hits` and `lines` for that commit
 API, and publishes `badges/coverage-<flag>.json` (a shields.io endpoint document) beside the
 Storybook. The root README and `packages/lyra-ui/README.md` point `img.shields.io/endpoint` at the
 `lyra-ui` file; each companion README points at its own flag's file. The percentage is
-`hits / lines` truncated to two decimals, never rounded up; colour is brightgreen from 99.74%, then
+`100 × hits / lines` rounded up to the next whole percent, with the Codecov logo and `CodeCov`
+label. For example, 99.35% displays as 100%; the linked report retains the exact coverage. Display
+rounding does not change coverage gates or measured colour bands: colour is brightgreen from 99.74%, then
 green from 99, yellowgreen from 98, yellow from 95, orange from 90 and red below. A flag without a
 merged upload for the commit (a docs-only push skips the lyra-ui coverage job), an unreachable API
 or an unusable answer republishes the figure the live site already serves (`unknown` on lightgrey

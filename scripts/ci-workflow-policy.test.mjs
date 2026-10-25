@@ -83,7 +83,7 @@ test('each of the seven coverage flags owns one complete package report and a sc
       const readme = read(file);
       const urls = [...readme.matchAll(/https:\/\/img\.shields\.io\/endpoint\?url=[^\s)]+/gu)].map(([url]) => url);
       assert.deepEqual(urls, [badge], `${file} must show exactly its own flag`);
-      assert.ok(readme.includes(`[![Coverage](${badge})](https://codecov.io/gh/aceshooting/lyra-ui)`), `${file} keeps its alt text and Codecov link`);
+      assert.ok(readme.includes(`[![Coverage](${badge})](https://codecov.io/gh/aceshooting/lyra-ui "Coverage rounded up to the next whole percent")`), `${file} keeps its report link and explains display rounding`);
       assert.doesNotMatch(readme, /codecov\.io\/[^\s)]*\/graph\/badge\.svg/u, `${file} must not request Codecov's own badge image`);
     }
   }
@@ -456,9 +456,39 @@ const listing = (...records) => ({ status: 200, body: { count: records.length + 
 const merged = (flags) => listing(...flags.map((flag) => record([flag])));
 const totalsReply = (hits, lines) => ({ status: 200, body: { totals: { files: 3, lines, hits, misses: lines - hits, partials: 0, coverage: 0 }, files: [] } });
 const priorReply = (message, color = 'blue') => ({ status: 200, body: { schemaVersion: 1, label: 'coverage', message, color } });
-const shield = (message, color) => ({ schemaVersion: 1, label: 'coverage', message, color });
+const shield = (message, color) => ({ schemaVersion: 1, label: 'CodeCov', message, color, namedLogo: 'codecov' });
 const badgesOf = (run) => Object.fromEntries(Object.entries(run.raw).map(([flag, text]) => [flag, text === null ? null : JSON.parse(text)]));
 const unknown = shield('unknown', 'lightgrey');
+
+test('whole-percent coverage rounds upward from exact counts and keeps the Codecov logo', needsJq, () => {
+  const flags = deployFlags();
+  const counts = [[0, 100], [1, 1000000], [99, 100], [990001, 1000000], [9999, 10000], [100, 100], [400001, 1000000]];
+  const expected = ['0%', '1%', '99%', '100%', '100%', '100%', '41%'];
+  const run = runBadgeSteps({
+    uploads: merged(flags),
+    totals: Object.fromEntries(flags.map((flag, index) => [flag, totalsReply(...counts[index])])),
+  });
+  assert.deepEqual([run.wait.status, run.write.status], [0, 0], `${run.wait.stderr}${run.write.stderr}`);
+  for (const [index, flag] of flags.entries()) {
+    const badge = badgesOf(run)[flag];
+    assert.equal(badge.message, expected[index]);
+    assert.equal(badge.label, 'CodeCov');
+    assert.equal(badge.namedLogo, 'codecov');
+  }
+  assert.equal(badgesOf(run)[flags[3]].color, 'green', 'display rounding does not promote the measured colour band');
+});
+
+test('already rounded coverage keeps its validated colour during a Codecov outage', needsJq, () => {
+  const run = runBadgeSteps({
+    uploads: [{ status: 404, body: {} }],
+    live: { 'lyra-ui': priorReply('100%', 'green'), 'lyra-map': priorReply('99%', 'yellowgreen') },
+  });
+  assert.deepEqual([run.wait.status, run.write.status], [0, 0]);
+  assert.equal(badgesOf(run)['lyra-ui'].message, '100%');
+  assert.equal(badgesOf(run)['lyra-ui'].color, 'green');
+  assert.equal(badgesOf(run)['lyra-map'].message, '99%');
+  assert.equal(badgesOf(run)['lyra-map'].color, 'yellowgreen');
+});
 
 test('the docs deploy finds its artifact beyond the first API page and rejects stale or unavailable builds', needsJq, () => {
   const dir = mkdtempSync(join(tmpdir(), 'deploy-docs-head-'));
@@ -556,7 +586,7 @@ test('the docs deploy publishes the coverage badges without loosening its privil
 
   // The JSON is built by jq from text that matched a strict pattern, with the bands below (the documented 99.74 target on top).
   const output = stepRun(writing);
-  assert.match(output, /jq -nc --arg message "\$message" --arg color "\$color" '\{schemaVersion: 1, label: "coverage", message: \$message, color: \$color\}'/u);
+  assert.match(output, /jq -nc --arg message "\$message" --arg color "\$color" '\{schemaVersion: 1, label: "CodeCov", message: \$message, color: \$color, namedLogo: "codecov"\}'/u);
   assert.match(output, /\[\[ "\$percent" =~ \^\(100\\\.00\|\[0-9\]\{1,2\}\\\.\[0-9\]\{2\}\)\$ \]\]/u);
   const bands = [...output.matchAll(/(?:if|elif) \(\( basis >= (\d+) \)\); then\n\s+color=(\w+)/gu)].map(([, floor, color]) => [Number(floor), color]);
   assert.deepEqual(bands, [[9974, 'brightgreen'], [9900, 'green'], [9800, 'yellowgreen'], [9500, 'yellow'], [9000, 'orange']]);
@@ -566,12 +596,12 @@ test('the docs deploy publishes the coverage badges without loosening its privil
     'brightgreen from 99.74%, then green from 99, yellowgreen from 98, yellow from 95, orange from 90 and red below'), 'the contributor guide documents the same bands');
 });
 
-test('the badge steps publish each flag\'s Codecov figure truncated to two decimals, banded, as compact endpoint JSON', needsJq, () => {
+test('the badge steps publish each flag\'s whole-percent ceiling with its measured colour band', needsJq, () => {
   const figures = {
     'lyra-ui': [521842, 526131], // 99.1847: green
-    'lyra-map': [1629, 1630], // 99.9386: 99.93 truncated, 99.94 if it were rounded
+    'lyra-map': [1629, 1630], // 99.9386: display 100, measured brightgreen
     'lyra-3d': [99740, 100000], // exactly 99.74: meets the target
-    'lyra-ide': [99739, 100000], // 99.739: must not claim the 99.74 target
+    'lyra-ide': [99739, 100000], // 99.739: display 100 without promoting the colour band
     'lyra-docs': [11202, 11223], // 99.8129
     'lyra-flags': [834, 834], // 100.00
     'lyra-translations': [9500, 10000], // 95.00: yellow
@@ -584,15 +614,15 @@ test('the badge steps publish each flag\'s Codecov figure truncated to two decim
   });
   assert.deepEqual([run.wait.status, run.write.status], [0, 0], `${run.wait.stderr}${run.write.stderr}`);
   assert.deepEqual(badgesOf(run), {
-    'lyra-ui': shield('99.18%', 'green'),
-    'lyra-map': shield('99.93%', 'brightgreen'),
-    'lyra-3d': shield('99.74%', 'brightgreen'),
-    'lyra-ide': shield('99.73%', 'green'),
-    'lyra-docs': shield('99.81%', 'brightgreen'),
-    'lyra-flags': shield('100.00%', 'brightgreen'),
-    'lyra-translations': shield('95.00%', 'yellow'),
+    'lyra-ui': shield('100%', 'green'),
+    'lyra-map': shield('100%', 'brightgreen'),
+    'lyra-3d': shield('100%', 'brightgreen'),
+    'lyra-ide': shield('100%', 'green'),
+    'lyra-docs': shield('100%', 'brightgreen'),
+    'lyra-flags': shield('100%', 'brightgreen'),
+    'lyra-translations': shield('95%', 'yellow'),
   });
-  assert.equal(run.raw['lyra-ui'], '{"schemaVersion":1,"label":"coverage","message":"99.18%","color":"green"}\n');
+  assert.equal(run.raw['lyra-ui'], '{"schemaVersion":1,"label":"CodeCov","message":"100%","color":"green","namedLogo":"codecov"}\n');
   assert.deepEqual(run.published, flags.map((flag) => `coverage-${flag}.json`).sort(), 'exactly one file per flag, and nothing the artifact held under badges/');
 
   // Everything is already merged: no waiting, one poll, one totals request per flag, all over https and never through a redirect.
@@ -619,7 +649,7 @@ test('the badge step waits for a flag Codecov has not merged yet, then republish
   assert.deepEqual([arrives.wait.status, arrives.write.status], [0, 0]);
   assert.deepEqual(arrives.sleeps, [30, 30], 'polls every 30 seconds');
   assert.deepEqual(arrives.calls.filter((call) => call.url.includes('/uploads/')).map((call) => call.at - CLOCK_START), [0, 30, 60]);
-  assert.deepEqual(badgesOf(arrives)['lyra-ui'], shield('99.18%', 'green'));
+  assert.deepEqual(badgesOf(arrives)['lyra-ui'], shield('100%', 'green'));
 
   // Never merged: at the bound the previously deployed figure is republished, banded again (the old colour is not trusted).
   // A shorter bound keeps this fast; the outage test below runs the real 15 minutes.
@@ -628,7 +658,7 @@ test('the badge step waits for a flag Codecov has not merged yet, then republish
   assert.deepEqual([stuck.sleeps, stuck.elapsed], [[30, 30, 30, 30], 120]);
   assert.match(stuck.wait.stdout, /::warning::Codecov had not merged the uploads for: lyra-ui\n/u);
   assert.equal(stuck.calls.filter((call) => call.url.includes('/totals/?')).some((call) => call.url.endsWith('flag=lyra-ui')), false, 'no totals are read for an unmerged flag');
-  assert.deepEqual(badgesOf(stuck)['lyra-ui'], shield('98.98%', 'yellowgreen'));
+  assert.deepEqual(badgesOf(stuck)['lyra-ui'], shield('99%', 'yellowgreen'));
   const prior = stuck.calls.find((call) => call.url.startsWith('https://aceshooting.github.io/'));
   assert.equal(prior.url, 'https://aceshooting.github.io/lyra-ui/badges/coverage-lyra-ui.json');
   assert.ok(prior.args.includes('--location'), 'the github.io address redirects to the account domain');
@@ -642,15 +672,15 @@ test('a flag with no upload for the commit (a docs-only push) is not waited for 
   assert.deepEqual([run.wait.status, run.write.status], [0, 0]);
   assert.deepEqual([run.sleeps, run.elapsed], [[30, 30], 60]);
   const badges = badgesOf(run);
-  assert.deepEqual(badges['lyra-ui'], shield('99.18%', 'green'), 'the figure of the last commit that had coverage stays');
-  assert.deepEqual(badges['lyra-map'], shield('100.00%', 'brightgreen'));
+  assert.deepEqual(badges['lyra-ui'], shield('100%', 'green'), 'the figure of the last commit that had coverage stays');
+  assert.deepEqual(badges['lyra-map'], shield('100%', 'brightgreen'));
   assert.equal(run.calls.some((call) => call.url.endsWith('flag=lyra-ui')), false, 'the empty answer Codecov gives for an absent flag is never read');
-  assert.match(run.write.stdout, /::warning::Codecov gave no figure for lyra-ui; publishing 99.18% from the previous deploy\./u);
+  assert.match(run.write.stdout, /::warning::Codecov gave no figure for lyra-ui; publishing 100% from the previous deploy\./u);
 
   // Codecov has not heard of the commit at all (HTTP 404): every flag is absent, the same minute applies.
   const unheard = runBadgeSteps({ uploads: [{ status: 404, body: { detail: 'The commit is not in our records.' } }], live: { 'lyra-ide': priorReply('100.00%') } });
   assert.deepEqual([unheard.wait.status, unheard.write.status, unheard.elapsed], [0, 0, 60]);
-  assert.deepEqual(badgesOf(unheard)['lyra-ide'], shield('100.00%', 'brightgreen'));
+  assert.deepEqual(badgesOf(unheard)['lyra-ide'], shield('100%', 'brightgreen'));
   assert.deepEqual(badgesOf(unheard)['lyra-ui'], unknown);
 });
 
@@ -659,9 +689,9 @@ test('a Codecov outage never fails the deploy: previous figures stay, "unknown" 
   const expected = (run) => {
     assert.deepEqual([run.wait.status, run.write.status], [0, 0], `${run.wait.stderr}${run.write.stderr}`);
     assert.deepEqual(badgesOf(run), {
-      'lyra-ui': shield('99.18%', 'green'),
+      'lyra-ui': shield('100%', 'green'),
       'lyra-map': unknown,
-      'lyra-3d': shield('100.00%', 'brightgreen'),
+      'lyra-3d': shield('100%', 'brightgreen'),
       'lyra-docs': unknown,
       'lyra-flags': unknown,
       'lyra-ide': unknown,
@@ -695,13 +725,13 @@ test('totals that cannot be a percentage are never published as one', needsJq, (
   });
   assert.deepEqual([run.wait.status, run.write.status], [0, 0], `${run.wait.stderr}${run.write.stderr}`);
   assert.deepEqual(badgesOf(run), {
-    'lyra-ui': shield('99.18%', 'green'),
-    'lyra-map': shield('99.93%', 'brightgreen'),
+    'lyra-ui': shield('100%', 'green'),
+    'lyra-map': shield('100%', 'brightgreen'),
     'lyra-3d': unknown,
     'lyra-docs': unknown,
     'lyra-flags': unknown,
     'lyra-ide': unknown,
-    'lyra-translations': shield('100.00%', 'brightgreen'),
+    'lyra-translations': shield('100%', 'brightgreen'),
   });
   assert.match(run.wait.stdout, /::warning::Codecov returned no usable totals for lyra-ui \(HTTP 200\)\./u);
   assert.match(run.wait.stdout, /::warning::Codecov returned no usable totals for lyra-docs \(HTTP 500\)\./u);
@@ -728,7 +758,7 @@ test('a previously deployed figure is untrusted input: only a bare percentage su
     'lyra-docs': unknown,
     'lyra-flags': unknown,
     'lyra-ide': unknown,
-    'lyra-translations': shield('100.00%', 'brightgreen'),
+    'lyra-translations': shield('100%', 'brightgreen'),
   });
   assert.equal(run.tree.some((entry) => entry.endsWith(marker)), false, 'nothing from the answer was executed');
 });
@@ -740,7 +770,7 @@ test('a head SHA that is not exactly 40 lowercase hex characters stops the Codec
     assert.match(run.wait.stdout, /^::error::The CI run head SHA is not 40 lowercase hex characters\.$/mu);
     assert.deepEqual(run.calls.filter((call) => call.url.startsWith('https://api.codecov.io/')), [], 'no request is built from an unvalidated SHA');
     assert.equal(run.write.status, 0);
-    assert.deepEqual(badgesOf(run)['lyra-ui'], shield('99.18%', 'green'));
+    assert.deepEqual(badgesOf(run)['lyra-ui'], shield('100%', 'green'));
     assert.deepEqual(badgesOf(run)['lyra-map'], unknown);
     assert.equal(run.tree.some((entry) => entry.endsWith('PWNED')), false);
   }

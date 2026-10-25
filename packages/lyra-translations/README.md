@@ -1,6 +1,6 @@
 # @aceshooting/lyra-translations
 
-[![Coverage](https://img.shields.io/endpoint?url=https://aceshooting.github.io/lyra-ui/badges/coverage-lyra-translations.json)](https://codecov.io/gh/aceshooting/lyra-ui)
+[![Coverage](https://img.shields.io/endpoint?url=https://aceshooting.github.io/lyra-ui/badges/coverage-lyra-translations.json)](https://codecov.io/gh/aceshooting/lyra-ui "Coverage rounded up to the next whole percent")
 
 [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-translations)](https://www.npmjs.com/package/@aceshooting/lyra-translations)
 [![Node.js](https://img.shields.io/node/v/%40aceshooting%2Flyra-translations)](https://www.npmjs.com/package/@aceshooting/lyra-translations)
