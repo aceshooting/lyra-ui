@@ -151,9 +151,10 @@ repeated cases. Do not obtain a favorable result by retrying failures or discard
 Randomize or interleave paired run order to limit provider-load and thermal effects. Separate
 generation randomness from repeated browser replay. Pin supported model revisions, provider,
 region, temperature, thinking/output limits and tool configuration; unsupported settings are
-explicit mismatches. Evaluate at least three model families for the first production chat claim,
-with a fourth when practical. Model drift triggers a new campaign, not silent replacement of a
-historical model name.
+explicit mismatches. Evaluate the selected Opus, Astra, Sonnet and Luna lineup for the first
+production chat claim, with exact identifiers and explicit availability exclusions as defined
+below. Distinct selected models do not imply distinct model families. Model drift triggers a new
+campaign, not silent replacement of a historical model name.
 
 ## Replay, reproducibility and publication
 

@@ -273,14 +273,15 @@ packages version independently. A target moves only when scope changes, never to
 | last | lyra-ui minors | Additional full catalogs |
 
 1. **30.2.0 maintenance delivered:** [corrections, performance work and consolidation](roadmap/30.2-maintenance.md) published on 2026-10-25. Website production delivery is complete; retained measurement limits remain authoritative.
-2. **lyra-3d 1.x: further visuals and scale:** curved edges, DAG layouts, custom node rendering and
+2. **Lyra Gen foundations and interactive chat first:** deliver the [generative UI stages](roadmap/generative-ui.md#delivery-sequence), with the qualified chat milestone taking priority over new 3D/document features; reassess companion scheduling after that milestone.
+3. **lyra-3d 1.x: further visuals and scale:** curved edges, DAG layouts, custom node rendering and
    optional glow, then 100k graph nodes with a performance gate.
-3. **lyra-docs 0.7.0 to 1.0.0: native document editing**, released independently: 0.7.0 phase 4
+4. **lyra-docs 0.7.0 to 1.0.0: native document editing**, released independently: 0.7.0 phase 4
    (pagination and Word fidelity), 0.8.0 phase 5 (agent-friendly document operations), 0.9.0 to
    0.11.0 phases 6 to 8 in [document-editing.md](roadmap/document-editing.md), and 1.0.0 once
    qualified, including the consolidation of document viewers and editors in `@aceshooting/lyra-docs`.
-4. **A restrained Fluent-informed look,** only on consumer demand, in a minor release.
-5. **Additional full catalogs (last):** `sk`, `bg`, `lt`, `lv`, `et`, `ca`, `ga`, `mt`, Serbian
+5. **A restrained Fluent-informed look,** only on consumer demand, in a minor release.
+6. **Additional full catalogs (last):** `sk`, `bg`, `lt`, `lv`, `et`, `ca`, `ga`, `mt`, Serbian
    Cyrillic and Latin (script-aware coverage), about 1,600 messages each, in minor releases;
    Luxembourgish (`lb`) only when a reviewer and application demand exist.
 
