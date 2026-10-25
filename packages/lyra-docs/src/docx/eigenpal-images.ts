@@ -1,5 +1,5 @@
 import type { DocxEditorInstance, EditorCommand } from '@docx-editor.dev/core';
-import type { OoxmlElement, OoxmlNode, OoxmlPackage, OoxmlPart } from '@docx-editor.dev/core/store';
+import type { OoxmlElement, OoxmlNode, OoxmlPackage, OoxmlPart, RelationshipRecord } from '@docx-editor.dev/core/store';
 import { DOCX_LIMITS } from './commands.js';
 import { inspectDocxImage } from './image-bytes.js';
 import {
@@ -207,6 +207,7 @@ interface ImageDocument {
   limits: typeof LIMITS;
   frames: Frame[];
   descendants: Map<OoxmlElement, Frame[]>;
+  relationshipIndex: Map<string, RelationshipRecord | null> | null | undefined;
 }
 function imageDocument(editor: DocxEditorInstance, overrides: Partial<typeof LIMITS>): ImageDocument {
   const surface = editor.surface;
@@ -226,7 +227,36 @@ function imageDocumentInPackage(pkg: OoxmlPackage, part: OoxmlPart, overrides: P
     const list = descendants.get(drawing) ?? []; list.push(frame); descendants.set(drawing, list);
   }
   visibleStyles(pkg, limits);
-  return { pkg, part, limits, frames, descendants };
+  return { pkg, part, limits, frames, descendants, relationshipIndex: null };
+}
+/** Built only when a qualified drawing needs a relationship; the document belongs to one query. */
+function imageRelationship(document: ImageDocument, id: string): RelationshipRecord {
+  let index = document.relationshipIndex;
+  let relation: RelationshipRecord | null | undefined;
+  if (index === null) {
+    const relations = document.pkg.relationships.get(document.part.name) ?? [];
+    if (relations.length > document.limits.nodes) reject('resource-limit');
+    let matches = 0;
+    relations.forEach(candidate => {
+      if (candidate.id !== id) return;
+      matches++; relation = candidate;
+    });
+    if (matches !== 1) reject();
+  } else {
+    if (index === undefined) {
+      const relations = document.pkg.relationships.get(document.part.name) ?? [];
+      if (relations.length > document.limits.nodes) reject('resource-limit');
+      const created = new Map<string, RelationshipRecord | null>();
+      relations.forEach(candidate => {
+        const key = candidate.id;
+        created.set(key, created.has(key) ? null : candidate);
+      });
+      document.relationshipIndex = index = created;
+    }
+    relation = index.get(id);
+  }
+  if (!relation || relation.type !== `${R}/image` || relation.targetMode === 'External') reject();
+  return relation;
 }
 interface DrawingValue { drawingId: string; paragraphId: string; width: number; height: number; title: string; description: string }
 function inspectDrawing(document: ImageDocument, target: Frame,
@@ -258,11 +288,8 @@ function inspectDrawing(document: ImageDocument, target: Frame,
   if (!metadata.ok) reject(metadata.code === 'resource-limit' ? 'resource-limit' : 'unsupported');
   const blip = child(fill, A, 'blip'), id = attribute(blip, 'embed', R);
   if (!id || blip.attributes.some(value => value.localName !== 'embed' && value.localName !== 'cstate')) reject();
-  const relations = pkg.relationships.get(part.name) ?? [];
-  if (relations.length > limits.nodes) reject('resource-limit');
-  const matches = relations.filter(relation => relation.id === id);
-  if (matches.length !== 1 || matches[0]!.type !== `${R}/image` || matches[0]!.targetMode === 'External') reject();
-  const media = internalTarget(part.name, matches[0]!.rawTarget), bytes = pkg.partBytes.get(media);
+  const relation = imageRelationship(document, id);
+  const media = internalTarget(part.name, relation.rawTarget), bytes = pkg.partBytes.get(media);
   if (!bytes) reject();
   let checked = mediaCache.get(media);
   if (!checked) {
@@ -294,6 +321,7 @@ export function imageCandidatesInPackage(pkg: OoxmlPackage, part: OoxmlPart, ove
   try {
     const document = imageDocumentInPackage(pkg, part, overrides), candidates = document.frames.filter(frame => is(frame.node, W, 'drawing'));
     if (candidates.length > (overrides.candidates ?? 256) || candidates.length > (overrides.attempts ?? 64)) reject('resource-limit');
+    if (candidates.length > 1) document.relationshipIndex = undefined;
     const mediaCache = new Map<string, { pixels: number; mimeType: string }>();
     const budget = { bytes: 0, maximum: overrides.mediaBytes ?? 16 * 1024 * 1024 }, values: DrawingValue[] = [];
     for (const candidate of candidates) {

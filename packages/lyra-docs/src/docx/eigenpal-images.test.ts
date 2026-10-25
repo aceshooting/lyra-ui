@@ -193,3 +193,60 @@ test('Word extension lists must be well-formed, unique a:ext records', () => {
   const inline = h.nodes.find(node => node.localName === 'inline')!;
   attributes(inline).find(value => value.localName === 'anchorId')!.value = 'nothex!!'; assert.equal(h.qualify().ok, false, 'malformed wp14 id');
 });
+
+// Count only storage of the actual fixture relationship records, never unrelated maps.
+function relationshipStorage(records: readonly object[], operation: () => void): number {
+  const identities = new Set(records), original = Map.prototype.set;
+  let stored = 0;
+  Map.prototype.set = function <K, V>(this: Map<K, V>, key: K, value: V): Map<K, V> {
+    if (value !== null && typeof value === 'object' && identities.has(value)) stored++;
+    return original.call(this, key, value) as Map<K, V>;
+  };
+  try { operation(); } finally { Map.prototype.set = original; }
+  return stored;
+}
+
+for (const mode of ['navigation', 'command'] as const) {
+  test(`one image ${mode} avoids storing the relationship table and retains refusals`, () => {
+    for (const scenario of ['valid', 'duplicate', 'limited', 'sparse'] as const) {
+      const h = fixture(), records = h.pkg.relationships.get(h.part.name)!;
+      // Keep the selected drawing in the actual tree; the corpus also contains a second image.
+      const drawings = h.nodes.filter(node => node.namespaceUri === h.drawing.namespaceUri && node.localName === 'drawing');
+      for (const drawing of drawings) {
+        if (drawing === h.drawing) continue;
+        const parent = h.nodes.find(node => (node.children as readonly OoxmlNode[]).includes(drawing));
+        assert.ok(parent, 'each extra drawing has an authored parent');
+        const children = parent.children as OoxmlNode[];
+        children.splice(children.indexOf(drawing), 1);
+      }
+      assert.equal(h.nodes.filter(node => (node.children as readonly OoxmlNode[]).includes(h.drawing)).length, 1);
+      const image = records.find(record => record.type.endsWith('/image'))!;
+      const many = Array.from({ length: 9998 }, (_, index) => ({ ...image, id: `unrelated-${index}` }));
+      const entries = [...many, image];
+      if (scenario === 'duplicate') entries.push({ ...image });
+      if (scenario === 'sparse') entries.length++;
+      (h.pkg.relationships as Map<string, readonly typeof image[]>).set(h.part.name, entries);
+      let visits = 0;
+      for (const record of entries) {
+        if (!record) continue;
+        const id = record.id;
+        Object.defineProperty(record, 'id', { configurable: true, get() { visits++; return id; } });
+      }
+      const limits = scenario === 'limited' ? { nodes: 100 } : {};
+      const stored = relationshipStorage(entries, () => {
+        const result = mode === 'navigation' ? imageCandidatesInPackage(h.pkg, h.part, limits) : h.qualify({ type: 'delete-image' }, limits);
+        if (scenario === 'limited') assert.deepEqual(result, { ok: false, code: 'resource-limit' });
+        else if (scenario === 'duplicate') {
+          if (mode === 'navigation') assert.deepEqual(result, { ok: true, value: [] });
+          else assert.deepEqual(result, { ok: false, code: 'unsupported' });
+        } else {
+          assert.equal(result.ok, true);
+          if (mode === 'navigation' && result.ok) assert.equal((result.value as readonly unknown[]).length, 1);
+        }
+      });
+      assert.equal(stored, 0, `${scenario}: a single lookup must not populate a relationship map`);
+      assert.equal(visits, scenario === 'limited' ? 0 : entries.filter(Boolean).length,
+        `${scenario}: scan each present relationship exactly once, or reject the cap before scanning`);
+    }
+  });
+}
