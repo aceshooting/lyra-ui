@@ -1,5 +1,76 @@
 # Changelog
 
+## 30.3.0
+
+### Minor Changes
+
+- 0d840bd: Add explicit widget registry and binding-state passthrough to message parts, preserve widget
+  identity during sibling text updates, and load non-text part renderers on demand. Correct the
+  structural A2UI-like helper's binding-state result and extend AG-UI reasoning/activity/custom
+  mapping with host-controlled custom-event destinations.
+
+  Add an opt-in official MCP Apps host transport with negotiated capabilities, bounded requests,
+  resource policy, cancellation and teardown alongside the existing default bridge. Incremental
+  text-delta accounting preserves untouched payload identities and handles UTF-8 surrogate joins
+  without repeatedly scanning retained message data. Support and qualification boundaries are
+  documented with the corresponding APIs.
+
+  The seven-sample quick Chromium comparison with 30.2.0 recorded eight advisory timing regressions
+  across table assignment, chart assignment and combobox metadata. Table update median increased
+  from 5.9 to 7.4 ms, while total median decreased from 28.1 to 27.7 ms; total p95 increased from
+  28.5 to 41.4 ms. The affected module closures and theme bytes are unchanged, and functional
+  assertions and bounded-work counts pass. Phase redistribution and isolated slow samples contribute
+  to these observations; their cause remains unresolved, so no runtime speedup is claimed.
+- c3b40ec: Expose map control container, corner, native icon and attribution-link parts, geolocation state
+  parts and expanded-attribution styling hooks. Add `--lr-map-scale-bar-display` to hide the scale
+  ruler independently of its distance text. Control option objects now accept finite `order`
+  values to keep visual and keyboard order aligned while retaining existing controls.
+  Use theme-aware SVG control icons while preserving native compass rotation, and give attribution
+  links a 24px minimum target size.
+
+  Add `whenControlsReady()` for installed native controls and synchronized chrome, and expose
+  initialization skeleton, label and control-corner parts so deferred maps can share control styling.
+  Independent top and bottom rows and expanded-attribution container tokens support responsive layouts.
+
+  The map layout/readiness helpers, icons and public references increase the media bundle to
+  350,928 gzip bytes and the UI archive to 21,969,742 unpacked bytes. Advance only exceeded media,
+  UI and editor byte ceilings to the next 64-byte boundary; retain all passing limits and file ceilings.
+
+  The tiled map scale DOM ceiling increases from 15 to 17 for the two fixed control-row wrappers;
+  all data-dependent scale ceilings remain unchanged. The tile test verifies both rows are reused
+  across camera moves and overlay updates.
+
+### Patch Changes
+
+- 0d840bd: Preserve keyboard scroll intent through native smooth scrolling so Home, PageUp and upward arrow
+  navigation can release chat following. Clear obsolete intent after settlement, cancellation,
+  focus changes and explicit scroll commands, including virtual conversations. Prevented keys and
+  editing controls retain their native behavior.
+- 0d840bd: Keep file-input labels, selected files and feedback inside intrinsically sized grid rows. Definite-height drop targets allocate the remaining space to the picker after the rest of the field content.
+- 0d840bd: Add measured Gen bundle and archive limits for parser, runtime, chat, generated views and chat
+  composition. JavaScript permits 2% headroom, CSS 4%, and assets none; external optional peers
+  remain listed separately. Archive increases use the next 64-byte boundary.
+
+  Widgets, MCP Apps, chat scroll intent, public type exports, documentation and seven Gen messages
+  across all 70 locale catalogs increase UI, editor and translation bytes. Raise only exceeded
+  ceilings; retain passing limits, the download ceiling, historical reduction rule and file inventories.
+
+  Navigation and server/client examples, catalog and adapter guides, CLI presets and the candidate
+  adapter correction increase Gen to 140 public files. Set its archive byte ceilings to the next
+  64-byte boundary. Interactive select validation adds 57 gzip bytes over its reviewed measurement; advance
+  only its exceeded direct-entry ceiling to the next 64-byte boundary.
+
+  Reviewed 2026-10-26: Gen measures 206,707 packed / 770,450 unpacked bytes across 140 files.
+  Set its ceilings to 206,720 / 770,496 bytes. The latest growth is the SDK 7 integration guide
+  and initial release notes; runtime entries, file count and other passing limits stay unchanged.
+- 0d840bd: Include generated-view status and action messages in every conversation locale catalog, retain
+  per-instance overrides, and update loaded MCP app locale and direction context without replacing
+  its frame. Locale changes during official app initialization are retained until the app is ready.
+- 3d5644c: Expose a required select's invalid state after native form submission or `reportValidity()`,
+  including its accessible state and error styling. Silent validity checks keep pristine controls
+  unchanged, and resetting the form restores that state.
+- @aceshooting/lyra-translations@30.3.0
+
 ## 30.2.0
 
 ### Minor Changes

@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard archive ceilings: UI downloads stay below 10,000,000 bytes, unpacked UI size retains the 25% historical-baseline reduction, and its file-count derivation reserves seven scaffold artifacts. Required files and artifact hygiene are checked independently; companions have separate ceilings. Only exceeded byte ceilings advance to the next 64-byte boundary. Current measured bytes: UI 21,969,742 unpacked archive / 21,970,364 estimated; IDE 1,709,794 packed / 10,582,934 unpacked; translations 1,407,252 packed / 6,225,498 unpacked; Gen 206,707 packed / 770,450 unpacked across 140 files. Gen growth covers navigation and server/client examples, catalog and adapter guides, CLI presets, and the candidate adapter correction. Its six added public artifacts set the exact file ceiling. Review on 2026-10-26 attributes the latest Gen archive growth to the SDK 7 integration guide and initial release notes; runtime entries and the file ceiling remain unchanged. Native map control parts, ordering, readiness and their declarations/references account for the UI and editor growth; only exceeded byte ceilings advance.",
+  "$comment": "Hard archive ceilings: UI downloads stay below 10,000,000 bytes, unpacked UI size retains the 25% historical-baseline reduction, and its file-count derivation reserves seven scaffold artifacts. Required files and artifact hygiene are checked independently; companions have separate ceilings. Only exceeded byte ceilings advance to a 64-byte boundary. Current measured bytes: UI 21,974,923 unpacked archive / 21,975,545 estimated; IDE 1,709,820 packed / 10,583,228 unpacked; translations 1,407,289 packed / 6,225,792 unpacked; Gen 206,706 packed / 770,450 unpacked across 140 files. The 30.3.0 version stamp and release notes add 5,181 UI bytes and 294 bytes to each editor/translation archive, advancing only those three unpacked ceilings. Native map controls, generated-view locale messages and Gen guides/examples account for prior reviewed growth; runtime bundle limits and all file ceilings remain unchanged.",
   "baseline": {
     "packedBytes": 7829794,
     "unpackedBytes": 38510084,
@@ -20,7 +20,7 @@
   },
   "maximum": {
     "packedBytes": 9999999,
-    "unpackedBytes": 21970368,
+    "unpackedBytes": 21975552,
     "fileCount": 3352
   },
   "companions": {
@@ -41,14 +41,14 @@
     "@aceshooting/lyra-translations": {
       "maximum": {
         "packedBytes": 1500000,
-        "unpackedBytes": 6225536,
+        "unpackedBytes": 6225792,
         "fileCount": 911
       }
     },
     "@aceshooting/lyra-ide": {
       "maximum": {
         "packedBytes": 1709824,
-        "unpackedBytes": 10582976,
+        "unpackedBytes": 10583232,
         "fileCount": 10
       }
     },

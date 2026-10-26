@@ -40,7 +40,7 @@ for the page.
 | `@aceshooting/lyra-3d` | `^1.0.0` | `lr-chart-3d`, `lr-embedding-explorer`, `lr-graph`, `lr-image-viewer`, `lr-knowledge-graph-explorer`, `lr-model-viewer`, `lr-video` |
 | `@aceshooting/lyra-flags` | `^2.3.1` | _(loaded by a shared internal module)_ |
 | `@aceshooting/lyra-map` | `^1.3.0` | `lr-geojson-viewer`, `lr-map` |
-| `@aceshooting/lyra-translations` | `^30.2.0` | _(not referenced by any component)_ |
+| `@aceshooting/lyra-translations` | `^30.3.0` | _(not referenced by any component)_ |
 | `@aiden0z/pptx-renderer` | `^1.4.0` | `lr-pptx-viewer` |
 | `@sgratzl/chartjs-chart-boxplot` | `^4.0.0` | `lr-box-plot` |
 | `chart.js` | `^4.0.1` | `lr-bar-chart`, `lr-box-plot`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
