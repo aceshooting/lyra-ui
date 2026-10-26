@@ -69,7 +69,8 @@ export function validateMemoryCycle(row, { quietObserver, collectionId, admissio
     require(row.quietObserver === undefined && row.contaminated === false, 'Memory observation was contaminated or belongs to another quiet profile.');
   } else {
     validateQuietObserver(row.quietObserver);
-    require(row.quietObserver?.configSha256 === quietObserver.configSha256 && typeof collectionId === 'string' && collectionId.length > 0
+    require(row.quietObserver?.profile === quietObserver.profile && row.quietObserver.configSha256 === quietObserver.configSha256
+      && Object.entries(quietObserver.scope).every(([key, value]) => row.quietObserver.scope[key] === value) && typeof collectionId === 'string' && collectionId.length > 0
       && row.collectionId === collectionId, 'Memory observer or collection binding changed.');
     require(typeof admissionSha256 === 'string' && /^[a-f0-9]{64}$/u.test(admissionSha256) && row.admissionSha256 === admissionSha256, 'Memory admission-helper identity changed.');
   }

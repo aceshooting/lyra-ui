@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { validateFixture, validatePrepared, validateCollectionManifest, runProfile, profilePlan, inspectQuietReceipt, collectionSchedule, validateInputInventory } from './profile.mjs';
 import { createHash } from 'node:crypto';
-import { reviewedQuietFixture } from './profile-reviewed.test-fixture.mjs';
+import { reviewedQuietFixture, sharedHostQuietFixture } from './profile-reviewed.test-fixture.mjs';
 import { quietEvidenceFromBytes } from './profile-driver.mjs';
 
 test('fixture boundary is explicit and requires current operation inventory and authored identity', () => {
@@ -64,6 +64,9 @@ test('manifest refuses missing workload or unsupported browser identity before d
   assert.throws(() => validateCollectionManifest({ ...manifest(), quietObserver: { profile: 'unknown' } }));
   const refinedReceipt = manifest(); refinedReceipt.quietReceipt.admission = { profile: 'reviewed-idle-service-v1', accepted: true };
   assert.throws(() => validateCollectionManifest(refinedReceipt));
+  for (const kind of ['shared-host-observed-live-receipt', 'unknown-live-receipt']) {
+    const nonStrict = manifest(); nonStrict.quietReceipt.kind = kind; assert.throws(() => validateCollectionManifest(nonStrict));
+  }
 });
 
 test('reviewed manifests bind exact observer, current helper, collection and independently approved receipt', () => {
@@ -77,10 +80,21 @@ test('reviewed manifests bind exact observer, current helper, collection and ind
   }
 });
 
-test('runner retains a refined sample with strict failures and both quiet observations before stopping', async () => {
-  const { observer, receipt } = reviewedQuietFixture(), input = { ...manifest(), quietObserver: observer, quietReceipt: receipt };
+test('shared-host manifest explicitly binds its different admission and retains original strict failure', () => {
+  const shared = sharedHostQuietFixture(), reviewed = reviewedQuietFixture();
+  const value = { ...manifest(), quietObserver: shared.observer, quietReceipt: shared.receipt };
+  validateCollectionManifest(value);
+  assert.equal(value.quietReceipt.contaminated, true); assert.equal(value.quietReceipt.maxUnrelatedProcessCpuFractionOfOneCore, .35875);
+  assert.throws(() => validateCollectionManifest({ ...value, quietObserver: undefined }));
+  assert.throws(() => validateCollectionManifest({ ...value, quietObserver: reviewed.observer }));
+  assert.throws(() => validateCollectionManifest({ ...value, quietReceipt: reviewed.receipt }));
+});
+
+for (const fixture of [reviewedQuietFixture, sharedHostQuietFixture]) test(`runner retains ${fixture.name} strict failures and both quiet observations before stopping`, async () => {
+  const { observer, receipt } = fixture(), input = { ...manifest(), quietObserver: observer, quietReceipt: receipt };
   const retained = [], trace = []; let quietChecks = 0, opens = 0, rejectPost = false;
-  const clean = structuredClone(receipt); Object.assign(clean, { contaminated: false, failures: [], observationComplete: true, coverageIssues: [], concurrentTaskWorkloads: false }); clean.admission.kernelCoverageIssues = [];
+  const clean = structuredClone(receipt); Object.assign(clean, { contaminated: false, failures: [], observationComplete: true, coverageIssues: [], concurrentTaskWorkloads: false,
+    maxUnrelatedProcessCpuFractionOfOneCore: .02 }); clean.admission.kernelCoverageIssues = []; clean.admission.metrics.maxUnrelatedUserspaceProcessCpuFractionOfOneCore = .02;
   const sources = [JSON.stringify(receipt), `\n${JSON.stringify(clean, null, 2)}\n`];
   const hashes = sources.map(source => createHash('sha256').update(source).digest('hex'));
   const evidence = hash => quietEvidenceFromBytes(Buffer.from(sources[hash === '1' ? 0 : 1]), input.collection.id,

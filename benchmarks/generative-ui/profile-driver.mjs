@@ -58,7 +58,7 @@ export function parseDriverOptions(args) {
 export function checkFreshQuietReceipt(receipt, collectionId, now = Date.now(), quietObserver, admissionSha256) {
   validateQuietObserver(quietObserver);
   if (quietObserver) { inspectReviewedQuietReceipt(receipt, quietObserver, { collectionId, now, admissionSha256 }); return receipt; }
-  require(receipt?.admission === undefined && receipt?.kind !== 'reviewed-idle-service-live-receipt' && receipt?.contaminated !== true
+  require(receipt?.admission === undefined && (receipt?.kind === undefined || receipt.kind === 'quiet-live-receipt') && receipt?.contaminated !== true
     && receipt?.observationComplete !== false && (receipt?.failures === undefined || Array.isArray(receipt.failures) && receipt.failures.length === 0), 'Strict quiet receipt is contaminated or uses a different observer.');
   inspectQuietReceipt(receipt);
   require(receipt.collectionId === collectionId && Number.isFinite(receipt.observedAt) && receipt.observedAt <= now && now - receipt.observedAt <= 5000, 'Quiet monitor receipt is stale or belongs to another collection.');

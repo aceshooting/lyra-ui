@@ -6,7 +6,7 @@ import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
-import { validateObserverConfig, validateQuietObserver, reviewedAdmissionFailures, parseObserverConfigBytes, validateObserverConfigSource } from './profile-admission.mjs';
+import { validateObserverConfig, validateQuietObserver, reviewedAdmissionFailures, parseObserverConfigBytes, validateObserverConfigSource, observerReceiptKinds } from './profile-admission.mjs';
 
 const require = (condition, message) => { if (!condition) throw new Error(message); };
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -233,7 +233,7 @@ export function reviewedWindowAdmission(samples, config, configSha256, { prechec
       firstCpuTicks: proofs[0].previousCpuTicks, lastCpuTicks: proofs.at(-1).currentCpuTicks,
       maxCpuTickDelta: deltas.some(value => value === null) ? null : String(deltas.reduce((max, value) => value > max ? value : max, 0n)) };
   });
-  const failures = reviewedAdmissionFailures(raw, metrics, { precheck });
+  const failures = reviewedAdmissionFailures(raw, metrics, { precheck, profile: config.profile });
   return { profile: config.profile, configSha256, scope: config.scope, config, configSource, inspected: false, accepted: failures.length === 0, failures, metrics, services,
     kernelCoverageIssues: samples.flatMap(row => row.reviewed.kernelCoverageIssues) };
 }
@@ -241,16 +241,16 @@ export function validateReviewedReview(review, { precheck, precheckSha256, owner
   validateObserverConfig(observerConfig);
   const expected = { profile: observerConfig.profile, configSha256, scope: observerConfig.scope };
   validateQuietObserver(review?.quietObserver); require(review?.quietObserver !== undefined, 'Missing reviewed observer binding.');
-  require(review?.schemaVersion === 1 && review.kind === 'reviewed-idle-service-precheck-review' && review.inspected === true && review.decision === 'approved'
+  require(review?.schemaVersion === 1 && review.kind === observerReceiptKinds(observerConfig.profile).review && review.inspected === true && review.decision === 'approved'
     && review.collectionId === precheck.collectionId && review.precheckSha256 === precheckSha256 && review.ownershipSha256 === ownershipSha256
     && hash(admissionSha256) && review.admissionSha256 === admissionSha256 && precheck.admissionSha256 === admissionSha256
     && review.quietObserver.profile === expected.profile && review.quietObserver.configSha256 === expected.configSha256
     && Number.isFinite(review.reviewedAt) && review.reviewedAt >= precheck.endedAt && hash(precheckSha256) && hash(ownershipSha256), 'A matching reviewed observer precheck authorization is required.');
-  require(precheck.kind === 'reviewed-idle-service-precheck' && precheck.inspected === false && precheck.requestedSeconds === 60 && precheck.intervals === 60
+  require(precheck.kind === observerReceiptKinds(observerConfig.profile).precheck && precheck.inspected === false && precheck.requestedSeconds === 60 && precheck.intervals === 60
     && precheck.metrics.seconds >= 60 && precheck.metrics.seconds <= 61 && hash(precheck.sampleSha256)
     && precheck.collectionId === observerConfig.collectionId && precheck.admission?.profile === expected.profile && precheck.admission.configSha256 === configSha256 && precheck.admission.accepted === true
     && JSON.stringify(precheck.admission.config) === JSON.stringify(observerConfig)
-    && reviewedAdmissionFailures(precheck.metrics, precheck.admission.metrics, { precheck: true }).length === 0, 'Reviewed observer precheck is incomplete or failed.');
+    && reviewedAdmissionFailures(precheck.metrics, precheck.admission.metrics, { precheck: true, profile: observerConfig.profile }).length === 0, 'Reviewed observer precheck is incomplete or failed.');
   validateObserverConfigSource(precheck.admission.config, precheck.admission.configSource, configSha256);
   return review;
 }
@@ -261,10 +261,10 @@ export function makeReviewedReceipt({ collectionId, samples, precheck, precheckS
     validateReviewedReview(review, { precheck, precheckSha256, ownershipSha256, observerConfig, configSha256, admissionSha256 });
     require(hash(reviewSha256), 'Missing reviewed observer authorization digest.'); admission.inspected = true;
   }
-  return { schemaVersion: 1, kind: 'reviewed-idle-service-live-receipt', collectionId, admissionSha256, bootId: observerConfig.bootId,
+  return { schemaVersion: 1, kind: observerReceiptKinds(observerConfig.profile).live, collectionId, admissionSha256, bootId: observerConfig.bootId,
     observedAt: samples.at(-1).observedAt, inspected: false, sha256: precheckSha256, ...metrics, contaminated: failures.length > 0, failures,
     coverageIssues: samples.flatMap(row => row.coverageIssues), admission,
-    semantics: { cpu: 'current-rolling-total-host-including-owned-services-and-kernel', processCpu: 'all-unrelated-userspace',
+    semantics: { cpu: 'current-rolling-total-host-including-owned-services-and-kernel', processCpu: observerConfig.scope.processCpu,
       coverage: 'sampled-userspace-with-explicit-kernel-gaps', inactivity: 'zero-observed-cpu-ticks-not-proof-of-no-io-or-gpu-work',
       processCoverage: 'unseen-short-lived-between-poll-processes-are-not-proven-absent' },
     precheck: { sha256: precheckSha256, startedAt: precheck.startedAt, endedAt: precheck.endedAt, inspected: Boolean(review),
@@ -338,7 +338,7 @@ export async function runMonitor({ collectionId, ownershipPath, reviewPath, obse
       previous = current; ownedBefore = ownedAfter;
       if (tick < 60) continue;
       if (!precheck) {
-        precheck = { schemaVersion: 1, kind: observerConfig ? 'reviewed-idle-service-precheck' : 'quiet-precheck', collectionId, inspected: false, requestedSeconds: 60, intervals: 60,
+        precheck = { schemaVersion: 1, kind: observerConfig ? observerReceiptKinds(observerConfig.profile).precheck : 'quiet-precheck', collectionId, inspected: false, requestedSeconds: 60, intervals: 60,
           startedAt: initialAt, endedAt: current.observedAt, metrics: windowMetrics(samples), sampleSha256: sampleDigest.copy().digest('hex'), ownershipSha256, toolSha256, admissionSha256, bootId: current.bootId, roots, ...(observerConfig ? { admission: reviewedWindowAdmission(samples, observerConfig, configSha256, { precheck: true, configSource }) } : {}) };
         const bytes = encode(precheck); await writeFile(join(output, 'precheck.json'), bytes, { flag: 'wx', mode: 0o600 }); precheckSha256 = digest(bytes);
         require((observerConfig ? precheck.admission.failures : ruleFailures(precheck.metrics, { precheck: true })).length === 0, 'The retained precheck failed; caller review cannot approve it.');

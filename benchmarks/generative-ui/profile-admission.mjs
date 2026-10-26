@@ -10,18 +10,29 @@ const same = (left, right) => canonical(left) === canonical(right);
 const keys = (value, names) => value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === names.length && names.every(name => Object.hasOwn(value, name));
 export const REVIEWED_IDLE_SERVICE_PROFILE = 'reviewed-idle-service-v1';
 export const REVIEWED_IDLE_SERVICE_SCOPE = Object.freeze({ processCpu: 'all-unrelated-userspace', kernelCpu: 'whole-host-aggregate', coverage: 'sampled-userspace-with-explicit-kernel-gaps' });
-const validScope = value => keys(value, Object.keys(REVIEWED_IDLE_SERVICE_SCOPE)) && Object.entries(REVIEWED_IDLE_SERVICE_SCOPE).every(([key, expected]) => value[key] === expected);
+export const SHARED_HOST_OBSERVED_PROFILE = 'shared-host-observed-v1';
+export const SHARED_HOST_OBSERVED_SCOPE = Object.freeze({ ...REVIEWED_IDLE_SERVICE_SCOPE, processCpu: 'all-unrelated-userspace-observational' });
+const validProfile = value => value === REVIEWED_IDLE_SERVICE_PROFILE || value === SHARED_HOST_OBSERVED_PROFILE;
+const validScope = (value, profile) => {
+  const scope = profile === SHARED_HOST_OBSERVED_PROFILE ? SHARED_HOST_OBSERVED_SCOPE : REVIEWED_IDLE_SERVICE_SCOPE;
+  return validProfile(profile) && keys(value, Object.keys(scope)) && Object.entries(scope).every(([key, expected]) => value[key] === expected);
+};
+export function observerReceiptKinds(profile) {
+  require(validProfile(profile), 'Unknown observer admission profile.');
+  const prefix = profile === SHARED_HOST_OBSERVED_PROFILE ? 'shared-host-observed' : 'reviewed-idle-service';
+  return { precheck: `${prefix}-precheck`, review: `${prefix}-precheck-review`, live: `${prefix}-live-receipt` };
+}
 
 export function validateQuietObserver(value) {
   if (value === undefined) return value;
-  require(keys(value, ['profile', 'configSha256', 'scope']) && value.profile === REVIEWED_IDLE_SERVICE_PROFILE && hash(value.configSha256) && validScope(value.scope), 'Invalid reviewed quiet observer binding.');
+  require(keys(value, ['profile', 'configSha256', 'scope']) && validProfile(value.profile) && hash(value.configSha256) && validScope(value.scope, value.profile), 'Invalid reviewed quiet observer binding.');
   return value;
 }
 export function validateObserverConfig(value) {
   require(keys(value, ['schemaVersion', 'kind', 'profile', 'collectionId', 'bootId', 'scope', 'idleServices'])
-    && value.schemaVersion === 1 && value.kind === 'quiet-observer-config' && value.profile === REVIEWED_IDLE_SERVICE_PROFILE
+    && value.schemaVersion === 1 && value.kind === 'quiet-observer-config' && validProfile(value.profile)
     && typeof value.collectionId === 'string' && /^[a-zA-Z0-9_-]{1,100}$/u.test(value.collectionId)
-    && typeof value.bootId === 'string' && value.bootId.length > 0 && validScope(value.scope)
+    && typeof value.bootId === 'string' && value.bootId.length > 0 && validScope(value.scope, value.profile)
     && Array.isArray(value.idleServices) && value.idleServices.length > 0 && value.idleServices.length <= 16, 'Invalid reviewed observer configuration.');
   const pids = new Set();
   for (const service of value.idleServices) {
@@ -43,13 +54,14 @@ export function validateObserverConfigSource(config, configSource, configSha256)
     && same(JSON.parse(configSource), config), 'Embedded observer config does not match the approved file bytes.');
   return config;
 }
-export function reviewedAdmissionFailures(raw, metrics, { precheck = false } = {}) {
+export function reviewedAdmissionFailures(raw, metrics, { precheck = false, profile = REVIEWED_IDLE_SERVICE_PROFILE } = {}) {
+  require(validProfile(profile), 'Unknown observer admission profile.');
   const failures = [];
   if (!finite(raw.meanCpuBusyFraction) || raw.meanCpuBusyFraction >= .05) failures.push('total-host-cpu');
   if (!finite(raw.normalizedOneMinuteLoad) || raw.normalizedOneMinuteLoad >= .1
     || precheck && (!finite(raw.peakNormalizedOneMinuteLoad) || raw.peakNormalizedOneMinuteLoad >= .1)) failures.push('total-host-load');
   if (raw.swapActivity !== false) failures.push('swap-activity');
-  if (!finite(metrics.maxUnrelatedUserspaceProcessCpuFractionOfOneCore) || metrics.maxUnrelatedUserspaceProcessCpuFractionOfOneCore >= .1) failures.push('unrelated-userspace-cpu');
+  if (!finite(metrics.maxUnrelatedUserspaceProcessCpuFractionOfOneCore) || profile !== SHARED_HOST_OBSERVED_PROFILE && metrics.maxUnrelatedUserspaceProcessCpuFractionOfOneCore >= .1) failures.push('unrelated-userspace-cpu');
   if (metrics.unapprovedTaskWorkloads !== false) failures.push('unapproved-workload');
   if (metrics.userspaceObservationComplete !== true) failures.push('userspace-observation-incomplete');
   if (metrics.idleServicesVerified !== true) failures.push('idle-service-not-idle-or-changed');
@@ -57,7 +69,7 @@ export function reviewedAdmissionFailures(raw, metrics, { precheck = false } = {
 }
 export function inspectReviewedQuietReceipt(receipt, observer, { collectionId, now, admissionSha256 } = {}) {
   validateQuietObserver(observer); require(observer !== undefined, 'Explicit reviewed observer binding required.');
-  require(receipt?.schemaVersion === 1 && receipt.kind === 'reviewed-idle-service-live-receipt' && receipt.inspected === false
+  require(receipt?.schemaVersion === 1 && receipt.kind === observerReceiptKinds(observer.profile).live && receipt.inspected === false
     && typeof receipt.collectionId === 'string' && (!collectionId || receipt.collectionId === collectionId)
     && finite(receipt.observedAt) && finite(receipt.seconds) && receipt.seconds >= 60 && receipt.seconds <= 61, 'Invalid reviewed live receipt.');
   if (now !== undefined) require(finite(now) && receipt.observedAt <= now && now - receipt.observedAt <= 5000, 'Reviewed live receipt is stale.');
@@ -73,13 +85,13 @@ export function inspectReviewedQuietReceipt(receipt, observer, { collectionId, n
   if (!receipt.observationComplete) strictFailures.push('process-observation-incomplete');
   require(same(receipt.failures, strictFailures), 'Raw strict failure reasons were changed.');
   const admission = receipt.admission;
-  require(admission?.profile === observer.profile && admission.configSha256 === observer.configSha256 && validScope(admission.scope)
+  require(admission?.profile === observer.profile && admission.configSha256 === observer.configSha256 && validScope(admission.scope, observer.profile)
     && admission.inspected === true && admission.accepted === true && Array.isArray(admission.failures) && admission.failures.length === 0, 'Reviewed admission is missing, mismatched or refused.');
   const config = validateObserverConfigSource(admission.config, admission.configSource, observer.configSha256);
   require(hash(receipt.admissionSha256) && receipt.precheck?.admissionSha256 === receipt.admissionSha256
     && (admissionSha256 === undefined || receipt.admissionSha256 === admissionSha256), 'Observer admission helper identity changed.');
-  require(config.collectionId === receipt.collectionId && config.bootId === receipt.bootId, 'Reviewed configuration belongs to another collection or boot.');
-  require(reviewedAdmissionFailures(receipt, admission.metrics).length === 0, 'Reviewed live receipt failed its fixed gates.');
+  require(config.profile === observer.profile && same(config.scope, observer.scope) && config.collectionId === receipt.collectionId && config.bootId === receipt.bootId, 'Reviewed configuration belongs to another collection or boot.');
+  require(reviewedAdmissionFailures(receipt, admission.metrics, { profile: observer.profile }).length === 0, 'Reviewed live receipt failed its fixed gates.');
   require(hash(receipt.sha256) && hash(receipt.ownershipSha256) && receipt.precheck?.sha256 === receipt.sha256 && receipt.precheck.inspected === true
     && hash(receipt.precheck.reviewSha256) && receipt.precheck.configSha256 === observer.configSha256
     && finite(receipt.precheck.startedAt) && finite(receipt.precheck.endedAt) && receipt.precheck.endedAt >= receipt.precheck.startedAt

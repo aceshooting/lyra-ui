@@ -386,6 +386,21 @@ cannot accept each other's receipts.
 Zero observed ticks is sampling-resolution evidence, not proof of no GPU, I/O or sub-tick work;
 between-scan process changes remain unobservable. Report this scope explicitly with the results.
 
+For disclosed shared-host measurements, select `shared-host-observed-v1` and set
+`scope.processCpu` to `all-unrelated-userspace-observational` in the configuration and manifest.
+Use review kind `shared-host-observed-precheck-review`; its corresponding precheck and live receipt
+kinds are `shared-host-observed-precheck` and `shared-host-observed-live-receipt`. All other
+configuration, identity and review steps above apply. This profile records the unrelated userspace
+CPU maximum without imposing a per-process ceiling. Whole-host CPU/load/swap limits, zero observed
+ticks for the exact reviewed service, other-workload refusal and userspace coverage still apply.
+All workload timing, memory, long-task and layout-shift budgets remain unchanged.
+
+Label these results **shared-host observations**, not strict-quiet or reviewed-idle qualification.
+The profile can admit background CPU from any otherwise admissible unrelated userspace process;
+it is not an exception for one named service. Preserve raw strict failures and all observed load.
+The busiest-five diagnostics are not an exhaustive per-process history. Aggregate load and periodic
+sampling cannot rule out scheduling, cache, GPU or I/O interference. Profiles cannot be pooled.
+
 After reviewing the preflight, complete the timing manifest with the collection ID, digest of the
 reviewed measurement design, and reviewed quiet receipt for the selected profile, then explicitly
 authorize collection.

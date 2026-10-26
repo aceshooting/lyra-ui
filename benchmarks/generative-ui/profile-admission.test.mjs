@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import test from 'node:test';
+import { sharedHostQuietFixture, reviewedQuietFixture } from './profile-reviewed.test-fixture.mjs';
 import assert from 'node:assert/strict';
 import { REVIEWED_IDLE_SERVICE_PROFILE, REVIEWED_IDLE_SERVICE_SCOPE, validateObserverConfig, validateQuietObserver, reviewedAdmissionFailures, inspectReviewedQuietReceipt, makeReviewedQuietEvidence, validateQuietEvidence, parseObserverConfigBytes, validateObserverConfigSource } from './profile-admission.mjs';
 
@@ -129,4 +130,54 @@ test('retained strict evidence accepts its actual clean receipt and refuses pend
   for (const patch of [{ inspected: false }, { meanCpuBusyFraction: .05 }, { normalizedOneMinuteLoad: .1 }, { maxUnrelatedProcessCpuFractionOfOneCore: .1 }]) {
     assert.throws(() => validateQuietEvidence(evidence({ ...receipt, ...patch })), /Strict/u);
   }
+});
+
+test('only the explicit shared-host profile treats finite userspace CPU as observational', () => {
+  const { receipt } = reviewedFixture();
+  const metrics = { ...receipt.admission.metrics, maxUnrelatedUserspaceProcessCpuFractionOfOneCore: .35875 };
+  assert.deepEqual(reviewedAdmissionFailures(receipt, metrics), ['unrelated-userspace-cpu']);
+  assert.deepEqual(reviewedAdmissionFailures(receipt, metrics, { profile: 'shared-host-observed-v1' }), []);
+  for (const value of [undefined, NaN, Infinity, -1]) {
+    assert.deepEqual(reviewedAdmissionFailures(receipt, { ...metrics, maxUnrelatedUserspaceProcessCpuFractionOfOneCore: value }, { profile: 'shared-host-observed-v1' }), ['unrelated-userspace-cpu']);
+  }
+});
+
+
+test('complete shared-host evidence preserves strict contamination and cannot cross-admit', () => {
+  const shared = sharedHostQuietFixture('shared-test');
+  const evidence = makeReviewedQuietEvidence(shared.receipt, shared.receiptSha256, shared.observer, { receiptSource: shared.receiptSource });
+  assert.equal(evidence.contaminated, true);
+  assert.equal(evidence.receipt.maxUnrelatedProcessCpuFractionOfOneCore, .35875);
+  assert.ok(evidence.receipt.failures.includes('unrelated-process-cpu'));
+  assert.doesNotThrow(() => validateQuietEvidence(evidence, shared.observer));
+  assert.throws(() => validateQuietEvidence(evidence));
+  const reviewed = reviewedQuietFixture('shared-test');
+  assert.throws(() => validateQuietEvidence(evidence, reviewed.observer));
+  reviewed.receipt.maxUnrelatedProcessCpuFractionOfOneCore = .35875;
+  reviewed.receipt.admission.metrics.maxUnrelatedUserspaceProcessCpuFractionOfOneCore = .35875;
+  reviewed.receipt.failures.unshift('unrelated-process-cpu');
+  assert.throws(() => validateQuietEvidence({ receipt: reviewed.receipt, contaminated: true, ...receiptBytes(reviewed.receipt) }, reviewed.observer), /fixed gates/u);
+  shared.receipt.kind = 'reviewed-idle-service-live-receipt';
+  assert.throws(() => validateQuietEvidence({ receipt: shared.receipt, contaminated: true, ...receiptBytes(shared.receipt) }, shared.observer), /live receipt/u);
+});
+
+test('shared-host full-source mutations still fail every preserved admission gate', () => {
+  const mutations = [
+    receipt => { receipt.meanCpuBusyFraction = .05; receipt.failures.unshift('total-host-cpu'); },
+    receipt => { receipt.normalizedOneMinuteLoad = .1; receipt.failures.unshift('total-host-load'); },
+    receipt => { receipt.swapActivity = true; receipt.failures.splice(1, 0, 'swap-activity'); },
+    receipt => { receipt.admission.metrics.unapprovedTaskWorkloads = true; },
+    receipt => { receipt.admission.metrics.userspaceObservationComplete = false; },
+    receipt => { receipt.admission.metrics.idleServicesVerified = false; },
+  ];
+  for (const change of mutations) {
+    const { receipt, observer } = sharedHostQuietFixture(); change(receipt);
+    assert.throws(() => validateQuietEvidence({ receipt, contaminated: true, ...receiptBytes(receipt) }, observer), /fixed gates/u);
+  }
+  const { receipt, observer } = sharedHostQuietFixture();
+  receipt.admission.services[0].lastCpuTicks = '26';
+  assert.throws(() => validateQuietEvidence({ receipt, contaminated: true, ...receiptBytes(receipt) }, observer), /Idle-service proof/u);
+  const fixture = sharedHostQuietFixture();
+  assert.ok(reviewedAdmissionFailures({ ...fixture.receipt, peakNormalizedOneMinuteLoad: .1 }, fixture.receipt.admission.metrics,
+    { profile: 'shared-host-observed-v1', precheck: true }).includes('total-host-load'));
 });

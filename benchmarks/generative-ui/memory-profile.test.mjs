@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { MEMORY_PHASES } from './memory-workload.mjs';
 import { memoryProfilePlan, validateMemoryManifest, runMemoryProfile } from './memory-profile.mjs';
-import { reviewedQuietFixture } from './profile-reviewed.test-fixture.mjs';
+import { reviewedQuietFixture, sharedHostQuietFixture } from './profile-reviewed.test-fixture.mjs';
 import { quietEvidenceFromBytes } from './profile-driver.mjs';
 
 const digest = 'a'.repeat(64);
@@ -52,9 +52,51 @@ test('memory authorization cannot be replaced by timing permission or altered pr
 });
 
 function reviewedEvidence(collectionId = 'synthetic-contract-test') {
-  const { observer, receipt, receiptSource, receiptSha256 } = reviewedQuietFixture(collectionId);
+  return receiptEvidence(reviewedQuietFixture(collectionId));
+}
+function receiptEvidence({ observer, receipt, receiptSource, receiptSha256 }) {
   return { observer, evidence: { receiptSha256, receiptSource, contaminated: receipt.contaminated, receipt } };
 }
+
+test('shared-host memory admission alone accepts the source-bound background statistic without changing any gate or cycle', async () => {
+  const shared = receiptEvidence(sharedHostQuietFixture()), driver = fakeDriver({ quietEvidence: shared.evidence });
+  const result = await runMemoryProfile({ ...manifest(), quietObserver: shared.observer }, driver, { retain: async () => {} });
+  assert.equal(result.quietObserver.profile, 'shared-host-observed-v1');
+  assert.equal(result.status, 'collected-needs-review'); assert.equal(result.qualification, 'not-assessed');
+  assert.equal(result.cycles.length, 270); assert.equal(result.warmups.length, 18); assert.equal(result.baselines.length, 37);
+  assert.equal(driver.quietChecks.length, 614); assert.equal(driver.opened.length, 37); assert.equal(driver.closed.length, 37);
+  for (const record of [...result.cycles, ...result.warmups, result.largeX]) {
+    assert.equal(record.contaminated, true);
+    assert.equal(record.quietObserver.profile, shared.observer.profile);
+    for (const boundary of ['before', 'after']) {
+      assert.deepEqual(record.quietEvidence[boundary], shared.evidence);
+      assert.equal(record.quietEvidence[boundary].receipt.maxUnrelatedProcessCpuFractionOfOneCore, .35875);
+      assert.ok(record.quietEvidence[boundary].receipt.failures.includes('unrelated-process-cpu'));
+    }
+  }
+  assert.equal(result.baselines.every(row => row.quietEvidence.after === null), true);
+  assert.equal(result.summaries.every(row => row.quietObserver.profile === shared.observer.profile), true);
+
+  const reviewed = reviewedEvidence(), higherReviewed = reviewedEvidence();
+  const raw = higherReviewed.evidence.receipt;
+  raw.maxUnrelatedProcessCpuFractionOfOneCore = .35875;
+  raw.admission.metrics.maxUnrelatedUserspaceProcessCpuFractionOfOneCore = .35875;
+  raw.failures.unshift('unrelated-process-cpu');
+  higherReviewed.evidence.receiptSource = `${JSON.stringify(raw)}\n`;
+  higherReviewed.evidence.receiptSha256 = createHash('sha256').update(higherReviewed.evidence.receiptSource).digest('hex');
+  for (const [quietObserver, evidence, expected] of [
+    [undefined, shared.evidence, undefined], [reviewed.observer, shared.evidence, undefined],
+    [shared.observer, reviewed.evidence, undefined], [reviewed.observer, higherReviewed.evidence, /fixed gates/u],
+  ]) {
+    const refused = fakeDriver({ quietEvidence: evidence });
+    await assert.rejects(runMemoryProfile({ ...manifest(), ...(quietObserver ? { quietObserver } : {}) }, refused, { retain: async () => {} }), error => {
+      assert.deepEqual(error.report.lastQuietAttempt.evidence, evidence);
+      if (expected) assert.match(error.cause.message, expected);
+      return true;
+    });
+    assert.equal(refused.opened.length, 0); assert.equal(refused.quietChecks.length, 1); assert.equal(refused.driverClosed, true);
+  }
+});
 
 test('memory observer admission is explicit and cannot alter the frozen lifecycle procedure', () => {
   const { observer } = reviewedEvidence();

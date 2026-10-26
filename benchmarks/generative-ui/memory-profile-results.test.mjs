@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { createHash } from 'node:crypto';
 import { MEMORY_PHASES } from './memory-workload.mjs';
 import { memoryProfileSchedule, validateMemoryObservation, validateMemoryCycle, summarizeMemoryRun } from './memory-profile-results.mjs';
-import { reviewedQuietFixture } from './profile-reviewed.test-fixture.mjs';
+import { reviewedQuietFixture, sharedHostQuietFixture } from './profile-reviewed.test-fixture.mjs';
 
 const observation = phase => ({ phase, gcPasses: 2, taskBetweenGcPasses: true,
   heap: { usedSize: 16 * 1024 * 1024, totalSize: 32 * 1024 * 1024, embedderHeapUsedSize: null, backingStorageSize: null },
@@ -15,12 +15,41 @@ const observation = phase => ({ phase, gcPasses: 2, taskBetweenGcPasses: true,
 const cycle = number => ({ lifecycle: 'full-chat', runIndex: 0, cycle: number, regime: 'persistent', admission: number % 2 ? 'direct' : 'adapters',
   savedBytes: 524288, archiveSha256: 'a'.repeat(64), semanticAssertionsPassed: true, contaminated: false, observations: MEMORY_PHASES.map(phase => ({ ...observation(phase), protocolOwners: !phase.includes('disposed') && number % 2 === 0 ? 2 : 0 })) });
 
-function reviewedCycle(number) {
-  const { observer, receipt, receiptSource, receiptSha256 } = reviewedQuietFixture();
+function reviewedCycle(number, fixture = reviewedQuietFixture()) {
+  const { observer, receipt, receiptSource, receiptSha256 } = fixture;
   const evidence = { receiptSha256, receiptSource, contaminated: receipt.contaminated, receipt };
   return { ...cycle(number), collectionId: receipt.collectionId, quietObserver: observer, admissionSha256: receipt.admissionSha256, contaminated: true,
     quietEvidence: { before: evidence, after: structuredClone(evidence) }, preQuietSha256: receiptSha256, postQuietSha256: receiptSha256 };
 }
+
+test('memory result metadata cannot relabel a valid receipt as another fixed observer profile', () => {
+  const row = reviewedCycle(1), shared = sharedHostQuietFixture().observer;
+  const options = { quietObserver: row.quietObserver, collectionId: row.collectionId, admissionSha256: row.admissionSha256 };
+  const relabelled = { ...row, quietObserver: { ...shared, configSha256: row.quietObserver.configSha256 } };
+  assert.throws(() => validateMemoryCycle(relabelled, options), /observer/u);
+});
+
+test('shared-host memory evidence keeps observed background CPU and every original lifecycle budget', () => {
+  const row = reviewedCycle(1, sharedHostQuietFixture());
+  const options = { quietObserver: row.quietObserver, collectionId: row.collectionId, admissionSha256: row.admissionSha256 };
+  assert.doesNotThrow(() => validateMemoryCycle(row, options));
+  assert.equal(row.quietEvidence.before.receipt.maxUnrelatedProcessCpuFractionOfOneCore, .35875);
+  assert.equal(row.contaminated, true);
+  assert.ok(row.quietEvidence.before.receipt.failures.includes('unrelated-process-cpu'));
+  assert.throws(() => validateMemoryCycle(row));
+  assert.throws(() => validateMemoryCycle(row, { ...options, quietObserver: reviewedQuietFixture().observer }));
+  for (const mutate of [value => { value.observations[0].gcPasses = 1; }, value => { value.savedBytes = 524289; },
+    value => { value.lifecycle = 'unknown'; }, value => { value.observations.reverse(); },
+    value => { value.observations[0].heap.usedSize = 134217729; value.observations[0].heap.totalSize = 268435456; },
+  ]) {
+    const changed = structuredClone(row); mutate(changed); assert.throws(() => validateMemoryCycle(changed, options));
+  }
+  const rows = Array.from({ length: 40 }, (_, index) => reviewedCycle(index + 1, sharedHostQuietFixture()));
+  assert.equal(summarizeMemoryRun(rows, options).quietObserver.profile, 'shared-host-observed-v1');
+  assert.throws(() => summarizeMemoryRun(rows.map((value, index) => index === 19 ? reviewedCycle(20) : value), options));
+  rows.at(-1).observations.at(-1).rendererDom.jsEventListeners++;
+  assert.equal(summarizeMemoryRun(rows, options).withinBudget, false, 'shared-host admission does not waive the original retained-counter bound');
+});
 
 test('memory cycles require explicit matching observer and collection evidence while retaining strict failure', () => {
   const row = reviewedCycle(1), options = { quietObserver: row.quietObserver, collectionId: row.collectionId, admissionSha256: row.admissionSha256 };

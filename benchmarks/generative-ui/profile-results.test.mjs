@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { profileCells, cellSchedule, validateCapabilities, validateOperation, validateSample, summarizeCell, sampleBudgetViolations, percentile, bootstrapP95, summarizeRetainedHeap, maximumCls } from './profile-results.mjs';
 import { makeReviewedQuietEvidence } from './profile-admission.mjs';
-import { reviewedQuietFixture } from './profile-reviewed.test-fixture.mjs';
+import { reviewedQuietFixture, sharedHostQuietFixture } from './profile-reviewed.test-fixture.mjs';
 
 const capabilities = { longtask: { supported: true, positiveControl: true, receipt: 'longtask-control' }, layoutShift: { supported: false, positiveControl: false, reason: 'entry-type-unavailable' } };
 const cell = () => profileCells()[0];
@@ -81,6 +81,32 @@ test('reviewed samples preserve strict contamination and cannot mix observer or 
   assert.throws(() => summarizeCell(cell(), mixed, [descriptor], options));
   const slow = structuredClone(row); slow.operations[0].renderOpportunity = 111; slow.window.end = 150;
   assert.deepEqual(sampleBudgetViolations(slow, cell(), [descriptor], options), ['operation:edit']);
+});
+
+test('shared-host samples cannot pool other profiles and still fail unchanged timing, CLS and long-task ceilings', () => {
+  const shared = sharedHostQuietFixture(), reviewed = reviewedQuietFixture();
+  const evidence = makeReviewedQuietEvidence(shared.receipt, shared.receiptSha256, shared.observer, { receiptSource: shared.receiptSource });
+  const options = { quietObserver: shared.observer, collectionId: shared.receipt.collectionId, admissionSha256: shared.receipt.admissionSha256, replicates: 100 };
+  const row = { ...sample(0), contaminated: true, quietObserver: shared.observer, collectionId: options.collectionId, admissionSha256: options.admissionSha256,
+    quietEvidence: { before: evidence, after: evidence }, quietReceiptSha256: evidence.receiptSha256 };
+  validateSample(row, cell(), [descriptor], options);
+  assert.deepEqual(sampleBudgetViolations(row, cell(), [descriptor], options), []);
+  const rows = Array.from({ length: 60 }, (_, index) => ({ ...structuredClone(row), batchIndex: Math.floor(index / 30), sampleIndex: index }));
+  const summary = summarizeCell(cell(), rows, [descriptor], options);
+  assert.equal(summary.status, 'within-scoped-budgets'); assert.equal(summary.quietObserver.profile, 'shared-host-observed-v1');
+  assert.equal(row.quietEvidence.before.receipt.admission.metrics.maxUnrelatedUserspaceProcessCpuFractionOfOneCore, .35875);
+  assert.throws(() => validateSample(row, cell(), [descriptor]));
+  assert.throws(() => validateSample(row, cell(), [descriptor], { ...options, quietObserver: reviewed.observer }));
+  const mixed = structuredClone(rows), oldEvidence = makeReviewedQuietEvidence(reviewed.receipt, reviewed.receiptSha256, reviewed.observer, { receiptSource: reviewed.receiptSource });
+  mixed[30].quietObserver = reviewed.observer; mixed[30].quietEvidence = { before: oldEvidence, after: oldEvidence }; mixed[30].quietReceiptSha256 = oldEvidence.receiptSha256;
+  assert.throws(() => summarizeCell(cell(), mixed, [descriptor], options));
+  const slow = structuredClone(row); slow.operations[0].renderOpportunity = 111; slow.window.end = 300;
+  assert.deepEqual(sampleBudgetViolations(slow, cell(), [descriptor], options), ['operation:edit']);
+  const shifted = structuredClone(row); shifted.capabilities.layoutShift = { supported: true, positiveControl: true, receipt: 'synthetic-control' };
+  shifted.observers.layoutShifts = [{ startTime: 25, value: .10001, hadRecentInput: false, phase: 'edit' }];
+  assert.deepEqual(sampleBudgetViolations(shifted, cell(), [descriptor], options), ['cls']);
+  const blocked = structuredClone(row); blocked.window.end = 300; blocked.observers.longTasks = [{ startTime: 0, duration: 200.01, phase: 'edit' }];
+  assert.deepEqual(sampleBudgetViolations(blocked, cell(), [descriptor], options), ['longtask']);
 });
 
 test('cell summary enforces every sample index and does not combine duplicate/missing observations', () => {

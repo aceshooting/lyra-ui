@@ -67,7 +67,7 @@ export function validateCollectionManifest(manifest) {
   validateQuietObserver(manifest.quietObserver);
   if (manifest.quietObserver) inspectReviewedQuietReceipt(manifest.quietReceipt, manifest.quietObserver, { collectionId: manifest.collection.id, admissionSha256: manifest.harness.admissionSha256 });
   else {
-    require(manifest.quietReceipt?.admission === undefined && manifest.quietReceipt?.kind !== 'reviewed-idle-service-live-receipt'
+    require(manifest.quietReceipt?.admission === undefined && (manifest.quietReceipt?.kind === undefined || manifest.quietReceipt.kind === 'quiet-live-receipt')
       && manifest.quietReceipt?.contaminated !== true && manifest.quietReceipt?.observationComplete !== false
       && (manifest.quietReceipt?.failures === undefined || Array.isArray(manifest.quietReceipt.failures) && manifest.quietReceipt.failures.length === 0), 'Strict collection cannot use a different observer or contaminated receipt.');
     inspectQuietReceipt(manifest.quietReceipt);

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseCpuStat, parseLoadAverage, parseSwapCounters, parseProcessStat, workloadLabels, createOwnershipTracker, intervalObservation, windowMetrics, ruleFailures, validateReview, makeReceipt, quietSnapshotDeadline, validateObserverBaseline, reviewedWindowAdmission, validateReviewedReview, makeReviewedReceipt } from './profile-quiet.mjs';
-import { REVIEWED_IDLE_SERVICE_PROFILE, REVIEWED_IDLE_SERVICE_SCOPE, makeReviewedQuietEvidence, parseObserverConfigBytes } from './profile-admission.mjs';
+import { REVIEWED_IDLE_SERVICE_PROFILE, REVIEWED_IDLE_SERVICE_SCOPE, SHARED_HOST_OBSERVED_PROFILE, SHARED_HOST_OBSERVED_SCOPE, makeReviewedQuietEvidence, parseObserverConfigBytes } from './profile-admission.mjs';
 import { checkFreshQuietReceipt } from './profile-driver.mjs';
 
 // Synthetic fixtures only. No /proc reader, monitor, campaign or inspected artifact runs here.
@@ -267,4 +267,35 @@ test('reviewed receipt retains raw strict failure, requires exact manual config 
   assert.throws(() => validateReviewedReview({ ...review, quietObserver: { ...quietObserver, configSha256: hash('e') } }, options));
   assert.throws(() => validateReviewedReview(values.review, options));
   assert.throws(() => validateReviewedReview({ ...review, admissionSha256: hash('8') }, options), /authorization/u);
+});
+
+
+test('shared-host monitor preserves actual CPU attribution and uses separately reviewed receipt kinds', () => {
+  const config = { ...observerConfig(), profile: SHARED_HOST_OBSERVED_PROFILE, scope: { ...SHARED_HOST_OBSERVED_SCOPE } };
+  const { before, current } = observerRow({ config, beforeRows: [processRow(40)], afterRows: [processRow(40, { cpu: 36n })] });
+  const cpuIds = Array.from({ length: 60 }, (_, index) => `cpu${index}`).join(',');
+  before.cpu = { ...before.cpu, logicalCpus: 60, cpuIds };
+  current.cpu = { busy: 236n, total: 7000n, logicalCpus: 60, cpuIds };
+  current.monotonicNs = 1_003_480_000n; current.observedAt = 1003.48;
+  for (const process of current.processes.values()) process.readMonotonicNs = current.monotonicNs;
+  const row = intervalObservation(before, current, { hz: 100, ownedBefore: new Map(), ownedAfter: new Map(), observerConfig: config });
+  assert.equal(row.reviewed.maxUnrelatedUserspaceProcessCpuFractionOfOneCore, .36 / 1.00348);
+  assert.equal(row.cpuBusyFraction, 36 / 6000);
+  const samples = reviewedRows(row), parsed = parseObserverConfigBytes(Buffer.from(`${JSON.stringify(config)}\n`));
+  assert.equal(windowAdmission(samples, config).accepted, true);
+  assert.deepEqual(windowAdmission(samples).failures, ['unrelated-userspace-cpu']);
+  assert.ok(ruleFailures(windowMetrics(samples)).includes('unrelated-process-cpu'));
+  const values = artifacts(), admissionSha256 = hash('9');
+  const precheck = { ...values.precheck, kind: 'shared-host-observed-precheck', admissionSha256, metrics: windowMetrics(samples),
+    admission: reviewedWindowAdmission(samples, config, parsed.configSha256, { precheck: true, configSource: parsed.configSource }) };
+  const quietObserver = { profile: config.profile, configSha256: parsed.configSha256, scope: config.scope };
+  const review = { ...values.review, kind: 'shared-host-observed-precheck-review', quietObserver, admissionSha256 };
+  const options = { ...values, collectionId: 'synthetic-unit', samples, precheck, review, observerConfig: config, ...parsed, admissionSha256 };
+  const receipt = makeReviewedReceipt(options), receiptSource = `${JSON.stringify(receipt, null, 2)}\n`, receiptSha256 = createHash('sha256').update(receiptSource).digest('hex');
+  assert.equal(receipt.kind, 'shared-host-observed-live-receipt'); assert.equal(receipt.contaminated, true); assert.equal(receipt.inspected, false);
+  assert.equal(receipt.admission.accepted, true); assert.equal(receipt.admission.metrics.maxUnrelatedUserspaceProcessCpuFractionOfOneCore, row.reviewed.maxUnrelatedUserspaceProcessCpuFractionOfOneCore);
+  assert.doesNotThrow(() => makeReviewedQuietEvidence(receipt, receiptSha256, quietObserver, { receiptSource, admissionSha256 }));
+  assert.throws(() => validateReviewedReview({ ...review, kind: 'reviewed-idle-service-precheck-review' }, options), /authorization/u);
+  const active = observerRow({ config, afterService: idleService({ cpu: 1n }) }).row;
+  assert.ok(windowAdmission(reviewedRows(active), config).failures.includes('idle-service-not-idle-or-changed'));
 });
