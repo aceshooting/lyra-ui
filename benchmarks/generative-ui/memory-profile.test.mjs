@@ -250,8 +250,13 @@ test('a refused post-cycle receipt retains its exact raw outcome and the precedi
 });
 
 test('collection CLI rejects invalid arguments without an import-cycle deadlock or browser work', () => {
-  const result = spawnSync(process.execPath, [new URL('./memory-profile.mjs', import.meta.url).pathname, '--invalid'], { encoding: 'utf8', timeout: 5000 });
-  assert.equal(result.status, 1); assert.equal(result.error, undefined); assert.match(result.stderr, /Explicit memory authorization/u);
+  for (const args of [[], ['--invalid']]) {
+    const result = spawnSync(process.execPath, [new URL('./memory-profile.mjs', import.meta.url).pathname, ...args], { encoding: 'utf8', timeout: 5000 });
+    assert.equal(result.error, undefined); assert.equal(result.signal, null);
+    assert.equal(result.status, 1, result.stderr); assert.equal(result.stdout, '');
+    assert.equal(result.stderr, 'Memory profile stopped. Explicit memory authorization and retained failure evidence are required.\n');
+    assert.doesNotMatch(result.stderr, /unsettled|top-level await/iu);
+  }
 });
 
 test('injected runner executes fixed independent processes, excluded warmups and one-shot X', async () => {

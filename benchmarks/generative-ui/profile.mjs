@@ -195,7 +195,7 @@ export async function profileBuildTools() {
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
   if (process.argv.length === 3 && process.argv[2] === '--plan') process.stdout.write(`${JSON.stringify(profilePlan(), null, 2)}\n`);
   else {
-    try { const { runProfileCli } = await import('./profile-driver.mjs'); await runProfileCli(process.argv.slice(2)); }
-    catch { process.stderr.write('Profile collection stopped without qualification. Inspect retained failure evidence and explicit authorization receipts.\n'); process.exitCode = 1; }
+    void import('./profile-driver.mjs').then(({ runProfileCli }) => runProfileCli(process.argv.slice(2)))
+      .catch(() => { process.stderr.write('Profile collection stopped without qualification. Inspect retained failure evidence and explicit authorization receipts.\n'); process.exitCode = 1; });
   }
 }

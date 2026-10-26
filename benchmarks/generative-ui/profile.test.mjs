@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { validateFixture, validatePrepared, validateCollectionManifest, runProfile, profilePlan, inspectQuietReceipt, collectionSchedule, validateInputInventory } from './profile.mjs';
 import { createHash } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import { reviewedQuietFixture, sharedHostQuietFixture, aggregateHostQuietFixture } from './profile-reviewed.test-fixture.mjs';
 import { quietEvidenceFromBytes } from './profile-driver.mjs';
 
@@ -18,6 +19,16 @@ test('runner plan cannot be mistaken for collected qualification', () => {
   const plan = profilePlan(); assert.equal(plan.status, 'not-collected'); assert.equal(plan.cells.length, 69);
   assert.equal(plan.measuredSamples, 4140); assert.equal(plan.warmupSamples, 414);
   assert.equal(Object.hasOwn(plan, 'metrics'), false);
+});
+
+test('normal timing CLI rejects missing arguments through its real driver without an entrypoint await cycle', () => {
+  for (const args of [[], ['--invalid']]) {
+    const result = spawnSync(process.execPath, [new URL('./profile.mjs', import.meta.url).pathname, ...args], { encoding: 'utf8', timeout: 5000 });
+    assert.equal(result.error, undefined); assert.equal(result.signal, null);
+    assert.equal(result.status, 1, result.stderr); assert.equal(result.stdout, '');
+    assert.equal(result.stderr, 'Profile collection stopped without qualification. Inspect retained failure evidence and explicit authorization receipts.\n');
+    assert.doesNotMatch(result.stderr, /unsettled|top-level await/iu);
+  }
 });
 
 test('collection refuses absent actual candidate/browser/control inventory and synthetic drivers', async () => {
