@@ -1,6 +1,6 @@
 # Generated UI production measurements
 
-These tools measure the experimental Lyra Gen entry points and a local chat replay. They do not
+These tools measure Lyra Gen entry points and deterministic application compositions. They do not
 contact model providers, record API latency, certify a memory ceiling, or produce comparative
 claims about other products. Run on a quiet machine using the repository's exact `.nvmrc` version.
 Keep raw reports from concurrent jobs labelled as smoke evidence rather than qualification.
@@ -237,8 +237,8 @@ they do not establish a general visual-quality score, provider benchmark or acce
 ## Tachometer boundary
 
 The existing `benchmarks/ab.mjs` release gate compares published Lyra UI against local Lyra UI.
-Lyra Gen is unpublished and has no corresponding published baseline, so these replay cases are not
-silently added to that gate. `WORKLOADS` is the reusable scenario registry for a future explicit
+Gen replay cases are not enrolled in that gate. A Gen comparison requires an explicitly selected
+published Gen baseline and matching compositions. `WORKLOADS` is the scenario registry for a future
 built-baseline/candidate comparison. Standalone replay reports do not claim tachometer confidence
 intervals or release-gate enrollment.
 
