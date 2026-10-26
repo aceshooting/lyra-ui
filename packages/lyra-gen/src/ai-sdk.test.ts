@@ -19,13 +19,13 @@ function options(limits?: { maxBytes?: number }) {
 function data(document: unknown, id = 'view-data'): MessagePart { return { id, type: 'data', name: 'view', data: document, state: 'complete' }; }
 
 // The exact ai devDependency builds snapshots from its public UIMessageChunk API.
-async function snapshots(chunks: UIMessageChunk[]): Promise<UIMessage[]> {
+async function snapshots(chunks: UIMessageChunk[], previous?: UIMessage): Promise<UIMessage[]> {
   const stream = new ReadableStream<UIMessageChunk>({ start(controller) {
     for (const chunk of chunks) controller.enqueue(chunk);
     controller.close();
   } });
   const output: UIMessage[] = [];
-  for await (const message of readUIMessageStream({ stream, terminateOnError: true })) output.push(message);
+  for await (const message of readUIMessageStream({ stream, message: previous, terminateOnError: true })) output.push(message);
   return output;
 }
 function adapted(message: UIMessage) {
@@ -106,6 +106,79 @@ test('pinned SDK streamed tool input stays inert until input-available and keeps
   const final = adapted(messages.at(-1)!);
   assert.deepEqual(final.parts?.map(part => part.type), ['tool-call', 'tool-result']);
   assert.equal(final.parts?.[1]?.type === 'tool-result' && final.parts[1].invocationId, 'view-call');
+});
+
+test('pinned SDK resumes persisted partial JSON tool input without admitting unfinished controls', async () => {
+  const document = view();
+  const source = JSON.stringify(document);
+  for (const dynamic of [false, true]) {
+    const selected = bridge();
+    const first = await snapshots([
+      { type: 'start', messageId: 'answer' },
+      { type: 'tool-input-start', toolCallId: 'resumed-view', toolName: 'show_view', dynamic },
+      { type: 'tool-input-delta', toolCallId: 'resumed-view', inputTextDelta: source.slice(0, 80) },
+    ]);
+    const persisted = structuredClone(first.at(-1)!);
+    const before = adapted(persisted).parts?.find(part => part.type === 'tool-call');
+    assert.notEqual(before, undefined);
+    assert.equal(selected.resolve(before!)?.status, 'loading');
+    const continued = await snapshots([
+      { type: 'tool-input-delta', toolCallId: 'resumed-view', inputTextDelta: source.slice(80) },
+      { type: 'tool-input-available', toolCallId: 'resumed-view', toolName: 'show_view', input: document, dynamic },
+    ], persisted);
+    assert.ok(continued.length > 0, 'The SDK must publish resumed input snapshots');
+    let sawStreaming = false;
+    let ready = false;
+    for (const message of continued) {
+      const part = adapted(message).parts?.find(part => part.type === 'tool-call');
+      assert.equal(part?.id, before!.id);
+      const result = selected.resolve(part!)!;
+      if (part?.metadata?.['aiSdkInputState'] === 'input-streaming') {
+        sawStreaming = true;
+        assert.equal(result.status, 'loading');
+        assert.equal(result.document, undefined);
+        assert.deepEqual(part.type === 'tool-call' && JSON.parse(JSON.stringify(part.invocation.args)), document);
+      } else {
+        assert.equal(result.status, 'ready');
+        assert.equal(result.document?.surfaceId, document.surfaceId);
+        ready = true;
+      }
+    }
+    assert.equal(sawStreaming, true, 'The resumed delta must publish reconstructed streaming input');
+    assert.equal(ready, true, 'The complete resumed input must reach the ready state');
+  }
+});
+
+test('pinned SDK reader separates a new message identity from resumed history', async () => {
+  const old = (await snapshots([
+    { type: 'start', messageId: 'previous' },
+    { type: 'data-view', id: 'old-view', data: view() },
+  ])).at(-1)!;
+  const nextDocument = { ...view(), surfaceId: 'next-view' };
+  const next = await snapshots([
+    { type: 'start', messageId: 'next' },
+    { type: 'data-view', id: 'next-part', data: nextDocument },
+    { type: 'finish', finishReason: 'stop' },
+  ], old);
+  assert.ok(next.length > 0, 'The SDK must publish the replacement message');
+  const message = adapted(next.at(-1)!);
+  assert.equal(message.id, 'next');
+  assert.deepEqual(message.parts?.map(part => part.id), ['next-part']);
+  const selected = new LyraGenAiSdkBridge({ messageId: 'next', catalog, dataNames: ['view'] });
+  assert.equal(selected.resolve(message.parts![0]!)?.document?.surfaceId, 'next-view');
+});
+
+test('pinned SDK string tool input is rejected instead of being reparsed as a generated view', async () => {
+  const messages = await snapshots([
+    { type: 'start', messageId: 'answer' },
+    { type: 'tool-input-available', toolCallId: 'string-view', toolName: 'show_view', input: JSON.stringify(view()) },
+  ]);
+  assert.ok(messages.length > 0);
+  const call = adapted(messages.at(-1)!).parts?.find(part => part.type === 'tool-call');
+  assert.notEqual(call, undefined);
+  const result = bridge().resolve(call!)!;
+  assert.equal(result.status, 'error');
+  assert.equal(result.document, undefined);
 });
 
 test('pinned dynamic tool snapshots preserve denied and error outcomes without activating input', async () => {

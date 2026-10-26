@@ -1,17 +1,19 @@
 # Interactive SDK answers
 
-This experimental integration is tested against the exact `ai@6.0.292` development dependency.
+This experimental integration is tested against the exact `ai@7.0.153` development dependency.
 It uses the SDK's public
-[`UIMessageChunk`](https://github.com/vercel/ai/blob/ai%406.0.292/packages/ai/src/ui-message-stream/ui-message-chunks.ts)
-and [`readUIMessageStream`](https://github.com/vercel/ai/blob/ai%406.0.292/packages/ai/src/ui-message-stream/read-ui-message-stream.ts)
+[`UIMessageChunk`](https://github.com/vercel/ai/blob/ai%407.0.153/packages/ai/src/ui-message-stream/ui-message-chunks.ts)
+and [`readUIMessageStream`](https://github.com/vercel/ai/blob/ai%407.0.153/packages/ai/src/ui-message-stream/read-ui-message-stream.ts)
 APIs. This qualification covers the fixture paths below, not arbitrary SDK versions or every
 provider. Lyra UI does not import the SDK at runtime.
 
 The existing neutral vocabulary is sufficient: `data-view` becomes a `data` part named `view`,
 and `tool-show_view` becomes a `tool-call` part with its parsed input in `invocation.args`.
-No new `ui` discriminator or alternate tool parser is needed. The application selects which data
-and tool names may carry generated views; every candidate still needs the active catalog's
-validation before rendering.
+No new `ui` discriminator or alternate tool parser is needed. This path accepts complete JSON
+view objects, including JSON-encoded streamed tool input; SDK text-encoded tool input and
+provider-specific `custom` content are outside the generated-view contract. The application
+selects which data and tool names may carry generated views; every candidate still needs the
+active catalog's validation before rendering.
 
 ## Server prompt and data events
 
@@ -110,10 +112,18 @@ host-owned resume/retry/cancel operations. The bridge reports states and never r
 For the full chat composition, including localized interruption controls, announcements and focus
 preservation, see [interactive chat](interactive-chat.md).
 
+For a persisted tool-input stream, pass the last SDK `UIMessage` to
+`readUIMessageStream({ message, stream })`. SDK 7 retains raw partial tool input and reconstructs
+its parser state; resume with the remaining deltas, rather than replaying the prefix. This is SDK
+transport state: it does not itself resume an interrupted neutral part or authorize an action.
+When a resumed stream starts a different message ID, SDK 7 starts separate message content.
+Create a new bridge for that ID; never combine documents retained by the previous bridge.
+
 ## Streamed tool input
 
 An SDK tool named `show_view` can use the catalog JSON Schema as its input schema. Its complete
-input must be the view object itself. Ordinary `tool-*` and `dynamic-tool` parts keep their existing
+input must be the view object itself. A string containing JSON is not a view object and is not
+parsed again by the bridge. Ordinary `tool-*` and `dynamic-tool` parts keep their existing
 call/result mapping. The UI adapter records the exact SDK tool state in
 `part.metadata.aiSdkInputState`, since neutral transport state alone cannot distinguish a partial
 input from a complete input awaiting tool output.
@@ -157,6 +167,9 @@ WTR_PORT=8320 pnpm --filter @aceshooting/lyra-gen exec wtr --config web-test-run
 ```
 
 The Node fixtures use the actual pinned SDK to assemble data and static/dynamic tool snapshots,
-including optional undefined fields, partial input, terminal errors/denial and transient data.
+including optional undefined fields, partial input and persisted resume, message-identity changes,
+terminal errors/denial and transient data. SDK 7 is ESM-only and requires Node 22 or later; the
+examples and fixtures use ESM imports. No SDK lifecycle callbacks or model/provider invocation
+APIs are wrapped by this integration.
 The browser fixtures exercise the existing rendering hook, stable document/element identity,
 input readiness and retained safe interruption content.

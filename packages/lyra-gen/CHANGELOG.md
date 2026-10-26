@@ -2,8 +2,8 @@
 
 ## 0.1.0
 
-Initial experimental development version. Publication and complete roadmap qualification are
-pending; the support boundaries in the package guides apply.
+Initial experimental release. The package guides document the supported profiles and
+qualification limits.
 
 - Restricted Lyra Markup and JSON input, reviewed catalogs, schemas, diagnostics and bounded parsing.
 - Incremental generated views, local and controlled form state, host-authorized actions and repairs.

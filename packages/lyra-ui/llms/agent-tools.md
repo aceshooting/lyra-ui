@@ -3779,8 +3779,8 @@ typed events. Browser API permissions are denied unless explicitly enabled in `r
 
 The default `protocol="legacy"` uses Lyra's existing nonce/port envelope. Set
 `protocol="mcp-apps"` for the supported JSON-RPC host subset of the
-[MCP Apps 2026-01-26 protocol](https://github.com/modelcontextprotocol/ext-apps/blob/v2.0.1/specification/2026-01-26/apps.mdx).
-The wire contract is pinned against the public `@modelcontextprotocol/ext-apps` 2.0.1 types.
+[MCP Apps 2026-01-26 protocol](https://github.com/modelcontextprotocol/ext-apps/blob/v2.0.3/specification/2026-01-26/apps.mdx).
+The wire contract is pinned against the public `@modelcontextprotocol/ext-apps` 2.0.3 types.
 An SDK-built interoperability fixture exercises initialization, tools, resources, context, text messages,
 links, inline display fallback, cancellation, error responses and teardown with `App` from the pinned
 SDK. This is a bounded host implementation, not a claim of full MCP Apps conformance: server

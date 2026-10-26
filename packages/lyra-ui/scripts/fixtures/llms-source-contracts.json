@@ -14695,7 +14695,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "4281b80582f416653e1c",
+      "fingerprint": "9c8f0794401f189536d0",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -16320,7 +16320,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "78ab64a6ec219986a558",
+      "fingerprint": "84b5aa4d95c32becb217",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16336,7 +16336,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "fd881ebb4387d629fbd4",
+      "fingerprint": "d2caef48533694dc4ec0",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16896,7 +16896,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "ce1c3293854c6d375de7",
+      "fingerprint": "8e13f0900fc22e2e5870",
       "routes": [
         "src/vue.ts"
       ],
@@ -17305,7 +17305,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "b7a095b76c97045049c9",
+      "fingerprint": "b5c856ecb950dae240e3",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -20953,7 +20953,7 @@
       "module": "src/components/media/map/map.class.ts",
       "exportName": "LyraMapControls",
       "kind": "interface",
-      "fingerprint": "2ddbbeb53073b33304cd",
+      "fingerprint": "836fedf1953d634304fb",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -20997,7 +20997,7 @@
       "module": "src/components/media/map/map-control-options.ts",
       "exportName": "LyraMapNavigationControlOptions",
       "kind": "interface",
-      "fingerprint": "68261ce0266569bb150a",
+      "fingerprint": "e1b1659164a34bd570b1",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -21019,7 +21019,7 @@
       "module": "src/components/media/map/map-control-options.ts",
       "exportName": "LyraMapScaleControlOptions",
       "kind": "interface",
-      "fingerprint": "9608bbb589cc2e54ef33",
+      "fingerprint": "53a868c1daf47fd9ada0",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -21041,7 +21041,7 @@
       "module": "src/components/media/map/map-control-options.ts",
       "exportName": "LyraMapAttributionControlOptions",
       "kind": "interface",
-      "fingerprint": "acf709931364e7168a67",
+      "fingerprint": "3fb4a427b9eecff30cbc",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -21063,7 +21063,7 @@
       "module": "src/components/media/map/map-control-options.ts",
       "exportName": "LyraMapGeolocateControlOptions",
       "kind": "interface",
-      "fingerprint": "2b0d773f5448cd78d1b7",
+      "fingerprint": "fd3aab661401da0cf926",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
