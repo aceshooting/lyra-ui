@@ -135,10 +135,22 @@ export function mountLiveDashboard(root: HTMLElement, options: DashboardExampleO
     render(index < 0 ? html`` : valueDetail(rows[index]!, index), detailSources);
   };
   const cleanups: (() => void)[] = [];
+  let boundTable: LyraTable<DashboardExampleRow, string> | undefined;
+  let boundChart: LyraLiteChart | undefined;
+  const releaseControls = () => {
+    selection?.dispose(); selection = undefined;
+    for (const cleanup of cleanups.splice(0)) cleanup();
+    boundTable = undefined; boundChart = undefined;
+  };
   const controls = () => {
-    const table = binding.panel('table')?.shadowRoot?.querySelector<LyraTable<DashboardExampleRow, string>>('[data-gen-id="records"]');
-    const chart = binding.panel('chart')?.shadowRoot?.querySelector<LyraLiteChart>('[data-gen-id="summary"]');
+    if (disposed) return;
+    const tableView = binding.panel('table'), chartView = binding.panel('chart');
+    const table = tableView?.shadowRoot?.querySelector<LyraTable<DashboardExampleRow, string>>(`${initialCatalog.components['table']!.tag}[data-gen-id="records"]`);
+    const chart = chartView?.shadowRoot?.querySelector<LyraLiteChart>(`${initialCatalog.components['chart']!.tag}[data-gen-id="summary"]`);
+    if (selection && (table !== boundTable || chart !== boundChart)) releaseControls();
+    if (tableView?.status !== 'ready' || chartView?.status !== 'ready') return;
     if (table && chart && !selection) {
+      boundTable = table; boundChart = chart;
       selection = bindDashboardSelection({ table, chart, shared, scope: 'records', rowId: row => row.c0, keys: rows.map(row => row.c0), onSelection: snapshot => { selected.textContent = options.labels.selection(snapshot.selection); chart.description = selected.textContent; } });
       if (options.authorizeDrilldown) {
         const onTable = (event: Event) => { const row = (event as CustomEvent<{ row: DashboardExampleRow }>).detail.row; void drilldown(row.c0, event.composedPath()[0] as HTMLElement); };
@@ -150,6 +162,9 @@ export function mountLiveDashboard(root: HTMLElement, options: DashboardExampleO
     // This example's query returns its complete selected page. Preserve known selection across pages.
     selection?.setKeys(rows.map(row => row.c0), options.totalRows === undefined && offset === 0 && rows.length < pageSize ? new Set(rows.map(row => row.c0)) : undefined);
   };
+  // A catalog replacement can settle without another ready event for the same revision.
+  const controlReadiness = new MutationObserver(controls);
+  for (const id of ['table', 'chart']) controlReadiness.observe(binding.panel(id)!, { attributes: true, attributeFilter: ['aria-busy'] });
   const updateRows = async (snapshot: DashboardDataSnapshot, pageOffset: number) => {
     const checked = validateSchema(snapshot.result?.data, { type: 'array', maxItems: pageSize, items: { type: 'object', properties: { c0: { type: 'string', minLength: 1, maxLength: 256 }, c1: { type: 'number' } }, required: ['c0', 'c1'], additionalProperties: false } });
     if (!checked.ok) { status.textContent = options.labels.status({ ...snapshot, status: 'error', stale: true, error: 'invalid-result' }); return; }
@@ -217,5 +232,5 @@ export function mountLiveDashboard(root: HTMLElement, options: DashboardExampleO
     enqueue(sequence: number) { const accepted = queue.push(sequence); queued.textContent = options.labels.queue(queue.metrics); return accepted; },
     /** One pull batch requests at most one refresh; host transport decides when another batch is ready. */
     async flush() { const batch = queue.takeBatch(); if (batch.length) await refresh(); queued.textContent = options.labels.queue(queue.metrics); return batch.length; },
-    dispose() { disposed = true; requestGeneration++; off(); selection?.dispose(); for (const cleanup of cleanups) cleanup(); navigation.reset(); binding.dispose(); live.dispose(); shared.dispose(); queue.dispose(); overview.remove(); breadcrumbs.remove(); detail.remove(); } };
+    dispose() { disposed = true; requestGeneration++; off(); controlReadiness.disconnect(); releaseControls(); navigation.reset(); binding.dispose(); live.dispose(); shared.dispose(); queue.dispose(); overview.remove(); breadcrumbs.remove(); detail.remove(); } };
 }

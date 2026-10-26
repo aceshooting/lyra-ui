@@ -1,4 +1,4 @@
-import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { render, type CSSResult, type TemplateResult } from 'lit';
 import type { LyraTable } from '@aceshooting/lyra-ui/components/lr-table.js';
@@ -10,7 +10,7 @@ import { HostQueryRegistry } from '../../src/live-data.js';
 import type { DashboardQueryResult } from '../../src/live-data.js';
 import { DashboardGridBinding, bindDashboardSelection } from '../../src/dashboard-binding.js';
 import { SharedDashboardState } from '../../src/dashboard.js';
-import { initialCatalog } from '../../src/catalog.js';
+import { createCatalog, initialCatalog } from '../../src/catalog.js';
 import { exportLyraTemplate } from '../../src/export.js';
 import { LyraGenViewElement } from '../../src/gen-view.js';
 import type { LyraGenView } from '../../src/types.js';
@@ -41,6 +41,80 @@ async function loaded(dashboard: Awaited<ReturnType<typeof mounted>>, category =
 }
 
 describe('controlled generated dashboard composition', () => {
+  it('binds selection and drilldown to the actual chart after a delayed catalog loader', async () => {
+    const gate = deferred<void>();
+    const registry = new HostQueryRegistry();
+    registry.register('records', { maxBytes: 5000, maxRows: 100, authorize: () => true, execute: async () => ({ data: records }) });
+    const root = await fixture<HTMLElement>(html`<section style="inline-size: 100%; max-inline-size: 60rem"></section>`);
+    const dashboard = mountLiveDashboard(root, { registry, context, query: 'records', labels, authorizeDrilldown: () => true });
+    const chartView = dashboard.binding.panel('chart')!;
+    chartView.catalog = createCatalog({ ...initialCatalog, components: { ...initialCatalog.components,
+      chart: { ...initialCatalog.components['chart']!, load: async () => { await gate.promise; return initialCatalog.components['chart']!.load!(); } },
+    } });
+    try {
+      await dashboard.ready; await dashboard.refresh();
+      await waitUntil(() => dashboard.binding.panel('table')!.status === 'ready');
+      const placeholder = chartView.shadowRoot!.querySelector<HTMLElement>('[data-gen-id="summary"]')!;
+      expect(placeholder.localName).to.equal('p');
+      gate.resolve();
+      await waitUntil(() => chartView.status === 'ready');
+      const currentChart = chartView.shadowRoot!.querySelector<LyraLiteChart>('lr-lite-chart')!;
+      const currentTable = dashboard.binding.panel('table')!.shadowRoot!.querySelector<LyraTable>('lr-table')!;
+      const row = currentTable.shadowRoot!.querySelector<HTMLElement>('tbody tr')!;
+      await focusByKeyboard(row); await sendKeys({ press: 'Enter' });
+      await waitUntil(() => !dashboard.detail.hidden);
+      expect([...dashboard.shared.snapshot('records').selection]).to.deep.equal(['North']);
+      expect(dashboard.selected.textContent).to.equal('Selected: North');
+      expect(currentChart.description).to.equal('Selected: North');
+      expect(placeholder.isConnected).to.equal(false);
+      expect(dashboard.detail.querySelector('h2')!.textContent).to.equal('Details: North');
+      expect(await dashboard.back()).to.equal(true);
+      expect(dashboard.overview.hidden).to.equal(false);
+      expect(currentChart.description).to.equal('Selected: North');
+    } finally { gate.resolve(); dashboard.dispose(); }
+  });
+
+  it('rebinds same-revision control replacements once and cannot rebind after disposal', async () => {
+    let authorizations = 0;
+    const dashboard = await mounted({ authorizeDrilldown: () => { authorizations++; return true; } });
+    try {
+      await dashboard.refresh(); await loaded(dashboard);
+      const tableView = dashboard.binding.panel('table')!, chartView = dashboard.binding.panel('chart')!;
+      const oldChart = chart(dashboard);
+      dashboard.shared.update('records', 'host', { selection: ['North'] });
+      chartView.catalog = createCatalog({ ...initialCatalog });
+      await chartView.updateComplete; await waitUntil(() => chartView.status === 'ready');
+      const replacement = chart(dashboard);
+      expect(replacement === oldChart).to.equal(false);
+      await waitUntil(() => replacement.description === 'Selected: North');
+      oldChart.dispatchEvent(new CustomEvent('lr-datum-activate', { detail: { index: 1 } }));
+      await nextFrame();
+      expect([...dashboard.shared.snapshot('records').selection]).to.deep.equal(['North']);
+      expect(authorizations).to.equal(0);
+      expect(dashboard.detail.hidden).to.equal(true);
+      for (let update = 0; update < 2; update++) {
+        chartView.requestUpdate(); await chartView.updateComplete;
+        await waitUntil(() => chartView.status === 'ready');
+      }
+      const currentTable = table(dashboard);
+      const secondRow = currentTable.shadowRoot!.querySelectorAll<HTMLElement>('tbody tr')[1]!;
+      await focusByKeyboard(secondRow); await sendKeys({ press: 'Enter' });
+      await waitUntil(() => !dashboard.detail.hidden);
+      expect(authorizations).to.equal(1);
+      expect(replacement.description).to.equal('Selected: South');
+      expect(await dashboard.back()).to.equal(true);
+      dashboard.dispose();
+      dashboard.root.append(tableView, chartView);
+      tableView.requestUpdate(); chartView.requestUpdate();
+      await Promise.all([tableView.updateComplete, chartView.updateComplete]);
+      await waitUntil(() => tableView.status === 'ready' && chartView.status === 'ready');
+      currentTable.dispatchEvent(new CustomEvent('lr-selection-change', { detail: { selectedRowKeys: new Set(['North']) } }));
+      replacement.dispatchEvent(new CustomEvent('lr-datum-activate', { detail: { index: 0 } }));
+      expect([...dashboard.shared.snapshot('records').selection]).to.deep.equal([]);
+      expect(authorizations).to.equal(1);
+    } finally { dashboard.dispose(); }
+  });
+
   it('rejects accessor-bearing saved panel definitions before invoking them or changing the grid', async () => {
     const dashboard = await mounted();
     try {

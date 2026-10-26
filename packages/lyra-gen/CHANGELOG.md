@@ -9,6 +9,7 @@ qualification limits.
 - Incremental generated views, local and controlled form state, host-authorized actions and repairs.
 - Chat integration, replay tooling and portable dashboard, revision and host-persistence contracts.
 - Keyboard focus return after host approval cancellation, preserving focus deliberately moved elsewhere.
+- Live-dashboard selection binds to loaded chart and table controls, including delayed role loaders.
 - Versioned A2UI processing with explicit capability limits and independent protocol fixtures.
 
 The package does not provide model credentials, a hosted generation service, application identity
