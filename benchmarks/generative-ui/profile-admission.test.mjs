@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import test from 'node:test';
-import { sharedHostQuietFixture, reviewedQuietFixture } from './profile-reviewed.test-fixture.mjs';
+import { sharedHostQuietFixture, reviewedQuietFixture, aggregateHostQuietFixture } from './profile-reviewed.test-fixture.mjs';
 import assert from 'node:assert/strict';
 import { REVIEWED_IDLE_SERVICE_PROFILE, REVIEWED_IDLE_SERVICE_SCOPE, validateObserverConfig, validateQuietObserver, reviewedAdmissionFailures, inspectReviewedQuietReceipt, makeReviewedQuietEvidence, validateQuietEvidence, parseObserverConfigBytes, validateObserverConfigSource } from './profile-admission.mjs';
 
@@ -180,4 +180,58 @@ test('shared-host full-source mutations still fail every preserved admission gat
   const fixture = sharedHostQuietFixture();
   assert.ok(reviewedAdmissionFailures({ ...fixture.receipt, peakNormalizedOneMinuteLoad: .1 }, fixture.receipt.admission.metrics,
     { profile: 'shared-host-observed-v1', precheck: true }).includes('total-host-load'));
+});
+
+test('aggregate profile admits valid process activity diagnostics but retains configured identity integrity', () => {
+  const { receipt } = reviewedFixture();
+  const metrics = { maxUnrelatedUserspaceProcessCpuFractionOfOneCore: .37953, unapprovedTaskWorkloads: true,
+    userspaceObservationComplete: false, idleServicesVerified: false, configuredServiceIdentitiesVerified: true };
+  assert.deepEqual(reviewedAdmissionFailures(receipt, metrics, { profile: 'shared-host-aggregate-v1' }), []);
+  assert.deepEqual(reviewedAdmissionFailures(receipt, { ...metrics, configuredServiceIdentitiesVerified: false }, { profile: 'shared-host-aggregate-v1' }), ['configured-service-identity-changed']);
+});
+
+
+test('aggregate full-byte evidence retains nonzero service activity and ordinary userspace exits', () => {
+  const fixture = aggregateHostQuietFixture('aggregate-test');
+  const evidence = makeReviewedQuietEvidence(fixture.receipt, fixture.receiptSha256, fixture.observer, { receiptSource: fixture.receiptSource });
+  assert.equal(evidence.contaminated, true); assert.equal(evidence.receipt.observationComplete, false);
+  assert.equal(evidence.receipt.admission.metrics.idleServicesVerified, false);
+  assert.equal(evidence.receipt.admission.metrics.userspaceObservationComplete, false);
+  assert.equal(evidence.receipt.admission.services[0].lastCpuTicks, '28');
+  assert.equal(evidence.receipt.admission.services[0].zeroCpuIntervals, 59);
+  assert.doesNotThrow(() => validateQuietEvidence(evidence, fixture.observer));
+  for (const observer of [undefined, reviewedQuietFixture('aggregate-test').observer, sharedHostQuietFixture('aggregate-test').observer]) {
+    assert.throws(() => validateQuietEvidence(evidence, observer));
+  }
+});
+
+test('aggregate proof mutations cannot invent inactivity, completeness or impossible tick summaries', () => {
+  const changes = [
+    receipt => { receipt.admission.services[0].zeroCpuIntervals = 58; },
+    receipt => { receipt.admission.services[0].zeroCpuIntervals = 60; },
+    receipt => { receipt.admission.services[0].zeroCpuIntervals = 59.5; },
+    receipt => { receipt.admission.services[0].maxCpuTickDelta = '4'; },
+    receipt => { receipt.admission.services[0].lastCpuTicks = '24'; },
+    receipt => { receipt.admission.services[0].identityMatchedIntervals = 59; },
+    receipt => { receipt.admission.metrics.idleServicesVerified = true; },
+    receipt => { receipt.admission.metrics.userspaceObservationComplete = true; },
+    receipt => { receipt.admission.kernelCoverageIssues = []; },
+    receipt => { receipt.coverageIssues[1].kernelThread = true; },
+  ];
+  for (const change of changes) {
+    const { receipt, observer } = aggregateHostQuietFixture(); change(receipt);
+    assert.throws(() => validateQuietEvidence({ receipt, contaminated: true, ...receiptBytes(receipt) }, observer));
+  }
+});
+
+test('aggregate profile keeps exact host limits, configured identity and diagnostic schema', () => {
+  const { receipt, observer } = aggregateHostQuietFixture(), metrics = receipt.admission.metrics;
+  for (const patch of [{ meanCpuBusyFraction: .05 }, { normalizedOneMinuteLoad: .1 }, { swapActivity: true }]) {
+    assert.ok(reviewedAdmissionFailures({ ...receipt, ...patch }, metrics, { profile: observer.profile }).length);
+  }
+  assert.ok(reviewedAdmissionFailures({ ...receipt, peakNormalizedOneMinuteLoad: .1 }, metrics, { profile: observer.profile, precheck: true }).length);
+  assert.throws(() => reviewedAdmissionFailures(receipt, { ...metrics, maxUnrelatedUserspaceProcessCpuFractionOfOneCore: null }, { profile: observer.profile }), /diagnostics/u);
+  assert.throws(() => reviewedAdmissionFailures(receipt, { ...metrics, userspaceObservationComplete: undefined }, { profile: observer.profile }), /diagnostics/u);
+  receipt.admission.metrics.configuredServiceIdentitiesVerified = false;
+  assert.throws(() => validateQuietEvidence({ receipt, contaminated: true, ...receiptBytes(receipt) }, observer), /fixed gates/u);
 });

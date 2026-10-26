@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { MEMORY_PHASES } from './memory-workload.mjs';
 import { memoryProfilePlan, validateMemoryManifest, runMemoryProfile } from './memory-profile.mjs';
-import { reviewedQuietFixture, sharedHostQuietFixture } from './profile-reviewed.test-fixture.mjs';
+import { reviewedQuietFixture, sharedHostQuietFixture, aggregateHostQuietFixture } from './profile-reviewed.test-fixture.mjs';
 import { quietEvidenceFromBytes } from './profile-driver.mjs';
 
 const digest = 'a'.repeat(64);
@@ -57,6 +57,52 @@ function reviewedEvidence(collectionId = 'synthetic-contract-test') {
 function receiptEvidence({ observer, receipt, receiptSource, receiptSha256 }) {
   return { observer, evidence: { receiptSha256, receiptSource, contaminated: receipt.contaminated, receipt } };
 }
+
+test('aggregate memory admission retains service activity and userspace gaps at every unchanged boundary', async () => {
+  const aggregate = receiptEvidence(aggregateHostQuietFixture()), driver = fakeDriver({ quietEvidence: aggregate.evidence });
+  const result = await runMemoryProfile({ ...manifest(), quietObserver: aggregate.observer }, driver, { retain: async () => {} });
+  assert.equal(result.status, 'collected-needs-review'); assert.equal(result.qualification, 'not-assessed');
+  assert.equal(result.cycles.length, 270); assert.equal(result.warmups.length, 18); assert.equal(result.baselines.length, 37);
+  assert.equal(driver.quietChecks.length, 614); assert.equal(driver.opened.length, 37); assert.equal(driver.closed.length, 37);
+  for (const record of [...result.baselines, ...result.warmups, ...result.cycles, result.largeX]) {
+    assert.equal(record.contaminated, true); assert.deepEqual(record.quietObserver, aggregate.observer);
+    for (const evidence of Object.values(record.quietEvidence).filter(Boolean)) {
+      assert.deepEqual(evidence, aggregate.evidence);
+      const raw = evidence.receipt, { metrics, services } = raw.admission;
+      assert.equal(raw.maxUnrelatedProcessCpuFractionOfOneCore, .37953);
+      assert.equal(raw.inspected, false); assert.equal(raw.observationComplete, false); assert.equal(raw.concurrentTaskWorkloads, true);
+      assert.deepEqual(raw.failures, ['unrelated-process-cpu', 'unrelated-workload', 'process-observation-incomplete']);
+      assert.equal(metrics.configuredServiceIdentitiesVerified, true); assert.equal(metrics.idleServicesVerified, false);
+      assert.equal(metrics.unapprovedTaskWorkloads, true); assert.equal(metrics.userspaceObservationComplete, false);
+      assert.equal(services[0].firstCpuTicks, '25'); assert.equal(services[0].lastCpuTicks, '28');
+      assert.equal(services[0].maxCpuTickDelta, '3'); assert.equal(services[0].zeroCpuIntervals, 59);
+      assert.equal(services[0].identityMatchedIntervals, 60);
+      assert.ok(raw.coverageIssues.some(gap => gap.kind === 'unrelated-exit-final-cpu-unobserved' && gap.kernelThread === false));
+    }
+  }
+  assert.equal(result.baselines.every(row => row.quietEvidence.after === null), true, 'baselines retain only their actual pre-open gate');
+  assert.equal(result.summaries.every(row => row.quietObserver.profile === 'shared-host-aggregate-v1'), true);
+  for (const quietObserver of [undefined, reviewedQuietFixture().observer, sharedHostQuietFixture().observer]) {
+    const refused = fakeDriver({ quietEvidence: aggregate.evidence });
+    await assert.rejects(runMemoryProfile({ ...manifest(), ...(quietObserver ? { quietObserver } : {}) }, refused, { retain: async () => {} }), error => {
+      assert.deepEqual(error.report.lastQuietAttempt.evidence, aggregate.evidence); return true;
+    });
+    assert.equal(refused.opened.length, 0); assert.equal(refused.quietChecks.length, 1); assert.equal(refused.driverClosed, true);
+  }
+  for (const fixture of [reviewedQuietFixture, sharedHostQuietFixture]) {
+    const legacy = fixture(), source = aggregate.evidence.receipt;
+    for (const key of ['maxUnrelatedProcessCpuFractionOfOneCore', 'failures', 'coverageIssues']) legacy.receipt[key] = structuredClone(source[key]);
+    for (const key of ['metrics', 'services', 'kernelCoverageIssues']) legacy.receipt.admission[key] = structuredClone(source.admission[key]);
+    legacy.receiptSource = `${JSON.stringify(legacy.receipt)}\n`;
+    legacy.receiptSha256 = createHash('sha256').update(legacy.receiptSource).digest('hex');
+    const { evidence } = receiptEvidence(legacy), refused = fakeDriver({ quietEvidence: evidence });
+    await assert.rejects(runMemoryProfile({ ...manifest(), quietObserver: legacy.observer }, refused, { retain: async () => {} }), error => {
+      assert.match(error.cause.message, /fixed gates/u);
+      assert.deepEqual(error.report.lastQuietAttempt.evidence, evidence); return true;
+    });
+    assert.equal(refused.opened.length, 0); assert.equal(refused.quietChecks.length, 1);
+  }
+});
 
 test('shared-host memory admission alone accepts the source-bound background statistic without changing any gate or cycle', async () => {
   const shared = receiptEvidence(sharedHostQuietFixture()), driver = fakeDriver({ quietEvidence: shared.evidence });

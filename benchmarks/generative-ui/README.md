@@ -401,6 +401,21 @@ it is not an exception for one named service. Preserve raw strict failures and a
 The busiest-five diagnostics are not an exhaustive per-process history. Aggregate load and periodic
 sampling cannot rule out scheduling, cache, GPU or I/O interference. Profiles cannot be pooled.
 
+When process activity and lifetime gaps must also remain observational, select
+`shared-host-aggregate-v1`, with `scope.processCpu: 'sampled-unrelated-userspace-observational'`
+and `scope.coverage: 'sampled-processes-observational-with-explicit-gaps'`. Its precheck, review
+and live kinds are `shared-host-aggregate-precheck`, `shared-host-aggregate-precheck-review` and
+`shared-host-aggregate-live-receipt`. Whole-host CPU/load/swap, valid observation windows, freshness
+and artifact integrity still gate admission; every application timing and memory budget remains.
+Process CPU, workload labels and unrelated coverage gaps stay in the retained diagnostics.
+
+For this aggregate profile, the existing `idleServices` configuration key binds **observed service
+identities**. Each configured identity must still match at every endpoint; activity is allowed and
+its tick counts and `idleServicesVerified` outcome remain factual. No process is silently rebound.
+Label results **shared-host aggregate observations**: they establish neither idle services, absence
+of provider work nor complete process attribution. An exited process's missing final CPU count
+remains an explicit gap. These diagnostics do not authorize the benchmark to start unrelated work.
+
 After reviewing the preflight, complete the timing manifest with the collection ID, digest of the
 reviewed measurement design, and reviewed quiet receipt for the selected profile, then explicitly
 authorize collection.

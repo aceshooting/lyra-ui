@@ -6,7 +6,7 @@ import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
-import { validateObserverConfig, validateQuietObserver, reviewedAdmissionFailures, parseObserverConfigBytes, validateObserverConfigSource, observerReceiptKinds } from './profile-admission.mjs';
+import { validateObserverConfig, validateQuietObserver, reviewedAdmissionFailures, parseObserverConfigBytes, validateObserverConfigSource, observerReceiptKinds, SHARED_HOST_AGGREGATE_PROFILE } from './profile-admission.mjs';
 
 const require = (condition, message) => { if (!condition) throw new Error(message); };
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -210,7 +210,8 @@ function reviewedInterval(previous, current, processes, coverageIssues, config, 
       observedComm: after?.comm ?? null, observedStartTimeTicks: after ? String(after.startTimeTicks) : null, observedFlags: after ? String(after.flags) : null };
   });
   const userspace = processes.filter(process => !process.owned && !process.kernelThread);
-  return { services, idleServicesVerified: services.every(service => service.identityMatched && service.zeroCpu && !service.owned),
+  return { services, configuredServiceIdentitiesVerified: services.every(service => service.identityMatched && !service.owned),
+    idleServicesVerified: services.every(service => service.identityMatched && service.zeroCpu && !service.owned),
     maxUnrelatedUserspaceProcessCpuFractionOfOneCore: Math.max(0, ...userspace.map(process => process.cpuFractionOfOneCore)),
     unapprovedTaskWorkloads: userspace.some(process => process.labels.length > 0 && !services.some(service => service.identity.pid === process.pid && service.identityMatched && service.zeroCpu)),
     userspaceObservationComplete: coverageIssues.every(issue => issue.kernelThread === true && (BigInt(issue.flags) & 0x00200000n) !== 0n),
@@ -223,7 +224,7 @@ export function reviewedWindowAdmission(samples, config, configSha256, { prechec
   require(samples.every(row => row.reviewed && row.reviewed.services.length === config.idleServices.length), 'Missing reviewed per-interval evidence.');
   const metrics = { maxUnrelatedUserspaceProcessCpuFractionOfOneCore: Math.max(...samples.map(row => row.reviewed.maxUnrelatedUserspaceProcessCpuFractionOfOneCore)),
     unapprovedTaskWorkloads: samples.some(row => row.reviewed.unapprovedTaskWorkloads), userspaceObservationComplete: samples.every(row => row.reviewed.userspaceObservationComplete),
-    idleServicesVerified: samples.every(row => row.reviewed.idleServicesVerified) };
+    idleServicesVerified: samples.every(row => row.reviewed.idleServicesVerified), configuredServiceIdentitiesVerified: samples.every(row => row.reviewed.configuredServiceIdentitiesVerified === true) };
   const services = config.idleServices.map((expected, index) => {
     const proofs = samples.map(row => row.reviewed.services[index]);
     require(proofs.every(proof => JSON.stringify(proof.identity) === JSON.stringify(expected)), 'Idle-service identity changed within the retained window.');
@@ -265,7 +266,7 @@ export function makeReviewedReceipt({ collectionId, samples, precheck, precheckS
     observedAt: samples.at(-1).observedAt, inspected: false, sha256: precheckSha256, ...metrics, contaminated: failures.length > 0, failures,
     coverageIssues: samples.flatMap(row => row.coverageIssues), admission,
     semantics: { cpu: 'current-rolling-total-host-including-owned-services-and-kernel', processCpu: observerConfig.scope.processCpu,
-      coverage: 'sampled-userspace-with-explicit-kernel-gaps', inactivity: 'zero-observed-cpu-ticks-not-proof-of-no-io-or-gpu-work',
+      coverage: observerConfig.scope.coverage, inactivity: observerConfig.profile === SHARED_HOST_AGGREGATE_PROFILE ? 'observed-service-activity-is-diagnostic-not-an-idle-requirement' : 'zero-observed-cpu-ticks-not-proof-of-no-io-or-gpu-work',
       processCoverage: 'unseen-short-lived-between-poll-processes-are-not-proven-absent' },
     precheck: { sha256: precheckSha256, startedAt: precheck.startedAt, endedAt: precheck.endedAt, inspected: Boolean(review),
       reviewSha256: review ? reviewSha256 : null, configSha256, admissionSha256 },

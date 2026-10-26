@@ -12,14 +12,16 @@ export const REVIEWED_IDLE_SERVICE_PROFILE = 'reviewed-idle-service-v1';
 export const REVIEWED_IDLE_SERVICE_SCOPE = Object.freeze({ processCpu: 'all-unrelated-userspace', kernelCpu: 'whole-host-aggregate', coverage: 'sampled-userspace-with-explicit-kernel-gaps' });
 export const SHARED_HOST_OBSERVED_PROFILE = 'shared-host-observed-v1';
 export const SHARED_HOST_OBSERVED_SCOPE = Object.freeze({ ...REVIEWED_IDLE_SERVICE_SCOPE, processCpu: 'all-unrelated-userspace-observational' });
-const validProfile = value => value === REVIEWED_IDLE_SERVICE_PROFILE || value === SHARED_HOST_OBSERVED_PROFILE;
+export const SHARED_HOST_AGGREGATE_PROFILE = 'shared-host-aggregate-v1';
+export const SHARED_HOST_AGGREGATE_SCOPE = Object.freeze({ processCpu: 'sampled-unrelated-userspace-observational', kernelCpu: 'whole-host-aggregate', coverage: 'sampled-processes-observational-with-explicit-gaps' });
+const validProfile = value => value === REVIEWED_IDLE_SERVICE_PROFILE || value === SHARED_HOST_OBSERVED_PROFILE || value === SHARED_HOST_AGGREGATE_PROFILE;
 const validScope = (value, profile) => {
-  const scope = profile === SHARED_HOST_OBSERVED_PROFILE ? SHARED_HOST_OBSERVED_SCOPE : REVIEWED_IDLE_SERVICE_SCOPE;
+  const scope = profile === SHARED_HOST_AGGREGATE_PROFILE ? SHARED_HOST_AGGREGATE_SCOPE : profile === SHARED_HOST_OBSERVED_PROFILE ? SHARED_HOST_OBSERVED_SCOPE : REVIEWED_IDLE_SERVICE_SCOPE;
   return validProfile(profile) && keys(value, Object.keys(scope)) && Object.entries(scope).every(([key, expected]) => value[key] === expected);
 };
 export function observerReceiptKinds(profile) {
   require(validProfile(profile), 'Unknown observer admission profile.');
-  const prefix = profile === SHARED_HOST_OBSERVED_PROFILE ? 'shared-host-observed' : 'reviewed-idle-service';
+  const prefix = profile === SHARED_HOST_AGGREGATE_PROFILE ? 'shared-host-aggregate' : profile === SHARED_HOST_OBSERVED_PROFILE ? 'shared-host-observed' : 'reviewed-idle-service';
   return { precheck: `${prefix}-precheck`, review: `${prefix}-precheck-review`, live: `${prefix}-live-receipt` };
 }
 
@@ -61,6 +63,12 @@ export function reviewedAdmissionFailures(raw, metrics, { precheck = false, prof
   if (!finite(raw.normalizedOneMinuteLoad) || raw.normalizedOneMinuteLoad >= .1
     || precheck && (!finite(raw.peakNormalizedOneMinuteLoad) || raw.peakNormalizedOneMinuteLoad >= .1)) failures.push('total-host-load');
   if (raw.swapActivity !== false) failures.push('swap-activity');
+  if (profile === SHARED_HOST_AGGREGATE_PROFILE) {
+    require(finite(metrics.maxUnrelatedUserspaceProcessCpuFractionOfOneCore)
+      && ['unapprovedTaskWorkloads', 'userspaceObservationComplete', 'idleServicesVerified', 'configuredServiceIdentitiesVerified'].every(key => typeof metrics[key] === 'boolean'), 'Invalid aggregate process diagnostics.');
+    if (!metrics.configuredServiceIdentitiesVerified) failures.push('configured-service-identity-changed');
+    return failures;
+  }
   if (!finite(metrics.maxUnrelatedUserspaceProcessCpuFractionOfOneCore) || profile !== SHARED_HOST_OBSERVED_PROFILE && metrics.maxUnrelatedUserspaceProcessCpuFractionOfOneCore >= .1) failures.push('unrelated-userspace-cpu');
   if (metrics.unapprovedTaskWorkloads !== false) failures.push('unapproved-workload');
   if (metrics.userspaceObservationComplete !== true) failures.push('userspace-observation-incomplete');
@@ -99,13 +107,26 @@ export function inspectReviewedQuietReceipt(receipt, observer, { collectionId, n
   require(Array.isArray(admission.services) && admission.services.length === config.idleServices.length, 'Missing idle-service interval proof.');
   for (let index = 0; index < config.idleServices.length; index++) {
     const expected = config.idleServices[index], proof = admission.services[index];
-    require(same(proof.identity, expected) && proof.owned === false && proof.observedIntervals === 60 && proof.zeroCpuIntervals === 60 && proof.identityMatchedIntervals === 60
-      && uint(proof.firstCpuTicks) && proof.firstCpuTicks === proof.lastCpuTicks && proof.maxCpuTickDelta === '0', 'Idle-service proof is incomplete or active.');
+    require(same(proof.identity, expected) && proof.owned === false && proof.observedIntervals === 60 && proof.identityMatchedIntervals === 60
+      && uint(proof.firstCpuTicks) && uint(proof.lastCpuTicks), 'Configured service identity proof is incomplete.');
+    if (observer.profile === SHARED_HOST_AGGREGATE_PROFILE) {
+      require(Number.isSafeInteger(proof.zeroCpuIntervals) && proof.zeroCpuIntervals >= 0 && proof.zeroCpuIntervals <= 60 && uint(proof.maxCpuTickDelta), 'Invalid observed service activity proof.');
+      const activeIntervals = BigInt(60 - proof.zeroCpuIntervals), total = BigInt(proof.lastCpuTicks) - BigInt(proof.firstCpuTicks), maximum = BigInt(proof.maxCpuTickDelta);
+      require(activeIntervals === 0n ? total === 0n && maximum === 0n : maximum > 0n && total >= maximum + activeIntervals - 1n && total <= maximum * activeIntervals, 'Observed service activity counters are inconsistent.');
+    } else require(proof.zeroCpuIntervals === 60 && proof.firstCpuTicks === proof.lastCpuTicks && proof.maxCpuTickDelta === '0', 'Idle-service proof is incomplete or active.');
   }
   require(Array.isArray(admission.kernelCoverageIssues) && admission.kernelCoverageIssues.every(issue => issue.kernelThread === true
     && uint(issue.flags) && (BigInt(issue.flags) & 0x00200000n) !== 0n), 'Kernel coverage gap lacks PF_KTHREAD proof.');
-  require(Array.isArray(receipt.coverageIssues) && receipt.observationComplete === (receipt.coverageIssues.length === 0)
-    && receipt.coverageIssues.every(issue => admission.kernelCoverageIssues.some(kernel => same(kernel, issue))), 'Raw coverage gaps were hidden or include userspace.');
+  require(Array.isArray(receipt.coverageIssues) && receipt.observationComplete === (receipt.coverageIssues.length === 0), 'Raw coverage completeness changed.');
+  if (observer.profile === SHARED_HOST_AGGREGATE_PROFILE) {
+    require(receipt.coverageIssues.every(issue => ['previous-process-observation-missing', 'unrelated-exit-final-cpu-unobserved'].includes(issue.kind)
+      && Number.isSafeInteger(issue.pid) && issue.pid > 0 && uint(issue.startTimeTicks) && typeof issue.comm === 'string'
+      && Array.isArray(issue.labels) && issue.labels.every(label => typeof label === 'string') && uint(issue.flags)
+      && issue.kernelThread === ((BigInt(issue.flags) & 0x00200000n) !== 0n)), 'Invalid observed process coverage diagnostic.');
+    const kernelGaps = receipt.coverageIssues.filter(issue => issue.kernelThread);
+    require(same(kernelGaps, admission.kernelCoverageIssues) && admission.metrics.userspaceObservationComplete === (kernelGaps.length === receipt.coverageIssues.length)
+      && admission.metrics.idleServicesVerified === admission.services.every(proof => proof.zeroCpuIntervals === 60), 'Observed process diagnostics contradict their retained proofs.');
+  } else require(receipt.coverageIssues.every(issue => admission.kernelCoverageIssues.some(kernel => same(kernel, issue))), 'Raw coverage gaps were hidden or include userspace.');
   return receipt;
 }
 export function makeReviewedQuietEvidence(receipt, receiptSha256, observer, options = {}) {

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseCpuStat, parseLoadAverage, parseSwapCounters, parseProcessStat, workloadLabels, createOwnershipTracker, intervalObservation, windowMetrics, ruleFailures, validateReview, makeReceipt, quietSnapshotDeadline, validateObserverBaseline, reviewedWindowAdmission, validateReviewedReview, makeReviewedReceipt } from './profile-quiet.mjs';
-import { REVIEWED_IDLE_SERVICE_PROFILE, REVIEWED_IDLE_SERVICE_SCOPE, SHARED_HOST_OBSERVED_PROFILE, SHARED_HOST_OBSERVED_SCOPE, makeReviewedQuietEvidence, parseObserverConfigBytes } from './profile-admission.mjs';
+import { REVIEWED_IDLE_SERVICE_PROFILE, REVIEWED_IDLE_SERVICE_SCOPE, SHARED_HOST_OBSERVED_PROFILE, SHARED_HOST_OBSERVED_SCOPE, SHARED_HOST_AGGREGATE_PROFILE, SHARED_HOST_AGGREGATE_SCOPE, makeReviewedQuietEvidence, parseObserverConfigBytes } from './profile-admission.mjs';
 import { checkFreshQuietReceipt } from './profile-driver.mjs';
 
 // Synthetic fixtures only. No /proc reader, monitor, campaign or inspected artifact runs here.
@@ -298,4 +298,43 @@ test('shared-host monitor preserves actual CPU attribution and uses separately r
   assert.throws(() => validateReviewedReview({ ...review, kind: 'reviewed-idle-service-precheck-review' }, options), /authorization/u);
   const active = observerRow({ config, afterService: idleService({ cpu: 1n }) }).row;
   assert.ok(windowAdmission(reviewedRows(active), config).failures.includes('idle-service-not-idle-or-changed'));
+});
+
+
+test('aggregate monitoring records active service and external exit without rewriting strict diagnostics', () => {
+  const config = { ...observerConfig(), profile: SHARED_HOST_AGGREGATE_PROFILE, scope: { ...SHARED_HOST_AGGREGATE_SCOPE } };
+  let previous = snapshot(0, [processRow(10), idleService({ cpu: 25n }), processRow(31, { comm: 'external-session' })]);
+  validateObserverBaseline(previous, new Map(), config);
+  const samples = [];
+  for (let second = 1; second <= 60; second++) {
+    const current = snapshot(second, [processRow(10), idleService({ cpu: 28n })], { busy: 203n, total: 1000n + BigInt(second) * 400n });
+    samples.push(intervalObservation(previous, current, { hz: 100, ownedBefore: new Map(), ownedAfter: new Map(), observerConfig: config }));
+    previous = current;
+  }
+  const parsed = parseObserverConfigBytes(Buffer.from(`${JSON.stringify(config)}\n`)), admission = windowAdmission(samples, config);
+  assert.equal(admission.accepted, true); assert.equal(admission.metrics.configuredServiceIdentitiesVerified, true);
+  assert.equal(admission.metrics.idleServicesVerified, false); assert.equal(admission.metrics.userspaceObservationComplete, false);
+  assert.equal(admission.metrics.unapprovedTaskWorkloads, true);
+  assert.equal(admission.services[0].firstCpuTicks, '25'); assert.equal(admission.services[0].lastCpuTicks, '28');
+  assert.equal(admission.services[0].zeroCpuIntervals, 59); assert.equal(admission.services[0].maxCpuTickDelta, '3');
+  assert.deepEqual(admission.kernelCoverageIssues, []);
+  assert.equal(windowMetrics(samples).observationComplete, false);
+  assert.equal(windowAdmission(samples, observerConfig()).accepted, false);
+  assert.equal(windowAdmission(samples, { ...observerConfig(), profile: SHARED_HOST_OBSERVED_PROFILE, scope: { ...SHARED_HOST_OBSERVED_SCOPE } }).accepted, false);
+  const values = artifacts(), admissionSha256 = hash('9');
+  const precheck = { ...values.precheck, kind: 'shared-host-aggregate-precheck', admissionSha256, metrics: windowMetrics(samples),
+    admission: reviewedWindowAdmission(samples, config, parsed.configSha256, { precheck: true, configSource: parsed.configSource }) };
+  const quietObserver = { profile: config.profile, configSha256: parsed.configSha256, scope: config.scope };
+  const review = { ...values.review, kind: 'shared-host-aggregate-precheck-review', quietObserver, admissionSha256 };
+  const options = { ...values, collectionId: 'synthetic-unit', samples, precheck, review, observerConfig: config, ...parsed, admissionSha256 };
+  const receipt = makeReviewedReceipt(options), receiptSource = `${JSON.stringify(receipt, null, 2)}\n`, receiptSha256 = createHash('sha256').update(receiptSource).digest('hex');
+  assert.equal(receipt.kind, 'shared-host-aggregate-live-receipt'); assert.equal(receipt.inspected, false); assert.equal(receipt.contaminated, true);
+  assert.deepEqual(receipt.failures, ['unrelated-workload', 'process-observation-incomplete']);
+  assert.equal(receipt.coverageIssues[0].comm, 'external-session'); assert.equal(receipt.coverageIssues[0].kernelThread, false);
+  assert.doesNotThrow(() => makeReviewedQuietEvidence(receipt, receiptSha256, quietObserver, { receiptSource, admissionSha256 }));
+  assert.throws(() => validateReviewedReview({ ...review, kind: 'shared-host-observed-precheck-review' }, options));
+  for (const afterService of [null, idleService({ start: 11n }), idleService({ cmdlineSha256: hash('e') })]) {
+    const row = observerRow({ config, afterService }).row;
+    assert.ok(windowAdmission(reviewedRows(row), config).failures.includes('configured-service-identity-changed'));
+  }
 });

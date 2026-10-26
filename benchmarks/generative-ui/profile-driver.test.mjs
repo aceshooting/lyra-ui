@@ -4,7 +4,7 @@ import { runInNewContext } from 'node:vm';
 import { fixtureModuleFor, validateNativeAction, requestAllowed, validateControlProbe, definitionDigest, parseDriverOptions, checkFreshQuietReceipt, quietEvidenceFromBytes, profileHarnessIdentity, requireFixtureModules, createProfileDriver, profileInputKey, prepareBrowserFixture, beginProfileObservation } from './profile-driver.mjs';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { reviewedQuietFixture, sharedHostQuietFixture } from './profile-reviewed.test-fixture.mjs';
+import { reviewedQuietFixture, sharedHostQuietFixture, aggregateHostQuietFixture } from './profile-reviewed.test-fixture.mjs';
 import { validateQuietEvidence } from './profile-admission.mjs';
 
 test('workloads have closed module routes and cannot select arbitrary modules', () => {
@@ -68,7 +68,7 @@ test('quiet receipt is collection-bound and must be refreshed, never reused inde
   assert.throws(() => checkFreshQuietReceipt(receipt, 'case', 999));
   assert.throws(() => checkFreshQuietReceipt({ ...receipt, admission: { profile: 'reviewed-idle-service-v1', accepted: true } }, 'case', 2000));
   assert.throws(() => checkFreshQuietReceipt({ ...receipt, kind: 'reviewed-idle-service-live-receipt' }, 'case', 2000));
-  for (const kind of ['shared-host-observed-live-receipt', 'unknown-live-receipt']) assert.throws(() => checkFreshQuietReceipt({ ...receipt, kind }, 'case', 2000));
+  for (const kind of ['shared-host-observed-live-receipt', 'shared-host-aggregate-live-receipt', 'unknown-live-receipt']) assert.throws(() => checkFreshQuietReceipt({ ...receipt, kind }, 'case', 2000));
   assert.throws(() => checkFreshQuietReceipt({ ...receipt, contaminated: true }, 'case', 2000));
 });
 
@@ -118,6 +118,33 @@ test('shared-host timing admission retains 0.35875 background CPU while strict a
   reviewed.receipt.admission.metrics.maxUnrelatedUserspaceProcessCpuFractionOfOneCore = .35875;
   reviewed.receipt.failures.unshift('unrelated-process-cpu');
   assert.throws(() => quietEvidenceFromBytes(Buffer.from(JSON.stringify(reviewed.receipt)), receipt.collectionId, { ...options, quietObserver: reviewed.observer }), /fixed gates/u);
+});
+
+test('aggregate timing admission retains activity and userspace exits that previous profiles refuse', () => {
+  const aggregate = aggregateHostQuietFixture();
+  const options = { now: 120001, quietObserver: aggregate.observer, admissionSha256: aggregate.receipt.admissionSha256 };
+  const evidence = quietEvidenceFromBytes(Buffer.from(aggregate.receiptSource), aggregate.receipt.collectionId, options);
+  assert.deepEqual(evidence.receipt, aggregate.receipt); assert.equal(evidence.contaminated, true);
+  assert.equal(evidence.receipt.admission.accepted, true); assert.equal(evidence.receipt.observationComplete, false);
+  assert.equal(evidence.receipt.admission.metrics.maxUnrelatedUserspaceProcessCpuFractionOfOneCore, .37953);
+  assert.equal(evidence.receipt.admission.metrics.unapprovedTaskWorkloads, true);
+  assert.equal(evidence.receipt.admission.metrics.userspaceObservationComplete, false);
+  assert.equal(evidence.receipt.admission.metrics.idleServicesVerified, false);
+  assert.equal(evidence.receipt.admission.metrics.configuredServiceIdentitiesVerified, true);
+  assert.ok(evidence.receipt.coverageIssues.some(issue => issue.kernelThread === false));
+  assert.equal(evidence.receipt.admission.services[0].zeroCpuIntervals, 59);
+  assert.deepEqual([evidence.receipt.admission.services[0].firstCpuTicks, evidence.receipt.admission.services[0].lastCpuTicks], ['25', '28']);
+  assert.throws(() => quietEvidenceFromBytes(Buffer.from(aggregate.receiptSource), aggregate.receipt.collectionId, { ...options, quietObserver: undefined }));
+  for (const legacy of [reviewedQuietFixture(), sharedHostQuietFixture()]) {
+    assert.throws(() => quietEvidenceFromBytes(Buffer.from(aggregate.receiptSource), aggregate.receipt.collectionId, { ...options, quietObserver: legacy.observer }));
+    for (const key of ['contaminated', 'failures', 'concurrentTaskWorkloads', 'observationComplete', 'maxUnrelatedProcessCpuFractionOfOneCore', 'coverageIssues']) legacy.receipt[key] = structuredClone(aggregate.receipt[key]);
+    for (const key of ['metrics', 'services', 'kernelCoverageIssues']) legacy.receipt.admission[key] = structuredClone(aggregate.receipt.admission[key]);
+    legacy.receipt.admission.config.idleServices = structuredClone(aggregate.receipt.admission.config.idleServices);
+    legacy.receipt.admission.configSource = `${JSON.stringify(legacy.receipt.admission.config, null, 2)}\n`;
+    const configSha256 = createHash('sha256').update(legacy.receipt.admission.configSource).digest('hex');
+    legacy.observer.configSha256 = configSha256; legacy.receipt.admission.configSha256 = configSha256; legacy.receipt.precheck.configSha256 = configSha256;
+    assert.throws(() => quietEvidenceFromBytes(Buffer.from(JSON.stringify(legacy.receipt)), aggregate.receipt.collectionId, { ...options, quietObserver: legacy.observer }), /fixed gates/u);
+  }
 });
 
 test('missing fixture modules fail before resolving build dependencies or starting a browser', async () => {
