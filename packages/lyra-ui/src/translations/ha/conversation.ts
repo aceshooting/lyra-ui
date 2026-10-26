@@ -8,6 +8,13 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 const strings: LyraLocaleStrings = {
   streamInterrupted: 'An katse rafi',
   streamResume: 'Ci gaba',
+  genViewEmpty: 'Babu wani kallon da aka samar don nunawa.',
+  genViewInvalid: 'Ba za a iya nuna wannan kallon da aka samar ba.',
+  genViewLoading: 'Ana loda sashi…',
+  genViewLoadFailed: 'Ba a iya loda wannan sashi ba.',
+  genViewInvalidState: 'Ba za a iya amfani da ƙimar wannan fili ba.',
+  genViewActionDenied: 'Wannan aikin ba ya samuwa.',
+  genViewConfirmationRequired: 'Wannan aikin yana buƙatar tabbatarwa daga manhajar.',
   chatViewportLabel: 'Tattaunawa',
   newMessagesCount: {
     one: 'Sabon saƙo {count}',

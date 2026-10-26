@@ -614,11 +614,18 @@ These named interfaces and helper signatures are available to typed integrations
   components: A2UiLikeComponent[];
   data?: unknown;
 }`
-  `adaptA2UiSurface(surface: unknown, typeMap: unknown, limits: Partial<A2UiAdapterLimits> = {}): LyraWidgetDocument | null`
+  `A2UiAdapterResult {
+  readonly version: '2';
+  readonly root: LyraWidgetNode;
+  readonly bindingState?: unknown;
+  readonly state?: unknown;
+}`
+  `adaptA2UiSurface(surface: unknown, typeMap: unknown, limits: Partial<A2UiAdapterLimits> = {}): A2UiAdapterResult | null`
 
 - **`ai-adapters-ag-ui-contracts`** — AI adapter and runtime contracts.
   `AgUiAdapterLimits {
   maxBufferedTools: number;
+  maxBufferedMessages: number;
   maxToolArgumentBytes: number;
   maxTextDeltaCharacters: number;
   maxDepth: number;
@@ -640,6 +647,23 @@ These named interfaces and helper signatures are available to typed integrations
   code?: string;
   snapshot?: unknown;
   messages?: unknown[];
+  name?: string;
+  value?: unknown;
+  activityType?: string;
+  content?: unknown;
+  replace?: boolean;
+  patch?: unknown[];
+}`
+  `AgUiCustomEvent {
+  name: string;
+  value: unknown;
+}`
+  `AgUiCustomEventTarget {
+  messageId: string;
+  partId: string;
+}`
+  `AgUiAdapterOptions {
+  customEventTarget?: (event: AgUiCustomEvent) => AgUiCustomEventTarget | null;
 }`
 
 - **`ai-adapters-ai-sdk-contracts`** — AI adapter and runtime contracts.

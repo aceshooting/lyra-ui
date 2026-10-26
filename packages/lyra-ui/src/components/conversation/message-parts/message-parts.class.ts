@@ -39,13 +39,17 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import type { LyraMarkdownEventMap } from '../markdown/markdown.class.js';
+import { DEFAULT_WIDGET_TYPE_REGISTRY } from '../widget-renderer/default-registry.js';
+import type { LyraWidgetTypeRegistry } from '../widget-renderer/registry.js';
+import type { LyraWidgetDocument, LyraWidgetNode } from '../widget-renderer/resolve.js';
+import { tag } from '../../../internal/prefix.js';
 import type { LyraWidgetRendererEventMap } from '../widget-renderer/widget-renderer.class.js';
 import { isNonBlankIdentity, isRecord } from '../../retrieval/retrieval-identity.js';
 import { styles } from './message-parts.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_messagePartError, LYRA_DEFAULT_messagePartRetry, LYRA_DEFAULT_messagePartsLabel, LYRA_DEFAULT_streamInterrupted, LYRA_DEFAULT_streamResume } from '../../../internal/default-strings/conversation.generated.js';
-import { LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_retry, LYRA_DEFAULT_thinkingPanelLabel } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_envListValueHidden, LYRA_DEFAULT_loading, LYRA_DEFAULT_retry, LYRA_DEFAULT_thinkingPanelLabel } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /**
@@ -74,6 +78,54 @@ export type MessagePartRenderer = (part: MessagePart, index: number) => unknown;
 export type MessagePartsContentMode = 'plain' | 'markdown';
 
 const MESSAGE_PARTS_CONTENT_MODES = Object.freeze(['plain', 'markdown'] as const);
+
+/** Registration is deferred until a built-in part actually uses its renderer. */
+const PART_RENDERER_LOADERS = {
+  'thinking-panel': () => import('../../agent-tools/thinking-panel/thinking-panel.js'),
+  'tool-call-block': () => import('../../agent-tools/tool-call-block/tool-call-block.js'),
+  'tool-call-chip': () => import('../../agent-tools/tool-call-chip/tool-call-chip.js'),
+  'tool-result-view': () => import('../../agent-tools/tool-result-view/tool-result-view.js'),
+  'citation-badge': () => import('../../retrieval/citation-badge/citation-badge.js'),
+  'attachment-chip': () => import('../../media/attachment-chip/attachment-chip.js'),
+  'json-viewer': () => import('../../utility/json-viewer/json-viewer.js'),
+  'widget-renderer': () => import('../widget-renderer/widget-renderer.js'),
+  button: () => import('../../forms/button/button.js'),
+};
+type PartRenderer = keyof typeof PART_RENDERER_LOADERS;
+
+/** Collection ownership clones nested records on array replacement. Compare those bounded,
+ * data-only snapshots so an unchanged widget keeps its document across unrelated text writes. */
+function sameWidgetSnapshot(left: unknown, right: unknown): boolean {
+  const pending: [unknown, unknown][] = [[left, right]];
+  const seen = new WeakMap<object, object>();
+  while (pending.length > 0) {
+    const [a, b] = pending.pop()!;
+    if (Object.is(a, b)) continue;
+    if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+    if (Array.isArray(a) !== Array.isArray(b)) return false;
+    if (!Array.isArray(a)) {
+      const aPrototype: unknown = Object.getPrototypeOf(a);
+      const bPrototype: unknown = Object.getPrototypeOf(b);
+      if ((aPrototype !== Object.prototype && aPrototype !== null) ||
+        (bPrototype !== Object.prototype && bPrototype !== null)) return false;
+    }
+    const paired = seen.get(a);
+    if (paired) {
+      if (paired !== b) return false;
+      continue;
+    }
+    seen.set(a, b);
+    const aKeys = Object.keys(a);
+    if (aKeys.length !== Object.keys(b).length) return false;
+    for (const key of aKeys) {
+      const aField = Object.getOwnPropertyDescriptor(a, key);
+      const bField = Object.getOwnPropertyDescriptor(b, key);
+      if (!aField || !bField || !('value' in aField) || !('value' in bField)) return false;
+      pending.push([aField.value, bField.value]);
+    }
+  }
+  return true;
+}
 
 /** How `tool-call`/`tool-result` parts render: `chip` (a tool-call chip plus a separate result
  *  view) or `block` (each call paired with its result in one inline `<lr-tool-call-block>`). */
@@ -163,6 +215,11 @@ export interface LyraMessagePartsEventMap
  * part. `disabled` gates built-in retry and resume requests. Custom renderers own their controls.
  *
  * Citation ranks are derived in one linear render prepass, including for mixed streaming arrays.
+ * Built-in non-text component renderers load on first use with localized loading/error fallback.
+ * Custom-rendered parts do not load the corresponding built-in renderer. Audio stays native.
+ * Widget parts use `widgetRegistry` and the separate controlled `widgetBindingState`; unchanged
+ * widget content keeps its document identity across unrelated text updates. Widget-v2 validation
+ * and its fail-closed identity and security rules still apply.
  *
  * `tool-display="block"` pairs each `tool-call` part with the first `tool-result` part carrying its
  * invocation id and renders the pair through one collapsed `<lr-tool-call-block>` at the call's
@@ -190,8 +247,8 @@ export interface LyraMessagePartsEventMap
  * @event lr-toggle - Passthrough from a rendered reasoning panel or tool-call block.
  * @event lr-tool-call-chip-select - Passthrough from a rendered tool-call chip. The
  * `lr-tool-chip-select` alias it replaced was removed in 9.0.0.
- * @event lr-render-error - Passthrough from rendered Markdown, tool-result, or widget content, or
- * tool-call block (`callId` included).
+ * @event lr-render-error - A lazy part renderer failed to load, or passthrough from rendered Markdown,
+ * tool-result, widget content, or tool-call block (`callId` included).
  * @event lr-link-activate - Passthrough from rendered Markdown.
  * @event lr-highlight-activate - Passthrough from rendered Markdown.
  * @event lr-text-select - Passthrough from rendered Markdown.
@@ -243,6 +300,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     envListValueHidden: LYRA_DEFAULT_envListValueHidden,
+    loading: LYRA_DEFAULT_loading,
     messagePartError: LYRA_DEFAULT_messagePartError,
     messagePartRetry: LYRA_DEFAULT_messagePartRetry,
     messagePartsLabel: LYRA_DEFAULT_messagePartsLabel,
@@ -254,7 +312,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
 
-  protected static override readonly ownedCollectionProperties = Object.freeze(['parts']);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['parts', 'widgetBindingState']);
 
   static override styles = [LyraElement.styles, styles];
   protected static override readonly immutableEventDetails = Object.freeze([
@@ -321,6 +379,12 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
    *  part's own interactive wiring (retry/citation/tool-call/widget events). */
   @property({ attribute: false }) renderPart?: MessagePartRenderer;
 
+  /** Immutable registry forwarded to every built-in widget part. Custom renderers own their registry. */
+  @property({ attribute: false }) widgetRegistry: LyraWidgetTypeRegistry = DEFAULT_WIDGET_TYPE_REGISTRY;
+
+  /** Explicit controlled binding state shared by built-in widget parts; reassign after updates. */
+  @property({ attribute: false }) widgetBindingState?: unknown;
+
   /** Rendering mode forwarded to built-in text and reasoning Markdown parts. */
   @property({ attribute: 'streaming-render' }) streamingRender: MarkdownStreamingRender = 'plain';
   /** Adds source-copy headers to built-in text and reasoning Markdown parts. Custom renderers replace this surface. */
@@ -333,6 +397,38 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
    *  grow an unusually large number of parts (e.g. a long agentic run with many interleaved
    *  tool-call/tool-result parts), where unbounded live DOM can visibly stall the main thread. */
   @property({ type: Number, attribute: 'max-rendered-parts' }) maxRenderedParts = 0;
+
+  private readonly widgetDocuments = new Map<string, LyraWidgetDocument>();
+  private readonly rendererLoads = new Map<PartRenderer, Promise<void>>();
+  private readonly failedRendererLoads = new Set<PartRenderer>();
+
+  private rendererReady(name: PartRenderer): boolean {
+    if (typeof customElements === 'undefined' || customElements.get(tag(name))) return true;
+    if (!this.rendererLoads.has(name)) {
+      const loading = PART_RENDERER_LOADERS[name]().then(() => {
+        this.requestUpdate();
+      }).catch((error: unknown) => {
+        this.failedRendererLoads.add(name);
+        this.requestUpdate();
+        this.emit('lr-render-error', { error });
+      });
+      this.rendererLoads.set(name, loading);
+    }
+    return false;
+  }
+
+  private rendererFallback(name: PartRenderer): TemplateResult {
+    return html`<span aria-busy=${this.failedRendererLoads.has(name) ? 'false' : 'true'}
+      >${this.failedRendererLoads.has(name) ? this.localize('messagePartError') : this.localize('loading')}</span>`;
+  }
+
+  private widgetDocument(part: MessagePart & { widget: unknown }): LyraWidgetDocument {
+    const cached = this.widgetDocuments.get(part.id);
+    if (cached && sameWidgetSnapshot(cached.root, part.widget)) return cached;
+    const document: LyraWidgetDocument = Object.freeze({ version: '2', root: part.widget as LyraWidgetNode });
+    this.widgetDocuments.set(part.id, document);
+    return document;
+  }
 
   private knownErrorIds = new Set<string>();
   /** First tool-call's projected `redactedFields` per invocation id; only non-empty entries. */
@@ -359,6 +455,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.widgetDocuments.clear();
     this.errorAnnouncementSink?.release();
     this.errorAnnouncementSink = undefined;
     this.suppressNextErrorAnnouncement = true;
@@ -495,6 +592,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
   }
 
   private renderToolBlock(part: ToolCallMessagePart, paired?: ToolResultMessagePart): TemplateResult {
+    if (!this.rendererReady('tool-call-block')) return this.rendererFallback('tool-call-block');
     const invocation = part.invocation;
     const result = paired ? paired.result : invocation.result;
     const error = paired && 'error' in paired ? paired.error : invocation.error;
@@ -555,6 +653,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
           ? this.renderPartMarkdown(part)
           : part.text;
       case 'reasoning':
+        if (!this.rendererReady('thinking-panel')) return this.rendererFallback('thinking-panel');
         return html`<lr-thinking-panel
           .label=${this.localize('thinkingPanelLabel')}
           .mode=${part.state === 'streaming' ? 'live' : 'post-hoc'}
@@ -565,6 +664,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
         >`;
       case 'tool-call': {
         if (this.toolDisplay === 'block') return this.renderToolBlock(part, pairing?.results.get(part.id));
+        if (!this.rendererReady('tool-call-chip')) return this.rendererFallback('tool-call-chip');
         const masked = this.redacted(part, part.invocation.id, {
           args: undefined,
           result: undefined,
@@ -580,6 +680,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
         ></lr-tool-call-chip>`;
       }
       case 'tool-result': {
+        if (!this.rendererReady('tool-result-view')) return this.rendererFallback('tool-result-view');
         const hasError = 'error' in part;
         const masked = this.redacted(part, part.invocationId, {
           args: undefined,
@@ -604,6 +705,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
         ></lr-tool-result-view>`;
       }
       case 'citation':
+        if (!this.rendererReady('citation-badge')) return this.rendererFallback('citation-badge');
         return html`<lr-citation-badge
           .index=${citationRank}
           .sourceId=${part.citation.sourceId ?? ''}
@@ -612,6 +714,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
           >${part.citation.quote ?? nothing}</lr-citation-badge
         >`;
       case 'attachment':
+        if (!this.rendererReady('attachment-chip')) return this.rendererFallback('attachment-chip');
         return html`<lr-attachment-chip
           .attachmentId=${part.document.id}
           .name=${part.document.name}
@@ -622,10 +725,15 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
           status="success"
           size="s"
         ></lr-attachment-chip>`;
-      case 'data':
-        return part.widget && typeof part.widget === 'object'
-          ? html`<lr-widget-renderer .document=${{ version: '2', root: part.widget }}></lr-widget-renderer>`
-          : html`<lr-json-viewer .data=${part.data}></lr-json-viewer>`;
+      case 'data': {
+        if (part.widget && typeof part.widget === 'object') {
+          if (!this.rendererReady('widget-renderer')) return this.rendererFallback('widget-renderer');
+          return html`<lr-widget-renderer .document=${this.widgetDocument(part as MessagePart & { widget: unknown })}
+            .registry=${this.widgetRegistry} .bindingState=${this.widgetBindingState}></lr-widget-renderer>`;
+        }
+        if (!this.rendererReady('json-viewer')) return this.rendererFallback('json-viewer');
+        return html`<lr-json-viewer .data=${part.data}></lr-json-viewer>`;
+      }
       case 'audio': {
         const src = safeMediaSrc(part.src);
         return html`${src
@@ -636,6 +744,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
         ${part.transcript ? html`<p part="audio-transcript">${part.transcript}</p>` : nothing}`;
       }
       case 'error':
+        if (part.retryable && !this.rendererReady('button')) return html`<span>${part.message || this.localize('messagePartError')}</span> ${this.rendererFallback('button')}`;
         return html`<span>${part.message || this.localize('messagePartError')}</span> ${part.retryable
             ? html`<lr-button
                 part="retry"
@@ -693,6 +802,10 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
       if (part.type === 'citation') citationRanks.set(part.id, ++citationRank);
     }
     const parts = this.renderedParts;
+    const widgetIds = new Set(parts.filter(part => part.type === 'data' && part.widget).map(part => part.id));
+    for (const id of this.widgetDocuments.keys()) {
+      if (!widgetIds.has(id)) this.widgetDocuments.delete(id);
+    }
     // One `renderPart` call per rendered part, in order, before anything renders: block display
     // needs to know which parts are custom before it can pair calls with results.
     const custom = new Map<string, unknown>();

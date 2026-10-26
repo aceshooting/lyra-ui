@@ -1,0 +1,10 @@
+:root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+body { margin: 0; background: Canvas; color: CanvasText; }
+main { max-inline-size: 64rem; margin-inline: auto; padding: 1.5rem; }
+label, select, lr-input { display: block; margin-block: .75rem; }
+select { padding: .5rem; font: inherit; }
+.actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-block: 1.5rem; }
+#conflict, #history-panel { border: 1px solid currentColor; border-radius: .5rem; padding: 1rem; margin-block: 1rem; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+lr-gen-view { display: block; min-inline-size: 0; }
+li { margin-block: .75rem; }

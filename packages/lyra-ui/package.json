@@ -2963,6 +2963,9 @@
     "@codecov/bundle-analyzer": "^2.0.1",
     "@custom-elements-manifest/analyzer": "^0.11.0",
     "@lit-labs/ssr": "^4.1.0",
+    "@modelcontextprotocol/client": "2.4.0",
+    "@modelcontextprotocol/core": "2.4.0",
+    "@modelcontextprotocol/ext-apps": "2.0.1",
     "@open-wc/testing": "^5.0.0",
     "@sgratzl/chartjs-chart-boxplot": "^4.4.5",
     "@types/d3-drag": "^3.0.7",
@@ -3017,7 +3020,8 @@
     "svelte": "^5.57.2",
     "typescript": "^7.0.2",
     "vue": "^3.5.44",
-    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
+    "zod": "4.6.7"
   },
   "packageManager": "pnpm@12.15.0"
 }

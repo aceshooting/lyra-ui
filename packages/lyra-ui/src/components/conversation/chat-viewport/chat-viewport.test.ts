@@ -1,3 +1,5 @@
+import { sendKeys } from '@web/test-runner-commands';
+import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { sinkTexts } from '../../../../test/announcements.js';
 import { twoFrames as nextFrame } from '../../../../test/frames.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
@@ -1349,6 +1351,35 @@ describe("virtual mode", () => {
     `;
   }
 
+  it('clears settled virtual keyboard intent before later programmatic scrolling with and without reduced motion', async () => {
+    const original = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'reduce' : 'no-preference';
+    try {
+      for (const preference of ['no-preference', 'reduce'] as const) {
+        await setReducedMotion(preference);
+        const el = await fixture<LyraChatViewport>(virtualFixtureMarkup(60));
+        el.bottomThreshold = 200;
+        const list = el.querySelector('lr-virtual-list') as LyraVirtualList;
+        await list.updateComplete;
+        const scroll = list.scrollContainer!;
+        await waitUntil(() => scroll.scrollTop > 2000);
+        await focusByKeyboard(scroll);
+        await nextFrame();
+        const initial = scroll.scrollTop;
+        const settled = oneEvent(scroll, 'scrollend');
+        await sendKeys({ press: 'ArrowUp' });
+        await settled;
+        await nextFrame();
+        await nextFrame();
+        expect(scroll.scrollTop).to.be.lessThan(initial);
+        expect(el.follow).to.equal(true);
+        scroll.scrollTop = 0;
+        await nextFrame();
+        await nextFrame();
+        expect(el.follow).to.equal(true);
+      }
+    } finally { await setReducedMotion(original); }
+  });
+
   // No `--lr-virtual-list-height` override anywhere: this is the consumer-CSS-free shape the
   // sizing fix is about. Every other fixture in this describe block deliberately keeps its own
   // inline override, which must keep winning (a document-tree inline style beats a ::slotted()
@@ -1758,6 +1789,95 @@ it("is accessible populated with real chat messages, an unread divider, and a fa
   const failed = el.querySelector('lr-chat-message[status="failed"]')!;
   expect(failed.shadowRoot!.querySelector('[part="retry-button"]')).to.exist;
   await expect(el).to.be.accessible();
+});
+
+it('releases follow for real keyboard scrolling even when native motion starts after several frames', async () => {
+  for (const key of ['Home', 'PageUp', 'ArrowUp']) {
+    const el = await fixture<LyraChatViewport>(html`<lr-chat-viewport style="block-size:240px" .bottomThreshold=${key === 'ArrowUp' ? 0 : 24}>${Array.from({ length: 60 }, (_, index) => row(`Message ${index}`))}</lr-chat-viewport>`);
+    const scroll = el.shadowRoot!.querySelector<HTMLElement>('[part="scroll"]')!;
+    await waitUntil(() => scroll.scrollTop > 2000, 'Initial transcript is scrolled to its end');
+    await focusByKeyboard(scroll);
+    const initial = scroll.scrollTop;
+    await sendKeys({ press: key });
+    await waitUntil(() => !el.follow, `${key} releases following after native scrolling`, { timeout: 5000 });
+    expect(scroll.scrollTop).to.be.lessThan(initial);
+    if (key === 'Home') {
+      await waitUntil(() => scroll.scrollTop <= 1, 'Home reaches the beginning', { timeout: 5000 });
+      const message = document.createElement('div');
+      message.textContent = 'A new streamed message';
+      el.append(message);
+      await nextFrame();
+      expect(scroll.scrollTop).to.be.at.most(1);
+      expect(el.follow).to.equal(false);
+    }
+  }
+});
+
+it('clears completed short keyboard scroll intent before a later programmatic scroll', async () => {
+  const el = await fixture<LyraChatViewport>(html`<lr-chat-viewport style="block-size:240px" .bottomThreshold=${200}>${Array.from({ length: 60 }, (_, index) => row(`Message ${index}`))}</lr-chat-viewport>`);
+  const scroll = el.shadowRoot!.querySelector<HTMLElement>('[part="scroll"]')!;
+  await waitUntil(() => scroll.scrollTop > 2000);
+  await focusByKeyboard(scroll);
+  await nextFrame();
+  const initial = scroll.scrollTop;
+  const settled = oneEvent(scroll, 'scrollend');
+  await sendKeys({ press: 'ArrowUp' });
+  await settled;
+  // Native listeners may queue their settlement check after oneEvent resolves.
+  await nextFrame();
+  await nextFrame();
+  expect(scroll.scrollTop).to.be.lessThan(initial);
+  expect(el.follow).to.equal(true);
+  scroll.scrollTop = 0;
+  await nextFrame();
+  expect(el.follow).to.equal(true);
+});
+
+it('releases follow when PageUp scrolls the transcript from a focused nested action', async () => {
+  const el = await fixture<LyraChatViewport>(html`<lr-chat-viewport style="block-size:240px">${Array.from({ length: 60 }, (_, index) => row(`Message ${index}`))}<button>Review generated answer</button></lr-chat-viewport>`);
+  const scroll = el.shadowRoot!.querySelector<HTMLElement>('[part="scroll"]')!;
+  await waitUntil(() => scroll.scrollTop > 2000);
+  await focusByKeyboard(el.querySelector('button')!);
+  await sendKeys({ press: 'PageUp' });
+  await waitUntil(() => !el.follow, 'Nested action PageUp releases following', { timeout: 5000 });
+});
+
+it('does not retain synthetic or modified keyboard intent for later unrelated scrolling', async () => {
+  const el = await fixture<LyraChatViewport>(html`<lr-chat-viewport style="block-size:240px">${Array.from({ length: 60 }, (_, index) => row(`Message ${index}`))}</lr-chat-viewport>`);
+  const scroll = el.shadowRoot!.querySelector<HTMLElement>('[part="scroll"]')!;
+  await waitUntil(() => scroll.scrollTop > 2000);
+  for (const altKey of [false, true]) {
+    el.scrollToBottom({ behavior: 'auto' });
+    await nextFrame();
+    scroll.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', altKey, bubbles: true, composed: true }));
+    await nextFrame();
+    await nextFrame();
+    scroll.scrollTop = 0;
+    scroll.dispatchEvent(new Event('scroll'));
+    expect(el.follow).to.equal(true);
+  }
+});
+
+it('ignores prevented keyboard scrolling and Home inside an editing control', async () => {
+  const el = await fixture<LyraChatViewport>(html`<lr-chat-viewport style="block-size:240px">${Array.from({ length: 60 }, (_, index) => row(`Message ${index}`))}<input aria-label="Message draft" value="Draft text"></lr-chat-viewport>`);
+  const scroll = el.shadowRoot!.querySelector<HTMLElement>('[part="scroll"]')!;
+  await waitUntil(() => scroll.scrollTop > 2000);
+  await focusByKeyboard(scroll);
+  const prevent = (event: Event) => event.preventDefault();
+  el.addEventListener('keydown', prevent);
+  await sendKeys({ press: 'Home' });
+  el.removeEventListener('keydown', prevent);
+  scroll.scrollTop = 0;
+  scroll.dispatchEvent(new Event('scroll'));
+  expect(el.follow).to.equal(true);
+  el.scrollToBottom({ behavior: 'auto' });
+  await nextFrame();
+  const input = el.querySelector('input')!;
+  await focusByKeyboard(input);
+  await sendKeys({ press: 'Home' });
+  scroll.scrollTop = 0;
+  scroll.dispatchEvent(new Event('scroll'));
+  expect(el.follow).to.equal(true);
 });
 
 // -- Keyboard scroll gestures count as user intent ---------------------------

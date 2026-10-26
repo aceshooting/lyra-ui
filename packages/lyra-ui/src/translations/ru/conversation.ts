@@ -8,6 +8,13 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 const strings: LyraLocaleStrings = {
   streamInterrupted: 'Поток прерван',
   streamResume: 'Продолжить',
+  genViewEmpty: 'Нет сгенерированного представления для отображения.',
+  genViewInvalid: 'Это сгенерированное представление невозможно отобразить.',
+  genViewLoading: 'Загрузка компонента…',
+  genViewLoadFailed: 'Не удалось загрузить этот компонент.',
+  genViewInvalidState: 'Значение этого поля невозможно использовать.',
+  genViewActionDenied: 'Это действие недоступно.',
+  genViewConfirmationRequired: 'Для этого действия требуется подтверждение приложения.',
   chatViewportLabel: 'Беседа',
   newMessagesCount: {
     one: '{count} новое сообщение',

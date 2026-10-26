@@ -173,7 +173,7 @@ export const scopedDefinitionClosures: Readonly<Record<string, readonly string[]
   'lr-menubar-item': ['lr-menu', 'lr-menu-item', 'lr-menubar-item'],
   'lr-message-actions': ['lr-chip', 'lr-copy-button', 'lr-icon-button', 'lr-message-actions', 'lr-message-feedback', 'lr-tooltip'],
   'lr-message-feedback': ['lr-chip', 'lr-message-feedback'],
-  'lr-message-parts': ['lr-attachment-chip', 'lr-badge', 'lr-button', 'lr-card', 'lr-citation-badge', 'lr-copy-button', 'lr-details', 'lr-icon-button', 'lr-json-viewer', 'lr-markdown', 'lr-media-card', 'lr-message-parts', 'lr-result-card', 'lr-result-field', 'lr-skeleton', 'lr-stat', 'lr-thinking-panel', 'lr-tool-call-block', 'lr-tool-call-chip', 'lr-tool-result-view', 'lr-tooltip', 'lr-virtual-list', 'lr-widget-renderer'],
+  'lr-message-parts': ['lr-attachment-chip', 'lr-badge', 'lr-button', 'lr-card', 'lr-citation-badge', 'lr-copy-button', 'lr-icon-button', 'lr-json-viewer', 'lr-markdown', 'lr-media-card', 'lr-message-parts', 'lr-result-card', 'lr-result-field', 'lr-skeleton', 'lr-stat', 'lr-thinking-panel', 'lr-tool-call-block', 'lr-tool-call-chip', 'lr-tool-result-view', 'lr-tooltip', 'lr-virtual-list', 'lr-widget-renderer'],
   'lr-mind-map': ['lr-mind-map', 'lr-virtual-list'],
   'lr-model-select': ['lr-model-select'],
   'lr-model-settings-panel': ['lr-model-select', 'lr-model-settings-panel', 'lr-slider'],

@@ -63,6 +63,12 @@ test('the committed bundle is current, valid and within the size budget', () => 
   }
 });
 
+test('the installed skill includes the companion guide referenced by its entry page', () => {
+  const { files } = renderSkillBundle(repoRoot);
+  assert.ok(files.get('lyra-ui/SKILL.md').includes('[lyra-gen.md](lyra-gen.md)'));
+  assert.equal(files.get('lyra-ui/lyra-gen.md'), bundleText(readFileSync(path.join(repoRoot, 'plugins/lyra-ui/skills/lyra-ui/lyra-gen.md'), 'utf8'), 'lyra-ui'));
+});
+
 test('reports stale, missing and unexpected files and rewrites the tree', () => {
   const directory = mkdtempSync(path.join(tmpdir(), 'lyra-skill-bundle-'));
   try {

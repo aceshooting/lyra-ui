@@ -1,0 +1,116 @@
+{
+  "id": "inventory-data",
+  "prompt": "Show a two-row stock table and an accessible bar chart for the same counts.",
+  "view": {
+    "version": "1",
+    "catalog": {
+      "id": "lyra-reviewed",
+      "version": "1"
+    },
+    "surfaceId": "inventory-data",
+    "revision": 0,
+    "root": {
+      "id": "inventory",
+      "type": "stack",
+      "children": [
+        {
+          "id": "title",
+          "type": "heading",
+          "text": "Stock overview"
+        },
+        {
+          "id": "stock",
+          "type": "table",
+          "props": {
+            "caption": "Current stock",
+            "columns": [
+              {
+                "key": "c0",
+                "label": "Item"
+              },
+              {
+                "key": "c1",
+                "label": "Units"
+              }
+            ],
+            "rows": [
+              {
+                "c0": "Pencils",
+                "c1": 24
+              },
+              {
+                "c0": "Notebooks",
+                "c1": 12
+              }
+            ]
+          }
+        },
+        {
+          "id": "chart",
+          "type": "chart",
+          "props": {
+            "label": "Stock by item",
+            "type": "bar",
+            "labels": [
+              "Pencils",
+              "Notebooks"
+            ],
+            "datasets": [
+              {
+                "label": "Units",
+                "data": [
+                  24,
+                  12
+                ]
+              }
+            ],
+            "withDataTable": true
+          }
+        }
+      ]
+    }
+  },
+  "markup": "<stack id=\"inventory\"><heading id=\"title\">Stock overview</heading><table id=\"stock\" caption=\"Current stock\" columns={[{\"key\":\"c0\",\"label\":\"Item\"},{\"key\":\"c1\",\"label\":\"Units\"}]} rows={[{\"c0\":\"Pencils\",\"c1\":24},{\"c0\":\"Notebooks\",\"c1\":12}]}></table><chart id=\"chart\" label=\"Stock by item\" type=\"bar\" labels={[\"Pencils\",\"Notebooks\"]} datasets={[{\"label\":\"Units\",\"data\":[24,12]}]} withDataTable={true}></chart></stack>",
+  "oracle": {
+    "nodes": [
+      {
+        "id": "stock",
+        "type": "table",
+        "props": {
+          "caption": "Current stock",
+          "rows": [
+            {
+              "c0": "Pencils",
+              "c1": 24
+            },
+            {
+              "c0": "Notebooks",
+              "c1": 12
+            }
+          ]
+        }
+      },
+      {
+        "id": "chart",
+        "type": "chart",
+        "props": {
+          "label": "Stock by item",
+          "labels": [
+            "Pencils",
+            "Notebooks"
+          ],
+          "datasets": [
+            {
+              "label": "Units",
+              "data": [
+                24,
+                12
+              ]
+            }
+          ],
+          "withDataTable": true
+        }
+      }
+    ]
+  }
+}

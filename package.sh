@@ -1,26 +1,7 @@
 #!/usr/bin/env bash
-# Packages both plugin skills into deterministic standalone archives. Before packaging the API
-# reference skill, regenerates packages/lyra-ui/llms/ itself (`pnpm --filter @aceshooting/lyra-ui
-# run llms`) and copies the result into references/, so this script is always self-sufficient --
-# it never trusts llms/ to already be fresh. (This used to just check llms/ existed and error
-# otherwise, which meant "edit a component's doc source, run pnpm run llms, then separately
-# remember to run ./package.sh" was a two-step sequence nothing enforced; the second step being
-# forgotten repeatedly shipped a stale packaged skill, since pnpm lint's contract-policy chain
-# checks llms/ freshness but not the packaged copy under plugins/ -- only the docs-and-storybook
-# CI job's `docs:check` step catches that drift, days after it's easy to trace back.) The
-# references are generated context-aware copies so the archive stays self-contained.
-#
-# The skill deliberately does NOT ship llms-full.txt: it is the same content concatenated into one
-# multi-megabyte file, and an agent reading a single component should pay for one component, not the
-# whole catalog. references/components/<tag>.md is addressed directly from the tag name. The package
-# changelog is trimmed to its current major (trimStandaloneChangelog in
-# scripts/skill-reference-context.mjs) instead of copied whole, and standalone-only link rewrites
-# remove promises that would require bundling llms-full.txt.
-#
-# The same run also generates packages/lyra-ui/skills/ (scripts/build-skill-bundle.mjs): the two skills
-# and the commands as shipped inside the npm package for `npx lyra-ui init-agents`. plugins/lyra-ui
-# stays the single authored source; the bundle's references point at the package's own llms/
-# (node_modules/@aceshooting/lyra-ui/llms/) instead of a copy.
+# Regenerates API references, npm-bundled skills and deterministic standalone skill archives.
+# Standalone references are self-contained, omit llms-full.txt and retain only the current-major
+# changelog. The npm bundle links to the package's own llms/ to avoid duplicating the API catalog.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

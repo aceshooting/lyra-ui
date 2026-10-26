@@ -8,6 +8,13 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 const strings: LyraLocaleStrings = {
   streamInterrupted: 'Aliran kaganggu',
   streamResume: 'Teruskeun',
+  genViewEmpty: 'Teu aya tampilan anu dijieun pikeun dipintonkeun.',
+  genViewInvalid: 'Tampilan anu dijieun ieu teu bisa dipintonkeun.',
+  genViewLoading: 'Ngamuat komponén…',
+  genViewLoadFailed: 'Komponén ieu teu bisa dimuat.',
+  genViewInvalidState: 'Nilai widang ieu teu bisa dipaké.',
+  genViewActionDenied: 'Aksi ieu teu sadia.',
+  genViewConfirmationRequired: 'Aksi ieu merlukeun konfirmasi ti aplikasi.',
   chatViewportLabel: 'Paguneman',
   newMessagesCount: {
     other: '{count} talatah anyar',

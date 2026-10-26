@@ -8,6 +8,13 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 const strings: LyraLocaleStrings = {
   streamInterrupted: 'وهڪرو رڪجي ويو',
   streamResume: 'ٻيهر جاري ڪريو',
+  genViewEmpty: 'ڏيکارڻ لاءِ ڪو ٺاهيل ڏيک موجود ناهي.',
+  genViewInvalid: 'هي ٺاهيل ڏيک ڏيکاري نٿو سگهجي.',
+  genViewLoading: 'جزو لوڊ ٿي رهيو آهي…',
+  genViewLoadFailed: 'هي جزو لوڊ نه ٿي سگهيو.',
+  genViewInvalidState: 'هن فيلڊ جي قدر استعمال نٿي ڪري سگهجي.',
+  genViewActionDenied: 'هي عمل موجود ناهي.',
+  genViewConfirmationRequired: 'هن عمل لاءِ ايپ کان تصديق گهربل آهي.',
   chatViewportLabel: 'گفتگو',
   newMessagesCount: {
     one: '{count} نئون پيغام',

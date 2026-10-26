@@ -14,8 +14,8 @@ English is built into `lyra-ui`; every other locale is an opt-in, side-effect-on
 pnpm add @aceshooting/lyra-ui @aceshooting/lyra-translations
 ```
 
-`@aceshooting/lyra-ui` is a required peer (same major). `lyra-ui` declares this package as an optional
-peer, so install it only when your app needs a non-English locale or `loadLyraLocale()`.
+Use the same version as the required `@aceshooting/lyra-ui` peer. Lyra UI declares this package as
+optional, so install it only when your app needs a non-English locale or `loadLyraLocale()`.
 
 ## Usage
 
@@ -31,6 +31,15 @@ setLyraLocale('fr');
 Each locale also has one slice per component family for smaller bundles, for example
 `@aceshooting/lyra-translations/fr/forms.js`. `locales.json` in `@aceshooting/lyra-ui` lists every
 locale with its exact import specifiers, direction and coverage.
+
+The `conversation` slice also includes the seven `genView*` renderer messages used by the optional
+`@aceshooting/lyra-gen` companion. Full locale imports include them automatically. With slices,
+load `conversation.js` for generated-view empty/loading/error and action messages, plus the
+families and `shared.js` used by the generated controls. Gen keeps English fallbacks locally;
+translations still use the matching **Lyra UI** package version. Registered messages update mounted
+views, while `.strings` can override renderer copy per instance. Generated prose and caller labels
+are application content and are not translated by these catalogs. Locale selection does not set
+text direction: set an inherited `dir` for RTL content.
 
 To load catalogs lazily instead, use `loadLyraLocale()` from `@aceshooting/lyra-ui/locale-loader.js`;
 it imports from this package.

@@ -2,7 +2,7 @@
 name: lyra-ui
 description: >
   Use when writing or reviewing code that imports @aceshooting/lyra-ui (or its lyra-docs,
-  lyra-flags, lyra-map, lyra-translations and lyra-ide companions), uses any lr-* custom element, or
+  lyra-flags, lyra-map, lyra-translations, lyra-ide and lyra-gen companions), uses any lr-* custom element, or
   migrates a project off Web Awesome (wa-*) or Shoelace (sl-*). Covers exact component APIs
   (attributes, slots, events, parts, CSS custom properties), design-token theming, localization,
   framework/TypeScript integration, and wa-*/sl-* to lr-* migration.
@@ -70,9 +70,10 @@ instead of guessing.
   older React via a ref.
 - **Form controls are form-associated** (native submit and validation, no wiring). Read
   `effectiveDisabled`, not `disabled`, for the state merged with an ancestor `<fieldset disabled>`.
-- **Every built-in string is localizable** through a per-instance `.strings` override or an app-wide
-  catalog via `registerLyraLocale()`; never overwrite slotted content to translate. Locale does not
-  set writing direction: inherit an explicit `dir="rtl"`.
+- **Localize component chrome separately from content.** Use documented keys through `.strings`
+  or `registerLyraLocale()`; preserve caller/slotted data. Locale imports register catalogs but do
+  not select them: use `setLyraLocale()` or inherited `lang`/`locale`, and apply `dir` explicitly.
+  Read `references/shared/localization-and-rtl.md` for precedence and document bridging.
 
 ## Appearance defaults
 
@@ -90,10 +91,13 @@ Install `@aceshooting/lyra-ide` and `@aceshooting/lyra-translations` at the same
 `@aceshooting/lyra-ui`. `@aceshooting/lyra-flags`, `@aceshooting/lyra-docs`, and `@aceshooting/lyra-map` are versioned
 independently; choose releases compatible with the installed packages and their declared peer ranges.
 
-- **`@aceshooting/lyra-translations`** (optional peer): the locale catalogs, imported as
-  `@aceshooting/lyra-translations/<locale>.js` (or `<locale>/<family>.js` slices) or through
-  `loadLyraLocale()`; see `references/shared/localization-and-rtl.md`. Only the pseudo-locales stay
-  under `@aceshooting/lyra-ui/translations/pseudo/`.
+- **`@aceshooting/lyra-translations`** (optional peer): side-effect-only core locale catalogs at
+  `@aceshooting/lyra-translations/<locale>.js` or `<locale>/<family>.js` (include shared keys when
+  using slices). Lazy loading uses `loadLyraLocale()` from `@aceshooting/lyra-ui/locale-loader.js`.
+  The conversation slice includes Gen's seven `genView*` renderer messages; generated prose stays
+  caller content. English is built into Lyra UI; pseudo locales stay under its `translations/pseudo/` path. Read
+  `@aceshooting/lyra-ui/locales.json` for exact imports and coverage; coverage is not linguistic
+  review. Companion-specific and application text retain their own message ownership.
 - **`@aceshooting/lyra-ide`** (dev dependency): editor data (`custom-elements.json`,
   `web-types.json`, `vscode-html-data.json`, `vscode-css-data.json`); setup in
   `references/shared/testing-and-utilities.md`.
@@ -102,6 +106,10 @@ independently; choose releases compatible with the installed packages and their 
 - **`@aceshooting/lyra-docs`**: experimental `<lr-docx-editor>`; read its installed README for the
   bundled engine, registration, stylesheet imports, async editing commands, save receipts and limits. Core document viewers
   stay in `references/components/`.
+- **`@aceshooting/lyra-gen`**: independently versioned experimental generated views and saved
+  dashboards. Read [lyra-gen.md](lyra-gen.md) for boundary, validation, authority and locale ownership,
+  then the installed companion guide for the task. Its view format differs from widget-v2;
+  a roadmap or adapter does not establish released support or protocol conformance.
 - **`@aceshooting/lyra-map`** (optional peer): the default modular renderer for `<lr-map>`. Configure
   `lyraMapWorkerPlugin()` from `@aceshooting/lyra-map/vite`, or supply a compatible worker URL.
   Read `references/components/lr-map.md` and the companion README before imperative map mutations:

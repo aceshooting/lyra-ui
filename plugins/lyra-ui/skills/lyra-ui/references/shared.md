@@ -2680,6 +2680,35 @@ Pluralized messages use one object-valued entry keyed by CLDR categories. A cata
 singular and `<key>Plural` entries should fold them into `{ one: …, other: … }` under the singular
 key's name; the plural key is not read.
 
+### Generated views and embedded apps
+
+`@aceshooting/lyra-gen` uses the same locale registry and inherited `lang`/`locale` as Lyra UI.
+The seven `genView*` renderer messages ship in each locale's `conversation` slice, including
+empty, invalid, loading, load-failure, field-value, unavailable-action and confirmation messages.
+Import the full matching `@aceshooting/lyra-translations/<locale>.js` catalog, or the
+`<locale>/conversation.js` slice plus the families and `shared.js` used by generated child controls.
+The translations package matches the **Lyra UI** version; Gen is versioned independently.
+
+```ts
+import '@aceshooting/lyra-translations/fr/conversation.js';
+import '@aceshooting/lyra-translations/fr/forms.js';
+import '@aceshooting/lyra-translations/fr/shared.js';
+import '@aceshooting/lyra-gen/gen-view.js';
+```
+
+The renderer keeps its own small English defaults and does not load the complete English catalog.
+Its `.strings` overrides affect its own messages; registered locale messages also reach nested
+controls. Changing the inherited locale or registering a catalog after mounting refreshes the
+renderer. Caller labels and model-generated prose remain caller content: the host chooses their
+language separately. Numeric/date formatting follows the host locale without changing stored
+JSON numbers or ISO dates. Host-created chat stream messages still require the host's localized
+`strings` configuration.
+
+A loaded `lr-mcp-app` publishes changed locale/direction context without reloading its frame.
+Official MCP Apps sessions retain context updates during initialization and deliver the latest
+context when the app becomes ready. Resource content remains responsible for rendering its own
+translations and direction; the iframe does not inherit the parent document's CSS or `dir`.
+
 ## RTL and direction
 
 Direction is inherited from the platform `dir` cascade; locale/`lang` selection does not change it,
@@ -2743,9 +2772,12 @@ import {
   and strictly increasing `sequence`. A newer generation atomically retires the previous run, while
   an older or replayed cursor is ignored. JSON Patch input is structurally validated and rejects
   prototype-mutating paths.
-- **Protocol adapters** — `adaptAiSdkMessage()`, `AgUiStreamAdapter`, and `adaptA2UiSurface()` map
-  structural provider messages, events, and documents onto the neutral runtime without pulling
-  vendor SDKs into the package. Feed AG-UI events through `new AgUiStreamAdapter().push(event)`.
+- **Structural adapters** — `adaptAiSdkMessage()` maps structural provider messages and
+  `AgUiStreamAdapter` maps events onto the neutral runtime without pulling vendor SDKs into the
+  package. Feed AG-UI events through `new AgUiStreamAdapter().push(event)`; the constructor accepts
+  `(limits?: Partial<AgUiAdapterLimits>, options?: AgUiAdapterOptions)`.
+  `adaptA2UiSurface()` is a limited A2UI-like graph helper, described below; it does not implement
+  the native A2UI protocol or its surface lifecycle.
   Adapter inputs are treated as untrusted data, recursively snapshotted, and rejected without
   throwing when malformed, non-serializable, or over their configured budgets.
   `adaptAiSdkMessage()` maps AI SDK tool states structurally: `output-error` → `error`,
@@ -2784,6 +2816,77 @@ import {
 
 These structural, provider-agnostic types correspond to the component inputs above; map a vendor
 payload onto them at the edge.
+
+### AG-UI reasoning, activity, and custom events
+
+`AgUiLikeEvent` is the structural input shape; `push()` also accepts unknown input for guarded
+admission. Visible `REASONING_MESSAGE_*` events become reasoning parts. `ACTIVITY_SNAPSHOT`
+uses `messageId`, `activityType`, object `content`, and optional `replace`; `replace: false`
+keeps an existing message. `ACTIVITY_DELTA` uses `patch` against a prior snapshot with the same
+`messageId` and `activityType`. Activity content becomes a named data part and remains subject to
+the adapter's snapshot and buffered-content budgets.
+
+`CUSTOM` requires `name` and `value` plus explicit host routing. Set
+`AgUiAdapterOptions.customEventTarget` to receive an `AgUiCustomEvent { name, value }` and return
+an `AgUiCustomEventTarget { messageId, partId }`, or `null` to ignore it. Repeated targets replace
+their data part. The callback owns those identities; the application registers named data renderers
+and controls which event names it accepts. An omitted callback ignores custom events. Named data values remain data,
+including values that resemble widgets or actions.
+
+`AgUiAdapterLimits.maxBufferedMessages` bounds retained message identities, including activity
+patch baselines; its default is 512. `maxBufferedTools`, `maxToolArgumentBytes`,
+`maxTextDeltaCharacters`, and the inherited provider snapshot limits remain independently bounded.
+Run boundaries and `reset()` clear retained buffers. Compact chunks require upstream expansion;
+phase, encrypted, raw, step, subagent, deprecated thinking, and unknown events are ignored.
+See the [AG-UI adapter guide](https://github.com/aceshooting/lyra-ui/blob/main/docs/ag-ui-adapter.md)
+for event mappings, routing examples, error behavior, and the supported subset.
+
+### Limited A2UI-like graph helper
+
+`adaptA2UiSurface(surface, typeMap, limits?)` accepts one structural graph:
+`{ rootId, components: [{ id, type, props?, text?, children?: string[], action?: { id, payload? } }], data? }`.
+The host-owned `typeMap` maps those type names to allowlisted widget types. Unsupported native
+A2UI lifecycle messages are not accepted as graphs; the helper does not maintain surfaces,
+process native data-model updates, or provide native A2UI catalog compatibility.
+
+The result is `A2UiAdapterResult | null`: a widget-compatible `{ version: '2', root }` plus
+`bindingState` when `surface.data` is present. Assign `bindingState` separately; the widget-v2
+document itself never supplies controlled state. Explicit `data: null` remains `bindingState: null`.
+The original `state` field remains an equal compatibility alias in the helper result; renderers
+do not read it. Input, props, action payloads and state are detached under the adapter budgets.
+
+```ts
+import { adaptA2UiSurface } from "@aceshooting/lyra-ui/ai";
+import "@aceshooting/lyra-ui/components/lr-message-parts.js";
+import "@aceshooting/lyra-ui/components/lr-input.js";
+import { createWidgetTypeRegistry } from "@aceshooting/lyra-ui/components/lr-widget-renderer.js";
+
+const registry = createWidgetTypeRegistry([["field", {
+  tag: "lr-input", interaction: "control", props: { label: "string", value: "string" },
+  bindings: { value: { event: "lr-input" } },
+}]]);
+const adapted = adaptA2UiSurface({
+  rootId: "name-field",
+  components: [{ id: "name-field", type: "Field", props: {
+    label: "Name", value: { $bind: "/name" },
+  } }],
+  data: { name: "Ada" },
+}, { Field: "field" });
+const message = document.querySelector("lr-message-parts")!;
+if (adapted) {
+  message.widgetRegistry = registry;
+  message.widgetBindingState = adapted.bindingState;
+  message.parts = [{ id: "name-form", type: "data", widget: adapted.root }];
+}
+message.addEventListener("lr-widget-state-change", (event) => {
+  if (event.detail.path === "/name") message.widgetBindingState = { name: event.detail.value };
+});
+```
+
+For host-specific content, keep using `renderPart(part, index)`: return `undefined` to delegate
+one part, or return a template to replace it and own its interaction. No extra part registry is
+required. Widget type registries control the existing widget renderer's allowed component types,
+separately from the message-part rendering hook.
 
 ### Interrupting and resuming a streamed run
 
@@ -4320,11 +4423,18 @@ These named interfaces and helper signatures are available to typed integrations
   components: A2UiLikeComponent[];
   data?: unknown;
 }`
-  `adaptA2UiSurface(surface: unknown, typeMap: unknown, limits: Partial<A2UiAdapterLimits> = {}): LyraWidgetDocument | null`
+  `A2UiAdapterResult {
+  readonly version: '2';
+  readonly root: LyraWidgetNode;
+  readonly bindingState?: unknown;
+  readonly state?: unknown;
+}`
+  `adaptA2UiSurface(surface: unknown, typeMap: unknown, limits: Partial<A2UiAdapterLimits> = {}): A2UiAdapterResult | null`
 
 - **`ai-adapters-ag-ui-contracts`** — AI adapter and runtime contracts.
   `AgUiAdapterLimits {
   maxBufferedTools: number;
+  maxBufferedMessages: number;
   maxToolArgumentBytes: number;
   maxTextDeltaCharacters: number;
   maxDepth: number;
@@ -4346,6 +4456,23 @@ These named interfaces and helper signatures are available to typed integrations
   code?: string;
   snapshot?: unknown;
   messages?: unknown[];
+  name?: string;
+  value?: unknown;
+  activityType?: string;
+  content?: unknown;
+  replace?: boolean;
+  patch?: unknown[];
+}`
+  `AgUiCustomEvent {
+  name: string;
+  value: unknown;
+}`
+  `AgUiCustomEventTarget {
+  messageId: string;
+  partId: string;
+}`
+  `AgUiAdapterOptions {
+  customEventTarget?: (event: AgUiCustomEvent) => AgUiCustomEventTarget | null;
 }`
 
 - **`ai-adapters-ai-sdk-contracts`** — AI adapter and runtime contracts.

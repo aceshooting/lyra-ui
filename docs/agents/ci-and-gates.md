@@ -31,7 +31,7 @@ modules are plain JavaScript). dependency-cruiser does need the legacy API, so `
 both are also root scripts, and a finding fails `lint`:
 
 - `check:oxlint` (`pnpm lint:oxlint`, about 6 s) runs oxlint with the root `.oxlintrc.json`:
-  type-aware over `packages/{lyra-ui,lyra-3d,lyra-map}/src`, syntax-only over the `.mjs` tooling
+  type-aware over `packages/{lyra-ui,lyra-gen,lyra-3d,lyra-map}/src`, syntax-only over the `.mjs` tooling
   (`scripts/`, `packages/*/scripts`, `benchmarks/`, `.storybook/`); `lyra-docs` runs the type-aware pass
   in its own `lint` script because it needs lyra-ui's built declarations. The config is oxlint's
   `correctness` category plus `no-floating-promises`, `no-misused-promises` and
@@ -507,10 +507,10 @@ tag is never rewritten.
 verify packed exports and dependencies against the versions actually on npm; workspace source at a
 matching version is no evidence a registry dependency works. npm needs a package to exist before its
 trusted publisher can be configured, so for the first publication of `@aceshooting/lyra-docs`,
-`@aceshooting/lyra-ide`, `@aceshooting/lyra-translations`, `@aceshooting/lyra-map` or `@aceshooting/lyra-3d`, provide a short-lived granular npm token
+`@aceshooting/lyra-gen`, `@aceshooting/lyra-ide`, `@aceshooting/lyra-translations`, `@aceshooting/lyra-map` or `@aceshooting/lyra-3d`, provide a short-lived granular npm token
 (`@aceshooting` read/write direct publish, Bypass 2FA) as the `NPM_BOOTSTRAP_TOKEN` secret in the
 protected `npm-publish` environment and dispatch
-`gh workflow run release.yml --ref main -f package=<lyra-docs|lyra-ide|lyra-translations|lyra-map|lyra-3d> -f first_package_bootstrap=true`.
+`gh workflow run release.yml --ref main -f package=<lyra-docs|lyra-gen|lyra-ide|lyra-translations|lyra-map|lyra-3d> -f first_package_bootstrap=true`.
 Both workflows reject the flag for other packages, for a package already on the registry, and on an
 ambiguous registry response. After environment approval the protected job uses the token only for the
 verified tarball and publishes with provenance. Then configure the trusted publisher for

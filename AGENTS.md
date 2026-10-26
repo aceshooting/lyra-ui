@@ -52,6 +52,7 @@ packages/lyra-ui/                 @aceshooting/lyra-ui, the library
                                   GENERATED; never edit, CI diffs them
 packages/lyra-flags/              optional <lr-flag> SVG companion (Noto Emoji, Public Domain)
 packages/lyra-docs/               public experimental editor companion; viewers stay in lyra-ui for now
+packages/lyra-gen/                experimental catalog, generated-view and saved-dashboard companion
 packages/lyra-map/                optional modular map renderer and shared module worker; generated from pinned source
 packages/lyra-3d/                 optional WebGL engines (three.js) behind opted-in 3D views; loaded lazily
 packages/lyra-ide/                editor data (custom-elements/web-types/vscode-*-data json), copied from lyra-ui at prepack

@@ -131,11 +131,16 @@ jobs:
         with:
           name: lyra-ui-dist
           path: packages/lyra-ui/dist
+      - run: pnpm --filter @aceshooting/lyra-translations assemble
       - run: pnpm --filter @aceshooting/lyra-map build
       - run: pnpm --filter '!@aceshooting/lyra-ui' -r test
       - run: pnpm --filter @aceshooting/lyra-map lint
       - run: pnpm --filter @aceshooting/lyra-3d lint
       - run: pnpm --filter @aceshooting/lyra-docs lint
+      - run: pnpm --filter @aceshooting/lyra-gen lint
+      - run: pnpm --filter @aceshooting/lyra-gen check:catalog
+      - run: pnpm --filter @aceshooting/lyra-gen check:examples
+      - run: pnpm --filter @aceshooting/lyra-gen check:bundles
       - run: pnpm --filter @aceshooting/lyra-ide lint
       - run: pnpm --filter @aceshooting/lyra-translations lint
       # Knip discovers the package's explicit exports and runs a production graph before the
@@ -649,7 +654,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  # lyra-flags, lyra-docs, lyra-ide, lyra-translations, lyra-map and lyra-3d tarballs for the contract job (the docs and translations
+  # lyra-flags, lyra-docs, lyra-gen, lyra-ide, lyra-translations, lyra-map and lyra-3d tarballs for the contract job (the docs and translations
   # prepacks are this run's build plus their own; lyra-ide's is a copy of lyra-ui's committed editor data).
   packed_consumer_companions:
     name: packed-consumer / companion packages
@@ -680,6 +685,8 @@ jobs:
           (cd packages/lyra-map && pnpm pack --ignore-scripts --pack-destination ../../artifacts/packed-companions)
           pnpm --filter @aceshooting/lyra-3d build
           (cd packages/lyra-3d && pnpm pack --ignore-scripts --pack-destination ../../artifacts/packed-companions)
+          pnpm --filter @aceshooting/lyra-gen build
+          (cd packages/lyra-gen && pnpm pack --ignore-scripts --pack-destination ../../artifacts/packed-companions)
           pnpm --filter @aceshooting/lyra-docs build
           (cd packages/lyra-docs && pnpm pack --ignore-scripts --pack-destination ../../artifacts/packed-companions)
           pnpm --filter @aceshooting/lyra-translations assemble
@@ -690,13 +697,14 @@ jobs:
           git diff --exit-code
           cd artifacts/packed-companions
           tarballs=(*.tgz)
-          test "${#tarballs[@]}" -eq 6
+          test "${#tarballs[@]}" -eq 7
           sha256sum "${tarballs[@]}" > SHA256SUMS
           cd ../..
           node packages/lyra-ui/scripts/check-package-size.mjs --package @aceshooting/lyra-translations --tarball artifacts/packed-companions/aceshooting-lyra-translations-*.tgz
           node packages/lyra-ui/scripts/check-package-size.mjs --package @aceshooting/lyra-ide --tarball artifacts/packed-companions/aceshooting-lyra-ide-*.tgz
           node packages/lyra-ui/scripts/check-package-size.mjs --package @aceshooting/lyra-map --tarball artifacts/packed-companions/aceshooting-lyra-map-*.tgz
           node packages/lyra-ui/scripts/check-package-size.mjs --package @aceshooting/lyra-3d --tarball artifacts/packed-companions/aceshooting-lyra-3d-*.tgz
+          node packages/lyra-ui/scripts/check-package-size.mjs --package @aceshooting/lyra-gen --tarball artifacts/packed-companions/aceshooting-lyra-gen-*.tgz
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: packed-companion-tarballs
@@ -769,17 +777,19 @@ jobs:
           ui=(artifacts/packed-attw/aceshooting-lyra-ui-*.tgz)
           flags=(artifacts/packed-companions/aceshooting-lyra-flags-*.tgz)
           docs=(artifacts/packed-companions/aceshooting-lyra-docs-*.tgz)
+          gen=(artifacts/packed-companions/aceshooting-lyra-gen-*.tgz)
           map=(artifacts/packed-companions/aceshooting-lyra-map-*.tgz)
           engine3d=(artifacts/packed-companions/aceshooting-lyra-3d-*.tgz)
           translations=(artifacts/packed-companions/aceshooting-lyra-translations-*.tgz)
           ide=(artifacts/packed-companions/aceshooting-lyra-ide-*.tgz)
-          test "${#engine3d[@]}" -eq 1
+          test "${#engine3d[@]}" -eq 1 && test "${#gen[@]}" -eq 1
           test "${#ui[@]}" -eq 1 && test "${#flags[@]}" -eq 1 && test "${#docs[@]}" -eq 1
           test "${#translations[@]}" -eq 1 && test "${#ide[@]}" -eq 1 && test "${#map[@]}" -eq 1
           {
             echo "LYRA_PACKED_UI_TARBALL=$PWD/${ui[0]}"
             echo "LYRA_PACKED_FLAGS_TARBALL=$PWD/${flags[0]}"
             echo "LYRA_PACKED_DOCS_TARBALL=$PWD/${docs[0]}"
+            echo "LYRA_PACKED_GEN_TARBALL=$PWD/${gen[0]}"
             echo "LYRA_PACKED_MAP_TARBALL=$PWD/${map[0]}"
             echo "LYRA_PACKED_3D_TARBALL=$PWD/${engine3d[0]}"
             echo "LYRA_PACKED_TRANSLATIONS_TARBALL=$PWD/${translations[0]}"
@@ -1561,6 +1571,27 @@ jobs:
             pnpm --filter @aceshooting/lyra-docs build
             pnpm --filter @aceshooting/lyra-docs test:browser
           fi
+      - name: Qualify generated views and the saved-dashboard host
+        if: (matrix.install_browser == 'firefox' && matrix.shard_index == 2) || (matrix.shard_index == 1 && (matrix.install_browser == 'chromium' || matrix.install_browser == 'webkit'))
+        env:
+          WTR_BROWSER: ${{ matrix.install_browser }}
+          WTR_STRICT_CONSOLE: "1"
+        run: |
+          pnpm --filter @aceshooting/lyra-translations assemble
+          pnpm --filter @aceshooting/lyra-gen build
+          pnpm --filter @aceshooting/lyra-gen test:browser
+          pnpm --filter @aceshooting/lyra-gen test:saved-dashboard
+      - name: Compare recorded generated-view visual baselines
+        if: matrix.install_browser == 'chromium' && matrix.shard_index == 1
+        run: pnpm --filter @aceshooting/lyra-gen test:visual --output="${{ runner.temp }}/gen-recorded-visual.json"
+      - name: Archive recorded generated-view visual evidence
+        if: always() && matrix.install_browser == 'chromium' && matrix.shard_index == 1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: gen-recorded-visual-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/gen-recorded-visual.json*
+          if-no-files-found: warn
+          retention-days: 7
       - name: Upload DOCX coverage to Codecov
         if: matrix.install_browser == 'chromium' && matrix.shard_index == 1
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1

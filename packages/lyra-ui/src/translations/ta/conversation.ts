@@ -8,6 +8,13 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 const strings: LyraLocaleStrings = {
   streamInterrupted: 'தொடர் இடைநிறுத்தப்பட்டது',
   streamResume: 'மீண்டும் தொடர்',
+  genViewEmpty: 'காண்பிக்க உருவாக்கப்பட்ட காட்சி எதுவும் இல்லை.',
+  genViewInvalid: 'இந்த உருவாக்கப்பட்ட காட்சியைக் காண்பிக்க முடியாது.',
+  genViewLoading: 'கூறு ஏற்றப்படுகிறது…',
+  genViewLoadFailed: 'இந்தக் கூறை ஏற்ற முடியவில்லை.',
+  genViewInvalidState: 'இந்தப் புலத்தின் மதிப்பைப் பயன்படுத்த முடியாது.',
+  genViewActionDenied: 'இந்தச் செயல் கிடைக்கவில்லை.',
+  genViewConfirmationRequired: 'இந்தச் செயலுக்குப் பயன்பாட்டிலிருந்து உறுதிப்படுத்தல் தேவை.',
   chatViewportLabel: 'உரையாடல்',
   newMessagesCount: {
     one: '{count} புதிய செய்தி',

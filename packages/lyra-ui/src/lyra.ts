@@ -1688,6 +1688,13 @@ export type {
   McpAppResource,
   McpAppToolCallDetail,
   McpAppToolResultOptions,
+  McpAppHostCapabilities,
+  McpAppNotificationMethod,
+  McpAppProtocol,
+  McpAppRequestDetail,
+  McpAppRequestId,
+  McpAppRequestMethod,
+  McpAppResponseOptions,
   LyraMcpAppEventMap,
 } from './components/agent-tools/mcp-app/mcp-app.class.js';
 export type {

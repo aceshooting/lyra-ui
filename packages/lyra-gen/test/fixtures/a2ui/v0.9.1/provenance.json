@@ -1,0 +1,65 @@
+{
+  "repository": "https://github.com/a2ui-project/a2ui",
+  "revision": "409ded29ccac3eebc541979ae5320771703248e8",
+  "specificationDirectory": "specification/v0_9_1",
+  "license": "Apache-2.0",
+  "wireVersions": [
+    "v0.9",
+    "v0.9.1"
+  ],
+  "exampleWireVersion": "v0.9",
+  "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json",
+  "qualification": "Selected processor examples only; no full basic-catalog or reference-renderer qualification. Files are unmodified. Candidate examples are excluded.",
+  "files": [
+    {
+      "file": "LICENSE",
+      "source": "https://github.com/a2ui-project/a2ui/blob/409ded29ccac3eebc541979ae5320771703248e8/LICENSE",
+      "sha256": "8c8b5b632d56c4c1658296963c693db5396772a33caaddb9a22593c4155c437a"
+    },
+    {
+      "file": "server_to_client.json",
+      "source": "https://github.com/a2ui-project/a2ui/blob/409ded29ccac3eebc541979ae5320771703248e8/specification/v0_9_1/json/server_to_client.json",
+      "sha256": "21693ba612f029940222ac788ff381c5fe0ef08f612312ff934db7a2daaca289"
+    },
+    {
+      "file": "client_to_server.json",
+      "source": "https://github.com/a2ui-project/a2ui/blob/409ded29ccac3eebc541979ae5320771703248e8/specification/v0_9_1/json/client_to_server.json",
+      "sha256": "f049f8a554296a603cd3c1cef37dd6811006dc90e3ff52ce845d1674cd00a6b7"
+    },
+    {
+      "file": "common_types.json",
+      "source": "https://github.com/a2ui-project/a2ui/blob/409ded29ccac3eebc541979ae5320771703248e8/specification/v0_9_1/json/common_types.json",
+      "sha256": "a13897d7dbe14c37512c5cbc9b8561782fc3b01e3a6ff114c1f12c82275b5884"
+    },
+    {
+      "file": "catalog.json",
+      "source": "https://github.com/a2ui-project/a2ui/blob/409ded29ccac3eebc541979ae5320771703248e8/specification/v0_9_1/catalogs/basic/catalog.json",
+      "sha256": "8cc94d0a482e67048f9fc989964ca5da56fe42f531d919315a508989fb22e13e"
+    },
+    {
+      "file": "00_simple-text.json",
+      "source": "https://github.com/a2ui-project/a2ui/blob/409ded29ccac3eebc541979ae5320771703248e8/specification/v0_9_1/catalogs/basic/examples/00_simple-text.json",
+      "sha256": "130ae3b46fa16b24246fb5bcd5d14d9707abbae8adda5fbd047ad98d1b13a56b"
+    },
+    {
+      "file": "00_interactive-button.json",
+      "source": "https://github.com/a2ui-project/a2ui/blob/409ded29ccac3eebc541979ae5320771703248e8/specification/v0_9_1/catalogs/basic/examples/00_interactive-button.json",
+      "sha256": "19d990117be8d66ffed20d5bb21127c9d153f90b8e3b2670f80c72d34aad0fb5"
+    },
+    {
+      "file": "34_child-list-template.json",
+      "source": "https://github.com/a2ui-project/a2ui/blob/409ded29ccac3eebc541979ae5320771703248e8/specification/v0_9_1/catalogs/basic/examples/34_child-list-template.json",
+      "sha256": "9e79e4057e05fb097ddd96c2f5b328984eee7dd567218d3f67b2f8f67da064a2"
+    },
+    {
+      "file": "client_capabilities.json",
+      "source": "https://github.com/a2ui-project/a2ui/blob/409ded29ccac3eebc541979ae5320771703248e8/specification/v0_9_1/json/client_capabilities.json",
+      "sha256": "917ff302b883c8c50475f0fafa836c17620078e7e2089392b322dc5df01de78f"
+    },
+    {
+      "file": "client_data_model.json",
+      "source": "https://github.com/a2ui-project/a2ui/blob/409ded29ccac3eebc541979ae5320771703248e8/specification/v0_9_1/json/client_data_model.json",
+      "sha256": "6aefe455be9287caaf2f964ae480e8cf87706718106130908b41df19d5e982be"
+    }
+  ]
+}

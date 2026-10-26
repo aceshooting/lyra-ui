@@ -8,6 +8,13 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 const strings: LyraLocaleStrings = {
   streamInterrupted: 'Flux întrerupt',
   streamResume: 'Reia',
+  genViewEmpty: 'Nu există nicio vizualizare generată de afișat.',
+  genViewInvalid: 'Această vizualizare generată nu poate fi afișată.',
+  genViewLoading: 'Se încarcă componenta…',
+  genViewLoadFailed: 'Această componentă nu a putut fi încărcată.',
+  genViewInvalidState: 'Valoarea acestui câmp nu poate fi utilizată.',
+  genViewActionDenied: 'Această acțiune nu este disponibilă.',
+  genViewConfirmationRequired: 'Această acțiune necesită confirmare din partea aplicației.',
   chatViewportLabel: 'Conversație',
   newMessagesCount: {
     one: '{count} mesaj nou',

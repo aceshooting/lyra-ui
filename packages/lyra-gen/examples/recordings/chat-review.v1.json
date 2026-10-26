@@ -1,0 +1,57 @@
+{
+  "version": "1",
+  "recordingKind": "authored-synthetic",
+  "source": {
+    "kind": "fixture",
+    "id": "chat-review-cadence-v1"
+  },
+  "model": null,
+  "package": {
+    "name": "@aceshooting/lyra-gen",
+    "version": "0.1.0"
+  },
+  "catalog": {
+    "id": "lyra-reviewed",
+    "version": "1"
+  },
+  "format": "chat",
+  "text": "Review follows.\n\n```lyra\n<stack id=\"answer\"><heading id=\"title\">Review the answer</heading><text id=\"summary\">This authored replay contains a working review field.</text><input id=\"note\" label=\"Review note\" bindings={{\"value\":\"/note\"}} /></stack>\n```\nThe first review field is ready.\n\n```lyra\n<text id=\"detail\">A second synthetic detail arrives later.</text>\n```\nReplay complete.",
+  "chunks": [
+    {
+      "atMs": 0,
+      "text": "Review follows.\n\n```lyra\n"
+    },
+    {
+      "atMs": 90,
+      "text": "<stack id=\"answer\"><heading id=\"title\">Review the answer</heading>"
+    },
+    {
+      "atMs": 180,
+      "text": "<text id=\"summary\">This authored replay contains a working review field.</text>"
+    },
+    {
+      "atMs": 310,
+      "text": "<input id=\"note\" label=\"Review note\" bindings={{\"value\":\"/note\"}} />"
+    },
+    {
+      "atMs": 480,
+      "text": "</stack>\n```\n"
+    },
+    {
+      "atMs": 760,
+      "text": "The first review field is ready.\n\n```lyra\n"
+    },
+    {
+      "atMs": 1100,
+      "text": "<text id=\"detail\">"
+    },
+    {
+      "atMs": 1450,
+      "text": "A second synthetic detail arrives later."
+    },
+    {
+      "atMs": 1800,
+      "text": "</text>\n```\nReplay complete."
+    }
+  ]
+}

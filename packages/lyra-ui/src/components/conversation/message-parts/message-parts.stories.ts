@@ -1,7 +1,15 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import type { MessagePart } from '../../../ai/types.js';
+import { createWidgetTypeRegistry } from '../widget-renderer/registry.js';
+import type { LyraMessageParts } from './message-parts.class.js';
+import '../../forms/input/input.js';
 import './message-parts.js';
+
+const nameFieldRegistry = createWidgetTypeRegistry([['field', {
+  tag: 'lr-input', interaction: 'control', props: { label: 'string', value: 'string' },
+  bindings: { value: { event: 'lr-input' } },
+}]]);
 
 const meta: Meta = {
   title: 'Message Parts',
@@ -328,4 +336,28 @@ export const Interrupted: Story = {
       { id: 'partial', type: 'text', text: 'The next result was interrupted while loading…', state: 'interrupted', interruption: { resumable: true, reason: 'The host can resume this response when the connection is available.' } },
     ] satisfies MessagePart[]}></lr-message-parts>
   </div>`,
+};
+
+export const ControlledWidgetAndCustomPart: Story = {
+  parameters: { docs: { description: { story: 'A host supplies a validated widget registry and controlled binding state. The existing renderPart callback replaces a separate custom part; it owns that part’s interaction.' } } },
+  render: () => {
+    const bindingState = { name: 'Ada' };
+    const parts: MessagePart[] = [
+      { id: 'intro', type: 'text', text: 'Update the name below.' },
+      { id: 'name-form', type: 'data', widget: {
+        id: 'name-field', type: 'field', props: { label: 'Name', value: { $bind: '/name' } },
+      } },
+      { id: 'host-note', type: 'data', data: { kind: 'host-note' } },
+    ];
+    return html`<lr-message-parts .parts=${parts} .widgetRegistry=${nameFieldRegistry}
+      .widgetBindingState=${bindingState}
+      .renderPart=${(part: MessagePart) => part.id === 'host-note'
+        ? html`<p>The application owns this custom message part.</p>` : undefined}
+      @lr-widget-state-change=${(event: CustomEvent<{ path: string; value: unknown }>) => {
+        if (event.detail.path !== '/name') return;
+        const target = event.currentTarget as LyraMessageParts;
+        target.widgetBindingState = { name: event.detail.value };
+      }}
+    ></lr-message-parts>`;
+  },
 };

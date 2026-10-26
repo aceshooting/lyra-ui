@@ -14,6 +14,7 @@ const COMPANIONS = [
   { name: '@aceshooting/lyra-ide', directory: 'packages/lyra-ide', prepare: 'sync' },
   { name: '@aceshooting/lyra-map', directory: 'packages/lyra-map', prepare: 'build' },
   { name: '@aceshooting/lyra-3d', directory: 'packages/lyra-3d', prepare: 'build' },
+  { name: '@aceshooting/lyra-gen', directory: 'packages/lyra-gen', prepare: 'build' },
 ];
 
 function run(command, args, cwd = root) {

@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "packageVersion": "0.1.0",
+  "uiVersion": "30.2.0",
+  "nodeVersion": "22.23.2",
+  "esbuildVersion": "0.28.2",
+  "policy": {
+    "javascriptHeadroomPercent": 2,
+    "cssHeadroomPercent": 4,
+    "assetHeadroomPercent": 0,
+    "basis": "Initial companion ceilings use measured production bytes with floor(1.02 × JS) and floor(1.04 × CSS), following repository review limits; assets have no allowance. Gzip is summed per independently transferred file."
+  },
+  "profiles": {
+    "parser": {
+      "measured": {
+        "eagerJsBytes": 9422,
+        "eagerJsGzipBytes": 3286,
+        "lazyJsBytes": 0,
+        "lazyJsGzipBytes": 0,
+        "eagerCssBytes": 0,
+        "eagerCssGzipBytes": 0,
+        "lazyCssBytes": 0,
+        "lazyCssGzipBytes": 0,
+        "assetBytes": 0
+      },
+      "ceilings": {
+        "eagerJsBytes": 9610,
+        "eagerJsGzipBytes": 3351,
+        "lazyJsBytes": 0,
+        "lazyJsGzipBytes": 0,
+        "eagerCssBytes": 0,
+        "eagerCssGzipBytes": 0,
+        "lazyCssBytes": 0,
+        "lazyCssGzipBytes": 0,
+        "assetBytes": 0
+      },
+      "externalImports": []
+    },
+    "runtime": {
+      "measured": {
+        "eagerJsBytes": 22530,
+        "eagerJsGzipBytes": 7738,
+        "lazyJsBytes": 0,
+        "lazyJsGzipBytes": 0,
+        "eagerCssBytes": 0,
+        "eagerCssGzipBytes": 0,
+        "lazyCssBytes": 0,
+        "lazyCssGzipBytes": 0,
+        "assetBytes": 0
+      },
+      "ceilings": {
+        "eagerJsBytes": 22980,
+        "eagerJsGzipBytes": 7892,
+        "lazyJsBytes": 0,
+        "lazyJsGzipBytes": 0,
+        "eagerCssBytes": 0,
+        "eagerCssGzipBytes": 0,
+        "lazyCssBytes": 0,
+        "lazyCssGzipBytes": 0,
+        "assetBytes": 0
+      },
+      "externalImports": []
+    },
+    "chat": {
+      "measured": {
+        "eagerJsBytes": 38644,
+        "eagerJsGzipBytes": 12184,
+        "lazyJsBytes": 0,
+        "lazyJsGzipBytes": 0,
+        "eagerCssBytes": 0,
+        "eagerCssGzipBytes": 0,
+        "lazyCssBytes": 0,
+        "lazyCssGzipBytes": 0,
+        "assetBytes": 0
+      },
+      "ceilings": {
+        "eagerJsBytes": 39416,
+        "eagerJsGzipBytes": 12427,
+        "lazyJsBytes": 0,
+        "lazyJsGzipBytes": 0,
+        "eagerCssBytes": 0,
+        "eagerCssGzipBytes": 0,
+        "lazyCssBytes": 0,
+        "lazyCssGzipBytes": 0,
+        "assetBytes": 0
+      },
+      "externalImports": []
+    },
+    "gen-view": {
+      "measured": {
+        "eagerJsBytes": 175005,
+        "eagerJsGzipBytes": 53486,
+        "lazyJsBytes": 822034,
+        "lazyJsGzipBytes": 238727,
+        "eagerCssBytes": 0,
+        "eagerCssGzipBytes": 0,
+        "lazyCssBytes": 0,
+        "lazyCssGzipBytes": 0,
+        "assetBytes": 0
+      },
+      "ceilings": {
+        "eagerJsBytes": 178505,
+        "eagerJsGzipBytes": 54555,
+        "lazyJsBytes": 838474,
+        "lazyJsGzipBytes": 243501,
+        "eagerCssBytes": 0,
+        "eagerCssGzipBytes": 0,
+        "lazyCssBytes": 0,
+        "lazyCssGzipBytes": 0,
+        "assetBytes": 0
+      },
+      "externalImports": []
+    },
+    "chat-composition": {
+      "measured": {
+        "eagerJsBytes": 466169,
+        "eagerJsGzipBytes": 145809,
+        "lazyJsBytes": 1011447,
+        "lazyJsGzipBytes": 287594,
+        "eagerCssBytes": 103994,
+        "eagerCssGzipBytes": 13457,
+        "lazyCssBytes": 0,
+        "lazyCssGzipBytes": 0,
+        "assetBytes": 0
+      },
+      "ceilings": {
+        "eagerJsBytes": 475492,
+        "eagerJsGzipBytes": 148725,
+        "lazyJsBytes": 1031675,
+        "lazyJsGzipBytes": 293345,
+        "eagerCssBytes": 108153,
+        "eagerCssGzipBytes": 13995,
+        "lazyCssBytes": 0,
+        "lazyCssGzipBytes": 0,
+        "assetBytes": 0
+      },
+      "externalImports": [
+        "dynamic-import:dompurify",
+        "dynamic-import:katex",
+        "dynamic-import:marked",
+        "dynamic-import:shiki",
+        "dynamic-import:shiki/core",
+        "dynamic-import:shiki/engine/javascript",
+        "dynamic-import:shiki/themes/github-dark.mjs",
+        "dynamic-import:shiki/themes/github-light.mjs"
+      ]
+    }
+  }
+}

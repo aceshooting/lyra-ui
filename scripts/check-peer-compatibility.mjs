@@ -3046,7 +3046,7 @@ export function inspectPeerTarballArchive(compressed, { expectedPackage, limits:
   }
   if (!isRecord(expectedPackage)) throw new TypeError('Expected tarball package identity is required.');
   stableVersion(expectedPackage.version, 'expected tarball package version');
-  if (!['@aceshooting/lyra-ui', '@aceshooting/lyra-ide', '@aceshooting/lyra-translations', '@aceshooting/lyra-map', '@aceshooting/lyra-3d'].includes(expectedPackage.name)) {
+  if (!['@aceshooting/lyra-ui', '@aceshooting/lyra-ide', '@aceshooting/lyra-translations', '@aceshooting/lyra-map', '@aceshooting/lyra-3d', '@aceshooting/lyra-gen'].includes(expectedPackage.name)) {
     throw new Error('Expected tarball package name must be @aceshooting/lyra-ui or one of its paired companions.');
   }
   const limits = resolvedTarballLimits(overrides);

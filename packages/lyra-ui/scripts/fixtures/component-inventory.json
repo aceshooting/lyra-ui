@@ -84879,6 +84879,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 800
+          },
+          {
+            "name": "protocol",
+            "property": "protocol",
+            "type": "McpAppProtocol",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "legacy"
           }
         ],
         "properties": [
@@ -84901,6 +84911,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 320
+          },
+          {
+            "name": "hostCapabilities",
+            "attribute": null,
+            "type": "McpAppHostCapabilities",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "{}"
           },
           {
             "name": "label",
@@ -84933,6 +84953,16 @@
             "default": 800
           },
           {
+            "name": "protocol",
+            "attribute": "protocol",
+            "type": "McpAppProtocol",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "legacy"
+          },
+          {
             "name": "resource",
             "attribute": null,
             "type": "McpAppResource | null",
@@ -84945,6 +84975,12 @@
         ],
         "slots": [],
         "events": [
+          {
+            "name": "lr-mcp-initialized",
+            "type": "CustomEvent<{ uri: string; frameGeneration: number }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
           {
             "name": "lr-mcp-log",
             "type": "CustomEvent<{ level: string; value: unknown }>",
@@ -84960,6 +84996,12 @@
           {
             "name": "lr-mcp-ready",
             "type": "CustomEvent<{ uri: string }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-mcp-request",
+            "type": "CustomEvent<McpAppRequestDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -85020,6 +85062,56 @@
             ]
           },
           {
+            "name": "postMcpNotification",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "method",
+                    "type": "McpAppNotificationMethod",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "params",
+                    "type": "Record<string, unknown>",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "frameGeneration",
+                    "type": "number",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "postMcpResponse",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "requestId",
+                    "type": "McpAppRequestId",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "options",
+                    "type": "McpAppResponseOptions",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
             "name": "postToolResult",
             "overloads": [
               {
@@ -85038,6 +85130,15 @@
                   }
                 ],
                 "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "teardownApp",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "Promise<boolean>"
               }
             ]
           }
@@ -88154,7 +88255,6 @@
           "lr-attachment-chip",
           "lr-button",
           "lr-citation-badge",
-          "lr-details",
           "lr-json-viewer",
           "lr-markdown",
           "lr-thinking-panel",
@@ -88356,6 +88456,25 @@
             "reflects": true,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "widgetBindingState",
+            "attribute": null,
+            "type": "unknown | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "widgetRegistry",
+            "attribute": null,
+            "type": "LyraWidgetTypeRegistry",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "DEFAULT_WIDGET_TYPE_REGISTRY"
           },
           {
             "name": "withoutReasoning",

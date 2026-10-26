@@ -288,3 +288,34 @@ export const SmallSizeOverrides: Story = {
     ></lr-file-input>
   `,
 };
+
+export const SelectedFilesInGrid: Story = {
+  render: () => narrowStoryFrames(() => html`
+    <div style="display: grid; gap: var(--lr-space-m); min-inline-size: 0">
+      <lr-file-input
+        size="s"
+        label="Archive containing the supporting documents"
+        hint="Choose a ZIP archive."
+        accept=".zip"
+        .files=${[new File(['archive'], 'supporting-documents-for-review.zip')]}
+      ></lr-file-input>
+      <lr-file-input
+        size="s"
+        label="Folder containing the supporting documents"
+        hint="All files in the folder are included."
+        directory
+        multiple
+        .files=${[new File(['a'], 'first-document.csv'), new File(['b'], 'second-document.csv')]}
+      ></lr-file-input>
+      <p style="margin: 0">Review the selected documents before continuing.</p>
+    </div>
+  `),
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Auto-sized grid rows include each compact control’s label, dropzone, selected files and hint. Both narrow directions keep the next field and following content below the complete field.',
+      },
+    },
+  },
+};

@@ -8,6 +8,13 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 const strings: LyraLocaleStrings = {
   streamInterrupted: 'Dhangala’aan addaan citeera',
   streamResume: 'Itti fufi',
+  genViewEmpty: 'Mul’anni uumame agarsiifamu hin jiru.',
+  genViewInvalid: 'Mul’ata uumame kana agarsiisuun hin danda’amu.',
+  genViewLoading: 'Qaamni fe’amaa jira…',
+  genViewLoadFailed: 'Qaama kana fe’uun hin danda’amne.',
+  genViewInvalidState: 'Gatii dirree kanaa fayyadamuun hin danda’amu.',
+  genViewActionDenied: 'Gochi kun hin jiru.',
+  genViewConfirmationRequired: 'Gochi kun mirkaneessa appii irraa barbaada.',
   chatViewportLabel: 'Haasaa',
   newMessagesCount: {
     one: 'Ergaa haaraa {count}',

@@ -1,0 +1,7 @@
+[
+  {
+    "source": "../lyra-gen/src/localization.ts",
+    "export": "LYRA_GEN_STRINGS",
+    "family": "conversation"
+  }
+]

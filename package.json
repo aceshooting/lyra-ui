@@ -15,7 +15,7 @@
     "benchmark:compare": "node benchmarks/compare.mjs",
     "benchmark:gpu": "node benchmarks/gpu/run.mjs",
     "benchmark:ab": "node benchmarks/ab.mjs",
-    "test:benchmarks": "node --test benchmarks/helpers.test.mjs benchmarks/gpu/run.test.mjs benchmarks/gpu/acceptance.test.mjs benchmarks/ab.test.mjs && node benchmarks/schema.mjs --check",
+    "test:benchmarks": "node --test benchmarks/helpers.test.mjs benchmarks/gpu/run.test.mjs benchmarks/gpu/acceptance.test.mjs benchmarks/ab.test.mjs benchmarks/generative-ui/run.test.mjs benchmarks/generative-ui/visual.test.mjs && node benchmarks/schema.mjs --check",
     "lint": "pnpm -r --if-present run lint",
     "manifest": "pnpm --filter @aceshooting/lyra-ui run manifest",
     "manifest:check": "pnpm --filter @aceshooting/lyra-ui run manifest:check",
@@ -33,11 +33,11 @@
     "plugin:sync": "node scripts/sync-plugin-version.mjs",
     "skill:check": "node --test scripts/build-skill-bundle.test.mjs scripts/sync-plugin-version.test.mjs scripts/skill-reference-context.test.mjs scripts/check-task-context-budgets.test.mjs && node scripts/sync-plugin-version.mjs --check && node scripts/build-skill-bundle.mjs --check && node scripts/check-skill-manifest.mjs && node scripts/check-task-context-budgets.mjs",
     "check:framework-recipes": "node --test scripts/lib/process.test.mjs scripts/check-framework-recipes.test.mjs && node scripts/check-framework-recipes.mjs",
-    "test:packed-consumer-tooling": "node --experimental-import-meta-resolve --test scripts/check-packed-consumer.test.mjs scripts/check-packed-framework-types.test.mjs scripts/check-packed-attw.test.mjs scripts/packed-migration-consumer.test.mjs scripts/packed-performance.test.mjs packages/lyra-ui/scripts/fixtures/packed-performance/installed-hydration.test.mjs",
+    "test:packed-consumer-tooling": "node --experimental-import-meta-resolve --test scripts/check-packed-consumer.test.mjs scripts/packed-gen-consumer.test.mjs scripts/check-packed-framework-types.test.mjs scripts/check-packed-attw.test.mjs scripts/packed-migration-consumer.test.mjs scripts/packed-performance.test.mjs packages/lyra-ui/scripts/fixtures/packed-performance/installed-hydration.test.mjs",
     "check:packed-attw": "node --test scripts/check-packed-attw.test.mjs && node scripts/check-packed-attw.mjs",
     "check:packed-consumer:contracts": "pnpm run test:packed-consumer-tooling && node scripts/check-packed-consumer.mjs --skip-attw && node scripts/check-packed-framework-types.mjs && pnpm run check:framework-recipes",
     "check:packed-consumer": "pnpm run test:packed-consumer-tooling && node scripts/check-packed-consumer.mjs && node scripts/check-packed-framework-types.mjs && pnpm run check:framework-recipes",
-    "lint:oxlint": "oxlint -c .oxlintrc.json --type-aware --deny-warnings packages/lyra-ui/src packages/lyra-3d/src packages/lyra-map/src && oxlint -c .oxlintrc.json --deny-warnings packages/lyra-ui/scripts packages/lyra-docs/scripts packages/lyra-3d/scripts packages/lyra-map/scripts packages/lyra-flags/scripts packages/lyra-ide/scripts packages/lyra-translations/scripts packages/lyra-ui/test packages/lyra-ui/type-tests packages/lyra-docs/test packages/lyra-map/test scripts benchmarks .storybook",
+    "lint:oxlint": "oxlint -c .oxlintrc.json --type-aware --deny-warnings packages/lyra-ui/src packages/lyra-3d/src packages/lyra-map/src packages/lyra-gen/src && oxlint -c .oxlintrc.json --deny-warnings packages/lyra-ui/scripts packages/lyra-docs/scripts packages/lyra-3d/scripts packages/lyra-map/scripts packages/lyra-flags/scripts packages/lyra-ide/scripts packages/lyra-translations/scripts packages/lyra-ui/test packages/lyra-ui/type-tests packages/lyra-docs/test packages/lyra-map/test packages/lyra-gen/scripts packages/lyra-gen/bin packages/lyra-gen/examples packages/lyra-gen/test packages/lyra-gen/web-test-runner.config.mjs scripts benchmarks .storybook",
     "check:architecture": "pnpm --filter @aceshooting/lyra-ui run check:architecture",
     "check:dead-code": "knip --production --no-progress && knip --no-progress",
     "check:secrets": "node scripts/check-secrets.mjs",
@@ -111,7 +111,9 @@
   "sherif": {
     "//": "maplibre-gl is pinned exactly in lyra-map on purpose: that package is built from the pinned upstream release, so its devDependency must not follow the caret range used by the root and lyra-ui.",
     "failOnWarnings": true,
-    "ignoreDependency": ["maplibre-gl"]
+    "ignoreDependency": [
+      "maplibre-gl"
+    ]
   },
   "packageManager": "pnpm@12.15.0",
   "customElements": "packages/lyra-ui/custom-elements.json"

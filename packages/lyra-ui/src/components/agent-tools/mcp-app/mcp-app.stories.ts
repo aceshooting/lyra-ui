@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './mcp-app.js';
-import type { LyraMcpApp, McpAppToolCallDetail } from './mcp-app.class.js';
+import type { LyraMcpApp, McpAppToolCallDetail, McpAppRequestDetail } from './mcp-app.class.js';
 
 const meta: Meta = {
   title: 'MCP App',
@@ -107,6 +107,54 @@ export const CorrelatedToolReply: Story = {
                 nonce: event.data.nonce
               });
             });
+          </script>
+        </body></html>`,
+      }}
+    ></lr-mcp-app>
+  `,
+};
+
+export const McpAppsProtocol: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'Opt-in MCP Apps 2026-01-26 lifecycle. The app uses standard JSON-RPC; the host grants tool access and returns a correlated response. This wire-level example uses inline assets. Official mode also permits external scripts and styles from host-approved resource.csp.resourceDomains; legacy mode keeps them inline-only. The supported host subset is qualified separately with the pinned SDK fixture.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-mcp-app
+      protocol="mcp-apps"
+      .hostCapabilities=${{ serverTools: {} }}
+      @lr-mcp-request=${(event: CustomEvent<McpAppRequestDetail>) => {
+        const host = event.currentTarget as LyraMcpApp;
+        host.postMcpResponse(event.detail.requestId, {
+          requestToken: event.detail.requestToken,
+          frameGeneration: event.detail.frameGeneration,
+          result: { content: [{ type: 'text', text: '21 °C in Luxembourg' }] },
+        });
+      }}
+      .resource=${{
+        uri: 'ui://weather/mcp-apps',
+        title: 'MCP Apps weather',
+        html: `<!doctype html><html><body>
+          <p id="status">Connecting…</p>
+          <script>
+            const send = message => parent.postMessage({ jsonrpc: '2.0', ...message }, '*');
+            addEventListener('message', event => {
+              if (event.source !== parent || event.data?.jsonrpc !== '2.0') return;
+              if (event.data.id === 'initialize') {
+                send({ method: 'ui/notifications/initialized' });
+                send({ id: 'weather', method: 'tools/call', params: { name: 'get_weather', arguments: { city: 'Luxembourg' } } });
+              }
+              if (event.data.id === 'weather') {
+                document.querySelector('#status').textContent = event.data.result?.content[0]?.text || 'Weather unavailable';
+              }
+              if (event.data.method === 'ui/resource-teardown') send({ id: event.data.id, result: {} });
+            });
+            send({ id: 'initialize', method: 'ui/initialize', params: {
+              protocolVersion: '2026-01-26', appInfo: { name: 'Weather', version: '1' }, appCapabilities: {}
+            } });
           </script>
         </body></html>`,
       }}

@@ -8,6 +8,13 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 const strings: LyraLocaleStrings = {
   streamInterrupted: 'ထုတ်လွှင့်မှု ပြတ်တောက်သွားသည်။',
   streamResume: 'ဆက်ရန်',
+  genViewEmpty: 'ပြသရန် ထုတ်ပေးထားသော မြင်ကွင်း မရှိပါ။',
+  genViewInvalid: 'ဤထုတ်ပေးထားသော မြင်ကွင်းကို မပြသနိုင်ပါ။',
+  genViewLoading: 'အစိတ်အပိုင်းကို တင်နေသည်…',
+  genViewLoadFailed: 'ဤအစိတ်အပိုင်းကို မတင်နိုင်ခဲ့ပါ။',
+  genViewInvalidState: 'ဤအကွက်၏ တန်ဖိုးကို အသုံးမပြုနိုင်ပါ။',
+  genViewActionDenied: 'ဤလုပ်ဆောင်ချက်ကို မရနိုင်ပါ။',
+  genViewConfirmationRequired: 'ဤလုပ်ဆောင်ချက်အတွက် အက်ပ်မှ အတည်ပြုချက် လိုအပ်သည်။',
   chatViewportLabel: 'စကားဝိုင်း',
   newMessagesCount: {
     other: 'မက်ဆေ့ချ်အသစ် {count} ခု',

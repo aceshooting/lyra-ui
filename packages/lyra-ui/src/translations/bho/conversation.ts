@@ -8,6 +8,13 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 const strings: LyraLocaleStrings = {
   streamInterrupted: 'स्ट्रीम टोक दिहलस',
   streamResume: 'जारी रखीं',
+  genViewEmpty: 'देखावे खातिर कवनो बनावल दृश्य नइखे।',
+  genViewInvalid: 'ई बनावल दृश्य देखावल ना जा सके।',
+  genViewLoading: 'घटक लोड हो रहल बा…',
+  genViewLoadFailed: 'ई घटक लोड ना हो सकल।',
+  genViewInvalidState: 'एह फील्ड के मान इस्तेमाल ना कइल जा सके।',
+  genViewActionDenied: 'ई कार्रवाई उपलब्ध नइखे।',
+  genViewConfirmationRequired: 'एह कार्रवाई खातिर ऐप से पुष्टि जरूरी बा।',
   chatViewportLabel: 'बातचीत',
   newMessagesCount: {
     one: '{count} नया संदेश',

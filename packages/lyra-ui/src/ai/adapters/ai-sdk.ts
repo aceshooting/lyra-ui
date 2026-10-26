@@ -30,6 +30,15 @@ export const DEFAULT_AI_SDK_ADAPTER_LIMITS: Readonly<AiSdkAdapterLimits> = Objec
 });
 
 const MESSAGE_ROLES = new Set<ChatMessageRole>(['user', 'assistant', 'system']);
+const OPTIONAL_MESSAGE_FIELDS = new Set(['metadata']);
+const OPTIONAL_PART_FIELDS = new Set([
+  'id', 'state', 'providerMetadata', 'filename', 'title', 'input', 'output', 'rawInput', 'errorText',
+  'providerExecuted', 'preliminary', 'toolMetadata', 'callProviderMetadata', 'resultProviderMetadata', 'approval',
+]);
+const TOOL_INPUT_STATES = new Set([
+  'input-streaming', 'input-available', 'approval-requested', 'approval-responded',
+  'output-available', 'output-error', 'output-denied',
+]);
 
 function resolveLimits(limits: Partial<AiSdkAdapterLimits>): Readonly<AiSdkAdapterLimits> {
   const snapshot = resolveProviderSnapshotLimits(limits);
@@ -43,6 +52,56 @@ function record(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
     ? value as Record<string, unknown>
     : null;
+}
+
+/** SDK snapshots retain absent optional members as own undefined properties. Keep descriptors
+ * intact so accessors, prototypes and payload values still face the strict snapshot boundary. */
+function optionalFields(value: unknown, fields: ReadonlySet<string>, budget: { remaining: number }): unknown {
+  if (!record(value)) return value;
+  const keys = Reflect.ownKeys(value as object);
+  if (keys.length > budget.remaining) throw new Error('SDK snapshot normalization exceeds the node limit.');
+  budget.remaining -= keys.length;
+  const output = Object.create(Object.getPrototypeOf(value)) as Record<PropertyKey, unknown>;
+  for (const key of keys) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor) continue;
+    if (typeof key === 'string' && fields.has(key) && 'value' in descriptor && descriptor.value === undefined) continue;
+    Object.defineProperty(output, key, descriptor);
+  }
+  return output;
+}
+
+function normalizeSnapshot(value: unknown, limits: Readonly<AiSdkAdapterLimits>): unknown {
+  try {
+    const budget = { remaining: limits.maxNodes };
+    const message = record(optionalFields(value, OPTIONAL_MESSAGE_FIELDS, budget));
+    if (!message) return value;
+    const descriptor = Object.getOwnPropertyDescriptor(message, 'parts');
+    if (!descriptor || !('value' in descriptor) || !Array.isArray(descriptor.value)) return message;
+    const parts: unknown[] = descriptor.value;
+    if (parts.length > limits.maxParts) return value;
+    const keys = Reflect.ownKeys(parts);
+    if (keys.length > budget.remaining) return null;
+    budget.remaining -= keys.length;
+    const output: unknown[] = new Array(parts.length);
+    for (const key of keys) {
+      if (key === 'length') continue;
+      const part = Object.getOwnPropertyDescriptor(parts, key);
+      if (!part) continue;
+      Object.defineProperty(output, key, 'value' in part
+        ? { ...part, value: optionalFields(part.value, OPTIONAL_PART_FIELDS, budget) }
+        : part);
+    }
+    // The copied record can have a non-writable parts descriptor.
+    const normalized = Object.create(Object.getPrototypeOf(message)) as Record<PropertyKey, unknown>;
+    for (const key of Reflect.ownKeys(message)) {
+      const property = Object.getOwnPropertyDescriptor(message, key);
+      if (property) Object.defineProperty(normalized, key, key === 'parts' ? { ...property, value: output } : property);
+    }
+    return normalized;
+  } catch {
+    return null;
+  }
 }
 
 function stringValue(value: unknown): string | undefined {
@@ -80,6 +139,9 @@ function toolParts(part: Record<string, unknown>, index: number, messageId: stri
     id: `${invocationId}:call`,
     type: 'tool-call',
     state: partState(part['state']),
+    ...(typeof part['state'] === 'string' && TOOL_INPUT_STATES.has(part['state'])
+      ? { metadata: { aiSdkInputState: part['state'] } }
+      : {}),
     invocation: {
       id: invocationId,
       name,
@@ -176,7 +238,7 @@ function adaptPart(value: unknown, index: number, messageId: string): MessagePar
     return [{
       id,
       type: 'data',
-      state: partState(part['state']),
+      state: 'complete',
       name: type.slice('data-'.length),
       data: part['data'],
     }];
@@ -193,7 +255,7 @@ export function adaptAiSdkMessage(
   limits: Partial<AiSdkAdapterLimits> = {},
 ): ChatMessage | null {
   const resolved = resolveLimits(limits);
-  const owned = snapshotProviderValue<unknown>(message, createProviderSnapshotBudget(resolved));
+  const owned = snapshotProviderValue<unknown>(normalizeSnapshot(message, resolved), createProviderSnapshotBudget(resolved));
   if (!owned.ok) return null;
   const source = record(owned.value);
   if (!source || typeof source['id'] !== 'string' || typeof source['role'] !== 'string') return null;

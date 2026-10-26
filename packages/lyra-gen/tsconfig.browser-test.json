@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": [
+      "mocha"
+    ],
+    "paths": {
+      "@aceshooting/lyra-gen": [
+        "./src/index.ts"
+      ],
+      "@aceshooting/lyra-gen/*.js": [
+        "./src/*.ts"
+      ]
+    }
+  },
+  "include": [
+    "test/browser/**/*.ts"
+  ],
+  "exclude": []
+}

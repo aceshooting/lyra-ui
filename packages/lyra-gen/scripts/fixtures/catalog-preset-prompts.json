@@ -1,0 +1,200 @@
+{
+  "format": "lyra-gen-preset-prompt-measurements",
+  "version": "1",
+  "boundary": "Exact output of buildCatalogPrompt for the full reviewed catalog and each action-closed named preset; includes metadata/examples and fixed prompt instructions.",
+  "providerUsage": {
+    "measuredTokens": null,
+    "measuredModelErrorRate": null,
+    "modelCalls": 0
+  },
+  "interpretation": "UTF-8 bytes and character counts describe prompt text only. No tokenizer, model-quality, latency or cost result is inferred.",
+  "measurements": {
+    "full": {
+      "catalog": {
+        "id": "lyra-reviewed",
+        "version": "1"
+      },
+      "roles": [
+        "alert",
+        "badge",
+        "button",
+        "card",
+        "chart",
+        "chat-composer",
+        "chat-message",
+        "chat-viewport",
+        "checkbox",
+        "citation",
+        "empty",
+        "form",
+        "heading",
+        "input",
+        "option",
+        "row",
+        "search",
+        "select",
+        "skeleton",
+        "slider",
+        "source-card",
+        "source-list",
+        "stack",
+        "stat",
+        "switch",
+        "table",
+        "text",
+        "textarea"
+      ],
+      "actionNames": [],
+      "utf16CodeUnits": 23693,
+      "unicodeCodePoints": 23693,
+      "utf8Bytes": 23693,
+      "bytesRemovedFromFull": 0,
+      "promptSha256": "032db28ed85f969a8a1b86c5513a865c54d936bbba06eb29f5b627246023057d"
+    },
+    "chat": {
+      "catalog": {
+        "id": "lyra-reviewed/chat",
+        "version": "1"
+      },
+      "roles": [
+        "alert",
+        "badge",
+        "button",
+        "card",
+        "chat-composer",
+        "chat-message",
+        "chat-viewport",
+        "citation",
+        "empty",
+        "heading",
+        "row",
+        "skeleton",
+        "source-card",
+        "source-list",
+        "stack",
+        "text"
+      ],
+      "actionNames": [],
+      "utf16CodeUnits": 10394,
+      "unicodeCodePoints": 10394,
+      "utf8Bytes": 10394,
+      "bytesRemovedFromFull": 13299,
+      "promptSha256": "8c2560325e978408cace97754762273e33b3f8cff757db3f142220a598a7713c"
+    },
+    "forms": {
+      "catalog": {
+        "id": "lyra-reviewed/forms",
+        "version": "1"
+      },
+      "roles": [
+        "alert",
+        "badge",
+        "button",
+        "card",
+        "checkbox",
+        "empty",
+        "form",
+        "heading",
+        "input",
+        "option",
+        "row",
+        "select",
+        "skeleton",
+        "slider",
+        "stack",
+        "switch",
+        "text",
+        "textarea"
+      ],
+      "actionNames": [],
+      "utf16CodeUnits": 12235,
+      "unicodeCodePoints": 12235,
+      "utf8Bytes": 12235,
+      "bytesRemovedFromFull": 11458,
+      "promptSha256": "cb8f2045bf76ec4c6bcc41fb4a822eb07b67c1cb02469affab3733428c2a1a2a"
+    },
+    "data": {
+      "catalog": {
+        "id": "lyra-reviewed/data",
+        "version": "1"
+      },
+      "roles": [
+        "alert",
+        "badge",
+        "button",
+        "card",
+        "chart",
+        "empty",
+        "heading",
+        "row",
+        "skeleton",
+        "stack",
+        "stat",
+        "table",
+        "text"
+      ],
+      "actionNames": [],
+      "utf16CodeUnits": 11357,
+      "unicodeCodePoints": 11357,
+      "utf8Bytes": 11357,
+      "bytesRemovedFromFull": 12336,
+      "promptSha256": "cbdff6f571b5948c8bc8e4c59b1c92ac36de7428ac727dd71c06268eeab20f71"
+    },
+    "retrieval": {
+      "catalog": {
+        "id": "lyra-reviewed/retrieval",
+        "version": "1"
+      },
+      "roles": [
+        "alert",
+        "badge",
+        "button",
+        "card",
+        "citation",
+        "empty",
+        "heading",
+        "row",
+        "search",
+        "skeleton",
+        "source-card",
+        "source-list",
+        "stack",
+        "text"
+      ],
+      "actionNames": [],
+      "utf16CodeUnits": 8759,
+      "unicodeCodePoints": 8759,
+      "utf8Bytes": 8759,
+      "bytesRemovedFromFull": 14934,
+      "promptSha256": "2e7aca616324fb7904d321760a92434a93fa88237863c2f170acead76464f97b"
+    },
+    "agent-ops": {
+      "catalog": {
+        "id": "lyra-reviewed/agent-ops",
+        "version": "1"
+      },
+      "roles": [
+        "alert",
+        "badge",
+        "button",
+        "card",
+        "chart",
+        "chat-message",
+        "empty",
+        "heading",
+        "row",
+        "skeleton",
+        "stack",
+        "stat",
+        "table",
+        "text"
+      ],
+      "actionNames": [],
+      "utf16CodeUnits": 12150,
+      "unicodeCodePoints": 12150,
+      "utf8Bytes": 12150,
+      "bytesRemovedFromFull": 11543,
+      "promptSha256": "af85c011a4ae807343e078736ec2e592b845113caffc0194eaa502033917b792"
+    }
+  }
+}

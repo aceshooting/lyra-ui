@@ -14,6 +14,7 @@ contract in the `lyra-ui` skill or the package reference before emitting markup.
 | Data display | Native text/list for small static content | Table, data grid, tree, virtual list, chart, or viewer when their interaction contract is required |
 | Feedback | Inline text near the action | Alert, progress, skeleton, spinner, empty state, toast, or live announcement based on urgency and persistence |
 | Transient UI | Inline disclosure when space permits | Popover, dropdown, drawer, or dialog when focus/dismissal/stacking behavior is genuinely needed |
+| Generated answers | Existing widget-v2 renderer for widget-v2 documents | Experimental `lyra-gen` for catalog-bound views; follow the sibling skill's `lyra-gen.md` and installed guides |
 
 Do not nest a component merely to obtain padding or a border. Use layout utilities and semantic
 containers for visual grouping; reserve interactive components for interactions they own.
@@ -64,13 +65,19 @@ separate. Announce user-triggered status transitions without replaying initial s
 or consequential tool actions behind an explicit confirmation/approval contract, and keep focus
 return deterministic when transient UI closes.
 
+For generated content, keep each admitted surface stable during prose updates, preserve edited
+state across refinements, and show a localized fallback when its boundary rejects. Keep source
+provenance, collection instructions and tool authorization host-owned. Readiness does not imply
+remote-data completion or authorize an automatic focus move.
+
 ## Implementation handoff checklist
 
 - Register only rendered tags through stable tag-shaped imports.
 - Import the framework's type-only declaration entry once.
 - Bind complex values as properties; do not serialize objects into attributes.
 - Use the documented CustomEvent name and exact detail type; decide whether cancellation matters.
-- Use caller data verbatim but localize library-owned labels and announcements.
+- Localize core/companion chrome and host copy through their respective owners; locale catalogs
+  do not translate caller data or generated prose. Keep source values separate from locale formatting.
 - Use logical CSS, Lyra tokens, and allocation-aware layout.
 - Record SSR mode, optional peers, remote-content boundaries, and failure behavior.
 - Test populated/open accessibility, keyboard/focus, narrow/long content, RTL, reduced motion,

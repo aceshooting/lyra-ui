@@ -8,6 +8,13 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 const strings: LyraLocaleStrings = {
   streamInterrupted: '스트림이 중단되었습니다.',
   streamResume: '계속',
+  genViewEmpty: '표시할 생성된 뷰가 없습니다.',
+  genViewInvalid: '이 생성된 뷰를 표시할 수 없습니다.',
+  genViewLoading: '컴포넌트 로드 중…',
+  genViewLoadFailed: '이 컴포넌트를 로드하지 못했습니다.',
+  genViewInvalidState: '이 필드의 값을 사용할 수 없습니다.',
+  genViewActionDenied: '이 작업을 사용할 수 없습니다.',
+  genViewConfirmationRequired: '이 작업에는 애플리케이션의 확인이 필요합니다.',
   chatViewportLabel: '채팅',
   newMessagesCount: {
     other: '새 메시지 {count}개',

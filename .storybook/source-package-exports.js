@@ -20,6 +20,16 @@ export function sourcePackageExportsPlugin() {
     name: 'lyra-source-package-exports',
     enforce: 'pre',
     resolveId(source) {
+      const prefix = '@aceshooting/lyra-gen/';
+      if (source === '@aceshooting/lyra-gen') {
+        return fileURLToPath(new URL('../packages/lyra-gen/src/index.ts', import.meta.url));
+      }
+      if (source.startsWith(prefix) && source.endsWith('.js')) {
+        const route = source.slice(prefix.length, -3);
+        if (route.split('/').some(part => !part || part === '.' || part === '..') || /\.(?:test|stories)$/.test(route)) return;
+        const target = new URL(`../packages/lyra-gen/src/${route}.ts`, import.meta.url);
+        if (existsSync(target)) return fileURLToPath(target);
+      }
       return sourceModules.get(source);
     },
   };

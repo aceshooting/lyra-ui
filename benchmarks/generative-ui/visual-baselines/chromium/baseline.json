@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "reviewed": true,
+  "identity": {
+    "fixtureHash": "ea06d42b4e1de3fcd66bc2a5c2c2edc5c7e4806c1c242c79880769628c978b83",
+    "node": "22.23.2",
+    "playwright": "1.64.1",
+    "browser": "chromium",
+    "browserVersion": "156.0.8078.4",
+    "os": "linux",
+    "arch": "x64",
+    "viewport": {
+      "width": 900,
+      "height": 900
+    },
+    "deviceScaleFactor": 1,
+    "reducedMotion": "reduce",
+    "locale": "en-US",
+    "timezoneId": "UTC",
+    "colorScheme": "light",
+    "font": {
+      "family": "Arial, sans-serif",
+      "weight": "600",
+      "size": "14px",
+      "platformFonts": [
+        "LiberationSans-Bold"
+      ]
+    }
+  },
+  "cases": {
+    "idle": "2f3f98db3e3acdeb5d13cb3a038552b0a958286ac5e08c03c758c40ff0c0cd1e",
+    "complete": "dc2228ea71a0002c289986738ce47de78d6029966fdfa312cdb90d793db7f30b",
+    "edited-rejected-tail": "260c14e1b44f94baff6e42e0f01b65b980ad2f0170fddc3639ede1624d789212",
+    "interrupted": "3cd61d5d9425e9fe21725bcfd45ba65fa774519711113b0bd09a9e2c3567fff3",
+    "reset": "2f3f98db3e3acdeb5d13cb3a038552b0a958286ac5e08c03c758c40ff0c0cd1e"
+  },
+  "review": {
+    "kind": "agent-visual-inspection",
+    "scope": "Five authored synthetic fixture states with pinned Arial family resolving to LiberationSans-Bold for semibold chrome. Compared byte-identically on two Linux environments. Completed transcript follows its scroll anchor. This is a regression baseline, not a design or accessibility qualification."
+  }
+}

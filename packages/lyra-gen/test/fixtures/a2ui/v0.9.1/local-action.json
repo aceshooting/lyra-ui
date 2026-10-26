@@ -1,0 +1,42 @@
+{
+  "origin": "authored-normative-case",
+  "protocolVersion": "v0.9.1",
+  "sourceRevision": "409ded29ccac3eebc541979ae5320771703248e8",
+  "normativeSource": "https://github.com/a2ui-project/a2ui/blob/409ded29ccac3eebc541979ae5320771703248e8/specification/v0_9_1/docs/a2ui_protocol.md#client-side-function-calls",
+  "messages": [
+    {
+      "version": "v0.9.1",
+      "createSurface": {
+        "surfaceId": "local-action",
+        "catalogId": "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json"
+      }
+    },
+    {
+      "version": "v0.9.1",
+      "updateComponents": {
+        "surfaceId": "local-action",
+        "components": [
+          {
+            "id": "root",
+            "component": "Button",
+            "child": "label",
+            "action": {
+              "functionCall": {
+                "call": "openUrl",
+                "args": {
+                  "url": "https://example.com/approved"
+                },
+                "returnType": "void"
+              }
+            }
+          },
+          {
+            "id": "label",
+            "component": "Text",
+            "text": "Open approved link"
+          }
+        ]
+      }
+    }
+  ]
+}

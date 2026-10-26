@@ -1,0 +1,18 @@
+{
+  "revision": "409ded29ccac3eebc541979ae5320771703248e8",
+  "license": "Apache-2.0",
+  "licenseFile": "../v0.9.1/LICENSE",
+  "qualification": "Candidate schema artifacts only; no processor or renderer qualification. Never counted in stable conformance.",
+  "files": [
+    {
+      "file": "agent_to_renderer.json",
+      "source": "https://github.com/a2ui-project/a2ui/blob/409ded29ccac3eebc541979ae5320771703248e8/specification/v1_0/json/agent_to_renderer.json",
+      "sha256": "bae87086b21636fdce8469b968155ce2a269335b1511ba4ac525589062aa5288"
+    },
+    {
+      "file": "catalog_definition.json",
+      "source": "https://github.com/a2ui-project/a2ui/blob/409ded29ccac3eebc541979ae5320771703248e8/specification/v1_0/json/catalog_definition.json",
+      "sha256": "dcbf9a0fc4140640c912732d5ca42ef8768bd3eabde65254173df863fbc25bd6"
+    }
+  ]
+}

@@ -1886,6 +1886,12 @@ export type LyraMatrixRangeSelectEvent = LyraHeatmapEventMap['lr-matrix-range-se
 export type LyraMaximizeChangeRequestEvent = LyraToolResultDialogEventMap['lr-maximize-change-request'];
 
 /**
+ * `lr-mcp-initialized` — dispatched by `<lr-mcp-app>`; detail
+ * `LyraMcpAppEventMap['lr-mcp-initialized']`.
+ */
+export type LyraMcpInitializedEvent = LyraMcpAppEventMap['lr-mcp-initialized'];
+
+/**
  * `lr-mcp-log` — dispatched by `<lr-mcp-app>`; detail `LyraMcpAppEventMap['lr-mcp-log']`.
  */
 export type LyraMcpLogEvent = LyraMcpAppEventMap['lr-mcp-log'];
@@ -1900,6 +1906,11 @@ export type LyraMcpOpenLinkEvent = LyraMcpAppEventMap['lr-mcp-open-link'];
  * `lr-mcp-ready` — dispatched by `<lr-mcp-app>`; detail `LyraMcpAppEventMap['lr-mcp-ready']`.
  */
 export type LyraMcpReadyEvent = LyraMcpAppEventMap['lr-mcp-ready'];
+
+/**
+ * `lr-mcp-request` — dispatched by `<lr-mcp-app>`; detail `LyraMcpAppEventMap['lr-mcp-request']`.
+ */
+export type LyraMcpRequestEvent = LyraMcpAppEventMap['lr-mcp-request'];
 
 /**
  * `lr-mcp-resize` — dispatched by `<lr-mcp-app>`; detail `LyraMcpAppEventMap['lr-mcp-resize']`.
@@ -3743,9 +3754,11 @@ export interface LyraGlobalEventMap {
   'lr-matrix-geometry-change': LyraMatrixGeometryChangeEvent;
   'lr-matrix-range-select': LyraMatrixRangeSelectEvent;
   'lr-maximize-change-request': LyraMaximizeChangeRequestEvent;
+  'lr-mcp-initialized': LyraMcpInitializedEvent;
   'lr-mcp-log': LyraMcpLogEvent;
   'lr-mcp-open-link': LyraMcpOpenLinkEvent;
   'lr-mcp-ready': LyraMcpReadyEvent;
+  'lr-mcp-request': LyraMcpRequestEvent;
   'lr-mcp-resize': LyraMcpResizeEvent;
   'lr-mcp-send-message': LyraMcpSendMessageEvent;
   'lr-mcp-tool-call': LyraMcpToolCallEvent;

@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import test from 'node:test';
+import { REQUIRED_GEN_FILES } from '../../../scripts/packed-gen-consumer.mjs';
 import {
   companionBudgetFindings,
   formatPackageSummary,
@@ -31,6 +32,27 @@ const budgets = {
     entrypointHeadroom: 3,
   },
 };
+
+test('generated UI uses the bounded archive parser and independent companion limits', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lyra-gen-package-size-'));
+  try {
+    const companion = { name: '@aceshooting/lyra-gen', version: '0.1.0' };
+    const tarball = join(directory, 'gen.tgz');
+    const contents = {
+      ...Object.fromEntries(requiredTarballFiles.map(file => [file, null])),
+      ...Object.fromEntries(REQUIRED_GEN_FILES.filter(file => file !== 'package.json').map(file => [file, 'public content'])),
+    };
+    writeFileSync(tarball, archiveFixture(companion, contents));
+    const metrics = await readTarballMetrics(tarball, companion);
+    const fixtureBudgets = { companions: { [companion.name]: { maximum: {
+      packedBytes: metrics.packedBytes, unpackedBytes: metrics.unpackedBytes, fileCount: metrics.fileCount,
+    } } } };
+    assert.deepEqual(companionBudgetFindings(metrics, companion.name, fixtureBudgets), []);
+    assert.equal(companionBudgetFindings({ ...metrics, packedBytes: metrics.packedBytes + 1 }, companion.name, fixtureBudgets).length, 1);
+    assert.ok(companionBudgetFindings({ ...metrics, files: metrics.files.filter(file => file.path !== 'docs/security.md') }, companion.name, fixtureBudgets).includes('published tarball is missing required file: docs/security.md'));
+    assert.deepEqual(parsePackageSizeArguments(['--package', companion.name, '--tarball', tarball]), { package: companion.name, tarball });
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
 
 const requiredTarballFiles = [
   'llms.txt',
@@ -489,7 +511,7 @@ test('retains seven scaffold files above the reviewed required-artifact inventor
   );
   assert.deepEqual(
     [actualBudgets.maximum.packedBytes, actualBudgets.maximum.unpackedBytes],
-    [9_999_999, 21_880_512],
+    [9_999_999, 21_952_064],
     'the split package keeps the absolute download ceiling and a tight unpacked ceiling',
   );
 
@@ -532,17 +554,17 @@ test('keeps editor data and locale catalogs out of the lyra-ui tarball and gates
   assert.match(findings[0], /2 file\(s\) that ship in a companion package: custom-elements\.json, dist\/translations\/fr\.js/u);
 
   assert.equal(actualBudgets.companions['@aceshooting/lyra-map'].maximum.unpackedBytes, 4_006_848);
-  assert.equal(actualBudgets.companions['@aceshooting/lyra-translations'].maximum.unpackedBytes, 6_189_952);
+  assert.equal(actualBudgets.companions['@aceshooting/lyra-translations'].maximum.unpackedBytes, 6_225_536);
   assert.deepEqual(
     [actualBudgets.companions['@aceshooting/lyra-ide'].maximum.packedBytes, actualBudgets.companions['@aceshooting/lyra-ide'].maximum.unpackedBytes],
-    [1_706_176, 10_566_848],
+    [1_708_800, 10_577_280],
   );
 
   const ide = ['custom-elements.json', 'web-types.json', 'vscode-html-data.json', 'vscode-css-data.json'].map((path) => file(path));
   assert.deepEqual(companionBudgetFindings({ packedBytes: 1, unpackedBytes: 1, fileCount: 4, files: ide }, '@aceshooting/lyra-ide', actualBudgets), []);
   assert.deepEqual(
     companionBudgetFindings({ packedBytes: 1, unpackedBytes: 99_000_000, fileCount: 3, files: ide.slice(1) }, '@aceshooting/lyra-ide', actualBudgets),
-    ['published tarball is missing required file: custom-elements.json', 'unpackedBytes 99,000,000 exceeds hard budget 10,566,848'],
+    ['published tarball is missing required file: custom-elements.json', 'unpackedBytes 99,000,000 exceeds hard budget 10,577,280'],
   );
   assert.throws(() => companionBudgetFindings({ files: [] }, '@example/other', actualBudgets), /no companion package budget/u);
   assert.deepEqual(parsePackageSizeArguments(['--package', '@aceshooting/lyra-translations', '--tarball', 'a.tgz']), { package: '@aceshooting/lyra-translations', tarball: 'a.tgz' });

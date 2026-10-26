@@ -8,6 +8,13 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 const strings: LyraLocaleStrings = {
   streamInterrupted: 'Stream ekatamaki',
   streamResume: 'Koba na likambo yango',
+  genViewEmpty: 'Ezali na bolakisi oyo esalemi te mpo na kolakisa.',
+  genViewInvalid: 'Tokoki te kolakisa bolakisi oyo esalemi.',
+  genViewLoading: 'Ezali kozwa composant…',
+  genViewLoadFailed: 'Tokoki te kocharger composant oyo.',
+  genViewInvalidState: 'Tokoki te kosalela valeur ya esika oyo.',
+  genViewActionDenied: 'Action oyo ezali te.',
+  genViewConfirmationRequired: 'Action oyo esengeli na bondimi ya application.',
   chatViewportLabel: 'Lisolo',
   newMessagesCount: {
     one: 'Message ya sika {count}',

@@ -8,6 +8,13 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 const strings: LyraLocaleStrings = {
   streamInterrupted: 'Ukusakaza kuphazamisekile',
   streamResume: 'Qhubeka',
+  genViewEmpty: 'Akukho ukubuka okukhiqiziwe okungaboniswa.',
+  genViewInvalid: 'Lokhu kubuka okukhiqiziwe akukwazi ukuboniswa.',
+  genViewLoading: 'Kulayishwa ingxenye…',
+  genViewLoadFailed: 'Le ngxenye ayikwazanga ukulayishwa.',
+  genViewInvalidState: 'Inani lale nkambu alikwazi ukusetshenziswa.',
+  genViewActionDenied: 'Lesi senzo asitholakali.',
+  genViewConfirmationRequired: 'Lesi senzo sidinga ukuqinisekiswa okuvela kuhlelo lokusebenza.',
   chatViewportLabel: 'Ingxoxo',
   newMessagesCount: {
     one: 'Umlayezo omusha ongu-{count}',

@@ -1,8 +1,8 @@
 # Generative UI evaluation and performance
 
-Status: planned and unstarted. This is the qualification plan for the
-[generative UI delivery sequence](generative-ui.md#delivery-sequence), not evidence that
-`@aceshooting/lyra-gen` has shipped or outperforms another framework. The
+Status: **tooling and focused qualification implemented; full campaigns pending**. This remains
+the qualification plan for the [generative UI delivery sequence](generative-ui.md#delivery-sequence),
+not evidence that `@aceshooting/lyra-gen` has shipped or outperforms another framework. The
 [delivery backlog](generative-ui-backlog.md) owns implementation scope; the
 [website plan](generative-ui-website.md) owns public examples and presentation of results.
 
@@ -11,7 +11,33 @@ useful interface, and how efficiently that interface renders and responds after 
 result on one does not establish a good result on the other. Product claims identify the exact
 workload, implementation, version, configuration and uncertainty.
 
-## Evidence available before implementation
+## Current implementation and evidence
+
+The experimental implementation now has bounded parsers, runtime/catalog checks, browser workflow
+fixtures and a provider-neutral evaluation harness. The inventory below distinguishes these from
+the remaining campaign. Final integrated release qualification is pending; no paid model campaign
+or human assistive-technology review is claimed.
+
+| Scope | Reproducible source or recorded result | What it does not establish |
+| --- | --- | --- |
+| Restricted input and semantic correctness | [Markup corpus](../../packages/lyra-gen/test/fixtures/markup.ts), [JSON chunk properties](../../packages/lyra-gen/src/json-stream.property.test.ts), [typed converters](../../packages/lyra-gen/src/converters.property.test.ts), [CLI/semantic oracle fixtures](../../packages/lyra-gen/test/cli.test.mjs) | A fixture pass does not measure model generation quality, provider tokens or browser performance. |
+| Composed browser behavior | [Catalog/keyboard/theme scenarios](../../packages/lyra-gen/test/browser/catalog.test.ts), [chat](../../packages/lyra-gen/test/browser/chat.test.ts), [live dashboard](../../packages/lyra-gen/test/browser/dashboard.test.ts) and [saved host workflow](../../packages/lyra-gen/test/host/saved-dashboard.test.mjs) | Focused browser coverage is not approved visual baselines, human assistive-technology review or production hosting qualification. |
+| Stream reduction and offline replay | [Reducer scaling workload](../../benchmarks/stream-runtime.mjs), [bounded recording/replay envelope](../../packages/lyra-gen/src/replay.ts), [production browser replay and visual harness](../../benchmarks/generative-ui/README.md), [bounded evaluation callbacks](../../packages/lyra-gen/src/evaluation.ts) | The retained cadence is explicitly authored synthetic data, not an observed provider response. Fake providers and parse/validate timings are not model latency or cost measurements. |
+| Recorded visual states | [Five reviewed Chromium baselines](../../benchmarks/generative-ui/visual-baselines/chromium/baseline.json) and [interaction/comparison harness](../../benchmarks/generative-ui/visual.mjs) | Agent visual review and exact-environment pixel comparison cover this synthetic composition only. They do not establish human design or assistive-technology approval. |
+| Catalog and examples | [Metadata verification](../../packages/lyra-gen/scripts/check-catalog.mjs), [schema profiles](../../packages/lyra-gen/src/prompts.ts), [paired example ablation configuration](../../packages/lyra-gen/src/examples.ts) | Profiles have explicit unsupported cases; provider acceptance, task-quality ablations and token effects remain unmeasured. |
+| A2UI reference scope | [Pinned state/model/action report](../../packages/lyra-gen/test/fixtures/a2ui/v0.9.1/reference-results.json) and [reproduction tool](../../packages/lyra-gen/scripts/compare-a2ui-reference.mjs) | Results exclude DOM, layout, accessibility and full basic-catalog coverage. The report records a normative/reference difference for null updates; it is not a full-conformance score. |
+| OpenUI importer decision | [Completed pinned experiment](../../packages/lyra-gen/docs/openui-experiment.md), [fixture manifest](../../packages/lyra-gen/scripts/fixtures/openui-experiment.json) and [actual report](../../packages/lyra-gen/scripts/fixtures/openui-experiment-report.json) | Ten classified parser fixtures and one bundle/telemetry setup support a no-go runtime-importer decision, not general import parity or a competitive generation result. |
+| Delivery measurement tooling | [Production export/bundle tool](../../packages/lyra-gen/scripts/measure-bundles.mjs) with [budget tests](../../packages/lyra-gen/scripts/measure-bundles.test.mjs) | Reviewed candidate budgets, equivalent competitor builds, cold/warm layout shift, long tasks and retained heap results still need their own runs. |
+
+EVAL-01–10 below retain their full acceptance criteria. Outstanding nonconditional measurements
+include pinned comparator enrollment, captured delivery schedules, full model/provider identifiers
+and approved spending, semantic held-out tasks, cache/thinking settings, provider tokenizer checks,
+repair outcomes, browser memory/interaction/CLS distributions and versioned raw evidence bundles.
+Unknown measurements remain unavailable; source size and logical retained character counts must
+not be relabeled as heap, provider usage or billing savings. The public website consumes the
+qualified results in the final workstream.
+
+## Historical exploratory evidence
 
 The following observations motivate experiments. They do not qualify a release or establish a
 competitive advantage. Publicly reproducible fixtures and runnable comparisons remain deliverables

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Saved dashboard development example</title>
+  <link rel="stylesheet" href="/app.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <main id="workspace">
+    <h1>Saved dashboards</h1>
+    <p>Offline development example with simulated sessions and original sample data.</p>
+    <p id="session-description"></p>
+    <label for="session">Development session</label>
+    <select id="session">
+      <option value="author">Author · North tenant</option>
+      <option value="editor">Editor · North tenant</option>
+      <option value="viewer">Viewer · North tenant</option>
+      <option value="other-tenant">Viewer · South tenant</option>
+    </select>
+    <label for="mode">Document version</label>
+    <select id="mode"><option value="draft">Draft</option><option value="published">Published</option></select>
+    <lr-input id="title" label="Dashboard title" value="Stationery overview"></lr-input>
+    <div class="actions" aria-label="Dashboard actions">
+      <lr-button id="create" variant="brand">Create dashboard</lr-button>
+      <lr-button id="save">Save draft</lr-button>
+      <lr-button id="publish">Publish draft</lr-button>
+      <lr-button id="refresh">Refresh view</lr-button>
+      <lr-button id="fork">Make independent copy</lr-button>
+      <lr-button id="history">Revision history</lr-button>
+      <lr-button id="revoke">Revoke viewer session</lr-button>
+    </div>
+    <p id="status" role="status" aria-live="polite">Loading application</p>
+    <p id="identity"></p>
+    <section id="conflict" hidden aria-labelledby="conflict-heading">
+      <h2 id="conflict-heading">Review competing changes</h2>
+      <p>Your proposed title remains in the title field. Compare both edits, then load the latest draft before choosing to save.</p>
+      <pre id="differences"></pre>
+      <lr-button id="review">Load latest draft for review</lr-button>
+    </section>
+    <section aria-label="Saved dashboard"><lr-gen-view id="view"></lr-gen-view></section>
+    <section id="history-panel" hidden aria-labelledby="history-heading">
+      <h2 id="history-heading">Revision history</h2>
+      <ol id="revisions"></ol>
+    </section>
+  </main>
+</body>
+</html>

@@ -8,6 +8,13 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 const strings: LyraLocaleStrings = {
   streamInterrupted: 'প্রবাহ বাধাগ্রস্ত হয়েছে',
   streamResume: 'চালিয়ে যান',
+  genViewEmpty: 'দেখানোর জন্য কোনো তৈরি করা দৃশ্য নেই।',
+  genViewInvalid: 'এই তৈরি করা দৃশ্যটি দেখানো যাবে না।',
+  genViewLoading: 'কম্পোনেন্ট লোড হচ্ছে…',
+  genViewLoadFailed: 'এই কম্পোনেন্টটি লোড করা যায়নি।',
+  genViewInvalidState: 'এই ঘরের মান ব্যবহার করা যাবে না।',
+  genViewActionDenied: 'এই কাজটি উপলব্ধ নয়।',
+  genViewConfirmationRequired: 'এই কাজের জন্য অ্যাপ্লিকেশন থেকে নিশ্চিতকরণ প্রয়োজন।',
   chatViewportLabel: 'কথোপকথন',
   newMessagesCount: {
     one: '{count}টি নতুন বার্তা',

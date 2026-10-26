@@ -4,6 +4,8 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
+import { keyEventOwnedByInnerControl } from '../../../internal/hotkey.js';
+import { isHtmlElement } from '../../../internal/dom-guards.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import type {
   LyraVirtualList,
@@ -171,6 +173,17 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   @query('[part="content"] > slot') private contentSlot?: HTMLSlotElement;
 
   private pendingUserIntent = false;
+  private keyboardScrollIntent?: {
+    readonly owner: HTMLElement;
+    readonly event: KeyboardEvent;
+    readonly start: number;
+    readonly height: number;
+    readonly viewport: number;
+    readonly cleanup: () => void;
+    readonly moving: () => void;
+    moved: boolean;
+    last: number;
+  };
   /** Owner-bound in-flight proactive expiry scheduled by `markUserIntent()` -- see that method and
    *  `cancelPendingUserIntentExpiry()`. */
   private pendingUserIntentExpiryFrame: OwnedAnimationFrame | null = null;
@@ -264,6 +277,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     this.releaseScrollbarDragListeners();
     // Safety net for a still-scheduled proactive user-intent expiry (see markUserIntent()).
     this.clearUserIntent();
+    this.clearKeyboardScrollIntent();
     this.scrollbarDragActive = false;
     this.followFocusRepair = null;
     this.unreadBoundaryEl?.remove();
@@ -345,6 +359,8 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   /** Scrolls to the end and re-engages `follow`. Default `smooth`, forced to `auto` under
    *  `prefers-reduced-motion`. */
   scrollToBottom(options?: { behavior?: 'auto' | 'smooth' }): void {
+    this.clearKeyboardScrollIntent();
+    this.clearUserIntent();
     const behavior = prefersReducedMotion(this)
       ? 'auto'
       : (options?.behavior ?? 'smooth');
@@ -369,11 +385,15 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     const list = this.virtualListEl;
     if (list) {
       if (unreadStartIndex >= virtualCount(list)) return false;
+      this.clearKeyboardScrollIntent();
+      this.clearUserIntent();
       list.scrollToIndex(unreadStartIndex, { align: 'start', behavior });
       return true;
     }
     const scrollEl = this.scrollEl;
     if (!scrollEl || this.unreadDividerTop == null) return false;
+    this.clearKeyboardScrollIntent();
+    this.clearUserIntent();
     scrollEl.scrollTo({ top: this.unreadDividerTop, behavior });
     return true;
   }
@@ -457,6 +477,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   }
 
   private markUserIntent = (): void => {
+    this.clearKeyboardScrollIntent();
     this.pendingUserIntent = true;
     this.cancelPendingUserIntentExpiry();
     // A gesture that actually produced a scroll is consumed by onScroll()/onVirtualScroll()
@@ -564,16 +585,84 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     this.scrollbarDragWindow = undefined;
   }
 
+  private clearKeyboardScrollIntent(): void {
+    this.keyboardScrollIntent?.cleanup();
+    this.keyboardScrollIntent = undefined;
+  }
+
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.key === 'PageUp' || e.key === 'ArrowUp' || e.key === 'Home' || (e.key === ' ' && e.shiftKey)) {
-      this.markUserIntent();
+    this.clearKeyboardScrollIntent();
+    const owner = this.listenedVirtualList?.scrollContainer ?? this.scrollEl;
+    const win = this.ownerDocument.defaultView;
+    if (e.defaultPrevented || e.isComposing || e.altKey || e.ctrlKey || e.metaKey || !owner || !win) return;
+    if (e.key !== 'PageUp' && e.key !== 'ArrowUp' && e.key !== 'Home' && !(e.key === ' ' && e.shiftKey)) return;
+    if (keyEventOwnedByInnerControl(e, { container: owner })) return;
+    for (const target of e.composedPath()) {
+      if (target === owner) break;
+      if (isHtmlElement(target) && target.scrollHeight > target.clientHeight && /^(auto|scroll)$/.test(win.getComputedStyle(target).overflowY)) return;
     }
+    if (e.isTrusted && owner.scrollTop <= 0) return;
+    this.markUserIntent();
+    // Synthetic gestures retain only the short wheel/touch lease. Native keyboard motion
+    // may start later, then cross the bottom threshold over several animation frames.
+    if (!e.isTrusted || owner.scrollTop <= 0) return;
+    let settlement: number | undefined;
+    let startDeadline: number | undefined;
+    const cancelSettlement = (): void => {
+      if (settlement !== undefined) win.cancelAnimationFrame(settlement);
+      settlement = undefined;
+    };
+    const finish = (): void => { if (this.keyboardScrollIntent === intent) this.clearKeyboardScrollIntent(); };
+    const stable = (position: number, frames: number): void => {
+      settlement = win.requestAnimationFrame(() => {
+        settlement = undefined;
+        if (this.keyboardScrollIntent !== intent || owner.scrollTop !== position) return;
+        if (frames > 1) stable(position, frames - 1);
+        else finish();
+      });
+    };
+    const settled = (): void => {
+      if (!intent.moved && owner.scrollTop >= intent.start) return;
+      // A previous scroll's queued scrollend can arrive during the first step of the
+      // new native animation. Confirm that its position really stopped changing.
+      cancelSettlement();
+      stable(owner.scrollTop, 2);
+    };
+    const intent = {
+      owner, event: e, start: owner.scrollTop, height: owner.scrollHeight, viewport: owner.clientHeight,
+      moved: false, last: owner.scrollTop,
+      moving: () => { win.clearTimeout(startDeadline); },
+      cleanup: () => {
+        win.clearTimeout(startDeadline);
+        cancelSettlement();
+        owner.removeEventListener('scrollend', settled);
+        owner.removeEventListener('focusout', finish);
+      },
+    };
+    this.keyboardScrollIntent = intent;
+    // Bound a native default that is canceled without producing a scroll event. This
+    // is an attribution deadline, not a guarantee about browser animation latency.
+    startDeadline = win.setTimeout(finish, 500);
+    owner.addEventListener('scrollend', settled);
+    owner.addEventListener('focusout', finish);
   };
 
   private onScroll = (): void => {
     const list = this.listenedVirtualList;
     const el = list ? list.scrollContainer : this.scrollEl;
     if (!el) return;
+    const keyboard = this.keyboardScrollIntent;
+    const sameGeometry = keyboard?.owner === el && !keyboard.event.defaultPrevented && keyboard.height === el.scrollHeight && keyboard.viewport === el.clientHeight;
+    if (keyboard && !sameGeometry) {
+      this.clearKeyboardScrollIntent();
+      this.clearUserIntent();
+    }
+    const keyboardCaused = sameGeometry && el.scrollTop < keyboard.start;
+    if (keyboardCaused && el.scrollTop !== keyboard.last) {
+      keyboard.moved = true;
+      keyboard.last = el.scrollTop;
+      keyboard.moving();
+    }
     const distanceFromEnd = el.scrollHeight - el.scrollTop - el.clientHeight;
     const atBottom = distanceFromEnd <= this.effectiveBottomThreshold;
     if (atBottom) {
@@ -581,8 +670,11 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
       if (!this.follow) this.follow = true;
       return;
     }
-    const userCaused = this.consumeUserIntent() || this.scrollbarDragActive;
-    if (userCaused && this.follow) this.follow = false;
+    const userCaused = this.consumeUserIntent() || keyboardCaused || this.scrollbarDragActive;
+    if (userCaused && this.follow) {
+      this.clearKeyboardScrollIntent();
+      this.follow = false;
+    }
   };
 
   private onVirtualScroll = (e: Event): void => {
@@ -853,6 +945,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   }
 
   private teardownObservers(): void {
+    this.clearKeyboardScrollIntent();
     this.scrollResizeObserver?.disconnect();
     this.scrollResizeObserver = undefined;
     this.contentResizeObserver?.disconnect();

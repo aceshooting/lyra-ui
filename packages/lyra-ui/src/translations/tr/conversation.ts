@@ -8,6 +8,13 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 const strings: LyraLocaleStrings = {
   streamInterrupted: 'Akış kesintiye uğradı',
   streamResume: 'Sürdür',
+  genViewEmpty: 'Görüntülenecek oluşturulmuş görünüm yok.',
+  genViewInvalid: 'Bu oluşturulmuş görünüm görüntülenemiyor.',
+  genViewLoading: 'Bileşen yükleniyor…',
+  genViewLoadFailed: 'Bu bileşen yüklenemedi.',
+  genViewInvalidState: 'Bu alanın değeri kullanılamaz.',
+  genViewActionDenied: 'Bu işlem kullanılamıyor.',
+  genViewConfirmationRequired: 'Bu işlem uygulamadan onay gerektiriyor.',
   chatViewportLabel: 'Sohbet',
   newMessagesCount: {
     one: '{count} yeni ileti',

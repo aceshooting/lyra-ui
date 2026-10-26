@@ -8,7 +8,7 @@ description: Design and implement coherent interfaces with @aceshooting/lyra-ui,
 Turn product intent into a small, coherent Lyra component hierarchy, then implement and verify it.
 Use the sibling `lyra-ui` skill (or the installed package's `llms.txt`) for exact properties, events,
 slots, parts, custom properties, peers and import paths before writing code; its companion-package
-routes cover the experimental DOCX editor, flag assets, locale catalogs and editor data.
+routes cover the experimental DOCX editor, generated views, flag assets, locale catalogs and editor data.
 
 Appearance defaults and the optional spotlights, gemstone selector, 44px mode/design/flag-language
 controls and persistence recipe are owned by the sibling `lyra-ui` skill ("Appearance defaults") and the
@@ -22,7 +22,8 @@ retheme an existing app only within an authorized migration or redesign.
 1. **Frame the experience.** Identify the primary user outcome, critical actions, data ownership,
    navigation boundary, and failure modes. Ask only for choices that materially change the result.
 2. **Inventory exact contracts.** Look up every candidate tag. Prefer an existing Lyra or native
-   primitive over inventing a wrapper. Record optional peers and stable/experimental status.
+   primitive over inventing a wrapper. Record optional peers and stable/experimental status. For
+   generated content, follow the sibling skill's `lyra-gen.md` before choosing a catalog or renderer.
 3. **Sketch structure before chrome.** Start with semantic page regions and native headings/forms.
    Add Lyra layout, control, data, feedback, and overlay primitives only where they provide a real
    contract. Read [references/composition-patterns.md](references/composition-patterns.md) for
@@ -31,7 +32,8 @@ retheme an existing app only within an authorized migration or redesign.
    read-only, and destructive/confirmation states that apply. Define event detail, focus movement,
    cancellation, and ownership of controlled values.
 5. **Design across constraints.** Check narrow allocation and long content first, then wide layout.
-   Include RTL, translated strings, keyboard-only use, reduced motion, forced colors, and both
+   Separate core/companion chrome, host copy, generated prose language and data formatting. Include
+   RTL, translated strings, keyboard-only use, reduced motion, forced colors, and both
    supported theme modes. Use logical CSS and Lyra tokens/utilities.
 6. **Implement with stable boundaries.** Import registration modules through stable tag-shaped
    paths such as `@aceshooting/lyra-ui/components/lr-input.js`. Bind objects, arrays, functions, and

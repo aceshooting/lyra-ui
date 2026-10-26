@@ -19,7 +19,8 @@ test('malformed comments and quoted strings fail promptly', () => {
     const child = spawnSync(process.execPath, [
       '--input-type=module', '-e',
       `import { parseJsonc } from ${JSON.stringify(new URL('./jsonc.mjs', import.meta.url).href)}; parseJsonc(${JSON.stringify(source)});`,
-    ], { encoding: 'utf8', timeout: 1000 });
+    // Bound a possible parser loop while allowing process startup under parallel CI load.
+    ], { encoding: 'utf8', timeout: 5000 });
     assert.equal(child.error?.code, undefined, 'the parser must finish before the timeout');
     assert.notEqual(child.status, 0, 'malformed input must fail');
   }

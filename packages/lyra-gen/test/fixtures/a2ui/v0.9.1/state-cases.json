@@ -1,0 +1,182 @@
+{
+  "origin": "authored-normative-cases",
+  "protocolVersion": "v0.9.1",
+  "sourceRevision": "409ded29ccac3eebc541979ae5320771703248e8",
+  "normativeSource": "https://github.com/a2ui-project/a2ui/blob/409ded29ccac3eebc541979ae5320771703248e8/specification/v0_9_1/docs/a2ui_protocol.md#server-to-client-updates",
+  "referenceSource": "https://github.com/a2ui-project/a2ui/blob/409ded29ccac3eebc541979ae5320771703248e8/typescript/core/web_core/src/state/data-model.ts",
+  "cases": [
+    {
+      "name": "array-delete-preserves-index",
+      "initial": {
+        "items": [
+          "first",
+          "second",
+          "third"
+        ]
+      },
+      "updates": [
+        {
+          "path": "/items/1"
+        }
+      ],
+      "expectedJson": {
+        "items": [
+          "first",
+          null,
+          "third"
+        ]
+      },
+      "undefinedPaths": [
+        "/items/1"
+      ],
+      "holePaths": []
+    },
+    {
+      "name": "sparse-array-upsert",
+      "initial": {
+        "items": [
+          "first"
+        ]
+      },
+      "updates": [
+        {
+          "path": "/items/3",
+          "value": "fourth"
+        }
+      ],
+      "expectedJson": {
+        "items": [
+          "first",
+          null,
+          null,
+          "fourth"
+        ]
+      },
+      "undefinedPaths": [],
+      "holePaths": [
+        "/items/1",
+        "/items/2"
+      ]
+    },
+    {
+      "name": "absent-delete-no-materialization",
+      "initial": {
+        "items": [
+          "first"
+        ]
+      },
+      "updates": [
+        {
+          "path": "/items/20"
+        },
+        {
+          "path": "/missing/children/2/name"
+        }
+      ],
+      "expectedJson": {
+        "items": [
+          "first"
+        ]
+      },
+      "undefinedPaths": [],
+      "holePaths": []
+    },
+    {
+      "name": "nested-sparse-upsert",
+      "initial": {},
+      "updates": [
+        {
+          "path": "/groups/2/items/1/name",
+          "value": "Ada"
+        }
+      ],
+      "expectedJson": {
+        "groups": [
+          null,
+          null,
+          {
+            "items": [
+              null,
+              {
+                "name": "Ada"
+              }
+            ]
+          }
+        ]
+      },
+      "undefinedPaths": [],
+      "holePaths": [
+        "/groups/0",
+        "/groups/1",
+        "/groups/2/items/0"
+      ]
+    },
+    {
+      "name": "delete-then-restore-container",
+      "initial": {
+        "items": [
+          {
+            "name": "before"
+          }
+        ]
+      },
+      "updates": [
+        {
+          "path": "/items/0"
+        },
+        {
+          "path": "/items/0/name",
+          "value": "after"
+        }
+      ],
+      "expectedJson": {
+        "items": [
+          {
+            "name": "after"
+          }
+        ]
+      },
+      "undefinedPaths": [],
+      "holePaths": []
+    },
+    {
+      "name": "null-is-an-explicit-value",
+      "initial": {
+        "value": "before",
+        "items": [
+          "before"
+        ]
+      },
+      "updates": [
+        {
+          "path": "/value",
+          "value": null
+        },
+        {
+          "path": "/items/0",
+          "value": null
+        }
+      ],
+      "expectedJson": {
+        "value": null,
+        "items": [
+          null
+        ]
+      },
+      "undefinedPaths": [],
+      "holePaths": [],
+      "referenceDivergence": {
+        "reason": "Pinned reference DataModel treats null as deletion; normative updateDataModel specifies deletion only when value is omitted.",
+        "expectedReferenceJson": {
+          "items": [
+            null
+          ]
+        },
+        "expectedReferenceUndefinedPaths": [
+          "/items/0"
+        ],
+        "expectedReferenceHolePaths": []
+      }
+    }
+  ]
+}

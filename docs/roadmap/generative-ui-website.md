@@ -1,8 +1,9 @@
 # Generative UI website and demonstrations
 
-Status: **planned**. This roadmap defines product and qualification work; it does not announce an
-implemented generative UI service or a release date. The website workstream is separate from the
-library runtime and depends on its qualified public contracts.
+Status: **planned; sequenced last after library implementation and qualification**. This roadmap
+does not announce an implemented generative UI service or a release date. The website workstream
+is separate from the library runtime and depends on its qualified public contracts. Its eventual
+launch still requires the live path and explicit failure states described below.
 
 Related roadmaps: [runtime and product direction](generative-ui.md),
 [implementation backlog](generative-ui-backlog.md), and
@@ -29,6 +30,21 @@ Public design references are OpenUI's [showcase](https://www.openui.com/demos),
 [comparison experience](https://www.openui.com/compare), and
 [source/preview playground](https://www.openui.com/openui-vs-json). These inform interaction patterns,
 not implementation reuse or evidence that Lyra performs better.
+
+## Library groundwork and website boundary
+
+The [experimental companion](../../packages/lyra-gen/README.md) now includes a real
+[chat composition](../../packages/lyra-gen/examples/chat.ts),
+[live grid/data example](../../packages/lyra-gen/examples/dashboard.ts), and a
+[file-backed saved-dashboard development host](../../packages/lyra-gen/examples/saved-dashboard/README.md).
+They provide reusable renderer/state/action/persistence patterns and automated browser fixtures.
+The development host uses fixture sessions and loopback storage; it is not an authenticated public
+sharing service or the website's hosted live-generation path.
+
+No public feature page, live provider endpoint, playground, comparison campaign or generative UI
+website deployment is established by those library examples. SITE-01–20 remain the final
+workstream. Use their acceptance criteria below when implementing the site, and consume published,
+qualified package versions rather than presenting the unpublished checkout as an installation.
 
 ## Delivery stages and tracked work
 

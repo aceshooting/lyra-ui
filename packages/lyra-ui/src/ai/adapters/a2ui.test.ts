@@ -206,3 +206,34 @@ describe('A2UI component validation', () => {
     expect(adaptA2UiSurface(surface({}), types)).to.not.equal(null);
   });
 });
+
+
+it('exposes controlled binding state separately from the version-two document', () => {
+  const source = { name: 'Ada' };
+  const result = adaptA2UiSurface({
+    rootId: 'name',
+    components: [{ id: 'name', type: 'Input', props: { value: { $bind: '/name' } } }],
+    data: source,
+  }, { Input: 'input' });
+  expect(result?.bindingState).to.deep.equal({ name: 'Ada' });
+  expect(result?.bindingState).to.equal(widgetState(result));
+  source.name = 'Changed';
+  expect(result?.bindingState).to.deep.equal({ name: 'Ada' });
+  const explicitNull = adaptA2UiSurface({
+    rootId: 'name', components: [{ id: 'name', type: 'Text' }], data: null,
+  }, { Text: 'text' });
+  expect(explicitNull?.bindingState).to.equal(null);
+  const omitted = adaptA2UiSurface({
+    rootId: 'name', components: [{ id: 'name', type: 'Text' }],
+  }, { Text: 'text' });
+  expect(omitted).not.to.have.property('bindingState');
+});
+
+it('does not interpret native A2UI lifecycle messages as helper surfaces', () => {
+  for (const message of [
+    { createSurface: { surfaceId: 'answer', catalogId: 'catalog' } },
+    { updateComponents: { surfaceId: 'answer', components: [] } },
+    { updateDataModel: { surfaceId: 'answer', value: { name: 'Ada' } } },
+    { deleteSurface: { surfaceId: 'answer' } },
+  ]) expect(adaptA2UiSurface(message, {})).to.equal(null);
+});

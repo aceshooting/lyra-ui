@@ -22,6 +22,7 @@ const PRIMARY_PACKAGE = '@aceshooting/lyra-ui';
 const BUILD_PREREQUISITES = {
   [PRIMARY_PACKAGE]: ['@aceshooting/lyra-map'],
   '@aceshooting/lyra-docs': [PRIMARY_PACKAGE],
+  '@aceshooting/lyra-gen': [PRIMARY_PACKAGE],
 };
 
 /**

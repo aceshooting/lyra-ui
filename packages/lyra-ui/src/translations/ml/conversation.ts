@@ -8,6 +8,13 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 const strings: LyraLocaleStrings = {
   streamInterrupted: 'സ്ട്രീം തടസ്സപ്പെട്ടു',
   streamResume: 'തുടരുക',
+  genViewEmpty: 'പ്രദർശിപ്പിക്കാൻ സൃഷ്ടിച്ച കാഴ്ചയൊന്നുമില്ല.',
+  genViewInvalid: 'ഈ സൃഷ്ടിച്ച കാഴ്ച പ്രദർശിപ്പിക്കാനാവില്ല.',
+  genViewLoading: 'ഘടകം ലോഡ് ചെയ്യുന്നു…',
+  genViewLoadFailed: 'ഈ ഘടകം ലോഡ് ചെയ്യാനായില്ല.',
+  genViewInvalidState: 'ഈ ഫീൽഡിന്റെ മൂല്യം ഉപയോഗിക്കാനാവില്ല.',
+  genViewActionDenied: 'ഈ പ്രവർത്തനം ലഭ്യമല്ല.',
+  genViewConfirmationRequired: 'ഈ പ്രവർത്തനത്തിന് ആപ്ലിക്കേഷന്റെ സ്ഥിരീകരണം ആവശ്യമാണ്.',
   chatViewportLabel: 'സംഭാഷണം',
   newMessagesCount: {
     one: '{count} പുതിയ സന്ദേശം',

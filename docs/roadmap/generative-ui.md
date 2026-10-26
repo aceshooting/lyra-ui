@@ -1,8 +1,10 @@
 # Generative UI: Lyra Gen
 
-Status: **planned and unstarted**. This roadmap defines a product program, not an implementation
-or release claim. The starting implementation reviewed here is Lyra UI 30.2.0. Package names,
-element names and example interfaces below describe proposed APIs until their contracts ship.
+Status: **implementation and qualification in progress**. The experimental
+[`@aceshooting/lyra-gen` 0.1.0 source](../../packages/lyra-gen/README.md) now exists alongside
+additive Lyra UI integration changes. It is unpublished; final release qualification remains
+pending. This roadmap preserves the complete program and its acceptance criteria, including
+remaining work. Website and hosted live generation are sequenced last, after the library work.
 
 The objective is to make Lyra a leading foundation for interactive generated answers and persistent
 application dashboards: useful earlier in a stream, responsive during interaction, reliable under
@@ -21,7 +23,11 @@ UI systems and conventional dashboard interactions where their capabilities over
   gallery, chat experience, source playground, live service and comparison pages.
 - [Main roadmap](../roadmap.md): ordering against the existing library and companion programs.
 
-Each capability remains planned until its implementation and qualification evidence are recorded.
+The [implementation snapshot](generative-ui-backlog.md#current-implementation-snapshot) links
+current source, scoped tests and limitations. The
+[evaluation inventory](generative-ui-evaluation.md#current-implementation-and-evidence) separates
+executed experiments from missing campaigns. A capability is accepted only when its own
+implementation and qualification evidence are recorded.
 An investigation result does not mark its eventual feature delivered. Existing component tests do
 not qualify a new generated composition, and a demo does not qualify a complete protocol profile.
 Backlog identifiers are stable references; merged approaches retain their identifiers and explain
@@ -91,7 +97,12 @@ announcements and documentation; verify current behavior before relying on a det
 | [assistant-ui](https://www.assistant-ui.com/docs/tools/generative-ui) and [LangGraph generative UI](https://docs.langchain.com/langgraph-platform/generative-ui-react) | Tool-specific renderers by tool name; allowlisted JSON-spec message parts; components loaded by name on demand | Keep tool-specific result renderers first-class beside composition; load component code by name as it appears |
 | [Flutter GenUI](https://docs.flutter.dev/ai/genui/components) | Catalog items defined by name, schema and builder; an A2UI connector | A minimal catalog-item contract for overlays |
 
-## Starting capabilities and gaps
+## Starting point and current implementation
+
+The table records the Lyra UI 30.2.0 starting point and the work it motivated. The companion now
+implements restricted Markup/JSON input, reviewed catalogs, keyed generated views, native forms,
+state/actions, chat composition and saved dashboard contracts. See the linked implementation
+snapshot for the current boundaries; the original gaps below are not all still open.
 
 | Area | Existing foundation | Required extension |
 |---|---|---|
@@ -104,11 +115,11 @@ announcements and documentation; verify current behavior before relying on a det
 | Dashboards | Layout and data components | Persistent documents, live bindings, sharing, application integration and collaborative revision semantics |
 | Website | Existing component and feature pages | Live generation service, qualified demo surfaces and reproducible comparative evidence |
 
-The structural adapter's returned `state` does not supply the renderer's separate `bindingState`;
-its return contract needs correction. Widget rendering inside `lr-message-parts` currently omits
-registry/binding-state passthrough and constructs a new document on render. These are concrete
-integration improvements. Primitive-only properties and rejection of malformed widget documents
-are documented boundaries, not evidence that an existing full generative runtime has regressed.
+The structural adapter now supplies `bindingState` while retaining its legacy `state` alias.
+`lr-message-parts` now forwards widget registry/state and memoizes unchanged widget documents;
+the provider-neutral reducer has an incremental text-delta path. These changes have dedicated
+regression fixtures. Structured generated properties live in the separately validated companion;
+stable widget-v2 rejection and primitive-property boundaries remain compatible.
 
 Source entry points: [AI adapters](../../packages/lyra-ui/src/ai/adapters/a2ui.ts),
 [stream reducer](../../packages/lyra-ui/src/ai/runtime.ts),
@@ -120,8 +131,8 @@ Source entry points: [AI adapters](../../packages/lyra-ui/src/ai/adapters/a2ui.t
 
 ### Package boundary
 
-Create `@aceshooting/lyra-gen` as an independently versioned experimental companion, proposed at
-`packages/lyra-gen`. Its dependency on Lyra UI is explicit and compatible; Lyra UI must not import
+`@aceshooting/lyra-gen` is an independently versioned experimental companion at
+`packages/lyra-gen`. Lyra UI is its required peer; Lyra UI must not import
 the companion. Public integration APIs must avoid imports from another package's private internals.
 Any necessary reusable library helper receives an intentional public contract and qualification.
 
@@ -132,7 +143,7 @@ Any necessary reusable library helper receives an intentional public contract an
 | Host application | Model/provider requests, transport, authentication, authorized data/tool access, storage, publication, permissions and side effects |
 | Public website | Version-pinned examples, bounded demonstration service, inspectable output, marketing and measured evidence |
 
-The proposed `<lr-gen-view>` belongs in the companion during experimentation. A later decision
+The implemented experimental `<lr-gen-view>` belongs in the companion. A later decision
 about its permanent home requires API and ownership evidence; promotion into Lyra UI is not a
 prerequisite for 1.0. Independent versioning does not waive quality, compatibility communication,
 release checks, or explicit migration of stored documents.
@@ -140,8 +151,10 @@ release checks, or explicit migration of stored documents.
 ### Inputs and one runtime contract
 
 Lyra Markup is the primary model-facing format. A structured JSON input is a companion route for
-hosts using tool calls or provider-supported constrained outputs. A2UI and an optional OpenUI
-input adapt to shared rendering capabilities while retaining their own protocol semantics.
+hosts using tool calls or provider-supported constrained outputs. The owned A2UI processor retains
+protocol state alongside rendered views. The bounded
+[OpenUI experiment](../../packages/lyra-gen/docs/openui-experiment.md) concluded no-go for a runtime
+importer; any later importer remains separately gated on useful semantic compatibility.
 
 ```mermaid
 flowchart LR
@@ -164,7 +177,12 @@ for surface lifecycle, component identity, scoped bindings, data versions, templ
 functions, actions and diagnostics. An adapter must report unsupported semantics explicitly rather
 than flattening away behavior and claiming compatibility.
 
-### Lyra Markup contract to specify
+### Lyra Markup contract and qualification
+
+[RFC 0006](../rfcs/0006-lyra-markup.md) specifies the implemented conservative profile. Markup
+documents commit at `finish()`; fenced islands can commit independently when their closing fence
+arrives. Incomplete controls remain inert. The following requirements continue to govern the
+profile and any future extensions.
 
 1. Start with clearly delimited `lyra` fenced islands inside Markdown. Raw markup detection is a
    separately qualified convenience because ordinary prose, code examples and incomplete blocks
@@ -187,9 +205,10 @@ than flattening away behavior and claiming compatibility.
 8. Map actions to a trusted host dispatcher. Generated text cannot register new tools, broaden
    permissions, create arbitrary imports or decide its own confirmation policy.
 
-Grammar, parser dependencies and recovery details require a bounded design and evaluation step.
-Minimal dependencies and no unsolicited telemetry are goals; an unmeasured zero-dependency rule
-must not force several poorly qualified custom parsers. Worker or WebAssembly work follows profiling.
+The RFC records the parser selection and current no-coercion/no-implicit-completion policy.
+Parser and resource qualification still apply when the profile changes. Minimal dependencies and
+no unsolicited telemetry remain requirements; an unmeasured zero-dependency rule must not force
+poorly qualified custom parsers. Worker or WebAssembly work follows profiling.
 
 ### Catalogs and generation
 
@@ -279,9 +298,12 @@ Use pinned official schemas, examples and reference behavior to qualify its surf
 templates, functions and actions; a small structural converter is not a substitute. Stage 0 sizes
 the conformance and maintenance work, measures bundle/runtime costs and establishes the upstream
 version-tracking process. This ownership decision does not remove dependency/license review for
-supporting utilities or adopted fixtures. Run an OpenUI integration experiment early; a complete
-importer remains conditional on useful compatibility and demand. Record its install-time and
-runtime telemetry behavior with its license and bundle costs: at the inspected revision,
+supporting utilities or adopted fixtures. The completed
+[OpenUI import experiment](../../packages/lyra-gen/docs/openui-experiment.md) records a pinned
+published parser, ten classified fixtures, bundle/license costs and a guarded no-fetch observation
+with telemetry disabled. Its no-go decision adds no runtime importer. A complete importer remains
+conditional on useful compatibility and demand. Historical source inspection also found that,
+at the inspected revision,
 `@openuidev/lang-core` sends
 [installation telemetry by default](https://github.com/thesysdev/openui/blob/9d73d17d2bbac565672a85e78f6eb7740cb0d9ca/packages/lang-core/src/telemetry/install.ts)
 unless an environment variable disables it.
@@ -382,7 +404,7 @@ previews carry explicit status and do not become production capability claims.
 |---|---|
 | Primary format and package | Lyra Markup in independent `@aceshooting/lyra-gen`; chat-first, then shared application dashboards |
 | Product priority | Lyra Gen precedes new lyra-3d and lyra-docs features; correctness/security maintenance remains active |
-| First renderer | Proposed `<lr-gen-view>` in the companion, with stable widget-v2 compatibility retained |
+| First renderer | Experimental `<lr-gen-view>` implemented in the companion, with stable widget-v2 compatibility retained |
 | Widget error isolation | Recommend opt-in independent-region recovery first; no approved change to the strict default in 31.0. Any future default change requires an explicit compatibility decision and the evidence below |
 | Canonical contract | Views plus surfaces, data, state, actions, revision and diagnostics; no lossy protocol flattening |
 | Saved sharing | Required for stage 3; host storage/authentication/authorization, versioned publishable definitions and optimistic concurrency |

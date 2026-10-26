@@ -466,6 +466,7 @@ pnpm --filter @aceshooting/lyra-ui check:pinned-upstream-manifests
 # after a build.
 step "pnpm build"
 pnpm build
+pnpm --filter @aceshooting/lyra-translations assemble
 
 step "optional look and theme builder contracts"
 pnpm --filter @aceshooting/lyra-ui test:optional-looks
@@ -491,6 +492,25 @@ pnpm --filter '!@aceshooting/lyra-ui' -r test
 
 step "document companion type and package checks"
 pnpm --filter @aceshooting/lyra-docs lint
+pnpm --filter @aceshooting/lyra-gen lint
+pnpm --filter @aceshooting/lyra-gen check:catalog
+pnpm --filter @aceshooting/lyra-gen check:examples
+pnpm --filter @aceshooting/lyra-gen check:bundles
+
+step "generated views and saved dashboards across browser engines"
+for gen_browser in chromium firefox webkit; do
+  WTR_BROWSER="$gen_browser" WTR_STRICT_CONSOLE=1 pnpm --filter @aceshooting/lyra-gen test:browser
+  WTR_BROWSER="$gen_browser" pnpm --filter @aceshooting/lyra-gen test:saved-dashboard
+done
+
+step "recorded generated-view visual baselines"
+gen_visual_dir="$(mktemp -d "${TMPDIR:-/tmp}/lyra-gen-visual.XXXXXXXX")"
+if pnpm --filter @aceshooting/lyra-gen test:visual --output="$gen_visual_dir/report.json"; then
+  rm -rf -- "$gen_visual_dir"
+else
+  printf 'Recorded replay visual failure evidence retained at %s\n' "$gen_visual_dir" >&2
+  exit 1
+fi
 
 step "editor-data and translation companion package checks"
 pnpm --filter @aceshooting/lyra-ide lint

@@ -429,6 +429,10 @@ it('forwards progressive mode through both streaming-text variants and message t
   mounted.push(parts);
   document.body.append(parts);
   await parts.updateComplete;
+  await waitUntil(
+    () => Boolean(parts.shadowRoot?.querySelector('lr-thinking-panel > lr-markdown')),
+    'the lazy reasoning renderer did not mount its Markdown child',
+  );
   const nestedMarkdown = Array.from(parts.shadowRoot!.querySelectorAll('lr-markdown')) as MarkdownHost[];
   expect(nestedMarkdown).to.have.lengthOf(2);
   await Promise.all(nestedMarkdown.map((el) => el.updateComplete));

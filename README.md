@@ -83,12 +83,16 @@ available to or used by the maintainers.
 | [`packages/lyra-ui`](./packages/lyra-ui) | Free, independent web components for Lit, React, Vue, Angular, Svelte, and plain JavaScript. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-ui)](https://www.npmjs.com/package/@aceshooting/lyra-ui) | [![avg per component](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Faceshooting%2Flyra-ui%2Fmain%2Fpackages%2Flyra-ui%2Fscripts%2Fbundle-stats.json&query=%24.avgComponentGzipKb&label=avg%20per%20component&suffix=%20KB%20gzip&color=blue)](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/scripts/bundle-stats.json) [![total gzip](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Faceshooting%2Flyra-ui%2Fmain%2Fpackages%2Flyra-ui%2Fscripts%2Fbundle-stats.json&query=%24.barrelGzipKb&label=total%20gzip&suffix=%20KB&color=blue)](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/scripts/bundle-stats.json) |
 | [`packages/lyra-flags`](./packages/lyra-flags) | Optional waving flag SVGs for `<lr-flag>`, kept out of `lyra-ui`'s install by default. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-flags)](https://www.npmjs.com/package/@aceshooting/lyra-flags) | *n/a — SVG assets, not a JS bundle* |
 | [`packages/lyra-docs`](./packages/lyra-docs) | Experimental DOCX editor companion with a bundled, lazy document engine; document viewers stay in `lyra-ui`. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-docs)](https://www.npmjs.com/package/@aceshooting/lyra-docs) | See the [package README](./packages/lyra-docs/README.md) |
+| [`packages/lyra-gen`](./packages/lyra-gen) | Experimental validated generated views, interactive answers and host-owned dashboard persistence. | Unpublished `0.1.0` | See the [measurement guide](./benchmarks/generative-ui/README.md) |
 | [`packages/lyra-map`](./packages/lyra-map) | Optional modular renderer and shared module worker for `<lr-map>`. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-map)](https://www.npmjs.com/package/@aceshooting/lyra-map) | See the [package README](./packages/lyra-map/README.md) |
 | [`packages/lyra-3d`](./packages/lyra-3d) | Optional WebGL engines (three.js) for opted-in 3D views, loaded on demand; not yet released. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-3d)](https://www.npmjs.com/package/@aceshooting/lyra-3d) | See the [package README](./packages/lyra-3d/README.md) |
 | [`packages/lyra-ide`](./packages/lyra-ide) | Editor data (Custom Elements Manifest, JetBrains web-types, VS Code HTML/CSS custom data), versioned with `lyra-ui`. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-ide)](https://www.npmjs.com/package/@aceshooting/lyra-ide) | *n/a — JSON data* |
 | [`packages/lyra-translations`](./packages/lyra-translations) | The 70 built-in locale catalogs, versioned with `lyra-ui`. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-translations)](https://www.npmjs.com/package/@aceshooting/lyra-translations) | *n/a — opt-in locale modules* |
 
-See each package's own README for full install/usage details.
+See each package's own README for full install/usage details. For generated interfaces, start with the
+[Lyra Gen quickstart](./packages/lyra-gen/README.md#render-a-validated-view),
+[chat integration](./packages/lyra-gen/docs/interactive-chat.md), or
+[saved-dashboard host example](./packages/lyra-gen/examples/saved-dashboard/README.md).
 
 ## Quick Start
 
@@ -296,7 +300,7 @@ main `$lyra-ui` skill remains the exact API reference.
 `@aceshooting/lyra-ui` source is versioned at `30.2.0`; `@aceshooting/lyra-flags` source at `2.3.1`
 — see each package's own `CHANGELOG.md` for release history. Published npm versions can lag these
 source versions while a release is being qualified. `lyra-ide` and `lyra-translations` version in
-lockstep with `lyra-ui`; `lyra-flags`, `lyra-docs`, `lyra-map` and `lyra-3d` version independently
+lockstep with `lyra-ui`; `lyra-flags`, `lyra-docs`, `lyra-gen`, `lyra-map` and `lyra-3d` version independently
 with [Changesets](https://github.com/changesets/changesets), following semver.
 
 Every component also carries machine-readable `stable` or `experimental` status plus its first

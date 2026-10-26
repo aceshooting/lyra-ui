@@ -8,6 +8,13 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 const strings: LyraLocaleStrings = {
   streamInterrupted: 'Akwụsịla iyi',
   streamResume: 'Gaa n\'ihu',
+  genViewEmpty: 'Enweghị nlele emepụtara a ga-egosi.',
+  genViewInvalid: 'Enweghị ike igosi nlele a emepụtara.',
+  genViewLoading: 'A na-ebunye akụkụ…',
+  genViewLoadFailed: 'Enweghị ike ibunye akụkụ a.',
+  genViewInvalidState: 'Enweghị ike iji uru oghere a.',
+  genViewActionDenied: 'Omume a adịghị.',
+  genViewConfirmationRequired: 'Omume a chọrọ nkwenye site na ngwa ahụ.',
   chatViewportLabel: 'Mkparịta ụka',
   newMessagesCount: {
     other: 'Ozi ọhụrụ {count}',

@@ -7,7 +7,8 @@ import {
 
 export const styles = css`
   :host {
-    display: block;
+    display: flex;
+    flex-direction: column;
     min-inline-size: 0;
     max-inline-size: 100%;
     --_lr-file-input-font-size: var(--lr-form-control-font-size);
@@ -53,14 +54,13 @@ export const styles = css`
     --_lr-file-input-detail-font-size: var(--lr-font-size-m);
   }
   [part="form-control"] {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
     min-inline-size: 0;
     max-inline-size: 100%;
-    /* A percentage block-size against an auto-height ancestor resolves to auto, so this is a no-op
-       for the content-sized default; it bites only when :host has a definite block size (a consumer
-       using this control as a full-area drop overlay, host absolutely positioned with inset: 0 over
-       a sized panel). The chain must continue through .dropzone and [part~="file-input"] below or the
-       fill breaks at whichever one is missing it. */
-    block-size: 100%;
+    /* Flex allocation preserves the intrinsic height in auto-sized grids and shares a definite
+       host height with labels, selected files and feedback before growing the dropzone. */
   }
   [part~="form-control-label"] {
     display: block;
@@ -82,13 +82,12 @@ export const styles = css`
   .dropzone {
     position: relative;
     display: grid;
+    flex: 1;
     min-inline-size: 0;
-    block-size: 100%;
   }
   [part~="file-input"] {
     grid-area: 1 / 1;
     inline-size: 100%;
-    block-size: 100%;
     ${iconHitTarget}
     box-sizing: border-box;
     font: inherit;

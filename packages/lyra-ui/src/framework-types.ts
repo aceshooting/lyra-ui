@@ -7660,17 +7660,21 @@ export interface LyraComponentTypeMap {
       LyraMcpApp,
       | 'accessibleLabel'
       | 'height'
+      | 'hostCapabilities'
       | 'label'
       | 'locale'
       | 'maxHeight'
+      | 'protocol'
       | 'resource'
       | 'strings',
       {}
     >;
     events: LyraMcpAppEventMap;
-    eventNames:       | 'lr-mcp-log'
+    eventNames:       | 'lr-mcp-initialized'
+      | 'lr-mcp-log'
       | 'lr-mcp-open-link'
       | 'lr-mcp-ready'
+      | 'lr-mcp-request'
       | 'lr-mcp-resize'
       | 'lr-mcp-send-message'
       | 'lr-mcp-tool-call';
@@ -7963,6 +7967,8 @@ export interface LyraComponentTypeMap {
       | 'streamingRender'
       | 'strings'
       | 'toolDisplay'
+      | 'widgetBindingState'
+      | 'widgetRegistry'
       | 'withoutReasoning',
       {}
     >;

@@ -9,6 +9,9 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeFrameSrc } from '../../../internal/safe-url.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { styles } from './mcp-app.styles.js';
+import { McpAppSession, MCP_APP_PROXY_DOCUMENT, mcpRecord } from './mcp-app-protocol.js';
+import type { McpAppProtocol, McpAppHostCapabilities, McpAppRequestDetail, McpAppRequestId, McpAppResponseOptions, McpAppNotificationMethod } from './mcp-app-protocol.js';
+export type { McpAppProtocol, McpAppHostCapabilities, McpAppRequestDetail, McpAppRequestId, McpAppResponseOptions, McpAppRequestMethod, McpAppNotificationMethod } from './mcp-app-protocol.js';
 import { purposeAccessibleLabel } from '../semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -26,6 +29,8 @@ export interface McpAppPermissions {
 
 export interface McpAppCsp {
   readonly connectDomains?: readonly string[];
+  /** HTTP(S) origins authorized by the embedding host. In mcp-apps mode these also allow
+   * external scripts and styles; legacy mode keeps scripts and styles inline-only. */
   readonly resourceDomains?: readonly string[];
   readonly frameDomains?: readonly string[];
 }
@@ -70,6 +75,8 @@ export type McpAppToolResultOptions =
 
 export interface LyraMcpAppEventMap {
   'lr-mcp-ready': CustomEvent<{ uri: string }>;
+  'lr-mcp-initialized': CustomEvent<{ uri: string; frameGeneration: number }>;
+  'lr-mcp-request': CustomEvent<McpAppRequestDetail>;
   'lr-mcp-tool-call': CustomEvent<McpAppToolCallDetail>;
   'lr-mcp-send-message': CustomEvent<{ message: unknown }>;
   'lr-mcp-open-link': CustomEvent<{ href: string }>;
@@ -78,6 +85,8 @@ export interface LyraMcpAppEventMap {
 }
 
 type HostMessage =
+  | { channel: 'lyra-mcp-app'; version: 1; type: 'mcp-apps'; message: Record<string, unknown> }
+  | { channel: 'lyra-mcp-app'; version: 1; type: 'mcp-resource'; title: string; allow: string; html?: string; src?: string }
   | { channel: 'lyra-mcp-app'; version: 1; type: 'host-context'; context: unknown }
   | {
       channel: 'lyra-mcp-app';
@@ -148,14 +157,14 @@ function cspSources(values: readonly string[] | undefined): string[] {
   });
 }
 
-function buildCsp(csp: McpAppCsp | undefined): string {
+function buildCsp(csp: McpAppCsp | undefined, externalAssets: boolean): string {
   const resources = cspSources(csp?.resourceDomains);
   const connections = cspSources(csp?.connectDomains);
   const frames = cspSources(csp?.frameDomains);
   return [
     `default-src 'none'`,
-    `script-src 'unsafe-inline'`,
-    `style-src 'unsafe-inline'`,
+    `script-src 'unsafe-inline' ${externalAssets ? resources.join(' ') : ''}`.trim(),
+    `style-src 'unsafe-inline' ${externalAssets ? resources.join(' ') : ''}`.trim(),
     `img-src data: blob: ${resources.join(' ')}`.trim(),
     `font-src data: ${resources.join(' ')}`.trim(),
     `media-src data: blob: ${resources.join(' ')}`.trim(),
@@ -166,8 +175,8 @@ function buildCsp(csp: McpAppCsp | undefined): string {
   ].join('; ');
 }
 
-function withCsp(htmlSource: string, csp: McpAppCsp | undefined): string {
-  const meta = `<meta http-equiv="Content-Security-Policy" content="${buildCsp(csp)}">`;
+function withCsp(htmlSource: string, csp: McpAppCsp | undefined, externalAssets = false): string {
+  const meta = `<meta http-equiv="Content-Security-Policy" content="${buildCsp(csp, externalAssets)}">`;
   // Trusted policy bytes must precede every caller-controlled token. Searching for a textual
   // <head> lets a decoy inside a comment or script string capture the insertion, leaving the real
   // document unrestricted. The HTML parser implicitly creates the head for this leading meta;
@@ -220,6 +229,13 @@ function permissionPolicy(permissions: McpAppPermissions | undefined): string {
  * snapshots. Create and reassign a new resource record after changes.
  *
  * @customElement lr-mcp-app
+ * Set protocol to mcp-apps for the MCP Apps 2026-01-26 host subset: negotiation, tool data,
+ * host context, capability-gated tool/resource requests, inline display fallback, cancellation
+ * and graceful teardown. This mode uses a
+ * trusted outer proxy; the executable app uses standard JSON-RPC window messages inside its own
+ * opaque sandbox. The default legacy bridge remains separate.
+ * @event lr-mcp-initialized - The official app completed negotiation. `detail: { uri, frameGeneration }`.
+ * @event lr-mcp-request - A capability-gated official request. `detail: { requestId, requestToken, method, params, frameGeneration, signal }`.
  * @event lr-mcp-ready - The frame loaded. `detail: { uri }`.
  * @event lr-mcp-tool-call - The frame requested a tool.
  *   `detail: { requestId?, name, args, frameGeneration }`. `frameGeneration` is an opaque id for
@@ -250,12 +266,17 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
 
-  protected static override readonly ownedCollectionProperties = Object.freeze(['resource']);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['resource', 'hostCapabilities']);
 
   static override styles = [LyraElement.styles, styles];
 
   /** Clone-owned resource snapshot. Reassign a new record after changing its CSP collections. */
   @property({ attribute: false }) resource: McpAppResource | null = null;
+  /** Transport dialect. Changing it remounts the app; legacy remains the default. */
+  @property() protocol: McpAppProtocol = 'legacy';
+  /** Clone-owned capabilities for official negotiation. Empty denies external actions; changing
+   * these capabilities remounts the app so grants cannot drift during a session. */
+  @property({ attribute: false }) hostCapabilities: McpAppHostCapabilities = {};
   /** Initial frame height: a number of pixels, or a CSS length in `px`, `rem`, `em`, `vw` or `vh`
    *  (resolved when set). Clamped to at least 120px and at most `max-height`; an unresolvable value
    *  uses the 320px default. */
@@ -272,6 +293,9 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
   @state() private loaded = false;
   @state() private frameHeight = 320;
   private frameGeneration = 0;
+  private protocolSession?: McpAppSession;
+  private deliveredEnvironment?: { locale: string; direction: 'ltr' | 'rtl' };
+  private pendingEnvironment?: { locale: string; direction: 'ltr' | 'rtl' };
   @query('iframe') private frame?: HTMLIFrameElement;
   private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite', 'assertive'] });
   private suppressNextResourceAnnouncement = true;
@@ -295,6 +319,9 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
   }
 
   private closeFramePort(): void {
+    this.deliveredEnvironment = undefined;
+    this.protocolSession?.close();
+    this.protocolSession = undefined;
     this.framePort?.removeEventListener('message', this.onPortMessage);
     this.framePort?.close();
     this.framePort = undefined;
@@ -328,7 +355,7 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
       resolveResource(changed.get('resource') as McpAppResource | null | undefined),
       resolveResource(this.resource),
     );
-    if (changed.has('resource') && !keptFrame) {
+    if ((changed.has('resource') && !keptFrame) || changed.has('protocol') || changed.has('hostCapabilities')) {
       if (this.hasUpdated && !this.suppressNextResourceAnnouncement) {
         const wasAvailable = this.resourceAvailable(
           changed.get('resource') as McpAppResource | null | undefined,
@@ -350,11 +377,20 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
     if ((changed.has('resource') && !keptFrame) || changed.has('height') || changed.has('maxHeight')) {
       this.frameHeight = finiteRange(this.heightPx(), 320, 120, this.maxHeightPx());
     }
+    this.pendingEnvironment = this.loaded ? { locale: this.effectiveLocale, direction: this.effectiveDirection } : undefined;
   }
 
   protected override updated(_changed: PropertyValues<this>): void {
     super.updated(_changed);
     this.suppressNextResourceAnnouncement = false;
+    const context = this.pendingEnvironment;
+    this.pendingEnvironment = undefined;
+    if (this.loaded && this.deliveredEnvironment && context) {
+      if (context.locale !== this.deliveredEnvironment.locale || context.direction !== this.deliveredEnvironment.direction) {
+        this.deliveredEnvironment = context;
+        this.postHostContext(context);
+      }
+    }
   }
 
   private createFrameNonce(): string {
@@ -388,18 +424,39 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
     this.framePort.start();
     this.loaded = true;
     this.bootstrapPort = { frame, port: port.port2 };
+    this.deliveredEnvironment = { locale: this.effectiveLocale, direction: this.effectiveDirection };
     this.postHostContext({
       resource: {
         uri: resource.uri,
         metadata: resource.resource.metadata,
       },
-      locale: this.effectiveLocale,
-      direction: this.effectiveDirection,
+      ...this.deliveredEnvironment,
     });
     // A test or consumer subclass may override postHostContext(). Do not leave an untransferred
     // port entangled with the host in that case.
     this.bootstrapPort?.port.close();
     this.bootstrapPort = undefined;
+    if (this.protocol === 'mcp-apps') {
+      this.protocolSession = new McpAppSession({
+        generation: frameGeneration,
+        capabilities: this.hostCapabilities,
+        context: { locale: this.effectiveLocale, displayMode: 'inline', availableDisplayModes: ['inline'] },
+        send: message => this.post({ channel: 'lyra-mcp-app', version: 1, type: 'mcp-apps', message }),
+        request: detail => this.emit('lr-mcp-request', detail),
+        initialized: () => this.emit('lr-mcp-initialized', { uri: resource.uri, frameGeneration }),
+        resize: requested => {
+          const height = finiteRange(requested, this.heightPx(), 120, this.maxHeightPx());
+          this.frameHeight = height;
+          this.emit('lr-mcp-resize', { height });
+        },
+        log: (level, value) => this.emit('lr-mcp-log', { level, value }),
+      });
+      this.post({ channel: 'lyra-mcp-app', version: 1, type: 'mcp-resource',
+        title: this.frame?.title ?? this.localize('mcpAppLabel'),
+        allow: permissionPolicy(resource.resource.permissions),
+        ...(resource.html ? { html: withCsp(resource.html, resource.resource.csp, true) } : { src: resource.src }),
+      });
+    }
     this.emit('lr-mcp-ready', { uri: resource.uri });
   }
 
@@ -424,6 +481,11 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
     const message = record(data);
     if (typeof this.frameNonce !== 'string' || message?.['nonce'] !== this.frameNonce) return;
     if (message?.['channel'] !== 'lyra-mcp-app' || message['version'] !== 1 || typeof message['type'] !== 'string') return;
+    if (this.protocol === 'mcp-apps') {
+      if (message['type'] === 'mcp-apps') this.protocolSession?.receive(message['message']);
+      else if (message['type'] === 'mcp-navigation') this.invalidateFrame();
+      return;
+    }
     switch (message['type']) {
       case 'resize': {
         const requested = typeof message['height'] === 'number' ? message['height'] : this.heightPx();
@@ -476,14 +538,40 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
     this.framePort?.postMessage({ ...message, nonce });
   }
 
+  /** Publish host context to the current app; official sessions retain updates during initialization.
+   * Locale and direction changes also publish automatically without replacing the loaded frame. */
   postHostContext(context: unknown): void {
     const bootstrap = this.bootstrapPort;
     this.bootstrapPort = undefined;
+    if (this.protocol === 'mcp-apps' && !bootstrap) {
+      const params = mcpRecord(context);
+      if (params) this.protocolSession?.updateHostContext(params);
+      return;
+    }
     this.post(
       { channel: 'lyra-mcp-app', version: 1, type: 'host-context', context },
       bootstrap?.frame,
       bootstrap?.port,
     );
+  }
+
+  /** Replies to one official request instance. Return its requestToken and frameGeneration;
+   * unknown, cancelled, duplicate and stale replies are ignored even when wire IDs are reused. */
+  postMcpResponse(requestId: McpAppRequestId, options: McpAppResponseOptions): boolean {
+    return this.protocolSession?.respond(requestId, options) ?? false;
+  }
+
+  /** Sends supported official tool/context notifications only after the app signals initialized. */
+  postMcpNotification(method: McpAppNotificationMethod, params: Record<string, unknown>, frameGeneration: number): boolean {
+    if (frameGeneration !== this.frameGeneration) return false;
+    return this.protocolSession?.notify(method, params) ?? false;
+  }
+
+  /** Gives an initialized official app up to one second to acknowledge resource teardown.
+   * Returns whether it acknowledged; the session then rejects new requests. Remove or replace
+   * the resource after awaiting this method. Disconnection instead closes immediately. */
+  teardownApp(): Promise<boolean> {
+    return this.protocolSession?.teardownResource() ?? Promise.resolve(false);
   }
 
   /** Resolves a prior `lr-mcp-tool-call`. The required frame generation binds the asynchronous
@@ -511,6 +599,19 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
     });
   }
 
+  /** The ancestor policy governs navigation of the app frame before any network request.
+   * Inline srcdoc frames also inherit it, so approved nested frames keep the same allowlist. */
+  private proxyDocument(resource: ResolvedMcpAppResource): string {
+    let policy = resource.resource.csp;
+    if (resource.src) {
+      let origin: string | undefined;
+      try { origin = new URL(resource.src, this.ownerDocument.baseURI).origin; }
+      catch { /* An unresolvable remote URL gets no frame navigation grant. */ }
+      policy = { frameDomains: origin ? [origin] : [] };
+    }
+    return withCsp(MCP_APP_PROXY_DOCUMENT, policy, true);
+  }
+
   override render(): TemplateResult {
     const resource = resolveResource(this.resource);
     if (!resource) {
@@ -532,8 +633,8 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
           sandbox="allow-forms allow-scripts"
           referrerpolicy="no-referrer"
           allow=${permissionPolicy(resource.resource.permissions)}
-          src=${resource.src ?? nothing}
-          .srcdoc=${resource.html ? withCsp(resource.html, resource.resource.csp) : nothing}
+          src=${this.protocol === 'mcp-apps' ? nothing : resource.src ?? nothing}
+          .srcdoc=${this.protocol === 'mcp-apps' ? this.proxyDocument(resource) : resource.html ? withCsp(resource.html, resource.resource.csp) : nothing}
           style=${styleMap({ height: `${this.frameHeight}px` })}
           @load=${(event: Event) => this.onLoad(event, frameGeneration, resource)}
         ></iframe>`,

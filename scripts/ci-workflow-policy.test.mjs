@@ -64,6 +64,52 @@ test('the complete DOCX group runs once per engine with Firefox owned by platfor
   }
 });
 
+test('generated UI has one browser and durable-host qualification per engine plus built static contracts', () => {
+  const workflow = read('.github/workflows/ci.yml');
+  const platform = job(workflow, 'platform-contracts');
+  const matrix = platform.slice(platform.indexOf('        include:\n'), platform.indexOf('    runs-on:'));
+  const rows = [...matrix.matchAll(/^ {10}- browser: ([^\n]+)\n([\s\S]*?)(?=^ {10}- browser:|$(?![\s\S]))/gmu)]
+    .map(([, browser, body]) => ({ browser, install_browser: body.match(/^ {12}install_browser: (\S+)$/mu)?.[1], shard_index: Number(body.match(/^ {12}shard_index: (\d+)$/mu)?.[1]) }));
+  assert.equal(rows.length, 6, 'test all real matrix legs, including branded channels and both Firefox shards');
+  const steps = platform.split(/\n(?= {6}- )/u);
+  const matches = steps.filter(step => step.startsWith('      - name: Qualify generated views and the saved-dashboard host\n'));
+  assert.equal(matches.length, 1);
+  const step = matches[0];
+  const condition = step.match(/^ {8}if: (.+)$/mu)?.[1];
+  assert.ok(condition);
+  const owners = rows.filter(row => runInNewContext(condition, { matrix: row }, { timeout: 100 })).map(row => `${row.install_browser}/${row.shard_index}`);
+  assert.deepEqual(owners, ['chromium/1', 'firefox/2', 'webkit/1']);
+  const download = steps.find(candidate => candidate.includes("name: Download this run's lyra-ui build for the DOCX editor"));
+  assert.equal(download.match(/^ {8}if: (.+)$/mu)?.[1], condition, 'the shared UI declarations exist in every selected leg');
+  assert.ok(steps.indexOf(download) < steps.indexOf(step));
+  assert.match(step, /WTR_BROWSER: \$\{\{ matrix\.install_browser \}\}/u);
+  assert.match(step, /WTR_STRICT_CONSOLE: "1"/u);
+  assert.ok(step.indexOf('lyra-translations assemble') >= 0, 'real locale catalog tests require the assembled companion');
+  assert.ok(step.indexOf('lyra-translations assemble') < step.indexOf('lyra-gen test:browser'));
+  assert.ok(step.indexOf('lyra-gen build') < step.indexOf('lyra-gen test:browser'));
+  for (const command of ['test:browser', 'test:saved-dashboard']) assert.equal(platform.split(`pnpm --filter @aceshooting/lyra-gen ${command}`).length - 1, 1);
+  const visuals = steps.filter(candidate => candidate.startsWith('      - name: Compare recorded generated-view visual baselines\n'));
+  assert.equal(visuals.length, 1);
+  const visualCondition = visuals[0].match(/^ {8}if: (.+)$/mu)?.[1];
+  const visualOwners = rows.filter(row => runInNewContext(visualCondition, { matrix: row }, { timeout: 100 })).map(row => `${row.install_browser}/${row.shard_index}`);
+  assert.deepEqual(visualOwners, ['chromium/1']);
+  assert.ok(steps.indexOf(visuals[0]) > steps.indexOf(step), 'visuals run after the companion build');
+  assert.match(visuals[0], /lyra-gen test:visual --output=/u);
+  assert.equal(platform.split('pnpm --filter @aceshooting/lyra-gen test:visual').length - 1, 1);
+  const staticJob = job(workflow, 'static-checks');
+  const tests = staticJob.indexOf("pnpm --filter '!@aceshooting/lyra-ui' -r test");
+  assert.ok(tests >= 0);
+  const assemble = staticJob.indexOf('pnpm --filter @aceshooting/lyra-translations assemble');
+  assert.ok(assemble > staticJob.indexOf('path: packages/lyra-ui/dist') && assemble < tests, 'static type checks have built locale package exports');
+  for (const command of ['check:catalog', 'check:examples', 'check:bundles']) assert.ok(staticJob.indexOf(`pnpm --filter @aceshooting/lyra-gen ${command}`) > tests, `${command} follows the package build`);
+  assert.doesNotMatch(staticJob, /lyra-gen test:(?:browser|saved-dashboard)/u);
+  const local = read('scripts/ci.sh');
+  const localAssemble = local.indexOf('pnpm --filter @aceshooting/lyra-translations assemble');
+  assert.ok(localAssemble > local.indexOf('pnpm build') && localAssemble < local.indexOf('pnpm --filter @aceshooting/lyra-gen lint'), 'local checks assemble catalogs after the UI build');
+  assert.match(local, /for gen_browser in chromium firefox webkit; do/u);
+  for (const command of ['check:catalog', 'check:examples', 'check:bundles', 'test:browser', 'test:saved-dashboard', 'test:visual']) assert.ok(local.includes(`pnpm --filter @aceshooting/lyra-gen ${command}`));
+});
+
 test('each of the seven coverage flags owns one complete package report and a scoped README badge', () => {
   const packages = ['lyra-ui', 'lyra-3d', 'lyra-map', 'lyra-docs', 'lyra-flags', 'lyra-ide', 'lyra-translations'];
   const config = read('codecov.yml');

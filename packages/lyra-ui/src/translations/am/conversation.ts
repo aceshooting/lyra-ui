@@ -8,6 +8,13 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 const strings: LyraLocaleStrings = {
   streamInterrupted: 'ዥረቱ ተቋርጧል',
   streamResume: 'ቀጥል',
+  genViewEmpty: 'የሚታይ የተፈጠረ እይታ የለም።',
+  genViewInvalid: 'ይህን የተፈጠረ እይታ ማሳየት አይቻልም።',
+  genViewLoading: 'ክፍል በመጫን ላይ…',
+  genViewLoadFailed: 'ይህን ክፍል መጫን አልተቻለም።',
+  genViewInvalidState: 'የዚህን መስክ እሴት መጠቀም አይቻልም።',
+  genViewActionDenied: 'ይህ እርምጃ አይገኝም።',
+  genViewConfirmationRequired: 'ይህ እርምጃ ከመተግበሪያው ማረጋገጫ ይፈልጋል።',
   chatViewportLabel: 'ውይይት',
   newMessagesCount: {
     one: '{count} አዲስ መልዕክት',

@@ -27,6 +27,11 @@ removing `label` never changes the dropzone text. Disabled file removal buttons,
 including fieldset disablement, retain resting foreground and background under hover and press;
 enabled buttons retain pointer feedback.
 
+The auto-sized host includes the label, dropzone, selected files and visible feedback, including
+inside intrinsic grid rows. A definite host height (such as an absolutely positioned full-area
+drop target) gives the dropzone the remaining space after the other field content; leave enough
+height for that content and the dropzone's minimum size.
+
 **Properties:**
 
 - `multiple: boolean = false` (reflected) — `multiple="false"` reads as false, like

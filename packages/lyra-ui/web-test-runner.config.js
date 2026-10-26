@@ -13,6 +13,7 @@ import { esbuildPlugin } from '@web/dev-server-esbuild';
 import { scaleReporter } from './scripts/wtr-scale-reporter.mjs';
 import { timingReporter } from './scripts/wtr-timing-reporter.mjs';
 import { failureReporter } from './scripts/wtr-failure-reporter.mjs';
+import { mcpAppSdkFixturePlugin } from './scripts/mcp-app-sdk-fixture.mjs';
 import { completeJunitReporter } from './scripts/wtr-junit-reporter.mjs';
 import { waitUntilPollIntervalPlugin } from './scripts/wait-until-poll-interval.mjs';
 
@@ -537,6 +538,7 @@ export default {
   // slow.
   browserStartTimeout: 90000,
   plugins: [
+    mcpAppSdkFixturePlugin(),
     esbuildPlugin({ ts: true, json: true, target: 'es2022', tsconfig: 'tsconfig.json' }),
     sourceDiagnosticsPlugin,
     waitUntilPollIntervalPlugin,

@@ -112,12 +112,58 @@ interface OwnedValue<T> {
   bytes: number;
 }
 
+interface RetainedMetrics {
+  bytes: number;
+  nodes: number;
+  depth: number;
+  textBytes?: number;
+  textTail?: number;
+}
+
 interface EventCursor {
   generation: number;
   sequence: number;
 }
 
 const usageByState = new WeakMap<AgentStreamState, ResourceUsage>();
+const metricsByValue = new WeakMap<object, RetainedMetrics>();
+const ownedMessageLimits = new WeakMap<ChatMessage, Readonly<AgentStreamLimits>>();
+const utf8Encoder = new TextEncoder();
+
+// These metrics describe already-owned snapshot values: each value costs eight bytes, object
+// keys and strings cost their UTF-8 length, and primitive leaves have relative depth zero.
+// Capture them once at ownership boundaries, then replace only the changed branch on a delta.
+function retainedMetrics(value: unknown): RetainedMetrics {
+  if (value !== null && typeof value === 'object') {
+    const cached = metricsByValue.get(value);
+    if (cached) return cached;
+    const metrics: RetainedMetrics = { bytes: 8, nodes: 1, depth: 0 };
+    for (const [key, child] of Object.entries(value)) {
+      const childMetrics = retainedMetrics(child);
+      metrics.bytes += childMetrics.bytes + (Array.isArray(value) ? 0 : utf8Encoder.encode(key).byteLength);
+      metrics.nodes += childMetrics.nodes;
+      metrics.depth = Math.max(metrics.depth, childMetrics.depth + 1);
+      if (key === 'text' && typeof child === 'string') {
+        metrics.textBytes = childMetrics.bytes - 8;
+        metrics.textTail = child.charCodeAt(child.length - 1);
+      }
+    }
+    metricsByValue.set(value, metrics);
+    return metrics;
+  }
+  return { bytes: 8 + (typeof value === 'string' ? utf8Encoder.encode(value).byteLength : 0), nodes: 1, depth: 0 };
+}
+
+function appendedTextMetrics(previous: RetainedMetrics | undefined, delta: string): { bytes: number; tail: number } {
+  const first = delta.charCodeAt(0);
+  const last = previous?.textTail ?? Number.NaN;
+  // Two isolated surrogates cost three bytes each; joining them produces one four-byte scalar.
+  const paired = last >= 0xd800 && last <= 0xdbff && first >= 0xdc00 && first <= 0xdfff;
+  return {
+    bytes: (previous?.textBytes ?? 0) + utf8Encoder.encode(delta).byteLength - (paired ? 2 : 0),
+    tail: delta.length ? delta.charCodeAt(delta.length - 1) : last,
+  };
+}
 const FORBIDDEN_PATH_SEGMENTS = new Set(['__proto__', 'prototype', 'constructor']);
 const ARRAY_INDEX = /^(0|[1-9][0-9]*)$/;
 const MESSAGE_ROLES = new Set<ChatMessageRole>(['user', 'assistant', 'system']);
@@ -305,7 +351,10 @@ function validMessage(value: unknown, limits: Readonly<AgentStreamLimits>): valu
 
 function ownedMessage(value: unknown, limits: Readonly<AgentStreamLimits>): OwnedValue<ChatMessage> | null {
   const owned = ownValue<ChatMessage>(value, limits);
-  return owned && validMessage(owned.value, limits) ? owned : null;
+  if (!owned || !validMessage(owned.value, limits)) return null;
+  retainedMetrics(owned.value);
+  ownedMessageLimits.set(owned.value, limits);
+  return owned;
 }
 
 function ownedTool(value: unknown, limits: Readonly<AgentStreamLimits>): OwnedValue<ToolInvocation> | null {
@@ -682,7 +731,7 @@ export function reduceAgentStream(state: AgentStreamState, event: AgentStreamEve
       if (messageIndex < 0 && state.messages.length >= state.limits.maxMessages) {
         return failEvent(state, cursor, 'Message count exceeds the configured limit.', 'stream_limit_exceeded');
       }
-      const current = messageIndex >= 0
+      const retained: ChatMessage = messageIndex >= 0
         ? state.messages[messageIndex]!
         : {
             id: source['messageId'],
@@ -690,6 +739,12 @@ export function reduceAgentStream(state: AgentStreamState, event: AgentStreamEve
             status: 'streaming',
             parts: [],
           };
+      // External/restored states have no ownership proof. Validate and own that message once
+      // before using cached metrics or sharing any of its nested values.
+      const current = ownedMessageLimits.get(retained) === state.limits
+        ? retained
+        : ownedMessage(retained, state.limits)?.value;
+      if (!current) return failEvent(state, cursor, 'Updated message has an invalid shape.', 'invalid_stream_event');
       const parts = [...(current.parts ?? [])];
       const partIndex = parts.findIndex((part) => part.id === source['partId']);
       const previous = partIndex >= 0 ? parts[partIndex] : undefined;
@@ -704,17 +759,39 @@ export function reduceAgentStream(state: AgentStreamState, event: AgentStreamEve
       if (text.length > state.limits.maxTextCharactersPerPart) {
         return failEvent(state, cursor, 'Message text exceeds the configured limit.', 'stream_limit_exceeded');
       }
-      const part: MessagePart = source['partType'] === 'reasoning'
-        ? { id: source['partId'], type: 'reasoning', text, state: 'streaming' }
-        : { id: source['partId'], type: 'text', text, state: 'streaming' };
+      const priorMetrics = previous ? retainedMetrics(previous) : undefined;
+      const appended = appendedTextMetrics(priorMetrics, source['delta']);
+      const part = Object.assign(Object.create(null) as MessagePart, {
+        id: source['partId'], type: source['partType'], text: '', state: 'streaming',
+      });
+      const partMetrics = retainedMetrics(part);
+      partMetrics.bytes += appended.bytes;
+      partMetrics.textBytes = appended.bytes;
+      partMetrics.textTail = appended.tail;
+      // The empty text above measures only the fixed replacement shape. Never re-encode the
+      // concatenated string, including when its last surrogate came from a previous event.
+      if (part.type === 'text' || part.type === 'reasoning') part.text = text;
+      const currentMetrics = retainedMetrics(current);
+      // Introducing parts adds its five-byte key and one eight-byte array node.
+      const messageMetrics: RetainedMetrics = {
+        bytes: currentMetrics.bytes + partMetrics.bytes - (priorMetrics?.bytes ?? 0) + (current.parts ? 0 : 13),
+        nodes: currentMetrics.nodes + partMetrics.nodes - (priorMetrics?.nodes ?? 0) + (current.parts ? 0 : 1),
+        depth: Math.max(currentMetrics.depth, partMetrics.depth + 2),
+      };
+      if (messageMetrics.bytes > state.limits.maxSnapshotBytes
+        || messageMetrics.nodes > state.limits.maxSnapshotNodes
+        || messageMetrics.depth > state.limits.maxSnapshotDepth) {
+        return failEvent(state, cursor, 'Updated message has an invalid shape.', 'invalid_stream_event');
+      }
       if (partIndex < 0) parts.push(part);
       else parts[partIndex] = part;
-      const message = ownedMessage({ ...current, parts }, state.limits);
-      if (!message) return failEvent(state, cursor, 'Updated message has an invalid shape.', 'invalid_stream_event');
+      const message = Object.assign(Object.create(null) as ChatMessage, current, { parts });
+      metricsByValue.set(message, messageMetrics);
+      ownedMessageLimits.set(message, state.limits);
       const messages = [...state.messages];
-      if (messageIndex < 0) messages.push(message.value);
-      else messages[messageIndex] = message.value;
-      replaceUsageEntry(usage, 'messages', message.value.id, message.bytes);
+      if (messageIndex < 0) messages.push(message);
+      else messages[messageIndex] = message;
+      replaceUsageEntry(usage, 'messages', message.id, messageMetrics.bytes);
       return commit(state, { ...state, messages }, usage, cursor);
     }
     case 'message-complete': {

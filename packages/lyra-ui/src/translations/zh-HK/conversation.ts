@@ -7,6 +7,8 @@ import { registerLyraLocaleDelta } from '../../internal/localization-runtime.js'
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  genViewLoading: '正在載入組件…',
+  genViewLoadFailed: '無法載入此組件。',
   sendMessage: '發送訊息',
   chatSending: '發送中…',
   chatFailedToSend: '發送失敗',

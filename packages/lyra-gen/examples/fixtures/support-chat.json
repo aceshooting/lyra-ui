@@ -1,0 +1,102 @@
+{
+  "id": "support-chat",
+  "prompt": "Show a support conversation and a labelled composer bound to the draft.",
+  "view": {
+    "version": "1",
+    "catalog": {
+      "id": "lyra-reviewed",
+      "version": "1"
+    },
+    "surfaceId": "support-chat",
+    "revision": 0,
+    "root": {
+      "id": "support",
+      "type": "stack",
+      "children": [
+        {
+          "id": "title",
+          "type": "heading",
+          "text": "Support conversation"
+        },
+        {
+          "id": "conversation",
+          "type": "chat-viewport",
+          "props": {
+            "accessibleLabel": "Support messages",
+            "live": "polite"
+          },
+          "children": [
+            {
+              "id": "question",
+              "type": "chat-message",
+              "props": {
+                "messageRole": "user",
+                "status": "sent"
+              },
+              "text": "When does the library open?"
+            },
+            {
+              "id": "answer",
+              "type": "chat-message",
+              "props": {
+                "messageRole": "assistant",
+                "status": "sent"
+              },
+              "text": "The library opens at 09:00."
+            }
+          ]
+        },
+        {
+          "id": "composer",
+          "type": "chat-composer",
+          "props": {
+            "accessibleLabel": "Write a support message",
+            "placeholder": "Your message",
+            "maxLength": 1000
+          },
+          "bindings": {
+            "value": "/draft"
+          }
+        }
+      ]
+    }
+  },
+  "markup": "<stack id=\"support\"><heading id=\"title\">Support conversation</heading><chat-viewport id=\"conversation\" accessibleLabel=\"Support messages\" live=\"polite\"><chat-message id=\"question\" messageRole=\"user\" status=\"sent\">When does the library open?</chat-message><chat-message id=\"answer\" messageRole=\"assistant\" status=\"sent\">The library opens at 09:00.</chat-message></chat-viewport><chat-composer id=\"composer\" accessibleLabel=\"Write a support message\" placeholder=\"Your message\" maxLength={1000} bindings={{\"value\":\"/draft\"}}></chat-composer></stack>",
+  "oracle": {
+    "nodes": [
+      {
+        "id": "conversation",
+        "type": "chat-viewport",
+        "props": {
+          "accessibleLabel": "Support messages"
+        }
+      },
+      {
+        "id": "question",
+        "type": "chat-message",
+        "props": {
+          "messageRole": "user"
+        },
+        "text": "When does the library open?"
+      },
+      {
+        "id": "answer",
+        "type": "chat-message",
+        "props": {
+          "messageRole": "assistant"
+        },
+        "text": "The library opens at 09:00."
+      },
+      {
+        "id": "composer",
+        "type": "chat-composer",
+        "props": {
+          "accessibleLabel": "Write a support message"
+        },
+        "bindings": {
+          "value": "/draft"
+        }
+      }
+    ]
+  }
+}

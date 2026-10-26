@@ -4237,12 +4237,7 @@ describe("lr-file-input custom validators", () => {
 });
 
 it("fills a host stretched to a definite block size by an absolutely positioned ancestor", async () => {
-  // Regression test: used as a full-area drop overlay (host absolutely positioned with
-  // inset: 0 over a panel of known size), the dropzone must fill the host instead of
-  // collapsing to its own intrinsic content height. block-size: 100% has to chain through
-  // every block-level wrapper between the host and the dropzone button -- form-control,
-  // the dropzone grid, and the button itself -- or the fill breaks at whichever one is
-  // missing it and the visible drop surface shrinks to a content-sized band.
+  // An unlabelled full-area drop target gives the complete allocation to its dropzone.
   const wrapper = (await fixture(html`
     <div style="position: relative; inline-size: 300px; block-size: 400px;">
       <lr-file-input style="position: absolute; inset: 0;"></lr-file-input>
@@ -4271,9 +4266,7 @@ it("fills a host stretched to a definite block size by an absolutely positioned 
 });
 
 it("keeps a labelled dropzone inside a definite-height host instead of overflowing it", async () => {
-  // The fill chain runs block-size: 100% through [part="form-control"], which also holds the
-  // label and hint. If the dropzone took 100% of that box, label + hint + dropzone would sum to
-  // more than the host and spill out the bottom of a full-area overlay.
+  // The label and hint share the allocation with the growing dropzone.
   const wrapper = await fixture<HTMLDivElement>(html`
     <div style="position: relative; inline-size: 400px; block-size: 500px">
       <lr-file-input
@@ -4291,12 +4284,13 @@ it("keeps a labelled dropzone inside a definite-height host instead of overflowi
     formControl.getBoundingClientRect().height,
     "label + hint + dropzone stay within the host"
   ).to.be.at.most(el.getBoundingClientRect().height + 1);
+  for (const part of ['dropzone', 'hint']) {
+    const rect = el.shadowRoot!.querySelector(`[part="${part}"]`)!.getBoundingClientRect();
+    expect(rect.bottom, `${part} stays within the host`).to.be.at.most(el.getBoundingClientRect().bottom + 1);
+  }
 });
 
-it("leaves an ordinary auto-height host content-sized, so the fill chain is a no-op by default", async () => {
-  // Explicit no-regression guard for the unconditional block-size: 100% chain: a percentage
-  // block size against an auto-height ancestor must resolve to auto, leaving the default
-  // content-sized band exactly as it was.
+it("leaves an ordinary auto-height host content-sized", async () => {
   const el = await fixture<LyraFileInput>(html`<lr-file-input></lr-file-input>`);
   await el.updateComplete;
 

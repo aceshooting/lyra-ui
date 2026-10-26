@@ -28,3 +28,13 @@ test('blocked and nonexistent package routes stay unresolved', () => {
     assert.equal(plugin.resolveId(specifier), undefined);
   }
 });
+
+test('generated UI public routes share the same source registration and reject private paths', () => {
+  const plugin = sourcePackageExportsPlugin();
+  assert.equal(plugin.resolveId('@aceshooting/lyra-gen/gen-view.js'),
+    fileURLToPath(new URL('../packages/lyra-gen/src/gen-view.ts', import.meta.url)));
+  for (const specifier of ['@aceshooting/lyra-gen/../package.js', '@aceshooting/lyra-gen/missing.js',
+    '@aceshooting/lyra-gen/schema.test.js', '@aceshooting/lyra-gen/src/types.ts']) {
+    assert.equal(plugin.resolveId(specifier), undefined);
+  }
+});

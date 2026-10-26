@@ -2,11 +2,13 @@
 
 This public capability backlog accompanies the [architecture and staged roadmap](generative-ui.md),
 [evaluation and qualification strategy](generative-ui-evaluation.md), and
-[website release plan](generative-ui-website.md). It describes planned work, not implemented
-features or a release promise. Every entry is **planned / unstarted**; experiments and deferred
-capabilities are labeled explicitly. Priority applies within the stated stage, not as a calendar estimate.
+[website release plan](generative-ui-website.md). Implementation and focused qualification are
+underway. The snapshot below links actual source and remaining limits; the detailed rows retain
+their full acceptance criteria and are not a blanket completion or release claim. Experiments and
+deferred capabilities remain labeled explicitly. Priority applies within the stated stage, not
+as a calendar estimate.
 
-`@aceshooting/lyra-gen` is planned as an independent package in `packages/lyra-gen`. It depends on the
+`@aceshooting/lyra-gen` now exists as an unpublished experimental package in `packages/lyra-gen`. It depends on the
 qualified public Lyra UI surface; `lyra-ui` never imports it. Lyra Markup is a restricted,
 validated model-facing syntax, not permission to render arbitrary HTML. Stable widget-v2
 contracts remain fail-closed. Safe-region recovery never overrides identity, security or resource
@@ -24,6 +26,39 @@ cross-cutting deliverables without duplicating those chapters' identifiers. Exis
 hooks are reused before adding new APIs. A Lyra-owned A2UI processor is the selected direction;
 supporting dependency selection and the Markup parser remain evidence-based decisions. Lyra Gen
 takes priority over new lyra-3d and lyra-docs features while maintenance continues.
+
+## Current implementation snapshot
+
+This is a source inventory for the experimental `0.1.0` work, not an accepted-release checklist.
+Focused Node, type, catalog and browser checks exist and have been exercised; final integrated
+qualification remains pending. Test code links describe coverage, while committed experiment
+reports describe only their explicitly measured scope. The [package guide](../../packages/lyra-gen/README.md)
+owns current API usage and the [compatibility policy](../../packages/lyra-gen/docs/compatibility.md)
+defines stable-release criteria.
+
+| Backlog area | Current implementation and scoped evidence | Remaining boundary |
+| --- | --- | --- |
+| FIX-01–06, FIX-08–12 | [UI adapters](../../packages/lyra-ui/src/ai/adapters/), [message-part integration](../../packages/lyra-ui/src/components/conversation/message-parts/message-parts.test.ts), [incremental reducer tests](../../packages/lyra-ui/src/ai/runtime-incremental.property.test.ts), companion structured values and diagnostics | Stable widget-v2 defaults remain unchanged; fair scaling and final regression qualification remain separate. |
+| CAT-01–07, CAT-09–12; DX-05 | [Reviewed catalog](../../packages/lyra-gen/src/catalog.ts), [named presets](../../packages/lyra-gen/docs/catalog-presets.md), [metadata checks](../../packages/lyra-gen/scripts/check-catalog.mjs), [typed catalogs](../../packages/lyra-gen/src/typed-catalog.ts), [prompt profiles](../../packages/lyra-gen/src/prompts.ts), [task examples](../../packages/lyra-gen/src/examples.ts) and converters | Metadata checks record explicit generic/adapter limitations. Provider schema acceptance, preset/example integration, few-shot ablations and provider token results retain separate qualification. |
+| FMT-01–09, FMT-12; IDEA-05 | [Restricted grammar](../rfcs/0006-lyra-markup.md), [Markup corpus](../../packages/lyra-gen/test/fixtures/markup.ts), [JSON streams and keyed templates](../../packages/lyra-gen/docs/structured-input.md), source ranges, scoped patches and safe emitter | Whole documents commit after validation; fenced islands commit independently. Raw-block detection, expression execution and guessed identities are unsupported. |
+| OpenUI experiment (FMT-11) | [Pinned OpenUI experiment](../../packages/lyra-gen/docs/openui-experiment.md) with reproducible parser, classification, license, telemetry and bundle observations | Experiment completed with a no-go runtime-importer decision. Conditional importer delivery remains unimplemented. |
+| RUN-01–14 | [Keyed renderer and cooperative preparation](../../packages/lyra-gen/docs/rendering.md), [runtime/state tests](../../packages/lyra-gen/src/runtime.test.ts), [form/readiness browser tests](../../packages/lyra-gen/test/browser/gen-view.test.ts), [stored-answer migrations](../../packages/lyra-gen/docs/stored-answer-migrations.md), host references/functions and native templates | Renderer readiness is not remote-data readiness. Admission and atomic commit remain synchronous. Static server snapshots use explicit client restoration, not in-place hydration. |
+| CHAT-01–09 | [Controller and browser composition](../../packages/lyra-gen/docs/interactive-chat.md), [real chat workflow tests](../../packages/lyra-gen/test/browser/chat.test.ts): scroll, input/focus, interruption, suggestions, sources, provenance and panel movement | No model transport is bundled. Logical source release is implemented; retained heap measurements and human assistive-technology review are separate. |
+| DASH-01–07, DASH-09–23 | [Live grid example](../../packages/lyra-gen/examples/dashboard.ts), [shared filters/drilldown/paging composition](../../packages/lyra-gen/docs/dashboard-composition.md), [grid/data/export browser cases](../../packages/lyra-gen/test/browser/dashboard.test.ts), [saved HTTP host](../../packages/lyra-gen/examples/saved-dashboard/README.md) and [multi-session host test](../../packages/lyra-gen/test/host/saved-dashboard.test.mjs) | The loopback host exercises file-backed persistence and fixture permissions, not production identity or hosting. Large-data performance and full workload qualification remain separate. |
+| IOP-01, IOP-03–05 | [Owned stable A2UI profile](../../packages/lyra-gen/docs/a2ui.md), [extended-catalog browser lifecycle](../../packages/lyra-gen/test/browser/a2ui.test.ts), pinned fixtures and [state/model/action reference results](../../packages/lyra-gen/test/fixtures/a2ui/v0.9.1/reference-results.json) | The reference report excludes DOM, layout, accessibility and full basic-catalog coverage, and records a normative/reference divergence. The browser cohort qualifies the declared Lyra profile separately. AG-UI/A2A binding acceptance remains unqualified and default advertising stays empty. |
+| FIX-07, IOP-06–07 | [MCP host SDK tests](../../packages/lyra-ui/src/components/agent-tools/mcp-app/mcp-app-sdk.test.ts), capability/resource/lifecycle cases, and [pinned AI SDK integration](../../packages/lyra-gen/docs/ai-sdk.md) | MCP supports a declared host profile, including inline display fallback; omitted capabilities are not full protocol conformance. The SDK integration names its tested version and paths. |
+| REL-01–05 | [Structured diagnostics and bounded repair](../../packages/lyra-gen/src/repair.ts), [cancellable host repair, narrow JSON completion and local category reporting](../../packages/lyra-gen/docs/recovery-and-diagnostics.md), revision guards and visible localized fallback | Strict rejection remains the default. Completion never guesses values, enums or identities; provider-backed repair success and broader coercion are not established. |
+| PERF-01–10; EVAL-01–08 | [Reducer workload](../../benchmarks/stream-runtime.mjs), [offline replay/evaluation harness](../../packages/lyra-gen/src/evaluation.ts), [production cadence and delivery tools](../../benchmarks/generative-ui/README.md), [CLI fixtures](../../packages/lyra-gen/test/cli.test.mjs) | The recorded cadence is authored synthetic data. Provider captures, retained-heap results, equivalent competitor builds, model/cache/thinking/tokenizer campaigns and final budgets require separate evidence. |
+| A11Y-01–06; TEST-01–03 | [Populated catalog/keyboard/theme tests](../../packages/lyra-gen/test/browser/catalog.test.ts), [locale/RTL/fault tests](../../packages/lyra-gen/test/browser/qualification.test.ts), [numeric/date locale fixtures](../../packages/lyra-gen/test/browser/locale-formatting.test.ts), reduced motion and workflow suites | Five agent-reviewed synthetic replay baselines provide bounded visual regression coverage. They do not establish human visual or assistive-technology review; final integrated three-engine qualification remains pending. |
+| SEC-01–06; GOV-01–04 | [Scoped field-purpose and URL policies](../../packages/lyra-gen/docs/security.md), [composed threat matrix](../../packages/lyra-gen/docs/threat-matrix.md), bounded plain-data admission, confirmations, host authorization and [experimental stability criteria](../../packages/lyra-gen/docs/compatibility.md) | Generic text can still deceive. Native media redirect isolation requires host delivery controls; trusted host callbacks and release artifact review retain their own obligations. |
+| DX-01–04; IDEA-06 | Granular package guides, CLI, typed examples, [recorded replay story](../../.storybook/GenerativeUI.stories.js) and [coding-agent companion guide](../../plugins/lyra-ui/skills/lyra-ui/lyra-gen.md) | Recorded replay uses a versioned synthetic fixture. Installed artifact smoke/freshness and the demand-gated Python consumer fixture remain separate work. |
+| DX-07; SITE-01–20 | Library examples and local development hosts supply reusable groundwork | Public website, hosted live generation, public comparison pages and deployment are sequenced last and remain unimplemented. |
+
+Conditional/deferred rows retain their original gates: composite answer blocks, constrained-decoding
+grammar exports, candidate protocol delivery, Remote DOM, simultaneous collaboration, migration
+guides, mobile/static/voice/document targets and optional export modes do not become supported
+because a neighboring helper or prototype exists. No paid model quality campaign, superiority
+result, human accessibility signoff or complete protocol-conformance claim is recorded here.
 
 ## Defects and corrections (FIX)
 

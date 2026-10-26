@@ -8,6 +8,13 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 const strings: LyraLocaleStrings = {
   streamInterrupted: 'Az adatfolyam megszakadt',
   streamResume: 'Folytatás',
+  genViewEmpty: 'Nincs megjeleníthető generált nézet.',
+  genViewInvalid: 'Ez a generált nézet nem jeleníthető meg.',
+  genViewLoading: 'Komponens betöltése…',
+  genViewLoadFailed: 'Ezt a komponenst nem sikerült betölteni.',
+  genViewInvalidState: 'Ennek a mezőnek az értéke nem használható.',
+  genViewActionDenied: 'Ez a művelet nem érhető el.',
+  genViewConfirmationRequired: 'Ez a művelet az alkalmazás megerősítését igényli.',
   chatViewportLabel: 'Beszélgetés',
   newMessagesCount: {
     one: '{count} új üzenet',

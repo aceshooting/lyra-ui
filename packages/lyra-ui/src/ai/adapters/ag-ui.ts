@@ -1,4 +1,4 @@
-import { parseJsonPatch, type AgentStreamEvent } from '../runtime.js';
+import { applySharedStatePatch, parseJsonPatch, type AgentStreamEvent } from '../runtime.js';
 import type { ChatMessage, ChatMessageRole, ToolInvocation } from '../types.js';
 import { positiveInteger } from '../../internal/numbers.js';
 import {
@@ -22,10 +22,35 @@ export interface AgUiLikeEvent {
   code?: string;
   snapshot?: unknown;
   messages?: unknown[];
+  name?: string;
+  value?: unknown;
+  activityType?: string;
+  content?: unknown;
+  replace?: boolean;
+  patch?: unknown[];
+}
+
+/** Application-defined data carried by an AG-UI CUSTOM event. */
+export interface AgUiCustomEvent {
+  name: string;
+  value: unknown;
+}
+
+/** Host-owned identities for a custom data part; repeated targets replace that part. */
+export interface AgUiCustomEventTarget {
+  messageId: string;
+  partId: string;
+}
+
+export interface AgUiAdapterOptions {
+  /** Opts a custom event into named data rendering. Omitted or null ignores the event. */
+  customEventTarget?: (event: AgUiCustomEvent) => AgUiCustomEventTarget | null;
 }
 
 export interface AgUiAdapterLimits extends ProviderSnapshotLimits {
   maxBufferedTools: number;
+  /** Maximum retained message identities, including activity patch baselines. */
+  maxBufferedMessages: number;
   maxToolArgumentBytes: number;
   maxTextDeltaCharacters: number;
 }
@@ -33,6 +58,7 @@ export interface AgUiAdapterLimits extends ProviderSnapshotLimits {
 export const DEFAULT_AG_UI_ADAPTER_LIMITS: Readonly<AgUiAdapterLimits> = Object.freeze({
   ...resolveProviderSnapshotLimits(),
   maxBufferedTools: 256,
+  maxBufferedMessages: 512,
   maxToolArgumentBytes: 262_144,
   maxTextDeltaCharacters: 32_768,
 });
@@ -43,6 +69,14 @@ interface ToolBuffer {
   argsBytes: number;
   args: Record<string, unknown>;
 }
+
+interface ActivityBuffer {
+  activityType: string;
+  content: Record<string, unknown>;
+  bytes: number;
+}
+
+type MessageKind = 'text' | 'reasoning' | 'activity' | 'custom';
 
 type EventWithoutCursor = AgentStreamEvent extends infer Event
   ? Event extends AgentStreamEvent
@@ -56,6 +90,7 @@ function resolveLimits(limits: Partial<AgUiAdapterLimits>): Readonly<AgUiAdapter
   return Object.freeze({
     ...resolveProviderSnapshotLimits(limits),
     maxBufferedTools: positiveInteger(limits.maxBufferedTools, DEFAULT_AG_UI_ADAPTER_LIMITS.maxBufferedTools),
+    maxBufferedMessages: positiveInteger(limits.maxBufferedMessages, DEFAULT_AG_UI_ADAPTER_LIMITS.maxBufferedMessages),
     maxToolArgumentBytes: positiveInteger(
       limits.maxToolArgumentBytes,
       DEFAULT_AG_UI_ADAPTER_LIMITS.maxToolArgumentBytes,
@@ -104,23 +139,41 @@ function snapshotMessage(value: unknown, index: number): ChatMessage | null {
   if (!source) return null;
   const id = typeof source['id'] === 'string' ? source['id'] : `snapshot-${index}`;
   const content = typeof source['content'] === 'string' ? source['content'] : '';
+  if (source['role'] === 'activity') {
+    if (typeof source['activityType'] !== 'string' || !source['activityType'] || !record(source['content'])) return null;
+    return {
+      id, role: 'assistant', status: 'sent',
+      parts: [{ id: `${id}:activity`, type: 'data', name: source['activityType'], data: source['content'], state: 'complete' }],
+    };
+  }
+  const partType = source['role'] === 'reasoning' ? 'reasoning' : 'text';
   return {
     id,
     role: role(source['role']),
     status: 'sent',
-    parts: content ? [{ id: `${id}:text`, type: 'text', text: content, state: 'complete' }] : [],
+    parts: content ? [{ id: `${id}:${partType}`, type: partType, text: content, state: 'complete' }] : [],
   };
 }
 
-/** Stateful, bounded mapper from AG-UI records to provider-neutral stream events. */
+/**
+ * Stateful, bounded mapper from AG-UI records to provider-neutral stream events.
+ * Visible reasoning uses reasoning parts; activity and opted-in custom events use named data parts.
+ * Compact chunks require upstream expansion. Phase, encrypted, raw, step, subagent, deprecated
+ * thinking and unknown events are ignored; custom events require explicit host routing.
+ */
 export class AgUiStreamAdapter {
   private readonly tools = new Map<string, ToolBuffer>();
+  private readonly messages = new Map<string, MessageKind>();
+  private readonly activities = new Map<string, ActivityBuffer>();
+  private activityBytes = 0;
   private readonly limits: Readonly<AgUiAdapterLimits>;
+  private readonly customEventTarget: AgUiAdapterOptions['customEventTarget'];
   private generation = 0;
   private sequence = 0;
 
-  constructor(limits: Partial<AgUiAdapterLimits> = {}) {
+  constructor(limits: Partial<AgUiAdapterLimits> = {}, options: AgUiAdapterOptions = {}) {
     this.limits = resolveLimits(limits);
+    this.customEventTarget = options.customEventTarget;
   }
 
   get bufferedToolCount(): number {
@@ -129,10 +182,56 @@ export class AgUiStreamAdapter {
 
   /** Clears buffers and returns the matching reducer reset boundary. */
   reset(): AgentStreamEvent {
-    this.tools.clear();
+    this.clearBuffers();
     this.generation += 1;
     this.sequence = 0;
     return this.emit({ type: 'reset' });
+  }
+
+  private clearBuffers(): void {
+    this.tools.clear();
+    this.messages.clear();
+    this.activities.clear();
+    this.activityBytes = 0;
+  }
+
+  private claimMessage(messageId: string, kind: MessageKind): AgentStreamEvent[] | null {
+    const previous = this.messages.get(messageId);
+    if (previous && kind === 'custom') return null;
+    if (previous === 'custom' && kind !== 'activity') {
+      this.messages.set(messageId, kind);
+      return null;
+    }
+    if (previous && previous !== kind) return [];
+    if (!previous && this.messages.size >= this.limits.maxBufferedMessages) {
+      return this.failure('Buffered message count exceeds the configured adapter limit.', 'stream_limit_exceeded');
+    }
+    this.messages.set(messageId, kind);
+    return null;
+  }
+
+  private activity(messageId: string, activityType: string, content: unknown, eventId?: string): AgentStreamEvent[] {
+    const snapshot = snapshotProviderValue<unknown>(content, createProviderSnapshotBudget(this.limits));
+    if (!snapshot.ok) {
+      return this.failure('Activity content exceeds the configured adapter limit.', 'stream_limit_exceeded');
+    }
+    const data = record(snapshot.value);
+    if (!data) return [];
+    const previous = this.activities.get(messageId);
+    const bytes = this.activityBytes - (previous?.bytes ?? 0) + snapshot.bytes;
+    if (bytes > this.limits.maxBytes) {
+      return this.failure('Buffered activity content exceeds the configured adapter limit.', 'stream_limit_exceeded');
+    }
+    const rejected = this.claimMessage(messageId, 'activity');
+    if (rejected) return rejected;
+    this.activities.set(messageId, { activityType, content: data, bytes: snapshot.bytes });
+    this.activityBytes = bytes;
+    return [this.emit({
+      type: 'message-part-upsert',
+      messageId,
+      role: 'assistant',
+      part: { id: `${messageId}:activity`, type: 'data', name: activityType, data: content, state: 'complete' },
+    }, eventId)];
   }
 
   private emit(event: EventWithoutCursor, eventId?: string, suffix?: string): AgentStreamEvent {
@@ -177,7 +276,7 @@ export class AgUiStreamAdapter {
     switch (eventType) {
       case 'RUN_STARTED': {
         if (typeof source['runId'] !== 'string' || !source['runId']) return [];
-        this.tools.clear();
+        this.clearBuffers();
         this.generation += 1;
         this.sequence = 0;
         return [this.emit({ type: 'run-start', runId: source['runId'] }, eventId)];
@@ -189,7 +288,7 @@ export class AgUiStreamAdapter {
           ...(source['runId'] ? { runId: source['runId'] as string } : {}),
           status: { kind: 'done' },
         }, eventId);
-        this.tools.clear();
+        this.clearBuffers();
         return [output];
       }
       case 'RUN_ERROR': {
@@ -206,38 +305,49 @@ export class AgUiStreamAdapter {
             status: { kind: 'error', message },
           }, eventId, 'status'),
         ];
-        this.tools.clear();
+        this.clearBuffers();
         return output;
       }
       case 'TEXT_MESSAGE_START':
-        return typeof source['messageId'] === 'string'
-          ? [this.emit({
-              type: 'message-start',
-              message: {
-                id: source['messageId'],
-                role: role(source['role']),
-                status: 'streaming',
-                parts: [],
-              },
-            }, eventId)]
-          : [];
+      case 'REASONING_MESSAGE_START': {
+        if (typeof source['messageId'] !== 'string' || !source['messageId']) return [];
+        const reasoning = eventType === 'REASONING_MESSAGE_START';
+        const rejected = this.claimMessage(source['messageId'], reasoning ? 'reasoning' : 'text');
+        if (rejected) return rejected;
+        return [this.emit({
+          type: 'message-start',
+          message: {
+            id: source['messageId'],
+            role: reasoning ? 'assistant' : role(source['role']),
+            status: 'streaming',
+            parts: [],
+          },
+        }, eventId)];
+      }
       case 'TEXT_MESSAGE_CONTENT':
-        if (typeof source['messageId'] !== 'string' || typeof source['delta'] !== 'string') return [];
+      case 'REASONING_MESSAGE_CONTENT': {
+        if (typeof source['messageId'] !== 'string' || !source['messageId'] || typeof source['delta'] !== 'string') return [];
         if (source['delta'].length > this.limits.maxTextDeltaCharacters) {
           return this.failure('Text delta exceeds the configured adapter limit.', 'stream_limit_exceeded');
         }
+        const partType = eventType === 'REASONING_MESSAGE_CONTENT' ? 'reasoning' : 'text';
+        const rejected = this.claimMessage(source['messageId'], partType);
+        if (rejected) return rejected;
         return [this.emit({
           type: 'message-part-delta',
           messageId: source['messageId'],
-          role: role(source['role']),
-          partId: `${source['messageId']}:text`,
-          partType: 'text',
+          role: partType === 'reasoning' ? 'assistant' : role(source['role']),
+          partId: `${source['messageId']}:${partType}`,
+          partType,
           delta: source['delta'],
         }, eventId)];
+      }
       case 'TEXT_MESSAGE_END':
-        return typeof source['messageId'] === 'string'
-          ? [this.emit({ type: 'message-complete', messageId: source['messageId'] }, eventId)]
-          : [];
+      case 'REASONING_MESSAGE_END': {
+        if (typeof source['messageId'] !== 'string' || !source['messageId']) return [];
+        const rejected = this.claimMessage(source['messageId'], eventType === 'REASONING_MESSAGE_END' ? 'reasoning' : 'text');
+        return rejected ?? [this.emit({ type: 'message-complete', messageId: source['messageId'] }, eventId)];
+      }
       case 'TOOL_CALL_START': {
         if (typeof source['toolCallId'] !== 'string') return [];
         if (!this.tools.has(source['toolCallId']) && this.tools.size >= this.limits.maxBufferedTools) {
@@ -305,15 +415,99 @@ export class AgUiStreamAdapter {
         const patch = parseJsonPatch(source['delta']);
         return patch ? [this.emit({ type: 'state-delta', patch }, eventId)] : [];
       }
-      case 'MESSAGES_SNAPSHOT': {
-        if (source['messages'] !== undefined && !Array.isArray(source['messages'])) return [];
+      case 'ACTIVITY_SNAPSHOT': {
+        if (typeof source['messageId'] !== 'string' || !source['messageId']
+          || typeof source['activityType'] !== 'string' || !source['activityType']
+          || !record(source['content'])
+          || (source['replace'] !== undefined && typeof source['replace'] !== 'boolean')) return [];
+        if (source['replace'] === false && this.messages.has(source['messageId'])) return [];
+        return this.activity(source['messageId'], source['activityType'], source['content'], eventId);
+      }
+      case 'ACTIVITY_DELTA': {
+        if (typeof source['messageId'] !== 'string' || typeof source['activityType'] !== 'string') return [];
+        const previous = this.activities.get(source['messageId']);
+        if (!previous || previous.activityType !== source['activityType']) return [];
+        const patch = parseJsonPatch(source['patch']);
+        if (!patch) return [];
+        return this.activity(
+          source['messageId'], source['activityType'], applySharedStatePatch(previous.content, patch), eventId,
+        );
+      }
+      case 'CUSTOM': {
+        if (!this.customEventTarget || typeof source['name'] !== 'string' || !source['name']
+          || !Object.hasOwn(source, 'value')) return [];
+        let target: unknown;
+        try {
+          target = this.customEventTarget({ name: source['name'], value: source['value'] });
+        } catch {
+          return this.failure('Custom event routing failed.', 'invalid_provider_event');
+        }
+        if (target === null) return [];
+        const ownedTarget = snapshotProviderValue<unknown>(target, createProviderSnapshotBudget(this.limits));
+        const destination = ownedTarget.ok ? record(ownedTarget.value) : null;
+        if (!destination || typeof destination['messageId'] !== 'string' || !destination['messageId']
+          || typeof destination['partId'] !== 'string' || !destination['partId']) return [];
+        const value = snapshotProviderValue<unknown>(source['value'], createProviderSnapshotBudget(this.limits));
+        if (!value.ok) {
+          return this.failure('Custom event payload is invalid or exceeds the configured adapter limit.',
+            value.failure === 'limit' ? 'stream_limit_exceeded' : 'invalid_provider_event');
+        }
+        const rejected = this.claimMessage(destination['messageId'], 'custom');
+        if (rejected) return rejected;
         return [this.emit({
-          type: 'messages-snapshot',
-          messages: (source['messages'] ?? [])
-            .map(snapshotMessage)
-            .filter((message): message is ChatMessage => message !== null),
+          type: 'message-part-upsert', messageId: destination['messageId'], role: 'assistant',
+          part: { id: destination['partId'], type: 'data', name: source['name'], data: value.value, state: 'complete' },
         }, eventId)];
       }
+      case 'MESSAGES_SNAPSHOT': {
+        if (source['messages'] !== undefined && !Array.isArray(source['messages'])) return [];
+        const messages = (source['messages'] ?? [])
+          .map(snapshotMessage)
+          .filter((message): message is ChatMessage => message !== null);
+        if (messages.length > this.limits.maxBufferedMessages) {
+          return this.failure('Buffered message count exceeds the configured adapter limit.', 'stream_limit_exceeded');
+        }
+        const activities = new Map<string, ActivityBuffer>();
+        const kinds = new Map<string, MessageKind>();
+        let bytes = 0;
+        for (const message of messages) {
+          const part = message.parts?.[0];
+          kinds.set(message.id, part?.type === 'data' ? 'activity' : part?.type === 'reasoning' ? 'reasoning' : 'text');
+          if (part?.type !== 'data' || !part.name) continue;
+          const ownedContent = snapshotProviderValue<Record<string, unknown>>(part.data, createProviderSnapshotBudget(this.limits));
+          if (!ownedContent.ok || bytes + ownedContent.bytes > this.limits.maxBytes) {
+            return this.failure('Buffered activity content exceeds the configured adapter limit.', 'stream_limit_exceeded');
+          }
+          activities.set(message.id, { activityType: part.name, content: ownedContent.value, bytes: ownedContent.bytes });
+          bytes += ownedContent.bytes;
+        }
+        this.messages.clear();
+        this.activities.clear();
+        for (const [id, kind] of kinds) this.messages.set(id, kind);
+        for (const [id, activity] of activities) this.activities.set(id, activity);
+        this.activityBytes = bytes;
+        return [this.emit({
+          type: 'messages-snapshot',
+          messages,
+        }, eventId)];
+      }
+      case 'REASONING_START':
+      case 'REASONING_END':
+      case 'REASONING_ENCRYPTED_VALUE':
+      case 'REASONING_MESSAGE_CHUNK':
+      case 'TEXT_MESSAGE_CHUNK':
+      case 'TOOL_CALL_CHUNK':
+      case 'STEP_STARTED':
+      case 'STEP_FINISHED':
+      case 'SUBAGENT_STARTED':
+      case 'SUBAGENT_FINISHED':
+      case 'SUBAGENT_ERROR':
+      case 'THINKING_START':
+      case 'THINKING_END':
+      case 'THINKING_TEXT_MESSAGE_START':
+      case 'THINKING_TEXT_MESSAGE_CONTENT':
+      case 'THINKING_TEXT_MESSAGE_END':
+      case 'RAW':
       default:
         return [];
     }

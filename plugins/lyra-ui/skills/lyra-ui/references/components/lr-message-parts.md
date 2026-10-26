@@ -22,6 +22,11 @@ Built-in text and reasoning Markdown receives each part's `state === 'streaming'
 accumulated plain text without parsing or highlighting by default. The `streaming-render` property
 can opt those parts into progressive Markdown. Replacing that same-id part with `state: 'complete'`
 parses and renders the final content.
+Built-in reasoning, tool, citation, attachment, JSON, widget and retry-button renderers register
+on first use. A localized loading placeholder is visible while the import is pending; a failed
+import shows a localized error and emits `lr-render-error`. Text-only messages do not load those
+renderer implementations. Audio uses the browser's native audio element. A custom `renderPart`
+that replaces a part does not load that part's built-in renderer.
 Citation badge ranks are precomputed in one linear pass per render, rather than rescanning and
 allocating every preceding part for each citation in a citation-heavy or growing message.
 
@@ -57,6 +62,19 @@ wants; `accessibleLabel: string | null = null` (attribute `aria-label`);
 default — every instance carries `tool-display="chip"` until set, like `content-mode="markdown"`).
 `renderPart` is called exactly once per rendered part, in order, in both tool displays, and its
 output is the host's own: it is never masked by `redactedFields`.
+
+`widgetRegistry: LyraWidgetTypeRegistry = DEFAULT_WIDGET_TYPE_REGISTRY` (property only) forwards
+an immutable registry created by `createWidgetTypeRegistry()` to every built-in widget part.
+`widgetBindingState?: unknown` (property only) forwards explicit controlled state; `null` is a real
+value. This state takes a bounded, clone-owned snapshot on assignment. Handle
+`lr-widget-state-change` and reassign the next state yourself. Parts share this state, so their
+JSON Pointer bindings must refer to the intended host-owned paths. Registry entries only describe
+allowed types: applications must still register custom mapped components using granular imports.
+Widget documents are cached by the unique part id and their bounded snapshot content. Unrelated
+text writes preserve the existing widget document, while a changed widget root invalidates it.
+Removing a part, windowing it out, or disconnecting releases its cached document. This cache does
+not change widget-v2 validation, identity rejection, or controlled-state ownership.
+
 
 Unsupported direct or `content-mode` attribute values normalize and reflect as `markdown`;
 unsupported `tool-display` values normalize and reflect as `chip`.

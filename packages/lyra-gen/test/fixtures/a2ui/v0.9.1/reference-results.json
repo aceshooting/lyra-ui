@@ -1,0 +1,127 @@
+{
+  "revision": "409ded29ccac3eebc541979ae5320771703248e8",
+  "runtime": {
+    "node": "v22.23.2",
+    "platform": "linux",
+    "architecture": "x64"
+  },
+  "compilerVersion": "Version 7.0.2",
+  "runtimeDependencies": {
+    "@lit-labs/ssr-dom-shim": {
+      "version": "1.6.0",
+      "integrity": "sha512-VHb0ALPMTlgKjM6yIxxoQNnpKyUKLD04VzeQdsiXkMqkvYlAHxq9glGLmgbb889/1GsohSOAjvQYoiBppXFqrQ=="
+    },
+    "@lit/context": {
+      "version": "1.1.6",
+      "integrity": "sha512-M26qDE6UkQbZA2mQ3RjJ3Gzd8TxP+/0obMgE5HfkfLhEEyYE3Bui4A5XHiGPjy0MUGAyxB3QgVuw2ciS0kHn6A=="
+    },
+    "@lit/reactive-element": {
+      "version": "2.1.2",
+      "integrity": "sha512-pbCDiVMnne1lYUIaYNN5wrwQXDtHaYtg7YEFPeW+hws6U47WeFvISGUWekPGKWOP1ygrs0ef0o1VJMk1exos5A=="
+    },
+    "@preact/signals-core": {
+      "version": "1.14.4",
+      "integrity": "sha512-HNB6HYeYKhQbJ1aKl+YRjrS4+QWHLKX6qKoUsfS/m0vqzsVaEBiZiaKbG/e+NKk2ch5ALQr/ihWaMHxiCuuWHA=="
+    },
+    "@types/trusted-types": {
+      "version": "2.0.7",
+      "integrity": "sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw=="
+    },
+    "jsesc": {
+      "version": "3.1.0",
+      "integrity": "sha512-/sM3dO2FOzXjKQhJuo0Q173wf2KOo8t4I8vHy6lF9poUp7bKT0/NHE8fPX23PwfhnykfqnC2xRxOnVw5XuGIaA=="
+    },
+    "lit": {
+      "version": "3.3.3",
+      "integrity": "sha512-fycuvZg/hkpozL00lm1pEJH5nN/lr9ZXd6mJI2HSN4+Bzc+LDNdEApJ6HFbPkdFNHLvOplIIuJvxkS4XUxqirw=="
+    },
+    "lit-element": {
+      "version": "4.2.2",
+      "integrity": "sha512-aFKhNToWxoyhkNDmWZwEva2SlQia+jfG0fjIWV//YeTaWrVnOxD89dPKfigCUspXFmjzOEUQpOkejH5Ly6sG0w=="
+    },
+    "lit-html": {
+      "version": "3.3.3",
+      "integrity": "sha512-el8M6jK2o3RXBnrSHX3ZKrsN8zEV63pSExTO1wYJz7QndGYZ8353e2a5PPX+qHe2aGayfnchQmkAojaWAREOIA=="
+    },
+    "redos-detector": {
+      "version": "6.1.4",
+      "integrity": "sha512-lPlka1rEH6kK42gtgokvvxMmpAvyc28DcRjQbGxeP5RJsJWgAduBOdGedVCDPdSyCr4ay/JDxq3nGYsJZyt8tA=="
+    },
+    "regjsparser": {
+      "version": "0.13.0",
+      "integrity": "sha512-NZQZdC5wOE/H3UT28fVGL+ikOZcEzfMGk/c3iN9UGxzWHMa1op7274oyiUVrAG4B2EuFhus8SvkaYnhvW92p9Q=="
+    },
+    "validate-color": {
+      "version": "2.2.4",
+      "integrity": "sha512-Znolz+b6CwW6eBXYld7MFM3O7funcdyRfjKC/X9hqYV/0VcC5LB/L45mff7m3dIn9wdGdNOAQ/fybNuD5P/HDw=="
+    },
+    "zod": {
+      "version": "3.25.76",
+      "integrity": "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="
+    },
+    "zod-to-json-schema": {
+      "version": "3.25.2",
+      "integrity": "sha512-O/PgfnpT1xKSDeQYSCfRI5Gy3hPf91mKVDuYLUHZJMiDFptvP41MSnWofm8dnCm0256ZNfZIM7DSzuSMAFnjHA=="
+    }
+  },
+  "implementationHashes": {
+    "src/adapters/a2ui.ts": "874500995281dba2f1103d5ff5f7f9a9fc8e7c442f32faaa8e270b50a45c9456",
+    "src/adapters/a2ui-state.ts": "b77fbd1f7e412ac33da77a4de4e255034de15ffd5664769eb56242b037970891",
+    "src/schema.ts": "3466ffcce85b52941b06d178a641352393e0ea7d992ae283f271b846b09c9ef8",
+    "src/types.ts": "816222dd29bee498cfacd281469c3f0f079f076b2c763f74e3ace7deca8b5f32"
+  },
+  "referenceStateSha256": "5f0271772fc288a36377371e630955eb5c0ceb4467730e9e0b91d8e6c0bdf776",
+  "compiledStateSha256": "f974b3b3c9789907551c69adc579b3140ac3019cf3db8203b02a3520dd22f72b",
+  "cohort": "v0.9.1",
+  "coverage": "Reference renderer state, resolved node model and action envelopes; excludes DOM, layout, accessibility and full basic-catalog coverage.",
+  "cases": [
+    {
+      "name": "array-delete-preserves-index",
+      "status": "match"
+    },
+    {
+      "name": "sparse-array-upsert",
+      "status": "match"
+    },
+    {
+      "name": "absent-delete-no-materialization",
+      "status": "match"
+    },
+    {
+      "name": "nested-sparse-upsert",
+      "status": "match"
+    },
+    {
+      "name": "delete-then-restore-container",
+      "status": "match"
+    },
+    {
+      "name": "null-is-an-explicit-value",
+      "status": "normative-pass-reference-divergence",
+      "reason": "Pinned reference DataModel treats null as deletion; normative updateDataModel specifies deletion only when value is omitted."
+    }
+  ],
+  "examples": [
+    {
+      "name": "00_simple-text.json",
+      "status": "match",
+      "components": 1
+    },
+    {
+      "name": "00_interactive-button.json",
+      "status": "match",
+      "components": 4
+    },
+    {
+      "name": "34_child-list-template.json",
+      "status": "match",
+      "components": 16
+    },
+    {
+      "name": "local-action.json",
+      "status": "match",
+      "hostAuthorization": "explicit",
+      "browserSink": "captured; no navigation"
+    }
+  ]
+}

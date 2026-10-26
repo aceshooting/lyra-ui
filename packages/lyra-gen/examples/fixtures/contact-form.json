@@ -1,0 +1,102 @@
+{
+  "id": "contact-form",
+  "prompt": "Create a labelled contact form with required email, message, and a submit button.",
+  "view": {
+    "version": "1",
+    "catalog": {
+      "id": "lyra-reviewed",
+      "version": "1"
+    },
+    "surfaceId": "contact-form",
+    "revision": 0,
+    "root": {
+      "id": "contact",
+      "type": "form",
+      "props": {
+        "ariaLabel": "Contact support"
+      },
+      "children": [
+        {
+          "id": "title",
+          "type": "heading",
+          "text": "Contact support"
+        },
+        {
+          "id": "email",
+          "type": "input",
+          "props": {
+            "label": "Email address",
+            "type": "email",
+            "required": true
+          },
+          "bindings": {
+            "value": "/email"
+          }
+        },
+        {
+          "id": "message",
+          "type": "textarea",
+          "props": {
+            "label": "Message",
+            "required": true,
+            "rows": 4
+          },
+          "bindings": {
+            "value": "/message"
+          }
+        },
+        {
+          "id": "send",
+          "type": "button",
+          "props": {
+            "type": "submit",
+            "variant": "brand"
+          },
+          "text": "Send message"
+        }
+      ]
+    }
+  },
+  "markup": "<form id=\"contact\" ariaLabel=\"Contact support\"><heading id=\"title\">Contact support</heading><input id=\"email\" label=\"Email address\" type=\"email\" required={true} bindings={{\"value\":\"/email\"}}></input><textarea id=\"message\" label=\"Message\" required={true} rows={4} bindings={{\"value\":\"/message\"}}></textarea><button id=\"send\" type=\"submit\" variant=\"brand\">Send message</button></form>",
+  "oracle": {
+    "nodes": [
+      {
+        "id": "contact",
+        "type": "form",
+        "props": {
+          "ariaLabel": "Contact support"
+        }
+      },
+      {
+        "id": "email",
+        "type": "input",
+        "props": {
+          "label": "Email address",
+          "type": "email",
+          "required": true
+        },
+        "bindings": {
+          "value": "/email"
+        }
+      },
+      {
+        "id": "message",
+        "type": "textarea",
+        "props": {
+          "required": true
+        },
+        "bindings": {
+          "value": "/message"
+        }
+      },
+      {
+        "id": "send",
+        "type": "button",
+        "text": "Send message",
+        "props": {
+          "type": "submit"
+        }
+      }
+    ]
+  }
+}

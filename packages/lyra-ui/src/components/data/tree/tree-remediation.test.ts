@@ -1,7 +1,37 @@
-import { expect, fixture, html } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { accessibleName } from '../../../../test/accessible-name.js';
 import './tree.js';
 import type { LyraTree, LyraTreeNodeData } from './tree.js';
 import type { LyraTreeItem } from './tree-item.js';
+
+/** Axe includes nested treeitems in their parent's visible text. An unnamed parent has no
+ * visible label to match; the child's label belongs to its own treeitem within the group. */
+async function expectUnnamedBranchAccessible(tree: LyraTree, row: LyraTreeItem): Promise<void> {
+  // The lifecycle event has a duration fallback; wait for the browser's final animation frame too.
+  const container = row.shadowRoot!.querySelector('[part="children"]')!;
+  await Promise.all(container.getAnimations().map((animation) => animation.finished));
+  await expect(tree).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+  expect(row.getAttribute('role')).to.equal('treeitem');
+  expect(row.getAttribute('aria-expanded')).to.equal('true');
+  expect(row.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim()).to.equal('');
+  expect(accessibleName(row)).to.equal(row.nodeId);
+  const group = row.shadowRoot!.querySelector('[part="group"]')!;
+  expect(group.getAttribute('role')).to.equal('group');
+  const children = row.childItems();
+  expect(children.length).to.be.greaterThan(0);
+  for (const child of children) {
+    expect(group.contains(child)).to.equal(true);
+    expect(child.getAttribute('role')).to.equal('treeitem');
+    expect(child.getBoundingClientRect().height).to.be.greaterThan(0);
+  }
+  const axe = (window as Window & { axe?: typeof import('axe-core') }).axe;
+  if (!axe) throw new Error('The accessibility scan must load axe before reviewing the unnamed branch.');
+  const results = await axe.run(tree, { runOnly: ['label-content-name-mismatch'], elementRef: true });
+  const failures = results.violations.flatMap((result) => result.nodes
+    .filter((node) => node.element !== row)
+    .map((node) => `${result.id}: ${JSON.stringify(node.target)}`));
+  expect(failures, 'Unreviewed label-in-name violations').to.deep.equal([]);
+}
 
 function inspectedArray(
   values: LyraTreeNodeData[],
@@ -96,12 +126,32 @@ describe('tree object projection limits and names', () => {
       row.select();
       await el.updateComplete;
       expect(el.selectedItems.map((item) => item.nodeId)).to.deep.equal(['document-42']);
+      await expect(el).to.be.accessible();
+      const afterExpand = oneEvent(row, 'lr-after-expand');
       row.expand();
+      await afterExpand;
       await el.updateComplete;
       expect(row.childItems().map((item) => item.nodeId)).to.deep.equal(['child']);
-      await expect(el).to.be.accessible();
+      await expectUnnamedBranchAccessible(el, row);
+      expect(accessibleName(row.childItems()[0]!)).to.equal('Child');
     });
   }
+
+  it('still rejects a mismatched child label when reviewing an unnamed expanded parent', async () => {
+    const el = await fixture<LyraTree>(html`<lr-tree label="Documents"></lr-tree>`);
+    el.data = [{ id: 'document-42', label: '', children: [{ id: 'child', label: 'Child', accessibleLabel: 'Different' }] }];
+    await el.updateComplete;
+    const row = el.querySelector<LyraTreeItem>('lr-tree-item')!;
+    const afterExpand = oneEvent(row, 'lr-after-expand');
+    row.expand();
+    await afterExpand;
+    await el.updateComplete;
+    let message = '';
+    try {
+      await expectUnnamedBranchAccessible(el, row);
+    } catch (error) { message = String(error); }
+    expect(message).to.contain('Unreviewed label-in-name violations');
+  });
 
   it('preserves usable data names and name-from-content, including description and badge-only rows', async () => {
     const el = await fixture<LyraTree>(html`<lr-tree label="Documents"></lr-tree>`);

@@ -8,6 +8,13 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 const strings: LyraLocaleStrings = {
   streamInterrupted: 'Η ροή διακόπηκε',
   streamResume: 'Συνέχεια',
+  genViewEmpty: 'Δεν υπάρχει δημιουργημένη προβολή για εμφάνιση.',
+  genViewInvalid: 'Δεν είναι δυνατή η εμφάνιση αυτής της δημιουργημένης προβολής.',
+  genViewLoading: 'Φόρτωση στοιχείου…',
+  genViewLoadFailed: 'Δεν ήταν δυνατή η φόρτωση αυτού του στοιχείου.',
+  genViewInvalidState: 'Αυτή η τιμή πεδίου δεν μπορεί να χρησιμοποιηθεί.',
+  genViewActionDenied: 'Αυτή η ενέργεια δεν είναι διαθέσιμη.',
+  genViewConfirmationRequired: 'Αυτή η ενέργεια απαιτεί επιβεβαίωση από την εφαρμογή.',
   chatViewportLabel: 'Συνομιλία',
   newMessagesCount: {
     one: '{count} νέο μήνυμα',

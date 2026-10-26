@@ -1,0 +1,61 @@
+{
+  "experimentVersion": 1,
+  "packages": [
+    { "name": "@openuidev/lang-core", "version": "1.0.1", "integrity": "sha512-4vBa7FRM6C4v4aCvBAmAtTgFWiEQiNTazG9h4Xy9fC6P/p6+9kZu4RdTyLToBEvdxrYn/gDy/PakEH8PU3lUcw==" },
+    { "name": "zod", "version": "4.6.7", "integrity": "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==" },
+    { "name": "ci-info", "version": "4.4.0", "integrity": "sha512-77PSwercCZU2Fc4sX94eF8k8Pxte6JAwL4/ICZLFjJLqegs7kCuAsqqj/70NQF6TvDpgFjkubQB2FW2ZZddvQg==" }
+  ],
+  "schemas": {
+    "Stack": { "type": "object", "properties": { "children": { "type": "array" } } },
+    "CardHeader": { "type": "object", "properties": { "text": { "type": "string" } } },
+    "TextContent": { "type": "object", "properties": { "text": { "type": "string" } } },
+    "Metric": { "type": "object", "properties": { "label": { "type": "string" }, "value": { "type": "number" } } },
+    "Table": { "type": "object", "properties": { "caption": { "type": "string" }, "columns": { "type": "array" }, "rows": { "type": "array" } } },
+    "Chart": { "type": "object", "properties": { "label": { "type": "string" }, "type": { "type": "string" }, "labels": { "type": "array" }, "series": { "type": "array" } } },
+    "Input": { "type": "object", "properties": { "label": { "type": "string" }, "value": { "type": "string" } } },
+    "Button": { "type": "object", "properties": { "label": { "type": "string" }, "action": {} } }
+  },
+  "fixtures": [
+    {
+      "id": "public-readme-forward-references", "root": "Stack", "expected": "supported",
+      "provenance": { "kind": "public", "source": "https://www.npmjs.com/package/@openuidev/lang-core/v/1.0.1", "section": "README: Parse OpenUI Lang", "license": "MIT", "notice": "openui-fixture-LICENSE.txt" },
+      "source": "root = Stack([header, content])\nheader = CardHeader(\"Hello\")\ncontent = TextContent(\"World\")"
+    },
+    {
+      "id": "typed-table", "root": "Table", "expected": "supported", "provenance": { "kind": "original", "license": "MIT" },
+      "source": "root = Table(\"Inventory\", [{key:\"item\",label:\"Item\",type:\"string\"},{key:\"count\",label:\"Count\",type:\"number\",nullable:true}], [{item:\"Apples\",count:2},{item:\"Pears\",count:null}])"
+    },
+    {
+      "id": "numeric-chart-null-gap", "root": "Chart", "expected": "supported", "provenance": { "kind": "original", "license": "MIT" },
+      "source": "root = Chart(\"Orders\", \"bar\", [\"Mon\",\"Tue\"], [{label:\"Orders\",values:[12,null]}])"
+    },
+    {
+      "id": "metric-numeric-source-loss", "root": "Metric", "expected": "lossy", "provenance": { "kind": "original", "license": "MIT" },
+      "source": "root = Metric(\"Requests\", 12)"
+    },
+    {
+      "id": "reactive-expression", "root": "Stack", "expected": "rejected", "provenance": { "kind": "original", "license": "MIT" },
+      "source": "root = Stack([text])\n$count = 1\ntext = TextContent($count + 1)"
+    },
+    {
+      "id": "assistant-action", "root": "Button", "expected": "rejected", "provenance": { "kind": "original", "license": "MIT" },
+      "source": "root = Button(\"Ask\", @ToAssistant(\"Tell me more\"))"
+    },
+    {
+      "id": "external-url-action", "root": "Button", "expected": "rejected", "provenance": { "kind": "original", "license": "MIT" },
+      "source": "root = Button(\"Open\", @OpenUrl(\"https://example.test/report\"))"
+    },
+    {
+      "id": "unapproved-field", "root": "Input", "expected": "rejected", "provenance": { "kind": "original", "license": "MIT" },
+      "source": "root = Input(\"Email address\", \"\")"
+    },
+    {
+      "id": "incomplete-reference", "root": "Stack", "expected": "rejected", "provenance": { "kind": "original", "license": "MIT" },
+      "source": "root = Stack([missing"
+    },
+    {
+      "id": "unknown-component", "root": "Stack", "expected": "rejected", "provenance": { "kind": "original", "license": "MIT" },
+      "source": "root = Widget(\"unknown\")"
+    }
+  ]
+}

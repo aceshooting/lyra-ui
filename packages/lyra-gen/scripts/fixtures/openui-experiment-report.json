@@ -1,0 +1,666 @@
+{
+  "experimentVersion": 1,
+  "observedDate": "2026-10-26",
+  "node": "v22.23.2",
+  "upstream": {
+    "package": "@openuidev/lang-core",
+    "version": "1.0.1",
+    "officialRepository": "https://github.com/thesysdev/openui",
+    "metadataUrl": "https://registry.npmjs.org/@openuidev%2Flang-core/1.0.1"
+  },
+  "installation": {
+    "mechanism": "Integrity-checked tarball extraction; no package manager install or lifecycle execution.",
+    "scriptsExecuted": false,
+    "packages": [
+      {
+        "name": "@openuidev/lang-core",
+        "version": "1.0.1",
+        "integrity": "sha512-4vBa7FRM6C4v4aCvBAmAtTgFWiEQiNTazG9h4Xy9fC6P/p6+9kZu4RdTyLToBEvdxrYn/gDy/PakEH8PU3lUcw==",
+        "license": "MIT",
+        "repository": {
+          "type": "git",
+          "url": "https://github.com/thesysdev/openui.git",
+          "directory": "packages/lang-core"
+        },
+        "gitHead": null,
+        "tarballBytes": 363407,
+        "extractedRegularFileBytes": 1417866,
+        "dependencies": {
+          "ci-info": "^4.4.0"
+        },
+        "peerDependencies": {
+          "@modelcontextprotocol/sdk": ">=1.0.0",
+          "zod": "^3.25.0 || ^4.0.0"
+        },
+        "peerDependenciesMeta": {
+          "@modelcontextprotocol/sdk": {
+            "optional": true
+          }
+        },
+        "lifecycleScripts": {
+          "postinstall": "node ./postinstall.cjs"
+        }
+      },
+      {
+        "name": "zod",
+        "version": "4.6.7",
+        "integrity": "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==",
+        "license": "MIT",
+        "repository": {
+          "type": "git",
+          "url": "git+https://github.com/colinhacks/zod.git"
+        },
+        "gitHead": "b500a2ee95134f81d74da7911d7378dd2853d042",
+        "tarballBytes": 1141941,
+        "extractedRegularFileBytes": 6148944,
+        "dependencies": {},
+        "peerDependencies": {},
+        "peerDependenciesMeta": {},
+        "lifecycleScripts": {}
+      },
+      {
+        "name": "ci-info",
+        "version": "4.4.0",
+        "integrity": "sha512-77PSwercCZU2Fc4sX94eF8k8Pxte6JAwL4/ICZLFjJLqegs7kCuAsqqj/70NQF6TvDpgFjkubQB2FW2ZZddvQg==",
+        "license": "MIT",
+        "repository": "github:watson/ci-info",
+        "gitHead": "c4e1d0565552fb20ea3c133db2e056a574e78e6b",
+        "tarballBytes": 8185,
+        "extractedRegularFileBytes": 29955,
+        "dependencies": {},
+        "peerDependencies": {},
+        "peerDependenciesMeta": {},
+        "lifecycleScripts": {
+          "prepare": "husky install || true"
+        }
+      }
+    ],
+    "totalTarballBytes": 1513533,
+    "totalExtractedRegularFileBytes": 7596765
+  },
+  "telemetry": {
+    "sourceReview": "Pinned package has opt-out installation telemetry and opt-in Node runtime parser/prompt telemetry. Public root imports zod/v4 and a shared telemetry module; ci-info is dynamically imported by telemetry.",
+    "disableFlags": [
+      "OPENUI_TELEMETRY_DISABLED=1",
+      "DO_NOT_TRACK=1"
+    ],
+    "guardedImportAndParserFetchAttempts": 0,
+    "scope": "globalThis.fetch guarded during actual import, batch parse and sampled streaming parse; this is not an operating-system network sandbox."
+  },
+  "bundle": {
+    "boundary": "Browser ESM bundle exporting public createParser and createStreamingParser only, with all dependency code bundled; no externals or telemetry rewrite.",
+    "tool": "esbuild@0.28.2",
+    "target": "es2022",
+    "minifiedBytes": 496495,
+    "gzipLevel9Bytes": 107300,
+    "bytesInOutputByPackage": {
+      "ci-info": 5196,
+      "@openuidev/lang-core": 36791,
+      "zod": 453825,
+      "entry": 0
+    },
+    "telemetryCaptureUrlRetained": true
+  },
+  "fixtures": [
+    {
+      "id": "public-readme-forward-references",
+      "provenance": {
+        "kind": "public",
+        "source": "https://www.npmjs.com/package/@openuidev/lang-core/v/1.0.1",
+        "section": "README: Parse OpenUI Lang",
+        "license": "MIT",
+        "notice": "openui-fixture-LICENSE.txt"
+      },
+      "status": "supported",
+      "reason": null,
+      "losses": [],
+      "streamingRootMatchesBatch": true,
+      "sourceBytes": 91,
+      "parserRoot": {
+        "type": "element",
+        "typeName": "Stack",
+        "props": {
+          "children": [
+            {
+              "type": "element",
+              "typeName": "CardHeader",
+              "props": {
+                "text": "Hello"
+              },
+              "partial": false,
+              "hasDynamicProps": false,
+              "statementId": "header"
+            },
+            {
+              "type": "element",
+              "typeName": "TextContent",
+              "props": {
+                "text": "World"
+              },
+              "partial": false,
+              "hasDynamicProps": false,
+              "statementId": "content"
+            }
+          ]
+        },
+        "partial": false,
+        "hasDynamicProps": false,
+        "statementId": "root"
+      },
+      "parserMeta": {
+        "incomplete": false,
+        "unresolved": [],
+        "orphaned": [],
+        "statementCount": 3,
+        "errors": []
+      },
+      "candidateView": {
+        "version": "1",
+        "catalog": {
+          "id": "lyra-reviewed",
+          "version": "1"
+        },
+        "surfaceId": "openui-experiment",
+        "revision": 0,
+        "root": {
+          "id": "root",
+          "type": "stack",
+          "children": [
+            {
+              "id": "header",
+              "type": "heading",
+              "text": "Hello"
+            },
+            {
+              "id": "content",
+              "type": "text",
+              "text": "World"
+            }
+          ]
+        }
+      },
+      "candidateSupplementalArtifacts": []
+    },
+    {
+      "id": "typed-table",
+      "provenance": {
+        "kind": "original",
+        "license": "MIT"
+      },
+      "status": "supported",
+      "reason": null,
+      "losses": [],
+      "streamingRootMatchesBatch": true,
+      "sourceBytes": 177,
+      "parserRoot": {
+        "type": "element",
+        "typeName": "Table",
+        "props": {
+          "caption": "Inventory",
+          "columns": [
+            {
+              "key": "item",
+              "label": "Item",
+              "type": "string"
+            },
+            {
+              "key": "count",
+              "label": "Count",
+              "type": "number",
+              "nullable": true
+            }
+          ],
+          "rows": [
+            {
+              "item": "Apples",
+              "count": 2
+            },
+            {
+              "item": "Pears",
+              "count": null
+            }
+          ]
+        },
+        "partial": false,
+        "hasDynamicProps": false,
+        "statementId": "root"
+      },
+      "parserMeta": {
+        "incomplete": false,
+        "unresolved": [],
+        "orphaned": [],
+        "statementCount": 1,
+        "errors": []
+      },
+      "candidateView": {
+        "version": "1",
+        "catalog": {
+          "id": "lyra-reviewed",
+          "version": "1"
+        },
+        "surfaceId": "openui-experiment",
+        "revision": 0,
+        "root": {
+          "id": "root",
+          "type": "table",
+          "props": {
+            "caption": "Inventory",
+            "columns": [
+              {
+                "key": "c0",
+                "label": "Item"
+              },
+              {
+                "key": "c1",
+                "label": "Count"
+              }
+            ],
+            "rows": [
+              {
+                "c0": "Apples",
+                "c1": 2
+              },
+              {
+                "c0": "Pears",
+                "c1": null
+              }
+            ]
+          }
+        }
+      },
+      "candidateSupplementalArtifacts": [
+        {
+          "nodeId": "root",
+          "kind": "table-column-metadata",
+          "columns": [
+            {
+              "key": "item",
+              "label": "Item",
+              "type": "string"
+            },
+            {
+              "key": "count",
+              "label": "Count",
+              "type": "number",
+              "nullable": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "numeric-chart-null-gap",
+      "provenance": {
+        "kind": "original",
+        "license": "MIT"
+      },
+      "status": "supported",
+      "reason": null,
+      "losses": [],
+      "streamingRootMatchesBatch": true,
+      "sourceBytes": 81,
+      "parserRoot": {
+        "type": "element",
+        "typeName": "Chart",
+        "props": {
+          "label": "Orders",
+          "type": "bar",
+          "labels": [
+            "Mon",
+            "Tue"
+          ],
+          "series": [
+            {
+              "label": "Orders",
+              "values": [
+                12,
+                null
+              ]
+            }
+          ]
+        },
+        "partial": false,
+        "hasDynamicProps": false,
+        "statementId": "root"
+      },
+      "parserMeta": {
+        "incomplete": false,
+        "unresolved": [],
+        "orphaned": [],
+        "statementCount": 1,
+        "errors": []
+      },
+      "candidateView": {
+        "version": "1",
+        "catalog": {
+          "id": "lyra-reviewed",
+          "version": "1"
+        },
+        "surfaceId": "openui-experiment",
+        "revision": 0,
+        "root": {
+          "id": "root",
+          "type": "chart",
+          "props": {
+            "label": "Orders",
+            "type": "bar",
+            "labels": [
+              "Mon",
+              "Tue"
+            ],
+            "datasets": [
+              {
+                "label": "Orders",
+                "data": [
+                  12,
+                  null
+                ]
+              }
+            ],
+            "withDataTable": true
+          }
+        }
+      },
+      "candidateSupplementalArtifacts": []
+    },
+    {
+      "id": "metric-numeric-source-loss",
+      "provenance": {
+        "kind": "original",
+        "license": "MIT"
+      },
+      "status": "lossy",
+      "reason": null,
+      "losses": [
+        "A numeric Metric source value becomes the stat component display string; numeric source type/provenance is not preserved by this view alone."
+      ],
+      "streamingRootMatchesBatch": true,
+      "sourceBytes": 29,
+      "parserRoot": {
+        "type": "element",
+        "typeName": "Metric",
+        "props": {
+          "label": "Requests",
+          "value": 12
+        },
+        "partial": false,
+        "hasDynamicProps": false,
+        "statementId": "root"
+      },
+      "parserMeta": {
+        "incomplete": false,
+        "unresolved": [],
+        "orphaned": [],
+        "statementCount": 1,
+        "errors": []
+      },
+      "candidateView": {
+        "version": "1",
+        "catalog": {
+          "id": "lyra-reviewed",
+          "version": "1"
+        },
+        "surfaceId": "openui-experiment",
+        "revision": 0,
+        "root": {
+          "id": "root",
+          "type": "stat",
+          "props": {
+            "label": "Requests",
+            "value": "12"
+          }
+        }
+      },
+      "candidateSupplementalArtifacts": []
+    },
+    {
+      "id": "reactive-expression",
+      "provenance": {
+        "kind": "original",
+        "license": "MIT"
+      },
+      "status": "rejected",
+      "reason": "Dynamic, partial or non-element AST nodes are outside this experiment.",
+      "losses": [],
+      "streamingRootMatchesBatch": true,
+      "sourceBytes": 62,
+      "parserRoot": {
+        "type": "element",
+        "typeName": "Stack",
+        "props": {
+          "children": [
+            {
+              "type": "element",
+              "typeName": "TextContent",
+              "props": {
+                "text": {
+                  "k": "BinOp",
+                  "op": "+",
+                  "left": {
+                    "k": "StateRef",
+                    "n": "$count"
+                  },
+                  "right": {
+                    "k": "Num",
+                    "v": 1
+                  }
+                }
+              },
+              "partial": false,
+              "hasDynamicProps": true,
+              "statementId": "text"
+            }
+          ]
+        },
+        "partial": false,
+        "hasDynamicProps": true,
+        "statementId": "root"
+      },
+      "parserMeta": {
+        "incomplete": false,
+        "unresolved": [],
+        "orphaned": [],
+        "statementCount": 3,
+        "errors": []
+      },
+      "candidateView": null,
+      "candidateSupplementalArtifacts": []
+    },
+    {
+      "id": "assistant-action",
+      "provenance": {
+        "kind": "original",
+        "license": "MIT"
+      },
+      "status": "rejected",
+      "reason": "Dynamic, partial or non-element AST nodes are outside this experiment.",
+      "losses": [],
+      "streamingRootMatchesBatch": true,
+      "sourceBytes": 50,
+      "parserRoot": {
+        "type": "element",
+        "typeName": "Button",
+        "props": {
+          "label": "Ask",
+          "action": {
+            "k": "Comp",
+            "name": "ToAssistant",
+            "args": [
+              {
+                "k": "Str",
+                "v": "Tell me more"
+              }
+            ],
+            "mappedProps": {
+              "message": {
+                "k": "Str",
+                "v": "Tell me more"
+              }
+            }
+          }
+        },
+        "partial": false,
+        "hasDynamicProps": true,
+        "statementId": "root"
+      },
+      "parserMeta": {
+        "incomplete": false,
+        "unresolved": [],
+        "orphaned": [],
+        "statementCount": 1,
+        "errors": []
+      },
+      "candidateView": null,
+      "candidateSupplementalArtifacts": []
+    },
+    {
+      "id": "external-url-action",
+      "provenance": {
+        "kind": "original",
+        "license": "MIT"
+      },
+      "status": "rejected",
+      "reason": "Dynamic, partial or non-element AST nodes are outside this experiment.",
+      "losses": [],
+      "streamingRootMatchesBatch": true,
+      "sourceBytes": 62,
+      "parserRoot": {
+        "type": "element",
+        "typeName": "Button",
+        "props": {
+          "label": "Open",
+          "action": {
+            "k": "Comp",
+            "name": "OpenUrl",
+            "args": [
+              {
+                "k": "Str",
+                "v": "https://example.test/report"
+              }
+            ],
+            "mappedProps": {
+              "url": {
+                "k": "Str",
+                "v": "https://example.test/report"
+              }
+            }
+          }
+        },
+        "partial": false,
+        "hasDynamicProps": true,
+        "statementId": "root"
+      },
+      "parserMeta": {
+        "incomplete": false,
+        "unresolved": [],
+        "orphaned": [],
+        "statementCount": 1,
+        "errors": []
+      },
+      "candidateView": null,
+      "candidateSupplementalArtifacts": []
+    },
+    {
+      "id": "unapproved-field",
+      "provenance": {
+        "kind": "original",
+        "license": "MIT"
+      },
+      "status": "rejected",
+      "reason": "Fields require an explicit host field/purpose policy; no field is imported by this experiment.",
+      "losses": [],
+      "streamingRootMatchesBatch": true,
+      "sourceBytes": 33,
+      "parserRoot": {
+        "type": "element",
+        "typeName": "Input",
+        "props": {
+          "label": "Email address",
+          "value": ""
+        },
+        "partial": false,
+        "hasDynamicProps": false,
+        "statementId": "root"
+      },
+      "parserMeta": {
+        "incomplete": false,
+        "unresolved": [],
+        "orphaned": [],
+        "statementCount": 1,
+        "errors": []
+      },
+      "candidateView": null,
+      "candidateSupplementalArtifacts": []
+    },
+    {
+      "id": "incomplete-reference",
+      "provenance": {
+        "kind": "original",
+        "license": "MIT"
+      },
+      "status": "rejected",
+      "reason": "Parser output is missing, incomplete, unresolved, orphaned, or reports errors.",
+      "losses": [],
+      "streamingRootMatchesBatch": true,
+      "sourceBytes": 21,
+      "parserRoot": {
+        "type": "element",
+        "typeName": "Stack",
+        "props": {
+          "children": []
+        },
+        "partial": true,
+        "hasDynamicProps": false,
+        "statementId": "root"
+      },
+      "parserMeta": {
+        "incomplete": true,
+        "unresolved": [
+          "missing"
+        ],
+        "orphaned": [],
+        "statementCount": 1,
+        "errors": []
+      },
+      "candidateView": null,
+      "candidateSupplementalArtifacts": []
+    },
+    {
+      "id": "unknown-component",
+      "provenance": {
+        "kind": "original",
+        "license": "MIT"
+      },
+      "status": "rejected",
+      "reason": "Parser output is missing, incomplete, unresolved, orphaned, or reports errors.",
+      "losses": [],
+      "streamingRootMatchesBatch": true,
+      "sourceBytes": 24,
+      "parserRoot": null,
+      "parserMeta": {
+        "incomplete": false,
+        "unresolved": [],
+        "orphaned": [],
+        "statementCount": 1,
+        "errors": [
+          {
+            "code": "unknown-component",
+            "component": "Widget",
+            "path": "",
+            "message": "Unknown component \"Widget\" — not found in catalog or builtins. Available components: Stack, CardHeader, TextContent, Metric, Table, Chart, Input, Button",
+            "statementId": "root"
+          }
+        ]
+      },
+      "candidateView": null,
+      "candidateSupplementalArtifacts": []
+    }
+  ],
+  "decision": {
+    "runtimeImporter": "no-go",
+    "explanation": "Literal host-schema mapping is feasible, but this experiment does not establish safe semantics for reactive expressions, actions, fields, query/mutation evaluation, source edits, arbitrary upstream libraries, or adversarial parser resource use. Keep the parser outside runtime dependencies until these boundaries have reviewed mappings and qualification.",
+    "supportedScope": "Only the exercised static literal mappings under the checked experiment schema. Synthetic Table and Chart signatures are host-defined, not assertions about upstream built-in UI component parity.",
+    "streamingScope": "One midpoint split per fixture matched its batch root; no exhaustive chunking, scheduling or memory bound is claimed.",
+    "paidModelCalls": 0
+  }
+}

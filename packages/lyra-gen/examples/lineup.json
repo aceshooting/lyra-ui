@@ -1,0 +1,6 @@
+{
+  "description": "Optional comparison labels only. Supply exact provider and model identifiers through host configuration before evaluating. No provider calls or quality claims are implied.",
+  "labels": ["Opus", "Astra", "Sonnet", "Luna"],
+  "models": {},
+  "liveEvaluationQualified": false
+}

@@ -313,6 +313,35 @@ Pluralized messages use one object-valued entry keyed by CLDR categories. A cata
 singular and `<key>Plural` entries should fold them into `{ one: …, other: … }` under the singular
 key's name; the plural key is not read.
 
+### Generated views and embedded apps
+
+`@aceshooting/lyra-gen` uses the same locale registry and inherited `lang`/`locale` as Lyra UI.
+The seven `genView*` renderer messages ship in each locale's `conversation` slice, including
+empty, invalid, loading, load-failure, field-value, unavailable-action and confirmation messages.
+Import the full matching `@aceshooting/lyra-translations/<locale>.js` catalog, or the
+`<locale>/conversation.js` slice plus the families and `shared.js` used by generated child controls.
+The translations package matches the **Lyra UI** version; Gen is versioned independently.
+
+```ts
+import '@aceshooting/lyra-translations/fr/conversation.js';
+import '@aceshooting/lyra-translations/fr/forms.js';
+import '@aceshooting/lyra-translations/fr/shared.js';
+import '@aceshooting/lyra-gen/gen-view.js';
+```
+
+The renderer keeps its own small English defaults and does not load the complete English catalog.
+Its `.strings` overrides affect its own messages; registered locale messages also reach nested
+controls. Changing the inherited locale or registering a catalog after mounting refreshes the
+renderer. Caller labels and model-generated prose remain caller content: the host chooses their
+language separately. Numeric/date formatting follows the host locale without changing stored
+JSON numbers or ISO dates. Host-created chat stream messages still require the host's localized
+`strings` configuration.
+
+A loaded `lr-mcp-app` publishes changed locale/direction context without reloading its frame.
+Official MCP Apps sessions retain context updates during initialization and deliver the latest
+context when the app becomes ready. Resource content remains responsible for rendering its own
+translations and direction; the iframe does not inherit the parent document's CSS or `dir`.
+
 ## RTL and direction
 
 Direction is inherited from the platform `dir` cascade; locale/`lang` selection does not change it,

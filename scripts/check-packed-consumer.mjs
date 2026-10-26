@@ -13,6 +13,7 @@ import { checkPublishedFieldHistorySync } from '../packages/lyra-ui/scripts/publ
 import { preservePackedTarball, verifyPackedMigrationConsumers, writeResolvedMigrationEntry, verifyResolvedMigrationBrowser } from './packed-migration-consumer.mjs';
 import { verifyPacked3dConsumer } from './packed-3d-consumer.mjs';
 import { verifyPackedMapConsumer } from './packed-map-consumer.mjs';
+import { verifyPackedGenConsumer } from './packed-gen-consumer.mjs';
 import { verifyPackedShikiConsumer } from './packed-shiki-consumer.mjs';
 import {
   parsePerformanceQualificationOptions,
@@ -1742,6 +1743,9 @@ async function main() {
       destination: tarballDir,
       compareExports: true,
     })) ?? await pack(docsPackage, tarballDir);
+    const genTarball = (await suppliedPackedTarball(PACKED_TARBALL_ENVIRONMENT.gen, {
+      packageDir: join(root, 'packages', 'lyra-gen'), destination: tarballDir, compareExports: true,
+    })) ?? await pack(join(root, 'packages', 'lyra-gen'), tarballDir);
     const translationsTarball = (await suppliedPackedTarball(PACKED_TARBALL_ENVIRONMENT.translations, {
       packageDir: translationsPackage,
       destination: tarballDir,
@@ -1771,6 +1775,7 @@ async function main() {
     }
     await verifyPackedMapConsumer({ workspace, mapTarball, run, pnpm, root });
     await verifyPackedDocsPackage({ workspace, uiTarball, docsTarball });
+    await verifyPackedGenConsumer({ workspace, uiTarball, genTarball, run, pnpm, root });
     await verifyPackedTranslationsPackage({ workspace, uiTarball, translationsTarball });
     await verifyPackedIdePackage({ workspace, uiTarball, ideTarball });
 

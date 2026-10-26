@@ -8,6 +8,13 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 const strings: LyraLocaleStrings = {
   streamInterrupted: 'Strömmen avbröts',
   streamResume: 'Återuppta',
+  genViewEmpty: 'Det finns ingen genererad vy att visa.',
+  genViewInvalid: 'Den här genererade vyn kan inte visas.',
+  genViewLoading: 'Läser in komponent…',
+  genViewLoadFailed: 'Den här komponenten kunde inte läsas in.',
+  genViewInvalidState: 'Värdet i det här fältet kan inte användas.',
+  genViewActionDenied: 'Den här åtgärden är inte tillgänglig.',
+  genViewConfirmationRequired: 'Den här åtgärden kräver bekräftelse från applikationen.',
   chatViewportLabel: 'Konversation',
   newMessagesCount: {
     one: '{count} nytt meddelande',

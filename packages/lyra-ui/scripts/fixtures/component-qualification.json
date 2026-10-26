@@ -9584,7 +9584,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-viewport/chat-viewport.test.ts",
-              "test": "treats PageUp/ArrowUp/Home/Shift+Space as a user scroll gesture, and ignores other keys",
+              "test": "clears settled virtual keyboard intent before later programmatic scrolling with and without reduced motion",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -9675,7 +9675,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-viewport/chat-viewport.class.ts",
-              "line": 745,
+              "line": 837,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -22430,7 +22430,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "rtl",
           "reducedMotion",
           "visual",
           "forcedColors",
@@ -22502,9 +22501,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/media/file-input/file-input-layout.test.ts",
+              "line": 26,
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "applicable",
@@ -22599,7 +22603,6 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "No component-local rendered RTL assertion is recorded.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -22613,6 +22616,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/media/file-input/accept.test.ts",
+          "src/components/media/file-input/file-input-layout.test.ts",
           "src/components/media/file-input/file-input-limits.test.ts",
           "src/components/media/file-input/file-input-remediation.test.ts",
           "src/components/media/file-input/file-input-thumbnail-cost.test.ts",
@@ -32567,7 +32571,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "rtl",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -32586,6 +32589,12 @@
           "applicability": "applicable",
           "status": "automated",
           "evidence": [
+            {
+              "file": "src/components/agent-tools/mcp-app/mcp-app-protocol.test.ts",
+              "test": "negotiates the official lifecycle and correlates numeric request ids through the sandbox proxy",
+              "target": "el",
+              "state": "populated"
+            },
             {
               "file": "src/components/agent-tools/mcp-app/mcp-app.test.ts",
               "test": "is accessible with an app loaded",
@@ -32609,9 +32618,14 @@
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/agent-tools/mcp-app/mcp-app-locale.test.ts",
+              "test": "updates ${protocol} app locale context after inherited language changes without replacing its frame",
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "not-applicable",
@@ -32707,7 +32721,6 @@
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
         "No component-owned interactive surface was detected; applicability is re-evaluated when the source changes.",
-        "No component-local rendered RTL assertion is recorded.",
         "No component-owned motion declaration or programmatic animation was detected.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
@@ -32720,7 +32733,12 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/mcp-app/mcp-app-csp.test.ts",
+          "src/components/agent-tools/mcp-app/mcp-app-locale.test.ts",
           "src/components/agent-tools/mcp-app/mcp-app-port-boundaries.test.ts",
+          "src/components/agent-tools/mcp-app/mcp-app-protocol.property.test.ts",
+          "src/components/agent-tools/mcp-app/mcp-app-protocol.test.ts",
+          "src/components/agent-tools/mcp-app/mcp-app-sdk.test.ts",
           "src/components/agent-tools/mcp-app/mcp-app.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -35054,6 +35072,8 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/message-parts/message-parts-lazy.test.ts",
+          "src/components/conversation/message-parts/message-parts-widget.test.ts",
           "src/components/conversation/message-parts/message-parts.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",

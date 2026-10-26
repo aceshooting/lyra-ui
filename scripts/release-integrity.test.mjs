@@ -982,7 +982,7 @@ test('requires the exhaustive packed ATTW matrix in the stable release gate', ()
   assert.match(contractJob, /name: packed-attw-tarball/u);
   assert.match(contractJob, /name: packed-companion-tarballs/u);
   assert.equal([...contractJob.matchAll(/sha256sum --check SHA256SUMS/gu)].length, 2);
-  for (const variable of ['LYRA_PACKED_UI_TARBALL', 'LYRA_PACKED_FLAGS_TARBALL', 'LYRA_PACKED_DOCS_TARBALL']) {
+  for (const variable of ['LYRA_PACKED_UI_TARBALL', 'LYRA_PACKED_FLAGS_TARBALL', 'LYRA_PACKED_DOCS_TARBALL', 'LYRA_PACKED_GEN_TARBALL']) {
     assert.match(contractJob, new RegExp(`echo "${variable}=`, 'u'));
   }
   assert.doesNotMatch(contractJob, /pnpm build|pnpm pack|check:package-size/u);
@@ -990,6 +990,7 @@ test('requires the exhaustive packed ATTW matrix in the stable release gate', ()
   assert.match(companionsJob, /name: lyra-ui-dist/u);
   assert.match(companionsJob, /cd packages\/lyra-flags && pnpm pack --pack-destination/u);
   assert.match(companionsJob, /cd packages\/lyra-docs && pnpm pack --ignore-scripts --pack-destination/u);
+  assert.match(companionsJob, /cd packages\/lyra-gen && pnpm pack --ignore-scripts --pack-destination/u);
   assert.match(companionsJob, /git diff --exit-code/u);
   assert.match(companionsJob, /sha256sum "\$\{tarballs\[@\]\}" > SHA256SUMS/u);
   assert.match(companionsJob, /name: packed-companion-tarballs/u);
@@ -1975,6 +1976,10 @@ test('resolves only supported release tags', () => {
     packageName: '@aceshooting/lyra-docs',
     version: '0.1.0',
   });
+  assert.deepEqual(parseReleaseTag('lyra-gen@0.1.0'), {
+    tag: 'lyra-gen@0.1.0', directory: 'packages/lyra-gen',
+    packageName: '@aceshooting/lyra-gen', version: '0.1.0',
+  });
   assert.throws(
     () => parseReleaseTag('other@1.0.0'),
     /Unsupported release tag/
@@ -1995,6 +2000,10 @@ test('release workflows accept the document companion and reject unsupported tag
     ['lyra-ui@25.6.1', true],
     ['lyra-flags@2.3.0', true],
     ['lyra-docs@0.1.0', true],
+    ['lyra-gen@0.1.0', true],
+    ['lyra-gen@0.1.0-beta.1', false],
+    ['lyra-gen@0.1.0+meta', false],
+    ['lyra-gen@00.1.0', false],
     ['lyra-ide@27.0.0', true],
     ['lyra-translations@27.0.0', true],
     ['lyra-map@1.0.0', true],
@@ -2032,6 +2041,18 @@ test('initial document release selects its existing version without releasing an
   assert.throws(() => validateTarballIdentity({ ...docs, version: '0.1.1' }, plan[0]), /does not match tag version/u);
   assert.throws(() => validateTarballIdentity({ ...docs, name: '@aceshooting/lyra-ui' }, plan[0]), /does not match tag package/u);
   assert.throws(() => planReleaseTags({ packages, existingTags: ['lyra-docs@0.1.0'], selection: 'lyra-docs' }), /already exists/u);
+});
+
+test('initial generated-UI release selects its existing independent version only', () => {
+  const gen = { directory: 'packages/lyra-gen', name: '@aceshooting/lyra-gen', version: '0.1.0' };
+  const packages = [gen, { directory: 'packages/lyra-ui', name: '@aceshooting/lyra-ui', version: '30.2.0' }];
+  const plan = planReleaseTags({ packages, existingTags: [], selection: 'lyra-gen' });
+  assert.deepEqual(plan, [parseReleaseTag('lyra-gen@0.1.0')]);
+  assert.deepEqual(validateTarballIdentity(gen, plan[0]), { name: gen.name, version: gen.version });
+  assert.throws(() => validateTarballIdentity({ ...gen, version: '0.1.1' }, plan[0]), /does not match tag version/u);
+  assert.throws(() => planReleaseTags({ packages, existingTags: ['lyra-gen@0.1.0'], selection: 'lyra-gen' }), /already exists/u);
+  const release = readFileSync(path.join(repoRoot, '.github/workflows/release.yml'), 'utf8');
+  assert.match(release, /options:\n(?:          - [^\n]+\n)*          - lyra-gen\n/u);
 });
 
 test('initial map release selects and validates only its own stable package', () => {

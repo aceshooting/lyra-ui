@@ -5,6 +5,7 @@ import { lstatSync, readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { REQUIRED_GEN_FILES } from '../../../scripts/packed-gen-consumer.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const budgetsPath = join(packageDir, 'scripts', 'package-budgets.json');
@@ -26,6 +27,7 @@ const REPOSITORY_ONLY_TARBALL_FILES = Object.freeze(['llms-full.txt']);
 // Published by @aceshooting/lyra-ide and @aceshooting/lyra-translations instead; the pseudo-locales stay.
 const COMPANION_TARBALL_FILE = /^(?:custom-elements\.json|web-types\.json|vscode-(?:html|css)-data\.json|dist\/translations\/(?!pseudo\/).+)$/u;
 const COMPANIONS = Object.freeze({
+  '@aceshooting/lyra-gen': { directory: 'lyra-gen', required: REQUIRED_GEN_FILES },
   '@aceshooting/lyra-translations': { directory: 'lyra-translations', required: ['dist/side-effect-only.d.ts', 'dist/fr.js', 'dist/fr/forms.js'] },
   '@aceshooting/lyra-ide': { directory: 'lyra-ide', required: ['custom-elements.json', 'web-types.json', 'vscode-html-data.json', 'vscode-css-data.json'] },
   '@aceshooting/lyra-map': { directory: 'lyra-map', required: ['dist/index.mjs', 'dist/index.d.ts', 'dist/worker.mjs', 'dist/vite.mjs', 'dist/map.css', 'dist/provenance.json', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'UPSTREAM.json'] },

@@ -462,15 +462,14 @@ export function catalogEntries(source, file = 'localization.ts', name = 'DEFAULT
   const program = parseProgram(file, source);
   let object;
   visitAst(program, (node) => {
-    if (
-      !object &&
-      node.type === 'VariableDeclarator' &&
-      node.id?.type === 'Identifier' &&
-      node.id.name === name &&
-      node.init?.type === 'ObjectExpression'
-    ) {
-      object = node.init;
+    if (object || node.type !== 'VariableDeclarator' || node.id?.type !== 'Identifier' || node.id.name !== name) return;
+    let initializer = unwrapExpression(node.init);
+    if (initializer?.type === 'CallExpression' && initializer.callee?.type === 'MemberExpression' &&
+        !initializer.callee.computed && initializer.callee.object?.name === 'Object' &&
+        initializer.callee.property?.name === 'freeze' && initializer.arguments.length === 1) {
+      initializer = unwrapExpression(initializer.arguments[0]);
     }
+    if (initializer?.type === 'ObjectExpression') object = initializer;
   });
   if (!object) throw new Error(`${file} does not declare ${name} as an object literal`);
   const entries = new Map();
@@ -958,7 +957,28 @@ async function classKeyReachability({ packageDir, exclusions }) {
       exclusions,
     }));
   }
-  const result = { catalogFile, catalogSource, entries, catalogKeys, componentsDir, files, sourceCache, keysByFile, helperConsumers };
+  const companionFile = path.join(packageDir, 'scripts/fixtures/companion-localization.json');
+  const companionSource = await readOptionalFile(companionFile);
+  sourceCache.set(companionFile, companionSource);
+  const companionMessages = [];
+  if (companionSource !== undefined) {
+    const definitions = JSON.parse(companionSource);
+    if (!Array.isArray(definitions)) throw new Error('Companion localization declarations must be an array');
+    for (const definition of definitions) {
+      if (!definition || typeof definition.source !== 'string' || !/^[a-z][a-z-]*$/.test(definition.family ?? '') ||
+          !/^[$A-Z_a-z][$\w]*$/.test(definition.export ?? '')) throw new Error('Invalid companion localization declaration');
+      const file = path.resolve(packageDir, definition.source);
+      const source = await readFile(file, 'utf8');
+      sourceCache.set(file, source);
+      const messages = catalogEntries(source, file, definition.export);
+      if (messages.size === 0) throw new Error(`${file}: companion message table must not be empty`);
+      for (const [key, value] of messages) {
+        if (entries.get(key) !== value) throw new Error(`${file}: companion message ${key} must match its DEFAULT_STRINGS entry`);
+      }
+      companionMessages.push({ family: definition.family, keys: [...messages.keys()] });
+    }
+  }
+  const result = { catalogFile, catalogSource, entries, catalogKeys, componentsDir, files, sourceCache, keysByFile, helperConsumers, companionMessages };
   reachabilityMemo.set(memoKey, { exclusions, result });
   return result;
 }
@@ -983,7 +1003,7 @@ export async function computeFamilyKeyIndex({
   return familyKeyIndex(await classKeyReachability({ packageDir, exclusions }), packageDir);
 }
 
-function familyKeyIndex({ catalogKeys, files, keysByFile, helperConsumers }, packageDir) {
+function familyKeyIndex({ catalogKeys, files, keysByFile, helperConsumers, companionMessages }, packageDir, includeCompanions = true) {
   const familyToKeys = new Map();
   const keyToFamilies = new Map();
   for (const file of files) {
@@ -1021,6 +1041,16 @@ function familyKeyIndex({ catalogKeys, files, keysByFile, helperConsumers }, pac
       }
     }
   }
+  for (const { family, keys } of includeCompanions ? companionMessages : []) {
+    const familyKeys = familyToKeys.get(family);
+    if (!familyKeys) throw new Error(`Unknown companion localization family: ${family}`);
+    for (const key of keys) {
+      familyKeys.add(key);
+      const owners = keyToFamilies.get(key) ?? new Set();
+      owners.add(family);
+      keyToFamilies.set(key, owners);
+    }
+  }
   return { familyToKeys, keyToFamilies, catalogKeys };
 }
 
@@ -1044,9 +1074,12 @@ export async function generateDefaultStringSlices({
     helperConsumers,
   } = reachability;
   const { keyToFamilies } = familyKeyIndex(reachability, packageDir);
+  // Companion messages belong in translated catalogs, but their English defaults ship with the
+  // companion. Only UI consumers need exports from the UI's physical default-string modules.
+  const { keyToFamilies: coreKeyToFamilies } = familyKeyIndex(reachability, packageDir, false);
   const keyFiles = new Map();
   const keysByModule = new Map();
-  for (const [key, families] of keyToFamilies) {
+  for (const [key, families] of coreKeyToFamilies) {
     const family = families.size > 1 ? 'shared' : [...families][0];
     const file = path.join(generatedDir, `${family}.generated.ts`);
     keyFiles.set(key, file);

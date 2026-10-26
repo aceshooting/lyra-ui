@@ -873,6 +873,16 @@ const DOCUMENTED_LAZY_REGISTRATION_EDGES = [
   // The approval dialog registers when the first approval-gated entry arrives.
   'src/components/agent-tools/tool-timeline/tool-timeline.class.ts -> src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.ts',
   'src/components/agent-tools/tool-timeline/tool-timeline.class.ts -> src/components/agent-tools/tool-result-view/tool-result-view.ts',
+  // Message parts register non-text renderers only when a matching part or retry control appears.
+  'src/components/conversation/message-parts/message-parts.class.ts -> src/components/agent-tools/thinking-panel/thinking-panel.ts',
+  'src/components/conversation/message-parts/message-parts.class.ts -> src/components/agent-tools/tool-call-block/tool-call-block.ts',
+  'src/components/conversation/message-parts/message-parts.class.ts -> src/components/agent-tools/tool-call-chip/tool-call-chip.ts',
+  'src/components/conversation/message-parts/message-parts.class.ts -> src/components/agent-tools/tool-result-view/tool-result-view.ts',
+  'src/components/conversation/message-parts/message-parts.class.ts -> src/components/conversation/widget-renderer/widget-renderer.ts',
+  'src/components/conversation/message-parts/message-parts.class.ts -> src/components/forms/button/button.ts',
+  'src/components/conversation/message-parts/message-parts.class.ts -> src/components/media/attachment-chip/attachment-chip.ts',
+  'src/components/conversation/message-parts/message-parts.class.ts -> src/components/retrieval/citation-badge/citation-badge.ts',
+  'src/components/conversation/message-parts/message-parts.class.ts -> src/components/utility/json-viewer/json-viewer.ts',
   // The searchable catalog pickers load the filter combobox on first use.
   'src/components/forms/country-picker/country-picker.class.ts -> src/components/forms/catalog-picker-base.ts -> src/components/forms/combobox/combobox-catalog.ts',
   'src/components/forms/currency-picker/currency-picker.class.ts -> src/components/forms/catalog-picker-base.ts -> src/components/forms/combobox/combobox-catalog.ts',

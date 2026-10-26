@@ -999,4 +999,36 @@ for (const key of ['inputLabel', 'showPassword', 'hidePassword', 'matchMismatch'
   assert.deepEqual([...inputFamilyIndex.keyToFamilies.get(key)].sort(), ['forms'], `the actual ${key} catalog entry remains forms-only`);
 }
 
+// Companion message ownership must be tied to real, matching source, not an orphan allowlist.
+const companionFixture = await mkdtemp(path.join(tmpdir(), 'lyra-companion-strings-'));
+try {
+  const packageDir = path.join(companionFixture, 'ui');
+  const companionDir = path.join(companionFixture, 'companion');
+  const sampleDir = path.join(packageDir, 'src/components/conversation/sample');
+  await Promise.all([path.join(packageDir, 'src/internal'), path.join(packageDir, 'scripts/fixtures'), sampleDir, companionDir].map(directory => mkdir(directory, { recursive: true })));
+  await writeFile(path.join(packageDir, 'src/internal/localization.ts'), "const DEFAULT_STRINGS = { label: 'Label', companionEmpty: 'No content.' };\n");
+  await writeFile(path.join(sampleDir, 'sample.class.ts'), "export class LyraSample extends LyraElement { render() { return this.localize('label'); } }\n");
+  const sourceFile = path.join(companionDir, 'localization.ts');
+  await writeFile(sourceFile, "export const COMPANION_STRINGS = Object.freeze({ companionEmpty: 'No content.' });\n");
+  await writeFile(path.join(packageDir, 'scripts/fixtures/companion-localization.json'), JSON.stringify([{ source: '../companion/localization.ts', export: 'COMPANION_STRINGS', family: 'conversation' }]));
+  const result = await generateDefaultStringSlices({ packageDir, write: true, exclusions: {} });
+  assert.deepEqual(result.unusedKeys, [], 'a real companion message is not an orphan');
+  const index = await computeFamilyKeyIndex({ packageDir, exclusions: {} });
+  assert.deepEqual([...index.keyToFamilies.get('companionEmpty')], ['conversation']);
+  assert.doesNotMatch(await readFile(path.join(sampleDir, 'sample.class.ts'), 'utf8'), /companionEmpty/, 'unrelated component default maps stay lean');
+  const generatedFile = path.join(packageDir, 'src/internal/default-strings/conversation.generated.ts');
+  assert.doesNotMatch(await readFile(generatedFile, 'utf8'), /LYRA_DEFAULT_companionEmpty/, 'companion-only messages do not emit unused core defaults');
+  await writeFile(sourceFile, "export const COMPANION_STRINGS = Object.freeze({ companionEmpty: 'No content.', label: 'Label' });\n");
+  await generateDefaultStringSlices({ packageDir, write: true, exclusions: {} });
+  assert.match(await readFile(generatedFile, 'utf8'), /LYRA_DEFAULT_label/, 'a message used by UI and a companion still emits its core fallback');
+  await writeFile(sourceFile, "export const COMPANION_STRINGS = Object.freeze({ companionEmpty: 'Changed without catalog update.' });\n");
+  await assert.rejects(generateDefaultStringSlices({ packageDir, exclusions: {} }), /companion.*match|match.*companion/i);
+} finally { await rm(companionFixture, { recursive: true, force: true }); }
+
+const actualConversationDefaults = await readFile(new URL('../src/internal/default-strings/conversation.generated.ts', import.meta.url), 'utf8');
+for (const key of ['genViewEmpty', 'genViewInvalid', 'genViewLoading', 'genViewLoadFailed', 'genViewInvalidState', 'genViewActionDenied', 'genViewConfirmationRequired']) {
+  assert.deepEqual([...inputFamilyIndex.keyToFamilies.get(key)], ['conversation'], `${key} remains available in the translation family`);
+  assert.doesNotMatch(actualConversationDefaults, new RegExp(`LYRA_DEFAULT_${key}\\b`), `${key} has no unused UI fallback export`);
+}
+
 console.log('per-component default-string slice generator tests passed.');

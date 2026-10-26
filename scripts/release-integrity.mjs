@@ -63,6 +63,7 @@ const RELEASE_PACKAGES = Object.freeze({
   'lyra-ui': '@aceshooting/lyra-ui',
   'lyra-flags': '@aceshooting/lyra-flags',
   'lyra-docs': '@aceshooting/lyra-docs',
+  'lyra-gen': '@aceshooting/lyra-gen',
   'lyra-map': '@aceshooting/lyra-map',
   'lyra-3d': '@aceshooting/lyra-3d',
   'lyra-ide': '@aceshooting/lyra-ide',

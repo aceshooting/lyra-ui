@@ -63,6 +63,21 @@ export default {
         'scripts/engine-regression-fixtures/refresh-regressions.mjs'],
       project: ['src/**/*.ts!', '!src/**/*.test.ts!', '!src/**/*-fixtures.ts!', 'scripts/**/*.mjs', 'type-tests/**/*.ts', 'test/**/*.ts'],
     },
+    'packages/lyra-gen': {
+      entry: [
+        'src/index.ts!', 'src/gen-view.ts!', 'src/gen-view.class.ts!',
+        'src/dashboard-binding.ts!', 'src/ssr.ts!', 'src/adapters/a2ui.ts!',
+        'src/adapters/a2ui-candidate.ts!', 'src/replay.ts!', 'src/evaluation.ts!',
+        'src/**/*.test.ts', 'test/**/*.{ts,mjs}',
+        // Published examples and maintainer qualification CLIs are explicit runnable entries.
+        'examples/chat.ts!', 'examples/dashboard.ts!', 'examples/saved-dashboard/{app.js,host.mjs}!',
+        'scripts/{compare-a2ui-reference,openui-experiment,report-catalog-presets}.mjs',
+        '*.config.mjs',
+      ],
+      project: ['src/**/*.ts!', '!src/**/*.test.ts!', 'scripts/**/*.mjs', 'bin/*.mjs', 'examples/**/*.{ts,js,mjs}', 'test/**/*.{ts,mjs}', '*.config.mjs'],
+      // TypeScript emits decorator helper imports into the published build.
+      ignoreDependencies: ['tslib'],
+    },
     'packages/lyra-map': {
       // Build inputs produce the public worker/plugin entries and declarations in dist/.
       entry: ['src/vite.mjs!', 'src/vite.d.ts!', 'types/features.d.ts!', 'test/*.test.mjs'],

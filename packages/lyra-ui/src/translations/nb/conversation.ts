@@ -8,6 +8,13 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 const strings: LyraLocaleStrings = {
   streamInterrupted: 'Strømmen ble avbrutt',
   streamResume: 'Fortsett',
+  genViewEmpty: 'Ingen generert visning å vise.',
+  genViewInvalid: 'Denne genererte visningen kan ikke vises.',
+  genViewLoading: 'Laster inn komponent …',
+  genViewLoadFailed: 'Denne komponenten kunne ikke lastes inn.',
+  genViewInvalidState: 'Verdien i dette feltet kan ikke brukes.',
+  genViewActionDenied: 'Denne handlingen er ikke tilgjengelig.',
+  genViewConfirmationRequired: 'Denne handlingen krever bekreftelse fra applikasjonen.',
   chatViewportLabel: 'Samtale',
   newMessagesCount: {
     one: '{count} ny melding',

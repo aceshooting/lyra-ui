@@ -15,7 +15,7 @@ on:
         type: boolean
         default: false
       first_package_bootstrap:
-        description: 'Use the protected npm token for the first publication of lyra-docs, lyra-ide, lyra-translations, lyra-map or lyra-3d only'
+        description: 'Use the protected npm token for the first publication of lyra-docs, lyra-ide, lyra-translations, lyra-map, lyra-3d or lyra-gen only'
         required: false
         type: boolean
         default: false
@@ -183,8 +183,8 @@ jobs:
           set -euo pipefail
           if [[ "$BOOTSTRAP" != true ]]; then exit 0; fi
           if [[ "$GITHUB_EVENT_NAME" != workflow_dispatch || "$DRY_RUN" == true ||
-                ! "$TAG" =~ ^lyra-(docs|ide|translations|map|3d)@(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-            echo '::error::First-package bootstrap requires a real, manually dispatched stable lyra-docs, lyra-ide, lyra-translations, lyra-map or lyra-3d release.'
+                ! "$TAG" =~ ^lyra-(docs|ide|translations|map|3d|gen)@(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo '::error::First-package bootstrap requires a real, manually dispatched stable lyra-docs, lyra-ide, lyra-translations, lyra-map, lyra-3d or lyra-gen release.'
             exit 1
           fi
           status="$(curl --silent --show-error --proto '=https' --tlsv1.2 \

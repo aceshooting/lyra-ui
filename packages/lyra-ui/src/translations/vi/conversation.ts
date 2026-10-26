@@ -8,6 +8,13 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 const strings: LyraLocaleStrings = {
   streamInterrupted: 'Luồng đã bị gián đoạn',
   streamResume: 'Tiếp tục',
+  genViewEmpty: 'Không có chế độ xem được tạo để hiển thị.',
+  genViewInvalid: 'Không thể hiển thị chế độ xem được tạo này.',
+  genViewLoading: 'Đang tải thành phần…',
+  genViewLoadFailed: 'Không thể tải thành phần này.',
+  genViewInvalidState: 'Không thể sử dụng giá trị của trường này.',
+  genViewActionDenied: 'Thao tác này không khả dụng.',
+  genViewConfirmationRequired: 'Thao tác này cần xác nhận từ ứng dụng.',
   chatViewportLabel: 'Cuộc trò chuyện',
   newMessagesCount: {
     other: '{count} tin nhắn mới',

@@ -31,6 +31,13 @@ export interface A2UiLikeSurface {
   data?: unknown;
 }
 
+/** A widget-compatible helper result. Assign `bindingState` separately to the renderer. */
+export interface A2UiAdapterResult extends LyraWidgetDocument {
+  readonly bindingState?: unknown;
+  /** Compatibility alias for the helper's original state field; renderers do not read it. */
+  readonly state?: unknown;
+}
+
 export type A2UiTypeMap = Readonly<Record<string, string>>;
 
 export interface A2UiAdapterLimits extends ProviderSnapshotLimits {
@@ -93,14 +100,16 @@ function componentRecord(value: unknown, limits: Readonly<A2UiAdapterLimits>): A
 }
 
 /**
- * Maps a structurally compatible A2UI component graph into Lyra's versioned, allowlisted widget
- * document. Input, child-cardinality, traversal, and output budgets fail closed as `null`.
+ * Maps a limited A2UI-like structural component graph into Lyra's versioned, allowlisted widget
+ * document. This helper does not process native A2UI protocol messages or surface lifecycles.
+ * Assign the returned `bindingState` to the renderer's separate controlled-state property.
+ * Input, child-cardinality, traversal, and output budgets fail closed as `null`.
  */
 export function adaptA2UiSurface(
   surface: unknown,
   typeMap: unknown,
   limits: Partial<A2UiAdapterLimits> = {},
-): LyraWidgetDocument | null {
+): A2UiAdapterResult | null {
   const resolved = resolveLimits(limits);
   const budget = createProviderSnapshotBudget(resolved);
   const ownedSurface = snapshotProviderValue<unknown>(surface, budget);
@@ -165,6 +174,6 @@ export function adaptA2UiSurface(
   return {
     version: '2',
     root,
-    ...(Object.hasOwn(source, 'data') ? { state: source['data'] } : {}),
+    ...(Object.hasOwn(source, 'data') ? { bindingState: source['data'], state: source['data'] } : {}),
   };
 }

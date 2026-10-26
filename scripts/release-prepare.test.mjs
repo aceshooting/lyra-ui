@@ -22,6 +22,17 @@ const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const source = readFileSync(join(repoRoot, 'scripts/release-prepare.mjs'), 'utf8');
 const render = (steps) => steps.map(([command, args]) => [command, ...args].join(' '));
 
+test('independent generated-UI release builds public declaration prerequisites without bumping them', () => {
+  const steps = render(releasePreparationSteps(['@aceshooting/lyra-gen']));
+  assert.deepEqual(steps.slice(0, 2), [
+    'pnpm --filter @aceshooting/lyra-map run build',
+    'pnpm --filter @aceshooting/lyra-ui run build',
+  ]);
+  assert.ok(steps.includes('pnpm --filter @aceshooting/lyra-gen --if-present run build'));
+  assert.ok(!steps.some(step => step.includes('--filter @aceshooting/lyra-ui --if-present')));
+  assert.ok(!steps.some(step => step.includes('sync-plugin-version')));
+});
+
 function indexAfter(lines, line, after = -1) {
   const index = lines.indexOf(line, after + 1);
   assert.ok(index > after, `${line} must follow its required predecessor`);

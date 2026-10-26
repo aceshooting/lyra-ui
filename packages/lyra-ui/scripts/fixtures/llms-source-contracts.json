@@ -70,7 +70,7 @@
       "module": "src/ai/adapters/a2ui.ts",
       "exportName": "adaptA2UiSurface",
       "kind": "function",
-      "fingerprint": "e7ac09547222c3fb7e12",
+      "fingerprint": "5b4b49f069b97d5586b6",
       "routes": [
         "src/ai/index.ts"
       ],
@@ -86,7 +86,7 @@
       "module": "src/ai/adapters/ag-ui.ts",
       "exportName": "AgUiAdapterLimits",
       "kind": "interface",
-      "fingerprint": "7019b34847f5f7ff89fa",
+      "fingerprint": "146cc7be7f62154f237a",
       "routes": [
         "src/ai/index.ts"
       ],
@@ -102,7 +102,7 @@
       "module": "src/ai/adapters/ag-ui.ts",
       "exportName": "AgUiLikeEvent",
       "kind": "interface",
-      "fingerprint": "64d63ec0598803b1b22b",
+      "fingerprint": "3e10fb1c2adf3b9ccadd",
       "routes": [
         "src/ai/index.ts"
       ],
@@ -14695,7 +14695,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "01831c0d5fcfaa2b314b",
+      "fingerprint": "4281b80582f416653e1c",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -16320,7 +16320,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "77585fd0b25ea3ff1281",
+      "fingerprint": "78ab64a6ec219986a558",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16336,7 +16336,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "4c90ec93c1259a1986ed",
+      "fingerprint": "fd881ebb4387d629fbd4",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16352,7 +16352,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "a1d743cd9103bbe97e5c",
+      "fingerprint": "8d3320d51720da366153",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16896,7 +16896,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "433815fd175f2a4e8d07",
+      "fingerprint": "ce1c3293854c6d375de7",
       "routes": [
         "src/vue.ts"
       ],
@@ -17305,7 +17305,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "778da450e2ab01bef85b",
+      "fingerprint": "b7a095b76c97045049c9",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -21712,6 +21712,108 @@
         "kind": "utility",
         "name": "components-media-map-owned-contracts",
         "declaration": "LyraMapVectorPaint"
+      }
+    },
+    {
+      "module": "src/ai/adapters/a2ui.ts",
+      "exportName": "A2UiAdapterResult",
+      "kind": "interface",
+      "fingerprint": "0aae664a2ea5400833d9",
+      "routes": [
+        "src/ai/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "ai-adapters-a2ui-contracts",
+        "declaration": "A2UiAdapterResult"
+      }
+    },
+    {
+      "module": "src/ai/adapters/ag-ui.ts",
+      "exportName": "AgUiAdapterOptions",
+      "kind": "interface",
+      "fingerprint": "f70d5a87600f1c980e95",
+      "routes": [
+        "src/ai/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "ai-adapters-ag-ui-contracts",
+        "declaration": "AgUiAdapterOptions"
+      }
+    },
+    {
+      "module": "src/ai/adapters/ag-ui.ts",
+      "exportName": "AgUiCustomEvent",
+      "kind": "interface",
+      "fingerprint": "a2f723408ce49f6cb426",
+      "routes": [
+        "src/ai/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "ai-adapters-ag-ui-contracts",
+        "declaration": "AgUiCustomEvent"
+      }
+    },
+    {
+      "module": "src/ai/adapters/ag-ui.ts",
+      "exportName": "AgUiCustomEventTarget",
+      "kind": "interface",
+      "fingerprint": "7ca768e328a74f85dfd2",
+      "routes": [
+        "src/ai/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "ai-adapters-ag-ui-contracts",
+        "declaration": "AgUiCustomEventTarget"
+      }
+    },
+    {
+      "module": "src/components/agent-tools/mcp-app/mcp-app-protocol.ts",
+      "exportName": "McpAppHostCapabilities",
+      "kind": "interface",
+      "fingerprint": "805208a75a494b5f72d8",
+      "routes": [
+        "src/components/agent-tools/index.ts",
+        "src/components/agent-tools/mcp-app/mcp-app.class.ts",
+        "src/components/agent-tools/mcp-app/mcp-app.ts",
+        "src/components/lr-mcp-app.ts"
+      ],
+      "document": "llms/agent-tools.md",
+      "family": "agent-tools",
+      "locator": {
+        "kind": "utility",
+        "name": "components-agent-tools-mcp-app-mcp-app-contracts",
+        "declaration": "McpAppHostCapabilities"
+      }
+    },
+    {
+      "module": "src/components/agent-tools/mcp-app/mcp-app-protocol.ts",
+      "exportName": "McpAppRequestDetail",
+      "kind": "interface",
+      "fingerprint": "1351eb9486d51200ae54",
+      "routes": [
+        "src/components/agent-tools/index.ts",
+        "src/components/agent-tools/mcp-app/mcp-app.class.ts",
+        "src/components/agent-tools/mcp-app/mcp-app.ts",
+        "src/components/lr-mcp-app.ts"
+      ],
+      "document": "llms/agent-tools.md",
+      "family": "agent-tools",
+      "locator": {
+        "kind": "utility",
+        "name": "components-agent-tools-mcp-app-mcp-app-contracts",
+        "declaration": "McpAppRequestDetail"
       }
     }
   ],

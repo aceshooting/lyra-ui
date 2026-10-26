@@ -8,6 +8,13 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 const strings: LyraLocaleStrings = {
   streamInterrupted: 'Mtiririko umekatizwa',
   streamResume: 'Endelea',
+  genViewEmpty: 'Hakuna mwonekano uliotengenezwa wa kuonyesha.',
+  genViewInvalid: 'Mwonekano huu uliotengenezwa hauwezi kuonyeshwa.',
+  genViewLoading: 'Inapakia kijenzi…',
+  genViewLoadFailed: 'Kijenzi hiki hakikuweza kupakiwa.',
+  genViewInvalidState: 'Thamani ya sehemu hii haiwezi kutumika.',
+  genViewActionDenied: 'Kitendo hiki hakipatikani.',
+  genViewConfirmationRequired: 'Kitendo hiki kinahitaji uthibitisho kutoka kwa programu.',
   chatViewportLabel: 'Mazungumzo',
   newMessagesCount: {
     one: 'ujumbe mpya {count}',

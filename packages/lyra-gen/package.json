@@ -1,0 +1,85 @@
+{
+  "name": "@aceshooting/lyra-gen",
+  "version": "0.1.0",
+  "description": "Experimental constrained generated UI, interactive answers and portable dashboard contracts for Lyra UI.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aceshooting/lyra-ui.git",
+    "directory": "packages/lyra-gen"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "docs",
+    "examples",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "sideEffects": [
+    "./dist/gen-view.js",
+    "./dist/dashboard-binding.js"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./gen-view.js": {
+      "types": "./dist/gen-view.d.ts",
+      "default": "./dist/gen-view.js"
+    },
+    "./*.js": {
+      "types": "./dist/*.d.ts",
+      "default": "./dist/*.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "lyra-gen": "./bin/lyra-gen.mjs"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "lint": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json && pnpm check:types && pnpm check:browser-types",
+    "test": "pnpm build && node scripts/run-tests.mjs",
+    "test:browser": "web-test-runner --config web-test-runner.config.mjs",
+    "test:visual": "node ../../benchmarks/generative-ui/visual.mjs --browser=chromium --baselines=../../benchmarks/generative-ui/visual-baselines/chromium",
+    "prepack": "pnpm --filter @aceshooting/lyra-ui build && pnpm build",
+    "check:catalog": "node scripts/check-catalog.mjs",
+    "check:types": "tsc -p tsconfig.types.json",
+    "check:browser-types": "tsc -p tsconfig.browser-test.json",
+    "check:build-artifacts": "node --test scripts/check-build-artifacts.test.mjs && node scripts/check-build-artifacts.mjs",
+    "check:examples": "tsc -p tsconfig.examples.json",
+    "test:saved-dashboard": "node --test test/host/saved-dashboard.test.mjs",
+    "check:bundles": "node scripts/measure-bundles.mjs"
+  },
+  "dependencies": {
+    "lit": "^3.3.3",
+    "tslib": "^2.8.1"
+  },
+  "peerDependencies": {
+    "@aceshooting/lyra-ui": "workspace:^"
+  },
+  "devDependencies": {
+    "@aceshooting/lyra-translations": "workspace:*",
+    "@aceshooting/lyra-ui": "workspace:*",
+    "@lit-labs/ssr": "^4.1.0",
+    "@open-wc/testing": "^5.0.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.20.5",
+    "@web/dev-server-esbuild": "^2.0.0",
+    "@web/test-runner": "^1.0.0",
+    "@web/test-runner-commands": "^1.0.1",
+    "ai": "6.0.292",
+    "esbuild": "^0.28.2",
+    "fast-check": "^4.10.2",
+    "playwright": "^1.64.1",
+    "typescript": "^7.0.2"
+  },
+  "packageManager": "pnpm@12.15.0"
+}

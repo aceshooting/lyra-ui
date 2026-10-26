@@ -3775,7 +3775,94 @@ with a trusted CSP meta placed before every caller-controlled HTML token; commen
 head decoys therefore cannot bypass the policy. Remote documents accept only relative or HTTP(S)
 URLs and use a fixed `no-referrer` policy; active-document `data:` and `blob:` URLs are rejected.
 The frame can only request tool calls, messages, navigation, logs, and clamped resizing through
-typed events. Capabilities are denied unless explicitly enabled in `resource.permissions`.
+typed events. Browser API permissions are denied unless explicitly enabled in `resource.permissions`.
+
+The default `protocol="legacy"` uses Lyra's existing nonce/port envelope. Set
+`protocol="mcp-apps"` for the supported JSON-RPC host subset of the
+[MCP Apps 2026-01-26 protocol](https://github.com/modelcontextprotocol/ext-apps/blob/v2.0.1/specification/2026-01-26/apps.mdx).
+The wire contract is pinned against the public `@modelcontextprotocol/ext-apps` 2.0.1 types.
+An SDK-built interoperability fixture exercises initialization, tools, resources, context, text messages,
+links, inline display fallback, cancellation, error responses and teardown with `App` from the pinned
+SDK. This is a bounded host implementation, not a claim of full MCP Apps conformance: server
+connections and discovery execution belong to the embedding application; sampling, downloads,
+fullscreen/PiP presentation and host calls into app-exposed tools are unsupported. Unsupported
+optional host capabilities are omitted from the initialization result, even if untyped input offers
+them; their incoming requests fail with method-not-found and do not dispatch host work. App-exposed
+tools use the separate app capability direction: advertising them does not grant server-tool access,
+and this host does not discover or invoke them.
+
+**Official protocol mode:**
+
+- `hostCapabilities: McpAppHostCapabilities = {}` (attribute: false) is a clone-owned grant snapshot.
+  Supported grants are `serverTools: {}`, `serverResources: {}`, `openLinks: {}`, `logging: {}`,
+  `message: { text: {} }`, and
+  `updateModelContext: { text?: {}, structuredContent?: {} }`. Unadvertised methods return JSON-RPC
+  method-not-found. Changing capabilities or protocol remounts the app and cancels pending work.
+- The app sends `ui/initialize`; the host returns the pinned revision, host identity, supported
+  capabilities, locale and inline display context. The app's `ui/notifications/initialized`
+  notification emits `lr-mcp-initialized` with `{ uri, frameGeneration }`. Host notifications are
+  rejected before that point; `lr-mcp-ready` alone only reports frame load.
+- `lr-mcp-request` carries `{ requestId, requestToken, method, params, frameGeneration, signal }` for `tools/call`,
+  `tools/list`, `resources/list`, `resources/templates/list`, `resources/read`, `ui/message`,
+  `ui/open-link`, and `ui/update-model-context`. IDs retain their string
+  or numeric type, including `0`. The host authorizes and executes each request. Links must be
+  absolute HTTP(S) or mailto; message content supports text blocks only. Resource methods delegate
+  authorization and actual server reads to the host listener; they never fetch on their own.
+- `ui/request-display-mode` accepts the standard mode vocabulary and returns `{ mode: "inline" }`,
+  the only display mode advertised by this host, including when the app requests fullscreen or PiP.
+- `postMcpResponse(requestId, options): boolean` requires `{ frameGeneration, requestToken, result }` or
+  `{ frameGeneration, requestToken, error: { code, message, data? } }`. Results are objects. Unknown, duplicate,
+  cancelled, timed-out and stale replies return `false`. Each event has a fresh opaque `requestToken`;
+  return it unchanged so a late reply cannot answer a newer request that reuses the same wire ID.
+  No external action is automatic.
+- `postMcpNotification(method, params, frameGeneration): boolean` supports
+  `ui/notifications/tool-input`, `tool-input-partial`, `tool-result`, `tool-cancelled` and
+  `host-context-changed` under that same prefix. Keep the initialized event's generation for
+  asynchronous deliveries. `postHostContext()` sends a context-changed notification in this mode.
+- `teardownApp(): Promise<boolean>` sends `ui/resource-teardown` and waits at most one second for
+  acknowledgement. Await it before removing the resource when graceful cleanup is needed. The
+  session closes regardless of acknowledgement. Abrupt removal closes immediately.
+- Each pending request has a 30-second deadline; cancellation, timeout and teardown abort its
+  `signal`. There are at most 64 pending requests; messages are bounded to 10,000 values, 32 nesting
+  levels and 1,048,576 UTF-16 code units across keys and strings. This bounds processing and retained requests, not the
+  browser's initial structured-clone allocation. Optional undefined object members are omitted
+  during bounded JSON normalization; sparse/undefined arrays, cyclic values and accessors are rejected.
+
+In official mode, inline resources can load external JavaScript and stylesheets only from the
+HTTP(S) origins explicitly granted in `resource.csp.resourceDomains`. The embedding host must vet
+those origins before assigning the resource; server-provided metadata is not itself authorization.
+Empty, malformed and unmatched origins do not enable external assets. This adds no evaluation,
+blob-script or wildcard allowances. Legacy mode keeps script and stylesheet execution inline-only,
+even when its resource domains permit images, fonts or media. Remote `src` resources still follow
+the remote server's own CSP rather than receiving an injected policy.
+
+The official app runs in an inner opaque-origin iframe within a trusted outer sandbox proxy.
+The trusted proxy enforces an ancestor CSP: inline app navigation is limited to the explicitly
+approved `frameDomains` (none by default), including redirects. For remote `src`, the ancestor
+permits only its initial HTTP(S) origin. This blocks unapproved destinations before a network
+request is sent; the inner document cannot remove or relax the ancestor policy. Inline srcdoc
+frames inherit the approved policy, including any approved nested-frame origins.
+The app uses standard parent-window JSON-RPC messages; the proxy checks the app window and opaque
+origin and relays through the host's document-bound message port. Loaded inner-frame navigation
+closes that relay and remounts the sandbox. Treat all app documents and navigations as untrusted;
+window transport does not authenticate a document during the interval before a permitted navigation
+loads. The origin allowlist constrains that interval but does not prove document identity. Do not deliver credentials or secrets as host context or tool data.
+
+```ts
+element.protocol = "mcp-apps";
+element.hostCapabilities = { serverTools: {} };
+element.addEventListener("lr-mcp-request", async event => {
+  const { requestId, requestToken, method, params, frameGeneration, signal } = event.detail;
+  if (method !== "tools/call") {
+    element.postMcpResponse(requestId, {
+      frameGeneration, requestToken, error: { code: -32601, message: "Unsupported method" }
+    });
+    return;
+  }
+  const result = await callAuthorizedTool(params, { signal });
+  element.postMcpResponse(requestId, { frameGeneration, requestToken, result });
+});
+```
 
 **Properties:**
 
@@ -3805,15 +3892,18 @@ typed events. Capabilities are denied unless explicitly enabled in `resource.per
 request with exactly one of `{ frameGeneration, result }` or `{ frameGeneration, error }`. Missing,
 stale, or ambiguous correlation fails closed. Both methods are no-ops before a frame exists.
 
-The initial `host-context` message includes a document-bound nonce and transfers a `MessagePort` to
+In legacy mode, the initial `host-context` message includes a document-bound nonce and transfers a `MessagePort` to
 the executable document; that port is the only channel (window messages are ignored). A same-frame
 navigation closes the port, invalidates the nonce and generation, and mounts a fresh sandbox before
 host data can be delivered.
 
 **Exported types:** `McpAppResource`, `McpAppCsp`, `McpAppPermissions`,
-`McpAppToolCallDetail`, `McpAppToolResultOptions`, and `LyraMcpAppEventMap`.
+`McpAppToolCallDetail`, `McpAppToolResultOptions`, `McpAppProtocol`, `McpAppHostCapabilities`,
+`McpAppRequestId`, `McpAppRequestMethod`, `McpAppRequestDetail`, `McpAppResponseOptions`,
+`McpAppNotificationMethod`, and `LyraMcpAppEventMap`.
 
-**Events:** `lr-mcp-ready` (`{ uri }`), `lr-mcp-tool-call`
+**Events:** `lr-mcp-ready` (`{ uri }`), `lr-mcp-initialized` (`{ uri, frameGeneration }`),
+`lr-mcp-request` (`{ requestId, requestToken, method, params, frameGeneration, signal }`), `lr-mcp-tool-call`
 (`{ requestId?, name, args, frameGeneration }`), `lr-mcp-send-message` (`{ message }`),
 `lr-mcp-open-link` (`{ href }`, an absolute http(s) or mailto URL), `lr-mcp-log`
 (`{ level, value }`), and `lr-mcp-resize` (`{ height }`). These are host-authorized requests; the
@@ -4370,6 +4460,27 @@ These named interfaces and helper signatures are available to typed integrations
     name: string;
     args: unknown;
     frameGeneration: number;
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/mcp-app/mcp-app.class.js`.
+  `McpAppHostCapabilities {
+    readonly serverTools?: Readonly<Record<string, never>>;
+    readonly serverResources?: Readonly<Record<string, never>>;
+    readonly openLinks?: Readonly<Record<string, never>>;
+    readonly logging?: Readonly<Record<string, never>>;
+    readonly message?: { readonly text?: Readonly<Record<string, never>> };
+    readonly updateModelContext?: {
+      readonly text?: Readonly<Record<string, never>>;
+      readonly structuredContent?: Readonly<Record<string, never>>;
+    };
+  }`
+  Import: `@aceshooting/lyra-ui/components/agent-tools/mcp-app/mcp-app.class.js`.
+  `McpAppRequestDetail {
+    requestId: McpAppRequestId;
+    requestToken: string;
+    method: McpAppRequestMethod;
+    params: Readonly<Record<string, unknown>>;
+    frameGeneration: number;
+    signal: AbortSignal;
   }`
 
 - **`components-agent-tools-policy-summary-policy-summary-contracts`** — Supporting data types and helpers for this component family.

@@ -378,3 +378,32 @@ it('drops a tool part without a name and keeps partial output beside a tool erro
   expect(message.parts?.map((part) => part.type)).to.deep.equal(['tool-call', 'tool-result']);
   expect(message.parts?.[1]).to.deep.include({ type: 'tool-result', error: 'Timed out', result: { partial: true } });
 });
+
+it('accepts documented optional undefined fields from SDK snapshots without relaxing payload validation', () => {
+  const message = adaptAiSdkMessage({
+    id: 'sdk-snapshot', role: 'assistant', metadata: undefined,
+    parts: [
+      { type: 'text', text: 'Answer', state: 'streaming', providerMetadata: undefined },
+      { type: 'tool-show_view', toolCallId: 'view-call', state: 'input-streaming',
+        input: undefined, output: undefined, errorText: undefined, rawInput: undefined,
+        providerExecuted: undefined, preliminary: undefined, title: undefined },
+      { type: 'data-view', id: undefined, data: { value: 1 } },
+    ],
+  });
+  expect(message?.parts).to.have.lengthOf(3);
+  expect(message?.parts?.[1]).to.deep.nested.include({ 'metadata.aiSdkInputState': 'input-streaming' });
+  expect(message?.parts?.[2]).to.deep.include({ type: 'data', name: 'view', state: 'complete' });
+  expect(adaptAiSdkMessage({ id: 'bad-data', role: 'assistant', parts: [{ type: 'data-view', data: undefined }] })).to.equal(null);
+  expect(adaptAiSdkMessage({ id: 'bad-input', role: 'assistant', parts: [
+    { type: 'tool-show_view', input: { nested: undefined } },
+  ] })).to.equal(null);
+  expect(adaptAiSdkMessage({ id: 'bad-metadata', role: 'assistant', metadata: { nested: undefined } })).to.equal(null);
+});
+
+it('does not invoke optional SDK property accessors or normalize non-plain records', () => {
+  let getterCalls = 0;
+  const part = { type: 'text', text: 'Unsafe', get providerMetadata() { getterCalls++; return undefined; } };
+  expect(adaptAiSdkMessage({ id: 'accessor', role: 'assistant', parts: [part] })).to.equal(null);
+  expect(getterCalls).to.equal(0);
+  expect(adaptAiSdkMessage(new class { id = 'class'; role = 'assistant'; metadata = undefined; parts = []; }())).to.equal(null);
+});

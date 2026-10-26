@@ -15,9 +15,10 @@ still open.
 - **Generative UI and shared dashboards:** [Lyra Gen program](roadmap/generative-ui.md),
   [detailed backlog](roadmap/generative-ui-backlog.md),
   [evaluation and performance](roadmap/generative-ui-evaluation.md), and
-  [website, showcases and live generation](roadmap/generative-ui-website.md). Planned and
-  unstarted: interactive chat first, then interoperability and persistent dashboards that users
-  can save, embed in applications, publish, share and edit with host-controlled permissions.
+  [website, showcases and live generation](roadmap/generative-ui-website.md). The unpublished
+  experimental companion now includes interactive chat, bounded generation contracts, protocol
+  adapters and saved dashboard workflows. The detailed backlog separates implemented scope,
+  outstanding qualification and conditional capabilities; the hosted demonstration remains planned.
 - **Native document editing:** [delivery sequence](roadmap/document-editing.md) and its
   [qualification record](roadmap/document-editing-feasibility.md). Experimental, in
   `@aceshooting/lyra-docs`; not part of lyra-ui release qualification.

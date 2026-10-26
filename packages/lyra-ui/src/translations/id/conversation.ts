@@ -8,6 +8,13 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 const strings: LyraLocaleStrings = {
   streamInterrupted: 'Streaming terputus',
   streamResume: 'Lanjutkan',
+  genViewEmpty: 'Tidak ada tampilan yang dihasilkan untuk ditampilkan.',
+  genViewInvalid: 'Tampilan yang dihasilkan ini tidak dapat ditampilkan.',
+  genViewLoading: 'Memuat komponen…',
+  genViewLoadFailed: 'Komponen ini tidak dapat dimuat.',
+  genViewInvalidState: 'Nilai kolom ini tidak dapat digunakan.',
+  genViewActionDenied: 'Tindakan ini tidak tersedia.',
+  genViewConfirmationRequired: 'Tindakan ini memerlukan konfirmasi dari aplikasi.',
   chatViewportLabel: 'Percakapan',
   newMessagesCount: {
     other: '{count} pesan baru',
