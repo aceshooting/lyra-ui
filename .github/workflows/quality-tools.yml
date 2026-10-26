@@ -74,7 +74,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       # package-entrypoints.test.ts imports dist/.
       - run: pnpm --filter @aceshooting/lyra-ui build
@@ -109,7 +109,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - name: Run complete map unit suite
         run: pnpm --filter @aceshooting/lyra-map test
@@ -144,7 +144,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @aceshooting/lyra-ui build
       - run: pnpm --filter @aceshooting/lyra-ui exec node scripts/bundle-composition-report.mjs
@@ -179,7 +179,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @aceshooting/lyra-ui build
       # Stop each workload as soon as the difference is bounded to within 5% either way (or after three minutes).

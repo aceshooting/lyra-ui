@@ -17,6 +17,61 @@ function job(text, name) {
   return next < 0 ? rest : rest.slice(0, next + 1);
 }
 
+test('qualification and release Node setup never restores package-manager caches', () => {
+  const workflows = new Map([
+    ['ci.yml', 21],
+    ['full-engine.yml', 2],
+    ['test-all-browsers.yml', 2],
+    ['quality-tools.yml', 4],
+    ['release.yml', 2],
+    ['release-verification.yml', 1],
+    ['prepare-artifacts.yml', 1],
+    ['publish.yml', 1],
+  ]);
+  for (const [name, count] of workflows) {
+    const source = read(`.github/workflows/${name}`);
+    const steps = source.split(/\n(?= {6}- )/u)
+      .filter(step => /uses: actions\/setup-node@/u.test(step));
+    assert.equal(steps.length, count, `${name}: inspect every Node setup step`);
+    for (const step of steps) {
+      assert.match(step, /uses: actions\/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1\b/u);
+      assert.match(step, /^ {10}package-manager-cache: false$/mu, `${name}: disable automatic caching`);
+      assert.doesNotMatch(step, /^ {10}cache(?:-dependency-path)?:/mu, `${name}: explicit caching overrides automatic-cache disablement`);
+      assert.doesNotMatch(step, /^ {8}continue-on-error:/mu, `${name}: Node setup must succeed`);
+      assert.match(step, name === 'publish.yml'
+        ? /^ {10}node-version: \$\{\{ needs\.verify\.outputs\.node_version \}\}$/mu
+        : /^ {10}node-version-file: \.nvmrc$/mu);
+    }
+  }
+});
+
+test('real browser channels install independently of cache availability', () => {
+  const ci = job(read('.github/workflows/ci.yml'), 'platform-contracts');
+  const browsers = job(read('.github/workflows/test-all-browsers.yml'), 'test');
+  for (const source of [ci, browsers]) {
+    assert.doesNotMatch(source, /actions\/cache(?:\/[^@\s]+)?@|playwright-cache|cache-hit/u);
+    assert.match(source, /pnpm install --frozen-lockfile/u);
+  }
+  const install = ci.split(/\n(?= {6}- )/u)
+    .find(step => /run: pnpm --filter @aceshooting\/lyra-ui exec playwright install \$\{\{ matrix\.install_browser \}\}/u.test(step));
+  assert.ok(install);
+  const ciCondition = install.match(/^ {6}- if: (.+)$/mu)?.[1];
+  assert.ok(ciCondition);
+  for (const container of ['', 'mcr.microsoft.com/playwright:v1.64.1-noble']) {
+    assert.equal(runInNewContext(ciCondition, { matrix: { container } }), container === '');
+  }
+  const channel = browsers.split(/\n(?= {6}- )/u)
+    .find(step => step.startsWith('      - name: Install real browser channel\n'));
+  assert.ok(channel);
+  const condition = channel.match(/^ {8}if: (.+)$/mu)?.[1];
+  assert.ok(condition);
+  for (const browser of ['chromium', 'chrome', 'edge', 'firefox', 'safari']) {
+    assert.equal(runInNewContext(condition, { matrix: { browser } }), ['chrome', 'edge'].includes(browser));
+  }
+  assert.match(channel, /INSTALL_BROWSER: \$\{\{ matrix\.browser == 'edge' && 'msedge' \|\| 'chrome' \}\}/u);
+  assert.match(channel, /run: \.\/scripts\/ci-phase\.sh channel-binary pnpm --filter @aceshooting\/lyra-ui exec playwright install "\$INSTALL_BROWSER"/u);
+});
+
 test('the coverage shard step runs under the strict console gate', () => {
   const step = read('.github/workflows/ci.yml');
   const at = step.indexOf('name: Run coverage shard');

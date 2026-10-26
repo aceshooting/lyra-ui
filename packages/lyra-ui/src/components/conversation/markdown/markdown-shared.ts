@@ -716,9 +716,9 @@ export function createMarkdownRenderContext(options: ParseMarkdownOptions): Mark
         return escapeHtmlOption ? escapeHtml(token.text) : token.text;
       },
       text(token) {
-        // After an unclosed raw-block opening tag (pre, code, kbd or script), marked lexes every
-        // later inline text token as already-escaped source and its default renderer emits it
-        // verbatim. Escape mode skips the sanitizer, so that text must be escaped here. Returning
+        // Within an inline raw run (pre, code, kbd or script), marked marks text as escaped
+        // and its default renderer emits it verbatim. Escape mode skips the sanitizer, so that
+        // text must be escaped here, including across block boundaries with older peers. Returning
         // false keeps marked's default for every other token and for sanitize and trusted modes.
         if (escapeHtmlOption && token.escaped === true && !token.tokens) {
           return escapeMarkdownText(token.text);

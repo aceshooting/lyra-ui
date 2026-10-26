@@ -43,6 +43,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
+          package-manager-cache: false
       - id: scope
         env:
           BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
@@ -65,7 +66,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @aceshooting/lyra-map --filter @aceshooting/lyra-3d build
       - run: pnpm --filter @aceshooting/lyra-ui run lint:parallel
@@ -98,7 +99,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - run: pnpm check:workflows
       # Repository hygiene, all in seconds: workflow security (zizmor), spelling (typos), Markdown
@@ -179,7 +180,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       # src/package-entrypoints.test.ts dynamically imports the package's published entry points
       # (./dist/lyra.js etc., per package.json's "exports"), which only exist after a build.
@@ -218,7 +219,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -263,7 +264,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -308,7 +309,7 @@ jobs:
       # Firefox refuses to launch when $HOME is not owned by the current user ("Running Nightly
       # as root in a regular user's session is not supported"); Chromium and WebKit do not care,
       # so this surfaces as a Firefox-only failure. /root is root-owned, and staying constant for
-      # the whole job keeps the pnpm store and setup-node cache on one path.
+      # the whole job keeps the pnpm store on one path.
       HOME: /root
     needs: [build_and_coverage_build, changes]
     if: needs.changes.outputs.runtime != 'false'
@@ -335,7 +336,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -379,7 +380,7 @@ jobs:
       # Firefox refuses to launch when $HOME is not owned by the current user ("Running Nightly
       # as root in a regular user's session is not supported"); Chromium and WebKit do not care,
       # so this surfaces as a Firefox-only failure. /root is root-owned, and staying constant for
-      # the whole job keeps the pnpm store and setup-node cache on one path.
+      # the whole job keeps the pnpm store on one path.
       HOME: /root
     timeout-minutes: 15
     steps:
@@ -404,7 +405,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -454,7 +455,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       # Explicit artifact names and destinations make a missing or misrouted shard fail before
       # floors or reporting can accidentally consume a partial aggregate.
@@ -623,7 +624,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - name: Produce the shared ATTW package through real prepack
         working-directory: packages/lyra-ui
@@ -670,7 +671,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -757,7 +758,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          package-manager-cache: false
       - name: Install frozen dependencies
         run: ./scripts/ci-phase.sh dependencies pnpm install --frozen-lockfile
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -869,7 +870,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -896,7 +897,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -965,7 +966,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       # Stories consume the map worker and document engine through their built package exports.
       # Build those prerequisites here so documentation-only changes remain independently runnable.
@@ -1008,7 +1009,7 @@ jobs:
       # Firefox refuses to launch when $HOME is not owned by the current user ("Running Nightly
       # as root in a regular user's session is not supported"); Chromium and WebKit do not care,
       # so this surfaces as a Firefox-only failure. /root is root-owned, and staying constant for
-      # the whole job keeps the pnpm store and setup-node cache on one path.
+      # the whole job keeps the pnpm store on one path.
       HOME: /root
     needs: docs_build
     # storybook:check drives a full Playwright crawl. Keep the established hang-detection budget;
@@ -1037,7 +1038,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -1072,7 +1073,7 @@ jobs:
       # Firefox refuses to launch when $HOME is not owned by the current user ("Running Nightly
       # as root in a regular user's session is not supported"); Chromium and WebKit do not care,
       # so this surfaces as a Firefox-only failure. /root is root-owned, and staying constant for
-      # the whole job keeps the pnpm store and setup-node cache on one path.
+      # the whole job keeps the pnpm store on one path.
       HOME: /root
     needs: docs_build
     timeout-minutes: 20
@@ -1098,7 +1099,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -1147,7 +1148,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -1231,7 +1232,7 @@ jobs:
       # Firefox refuses to launch when $HOME is not owned by the current user ("Running Nightly
       # as root in a regular user's session is not supported"); Chromium and WebKit do not care,
       # so this surfaces as a Firefox-only failure. /root is root-owned, and staying constant for
-      # the whole job keeps the pnpm store and setup-node cache on one path.
+      # the whole job keeps the pnpm store on one path.
       HOME: /root
       VISUAL_SHARD_INDEX: ${{ matrix.shard }}
       VISUAL_SHARD_TOTAL: "3"
@@ -1265,7 +1266,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -1340,7 +1341,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -1452,7 +1453,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+          package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - name: Bound apt so a degraded mirror cannot hang the leg
         if: matrix.container == ''
@@ -1462,17 +1463,6 @@ jobs:
           Acquire::http::Timeout "20";
           Acquire::https::Timeout "20";
           EOF
-      - name: Restore Playwright browser cache
-        if: matrix.container == ''
-        id: playwright-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          # Keyed on the Playwright version, not the whole lockfile: the browser payload only
-          # changes when Playwright does, so hashing pnpm-lock.yaml threw the cache away on every
-          # unrelated dependency bump and paid the 100MB+ download again for nothing.
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ matrix.install_browser }}-${{ runner.os }}-${{ hashFiles('.github/playwright-version.txt') }}
-          restore-keys: playwright-${{ matrix.install_browser }}-${{ runner.os }}-
       - name: Install browser OS dependencies
         if: matrix.container == ''
         # Belt and braces: the runner image already ships Chrome/Edge and their libraries, so this
@@ -1496,7 +1486,7 @@ jobs:
             sudo dpkg --configure -a 2>/dev/null || true
           done
           echo "::warning::install-deps did not succeed; continuing, since the runner image already provides these libraries"
-      - if: matrix.container == '' && steps.playwright-cache.outputs.cache-hit != 'true'
+      - if: matrix.container == ''
         run: pnpm --filter @aceshooting/lyra-ui exec playwright install ${{ matrix.install_browser }}
       - name: Run platform contract suite
         if: matrix.browser != 'edge'

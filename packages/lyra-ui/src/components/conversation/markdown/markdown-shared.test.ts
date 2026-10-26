@@ -601,11 +601,13 @@ describe('escape-mode raw-block text', () => {
    *  and follow-up text `p`. */
   const contexts: ReadonlyArray<{
     name: string;
+    withinRawRun?: true;
     source: (opener: string) => string;
     html: (o: string, p: string) => string;
   }> = [
     {
       name: 'the same paragraph',
+      withinRawRun: true,
       source: (opener) => `Intro ${opener} run ${payload}`,
       html: (o, p) => `<p part='paragraph'>Intro ${o} run ${p}</p>\n`,
     },
@@ -726,17 +728,17 @@ describe('escape-mode raw-block text', () => {
     expect((parseHtml(rawRun).body.textContent ?? '').trim()).to.equal('Intro <code> & © © © & 1 < 2 <b');
   });
 
-  it('changes escape mode only: sanitize and trusted output are unchanged for the same inputs', async () => {
+  it('preserves marked raw text within a block and escaped text in later blocks for sanitize and trusted modes', async () => {
     const marked = (await loadMarkdownDeps()).marked!;
     for (const opener of openers) {
       for (const context of contexts) {
         const label = `${opener} followed by ${context.name}`;
         const source = context.source(opener);
-        // Sanitize and trusted parses emit the raw run verbatim, exactly as before; DOMPurify (in
-        // sanitize mode) is what makes that output safe, and trusted mode is the documented bypass.
-        const verbatim = context.html(opener, payload);
-        expect(parse(marked, source, 'sanitize'), `${label} (sanitize)`).to.equal(verbatim);
-        expect(parse(marked, source, 'trusted'), `${label} (trusted)`).to.equal(verbatim);
+        // Marked ends an unclosed inline raw run at its block boundary. Both modes delegate
+        // text rendering to marked; sanitize mode still applies DOMPurify after this parse.
+        const expected = context.html(opener, context.withinRawRun ? payload : escapedPayload);
+        expect(parse(marked, source, 'sanitize'), `${label} (sanitize)`).to.equal(expected);
+        expect(parse(marked, source, 'trusted'), `${label} (trusted)`).to.equal(expected);
         expect(parse(marked, source, 'escape'), `${label} (escape)`).to.equal(
           context.html(escapeOpener(opener), escapedPayload),
         );
