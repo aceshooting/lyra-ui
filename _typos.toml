@@ -3,6 +3,7 @@
 # this file only for a real domain term (default.extend-words), for deliberately foreign or
 # misspelled test and story text (type.fixtures), or for data that is not English prose
 # (files.extend-exclude).
+# Localized application copy uses block-specific type overrides, preserving surrounding checks.
 
 [files]
 # Check hidden directories too: .github/, .changeset/ and .storybook/ hold authored prose.
@@ -82,6 +83,11 @@ uncatalogued = "uncatalogued"
 sherif = "sherif"                # npm workspace dependency linter (package.json)
 Zink = "Zink"                    # Mesa's OpenGL-on-Vulkan driver
 ZINK = "ZINK"
+
+[type.guided-demo]
+extend-glob = ["guided-demo.ts"]
+# French application copy only; English labels, comments and controller code remain checked.
+extend-ignore-re = ['(?ms)^  fr: \{\n.*?^  \},\n']
 
 [type.fixtures]
 # Tests, stories and type tests (matched by file name): UI strings in several languages (the localization contract),

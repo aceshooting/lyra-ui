@@ -1,17 +1,18 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, statSync } from 'node:fs';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { gunzipSync, gzipSync } from 'node:zlib';
 
 import { linkInputs, lycheeArgs } from './check-links.mjs';
 import { SHELL_SHEBANG, shellScripts } from './check-shell.mjs';
 import { trackedFindings } from './check-spelling.mjs';
 import { ZIZMOR_ARGS } from './check-workflow-security.mjs';
-import { PINNED_TOOLS, extractMember, pinnedToolPath, tarEntries } from './lib/pinned-tool.mjs';
+import { PINNED_TOOLS, capturePinnedTool, extractMember, pinnedToolPath, tarEntries } from './lib/pinned-tool.mjs';
 
 const read = (file) => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
 
@@ -168,6 +169,33 @@ test('spelling findings count only for tracked files, in a stable one-line form'
   assert.deepEqual(trackedFindings(stream, new Set()), [], 'untracked scratch files never fail the check');
   assert.deepEqual(trackedFindings('', new Set(['docs/a.md'])), []);
   assert.throws(() => trackedFindings('not json', new Set()), /JSON/u);
+});
+
+test('guided demo French copy leaves surrounding English and other files spell-checked', async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'guided-spelling-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const source = [
+    "const english = { title: 'avance' };",
+    'const copies = {',
+    '  fr: {',
+    "    title: 'Réponse écrite à l’avance', total: 'Le contenu reste disponible',",
+    '  },',
+    "  ar: { title: 'avance' },",
+    '};',
+    "const status = 'avance';",
+  ].join('\n');
+  const example = 'packages/lyra-gen/examples/guided-demo.ts';
+  const other = 'packages/lyra-gen/examples/other-demo.ts';
+  await mkdir(join(directory, 'packages/lyra-gen/examples'), { recursive: true });
+  await Promise.all([writeFile(join(directory, example), source), writeFile(join(directory, other), source)]);
+  const { status, stdout } = await capturePinnedTool('typos', [
+    '--isolated', '--config', fileURLToPath(new URL('../_typos.toml', import.meta.url)),
+    '--format', 'json', example, other,
+  ], { cwd: directory });
+  assert.equal(status, 2, 'surrounding and unrelated prose still fails');
+  const findings = stdout.split('\n').filter(Boolean).map(line => JSON.parse(line)).filter(item => item.type === 'typo');
+  assert.deepEqual(findings.filter(item => item.path === example).map(item => item.line_num), [1, 6, 8]);
+  assert.ok(findings.some(item => item.path === other && item.line_num === 4), 'the locale exception is scoped to the example');
 });
 
 test('link inputs omit only the fragment already excluded for its package-root links', () => {

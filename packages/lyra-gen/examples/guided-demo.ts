@@ -10,7 +10,7 @@ export const guidedDemoScenarios = ['markets', 'weather', 'travel-budget'] as co
 export type GuidedDemoLocale = typeof guidedDemoLocales[number];
 export type GuidedDemoScenario = typeof guidedDemoScenarios[number];
 export type GuidedDemoFollowUp = 'focus-orchard' | 'dry-cities' | 'add-night';
-export type GuidedDemoPhase = 'idle' | 'playing' | 'complete' | 'cancelled' | 'error' | 'unsupported';
+type GuidedDemoPhase = 'idle' | 'playing' | 'complete' | 'cancelled' | 'error' | 'unsupported';
 export interface TravelInputs { readonly nights: number; readonly travelers: number; readonly budget: number }
 export interface TravelTotals {
   readonly days: number; readonly lodging: number; readonly meals: number; readonly transit: number;
@@ -35,7 +35,7 @@ export const weatherSamples = freeze([
   { id: 'lisbon', name: 'Lisbon', temperature: 23, precipitation: 5 },
   { id: 'oslo', name: 'Oslo', temperature: 12, precipitation: 60 },
 ]);
-export const travelRates = freeze({ lodgingPerNight: 95, mealsPerPersonDay: 28, transitPerPersonDay: 8, activitiesPerPerson: 45 });
+const travelRates = freeze({ lodgingPerNight: 95, mealsPerPersonDay: 28, transitPerPersonDay: 8, activitiesPerPerson: 45 });
 const defaultTravel: TravelInputs = freeze({ nights: 4, travelers: 2, budget: 1200 });
 
 /** One room, nights + 1 days, and one activities allowance per traveler; EUR budgets accept whole cents. */
@@ -75,7 +75,7 @@ const english = {
   lodging: 'Lodging', meals: 'Meals', transit: 'Transit', activities: 'Activities', total: 'Total', remaining: 'Budget remaining',
   rates: 'Sample rates: room 95 EUR/night; meals 28 EUR/person/day; transit 8 EUR/person/day; activities 45 EUR/person. Days = nights + 1.',
 };
-export type GuidedDemoLabels = Readonly<Record<keyof typeof english, string>>;
+type GuidedDemoLabels = Readonly<Record<keyof typeof english, string>>;
 const copies: Readonly<Record<GuidedDemoLocale, GuidedDemoLabels>> = freeze({
   en: english,
   fr: {
