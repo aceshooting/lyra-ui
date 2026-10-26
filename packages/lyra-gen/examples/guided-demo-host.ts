@@ -8,7 +8,7 @@ import { LyraMessageParts } from '@aceshooting/lyra-ui/components/lr-message-par
 import type { LyraSelect } from '@aceshooting/lyra-ui/components/lr-select.js';
 import { initialCatalog } from '@aceshooting/lyra-gen/catalog.js';
 import { LyraGenViewElement } from '@aceshooting/lyra-gen/gen-view.js';
-import { createGuidedDemo, guidedDemoScenarios, type GuidedDemoLocale } from './guided-demo.js';
+import { createGuidedDemo, guidedDemoScenarios, type GuidedDemoLocale, type GuidedDemoLocalization } from './guided-demo.js';
 
 const styles = css`
   [data-guided-demo] {
@@ -40,7 +40,9 @@ const styles = css`
 type UpdatingElement = HTMLElement & { readonly updateComplete: Promise<unknown> };
 type Action = 'next' | 'back' | 'replay' | 'follow-up' | 'send' | 'apply';
 
-export function mountGuidedDemo(root: HTMLElement, options: { readonly locale?: GuidedDemoLocale; readonly packageVersion: string }) {
+export function mountGuidedDemo(root: HTMLElement, options: { readonly packageVersion: string }
+  & ({ readonly locale?: GuidedDemoLocale; readonly localization?: never }
+    | { readonly locale?: never; readonly localization: GuidedDemoLocalization })) {
   const element = root.ownerDocument.createElement('section');
   element.dataset['guidedDemo'] = '';
   const transcript = new LyraMessageParts();

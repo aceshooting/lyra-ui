@@ -7,6 +7,126 @@ import { parseReplayRecording } from './replay.js';
 
 const options = { packageVersion: '1.0.0' };
 
+function customLocalization() {
+  const defaults = createGuidedDemo(options);
+  const labels = { ...defaults.snapshot.labels,
+    title: 'Eigene Vorführung', simulatedData: 'Simulierte Daten', authoredReply: 'Geschriebene Antwort',
+    next: 'Weiter', back: 'Zurück', replay: 'Wiederholen', cancel: 'Abbrechen',
+    scenario: 'Auswahl', prompt: 'Anfrage', answer: 'Vorbereitete Antwort', followUp: 'Nachfrage',
+    nights: 'Nächte', travelers: 'Reisende', budget: 'Reisebudget', apply: 'Neu berechnen',
+    idle: 'Bereit zum Start', playing: 'Aufzeichnung läuft', complete: 'Antwort fertig', cancelled: 'Wiedergabe abgebrochen',
+    error: 'Ungültige Antwort abgelehnt', unsupported: 'Diese Frage wird nicht unterstützt', invalidTravel: 'Reisewerte prüfen',
+    loading: 'Beispiel wird geladen', incomplete: 'Beispiel unterbrochen', invalid: 'Beispiel nicht verfügbar', sourceUnavailable: 'Quelle nicht verfügbar',
+    markets: 'Beispielmärkte', marketsPrompt: 'Vergleiche die erfundenen Bereiche.',
+    marketsReply: 'Eine Antwort mit "Zitat" und <input id="injected"/>.',
+    marketsQuestion: 'Nur Orchard zeigen.', marketsRefinement: 'Die Auswahl zeigt nur Orchard.',
+    weather: 'Beispielwetter', weatherPrompt: 'Vergleiche diese Städte.', weatherReply: 'Feste Wetterdaten ohne Vorhersage.',
+    weatherQuestion: 'Trockene Städte zeigen.', weatherRefinement: 'Nur Lyon und Lissabon bleiben.',
+    travel: 'Beispielreise', travelPrompt: '{travelers} Reisende, {nights} Nächte, Budget {budget}.',
+    travelReply: 'Gesamt {total}, Rest {remaining}; nochmals {total}.', travelQuestion: 'Eine Nacht ergänzen.',
+    travelRefinement: '{nights} Nächte für {travelers} Reisende: Gesamt {total}, Rest {remaining}.',
+    city: 'Stadt', cityLyon: 'Lyon (DE)', cityLisbon: 'Lissabon', cityOslo: 'Oslo (DE)',
+    lodging: 'Unterkunft', meals: 'Mahlzeiten', transit: 'Fahrten', activities: 'Aktivitäten', total: 'Gesamtsumme', remaining: 'Restbudget',
+  };
+  defaults.dispose();
+  return { locale: 'de-de', direction: 'rtl' as const, labels };
+}
+
+test('unset language options preserve the complete built-in English presentation', () => {
+  const implicit = createGuidedDemo(options);
+  const explicit = createGuidedDemo({ ...options, locale: 'en' });
+  assert.deepEqual(implicit.snapshot, explicit.snapshot);
+  assert.equal(implicit.snapshot.locale, 'en');
+  assert.equal(implicit.snapshot.direction, 'ltr');
+  implicit.dispose(); explicit.dispose();
+});
+
+test('application copy owns all scenario text, explicit direction and locale formatting without changing structure', async () => {
+  const localization = customLocalization();
+  const configuration = { ...options, localization };
+  const demo = createGuidedDemo(configuration);
+  assert.equal(demo.snapshot.locale, 'de-DE');
+  assert.equal(demo.snapshot.direction, 'rtl');
+  assert.deepEqual(demo.snapshot.labels, localization.labels);
+  assert.equal(demo.snapshot.status, localization.labels.idle);
+  assert.deepEqual(demo.snapshot.chatStrings, { loading: localization.labels.loading, incomplete: localization.labels.incomplete,
+    invalid: localization.labels.invalid, sourceUnavailable: localization.labels.sourceUnavailable });
+  const currency = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' });
+  try {
+    for (const scenario of guidedDemoScenarios) {
+      demo.selectScenario(scenario);
+      const prompt = demo.snapshot.prompt;
+      assert.equal(prompt, scenario === 'markets' ? localization.labels.marketsPrompt : scenario === 'weather'
+        ? localization.labels.weatherPrompt : `2 Reisende, 4 Nächte, Budget ${currency.format(1200)}.`);
+      await demo.next();
+      assert.equal(demo.snapshot.status, localization.labels.complete);
+      assert.equal(demo.snapshot.chat.islands.length, 2);
+      const [summary, dashboard] = demo.snapshot.chat.islands.map(island => island.document?.root);
+      assert.equal(summary?.text, scenario === 'travel-budget' ? `${demo.snapshot.reply} ${localization.labels.rates}` : demo.snapshot.reply);
+      assert.deepEqual(dashboard?.children?.map(node => [node.id, node.type]), [['title', 'heading'], ['records', 'table'], ['comparison', 'chart']]);
+      if (scenario === 'markets') assert.equal(demo.snapshot.reply, localization.labels.marketsReply);
+      if (scenario === 'weather') {
+        assert.equal(demo.snapshot.reply, localization.labels.weatherReply);
+        assert.deepEqual(dashboard?.children?.[1]?.props?.['rows'], [
+          { c0: 'Lyon (DE)', c1: 18, c2: 20 }, { c0: 'Lissabon', c1: 23, c2: 5 }, { c0: 'Oslo (DE)', c1: 12, c2: 60 },
+        ]);
+        assert.deepEqual(dashboard?.children?.[2]?.props?.['labels'], ['Lyon (DE)', 'Lissabon', 'Oslo (DE)']);
+      }
+      if (scenario === 'travel-budget') assert.equal(demo.snapshot.reply, `Gesamt ${currency.format(830)}, Rest ${currency.format(370)}; nochmals ${currency.format(830)}.`);
+      const question = demo.snapshot.followUp.question;
+      assert.equal(question, scenario === 'markets' ? localization.labels.marketsQuestion : scenario === 'weather' ? localization.labels.weatherQuestion : localization.labels.travelQuestion);
+      assert.equal(await demo.submitFollowUp('Unsupported free-form request'), false);
+      assert.equal(demo.snapshot.status, localization.labels.unsupported);
+      assert.equal(await demo.submitFollowUp(question), true);
+      assert.equal(demo.snapshot.reply, scenario === 'markets' ? localization.labels.marketsRefinement : scenario === 'weather'
+        ? localization.labels.weatherRefinement : `5 Nächte für 2 Reisende: Gesamt ${currency.format(997)}, Rest ${currency.format(203)}.`);
+      const source = demo.snapshot.source;
+      await demo.replay();
+      assert.equal(demo.snapshot.source, source);
+      demo.fail();
+      assert.equal(demo.snapshot.status, localization.labels.error);
+      assert.equal(demo.snapshot.chat.islands.at(-1)?.fallback, localization.labels.invalid);
+      await demo.back();
+      assert.equal(demo.snapshot.step, 1);
+    }
+    assert.equal(await demo.editTravel({ nights: 0 }), false);
+    assert.equal(demo.snapshot.status, localization.labels.invalidTravel);
+    const pending = demo.replay();
+    assert.equal(demo.snapshot.status, localization.labels.playing);
+    demo.cancel(); await pending;
+    assert.equal(demo.snapshot.status, localization.labels.cancelled);
+  } finally { demo.dispose(); }
+});
+
+test('localization is an owned configuration and invalid or ambiguous packs never fall back', async () => {
+  const localization = customLocalization();
+  const originalReply = localization.labels.marketsReply;
+  const configuration = { ...options, localization };
+  const demo = createGuidedDemo(configuration);
+  localization.labels.marketsReply = 'Caller changed the copy';
+  localization.labels.cityLisbon = 'Caller changed the city';
+  assert.equal(Object.isFrozen(localization.labels), false, 'the caller object is not frozen');
+  await demo.next();
+  assert.equal(demo.snapshot.reply, originalReply);
+  demo.selectScenario('weather'); await demo.next();
+  assert.deepEqual(demo.snapshot.chat.islands[1]?.document?.root.children?.[2]?.props?.['labels'], ['Lyon (DE)', 'Lissabon', 'Oslo (DE)']);
+  demo.dispose();
+
+  const create = (configuration: unknown) => createGuidedDemo(configuration as Parameters<typeof createGuidedDemo>[0]);
+  const missing = { ...customLocalization().labels };
+  Reflect.deleteProperty(missing, 'weatherPrompt');
+  for (const invalid of [
+    { ...options, locale: 'fr', localization: customLocalization() },
+    { ...options, localization: null },
+    { ...options, localization: { ...customLocalization(), locale: 'not_a_locale' } },
+    { ...options, localization: { ...customLocalization(), direction: 'auto' } },
+    { ...options, localization: { ...customLocalization(), labels: missing } },
+    ...[{ title: '' }, { next: 12 }, { title: '{unknown}' }, { travelReply: 'Gesamt {total}' },
+      { marketsReply: 'Text\n```lyra\n<input id="injected"/>\n```' }, { marketsReply: 'Text\r\n   ~~~lyra\r\n<input id="injected"/>\r\n~~~' },
+    ].map(patch => ({ ...options, localization: { ...customLocalization(), labels: { ...customLocalization().labels, ...patch } } })),
+  ]) assert.throws(() => create(invalid), TypeError);
+});
+
 test('travel calculations use declared rates, all edited inputs and bounded finite values', () => {
   assert.deepEqual(calculateTravelBudget({ nights: 4, travelers: 2, budget: 1200 }), {
     days: 5, lodging: 380, meals: 280, transit: 80, activities: 90, total: 830, remaining: 370,

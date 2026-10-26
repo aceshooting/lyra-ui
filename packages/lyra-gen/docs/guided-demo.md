@@ -56,12 +56,52 @@ including the deliberately invalid tail when that control is used.
 
 ## Language ownership and delivery scope
 
-The example owns its English, French and Arabic labels, prompts and scripted prose. Core Lyra
-control and renderer translations remain application-owned: load the matching catalogs before
-mounting; their package version follows **Lyra UI**, independently of Gen. The host applies the
-selected language and direction, including Arabic RTL. Adding a core catalog does not translate
-the example's own copy or extend its three-language inventory. Numeric chart and table values
-remain JSON numbers; display prose uses the selected locale.
+The example includes English, French and Arabic labels, prompts and scripted prose. Omitting
+`locale` selects English; `locale: 'fr'` and `locale: 'ar'` retain those built-in packs, including
+Arabic RTL. To use another language, supply complete trusted application copy through
+`localization` instead of `locale`:
+
+```ts
+import '@aceshooting/lyra-translations/he.js';
+import type { GuidedDemoLocalization } from './guided-demo.js';
+import { mountGuidedDemo } from './guided-demo-host.js';
+
+export async function startLocalizedDemo(
+  root: HTMLElement,
+  installedGenVersion: string,
+  labels: GuidedDemoLocalization['labels'],
+) {
+  const demo = mountGuidedDemo(root, {
+    packageVersion: installedGenVersion,
+    localization: { locale: 'he', direction: 'rtl', labels },
+  });
+  await demo.ready;
+  return demo;
+}
+```
+
+The same `localization` option works with `createGuidedDemo()`. Its locale must be a valid BCP47
+tag; snapshots expose the canonical tag. Direction is explicitly `ltr` or `rtl`, independently
+of the locale. Supply every string key from the example's [English copy](../examples/guided-demo.ts),
+including cityLyon/cityLisbon/cityOslo, provenance labels, statuses, prompts and follow-ups. The
+indexed type above checks pack completeness. The controller copies and freezes its own labels;
+subsequent caller edits do not change an active recording. Dispose and remount to change language.
+
+Keep `{nights}`, `{travelers}` and `{budget}` in `travelPrompt`; `{total}` and `{remaining}` in
+`travelReply`; and `{nights}`, `{travelers}`, `{total}` and `{remaining}` in `travelRefinement`.
+Tokens may be reordered or repeated. Unknown or missing tokens, incomplete/empty copy, an invalid
+locale/direction, or both `locale` and `localization` throw `TypeError`; there is no automatic
+English fallback for a missing application pack. Quotes and angle brackets remain literal text.
+Copy cannot contain a line beginning with up to three spaces followed by three or more backticks
+or tildes: those fence openers would affect the authored prose/island framing and are rejected as
+invalid configuration. Application strings never choose node types, IDs, actions or numeric data.
+
+Core Lyra control and renderer translations remain application-owned: load the matching catalogs
+before mounting; their package version follows **Lyra UI**, independently of Gen. Adding a core
+catalog does not translate the example's own copy. Numeric chart and table values remain JSON
+numbers; prose formats numbers/currency through the supplied locale and the browser's Intl data.
+The library's representative en/fr/ar checks do not qualify every application language or imply
+human translation or assistive-technology review.
 
 Website integration and deployment are separate and pending. This guide covers the library
 example; adapting it into another application requires that application's own integration checks.

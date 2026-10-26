@@ -71,11 +71,17 @@ const english = {
   travelPrompt: 'Plan a Lisbon trip: {nights} nights, {travelers} travelers, budget {budget}.', travelReply: 'Using the displayed sample rates and your inputs: total {total}; budget remaining {remaining}. No prices were fetched.',
   travelQuestion: 'Add one night.', travelRefinement: 'Updated local calculation: {nights} nights, {travelers} travelers. Total {total}; budget remaining {remaining}. Replay keeps these inputs.',
   sector: 'Fictional sector', index: 'Sample index', day1: 'Sample day 1', day2: 'Sample day 2', day3: 'Sample day 3',
-  city: 'City', temperature: 'Temperature (°C)', precipitation: 'Precipitation (%)', category: 'Category', amount: 'Amount (EUR)',
+  city: 'City', cityLyon: 'Lyon', cityLisbon: 'Lisbon', cityOslo: 'Oslo',
+  temperature: 'Temperature (°C)', precipitation: 'Precipitation (%)', category: 'Category', amount: 'Amount (EUR)',
   lodging: 'Lodging', meals: 'Meals', transit: 'Transit', activities: 'Activities', total: 'Total', remaining: 'Budget remaining',
   rates: 'Sample rates: room 95 EUR/night; meals 28 EUR/person/day; transit 8 EUR/person/day; activities 45 EUR/person. Days = nights + 1.',
 };
 type GuidedDemoLabels = Readonly<Record<keyof typeof english, string>>;
+export interface GuidedDemoLocalization {
+  readonly locale: string;
+  readonly direction: 'ltr' | 'rtl';
+  readonly labels: GuidedDemoLabels;
+}
 const copies: Readonly<Record<GuidedDemoLocale, GuidedDemoLabels>> = freeze({
   en: english,
   fr: {
@@ -95,7 +101,8 @@ const copies: Readonly<Record<GuidedDemoLocale, GuidedDemoLabels>> = freeze({
     travelPrompt: 'Préparer un séjour à Lisbonne : {nights} nuits, {travelers} voyageurs, budget {budget}.', travelReply: 'Avec les tarifs de l’exemple et vos valeurs : total {total} ; budget restant {remaining}. Aucun prix n’a été récupéré.',
     travelQuestion: 'Ajouter une nuit.', travelRefinement: 'Calcul local actualisé : {nights} nuits, {travelers} voyageurs. Total {total} ; budget restant {remaining}. Rejouer conserve ces valeurs.',
     sector: 'Secteur fictif', index: 'Indice de l’exemple', day1: 'Journée 1', day2: 'Journée 2', day3: 'Journée 3',
-    city: 'Ville', temperature: 'Température (°C)', precipitation: 'Précipitations (%)', category: 'Catégorie', amount: 'Montant (EUR)',
+    city: 'Ville', cityLyon: 'Lyon', cityLisbon: 'Lisbonne', cityOslo: 'Oslo',
+    temperature: 'Température (°C)', precipitation: 'Précipitations (%)', category: 'Catégorie', amount: 'Montant (EUR)',
     lodging: 'Hébergement', meals: 'Repas', transit: 'Transports', activities: 'Activités', total: 'Total', remaining: 'Budget restant',
     rates: 'Tarifs fictifs : chambre 95 EUR/nuit ; repas 28 EUR/personne/jour ; transports 8 EUR/personne/jour ; activités 45 EUR/personne. Jours = nuits + 1.',
   },
@@ -116,15 +123,51 @@ const copies: Readonly<Record<GuidedDemoLocale, GuidedDemoLabels>> = freeze({
     travelPrompt: 'خطط لرحلة إلى لشبونة: الليالي {nights}، المسافرون {travelers}، الميزانية {budget}.', travelReply: 'بحسب أسعار العينة ومدخلاتك: الإجمالي {total}؛ والمتبقي من الميزانية {remaining}. لم تُجلب أي أسعار.',
     travelQuestion: 'أضف ليلة واحدة.', travelRefinement: 'الحساب المحلي المحدّث: الليالي {nights}، المسافرون {travelers}. الإجمالي {total}؛ والمتبقي {remaining}. تحتفظ إعادة التشغيل بهذه المدخلات.',
     sector: 'قطاع خيالي', index: 'مؤشر العينة', day1: 'يوم العينة 1', day2: 'يوم العينة 2', day3: 'يوم العينة 3',
-    city: 'المدينة', temperature: 'الحرارة (°C)', precipitation: 'الهطول (%)', category: 'الفئة', amount: 'المبلغ (EUR)',
+    city: 'المدينة', cityLyon: 'ليون', cityLisbon: 'لشبونة', cityOslo: 'أوسلو',
+    temperature: 'الحرارة (°C)', precipitation: 'الهطول (%)', category: 'الفئة', amount: 'المبلغ (EUR)',
     lodging: 'الإقامة', meals: 'الوجبات', transit: 'التنقل', activities: 'الأنشطة', total: 'الإجمالي', remaining: 'المتبقي من الميزانية',
     rates: 'أسعار العينة: الغرفة 95 يورو/ليلة؛ الوجبات 28 يورو/شخص/يوم؛ التنقل 8 يورو/شخص/يوم؛ الأنشطة 45 يورو/شخص. الأيام = الليالي + 1.',
   },
 });
 const followUps: Readonly<Record<GuidedDemoScenario, GuidedDemoFollowUp>> = { markets: 'focus-orchard', weather: 'dry-cities', 'travel-budget': 'add-night' };
 
+function language(options: { readonly locale?: GuidedDemoLocale; readonly localization?: GuidedDemoLocalization }): {
+  readonly locale: string; readonly direction: 'ltr' | 'rtl'; readonly labels: GuidedDemoLabels;
+} {
+  if (options.localization === undefined) {
+    const locale = options.locale ?? 'en';
+    if (!guidedDemoLocales.includes(locale)) throw new TypeError('Unsupported demo locale.');
+    return { locale, direction: locale === 'ar' ? 'rtl' : 'ltr', labels: copies[locale] };
+  }
+  const localization = options.localization;
+  if (options.locale !== undefined || localization === null || typeof localization !== 'object'
+    || !['ltr', 'rtl'].includes(localization.direction)) throw new TypeError('Invalid demo localization options.');
+  let locale: string;
+  try {
+    const canonical = typeof localization.locale === 'string' ? Intl.getCanonicalLocales(localization.locale) : [];
+    if (canonical.length !== 1) throw new TypeError();
+    locale = canonical[0]!;
+  } catch { throw new TypeError('Invalid demo localization locale.'); }
+  const source = localization.labels;
+  const keys = Object.keys(english) as (keyof GuidedDemoLabels)[];
+  if (source === null || typeof source !== 'object' || Array.isArray(source) || Object.keys(source).length !== keys.length)
+    throw new TypeError('Incomplete demo localization copy.');
+  const placeholders = (text: string) => [...new Set([...text.matchAll(/\{([^{}]*)\}/gu)].map(match => match[1]!))].sort();
+  const labels = { ...source };
+  for (const key of keys) {
+    const value = labels[key];
+    if (!Object.hasOwn(source, key) || typeof value !== 'string' || !value.trim()
+      || /(?:^|\r\n|\r|\n) {0,3}(?:`{3,}|~{3,})/u.test(value)) throw new TypeError(`Invalid demo localization copy: ${key}.`);
+    const expected = placeholders(english[key]);
+    const actual = placeholders(value);
+    if (expected.length !== actual.length || expected.some((token, index) => token !== actual[index]))
+      throw new TypeError(`Invalid demo localization placeholders: ${key}.`);
+  }
+  return { locale, direction: localization.direction, labels: freeze(labels) };
+}
+
 export interface GuidedDemoSnapshot {
-  readonly locale: GuidedDemoLocale; readonly direction: 'ltr' | 'rtl'; readonly scenario: GuidedDemoScenario;
+  readonly locale: string; readonly direction: 'ltr' | 'rtl'; readonly scenario: GuidedDemoScenario;
   readonly step: 0 | 1 | 2; readonly phase: GuidedDemoPhase; readonly status: string; readonly labels: GuidedDemoLabels;
   readonly prompt: string; readonly reply: string; readonly followUp: { readonly id: GuidedDemoFollowUp; readonly question: string };
   readonly travel: { readonly inputs: TravelInputs; readonly totals: TravelTotals };
@@ -134,13 +177,12 @@ export interface GuidedDemoSnapshot {
 
 /** Host-owned locale and chrome; the eventual renderer still receives its own locale catalogs. */
 export function createGuidedDemo(options: {
-  readonly packageVersion: string; readonly locale?: GuidedDemoLocale;
+  readonly packageVersion: string;
   readonly onChange?: (snapshot: GuidedDemoSnapshot) => void;
-}) {
+} & ({ readonly locale?: GuidedDemoLocale; readonly localization?: never }
+  | { readonly locale?: never; readonly localization: GuidedDemoLocalization })) {
   if (!options.packageVersion.trim() || options.packageVersion.length > 128) throw new TypeError('A package version is required.');
-  const locale = options.locale ?? 'en';
-  if (!guidedDemoLocales.includes(locale)) throw new TypeError('Unsupported demo locale.');
-  const labels = copies[locale];
+  const { locale, direction, labels } = language(options);
   const chatStrings: LyraGenChatStrings = freeze({ loading: labels.loading, incomplete: labels.incomplete, invalid: labels.invalid, sourceUnavailable: labels.sourceUnavailable });
   let scenario: GuidedDemoScenario = 'markets';
   let step: 0 | 1 | 2 = 0;
@@ -165,8 +207,8 @@ export function createGuidedDemo(options: {
     const currency = (value: number) => money.formatToParts(value).map(part => part.type === 'literal'
       ? part.value.replace(/[\u061c\u200e\u200f]/gu, '') : part.value).join('');
     const numbers = new Intl.NumberFormat(locale);
-    const interpolate = (text: string) => text.replace('{total}', currency(totals.total)).replace('{remaining}', currency(totals.remaining))
-      .replace('{nights}', numbers.format(travel.nights)).replace('{travelers}', numbers.format(travel.travelers)).replace('{budget}', currency(travel.budget));
+    const interpolate = (text: string) => text.replaceAll('{total}', currency(totals.total)).replaceAll('{remaining}', currency(totals.remaining))
+      .replaceAll('{nights}', numbers.format(travel.nights)).replaceAll('{travelers}', numbers.format(travel.travelers)).replaceAll('{budget}', currency(travel.budget));
     const reply = interpolate(scenario === 'markets' ? refined ? labels.marketsRefinement : labels.marketsReply
       : scenario === 'weather' ? refined ? labels.weatherRefinement : labels.weatherReply
         : refined ? labels.travelRefinement : labels.travelReply);
@@ -185,11 +227,10 @@ export function createGuidedDemo(options: {
       datasets = selected.map(row => ({ label: row.name, data: [...row.values] }));
     } else if (scenario === 'weather') {
       const selected = refined ? weatherSamples.filter(row => row.precipitation <= 20) : weatherSamples;
-      const city = (id: string, name: string) => locale === 'en' || id === 'lyon' && locale === 'fr' ? name
-        : locale === 'fr' ? id === 'lisbon' ? 'Lisbonne' : 'Oslo' : id === 'lyon' ? 'ليون' : id === 'lisbon' ? 'لشبونة' : 'أوسلو';
+      const city = (id: string) => id === 'lyon' ? labels.cityLyon : id === 'lisbon' ? labels.cityLisbon : labels.cityOslo;
       columns = [{ key: 'c0', label: labels.city }, { key: 'c1', label: labels.temperature }, { key: 'c2', label: labels.precipitation }];
-      rows = selected.map(row => ({ c0: city(row.id, row.name), c1: row.temperature, c2: row.precipitation }));
-      chartLabels = selected.map(row => city(row.id, row.name));
+      rows = selected.map(row => ({ c0: city(row.id), c1: row.temperature, c2: row.precipitation }));
+      chartLabels = selected.map(row => city(row.id));
       datasets = [{ label: labels.temperature, data: selected.map(row => row.temperature) }];
     } else {
       columns = [{ key: 'c0', label: labels.category }, { key: 'c1', label: labels.amount }];
@@ -221,7 +262,7 @@ export function createGuidedDemo(options: {
 
   let presentation = content();
   function snapshot(): GuidedDemoSnapshot {
-    return freeze({ locale, direction: locale === 'ar' ? 'rtl' : 'ltr', scenario, step, phase,
+    return freeze({ locale, direction, scenario, step, phase,
       status: validationMessage ?? labels[phase], labels, prompt: presentation.prompt, reply: presentation.reply,
       followUp: { id: followUps[scenario], question: presentation.question }, travel: { inputs: travel, totals: calculateTravelBudget(travel) },
       source: presentation.recording.text + extraSource, recording: presentation.recording, deliveredChunks, chat: chat.snapshot, chatStrings });
