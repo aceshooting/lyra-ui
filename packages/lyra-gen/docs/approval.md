@@ -47,6 +47,10 @@ bar's `autofocus` and `escapeDenies` behaviors. It is inline and does not trap f
 return focus to the originally focused control, or to the optional `returnFocusTo(action)`
 target supplied by the application.
 
+Host cancellation and disposal return focus only while it remains inside the approval bar. They
+try the application's return target, then the original control if that target is unavailable.
+Hidden, inert, disabled or detached targets are skipped; focus moved elsewhere is preserved.
+
 The callback resolves true only after an actual approve request and the component's
 `lr-decision-settled` notification. Merely assigning an approved status does not approve an
 action. Denial, scoped Escape, explicit host cancellation, a superseding request and renderer

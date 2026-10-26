@@ -11,13 +11,13 @@ const catalog = createCatalog({ ...initialCatalog, actions: { save: { payload: {
 const documentFor = (revision = 0): LyraGenView => ({ version: '1', surfaceId: 'approval-example', revision,
   catalog: { id: catalog.id, version: catalog.version }, root: { id: 'save', type: 'button', text: `Save revision ${revision}`, action: { name: 'save', payload: null } } });
 type UpdatingElement = HTMLElement & { readonly updateComplete: Promise<unknown> };
-async function setup() {
+async function setup(options: Parameters<typeof connectGeneratedApproval>[2] = {}) {
   const root = await fixture<HTMLElement>(html`<section><lr-gen-view .catalog=${catalog} .document=${documentFor()}></lr-gen-view><div data-approval></div></section>`);
   const view = root.querySelector<LyraGenViewElement>('lr-gen-view')!;
   const region = root.querySelector<HTMLElement>('[data-approval]')!;
   const actions: LyraGenAction[] = [];
   view.addEventListener('lr-gen-action', event => actions.push(event.detail));
-  const connection = connectGeneratedApproval(view, region, { heading: () => 'Review this save' });
+  const connection = connectGeneratedApproval(view, region, { heading: () => 'Review this save', ...options });
   await waitUntil(() => view.status === 'ready', 'Generated action loaded', { timeout: 5000 });
   const trigger = view.shadowRoot!.querySelector<UpdatingElement>('[data-gen-id="save"]')!;
   await trigger.updateComplete;
@@ -89,6 +89,124 @@ describe('generated action approval composition', () => {
       expect(app.connection.pending === undefined).to.equal(true);
     } finally { app.connection.dispose(); }
   });
+
+  it('returns focus before host cancellation removes the focused approval controls without admitting an action', async () => {
+    const app = await setup();
+    try {
+      const bar = await request(app);
+      const approve = bar.shadowRoot!.querySelector<HTMLElement>('[part="approve-button"]')!;
+      await focusByKeyboard(approve);
+      app.connection.cancel();
+      expect(app.view.shadowRoot!.activeElement === app.trigger, 'Cancellation returns focus before the bar renders denial').to.equal(true);
+      await bar.updateComplete;
+      approve.click();
+      expect(bar.decision).to.equal('denied');
+      expect(app.actions.length).to.equal(0);
+      expect(app.connection.pending === undefined).to.equal(true);
+    } finally { app.connection.dispose(); }
+  });
+
+  it('uses the live host return target on cancellation and disposal', async () => {
+    let target: HTMLElement | null = null;
+    const app = await setup({ returnFocusTo: () => target });
+    try {
+      const button = document.createElement('button');
+      button.textContent = 'Return to review';
+      app.root.append(button);
+      target = button;
+      let bar = await request(app);
+      await focusByKeyboard(bar.shadowRoot!.querySelector<HTMLElement>('[part="deny-button"]')!);
+      app.connection.cancel();
+      expect(document.activeElement === button).to.equal(true);
+      await bar.updateComplete;
+      bar = await request(app);
+      await focusByKeyboard(bar.shadowRoot!.querySelector<HTMLElement>('[part="deny-button"]')!);
+      app.connection.dispose();
+      expect(document.activeElement === button).to.equal(true);
+      expect(bar.isConnected).to.equal(false);
+      expect(app.actions.length).to.equal(0);
+    } finally { app.connection.dispose(); }
+  });
+
+  it('preserves focus intentionally moved outside approval before host cancellation', async () => {
+    const app = await setup();
+    try {
+      const bar = await request(app);
+      const outside = document.createElement('button');
+      outside.textContent = 'Another task';
+      app.root.append(outside);
+      await focusByKeyboard(outside);
+      app.connection.cancel();
+      await bar.updateComplete;
+      expect(document.activeElement === outside).to.equal(true);
+      expect(app.actions.length).to.equal(0);
+    } finally { app.connection.dispose(); }
+  });
+
+  it('settles cancellation and uses the original control if the host return callback throws', async () => {
+    let calls = 0;
+    const app = await setup({ returnFocusTo: () => { calls++; throw new Error('Host focus callback failed'); } });
+    try {
+      const bar = await request(app);
+      await focusByKeyboard(bar.shadowRoot!.querySelector<HTMLElement>('[part="deny-button"]')!);
+      app.connection.cancel();
+      await bar.updateComplete;
+      expect(calls).to.equal(1);
+      expect(app.view.shadowRoot!.activeElement === app.trigger).to.equal(true);
+      expect(bar.decision).to.equal('denied');
+      expect(app.connection.pending === undefined).to.equal(true);
+      expect(app.actions.length).to.equal(0);
+    } finally { app.connection.dispose(); }
+  });
+
+  it('preserves focus moved by a host callback or a throwing focus method', async () => {
+    const target = document.createElement('button');
+    target.textContent = 'Custom destination';
+    const outside = document.createElement('button');
+    outside.textContent = 'Chosen destination';
+    let callbackMovesFocus = false;
+    let focusCalls = 0;
+    target.focus = () => { focusCalls++; outside.focus(); throw new Error('Host focus method failed'); };
+    const app = await setup({ returnFocusTo: () => { if (callbackMovesFocus) outside.focus(); return target; } });
+    try {
+      app.root.append(target, outside);
+      for (const moveInCallback of [false, true]) {
+        callbackMovesFocus = moveInCallback;
+        const bar = await request(app);
+        await focusByKeyboard(bar.shadowRoot!.querySelector<HTMLElement>('[part="deny-button"]')!);
+        app.connection.cancel();
+        await bar.updateComplete;
+        expect(document.activeElement === outside).to.equal(true);
+        expect(bar.decision).to.equal('denied');
+        expect(app.connection.pending === undefined).to.equal(true);
+        expect(app.actions.length).to.equal(0);
+      }
+      expect(focusCalls, 'A host callback that moves focus prevents another focus attempt').to.equal(1);
+    } finally { app.connection.dispose(); }
+  });
+
+  for (const unavailable of ['hidden', 'inert', 'disabled', 'detached', 'unfocusable', 'aria-hidden'] as const) {
+    it(`skips a ${unavailable} host cancellation target and falls back to the original control`, async () => {
+      const target = document.createElement(unavailable === 'unfocusable' ? 'div' : 'button');
+      target.textContent = 'Unavailable destination';
+      const app = await setup({ returnFocusTo: () => target });
+      try {
+        const wrapper = document.createElement('div');
+        wrapper.append(target);
+        if (unavailable !== 'detached') app.root.append(wrapper);
+        if (unavailable === 'hidden') wrapper.hidden = true;
+        if (unavailable === 'inert') wrapper.inert = true;
+        if (unavailable === 'disabled') target.setAttribute('disabled', '');
+        if (unavailable === 'aria-hidden') wrapper.setAttribute('aria-hidden', 'true');
+        const bar = await request(app);
+        await focusByKeyboard(bar.shadowRoot!.querySelector<HTMLElement>('[part="deny-button"]')!);
+        app.connection.cancel();
+        await bar.updateComplete;
+        expect(app.view.shadowRoot!.activeElement === app.trigger).to.equal(true);
+        expect(app.actions.length).to.equal(0);
+      } finally { app.connection.dispose(); }
+    });
+  }
 
   it('rejects a stale bar after revision supersession and only approves the new revision', async () => {
     const app = await setup();

@@ -3,6 +3,19 @@ import { LyraConfirmBar } from '@aceshooting/lyra-ui/components/lr-confirm-bar.j
 import type { LyraGenViewElement, LyraGenConfirmation } from '@aceshooting/lyra-gen/gen-view.class.js';
 import type { LyraGenAction } from '@aceshooting/lyra-gen/types.js';
 
+function availableFocusTarget(target: HTMLElement, document: Document): boolean {
+  if (!target.isConnected || target.ownerDocument !== document || target.matches(':disabled')) return false;
+  let ancestor: Element | null = target;
+  for (let depth = 0; ancestor && depth < 64; depth++) {
+    if (ancestor.hasAttribute('hidden') || ancestor.hasAttribute('inert') || ancestor.getAttribute('aria-hidden') === 'true') return false;
+    const style = document.defaultView?.getComputedStyle(ancestor);
+    if (style?.display === 'none' || style?.visibility === 'hidden' || style?.visibility === 'collapse') return false;
+    const root = ancestor.getRootNode();
+    ancestor = ancestor.assignedSlot ?? ancestor.parentElement ?? (root instanceof ShadowRoot ? root.host : null);
+  }
+  return ancestor === null && target.getClientRects().length > 0;
+}
+
 export function connectGeneratedApproval(view: LyraGenViewElement, region: HTMLElement, options: {
   /** Application-localized explanation of the proposed action. */
   readonly heading?: (action: LyraGenAction) => string;
@@ -43,9 +56,20 @@ export function connectGeneratedApproval(view: LyraGenViewElement, region: HTMLE
         if (event.target === bar) finish(approvedRequest && event.detail.decision === 'approved');
       };
       const cancel = (): void => {
+        if (settled) return;
         bar.decision = 'denied';
         bar.disabled = true;
         finish(false);
+        // An external decision does not run the bar's native activation focus handoff.
+        if (!bar.matches(':focus-within')) return;
+        let preferred: HTMLElement | null = null;
+        try { preferred = options.returnFocusTo ? options.returnFocusTo(action) : original; } catch { /* Cancellation still settles if the host callback fails. */ }
+        for (const target of [preferred, original]) {
+          // A host callback or focus method may deliberately move focus elsewhere.
+          if (!bar.matches(':focus-within')) break;
+          if (!target || !availableFocusTarget(target, region.ownerDocument)) continue;
+          try { target.focus({ preventScroll: true }); } catch { /* Try the original control only while approval still owns focus. */ }
+        }
       };
       pending = { bar, cancel };
       signal.addEventListener('abort', cancel, { once: true });
