@@ -496,6 +496,8 @@ pnpm --filter @aceshooting/lyra-gen lint
 pnpm --filter @aceshooting/lyra-gen check:catalog
 pnpm --filter @aceshooting/lyra-gen check:examples
 pnpm --filter @aceshooting/lyra-gen check:bundles
+pnpm --filter @aceshooting/lyra-gen check:api
+pnpm test:gen-profile
 
 step "generated views and saved dashboards across browser engines"
 for gen_browser in chromium firefox webkit; do

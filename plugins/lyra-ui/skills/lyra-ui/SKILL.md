@@ -106,10 +106,11 @@ independently; choose releases compatible with the installed packages and their 
 - **`@aceshooting/lyra-docs`**: experimental `<lr-docx-editor>`; read its installed README for the
   bundled engine, registration, stylesheet imports, async editing commands, save receipts and limits. Core document viewers
   stay in `references/components/`.
-- **`@aceshooting/lyra-gen`**: independently versioned experimental generated views and saved
+- **`@aceshooting/lyra-gen`**: independently versioned generated views, interactive chat and saved/live
   dashboards. Read [lyra-gen.md](lyra-gen.md) for boundary, validation, authority and locale ownership,
   then the installed companion guide for the task. Its view format differs from widget-v2;
-  a roadmap or adapter does not establish released support or protocol conformance.
+  its explicit compatibility profile owns qualification limits and the experimental A2UI candidate
+  entry. A roadmap or adapter does not establish released support or protocol conformance.
 - **`@aceshooting/lyra-map`** (optional peer): the default modular renderer for `<lr-map>`. Configure
   `lyraMapWorkerPlugin()` from `@aceshooting/lyra-map/vite`, or supply a compatible worker URL.
   Read `references/components/lr-map.md` and the companion README before imperative map mutations:

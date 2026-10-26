@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { genTypedEntrypoints, REQUIRED_GEN_FILES, validatePackedGenManifest } from './packed-gen-consumer.mjs';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { copyPackedGuidedExamples, genTypedEntrypoints, REQUIRED_GEN_FILES, validatePackedGenManifest } from './packed-gen-consumer.mjs';
 
 const manifest = () => ({
   name: '@aceshooting/lyra-gen', type: 'module', license: 'MIT',
@@ -32,8 +35,27 @@ test('the archive retains host guides and runnable examples', () => {
     'docs/recovery-and-diagnostics.md', 'docs/threat-matrix.md',
     'docs/navigation.md', 'examples/navigation.ts',
     'docs/server-transport.md', 'examples/server-transport.mjs',
+    'examples/guided-demo.ts', 'examples/guided-demo-host.ts',
     'examples/recordings/chat-review.v1.json', 'examples/saved-dashboard/README.md',
   ]) {
     assert.throws(() => validatePackedGenManifest(manifest(), files.filter(file => file !== required), '30.2.0'), error => error instanceof Error && error.message.includes(required));
   }
+});
+
+test('guided examples are copied from the installed package with their public and relative imports intact', async t => {
+  const fixture = await mkdtemp(join(tmpdir(), 'lyra-guided-consumer-'));
+  t.after(() => rm(fixture, { recursive: true, force: true }));
+  const installed = join(fixture, 'node_modules/@aceshooting/lyra-gen');
+  await mkdir(join(installed, 'examples'), { recursive: true });
+  await writeFile(join(fixture, 'package.json'), '{"type":"module"}');
+  await writeFile(join(installed, 'package.json'), JSON.stringify({ name: '@aceshooting/lyra-gen', exports: { './package.json': './package.json' } }));
+  const sources = {
+    'guided-demo.ts': "import { createChatStream } from '@aceshooting/lyra-gen/chat.js';\nexport const demo = createChatStream;\n",
+    'guided-demo-host.ts': "import { html } from 'lit';\nimport { demo } from './guided-demo.js';\nexport const host = [html, demo];\n",
+  };
+  for (const [name, source] of Object.entries(sources)) await writeFile(join(installed, 'examples', name), source);
+  assert.deepEqual(await copyPackedGuidedExamples(fixture), ['guided-demo/guided-demo.ts', 'guided-demo/guided-demo-host.ts']);
+  for (const [name, source] of Object.entries(sources)) assert.equal(await readFile(join(fixture, 'guided-demo', name), 'utf8'), source);
+  await rm(join(installed, 'examples/guided-demo-host.ts'));
+  await assert.rejects(copyPackedGuidedExamples(fixture), /guided-demo-host/u);
 });

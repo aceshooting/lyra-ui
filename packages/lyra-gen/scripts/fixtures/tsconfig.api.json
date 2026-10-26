@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "noEmit": true,
+    "noResolve": true,
+    "noLib": true,
+    "types": [],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true
+  },
+  "include": ["../../dist/**/*.d.ts"]
+}

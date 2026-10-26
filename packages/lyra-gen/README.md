@@ -1,24 +1,27 @@
 # @aceshooting/lyra-gen
 
-Experimental generated views and saved dashboard contracts for Lyra UI. This `0.1.0` implementation
-is under development and unpublished. It accepts a reviewed component catalog and bounded
-declarative data; the host supplies model requests, authorized data, action handling and storage.
+Generated views, interactive chat and saved/live dashboard contracts for Lyra UI. It accepts a
+reviewed component catalog and bounded declarative data; the host supplies model requests, authorized
+data, action handling and storage. Check the installed package's version and compatibility profile.
 The [program roadmap](../../docs/roadmap/generative-ui.md) separates implementation from remaining
 qualification, planned features and conditional work.
 
 The package provides catalog subsets, deterministic JSON generation prompts, a restricted Markup
 parser, view validation, revision-checked patches, local binding state, a browser renderer and host
-persistence contracts. These entry points are experimental; their presence does not establish a
-released, production-qualified or protocol-conformant product.
+persistence contracts. The [compatibility profile](docs/compatibility.md) defines the 1.x contract,
+separately experimental A2UI candidate entry and criteria for a 1.0 designation. Each protocol and
+host integration retains its documented limits; API availability does not establish full protocol
+conformance or qualify an application's deployment.
 
 ## Choose an integration
 
 Requires Node ≥22 for package tooling and a compatible `@aceshooting/lyra-ui` peer. The browser
-recipes use granular module imports through the application's bundler. While this package is
-unpublished, run the examples from a built workspace rather than installing an unavailable npm version.
+recipes use granular module imports through the application's bundler. Run repository examples
+from a built workspace or adapt their source into the application.
 
 | Task | Guide |
 | --- | --- |
+| Explore scripted Markets, Weather and travel budgets | [Guided demo](docs/guided-demo.md) |
 | Select roles and generate prompts | [Catalog presets](docs/catalog-presets.md) |
 | Stream JSON or expand keyed rows | [Structured input and templates](docs/structured-input.md) |
 | Mix prose and generated views | [Interactive chat](docs/interactive-chat.md) |
@@ -30,12 +33,15 @@ unpublished, run the examples from a built workspace rather than installing an u
 | Save or publish a dashboard | [Host persistence](docs/dashboards.md), [executable development host](examples/saved-dashboard/README.md) |
 | Filter, navigate or cite values | [Live dashboard composition](docs/dashboard-composition.md) |
 | Recover or upgrade stored answers | [Recovery and diagnostics](docs/recovery-and-diagnostics.md), [catalog migrations](docs/stored-answer-migrations.md) |
-| Review trust and compatibility | [Security](docs/security.md), [threat fixtures](docs/threat-matrix.md), [experimental compatibility](docs/compatibility.md) |
+| Review trust and compatibility | [Security](docs/security.md), [threat fixtures](docs/threat-matrix.md), [compatibility](docs/compatibility.md) |
 
 ## Render a validated view
 
 Use granular entry points. Importing the package root registers no elements; `gen-view.js`
 registers `<lr-gen-view>`. The browser example below uses the built-in catalog's plain text roles.
+The installed package's explicit `exports` map defines the import boundary; see
+[supported paths and migration](docs/compatibility.md#supported-api-boundary). Files in `examples/`
+are application source recipes, not exported runtime modules.
 
 ```ts
 import '@aceshooting/lyra-ui/theme.css';

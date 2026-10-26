@@ -241,3 +241,147 @@ Lyra Gen is unpublished and has no corresponding published baseline, so these re
 silently added to that gate. `WORKLOADS` is the reusable scenario registry for a future explicit
 built-baseline/candidate comparison. Standalone replay reports do not claim tachometer confidence
 intervals or release-gate enrollment.
+
+## Reproduce the full timing and memory profiles
+
+`profile.mjs` covers text, recorded chat, long chat, normal/large views, live/saved dashboards,
+static SSR and restoration, the owned A2UI profile, and the SDK integration. Its measurements are
+semantic DOM commit followed by two animation-frame opportunities, **not physical display paint**.
+Streaming readiness starts at the required input; the separate first-mount interval retains import
+and replay cadence. `memory-profile.mjs` covers complete chat/dashboard lifecycles with direct and
+adapter admissions, isolated fresh controls, and the large-view observation. Neither contacts a
+provider. The earlier replay/session tools above remain separate experiments.
+
+Use the pinned Node, built public UI/Gen exports, already-installed Playwright browsers, and a
+frozen source/candidate archive. Keep evidence outside the checkout: reports contain machine and
+process identities. All paths below are caller-supplied environment variables. Inspect the fixed
+procedures without starting a browser:
+
+```sh
+node benchmarks/generative-ui/profile.mjs --plan
+node benchmarks/generative-ui/memory-profile.mjs --plan
+node --test benchmarks/generative-ui/profile-quiet.test.mjs
+```
+
+First write a new built-file inventory and an **unapproved** preflight draft. This reads and hashes
+files/executables; it does not build bundles or launch browsers:
+
+```sh
+node --input-type=module <<'JS'
+import { profileBuildInventory, preflightAuthorizationDraft } from './benchmarks/generative-ui/profile-driver.mjs';
+import { writeProfileRecord } from './benchmarks/generative-ui/profile.mjs';
+await writeProfileRecord(process.env.PROFILE_BUILD_MANIFEST, await profileBuildInventory());
+await writeProfileRecord(process.env.PROFILE_PREFLIGHT_DRAFT, await preflightAuthorizationDraft({
+  archive: process.env.PROFILE_ARCHIVE, buildManifest: process.env.PROFILE_BUILD_MANIFEST,
+}));
+JS
+```
+
+Review its source/candidate hashes and all three browser identities before explicitly approving a
+separate copy (`authorized:true`). Capture that approved preflight into a new directory:
+
+```sh
+node --input-type=module <<'JS'
+import { readFile } from 'node:fs/promises';
+import { runProfilePreflight } from './benchmarks/generative-ui/profile-driver.mjs';
+const controller = new AbortController();
+process.once('SIGINT', () => controller.abort()); process.once('SIGTERM', () => controller.abort());
+await runProfilePreflight({
+  authorization: JSON.parse(await readFile(process.env.PROFILE_PREFLIGHT_APPROVED, 'utf8')),
+  archive: process.env.PROFILE_ARCHIVE, buildManifest: process.env.PROFILE_BUILD_MANIFEST,
+  output: process.env.PROFILE_PREFLIGHT_OUTPUT, signal: controller.signal,
+});
+JS
+```
+
+This builds the production fixture and captures actual environment/browser versions, one observer
+positive control per engine, all ten fixture definitions and prepared input identities. It runs no
+workload operation, timing sample or GC. `preflight.json` contains `manifestDraft`; `controls/`
+contains the exact content-addressed positive-control receipts. Unsupported observers remain
+unsupported, with null raw observations. The collection draft deliberately leaves authorization
+false and collection ID, reviewed design digest and quiet receipt unset.
+
+### Linux quiet receipt
+
+`profile-quiet.mjs` observes `/proc` only when explicitly run. Supply an ownership JSON object with
+`schemaVersion:1`, the campaign `collectionId`, `monitorOwned:true`, and `roots` containing actual
+`{pid,startTimeTicks,role}` entries. Read each dedicated launcher's PID and field 22 start ticks from
+`/proc/<pid>/stat` (the exported `parseProcessStat` handles command names containing parentheses).
+Do not declare a shared shell/daemon or PID 1 as campaign-owned. Each root must remain alive;
+observed descendants are bound to boot/PID/start identity so PID reuse cannot inherit ownership.
+
+```sh
+node benchmarks/generative-ui/profile-quiet.mjs --run \
+  --collection="$PROFILE_COLLECTION_ID" --ownership="$PROFILE_OWNERSHIP" \
+  --review="$PROFILE_QUIET_REVIEW" --output="$PROFILE_QUIET_OUTPUT"
+```
+
+The new output directory receives compact per-second samples and an immutable, initially
+uninspected `precheck.json`. Review its first 60 intervals and source/ownership identities before
+creating the watched review file. That JSON must contain `schemaVersion:1`,
+`kind:"quiet-precheck-review"`, the matching `collectionId`, `inspected:true`, `decision:"approved"`,
+a real `reviewedAt` timestamp in milliseconds since epoch, and exact `precheckSha256` and
+`ownershipSha256` digests. The helper never writes its own approval; a malformed/pending review file
+fails, so keep drafts away from the watched path.
+
+The 60 scheduled intervals must span 60–61 actual seconds; jitter outside that bound fails.
+Total-host mean CPU must stay below 5%, normalized one-minute load below 0.1, unrelated process
+CPU below 0.1 of one core, with no swap I/O or observed unrelated build/browser/provider work.
+Owned work remains in total-host CPU/load. Receipts contain fresh rolling observations and a
+separate historical reviewed-precheck digest; the driver rejects receipts older than five seconds.
+Missing process observations, changed PID identities/review, contamination or interruption stops the
+observer and invalidates its receipt. It never kills other processes. Sampling cannot prove the
+absence of a short-lived process entirely between polls, and process-name classification cannot
+identify every provider task. Atomic receipt replacement is not a crash-durability guarantee.
+
+After reviewing the preflight, complete the timing manifest with the collection ID, digest of the
+reviewed measurement design, and inspected quiet receipt, then explicitly authorize collection.
+Keep the observer running, and pass its live `receipt.json` and the preflight's `controls` directory:
+
+```sh
+node benchmarks/generative-ui/profile.mjs --manifest="$PROFILE_MANIFEST" \
+  --quiet="$PROFILE_QUIET_RECEIPT" --controls="$PROFILE_CONTROLS" \
+  --archive="$PROFILE_ARCHIVE" --build-manifest="$PROFILE_BUILD_MANIFEST" --output="$PROFILE_OUTPUT"
+```
+
+### Separate memory authorization and collection
+
+Create a memory draft through the exported helper below. Unlike the timing preflight draft, this
+step builds the memory fixture to bind its actual bundle; it launches no browser or GC. The design
+and composition digests identify caller-reviewed specifications. The code independently verifies
+the fixed `memoryProfilePlan()`, actual source/build identities and semantic fixture oracles; it does
+not verify the contents of a separate composition specification file.
+
+```sh
+node --input-type=module <<'JS'
+import { memoryAuthorizationDraft } from './benchmarks/generative-ui/memory-profile-driver.mjs';
+import { writeProfileRecord } from './benchmarks/generative-ui/profile.mjs';
+await writeProfileRecord(process.env.MEMORY_DRAFT, await memoryAuthorizationDraft({
+  archive: process.env.PROFILE_ARCHIVE, 'build-manifest': process.env.PROFILE_BUILD_MANIFEST,
+  compositionSha256: process.env.MEMORY_COMPOSITION_SHA256,
+  collectionId: process.env.PROFILE_COLLECTION_ID, designSha256: process.env.MEMORY_DESIGN_SHA256,
+}));
+JS
+```
+
+After separate review and explicit authorization, run against a matching live quiet receipt:
+
+```sh
+node benchmarks/generative-ui/memory-profile.mjs --manifest="$MEMORY_MANIFEST" \
+  --quiet="$PROFILE_QUIET_RECEIPT" --archive="$PROFILE_ARCHIVE" \
+  --build-manifest="$PROFILE_BUILD_MANIFEST" --output="$MEMORY_OUTPUT"
+```
+
+Memory collection uses separate Chromium processes/stores, one bounded external archive and two
+GC requests separated by a task for each observation. Main-isolate heap excludes worker, native,
+GPU and OS memory; renderer DOM counters can include disconnected nodes. Statistical summaries
+and `collected-needs-review` status are scoped observations, not release qualification.
+
+For correctness only, `smokeAuthorizationDraft()` plus `profile-smoke.mjs` exercise the timing
+workloads. `memoryAuthorizationDraft(options,{functional:true})` plus
+`memory-profile-smoke.mjs` exercise memory lifecycle semantics with a distinct approved smoke
+manifest. Both smoke CLIs accept `--manifest`, `--archive`, `--build-manifest` and `--output`;
+neither accepts `--quiet` or authorizes numerical collection. Timing smoke discards operation
+clocks; memory smoke makes no CDP/GC/heap observations. A passing smoke is not quiet-run evidence,
+a budget result or a memory bound. No runner automatically retries failed attempts or approves
+its own results.

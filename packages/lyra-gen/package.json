@@ -1,7 +1,7 @@
 {
   "name": "@aceshooting/lyra-gen",
   "version": "0.1.0",
-  "description": "Experimental constrained generated UI, interactive answers and portable dashboard contracts for Lyra UI.",
+  "description": "Catalog-bound generated views, interactive answers and portable dashboard contracts for Lyra UI.",
   "type": "module",
   "license": "MIT",
   "engines": {
@@ -30,13 +30,157 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./index.js": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./types.js": {
+      "types": "./dist/types.d.ts",
+      "default": "./dist/types.js"
+    },
+    "./schema.js": {
+      "types": "./dist/schema.d.ts",
+      "default": "./dist/schema.js"
+    },
+    "./catalog.js": {
+      "types": "./dist/catalog.d.ts",
+      "default": "./dist/catalog.js"
+    },
+    "./content-policy.js": {
+      "types": "./dist/content-policy.d.ts",
+      "default": "./dist/content-policy.js"
+    },
+    "./prompts.js": {
+      "types": "./dist/prompts.d.ts",
+      "default": "./dist/prompts.js"
+    },
+    "./typed-catalog.js": {
+      "types": "./dist/typed-catalog.d.ts",
+      "default": "./dist/typed-catalog.js"
+    },
+    "./examples.js": {
+      "types": "./dist/examples.d.ts",
+      "default": "./dist/examples.js"
+    },
+    "./parser.js": {
+      "types": "./dist/parser.d.ts",
+      "default": "./dist/parser.js"
+    },
+    "./islands.js": {
+      "types": "./dist/islands.d.ts",
+      "default": "./dist/islands.js"
+    },
+    "./json-stream.js": {
+      "types": "./dist/json-stream.d.ts",
+      "default": "./dist/json-stream.js"
+    },
+    "./authoring.js": {
+      "types": "./dist/authoring.d.ts",
+      "default": "./dist/authoring.js"
+    },
+    "./templates.js": {
+      "types": "./dist/templates.d.ts",
+      "default": "./dist/templates.js"
+    },
+    "./runtime.js": {
+      "types": "./dist/runtime.d.ts",
+      "default": "./dist/runtime.js"
+    },
+    "./references.js": {
+      "types": "./dist/references.d.ts",
+      "default": "./dist/references.js"
+    },
+    "./functions.js": {
+      "types": "./dist/functions.d.ts",
+      "default": "./dist/functions.js"
+    },
+    "./repair.js": {
+      "types": "./dist/repair.d.ts",
+      "default": "./dist/repair.js"
+    },
+    "./repair-workflow.js": {
+      "types": "./dist/repair-workflow.d.ts",
+      "default": "./dist/repair-workflow.js"
+    },
+    "./recovery.js": {
+      "types": "./dist/recovery.d.ts",
+      "default": "./dist/recovery.js"
+    },
+    "./diagnostics.js": {
+      "types": "./dist/diagnostics.d.ts",
+      "default": "./dist/diagnostics.js"
+    },
+    "./chat.js": {
+      "types": "./dist/chat.d.ts",
+      "default": "./dist/chat.js"
+    },
+    "./ai-sdk.js": {
+      "types": "./dist/ai-sdk.d.ts",
+      "default": "./dist/ai-sdk.js"
+    },
+    "./gen-view.class.js": {
+      "types": "./dist/gen-view.class.d.ts",
+      "default": "./dist/gen-view.class.js"
+    },
     "./gen-view.js": {
       "types": "./dist/gen-view.d.ts",
       "default": "./dist/gen-view.js"
     },
-    "./*.js": {
-      "types": "./dist/*.d.ts",
-      "default": "./dist/*.js"
+    "./dashboard.js": {
+      "types": "./dist/dashboard.d.ts",
+      "default": "./dist/dashboard.js"
+    },
+    "./live-data.js": {
+      "types": "./dist/live-data.d.ts",
+      "default": "./dist/live-data.js"
+    },
+    "./persistence.js": {
+      "types": "./dist/persistence.d.ts",
+      "default": "./dist/persistence.js"
+    },
+    "./application.js": {
+      "types": "./dist/application.d.ts",
+      "default": "./dist/application.js"
+    },
+    "./migrations.js": {
+      "types": "./dist/migrations.d.ts",
+      "default": "./dist/migrations.js"
+    },
+    "./dashboard-binding.js": {
+      "types": "./dist/dashboard-binding.d.ts",
+      "default": "./dist/dashboard-binding.js"
+    },
+    "./answer-migrations.js": {
+      "types": "./dist/answer-migrations.d.ts",
+      "default": "./dist/answer-migrations.js"
+    },
+    "./converters.js": {
+      "types": "./dist/converters.d.ts",
+      "default": "./dist/converters.js"
+    },
+    "./export.js": {
+      "types": "./dist/export.d.ts",
+      "default": "./dist/export.js"
+    },
+    "./replay.js": {
+      "types": "./dist/replay.d.ts",
+      "default": "./dist/replay.js"
+    },
+    "./evaluation.js": {
+      "types": "./dist/evaluation.d.ts",
+      "default": "./dist/evaluation.js"
+    },
+    "./ssr.js": {
+      "types": "./dist/ssr.d.ts",
+      "default": "./dist/ssr.js"
+    },
+    "./adapters/a2ui.js": {
+      "types": "./dist/adapters/a2ui.d.ts",
+      "default": "./dist/adapters/a2ui.js"
+    },
+    "./adapters/a2ui-candidate.js": {
+      "types": "./dist/adapters/a2ui-candidate.d.ts",
+      "default": "./dist/adapters/a2ui-candidate.js"
     },
     "./package.json": "./package.json"
   },
@@ -56,7 +200,8 @@
     "check:build-artifacts": "node --test scripts/check-build-artifacts.test.mjs && node scripts/check-build-artifacts.mjs",
     "check:examples": "tsc -p tsconfig.examples.json",
     "test:saved-dashboard": "node --test test/host/saved-dashboard.test.mjs",
-    "check:bundles": "node scripts/measure-bundles.mjs"
+    "check:bundles": "node scripts/measure-bundles.mjs",
+    "check:api": "node --test scripts/check-api.test.mjs && node scripts/check-api.mjs"
   },
   "dependencies": {
     "lit": "^3.3.3",

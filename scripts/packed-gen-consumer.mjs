@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdir, writeFile } from 'node:fs/promises';
-import { join, relative } from 'node:path';
+import { copyFile, mkdir, writeFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
+import { dirname, join, relative } from 'node:path';
 import { attwCommandArguments } from './packed-attw.mjs';
 import { packedManifest } from './packed-tarball-input.mjs';
 
@@ -9,6 +10,7 @@ import { packedManifest } from './packed-tarball-input.mjs';
 const PUBLIC_GEN_EXAMPLES = Object.freeze([
   'examples/fixtures/contact-form.json', 'examples/fixtures/inventory-data.json', 'examples/fixtures/support-chat.json',
 ]);
+const GUIDED_GEN_EXAMPLES = Object.freeze(['examples/guided-demo.ts', 'examples/guided-demo-host.ts']);
 
 export const REQUIRED_GEN_FILES = Object.freeze([
   'package.json', 'README.md', 'LICENSE', 'CHANGELOG.md', 'bin/lyra-gen.mjs',
@@ -18,10 +20,26 @@ export const REQUIRED_GEN_FILES = Object.freeze([
   'docs/recovery-and-diagnostics.md', 'docs/threat-matrix.md',
   'docs/navigation.md', 'examples/navigation.ts',
   'docs/server-transport.md', 'examples/server-transport.mjs',
+  ...GUIDED_GEN_EXAMPLES,
   'examples/recordings/chat-review.v1.json', 'examples/saved-dashboard/README.md',
   'dist/index.js', 'dist/index.d.ts', 'dist/gen-view.js', 'dist/gen-view.d.ts',
   ...PUBLIC_GEN_EXAMPLES,
 ]);
+
+/** Copy the installed archive's examples out of its package scope, as application code. */
+export async function copyPackedGuidedExamples(fixture) {
+  const require = createRequire(join(fixture, 'package.json'));
+  const packageDirectory = dirname(require.resolve('@aceshooting/lyra-gen/package.json'));
+  const destination = join(fixture, 'guided-demo');
+  await mkdir(destination, { recursive: true });
+  const entries = [];
+  for (const source of GUIDED_GEN_EXAMPLES) {
+    const target = join(destination, source.slice('examples/'.length));
+    await copyFile(join(packageDirectory, source), target);
+    entries.push(relative(fixture, target));
+  }
+  return entries;
+}
 
 /** Expand wildcard exports against the exact archive so every shipped module receives ATTW. */
 export function genTypedEntrypoints(manifest, files) {
@@ -84,7 +102,7 @@ export async function verifyPackedGenConsumer({ workspace, uiTarball, genTarball
   await writeFile(join(fixture, 'package.json'), JSON.stringify({
     name: 'lyra-packed-gen-consumer', private: true, type: 'module',
     dependencies: { '@aceshooting/lyra-gen': `file:${relative(fixture, genTarball)}`, '@aceshooting/lyra-ui': `file:${relative(fixture, uiTarball)}` },
-    devDependencies: { typescript: '7.0.2' },
+    devDependencies: { typescript: '7.0.2', lit: manifest.dependencies.lit },
   }));
   await writeFile(join(fixture, 'load.mjs'), `import assert from 'node:assert/strict';
 const definitions = new Map();
@@ -117,6 +135,7 @@ if (checked.ok) {
 }
 `);
   await run(pnpm, ['install', '--ignore-scripts', '--config.auto-install-peers=false'], fixture, 'lyra-gen packed fixture install');
+  const guidedExamples = await copyPackedGuidedExamples(fixture);
   await run(process.execPath, ['load.mjs'], fixture, 'lyra-gen pure root and granular registration');
-  await run(pnpm, ['--config.auto-install-peers=false', 'exec', 'tsc', '--noEmit', '--skipLibCheck', 'false', '--strict', '--target', 'ES2022', '--module', 'NodeNext', '--moduleResolution', 'NodeNext', 'consumer.ts'], fixture, 'lyra-gen packed declaration check');
+  await run(pnpm, ['--config.auto-install-peers=false', 'exec', 'tsc', '--noEmit', '--skipLibCheck', 'false', '--strict', '--target', 'ES2022', '--module', 'NodeNext', '--moduleResolution', 'NodeNext', 'consumer.ts', ...guidedExamples], fixture, 'lyra-gen packed declaration and guided example check');
 }

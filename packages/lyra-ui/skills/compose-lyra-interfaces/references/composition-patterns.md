@@ -14,7 +14,7 @@ contract in the `lyra-ui` skill or the package reference before emitting markup.
 | Data display | Native text/list for small static content | Table, data grid, tree, virtual list, chart, or viewer when their interaction contract is required |
 | Feedback | Inline text near the action | Alert, progress, skeleton, spinner, empty state, toast, or live announcement based on urgency and persistence |
 | Transient UI | Inline disclosure when space permits | Popover, dropdown, drawer, or dialog when focus/dismissal/stacking behavior is genuinely needed |
-| Generated answers | Existing widget-v2 renderer for widget-v2 documents | Experimental `lyra-gen` for catalog-bound views; follow the sibling skill's `lyra-gen.md` and installed guides |
+| Generated answers | Existing widget-v2 renderer for widget-v2 documents | `lyra-gen` for catalog-bound views; follow the sibling skill's `lyra-gen.md` and installed `docs/compatibility.md` for the supported profile and limits |
 
 Do not nest a component merely to obtain padding or a border. Use layout utilities and semantic
 containers for visual grouping; reserve interactive components for interactions they own.

@@ -185,6 +185,17 @@ state = reduceAgentStream(state, {
 - **Build voice sessions:** `lr-realtime-session`; it composes the existing audio visualizer,
   push-to-talk control, and transcript feed while leaving transport ownership with the host.
 
+For catalog-bound generated views, use the independently versioned `@aceshooting/lyra-gen`
+companion; its format differs from widget-v2. Read its
+[integration guide](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-gen/README.md)
+and installed explicit `exports` map before importing runtime modules. The
+[compatibility guide](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-gen/docs/compatibility.md)
+defines its 1.x contract and qualification limits; only the A2UI candidate entry is separately
+experimental. Its
+[guided demo](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-gen/docs/guided-demo.md)
+is shipped application source with simulated data and scripted en/fr/ar replies, not an exported
+runtime entry or a model service. Core locale catalogs do not translate that example-owned copy.
+
 Family registration entry points are additive: importing
 `@aceshooting/lyra-ui/components/conversation`, `/agent-tools`, or `/retrieval` registers and
 exports that complete family. Granular component entry points remain the smallest bundles and are

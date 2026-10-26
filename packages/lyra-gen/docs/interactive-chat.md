@@ -11,6 +11,8 @@ ordinary `MessagePart[]` and exposes generated island metadata to the existing `
 The complete [browser composition](../examples/chat.ts) wires this controller to `lr-chat-viewport`,
 suggestions, citations and an artifact panel. Its host callbacks supply transport, current source
 permissions and side effects; it is an application example, not a hosted generation service.
+For a complete local walkthrough with scripted replies, editable travel calculations and replay,
+use the [guided demo](guided-demo.md); its source and three-language copy remain example-owned.
 
 ```ts
 import { initialCatalog } from '@aceshooting/lyra-gen/catalog.js';

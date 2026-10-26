@@ -1,9 +1,17 @@
 # Lyra Gen companion
 
-`@aceshooting/lyra-gen` is independently versioned and experimental. Pin the installed version,
+`@aceshooting/lyra-gen` is independently versioned. Pin the installed version,
 check its Lyra UI peer range and release status, then read its `README.md` and the relevant guide
 below. Package, view-format and catalog versions are separate contracts. Use granular imports;
 the root registers no elements, while `@aceshooting/lyra-gen/gen-view.js` registers `lr-gen-view`.
+Use only entries in the installed package's explicit `exports` map. Its `examples/` files are
+application source recipes, not importable package subpaths; `docs/compatibility.md` owns the
+implementation-path migration and separately experimental entry boundary.
+
+The 1.x compatibility contract covers the declared view/chat/dashboard, static SSR, pinned SDK
+and owned protocol profiles; only `adapters/a2ui-candidate.js` is an experimental exported API.
+Read the installed compatibility guide's qualification limits before making release or performance
+claims; provider/comparator campaigns and human assistive-technology review are not implied.
 
 ## Choose and validate the boundary
 
@@ -74,6 +82,7 @@ than expanding this skill into a second API reference.
 | Task | Guide |
 |---|---|
 | Presets, schemas, examples and structured inputs | `docs/catalog-presets.md`, `docs/structured-input.md` |
+| Local scripted Markets, Weather and editable travel-budget walkthrough | `docs/guided-demo.md` (example-owned en/fr/ar copy; no model request) |
 | Chat, stable `renderPart` shells and SDK parts | `docs/interactive-chat.md`, `docs/ai-sdk.md` |
 | Rendering, state, readiness and approval | `docs/rendering.md`, `docs/approval.md` |
 | Saved/live dashboards | `docs/dashboards.md`, `docs/dashboard-composition.md` |

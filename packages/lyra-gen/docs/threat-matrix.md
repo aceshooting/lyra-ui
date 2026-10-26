@@ -1,6 +1,6 @@
 # Generated-content threat fixtures
 
-This version 1 matrix maps the experimental native generated-view profile to specific mitigation
+This version 1 matrix maps the native generated-view profile to specific mitigation
 paths and executable fixtures. Model output, imported views, tool data and restored state are
 untrusted. Catalog definitions, adapters, loaders and host callbacks are trusted application code;
 the declarative boundary does not sandbox that code.

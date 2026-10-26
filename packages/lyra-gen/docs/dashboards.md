@@ -5,7 +5,7 @@ it does not require another model request. Lyra Gen supplies document validation
 publication orchestration, and application lifecycle helpers. The host supplies the durable
 database, authenticated viewer, authorization policy, routes and UI for editing or sharing.
 
-These APIs are experimental. An adapter interface, a test fixture or a browser-storage example
+An adapter interface, a test fixture or a browser-storage example
 does not establish a deployed multiuser storage service.
 
 ## Definition, state and authority

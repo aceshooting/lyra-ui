@@ -1,6 +1,6 @@
 # Structured JSON streams and keyed templates
 
-These experimental helpers use the same versioned view and catalog contracts as the generated
+These helpers use the same versioned view and catalog contracts as the generated
 renderer. They do not execute model-produced scripts, fetch data, grant permissions or invoke
 actions. Hosts retain responsibility for transport, data authorization and action dispatch.
 

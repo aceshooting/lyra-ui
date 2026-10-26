@@ -1,0 +1,6 @@
+{
+  "index.d.ts": "export * from './public.js';",
+  "public.d.ts": "import type { Payload } from './internal.js';\nexport { Payload as PublicPayload } from './internal.js';\nexport declare function admit(input: string): Payload;\nexport declare function admit(input: Uint8Array): Payload;\nexport declare class Controller { private pending; readonly status: 'ready' | 'error'; protected reset(): void; submit(input: Payload): Promise<void>; }\nexport declare const VERSION: '1';\ndeclare global { interface HTMLElementTagNameMap { 'fixture-view': Controller; } }",
+  "internal.d.ts": "export interface Payload { readonly value: string; readonly next?: Payload; }\nexport interface Unreachable { ignored: number; }",
+  "candidate.d.ts": "export declare function candidate(input: string): number;"
+}

@@ -142,6 +142,8 @@ jobs:
       - run: pnpm --filter @aceshooting/lyra-gen check:catalog
       - run: pnpm --filter @aceshooting/lyra-gen check:examples
       - run: pnpm --filter @aceshooting/lyra-gen check:bundles
+      - run: pnpm --filter @aceshooting/lyra-gen check:api
+      - run: pnpm test:gen-profile
       - run: pnpm --filter @aceshooting/lyra-ide lint
       - run: pnpm --filter @aceshooting/lyra-translations lint
       # Knip discovers the package's explicit exports and runs a production graph before the
