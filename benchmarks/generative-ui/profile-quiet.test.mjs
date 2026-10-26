@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseCpuStat, parseLoadAverage, parseSwapCounters, parseProcessStat, workloadLabels, createOwnershipTracker, intervalObservation, windowMetrics, ruleFailures, validateReview, makeReceipt } from './profile-quiet.mjs';
+import { parseCpuStat, parseLoadAverage, parseSwapCounters, parseProcessStat, workloadLabels, createOwnershipTracker, intervalObservation, windowMetrics, ruleFailures, validateReview, makeReceipt, quietSnapshotDeadline } from './profile-quiet.mjs';
 import { checkFreshQuietReceipt } from './profile-driver.mjs';
 
 // Synthetic fixtures only. No /proc reader, monitor, campaign or inspected artifact runs here.
@@ -74,7 +74,12 @@ test('process CPU uses actual elapsed time and leaves owned CPU in the host tota
   assert.equal(row.ownedCpuFractionOfOneCore, .3); assert.equal(row.maxUnrelatedProcessCpuFractionOfOneCore, .02);
   assert.equal(row.cpuBusyFraction, .08); assert.equal(row.swapActivity, false);
   const missing = snapshot(1, [processRow(10, { cpu: 130n })], { busy: 232n, total: 1400n });
-  assert.ok(intervalObservation(before, missing, { hz: 100, ownedBefore: owned, ownedAfter: owned }).coverageIssues.some(item => item.kind === 'unrelated-exit-final-cpu-unobserved'));
+  before.processes.get(20).comm = 'exited-worker'; before.processes.get(20).labels = ['build-or-package-tool'];
+  const incomplete = intervalObservation(before, missing, { hz: 100, ownedBefore: owned, ownedAfter: owned });
+  assert.deepEqual(incomplete.coverageIssues, [{ kind: 'unrelated-exit-final-cpu-unobserved', pid: 20, startTimeTicks: '10', comm: 'exited-worker', labels: ['build-or-package-tool'] }]);
+  const rows = intervals(); rows[0].coverageIssues = incomplete.coverageIssues;
+  assert.equal(windowMetrics(rows).observationComplete, false);
+  assert.ok(ruleFailures(windowMetrics(rows)).includes('process-observation-incomplete'));
 });
 
 test('sampled unrelated build/browser/provider activity and swap produce explicit failure reasons', () => {
@@ -121,4 +126,56 @@ test('process-specific read timestamps determine one-core fractions and reused P
   const reused = snapshot(1, [processRow(10, { start: 1050n, cpu: 20n, labels: ['build-or-package-tool'] })], { busy: 220n, total: 1400n });
   const observed = intervalObservation(before, reused, { hz: 100, ownedBefore: new Map([['10:10', {}]]), ownedAfter: new Map() });
   assert.equal(observed.maxUnrelatedProcessCpuFractionOfOneCore, .2); assert.equal(observed.concurrentTaskWorkloads, true);
+});
+
+function scheduledSnapshots(deadlineFor, scanCost, count = 121) {
+  const epochNs = 0n, rows = [], endpoints = [epochNs], deadlines = [], windows = [];
+  let previous = snapshot(0, [processRow(10)]);
+  for (let tick = 1; tick <= count; tick++) {
+    const deadline = deadlineFor({ epochNs, tick, previousCompletionNs: previous.monotonicNs,
+      oldestBoundaryNs: rows.length === 60 ? BigInt(rows[0].monotonicNs) : undefined });
+    const started = deadline > previous.monotonicNs ? deadline : previous.monotonicNs;
+    const completed = started + scanCost(tick);
+    const current = snapshot(tick, [processRow(10)], { busy: 200n + BigInt(tick), total: 1000n + BigInt(tick) * 400n });
+    current.monotonicNs = completed; current.observedAt = Number(completed) / 1e6;
+    current.processes.get(10).readMonotonicNs = completed;
+    const row = intervalObservation(previous, current, { hz: 100, ownedBefore: new Map(), ownedAfter: new Map() });
+    rows.push(row); if (rows.length > 60) rows.shift();
+    endpoints.push(completed); deadlines.push(deadline);
+    if (rows.length === 60) windows.push(windowMetrics(rows));
+    previous = current;
+  }
+  return { rows, endpoints, deadlines, windows };
+}
+
+test('absolute scan deadlines absorb read cost instead of adding it to every interval', () => {
+  const cost = () => 180_000_000n;
+  assert.throws(() => scheduledSnapshots(({ previousCompletionNs }) => previousCompletionNs + 1_000_000_000n, cost, 60), /sixty-second/u);
+  const result = scheduledSnapshots(quietSnapshotDeadline, cost, 60);
+  assert.equal(result.endpoints[60], 60_180_000_000n);
+  assert.equal(result.windows[0].seconds, 60.18);
+  assert.equal(result.deadlines[1] - result.deadlines[0], 1_000_000_000n);
+  assert.equal(result.rows[0].seconds, 1.18); assert.equal(result.rows[1].seconds, 1);
+  assert.equal(BigInt(result.rows[59].monotonicNs), result.deadlines[59] + cost());
+});
+
+test('the rolling boundary guard keeps variable-cost windows real and at least sixty seconds', () => {
+  const cost = tick => tick === 1 ? 240_000_000n : BigInt(20 + tick % 7 * 25) * 1_000_000n;
+  assert.throws(() => scheduledSnapshots(({ epochNs, tick }) => epochNs + BigInt(tick) * 1_000_000_000n, cost), /sixty-second/u);
+  const result = scheduledSnapshots(quietSnapshotDeadline, cost, 181);
+  assert.equal(result.windows.length, 122);
+  assert.equal(new Set(result.endpoints).size, 182);
+  for (const window of result.windows) assert.ok(window.seconds >= 60 && window.seconds <= 61);
+  for (let tick = 1; tick <= 181; tick++) {
+    assert.equal(result.endpoints[tick], result.deadlines[tick - 1] + cost(tick));
+    if (tick > 60) assert.ok(result.deadlines[tick - 1] >= result.endpoints[tick - 60] + 60_000_000_000n);
+  }
+});
+
+test('deadline scheduling cannot disguise a delayed actual observation or invalid clock input', () => {
+  assert.throws(() => scheduledSnapshots(quietSnapshotDeadline, () => 600_000_000n, 1), /interval is missing or delayed/u);
+  for (const input of [{ epochNs: 0, tick: 1 }, { epochNs: 0n, tick: 0 }, { epochNs: 0n, tick: 1.5 },
+    { epochNs: 0n, tick: 61, oldestBoundaryNs: 1 }, { epochNs: 2n, tick: 61, oldestBoundaryNs: 1n }]) {
+    assert.throws(() => quietSnapshotDeadline(input), /deadline/u);
+  }
 });

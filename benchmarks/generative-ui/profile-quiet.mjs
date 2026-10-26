@@ -14,6 +14,16 @@ const uint = value => { require(typeof value === 'string' && /^\d+$/u.test(value
 const hash = value => typeof value === 'string' && /^[a-f0-9]{64}$/u.test(value);
 export const QUIET_RULES = Object.freeze({ cpuBusy: .05, normalizedLoad: .1, unrelatedProcessOneCore: .1, seconds: 60, intervals: 60, intervalMs: 1000 });
 
+/** Schedule reads from a fixed epoch while preserving actual rolling-window coverage. */
+export function quietSnapshotDeadline({ epochNs, tick, oldestBoundaryNs }) {
+  require(typeof epochNs === 'bigint' && epochNs >= 0n && Number.isSafeInteger(tick) && tick > 0
+    && (oldestBoundaryNs === undefined || typeof oldestBoundaryNs === 'bigint' && oldestBoundaryNs >= epochNs), 'Invalid quiet snapshot deadline input.');
+  const scheduled = epochNs + BigInt(tick) * 1_000_000_000n;
+  // Scan duration may shrink; wait for a full real window rather than padding its timestamps.
+  const rolling = oldestBoundaryNs === undefined ? scheduled : oldestBoundaryNs + 60_000_000_000n;
+  return scheduled > rolling ? scheduled : rolling;
+}
+
 export function parseCpuStat(source) {
   const rows = source.trim().split('\n'), aggregate = rows.find(line => /^cpu\s/u.test(line));
   require(aggregate, 'Missing aggregate CPU counters.');
@@ -116,7 +126,7 @@ export function intervalObservation(previous, current, { hz, ownedBefore, ownedA
   }
   for (const process of previous.processes.values()) {
     const after = current.processes.get(process.pid);
-    if ((!after || after.startTimeTicks !== process.startTimeTicks) && !ownedBefore.has(identity(process))) coverageIssues.push({ kind: 'unrelated-exit-final-cpu-unobserved', pid: process.pid, startTimeTicks: String(process.startTimeTicks) });
+    if ((!after || after.startTimeTicks !== process.startTimeTicks) && !ownedBefore.has(identity(process))) coverageIssues.push({ kind: 'unrelated-exit-final-cpu-unobserved', pid: process.pid, startTimeTicks: String(process.startTimeTicks), comm: process.comm, labels: process.labels });
   }
   const unrelated = processes.filter(process => !process.owned);
   return { observedAt: current.observedAt, monotonicNs: String(current.monotonicNs), seconds, logicalCpus: current.cpu.logicalCpus,
@@ -221,12 +231,12 @@ export async function runMonitor({ collectionId, ownershipPath, reviewPath, outp
     initialOwnedProcesses: [...previous.processes.values()].filter(process => ownedBefore.has(identity(process))).map(process => ({ pid: process.pid, ppid: process.ppid, startTimeTicks: String(process.startTimeTicks), ...ownedBefore.get(identity(process)) })) };
   await writeFile(join(output, 'baseline.json'), encode(baseline), { flag: 'wx', mode: 0o600 });
   await writeFile(join(output, 'samples.jsonl'), '', { flag: 'wx', mode: 0o600 });
-  const initialAt = previous.observedAt, samples = [], sampleDigest = createHash('sha256');
+  const initialAt = previous.observedAt, epochNs = previous.monotonicNs, samples = [], sampleDigest = createHash('sha256');
   let tick = 0;
   try {
     while (!signal?.aborted) {
       tick++;
-      const deadline = previous.monotonicNs + 1_000_000_000n;
+      const deadline = quietSnapshotDeadline({ epochNs, tick, oldestBoundaryNs: samples.length === 60 ? BigInt(samples[0].monotonicNs) : undefined });
       while (process.hrtime.bigint() < deadline) await delay(Math.max(1, Number(deadline - process.hrtime.bigint()) / 1e6), undefined, { signal });
       const current = await readSnapshot(hz), ownedAfter = tracker.classify(current);
       const row = intervalObservation(previous, current, { hz, ownedBefore, ownedAfter });
