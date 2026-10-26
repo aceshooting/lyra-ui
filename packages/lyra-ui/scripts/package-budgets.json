@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard archive ceilings: UI downloads stay below 10,000,000 bytes, unpacked UI size retains the 25% historical-baseline reduction, and its file-count derivation reserves seven scaffold artifacts. Required files and artifact hygiene are checked independently; companions have separate ceilings. Only exceeded byte ceilings advance to a 64-byte boundary. Current measured bytes: UI 21,974,923 unpacked archive / 21,975,545 estimated; IDE 1,709,820 packed / 10,583,228 unpacked; translations 1,407,289 packed / 6,225,792 unpacked; Gen 207,647 packed / 773,556 unpacked across 140 files. The Gen dashboard loading fix and its changelog add 1,065 unpacked bytes; only its two byte ceilings advance. Runtime bundle limits and all file ceilings remain unchanged.",
+  "$comment": "Hard archive ceilings: UI downloads stay below 10,000,000 bytes, unpacked UI size retains the 25% historical-baseline reduction, and its file-count derivation reserves seven scaffold artifacts. Required files and artifact hygiene are checked independently; companions have separate ceilings. Only exceeded byte ceilings advance to a 64-byte boundary. Measured UI: 21,977,538 unpacked archive / 21,978,160 estimated after updated Gen guidance. Measured Gen: 225,212 packed / 830,774 unpacked across 143 files, including the guided-demo guide and two example sources. Runtime bundle ceilings remain unchanged.",
   "baseline": {
     "packedBytes": 7829794,
     "unpackedBytes": 38510084,
@@ -20,7 +20,7 @@
   },
   "maximum": {
     "packedBytes": 9999999,
-    "unpackedBytes": 21975552,
+    "unpackedBytes": 21978176,
     "fileCount": 3352
   },
   "companions": {
@@ -54,9 +54,9 @@
     },
     "@aceshooting/lyra-gen": {
       "maximum": {
-        "packedBytes": 207680,
-        "unpackedBytes": 773568,
-        "fileCount": 140
+        "packedBytes": 225216,
+        "unpackedBytes": 830784,
+        "fileCount": 143
       }
     }
   }
