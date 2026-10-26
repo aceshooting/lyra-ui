@@ -45,6 +45,11 @@ for (const released of [
   ['@aceshooting/lyra-docs'],
   ['@aceshooting/lyra-map', '@aceshooting/lyra-ui', '@aceshooting/lyra-docs'],
   ['@aceshooting/lyra-docs', '@aceshooting/lyra-map', '@aceshooting/lyra-ui'],
+  ['@aceshooting/lyra-ui'],
+  ['@aceshooting/lyra-gen'],
+  ['@aceshooting/lyra-ui', '@aceshooting/lyra-gen'],
+  ['@aceshooting/lyra-gen', '@aceshooting/lyra-ui'],
+  ['@aceshooting/lyra-map'],
 ]) {
   test(`release preparation builds clean prerequisites for ${released.join(', ')}`, () => {
     const root = mkdtempSync(join(tmpdir(), 'lyra-release-build-order-'));
@@ -52,6 +57,11 @@ for (const released of [
       const ui = join(root, 'packages/lyra-ui');
       const docs = join(root, 'packages/lyra-docs');
       const map = join(root, 'packages/lyra-map');
+      const gen = join(root, 'packages/lyra-gen');
+      const uiReleased = released.includes('@aceshooting/lyra-ui');
+      const genReleased = released.includes('@aceshooting/lyra-gen');
+      const refreshGen = uiReleased || genReleased;
+      const needsUI = refreshGen || released.includes('@aceshooting/lyra-docs');
       mkdirSync(map, { recursive: true });
       writeFileSync(join(map, 'package.json'), JSON.stringify({
         name: '@aceshooting/lyra-map', version: '1.0.0',
@@ -59,6 +69,9 @@ for (const released of [
       }));
       mkdirSync(ui, { recursive: true });
       mkdirSync(docs, { recursive: true });
+      mkdirSync(join(gen, 'scripts'), { recursive: true });
+      writeFileSync(join(gen, 'metadata.json'), '"current"');
+      writeFileSync(join(ui, 'source-revision.json'), '"initial"');
       // Source metadata starts at the unchanged version; the released UI generator updates it.
       writeFileSync(join(ui, 'metadata.json'), '"current"');
       writeFileSync(join(root, 'package.json'), JSON.stringify({
@@ -78,6 +91,12 @@ for (const released of [
         name: '@aceshooting/lyra-docs', version: '1.0.0',
         scripts: { build: 'node ../../fixture.mjs docs' },
       }));
+      writeFileSync(join(gen, 'package.json'), JSON.stringify({
+        name: '@aceshooting/lyra-gen', version: '1.0.0',
+        scripts: { 'package-metadata': 'node ../../fixture.mjs gen-metadata', build: 'node ../../fixture.mjs gen' },
+      }));
+      writeFileSync(join(gen, 'scripts/measure-bundles.mjs'), "import '../../../fixture.mjs';\n");
+      const packageVersions = [map, ui, docs, gen].map(directory => readFileSync(join(directory, 'package.json'), 'utf8'));
       writeFileSync(join(root, 'fixture.mjs'), `
 import assert from 'node:assert/strict';
 import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -85,8 +104,12 @@ const root = new URL('./', import.meta.url);
 const ui = new URL('packages/lyra-ui/', root);
 const metadata = new URL('metadata.json', ui);
 const declaration = new URL('dist/localization.d.ts', ui);
+const gen = new URL('packages/lyra-gen/', root);
+const revision = new URL('source-revision.json', ui);
 const task = process.argv[2];
 if (task === 'metadata') writeFileSync(metadata, '"released"');
+if (task === 'gen-metadata') writeFileSync(new URL('metadata.json', gen), '"released"');
+if (task === 'packaged') writeFileSync(revision, '"packaged"');
 if (task === 'map') {
   mkdirSync(new URL('packages/lyra-map/dist/', root), { recursive: true });
   writeFileSync(new URL('packages/lyra-map/dist/index.d.ts', root), 'map declarations');
@@ -94,10 +117,22 @@ if (task === 'map') {
 if (task === 'ui') {
   assert.equal(readFileSync(new URL('packages/lyra-map/dist/index.d.ts', root), 'utf8'), 'map declarations');
   mkdirSync(new URL('dist/', ui), { recursive: true });
-  writeFileSync(declaration, readFileSync(metadata));
+  writeFileSync(declaration, JSON.stringify({ metadata: JSON.parse(readFileSync(metadata)), revision: JSON.parse(readFileSync(revision)) }));
 }
 if (task === 'docs' || task === 'quality') {
-  assert.equal(readFileSync(declaration, 'utf8'), JSON.stringify(process.env.EXPECTED_METADATA));
+  assert.equal(JSON.parse(readFileSync(declaration)).metadata, process.env.EXPECTED_METADATA);
+}
+if (task === 'gen') {
+  mkdirSync(new URL('dist/', gen), { recursive: true });
+  writeFileSync(new URL('dist/ui-input.json', gen), readFileSync(declaration));
+}
+if (task === '--refresh-versions') {
+  assert.equal(process.argv.length, 3);
+  const built = JSON.parse(readFileSync(new URL('dist/ui-input.json', gen)));
+  assert.deepEqual(built, JSON.parse(readFileSync(declaration)));
+  assert.equal(built.metadata, process.env.EXPECTED_METADATA);
+  assert.equal(built.revision, process.env.EXPECTED_REVISION);
+  assert.equal(JSON.parse(readFileSync(new URL('metadata.json', gen))), process.env.EXPECTED_GEN_METADATA);
 }
 appendFileSync(new URL('steps.log', root), task + '\\n');
 `);
@@ -107,13 +142,15 @@ appendFileSync(new URL('steps.log', root), task + '\\n');
         mkdirSync(join(root, 'scripts'), { recursive: true });
         writeFileSync(join(root, 'scripts', `${script}.mjs`), '');
       }
-      writeFileSync(join(root, 'package.sh'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
+      writeFileSync(join(root, 'package.sh'), '#!/bin/sh\nexec node fixture.mjs packaged\n', { mode: 0o755 });
       for (const [command, args] of releasePreparationSteps(released)) {
         const result = spawnSync(command === 'node' ? process.execPath : command, args, {
           cwd: root,
           env: {
             ...process.env,
-            EXPECTED_METADATA: released.includes('@aceshooting/lyra-ui') ? 'released' : 'current',
+            EXPECTED_METADATA: uiReleased ? 'released' : 'current',
+            EXPECTED_REVISION: uiReleased ? 'packaged' : 'initial',
+            EXPECTED_GEN_METADATA: genReleased ? 'released' : 'current',
           },
           encoding: 'utf8',
         });
@@ -122,15 +159,27 @@ appendFileSync(new URL('steps.log', root), task + '\\n');
       }
       const tasks = readFileSync(join(root, 'steps.log'), 'utf8').trim().split('\n');
       assert.equal(tasks.filter(task => task === 'map').length, 1);
-      assert.ok(tasks.indexOf('map') < tasks.indexOf('ui'), 'map declarations exist before UI builds');
-      assert.equal(tasks.filter(task => task === 'docs').length, 1);
-      assert.ok(tasks.indexOf('ui') < tasks.indexOf('docs'), 'UI declarations exist before docs builds');
-      assert.equal(tasks.filter(task => task === 'ui').length,
-        released.includes('@aceshooting/lyra-ui') ? 2 : 1,
-        'a prerequisite is prepared once, plus the existing post-packaging UI rebuild when released');
-      assert.equal(tasks.filter(task => task === 'metadata').length,
-        released.includes('@aceshooting/lyra-ui') ? 1 : 0,
+      if (needsUI) assert.ok(tasks.indexOf('map') < tasks.indexOf('ui'), 'map declarations exist before UI builds');
+      assert.equal(tasks.filter(task => task === 'docs').length, released.includes('@aceshooting/lyra-docs') ? 1 : 0);
+      if (released.includes('@aceshooting/lyra-docs')) {
+        assert.ok(tasks.indexOf('ui') < tasks.indexOf('docs'), 'UI declarations exist before docs builds');
+      }
+      assert.equal(tasks.filter(task => task === 'ui').length, uiReleased ? 2 : needsUI ? 1 : 0,
+        'a prerequisite is prepared once, plus the post-packaging UI rebuild when released');
+      assert.equal(tasks.filter(task => task === 'metadata').length, uiReleased ? 1 : 0,
         'an unchanged prerequisite is built without regenerating its release metadata');
+      assert.equal(tasks.filter(task => task === 'gen').length, refreshGen ? 1 : 0,
+        'Gen builds once after final UI, only when either package releases');
+      assert.equal(tasks.filter(task => task === '--refresh-versions').length, refreshGen ? 1 : 0);
+      if (refreshGen) {
+        assert.ok(tasks.indexOf('gen') > tasks.lastIndexOf('ui'));
+        assert.ok(tasks.indexOf('--refresh-versions') > tasks.indexOf('gen'));
+      }
+      assert.equal(tasks.filter(task => task === 'gen-metadata').length, genReleased ? 1 : 0);
+      assert.equal(JSON.parse(readFileSync(join(gen, 'metadata.json'))), genReleased ? 'released' : 'current');
+      assert.equal(JSON.parse(readFileSync(join(ui, 'metadata.json'))), uiReleased ? 'released' : 'current');
+      assert.deepEqual([map, ui, docs, gen].map(directory => readFileSync(join(directory, 'package.json'), 'utf8')), packageVersions,
+        'preparation preserves package versions after the separate version bump');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -387,4 +436,19 @@ test('the closing guidance names every qualification workflow to dispatch on the
   assert.ok(text.indexOf('quality-tools.yml') < text.indexOf('gh workflow run release.yml --ref main'), 'Release runs after every gate');
   // The workflow inputs stay at their defaults: a Quality tools run without the benchmark cannot qualify.
   assert.doesNotMatch(text, /ab_benchmark=false|-f ab_benchmark/u);
+});
+
+
+test('release budgets check generated bundles before archive and installed-consumer checks', () => {
+  const script = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf8')).scripts['release:budgets'];
+  const commands = script.split(' && ');
+  const build = indexAfter(commands, 'pnpm --filter @aceshooting/lyra-gen run build');
+  const bundles = indexAfter(commands, 'pnpm --filter @aceshooting/lyra-gen run check:bundles', build);
+  for (const archive of [
+    'pnpm --filter @aceshooting/lyra-ui run check:package-size',
+    'node scripts/check-companion-package-sizes.mjs',
+    'node scripts/check-packed-consumer.mjs --skip-attw',
+  ]) indexAfter(commands, archive, bundles);
+  assert.equal(commands.filter(command => command.includes('@aceshooting/lyra-gen')).length, 2);
+  assert.doesNotMatch(script, /--(?:write-budgets|refresh-versions)/u);
 });

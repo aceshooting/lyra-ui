@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { createHash } from 'node:crypto';
-import { readFile, writeFile, mkdtemp, rm } from 'node:fs/promises';
+import { readFile, writeFile, open, mkdtemp, rm } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
@@ -97,7 +97,18 @@ function ceilingFor(metric, bytes) {
   return Math.floor(bytes * (100 + percent) / 100);
 }
 
+function stableVersionParts(version) {
+  if (typeof version !== 'string' || !/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.test(version)) {
+    throw new Error('Bundle budget package versions must be stable release versions.');
+  }
+  const parts = version.split('.').map(Number);
+  if (parts.some(part => !Number.isSafeInteger(part))) throw new Error('Bundle budget package version is out of range.');
+  return parts;
+}
+
 export function deriveBudgets(report) {
+  stableVersionParts(report.packageVersion);
+  stableVersionParts(report.uiVersion);
   return {
     schemaVersion: 1, packageVersion: report.packageVersion, uiVersion: report.uiVersion, nodeVersion: report.nodeVersion, esbuildVersion: report.esbuildVersion,
     policy: { javascriptHeadroomPercent: 2, cssHeadroomPercent: 4, assetHeadroomPercent: 0, basis: 'Initial companion ceilings use measured production bytes with floor(1.02 × JS) and floor(1.04 × CSS), following repository review limits; assets have no allowance. Gzip is summed per independently transferred file.' },
@@ -110,15 +121,52 @@ export function deriveBudgets(report) {
 }
 
 export function checkBudgets(report, budgets) {
+  for (const versions of [report, budgets]) {
+    stableVersionParts(versions.packageVersion);
+    stableVersionParts(versions.uiVersion);
+  }
   if (budgets.schemaVersion !== 1 || budgets.packageVersion !== report.packageVersion || budgets.uiVersion !== report.uiVersion || budgets.nodeVersion !== report.nodeVersion || budgets.esbuildVersion !== report.esbuildVersion) throw new Error('Bundle budget toolchain or package version differs; remeasure and review.');
   if (JSON.stringify(Object.keys(budgets.profiles).sort()) !== JSON.stringify(report.profiles.map(profile => profile.name).sort())) throw new Error('Bundle budget profile set differs.');
   for (const profile of report.profiles) {
     const budget = budgets.profiles[profile.name];
     if (JSON.stringify(profile.externalImports) !== JSON.stringify(budget.externalImports)) throw new Error(`External dependency inventory changed: ${profile.name}`);
+    const metrics = Object.keys(profile.totals).sort();
+    if (JSON.stringify(metrics) !== JSON.stringify(Object.keys(budget.measured).sort())
+      || JSON.stringify(metrics) !== JSON.stringify(Object.keys(budget.ceilings).sort())) throw new Error(`Bundle metric inventory changed: ${profile.name}`);
     for (const [metric, measured] of Object.entries(profile.totals)) {
-      if (!Number.isSafeInteger(budget.ceilings[metric]) || budget.ceilings[metric] < budget.measured[metric] || budget.ceilings[metric] > ceilingFor(metric, budget.measured[metric]) || measured > budget.ceilings[metric]) throw new Error(`Bundle budget exceeded: ${profile.name}/${metric}`);
+      if (!Number.isSafeInteger(measured) || measured < 0 || !Number.isSafeInteger(budget.ceilings[metric]) || budget.ceilings[metric] < budget.measured[metric] || budget.ceilings[metric] > ceilingFor(metric, budget.measured[metric]) || measured > budget.ceilings[metric]) throw new Error(`Bundle budget exceeded: ${profile.name}/${metric}`);
     }
   }
+}
+
+/** Advance release stamps only after checking the original measurements and ceilings. */
+export function refreshBudgetVersions(report, budgets) {
+  for (const key of ['packageVersion', 'uiVersion']) {
+    const previous = stableVersionParts(budgets[key]);
+    const next = stableVersionParts(report[key]);
+    const difference = next.findIndex((part, index) => part !== previous[index]);
+    if (difference >= 0 && next[difference] < previous[difference]) throw new Error('Bundle budget package versions cannot regress.');
+  }
+  const proposed = { ...budgets, packageVersion: report.packageVersion, uiVersion: report.uiVersion };
+  checkBudgets(report, proposed);
+  return proposed;
+}
+
+/** Refresh one existing file after validating its current baseline; never create a baseline. */
+export async function refreshBudgetFile(report, budgetsFile) {
+  const handle = await open(budgetsFile, 'r+');
+  try {
+    const refreshed = refreshBudgetVersions(report, JSON.parse(await handle.readFile('utf8')));
+    const contents = Buffer.from(`${JSON.stringify(refreshed, null, 2)}\n`, 'utf8');
+    let written = 0;
+    while (written < contents.byteLength) {
+      const result = await handle.write(contents, written, contents.byteLength - written, written);
+      if (!result.bytesWritten) throw new Error('Could not write refreshed bundle budget versions.');
+      written += result.bytesWritten;
+    }
+    await handle.truncate(contents.byteLength);
+    return refreshed;
+  } finally { await handle.close(); }
 }
 
 export async function measureBundles() {
@@ -155,13 +203,24 @@ export async function measureBundles() {
 
 async function main() {
   const args = process.argv.slice(2);
-  if (args.some(arg => !arg.startsWith('--output=') && !arg.startsWith('--budgets=') && arg !== '--write-budgets')) throw new Error('Unknown bundle measurement argument.');
+  if (args.includes('--refresh-versions') && args.includes('--write-budgets')) {
+    console.error('Bundle measurement cannot combine --refresh-versions with --write-budgets.');
+    process.exitCode = 1;
+    return;
+  }
+  if (args.some(arg => !arg.startsWith('--output=') && !arg.startsWith('--budgets=') && arg !== '--write-budgets' && arg !== '--refresh-versions')) throw new Error('Unknown bundle measurement argument.');
   const budgetsFile = resolve(args.find(arg => arg.startsWith('--budgets='))?.slice(10) ?? join(packageDirectory, 'scripts/bundle-budgets.json'));
   const output = args.find(arg => arg.startsWith('--output='))?.slice(9);
   const report = await measureBundles();
+  let refreshed;
+  if (!args.includes('--write-budgets')) {
+    const budgets = JSON.parse(await readFile(budgetsFile, 'utf8'));
+    if (args.includes('--refresh-versions')) refreshed = refreshBudgetVersions(report, budgets);
+    else checkBudgets(report, budgets);
+  }
   if (output) await writeFile(resolve(output), `${JSON.stringify(report, null, 2)}\n`, { flag: 'wx' });
   if (args.includes('--write-budgets')) await writeFile(budgetsFile, `${JSON.stringify(deriveBudgets(report), null, 2)}\n`, { flag: 'wx' });
-  else checkBudgets(report, JSON.parse(await readFile(budgetsFile, 'utf8')));
+  else if (refreshed) await refreshBudgetFile(report, budgetsFile);
   console.log(JSON.stringify(report, null, 2));
 }
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {

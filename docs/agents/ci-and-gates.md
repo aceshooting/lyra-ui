@@ -538,8 +538,10 @@ remain advisory evidence; the deterministic scale counters are the automated reg
    history, stamp metadata, regenerate API and consumer references, build and measure each released
    package). A lyra-ui release also syncs the plugin versions, runs `./package.sh`, and rebuilds and
    remeasures because `package.sh` writes source; `node scripts/update-readme-status.mjs` runs last.
+   When UI or Gen releases, preparation builds Gen against the final UI output and refreshes its
+   bundle version stamps only after the existing byte ceilings and dependency inventories pass.
    It never lints, tests, packs, commits, tags or pushes. Then run `pnpm release:budgets`
-   (`check:bundle-size`, `check:package-size`, the packed lyra-translations and lyra-ide archives via
+   (`check:bundle-size`, Gen's build and `check:bundles`, `check:package-size`, companion archives via
    `scripts/check-companion-package-sizes.mjs`, `check-packed-consumer.mjs --skip-attw`): the bump
    changes version-stamped bytes, so a budget overrun surfaces before the release commit instead of
    as budget-only follow-ups after CI. Changesets can auto-expand a release to a

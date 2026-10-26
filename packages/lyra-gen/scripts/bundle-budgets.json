@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "packageVersion": "0.1.0",
-  "uiVersion": "30.2.0",
+  "uiVersion": "30.3.0",
   "nodeVersion": "22.23.2",
   "esbuildVersion": "0.28.2",
   "policy": {
