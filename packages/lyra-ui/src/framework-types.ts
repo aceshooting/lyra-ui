@@ -7474,7 +7474,8 @@ export interface LyraComponentTypeMap {
       | '--lr-map-popup-close-button-active-bg'
       | '--lr-map-popup-close-button-active-color'
       | '--lr-map-popup-close-button-hover-bg'
-      | '--lr-map-popup-close-button-hover-color';
+      | '--lr-map-popup-close-button-hover-color'
+      | '--lr-map-scale-bar-display';
     attributeAliases: {
       'anchor-closable'?: LyraMap['anchorClosable'];
       'choropleth-legend'?: LyraMap['choroplethLegend'];

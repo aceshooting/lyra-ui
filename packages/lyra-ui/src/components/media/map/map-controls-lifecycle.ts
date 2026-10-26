@@ -97,18 +97,19 @@ export class MapControlsLifecycle {
     const constructors = new Map(pending.map((entry, index) => [entry, loaded[index]]));
     const priority: readonly MapOwnedControlKind[] = ['navigation', 'scale', 'geolocate', 'attribution'];
     for (const corner of ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const) {
-      const order = corner.startsWith('bottom') ? [...priority].reverse() : priority;
-      for (const kind of order) {
+      const ordered = priority.map(kind => this.entries.get(kind)).filter((entry): entry is Entry =>
+        entry !== undefined && entry.options.position === corner).sort((a, b) => a.options.order - b.options.order);
+      const order = corner.startsWith('bottom') ? ordered.reverse() : ordered;
+      for (const entry of order) {
         if (generation !== this.generation || !this.validContext(context)) return;
-        const entry = this.entries.get(kind);
-        if (entry?.options.position === corner && constructors.has(entry)) this.install(entry, constructors.get(entry));
+        if (constructors.has(entry)) this.install(entry, constructors.get(entry));
       }
     }
     // Native bottom corners prepend; the resulting DOM and keyboard order is always top-to-bottom.
     for (const corner of ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const) {
       if (generation !== this.generation || !this.validContext(context)) return;
       const entries = priority.map(kind => this.entries.get(kind)).filter((entry): entry is Entry =>
-        entry !== undefined && entry.installed && entry.options.position === corner);
+        entry !== undefined && entry.installed && entry.options.position === corner).sort((a, b) => a.options.order - b.options.order);
       for (let index = entries.length - 1; index >= 0; index--) {
         const entry = entries[index]!;
         if (generation !== this.generation || !this.current(entry)) return;

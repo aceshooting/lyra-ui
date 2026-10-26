@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { walk } from './lib/fs-walk.mjs';
 import { cli as analyzeManifest } from '@custom-elements-manifest/analyzer/cli.js';
 import { compactManifest } from './manifest-compact.mjs';
-import { renderSurfaceFor } from './manifest-render-reachability.mjs';
+import { literalDOMPartNames, renderSurfaceFor } from './manifest-render-reachability.mjs';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sourceDir = path.join(packageDir, 'src', 'components');
@@ -185,7 +185,7 @@ function balancedArguments(source, openIndex) {
 }
 
 function namesFromTemplates(source) {
-  const names = new Set();
+  const names = literalDOMPartNames(source);
   for (const match of source.matchAll(/\bpart\s*=\s*["']([^"']+)["']/g)) {
     for (const name of match[1].trim().split(/\s+/)) {
       if (name) names.add(name);

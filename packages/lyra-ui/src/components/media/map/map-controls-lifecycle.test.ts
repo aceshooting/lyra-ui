@@ -1,3 +1,4 @@
+import { sendKeys } from '@web/test-runner-commands';
 import { expect } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { normalizeMapControlOptions } from './map-control-options.js';
@@ -152,6 +153,51 @@ describe('map controls lifecycle', () => {
       expect(h.failures).to.deep.equal(['scale']); manager.dispose();
     }
   });
+  it('sorts explicit orders and stable ties at every corner, including live focused moves', async () => {
+    for (const position of ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const) {
+      const h = harness(); const parent = document.createElement('div'); document.body.append(parent);
+      const kinds = ['navigation', 'scale', 'geolocate', 'attribution'] as const;
+      const pending = new Map<string, (value: new () => Control) => void>();
+      let created = 0, removed = 0;
+      const manager = new MapControlsLifecycle(kind => new Promise(resolve => { pending.set(kind, resolve); }));
+      const map = {
+        controlContainer: () => parent,
+        addControl(control: MapManagedControl) {
+          const root = control.onAdd!();
+          if (position.startsWith('bottom')) parent.prepend(root); else parent.append(root);
+        },
+        removeControl(control: MapManagedControl) { removed++; (control as Control & { root: HTMLElement }).root.remove(); },
+      };
+      const desired = (orders: readonly number[]) => options(Object.fromEntries(kinds.map((kind, index) => [kind, { position, order: orders[index] }])));
+      const labels = () => [...parent.children].map(node => (node as HTMLElement).dataset['kind']);
+      try {
+        const sync = manager.sync(map, desired([1, -1, 1, 0]), h.context);
+        for (const kind of [...kinds].reverse()) pending.get(kind)!(class extends Control {
+          readonly root = document.createElement('div');
+          constructor() { super(); created++; this.root.dataset['kind'] = kind; const button = document.createElement('button'); button.textContent = kind; this.root.append(button); }
+          onAdd() { return this.root; }
+        });
+        await sync;
+        expect(labels()).to.deep.equal(['scale', 'attribution', 'navigation', 'geolocate']);
+        await focusByKeyboard(parent.querySelector<HTMLElement>('button')!);
+        for (const kind of ['attribution', 'navigation', 'geolocate']) {
+          await sendKeys({ press: 'Tab' });
+          expect((document.activeElement?.parentElement as HTMLElement | null)?.dataset['kind']).to.equal(kind);
+        }
+        const button = parent.querySelector<HTMLElement>('[data-kind="geolocate"] button')!;
+        await focusByKeyboard(button);
+        await manager.sync(map, desired([0, 0, -2, 0]), h.context);
+        expect(labels()).to.deep.equal(['geolocate', 'navigation', 'scale', 'attribution']);
+        expect(document.activeElement === button).to.equal(true);
+        for (const kind of ['navigation', 'scale', 'attribution']) {
+          await sendKeys({ press: 'Tab' });
+          expect((document.activeElement?.parentElement as HTMLElement | null)?.dataset['kind']).to.equal(kind);
+        }
+        expect(created).to.equal(4); expect(removed).to.equal(0);
+        expect(h.failures).to.deep.equal([]);
+      } finally { manager.dispose(); parent.remove(); }
+    }
+  });
   it('moves existing roots without rebuilding subscriptions and leaves focus on the same button', async () => {
     const wrapper = document.createElement('div'); document.body.append(wrapper);
     const corners = new Map(['top-right', 'bottom-left'].map(position => [position, document.createElement('div')]));
@@ -174,11 +220,11 @@ describe('map controls lifecycle', () => {
       await manager.sync(map, options({ geolocate: { position: 'top-right' } }), h.context);
       const button = corners.get('top-right')!.querySelector('button')!;
       await focusByKeyboard(button);
-      await manager.sync(map, options({ navigation: { position: 'bottom-left' }, scale: { position: 'bottom-left' }, geolocate: { position: 'bottom-left' }, attribution: { position: 'bottom-left' } }), h.context);
+      await manager.sync(map, options({ navigation: { position: 'bottom-left' }, scale: { position: 'bottom-left' }, geolocate: { position: 'bottom-left', order: 1 }, attribution: { position: 'bottom-left' } }), h.context);
       expect(document.activeElement === button).to.equal(true); expect(created.length).to.equal(4); expect(removals).to.equal(0);
       expect(created[0]!.retired).to.deep.equal([]);
       expect(corners.get('bottom-left')!.children.length).to.equal(4);
-      expect(corners.get('bottom-left')!.children[2]!.contains(button)).to.equal(true);
+      expect(corners.get('bottom-left')!.children[3]!.contains(button)).to.equal(true);
       await manager.sync(map, options({ geolocate: { position: 'bottom-left' } }), h.context);
       expect(document.activeElement === button).to.equal(true); expect(removals).to.equal(3);
       manager.dispose(); expect(removals).to.equal(4);

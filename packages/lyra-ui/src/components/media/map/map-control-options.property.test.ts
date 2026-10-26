@@ -16,3 +16,29 @@ describe('linked attribution properties', () => {
     }), propertyRuns());
   });
 });
+
+
+describe('control order properties', () => {
+  it('snapshots finite order values separately from native constructor options', () => {
+    fc.assert(fc.property(fc.double({ noNaN: true, noDefaultInfinity: true }), order => {
+      for (const kind of ['navigation', 'scale', 'geolocate', 'attribution'] as const) {
+        const result = normalizeMapControlOptions({ [kind]: { order } });
+        expect(result.controls.get(kind)?.order).to.equal(order);
+        expect(result.controls.get(kind)?.options).not.to.have.property('order');
+      }
+    }), propertyRuns());
+  });
+  it('rejects malformed order without invoking accessors', () => {
+    for (const order of [NaN, Infinity, -Infinity, '1', null, {}, true]) {
+      for (const kind of ['navigation', 'scale', 'geolocate', 'attribution'] as const) {
+        const result = normalizeMapControlOptions({ [kind]: { order } });
+        expect(result.controls.size).to.equal(0);
+        expect(result.diagnostics).to.deep.equal([{ kind, code: 'invalid-options' }]);
+      }
+    }
+    let reads = 0;
+    const entry = { get order() { reads++; return 1; } };
+    expect(normalizeMapControlOptions({ navigation: entry }).controls.size).to.equal(0);
+    expect(reads).to.equal(0);
+  });
+});

@@ -53,6 +53,7 @@ import { styles } from './map.styles.js';
 import { mapLayerHittable, queryMapHit, type MapHitRule, type LyraMapFeatureValue } from './map-hit-test.js';
 export type { LyraMapFeatureValue } from './map-hit-test.js';
 import { flattenedParentElement } from '../../../internal/composed-tree.js';
+import { syncMapControlRows } from './map-control-chrome.js';
 import { MapFeatureStateRouter, type MapFeatureStateRoute, type LyraMapFeatureOrigin, type LyraMapFeatureStateTarget,
   type LyraMapResolvedFeatureStateTarget } from './map-feature-state-router.js';
 import type { MapFeatureStateRoutes } from './map-feature-state-routes.js';
@@ -114,6 +115,7 @@ export type { LyraMapControlPosition, LyraMapScaleUnit, LyraMapNavigationControl
 import type { MapControlLifecyclePeer, MapControlsLifecycle } from './map-controls-lifecycle.js';
 import { MapEngineEvents } from './map-engine-events.js';
 import { MapReadiness } from './map-readiness.js';
+import { MapControlsReadiness } from './map-controls-readiness.js';
 import { LyraMapImageExportError, type LyraMapImageExportOptions, type LyraMapImageExportErrorCode } from './map-image-export-error.js';
 import type { MapImageExportController, MapImageExportHost, MapImageExportRequest } from './map-image-export-controller.js';
 import { loadMapAnchorRuntime, loadMapControlRuntime, loadMapDrawingRuntime, loadMapFeatureStateRuntime, loadMapHashRuntime,
@@ -656,6 +658,11 @@ function addPartToken(element: Element, token: string): void {
   const tokens = new Set((element.getAttribute('part') ?? '').split(/\s+/).filter(Boolean));
   tokens.add(token);
   element.setAttribute('part', [...tokens].join(' '));
+}
+
+function attributionExpanded(element: Element): boolean {
+  return element.localName === 'details' ? element.hasAttribute('open')
+    : !element.classList.contains('maplibregl-compact') || element.classList.contains('maplibregl-compact-show');
 }
 
 /**
@@ -2698,6 +2705,14 @@ export interface LyraMapEventMap {
  * @csspart initialization-activate - Localized button covering an `initialization="interaction"`
  *   placeholder until the first input builds the map.
  * @csspart initialization-control - Decorative outline of a requested native control before construction.
+ * @csspart initialization-navigation - Decorative navigation control placeholder.
+ * @csspart initialization-scale - Decorative scale control placeholder.
+ * @csspart initialization-geolocate - Decorative geolocation control placeholder.
+ * @csspart initialization-attribution - Decorative attribution control placeholder.
+ * @csspart initialization-skeleton - Decorative map skeleton before construction.
+ * @csspart initialization-activate-label - Visible activation prompt; hiding it preserves the button's localized accessible name.
+ * @csspart initialization-controls - Decorative requested controls, also exposing controls.
+ * @csspart initialization-corner - Decorative control corner, also exposing its controls-top-left, controls-top-right, controls-bottom-left or controls-bottom-right token.
  * @event lr-map-style-load - `detail: { generation }` (`LyraMapReadinessDetail`). Fired once per
  *   connection/style after generated and registered overlays, images, style overrides and their
  *   asynchronous preparation are restored.
@@ -2783,6 +2798,19 @@ export interface LyraMapEventMap {
  * @csspart configuration-error - Localized control or URL configuration feedback.
  * @csspart geolocate - Native user-activated geolocation button.
  * @csspart geolocate-control - Native geolocation control wrapper, for group-level layout offsets.
+ * @csspart geolocate-icon - Decorative native geolocation icon span.
+ * @csspart geolocate-waiting - Additional geolocate button token while the peer awaits a position.
+ * @csspart geolocate-active - Additional geolocate button token while actively tracking.
+ * @csspart geolocate-background - Additional geolocate button token while tracking in the background.
+ * @csspart geolocate-error - Additional geolocate button token for active or background location errors.
+ * @csspart controls - Native or deferred control layout container; each row shares its available inline space.
+ * @csspart controls-top - Native or deferred top control row; use display: contents for a custom flattened layout.
+ * @csspart controls-bottom - Native or deferred bottom control row.
+ * @csspart controls-attribution-expanded - Additional token on controls, both rows and all four corners while any native attribution in that container is expanded.
+ * @csspart controls-top-left - Native or deferred top-left corner, following the control position vocabulary.
+ * @csspart controls-top-right - Native or deferred top-right control corner.
+ * @csspart controls-bottom-left - Native or deferred bottom-left control corner.
+ * @csspart controls-bottom-right - Native or deferred bottom-right control corner.
  * @csspart container - The MapLibre container. Its generated canvas is the actual focusable map
  *   region and receives the host-first accessible name and effective locale.
  * @slot anchor - Content placed at `anchorLngLat`: above the point, flipped below near the top edge
@@ -2839,11 +2867,17 @@ export interface LyraMapEventMap {
  * @csspart attribution - MapLibre-generated map attribution.
  * @csspart attribution-toggle - MapLibre's compact-attribution disclosure control with a decorative information glyph.
  * @csspart attribution-content - Native attribution credits, independently positionable from the compact disclosure control.
+ * @csspart attribution-link - Each native attribution link, with a minimum 24px target in both axes.
+ * @csspart attribution-expanded - Additional token on attribution, attribution-toggle and attribution-content while credits are expanded.
  * @csspart navigation - Standard peer NavigationControl group, added through `controls` or the map getter.
  * @csspart zoom-in - Peer zoom-in button with a localized accessible name and tokenized target.
+ * @csspart zoom-in-icon - Decorative native zoom-in icon span.
  * @csspart zoom-out - Peer zoom-out button.
+ * @csspart zoom-out-icon - Decorative native zoom-out icon span.
  * @csspart compass - Peer compass/reset-north button; its glyph retains the peer's bearing rotation.
+ * @csspart compass-icon - Decorative native compass span; native bearing transforms remain on this node.
  * @csspart scale - Standard peer ScaleControl bar. Units and updates remain owned by MapLibre.
+ * @cssprop [--lr-map-scale-bar-display=block] - Display of the decorative scale ruler; set to none for a text-only scale.
  * @csspart error - Visible localized message shown instead of `container` when `mapStyle` is
  *   missing, the optional peer is unavailable, WebGL2 cannot be created, or map initialization
  *   fails; the transition is announced through the shared light-DOM assertive region.
@@ -3985,6 +4019,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private _connectGeneration = 0;
   private _styleGeneration = 0;
   private readonly readiness = new MapReadiness();
+  private readonly controlsReadiness = new MapControlsReadiness();
   /** Native resource owners, created once their runtime has loaded for requested resources. */
   private ownedFeatures?: MapOwnedFeatures;
   private externalFeatures?: MapOwnedFeatures;
@@ -4077,6 +4112,19 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    */
   whenStyleReady(): Promise<void> {
     return this.readiness.whenStyleReady();
+  }
+
+  /**
+   * Resolves after the current connection's configured native controls, including default
+   * attribution unless disabled, are installed and their chrome is synchronized. Callable before
+   * deferred construction, including initialization="interaction". An explicitly empty control
+   * configuration resolves after construction. Rejects with AbortError on disconnect or controls
+   * replacement, and MapReadinessError on initialization, invalid configuration or control loading
+   * failure. Style-only changes preserve this barrier. A completed promise describes its captured
+   * configuration; call again after assigning controls.
+   */
+  whenControlsReady(): Promise<void> {
+    return this.controlsReadiness.whenReady();
   }
 
   /**
@@ -4602,7 +4650,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   /** Owns default attribution as well as explicit controls, so live configuration cannot duplicate it. */
   private syncControls(): void {
     const map = this._map;
-    if (!map || typeof map.addControl !== 'function' || typeof map.removeControl !== 'function') return;
+    if (!map) return;
+    const ready = this.controlsReadiness.begin();
     const input = this.controls, connection = this._connectGeneration;
     const projected = normalizeMapControlOptions(input);
     const wanted = new Map(projected.controls);
@@ -4611,15 +4660,23 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       (attribution !== UNSAFE_OWN_DATA_DESCRIPTOR && attribution.value === undefined);
     if (defaultAttribution || projected.diagnostics.some(issue => issue.kind === 'attribution')) wanted.set('attribution', normalizeMapControlOptions({ attribution: true }).controls.get('attribution')!);
     this.setControlIssue(projected.diagnostics.length ? 'mapControlUnavailable' : undefined);
-    const current = () => this.isConnected && this._map === map && this.controls === input && this._connectGeneration === connection;
+    const current = () => ready.isCurrent() && this.isConnected && this._map === map && this.controls === input && this._connectGeneration === connection;
+    if (projected.diagnostics.length) ready.fail();
+    if (typeof map.addControl !== 'function' || typeof map.removeControl !== 'function') {
+      if (wanted.size === 0) ready.resolve();
+      else ready.fail();
+      return;
+    }
     if (this.controlPeer?.map !== map) this.controlPeer = { map, adapter: {
       addControl: (control, position) => map.addControl!(control, position),
       removeControl: control => map.removeControl!(control),
       controlContainer: position => this.containerEl?.querySelector<HTMLElement>(`.maplibregl-ctrl-${position}`) ?? undefined,
     } };
     const peer = this.controlPeer.adapter;
-    const run = ({ MapControlsLifecycle }: NonNullable<typeof loadMapControlRuntime.loaded>): Promise<void> => (this.controlLifecycle ??=
-      new MapControlsLifecycle(kind => loadMapControl(kind, this.engine, this._maplibreModule))).sync(peer, wanted, {
+    const run = ({ MapControlsLifecycle }: NonNullable<typeof loadMapControlRuntime.loaded>): Promise<void> => {
+      if (!current()) return Promise.resolve();
+      return (this.controlLifecycle ??=
+        new MapControlsLifecycle(kind => loadMapControl(kind, this.engine, this._maplibreModule))).sync(peer, wanted, {
       isCurrent: current,
       onEvent: event => {
         if (!current()) return;
@@ -4640,20 +4697,29 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         else this.emit('lr-map-geolocate-error', { code: event.code });
       },
       onFailure: failure => {
-        if (!current() || (defaultAttribution && failure.kind === 'attribution')) return;
+        if (!current()) return;
+        ready.fail();
+        if (defaultAttribution && failure.kind === 'attribution') return;
         this.setControlIssue('mapControlUnavailable');
         this.announcements.announceAssertive(this.localize('mapControlUnavailable'));
       },
-    });
+      });
+    };
     const runtime = loadMapControlRuntime.loaded;
     // Without a previously owned control, an empty request needs no control runtime at all.
     const sync = !this.controlLifecycle && wanted.size === 0 ? Promise.resolve() : runtime ? run(runtime) : loadMapControlRuntime().then(run, () => {
       // Fail closed exactly like a control whose own code cannot load; default attribution stays silent.
-      if (!current() || ![...wanted.keys()].some(kind => !defaultAttribution || kind !== 'attribution')) return;
+      if (!current()) return;
+      ready.fail();
+      if (![...wanted.keys()].some(kind => !defaultAttribution || kind !== 'attribution')) return;
       this.setControlIssue('mapControlUnavailable');
       this.announcements.announceAssertive(this.localize('mapControlUnavailable'));
     });
-    this.trackFeatureLoad(sync.then(() => { if (current()) this.syncPeerChromeParts(); }));
+    this.trackFeatureLoad(Promise.race([ready.cancelled, sync.then(() => {
+      if (!current()) return;
+      this.syncPeerChromeParts();
+      if (current()) ready.resolve();
+    }).catch(() => { if (current()) ready.fail(); })]));
   }
 
   /** Placement and close ownership, once a requested coordinate has loaded the anchor runtime. */
@@ -5109,6 +5175,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     super.connectedCallback();
     const generation = ++this._connectGeneration;
     this.readiness.reset();
+    this.controlsReadiness.reset();
     this.hashRuntimeFailed = false;
     this.syncHash();
     this.visible = false;
@@ -5219,6 +5286,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private failInitialization(reason: MapFailureReason, partialMap?: MapLibreMapCapability): void {
     const connection = this._connectGeneration, generation = this._styleGeneration, style = this.mapStyle;
     this.readiness.fail();
+    this.controlsReadiness.fail();
     try {
       if (partialMap) this.peerEvents.clear(partialMap);
       partialMap?.remove();
@@ -5252,7 +5320,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     else this.publishExportIssue(false);
     this.cancelMapDrawing('disconnect');
     this.drawingController?.cancelResources();
-    if (cancelReadiness) this.readiness.cancel();
+    if (cancelReadiness) { this.readiness.cancel(); this.controlsReadiness.cancel(); }
     this.cancelFeaturePreparation();
     this.pointerCleanup?.(); this.pointerCleanup = undefined;
     this.interactionObserver?.disconnect(); this.interactionObserver = undefined;
@@ -5626,6 +5694,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (valueChanged && this.isUpdatePending && (args[0] === undefined || ['mapStyle', 'dataLayers', 'choropleth', 'overlays', 'images', 'styleOverrides', 'interactiveBasemapLayers'].includes(String(args[0])))) {
       this.interactionGeneration = (this.interactionGeneration ?? 0) + 1;
       this.featureStates?.cancel();
+    }
+    if (valueChanged && args[0] === 'controls' && this.controlsReadiness && this.isConnected && this.isUpdatePending) {
+      this.controlsReadiness.reset();
+      if (this.failure) this.controlsReadiness.fail();
     }
     if (valueChanged && this.readiness && this.isConnected && this.isUpdatePending) {
       if (args[0] === 'mapStyle' && !Object.is(args[1], this.mapStyle)) this.readiness.reset();
@@ -8129,7 +8201,15 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       ['.maplibregl-popup', 'popup'],
       ['.maplibregl-popup-content', 'popup-content'],
       ['.maplibregl-popup-close-button', 'popup-close-button'],
+      ['.maplibregl-control-container', 'controls'],
+      ['.map-control-row-top', 'controls-top'],
+      ['.map-control-row-bottom', 'controls-bottom'],
+      ['.maplibregl-ctrl-top-left', 'controls-top-left'],
+      ['.maplibregl-ctrl-top-right', 'controls-top-right'],
+      ['.maplibregl-ctrl-bottom-left', 'controls-bottom-left'],
+      ['.maplibregl-ctrl-bottom-right', 'controls-bottom-right'],
       ['.maplibregl-ctrl-attrib', 'attribution'],
+      ['.maplibregl-ctrl-attrib a', 'attribution-link'],
       ['.maplibregl-ctrl-attrib-button', 'attribution-toggle'],
       ['.maplibregl-ctrl-attrib-inner', 'attribution-content'],
       ['.maplibregl-ctrl-group:has(.maplibregl-ctrl-zoom-in, .maplibregl-ctrl-compass)', 'navigation'],
@@ -8139,6 +8219,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       ['.maplibregl-ctrl-scale', 'scale'],
       ['.maplibregl-ctrl:has(.maplibregl-ctrl-geolocate)', 'geolocate-control'],
       ['.maplibregl-ctrl-geolocate', 'geolocate'],
+      ['.maplibregl-ctrl-zoom-in .maplibregl-ctrl-icon', 'zoom-in-icon'],
+      ['.maplibregl-ctrl-zoom-out .maplibregl-ctrl-icon', 'zoom-out-icon'],
+      ['.maplibregl-ctrl-compass .maplibregl-ctrl-icon', 'compass-icon'],
+      ['.maplibregl-ctrl-geolocate .maplibregl-ctrl-icon', 'geolocate-icon'],
     ];
     for (const [selector, part] of selectors) {
       const candidate = root as ParentNode & { matches?: (value: string) => boolean };
@@ -8147,6 +8231,22 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       if (!(root instanceof Element) || root.childElementCount > 0) elements.push(...root.querySelectorAll(selector));
       for (const element of elements) {
         addPartToken(element, part);
+        if (part.endsWith('-icon')) element.setAttribute('aria-hidden', 'true');
+        if (part === 'geolocate') {
+          for (const [state, statePart] of [
+            ['waiting', 'geolocate-waiting'], ['active', 'geolocate-active'],
+            ['background', 'geolocate-background'], ['error', 'geolocate-error'],
+          ] as const) {
+            const present = state === 'error'
+              ? element.classList.contains('maplibregl-ctrl-geolocate-active-error') || element.classList.contains('maplibregl-ctrl-geolocate-background-error')
+              : element.classList.contains(`maplibregl-ctrl-geolocate-${state}`);
+            element.part.toggle(statePart, present);
+          }
+        }
+        if (part === 'attribution' || part === 'attribution-toggle' || part === 'attribution-content') {
+          const attribution = element.closest('.maplibregl-ctrl-attrib');
+          element.part.toggle('attribution-expanded', !!attribution && attributionExpanded(attribution));
+        }
         if (part === 'scale') {
           const text = element.textContent ?? '';
           const units = [...this.scaleLabels.keys()].sort((a, b) => b.length - a.length);
@@ -8171,10 +8271,22 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     }
   }
 
+  private syncPeerAttributionExpansion(container: HTMLElement): void {
+    for (const controls of container.querySelectorAll('.maplibregl-control-container')) {
+      const expanded = [...controls.querySelectorAll('.maplibregl-ctrl-attrib')].some(attributionExpanded);
+      for (const node of [controls, ...controls.querySelectorAll(
+        '.map-control-row, .maplibregl-ctrl-top-left, .maplibregl-ctrl-top-right, .maplibregl-ctrl-bottom-left, .maplibregl-ctrl-bottom-right',
+      )]) node.part.toggle('controls-attribution-expanded', expanded);
+    }
+  }
+
   private observePeerChrome(): void {
     const container = this.containerEl;
     if (!container) return;
+    syncMapControlRows(container, () => this.isConnected && this.containerEl === container);
+    if (!this.isConnected || this.containerEl !== container) return;
     this.syncPeerChromeParts(container);
+    this.syncPeerAttributionExpansion(container);
     if (this.observedPeerContainer === container && this.peerChromeObserver) return;
     this.stopObservingPeerChrome();
     const MutationObserverCtor = container.ownerDocument.defaultView?.MutationObserver;
@@ -8189,25 +8301,35 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       )) this.peerControlsResizeObserver.observe(corner);
     }
     this.measurePeerControlInsets(container);
-    this.peerChromeObserver = new MutationObserverCtor((records) => {
-      if (!this.isConnected || this.containerEl !== container) return;
+    const observer = new MutationObserverCtor((records) => {
+      if (!this.isConnected || this.containerEl !== container || this.peerChromeObserver !== observer) return;
       let elementsChanged = false;
+      let attributionChanged = false;
       for (const record of records) {
-        if (record.type === 'attributes' && record.target instanceof Element) this.syncPeerChromeParts(record.target);
+        if (!container.contains(record.target)) continue;
+        if (record.type === 'attributes' && record.target instanceof Element) {
+          if (record.attributeName === 'class' && !record.target.matches('.maplibregl-ctrl-geolocate, .maplibregl-ctrl-attrib')) continue;
+          this.syncPeerChromeParts(record.target);
+          if (record.target.matches('.maplibregl-ctrl-attrib')) attributionChanged = true;
+        }
         if (record.type === 'characterData' && record.target.parentElement) this.syncPeerChromeParts(record.target.parentElement);
         if (record.type === 'childList' && record.target instanceof Element && record.target.matches('.maplibregl-ctrl-scale')) this.syncPeerChromeParts(record.target);
         for (const node of record.removedNodes) if (node.nodeType === 1) elementsChanged = true;
         for (const node of record.addedNodes) {
-          if (node.nodeType !== 1) continue;
+          if (node.nodeType !== 1 || !container.contains(node)) continue;
           elementsChanged = true;
           const element = node as Element;
           if (element.matches('.maplibregl-marker[part~="marker"]')) continue;
           this.syncPeerChromeParts(element);
         }
       }
+      if (elementsChanged) syncMapControlRows(container, () => this.isConnected && this.containerEl === container && this.peerChromeObserver === observer);
+      if (!this.isConnected || this.containerEl !== container || this.peerChromeObserver !== observer) return;
+      if (elementsChanged || attributionChanged) this.syncPeerAttributionExpansion(container);
       if (elementsChanged) this.schedulePeerControlInsets(this.peerControlsResizeObserver, container);
     });
-    this.peerChromeObserver.observe(container, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['disabled'] });
+    this.peerChromeObserver = observer;
+    observer.observe(container, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['disabled', 'class', 'open'] });
   }
 
   private syncPopupSemantics(
@@ -8540,6 +8662,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   override render(): TemplateResult {
     const drawing = this.drawingController;
+    const initializationControls = !this.failure && !this.loading && !this._map
+      ? [...normalizeMapControlOptions(this.controls).controls.values()].sort((a, b) => a.order - b.order) : [];
     // Lit's own whitespace/comment marker nodes around the `${...}` binding mean
     // `[part="legend"]` is never truly `:empty` in CSS even with zero entries, so
     // the panel is omitted only when both the bounded legend and its projection result are empty
@@ -8565,10 +8689,22 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
             : html`<div part="container" id="map-container" lang=${this.effectiveLocale}></div>`}
         ${!this.failure && !this.loading && !this._map ? html`<div part="initialization-placeholder">
           ${this.awaitingActivation
-            ? html`<button type="button" part="initialization-activate"><span class="activate-label">${this.localize('mapActivate')}</span></button>`
+            ? html`<button type="button" part="initialization-activate" aria-label=${this.localize('mapActivate')}><span class="activate-label" part="initialization-activate-label">${this.localize('mapActivate')}</span></button>`
             : html`<span class="sr-only">${this.localize('loading')}</span>`}
-          <lr-skeleton class="initialization-skeleton" shape="rect" .announce=${false}></lr-skeleton>
-          <div class="initialization-controls" aria-hidden="true">${[...normalizeMapControlOptions(this.controls).controls.keys()].map(kind => html`<span part="initialization-control" data-control=${kind}></span>`)}</div>
+          <lr-skeleton class="initialization-skeleton" part="initialization-skeleton" shape="rect" .announce=${false}></lr-skeleton>
+          <div class="initialization-controls" part="initialization-controls controls" aria-hidden="true">
+            ${(['top', 'bottom'] as const).map(row => html`<div class="initialization-row initialization-row-${row}" part=${row === 'top' ? 'controls-top' : 'controls-bottom'}>
+              ${(['left', 'right'] as const).map(side => html`<div class="initialization-corner initialization-corner-${side}" part=${{
+                'top-left': 'initialization-corner controls-top-left', 'top-right': 'initialization-corner controls-top-right',
+                'bottom-left': 'initialization-corner controls-bottom-left', 'bottom-right': 'initialization-corner controls-bottom-right',
+              }[`${row}-${side}`]}>
+                ${initializationControls.filter(control => control.position === `${row}-${side}`).map(control => html`<span part=${{
+                  navigation: 'initialization-control initialization-navigation', scale: 'initialization-control initialization-scale',
+                  geolocate: 'initialization-control initialization-geolocate', attribution: 'initialization-control initialization-attribution',
+                }[control.kind]} data-control=${control.kind}></span>`)}
+              </div>`)}
+            </div>`)}
+          </div>
         </div>` : nothing}
         ${this.hashIssue || this.controlIssue ? html`<div part="configuration-error">${this.localize(MAP_CONFIGURATION_MESSAGE[this.hashIssue ?? this.controlIssue!])}</div>` : nothing}
         ${this.exportIssue ? html`<div part="configuration-error">${this.localize('mapExportUnavailable')}</div>` : nothing}

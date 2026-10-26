@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { renderSurfaceFor } from "./manifest-render-reachability.mjs";
+import { literalDOMPartNames, renderSurfaceFor } from "./manifest-render-reachability.mjs";
 
 test("render reachability excludes stylesheets and unrelated sibling classes", () => {
   const sources = new Map([
@@ -297,4 +297,29 @@ test("render reachability keeps an imported call outside a shadowing block", () 
     ["src/view.ts", `export function dataView() { return html\`<div part="scoped-owned"></div>\`; }`],
   ]);
   assert.match(renderSurfaceFor("src/example.ts", sources), /scoped-owned/);
+});
+
+test("literal DOM part sinks include add arguments and only the toggle token", () => {
+  assert.deepEqual([...literalDOMPartNames(`
+    element.part.add('corner', 'control');
+    element.part.toggle('expanded', condition ? 'not-a-token' : 'also-not-a-token');
+  `)].sort(), ['control', 'corner', 'expanded']);
+});
+
+test("literal DOM part sinks exclude text, other token lists and computed names", () => {
+  assert.deepEqual([...literalDOMPartNames(`
+    // element.part.add('comment-only');
+    const note = "element.part.toggle('string-only')";
+    element.classList.add('class-only');
+    element.part.remove('removed-only');
+    element.part.contains('queried-only');
+    element.part.add(prefix + '-dynamic');
+    element.part.toggle(name, true);
+    element.part.toggle('never-present', false);
+    element['part'].add('computed-property');
+  `)], []);
+});
+
+test("literal DOM part sinks fail closed on invalid source", () => {
+  assert.deepEqual([...literalDOMPartNames("element.part.add('phantom'); function {")], []);
 });

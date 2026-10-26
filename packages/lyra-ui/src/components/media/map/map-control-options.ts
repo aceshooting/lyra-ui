@@ -10,11 +10,15 @@ export type LyraMapScaleUnit = 'metric' | 'imperial';
 export interface LyraMapNavigationControlOptions {
   /** Corner to add the control to. Defaults to `'top-right'`. */
   readonly position?: LyraMapControlPosition;
+  /** Ascending visual and keyboard order within the corner. Defaults to 0; ties use navigation, scale, geolocate, attribution. */
+  readonly order?: number;
 }
 /** Options of the declarative scale control. */
 export interface LyraMapScaleControlOptions {
   /** Corner to add the control to. Defaults to `'bottom-left'`. */
   readonly position?: LyraMapControlPosition;
+  /** Ascending visual and keyboard order within the corner. Defaults to 0; ties use navigation, scale, geolocate, attribution. */
+  readonly order?: number;
   /** Unit system. Defaults to `'metric'`. */
   readonly unit?: LyraMapScaleUnit;
 }
@@ -44,6 +48,7 @@ export interface LyraMapAttributionControlOptions extends LyraMapNavigationContr
 export interface NormalizedMapControlOptions {
   readonly kind: MapOwnedControlKind;
   readonly position: LyraMapControlPosition;
+  readonly order: number;
   readonly unit: LyraMapScaleUnit | undefined;
   readonly options: Readonly<Record<string, unknown>>;
   readonly key: string;
@@ -70,6 +75,12 @@ function bool(input: object, key: string, fallback: boolean): boolean {
 function number(input: object, key: string, fallback: number, maximum: number): number {
   const value = own(input, key); if (value === undefined) return fallback;
   if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > maximum) throw new RangeError('Invalid numeric control option'); return value;
+}
+function controlOrder(input: object): number {
+  const value = own(input, 'order');
+  if (value === undefined) return 0;
+  if (typeof value !== 'number' || !Number.isFinite(value)) throw new TypeError('Invalid control order');
+  return value;
 }
 function position(input: object, fallback: LyraMapControlPosition): LyraMapControlPosition {
   const value = own(input, 'position'); if (value === undefined) return fallback;
@@ -121,14 +132,16 @@ export function normalizeMapControlOptions(input: unknown): MapControlOptionsRes
       if (kind === 'navigation' || kind === 'scale') {
         if (value !== true && !runtimeRecord(value)) continue;
         const entry = value === true ? {} : value;
+        const order = controlOrder(entry);
         const fallback = kind === 'navigation' ? 'top-right' : 'bottom-left';
         const requested = optionalLegacy(entry, 'position');
         const corner = positions.has(requested as LyraMapControlPosition) ? requested as LyraMapControlPosition : fallback;
         const unit = kind === 'scale' ? optionalLegacy(entry, 'unit') === 'imperial' ? 'imperial' : 'metric' : undefined;
-        controls.set(kind, Object.freeze({ kind, position: corner, unit, options: Object.freeze(kind === 'scale' ? { unit } : {}), key: `${corner}:${unit ?? ''}` }));
+        controls.set(kind, Object.freeze({ kind, position: corner, order, unit, options: Object.freeze(kind === 'scale' ? { unit } : {}), key: `${corner}:${order}:${unit ?? ''}` }));
         continue;
       }
       const entry = value === true ? {} : plain(value);
+      const order = controlOrder(entry);
       const corner = position(entry, kind === 'geolocate' ? 'top-right' : 'bottom-right');
       let options: Readonly<Record<string, unknown>>;
       let attributionLabels: readonly string[] | undefined;
@@ -150,7 +163,7 @@ export function normalizeMapControlOptions(input: unknown): MapControlOptionsRes
         attributionLabels = credits?.text;
         options = Object.freeze({ ...(compact === undefined ? {} : { compact }), ...(credits === undefined ? {} : { customAttribution: credits.html }) });
       }
-      controls.set(kind, Object.freeze({ kind, position: corner, unit: undefined, options, ...(attributionLabels ? { attributionText: attributionLabels } : {}), key: `${corner}:${JSON.stringify(options)}` }));
+      controls.set(kind, Object.freeze({ kind, position: corner, order, unit: undefined, options, ...(attributionLabels ? { attributionText: attributionLabels } : {}), key: `${corner}:${order}:${JSON.stringify(options)}` }));
     } catch { diagnostics.push({ kind, code: 'invalid-options' }); }
   }
   return done();

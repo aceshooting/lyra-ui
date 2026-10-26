@@ -330,3 +330,25 @@ export function renderSurfaceFor(modulePath, sources) {
   visit(modulePath);
   return reachableSources.join("\n");
 }
+
+/** Literal DOMTokenList part sinks; dynamic names and non-part token lists supply no evidence. */
+export function literalDOMPartNames(source) {
+  const parsed = parseSync('render-surface.ts', source, { lang: "ts", sourceType: "module" });
+  const names = new Set();
+  if (parsed.errors.length) return names;
+  for (const call of nodesMatching(parsed.program, node => node.type === "CallExpression")) {
+    const method = call.callee;
+    const part = method?.object;
+    if (method?.type !== "MemberExpression" || method.computed ||
+      !["add", "toggle"].includes(method.property?.name) ||
+      part?.type !== "MemberExpression" || part.computed || part.property?.name !== "part") continue;
+    if (method.property.name === "toggle" && call.arguments[1]?.type === "Literal" &&
+      call.arguments[1].value === false) continue;
+    const args = method.property.name === "toggle" ? call.arguments.slice(0, 1) : call.arguments;
+    for (const argument of args) {
+      if (argument.type === "Literal" && typeof argument.value === "string" &&
+        /^[A-Za-z0-9_-]+$/.test(argument.value)) names.add(argument.value);
+    }
+  }
+  return names;
+}

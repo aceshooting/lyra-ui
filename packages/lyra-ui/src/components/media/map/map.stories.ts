@@ -1706,20 +1706,35 @@ export const IndependentModules: Story = {
 
 /** All four controls share one corner, retaining keyboard focus when their corner changes. */
 export const OrderedLinkedControls: Story = {
+  parameters: { docs: { description: { story: 'Geolocation order −1 puts it first in both visual and keyboard order. Corner, native icon and credit-link parts customize the controls; the scale token hides only the ruler. Moving corners retains the controls. Expanded-attribution tokens also reach the row containers.' } } },
   render: () => {
     let map: LyraMap | undefined;
     let top = false;
     const controls = () => {
       const position = top ? 'top-right' as const : 'bottom-left' as const;
-      return { navigation: { position }, scale: { position }, geolocate: { position },
+      return { navigation: { position }, scale: { position }, geolocate: { position, order: -1 },
         attribution: { position, compact: false, customAttribution: [
           'Local survey', { label: 'Data contributors', url: 'https://www.openstreetmap.org/copyright' },
         ] } };
     };
     return html`<div style="display: grid; gap: var(--lr-space-s)">
+      <style>
+        lr-map.ordered-control-parts { --lr-map-scale-bar-display: none; }
+        lr-map.ordered-control-parts::part(controls-bottom-left),
+        lr-map.ordered-control-parts::part(controls-top-right) { gap: var(--lr-space-s); padding: var(--lr-space-xs); }
+        lr-map.ordered-control-parts::part(navigation),
+        lr-map.ordered-control-parts::part(scale),
+        lr-map.ordered-control-parts::part(geolocate-control),
+        lr-map.ordered-control-parts::part(attribution) { margin: 0; }
+        lr-map.ordered-control-parts::part(compass-icon) { color: var(--lr-color-brand); }
+        lr-map.ordered-control-parts::part(attribution-link) { padding-inline: var(--lr-space-xs); }
+        lr-map.ordered-control-parts::part(attribution-toggle) { background: transparent; }
+        lr-map.ordered-control-parts::part(controls-bottom controls-attribution-expanded),
+        lr-map.ordered-control-parts::part(controls-top controls-attribution-expanded) { padding-block: var(--lr-space-xs); }
+      </style>
       <lr-button @click=${() => { top = !top; if (map) map.controls = controls(); }}>Move controls</lr-button>
       <lr-map ${ref(node => { map = node as LyraMap | undefined; })}
-        style="height: 24rem" label="Map credits and navigation" center="[2.3522, 48.8566]" zoom="9"
+        class="ordered-control-parts" style="block-size: 24rem" label="Map credits and navigation" center="[2.3522, 48.8566]" zoom="9"
         .controls=${controls()} .mapStyle=${OFFLINE_RASTER_STYLE}></lr-map>
     </div>`;
   },

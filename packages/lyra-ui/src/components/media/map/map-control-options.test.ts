@@ -5,14 +5,14 @@ describe('map control option projection', () => {
   it('keeps unset and disabled controls absent, with legacy navigation and scale defaults', () => {
     for (const input of [undefined, null, false, {}, { navigation: false, scale: false, geolocate: false, attribution: false }]) expect(normalizeMapControlOptions(input).controls.size).to.equal(0);
     const { controls } = normalizeMapControlOptions({ navigation: true, scale: true });
-    expect(controls.get('navigation')).to.deep.equal({ kind: 'navigation', position: 'top-right', unit: undefined, options: {}, key: 'top-right:' });
-    expect(controls.get('scale')).to.deep.equal({ kind: 'scale', position: 'bottom-left', unit: 'metric', options: { unit: 'metric' }, key: 'bottom-left:metric' });
+    expect(controls.get('navigation')).to.deep.equal({ kind: 'navigation', position: 'top-right', order: 0, unit: undefined, options: {}, key: 'top-right:0:' });
+    expect(controls.get('scale')).to.deep.equal({ kind: 'scale', position: 'bottom-left', order: 0, unit: 'metric', options: { unit: 'metric' }, key: 'bottom-left:0:metric' });
   });
   it('preserves legacy position/unit fallback and does not call option getters', () => {
     let reads = 0;
     const options = Object.defineProperty({ unit: 'unknown' }, 'position', { get() { reads++; return 'top-left'; } });
     const { controls } = normalizeMapControlOptions({ navigation: { position: 'bottom-right' }, scale: options });
-    expect(controls.get('navigation')!.position).to.equal('bottom-right'); expect(controls.get('scale')!.key).to.equal('bottom-left:metric'); expect(reads).to.equal(0);
+    expect(controls.get('navigation')!.position).to.equal('bottom-right'); expect(controls.get('scale')!.key).to.equal('bottom-left:0:metric'); expect(reads).to.equal(0);
     expect(normalizeMapControlOptions({ scale: { unit: 'imperial', position: 'top-left' } }).controls.get('scale')!.unit).to.equal('imperial');
   });
   it('admits geolocate as inert constructor data with bounded explicit options', () => {

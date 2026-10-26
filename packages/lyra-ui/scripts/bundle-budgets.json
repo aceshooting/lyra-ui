@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard gzip KiB ceilings for bundled, minified ESM with optional peers externalized, measured with pinned Node 22.23.2, production esbuild and gzip level 9. Every direct or aggregate ceiling has an exact reviewed measurement and at most 4% headroom. Raise only exceeded JavaScript ceilings with 2% headroom or to the next 64-byte boundary; CSS permits 4%. Retain tighter passing limits. Current increases cover widgets, MCP Apps, chat scroll intent, localized Gen messages and interactive select validation; reviewed bytes are paired below.",
+  "$comment": "Hard gzip KiB ceilings for bundled, minified ESM with optional peers externalized, measured with pinned Node 22.23.2, production esbuild and gzip level 9. Every direct or aggregate ceiling has an exact reviewed measurement and at most 4% headroom. Raise only exceeded JavaScript ceilings with 2% headroom or to the next 64-byte boundary; CSS permits 4%. Retain tighter passing limits. Current increases cover widgets, MCP Apps, chat scroll intent, localized Gen messages, interactive select validation and native map control layout/readiness; reviewed bytes are paired below.",
   "$maximumHeadroomPercent": 4,
   "$reviewedGzipBytes": {
     "$componentMaxGzipKb": 299846,
@@ -18,7 +18,7 @@
     "dist/components/forms/index.js": 283311,
     "dist/components/forms/select/select.js": 84226,
     "dist/components/layout/index.js": 384068,
-    "dist/components/media/index.js": 349035,
+    "dist/components/media/index.js": 350928,
     "dist/components/overlays/index.js": 152648,
     "dist/components/overlays/overlay/popover.js": 60348,
     "dist/components/retrieval/index.js": 452643,
@@ -48,7 +48,7 @@
   "dist/components/data/index.js": 422.375,
   "dist/components/forms/index.js": 282.2041015625,
   "dist/components/layout/index.js": 375.125,
-  "dist/components/media/index.js": 340.875,
+  "dist/components/media/index.js": 342.75,
   "dist/components/overlays/index.js": 149.125,
   "dist/components/retrieval/index.js": 450.8740234375,
   "dist/components/utility/index.js": 177.875,

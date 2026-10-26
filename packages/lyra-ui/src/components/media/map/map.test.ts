@@ -602,12 +602,21 @@ it('reserves peer-control height in layout pixels when an ancestor scales the ma
   const legend = document.createElement('div');
   legend.setAttribute('part', 'legend');
   legend.textContent = 'Synthetic map legend';
-  container.append(corner);
+  const controls = document.createElement('div');
+  controls.className = 'maplibregl-control-container';
+  for (const position of ['top-left', 'top-right', 'bottom-left']) {
+    const emptyCorner = document.createElement('div');
+    emptyCorner.className = `maplibregl-ctrl-${position}`;
+    controls.append(emptyCorner);
+  }
+  controls.append(corner); container.append(controls);
   base.append(container, legend);
   el.shadowRoot!.append(base);
   const privateMap = el as unknown as {
     measurePeerControlInsets(container: HTMLElement): void;
+    observePeerChrome(): void;
   };
+  privateMap.observePeerChrome();
   const gap = () => corner.getBoundingClientRect().top - legend.getBoundingClientRect().bottom;
   privateMap.measurePeerControlInsets(container);
   const layoutGap = gap();
@@ -2356,10 +2365,11 @@ it('projects parts onto peer chrome added after map construction', async () => {
   attribution.append(toggle);
   container.append(attribution);
   await waitUntil(
-    () => attribution.getAttribute('part') === 'attribution' &&
-      toggle.getAttribute('part') === 'attribution-toggle',
+    () => attribution.part.contains('attribution') && toggle.part.contains('attribution-toggle'),
     'late peer chrome never received stable parts',
   );
+  expect(attribution.part.contains('attribution-expanded')).to.equal(true);
+  expect(toggle.part.contains('attribution-expanded')).to.equal(true);
 });
 
 it('lets public CSS offset the geolocation control group without enlarging its button', async () => {
@@ -3664,7 +3674,9 @@ it('provides shadow-local layout for MapLibre canvas, markers, and popups withou
     expect(canvas.clientHeight).to.equal(container.clientHeight);
     expect(getComputedStyle(canvas).position).to.equal('absolute');
     expect(getComputedStyle(marker).position).to.equal('absolute');
-    expect(getComputedStyle(controlCorner).position).to.equal('absolute');
+    expect(controlCorner.parentElement?.part.contains('controls-bottom')).to.equal(true);
+    expect(controlCorner.getBoundingClientRect().bottom).to.be.closeTo(container.getBoundingClientRect().bottom, 1);
+    expect(controlCorner.getBoundingClientRect().right).to.be.closeTo(container.getBoundingClientRect().right, 1);
     expect(getComputedStyle(controlCorner).pointerEvents).to.equal('none');
 
     marker.click();
@@ -7838,7 +7850,11 @@ describe('standard peer navigation and scale controls', () => {
     expect(zoom.getBoundingClientRect().height).to.be.at.least(24);
     expect(getComputedStyle(scale, '::after').borderBottomStyle).to.equal('solid');
     const glyph = zoom.querySelector<HTMLElement>('.maplibregl-ctrl-icon')!;
-    expect(getComputedStyle(glyph, '::before').content).to.include('+');
+    const paint = getComputedStyle(glyph, '::before');
+    expect(paint.maskImage).to.contain('data:image/svg+xml');
+    expect(paint.backgroundColor).to.equal(getComputedStyle(glyph).color);
+    expect(parseFloat(paint.width)).to.be.greaterThan(0);
+    expect(parseFloat(paint.height)).to.be.greaterThan(0);
     const legend = el.shadowRoot!.querySelector<HTMLElement>('[part="legend"]')!;
     // Peer parts are assigned before the next-frame measurement reserves both control corners.
     await waitUntil(() => legend.getBoundingClientRect().bottom <= Math.min(

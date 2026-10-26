@@ -12,7 +12,14 @@ export const styles = css`
   }
   [part='initialization-placeholder'] { position: absolute; inset: 0; pointer-events: none; }
   .initialization-skeleton { inline-size: 100%; block-size: 100%; }
-  .initialization-controls { position: absolute; inset-block-start: var(--lr-space-s); inset-inline-end: var(--lr-space-s); display: flex; flex-direction: column; gap: var(--lr-space-xs); }
+  .initialization-controls { position: absolute; inset: 0; display: grid; grid-template-rows: auto 1fr auto; pointer-events: none; }
+  .initialization-row { display: grid; grid-template-columns: minmax(0, max-content) minmax(0, max-content); justify-content: space-between; min-inline-size: 0; }
+  .initialization-row-top { grid-row: 1; }
+  .initialization-row-bottom { grid-row: 3; }
+  .initialization-corner { display: flex; flex-direction: column; min-inline-size: 0; gap: 0; }
+  .initialization-row-bottom .initialization-corner { justify-content: flex-end; }
+  .initialization-corner-left { grid-column: 1; align-items: flex-start; }
+  .initialization-corner-right { grid-column: 2; align-items: flex-end; }
   /* Covers the whole placeholder: any press on it starts the map, and the label stays centered. */
   [part='initialization-activate'] {
     ${iconHitTarget}
@@ -32,7 +39,7 @@ export const styles = css`
   }
   [part='initialization-activate']:focus-visible { ${focusRing} outline-offset: calc(-1 * var(--lr-focus-ring-width)); }
   .activate-label { position: relative; padding: var(--lr-space-xs) var(--lr-space-s); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius-button); background: var(--lr-color-surface); }
-  [part='initialization-control'] { inline-size: var(--lr-icon-button-size); block-size: var(--lr-icon-button-size); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius-button); background: var(--lr-color-surface); }
+  [part~='initialization-control'] { flex-shrink: 0; margin: var(--lr-space-xs); inline-size: var(--lr-icon-button-size); block-size: var(--lr-icon-button-size); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius-button); background: var(--lr-color-surface); }
   [part='pick-controls'], [part='drawing-controls'] {
     position: absolute;
     inset-inline: var(--lr-space-s);
@@ -625,11 +632,29 @@ export const styles = css`
 
   /* MapLibre's attribution control is generated in the same shadow-local container: anchored over
      the map, on Lyra's own surface, typography, and interaction tokens. */
+  .maplibregl-control-container {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 1fr auto;
+    pointer-events: none;
+  }
+  .map-control-row {
+    display: grid;
+    grid-template-columns: minmax(0, max-content) minmax(0, max-content);
+    justify-content: space-between;
+    min-inline-size: 0;
+    pointer-events: none;
+  }
+  .map-control-row-top { grid-row: 1; }
+  .map-control-row-bottom { grid-row: 3; }
   .maplibregl-ctrl-top-left,
   .maplibregl-ctrl-top-right,
   .maplibregl-ctrl-bottom-left,
   .maplibregl-ctrl-bottom-right {
-    position: absolute;
+    position: relative;
+    min-inline-size: 0;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -641,27 +666,10 @@ export const styles = css`
   .maplibregl-ctrl-bottom-right {
     align-items: flex-end;
   }
-  /* Opposing occupied corners each retain usable space when attribution expands. */
-  .maplibregl-control-container:where(:has(.maplibregl-ctrl-top-left:not(:empty))):where(:has(.maplibregl-ctrl-top-right:not(:empty))) :where(.maplibregl-ctrl-top-left, .maplibregl-ctrl-top-right),
-  .maplibregl-control-container:where(:has(.maplibregl-ctrl-bottom-left:not(:empty))):where(:has(.maplibregl-ctrl-bottom-right:not(:empty))) :where(.maplibregl-ctrl-bottom-left, .maplibregl-ctrl-bottom-right) {
-    max-inline-size: 50%;
-  }
-  .maplibregl-ctrl-top-left {
-    inset-block-start: 0;
-    inset-inline-start: 0;
-  }
-  .maplibregl-ctrl-top-right {
-    inset-block-start: 0;
-    inset-inline-end: 0;
-  }
-  .maplibregl-ctrl-bottom-left {
-    inset-block-end: 0;
-    inset-inline-start: 0;
-  }
-  .maplibregl-ctrl-bottom-right {
-    inset-block-end: 0;
-    inset-inline-end: 0;
-  }
+  .maplibregl-ctrl-top-left { grid-column: 1; }
+  .maplibregl-ctrl-top-right { grid-column: 2; }
+  .maplibregl-ctrl-bottom-left { grid-column: 1; justify-content: flex-end; }
+  .maplibregl-ctrl-bottom-right { grid-column: 2; justify-content: flex-end; }
   .maplibregl-ctrl {
     box-sizing: border-box;
     max-inline-size: calc(100% - 2 * var(--lr-space-xs));
@@ -721,24 +729,37 @@ export const styles = css`
     cursor: not-allowed;
   }
   .maplibregl-ctrl-icon {
-    display: grid;
-    place-items: center;
+    position: relative;
+    display: block;
     inline-size: var(--lr-size-1em);
     block-size: var(--lr-size-1em);
     font-size: var(--lr-font-size-lg);
-    line-height: var(--lr-line-height-none);
+  }
+  .maplibregl-ctrl-icon::before,
+  .maplibregl-ctrl-compass .maplibregl-ctrl-icon::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: currentColor;
+    mask-position: center;
+    mask-size: contain;
+    mask-repeat: no-repeat;
   }
   .maplibregl-ctrl-zoom-in .maplibregl-ctrl-icon::before {
-    content: '+';
+    mask-image: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"%3E%3Cpath d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/%3E%3C/svg%3E');
   }
   .maplibregl-ctrl-zoom-out .maplibregl-ctrl-icon::before {
-    content: '−';
+    mask-image: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"%3E%3Cpath d="M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/%3E%3C/svg%3E');
   }
   .maplibregl-ctrl-compass .maplibregl-ctrl-icon::before {
-    content: '▲';
+    mask-image: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"%3E%3Cpath d="M12 2 18 12H6Z"/%3E%3C/svg%3E');
+  }
+  .maplibregl-ctrl-compass .maplibregl-ctrl-icon::after {
+    mask-image: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"%3E%3Cpath d="m12 22 6-10H6Z"/%3E%3C/svg%3E');
+    opacity: var(--lr-opacity-disabled);
   }
   .maplibregl-ctrl-geolocate .maplibregl-ctrl-icon::before {
-    content: '◎';
+    mask-image: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"%3E%3Ccircle cx="12" cy="12" r="6" fill="none" stroke="currentColor" stroke-width="2"/%3E%3Ccircle cx="12" cy="12" r="2"/%3E%3Cpath d="M12 2v4m0 12v4M2 12h4m12 0h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/%3E%3C/svg%3E');
   }
   .maplibregl-ctrl-scale {
     position: relative;
@@ -755,6 +776,7 @@ export const styles = css`
   }
   .maplibregl-ctrl-scale::after {
     content: '';
+    display: var(--lr-map-scale-bar-display, block);
     position: absolute;
     inset-inline-start: 0;
     inset-block-end: 0;
@@ -766,11 +788,18 @@ export const styles = css`
     pointer-events: none;
   }
   .maplibregl-ctrl-attrib a {
+    display: inline-flex;
+    align-items: center;
+    min-inline-size: var(--lr-size-24px);
+    min-block-size: var(--lr-size-24px);
     color: var(--lr-color-text-quiet);
     text-decoration: none;
   }
   .maplibregl-ctrl-attrib a:hover {
     text-decoration: underline;
+  }
+  .maplibregl-ctrl-attrib a:focus-visible {
+    ${focusRing}
   }
   .maplibregl-ctrl-attrib-inner {
     overflow-wrap: anywhere;

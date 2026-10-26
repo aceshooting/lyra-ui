@@ -82438,6 +82438,14 @@
             "deprecated": null
           },
           {
+            "name": "attribution-expanded",
+            "deprecated": null
+          },
+          {
+            "name": "attribution-link",
+            "deprecated": null
+          },
+          {
             "name": "attribution-toggle",
             "deprecated": null
           },
@@ -82450,11 +82458,47 @@
             "deprecated": null
           },
           {
+            "name": "compass-icon",
+            "deprecated": null
+          },
+          {
             "name": "configuration-error",
             "deprecated": null
           },
           {
             "name": "container",
+            "deprecated": null
+          },
+          {
+            "name": "controls",
+            "deprecated": null
+          },
+          {
+            "name": "controls-attribution-expanded",
+            "deprecated": null
+          },
+          {
+            "name": "controls-bottom",
+            "deprecated": null
+          },
+          {
+            "name": "controls-bottom-left",
+            "deprecated": null
+          },
+          {
+            "name": "controls-bottom-right",
+            "deprecated": null
+          },
+          {
+            "name": "controls-top",
+            "deprecated": null
+          },
+          {
+            "name": "controls-top-left",
+            "deprecated": null
+          },
+          {
+            "name": "controls-top-right",
             "deprecated": null
           },
           {
@@ -82510,7 +82554,27 @@
             "deprecated": null
           },
           {
+            "name": "geolocate-active",
+            "deprecated": null
+          },
+          {
+            "name": "geolocate-background",
+            "deprecated": null
+          },
+          {
             "name": "geolocate-control",
+            "deprecated": null
+          },
+          {
+            "name": "geolocate-error",
+            "deprecated": null
+          },
+          {
+            "name": "geolocate-icon",
+            "deprecated": null
+          },
+          {
+            "name": "geolocate-waiting",
             "deprecated": null
           },
           {
@@ -82518,11 +82582,43 @@
             "deprecated": null
           },
           {
+            "name": "initialization-activate-label",
+            "deprecated": null
+          },
+          {
+            "name": "initialization-attribution",
+            "deprecated": null
+          },
+          {
             "name": "initialization-control",
             "deprecated": null
           },
           {
+            "name": "initialization-controls",
+            "deprecated": null
+          },
+          {
+            "name": "initialization-corner",
+            "deprecated": null
+          },
+          {
+            "name": "initialization-geolocate",
+            "deprecated": null
+          },
+          {
+            "name": "initialization-navigation",
+            "deprecated": null
+          },
+          {
             "name": "initialization-placeholder",
+            "deprecated": null
+          },
+          {
+            "name": "initialization-scale",
+            "deprecated": null
+          },
+          {
+            "name": "initialization-skeleton",
             "deprecated": null
           },
           {
@@ -82626,7 +82722,15 @@
             "deprecated": null
           },
           {
+            "name": "zoom-in-icon",
+            "deprecated": null
+          },
+          {
             "name": "zoom-out",
+            "deprecated": null
+          },
+          {
+            "name": "zoom-out-icon",
             "deprecated": null
           }
         ],
@@ -82684,6 +82788,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-map-scale-bar-display",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "block"
           }
         ],
         "cssStates": [],
@@ -82964,6 +83074,15 @@
                   }
                 ],
                 "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "whenControlsReady",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "Promise<void>"
               }
             ]
           },

@@ -400,6 +400,15 @@ style, await `whenIdle()` for the current resource and rendering work. Observe
 rejection when replacing styles or disconnecting; a returned `true` from a synchronous command
 means admission, not asynchronous completion.
 
+`whenControlsReady(): Promise<void>` waits for native control installation and public chrome hooks,
+including default attribution. Await it after `whenStyleReady()` when measuring or styling installed
+controls. Explicitly disabling all controls resolves after map construction. On a connected deferred
+map, it waits for initialization rather than activating the map. Replacing `controls` or disconnecting
+rejects the pending barrier with `AbortError`; initialization, invalid configuration or control
+loading failure rejects with `MapReadinessError`. A style-only change preserves the controls
+barrier. A completed promise describes its captured configuration; call again after assigning
+`controls`.
+
 URL `mapStyle` replacements and new objects on the modular peer use `setStyle(style, { diff: false })`.
 Readiness waits for the replacement's committed `style.load` before capturing its catalog and
 restoring owned layers, images and style overrides. Superseding an unfinished replacement also
@@ -1375,12 +1384,16 @@ intensity?: LyraMapHeatmapZoomValue; opacity?: number }`, where `LyraMapHeatmapZ
   LyraMapNavigationControlOptions; scale?: boolean | LyraMapScaleControlOptions;
   geolocate?: boolean | LyraMapGeolocateControlOptions;
   attribution?: boolean | LyraMapAttributionControlOptions }`, with
-  `LyraMapNavigationControlOptions { position?: LyraMapControlPosition }`,
-  `LyraMapScaleControlOptions { position?: LyraMapControlPosition; unit?: LyraMapScaleUnit }`,
+  `LyraMapNavigationControlOptions { position?: LyraMapControlPosition; order?: number }`,
+  `LyraMapScaleControlOptions { position?: LyraMapControlPosition; order?: number; unit?: LyraMapScaleUnit }`,
   `LyraMapControlPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'` and
   `LyraMapScaleUnit = 'metric' | 'imperial'`. The element adds the engine's standard controls once
   the map exists, moves one whose corner changes, replaces one whose other options change and removes one that
   is dropped, so an application no longer imports control classes and calls `map.addControl()`.
+  All four control option objects accept finite `order` numbers, defaulting to `0`. Within each
+  corner, ascending order controls both visual and keyboard order; ties retain the existing
+  navigation, scale, geolocate, attribution sequence. Changing only order moves existing controls
+  without reconstructing them. Invalid order values produce localized configuration feedback.
   `true` takes the defaults (navigation `'top-right'`, scale `'bottom-left'` and `'metric'`); an
   unknown navigation/scale position or unit falls back to its default. Malformed geolocate or
   attribution options are rejected with localized feedback. The control code comes from the selected
@@ -1401,7 +1414,7 @@ intensity?: LyraMapHeatmapZoomValue; opacity?: number }`, where `LyraMapHeatmapZ
   mapElement.controls = {
     navigation: { position: 'bottom-left' },
     scale: { position: 'bottom-left' },
-    geolocate: { position: 'bottom-left' },
+    geolocate: { position: 'bottom-left', order: -1 },
     attribution: { position: 'bottom-left', customAttribution: [
       'Survey team', { label: 'Data contributors', url: 'https://example.com/credits' }
     ] }
@@ -1755,11 +1768,20 @@ which only reaches rows projected from `legend`.
 `legend-hi`, `legend-ticks`, `legend-tick`, `legend-derived`, `legend-limit`, `anchor`,
 `anchor-close`, `marker`, `popup`, `popup-content`, `popup-close-button`, `attribution`,
 `attribution-toggle`, `attribution-content`, `navigation`, `zoom-in`, `zoom-out`, `compass`, `scale`,
-`geolocate`, `geolocate-control`,
+`geolocate`, `geolocate-control`, `controls`, `controls-top`, `controls-bottom`, `controls-top-left`, `controls-top-right`,
+`controls-bottom-left`, `controls-bottom-right`, `zoom-in-icon`, `zoom-out-icon`, `compass-icon`,
+`geolocate-icon`, `geolocate-waiting`, `geolocate-active`, `geolocate-background`, `geolocate-error`,
+`attribution-link`, `attribution-expanded`, `controls-attribution-expanded`,
 `configuration-error`, `error`.
-Before native construction, `initialization-placeholder` is the stable surface,
-`initialization-control` outlines each requested control and, for `initialization="interaction"`,
-`initialization-activate` is the localized button that starts the map. Pick mode renders `pick-controls` with
+Before native construction, `initialization-placeholder` is the stable surface and
+`initialization-skeleton` is its decorative skeleton. `initialization-controls` also exposes `controls`;
+its rows expose `controls-top` and `controls-bottom`, and each `initialization-corner` also exposes its
+matching corner token. `initialization-control` outlines explicitly requested controls, with
+`initialization-navigation`, `initialization-scale`, `initialization-geolocate` or
+`initialization-attribution` identifying the kind. Placeholder corners and order follow those options;
+implicit default attribution has no placeholder. For `initialization="interaction"`,
+`initialization-activate` starts the map and `initialization-activate-label` styles its visible label.
+Hiding that label retains the button's localized accessible name. Pick mode renders `pick-controls` with
 `pick-center` and `pick-cancel`; draw mode renders `drawing-controls` with `drawing-add`,
 `drawing-undo`, `drawing-complete`, `drawing-cancel` and the `drawing-status` vertex count (plus
 `drawing-summary` with `drawingMeasurements`), vertex editing renders `drawing-handles` containing
@@ -1795,6 +1817,55 @@ lr-map::part(attribution-content) {
 ```
 
 Choose panel bounds that fit the map's allocation and keep required provider credits reachable.
+
+`controls` targets the native control container; `controls-top` and `controls-bottom` are independent
+row grids. `controls-top-left`, `controls-top-right`,
+`controls-bottom-left` and `controls-bottom-right` target its corners. Their names match the control
+position vocabulary; positioning follows the inherited text direction. Use these parts for corner
+insets, gaps and responsive layouts. Icon parts target the native spans: styling `compass-icon`
+preserves the engine's bearing rotation. Geolocation button state adds `geolocate-waiting`,
+`geolocate-active`, `geolocate-background` or `geolocate-error` tokens as applicable.
+`attribution-link` reaches each credit link. While credits are expanded, `attribution-expanded`
+is added to the attribution wrapper, toggle and content, allowing each surface to be styled directly.
+
+`--lr-map-scale-bar-display` defaults to `block`; set it to `none` to hide the ruler while retaining
+the distance text. For example:
+
+```css
+lr-map { --lr-map-scale-bar-display: none; }
+lr-map::part(controls-bottom-right) { gap: var(--lr-space-s); }
+lr-map::part(compass-icon) { color: var(--lr-color-brand); }
+lr-map::part(attribution-link) { padding-inline: var(--lr-space-xs); }
+lr-map::part(attribution-toggle) { background: transparent; }
+```
+
+Corner spacing also includes each control's margin; reset those public wrapper margins when
+replacing them with a corner gap. Keep required credits visible and controls within the map.
+
+When any attribution in the container is expanded, `controls-attribution-expanded` is added to
+that container, both rows and all four corners. Compound part selectors can therefore reflow the
+corners without observing shadow DOM. This bounded example stacks the two bottom corners on narrow
+viewports; choose the breakpoint and footer reservation for the application:
+
+```css
+@media (max-width: 40rem) {
+  lr-map::part(controls controls-attribution-expanded) {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: var(--lr-space-s);
+  }
+  lr-map::part(controls-top controls-attribution-expanded),
+  lr-map::part(controls-bottom controls-attribution-expanded) { display: contents; }
+  lr-map::part(controls-bottom-left controls-attribution-expanded),
+  lr-map::part(controls-bottom-right controls-attribution-expanded) { position: static; }
+  lr-map::part(controls-bottom-left controls-attribution-expanded) { align-self: flex-start; }
+  lr-map::part(controls-bottom-right controls-attribution-expanded) { align-self: flex-end; }
+}
+```
+
+Map content is clipped to its allocation. The host application owns stacking relative to page
+siblings and the stacking contexts established by its ancestors.
 
 `legend` is a localized `role="group"` containing a real list associated to the map canvas with
 `aria-describedby`; each entry is a `listitem`, decorative swatches are inert/accessibility-hidden,
@@ -1958,6 +2029,7 @@ mapEl.overlays = {
 };
 document.body.append(mapEl);
 await mapEl.whenStyleReady();
+await mapEl.whenControlsReady();
 
 async function replaceBasemap(style: LyraMapStyleSpecification): Promise<void> {
   mapEl.mapStyle = style;
@@ -5314,10 +5386,12 @@ These named interfaces and helper signatures are available to typed integrations
   Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapNavigationControlOptions {
     readonly position?: LyraMapControlPosition;
+    readonly order?: number;
   }`
   Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapScaleControlOptions {
     readonly position?: LyraMapControlPosition;
+    readonly order?: number;
     readonly unit?: LyraMapScaleUnit;
   }`
   Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
