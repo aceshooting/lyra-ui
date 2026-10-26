@@ -37,6 +37,21 @@ on:
         required: false
         type: boolean
         default: false
+      token_auth_package:
+        description: 'Use the protected npm token for one named, already published package'
+        required: false
+        type: choice
+        default: none
+        options:
+          - none
+          - lyra-ui
+          - lyra-flags
+          - lyra-docs
+          - lyra-ide
+          - lyra-translations
+          - lyra-map
+          - lyra-3d
+          - lyra-gen
 
 permissions:
   contents: read
@@ -103,6 +118,31 @@ jobs:
             "https://registry.npmjs.org/%40aceshooting%2F$PACKAGE")"
           if [[ "$status" != 404 ]]; then
             echo "::error::Expected npm registry absence (HTTP 404) before $PACKAGE bootstrap; received HTTP $status."
+            exit 1
+          fi
+
+      - name: Require a single existing package for token authentication
+        env:
+          TOKEN_AUTH_PACKAGE: ${{ inputs.token_auth_package }}
+          BOOTSTRAP: ${{ inputs.first_package_bootstrap }}
+          PACKAGE: ${{ inputs.package }}
+          TAGS: ${{ steps.plan.outputs.tags }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$TOKEN_AUTH_PACKAGE" || "$TOKEN_AUTH_PACKAGE" == none ]]; then exit 0; fi
+          if [[ "$GITHUB_EVENT_NAME" != workflow_dispatch || "$BOOTSTRAP" == true ||
+                ! "$TOKEN_AUTH_PACKAGE" =~ ^lyra-(ui|flags|docs|ide|translations|map|3d|gen)$ ||
+                "$PACKAGE" != "$TOKEN_AUTH_PACKAGE" ||
+                ! "$TAGS" =~ ^lyra-(ui|flags|docs|ide|translations|map|3d|gen)@(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ||
+                "${TAGS%@*}" != "$TOKEN_AUTH_PACKAGE" ]]; then
+            echo '::error::Token authentication requires one matching named stable release and cannot use first-package bootstrap.'
+            exit 1
+          fi
+          status="$(curl --silent --show-error --proto '=https' --tlsv1.2 \
+            --connect-timeout 10 --max-time 30 --output /dev/null --write-out '%{http_code}' \
+            "https://registry.npmjs.org/%40aceshooting%2F$TOKEN_AUTH_PACKAGE")"
+          if [[ "$status" != 200 ]]; then
+            echo '::error::Token authentication requires an existing npm package (HTTP 200).'
             exit 1
           fi
 
@@ -252,14 +292,27 @@ jobs:
       - name: Dispatch npm publish for each tag
         env:
           BOOTSTRAP: ${{ inputs.first_package_bootstrap }}
+          TOKEN_AUTH_PACKAGE: ${{ inputs.token_auth_package }}
           GH_TOKEN: ${{ github.token }}
           TAGS: ${{ needs.plan.outputs.tags }}
         run: |
           set -euo pipefail
+          if [[ -n "$TOKEN_AUTH_PACKAGE" && "$TOKEN_AUTH_PACKAGE" != none ]]; then
+            if [[ "$BOOTSTRAP" == true ||
+                  ! "$TOKEN_AUTH_PACKAGE" =~ ^lyra-(ui|flags|docs|ide|translations|map|3d|gen)$ ||
+                  ! "$TAGS" =~ ^lyra-(ui|flags|docs|ide|translations|map|3d|gen)@(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ||
+                  "${TAGS%@*}" != "$TOKEN_AUTH_PACKAGE" ]]; then
+              echo '::error::Token authentication dispatch requires exactly one matching package tag.'
+              exit 1
+            fi
+          fi
           for tag in $TAGS; do
             if [[ "$BOOTSTRAP" == true ]]; then
               gh workflow run publish.yml --repo "$GITHUB_REPOSITORY" --ref "$tag" \
                 -f tag="$tag" -f first_package_bootstrap=true
+            elif [[ -n "$TOKEN_AUTH_PACKAGE" && "$TOKEN_AUTH_PACKAGE" != none ]]; then
+              gh workflow run publish.yml --repo "$GITHUB_REPOSITORY" --ref "$tag" \
+                -f tag="$tag" -f token_auth_package="$TOKEN_AUTH_PACKAGE"
             else
               gh workflow run publish.yml --repo "$GITHUB_REPOSITORY" --ref "$tag" -f tag="$tag"
             fi

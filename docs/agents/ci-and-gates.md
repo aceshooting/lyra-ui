@@ -520,6 +520,22 @@ apply to a first publication too. See
 [npm trust prerequisites](https://docs.npmjs.com/cli/v11/commands/npm-trust/#prerequisites) and
 [npm access-token permissions](https://docs.npmjs.com/about-access-tokens/).
 
+**Explicit token authentication for an existing package.** OIDC remains the default. To enable the
+protected `NPM_BOOTSTRAP_TOKEN` for one existing package, manually dispatch Release with matching
+`package` and `token_auth_package` choices (for example, both `lyra-gen`), or dispatch Publish on the
+qualified tag with `tag=<tag>` and `token_auth_package=<package>`. This requires the same protected
+`npm-publish` approval, exact-commit qualifications, verified tarball and provenance as ordinary
+publishing. It rejects `all`, mismatched or multiple tags, a package absent from npm, dry runs and
+`first_package_bootstrap=true`. The token must permit direct publication of the selected package;
+it is exposed only to the protected publish step and is never extracted for workstation publishing.
+Remove or rotate the secret when no longer needed. The pinned npm CLI attempts OIDC before
+configured token authentication, so this option enables the token fallback without forcing
+precedence over a working trusted publisher. See [npm authentication behavior](https://docs.npmjs.com/trusted-publishers/)
+and [token publishing with provenance](https://docs.npmjs.com/generating-provenance-statements/).
+The option must exist in the qualified tagged workflow; a later workflow cannot replace an immutable
+tag's publishing procedure. Successful publishing still requires the registry's canonical tarball
+bytes and integrity to match the verified release archive.
+
 **Runtime comparison.** Before preparing a release, run the quick Chromium benchmark on a stable
 workstation with the pinned Node and built package:
 `pnpm benchmark --profile quick --browsers chromium --output benchmarks/results/<version>.json`.

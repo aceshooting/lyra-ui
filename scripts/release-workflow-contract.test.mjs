@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -9,6 +9,128 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const read = (relative) => readFileSync(path.join(root, relative), 'utf8');
+const workflowStep = (source, name) => {
+  const marker = `      - name: ${name}\n`, start = source.indexOf(marker);
+  assert.ok(start >= 0, `Missing ${name}`);
+  const next = source.indexOf('\n      - ', start + marker.length);
+  return source.slice(start, next < 0 ? undefined : next);
+};
+const stepScript = step => {
+  const marker = '        run: |\n', start = step.indexOf(marker);
+  assert.ok(start >= 0, 'Missing workflow script');
+  return step.slice(start + marker.length).split('\n').map(line => line.startsWith('          ') ? line.slice(10) : line).join('\n');
+};
+
+test('named token authentication is explicit while default OIDC stays credential-free', () => {
+  const publish = read('.github/workflows/publish.yml'), release = read('.github/workflows/release.yml');
+  for (const source of [publish, release]) {
+    assert.match(source, /token_auth_package:\n\s+description: [^\n]+\n\s+required: false\n\s+type: choice\n\s+default: none/u);
+    const choices = source.match(/token_auth_package:[\s\S]*?options:\n((?:          - [^\n]+\n)+)/u)[1].trim().split('\n').map(line => line.trim().slice(2));
+    assert.deepEqual(choices, ['none', 'lyra-ui', 'lyra-flags', 'lyra-docs', 'lyra-ide', 'lyra-translations', 'lyra-map', 'lyra-3d', 'lyra-gen']);
+  }
+  const normal = workflowStep(publish, 'Publish to npm'), token = workflowStep(publish, 'Publish with protected npm token and provenance');
+  const runIf = (step, inputs) => Boolean(new Function('inputs', `return ${step.match(/if: \$\{\{ (.*) \}\}/u)[1]};`)(inputs));
+  for (const first of [false, true]) for (const selected of [undefined, 'none', 'lyra-gen']) {
+    const inputs = { first_package_bootstrap: first, token_auth_package: selected };
+    assert.equal(runIf(normal, inputs), !first && (!selected || selected === 'none'));
+    assert.equal(runIf(token, inputs), first || Boolean(selected && selected !== 'none'));
+  }
+  assert.doesNotMatch(normal, /NODE_AUTH_TOKEN|NPM_BOOTSTRAP_TOKEN|--provenance/u);
+  assert.match(token, /NODE_AUTH_TOKEN: \$\{\{ secrets\.NPM_BOOTSTRAP_TOKEN \}\}/u);
+  assert.match(token, /npm publish "\$TARBALL" --access public --provenance/u);
+  assert.equal((publish.match(/secrets\.NPM_BOOTSTRAP_TOKEN/gu) ?? []).length, 1);
+  assert.doesNotMatch(release, /secrets\.NPM_BOOTSTRAP_TOKEN|NODE_AUTH_TOKEN/u);
+});
+
+test('release dispatch forwards token mode only for one exact selected package', () => {
+  const script = stepScript(workflowStep(read('.github/workflows/release.yml'), 'Dispatch npm publish for each tag'));
+  const fixture = mkdtempSync(path.join(tmpdir(), 'lyra-token-dispatch-'));
+  try {
+    const gh = path.join(fixture, 'gh'); writeFileSync(gh, '#!/usr/bin/env bash\nprintf "%s\\n" "$*" >> "$DISPATCH_LOG"\n'); chmodSync(gh, 0o755);
+    let serial = 0;
+    const run = (vars = {}) => {
+      const log = path.join(fixture, `log-${serial++}`);
+      const result = spawnSync('bash', ['-c', script], { encoding: 'utf8', env: { ...process.env, PATH: `${fixture}:${process.env.PATH}`,
+        GITHUB_REPOSITORY: 'example/library', GITHUB_STEP_SUMMARY: path.join(fixture, 'summary'), DISPATCH_LOG: log,
+        TOKEN_AUTH_PACKAGE: 'lyra-gen', TAGS: 'lyra-gen@1.0.0', BOOTSTRAP: 'false', ...vars } });
+      let calls = ''; try { calls = readFileSync(log, 'utf8'); } catch { /* Rejected dispatches make no call. */ }
+      return { ...result, calls };
+    };
+    assert.equal(run().calls, 'workflow run publish.yml --repo example/library --ref lyra-gen@1.0.0 -f tag=lyra-gen@1.0.0 -f token_auth_package=lyra-gen\n');
+    for (const vars of [{ TOKEN_AUTH_PACKAGE: 'all' }, { TOKEN_AUTH_PACKAGE: 'lyra-ui' }, { BOOTSTRAP: 'true' },
+      { TAGS: 'lyra-gen@1.0.0 lyra-ui@30.3.0' }, { TAGS: 'lyra-gen@1.0.0-beta.1' }, { TAGS: '' }]) {
+      const rejected = run(vars); assert.notEqual(rejected.status, 0, JSON.stringify(vars)); assert.equal(rejected.calls, '');
+    }
+    const normal = run({ TOKEN_AUTH_PACKAGE: 'none' }); assert.equal(normal.status, 0); assert.doesNotMatch(normal.calls, /token_auth_package|first_package_bootstrap/u);
+    const bootstrap = run({ TOKEN_AUTH_PACKAGE: 'none', BOOTSTRAP: 'true' }); assert.equal(bootstrap.status, 0); assert.match(bootstrap.calls, /-f first_package_bootstrap=true/u);
+  } finally { rmSync(fixture, { recursive: true, force: true }); }
+});
+
+test('normal token eligibility rejects ambiguous packages, modes and registry responses before dispatch or publish', () => {
+  const plan = stepScript(workflowStep(read('.github/workflows/release.yml'), 'Require a single existing package for token authentication'));
+  const publish = stepScript(workflowStep(read('.github/workflows/publish.yml'), 'Require a single existing package for token authentication after approval'));
+  const fixture = mkdtempSync(path.join(tmpdir(), 'lyra-token-policy-'));
+  try {
+    const curl = path.join(fixture, 'curl'); writeFileSync(curl, '#!/usr/bin/env bash\n[[ "${!#}" == "https://registry.npmjs.org/%40aceshooting%2F$TOKEN_AUTH_PACKAGE" ]] || exit 9\nprintf "%s" "$MOCK_REGISTRY_STATUS"\nexit "${MOCK_CURL_EXIT:-0}"\n'); chmodSync(curl, 0o755);
+    const run = (script, vars = {}) => spawnSync('bash', ['-c', script], { encoding: 'utf8', env: { ...process.env,
+      PATH: `${fixture}:${process.env.PATH}`, TOKEN_AUTH_PACKAGE: 'lyra-gen', PACKAGE: 'lyra-gen', TAG: 'lyra-gen@1.0.0', TAGS: 'lyra-gen@1.0.0',
+      BOOTSTRAP: 'false', DRY_RUN: 'false', GITHUB_EVENT_NAME: 'workflow_dispatch', MOCK_REGISTRY_STATUS: '200', ...vars } });
+    for (const script of [plan, publish]) {
+      assert.equal(run(script).status, 0);
+      for (const name of ['ui', 'flags', 'docs', 'ide', 'translations', 'map', '3d', 'gen'].map(name => `lyra-${name}`)) {
+        assert.equal(run(script, { TOKEN_AUTH_PACKAGE: name, PACKAGE: name, TAG: `${name}@1.0.0`, TAGS: `${name}@1.0.0` }).status, 0, name);
+      }
+      for (const vars of [{ TOKEN_AUTH_PACKAGE: 'all' }, { TOKEN_AUTH_PACKAGE: 'lyra-other' }, { TOKEN_AUTH_PACKAGE: 'lyra-ui' },
+        { BOOTSTRAP: 'true' }, { GITHUB_EVENT_NAME: 'release' }, ...['404', '401', '403', '500', '503', ''].map(status => ({ MOCK_REGISTRY_STATUS: status })),
+        { MOCK_CURL_EXIT: '28' }]) assert.notEqual(run(script, vars).status, 0, JSON.stringify(vars));
+      for (const tag of ['lyra-gen@01.0.0', 'lyra-gen@1.0.0-beta.1', 'lyra-gen@1.0.0+build', 'lyra-gen@1.0.0 lyra-ui@30.3.0']) {
+        assert.notEqual(run(script, { TAG: tag, TAGS: tag }).status, 0, tag);
+      }
+      for (const selected of ['', 'none']) assert.equal(run(script, { TOKEN_AUTH_PACKAGE: selected, MOCK_CURL_EXIT: '28' }).status, 0);
+    }
+    assert.notEqual(run(plan, { PACKAGE: 'all' }).status, 0);
+    assert.notEqual(run(plan, { PACKAGE: 'lyra-ui' }).status, 0);
+    assert.notEqual(run(publish, { DRY_RUN: 'true' }).status, 0);
+  } finally { rmSync(fixture, { recursive: true, force: true }); }
+});
+
+test('protected token publish rebinds bytes and mode before invoking npm with provenance', () => {
+  const script = stepScript(workflowStep(read('.github/workflows/publish.yml'), 'Publish with protected npm token and provenance'));
+  const fixture = mkdtempSync(path.join(tmpdir(), 'lyra-token-publish-'));
+  try {
+    const bin = path.join(fixture, 'bin'); mkdirSync(bin);
+    const executable = (name, body) => { const file = path.join(bin, name); writeFileSync(file, `#!/usr/bin/env bash\n${body}\n`); chmodSync(file, 0o755); };
+    executable('git', 'printf "%s\\trefs/tags/mock^{}\\n" "$MOCK_TAG_SHA"');
+    executable('curl', '[[ "${!#}" == "https://registry.npmjs.org/%40aceshooting%2Flyra-gen" ]] || exit 9\nprintf "%s" "$MOCK_REGISTRY_STATUS"\nexit "${MOCK_CURL_EXIT:-0}"');
+    executable('gh', 'while [[ "$#" -gt 0 ]]; do if [[ "$1" == --dir ]]; then cp "$MOCK_ASSET" "$2/release.tgz"; exit; fi; shift; done; exit 1');
+    executable('npm', '[[ "$NODE_AUTH_TOKEN" == synthetic-secret-marker ]] || exit 9\nprintf "%s\\n" "$*" >> "$NPM_LOG"');
+    const tarball = path.join(fixture, 'release.tgz'), changed = path.join(fixture, 'changed.tgz');
+    writeFileSync(tarball, 'verified release bytes'); writeFileSync(changed, 'different release bytes');
+    const expected = createHash('sha256').update(readFileSync(tarball)).digest('hex'); let serial = 0;
+    const run = (vars = {}) => {
+      const dir = path.join(fixture, String(serial++)); mkdirSync(dir);
+      const log = path.join(dir, 'npm-log'), marker = 'synthetic-secret-marker';
+      const result = spawnSync('bash', ['-c', script], { encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH}`,
+        RUNNER_TEMP: dir, NPM_LOG: log, MOCK_ASSET: tarball, TARBALL: tarball, EXPECTED_SHA256: expected,
+        EXPECTED_TAG_SHA: 'a'.repeat(40), MOCK_TAG_SHA: 'a'.repeat(40), GITHUB_REPOSITORY: 'example/library',
+        TOKEN_AUTH_PACKAGE: 'lyra-gen', TAG: 'lyra-gen@1.0.0', BOOTSTRAP: 'false', DRY_RUN: 'false', GITHUB_EVENT_NAME: 'workflow_dispatch',
+        NODE_AUTH_TOKEN: marker, MOCK_REGISTRY_STATUS: '200', ...vars } });
+      assert.equal(`${result.stdout}${result.stderr}`.includes(marker), false);
+      let calls = ''; try { calls = readFileSync(log, 'utf8'); } catch { /* No publish is expected for rejected input. */ }
+      return { ...result, calls };
+    };
+    const accepted = run(); assert.equal(accepted.status, 0, accepted.stderr); assert.equal(accepted.calls, `publish ${tarball} --access public --provenance\n`);
+    const bootstrap = run({ BOOTSTRAP: 'true', TOKEN_AUTH_PACKAGE: 'none', MOCK_REGISTRY_STATUS: '404' }); assert.equal(bootstrap.status, 0, bootstrap.stderr);
+    for (const vars of [{ NODE_AUTH_TOKEN: '' }, { MOCK_TAG_SHA: 'b'.repeat(40) }, { MOCK_ASSET: changed },
+      { TOKEN_AUTH_PACKAGE: 'none' }, { TOKEN_AUTH_PACKAGE: 'lyra-ui' }, { TOKEN_AUTH_PACKAGE: 'all' }, { BOOTSTRAP: 'true' },
+      { TAG: 'lyra-gen@01.0.0' }, { TAG: 'lyra-gen@1.0.0-beta.1' }, { TAG: 'lyra-gen@1.0.0 lyra-ui@30.3.0' },
+      { DRY_RUN: 'true' }, { GITHUB_EVENT_NAME: 'release' }, { MOCK_CURL_EXIT: '28' },
+      ...['404', '401', '403', '503', ''].map(status => ({ MOCK_REGISTRY_STATUS: status })),
+      { BOOTSTRAP: 'true', TOKEN_AUTH_PACKAGE: 'none', MOCK_REGISTRY_STATUS: '200' }]) {
+      const rejected = run(vars); assert.notEqual(rejected.status, 0, JSON.stringify(vars)); assert.equal(rejected.calls, '');
+    }
+  } finally { rmSync(fixture, { recursive: true, force: true }); }
+});
 
 test('release checkouts bind directly to the main dispatch commit before using dependency caches', () => {
   const workflow = read('.github/workflows/release.yml');
@@ -179,10 +301,11 @@ test('first publication of a companion package uses a protected, provenance-bear
   );
   const normalPublish = protectedJob.slice(
     protectedJob.indexOf('      - name: Publish to npm'),
-    protectedJob.indexOf('      - name: Bootstrap first package publication with npm provenance'),
+    protectedJob.indexOf('      - name: Publish with protected npm token and provenance'),
   );
   const bootstrapPublish = protectedJob.slice(
-    protectedJob.indexOf('      - name: Bootstrap first package publication with npm provenance'),
+    protectedJob.indexOf('      - name: Publish with protected npm token and provenance'),
+    protectedJob.indexOf('      - name: Confirm the registry serves the published tarball'),
   );
 
   assert.match(release, /first_package_bootstrap:\n\s+description: [^\n]+\n\s+required: false\n\s+type: boolean\n\s+default: false/u);
@@ -193,9 +316,9 @@ test('first publication of a companion package uses a protected, provenance-bear
   assert.match(eligibility, /"\$GITHUB_EVENT_NAME" != workflow_dispatch \|\| "\$DRY_RUN" == true/u);
   assert.match(eligibility, /! "\$TAG" =~ \^lyra-\(docs\|ide\|translations\|map\|3d\|gen\)@/u);
   assert.match(eligibility, /"\$status" != 404/u);
-  assert.match(normalPublish, /if: \$\{\{ inputs\.first_package_bootstrap != true \}\}/u);
+  assert.match(normalPublish, /if: \$\{\{ inputs\.first_package_bootstrap != true && \(!inputs\.token_auth_package \|\| inputs\.token_auth_package == 'none'\) \}\}/u);
   assert.doesNotMatch(normalPublish, /NODE_AUTH_TOKEN|NPM_BOOTSTRAP_TOKEN|--provenance/u);
-  assert.match(bootstrapPublish, /if: \$\{\{ inputs\.first_package_bootstrap == true \}\}/u);
+  assert.match(bootstrapPublish, /if: \$\{\{ inputs\.first_package_bootstrap == true \|\| \(inputs\.token_auth_package && inputs\.token_auth_package != 'none'\) \}\}/u);
   assert.match(bootstrapPublish, /NODE_AUTH_TOKEN: \$\{\{ secrets\.NPM_BOOTSTRAP_TOKEN \}\}/u);
   assert.match(bootstrapPublish, /"\$status" != 404[\s\S]*npm publish "\$TARBALL" --access public --provenance/u);
   assert.match(bootstrapPublish, /EXPECTED_SHA256:[\s\S]*EXPECTED_TAG_SHA:[\s\S]*git ls-remote --tags[\s\S]*sha256sum/u);
