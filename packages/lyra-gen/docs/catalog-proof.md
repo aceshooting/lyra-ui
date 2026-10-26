@@ -52,3 +52,24 @@ mapping. Invalid identifiers, mapping collisions and unknown child roles reject 
 property names are validated and retain their spelling. Stable v0.9.1 identifiers are unchanged.
 The candidate artifact still contains literal properties only and advertises no supported protocol
 processor or renderer.
+
+# Rendered theme contrast
+
+`test/browser/theme-contrast.test.ts` covers 36 combinations: the base Lyra look and five authored
+look profiles, resolved light/dark modes, and compact/comfortable/touch density. Each renders a
+320px solid-surface generated report with text, a labelled input, an action button, and a grouped
+bar chart containing all eight categorical series over two categories. Computed surface colors
+and density settings are checked against the authored token definitions before measuring contrast.
+
+The cohort checks normal text at 4.5:1 and separated bar marks against their plot background at
+3:1, using the shared rendered-color helpers. Every series retains its mark names, matching legend,
+and visible table with exact labelled values, so color is not the only available representation.
+These checks follow [text contrast](https://www.w3.org/TR/WCAG22/#contrast-minimum),
+[non-text contrast](https://www.w3.org/TR/WCAG22/#non-text-contrast), and
+[use of color](https://www.w3.org/TR/WCAG22/#use-of-color); they impose no pairwise 3:1 requirement
+between separated series colors.
+
+This is a bounded automated composition check. Line charts, arbitrary host colors, translucent
+backdrops, interaction states, forced colors, screenshots, and human visual or assistive-technology
+review require separate qualification. System and unset modes resolve to light or dark; their
+selection behavior is covered by the UI theme tests.

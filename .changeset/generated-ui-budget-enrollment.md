@@ -15,6 +15,7 @@ adapter correction increase Gen to 140 public files. Set its archive byte ceilin
 64-byte boundary. Interactive select validation adds 57 gzip bytes over its reviewed measurement; advance
 only its exceeded direct-entry ceiling to the next 64-byte boundary.
 
-Reviewed 2026-10-26: the direct candidate export guard and documented prototype-property refusal
-measure 205,791 packed / 767,995 unpacked bytes across 140 files. Set Gen ceilings to 205,824 /
-768,000 bytes; its file count and all other passing limits stay unchanged.
+Reviewed 2026-10-26: the candidate export guard, prototype-property refusal and rendered-contrast
+methodology measure 206,388 packed / 769,439 unpacked bytes across 140 files. Set Gen ceilings to
+206,400 / 769,472 bytes. The latest archive changes only the contrast methodology documentation;
+its file count and all other passing limits stay unchanged.
