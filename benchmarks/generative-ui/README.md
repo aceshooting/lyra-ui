@@ -334,8 +334,61 @@ observer and invalidates its receipt. It never kills other processes. Sampling c
 absence of a short-lived process entirely between polls, and process-name classification cannot
 identify every provider task. Atomic receipt replacement is not a crash-durability guarantee.
 
+For a host with a reviewed resident service, the separate `reviewed-idle-service-v1` profile can
+admit **zero observed CPU ticks** for that exact process and distinguish kernel-thread coverage
+gaps from userspace gaps. Strict mode remains the default. This profile retains the original strict
+failures and contamination fields; its separate admission result does not establish a strict pass.
+Whole-host CPU, load and swap limits remain unchanged, including service, kernel and owned work.
+The per-process limit covers all unrelated userspace processes, including the reviewed service.
+
+Create a configuration outside the checkout using actual observed identities:
+
+```json
+{
+  "schemaVersion": 1,
+  "kind": "quiet-observer-config",
+  "profile": "reviewed-idle-service-v1",
+  "collectionId": "<collection-id>",
+  "bootId": "<actual-boot-id>",
+  "scope": {
+    "processCpu": "all-unrelated-userspace",
+    "kernelCpu": "whole-host-aggregate",
+    "coverage": "sampled-userspace-with-explicit-kernel-gaps"
+  },
+  "idleServices": [
+    { "pid": 123, "startTimeTicks": "<actual-start-ticks>", "comm": "<actual-comm>", "cmdlineSha256": "<raw-cmdline-sha256>" }
+  ]
+}
+```
+
+Replace every illustrative identity before use. Read the boot ID from
+`/proc/sys/kernel/random/boot_id`, process identity through `parseProcessStat`, and hash the raw
+`/proc/<pid>/cmdline` bytes without splitting or reserializing arguments. Review the process and
+configuration, then add `--observer-config="$PROFILE_OBSERVER_CONFIG"` to the observer command.
+Its exact file SHA-256 becomes `configSha256` in
+`quietObserver:{profile,configSha256,scope}`, included in both collection manifests and the manual
+precheck review. Use review kind `reviewed-idle-service-precheck-review` with the same collection,
+timestamp, approval and precheck/ownership digest fields described above, plus the precheck's
+`admissionSha256` for the shared admission module. Retained receipts include the exact UTF-8
+configuration text as `admission.configSource`; validation checks its byte digest and parsed
+configuration. Configuration creation does not approve the precheck or authorize collection.
+
+The observer rechecks every allowed process at both interval endpoints. Any observed CPU tick,
+identity/command change, missing process or overlap with owned work fails admission; descendants
+receive no allowance. Kernel classification uses the observed `PF_KTHREAD` flag, never a process
+name. Kernel exit gaps remain recorded, and an unknown or userspace coverage gap still fails.
+The resulting `reviewed-idle-service-live-receipt` keeps top-level `inspected:false` and exposes
+the separately reviewed `admission.inspected` and `admission.accepted` fields. Timing and memory
+records retain complete receipts at their existing admission checks, alongside the raw strict
+contamination result. Each retained `receiptSource` preserves the original UTF-8 bytes for digest
+and parsed-body validation, including refused observations. Strict and reviewed-service manifests
+cannot accept each other's receipts.
+Zero observed ticks is sampling-resolution evidence, not proof of no GPU, I/O or sub-tick work;
+between-scan process changes remain unobservable. Report this scope explicitly with the results.
+
 After reviewing the preflight, complete the timing manifest with the collection ID, digest of the
-reviewed measurement design, and inspected quiet receipt, then explicitly authorize collection.
+reviewed measurement design, and reviewed quiet receipt for the selected profile, then explicitly
+authorize collection.
 Keep the observer running, and pass its live `receipt.json` and the preflight's `controls` directory:
 
 ```sh

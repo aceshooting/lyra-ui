@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { profileCells, cellSchedule, validateCapabilities, validateOperation, validateSample, summarizeCell, sampleBudgetViolations, percentile, bootstrapP95, summarizeRetainedHeap, maximumCls } from './profile-results.mjs';
+import { makeReviewedQuietEvidence } from './profile-admission.mjs';
+import { reviewedQuietFixture } from './profile-reviewed.test-fixture.mjs';
 
 const capabilities = { longtask: { supported: true, positiveControl: true, receipt: 'longtask-control' }, layoutShift: { supported: false, positiveControl: false, reason: 'entry-type-unavailable' } };
 const cell = () => profileCells()[0];
@@ -42,6 +44,43 @@ test('sample admission requires real metrics when supported and null only when u
     assert.throws(() => validateSample({ ...sample(0), ...patch }, cell(), [descriptor]));
   }
   assert.throws(() => validateSample({ ...sample(0), operations: [operation(), operation()] }, cell(), [descriptor]));
+});
+
+test('strict samples cannot silently admit a different observer profile even when its raw flag is clean', () => {
+  const row = { ...sample(0), quietObserver: { profile: 'reviewed-idle-service-v1', configSha256: 'a'.repeat(64), scope: {
+    processCpu: 'all-unrelated-userspace', kernelCpu: 'whole-host-aggregate', coverage: 'sampled-userspace-with-explicit-kernel-gaps' } } };
+  assert.throws(() => validateSample(row, cell(), [descriptor]));
+  assert.throws(() => sampleBudgetViolations(row, cell(), [descriptor]));
+  assert.throws(() => summarizeCell(cell(), Array.from({ length: 60 }, (_, index) => ({ ...sample(index), quietObserver: row.quietObserver })), [descriptor], { replicates: 100 }));
+});
+
+test('reviewed samples preserve strict contamination and cannot mix observer or collection scopes', () => {
+  const { observer, receipt, receiptSource, receiptSha256 } = reviewedQuietFixture();
+  const before = makeReviewedQuietEvidence(receipt, receiptSha256, observer, { receiptSource }), after = makeReviewedQuietEvidence(receipt, receiptSha256, observer, { receiptSource });
+  const options = { quietObserver: observer, collectionId: receipt.collectionId, admissionSha256: receipt.admissionSha256, replicates: 100 };
+  const row = { ...sample(0), quietObserver: observer, collectionId: receipt.collectionId, admissionSha256: receipt.admissionSha256,
+    contaminated: true, quietEvidence: { before, after }, quietReceiptSha256: after.receiptSha256 };
+  validateSample(row, cell(), [descriptor], options);
+  assert.deepEqual(sampleBudgetViolations(row, cell(), [descriptor], options), []);
+  const rows = Array.from({ length: 60 }, (_, index) => ({ ...structuredClone(row), batchIndex: Math.floor(index / 30), sampleIndex: index }));
+  const summary = summarizeCell(cell(), rows, [descriptor], options);
+  assert.equal(summary.status, 'within-scoped-budgets'); assert.deepEqual(summary.quietObserver, observer); assert.equal(summary.collectionId, receipt.collectionId);
+  assert.equal(row.contaminated, true); assert.equal(row.quietEvidence.after.receipt.observationComplete, false);
+  for (const changes of [{ contaminated: false }, { quietEvidence: { before } }, { quietReceiptSha256: '0'.repeat(64) },
+    { collectionId: 'different' }, { admissionSha256: '8'.repeat(64) }, { quietObserver: undefined }]) assert.throws(() => validateSample({ ...row, ...changes }, cell(), [descriptor], options));
+  for (const scope of [{}, { quietObserver: observer }, { ...options, collectionId: 'different' }, { ...options, admissionSha256: '8'.repeat(64) }, { ...options, quietObserver: { ...observer, configSha256: '0'.repeat(64) } }]) {
+    assert.throws(() => validateSample(row, cell(), [descriptor], scope));
+    assert.throws(() => summarizeCell(cell(), rows, [descriptor], scope));
+  }
+  const hidden = { ...row, quietObserver: undefined, contaminated: false };
+  assert.throws(() => validateSample(hidden, cell(), [descriptor]));
+  const strict = { ...sample(0), quietObserver: observer, collectionId: receipt.collectionId, quietEvidence: {
+    before: { receiptSha256: 'b'.repeat(64), contaminated: false }, after: { receiptSha256: 'f'.repeat(64), contaminated: false } }, quietReceiptSha256: 'f'.repeat(64) };
+  assert.throws(() => validateSample(strict, cell(), [descriptor], options));
+  const mixed = structuredClone(rows); mixed[20] = sample(20);
+  assert.throws(() => summarizeCell(cell(), mixed, [descriptor], options));
+  const slow = structuredClone(row); slow.operations[0].renderOpportunity = 111; slow.window.end = 150;
+  assert.deepEqual(sampleBudgetViolations(slow, cell(), [descriptor], options), ['operation:edit']);
 });
 
 test('cell summary enforces every sample index and does not combine duplicate/missing observations', () => {

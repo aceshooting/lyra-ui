@@ -3,6 +3,7 @@ import { writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { PROFILE_METHOD, PROFILE_WORKLOADS, PROFILE_ENGINES, profileCells, cellSchedule, validateCapabilities, validateDescriptor, validateOperation, validateSample, summarizeCell, sampleBudgetViolations } from './profile-results.mjs';
+import { validateQuietObserver, inspectReviewedQuietReceipt, validateQuietEvidence } from './profile-admission.mjs';
 
 const require = (condition, message) => { if (!condition) throw new TypeError(message); };
 const hash = value => typeof value === 'string' && /^[a-f0-9]{64}$/u.test(value);
@@ -47,7 +48,7 @@ export function validateCollectionManifest(manifest) {
   require(manifest?.schemaVersion === 1 && manifest.method === PROFILE_METHOD && manifest.collection?.authorized === true
     && text(manifest.collection.id) && hash(manifest.collection.designSha256), 'Explicit collection manifest and design identity are required.');
   for (const key of ['archiveSha256', 'lockfileSha256', 'buildSha256']) require(hash(manifest.candidate?.[key]), `Missing actual candidate ${key}.`);
-  for (const key of ['runnerSha256', 'resultsSha256', 'measurementSha256', 'driverSha256']) require(hash(manifest.harness?.[key]), `Missing actual harness ${key}.`);
+  for (const key of ['runnerSha256', 'resultsSha256', 'measurementSha256', 'driverSha256', 'admissionSha256']) require(hash(manifest.harness?.[key]), `Missing actual harness ${key}.`);
   for (const key of ['bundleSha256', 'inputsSha256', 'hostSha256', 'recordingSha256']) require(hash(manifest.fixtureBuild?.[key]), `Missing actual fixture build ${key}.`);
   const environment = manifest.environment;
   require(environment?.node === '22.23.2' && text(environment.os) && text(environment.arch) && text(environment.cpuModel)
@@ -63,7 +64,14 @@ export function validateCollectionManifest(manifest) {
     validateInventory(manifest.fixtures[workload].operations);
     if (manifest.fixtures[workload].inputs !== undefined) validateInputInventory(manifest.fixtures[workload].inputs);
   }
-  inspectQuietReceipt(manifest.quietReceipt);
+  validateQuietObserver(manifest.quietObserver);
+  if (manifest.quietObserver) inspectReviewedQuietReceipt(manifest.quietReceipt, manifest.quietObserver, { collectionId: manifest.collection.id, admissionSha256: manifest.harness.admissionSha256 });
+  else {
+    require(manifest.quietReceipt?.admission === undefined && manifest.quietReceipt?.kind !== 'reviewed-idle-service-live-receipt'
+      && manifest.quietReceipt?.contaminated !== true && manifest.quietReceipt?.observationComplete !== false
+      && (manifest.quietReceipt?.failures === undefined || Array.isArray(manifest.quietReceipt.failures) && manifest.quietReceipt.failures.length === 0), 'Strict collection cannot use a different observer or contaminated receipt.');
+    inspectQuietReceipt(manifest.quietReceipt);
+  }
   return manifest;
 }
 
@@ -92,8 +100,10 @@ export async function runProfile({ driver, manifest, signal, retain } = {}) {
   require(typeof retain === 'function', 'An immutable raw-result retention callback is required.');
   const owned = freeze(JSON.parse(JSON.stringify(manifest)));
   const expected = { candidate: owned.candidate, harness: owned.harness, environment: owned.environment, fixtures: owned.fixtures, controls: owned.controls, fixtureBuild: owned.fixtureBuild };
-  const report = { schemaVersion: 1, method: PROFILE_METHOD, status: 'collecting', qualification: 'not-assessed', manifest: owned, samples: [], warmups: [], summaries: [], failures: [] };
-  let session;
+  const report = { schemaVersion: 1, method: PROFILE_METHOD, status: 'collecting', qualification: 'not-assessed', manifest: owned,
+    ...(owned.quietObserver ? { quietObserver: owned.quietObserver, admissionSha256: owned.harness.admissionSha256 } : {}), samples: [], warmups: [], summaries: [], failures: [] };
+  const admission = { quietObserver: owned.quietObserver, collectionId: owned.collection.id, admissionSha256: owned.harness.admissionSha256 };
+  let session, quietPhase;
   try {
     const verified = await driver.verify(owned);
     require(verified?.kind === 'browser-artifact-verification' && stable(verified.actual) === stable(expected), 'Browser driver artifact or positive-control verification mismatch.');
@@ -101,8 +111,10 @@ export async function runProfile({ driver, manifest, signal, retain } = {}) {
     await retain({ kind: 'verification', value: verified });
     for (const task of collectionSchedule()) {
       if (signal?.aborted) throw new Error('Collection aborted.');
+      quietPhase = 'before'; report.lastAttempt = { cellId: task.cell.id, position: task.position, quietEvidence: {} };
       const quiet = await driver.checkQuiet(task);
-      require(quiet?.contaminated === false && hash(quiet.receiptSha256), 'Collection became contaminated or lost its quiet receipt.');
+      report.lastAttempt.quietEvidence.before = quiet;
+      validateQuietEvidence(quiet, owned.quietObserver, admission);
       session = await driver.openSample({ ...task, manifest: owned, signal });
       validateFixture(session);
       for (const name of ['startObservation', 'phase', 'finishObservation', 'close', 'activate']) require(typeof session[name] === 'function', `Browser driver session lacks ${name}.`);
@@ -117,7 +129,7 @@ export async function runProfile({ driver, manifest, signal, retain } = {}) {
       require(stable(prepared.inputs) === stable(fixture.inputs), 'Prepared input bytes differ from the frozen inventory.');
       await session.startObservation();
       const operations = [];
-      report.lastAttempt = { cellId: task.cell.id, position: task.position, generation: prepared.generation, operations, ...(prepared.inputs ? { inputs: prepared.inputs } : {}) };
+      Object.assign(report.lastAttempt, { generation: prepared.generation, operations, ...(prepared.inputs ? { inputs: prepared.inputs } : {}) });
       for (const operation of prepared.operations) {
         await session.phase(operation.id);
         let armed = false;
@@ -138,21 +150,28 @@ export async function runProfile({ driver, manifest, signal, retain } = {}) {
       require(stable(observed.capabilities) === stable(owned.controls[task.cell.engine]), 'Observed capability receipt changed.');
       const disposal = await session.dispose();
       report.lastAttempt.disposal = disposal;
-      const postQuiet = await driver.checkQuiet(task);
-      require(postQuiet?.contaminated === false && hash(postQuiet.receiptSha256), 'Sample was contaminated during observation.');
-      const sample = { schemaVersion: 1, ...task.position, operations, capabilities: observed.capabilities, observers: observed.observers, renderer: observed.renderer, window: observed.window, disposal, contaminated: false,
+      quietPhase = 'after'; const postQuiet = await driver.checkQuiet(task);
+      report.lastAttempt.quietEvidence.after = postQuiet;
+      validateQuietEvidence(postQuiet, owned.quietObserver, admission);
+      const sample = { schemaVersion: 1, ...task.position, operations, capabilities: observed.capabilities, observers: observed.observers, renderer: observed.renderer, window: observed.window, disposal,
+        contaminated: quiet.contaminated || postQuiet.contaminated, quietEvidence: { before: quiet, after: postQuiet },
+        ...(owned.quietObserver ? { quietObserver: owned.quietObserver, collectionId: owned.collection.id, admissionSha256: owned.harness.admissionSha256 } : {}),
         ...(prepared.inputs ? { inputs: prepared.inputs } : {}), fixtureSha256: fixture.sha256, quietReceiptSha256: postQuiet.receiptSha256,
         ...(observed.delivery ? { delivery: observed.delivery } : {}), ...(observed.hostRequests ? { hostRequests: observed.hostRequests } : {}) };
-      validateSample(sample, task.cell, prepared.operations, { warmup: task.position.warmup });
+      validateSample(sample, task.cell, prepared.operations, { ...admission, warmup: task.position.warmup });
       (task.position.warmup ? report.warmups : report.samples).push(sample);
       await retain({ kind: task.position.warmup ? 'warmup' : 'sample', value: sample });
-      if (!task.position.warmup) require(sampleBudgetViolations(sample, task.cell, prepared.operations).length === 0, 'A sample exceeded its frozen budget.');
+      if (!task.position.warmup) require(sampleBudgetViolations(sample, task.cell, prepared.operations, admission).length === 0, 'A sample exceeded its frozen budget.');
       await session.close({ keepContext: task.keepContext }); session = undefined;
       delete report.lastAttempt;
     }
-    for (const cell of profileCells()) report.summaries.push(summarizeCell(cell, report.samples.filter(item => item.cellId === cell.id), owned.fixtures[cell.workload].operations));
+    for (const cell of profileCells()) report.summaries.push(summarizeCell(cell, report.samples.filter(item => item.cellId === cell.id), owned.fixtures[cell.workload].operations, admission));
     report.status = report.summaries.every(item => item.status === 'within-scoped-budgets') ? 'collected-needs-review' : 'budget-exceeded';
   } catch (error) {
+    if (error.quietEvidence) {
+      report.refusedQuietEvidence = error.quietEvidence;
+      if (report.lastAttempt && quietPhase) report.lastAttempt.quietEvidence[quietPhase] = error.quietEvidence;
+    }
     report.status = 'incomplete'; report.failures.push({ category: signal?.aborted ? 'aborted' : 'collection-failed', message: 'Collection stopped; retain driver diagnostics separately.' });
     await retain({ kind: 'failure', value: report });
     throw Object.assign(new Error('Profile collection stopped without qualification.', { cause: error }), { report });

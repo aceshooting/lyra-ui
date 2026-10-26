@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { createHash } from 'node:crypto';
 import { MEMORY_PHASES } from './memory-workload.mjs';
 import { memoryProfileSchedule, validateMemoryObservation, validateMemoryCycle, summarizeMemoryRun } from './memory-profile-results.mjs';
+import { reviewedQuietFixture } from './profile-reviewed.test-fixture.mjs';
 
 const observation = phase => ({ phase, gcPasses: 2, taskBetweenGcPasses: true,
   heap: { usedSize: 16 * 1024 * 1024, totalSize: 32 * 1024 * 1024, embedderHeapUsedSize: null, backingStorageSize: null },
@@ -12,6 +14,55 @@ const observation = phase => ({ phase, gcPasses: 2, taskBetweenGcPasses: true,
   externalArchiveBytes: ['released', 'disposed', 'restored'].includes(phase) ? 524288 : 0 });
 const cycle = number => ({ lifecycle: 'full-chat', runIndex: 0, cycle: number, regime: 'persistent', admission: number % 2 ? 'direct' : 'adapters',
   savedBytes: 524288, archiveSha256: 'a'.repeat(64), semanticAssertionsPassed: true, contaminated: false, observations: MEMORY_PHASES.map(phase => ({ ...observation(phase), protocolOwners: !phase.includes('disposed') && number % 2 === 0 ? 2 : 0 })) });
+
+function reviewedCycle(number) {
+  const { observer, receipt, receiptSource, receiptSha256 } = reviewedQuietFixture();
+  const evidence = { receiptSha256, receiptSource, contaminated: receipt.contaminated, receipt };
+  return { ...cycle(number), collectionId: receipt.collectionId, quietObserver: observer, admissionSha256: receipt.admissionSha256, contaminated: true,
+    quietEvidence: { before: evidence, after: structuredClone(evidence) }, preQuietSha256: receiptSha256, postQuietSha256: receiptSha256 };
+}
+
+test('memory cycles require explicit matching observer and collection evidence while retaining strict failure', () => {
+  const row = reviewedCycle(1), options = { quietObserver: row.quietObserver, collectionId: row.collectionId, admissionSha256: row.admissionSha256 };
+  assert.doesNotThrow(() => validateMemoryCycle(row, options));
+  assert.throws(() => validateMemoryCycle(row), /quiet profile/u);
+  assert.throws(() => validateMemoryCycle(row, { quietObserver: row.quietObserver }), /collection/u);
+  assert.throws(() => validateMemoryCycle(row, { ...options, admissionSha256: undefined }), /helper/u);
+  for (const mutate of [value => { value.contaminated = false; }, value => { value.quietEvidence.before.contaminated = false; },
+    value => { value.quietEvidence.after = null; }, value => { value.quietObserver.configSha256 = 'b'.repeat(64); },
+    value => { value.preQuietSha256 = 'e'.repeat(64); }, value => { value.admissionSha256 = '8'.repeat(64); },
+    value => { value.postQuietSha256 = 'e'.repeat(64); }, value => { value.observations[0].gcPasses = 1; },
+    value => { value.quietEvidence.after.receiptSource += ' '; },
+    value => { value.observations[0].heap.usedSize = 129 * 1024 * 1024; value.observations[0].heap.totalSize = 256 * 1024 * 1024; },
+  ]) {
+    const changed = structuredClone(row); mutate(changed); assert.throws(() => validateMemoryCycle(changed, options));
+  }
+  for (const [mutate, expected] of [
+    [receipt => { receipt.collectionId = 'another'; }, /Invalid reviewed live receipt/u],
+    [receipt => { receipt.admissionSha256 = '8'.repeat(64); receipt.precheck.admissionSha256 = '8'.repeat(64); }, /admission helper identity changed/u],
+  ]) {
+    const changed = structuredClone(row), after = changed.quietEvidence.after;
+    mutate(after.receipt);
+    after.receiptSource = `${JSON.stringify(after.receipt)}\n`;
+    after.receiptSha256 = createHash('sha256').update(after.receiptSource).digest('hex');
+    changed.postQuietSha256 = after.receiptSha256;
+    assert.throws(() => validateMemoryCycle(changed, options), expected);
+  }
+});
+
+test('memory summaries cannot pool observer scopes, configurations or collections', () => {
+  const rows = Array.from({ length: 40 }, (_, index) => reviewedCycle(index + 1));
+  const options = { quietObserver: rows[0].quietObserver, collectionId: rows[0].collectionId, admissionSha256: rows[0].admissionSha256 };
+  const result = summarizeMemoryRun(rows, options);
+  assert.equal(result.withinBudget, true); assert.deepEqual(result.quietObserver, options.quietObserver);
+  assert.equal(result.collectionId, options.collectionId); assert.equal(rows.every(row => row.contaminated), true);
+  assert.equal(result.admissionSha256, options.admissionSha256);
+  assert.throws(() => summarizeMemoryRun(rows));
+  for (const replacement of [cycle(20), { ...reviewedCycle(20), collectionId: 'another' },
+    { ...reviewedCycle(20), quietObserver: { ...options.quietObserver, configSha256: 'b'.repeat(64) } },
+    { ...reviewedCycle(20), admissionSha256: '8'.repeat(64) },
+  ]) assert.throws(() => summarizeMemoryRun(rows.map((row, index) => index === 19 ? replacement : row), options));
+});
 
 test('fixed memory schedule has 240 persistent cycles, 30 fresh controls and parity ordering', () => {
   const schedule = memoryProfileSchedule();

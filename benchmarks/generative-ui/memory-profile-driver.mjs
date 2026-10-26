@@ -5,9 +5,10 @@ import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { validateMemoryObservation } from './memory-profile-results.mjs';
-import { validateNativeAction, profileBuildInventory, profileSourceIdentity, checkFreshQuietReceipt, definitionDigest } from './profile-driver.mjs';
+import { validateNativeAction, profileBuildInventory, profileSourceIdentity, quietEvidenceFromBytes, definitionDigest } from './profile-driver.mjs';
 import { memoryProfilePlan, validateMemoryManifest, runMemoryProfile } from './memory-profile.mjs';
 import { writeProfileRecord } from './profile.mjs';
+import { validateQuietObserver } from './profile-admission.mjs';
 
 const require = (condition, message) => { if (!condition) throw new TypeError(message); };
 const invoke = (owner, method, value) => owner.page.evaluate(({ method, value }) => window.__memoryProfile[method](value), { method, value });
@@ -39,7 +40,7 @@ export function validateMemorySmokeManifest(value) {
     && value.lifecycles.every(item => ['full-chat', 'full-dashboard'].includes(item)), 'Explicit unique memory lifecycle inventory is required.');
   require(Array.isArray(value.admissions) && value.admissions.length > 0 && new Set(value.admissions).size === value.admissions.length
     && value.admissions.every(item => ['direct', 'adapters'].includes(item)) && typeof value.includeX === 'boolean', 'Explicit unique admission inventory and X choice are required.');
-  require(value.configuration === undefined && value.collectionId === undefined && value.samples === undefined, 'Correctness smoke cannot authorize a memory campaign.');
+  require(value.configuration === undefined && value.collectionId === undefined && value.samples === undefined && value.quietObserver === undefined, 'Correctness smoke cannot authorize a memory campaign.');
 }
 export function parseMemoryOptions(args, { functional = false } = {}) {
   const names = ['manifest', 'archive', 'build-manifest', 'output', ...(functional ? [] : ['quiet'])], options = {};
@@ -63,6 +64,9 @@ async function runtimeIdentity(esbuildVersion) {
 
 /** Preflight bundles authored fixtures without launching a browser or authorizing collection. */
 export async function memoryAuthorizationDraft(options, { functional = false } = {}) {
+  validateQuietObserver(options.quietObserver);
+  require(!functional || options.quietObserver === undefined, 'Correctness smoke has no quiet observer admission.');
+  const quietObserver = options.quietObserver === undefined ? undefined : structuredClone(options.quietObserver);
   const { prepareProfileHost } = await import('./profile-host.mjs'), { chromium } = await import('playwright');
   const prepared = await prepareProfileHost({ fixtureDirectory, hostModules });
   try {
@@ -71,12 +75,12 @@ export async function memoryAuthorizationDraft(options, { functional = false } =
       candidate: await candidateIdentity(options), browser: { engine: 'chromium', executableSha256: hash(await readFile(chromium.executablePath())) },
       fixtureBuild: prepared.fixtureBuild, environment: await runtimeIdentity(prepared.esbuildVersion),
       ...(functional ? { lifecycles: ['full-chat', 'full-dashboard'], admissions: ['direct', 'adapters'], includeX: true }
-        : { collectionId: options.collectionId, designSha256: options.designSha256, configuration: memoryProfilePlan() }) };
+        : { collectionId: options.collectionId, designSha256: options.designSha256, configuration: memoryProfilePlan(), ...(quietObserver ? { quietObserver } : {}) }) };
   } finally { await prepared.close(); }
 }
 
 export function createMemoryDriver(options, { functional = false } = {}) {
-  let owned, prepared, chromium, helpers;
+  let owned, prepared, chromium, helpers, admissionSha256;
   const processes = new Set();
   return {
     async verify(manifest) {
@@ -85,17 +89,18 @@ export function createMemoryDriver(options, { functional = false } = {}) {
       require(process.versions.node === '22.23.2', 'Use the pinned Node version.');
       require(same(await candidateIdentity(options), manifest.candidate) && await memoryProfileSourceIdentity() === manifest.sourceSha256, 'Memory source or candidate differs from authorization.');
       owned = structuredClone(manifest);
+      if (owned.quietObserver) admissionSha256 = hash(await readFile(join(here, 'profile-admission.mjs')));
       helpers = await import('./profile-host.mjs'); ({ chromium } = await import('playwright'));
       require(hash(await readFile(chromium.executablePath())) === owned.browser.executableSha256, 'Memory browser executable changed.');
       prepared = await helpers.prepareProfileHost({ fixtureDirectory, hostModules });
       const environment = await runtimeIdentity(prepared.esbuildVersion);
       require(same(prepared.fixtureBuild, owned.fixtureBuild) && same(environment, owned.environment), 'Memory fixture build or environment differs from authorization.');
-      return { candidate: owned.candidate, sourceSha256: owned.sourceSha256, fixtureBuild: prepared.fixtureBuild, environment };
+      return { candidate: owned.candidate, sourceSha256: owned.sourceSha256, fixtureBuild: prepared.fixtureBuild, environment,
+        ...(owned.quietObserver ? { quietObserver: owned.quietObserver, admissionSha256 } : {}) };
     },
     async checkQuiet() {
       require(owned && !functional, 'Quiet evidence belongs to an authorized memory campaign.');
-      const bytes = await readFile(options.quiet); checkFreshQuietReceipt(JSON.parse(bytes), owned.collectionId);
-      return { contaminated: false, receiptSha256: hash(bytes) };
+      return quietEvidenceFromBytes(await readFile(options.quiet), owned.collectionId, { quietObserver: owned.quietObserver, admissionSha256 });
     },
     async openProcess(identity) {
       require(prepared && owned && !identity.signal?.aborted, 'Memory process needs verified artifacts and active ownership.');
@@ -209,7 +214,7 @@ export async function runMemoryX(owner, { collect = true, fixtureSha256 } = {}) 
 }
 
 export async function runMemoryCycle(owner, task, { collect = true } = {}) {
-  const row = { method: collect ? 'two-gc-memory-profile' : 'memory-semantic-smoke', ...Object.fromEntries(['lifecycle', 'runIndex', 'cycle', 'regime', 'admission'].map(key => [key, task[key]])), observations: [], contaminated: false };
+  const row = { method: collect ? 'two-gc-memory-profile' : 'memory-semantic-smoke', ...Object.fromEntries(['lifecycle', 'runIndex', 'cycle', 'regime', 'admission'].map(key => [key, task[key]])), observations: [] };
   owner.currentAttempt = row;
   const call = async (method, value) => { row.lastCommand = method; return invoke(owner, method, value); };
   const nativeStage = async stage => {

@@ -1,11 +1,19 @@
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { test } from 'node:test';
-import { observeMemoryProcess, runMemoryCycle, runMemoryX, withMemoryProfileSignals } from './memory-profile-driver.mjs';
+import { observeMemoryProcess, runMemoryCycle, runMemoryX, withMemoryProfileSignals, validateMemorySmokeManifest } from './memory-profile-driver.mjs';
 import { memoryProfilePlan, runMemoryProfile } from './memory-profile.mjs';
-import { validateMemoryCycle } from './memory-profile-results.mjs';
+import { validateMemoryCycleSemantics } from './memory-profile-results.mjs';
+import { reviewedQuietFixture } from './profile-reviewed.test-fixture.mjs';
 
 const signals = ['SIGINT', 'SIGTERM'];
+test('correctness-only memory authorization cannot carry observer admission', () => {
+  const digest = 'a'.repeat(64), value = { schemaVersion: 1, kind: 'memory-functional-smoke', authorized: true,
+    sourceSha256: digest, compositionSha256: digest, candidate: { archiveSha256: digest, lockfileSha256: digest, buildSha256: digest },
+    browser: { engine: 'chromium', executableSha256: digest }, lifecycles: ['full-chat'], admissions: ['direct'], includeX: false };
+  assert.doesNotThrow(() => validateMemorySmokeManifest(value));
+  assert.throws(() => validateMemorySmokeManifest({ ...value, quietObserver: reviewedQuietFixture().observer }), /smoke/u);
+});
 for (const name of signals) test(`${name} aborts the memory runner, retains failure and closes owned resources`, async () => {
   const source = new EventEmitter(), retained = [], closed = [];
   const prior = () => {}; for (const signal of signals) source.on(signal, prior);
@@ -103,7 +111,8 @@ test('observation releases handles and requests exactly two GC passes with an in
 test('five phases bracket exact native actions, one external archive and truthful first disposal', async () => {
   const process = owner();
   const row = await runMemoryCycle(process, { lifecycle: 'full-chat', runIndex: 0, cycle: 2, regime: 'persistent', admission: 'adapters' });
-  assert.doesNotThrow(() => validateMemoryCycle(row));
+  assert.doesNotThrow(() => validateMemoryCycleSemantics(row));
+  assert.equal('contaminated' in row, false, 'application counters cannot assert an unobserved quiet result');
   assert.equal(process.trace.filter(item => item === 'HeapProfiler.collectGarbage').length, 10);
   for (const id of ['edit', 'first', 'second']) assert.ok(process.trace.indexOf(`armNative:${id}`) < process.trace.indexOf(`native:#${id}`)
     && process.trace.indexOf(`native:#${id}`) < process.trace.indexOf(`completeNative:${id}`));

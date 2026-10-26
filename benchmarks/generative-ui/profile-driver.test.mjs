@@ -1,7 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { runInNewContext } from 'node:vm';
-import { fixtureModuleFor, validateNativeAction, requestAllowed, validateControlProbe, definitionDigest, parseDriverOptions, checkFreshQuietReceipt, requireFixtureModules, createProfileDriver, profileInputKey, prepareBrowserFixture, beginProfileObservation } from './profile-driver.mjs';
+import { fixtureModuleFor, validateNativeAction, requestAllowed, validateControlProbe, definitionDigest, parseDriverOptions, checkFreshQuietReceipt, quietEvidenceFromBytes, profileHarnessIdentity, requireFixtureModules, createProfileDriver, profileInputKey, prepareBrowserFixture, beginProfileObservation } from './profile-driver.mjs';
+import { createHash } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import { reviewedQuietFixture } from './profile-reviewed.test-fixture.mjs';
+import { validateQuietEvidence } from './profile-admission.mjs';
 
 test('workloads have closed module routes and cannot select arbitrary modules', () => {
   assert.equal(fixtureModuleFor('T'), 'workloads/text.js');
@@ -40,6 +44,13 @@ test('definition digest is canonical but distinguishes semantic inventories', ()
   assert.notEqual(definitionDigest({ sizes: { rows: 100 } }), definitionDigest({ sizes: { rows: 200 } }));
 });
 
+test('current timing harness identity binds the admission helper bytes', async () => {
+  const identity = await profileHarnessIdentity();
+  const helper = await readFile(new URL('./profile-admission.mjs', import.meta.url));
+  assert.equal(identity.admissionSha256, createHash('sha256').update(helper).digest('hex'));
+  assert.deepEqual(Object.keys(identity).sort(), ['admissionSha256', 'driverSha256', 'measurementSha256', 'resultsSha256', 'runnerSha256']);
+});
+
 test('collection CLI requires all explicit artifact/authorization receipts and rejects duplicate flags', () => {
   const flags = ['manifest', 'quiet', 'controls', 'archive', 'build-manifest', 'output'].map(key => `--${key}=fixture-${key}`);
   assert.equal(parseDriverOptions(flags).manifest, 'fixture-manifest');
@@ -55,6 +66,39 @@ test('quiet receipt is collection-bound and must be refreshed, never reused inde
   assert.throws(() => checkFreshQuietReceipt(receipt, 'other', 2000));
   assert.throws(() => checkFreshQuietReceipt(receipt, 'case', 7000));
   assert.throws(() => checkFreshQuietReceipt(receipt, 'case', 999));
+  assert.throws(() => checkFreshQuietReceipt({ ...receipt, admission: { profile: 'reviewed-idle-service-v1', accepted: true } }, 'case', 2000));
+  assert.throws(() => checkFreshQuietReceipt({ ...receipt, kind: 'reviewed-idle-service-live-receipt' }, 'case', 2000));
+  assert.throws(() => checkFreshQuietReceipt({ ...receipt, contaminated: true }, 'case', 2000));
+});
+
+test('reviewed live bytes retain actual strict failure, exact digest and explicit fresh collection scope', () => {
+  const { observer, receipt } = reviewedQuietFixture(), source = ` \n${JSON.stringify(receipt, null, 2)}\n\t`, bytes = Buffer.from(source);
+  const options = { now: 120001, quietObserver: observer, admissionSha256: receipt.admissionSha256 };
+  const evidence = quietEvidenceFromBytes(bytes, receipt.collectionId, options);
+  assert.equal(evidence.receiptSha256, createHash('sha256').update(bytes).digest('hex'));
+  assert.equal(evidence.receiptSource, source);
+  assert.equal(evidence.contaminated, true); assert.deepEqual(evidence.receipt.failures, ['unrelated-workload', 'process-observation-incomplete']);
+  assert.equal(evidence.receipt.observationComplete, false); assert.equal(evidence.receipt.admission.accepted, true);
+  for (const invalid of [{ now: 125001, quietObserver: observer }, { now: 119999, quietObserver: observer },
+    { now: 120001 }, { ...options, admissionSha256: '8'.repeat(64) }, { now: 120001, quietObserver: { ...observer, configSha256: 'f'.repeat(64) } }]) {
+    assert.throws(() => quietEvidenceFromBytes(bytes, receipt.collectionId, invalid));
+  }
+  assert.throws(() => quietEvidenceFromBytes(bytes, 'different-collection', { now: 120001, quietObserver: observer }));
+  const changed = structuredClone(receipt); changed.admission.services[0].lastCpuTicks = '26';
+  const refusedBytes = Buffer.from(`${JSON.stringify(changed)}\n`);
+  assert.throws(() => quietEvidenceFromBytes(refusedBytes, receipt.collectionId, { now: 120001, quietObserver: observer }), error => {
+    assert.equal(error.quietEvidence.receiptSha256, createHash('sha256').update(refusedBytes).digest('hex'));
+    assert.equal(error.quietEvidence.receiptSource, refusedBytes.toString('utf8'));
+    assert.equal(error.quietEvidence.contaminated, true); assert.deepEqual(error.quietEvidence.receipt, changed); return true;
+  });
+  assert.throws(() => quietEvidenceFromBytes(Buffer.from('{'), receipt.collectionId, { now: 120001, quietObserver: observer }), error => error.quietEvidence === undefined);
+  const lossy = Buffer.concat([Buffer.from('{"value":"'), Buffer.from([255]), Buffer.from('"}')]);
+  assert.throws(() => quietEvidenceFromBytes(lossy, receipt.collectionId, options), /lossless UTF8/u);
+  const edited = structuredClone(evidence); edited.receipt.meanCpuBusyFraction = .02;
+  assert.throws(() => validateQuietEvidence(edited, observer, { collectionId: receipt.collectionId, admissionSha256: receipt.admissionSha256 }), /source bytes/u);
+  assert.throws(() => validateQuietEvidence({ ...evidence, receiptSource: evidence.receiptSource.trim() }, observer), /source bytes/u);
+  assert.doesNotThrow(() => checkFreshQuietReceipt(receipt, receipt.collectionId, 120001, observer, receipt.admissionSha256));
+  assert.throws(() => checkFreshQuietReceipt(receipt, receipt.collectionId, 120001, observer, '8'.repeat(64)), /helper identity/u);
 });
 
 test('missing fixture modules fail before resolving build dependencies or starting a browser', async () => {

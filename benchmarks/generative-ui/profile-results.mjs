@@ -1,4 +1,6 @@
 /** Offline measurement contracts. A scoped numeric summary is never release qualification. */
+import { validateQuietObserver, validateQuietEvidence } from './profile-admission.mjs';
+
 export const PROFILE_WORKLOADS = Object.freeze(['T', 'C', 'L', 'V', 'X', 'D', 'S', 'R', 'A', 'K']);
 export const PROFILE_ENGINES = Object.freeze(['chromium', 'firefox', 'webkit']);
 export const PROFILE_METHOD = 'semantic-commit-two-frame-opportunities-v1';
@@ -66,9 +68,22 @@ export function maximumCls(entries) {
   }
   return maximum;
 }
-export function validateSample(sample, cell, descriptors, { warmup = false } = {}) {
+export function validateSample(sample, cell, descriptors, { warmup = false, quietObserver, collectionId, admissionSha256 } = {}) {
   validateCell(cell); validateCapabilities(sample?.capabilities);
-  require(sample.schemaVersion === 1 && sample.cellId === cell.id && sample.warmup === warmup && sample.contaminated === false, 'Wrong sample identity, warmup or contamination.');
+  require(sample.schemaVersion === 1 && sample.cellId === cell.id && sample.warmup === warmup, 'Wrong sample identity or warmup.');
+  validateQuietObserver(quietObserver);
+  validateQuietObserver(sample.quietObserver);
+  require(sample.quietObserver?.profile === quietObserver?.profile && sample.quietObserver?.configSha256 === quietObserver?.configSha256, 'Sample observer differs from the explicit validation scope.');
+  if (quietObserver) require(nonempty(collectionId) && sample.collectionId === collectionId
+    && typeof admissionSha256 === 'string' && /^[a-f0-9]{64}$/u.test(admissionSha256) && sample.admissionSha256 === admissionSha256, 'Reviewed sample collection and helper identities are required.');
+  if (quietObserver || sample.quietEvidence !== undefined) {
+    const evidence = sample.quietEvidence;
+    require(evidence?.before && evidence.after, 'Both sample quiet observations are required.');
+    validateQuietEvidence(evidence.before, quietObserver, { collectionId, admissionSha256 });
+    validateQuietEvidence(evidence.after, quietObserver, { collectionId, admissionSha256 });
+    require(sample.contaminated === (evidence.before.contaminated || evidence.after.contaminated)
+      && sample.quietReceiptSha256 === evidence.after.receiptSha256, 'Sample raw contamination or receipt identity changed.');
+  } else require(sample.contaminated === false, 'Strict sample was contaminated.');
   require(Number.isInteger(sample.batchIndex) && [0, 1].includes(sample.batchIndex), 'Invalid sample batch.');
   require(Number.isInteger(sample.sampleIndex) && (warmup ? sample.sampleIndex >= -3 && sample.sampleIndex < 0 : sample.sampleIndex >= sample.batchIndex * 30 && sample.sampleIndex < (sample.batchIndex + 1) * 30), 'Invalid sample index.');
   require(Array.isArray(descriptors) && descriptors.length > 0 && new Set(descriptors.map(item => item.id)).size === descriptors.length, 'Operation inventory is missing or duplicated.');
@@ -126,8 +141,8 @@ export function operationBudget(cell, descriptor) {
   return descriptor.kind === 'ready' ? (cell.temperature === 'cold' ? (large ? 2000 : 1000) : (large ? 500 : 250))
     : descriptor.kind === 'delayed' ? 250 : (large ? 200 : 100);
 }
-export function sampleBudgetViolations(sample, cell, descriptors) {
-  validateSample(sample, cell, descriptors, { warmup: sample.warmup });
+export function sampleBudgetViolations(sample, cell, descriptors, options = {}) {
+  validateSample(sample, cell, descriptors, { ...options, warmup: sample.warmup });
   const violations = sample.operations.flatMap((operation, index) => operation.renderOpportunity - operation.start > operationBudget(cell, descriptors[index]) ? [`operation:${operation.id}`] : []);
   if (sample.observers.layoutShifts !== null && maximumCls(sample.observers.layoutShifts) > .1) violations.push('cls');
   if (sample.observers.longTasks?.some(entry => entry.duration > (['L', 'X'].includes(cell.workload) ? 400 : 200))) violations.push('longtask');
@@ -136,7 +151,7 @@ export function sampleBudgetViolations(sample, cell, descriptors) {
 export function summarizeCell(cell, samples, descriptors, options = {}) {
   require(Array.isArray(samples) && samples.length === 60, 'A cell requires exactly sixty measured samples.');
   const indices = new Set();
-  for (const sample of samples) { validateSample(sample, cell, descriptors); require(!indices.has(sample.sampleIndex), 'Duplicate sample.'); indices.add(sample.sampleIndex); }
+  for (const sample of samples) { validateSample(sample, cell, descriptors, { quietObserver: options.quietObserver, collectionId: options.collectionId, admissionSha256: options.admissionSha256 }); require(!indices.has(sample.sampleIndex), 'Duplicate sample.'); indices.add(sample.sampleIndex); }
   for (const name of ['longtask', 'layoutShift']) require(samples.every(sample => sample.capabilities[name].supported === samples[0].capabilities[name].supported), 'Instrument capability changed inside a cell.');
   let within = true;
   const operations = Object.fromEntries(descriptors.map((descriptor, index) => {
@@ -152,7 +167,8 @@ export function summarizeCell(cell, samples, descriptors, options = {}) {
   const longTaskCeilingMs = ['L', 'X'].includes(cell.workload) ? 400 : 200;
   if (cls) within &&= cls.every(value => value <= .1);
   if (longTasks) within &&= longTasks.every(entry => entry.duration <= longTaskCeilingMs);
-  return { cellId: cell.id, status: within ? 'within-scoped-budgets' : 'budget-exceeded', operations, cls,
+  return { cellId: cell.id, status: within ? 'within-scoped-budgets' : 'budget-exceeded',
+    ...(options.quietObserver ? { quietObserver: options.quietObserver, collectionId: options.collectionId, admissionSha256: options.admissionSha256 } : {}), operations, cls,
     longTasks: longTasks === null ? null : { count: longTasks.length, maxMs: Math.max(0, ...longTasks.map(entry => entry.duration)), ceilingMs: longTaskCeilingMs },
     uncertainty: 'Empirical maximum and seeded bootstrap upper p95; no independent-sample population or physical-paint claim.' };
 }

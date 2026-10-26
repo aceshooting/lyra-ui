@@ -6,6 +6,7 @@ import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
+import { validateObserverConfig, validateQuietObserver, reviewedAdmissionFailures, parseObserverConfigBytes, validateObserverConfigSource } from './profile-admission.mjs';
 
 const require = (condition, message) => { if (!condition) throw new Error(message); };
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -55,7 +56,7 @@ export function parseProcessStat(source) {
   const pid = Number(source.slice(0, left).trim()), fields = source.slice(right + 1).trim().split(/\s+/u);
   require(Number.isSafeInteger(pid) && pid > 0 && fields.length >= 20 && /^[A-Za-z]$/u.test(fields[0]), 'Invalid process stat fields.');
   const ppid = Number(fields[1]); require(Number.isSafeInteger(ppid) && ppid >= 0, 'Invalid parent PID.');
-  return { pid, ppid, comm: source.slice(left + 1, right), state: fields[0], cpuTicks: uint(fields[11]) + uint(fields[12]), startTimeTicks: uint(fields[19]) };
+  return { pid, ppid, comm: source.slice(left + 1, right), state: fields[0], cpuTicks: uint(fields[11]) + uint(fields[12]), startTimeTicks: uint(fields[19]), flags: uint(fields[6]), kernelThread: (uint(fields[6]) & 0x00200000n) !== 0n };
 }
 export function workloadLabels(comm, commandLine = '') {
   const text = `${comm}\n${commandLine.replaceAll('\0', ' ')}`;
@@ -103,7 +104,7 @@ export function createOwnershipTracker({ bootId, roots }) {
     },
   };
 }
-export function intervalObservation(previous, current, { hz, ownedBefore, ownedAfter }) {
+export function intervalObservation(previous, current, { hz, ownedBefore, ownedAfter, observerConfig }) {
   require(Number.isSafeInteger(hz) && hz > 0 && previous.bootId === current.bootId && previous.cpu.cpuIds === current.cpu.cpuIds, 'Clock frequency, boot or CPU inventory changed.');
   const seconds = Number(current.monotonicNs - previous.monotonicNs) / 1e9;
   require(seconds > 0 && seconds <= 1.5, 'Process observation interval is missing or delayed.');
@@ -116,19 +117,20 @@ export function intervalObservation(previous, current, { hz, ownedBefore, ownedA
     const ticks = same ? process.cpuTicks - before.cpuTicks : process.cpuTicks;
     require(ticks >= 0n, 'Process CPU counter reset.');
     const owned = ownedAfter.has(identity(process));
-    if (!same && process.startTimeTicks < previous.uptimeTicks) coverageIssues.push({ kind: 'previous-process-observation-missing', pid: process.pid, startTimeTicks: String(process.startTimeTicks) });
+    if (!same && process.startTimeTicks < previous.uptimeTicks) coverageIssues.push({ kind: 'previous-process-observation-missing', pid: process.pid, startTimeTicks: String(process.startTimeTicks), comm: process.comm, labels: process.labels, flags: String(process.flags ?? 0n), kernelThread: process.kernelThread === true });
     const processSeconds = same ? Number(process.readMonotonicNs - before.readMonotonicNs) / 1e9 : seconds;
     require(processSeconds > 0 && processSeconds <= 1.75, 'Process read interval is missing or delayed.');
     const cpuFractionOfOneCore = Number(ticks) / hz / processSeconds;
-    const entry = { pid: process.pid, startTimeTicks: String(process.startTimeTicks), comm: process.comm, owned, observedSeconds: processSeconds, cpuTicks: String(ticks), previousCpuTicks: same ? String(before.cpuTicks) : null, currentCpuTicks: String(process.cpuTicks), cpuFractionOfOneCore, labels: process.labels };
+    const entry = { pid: process.pid, startTimeTicks: String(process.startTimeTicks), comm: process.comm, owned, observedSeconds: processSeconds, cpuTicks: String(ticks), previousCpuTicks: same ? String(before.cpuTicks) : null, currentCpuTicks: String(process.cpuTicks), cpuFractionOfOneCore, labels: process.labels, flags: String(process.flags ?? 0n), kernelThread: process.kernelThread === true };
     processes.push(entry);
     if (!owned && process.labels.length) unrelatedWorkloads.push({ pid: process.pid, startTimeTicks: entry.startTimeTicks, comm: process.comm, labels: process.labels });
   }
   for (const process of previous.processes.values()) {
     const after = current.processes.get(process.pid);
-    if ((!after || after.startTimeTicks !== process.startTimeTicks) && !ownedBefore.has(identity(process))) coverageIssues.push({ kind: 'unrelated-exit-final-cpu-unobserved', pid: process.pid, startTimeTicks: String(process.startTimeTicks), comm: process.comm, labels: process.labels });
+    if ((!after || after.startTimeTicks !== process.startTimeTicks) && !ownedBefore.has(identity(process))) coverageIssues.push({ kind: 'unrelated-exit-final-cpu-unobserved', pid: process.pid, startTimeTicks: String(process.startTimeTicks), comm: process.comm, labels: process.labels, flags: String(process.flags ?? 0n), kernelThread: process.kernelThread === true });
   }
   const unrelated = processes.filter(process => !process.owned);
+  const reviewed = observerConfig ? reviewedInterval(previous, current, processes, coverageIssues, observerConfig, ownedBefore, ownedAfter) : undefined;
   return { observedAt: current.observedAt, monotonicNs: String(current.monotonicNs), seconds, logicalCpus: current.cpu.logicalCpus,
     cpuTicks: { busy: String(busy), total: String(total) }, cpuBusyFraction: Number(busy) / Number(total),
     normalizedOneMinuteLoad: current.load.normalizedOneMinuteLoad, oneMinuteLoad: current.load.oneMinute,
@@ -139,7 +141,7 @@ export function intervalObservation(previous, current, { hz, ownedBefore, ownedA
     concurrentTaskWorkloads: unrelatedWorkloads.length > 0, unrelatedWorkloads, coverageIssues,
     processesSeen: processes.length, ownedProcessesSeen: processes.length - unrelated.length,
     newOwnedProcesses: [...current.processes.values()].filter(process => ownedAfter.has(identity(process)) && !ownedBefore.has(identity(process))).map(process => ({ pid: process.pid, ppid: process.ppid, startTimeTicks: String(process.startTimeTicks), ...ownedAfter.get(identity(process)) })),
-    busiestUnrelated: unrelated.sort((a, b) => b.cpuFractionOfOneCore - a.cpuFractionOfOneCore).slice(0, 5) };
+    busiestUnrelated: unrelated.sort((a, b) => b.cpuFractionOfOneCore - a.cpuFractionOfOneCore).slice(0, 5), ...(reviewed ? { reviewed } : {}) };
 }
 export function windowMetrics(samples) {
   require(Array.isArray(samples) && samples.length === 60, 'A quiet window requires exactly sixty retained intervals.');
@@ -172,11 +174,11 @@ export function validateReview(review, { precheck, precheckSha256, ownershipSha2
   require(precheck.kind === 'quiet-precheck' && precheck.inspected === false && precheck.requestedSeconds === 60 && precheck.intervals === 60 && precheck.metrics.seconds >= 60 && precheck.metrics.seconds <= 61 && hash(precheck.sampleSha256) && ruleFailures(precheck.metrics, { precheck: true }).length === 0, 'Historical precheck is incomplete or failed.');
   return review;
 }
-export function makeReceipt({ collectionId, samples, precheck, precheckSha256, review, reviewSha256, ownershipSha256 }) {
+export function makeReceipt({ collectionId, samples, precheck, precheckSha256, review, reviewSha256, ownershipSha256, admissionSha256 }) {
   const metrics = windowMetrics(samples), failures = ruleFailures(metrics);
   const approved = Boolean(review);
   if (approved) { validateReview(review, { precheck, precheckSha256, ownershipSha256 }); require(hash(reviewSha256), 'Missing review artifact digest.'); }
-  return { schemaVersion: 1, kind: 'quiet-live-receipt', collectionId, observedAt: samples.at(-1).observedAt,
+  return { schemaVersion: 1, kind: 'quiet-live-receipt', collectionId, ...(admissionSha256 ? { admissionSha256 } : {}), observedAt: samples.at(-1).observedAt,
     inspected: approved && metrics.observationComplete, sha256: precheckSha256, ...metrics,
     concurrentTaskWorkloads: metrics.concurrentTaskWorkloads, contaminated: failures.length > 0, failures,
     semantics: { cpu: 'current-rolling-sixty-second-total-host-busy-including-owned', load: 'current-total-host-one-minute-load-per-logical-cpu',
@@ -186,11 +188,96 @@ export function makeReceipt({ collectionId, samples, precheck, precheckSha256, r
     live: { firstObservedAt: samples[0].observedAt, lastObservedAt: samples.at(-1).observedAt, intervals: 60, ownedCpuFractionOfOneCore: samples.at(-1).ownedCpuFractionOfOneCore }, ownershipSha256 };
 }
 
+function exactIdleIdentity(process, expected, owned) {
+  return Boolean(process && process.pid === expected.pid && String(process.startTimeTicks) === expected.startTimeTicks
+    && process.comm === expected.comm && process.cmdlineSha256 === expected.cmdlineSha256
+    && process.kernelThread === false && typeof process.flags === 'bigint' && (process.flags & 0x00200000n) === 0n && !owned.has(identity(process)));
+}
+export function validateObserverBaseline(snapshot, owned, config) {
+  validateObserverConfig(config);
+  require(snapshot.bootId === config.bootId && config.idleServices.every(expected => exactIdleIdentity(snapshot.processes.get(expected.pid), expected, owned)), 'Reviewed idle service is missing, changed, kernel-owned or campaign-owned.');
+}
+function reviewedInterval(previous, current, processes, coverageIssues, config, ownedBefore, ownedAfter) {
+  require(previous.bootId === config.bootId && current.bootId === config.bootId, 'Reviewed observer boot changed.');
+  const services = config.idleServices.map(expected => {
+    const before = previous.processes.get(expected.pid), after = current.processes.get(expected.pid);
+    const matched = exactIdleIdentity(before, expected, ownedBefore) && exactIdleIdentity(after, expected, ownedAfter);
+    const delta = before && after && before.startTimeTicks === after.startTimeTicks ? after.cpuTicks - before.cpuTicks : null;
+    return { identity: expected, owned: Boolean(before && ownedBefore.has(identity(before)) || after && ownedAfter.has(identity(after))), identityMatched: matched,
+      zeroCpu: matched && delta === 0n, previousCpuTicks: before ? String(before.cpuTicks) : null, currentCpuTicks: after ? String(after.cpuTicks) : null,
+      cpuTickDelta: delta === null ? null : String(delta), previousReadMonotonicNs: before ? String(before.readMonotonicNs) : null,
+      currentReadMonotonicNs: after ? String(after.readMonotonicNs) : null, observedCmdlineSha256: after?.cmdlineSha256 ?? null,
+      observedComm: after?.comm ?? null, observedStartTimeTicks: after ? String(after.startTimeTicks) : null, observedFlags: after ? String(after.flags) : null };
+  });
+  const userspace = processes.filter(process => !process.owned && !process.kernelThread);
+  return { services, idleServicesVerified: services.every(service => service.identityMatched && service.zeroCpu && !service.owned),
+    maxUnrelatedUserspaceProcessCpuFractionOfOneCore: Math.max(0, ...userspace.map(process => process.cpuFractionOfOneCore)),
+    unapprovedTaskWorkloads: userspace.some(process => process.labels.length > 0 && !services.some(service => service.identity.pid === process.pid && service.identityMatched && service.zeroCpu)),
+    userspaceObservationComplete: coverageIssues.every(issue => issue.kernelThread === true && (BigInt(issue.flags) & 0x00200000n) !== 0n),
+    kernelCoverageIssues: coverageIssues.filter(issue => issue.kernelThread === true && (BigInt(issue.flags) & 0x00200000n) !== 0n) };
+}
+export function reviewedWindowAdmission(samples, config, configSha256, { precheck = false, configSource } = {}) {
+  validateObserverConfigSource(config, configSource, configSha256);
+  validateQuietObserver({ profile: config.profile, configSha256, scope: config.scope });
+  const raw = windowMetrics(samples);
+  require(samples.every(row => row.reviewed && row.reviewed.services.length === config.idleServices.length), 'Missing reviewed per-interval evidence.');
+  const metrics = { maxUnrelatedUserspaceProcessCpuFractionOfOneCore: Math.max(...samples.map(row => row.reviewed.maxUnrelatedUserspaceProcessCpuFractionOfOneCore)),
+    unapprovedTaskWorkloads: samples.some(row => row.reviewed.unapprovedTaskWorkloads), userspaceObservationComplete: samples.every(row => row.reviewed.userspaceObservationComplete),
+    idleServicesVerified: samples.every(row => row.reviewed.idleServicesVerified) };
+  const services = config.idleServices.map((expected, index) => {
+    const proofs = samples.map(row => row.reviewed.services[index]);
+    require(proofs.every(proof => JSON.stringify(proof.identity) === JSON.stringify(expected)), 'Idle-service identity changed within the retained window.');
+    const deltas = proofs.map(proof => proof.cpuTickDelta === null ? null : BigInt(proof.cpuTickDelta));
+    return { identity: expected, owned: proofs.some(proof => proof.owned), observedIntervals: proofs.length,
+      zeroCpuIntervals: proofs.filter(proof => proof.zeroCpu).length, identityMatchedIntervals: proofs.filter(proof => proof.identityMatched).length,
+      firstCpuTicks: proofs[0].previousCpuTicks, lastCpuTicks: proofs.at(-1).currentCpuTicks,
+      maxCpuTickDelta: deltas.some(value => value === null) ? null : String(deltas.reduce((max, value) => value > max ? value : max, 0n)) };
+  });
+  const failures = reviewedAdmissionFailures(raw, metrics, { precheck });
+  return { profile: config.profile, configSha256, scope: config.scope, config, configSource, inspected: false, accepted: failures.length === 0, failures, metrics, services,
+    kernelCoverageIssues: samples.flatMap(row => row.reviewed.kernelCoverageIssues) };
+}
+export function validateReviewedReview(review, { precheck, precheckSha256, ownershipSha256, observerConfig, configSha256, admissionSha256 }) {
+  validateObserverConfig(observerConfig);
+  const expected = { profile: observerConfig.profile, configSha256, scope: observerConfig.scope };
+  validateQuietObserver(review?.quietObserver); require(review?.quietObserver !== undefined, 'Missing reviewed observer binding.');
+  require(review?.schemaVersion === 1 && review.kind === 'reviewed-idle-service-precheck-review' && review.inspected === true && review.decision === 'approved'
+    && review.collectionId === precheck.collectionId && review.precheckSha256 === precheckSha256 && review.ownershipSha256 === ownershipSha256
+    && hash(admissionSha256) && review.admissionSha256 === admissionSha256 && precheck.admissionSha256 === admissionSha256
+    && review.quietObserver.profile === expected.profile && review.quietObserver.configSha256 === expected.configSha256
+    && Number.isFinite(review.reviewedAt) && review.reviewedAt >= precheck.endedAt && hash(precheckSha256) && hash(ownershipSha256), 'A matching reviewed observer precheck authorization is required.');
+  require(precheck.kind === 'reviewed-idle-service-precheck' && precheck.inspected === false && precheck.requestedSeconds === 60 && precheck.intervals === 60
+    && precheck.metrics.seconds >= 60 && precheck.metrics.seconds <= 61 && hash(precheck.sampleSha256)
+    && precheck.collectionId === observerConfig.collectionId && precheck.admission?.profile === expected.profile && precheck.admission.configSha256 === configSha256 && precheck.admission.accepted === true
+    && JSON.stringify(precheck.admission.config) === JSON.stringify(observerConfig)
+    && reviewedAdmissionFailures(precheck.metrics, precheck.admission.metrics, { precheck: true }).length === 0, 'Reviewed observer precheck is incomplete or failed.');
+  validateObserverConfigSource(precheck.admission.config, precheck.admission.configSource, configSha256);
+  return review;
+}
+export function makeReviewedReceipt({ collectionId, samples, precheck, precheckSha256, review, reviewSha256, ownershipSha256, observerConfig, configSha256, configSource, admissionSha256 }) {
+  require(hash(admissionSha256), 'Missing observer admission helper identity.');
+  const metrics = windowMetrics(samples), failures = ruleFailures(metrics), admission = reviewedWindowAdmission(samples, observerConfig, configSha256, { configSource });
+  if (review) {
+    validateReviewedReview(review, { precheck, precheckSha256, ownershipSha256, observerConfig, configSha256, admissionSha256 });
+    require(hash(reviewSha256), 'Missing reviewed observer authorization digest.'); admission.inspected = true;
+  }
+  return { schemaVersion: 1, kind: 'reviewed-idle-service-live-receipt', collectionId, admissionSha256, bootId: observerConfig.bootId,
+    observedAt: samples.at(-1).observedAt, inspected: false, sha256: precheckSha256, ...metrics, contaminated: failures.length > 0, failures,
+    coverageIssues: samples.flatMap(row => row.coverageIssues), admission,
+    semantics: { cpu: 'current-rolling-total-host-including-owned-services-and-kernel', processCpu: 'all-unrelated-userspace',
+      coverage: 'sampled-userspace-with-explicit-kernel-gaps', inactivity: 'zero-observed-cpu-ticks-not-proof-of-no-io-or-gpu-work',
+      processCoverage: 'unseen-short-lived-between-poll-processes-are-not-proven-absent' },
+    precheck: { sha256: precheckSha256, startedAt: precheck.startedAt, endedAt: precheck.endedAt, inspected: Boolean(review),
+      reviewSha256: review ? reviewSha256 : null, configSha256, admissionSha256 },
+    live: { firstObservedAt: samples[0].observedAt, lastObservedAt: samples.at(-1).observedAt, intervals: 60,
+      ownedCpuFractionOfOneCore: samples.at(-1).ownedCpuFractionOfOneCore }, ownershipSha256 };
+}
+
 async function atomicJson(filename, value) {
   const temporary = `${filename}.tmp-${process.pid}-${randomUUID()}`;
   await writeFile(temporary, encode(value), { flag: 'wx', mode: 0o600 }); await rename(temporary, filename);
 }
-async function readSnapshot(hz) {
+async function readSnapshot(hz, observerConfig) {
   const monotonicStart = process.hrtime.bigint();
   const [statText, loadText, vmText, uptimeText, bootId, entries] = await Promise.all([
     readFile('/proc/stat', 'utf8'), readFile('/proc/loadavg', 'utf8'), readFile('/proc/vmstat', 'utf8'), readFile('/proc/uptime', 'utf8'),
@@ -202,10 +289,10 @@ async function readSnapshot(hz) {
     while (cursor < pids.length) {
       const pid = pids[cursor++];
       try {
-        const [firstText, commandLine] = await Promise.all([readFile(`/proc/${pid}/stat`, 'utf8'), readFile(`/proc/${pid}/cmdline`, 'utf8')]);
+        const [firstText, commandLine] = await Promise.all([readFile(`/proc/${pid}/stat`, 'utf8'), readFile(`/proc/${pid}/cmdline`)]);
         const first = parseProcessStat(firstText), second = parseProcessStat(await readFile(`/proc/${pid}/stat`, 'utf8'));
         require(first.pid === Number(pid) && first.startTimeTicks === second.startTimeTicks, 'PID was reused during sampling.');
-        processes.set(first.pid, { ...second, readMonotonicNs: process.hrtime.bigint(), labels: workloadLabels(second.comm, commandLine) });
+        processes.set(first.pid, { ...second, readMonotonicNs: process.hrtime.bigint(), labels: workloadLabels(second.comm, commandLine.toString('utf8')), ...(observerConfig?.idleServices.some(service => service.pid === first.pid) ? { cmdlineSha256: digest(commandLine) } : {}) });
       } catch (error) { if (error.code !== 'ENOENT' && error.code !== 'ESRCH') throw error; }
     }
   }));
@@ -214,20 +301,25 @@ async function readSnapshot(hz) {
   const uptime = Number(uptimeText.trim().split(/\s/u)[0]); require(Number.isFinite(uptime) && uptime >= 0, 'Invalid uptime.');
   return { bootId: bootId.trim(), monotonicNs, observedAt: Date.now(), cpu, load: parseLoadAverage(loadText, cpu.logicalCpus), swap: parseSwapCounters(vmText), uptimeTicks: BigInt(Math.floor(uptime * hz)), processes };
 }
-export async function runMonitor({ collectionId, ownershipPath, reviewPath, output, signal }) {
+export async function runMonitor({ collectionId, ownershipPath, reviewPath, observerConfigPath, output, signal }) {
   require(process.platform === 'linux' && process.versions.node === '22.23.2', 'Use Linux and exact Node22.23.2.');
   require(typeof collectionId === 'string' && /^[a-zA-Z0-9_-]{1,100}$/u.test(collectionId), 'Invalid collection identity.');
-  const toolSha256 = digest(await readFile(new URL(import.meta.url)));
+  const toolSha256 = digest(await readFile(new URL(import.meta.url))), admissionSha256 = digest(await readFile(new URL('./profile-admission.mjs', import.meta.url)));
   const ownershipBytes = await readFile(ownershipPath), ownership = JSON.parse(ownershipBytes), ownershipSha256 = digest(ownershipBytes);
   require(ownership.schemaVersion === 1 && ownership.collectionId === collectionId && ownership.monitorOwned === true && Array.isArray(ownership.roots) && ownership.roots.length > 0, 'Explicit campaign roots and monitor ownership are required.');
+  const configBytes = observerConfigPath ? await readFile(observerConfigPath) : undefined;
+  const parsedConfig = configBytes ? parseObserverConfigBytes(configBytes) : undefined;
+  const observerConfig = parsedConfig?.config, configSha256 = parsedConfig?.configSha256, configSource = parsedConfig?.configSource;
+  if (observerConfig) require(observerConfig.collectionId === collectionId, 'Observer configuration belongs to another collection.');
   const hz = Number(execFileSync('getconf', ['CLK_TCK'], { encoding: 'utf8' }).trim());
   require(Number.isSafeInteger(hz) && hz > 0, 'Invalid real CLK_TCK.');
   await mkdir(output, { recursive: false, mode: 0o700 });
-  let previous = await readSnapshot(hz), receipt, precheck, precheckSha256, review, reviewSha256;
+  let previous = await readSnapshot(hz, observerConfig), receipt, precheck, precheckSha256, review, reviewSha256;
   const self = previous.processes.get(process.pid); require(self, 'Monitor PID is missing.');
   const roots = [...ownership.roots, { pid: self.pid, startTimeTicks: String(self.startTimeTicks), role: 'quiet-monitor' }];
   const tracker = createOwnershipTracker({ bootId: previous.bootId, roots }); let ownedBefore = tracker.classify(previous);
-  const baseline = { collectionId, bootId: previous.bootId, startedAt: previous.observedAt, monotonicNs: String(previous.monotonicNs), hz, logicalCpus: previous.cpu.logicalCpus, roots, ownershipSha256, toolSha256,
+  if (observerConfig) validateObserverBaseline(previous, ownedBefore, observerConfig);
+  const baseline = { collectionId, bootId: previous.bootId, startedAt: previous.observedAt, monotonicNs: String(previous.monotonicNs), hz, logicalCpus: previous.cpu.logicalCpus, roots, ownershipSha256, toolSha256, admissionSha256, ...(observerConfig ? { quietObserver: { profile: observerConfig.profile, configSha256, scope: observerConfig.scope }, observerConfig } : {}),
     initialOwnedProcesses: [...previous.processes.values()].filter(process => ownedBefore.has(identity(process))).map(process => ({ pid: process.pid, ppid: process.ppid, startTimeTicks: String(process.startTimeTicks), ...ownedBefore.get(identity(process)) })) };
   await writeFile(join(output, 'baseline.json'), encode(baseline), { flag: 'wx', mode: 0o600 });
   await writeFile(join(output, 'samples.jsonl'), '', { flag: 'wx', mode: 0o600 });
@@ -238,27 +330,29 @@ export async function runMonitor({ collectionId, ownershipPath, reviewPath, outp
       tick++;
       const deadline = quietSnapshotDeadline({ epochNs, tick, oldestBoundaryNs: samples.length === 60 ? BigInt(samples[0].monotonicNs) : undefined });
       while (process.hrtime.bigint() < deadline) await delay(Math.max(1, Number(deadline - process.hrtime.bigint()) / 1e6), undefined, { signal });
-      const current = await readSnapshot(hz), ownedAfter = tracker.classify(current);
-      const row = intervalObservation(previous, current, { hz, ownedBefore, ownedAfter });
+      if (observerConfigPath) require(digest(await readFile(observerConfigPath)) === configSha256, 'Observer configuration changed during collection.');
+      const current = await readSnapshot(hz, observerConfig), ownedAfter = tracker.classify(current);
+      const row = intervalObservation(previous, current, { hz, ownedBefore, ownedAfter, observerConfig });
       const line = `${JSON.stringify(row)}\n`; await appendFile(join(output, 'samples.jsonl'), line); sampleDigest.update(line);
       samples.push(row); if (samples.length > 60) samples.shift();
       previous = current; ownedBefore = ownedAfter;
       if (tick < 60) continue;
       if (!precheck) {
-        precheck = { schemaVersion: 1, kind: 'quiet-precheck', collectionId, inspected: false, requestedSeconds: 60, intervals: 60,
-          startedAt: initialAt, endedAt: current.observedAt, metrics: windowMetrics(samples), sampleSha256: sampleDigest.copy().digest('hex'), ownershipSha256, toolSha256, bootId: current.bootId, roots };
+        precheck = { schemaVersion: 1, kind: observerConfig ? 'reviewed-idle-service-precheck' : 'quiet-precheck', collectionId, inspected: false, requestedSeconds: 60, intervals: 60,
+          startedAt: initialAt, endedAt: current.observedAt, metrics: windowMetrics(samples), sampleSha256: sampleDigest.copy().digest('hex'), ownershipSha256, toolSha256, admissionSha256, bootId: current.bootId, roots, ...(observerConfig ? { admission: reviewedWindowAdmission(samples, observerConfig, configSha256, { precheck: true, configSource }) } : {}) };
         const bytes = encode(precheck); await writeFile(join(output, 'precheck.json'), bytes, { flag: 'wx', mode: 0o600 }); precheckSha256 = digest(bytes);
-        require(ruleFailures(precheck.metrics, { precheck: true }).length === 0, 'The retained precheck failed; caller review cannot approve it.');
+        require((observerConfig ? precheck.admission.failures : ruleFailures(precheck.metrics, { precheck: true })).length === 0, 'The retained precheck failed; caller review cannot approve it.');
       }
       try {
         const bytes = await readFile(reviewPath), nextReview = JSON.parse(bytes);
-        validateReview(nextReview, { precheck, precheckSha256, ownershipSha256 });
+        if (observerConfig) validateReviewedReview(nextReview, { precheck, precheckSha256, ownershipSha256, observerConfig, configSha256, admissionSha256 });
+        else validateReview(nextReview, { precheck, precheckSha256, ownershipSha256 });
         if (reviewSha256) require(digest(bytes) === reviewSha256, 'Reviewed precheck authorization changed.');
         review = nextReview; reviewSha256 = digest(bytes);
       } catch (error) { if (error.code !== 'ENOENT' || review) throw error; }
-      receipt = makeReceipt({ collectionId, samples, precheck, precheckSha256, review, reviewSha256, ownershipSha256 });
+      receipt = (observerConfig ? makeReviewedReceipt : makeReceipt)({ collectionId, samples, precheck, precheckSha256, review, reviewSha256, ownershipSha256, observerConfig, configSha256, configSource, admissionSha256 });
       await atomicJson(join(output, 'receipt.json'), receipt);
-      require(!receipt.contaminated && receipt.observationComplete, 'Live quiet observation failed; monitor stops without suppressing evidence.');
+      require(observerConfig ? receipt.admission.accepted : !receipt.contaminated && receipt.observationComplete, 'Live quiet observation failed; monitor stops without suppressing evidence.');
     }
     if (signal?.aborted) throw new Error('Operator stopped monitor.');
   } catch (error) {
@@ -272,11 +366,11 @@ function options(args) {
   const values = {};
   require(args.includes('--run'), 'Explicit --run required. No monitor started.');
   for (const argument of args.filter(item => item !== '--run')) {
-    const match = /^--(collection|ownership|review|output)=(.+)$/u.exec(argument);
+    const match = /^--(collection|ownership|review|observer-config|output)=(.+)$/u.exec(argument);
     require(match && !Object.hasOwn(values, match[1]), 'Invalid or duplicate monitor option.'); values[match[1]] = match[2];
   }
   require(['collection', 'ownership', 'review', 'output'].every(key => values[key]), 'Supply collection, ownership, review and output.');
-  return { collectionId: values.collection, ownershipPath: values.ownership, reviewPath: values.review, output: values.output };
+  return { collectionId: values.collection, ownershipPath: values.ownership, reviewPath: values.review, observerConfigPath: values['observer-config'], output: values.output };
 }
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
   const controller = new AbortController(); const stop = () => controller.abort(); process.once('SIGINT', stop); process.once('SIGTERM', stop);

@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { MEMORY_PHASES } from './memory-workload.mjs';
 import { memoryProfilePlan, validateMemoryManifest, runMemoryProfile } from './memory-profile.mjs';
+import { reviewedQuietFixture } from './profile-reviewed.test-fixture.mjs';
+import { quietEvidenceFromBytes } from './profile-driver.mjs';
 
 const digest = 'a'.repeat(64);
 const manifest = () => ({ schemaVersion: 1, kind: 'memory-profile', authorized: true, collectionId: 'synthetic-contract-test',
@@ -16,12 +19,12 @@ const observation = phase => ({ phase, gcPasses: 2, taskBetweenGcPasses: true,
   controllerParts: phase.includes('disposed') ? 0 : 12, controllerIslands: phase.includes('disposed') ? 0 : 12,
   pendingOperations: 0, actions: phase === 'restored-disposed' ? 2 : 1, protocolOwners: 0, protocolSurfaces: phase.includes('disposed') || phase === 'baseline' ? 0 : 3,
   externalArchiveBytes: ['released', 'disposed', 'restored'].includes(phase) ? 1000 : 0 });
-function fakeDriver({ failCycle = false, invalidBaseline = false, failLargeX = false } = {}) {
-  const opened = [], closed = [], calls = [];
+function fakeDriver({ failCycle = false, invalidBaseline = false, failLargeX = false, quietEvidence } = {}) {
+  const opened = [], closed = [], calls = [], quietChecks = [];
   let driverClosed = false;
-  return { opened, closed, calls, get driverClosed() { return driverClosed; },
-    async verify() { calls.push('verify'); return { synthetic: true }; },
-    async checkQuiet() { return { contaminated: false, receiptSha256: digest }; },
+  return { opened, closed, calls, quietChecks, get driverClosed() { return driverClosed; },
+    async verify() { calls.push('verify'); return { synthetic: true, admissionSha256: reviewedQuietFixture().receipt.admissionSha256 }; },
+    async checkQuiet(identity) { quietChecks.push(identity); return structuredClone(quietEvidence ?? { contaminated: false, receiptSha256: digest }); },
     async openProcess(identity) {
       const processId = opened.length; opened.push(identity);
       return {
@@ -48,6 +51,116 @@ test('memory authorization cannot be replaced by timing permission or altered pr
   }
 });
 
+function reviewedEvidence(collectionId = 'synthetic-contract-test') {
+  const { observer, receipt, receiptSource, receiptSha256 } = reviewedQuietFixture(collectionId);
+  return { observer, evidence: { receiptSha256, receiptSource, contaminated: receipt.contaminated, receipt } };
+}
+
+test('memory observer admission is explicit and cannot alter the frozen lifecycle procedure', () => {
+  const { observer } = reviewedEvidence();
+  assert.doesNotThrow(() => validateMemoryManifest({ ...manifest(), quietObserver: observer }));
+  for (const patch of [{ profile: 'unknown' }, { configSha256: '' }, { scope: { ...observer.scope, coverage: 'all' } }, { cpuCeiling: .5 }])
+    assert.throws(() => validateMemoryManifest({ ...manifest(), quietObserver: { ...observer, ...patch } }));
+  const changed = { ...manifest(), quietObserver: observer };
+  changed.configuration.gcPasses = 1;
+  assert.throws(() => validateMemoryManifest(changed), /procedure/u);
+});
+
+test('reviewed memory evidence retains strict contamination at every actual boundary without changing the schedule', async () => {
+  const { observer, evidence } = reviewedEvidence(), driver = fakeDriver({ quietEvidence: evidence });
+  const frozenObserver = structuredClone(observer);
+  const retained = [], expected = { ...manifest(), quietObserver: observer };
+  driver.verify = async value => {
+    assert.equal(Object.isFrozen(value.quietObserver), true);
+    assert.equal(Object.isFrozen(value.quietObserver.scope), true);
+    expected.quietObserver.configSha256 = 'b'.repeat(64);
+    return { synthetic: true, admissionSha256: evidence.receipt.admissionSha256 };
+  };
+  const result = await runMemoryProfile(expected, driver, { retain: async row => { retained.push(structuredClone(row)); } });
+  assert.equal(result.status, 'collected-needs-review'); assert.equal(result.qualification, 'not-assessed');
+  assert.equal(result.cycles.length, 270); assert.equal(result.warmups.length, 18); assert.equal(result.baselines.length, 37);
+  assert.deepEqual(result.quietObserver, frozenObserver);
+  for (const record of [...result.cycles, ...result.warmups, result.largeX]) {
+    assert.equal(record.collectionId, expected.collectionId); assert.deepEqual(record.quietObserver, frozenObserver);
+    assert.equal(record.admissionSha256, result.artifacts.admissionSha256);
+    assert.equal(record.contaminated, true);
+    for (const boundary of ['before', 'after']) {
+      assert.deepEqual(record.quietEvidence[boundary], evidence);
+      assert.equal(record.quietEvidence[boundary].receipt.admission.accepted, true);
+      assert.equal(record.quietEvidence[boundary].receipt.observationComplete, false);
+      assert.equal(record.quietEvidence[boundary].receipt.concurrentTaskWorkloads, true);
+    }
+  }
+  for (const record of result.baselines) {
+    assert.deepEqual(record.quietEvidence.before, evidence);
+    assert.equal(record.quietEvidence.after, null, 'there is no post-baseline gate');
+    assert.equal(record.admissionSha256, result.artifacts.admissionSha256);
+    assert.equal(record.contaminated, true);
+  }
+  assert.equal(retained.filter(row => row.kind === 'cycle-attempt').length, 270);
+  assert.equal(retained.find(row => row.kind === 'cycle-attempt').value.quietEvidence.after, null);
+  assert.equal(result.summaries.every(row => row.quietObserver.configSha256 === frozenObserver.configSha256), true);
+  assert.equal(result.summaries.every(row => row.admissionSha256 === result.artifacts.admissionSha256), true);
+  assert.equal(driver.opened.length, 37); assert.equal(driver.closed.length, 37);
+  assert.equal(driver.quietChecks.length, 614, 'original gate locations and counts remain unchanged');
+});
+
+test('strict, different-configuration and different-collection memory receipts cannot cross-admit', async () => {
+  const { observer, evidence } = reviewedEvidence();
+  const activeService = structuredClone(evidence);
+  activeService.receipt.admission.services[0].lastCpuTicks = '26';
+  const wrongHelper = structuredClone(evidence);
+  wrongHelper.receipt.admissionSha256 = '8'.repeat(64); wrongHelper.receipt.precheck.admissionSha256 = '8'.repeat(64);
+  for (const synthetic of [activeService, wrongHelper]) {
+    synthetic.receiptSource = `${JSON.stringify(synthetic.receipt)}\n`;
+    synthetic.receiptSha256 = createHash('sha256').update(synthetic.receiptSource).digest('hex');
+  }
+  for (const [binding, quietEvidence] of [
+    [undefined, evidence],
+    [observer, { contaminated: false, receiptSha256: digest }],
+    [{ ...observer, configSha256: 'b'.repeat(64) }, evidence],
+    [observer, reviewedEvidence('another-collection').evidence],
+    [observer, activeService],
+    [observer, wrongHelper],
+  ]) {
+    const driver = fakeDriver({ quietEvidence }), retained = [];
+    await assert.rejects(runMemoryProfile({ ...manifest(), ...(binding ? { quietObserver: binding } : {}) }, driver,
+      { retain: async record => { retained.push(record); } }));
+    assert.equal(driver.opened.length, 0); assert.equal(driver.driverClosed, true);
+    assert.equal(retained.at(-1).kind, 'failure');
+    assert.deepEqual(retained.find(record => record.kind === 'quiet-attempt').value.evidence, quietEvidence);
+  }
+});
+
+test('reviewed memory collection refuses a driver without a verified helper digest', async () => {
+  const { observer, evidence } = reviewedEvidence(), driver = fakeDriver({ quietEvidence: evidence });
+  driver.verify = async () => ({ synthetic: true });
+  await assert.rejects(runMemoryProfile({ ...manifest(), quietObserver: observer }, driver, { retain: async () => {} }), error => /helper identity/u.test(error.cause.message));
+  assert.equal(driver.opened.length, 0); assert.equal(driver.quietChecks.length, 0); assert.equal(driver.driverClosed, true);
+});
+
+test('a refused post-cycle receipt retains its exact raw outcome and the preceding attempted cycle', async () => {
+  const { observer, evidence } = reviewedEvidence(), driver = fakeDriver({ quietEvidence: evidence });
+  const refused = structuredClone(evidence.receipt); refused.admission.services[0].lastCpuTicks = '26';
+  const bytes = Buffer.from(`${JSON.stringify(refused)}\n`), retained = [];
+  const check = driver.checkQuiet; let checks = 0;
+  driver.checkQuiet = async identity => {
+    if (++checks === 3) return quietEvidenceFromBytes(bytes, manifest().collectionId, { now: 120001, quietObserver: observer, admissionSha256: evidence.receipt.admissionSha256 });
+    return check(identity);
+  };
+  await assert.rejects(runMemoryProfile({ ...manifest(), quietObserver: observer }, driver, { retain: async record => { retained.push(record); } }), error => {
+    assert.equal(error.report.lastQuietAttempt.position, 'after');
+    assert.equal(error.report.lastQuietAttempt.evidence.receiptSha256, createHash('sha256').update(bytes).digest('hex'));
+    assert.deepEqual(error.report.lastQuietAttempt.evidence.receipt, refused);
+    assert.equal(error.report.lastQuietAttempt.evidence.contaminated, true);
+    assert.equal(error.report.warmups.length, 0); assert.equal(error.report.cycles.length, 0); return true;
+  });
+  const attempted = retained.find(record => record.kind === 'warmup-attempt').value;
+  assert.deepEqual(attempted.quietEvidence.before, evidence); assert.equal(attempted.quietEvidence.after, null);
+  assert.equal(checks, 3); assert.equal(driver.opened.length, 1); assert.equal(driver.closed.length, 1);
+  assert.equal(retained.at(-1).kind, 'failure');
+});
+
 test('collection CLI rejects invalid arguments without an import-cycle deadlock or browser work', () => {
   const result = spawnSync(process.execPath, [new URL('./memory-profile.mjs', import.meta.url).pathname, '--invalid'], { encoding: 'utf8', timeout: 5000 });
   assert.equal(result.status, 1); assert.equal(result.error, undefined); assert.match(result.stderr, /Explicit memory authorization/u);
@@ -59,6 +172,7 @@ test('injected runner executes fixed independent processes, excluded warmups and
   assert.equal(result.status, 'collected-needs-review'); assert.equal(result.cycles.length, 270); assert.equal(result.warmups.length, 18);
   assert.equal(result.baselines.length, 37); assert.equal(result.summaries.length, 6);
   assert.equal(driver.opened.length, 37); assert.equal(driver.closed.length, 37); assert.equal(driver.driverClosed, true);
+  assert.equal(driver.quietChecks.length, 614);
   const persistent = driver.opened.flatMap((identity, index) => identity.regime === 'persistent' ? [index] : []);
   assert.equal(persistent.length, 6);
   for (const processId of persistent) {

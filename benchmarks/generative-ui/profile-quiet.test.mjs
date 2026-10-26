@@ -1,12 +1,14 @@
+import { createHash } from 'node:crypto';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseCpuStat, parseLoadAverage, parseSwapCounters, parseProcessStat, workloadLabels, createOwnershipTracker, intervalObservation, windowMetrics, ruleFailures, validateReview, makeReceipt, quietSnapshotDeadline } from './profile-quiet.mjs';
+import { parseCpuStat, parseLoadAverage, parseSwapCounters, parseProcessStat, workloadLabels, createOwnershipTracker, intervalObservation, windowMetrics, ruleFailures, validateReview, makeReceipt, quietSnapshotDeadline, validateObserverBaseline, reviewedWindowAdmission, validateReviewedReview, makeReviewedReceipt } from './profile-quiet.mjs';
+import { REVIEWED_IDLE_SERVICE_PROFILE, REVIEWED_IDLE_SERVICE_SCOPE, makeReviewedQuietEvidence, parseObserverConfigBytes } from './profile-admission.mjs';
 import { checkFreshQuietReceipt } from './profile-driver.mjs';
 
 // Synthetic fixtures only. No /proc reader, monitor, campaign or inspected artifact runs here.
 const hash = letter => letter.repeat(64);
-function processRow(pid, { ppid = 1, start = 10n, cpu = 0n, comm = 'idle', labels = [] } = {}) {
-  return { pid, ppid, startTimeTicks: start, cpuTicks: cpu, comm, labels };
+function processRow(pid, { ppid = 1, start = 10n, cpu = 0n, comm = 'idle', labels = [], flags = 0n, cmdlineSha256 = hash('b') } = {}) {
+  return { pid, ppid, startTimeTicks: start, cpuTicks: cpu, comm, labels, flags, kernelThread: (flags & 0x00200000n) !== 0n, cmdlineSha256 };
 }
 function snapshot(second, processes, { busy = 200n, total = 1000n, bootId = 'boot', swap = 0n, load = .01 } = {}) {
   return { bootId, monotonicNs: BigInt(second) * 1_000_000_000n, observedAt: second * 1000, uptimeTicks: BigInt(1000 + second * 100),
@@ -76,7 +78,7 @@ test('process CPU uses actual elapsed time and leaves owned CPU in the host tota
   const missing = snapshot(1, [processRow(10, { cpu: 130n })], { busy: 232n, total: 1400n });
   before.processes.get(20).comm = 'exited-worker'; before.processes.get(20).labels = ['build-or-package-tool'];
   const incomplete = intervalObservation(before, missing, { hz: 100, ownedBefore: owned, ownedAfter: owned });
-  assert.deepEqual(incomplete.coverageIssues, [{ kind: 'unrelated-exit-final-cpu-unobserved', pid: 20, startTimeTicks: '10', comm: 'exited-worker', labels: ['build-or-package-tool'] }]);
+  assert.deepEqual(incomplete.coverageIssues, [{ kind: 'unrelated-exit-final-cpu-unobserved', pid: 20, startTimeTicks: '10', comm: 'exited-worker', labels: ['build-or-package-tool'], flags: '0', kernelThread: false }]);
   const rows = intervals(); rows[0].coverageIssues = incomplete.coverageIssues;
   assert.equal(windowMetrics(rows).observationComplete, false);
   assert.ok(ruleFailures(windowMetrics(rows)).includes('process-observation-incomplete'));
@@ -178,4 +180,91 @@ test('deadline scheduling cannot disguise a delayed actual observation or invali
     { epochNs: 0n, tick: 61, oldestBoundaryNs: 1 }, { epochNs: 2n, tick: 61, oldestBoundaryNs: 1n }]) {
     assert.throws(() => quietSnapshotDeadline(input), /deadline/u);
   }
+});
+
+function observerConfig() {
+  return { schemaVersion: 1, kind: 'quiet-observer-config', profile: REVIEWED_IDLE_SERVICE_PROFILE, collectionId: 'synthetic-unit', bootId: 'boot',
+    scope: { ...REVIEWED_IDLE_SERVICE_SCOPE }, idleServices: [{ pid: 20, startTimeTicks: '10', comm: 'idle-service', cmdlineSha256: hash('b') }] };
+}
+const idleService = options => processRow(20, { comm: 'idle-service', labels: ['provider-or-agent'], ...options });
+function observerRow({ beforeRows = [], afterRows = [], beforeService = idleService(), afterService = idleService(), owned = new Map(), config = observerConfig() } = {}) {
+  const before = snapshot(0, [processRow(10), ...(beforeService ? [beforeService] : []), ...beforeRows]);
+  const current = snapshot(1, [processRow(10), ...(afterService ? [afterService] : []), ...afterRows], { busy: 201n, total: 1400n });
+  return { before, current, row: intervalObservation(before, current, { hz: 100, ownedBefore: owned, ownedAfter: owned, observerConfig: config }) };
+}
+function windowAdmission(samples, config = observerConfig(), options = {}) {
+  const { configSource, configSha256 } = parseObserverConfigBytes(Buffer.from(`${JSON.stringify(config)}\n`));
+  return reviewedWindowAdmission(samples, config, configSha256, { ...options, configSource });
+}
+function reviewedRows(row) {
+  return intervals().map((base, index) => ({ ...row, observedAt: base.observedAt, monotonicNs: base.monotonicNs, seconds: base.seconds,
+    coverageIssues: index === 0 ? row.coverageIssues : [], reviewed: { ...row.reviewed, kernelCoverageIssues: index === 0 ? row.reviewed.kernelCoverageIssues : [] } }));
+}
+
+test('PF_KTHREAD comes from stat flags, never a kernel-looking command name', () => {
+  const fields = Array(20).fill('0'); fields[0] = 'S'; fields[1] = '2'; fields[6] = '2097152';
+  const kernel = parseProcessStat(`30 (ordinary-name) ${fields.join(' ')}`);
+  assert.equal(kernel.flags, 0x00200000n); assert.equal(kernel.kernelThread, true);
+  fields[6] = '0'; assert.equal(parseProcessStat(`30 (kworker/0:1) ${fields.join(' ')}`).kernelThread, false);
+  fields[6] = 'invalid'; assert.throws(() => parseProcessStat(`30 (kworker/0:1) ${fields.join(' ')}`));
+});
+
+test('reviewed idle identity stays unrelated and permits only zero observed CPU ticks', () => {
+  const config = observerConfig(), { before, row } = observerRow();
+  assert.doesNotThrow(() => validateObserverBaseline(before, new Map(), config));
+  assert.equal(row.concurrentTaskWorkloads, true); assert.equal(row.reviewed.unapprovedTaskWorkloads, false);
+  assert.equal(row.reviewed.services[0].owned, false); assert.equal(row.reviewed.services[0].cpuTickDelta, '0');
+  assert.equal(row.reviewed.services[0].previousReadMonotonicNs, '0'); assert.equal(row.reviewed.services[0].currentReadMonotonicNs, '1000000000');
+  assert.ok(ruleFailures(windowMetrics(reviewedRows(row))).includes('unrelated-workload'));
+  const active = observerRow({ afterService: idleService({ cpu: 1n }) }).row;
+  assert.equal(active.reviewed.maxUnrelatedUserspaceProcessCpuFractionOfOneCore, .01);
+  assert.equal(active.reviewed.idleServicesVerified, false); assert.equal(active.reviewed.unapprovedTaskWorkloads, true);
+  assert.ok(windowAdmission(reviewedRows(active), config).failures.includes('idle-service-not-idle-or-changed'));
+});
+
+test('idle-service allowance fails identity changes, disappearance and owned-root or descendant overlap', () => {
+  for (const change of [{ start: 11n }, { comm: 'renamed' }, { cmdlineSha256: hash('c') }, { flags: 0x00200000n }]) {
+    const { row } = observerRow({ afterService: idleService(change) }); assert.equal(row.reviewed.idleServicesVerified, false);
+  }
+  assert.equal(observerRow({ afterService: null }).row.reviewed.idleServicesVerified, false);
+  const { before } = observerRow();
+  assert.throws(() => validateObserverBaseline(before, new Map([['20:10', {}]]), observerConfig()), /campaign-owned/u);
+  assert.throws(() => validateObserverBaseline({ ...before, bootId: 'changed' }, new Map(), observerConfig()), /changed/u);
+  assert.equal(observerRow({ owned: new Map([['20:10', { role: 'campaign-descendant' }]]) }).row.reviewed.idleServicesVerified, false);
+  const child = processRow(21, { ppid: 20, labels: ['provider-or-agent'] });
+  const row = observerRow({ beforeRows: [child], afterRows: [child] }).row;
+  assert.equal(row.reviewed.idleServicesVerified, true); assert.equal(row.reviewed.unapprovedTaskWorkloads, true);
+});
+
+test('only proven kernel coverage gaps are outside reviewed userspace coverage; host CPU still includes them', () => {
+  const kernel = processRow(30, { flags: 0x00200000n, comm: 'ordinary-name' });
+  const { row } = observerRow({ beforeRows: [kernel] });
+  assert.equal(row.coverageIssues[0].kernelThread, true); assert.equal(row.reviewed.userspaceObservationComplete, true);
+  assert.equal(windowMetrics(reviewedRows(row)).observationComplete, false);
+  assert.equal(windowAdmission(reviewedRows(row)).accepted, true);
+  const userspace = observerRow({ beforeRows: [processRow(30, { comm: 'kworker/0:1' })] }).row;
+  assert.equal(userspace.reviewed.userspaceObservationComplete, false);
+  assert.equal(windowAdmission(reviewedRows(userspace)).accepted, false);
+  const loaded = reviewedRows(row); loaded[0].cpuTicks.busy = '1200'; loaded[0].cpuTicks.total = '1400';
+  assert.ok(windowAdmission(loaded).failures.includes('total-host-cpu'));
+});
+
+test('reviewed receipt retains raw strict failure, requires exact manual config review and remains distinct', () => {
+  const config = observerConfig(), { configSource, configSha256 } = parseObserverConfigBytes(Buffer.from(`${JSON.stringify(config)}\n`)), admissionSha256 = hash('9'), row = observerRow({ beforeRows: [processRow(30, { flags: 0x00200000n })] }).row;
+  const samples = reviewedRows(row), values = artifacts();
+  const precheck = { ...values.precheck, kind: 'reviewed-idle-service-precheck', admissionSha256, metrics: windowMetrics(samples), admission: reviewedWindowAdmission(samples, config, configSha256, { precheck: true, configSource }) };
+  const quietObserver = { profile: config.profile, configSha256, scope: config.scope };
+  const review = { ...values.review, kind: 'reviewed-idle-service-precheck-review', quietObserver, admissionSha256 };
+  const options = { ...values, collectionId: 'synthetic-unit', samples, precheck, review, observerConfig: config, configSha256, configSource, admissionSha256 };
+  const receipt = makeReviewedReceipt(options);
+  assert.equal(receipt.inspected, false); assert.equal(receipt.contaminated, true); assert.equal(receipt.observationComplete, false);
+  assert.equal(receipt.admission.inspected, true); assert.equal(receipt.admission.accepted, true);
+  assert.throws(() => checkFreshQuietReceipt(receipt, 'synthetic-unit', 60001));
+  const receiptSource = `${JSON.stringify(receipt, null, 2)}\n`, receiptSha256 = createHash('sha256').update(receiptSource).digest('hex');
+  assert.doesNotThrow(() => makeReviewedQuietEvidence(receipt, receiptSha256, quietObserver, { collectionId: 'synthetic-unit', now: 60001, receiptSource }));
+  const pending = makeReviewedReceipt({ ...options, review: undefined }); assert.equal(pending.admission.inspected, false);
+  assert.throws(() => makeReviewedQuietEvidence(pending, hash('f'), quietObserver));
+  assert.throws(() => validateReviewedReview({ ...review, quietObserver: { ...quietObserver, configSha256: hash('e') } }, options));
+  assert.throws(() => validateReviewedReview(values.review, options));
+  assert.throws(() => validateReviewedReview({ ...review, admissionSha256: hash('8') }, options), /authorization/u);
 });

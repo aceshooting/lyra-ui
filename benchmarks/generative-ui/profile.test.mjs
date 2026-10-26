@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { validateFixture, validatePrepared, validateCollectionManifest, runProfile, profilePlan, inspectQuietReceipt, collectionSchedule, validateInputInventory } from './profile.mjs';
+import { createHash } from 'node:crypto';
+import { reviewedQuietFixture } from './profile-reviewed.test-fixture.mjs';
+import { quietEvidenceFromBytes } from './profile-driver.mjs';
 
 test('fixture boundary is explicit and requires current operation inventory and authored identity', () => {
   assert.throws(() => validateFixture({ prepare() {} }));
@@ -34,7 +37,7 @@ function manifest() {
   const fixture = { sha256: 'c'.repeat(64), operations: [{ id: 'append', kind: 'interaction', trigger: 'host', expectedFingerprint: 'text-v2' }] };
   return { schemaVersion: 1, method: profilePlan().method, collection: { authorized: true, id: 'synthetic-contract-test', designSha256: 'a'.repeat(64) },
     candidate: { archiveSha256: 'b'.repeat(64), lockfileSha256: 'b'.repeat(64), buildSha256: 'b'.repeat(64) },
-    harness: { runnerSha256: 'e'.repeat(64), resultsSha256: 'e'.repeat(64), measurementSha256: 'e'.repeat(64), driverSha256: 'e'.repeat(64) },
+    harness: { runnerSha256: 'e'.repeat(64), resultsSha256: 'e'.repeat(64), measurementSha256: 'e'.repeat(64), driverSha256: 'e'.repeat(64), admissionSha256: '9'.repeat(64) },
     fixtureBuild: { bundleSha256: 'f'.repeat(64), inputsSha256: 'f'.repeat(64), hostSha256: 'f'.repeat(64), recordingSha256: 'f'.repeat(64) },
     environment: { node: '22.23.2', os: 'synthetic', arch: 'synthetic', cpuModel: 'synthetic', logicalCpus: 1, memoryBytes: 1, playwright: 'test', esbuild: 'test',
       browsers: Object.fromEntries(['chromium', 'firefox', 'webkit'].map(engine => [engine, { version: 'synthetic', executableSha256: 'c'.repeat(64) }])) },
@@ -58,6 +61,73 @@ test('manifest refuses missing workload or unsupported browser identity before d
   const noBrowser = manifest(); delete noBrowser.environment.browsers.webkit.executableSha256; assert.throws(() => validateCollectionManifest(noBrowser));
   const wrongControl = manifest(); wrongControl.controls.chromium = { ...wrongControl.controls.chromium, longtask: { supported: true, positiveControl: true, receipt: 'not-a-hash' } };
   assert.throws(() => validateCollectionManifest(wrongControl));
+  assert.throws(() => validateCollectionManifest({ ...manifest(), quietObserver: { profile: 'unknown' } }));
+  const refinedReceipt = manifest(); refinedReceipt.quietReceipt.admission = { profile: 'reviewed-idle-service-v1', accepted: true };
+  assert.throws(() => validateCollectionManifest(refinedReceipt));
+});
+
+test('reviewed manifests bind exact observer, current helper, collection and independently approved receipt', () => {
+  const { observer, receipt } = reviewedQuietFixture(), value = { ...manifest(), quietObserver: observer, quietReceipt: receipt };
+  validateCollectionManifest(value);
+  assert.equal(value.quietReceipt.contaminated, true);
+  for (const mutate of [value => { delete value.harness.admissionSha256; }, value => { value.quietObserver.configSha256 = 'f'.repeat(64); },
+    value => { value.quietObserver.scope.processCpu = 'all-processes'; }, value => { value.quietReceipt.admission.inspected = false; },
+    value => { value.collection.id = 'different'; }, value => { value.harness.admissionSha256 = '8'.repeat(64); }, value => { delete value.quietObserver; }]) {
+    const changed = structuredClone(value); mutate(changed); assert.throws(() => validateCollectionManifest(changed));
+  }
+});
+
+test('runner retains a refined sample with strict failures and both quiet observations before stopping', async () => {
+  const { observer, receipt } = reviewedQuietFixture(), input = { ...manifest(), quietObserver: observer, quietReceipt: receipt };
+  const retained = [], trace = []; let quietChecks = 0, opens = 0, rejectPost = false;
+  const clean = structuredClone(receipt); Object.assign(clean, { contaminated: false, failures: [], observationComplete: true, coverageIssues: [], concurrentTaskWorkloads: false }); clean.admission.kernelCoverageIssues = [];
+  const sources = [JSON.stringify(receipt), `\n${JSON.stringify(clean, null, 2)}\n`];
+  const hashes = sources.map(source => createHash('sha256').update(source).digest('hex'));
+  const evidence = hash => quietEvidenceFromBytes(Buffer.from(sources[hash === '1' ? 0 : 1]), input.collection.id,
+    { now: 120001, quietObserver: observer, admissionSha256: input.harness.admissionSha256 });
+  const disposal = { connectedNodes: 0, connectedElements: 0, retainedSources: 0, pendingOperations: 0 };
+  const operation = input.fixtures.T.operations[0];
+  const session = { temperatureEvidence: { freshContext: true, primedMounts: 0, fullyDisposedBeforeSample: true },
+    async prepare() { return { generation: 'g1', manifest: { workload: 'T', sha256: input.fixtures.T.sha256 }, operations: [operation] }; },
+    async runOperation() { return { ...operation, generation: 'g1', fingerprint: operation.expectedFingerprint, start: 1, listenerReceipt: null, semanticCommit: 2,
+      renderOpportunity: 3, censored: false, firstMount: { scope: 'first-operation-lifecycle', operationId: operation.id, generation: 'g1', start: 0, semanticCommit: 2, renderOpportunity: 3 } }; },
+    async readOracle() { return { generation: 'g1', status: 'committed', fingerprint: operation.expectedFingerprint, connected: true, visible: true }; },
+    async dispose() { trace.push('dispose'); return disposal; }, async close() { trace.push('close'); }, async startObservation() {}, async phase() {}, async activate() {},
+    async finishObservation() { return { capabilities: input.controls.chromium, window: { start: 0, end: 4 }, observers: { longTasks: null, layoutShifts: null },
+      renderer: { supported: false, reason: 'synthetic', taskMs: null, scriptMs: null, layoutMs: null, styleMs: null } }; } };
+  const driver = { kind: 'playwright-profile-v1', async verify() { return { kind: 'browser-artifact-verification', actual: { candidate: input.candidate, harness: input.harness,
+    environment: input.environment, fixtures: input.fixtures, controls: input.controls, fixtureBuild: input.fixtureBuild } }; },
+    async openSample() { opens++; return session; }, async checkQuiet() {
+      quietChecks++;
+      if (quietChecks === 3) throw new Error('Synthetic stop after one retained sample.');
+      if (quietChecks === 2 && rejectPost) {
+        const refused = structuredClone(receipt); refused.admission.accepted = false;
+        return quietEvidenceFromBytes(Buffer.from(JSON.stringify(refused)), input.collection.id, { now: 120001, quietObserver: observer, admissionSha256: input.harness.admissionSha256 });
+      }
+      return evidence(quietChecks === 1 ? '1' : '2');
+    },
+    async close() { trace.push('driver-close'); } };
+  await assert.rejects(runProfile({ driver, manifest: input, retain: async record => { retained.push(structuredClone(record)); } }), error => {
+    const sample = error.report.warmups[0];
+    assert.equal(sample.contaminated, true); assert.equal(sample.quietEvidence.before.receiptSha256, hashes[0]);
+    assert.equal(sample.quietEvidence.after.receiptSha256, hashes[1]); assert.deepEqual(sample.quietEvidence.before.receipt.failures, receipt.failures);
+    assert.equal(sample.quietEvidence.after.receiptSource, sources[1]); assert.equal(sample.admissionSha256, input.harness.admissionSha256);
+    assert.equal(sample.quietEvidence.after.contaminated, false); assert.deepEqual(sample.quietEvidence.after.receipt.failures, []);
+    assert.equal(error.report.qualification, 'not-assessed'); assert.deepEqual(error.report.quietObserver, observer); return true;
+  });
+  assert.equal(opens, 1); assert.deepEqual(trace, ['dispose', 'close', 'driver-close']);
+  assert.deepEqual(retained.map(row => row.kind), ['verification', 'warmup', 'failure']);
+  quietChecks = 0; opens = 0; rejectPost = true; retained.length = 0; trace.length = 0;
+  await assert.rejects(runProfile({ driver, manifest: input, retain: async record => { retained.push(structuredClone(record)); } }), error => {
+    assert.equal(error.report.warmups.length, 0);
+    const refused = error.report.lastAttempt.quietEvidence.after;
+    assert.equal(refused.contaminated, true); assert.equal(refused.receipt.admission.accepted, false);
+    assert.equal(refused.receiptSource, JSON.stringify(refused.receipt));
+    assert.deepEqual(refused.receipt.failures, receipt.failures); assert.deepEqual(error.report.refusedQuietEvidence, refused);
+    return true;
+  });
+  assert.equal(opens, 1); assert.deepEqual(trace.slice(-2), ['close', 'driver-close']);
+  assert.deepEqual(retained.map(row => row.kind), ['verification', 'failure']);
 });
 
 test('collection ordering pairs cold and warm without retaining sixty pages or mixing sample identities', () => {

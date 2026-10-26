@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { inspectQuietReceipt, validateCollectionManifest, validatePrepared, runProfile, writeProfileRecord } from './profile.mjs';
 import { PROFILE_ENGINES, PROFILE_WORKLOADS, PROFILE_METHOD, validateOperation } from './profile-results.mjs';
 import { prepareProfileHost, createOwnedPage, activateNative, validateNativeAction } from './profile-host.mjs';
+import { validateQuietObserver, inspectReviewedQuietReceipt, makeReviewedQuietEvidence, validateQuietEvidence } from './profile-admission.mjs';
 export { profileBrowserResolution, profileInputKey, validateNativeAction, requestAllowed } from './profile-host.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -54,10 +55,28 @@ export function parseDriverOptions(args) {
   require(names.every(key => options[key]), 'Supply manifest, quiet, controls, archive, build-manifest and output.');
   return options;
 }
-export function checkFreshQuietReceipt(receipt, collectionId, now = Date.now()) {
+export function checkFreshQuietReceipt(receipt, collectionId, now = Date.now(), quietObserver, admissionSha256) {
+  validateQuietObserver(quietObserver);
+  if (quietObserver) { inspectReviewedQuietReceipt(receipt, quietObserver, { collectionId, now, admissionSha256 }); return receipt; }
+  require(receipt?.admission === undefined && receipt?.kind !== 'reviewed-idle-service-live-receipt' && receipt?.contaminated !== true
+    && receipt?.observationComplete !== false && (receipt?.failures === undefined || Array.isArray(receipt.failures) && receipt.failures.length === 0), 'Strict quiet receipt is contaminated or uses a different observer.');
   inspectQuietReceipt(receipt);
   require(receipt.collectionId === collectionId && Number.isFinite(receipt.observedAt) && receipt.observedAt <= now && now - receipt.observedAt <= 5000, 'Quiet monitor receipt is stale or belongs to another collection.');
   return receipt;
+}
+export function quietEvidenceFromBytes(bytes, collectionId, { now = Date.now(), quietObserver, admissionSha256 } = {}) {
+  require(bytes instanceof Uint8Array, 'Quiet evidence requires exact UTF8 receipt bytes.');
+  const receiptSource = Buffer.from(bytes).toString('utf8');
+  require(Buffer.from(receiptSource, 'utf8').equals(Buffer.from(bytes)), 'Quiet receipt is not lossless UTF8.');
+  const receipt = JSON.parse(receiptSource), receiptSha256 = digest(bytes);
+  try {
+    checkFreshQuietReceipt(receipt, collectionId, now, quietObserver, admissionSha256);
+    const evidence = quietObserver ? makeReviewedQuietEvidence(receipt, receiptSha256, quietObserver, { collectionId, now, admissionSha256, receiptSource })
+      : { contaminated: receipt.contaminated ?? false, receiptSha256, receiptSource, receipt };
+    validateQuietEvidence(evidence, quietObserver, { collectionId, now, admissionSha256 }); return evidence;
+  } catch (error) {
+    throw Object.assign(error, { quietEvidence: { receiptSha256, receiptSource, receipt, contaminated: receipt?.contaminated } });
+  }
 }
 export async function requireFixtureModules(directory = fixtureDirectory) {
   const files = [...new Set(PROFILE_WORKLOADS.map(fixtureModuleFor)), 'workloads/views-host.mjs', 'workloads/dashboards-host.mjs'];
@@ -91,11 +110,15 @@ async function verifyBuiltFiles(manifestPath) {
   return digest(bytes);
 }
 export async function profileSourceIdentity() {
-  const files = ['profile.mjs', 'profile-results.mjs', 'profile-driver.mjs', 'profile-host.mjs', 'profile-smoke.mjs',
+  const files = ['profile.mjs', 'profile-results.mjs', 'profile-driver.mjs', 'profile-host.mjs', 'profile-smoke.mjs', 'profile-admission.mjs',
     ...(await filesUnder(fileURLToPath(fixtureDirectory))).filter(file => !file.includes('.test.')).map(file => `profile-fixture/${file}`)];
   const inventory = Object.fromEntries(await Promise.all(files.map(async file => [`benchmarks/generative-ui/${file}`, await fileDigest(join(here, file))])));
   for (const file of ['packages/lyra-gen/scripts/measure-bundles.mjs', 'packages/lyra-gen/examples/chat.ts', 'packages/lyra-gen/examples/dashboard.ts', 'packages/lyra-gen/examples/recordings/chat-review.v1.json']) inventory[file] = await fileDigest(join(root, file));
   return definitionDigest(inventory);
+}
+export async function profileHarnessIdentity() {
+  return Object.fromEntries(await Promise.all([['runner', 'profile.mjs'], ['results', 'profile-results.mjs'], ['measurement', 'profile-fixture/measurement.js'],
+    ['driver', 'profile-driver.mjs'], ['admission', 'profile-admission.mjs']].map(async ([key, file]) => [`${key}Sha256`, await fileDigest(join(here, file))])));
 }
 export function validateSmokeAuthorization(value) {
   const hash = value => typeof value === 'string' && /^[a-f0-9]{64}$/u.test(value);
@@ -199,7 +222,7 @@ export async function probeBrowserCapabilities(page) {
 
 /** Production browser driver. Construction is inert; verify requires full authorization. */
 export function createProfileDriver(options) {
-  let owned, scratch, artifacts, host, browser, engine, paired, playwright, verificationMode;
+  let owned, scratch, artifacts, host, browser, engine, paired, playwright, verificationMode, admissionSha256;
   const definitions = {}, probes = {};
   let serviceValues = {};
   async function ensureBrowser(next) {
@@ -212,9 +235,7 @@ export function createProfileDriver(options) {
   }
   async function checkQuiet() {
     require(owned, 'Driver has not verified authorization.');
-    const bytes = await readFile(options.quiet);
-    checkFreshQuietReceipt(JSON.parse(bytes), owned.collection.id);
-    return { contaminated: false, receiptSha256: digest(bytes) };
+    return quietEvidenceFromBytes(await readFile(options.quiet), owned.collection.id, { quietObserver: owned.quietObserver, admissionSha256 });
   }
   async function createPage(cell, { diagnostic = false } = {}) {
     const active = await ensureBrowser(cell.engine);
@@ -280,14 +301,15 @@ export function createProfileDriver(options) {
       else if (functional) validateSmokeAuthorization(manifest); else validateCollectionManifest(manifest);
       require(process.versions.node === '22.23.2', 'Use the pinned Node version.');
       owned = JSON.parse(JSON.stringify(manifest));
+      const harness = await profileHarnessIdentity();
+      if (!functional) hashesEqual(harness, owned.harness, 'Harness differs from the authorized manifest.');
+      admissionSha256 = harness.admissionSha256;
       if (!functional) await checkQuiet();
       await requireFixtureModules();
       const candidate = { archiveSha256: await fileDigest(options.archive), lockfileSha256: await fileDigest(join(root, 'pnpm-lock.yaml')),
         buildSha256: await verifyBuiltFiles(options['build-manifest']) };
       hashesEqual(candidate, owned.candidate, 'Candidate artifacts differ from the authorized manifest.');
-      const harness = Object.fromEntries(await Promise.all([['runner', 'profile.mjs'], ['results', 'profile-results.mjs'], ['measurement', 'profile-fixture/measurement.js'], ['driver', 'profile-driver.mjs']].map(async ([key, file]) => [`${key}Sha256`, await fileDigest(join(here, file))])));
       if (functional) require(await profileSourceIdentity() === owned.sourceSha256, 'Functional smoke source differs from the authorization.');
-      else hashesEqual(harness, owned.harness, 'Harness differs from the authorized manifest.');
       artifacts = await prepareProfileHost({ fixtureDirectory }); scratch = artifacts.scratchDirectory;
       playwright = await import('playwright');
       const { fixtureBuild } = artifacts;
@@ -505,7 +527,8 @@ export async function runProfileCli(args) {
   const options = parseDriverOptions(args);
   const manifest = JSON.parse(await readFile(options.manifest, 'utf8'));
   validateCollectionManifest(manifest);
-  checkFreshQuietReceipt(JSON.parse(await readFile(options.quiet, 'utf8')), manifest.collection.id);
+  const harness = await profileHarnessIdentity(); hashesEqual(harness, manifest.harness, 'Harness differs from the authorized manifest.');
+  quietEvidenceFromBytes(await readFile(options.quiet), manifest.collection.id, { quietObserver: manifest.quietObserver, admissionSha256: harness.admissionSha256 });
   await requireFixtureModules();
   await mkdir(options.output, { recursive: false });
   const controller = new AbortController(); const stop = () => controller.abort();

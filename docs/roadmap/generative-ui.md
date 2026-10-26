@@ -1,10 +1,12 @@
 # Generative UI: Lyra Gen
 
-Status: **implementation and qualification in progress**. The experimental
-[`@aceshooting/lyra-gen` 0.1.0 source](../../packages/lyra-gen/README.md) now exists alongside
-additive Lyra UI integration changes. It is unpublished; final release qualification remains
-pending. This roadmap preserves the complete program and its acceptance criteria, including
-remaining work. Website and hosted live generation are sequenced last, after the library work.
+Status: **experimental 0.1.0 published; 1.0.0 candidate qualification in progress**. The
+experimental [`@aceshooting/lyra-gen` 0.1.0 release](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-gen%400.1.0)
+is published. [Current source](../../packages/lyra-gen/README.md) is the 1.0.0 candidate; final
+qualification and publication remain pending. This roadmap preserves the complete program and
+its acceptance criteria, including remaining work; original stage-version targets remain as
+planning history. Website and hosted live generation remain pending and are sequenced last,
+after the library work.
 
 The objective is to make Lyra a leading foundation for interactive generated answers and persistent
 application dashboards: useful earlier in a stream, responsive during interaction, reliable under

@@ -15,10 +15,12 @@ still open.
 - **Generative UI and shared dashboards:** [Lyra Gen program](roadmap/generative-ui.md),
   [detailed backlog](roadmap/generative-ui-backlog.md),
   [evaluation and performance](roadmap/generative-ui-evaluation.md), and
-  [website, showcases and live generation](roadmap/generative-ui-website.md). The unpublished
-  experimental companion now includes interactive chat, bounded generation contracts, protocol
-  adapters and saved dashboard workflows. The detailed backlog separates implemented scope,
-  outstanding qualification and conditional capabilities; the hosted demonstration remains planned.
+  [website, showcases and live generation](roadmap/generative-ui-website.md). Experimental
+  [Lyra Gen 0.1.0 is published](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-gen%400.1.0).
+  The current 1.0.0 candidate includes interactive chat, bounded generation contracts, protocol
+  adapters and saved dashboard workflows; its qualification and publication remain pending.
+  The detailed backlog separates implemented scope, outstanding qualification and conditional
+  capabilities; the hosted demonstration remains planned.
 - **Native document editing:** [delivery sequence](roadmap/document-editing.md) and its
   [qualification record](roadmap/document-editing-feasibility.md). Experimental, in
   `@aceshooting/lyra-docs`; not part of lyra-ui release qualification.
@@ -29,6 +31,9 @@ still open.
 - **After 30.1.0:** [geospatial scenes and synchronized playback](roadmap/geospatial-scenes.md).
   Planned and unstarted; outside the 30.1.0 release gate, with no assigned version or date.
 - **30.2.0 published maintenance:** [corrections, performance work and consolidation](roadmap/30.2-maintenance.md). Published on 2026-10-25 with corrections, consolidations and asynchronous model loading; all nineteen selected items are delivered, including website production delivery. Affected companions version independently.
+- **30.3.0 published:** [Lyra UI](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.3.0),
+  [IDE](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ide%4030.3.0) and
+  [translations](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-translations%4030.3.0).
 - **Rationale for the style-axis, token and migration designs:** the [RFCs](rfcs/).
 
 ## Published 30.0.0, 30.1.0 and current maintenance
@@ -254,12 +259,13 @@ Generative UI is the next product workstream after maintenance follow-ups and ta
 new lyra-3d and lyra-docs features. The [Lyra Gen roadmap](roadmap/generative-ui.md#delivery-sequence)
 retains existing map, 3D and document commitments while defining its own stages, qualification gates
 and independently versioned companion; correctness and security maintenance continues across packages.
-All generative capabilities and website deliveries below are planned; no benchmark superiority or
-protocol conformance is established by this roadmap.
+Remaining generative capabilities and website deliveries retain their stated acceptance criteria.
+No benchmark superiority or protocol conformance is established by this roadmap.
 
-Unshipped work in delivery order, with target versions. Targets follow semantic versioning and the
-`fixed` release group (`lyra-ui`, `lyra-ide` and `lyra-translations` share one version); companion
-packages version independently. A target moves only when scope changes, never to absorb a slip.
+The original delivery sequence and target versions are retained below; current status is recorded
+in the linked roadmaps. Targets follow semantic versioning and the `fixed` release group (`lyra-ui`,
+`lyra-ide` and `lyra-translations` share one version); companion packages version independently.
+A target moves only when scope changes, never to absorb a slip.
 
 | Target | Package versions | Scope |
 |---|---|---|

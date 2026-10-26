@@ -1,5 +1,6 @@
 import { MEMORY_PHASES } from './memory-workload.mjs';
 import { PROFILE_SEED, summarizeRetainedHeap } from './profile-results.mjs';
+import { validateQuietObserver, validateQuietEvidence } from './profile-admission.mjs';
 
 export const MEMORY_PROFILE_LIFECYCLES = Object.freeze(['full-chat', 'full-dashboard']);
 export const MEMORY_PROFILE_ARCHIVE_BYTES = 512 * 1024;
@@ -42,14 +43,15 @@ export function validateMemoryObservation(value, { large = false } = {}) {
   if (value.phase === 'restored-disposed' || value.phase === 'baseline') require(value.externalArchiveBytes === 0, 'Archive must be released before final disposal or baseline.');
 }
 
-export function validateMemoryCycle(row) {
+/** Application counters and budgets are checked before the existing post-cycle quiet gate. */
+export function validateMemoryCycleSemantics(row) {
   require(MEMORY_PROFILE_LIFECYCLES.includes(row?.lifecycle) && Number.isInteger(row.runIndex) && row.runIndex >= 0 && row.runIndex < 3
     && Number.isInteger(row.cycle) && row.cycle >= 1 && row.cycle <= 40 && ['persistent', 'fresh'].includes(row.regime), 'Invalid memory cycle identity.');
   require(row.regime !== 'fresh' || controls.has(row.cycle), 'Fresh control is outside the fixed checkpoints.');
   require(row.admission === (row.cycle % 2 ? 'direct' : 'adapters'), 'Cycle admission parity changed.');
   require(Number.isSafeInteger(row.savedBytes) && row.savedBytes > 0 && row.savedBytes <= MEMORY_PROFILE_ARCHIVE_BYTES
     && /^[a-f0-9]{64}$/u.test(row.archiveSha256), 'External archive is missing, unbounded or unhashed.');
-  require(row.semanticAssertionsPassed === true && row.contaminated === false, 'Memory semantics failed or the observation was contaminated.');
+  require(row.semanticAssertionsPassed === true, 'Memory semantics failed.');
   require(Array.isArray(row.observations) && row.observations.length === MEMORY_PHASES.length, 'Memory cycle needs all five phases.');
   row.observations.forEach((value, index) => {
     require(value.phase === MEMORY_PHASES[index], 'Memory phases are missing or reordered.');
@@ -60,11 +62,32 @@ export function validateMemoryCycle(row) {
   });
 }
 
-export function summarizeMemoryRun(rows) {
+export function validateMemoryCycle(row, { quietObserver, collectionId, admissionSha256 } = {}) {
+  validateMemoryCycleSemantics(row);
+  validateQuietObserver(quietObserver);
+  if (quietObserver === undefined) {
+    require(row.quietObserver === undefined && row.contaminated === false, 'Memory observation was contaminated or belongs to another quiet profile.');
+  } else {
+    validateQuietObserver(row.quietObserver);
+    require(row.quietObserver?.configSha256 === quietObserver.configSha256 && typeof collectionId === 'string' && collectionId.length > 0
+      && row.collectionId === collectionId, 'Memory observer or collection binding changed.');
+    require(typeof admissionSha256 === 'string' && /^[a-f0-9]{64}$/u.test(admissionSha256) && row.admissionSha256 === admissionSha256, 'Memory admission-helper identity changed.');
+  }
+  if (collectionId !== undefined) require(row.collectionId === collectionId, 'Memory collection changed.');
+  if (quietObserver !== undefined || row.quietEvidence !== undefined) {
+    require(row.quietEvidence?.before && row.quietEvidence.after, 'Memory cycle needs both actual quiet boundaries.');
+    for (const evidence of [row.quietEvidence.before, row.quietEvidence.after]) validateQuietEvidence(evidence, quietObserver, { collectionId, admissionSha256 });
+    require(row.contaminated === (row.quietEvidence.before.contaminated || row.quietEvidence.after.contaminated), 'Memory raw strict contamination changed.');
+    require(row.preQuietSha256 === row.quietEvidence.before.receiptSha256 && row.postQuietSha256 === row.quietEvidence.after.receiptSha256, 'Memory quiet receipt references changed.');
+  }
+}
+
+export function summarizeMemoryRun(rows, { quietObserver, collectionId, admissionSha256 } = {}) {
   require(Array.isArray(rows) && rows.length === 40, 'A memory run requires forty persistent cycles.');
   rows.forEach((row, index) => {
-    validateMemoryCycle(row);
-    require(row.regime === 'persistent' && row.cycle === index + 1 && row.lifecycle === rows[0].lifecycle && row.runIndex === rows[0].runIndex, 'Cannot mix, reorder or pool memory runs.');
+    validateMemoryCycle(row, { quietObserver, collectionId, admissionSha256 });
+    require(row.regime === 'persistent' && row.cycle === index + 1 && row.lifecycle === rows[0].lifecycle && row.runIndex === rows[0].runIndex
+      && row.collectionId === rows[0].collectionId, 'Cannot mix, reorder or pool memory runs.');
   });
   const final = rows.map(row => row.observations.at(-1));
   const heaps = final.map(value => value.heap.usedSize);
@@ -76,7 +99,8 @@ export function summarizeMemoryRun(rows) {
     const firstMaximum = Math.max(...sequence.slice(0, 5)), lastMaximum = Math.max(...sequence.slice(-5));
     return [field, { sequence, firstMaximum, lastMaximum, withinBudget: lastMaximum <= firstMaximum }];
   }));
-  return { lifecycle: rows[0].lifecycle, runIndex: rows[0].runIndex, retained, sensitivity, counters,
+  return { lifecycle: rows[0].lifecycle, runIndex: rows[0].runIndex,
+    ...(quietObserver ? { quietObserver: structuredClone(quietObserver), admissionSha256 } : {}), ...(collectionId === undefined ? {} : { collectionId }), retained, sensitivity, counters,
     withinBudget: retained.withinBudget && Object.values(counters).every(value => value.withinBudget),
     scope: 'One forty-cycle main-isolate run. Fresh controls are diagnostic and are not subtracted; no total-process or infinite-plateau claim.' };
 }

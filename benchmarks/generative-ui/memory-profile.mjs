@@ -1,7 +1,8 @@
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import { MEMORY_PHASES } from './memory-workload.mjs';
-import { memoryProfileSchedule, validateMemoryObservation, validateMemoryCycle, summarizeMemoryRun } from './memory-profile-results.mjs';
+import { memoryProfileSchedule, validateMemoryObservation, validateMemoryCycleSemantics, validateMemoryCycle, summarizeMemoryRun } from './memory-profile-results.mjs';
+import { validateQuietObserver, validateQuietEvidence } from './profile-admission.mjs';
 
 const require = (condition, message) => { if (!condition) throw new TypeError(message); };
 const hash = value => typeof value === 'string' && /^[a-f0-9]{64}$/u.test(value);
@@ -23,6 +24,7 @@ export function validateMemoryManifest(value) {
   require(hash(value.designSha256) && hash(value.sourceSha256) && hash(value.compositionSha256), 'Frozen memory design, source and composition identities are required.');
   require(['archiveSha256', 'lockfileSha256', 'buildSha256'].every(key => hash(value.candidate?.[key])), 'Exact candidate artifacts are required.');
   require(value.browser?.engine === 'chromium' && hash(value.browser.executableSha256), 'Exact Chromium identity is required.');
+  validateQuietObserver(value.quietObserver);
   require(same(value.configuration, memoryProfilePlan()), 'The frozen memory procedure cannot be overridden.');
   return value;
 }
@@ -30,74 +32,107 @@ export function validateMemoryManifest(value) {
 /** No imports of browser tooling and no automatic retries. The concrete driver owns each process. */
 export async function runMemoryProfile(manifest, driver, { signal, retain } = {}) {
   validateMemoryManifest(manifest);
+  const owned = structuredClone(manifest);
+  if (owned.quietObserver) { Object.freeze(owned.quietObserver.scope); Object.freeze(owned.quietObserver); }
+  Object.freeze(owned);
+  const binding = { quietObserver: owned.quietObserver, collectionId: owned.collectionId };
   require(typeof retain === 'function', 'An immutable evidence writer is required.');
   for (const name of ['verify', 'checkQuiet', 'openProcess', 'close']) require(typeof driver?.[name] === 'function', `Memory driver lacks ${name}.`);
-  const report = { schemaVersion: 1, kind: 'memory-profile', collectionId: manifest.collectionId, status: 'incomplete',
+  const report = { schemaVersion: 1, kind: 'memory-profile', collectionId: owned.collectionId, status: 'incomplete', qualification: 'not-assessed',
+    ...(owned.quietObserver ? { quietObserver: owned.quietObserver } : {}),
     baselines: [], warmups: [], cycles: [], summaries: [], failures: [] };
   let persistent, control;
   const active = () => { require(!signal?.aborted, 'Memory profile aborted.'); };
-  const quiet = async identity => {
-    active(); const receipt = await driver.checkQuiet(identity);
-    require(receipt?.contaminated === false && hash(receipt.receiptSha256), 'Memory quiet-window evidence is missing or contaminated.');
-    return receipt.receiptSha256;
+  const quiet = async (identity, position) => {
+    active(); let evidence;
+    try {
+      evidence = structuredClone(await driver.checkQuiet(identity));
+      validateQuietEvidence(evidence, owned.quietObserver, { collectionId: owned.collectionId, admissionSha256: binding.admissionSha256 });
+    } catch (error) {
+      const refused = evidence ?? error.quietEvidence;
+      if (refused !== undefined) {
+        report.lastQuietAttempt = { ...identity, ...binding, position, evidence: structuredClone(refused) };
+        await retain({ kind: 'quiet-attempt', value: report.lastQuietAttempt });
+      }
+      throw error;
+    }
+    return evidence;
   };
+  const withQuiet = (record, before, after = null) => ({ ...record, collectionId: owned.collectionId,
+    ...(owned.quietObserver ? { quietObserver: owned.quietObserver, admissionSha256: binding.admissionSha256 } : {}), quietEvidence: { before, after },
+    preQuietSha256: before.receiptSha256, postQuietSha256: after?.receiptSha256 ?? null,
+    contaminated: Boolean(record.contaminated || before.contaminated || after?.contaminated) });
   const open = async identity => {
     active();
     const process = await driver.openProcess({ ...identity, signal });
     for (const name of ['baseline', 'cycle', 'close']) require(typeof process?.[name] === 'function', `Memory process lacks ${name}.`);
     return process;
   };
-  const baseline = async (process, identity) => {
-    const observation = await process.baseline(), record = { ...identity, observation };
+  const baseline = async (process, identity, before) => {
+    const observation = await process.baseline(), record = withQuiet({ ...identity, observation }, before);
     report.lastAttempt = record; await retain({ kind: 'baseline-attempt', value: record });
     require(observation.phase === 'baseline', 'Process has no distinct post-load baseline.'); validateMemoryObservation(observation);
     report.baselines.push(record); await retain({ kind: 'baseline', value: record }); delete report.lastAttempt;
   };
   const cycle = async (process, task) => {
-    const preQuietSha256 = await quiet(task);
+    const before = await quiet(task, 'before');
     let row;
     try { row = await process.cycle({ ...task, signal }); }
     catch (error) {
-      if (error.attempt) { report.lastAttempt = error.attempt; await retain({ kind: task.warmup ? 'warmup-attempt' : 'cycle-attempt', value: error.attempt }); }
+      if (error.attempt) {
+        error.attempt = withQuiet(error.attempt, before); report.lastAttempt = error.attempt;
+        await retain({ kind: task.warmup ? 'warmup-attempt' : 'cycle-attempt', value: error.attempt });
+      }
       throw error;
     }
     // Keep every returned attempt before validating or evaluating budgets.
-    report.lastAttempt = row; await retain({ kind: task.warmup ? 'warmup-attempt' : 'cycle-attempt', value: row });
+    report.lastAttempt = withQuiet(row, before); await retain({ kind: task.warmup ? 'warmup-attempt' : 'cycle-attempt', value: report.lastAttempt });
     const identity = Object.fromEntries(['lifecycle', 'runIndex', 'cycle', 'regime', 'admission'].map(key => [key, task[key]]));
     require(Object.entries(identity).every(([key, value]) => row[key] === value), 'Memory driver changed cycle identity.');
-    validateMemoryCycle(row);
-    const postQuietSha256 = await quiet(task), record = { ...row, warmup: Boolean(task.warmup), preQuietSha256, postQuietSha256 };
+    validateMemoryCycleSemantics(row);
+    if (owned.quietObserver === undefined) require(row.contaminated === undefined || row.contaminated === false, 'Memory observation was contaminated.');
+    const after = await quiet(task, 'after'), record = { ...withQuiet(row, before, after), warmup: Boolean(task.warmup) };
+    validateMemoryCycle(record, binding);
     (task.warmup ? report.warmups : report.cycles).push(record);
     await retain({ kind: task.warmup ? 'warmup' : 'cycle', value: record }); delete report.lastAttempt;
   };
   try {
-    active(); report.artifacts = await driver.verify(manifest);
+    active(); report.artifacts = structuredClone(await driver.verify(owned));
+    if (owned.quietObserver) {
+      require(hash(report.artifacts?.admissionSha256), 'Memory driver has no verified admission-helper identity.');
+      binding.admissionSha256 = report.artifacts.admissionSha256;
+    }
     for (const lifecycle of memoryProfilePlan().lifecycles) for (let runIndex = 0; runIndex < 3; runIndex++) {
       const owner = { lifecycle, runIndex, regime: 'persistent' };
-      await quiet(owner); persistent = await open(owner); await baseline(persistent, owner);
+      const before = await quiet(owner, 'before-open'); persistent = await open(owner); await baseline(persistent, owner, before);
       for (let warmupIndex = 0; warmupIndex < 3; warmupIndex++) await cycle(persistent,
         { ...owner, cycle: warmupIndex + 1, admission: warmupIndex % 2 ? 'adapters' : 'direct', warmup: true, warmupIndex });
       for (const task of memoryProfileSchedule().filter(item => item.lifecycle === lifecycle && item.runIndex === runIndex)) {
         if (task.regime === 'persistent') await cycle(persistent, task);
         else {
-          await quiet(task); control = await open(task); await baseline(control, task);
+          const before = await quiet(task, 'before-open'); control = await open(task); await baseline(control, task, before);
           try { await cycle(control, task); } finally { await control.close(); control = undefined; }
         }
       }
       await persistent.close(); persistent = undefined;
-      const summary = summarizeMemoryRun(report.cycles.filter(row => row.lifecycle === lifecycle && row.runIndex === runIndex && row.regime === 'persistent'));
+      const summary = summarizeMemoryRun(report.cycles.filter(row => row.lifecycle === lifecycle && row.runIndex === runIndex && row.regime === 'persistent'), binding);
       report.summaries.push(summary); await retain({ kind: 'run-summary', value: summary });
       require(summary.withinBudget, 'A memory run exceeded the frozen retained-state bounds.');
     }
-    await quiet({ lifecycle: 'large-X' }); control = await open({ lifecycle: 'large-X', regime: 'fresh', runIndex: 0 });
-    await baseline(control, { lifecycle: 'large-X', regime: 'fresh', runIndex: 0 });
+    const beforeX = await quiet({ lifecycle: 'large-X' }, 'before-open'); control = await open({ lifecycle: 'large-X', regime: 'fresh', runIndex: 0 });
+    await baseline(control, { lifecycle: 'large-X', regime: 'fresh', runIndex: 0 }, beforeX);
     require(typeof control.largeX === 'function', 'Memory process lacks the separate X observation.');
-    report.largeX = await control.largeX({ signal }); await retain({ kind: 'large-X-attempt', value: report.largeX });
+    try { report.largeX = withQuiet(await control.largeX({ signal }), beforeX); }
+    catch (error) { if (error.attempt) error.attempt = withQuiet(error.attempt, beforeX); throw error; }
+    await retain({ kind: 'large-X-attempt', value: report.largeX });
     require(report.largeX.semanticAssertionsPassed === true && report.largeX.observation?.phase === 'mounted', 'X semantics did not pass.');
     validateMemoryObservation(report.largeX.observation, { large: true });
     require(report.largeX.disposal?.connectedFixtureNodes === 0 && report.largeX.disposal.connectedFixtureElements === 0
       && report.largeX.disposal.pendingOperations === 0 && report.largeX.disposal.sourceCharacters === 0, 'X retained application state after disposal.');
-    await quiet({ lifecycle: 'large-X' }); await control.close(); control = undefined;
+    const afterX = await quiet({ lifecycle: 'large-X' }, 'after');
+    report.largeX = withQuiet(report.largeX, beforeX, afterX);
+    await retain({ kind: 'large-X', value: report.largeX });
+    await control.close(); control = undefined;
     require(report.cycles.length === 270 && report.warmups.length === 18 && report.baselines.length === 37, 'Memory schedule is incomplete.');
     report.status = 'collected-needs-review';
   } catch (error) {
