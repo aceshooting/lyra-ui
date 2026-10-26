@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import { fixtureDefinitions as textDefinitions, ascii, waitForCommit, createFixture as createTextFixture } from './text.js';
-import { fixtureDefinitions as chatDefinitions, matchesRenderedTree, chatButtonAction, expectedChatTrees, createRetainedViewport, createFixture as createChatFixture } from './chat.js';
+import { fixtureDefinitions as chatDefinitions, matchesRenderedTree, chatButtonAction, expectedChatTrees, createRetainedViewport, largeText, retainedFormSource, createFixture as createChatFixture } from './chat.js';
 
 const contextFor = workload => ({ batchIndex: 0, sampleIndex: 0, manifest: { workload, sha256: 'a'.repeat(64) } });
 const chatServices = { chatRecording: chatDefinitions.C.recording, loadChatRecording: async () => { throw new Error('Unexpected recording request.'); },
@@ -221,4 +221,25 @@ test('commit wait observes a non-bubbling scroll target and removes its listener
   controller.abort();
   await assert.rejects(aborted, /aborted/u);
   assert.equal(host.listeners, 0); assert.equal(scroll.listeners, 0);
+});
+
+test('retained form transport preserves exact authored bytes, newline fences and all ten forms', () => {
+  const hash = value => createHash('sha256').update(value).digest('hex');
+  const sources = Array.from({ length: 10 }, (_, index) => retainedFormSource(index * 5));
+  assert.deepEqual(sources.map(value => Buffer.byteLength(value)), [1561, 1561, 1570, 1570, 1570, 1570, 1570, 1570, 1570, 1570]);
+  assert.equal(hash(JSON.stringify(sources)), '9db6bdc78dcb653dee5714cb36cb42be64db8fb9bb0f66b4de321c14ca7c0104');
+  assert.equal(hash(sources[0]), 'ee93623ffe740cb64f3ac26eec00bf60821a60d771d4258036d4ac18a3b56d34');
+  assert.equal(hash(sources[5]), 'b1e06956b202c83abd6c64e978e6d5e98c220be62b16f8fe4ca36d09528a78a7');
+  assert.equal(hash(sources[9]), 'd622f0c627b8e72d5e3430ddf8ce8002bae2fedf14a6b22bdf7c25e7012f1895');
+  for (const source of sources) {
+    assert.equal(source.length, Buffer.byteLength(source));
+    assert.equal(source.slice(1023, 1032), '\n```lyra\n');
+    assert.equal(source.endsWith('</stack>\n```\n'), true);
+    assert.equal((source.match(/<input /gu) ?? []).length, 5);
+    assert.equal((source.match(/bindings=/gu) ?? []).length, 5);
+  }
+  const text = Array.from({ length: 50 }, (_, index) => largeText(index));
+  assert.equal(text.join('').length, 51200);
+  assert.equal(text.filter(value => value.endsWith('\n')).length, 10);
+  assert.equal(largeText(1), ascii(1));
 });
