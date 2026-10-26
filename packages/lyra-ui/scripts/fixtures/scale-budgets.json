@@ -922,7 +922,7 @@
       "tile-source@1000000:three-cameras-overlay-diff": {
         "canvases": 2,
         "dataLayerDescriptors": 2,
-        "domNodes": 15,
+        "domNodes": 17,
         "generatedFeatures": 4,
         "logicalRecords": 1100000,
         "markers": 0,

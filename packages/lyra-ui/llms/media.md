@@ -5823,6 +5823,7 @@ particular country. Representative language mappings also include `lb` (Luxembou
   }`
   `LyraMapGeolocateControlOptions {
     readonly position?: LyraMapControlPosition;
+    readonly order?: number;
     readonly trackUserLocation?: boolean;
     readonly showUserLocation?: boolean;
     readonly showAccuracyCircle?: boolean;
@@ -5833,6 +5834,7 @@ particular country. Representative language mappings also include `lb` (Luxembou
   `LyraMapAttributionLink { readonly label: string; readonly url: string }`
   `LyraMapAttributionControlOptions {
     readonly position?: LyraMapControlPosition;
+    readonly order?: number;
     readonly compact?: boolean;
     readonly customAttribution?: string | LyraMapAttributionLink | readonly (string | LyraMapAttributionLink)[];
   }`

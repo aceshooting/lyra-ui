@@ -16,3 +16,7 @@ Independent top and bottom rows and expanded-attribution container tokens suppor
 The map layout/readiness helpers, icons and public references increase the media bundle to
 350,928 gzip bytes and the UI archive to 21,969,742 unpacked bytes. Advance only exceeded media,
 UI and editor byte ceilings to the next 64-byte boundary; retain all passing limits and file ceilings.
+
+The tiled map scale DOM ceiling increases from 15 to 17 for the two fixed control-row wrappers;
+all data-dependent scale ceilings remain unchanged. The tile test verifies both rows are reused
+across camera moves and overlay updates.

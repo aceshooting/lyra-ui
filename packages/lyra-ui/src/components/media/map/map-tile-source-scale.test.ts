@@ -40,6 +40,18 @@ it('reaches first middle and final million-catalog features through real modular
     }}></lr-map>`);
     expect(element.engine).to.equal('modular');
     await waitUntil(() => element?.map !== undefined, 'real modular peer must construct', { timeout: 12000 });
+    await element.whenControlsReady();
+    const controls = element.shadowRoot!.querySelector<HTMLElement>('[part~="controls"]')!;
+    const topRow = controls.querySelector<HTMLElement>(':scope > [part~="controls-top"]')!;
+    const bottomRow = controls.querySelector<HTMLElement>(':scope > [part~="controls-bottom"]')!;
+    const assertControlRows = (): void => {
+      expect(element!.shadowRoot!.querySelector('[part~="controls"]') === controls).to.equal(true);
+      expect(controls.querySelectorAll('[part~="controls-top"], [part~="controls-bottom"]').length).to.equal(2);
+      expect(topRow !== null && bottomRow !== null && topRow !== bottomRow).to.equal(true);
+      expect(controls.querySelector(':scope > [part~="controls-top"]') === topRow).to.equal(true);
+      expect(controls.querySelector(':scope > [part~="controls-bottom"]') === bottomRow).to.equal(true);
+    };
+    assertControlRows();
     const peer = element.map as unknown as ModularMap;
     peer.on('error', event => errors.push(event.error.message));
     expect(typeof peer.prepareFeatures).to.equal('function');
@@ -56,19 +68,23 @@ it('reaches first middle and final million-catalog features through real modular
       const [x, y] = catalogPoint(index).tile;
       expect(requestedTiles.has(`10/${x}/${y}`)).to.equal(true);
       reached.push(index);
+      assertControlRows();
     }
     const firstOverlay = 999999;
     element.dataLayers = [{ sourceId: 'selection', geojson: { type: 'FeatureCollection', features: [feature(firstOverlay, 'initial')] }, point: { radius: 12 }, color: '#b00020' }];
     await element.updateComplete;
     const overlayHits = () => peer.queryRenderedFeatures(peer.project(catalogPoint(firstOverlay).coordinates)).filter(value => value.properties['phase']);
     await waitUntil(() => overlayHits().some(value => value.properties['phase'] === 'initial'), 'real GeoJSON overlay', { timeout: 10000 });
+    assertControlRows();
     expect(element.updateSourceData('selection', { update: [{ id: firstOverlay, addOrUpdateProperties: [{ key: 'phase', value: 'diff' }] }] })).to.equal(true);
     await waitUntil(() => overlayHits().some(value => value.properties['phase'] === 'diff'), 'worker-applied public diff', { timeout: 10000 });
+    assertControlRows();
     const replacementIndex = 500000;
     element.dataLayers = [{ sourceId: 'selection', geojson: feature(replacementIndex, 'replacement'), point: { radius: 12 }, color: '#b00020' }];
     await element.updateComplete;
     peer.jumpTo({ center: catalogPoint(replacementIndex).coordinates, zoom: 10 });
     await waitUntil(() => peer.loaded() && peer.queryRenderedFeatures(peer.project(catalogPoint(replacementIndex).coordinates)).some(value => value.id === replacementIndex && value.properties['phase'] === 'replacement'), 'actual Feature replacement', { timeout: 10000 });
+    assertControlRows();
     expect(reached).to.deep.equal([0, 500000, 999999]);
     expect(errors).to.deep.equal([]);
     expect(requests).to.be.at.most(100);
