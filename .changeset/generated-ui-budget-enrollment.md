@@ -9,3 +9,8 @@ remain listed separately. Archive increases use the next 64-byte boundary.
 Widgets, MCP Apps, chat scroll intent, public type exports, documentation and seven Gen messages
 across all 70 locale catalogs increase UI, editor and translation bytes. Raise only exceeded
 ceilings; retain passing limits, the download ceiling, historical reduction rule and file inventories.
+
+Navigation and server/client examples, catalog and adapter guides, CLI presets and the candidate
+adapter correction increase Gen to 140 public files. Set its archive byte ceilings to the next
+64-byte boundary. Interactive select validation adds 57 gzip bytes over its reviewed measurement; advance
+only its exceeded direct-entry ceiling to the next 64-byte boundary.

@@ -4,6 +4,8 @@ import type { LyraToolResultView } from '../src/components/agent-tools/tool-resu
 import type { LyraSourceCard } from '../src/components/retrieval/source-card/source-card.class.js';
 import type { LyraAttachmentChip } from '../src/components/media/attachment-chip/attachment-chip.class.js';
 import type { LyraDocumentPreview } from '../src/components/viewers/document-preview/document-preview.class.js';
+import type { LyraWidgetDocument } from '../src/components/conversation/widget-renderer/resolve.js';
+import type { A2UiAdapterLimits } from '../src/ai/adapters/a2ui.js';
 import {
   AgUiStreamAdapter,
   adaptA2UiSurface,
@@ -38,6 +40,15 @@ import type {
   ToolResultMessagePart,
   WidgetMessagePart,
 } from '../src/ai/index.js';
+
+type A2UiAdapterV30 = (
+  surface: unknown,
+  typeMap: unknown,
+  limits?: Partial<A2UiAdapterLimits>,
+) => LyraWidgetDocument | null;
+const legacyA2UiAdapter: A2UiAdapterV30 = adaptA2UiSurface;
+const currentA2UiAdapter: typeof adaptA2UiSurface = legacyA2UiAdapter;
+void currentA2UiAdapter;
 
 const status: AgentStatus = { kind: 'running', message: 'Searching' };
 const step: AgentStep = {

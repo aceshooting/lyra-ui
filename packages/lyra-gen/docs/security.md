@@ -116,6 +116,8 @@ check the destination again immediately before navigation. A generated button la
 `lr-gen-action` event is not evidence of a user gesture. The helper grants no user activation and
 cannot enforce a host callback's behavior. Opening a new browsing context also requires guarded
 `noopener noreferrer` handling. This package does not render a general declarative link component.
+The [host navigation example](navigation.md) composes canonical destination review, trusted
+keyboard/pointer activation and explicit refusal of download, fetch, executable and media actions.
 
 ## Actions and confirmation
 

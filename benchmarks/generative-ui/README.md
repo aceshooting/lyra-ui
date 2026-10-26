@@ -100,6 +100,73 @@ Raw samples are retained. No timing, CLS, long-task or heap threshold is invente
 qualification requires reviewed budgets and adequate quiet-run evidence. Long-session persistence
 and browser heap snapshots remain separate work.
 
+### Cold/warm modules and loading-space variants
+
+The default remains a first composition in a fresh context/page. For matched module-temperature
+and loading-placeholder checks, opt in explicitly:
+
+```sh
+node benchmarks/generative-ui/run.mjs --browser=chromium --workload=chat-recorded-cadence --samples=7 --temperature=paired --reservation=both --output=replay-cells.json
+```
+
+Each scheduling/reservation pair receives a fresh page. Its **cold** composition runs after the
+static entry modules have loaded; its **warm** composition repeats in that same page after full
+application disposal, preserving the JavaScript module registry. HTTP caching is disabled by
+request routing and `no-store` responses. These temperatures describe module reuse, not a cold
+machine, navigation-cache experiment, provider prompt cache or model timing.
+Delivery byte/request totals cover observed subresources, excluding the HTML document, request
+headers and transport overhead; they are not a total network-wire measurement.
+
+The reservation cells use the chat example's existing loading minimum and an explicit zero
+minimum. The runner records actual rendered placeholder minima and refuses a `both` run if the
+policy never reaches a loading placeholder. Both cells must produce identical final snapshots,
+retain a real input edit through source release, and dispose their elements. This does not prove
+that a catalog-wide minimum-size policy or an approved CLS budget has been satisfied.
+
+Schema `2` reports preserve every sample, actual chunk arrival offsets, raw layout-shift entries
+and long-task durations, initial page delivery and replay-time module requests/bytes. Chromium
+also records CDP renderer task, script, layout and style duration deltas around the complete
+composition call. Task duration is renderer task wall time, not hardware CPU; the component
+setup window is broader than the fixture's parser/observer window. Unsupported counters remain
+`null`. Script/layout/style figures overlap task time and must not be added to it. Measurement
+instrumentation contributes work, and per-chunk mode deliberately awaits settlement while frame
+mode coalesces; mode differences compare those host strategies rather than isolate a renderer
+optimization under identical actual arrival times.
+Readiness is sampled at render-settling checkpoints; sparse chunk arrivals can delay detection,
+so `controlReadyMs` bounds observed readiness rather than timestamping its exact first event.
+
+Summaries reuse the repository's descriptive `count/min/median/nearest-rank-p95/max` aggregation,
+keep temperatures and reservations separate, and retain exact paired frame-minus-chunk samples.
+At small sample counts, p95 is usually the maximum. No confidence interval, improvement claim,
+approved threshold or field percentile is inferred. Keep quiet-machine receipts separate from
+shared-load smoke runs and retain raw reports outside the public source tree.
+
+### Matched reducer scaling
+
+`../stream-runtime.mjs` measures only the UI package's provider-neutral text-delta reducer:
+
+```sh
+node benchmarks/stream-runtime.mjs --candidate=packages/lyra-ui/dist/ai/runtime.js --samples=7 --output=stream-current.json
+node benchmarks/stream-runtime.mjs --candidate=packages/lyra-ui/dist/ai/runtime.js --baseline=baseline/dist/ai/runtime.js --samples=7 --profile=quick --output=stream-paired.json
+```
+
+An optional baseline must be an actual built runtime with its relative dependencies. The runner
+bundles each supplied artifact with the same esbuild/settings in disposable storage and records
+entry, bundle and dependency hashes. Labels alone do not establish a published version: retain
+the source/archive receipt separately. A published UI runtime can be a reducer comparator; it
+does not create a published Lyra Gen baseline or an end-to-end UI comparison.
+
+Before timing, both artifacts must agree on split-surrogate output, UTF-16 and retained-state
+limits, and rejection of a retired generation. Each timed run independently checks exact text,
+unchanged initial state and preserved sibling payloads. Identity ratios are measured in separate
+runs. Variant order alternates within each workload/sample, including retained fields of
+different sizes; no unrelated old timing file is treated as a matched baseline. The full profile
+uses 1,000/2,000/4,000 deltas and 0/65,536/262,144 retained characters per metadata/data field.
+The quick profile uses 250/500/1,000 deltas and 0/65,536 retained characters. These are reducer
+workloads, not browser-focus, total application memory or provider measurements. Raw samples and
+descriptive spread support a narrow comparison; they do not supply a confidence interval or
+approved performance budget.
+
 ## Recorded replay interaction and visual checks
 
 `visual.mjs` bundles the same recorded-replay composition used by Storybook. It checks native

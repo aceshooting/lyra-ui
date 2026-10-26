@@ -253,7 +253,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-scatter-chart"></a>`lr-scatter-chart` | charts | `import '@aceshooting/lyra-ui/components/lr-scatter-chart.js';` | `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` | `lr-chart`, `lr-skeleton` | none | 83.9 KiB |
 | <a id="lr-scroller"></a>`lr-scroller` | layout | `import '@aceshooting/lyra-ui/components/lr-scroller.js';` | none | none | none | 25 KiB |
 | <a id="lr-segmented"></a>`lr-segmented` | layout | `import '@aceshooting/lyra-ui/components/lr-segmented.js';` | none | none | none | 27 KiB |
-| <a id="lr-select"></a>`lr-select` | forms | `import '@aceshooting/lyra-ui/components/lr-select.js';` | none | `lr-option` | none | 82.2 KiB |
+| <a id="lr-select"></a>`lr-select` | forms | `import '@aceshooting/lyra-ui/components/lr-select.js';` | none | `lr-option` | none | 82.3 KiB |
 | <a id="lr-selection-toolbar"></a>`lr-selection-toolbar` | conversation | `import '@aceshooting/lyra-ui/components/lr-selection-toolbar.js';` | none | `lr-button` | none | 61.4 KiB |
 | <a id="lr-sequence-playback"></a>`lr-sequence-playback` | media | `import '@aceshooting/lyra-ui/components/lr-sequence-playback.js';` | none | none | none | 25.2 KiB |
 | <a id="lr-sequence-strip"></a>`lr-sequence-strip` | data | `import '@aceshooting/lyra-ui/components/lr-sequence-strip.js';` | none | none | none | 35.6 KiB |

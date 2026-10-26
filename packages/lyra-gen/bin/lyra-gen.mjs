@@ -2,7 +2,7 @@
 import { open, readdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
-import { initialCatalog } from '../dist/catalog.js';
+import { initialCatalog, selectCatalogPreset } from '../dist/catalog.js';
 import { buildCatalogPrompt, exportCatalogArtifact, exportCatalogJsonSchema } from '../dist/prompts.js';
 import { validateView } from '../dist/runtime.js';
 import { parseJson } from '../dist/schema.js';
@@ -50,7 +50,7 @@ function argumentsFor(args) {
     const value = args[i];
     if (value.startsWith('--')) {
       const key = value.slice(2);
-      if (!['format', 'iterations', 'fixtures', 'model', 'provider', 'source', 'surface', 'revision'].includes(key) || Object.hasOwn(flags, key) || !args[i + 1] || args[i + 1].startsWith('--')) throw new Error('arguments');
+      if (!['format', 'iterations', 'fixtures', 'model', 'provider', 'source', 'surface', 'revision', 'preset'].includes(key) || Object.hasOwn(flags, key) || !args[i + 1] || args[i + 1].startsWith('--')) throw new Error('arguments');
       flags[key] = args[++i];
     } else positional.push(value);
   }
@@ -115,39 +115,42 @@ async function benchmark(flags) {
 async function main() {
   const [command, ...args] = process.argv.slice(2);
   if (!command || command === 'help' || command === '--help') {
-    process.stdout.write('lyra-gen prompt [--format json|markup]\nlyra-gen schema\nlyra-gen validate <file|-> [--format json|markup]\nlyra-gen record <file|-> [--format json|markup] [--source id] [--model exact-id --provider id]\nlyra-gen replay <file|->\nlyra-gen benchmark [--iterations 100] [--format json|markup|both] [--fixtures directory]\n');
+    process.stdout.write('lyra-gen prompt [--preset name] [--format json|markup]\nlyra-gen schema [--preset name]\nlyra-gen validate <file|-> [--preset name] [--format json|markup]\nlyra-gen record <file|-> [--preset name] [--format json|markup] [--source id] [--model exact-id --provider id]\nlyra-gen replay <file|-> [--preset name]\nlyra-gen benchmark [--iterations 100] [--format json|markup|both] [--fixtures directory]\n');
     return;
   }
   const { flags, positional } = argumentsFor(args);
-  const allowed = { prompt: ['format'], schema: [], validate: ['format', 'surface', 'revision'], record: ['format', 'surface', 'revision', 'source', 'model', 'provider'], replay: [], benchmark: ['iterations', 'fixtures', 'format'] };
+  const allowed = { prompt: ['format', 'preset'], schema: ['preset'], validate: ['format', 'surface', 'revision', 'preset'], record: ['format', 'surface', 'revision', 'source', 'model', 'provider', 'preset'], replay: ['preset'], benchmark: ['iterations', 'fixtures', 'format'] };
   if (!Object.hasOwn(allowed, command) || Object.keys(flags).some(key => !allowed[command].includes(key))) throw new Error('arguments');
   if (['validate', 'record', 'replay'].includes(command) ? positional.length !== 1 : positional.length !== 0) throw new Error('arguments');
+  const selected = flags.preset ? selectCatalogPreset(flags.preset) : { ok: true, value: initialCatalog };
+  if (!selected.ok) { emit(selected); process.exitCode = 1; return; }
+  const catalog = selected.value;
   if (command === 'prompt') {
     const format = formatFor(flags.format);
-    const prompt = format === 'json' ? buildCatalogPrompt(initialCatalog) : [
+    const prompt = format === 'json' ? buildCatalogPrompt(catalog) : [
       'Return one restricted Lyra Markup root. Tag names are catalog roles, never arbitrary HTML.',
       'Every node needs id="stable-id". String properties use quoted attributes; typed properties use ={JSON}.',
       'Use bindings={{"value":"/localStateKey"}} only on declared binding properties. Plain text uses XML entities; no comments, scripts, CSS, URLs or declarations.',
       'Close every tag. Do not invent properties or roles. Runtime validation is required.',
-      JSON.stringify(exportCatalogArtifact(initialCatalog))
+      JSON.stringify(exportCatalogArtifact(catalog))
     ].join('\n');
     process.stdout.write(`${prompt}\n`); return;
   }
-  if (command === 'schema') { emit(exportCatalogJsonSchema(initialCatalog)); return; }
+  if (command === 'schema') { emit(exportCatalogJsonSchema(catalog)); return; }
   if (command === 'benchmark') { await benchmark(flags); return; }
   const text = await readBounded(positional[0]);
   if (command === 'replay') {
-    const result = replayRecord(readJson(text), initialCatalog);
+    const result = replayRecord(readJson(text), catalog);
     emit(result); if (!result.ok) process.exitCode = 1; return;
   }
   const source = sourceFor(text, flags);
-  const parsed = parseGeneratedSource(source.text, source.format, initialCatalog, source);
-  const result = parsed.ok ? validateView(parsed.value, initialCatalog) : parsed;
+  const parsed = parseGeneratedSource(source.text, source.format, catalog, source);
+  const result = parsed.ok ? validateView(parsed.value, catalog) : parsed;
   if (command === 'validate') { emit(result); if (!result.ok) process.exitCode = 1; return; }
   if (!result.ok) { emit(result); process.exitCode = 1; return; }
   if (Boolean(flags.model) !== Boolean(flags.provider)) throw new Error('model-provider');
   const metadata = readJson(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
-  emit(createReplayRecord({ ...source, source: { kind: flags.model ? 'provider' : 'file', id: flags.source ?? 'local-input' }, model: flags.model ? { id: flags.model, provider: flags.provider } : null, package: { name: metadata.name, version: metadata.version }, catalog: initialCatalog }));
+  emit(createReplayRecord({ ...source, source: { kind: flags.model ? 'provider' : 'file', id: flags.source ?? 'local-input' }, model: flags.model ? { id: flags.model, provider: flags.provider } : null, package: { name: metadata.name, version: metadata.version }, catalog }));
 }
 main().catch(error => {
   if (error instanceof JsonInputError) { emit(error.result); process.exitCode = 1; }

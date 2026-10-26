@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard gzip KiB ceilings for bundled, minified ESM with optional peers externalized, measured with pinned Node 22.23.2, production esbuild and gzip level 9. Every direct or aggregate ceiling has an exact reviewed measurement and at most 4% headroom. Raise only exceeded JavaScript ceilings with 2% headroom or to the next 64-byte boundary; CSS permits 4%. Retain tighter passing limits. Current increases cover widgets, MCP Apps, chat scroll intent and localized Gen messages; reviewed bytes are paired below.",
+  "$comment": "Hard gzip KiB ceilings for bundled, minified ESM with optional peers externalized, measured with pinned Node 22.23.2, production esbuild and gzip level 9. Every direct or aggregate ceiling has an exact reviewed measurement and at most 4% headroom. Raise only exceeded JavaScript ceilings with 2% headroom or to the next 64-byte boundary; CSS permits 4%. Retain tighter passing limits. Current increases cover widgets, MCP Apps, chat scroll intent, localized Gen messages and interactive select validation; reviewed bytes are paired below.",
   "$maximumHeadroomPercent": 4,
   "$reviewedGzipBytes": {
     "$componentMaxGzipKb": 299846,
@@ -16,7 +16,7 @@
     "dist/components/forms/button/button.js": 36257,
     "dist/components/forms/combobox/combobox.js": 91399,
     "dist/components/forms/index.js": 283311,
-    "dist/components/forms/select/select.js": 84169,
+    "dist/components/forms/select/select.js": 84226,
     "dist/components/layout/index.js": 384068,
     "dist/components/media/index.js": 349035,
     "dist/components/overlays/index.js": 152648,
@@ -55,7 +55,7 @@
   "dist/components/viewers/index.js": 418.015625,
   "dist/components/forms/button/button.js": 35.4375,
   "dist/components/forms/combobox/combobox.js": 89.3125,
-  "dist/components/forms/select/select.js": 82.25,
+  "dist/components/forms/select/select.js": 82.3125,
   "dist/components/overlays/overlay/popover.js": 58.9375,
   "dist/components/data/gauge/gauge.js": 26.0,
   "dist/components/viewers/pdf-viewer/pdf-viewer.js": 71.875,

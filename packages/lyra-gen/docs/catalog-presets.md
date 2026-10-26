@@ -45,11 +45,27 @@ if (!selected.ok) throw new Error('The requested roles or actions are unavailabl
 
 An unknown preset, absent role/dependency, or undeclared action yields diagnostics. Component event declarations alone grant no action authority. Presets also grant no permission to collect fields, resolve sources, access data, or execute tools; those remain host policies. Keep the renderer's authorization and confirmation controls in place.
 
-The repository-only measurement script records the actual deterministic prompt text:
+## CLI and request context
+
+The CLI defaults to the full catalog. Use the same preset for generation, schema, validation,
+recording and replay so catalog identities match:
+
+```sh
+pnpm exec lyra-gen prompt --preset data
+pnpm exec lyra-gen schema --preset data
+pnpm exec lyra-gen validate answer.json --preset data
+```
+
+`record` and `replay` also accept `--preset`; the benchmark retains its full-catalog fixtures.
+Unknown presets reject. `buildCatalogPrompt()` already embeds `exportCatalogArtifact()`; do not
+append that identical artifact again. Task-specific composed examples can still provide useful
+context; select only examples supported by the active catalog.
+
+The repository-only measurement script records the emitted prompt and schema content:
 
 ```sh
 node packages/lyra-gen/scripts/report-catalog-presets.mjs --check
 node packages/lyra-gen/scripts/report-catalog-presets.mjs --write
 ```
 
-Build the package first. The [checked report](../scripts/fixtures/catalog-preset-prompts.json) includes UTF-16 code units, Unicode code points, UTF-8 bytes and a prompt SHA-256 for the full catalog and every preset. Byte differences apply only to this emitted text. Provider token counts and model error rates remain unmeasured; smaller text alone does not prove token, quality, latency or cost improvements.
+Build the package first. The [checked report](../scripts/fixtures/catalog-preset-prompts.json) includes prompt UTF-16/code-point counts, UTF-8 bytes and SHA-256; compact serialized-schema bytes and SHA-256; and their combined content bytes. Trailing newlines, provider wrappers and request metadata are excluded. Provider tokens and model error rates remain unmeasured; smaller content does not establish token, quality, latency, caching or cost improvements.

@@ -47,6 +47,9 @@ overrides:
   'maplibre-gl@6.15.0>@maplibre/vt-pbf': 4.3.2
   # Codecov 2.0.1 uses Zod 3 schemas; its compatibility patch supports patched Zod 4.
   '@codecov/bundler-plugin-core@2.0.1>zod': 4.6.7
+  # These AG-UI versions already import Zod v4; use its patched collection validators.
+  '@ag-ui/client@1.0.3>zod': 4.6.7
+  '@ag-ui/proto@1.0.3>zod': 4.6.7
   # Keep the reviewed DOCX engine dependency graph aligned with its source lock.
   '@docx-editor.dev/core@2.32.0>@docx-editor.dev/i18n': 2.32.0
   '@docx-editor.dev/core@2.32.0>prosemirror-view': 1.42.7

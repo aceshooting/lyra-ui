@@ -23,8 +23,10 @@ unpublished, run the examples from a built workspace rather than installing an u
 | Stream JSON or expand keyed rows | [Structured input and templates](docs/structured-input.md) |
 | Mix prose and generated views | [Interactive chat](docs/interactive-chat.md) |
 | Connect an existing transport | [AI SDK](docs/ai-sdk.md), [AG-UI adapter](../../docs/ag-ui-adapter.md), [A2UI processor](docs/a2ui.md) |
+| Run a server/client example | [Server transport](docs/server-transport.md) |
 | Render, schedule and restore | [Browser rendering](docs/rendering.md), [server snapshots](docs/ssr.md) |
 | Confirm an action | [Approval composition](docs/approval.md) |
+| Review an external destination | [Host navigation](docs/navigation.md) |
 | Save or publish a dashboard | [Host persistence](docs/dashboards.md), [executable development host](examples/saved-dashboard/README.md) |
 | Filter, navigate or cite values | [Live dashboard composition](docs/dashboard-composition.md) |
 | Recover or upgrade stored answers | [Recovery and diagnostics](docs/recovery-and-diagnostics.md), [catalog migrations](docs/stored-answer-migrations.md) |
@@ -224,7 +226,8 @@ node packages/lyra-gen/bin/lyra-gen.mjs validate packages/lyra-gen/examples/fixt
 node packages/lyra-gen/bin/lyra-gen.mjs benchmark --iterations 100 --format both
 ```
 
-The CLI uses the built-in full catalog. `prompt` emits generation instructions; `schema` exports
+The CLI defaults to the full catalog; `--preset` selects a [reviewed request catalog](docs/catalog-presets.md)
+for prompt, schema, validation, recording and replay. `prompt` emits generation instructions; `schema` exports
 its structural schema; `validate` accepts a file or `-` for standard input. `record` and `replay`
 operate on a validated-source `ReplayRecord`, not a timed chunk recording. Invalid input exits
 nonzero. The offline benchmark measures parsing/validation, not provider or browser performance.

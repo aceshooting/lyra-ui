@@ -16,6 +16,8 @@ export const REQUIRED_GEN_FILES = Object.freeze([
   'docs/interactive-chat.md', 'docs/dashboards.md',
   'docs/approval.md', 'docs/rendering.md', 'docs/stored-answer-migrations.md',
   'docs/recovery-and-diagnostics.md', 'docs/threat-matrix.md',
+  'docs/navigation.md', 'examples/navigation.ts',
+  'docs/server-transport.md', 'examples/server-transport.mjs',
   'examples/recordings/chat-review.v1.json', 'examples/saved-dashboard/README.md',
   'dist/index.js', 'dist/index.d.ts', 'dist/gen-view.js', 'dist/gen-view.d.ts',
   ...PUBLIC_GEN_EXAMPLES,

@@ -7,7 +7,8 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { configuredLineup, evaluateLineup, evaluateModel, evaluateSemantics } from '../dist/evaluation.js';
 import { createReplayRecord, parseGeneratedSource, parseReplayRecord, replayRecord } from '../dist/replay.js';
-import { initialCatalog } from '../dist/catalog.js';
+import { catalogPresetNames, catalogPresets, initialCatalog } from '../dist/catalog.js';
+import { buildCatalogPrompt, exportCatalogJsonSchema } from '../dist/prompts.js';
 
 const cli = fileURLToPath(new URL('../bin/lyra-gen.mjs', import.meta.url));
 const fixture = fileURLToPath(new URL('../examples/fixtures/contact-form.json', import.meta.url));
@@ -23,6 +24,55 @@ test('CLI prompt and schema output are deterministic and validate fails nonzero'
   assert.equal(JSON.parse(run('schema').stdout).type, 'object');
   assert.notEqual(run('validate', new URL('./cli.test.mjs', import.meta.url).pathname).status, 0);
   assert.notEqual(run('benchmark', '--iterations', 'NaN').status, 0);
+});
+
+
+test('CLI defaults retain the full prompt and schema while presets use exact reviewed identities', () => {
+  assert.equal(run('prompt').stdout, `${buildCatalogPrompt(initialCatalog)}\n`);
+  assert.equal(run('schema').stdout, `${JSON.stringify(exportCatalogJsonSchema(initialCatalog), null, 2)}\n`);
+  for (const name of catalogPresetNames) {
+    const selected = catalogPresets[name];
+    const prompt = run('prompt', '--preset', name);
+    assert.equal(prompt.status, 0, prompt.stderr || prompt.stdout);
+    assert.equal(prompt.stdout, `${buildCatalogPrompt(selected)}\n`);
+    const schema = run('schema', '--preset', name);
+    assert.equal(schema.status, 0, schema.stderr || schema.stdout);
+    assert.deepEqual(JSON.parse(schema.stdout), exportCatalogJsonSchema(selected));
+    const markup = run('prompt', '--format', 'markup', '--preset', name);
+    assert.equal(markup.status, 0, markup.stderr || markup.stdout);
+    assert.equal(JSON.parse(markup.stdout.trim().split('\n').at(-1)).id, selected.id);
+  }
+});
+
+test('CLI preset validation and recording require the same catalog through replay', () => {
+  const catalog = catalogPresets.retrieval;
+  const view = { version: '1', catalog: { id: catalog.id, version: catalog.version }, surfaceId: 'preset-answer', revision: 3, root: { id: 'answer', type: 'text', text: 'Reviewed answer' } };
+  const source = JSON.stringify(view);
+  assert.equal(runInput(source, 'validate', '-', '--preset', 'retrieval').status, 0);
+  assert.notEqual(runInput(source, 'validate', '-').status, 0);
+  const recorded = runInput(source, 'record', '-', '--preset', 'retrieval');
+  assert.equal(recorded.status, 0, recorded.stderr || recorded.stdout);
+  assert.deepEqual(JSON.parse(recorded.stdout).catalog, view.catalog);
+  assert.equal(runInput(recorded.stdout, 'replay', '-', '--preset', 'retrieval').status, 0);
+  assert.notEqual(runInput(recorded.stdout, 'replay', '-', '--preset', 'data').status, 0);
+  const markup = '<text id="answer">Reviewed answer</text>';
+  const fromMarkup = runInput(markup, 'record', '-', '--format', 'markup', '--preset', 'retrieval', '--surface', 'preset-answer', '--revision', '3');
+  assert.equal(fromMarkup.status, 0, fromMarkup.stderr || fromMarkup.stdout);
+  assert.deepEqual(JSON.parse(fromMarkup.stdout).catalog, view.catalog);
+  assert.equal(runInput(fromMarkup.stdout, 'replay', '-', '--preset', 'retrieval').status, 0);
+  for (const root of [
+    { id: 'field', type: 'input', props: { label: 'Omitted role' } },
+    { id: 'action', type: 'button', props: { label: 'Action' }, action: { name: 'undeclared' } },
+    { id: 'answer', type: 'text', props: { innerHTML: '<script>run()</script>' } },
+  ]) assert.notEqual(runInput(JSON.stringify({ ...view, root }), 'validate', '-', '--preset', 'retrieval').status, 0);
+});
+
+test('CLI rejects unknown, missing, repeated and unsupported preset options', () => {
+  for (const args of [
+    ['prompt', '--preset', 'unknown'], ['schema', '--preset', 'unknown'],
+    ['prompt', '--preset'], ['schema', '--preset', 'data', '--preset', 'forms'],
+    ['benchmark', '--preset', 'data'],
+  ]) assert.notEqual(run(...args).status, 0, args.join(' '));
 });
 
 test('offline fixtures validate and benchmark reports measured timings', () => {

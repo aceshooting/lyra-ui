@@ -13,6 +13,11 @@
       "file": "catalog_definition.json",
       "source": "https://github.com/a2ui-project/a2ui/blob/409ded29ccac3eebc541979ae5320771703248e8/specification/v1_0/json/catalog_definition.json",
       "sha256": "dcbf9a0fc4140640c912732d5ca42ef8768bd3eabde65254173df863fbc25bd6"
+    },
+    {
+      "file": "common_types.json",
+      "source": "https://github.com/a2ui-project/a2ui/blob/409ded29ccac3eebc541979ae5320771703248e8/specification/v1_0/json/common_types.json",
+      "sha256": "8225a34c954537abef057f7cd599fa59361fce2dbbe89349ddf3fe49cc914c15"
     }
   ]
 }

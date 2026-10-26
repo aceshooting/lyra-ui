@@ -166,6 +166,8 @@ overrides:
   maplibre-gl@6.15.0>@maplibre/geojson-vt: 6.3.0
   maplibre-gl@6.15.0>@maplibre/vt-pbf: 4.3.2
   '@codecov/bundler-plugin-core@2.0.1>zod': 4.6.7
+  '@ag-ui/client@1.0.3>zod': 4.6.7
+  '@ag-ui/proto@1.0.3>zod': 4.6.7
   '@docx-editor.dev/core@2.32.0>@docx-editor.dev/i18n': 2.32.0
   '@docx-editor.dev/core@2.32.0>prosemirror-view': 1.42.7
   prosemirror-state@1.4.4>prosemirror-view: 1.42.7
@@ -450,6 +452,9 @@ importers:
       ai:
         specifier: 6.0.292
         version: 6.0.292(zod@4.6.7)
+      ajv:
+        specifier: 8.20.0
+        version: 8.20.0
       esbuild:
         specifier: ^0.28.2
         version: 0.28.2
@@ -7112,9 +7117,6 @@ packages:
   zimmerframe@1.1.5:
     resolution: {integrity: sha512-msJxIvYDYcoNL+PJsu+7qmpDWsYmAxTY+2TNYXXF0hzBzBk0BMecOqDOG/EckUoKCuKwObfbugIl8QpqHDXeFA==}
 
-  zod@3.25.76:
-    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
-
   zod@4.6.7:
     resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==}
 
@@ -7167,8 +7169,8 @@ snapshots:
 
   '@ag-ui/client@1.0.3':
     dependencies:
-      '@ag-ui/core': 1.0.3(zod@3.25.76)
-      '@ag-ui/encoder': 1.0.3(zod@3.25.76)
+      '@ag-ui/core': 1.0.3(zod@4.6.7)
+      '@ag-ui/encoder': 1.0.3(zod@4.6.7)
       '@ag-ui/proto': 1.0.3
       '@types/uuid': 10.0.0
       compare-versions: 6.1.1
@@ -7176,29 +7178,25 @@ snapshots:
       rxjs: 7.8.1
       untruncate-json: 0.0.1
       uuid: 11.1.1
-      zod: 3.25.76
-
-  '@ag-ui/core@1.0.3(zod@3.25.76)':
-    optionalDependencies:
-      zod: 3.25.76
+      zod: 4.6.7
 
   '@ag-ui/core@1.0.3(zod@4.6.7)':
     optionalDependencies:
       zod: 4.6.7
 
-  '@ag-ui/encoder@1.0.3(zod@3.25.76)':
+  '@ag-ui/encoder@1.0.3(zod@4.6.7)':
     dependencies:
-      '@ag-ui/core': 1.0.3(zod@3.25.76)
+      '@ag-ui/core': 1.0.3(zod@4.6.7)
       '@ag-ui/proto': 1.0.3
     transitivePeerDependencies:
       - zod
 
   '@ag-ui/proto@1.0.3':
     dependencies:
-      '@ag-ui/core': 1.0.3(zod@3.25.76)
+      '@ag-ui/core': 1.0.3(zod@4.6.7)
       '@bufbuild/protobuf': 2.16.0
       '@protobuf-ts/protoc': 2.11.1
-      zod: 3.25.76
+      zod: 4.6.7
 
   '@ai-sdk/gateway@3.0.202(zod@4.6.7)':
     dependencies:
@@ -13484,8 +13482,6 @@ snapshots:
   yoctocolors@2.2.0: {}
 
   zimmerframe@1.1.5: {}
-
-  zod@3.25.76: {}
 
   zod@4.6.7: {}
 

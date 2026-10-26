@@ -1,0 +1,2898 @@
+{
+  "revision": "409ded29ccac3eebc541979ae5320771703248e8",
+  "harnessSha256": "a1ba29cc7c4ce8184bd0ca87ee94ff2d377b51ad7c647c65f84db7807a87de21",
+  "compiler": "esbuild 0.28.2",
+  "node": "v22.23.2",
+  "runtimeDependencies": {
+    "@lit-labs/ssr-dom-shim": {
+      "version": "1.6.0",
+      "integrity": "sha512-VHb0ALPMTlgKjM6yIxxoQNnpKyUKLD04VzeQdsiXkMqkvYlAHxq9glGLmgbb889/1GsohSOAjvQYoiBppXFqrQ=="
+    },
+    "@lit/context": {
+      "version": "1.1.6",
+      "integrity": "sha512-M26qDE6UkQbZA2mQ3RjJ3Gzd8TxP+/0obMgE5HfkfLhEEyYE3Bui4A5XHiGPjy0MUGAyxB3QgVuw2ciS0kHn6A=="
+    },
+    "@lit/reactive-element": {
+      "version": "2.1.2",
+      "integrity": "sha512-pbCDiVMnne1lYUIaYNN5wrwQXDtHaYtg7YEFPeW+hws6U47WeFvISGUWekPGKWOP1ygrs0ef0o1VJMk1exos5A=="
+    },
+    "@preact/signals-core": {
+      "version": "1.14.4",
+      "integrity": "sha512-HNB6HYeYKhQbJ1aKl+YRjrS4+QWHLKX6qKoUsfS/m0vqzsVaEBiZiaKbG/e+NKk2ch5ALQr/ihWaMHxiCuuWHA=="
+    },
+    "@types/trusted-types": {
+      "version": "2.0.7",
+      "integrity": "sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw=="
+    },
+    "jsesc": {
+      "version": "3.1.0",
+      "integrity": "sha512-/sM3dO2FOzXjKQhJuo0Q173wf2KOo8t4I8vHy6lF9poUp7bKT0/NHE8fPX23PwfhnykfqnC2xRxOnVw5XuGIaA=="
+    },
+    "lit": {
+      "version": "3.3.3",
+      "integrity": "sha512-fycuvZg/hkpozL00lm1pEJH5nN/lr9ZXd6mJI2HSN4+Bzc+LDNdEApJ6HFbPkdFNHLvOplIIuJvxkS4XUxqirw=="
+    },
+    "lit-element": {
+      "version": "4.2.2",
+      "integrity": "sha512-aFKhNToWxoyhkNDmWZwEva2SlQia+jfG0fjIWV//YeTaWrVnOxD89dPKfigCUspXFmjzOEUQpOkejH5Ly6sG0w=="
+    },
+    "lit-html": {
+      "version": "3.3.3",
+      "integrity": "sha512-el8M6jK2o3RXBnrSHX3ZKrsN8zEV63pSExTO1wYJz7QndGYZ8353e2a5PPX+qHe2aGayfnchQmkAojaWAREOIA=="
+    },
+    "redos-detector": {
+      "version": "6.1.4",
+      "integrity": "sha512-lPlka1rEH6kK42gtgokvvxMmpAvyc28DcRjQbGxeP5RJsJWgAduBOdGedVCDPdSyCr4ay/JDxq3nGYsJZyt8tA=="
+    },
+    "regjsparser": {
+      "version": "0.13.0",
+      "integrity": "sha512-NZQZdC5wOE/H3UT28fVGL+ikOZcEzfMGk/c3iN9UGxzWHMa1op7274oyiUVrAG4B2EuFhus8SvkaYnhvW92p9Q=="
+    },
+    "validate-color": {
+      "version": "2.2.4",
+      "integrity": "sha512-Znolz+b6CwW6eBXYld7MFM3O7funcdyRfjKC/X9hqYV/0VcC5LB/L45mff7m3dIn9wdGdNOAQ/fybNuD5P/HDw=="
+    },
+    "zod": {
+      "version": "3.25.76",
+      "integrity": "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="
+    },
+    "zod-to-json-schema": {
+      "version": "3.25.2",
+      "integrity": "sha512-O/PgfnpT1xKSDeQYSCfRI5Gy3hPf91mKVDuYLUHZJMiDFptvP41MSnWofm8dnCm0256ZNfZIM7DSzuSMAFnjHA=="
+    }
+  },
+  "scope": "Three unchanged stable-directory examples; actual reference Lit DOM versus an explicit six-role Lyra test projection. Visible text, headings, keyboard actions, relative layout and data updates; not pixel, styling, accessibility or full-basic-catalog equivalence.",
+  "limitations": [
+    "Lyra fixture uses native button/section and explicit h1/h3 roles; production basic catalog is not provided.",
+    "Column alignment, spacing, typography, card chrome, button variants and markdown are not projected or claimed equivalent.",
+    "Candidate examples are excluded."
+  ],
+  "builds": {
+    "reference": {
+      "sha256": "8ee04c7fd28698d5fdc33b181fe0977247cf621fd58009d151df20191264dfd9",
+      "inputCount": 211,
+      "inputsSha256": "3fde93a0c907826849278ab33a11a76d082204829b69c091aa4adef05cea24e3"
+    },
+    "lyra": {
+      "sha256": "cc873c98ddeeb1e2acd018375cb482471d58ea26ee3ad6b6a0a863eaf984b454",
+      "inputCount": 344,
+      "inputsSha256": "416c544431752077a99d3e614f556f7775cdaa6c384aaeb97fc89ebe6b335c85"
+    }
+  },
+  "browsers": [
+    {
+      "engine": "chromium",
+      "version": "156.0.8078.4",
+      "examples": [
+        {
+          "file": "00_simple-text.json",
+          "fixtureSha256": "130ae3b46fa16b24246fb5bcd5d14d9707abbae8adda5fbd047ad98d1b13a56b",
+          "viewportWidth": 800,
+          "wireVersion": "v0.9",
+          "initial": {
+            "reference": [
+              {
+                "tag": "h1",
+                "text": "Hello, Minimal Catalog!",
+                "x": 16,
+                "y": 16,
+                "width": 768,
+                "height": 38
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "h1",
+                "text": "Hello, Minimal Catalog!",
+                "x": 16,
+                "y": 37,
+                "width": 768,
+                "height": 37
+              }
+            ]
+          },
+          "updated": {
+            "reference": [
+              {
+                "tag": "h1",
+                "text": "Updated heading",
+                "x": 16,
+                "y": 16,
+                "width": 768,
+                "height": 38
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "h1",
+                "text": "Updated heading",
+                "x": 16,
+                "y": 37,
+                "width": 768,
+                "height": 37
+              }
+            ]
+          },
+          "deleted": {
+            "reference": [],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "No generated view to display."
+              }
+            ]
+          },
+          "result": "declared-checks-pass"
+        },
+        {
+          "file": "00_interactive-button.json",
+          "fixtureSha256": "19d990117be8d66ffed20d5bb21127c9d153f90b8e3b2670f80c72d34aad0fb5",
+          "viewportWidth": 800,
+          "wireVersion": "v0.9",
+          "initial": {
+            "reference": [
+              {
+                "tag": "span",
+                "text": "Click the button below",
+                "x": 322,
+                "y": 16,
+                "width": 157,
+                "height": 18
+              },
+              {
+                "tag": "button",
+                "text": "Click Me",
+                "x": 358,
+                "y": 50,
+                "width": 83,
+                "height": 31
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "Click the button below",
+                "x": 16,
+                "y": 32,
+                "width": 768,
+                "height": 18
+              },
+              {
+                "tag": "button",
+                "text": "Click Me",
+                "x": 16,
+                "y": 74,
+                "width": 768,
+                "height": 21
+              }
+            ]
+          },
+          "updated": {
+            "reference": [
+              {
+                "tag": "span",
+                "text": "Updated heading",
+                "x": 339,
+                "y": 16,
+                "width": 122,
+                "height": 18
+              },
+              {
+                "tag": "button",
+                "text": "Click Me",
+                "x": 358,
+                "y": 50,
+                "width": 83,
+                "height": 31
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "Updated heading",
+                "x": 16,
+                "y": 32,
+                "width": 768,
+                "height": 18
+              },
+              {
+                "tag": "button",
+                "text": "Click Me",
+                "x": 16,
+                "y": 74,
+                "width": 768,
+                "height": 21
+              }
+            ]
+          },
+          "actions": {
+            "reference": {
+              "name": "button_clicked",
+              "surfaceId": "gallery-interactive-button",
+              "sourceComponentId": "action_button",
+              "context": {}
+            },
+            "lyra": {
+              "name": "button_clicked",
+              "surfaceId": "gallery-interactive-button",
+              "sourceComponentId": "action_button",
+              "context": {}
+            }
+          },
+          "deleted": {
+            "reference": [],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "No generated view to display."
+              }
+            ]
+          },
+          "result": "declared-checks-pass"
+        },
+        {
+          "file": "34_child-list-template.json",
+          "fixtureSha256": "9e79e4057e05fb097ddd96c2f5b328984eee7dd567218d3f67b2f8f67da064a2",
+          "viewportWidth": 800,
+          "wireVersion": "v0.9",
+          "initial": {
+            "reference": [
+              {
+                "tag": "h3",
+                "text": "Dynamic Item List",
+                "x": 33,
+                "y": 33,
+                "width": 734,
+                "height": 24
+              },
+              {
+                "tag": "span",
+                "text": "Apple",
+                "x": 49,
+                "y": 65,
+                "width": 41,
+                "height": 18
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 98,
+                "y": 65,
+                "width": 39,
+                "height": 18
+              },
+              {
+                "tag": "span",
+                "text": "10",
+                "x": 145,
+                "y": 65,
+                "width": 18,
+                "height": 18
+              },
+              {
+                "tag": "span",
+                "text": "Banana",
+                "x": 49,
+                "y": 87,
+                "width": 55,
+                "height": 18
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 112,
+                "y": 87,
+                "width": 39,
+                "height": 18
+              },
+              {
+                "tag": "span",
+                "text": "5",
+                "x": 159,
+                "y": 87,
+                "width": 9,
+                "height": 18
+              },
+              {
+                "tag": "span",
+                "text": "Cherry",
+                "x": 49,
+                "y": 109,
+                "width": 48,
+                "height": 18
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 105,
+                "y": 109,
+                "width": 39,
+                "height": 18
+              },
+              {
+                "tag": "span",
+                "text": "20",
+                "x": 152,
+                "y": 109,
+                "width": 18,
+                "height": 18
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "h3",
+                "text": "Dynamic Item List",
+                "x": 16,
+                "y": 35,
+                "width": 768,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "Apple",
+                "x": 16,
+                "y": 99,
+                "width": 41,
+                "height": 18
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 65,
+                "y": 99,
+                "width": 39,
+                "height": 18
+              },
+              {
+                "tag": "p",
+                "text": "10",
+                "x": 112,
+                "y": 99,
+                "width": 18,
+                "height": 18
+              },
+              {
+                "tag": "p",
+                "text": "Banana",
+                "x": 16,
+                "y": 157,
+                "width": 55,
+                "height": 18
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 79,
+                "y": 157,
+                "width": 39,
+                "height": 18
+              },
+              {
+                "tag": "p",
+                "text": "5",
+                "x": 126,
+                "y": 157,
+                "width": 9,
+                "height": 18
+              },
+              {
+                "tag": "p",
+                "text": "Cherry",
+                "x": 16,
+                "y": 215,
+                "width": 48,
+                "height": 18
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 72,
+                "y": 215,
+                "width": 39,
+                "height": 18
+              },
+              {
+                "tag": "p",
+                "text": "20",
+                "x": 119,
+                "y": 215,
+                "width": 18,
+                "height": 18
+              }
+            ]
+          },
+          "updated": {
+            "reference": [
+              {
+                "tag": "h3",
+                "text": "Dynamic Item List",
+                "x": 33,
+                "y": 33,
+                "width": 734,
+                "height": 24
+              },
+              {
+                "tag": "span",
+                "text": "Apricot",
+                "x": 49,
+                "y": 65,
+                "width": 50,
+                "height": 18
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 107,
+                "y": 65,
+                "width": 39,
+                "height": 18
+              },
+              {
+                "tag": "span",
+                "text": "7",
+                "x": 154,
+                "y": 65,
+                "width": 9,
+                "height": 18
+              },
+              {
+                "tag": "span",
+                "text": "Pear",
+                "x": 49,
+                "y": 87,
+                "width": 34,
+                "height": 18
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 91,
+                "y": 87,
+                "width": 39,
+                "height": 18
+              },
+              {
+                "tag": "span",
+                "text": "3",
+                "x": 138,
+                "y": 87,
+                "width": 9,
+                "height": 18
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "h3",
+                "text": "Dynamic Item List",
+                "x": 16,
+                "y": 35,
+                "width": 768,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "Apricot",
+                "x": 16,
+                "y": 99,
+                "width": 50,
+                "height": 18
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 74,
+                "y": 99,
+                "width": 39,
+                "height": 18
+              },
+              {
+                "tag": "p",
+                "text": "7",
+                "x": 121,
+                "y": 99,
+                "width": 9,
+                "height": 18
+              },
+              {
+                "tag": "p",
+                "text": "Pear",
+                "x": 16,
+                "y": 157,
+                "width": 34,
+                "height": 18
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 58,
+                "y": 157,
+                "width": 39,
+                "height": 18
+              },
+              {
+                "tag": "p",
+                "text": "3",
+                "x": 105,
+                "y": 157,
+                "width": 9,
+                "height": 18
+              }
+            ]
+          },
+          "deleted": {
+            "reference": [],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "No generated view to display."
+              }
+            ]
+          },
+          "result": "declared-checks-pass"
+        },
+        {
+          "file": "00_simple-text.json",
+          "fixtureSha256": "130ae3b46fa16b24246fb5bcd5d14d9707abbae8adda5fbd047ad98d1b13a56b",
+          "viewportWidth": 320,
+          "wireVersion": "v0.9",
+          "initial": {
+            "reference": [
+              {
+                "tag": "h1",
+                "text": "Hello, Minimal Catalog!",
+                "x": 16,
+                "y": 16,
+                "width": 288,
+                "height": 77
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "h1",
+                "text": "Hello, Minimal Catalog!",
+                "x": 16,
+                "y": 37,
+                "width": 288,
+                "height": 74
+              }
+            ]
+          },
+          "updated": {
+            "reference": [
+              {
+                "tag": "h1",
+                "text": "Updated heading",
+                "x": 16,
+                "y": 16,
+                "width": 288,
+                "height": 38
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "h1",
+                "text": "Updated heading",
+                "x": 16,
+                "y": 37,
+                "width": 288,
+                "height": 37
+              }
+            ]
+          },
+          "deleted": {
+            "reference": [],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "No generated view to display."
+              }
+            ]
+          },
+          "result": "declared-checks-pass"
+        },
+        {
+          "file": "00_interactive-button.json",
+          "fixtureSha256": "19d990117be8d66ffed20d5bb21127c9d153f90b8e3b2670f80c72d34aad0fb5",
+          "viewportWidth": 320,
+          "wireVersion": "v0.9",
+          "initial": {
+            "reference": [
+              {
+                "tag": "span",
+                "text": "Click the button below",
+                "x": 82,
+                "y": 16,
+                "width": 157,
+                "height": 18
+              },
+              {
+                "tag": "button",
+                "text": "Click Me",
+                "x": 118,
+                "y": 50,
+                "width": 83,
+                "height": 31
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "Click the button below",
+                "x": 16,
+                "y": 32,
+                "width": 288,
+                "height": 18
+              },
+              {
+                "tag": "button",
+                "text": "Click Me",
+                "x": 16,
+                "y": 74,
+                "width": 288,
+                "height": 21
+              }
+            ]
+          },
+          "updated": {
+            "reference": [
+              {
+                "tag": "span",
+                "text": "Updated heading",
+                "x": 99,
+                "y": 16,
+                "width": 122,
+                "height": 18
+              },
+              {
+                "tag": "button",
+                "text": "Click Me",
+                "x": 118,
+                "y": 50,
+                "width": 83,
+                "height": 31
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "Updated heading",
+                "x": 16,
+                "y": 32,
+                "width": 288,
+                "height": 18
+              },
+              {
+                "tag": "button",
+                "text": "Click Me",
+                "x": 16,
+                "y": 74,
+                "width": 288,
+                "height": 21
+              }
+            ]
+          },
+          "actions": {
+            "reference": {
+              "name": "button_clicked",
+              "surfaceId": "gallery-interactive-button",
+              "sourceComponentId": "action_button",
+              "context": {}
+            },
+            "lyra": {
+              "name": "button_clicked",
+              "surfaceId": "gallery-interactive-button",
+              "sourceComponentId": "action_button",
+              "context": {}
+            }
+          },
+          "deleted": {
+            "reference": [],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "No generated view to display."
+              }
+            ]
+          },
+          "result": "declared-checks-pass"
+        },
+        {
+          "file": "34_child-list-template.json",
+          "fixtureSha256": "9e79e4057e05fb097ddd96c2f5b328984eee7dd567218d3f67b2f8f67da064a2",
+          "viewportWidth": 320,
+          "wireVersion": "v0.9",
+          "initial": {
+            "reference": [
+              {
+                "tag": "h3",
+                "text": "Dynamic Item List",
+                "x": 33,
+                "y": 33,
+                "width": 254,
+                "height": 24
+              },
+              {
+                "tag": "span",
+                "text": "Apple",
+                "x": 49,
+                "y": 65,
+                "width": 41,
+                "height": 18
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 98,
+                "y": 65,
+                "width": 39,
+                "height": 18
+              },
+              {
+                "tag": "span",
+                "text": "10",
+                "x": 145,
+                "y": 65,
+                "width": 18,
+                "height": 18
+              },
+              {
+                "tag": "span",
+                "text": "Banana",
+                "x": 49,
+                "y": 87,
+                "width": 55,
+                "height": 18
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 112,
+                "y": 87,
+                "width": 39,
+                "height": 18
+              },
+              {
+                "tag": "span",
+                "text": "5",
+                "x": 159,
+                "y": 87,
+                "width": 9,
+                "height": 18
+              },
+              {
+                "tag": "span",
+                "text": "Cherry",
+                "x": 49,
+                "y": 109,
+                "width": 48,
+                "height": 18
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 105,
+                "y": 109,
+                "width": 39,
+                "height": 18
+              },
+              {
+                "tag": "span",
+                "text": "20",
+                "x": 152,
+                "y": 109,
+                "width": 18,
+                "height": 18
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "h3",
+                "text": "Dynamic Item List",
+                "x": 16,
+                "y": 35,
+                "width": 288,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "Apple",
+                "x": 16,
+                "y": 99,
+                "width": 41,
+                "height": 18
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 65,
+                "y": 99,
+                "width": 39,
+                "height": 18
+              },
+              {
+                "tag": "p",
+                "text": "10",
+                "x": 112,
+                "y": 99,
+                "width": 18,
+                "height": 18
+              },
+              {
+                "tag": "p",
+                "text": "Banana",
+                "x": 16,
+                "y": 157,
+                "width": 55,
+                "height": 18
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 79,
+                "y": 157,
+                "width": 39,
+                "height": 18
+              },
+              {
+                "tag": "p",
+                "text": "5",
+                "x": 126,
+                "y": 157,
+                "width": 9,
+                "height": 18
+              },
+              {
+                "tag": "p",
+                "text": "Cherry",
+                "x": 16,
+                "y": 215,
+                "width": 48,
+                "height": 18
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 72,
+                "y": 215,
+                "width": 39,
+                "height": 18
+              },
+              {
+                "tag": "p",
+                "text": "20",
+                "x": 119,
+                "y": 215,
+                "width": 18,
+                "height": 18
+              }
+            ]
+          },
+          "updated": {
+            "reference": [
+              {
+                "tag": "h3",
+                "text": "Dynamic Item List",
+                "x": 33,
+                "y": 33,
+                "width": 254,
+                "height": 24
+              },
+              {
+                "tag": "span",
+                "text": "Apricot",
+                "x": 49,
+                "y": 65,
+                "width": 50,
+                "height": 18
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 107,
+                "y": 65,
+                "width": 39,
+                "height": 18
+              },
+              {
+                "tag": "span",
+                "text": "7",
+                "x": 154,
+                "y": 65,
+                "width": 9,
+                "height": 18
+              },
+              {
+                "tag": "span",
+                "text": "Pear",
+                "x": 49,
+                "y": 87,
+                "width": 34,
+                "height": 18
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 91,
+                "y": 87,
+                "width": 39,
+                "height": 18
+              },
+              {
+                "tag": "span",
+                "text": "3",
+                "x": 138,
+                "y": 87,
+                "width": 9,
+                "height": 18
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "h3",
+                "text": "Dynamic Item List",
+                "x": 16,
+                "y": 35,
+                "width": 288,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "Apricot",
+                "x": 16,
+                "y": 99,
+                "width": 50,
+                "height": 18
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 74,
+                "y": 99,
+                "width": 39,
+                "height": 18
+              },
+              {
+                "tag": "p",
+                "text": "7",
+                "x": 121,
+                "y": 99,
+                "width": 9,
+                "height": 18
+              },
+              {
+                "tag": "p",
+                "text": "Pear",
+                "x": 16,
+                "y": 157,
+                "width": 34,
+                "height": 18
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 58,
+                "y": 157,
+                "width": 39,
+                "height": 18
+              },
+              {
+                "tag": "p",
+                "text": "3",
+                "x": 105,
+                "y": 157,
+                "width": 9,
+                "height": 18
+              }
+            ]
+          },
+          "deleted": {
+            "reference": [],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "No generated view to display."
+              }
+            ]
+          },
+          "result": "declared-checks-pass"
+        }
+      ]
+    },
+    {
+      "engine": "firefox",
+      "version": "157.0",
+      "examples": [
+        {
+          "file": "00_simple-text.json",
+          "fixtureSha256": "130ae3b46fa16b24246fb5bcd5d14d9707abbae8adda5fbd047ad98d1b13a56b",
+          "viewportWidth": 800,
+          "wireVersion": "v0.9",
+          "initial": {
+            "reference": [
+              {
+                "tag": "h1",
+                "text": "Hello, Minimal Catalog!",
+                "x": 16,
+                "y": 16,
+                "width": 768,
+                "height": 38
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "h1",
+                "text": "Hello, Minimal Catalog!",
+                "x": 16,
+                "y": 37,
+                "width": 768,
+                "height": 45
+              }
+            ]
+          },
+          "updated": {
+            "reference": [
+              {
+                "tag": "h1",
+                "text": "Updated heading",
+                "x": 16,
+                "y": 16,
+                "width": 768,
+                "height": 38
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "h1",
+                "text": "Updated heading",
+                "x": 16,
+                "y": 37,
+                "width": 768,
+                "height": 45
+              }
+            ]
+          },
+          "deleted": {
+            "reference": [],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "No generated view to display."
+              }
+            ]
+          },
+          "result": "declared-checks-pass"
+        },
+        {
+          "file": "00_interactive-button.json",
+          "fixtureSha256": "19d990117be8d66ffed20d5bb21127c9d153f90b8e3b2670f80c72d34aad0fb5",
+          "viewportWidth": 800,
+          "wireVersion": "v0.9",
+          "initial": {
+            "reference": [
+              {
+                "tag": "span",
+                "text": "Click the button below",
+                "x": 316,
+                "y": 16,
+                "width": 168,
+                "height": 23
+              },
+              {
+                "tag": "button",
+                "text": "Click Me",
+                "x": 358,
+                "y": 55,
+                "width": 84,
+                "height": 35
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "Click the button below",
+                "x": 16,
+                "y": 32,
+                "width": 768,
+                "height": 23
+              },
+              {
+                "tag": "button",
+                "text": "Click Me",
+                "x": 16,
+                "y": 79,
+                "width": 768,
+                "height": 25
+              }
+            ]
+          },
+          "updated": {
+            "reference": [
+              {
+                "tag": "span",
+                "text": "Updated heading",
+                "x": 335,
+                "y": 16,
+                "width": 131,
+                "height": 23
+              },
+              {
+                "tag": "button",
+                "text": "Click Me",
+                "x": 358,
+                "y": 55,
+                "width": 84,
+                "height": 35
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "Updated heading",
+                "x": 16,
+                "y": 32,
+                "width": 768,
+                "height": 23
+              },
+              {
+                "tag": "button",
+                "text": "Click Me",
+                "x": 16,
+                "y": 79,
+                "width": 768,
+                "height": 25
+              }
+            ]
+          },
+          "actions": {
+            "reference": {
+              "name": "button_clicked",
+              "surfaceId": "gallery-interactive-button",
+              "sourceComponentId": "action_button",
+              "context": {}
+            },
+            "lyra": {
+              "name": "button_clicked",
+              "surfaceId": "gallery-interactive-button",
+              "sourceComponentId": "action_button",
+              "context": {}
+            }
+          },
+          "deleted": {
+            "reference": [],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "No generated view to display."
+              }
+            ]
+          },
+          "result": "declared-checks-pass"
+        },
+        {
+          "file": "34_child-list-template.json",
+          "fixtureSha256": "9e79e4057e05fb097ddd96c2f5b328984eee7dd567218d3f67b2f8f67da064a2",
+          "viewportWidth": 800,
+          "wireVersion": "v0.9",
+          "initial": {
+            "reference": [
+              {
+                "tag": "h3",
+                "text": "Dynamic Item List",
+                "x": 33,
+                "y": 33,
+                "width": 734,
+                "height": 24
+              },
+              {
+                "tag": "span",
+                "text": "Apple",
+                "x": 49,
+                "y": 65,
+                "width": 43,
+                "height": 23
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 100,
+                "y": 65,
+                "width": 40,
+                "height": 23
+              },
+              {
+                "tag": "span",
+                "text": "10",
+                "x": 148,
+                "y": 65,
+                "width": 18,
+                "height": 23
+              },
+              {
+                "tag": "span",
+                "text": "Banana",
+                "x": 49,
+                "y": 92,
+                "width": 57,
+                "height": 23
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 114,
+                "y": 92,
+                "width": 40,
+                "height": 23
+              },
+              {
+                "tag": "span",
+                "text": "5",
+                "x": 162,
+                "y": 92,
+                "width": 9,
+                "height": 23
+              },
+              {
+                "tag": "span",
+                "text": "Cherry",
+                "x": 49,
+                "y": 119,
+                "width": 50,
+                "height": 23
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 107,
+                "y": 119,
+                "width": 40,
+                "height": 23
+              },
+              {
+                "tag": "span",
+                "text": "20",
+                "x": 155,
+                "y": 119,
+                "width": 18,
+                "height": 23
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "h3",
+                "text": "Dynamic Item List",
+                "x": 16,
+                "y": 35,
+                "width": 768,
+                "height": 27
+              },
+              {
+                "tag": "p",
+                "text": "Apple",
+                "x": 16,
+                "y": 104,
+                "width": 43,
+                "height": 23
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 67,
+                "y": 104,
+                "width": 40,
+                "height": 23
+              },
+              {
+                "tag": "p",
+                "text": "10",
+                "x": 115,
+                "y": 104,
+                "width": 18,
+                "height": 23
+              },
+              {
+                "tag": "p",
+                "text": "Banana",
+                "x": 16,
+                "y": 167,
+                "width": 57,
+                "height": 23
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 81,
+                "y": 167,
+                "width": 40,
+                "height": 23
+              },
+              {
+                "tag": "p",
+                "text": "5",
+                "x": 129,
+                "y": 167,
+                "width": 9,
+                "height": 23
+              },
+              {
+                "tag": "p",
+                "text": "Cherry",
+                "x": 16,
+                "y": 230,
+                "width": 50,
+                "height": 23
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 74,
+                "y": 230,
+                "width": 40,
+                "height": 23
+              },
+              {
+                "tag": "p",
+                "text": "20",
+                "x": 122,
+                "y": 230,
+                "width": 18,
+                "height": 23
+              }
+            ]
+          },
+          "updated": {
+            "reference": [
+              {
+                "tag": "h3",
+                "text": "Dynamic Item List",
+                "x": 33,
+                "y": 33,
+                "width": 734,
+                "height": 24
+              },
+              {
+                "tag": "span",
+                "text": "Apricot",
+                "x": 49,
+                "y": 65,
+                "width": 54,
+                "height": 23
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 111,
+                "y": 65,
+                "width": 40,
+                "height": 23
+              },
+              {
+                "tag": "span",
+                "text": "7",
+                "x": 159,
+                "y": 65,
+                "width": 9,
+                "height": 23
+              },
+              {
+                "tag": "span",
+                "text": "Pear",
+                "x": 49,
+                "y": 92,
+                "width": 34,
+                "height": 23
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 91,
+                "y": 92,
+                "width": 40,
+                "height": 23
+              },
+              {
+                "tag": "span",
+                "text": "3",
+                "x": 139,
+                "y": 92,
+                "width": 9,
+                "height": 23
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "h3",
+                "text": "Dynamic Item List",
+                "x": 16,
+                "y": 35,
+                "width": 768,
+                "height": 27
+              },
+              {
+                "tag": "p",
+                "text": "Apricot",
+                "x": 16,
+                "y": 104,
+                "width": 54,
+                "height": 23
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 78,
+                "y": 104,
+                "width": 40,
+                "height": 23
+              },
+              {
+                "tag": "p",
+                "text": "7",
+                "x": 126,
+                "y": 104,
+                "width": 9,
+                "height": 23
+              },
+              {
+                "tag": "p",
+                "text": "Pear",
+                "x": 16,
+                "y": 167,
+                "width": 34,
+                "height": 23
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 58,
+                "y": 167,
+                "width": 40,
+                "height": 23
+              },
+              {
+                "tag": "p",
+                "text": "3",
+                "x": 106,
+                "y": 167,
+                "width": 9,
+                "height": 23
+              }
+            ]
+          },
+          "deleted": {
+            "reference": [],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "No generated view to display."
+              }
+            ]
+          },
+          "result": "declared-checks-pass"
+        },
+        {
+          "file": "00_simple-text.json",
+          "fixtureSha256": "130ae3b46fa16b24246fb5bcd5d14d9707abbae8adda5fbd047ad98d1b13a56b",
+          "viewportWidth": 320,
+          "wireVersion": "v0.9",
+          "initial": {
+            "reference": [
+              {
+                "tag": "h1",
+                "text": "Hello, Minimal Catalog!",
+                "x": 16,
+                "y": 16,
+                "width": 288,
+                "height": 77
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "h1",
+                "text": "Hello, Minimal Catalog!",
+                "x": 16,
+                "y": 37,
+                "width": 288,
+                "height": 90
+              }
+            ]
+          },
+          "updated": {
+            "reference": [
+              {
+                "tag": "h1",
+                "text": "Updated heading",
+                "x": 16,
+                "y": 16,
+                "width": 288,
+                "height": 38
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "h1",
+                "text": "Updated heading",
+                "x": 16,
+                "y": 37,
+                "width": 288,
+                "height": 45
+              }
+            ]
+          },
+          "deleted": {
+            "reference": [],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "No generated view to display."
+              }
+            ]
+          },
+          "result": "declared-checks-pass"
+        },
+        {
+          "file": "00_interactive-button.json",
+          "fixtureSha256": "19d990117be8d66ffed20d5bb21127c9d153f90b8e3b2670f80c72d34aad0fb5",
+          "viewportWidth": 320,
+          "wireVersion": "v0.9",
+          "initial": {
+            "reference": [
+              {
+                "tag": "span",
+                "text": "Click the button below",
+                "x": 76,
+                "y": 16,
+                "width": 168,
+                "height": 23
+              },
+              {
+                "tag": "button",
+                "text": "Click Me",
+                "x": 118,
+                "y": 55,
+                "width": 84,
+                "height": 35
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "Click the button below",
+                "x": 16,
+                "y": 32,
+                "width": 288,
+                "height": 23
+              },
+              {
+                "tag": "button",
+                "text": "Click Me",
+                "x": 16,
+                "y": 79,
+                "width": 288,
+                "height": 25
+              }
+            ]
+          },
+          "updated": {
+            "reference": [
+              {
+                "tag": "span",
+                "text": "Updated heading",
+                "x": 95,
+                "y": 16,
+                "width": 131,
+                "height": 23
+              },
+              {
+                "tag": "button",
+                "text": "Click Me",
+                "x": 118,
+                "y": 55,
+                "width": 84,
+                "height": 35
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "Updated heading",
+                "x": 16,
+                "y": 32,
+                "width": 288,
+                "height": 23
+              },
+              {
+                "tag": "button",
+                "text": "Click Me",
+                "x": 16,
+                "y": 79,
+                "width": 288,
+                "height": 25
+              }
+            ]
+          },
+          "actions": {
+            "reference": {
+              "name": "button_clicked",
+              "surfaceId": "gallery-interactive-button",
+              "sourceComponentId": "action_button",
+              "context": {}
+            },
+            "lyra": {
+              "name": "button_clicked",
+              "surfaceId": "gallery-interactive-button",
+              "sourceComponentId": "action_button",
+              "context": {}
+            }
+          },
+          "deleted": {
+            "reference": [],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "No generated view to display."
+              }
+            ]
+          },
+          "result": "declared-checks-pass"
+        },
+        {
+          "file": "34_child-list-template.json",
+          "fixtureSha256": "9e79e4057e05fb097ddd96c2f5b328984eee7dd567218d3f67b2f8f67da064a2",
+          "viewportWidth": 320,
+          "wireVersion": "v0.9",
+          "initial": {
+            "reference": [
+              {
+                "tag": "h3",
+                "text": "Dynamic Item List",
+                "x": 33,
+                "y": 33,
+                "width": 254,
+                "height": 24
+              },
+              {
+                "tag": "span",
+                "text": "Apple",
+                "x": 49,
+                "y": 65,
+                "width": 43,
+                "height": 23
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 100,
+                "y": 65,
+                "width": 40,
+                "height": 23
+              },
+              {
+                "tag": "span",
+                "text": "10",
+                "x": 148,
+                "y": 65,
+                "width": 18,
+                "height": 23
+              },
+              {
+                "tag": "span",
+                "text": "Banana",
+                "x": 49,
+                "y": 92,
+                "width": 57,
+                "height": 23
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 114,
+                "y": 92,
+                "width": 40,
+                "height": 23
+              },
+              {
+                "tag": "span",
+                "text": "5",
+                "x": 162,
+                "y": 92,
+                "width": 9,
+                "height": 23
+              },
+              {
+                "tag": "span",
+                "text": "Cherry",
+                "x": 49,
+                "y": 119,
+                "width": 50,
+                "height": 23
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 107,
+                "y": 119,
+                "width": 40,
+                "height": 23
+              },
+              {
+                "tag": "span",
+                "text": "20",
+                "x": 155,
+                "y": 119,
+                "width": 18,
+                "height": 23
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "h3",
+                "text": "Dynamic Item List",
+                "x": 16,
+                "y": 35,
+                "width": 288,
+                "height": 27
+              },
+              {
+                "tag": "p",
+                "text": "Apple",
+                "x": 16,
+                "y": 104,
+                "width": 43,
+                "height": 23
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 67,
+                "y": 104,
+                "width": 40,
+                "height": 23
+              },
+              {
+                "tag": "p",
+                "text": "10",
+                "x": 115,
+                "y": 104,
+                "width": 18,
+                "height": 23
+              },
+              {
+                "tag": "p",
+                "text": "Banana",
+                "x": 16,
+                "y": 167,
+                "width": 57,
+                "height": 23
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 81,
+                "y": 167,
+                "width": 40,
+                "height": 23
+              },
+              {
+                "tag": "p",
+                "text": "5",
+                "x": 129,
+                "y": 167,
+                "width": 9,
+                "height": 23
+              },
+              {
+                "tag": "p",
+                "text": "Cherry",
+                "x": 16,
+                "y": 230,
+                "width": 50,
+                "height": 23
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 74,
+                "y": 230,
+                "width": 40,
+                "height": 23
+              },
+              {
+                "tag": "p",
+                "text": "20",
+                "x": 122,
+                "y": 230,
+                "width": 18,
+                "height": 23
+              }
+            ]
+          },
+          "updated": {
+            "reference": [
+              {
+                "tag": "h3",
+                "text": "Dynamic Item List",
+                "x": 33,
+                "y": 33,
+                "width": 254,
+                "height": 24
+              },
+              {
+                "tag": "span",
+                "text": "Apricot",
+                "x": 49,
+                "y": 65,
+                "width": 54,
+                "height": 23
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 111,
+                "y": 65,
+                "width": 40,
+                "height": 23
+              },
+              {
+                "tag": "span",
+                "text": "7",
+                "x": 159,
+                "y": 65,
+                "width": 9,
+                "height": 23
+              },
+              {
+                "tag": "span",
+                "text": "Pear",
+                "x": 49,
+                "y": 92,
+                "width": 34,
+                "height": 23
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 91,
+                "y": 92,
+                "width": 40,
+                "height": 23
+              },
+              {
+                "tag": "span",
+                "text": "3",
+                "x": 139,
+                "y": 92,
+                "width": 9,
+                "height": 23
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "h3",
+                "text": "Dynamic Item List",
+                "x": 16,
+                "y": 35,
+                "width": 288,
+                "height": 27
+              },
+              {
+                "tag": "p",
+                "text": "Apricot",
+                "x": 16,
+                "y": 104,
+                "width": 54,
+                "height": 23
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 78,
+                "y": 104,
+                "width": 40,
+                "height": 23
+              },
+              {
+                "tag": "p",
+                "text": "7",
+                "x": 126,
+                "y": 104,
+                "width": 9,
+                "height": 23
+              },
+              {
+                "tag": "p",
+                "text": "Pear",
+                "x": 16,
+                "y": 167,
+                "width": 34,
+                "height": 23
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 58,
+                "y": 167,
+                "width": 40,
+                "height": 23
+              },
+              {
+                "tag": "p",
+                "text": "3",
+                "x": 106,
+                "y": 167,
+                "width": 9,
+                "height": 23
+              }
+            ]
+          },
+          "deleted": {
+            "reference": [],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "No generated view to display."
+              }
+            ]
+          },
+          "result": "declared-checks-pass"
+        }
+      ]
+    },
+    {
+      "engine": "webkit",
+      "version": "27.2",
+      "examples": [
+        {
+          "file": "00_simple-text.json",
+          "fixtureSha256": "130ae3b46fa16b24246fb5bcd5d14d9707abbae8adda5fbd047ad98d1b13a56b",
+          "viewportWidth": 800,
+          "wireVersion": "v0.9",
+          "initial": {
+            "reference": [
+              {
+                "tag": "h1",
+                "text": "Hello, Minimal Catalog!",
+                "x": 16,
+                "y": 16,
+                "width": 768,
+                "height": 38
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "h1",
+                "text": "Hello, Minimal Catalog!",
+                "x": 16,
+                "y": 37,
+                "width": 768,
+                "height": 43
+              }
+            ]
+          },
+          "updated": {
+            "reference": [
+              {
+                "tag": "h1",
+                "text": "Updated heading",
+                "x": 16,
+                "y": 16,
+                "width": 768,
+                "height": 38
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "h1",
+                "text": "Updated heading",
+                "x": 16,
+                "y": 37,
+                "width": 768,
+                "height": 43
+              }
+            ]
+          },
+          "deleted": {
+            "reference": [],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "No generated view to display."
+              }
+            ]
+          },
+          "result": "declared-checks-pass"
+        },
+        {
+          "file": "00_interactive-button.json",
+          "fixtureSha256": "19d990117be8d66ffed20d5bb21127c9d153f90b8e3b2670f80c72d34aad0fb5",
+          "viewportWidth": 800,
+          "wireVersion": "v0.9",
+          "initial": {
+            "reference": [
+              {
+                "tag": "span",
+                "text": "Click the button below",
+                "x": 316,
+                "y": 16,
+                "width": 168,
+                "height": 22
+              },
+              {
+                "tag": "button",
+                "text": "Click Me",
+                "x": 353,
+                "y": 54,
+                "width": 94,
+                "height": 38
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "Click the button below",
+                "x": 16,
+                "y": 32,
+                "width": 768,
+                "height": 22
+              },
+              {
+                "tag": "button",
+                "text": "Click Me",
+                "x": 16,
+                "y": 78,
+                "width": 768,
+                "height": 31
+              }
+            ]
+          },
+          "updated": {
+            "reference": [
+              {
+                "tag": "span",
+                "text": "Updated heading",
+                "x": 335,
+                "y": 16,
+                "width": 131,
+                "height": 22
+              },
+              {
+                "tag": "button",
+                "text": "Click Me",
+                "x": 353,
+                "y": 54,
+                "width": 94,
+                "height": 38
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "Updated heading",
+                "x": 16,
+                "y": 32,
+                "width": 768,
+                "height": 22
+              },
+              {
+                "tag": "button",
+                "text": "Click Me",
+                "x": 16,
+                "y": 78,
+                "width": 768,
+                "height": 31
+              }
+            ]
+          },
+          "actions": {
+            "reference": {
+              "name": "button_clicked",
+              "surfaceId": "gallery-interactive-button",
+              "sourceComponentId": "action_button",
+              "context": {}
+            },
+            "lyra": {
+              "name": "button_clicked",
+              "surfaceId": "gallery-interactive-button",
+              "sourceComponentId": "action_button",
+              "context": {}
+            }
+          },
+          "deleted": {
+            "reference": [],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "No generated view to display."
+              }
+            ]
+          },
+          "result": "declared-checks-pass"
+        },
+        {
+          "file": "34_child-list-template.json",
+          "fixtureSha256": "9e79e4057e05fb097ddd96c2f5b328984eee7dd567218d3f67b2f8f67da064a2",
+          "viewportWidth": 800,
+          "wireVersion": "v0.9",
+          "initial": {
+            "reference": [
+              {
+                "tag": "h3",
+                "text": "Dynamic Item List",
+                "x": 33,
+                "y": 33,
+                "width": 734,
+                "height": 24
+              },
+              {
+                "tag": "span",
+                "text": "Apple",
+                "x": 49,
+                "y": 65,
+                "width": 43,
+                "height": 22
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 100,
+                "y": 65,
+                "width": 40,
+                "height": 22
+              },
+              {
+                "tag": "span",
+                "text": "10",
+                "x": 148,
+                "y": 65,
+                "width": 18,
+                "height": 22
+              },
+              {
+                "tag": "span",
+                "text": "Banana",
+                "x": 49,
+                "y": 91,
+                "width": 57,
+                "height": 22
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 114,
+                "y": 91,
+                "width": 40,
+                "height": 22
+              },
+              {
+                "tag": "span",
+                "text": "5",
+                "x": 162,
+                "y": 91,
+                "width": 9,
+                "height": 22
+              },
+              {
+                "tag": "span",
+                "text": "Cherry",
+                "x": 49,
+                "y": 117,
+                "width": 50,
+                "height": 22
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 107,
+                "y": 117,
+                "width": 40,
+                "height": 22
+              },
+              {
+                "tag": "span",
+                "text": "20",
+                "x": 155,
+                "y": 117,
+                "width": 18,
+                "height": 22
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "h3",
+                "text": "Dynamic Item List",
+                "x": 16,
+                "y": 35,
+                "width": 768,
+                "height": 25
+              },
+              {
+                "tag": "p",
+                "text": "Apple",
+                "x": 16,
+                "y": 102,
+                "width": 43,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 67,
+                "y": 102,
+                "width": 40,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "10",
+                "x": 115,
+                "y": 102,
+                "width": 18,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "Banana",
+                "x": 16,
+                "y": 164,
+                "width": 57,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 81,
+                "y": 164,
+                "width": 40,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "5",
+                "x": 129,
+                "y": 164,
+                "width": 9,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "Cherry",
+                "x": 16,
+                "y": 226,
+                "width": 50,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 74,
+                "y": 226,
+                "width": 40,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "20",
+                "x": 122,
+                "y": 226,
+                "width": 18,
+                "height": 22
+              }
+            ]
+          },
+          "updated": {
+            "reference": [
+              {
+                "tag": "h3",
+                "text": "Dynamic Item List",
+                "x": 33,
+                "y": 33,
+                "width": 734,
+                "height": 24
+              },
+              {
+                "tag": "span",
+                "text": "Apricot",
+                "x": 49,
+                "y": 65,
+                "width": 54,
+                "height": 22
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 111,
+                "y": 65,
+                "width": 40,
+                "height": 22
+              },
+              {
+                "tag": "span",
+                "text": "7",
+                "x": 159,
+                "y": 65,
+                "width": 9,
+                "height": 22
+              },
+              {
+                "tag": "span",
+                "text": "Pear",
+                "x": 49,
+                "y": 91,
+                "width": 34,
+                "height": 22
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 91,
+                "y": 91,
+                "width": 40,
+                "height": 22
+              },
+              {
+                "tag": "span",
+                "text": "3",
+                "x": 139,
+                "y": 91,
+                "width": 9,
+                "height": 22
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "h3",
+                "text": "Dynamic Item List",
+                "x": 16,
+                "y": 35,
+                "width": 768,
+                "height": 25
+              },
+              {
+                "tag": "p",
+                "text": "Apricot",
+                "x": 16,
+                "y": 102,
+                "width": 54,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 78,
+                "y": 102,
+                "width": 40,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "7",
+                "x": 126,
+                "y": 102,
+                "width": 9,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "Pear",
+                "x": 16,
+                "y": 164,
+                "width": 34,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 58,
+                "y": 164,
+                "width": 40,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "3",
+                "x": 106,
+                "y": 164,
+                "width": 9,
+                "height": 22
+              }
+            ]
+          },
+          "deleted": {
+            "reference": [],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "No generated view to display."
+              }
+            ]
+          },
+          "result": "declared-checks-pass"
+        },
+        {
+          "file": "00_simple-text.json",
+          "fixtureSha256": "130ae3b46fa16b24246fb5bcd5d14d9707abbae8adda5fbd047ad98d1b13a56b",
+          "viewportWidth": 320,
+          "wireVersion": "v0.9",
+          "initial": {
+            "reference": [
+              {
+                "tag": "h1",
+                "text": "Hello, Minimal Catalog!",
+                "x": 16,
+                "y": 16,
+                "width": 288,
+                "height": 77
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "h1",
+                "text": "Hello, Minimal Catalog!",
+                "x": 16,
+                "y": 37,
+                "width": 288,
+                "height": 86
+              }
+            ]
+          },
+          "updated": {
+            "reference": [
+              {
+                "tag": "h1",
+                "text": "Updated heading",
+                "x": 16,
+                "y": 16,
+                "width": 288,
+                "height": 38
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "h1",
+                "text": "Updated heading",
+                "x": 16,
+                "y": 37,
+                "width": 288,
+                "height": 43
+              }
+            ]
+          },
+          "deleted": {
+            "reference": [],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "No generated view to display."
+              }
+            ]
+          },
+          "result": "declared-checks-pass"
+        },
+        {
+          "file": "00_interactive-button.json",
+          "fixtureSha256": "19d990117be8d66ffed20d5bb21127c9d153f90b8e3b2670f80c72d34aad0fb5",
+          "viewportWidth": 320,
+          "wireVersion": "v0.9",
+          "initial": {
+            "reference": [
+              {
+                "tag": "span",
+                "text": "Click the button below",
+                "x": 76,
+                "y": 16,
+                "width": 168,
+                "height": 22
+              },
+              {
+                "tag": "button",
+                "text": "Click Me",
+                "x": 113,
+                "y": 54,
+                "width": 94,
+                "height": 38
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "Click the button below",
+                "x": 16,
+                "y": 32,
+                "width": 288,
+                "height": 22
+              },
+              {
+                "tag": "button",
+                "text": "Click Me",
+                "x": 16,
+                "y": 78,
+                "width": 288,
+                "height": 31
+              }
+            ]
+          },
+          "updated": {
+            "reference": [
+              {
+                "tag": "span",
+                "text": "Updated heading",
+                "x": 95,
+                "y": 16,
+                "width": 131,
+                "height": 22
+              },
+              {
+                "tag": "button",
+                "text": "Click Me",
+                "x": 113,
+                "y": 54,
+                "width": 94,
+                "height": 38
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "Updated heading",
+                "x": 16,
+                "y": 32,
+                "width": 288,
+                "height": 22
+              },
+              {
+                "tag": "button",
+                "text": "Click Me",
+                "x": 16,
+                "y": 78,
+                "width": 288,
+                "height": 31
+              }
+            ]
+          },
+          "actions": {
+            "reference": {
+              "name": "button_clicked",
+              "surfaceId": "gallery-interactive-button",
+              "sourceComponentId": "action_button",
+              "context": {}
+            },
+            "lyra": {
+              "name": "button_clicked",
+              "surfaceId": "gallery-interactive-button",
+              "sourceComponentId": "action_button",
+              "context": {}
+            }
+          },
+          "deleted": {
+            "reference": [],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "No generated view to display."
+              }
+            ]
+          },
+          "result": "declared-checks-pass"
+        },
+        {
+          "file": "34_child-list-template.json",
+          "fixtureSha256": "9e79e4057e05fb097ddd96c2f5b328984eee7dd567218d3f67b2f8f67da064a2",
+          "viewportWidth": 320,
+          "wireVersion": "v0.9",
+          "initial": {
+            "reference": [
+              {
+                "tag": "h3",
+                "text": "Dynamic Item List",
+                "x": 33,
+                "y": 33,
+                "width": 254,
+                "height": 24
+              },
+              {
+                "tag": "span",
+                "text": "Apple",
+                "x": 49,
+                "y": 65,
+                "width": 43,
+                "height": 22
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 100,
+                "y": 65,
+                "width": 40,
+                "height": 22
+              },
+              {
+                "tag": "span",
+                "text": "10",
+                "x": 148,
+                "y": 65,
+                "width": 18,
+                "height": 22
+              },
+              {
+                "tag": "span",
+                "text": "Banana",
+                "x": 49,
+                "y": 91,
+                "width": 57,
+                "height": 22
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 114,
+                "y": 91,
+                "width": 40,
+                "height": 22
+              },
+              {
+                "tag": "span",
+                "text": "5",
+                "x": 162,
+                "y": 91,
+                "width": 9,
+                "height": 22
+              },
+              {
+                "tag": "span",
+                "text": "Cherry",
+                "x": 49,
+                "y": 117,
+                "width": 50,
+                "height": 22
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 107,
+                "y": 117,
+                "width": 40,
+                "height": 22
+              },
+              {
+                "tag": "span",
+                "text": "20",
+                "x": 155,
+                "y": 117,
+                "width": 18,
+                "height": 22
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "h3",
+                "text": "Dynamic Item List",
+                "x": 16,
+                "y": 35,
+                "width": 288,
+                "height": 25
+              },
+              {
+                "tag": "p",
+                "text": "Apple",
+                "x": 16,
+                "y": 102,
+                "width": 43,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 67,
+                "y": 102,
+                "width": 40,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "10",
+                "x": 115,
+                "y": 102,
+                "width": 18,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "Banana",
+                "x": 16,
+                "y": 164,
+                "width": 57,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 81,
+                "y": 164,
+                "width": 40,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "5",
+                "x": 129,
+                "y": 164,
+                "width": 9,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "Cherry",
+                "x": 16,
+                "y": 226,
+                "width": 50,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 74,
+                "y": 226,
+                "width": 40,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "20",
+                "x": 122,
+                "y": 226,
+                "width": 18,
+                "height": 22
+              }
+            ]
+          },
+          "updated": {
+            "reference": [
+              {
+                "tag": "h3",
+                "text": "Dynamic Item List",
+                "x": 33,
+                "y": 33,
+                "width": 254,
+                "height": 24
+              },
+              {
+                "tag": "span",
+                "text": "Apricot",
+                "x": 49,
+                "y": 65,
+                "width": 54,
+                "height": 22
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 111,
+                "y": 65,
+                "width": 40,
+                "height": 22
+              },
+              {
+                "tag": "span",
+                "text": "7",
+                "x": 159,
+                "y": 65,
+                "width": 9,
+                "height": 22
+              },
+              {
+                "tag": "span",
+                "text": "Pear",
+                "x": 49,
+                "y": 91,
+                "width": 34,
+                "height": 22
+              },
+              {
+                "tag": "span",
+                "text": "- Qty:",
+                "x": 91,
+                "y": 91,
+                "width": 40,
+                "height": 22
+              },
+              {
+                "tag": "span",
+                "text": "3",
+                "x": 139,
+                "y": 91,
+                "width": 9,
+                "height": 22
+              }
+            ],
+            "lyra": [
+              {
+                "tag": "h3",
+                "text": "Dynamic Item List",
+                "x": 16,
+                "y": 35,
+                "width": 288,
+                "height": 25
+              },
+              {
+                "tag": "p",
+                "text": "Apricot",
+                "x": 16,
+                "y": 102,
+                "width": 54,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 78,
+                "y": 102,
+                "width": 40,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "7",
+                "x": 126,
+                "y": 102,
+                "width": 9,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "Pear",
+                "x": 16,
+                "y": 164,
+                "width": 34,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "- Qty:",
+                "x": 58,
+                "y": 164,
+                "width": 40,
+                "height": 22
+              },
+              {
+                "tag": "p",
+                "text": "3",
+                "x": 106,
+                "y": 164,
+                "width": 9,
+                "height": 22
+              }
+            ]
+          },
+          "deleted": {
+            "reference": [],
+            "lyra": [
+              {
+                "tag": "p",
+                "text": "No generated view to display."
+              }
+            ]
+          },
+          "result": "declared-checks-pass"
+        }
+      ]
+    }
+  ]
+}

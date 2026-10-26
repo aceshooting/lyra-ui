@@ -68,15 +68,15 @@ export default {
         'src/index.ts!', 'src/gen-view.ts!', 'src/gen-view.class.ts!',
         'src/dashboard-binding.ts!', 'src/ssr.ts!', 'src/adapters/a2ui.ts!',
         'src/adapters/a2ui-candidate.ts!', 'src/replay.ts!', 'src/evaluation.ts!',
-        'src/**/*.test.ts', 'test/**/*.{ts,mjs}',
+        'src/**/*.test.ts', 'test/**/*.{ts,mjs}', 'scripts/*.test.mjs',
         // Published examples and maintainer qualification CLIs are explicit runnable entries.
         'examples/chat.ts!', 'examples/dashboard.ts!', 'examples/saved-dashboard/{app.js,host.mjs}!',
-        'scripts/{compare-a2ui-reference,openui-experiment,report-catalog-presets}.mjs',
+        'scripts/{check-catalog-consumer,compare-a2ui-reference,compare-a2ui-dom,openui-experiment,report-catalog-presets}.mjs',
         '*.config.mjs',
       ],
       project: ['src/**/*.ts!', '!src/**/*.test.ts!', 'scripts/**/*.mjs', 'bin/*.mjs', 'examples/**/*.{ts,js,mjs}', 'test/**/*.{ts,mjs}', '*.config.mjs'],
-      // TypeScript emits decorator helper imports into the published build.
-      ignoreDependencies: ['tslib'],
+      // TypeScript emits tslib helpers; the DOM comparison bundles these aliases from pinned source.
+      ignoreDependencies: ['tslib', '@a2ui/web_core', '@a2ui/lit-basic', '@a2ui/lit-surface'],
     },
     'packages/lyra-map': {
       // Build inputs produce the public worker/plugin entries and declarations in dist/.

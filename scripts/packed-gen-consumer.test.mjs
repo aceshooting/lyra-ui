@@ -26,8 +26,14 @@ test('packing rejects leaked workspace ranges, missing docs/types, fixtures and 
   assert.throws(() => validatePackedGenManifest(manifest(), files, '31.0.0'), /peer/u);
 });
 
-test('the archive retains authority, recovery and replay guidance with its runnable examples', () => {
-  for (const required of ['docs/approval.md', 'docs/rendering.md', 'docs/stored-answer-migrations.md', 'docs/recovery-and-diagnostics.md', 'docs/threat-matrix.md', 'examples/recordings/chat-review.v1.json', 'examples/saved-dashboard/README.md']) {
+test('the archive retains host guides and runnable examples', () => {
+  for (const required of [
+    'docs/approval.md', 'docs/rendering.md', 'docs/stored-answer-migrations.md',
+    'docs/recovery-and-diagnostics.md', 'docs/threat-matrix.md',
+    'docs/navigation.md', 'examples/navigation.ts',
+    'docs/server-transport.md', 'examples/server-transport.mjs',
+    'examples/recordings/chat-review.v1.json', 'examples/saved-dashboard/README.md',
+  ]) {
     assert.throws(() => validatePackedGenManifest(manifest(), files.filter(file => file !== required), '30.2.0'), error => error instanceof Error && error.message.includes(required));
   }
 });

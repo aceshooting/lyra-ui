@@ -10,21 +10,38 @@ export const A2UI_CANDIDATE_PROFILE = Object.freeze({
   supportedCatalogIds: Object.freeze([] as string[])
 });
 
-/** Export a literal-property candidate catalog for schema experiments, never stable negotiation. */
+/** Export a literal-property candidate catalog for schema experiments, never stable negotiation.
+ * Candidate role names replace hyphens with underscores to satisfy v1 identifier rules. */
 export function exportA2uiCandidateCatalog(catalog: LyraGenCatalog, id = `https://github.com/aceshooting/lyra-ui/a2ui/v1.0-candidate/${encodeURIComponent(catalog.id)}/${encodeURIComponent(catalog.version)}`): JsonObject {
-  const components: Record<string, JsonValue> = {};
+  const identifier = /^[\p{XID_Start}_][\p{XID_Continue}]*$/u;
+  const names = new Map<string, string>();
+  const used = new Set<string>();
+  for (const name of Object.keys(catalog.components)) {
+    const wireName = name.replaceAll('-', '_');
+    if (!identifier.test(wireName)) throw new TypeError('Invalid candidate component identifier.');
+    if (wireName === 'Surface') throw new TypeError('Surface is reserved by the candidate protocol.');
+    if (used.has(wireName)) throw new TypeError('Candidate component identifier collision.');
+    used.add(wireName);
+    names.set(name, wireName);
+  }
+  const components: Record<string, JsonValue> = Object.create(null) as Record<string, JsonValue>;
   for (const [name, definition] of Object.entries(catalog.components)) {
-    if (name === 'Surface') throw new TypeError('Surface is reserved by the candidate protocol.');
-    const properties: Record<string, JsonValue> = { id: { type: 'string' }, component: { const: name } };
+    const wireName = names.get(name)!;
+    const properties: Record<string, JsonValue> = { id: { type: 'string' }, component: { const: wireName } };
     for (const [key, schema] of Object.entries(definition.properties)) {
+      if (!identifier.test(key)) throw new TypeError('Invalid candidate property identifier.');
       if (['id', 'component', 'children', 'action', 'checks'].includes(key)) throw new TypeError('A catalog property collides with the protocol vocabulary.');
       properties[key] = schema as unknown as JsonValue;
     }
     if (definition.text) properties['text'] = { type: 'string' };
     if (definition.children) properties['children'] = { type: 'array', items: { type: 'string' } };
-    components[name] = {
+    components[wireName] = {
       type: 'object', properties, required: ['id', 'component', ...(definition.required ?? [])], additionalProperties: false,
-      ...(Array.isArray(definition.children) ? { allowedChildren: [...definition.children] } : !definition.children ? { allowedChildren: [] } : {})
+      ...(Array.isArray(definition.children) ? { allowedChildren: definition.children.map(child => {
+        const wireChild = names.get(child);
+        if (!wireChild) throw new TypeError('Unknown child in candidate catalog.');
+        return wireChild;
+      }) } : !definition.children ? { allowedChildren: [] } : {})
     };
   }
   return {

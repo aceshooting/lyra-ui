@@ -788,12 +788,11 @@ export class LyraSelect<
   }
   /** An unobserved default slot is not an authoritative empty catalog. */
   @state() private optionsObserved = false;
-  // Set on the trigger button's first `blur`; gates the `data-invalid`
-  // reflection below so validity styling never flashes on first render.
+  // Blur or interactive validation reveals errors; a pristine field stays visually neutral.
   @state() private touched = false;
   /** Whether the user has acted on this control yet, which is what gates the `user-valid`/
    *  `user-invalid` custom states. Deliberately separate from `touched` (which drives the visible
-   *  `data-invalid`/`aria-invalid` pair and is set on blur alone): picking an option is an
+   *  `data-invalid`/`aria-invalid` pair): picking an option is an
    *  interaction the instant it happens, and so is interactive validation — `reportValidity()` and
    *  a submission attempt alike, via `installInteractionOnInvalid()` — exactly as it does for
    *  native `:user-invalid`. A silent `checkValidity()` alone never counts. Not `@state`: nothing
@@ -1547,6 +1546,7 @@ export class LyraSelect<
     this.requestUpdate();
   }
   private markInteracted = (): void => {
+    this.touched = true;
     if (this.hasInteracted) return;
     this.hasInteracted = true;
     this.reflectValidityStates();
@@ -1564,8 +1564,7 @@ export class LyraSelect<
     // A submission attempt reaches the same listener without ever calling this method at all --
     // it drives `ElementInternals` directly. `checkValidity()` deliberately marks neither path:
     // it is the silent query, and wraps its own call in `withStaticValidityCheck()` accordingly.
-    this.hasInteracted = true;
-    this.reflectValidityStates();
+    this.markInteracted();
     return this.internals.reportValidity();
   }
 

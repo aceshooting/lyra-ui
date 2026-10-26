@@ -47938,6 +47938,7 @@
           "src/components/forms/select/select-rendering-a11y.test.ts",
           "src/components/forms/select/select-scale.test.ts",
           "src/components/forms/select/select-slot-observation.test.ts",
+          "src/components/forms/select/select-validation-accessibility.test.ts",
           "src/components/forms/select/select.test.ts",
           "src/components/forms/select/select.viewport.test.ts",
           "src/components/forms/select/top-layer.test.ts",

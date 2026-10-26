@@ -1,13 +1,13 @@
 {
   "format": "lyra-gen-preset-prompt-measurements",
   "version": "1",
-  "boundary": "Exact output of buildCatalogPrompt for the full reviewed catalog and each action-closed named preset; includes metadata/examples and fixed prompt instructions.",
+  "boundary": "Exact buildCatalogPrompt text and compact JSON.stringify(exportCatalogJsonSchema) for the full reviewed catalog and each action-closed preset; excludes trailing newlines, provider wrappers and request metadata.",
   "providerUsage": {
     "measuredTokens": null,
     "measuredModelErrorRate": null,
     "modelCalls": 0
   },
-  "interpretation": "UTF-8 bytes and character counts describe prompt text only. No tokenizer, model-quality, latency or cost result is inferred.",
+  "interpretation": "Bytes and character counts describe emitted content only, not provider tokens. No tokenizer, model-quality, latency, caching or cost result is inferred.",
   "measurements": {
     "full": {
       "catalog": {
@@ -45,11 +45,14 @@
         "textarea"
       ],
       "actionNames": [],
-      "utf16CodeUnits": 23693,
-      "unicodeCodePoints": 23693,
-      "utf8Bytes": 23693,
+      "utf16CodeUnits": 24296,
+      "unicodeCodePoints": 24296,
+      "utf8Bytes": 24296,
       "bytesRemovedFromFull": 0,
-      "promptSha256": "032db28ed85f969a8a1b86c5513a865c54d936bbba06eb29f5b627246023057d"
+      "promptSha256": "a141105b79d8af8b6315a045582a799a5c81313f1adbad450c50410f7ce931cf",
+      "schemaUtf8Bytes": 28504,
+      "schemaSha256": "841939921247a45507725deb6d17f3d06c08109a58ed0edfa84bd4f68faa9ff7",
+      "promptAndSchemaUtf8Bytes": 52800
     },
     "chat": {
       "catalog": {
@@ -75,11 +78,14 @@
         "text"
       ],
       "actionNames": [],
-      "utf16CodeUnits": 10394,
-      "unicodeCodePoints": 10394,
-      "utf8Bytes": 10394,
-      "bytesRemovedFromFull": 13299,
-      "promptSha256": "8c2560325e978408cace97754762273e33b3f8cff757db3f142220a598a7713c"
+      "utf16CodeUnits": 10419,
+      "unicodeCodePoints": 10419,
+      "utf8Bytes": 10419,
+      "bytesRemovedFromFull": 13877,
+      "promptSha256": "fc7c87819a4d32004c8d00a3d7c7d1a4c5ab48e950b1bfaf8747b77c51daa788",
+      "schemaUtf8Bytes": 12355,
+      "schemaSha256": "9c9671a9dec8c1b4ae91e4e5353fcc63ad952383cbdae4226ec4dba4db1110a9",
+      "promptAndSchemaUtf8Bytes": 22774
     },
     "forms": {
       "catalog": {
@@ -107,11 +113,14 @@
         "textarea"
       ],
       "actionNames": [],
-      "utf16CodeUnits": 12235,
-      "unicodeCodePoints": 12235,
-      "utf8Bytes": 12235,
-      "bytesRemovedFromFull": 11458,
-      "promptSha256": "cb8f2045bf76ec4c6bcc41fb4a822eb07b67c1cb02469affab3733428c2a1a2a"
+      "utf16CodeUnits": 12385,
+      "unicodeCodePoints": 12385,
+      "utf8Bytes": 12385,
+      "bytesRemovedFromFull": 11911,
+      "promptSha256": "70818c5dd43b462f0af0cedfd33f8af239e4fe9997797e1488cd65974bca6a22",
+      "schemaUtf8Bytes": 15049,
+      "schemaSha256": "3b16a2b761ada6e4d55f15979b225996e5a08958f32c62a2eba1ab5f4fb56301",
+      "promptAndSchemaUtf8Bytes": 27434
     },
     "data": {
       "catalog": {
@@ -134,11 +143,14 @@
         "text"
       ],
       "actionNames": [],
-      "utf16CodeUnits": 11357,
-      "unicodeCodePoints": 11357,
-      "utf8Bytes": 11357,
-      "bytesRemovedFromFull": 12336,
-      "promptSha256": "cbdff6f571b5948c8bc8e4c59b1c92ac36de7428ac727dd71c06268eeab20f71"
+      "utf16CodeUnits": 11760,
+      "unicodeCodePoints": 11760,
+      "utf8Bytes": 11760,
+      "bytesRemovedFromFull": 12536,
+      "promptSha256": "62f266d8c9b6733efeed60f5eeef176542e8371371fbe3ee18fcaed221baffc6",
+      "schemaUtf8Bytes": 13540,
+      "schemaSha256": "bfa152621858a4a6e63477c9a1631e02cad0397a0d30624fd36aa1255d355d8e",
+      "promptAndSchemaUtf8Bytes": 25300
     },
     "retrieval": {
       "catalog": {
@@ -162,11 +174,14 @@
         "text"
       ],
       "actionNames": [],
-      "utf16CodeUnits": 8759,
-      "unicodeCodePoints": 8759,
-      "utf8Bytes": 8759,
-      "bytesRemovedFromFull": 14934,
-      "promptSha256": "2e7aca616324fb7904d321760a92434a93fa88237863c2f170acead76464f97b"
+      "utf16CodeUnits": 8784,
+      "unicodeCodePoints": 8784,
+      "utf8Bytes": 8784,
+      "bytesRemovedFromFull": 15512,
+      "promptSha256": "e1a8b10d10e0c068fe99f123e4f830fbf5f6329181cd573893880b0c9190395a",
+      "schemaUtf8Bytes": 10574,
+      "schemaSha256": "3974a7b616adbf6579cc4b20541072b39ec8b0a20be60bfc27a491541505db68",
+      "promptAndSchemaUtf8Bytes": 19358
     },
     "agent-ops": {
       "catalog": {
@@ -190,11 +205,14 @@
         "text"
       ],
       "actionNames": [],
-      "utf16CodeUnits": 12150,
-      "unicodeCodePoints": 12150,
-      "utf8Bytes": 12150,
-      "bytesRemovedFromFull": 11543,
-      "promptSha256": "af85c011a4ae807343e078736ec2e592b845113caffc0194eaa502033917b792"
+      "utf16CodeUnits": 12553,
+      "unicodeCodePoints": 12553,
+      "utf8Bytes": 12553,
+      "bytesRemovedFromFull": 11743,
+      "promptSha256": "0d86a3cb77b66edd268f0c636e848a4579036a26384180be8efc035cb7b1f2eb",
+      "schemaUtf8Bytes": 14422,
+      "schemaSha256": "900f94881837d31faca74b6f7d11b317a7e4b4a94ac87e5f4d94ac2d3ca0f40b",
+      "promptAndSchemaUtf8Bytes": 26975
     }
   }
 }

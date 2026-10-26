@@ -38,10 +38,23 @@ function shiftsCls(entries) {
 }
 let active;
 
-async function replay(id, mode = 'frame') {
+function reservedSizes(root, result) {
+  for (const child of root.children ?? []) {
+    if (child.localName === 'section' && child.style.minBlockSize && child.isConnected) {
+      const size = Number.parseFloat(getComputedStyle(child).minBlockSize);
+      if (Number.isFinite(size)) result.add(size);
+    }
+    reservedSizes(child, result);
+    if (child.shadowRoot) reservedSizes(child.shadowRoot, result);
+  }
+}
+
+async function replay(id, mode = 'frame', reservation = 'default') {
   if (active) throw new Error('Dispose the preceding replay before starting another.');
   const workload = WORKLOADS[id];
-  if (!workload || !['frame', 'chunk'].includes(mode)) throw new Error('Unknown replay workload or scheduling mode.');
+  if (!workload || !['frame', 'chunk'].includes(mode) || !['default', 'none'].includes(reservation)) throw new Error('Unknown replay workload, scheduling mode or reservation policy.');
+  if (reservation === 'none') host.style.setProperty('--lr-gen-chat-reserved-block-size', '0rem');
+  else host.style.removeProperty('--lr-gen-chat-reserved-block-size');
   if (workload.recording && !parseReplayRecording(workload.recording).ok) throw new Error('Invalid authored recording.');
   const app = mountInteractiveChat(host, {
     sources: new Map(), canAsk: () => true, onAsk() {}, onSource() {},
@@ -72,10 +85,12 @@ async function replay(id, mode = 'frame') {
   let parseControllerMs = 0, renderSettlingMs = 0, firstUsefulMs = null, controlReadyMs = null;
   let hostUpdates = 0, peakConnectedNodes = descendants(host), pendingFrame;
   const arrivals = [];
+  const loadingReservedSizes = new Set();
   const update = () => { app.update(); hostUpdates++; };
   const flush = async () => {
     const before = performance.now();
     await app.transcript.updateComplete;
+    if (loadingReservedSizes.size === 0) reservedSizes(host, loadingReservedSizes);
     await frame();
     renderSettlingMs += performance.now() - before;
     const prose = app.transcript.parts.find(part => part.type === 'text' && part.text.trim());
@@ -109,7 +124,9 @@ async function replay(id, mode = 'frame') {
       cls: PerformanceObserver.supportedEntryTypes.includes('layout-shift') ? shiftsCls(layoutShifts) : null,
       longTaskCount: PerformanceObserver.supportedEntryTypes.includes('longtask') ? longTasks.length : null,
       maximumLongTaskMs: PerformanceObserver.supportedEntryTypes.includes('longtask') ? Math.max(0, ...longTasks.map(entry => entry.duration)) : null,
+      totalLongTaskMs: PerformanceObserver.supportedEntryTypes.includes('longtask') ? longTasks.reduce((sum, entry) => sum + entry.duration, 0) : null,
       sourceUtf16Units: workload.source.length, sourceUtf8Bytes: new TextEncoder().encode(workload.source).byteLength,
+      reservationObserved: loadingReservedSizes.size > 0,
     };
     const native = app.transcript.shadowRoot.querySelector('lr-gen-view')?.shadowRoot.querySelector('lr-input')?.shadowRoot.querySelector('input');
     metrics.controlInputToFrameMs = null;
@@ -118,7 +135,11 @@ async function replay(id, mode = 'frame') {
       void frame().then(() => { metrics.controlInputToFrameMs = performance.now() - inputStarted; });
     }, { once: true });
     active = { app, restorers, metrics };
-    return { metrics, arrivals, finalSnapshot: JSON.stringify(app.controller.snapshot) };
+    return { metrics, arrivals, observations: {
+      loadingReservedBlockSizesPx: [...loadingReservedSizes].sort((left, right) => left - right),
+      longTasks: PerformanceObserver.supportedEntryTypes.includes('longtask') ? longTasks.map(entry => ({ startMs: entry.startTime - started, durationMs: entry.duration })) : null,
+      layoutShifts: PerformanceObserver.supportedEntryTypes.includes('layout-shift') ? layoutShifts.map(entry => ({ startMs: entry.startTime - started, value: entry.value, hadRecentInput: entry.hadRecentInput })) : null,
+    }, finalSnapshot: JSON.stringify(app.controller.snapshot) };
   } catch (error) {
     for (const [observer] of observers) observer.disconnect();
     for (const restore of restorers) restore(); app.dispose(); host.replaceChildren(); throw error;
@@ -148,7 +169,7 @@ async function dispose() {
   await frame(); await frame();
   const disposal = { ...metrics, interactionAccepted, connectedNodesAfterDispose: descendants(host), connectedElementsAfterDispose: connectedElements(host), viewDisconnected: !view?.isConnected,
     controllerSnapshotCleared: app.controller.snapshot.status === 'cancelled' && app.controller.snapshot.parts.length === 0 && app.controller.snapshot.islands.length === 0 };
-  host.replaceChildren();
+  // Lit retains its root part on the container; keep its inert marker for same-page warm replay.
   return disposal;
 }
 window.__genBenchmark = { replay, dispose };

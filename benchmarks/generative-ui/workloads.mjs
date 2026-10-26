@@ -21,13 +21,14 @@ export function workloadSchedule(workload) {
 }
 
 export const METRIC_DEFINITIONS = Object.freeze({
-  firstUsefulMs: 'Replay start until nonempty prose is committed and one animation frame has elapsed; not model first-token latency.',
-  controlReadyMs: 'Replay start until the generated input exists, lr-gen-ready has settled, and one animation frame has elapsed.',
+  firstUsefulMs: 'Replay start until the first settling checkpoint with nonempty committed prose and a paint opportunity; not model first-token latency.',
+  controlReadyMs: 'Replay start until the first settling checkpoint with a ready generated view and native input after a paint opportunity. Checkpoint sampling is an upper bound on actual first readiness.',
   parseControllerMs: 'Synchronous chat-controller push and finish work; includes parser, admission and projection, excludes rendering.',
   renderSettlingMs: 'Elapsed time awaiting transcript updates and a paint opportunity; includes frame waiting, not CPU-only rendering time.',
   litUpdates: 'Completed update calls on transcript, generated views, and their rendered Lyra children.',
   cls: 'Maximum CLS session window, excluding shifts marked hadRecentInput; unsupported is null.',
-  longTaskCount: 'Observed main-thread tasks of at least 50 ms during replay; unsupported is null.',
+  longTaskCount: 'Observed main-thread tasks of at least 50 ms overlapping replay; a task can begin before local zero and include setup. Unsupported is null.',
+  totalLongTaskMs: 'Sum of whole observed long-task durations overlapping the replay observer window; unsupported is null. This is not total main-thread time.',
   peakConnectedNodes: 'Maximum recursively counted fixture DOM nodes, including open shadow roots; not a heap measurement.',
   sourceCharactersAfterRelease: 'Logical controller transport source length after explicit host release; prose presentation remains and engines may share substring backing stores.',
   connectedNodesAfterDispose: 'Fixture DOM nodes remaining after application disposal, before harness cleanup; inert Lit comment markers can remain. Detached browser heap is not inferred.',

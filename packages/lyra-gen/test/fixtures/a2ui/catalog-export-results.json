@@ -1,0 +1,853 @@
+{
+  "revision": "409ded29ccac3eebc541979ae5320771703248e8",
+  "node": "v22.23.2",
+  "compiler": {
+    "name": "esbuild",
+    "version": "0.28.2"
+  },
+  "runtimeDependencies": {
+    "@lit-labs/ssr-dom-shim": {
+      "version": "1.6.0",
+      "integrity": "sha512-VHb0ALPMTlgKjM6yIxxoQNnpKyUKLD04VzeQdsiXkMqkvYlAHxq9glGLmgbb889/1GsohSOAjvQYoiBppXFqrQ=="
+    },
+    "@lit/context": {
+      "version": "1.1.6",
+      "integrity": "sha512-M26qDE6UkQbZA2mQ3RjJ3Gzd8TxP+/0obMgE5HfkfLhEEyYE3Bui4A5XHiGPjy0MUGAyxB3QgVuw2ciS0kHn6A=="
+    },
+    "@lit/reactive-element": {
+      "version": "2.1.2",
+      "integrity": "sha512-pbCDiVMnne1lYUIaYNN5wrwQXDtHaYtg7YEFPeW+hws6U47WeFvISGUWekPGKWOP1ygrs0ef0o1VJMk1exos5A=="
+    },
+    "@preact/signals-core": {
+      "version": "1.14.4",
+      "integrity": "sha512-HNB6HYeYKhQbJ1aKl+YRjrS4+QWHLKX6qKoUsfS/m0vqzsVaEBiZiaKbG/e+NKk2ch5ALQr/ihWaMHxiCuuWHA=="
+    },
+    "@types/trusted-types": {
+      "version": "2.0.7",
+      "integrity": "sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw=="
+    },
+    "jsesc": {
+      "version": "3.1.0",
+      "integrity": "sha512-/sM3dO2FOzXjKQhJuo0Q173wf2KOo8t4I8vHy6lF9poUp7bKT0/NHE8fPX23PwfhnykfqnC2xRxOnVw5XuGIaA=="
+    },
+    "lit": {
+      "version": "3.3.3",
+      "integrity": "sha512-fycuvZg/hkpozL00lm1pEJH5nN/lr9ZXd6mJI2HSN4+Bzc+LDNdEApJ6HFbPkdFNHLvOplIIuJvxkS4XUxqirw=="
+    },
+    "lit-element": {
+      "version": "4.2.2",
+      "integrity": "sha512-aFKhNToWxoyhkNDmWZwEva2SlQia+jfG0fjIWV//YeTaWrVnOxD89dPKfigCUspXFmjzOEUQpOkejH5Ly6sG0w=="
+    },
+    "lit-html": {
+      "version": "3.3.3",
+      "integrity": "sha512-el8M6jK2o3RXBnrSHX3ZKrsN8zEV63pSExTO1wYJz7QndGYZ8353e2a5PPX+qHe2aGayfnchQmkAojaWAREOIA=="
+    },
+    "redos-detector": {
+      "version": "6.1.4",
+      "integrity": "sha512-lPlka1rEH6kK42gtgokvvxMmpAvyc28DcRjQbGxeP5RJsJWgAduBOdGedVCDPdSyCr4ay/JDxq3nGYsJZyt8tA=="
+    },
+    "regjsparser": {
+      "version": "0.13.0",
+      "integrity": "sha512-NZQZdC5wOE/H3UT28fVGL+ikOZcEzfMGk/c3iN9UGxzWHMa1op7274oyiUVrAG4B2EuFhus8SvkaYnhvW92p9Q=="
+    },
+    "validate-color": {
+      "version": "2.2.4",
+      "integrity": "sha512-Znolz+b6CwW6eBXYld7MFM3O7funcdyRfjKC/X9hqYV/0VcC5LB/L45mff7m3dIn9wdGdNOAQ/fybNuD5P/HDw=="
+    },
+    "zod": {
+      "version": "3.25.76",
+      "integrity": "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="
+    },
+    "zod-to-json-schema": {
+      "version": "3.25.2",
+      "integrity": "sha512-O/PgfnpT1xKSDeQYSCfRI5Gy3hPf91mKVDuYLUHZJMiDFptvP41MSnWofm8dnCm0256ZNfZIM7DSzuSMAFnjHA=="
+    }
+  },
+  "sourceHashes": {
+    "typescript/core/web_core/src/errors.ts": "27a39330f581bb80516027ab22f4db228481d103cd829db1fedc097587ef940f",
+    "typescript/core/web_core/src/common/semver.ts": "c79da869237bd70a3e914b066346b06f3a8b5c32f5c4a9719c5f9434fb540b05",
+    "typescript/core/web_core/src/spec_versions.ts": "24bb5ff4688eebda2409c81307063a24bb2cbbae3b2a3e7025389a9ba04c2c37",
+    "typescript/core/web_core/src/common/uax31.ts": "b45c8718a8b5402907b773347aaca5bc507d94fef4e860157e1f4dd8ccd7dfc7",
+    "typescript/core/web_core/src/types/child-ref-helpers.ts": "e7d92ef3ca502b17dc75a56080733ef491c4caf3344a8e54a671b6f2d3708f37",
+    "typescript/core/web_core/src/types/common-types.ts": "1601e9260281ab54f1a8d005fcc85ee98e7c47571a8b254a871fe2133993b7eb",
+    "typescript/core/web_core/src/catalog/exclusive_union.ts": "6e9df5fa95f36509e8bff367b608e1dd2073c64070e46820eba8111fd1ff7bf9",
+    "typescript/core/web_core/src/catalog/json_entries.ts": "b5580f396f33fccbdbbc54302f94155b1421684a71a839b8611167feded10a93",
+    "typescript/core/web_core/src/catalog/spec_annotations.ts": "da7a8d1ef53e8e2a615d16f38d7f426b3d418ebaaab747409e0436fbf255410d",
+    "typescript/core/web_core/src/v0_8/standard_defs.ts": "68006257fa3d589afbdafbba4ab1455e27a2904cc83d4836fc6dfc44f05407d7",
+    "typescript/core/web_core/src/v0_9/standard_defs.ts": "04456b5e04e395af43d7579e89969b6006c3cab10914047b93d9c6ac2ba7ea34",
+    "typescript/core/web_core/src/v1_0/standard_defs.ts": "26a940a0e2b58607075a6752afb0b884ad2f1fc739b558c120f38687ec344263",
+    "typescript/core/web_core/src/catalog/spec_shape.ts": "7349188106bf14fa5e04c5d4381ea6d359625083f2bf7d5a6068e17e7e9d9c79",
+    "typescript/core/web_core/src/catalog/schema_serializer.ts": "c59c9c6342d5da0bc2046ec401962652677181e75e3ed4d37cb255361773fd83",
+    "typescript/core/web_core/src/catalog/schema_loader.ts": "c902f24901eb613d23f43068e4ede147f1cd0bacf79def91f447804185d29ab5",
+    "typescript/core/web_core/src/catalog/schema_generator.ts": "ad779f2346ba6f0245e9ffbb624b748dd9083a7b29d46a09223251332b71f095",
+    "typescript/core/web_core/src/catalog/reference-map.ts": "31c3790d21b4163ed37727e866a4529774e1a35da9f791ac3ed0e1154fcc88d2",
+    "typescript/core/web_core/src/reactivity/signals.ts": "0c3f632a845f6b9e4f387009c759ced32c388951897014d0b2e8c22da80f8fce",
+    "typescript/core/web_core/src/state/data-model.ts": "5f0271772fc288a36377371e630955eb5c0ceb4467730e9e0b91d8e6c0bdf776",
+    "typescript/core/web_core/src/types/helpers.ts": "2696beffb696bc5de32adedc45ffd2881a01bd64c95c00e0753f9931ef302ab8",
+    "typescript/core/web_core/src/state/resolve-surface-catalog.ts": "528157c2632c435123d0edf279068a223739d8045b125aab76643e5c0b9f8a50",
+    "typescript/core/web_core/src/resolution/data-context.ts": "d8c585a70219c219483cb771a12ebbda66ab3a725132209bce7d509ffd906a7d",
+    "typescript/core/web_core/src/v1_0/schema/common-types.ts": "5baead6a251114d691057afb8e164b7650409a01bf2ccb69048726df89e4772b",
+    "typescript/core/web_core/src/v1_0/functions/system_functions.ts": "82bfacbc40bd5ea13a046a6dc41ad8d1212bc6146538f555e7bc9c61dfe6d72b",
+    "typescript/core/web_core/src/catalog/types.ts": "cbbfe63573babed7de0a28ceeab6cb51a77f842115f5a66cb945aee6b4e223ff"
+  },
+  "consumerBundleSha256": "67244f07c10f00a2a2cb69f0077b51d4394850148de2df2a22c9303975d0f088",
+  "implementationHashes": {
+    "dist/catalog.js": "132c9c5514fbf630d6ec0de384cf69151a21cdf0f041e06b20c6047654dc5288",
+    "dist/adapters/a2ui.js": "909408df2d81c48b5ed063316ca8d3630549c62f79bdfbf1301c75b01fa241e0",
+    "dist/adapters/a2ui-candidate.js": "3073f8ef865179cf1f7b34513b3d1665c0eb0e76c24f339a98636849d29c5018",
+    "scripts/catalog-export-cohort.mjs": "d27cde5439f012d3706dd463d952132d8ae46b188f5e2df995a31dd96a551854",
+    "scripts/check-catalog-consumer.mjs": "d2b914cfe642f3c57e54912600887b0c936b9e63a5c278901144876367c9f257"
+  },
+  "profiles": [
+    {
+      "version": "v0.9.1",
+      "catalogId": "https://github.com/aceshooting/lyra-ui/a2ui/v0.9.1/lyra-reviewed/1",
+      "artifactSha256": "1d81bf41608aacc8be63c62da51234e9ad4ed5620e29070a4a5ad72e77247f9e",
+      "components": 28,
+      "cases": [
+        {
+          "role": "stack",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "stack",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "row",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "row",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "text",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "text",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "heading",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "heading",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "card",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "card",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "badge",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "badge",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "alert",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "alert",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "empty",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "empty",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "empty",
+          "name": "missing-heading",
+          "accepted": false
+        },
+        {
+          "role": "skeleton",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "skeleton",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "stat",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "stat",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "stat",
+          "name": "missing-label",
+          "accepted": false
+        },
+        {
+          "role": "stat",
+          "name": "missing-value",
+          "accepted": false
+        },
+        {
+          "role": "form",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "form",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "button",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "button",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "input",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "input",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "textarea",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "textarea",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "select",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "select",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "option",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "option",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "option",
+          "name": "missing-value",
+          "accepted": false
+        },
+        {
+          "role": "checkbox",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "checkbox",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "switch",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "switch",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "slider",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "slider",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "chat-viewport",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "chat-viewport",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "chat-message",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "chat-message",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "chat-composer",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "chat-composer",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "chat-composer",
+          "name": "missing-accessibleLabel",
+          "accepted": false
+        },
+        {
+          "role": "table",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "table",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "table",
+          "name": "missing-caption",
+          "accepted": false
+        },
+        {
+          "role": "table",
+          "name": "missing-columns",
+          "accepted": false
+        },
+        {
+          "role": "table",
+          "name": "missing-rows",
+          "accepted": false
+        },
+        {
+          "role": "chart",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "chart",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "chart",
+          "name": "missing-label",
+          "accepted": false
+        },
+        {
+          "role": "chart",
+          "name": "missing-labels",
+          "accepted": false
+        },
+        {
+          "role": "chart",
+          "name": "missing-datasets",
+          "accepted": false
+        },
+        {
+          "role": "citation",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "citation",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "citation",
+          "name": "missing-sourceId",
+          "accepted": false
+        },
+        {
+          "role": "citation",
+          "name": "missing-label",
+          "accepted": false
+        },
+        {
+          "role": "source-card",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "source-card",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "source-card",
+          "name": "missing-sourceId",
+          "accepted": false
+        },
+        {
+          "role": "source-card",
+          "name": "missing-heading",
+          "accepted": false
+        },
+        {
+          "role": "source-list",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "source-list",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "search",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "search",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "input",
+          "name": "binding",
+          "accepted": true
+        },
+        {
+          "role": "select",
+          "name": "array-value",
+          "accepted": false
+        }
+      ],
+      "roundTrip": "exact-json",
+      "coverage": "JSON catalog ingestion and property schema validation; no message processor, DOM, action or rendering qualification."
+    },
+    {
+      "version": "v1.0-candidate",
+      "catalogId": "https://github.com/aceshooting/lyra-ui/a2ui/v1.0-candidate/lyra-reviewed/1",
+      "artifactSha256": "ecd99d41412c26abf8633cc23d5988ef0bdb19130236a62b8063b546b4476d20",
+      "components": 28,
+      "cases": [
+        {
+          "role": "stack",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "stack",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "row",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "row",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "text",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "text",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "heading",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "heading",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "card",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "card",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "badge",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "badge",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "alert",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "alert",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "empty",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "empty",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "empty",
+          "name": "missing-heading",
+          "accepted": false
+        },
+        {
+          "role": "skeleton",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "skeleton",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "stat",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "stat",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "stat",
+          "name": "missing-label",
+          "accepted": false
+        },
+        {
+          "role": "stat",
+          "name": "missing-value",
+          "accepted": false
+        },
+        {
+          "role": "form",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "form",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "button",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "button",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "input",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "input",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "textarea",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "textarea",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "select",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "select",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "option",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "option",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "option",
+          "name": "missing-value",
+          "accepted": false
+        },
+        {
+          "role": "checkbox",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "checkbox",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "switch",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "switch",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "slider",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "slider",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "chat_viewport",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "chat_viewport",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "chat_message",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "chat_message",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "chat_composer",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "chat_composer",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "chat_composer",
+          "name": "missing-accessibleLabel",
+          "accepted": false
+        },
+        {
+          "role": "table",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "table",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "table",
+          "name": "missing-caption",
+          "accepted": false
+        },
+        {
+          "role": "table",
+          "name": "missing-columns",
+          "accepted": false
+        },
+        {
+          "role": "table",
+          "name": "missing-rows",
+          "accepted": false
+        },
+        {
+          "role": "chart",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "chart",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "chart",
+          "name": "missing-label",
+          "accepted": false
+        },
+        {
+          "role": "chart",
+          "name": "missing-labels",
+          "accepted": false
+        },
+        {
+          "role": "chart",
+          "name": "missing-datasets",
+          "accepted": false
+        },
+        {
+          "role": "citation",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "citation",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "citation",
+          "name": "missing-sourceId",
+          "accepted": false
+        },
+        {
+          "role": "citation",
+          "name": "missing-label",
+          "accepted": false
+        },
+        {
+          "role": "source_card",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "source_card",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "source_card",
+          "name": "missing-sourceId",
+          "accepted": false
+        },
+        {
+          "role": "source_card",
+          "name": "missing-heading",
+          "accepted": false
+        },
+        {
+          "role": "source_list",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "source_list",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "search",
+          "name": "authored-example",
+          "accepted": true
+        },
+        {
+          "role": "search",
+          "name": "undeclared-property",
+          "accepted": false
+        },
+        {
+          "role": "input",
+          "name": "binding",
+          "accepted": false
+        },
+        {
+          "role": "select",
+          "name": "array-value",
+          "accepted": false
+        }
+      ],
+      "roundTrip": "exact-json",
+      "coverage": "JSON catalog ingestion and property schema validation; no message processor, DOM, action or rendering qualification."
+    }
+  ]
+}

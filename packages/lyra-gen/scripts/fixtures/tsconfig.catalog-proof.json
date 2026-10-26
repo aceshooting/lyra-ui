@@ -1,0 +1,6 @@
+{
+  "extends": "../../../lyra-ui/tsconfig.json",
+  "compilerOptions": { "rootDir": "../../../..", "noEmit": true },
+  "include": ["../../../lyra-ui/src", "catalog-proof-types.ts"],
+  "exclude": ["../../../lyra-ui/src/**/*.test.ts", "../../../lyra-ui/src/**/*.stories.ts"]
+}

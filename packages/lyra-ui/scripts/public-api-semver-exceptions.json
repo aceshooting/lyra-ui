@@ -1,3 +1,24 @@
 {
-  "exceptions": []
+  "exceptions": [
+    {
+      "changeId": "subpath-export:./ai:adaptA2UiSurface:contract",
+      "before": "531bd23b504eb83bad01acb4889e99b9bb3e99db6a4c1ca0bdca0f6f2cda38b2",
+      "after": "35d022fa0f1bf20422e44814d7454bd65db63c470ad8a61bba6ccf41aef153c0",
+      "requiredBump": "major",
+      "allowedBump": "minor",
+      "reason": "The 30.2.0 return type LyraWidgetDocument | null becomes A2UiAdapterResult | null. The result extends the unchanged document with only optional readonly unknown bindingState/state properties. Parameters and existing fields are unchanged; strict TypeScript consumer checks confirm both callable assignments remain valid.",
+      "reviewer": "codex",
+      "reviewedOn": "2026-10-26"
+    },
+    {
+      "changeId": "subpath-export:./ai:adaptA2UiSurface:dependencies",
+      "before": "a22be640bebc7278acb552ba09effe6090c50ec38d12b91680c9943c62e3a643",
+      "after": "2318121602c82f692783173fd9b3d7501462dcfe36b5ad6a00769c637bec5059",
+      "requiredBump": "major",
+      "allowedBump": "minor",
+      "reason": "The return dependency now points to A2UiAdapterResult, which extends the same LyraWidgetDocument and adds only optional readonly unknown bindingState/state properties. The former document remains reachable and structurally compatible; the declaration graph gains one edge without removing any accepted input or existing result member.",
+      "reviewer": "codex",
+      "reviewedOn": "2026-10-26"
+    }
+  ]
 }

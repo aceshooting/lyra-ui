@@ -201,3 +201,41 @@ JSON null as deletion. The stable normative update contract specifies deletion
 when `value` is omitted. Lyra retains explicit null; the comparison asserts the
 known upstream behavior separately and labels that case as a divergence, never a
 match. Changing either behavior makes the corresponding assertion fail.
+
+## Declared coverage and actual renderer comparison
+
+[The coverage inventory](a2ui-coverage.json) maps this stable profile's protocol,
+host-policy, rendering and binding areas to executable cases. It also records
+unsupported areas and the explicit-null reference divergence. It is a scoped
+inventory, not a declaration that every upstream normative requirement is covered.
+[Catalog export proofs](catalog-proof.md) separately describe schema and actual
+catalog-consumer acceptance; they do not imply renderer coverage.
+
+The optional DOM comparison bundles the **actual pinned upstream Lit surface and
+basic catalog source** into disposable output and renders the three unchanged
+stable-directory examples in Chromium, Firefox and WebKit at 320px and 800px.
+It compares them with an explicit six-role test projection through Lyra's generated
+view. The assertions cover visible text, heading/button roles, native keyboard
+actions, horizontal child order, vertical row order, data/component updates and
+removal of deleted content. The retained report records real geometry, build input
+hashes, exact engine versions and all eighteen example/viewport results.
+
+Typography, margins, column alignment, card chrome and button variants differ.
+The test projection uses native button/section elements and explicit heading roles;
+it is not a production basic-catalog implementation. Plain text is compared without
+claiming markdown or paragraph-element parity. Deletion leaves Lyra's empty-state
+message while the reference surface becomes empty. Pixel equivalence, full
+accessibility conformance and candidate rendering are not established.
+
+Supply a clean checkout at the documented revision and a separately provisioned
+`node_modules` directory with the exact runtime pins in
+`test/fixtures/a2ui/v0.9.1/reference-results.json`:
+
+```sh
+node scripts/compare-a2ui-dom.mjs --reference <reference-checkout> --dependencies <pinned-node-modules> --output <report.json>
+```
+
+The command verifies every bundled upstream input against the pinned commit,
+checks dependency versions and official example hashes, blocks external browser
+requests, and removes its temporary bundles. It installs nothing and does not
+write shared build output. Its catalog remains unadvertised.

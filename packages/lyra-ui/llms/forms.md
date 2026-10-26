@@ -1389,8 +1389,9 @@ purposes.
   `defaultSelected`/attribute changes update that reset baseline without clobbering a dirty live
   selection; user picks and direct `option.selected` writes remain live-only and never rewrite the
   attribute/default.
-- `aria-required` on the trigger reflects `required` immediately; `aria-invalid` only reflects once
-  the trigger has been blurred (touched) at least once, mirroring `lr-combobox`'s own input.
+- `aria-required` on the trigger reflects `required` immediately; `aria-invalid` and `data-invalid`
+  reveal a constraint error after blur, `reportValidity()` or a native submission attempt.
+  A silent `checkValidity()` leaves a pristine control unchanged; `form.reset()` restores that state.
   Blurring the trigger (Tab away) closes an open listbox, the same as a native `<select>`'s popup,
   without restoring focus and undoing the browser's native Tab/Shift+Tab destination.
 - The trigger's accessible name now checks a host-level `aria-label` attribute first, before falling

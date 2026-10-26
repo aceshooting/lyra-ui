@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "profile": "Lyra owned stable A2UI subset",
+  "revision": "409ded29ccac3eebc541979ae5320771703248e8",
+  "specificationDirectory": "specification/v0_9_1",
+  "acceptedEnvelopeVersions": ["v0.9", "v0.9.1"],
+  "inventoryScope": "Declared implemented profile and explicit exclusions, not an exhaustive assertion of every requirement in the upstream specification.",
+  "normativeSource": "https://github.com/a2ui-project/a2ui/blob/409ded29ccac3eebc541979ae5320771703248e8/specification/v0_9_1/docs/a2ui_protocol.md",
+  "areas": [
+    {
+      "id": "surface-lifecycle",
+      "kind": "protocol",
+      "scope": "Create before update, duplicate rejection, delete/recreate and immutable committed snapshots.",
+      "tests": [{ "file": "src/adapters/a2ui.test.ts", "title": "requires creation, rejects duplicate creation and clears state on delete/recreate" }]
+    },
+    {
+      "id": "incremental-components",
+      "kind": "protocol",
+      "scope": "Forward references, replacement of one definition, retained unrelated data, duplicate/cycle rejection without partial mutation.",
+      "tests": [{ "file": "src/adapters/a2ui.test.ts", "title": "component updates replace individual definitions, retain unrelated data and reject duplicates/cycles atomically" }, { "file": "src/adapters/a2ui.property.test.ts", "title": "incremental component replacement agrees with the last accepted definition" }]
+    },
+    {
+      "id": "data-pointers-and-deletion",
+      "kind": "protocol",
+      "scope": "RFC 6901 escaping, root and nested replacement, omitted-value deletion, array index preservation and sparse upsert.",
+      "tests": [{ "file": "src/adapters/a2ui.test.ts", "title": "uses RFC 6901 escaping and transactional upsert/replacement/delete semantics" }, { "file": "src/adapters/a2ui.property.test.ts", "title": "escaped pointer segments round-trip independent string keys" }],
+      "fixtures": ["test/fixtures/a2ui/v0.9.1/state-cases.json"],
+      "referenceLimit": "Pinned reference deletes explicit null; normative Lyra behavior retains null. reference-results.json labels this divergence explicitly."
+    },
+    {
+      "id": "templates-and-bindings",
+      "kind": "protocol",
+      "scope": "Nested child-list scopes, absolute versus relative pointers, per-instance writes and bounded expansion.",
+      "tests": [{ "file": "src/adapters/a2ui.test.ts", "title": "scopes nested templates, keeps absolute bindings absolute and writes only the selected instance" }, { "file": "src/adapters/a2ui.test.ts", "title": "bounds expanded template work and rolls back data that exceeds the instance budget" }],
+      "fixtures": ["test/fixtures/a2ui/v0.9.1/34_child-list-template.json"]
+    },
+    {
+      "id": "functions-checks-and-actions",
+      "kind": "protocol-and-host-policy",
+      "scope": "Only explicitly registered functions; nested evaluation, checks before dispatch, resolved event context and local effects behind host authorization.",
+      "tests": [{ "file": "src/adapters/a2ui.test.ts", "title": "evaluates nested admitted functions and rechecks validation before dispatch" }, { "file": "src/adapters/a2ui.test.ts", "title": "rejects unresolved action context and unregistered local functions explicitly" }, { "file": "src/adapters/a2ui.test.ts", "title": "host effects never run in bindings, checks, arguments or event contexts" }],
+      "fixtures": ["test/fixtures/a2ui/v0.9.1/00_interactive-button.json", "test/fixtures/a2ui/v0.9.1/local-action.json"],
+      "excludes": ["Complete standard function library", "Unreviewed host effects", "Implicit navigation"]
+    },
+    {
+      "id": "ownership-and-lifetimes",
+      "kind": "host-policy",
+      "scope": "Owner/revision checks, opaque active instance identities, stale action/write/update/delete rejection after recreation.",
+      "tests": [{ "file": "src/adapters/a2ui.test.ts", "title": "rejects prior-lifetime actions, writes and guarded mutations after same-owner surface recreation" }, { "file": "test/browser/a2ui.test.ts", "title": "keeps a retired rendered action inert when the same owner recreates the same surface and component IDs" }]
+    },
+    {
+      "id": "owned-report-rendering",
+      "kind": "catalog-cohort",
+      "scope": "Actual Lyra chart/table/stat/citation components, data updates, native keyboard action, deletion and current-viewer source authorization.",
+      "tests": [{ "file": "test/browser/a2ui.test.ts", "title": "renders the owned stable chart/table/stat/citation profile through create, update, native action and delete" }, { "file": "test/browser/a2ui.test.ts", "title": "rechecks viewer source access at activation and replaces revoked citations with an explicit fallback" }],
+      "excludes": ["Full basic catalog", "All Lyra catalog roles"]
+    },
+    {
+      "id": "binding-admission",
+      "kind": "host-binding-cohort",
+      "scope": "Pinned AG-UI 1.0 HTTP/SSE host contract and A2A 1.0 JSON-RPC metadata/extension admission, only the owned report catalog allowlist.",
+      "tests": [{ "file": "test/a2ui-bindings.test.mjs", "title": "pinned AG-UI HttpAgent admits only the owned report metadata contract through real HTTP/SSE" }, { "file": "test/a2ui-bindings.test.mjs", "title": "pinned A2A client/server activates the exact extension and admits message metadata through JSON-RPC" }],
+      "excludes": ["Standard AG-UI middleware catalog negotiation", "Other A2A transports", "Automatic catalog advertising"]
+    },
+    {
+      "id": "reference-dom-and-layout",
+      "kind": "reference-cohort",
+      "scope": "Three unchanged official examples, Chromium/Firefox/WebKit, 320px and 800px: visible content, heading/button roles, native keyboard action, relative row/column geometry, updates and deletion.",
+      "runner": "scripts/compare-a2ui-dom.mjs",
+      "fixtures": ["test/fixtures/a2ui/dom/results.json"],
+      "excludes": ["Pixel equivalence", "Style/alignment equivalence", "Complete accessibility audit", "Full basic catalog", "Candidate renderer"]
+    }
+  ],
+  "unsupported": [
+    { "scope": "Candidate protocol envelopes in the stable processor", "behavior": "Explicit rejection; candidate catalog export remains separate.", "test": { "file": "src/adapters/a2ui.test.ts", "title": "owns snapshots, rejects non-JSON payloads and refuses candidate envelopes in stable processing" } },
+    { "scope": "Undeclared catalog members and functions, ambiguous dynamic values", "behavior": "Explicit rejection; no silent interpretation of arbitrary functions or properties.", "test": { "file": "src/adapters/a2ui.test.ts", "title": "rejects a value that is ambiguous between catalog literal data and a binding" } },
+    { "scope": "Full standard basic catalog and global qualified binding registry", "behavior": "Not advertised; supportedCatalogIds remains empty without an explicit host qualification assertion.", "test": { "file": "test/browser/a2ui.test.ts", "title": "keeps transport catalog advertising empty after local rendering qualification" } }
+  ]
+}
