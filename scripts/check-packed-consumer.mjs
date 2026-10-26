@@ -155,17 +155,17 @@ const optionalPeerFamilyTags = componentInventory.components
 const rootHelperRegisteredTags = [];
 
 // Packed core/all.js includes every non-optional registration and every emitted chunk.
-// With independent map anchors and locale-picker lifecycle events it measures 5,621,018 raw
-// bytes across 57 files; the next 64-byte ceiling is 5,621,056, leaving 38 bytes of headroom.
+// With MCP app sessions, lazy message renderers, and viewport/source lifetime guards it measures
+// 5,640,914 raw bytes across 64 files; the next 64-byte ceiling leaves 46 bytes of headroom.
 // Optional-peer exclusions and the complete file sum stay fixed. Core has no WASM allowance;
 // the explicit Oniguruma canary retains its separate exact 466,610-byte binary requirement.
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/7859878f724ef4237ee93a5414fa6b54f204313a/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'The full non-optional registration graph including independent map anchors and locale-picker lifecycle events measures 5,621,018 raw bytes across 57 files; its ceiling is the next 64-byte boundary with 38 bytes of headroom. The explicit Oniguruma canary retains its separate exact binary requirement.',
-  reviewedCoreMeasurementBytes: 5_621_018,
+  $comment: 'The full non-optional registration graph including MCP app sessions, lazy message renderers, and viewport/source lifetime guards measures 5,640,914 raw bytes across 64 files; its ceiling is the next 64-byte boundary with 46 bytes of headroom. The explicit Oniguruma canary retains its separate exact binary requirement.',
+  reviewedCoreMeasurementBytes: 5_640_914,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 38,
+  selectedRegressionHeadroomBytes: 46,
 };
 
 /**

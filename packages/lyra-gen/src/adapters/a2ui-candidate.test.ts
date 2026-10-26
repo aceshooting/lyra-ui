@@ -31,3 +31,11 @@ test('candidate export rejects collisions, invalid properties and dangling child
   assert.throws(() => exportA2uiCandidateCatalog(catalog({ item: { ...component, properties: { 'bad-name': { type: 'string' } } } })), /identifier/i);
   assert.throws(() => exportA2uiCandidateCatalog(catalog({ parent: { ...component, children: ['missing'] } })), /unknown child/i);
 });
+
+test('direct candidate export rejects own prototype-related property keys', () => {
+  for (const key of ['__proto__', 'constructor', 'prototype', '__PROTO__', 'Constructor', 'PROTOTYPE']) {
+    const properties = Object.fromEntries([[key, { type: 'string' as const }]]);
+    assert.equal(Object.hasOwn(properties, key), true);
+    assert.throws(() => exportA2uiCandidateCatalog(catalog({ item: { ...component, properties } })), /unsafe catalog property/i);
+  }
+});

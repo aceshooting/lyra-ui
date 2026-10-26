@@ -167,6 +167,34 @@ workloads, not browser-focus, total application memory or provider measurements.
 descriptive spread support a narrow comparison; they do not supply a confidence interval or
 approved performance budget.
 
+## Saved-session memory observations
+
+`memory.mjs` exercises bounded generated-view persistence through the existing chat controller,
+snapshot helpers and browser view. It generates transport inside each mount call, edits a real
+input, activates a local action, saves one presentation archive outside the browser, releases
+source, disposes, restores and changes the generated default to verify dirty ownership. Restore
+must preserve the synthetic data/prose/edit and emit no action; a second explicit activation proves
+the restored action remains usable. Every disposal must leave zero connected fixture children.
+
+```sh
+node benchmarks/generative-ui/memory.mjs --cycles=20 --output=session-memory.json
+node --test benchmarks/generative-ui/memory.test.mjs
+```
+
+The runner alternates persistent-page cycles with fresh controls. Each control launches a separate
+Chromium process and has its own post-load baseline. After settlement, every phase requests one
+CDP garbage collection and records main-isolate heap, renderer DOM/listener counters and separately
+counted connected fixture nodes. Source strings/chunks and old controller/view references are not
+kept in fixture history; only current intended presentation and one overwritten host archive remain.
+
+These are raw series and signed changes, including decreases. Main-isolate heap excludes workers,
+native/GPU allocations and OS memory. Renderer DOM/listener counters can include disconnected
+objects; zero connected fixture DOM does not prove zero detached heap. Module/template caches and
+JIT state can remain intentionally. No memory ceiling, heap superiority, leak verdict or confidence
+interval is inferred. The fixture covers a generated view/controller with native prose, rather
+than the complete chat viewport or arbitrary application storage/security. Keep measured reports
+private, identify exact artifact/source hashes, and distinguish loaded smoke from a quiet cohort.
+
 ## Recorded replay interaction and visual checks
 
 `visual.mjs` bundles the same recorded-replay composition used by Storybook. It checks native

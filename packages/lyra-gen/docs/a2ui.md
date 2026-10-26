@@ -100,6 +100,8 @@ It exports a **literal-property catalog artifact** against the pinned candidate
 `protocolVersion: '1.0'`, no functions, and no dynamic expressions or action
 contract. There is no candidate message processor. The stable processor rejects
 `v1.0` envelopes, and candidate IDs are not included in stable capability metadata.
+Direct candidate export rejects `__proto__`, `constructor` and `prototype` property
+keys regardless of case, matching `createCatalog()`.
 
 Candidate schemas differ materially: they introduce `@call`, new function message
 operations, an implicit `Surface`, initial data/components, and lifetime-unique

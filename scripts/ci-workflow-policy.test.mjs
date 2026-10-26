@@ -116,6 +116,22 @@ test('generated UI has one browser and durable-host qualification per engine plu
   for (const command of ['check:catalog', 'check:examples', 'check:bundles', 'test:browser', 'test:saved-dashboard', 'test:visual']) assert.ok(local.includes(`pnpm --filter @aceshooting/lyra-gen ${command}`));
 });
 
+test('companion coverage limits runner occupancy while retaining every complete coverage gate', () => {
+  const workflow = read('.github/workflows/ci.yml');
+  const producer = job(workflow, 'companion_coverage');
+  assert.match(producer, /^ {6}max-parallel: 2$/mu);
+  assert.match(producer, /^ {6}fail-fast: false$/mu);
+  assert.match(producer, /^ {4}needs: build_and_coverage_build$/mu);
+  const packages = producer.match(/^ {8}package: \[([^\]]+)\]$/mu)?.[1].split(',').map(name => name.trim());
+  assert.deepEqual(packages, ['lyra-3d', 'lyra-map', 'lyra-flags', 'lyra-ide', 'lyra-translations']);
+  assert.match(producer, /name: Run complete companion coverage and its floors/u);
+  assert.match(producer, /^ {8}run: pnpm --filter "@aceshooting\/\$COVERAGE_PACKAGE" test:coverage$/mu);
+  assert.doesNotMatch(producer, /continue-on-error|allow-lower|COVERAGE_BROWSER: ['"]?0/u);
+  for (const name of ['build_and_coverage_coverage_shard', 'build_and_coverage_coverage', 'platform-contracts']) {
+    assert.doesNotMatch(job(workflow, name), /\bcompanion_coverage\b/u, `${name} does not wait for companion coverage`);
+  }
+});
+
 test('each of the seven coverage flags owns one complete package report and a scoped README badge', () => {
   const packages = ['lyra-ui', 'lyra-3d', 'lyra-map', 'lyra-docs', 'lyra-flags', 'lyra-ide', 'lyra-translations'];
   const config = read('codecov.yml');

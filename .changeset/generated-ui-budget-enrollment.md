@@ -14,3 +14,7 @@ Navigation and server/client examples, catalog and adapter guides, CLI presets a
 adapter correction increase Gen to 140 public files. Set its archive byte ceilings to the next
 64-byte boundary. Interactive select validation adds 57 gzip bytes over its reviewed measurement; advance
 only its exceeded direct-entry ceiling to the next 64-byte boundary.
+
+Reviewed 2026-10-26: the direct candidate export guard and documented prototype-property refusal
+measure 205,791 packed / 767,995 unpacked bytes across 140 files. Set Gen ceilings to 205,824 /
+768,000 bytes; its file count and all other passing limits stay unchanged.

@@ -30,6 +30,7 @@ export function exportA2uiCandidateCatalog(catalog: LyraGenCatalog, id = `https:
     const properties: Record<string, JsonValue> = { id: { type: 'string' }, component: { const: wireName } };
     for (const [key, schema] of Object.entries(definition.properties)) {
       if (!identifier.test(key)) throw new TypeError('Invalid candidate property identifier.');
+      if (['__proto__', 'constructor', 'prototype'].includes(key.toLowerCase())) throw new TypeError('Unsafe catalog property.');
       if (['id', 'component', 'children', 'action', 'checks'].includes(key)) throw new TypeError('A catalog property collides with the protocol vocabulary.');
       properties[key] = schema as unknown as JsonValue;
     }
