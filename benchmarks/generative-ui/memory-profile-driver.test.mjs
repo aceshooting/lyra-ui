@@ -1,7 +1,69 @@
 import assert from 'node:assert/strict';
+import { EventEmitter } from 'node:events';
 import { test } from 'node:test';
-import { observeMemoryProcess, runMemoryCycle, runMemoryX } from './memory-profile-driver.mjs';
+import { observeMemoryProcess, runMemoryCycle, runMemoryX, withMemoryProfileSignals } from './memory-profile-driver.mjs';
+import { memoryProfilePlan, runMemoryProfile } from './memory-profile.mjs';
 import { validateMemoryCycle } from './memory-profile-results.mjs';
+
+const signals = ['SIGINT', 'SIGTERM'];
+for (const name of signals) test(`${name} aborts the memory runner, retains failure and closes owned resources`, async () => {
+  const source = new EventEmitter(), retained = [], closed = [];
+  const prior = () => {}; for (const signal of signals) source.on(signal, prior);
+  const digest = 'a'.repeat(64), manifest = { schemaVersion: 1, kind: 'memory-profile', authorized: true, collectionId: 'signal-contract-test',
+    designSha256: digest, sourceSha256: digest, compositionSha256: digest,
+    candidate: { archiveSha256: digest, lockfileSha256: digest, buildSha256: digest },
+    browser: { engine: 'chromium', executableSha256: digest }, configuration: memoryProfilePlan() };
+  let received, started, failBaseline;
+  const baselineStarted = new Promise(resolve => { started = resolve; });
+  const driver = {
+    async verify() { return {}; },
+    async checkQuiet() { return { contaminated: false, receiptSha256: digest }; },
+    async openProcess({ signal }) {
+      assert.equal(signal, received);
+      return { baseline: () => new Promise((_resolve, reject) => {
+        failBaseline = reject;
+        signal.addEventListener('abort', () => reject(new Error('Interrupted synthetic baseline.')), { once: true }); started();
+      }), cycle() { assert.fail('Interrupted baseline cannot start a cycle.'); }, async close() { closed.push('process'); } };
+    },
+    async close() { closed.push('driver'); },
+  };
+  const running = withMemoryProfileSignals(signal => {
+    received = signal;
+    return runMemoryProfile(manifest, driver, { signal, retain: async record => { retained.push(record); } });
+  }, source);
+  try {
+    await baselineStarted;
+    for (const signal of signals) assert.equal(source.listenerCount(signal), 2);
+    source.emit(name); assert.equal(received.aborted, true);
+    await assert.rejects(running, error => error.report.failures[0].category === 'aborted');
+    assert.equal(retained.at(-1).kind, 'failure');
+    assert.deepEqual(closed, ['process', 'driver']);
+  } finally { failBaseline?.(new Error('Test cleanup.')); await running.catch(() => {}); }
+  for (const signal of signals) assert.deepEqual(source.listeners(signal), [prior]);
+});
+
+test('CLI signal scope preserves existing process listeners after successful work', async () => {
+  const before = signals.map(signal => process.listeners(signal));
+  const value = await withMemoryProfileSignals(async signal => {
+    assert.equal(signal.aborted, false);
+    signals.forEach((name, index) => assert.equal(process.listenerCount(name), before[index].length + 1));
+    await Promise.resolve(); return 'complete';
+  });
+  assert.equal(value, 'complete'); signals.forEach((name, index) => assert.deepEqual(process.listeners(name), before[index]));
+});
+
+test('CLI signal scope removes both listeners after synchronous or asynchronous errors', async () => {
+  for (const asynchronous of [false, true]) {
+    const source = new EventEmitter(), prior = () => {}, expected = new Error('Owned work failed.');
+    for (const signal of signals) source.on(signal, prior);
+    await assert.rejects(withMemoryProfileSignals(() => {
+      for (const signal of signals) assert.equal(source.listenerCount(signal), 2);
+      if (asynchronous) return Promise.reject(expected);
+      throw expected;
+    }, source), error => error === expected);
+    for (const signal of signals) assert.deepEqual(source.listeners(signal), [prior]);
+  }
+});
 
 function owner({ failNative = false } = {}) {
   const trace = []; let phase = 'baseline', archiveBytes = 0, actions = 0;

@@ -159,11 +159,19 @@ export function createMemoryDriver(options, { functional = false } = {}) {
   };
 }
 
+export async function withMemoryProfileSignals(work, signalSource = process) {
+  const controller = new AbortController(), stop = () => controller.abort();
+  signalSource.once('SIGINT', stop); signalSource.once('SIGTERM', stop);
+  try { return await work(controller.signal); }
+  finally { signalSource.removeListener('SIGINT', stop); signalSource.removeListener('SIGTERM', stop); }
+}
+
 export async function runMemoryProfileCli(args) {
   const options = parseMemoryOptions(args), manifest = JSON.parse(await readFile(options.manifest, 'utf8'));
   validateMemoryManifest(manifest); await mkdir(options.output, { recursive: true });
   let serial = 0;
-  return runMemoryProfile(manifest, createMemoryDriver(options), { retain: record => writeProfileRecord(join(options.output, `${String(serial++).padStart(4, '0')}-${record.kind}.json`), record) });
+  return withMemoryProfileSignals(signal => runMemoryProfile(manifest, createMemoryDriver(options), { signal,
+    retain: record => writeProfileRecord(join(options.output, `${String(serial++).padStart(4, '0')}-${record.kind}.json`), record) }));
 }
 
 /** Scalar return values only; no JSHandle or element handle survives an observation. */
