@@ -15602,7 +15602,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "90147dd0c7953f33b3c4",
+      "fingerprint": "2cfbcd69350833ee8486",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15736,7 +15736,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "2eeeea21d83f9f5a2f12",
+      "fingerprint": "6c7aab463d9ad82c016a",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -16879,7 +16879,7 @@
       "module": "src/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "2bd2214757b4dec6d6f0",
+      "fingerprint": "a95dcea8174d681f78a5",
       "routes": [
         "src/localization.ts",
         "src/utilities/index.ts"
@@ -17330,7 +17330,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocaleDelta",
       "kind": "function",
-      "fingerprint": "06f87b5ee205912f5097",
+      "fingerprint": "8e4acea7066d0e57012c",
       "routes": [
         "src/localization.ts"
       ],
@@ -21784,10 +21784,13 @@
       "kind": "interface",
       "fingerprint": "805208a75a494b5f72d8",
       "routes": [
+        "src/all.ts",
         "src/components/agent-tools/index.ts",
         "src/components/agent-tools/mcp-app/mcp-app.class.ts",
         "src/components/agent-tools/mcp-app/mcp-app.ts",
-        "src/components/lr-mcp-app.ts"
+        "src/components/lr-mcp-app.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
       ],
       "document": "llms/agent-tools.md",
       "family": "agent-tools",
@@ -21803,10 +21806,13 @@
       "kind": "interface",
       "fingerprint": "1351eb9486d51200ae54",
       "routes": [
+        "src/all.ts",
         "src/components/agent-tools/index.ts",
         "src/components/agent-tools/mcp-app/mcp-app.class.ts",
         "src/components/agent-tools/mcp-app/mcp-app.ts",
-        "src/components/lr-mcp-app.ts"
+        "src/components/lr-mcp-app.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
       ],
       "document": "llms/agent-tools.md",
       "family": "agent-tools",

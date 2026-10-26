@@ -85,6 +85,7 @@ test('artifact-only CI selects exactly one 3D tarball through the canonical envi
   const { join } = await import('node:path');
   const { tmpdir } = await import('node:os');
   const { execFileSync } = await import('node:child_process');
+  const { writeFileSync } = await import('node:fs');
   assert.equal(PACKED_TARBALL_ENVIRONMENT.engine3d, 'LYRA_PACKED_3D_TARBALL');
   const workflow = await readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
   const job = workflow.slice(workflow.indexOf('  packed_consumer_contract:'));
@@ -94,20 +95,42 @@ test('artifact-only CI selects exactly one 3D tarball through the canonical envi
   try {
     await mkdir(join(directory, 'artifacts/packed-attw'), { recursive: true });
     await mkdir(join(directory, 'artifacts/packed-companions'), { recursive: true });
-    await writeFile(join(directory, 'artifacts/packed-attw/aceshooting-lyra-ui-1.0.0.tgz'), '');
-    for (const name of ['flags', 'docs', 'map', 'translations', 'ide']) {
-      await writeFile(join(directory, `artifacts/packed-companions/aceshooting-lyra-${name}-1.0.0.tgz`), '');
-    }
-    const execute = () => execFileSync('bash', ['-c', `set -euo pipefail\n${selection}`], {
-      cwd: directory, env: { ...process.env, GITHUB_ENV: join(directory, 'environment') }, stdio: 'pipe',
+    const artifacts = Object.entries(PACKED_TARBALL_ENVIRONMENT).map(([key, variable]) => {
+      const name = key === 'engine3d' ? '3d' : key;
+      const parent = key === 'ui' ? 'artifacts/packed-attw' : 'artifacts/packed-companions';
+      return {
+        key, variable,
+        tarball: join(directory, parent, `aceshooting-lyra-${name}-1.0.0.tgz`),
+        duplicate: join(directory, parent, `aceshooting-lyra-${name}-2.0.0.tgz`),
+      };
     });
+    for (const artifact of artifacts.filter(candidate => candidate.key !== 'engine3d')) {
+      await writeFile(artifact.tarball, '');
+    }
+    const execute = () => {
+      writeFileSync(join(directory, 'environment'), '');
+      return execFileSync('bash', ['-c', `set -euo pipefail\n${selection}`], {
+        cwd: directory, env: { ...process.env, GITHUB_ENV: join(directory, 'environment') }, stdio: 'pipe',
+      });
+    };
     assert.throws(execute, 'an absent 3D artifact must fail instead of triggering a source pack');
-    const artifact = join(directory, 'artifacts/packed-companions/aceshooting-lyra-3d-0.0.0.tgz');
-    await writeFile(artifact, '');
+    assert.equal(await readFile(join(directory, 'environment'), 'utf8'), '');
+    const engine3d = artifacts.find(artifact => artifact.key === 'engine3d');
+    assert.ok(engine3d);
+    await writeFile(engine3d.tarball, '');
     execute();
-    assert.ok((await readFile(join(directory, 'environment'), 'utf8')).includes(`${PACKED_TARBALL_ENVIRONMENT.engine3d}=${artifact}\n`));
-    await writeFile(join(directory, 'artifacts/packed-companions/aceshooting-lyra-3d-1.0.0.tgz'), '');
-    assert.throws(execute, 'ambiguous 3D artifacts must fail');
+    assert.deepEqual((await readFile(join(directory, 'environment'), 'utf8')).trim().split('\n').sort(),
+      artifacts.map(artifact => `${artifact.variable}=${artifact.tarball}`).sort());
+    for (const artifact of artifacts) {
+      await rm(artifact.tarball);
+      assert.throws(execute, `an absent ${artifact.key} artifact must fail`);
+      assert.equal(await readFile(join(directory, 'environment'), 'utf8'), '', `${artifact.key} absence must export nothing`);
+      await writeFile(artifact.tarball, '');
+      await writeFile(artifact.duplicate, '');
+      assert.throws(execute, `ambiguous ${artifact.key} artifacts must fail`);
+      assert.equal(await readFile(join(directory, 'environment'), 'utf8'), '', `${artifact.key} ambiguity must export nothing`);
+      await rm(artifact.duplicate);
+    }
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard archive ceilings: UI downloads stay below 10,000,000 bytes, unpacked UI size retains the 25% historical-baseline reduction, and its file-count derivation reserves seven scaffold artifacts. Required files and artifact hygiene are checked independently; companions have separate ceilings. Only exceeded byte ceilings advance to the next 64-byte boundary. Current measured bytes: UI 21,950,720 unpacked archive / 21,951,342 estimated; IDE 1,708,766 packed / 10,577,266 unpacked; translations 1,407,252 packed / 6,225,498 unpacked; Gen 191,879 packed / 722,620 unpacked across 134 files. Growth covers widget/MCP contracts, chat scroll intent, localized Gen messages, documentation and editor data.",
+  "$comment": "Hard archive ceilings: UI downloads stay below 10,000,000 bytes, unpacked UI size retains the 25% historical-baseline reduction, and its file-count derivation reserves seven scaffold artifacts. Required files and artifact hygiene are checked independently; companions have separate ceilings. Only exceeded byte ceilings advance to the next 64-byte boundary. Current measured bytes: UI 21,950,720 unpacked archive / 21,951,342 estimated; IDE 1,708,766 packed / 10,577,266 unpacked; translations 1,407,252 packed / 6,225,498 unpacked; Gen 192,687 packed / 724,831 unpacked across 134 files. Growth covers widget/MCP contracts, chat scroll intent, localized Gen messages, documentation and editor data. The Gen binding guide and exact SDK test metadata account for its latest byte increase; its runtime files and file inventory are unchanged.",
   "baseline": {
     "packedBytes": 7829794,
     "unpackedBytes": 38510084,
@@ -54,8 +54,8 @@
     },
     "@aceshooting/lyra-gen": {
       "maximum": {
-        "packedBytes": 192064,
-        "unpackedBytes": 722688,
+        "packedBytes": 192704,
+        "unpackedBytes": 724864,
         "fileCount": 134
       }
     }

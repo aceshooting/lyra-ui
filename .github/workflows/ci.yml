@@ -782,9 +782,14 @@ jobs:
           engine3d=(artifacts/packed-companions/aceshooting-lyra-3d-*.tgz)
           translations=(artifacts/packed-companions/aceshooting-lyra-translations-*.tgz)
           ide=(artifacts/packed-companions/aceshooting-lyra-ide-*.tgz)
-          test "${#engine3d[@]}" -eq 1 && test "${#gen[@]}" -eq 1
-          test "${#ui[@]}" -eq 1 && test "${#flags[@]}" -eq 1 && test "${#docs[@]}" -eq 1
-          test "${#translations[@]}" -eq 1 && test "${#ide[@]}" -eq 1 && test "${#map[@]}" -eq 1
+          test "${#ui[@]}" -eq 1
+          test "${#flags[@]}" -eq 1
+          test "${#docs[@]}" -eq 1
+          test "${#gen[@]}" -eq 1
+          test "${#map[@]}" -eq 1
+          test "${#engine3d[@]}" -eq 1
+          test "${#translations[@]}" -eq 1
+          test "${#ide[@]}" -eq 1
           {
             echo "LYRA_PACKED_UI_TARBALL=$PWD/${ui[0]}"
             echo "LYRA_PACKED_FLAGS_TARBALL=$PWD/${flags[0]}"
@@ -1583,13 +1588,15 @@ jobs:
           pnpm --filter @aceshooting/lyra-gen test:saved-dashboard
       - name: Compare recorded generated-view visual baselines
         if: matrix.install_browser == 'chromium' && matrix.shard_index == 1
-        run: pnpm --filter @aceshooting/lyra-gen test:visual --output="${{ runner.temp }}/gen-recorded-visual.json"
+        run: |
+          mkdir -p artifacts/gen-recorded-visual
+          pnpm --filter @aceshooting/lyra-gen test:visual --output=../../artifacts/gen-recorded-visual/report.json
       - name: Archive recorded generated-view visual evidence
         if: always() && matrix.install_browser == 'chromium' && matrix.shard_index == 1
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: gen-recorded-visual-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/gen-recorded-visual.json*
+          path: artifacts/gen-recorded-visual
           if-no-files-found: warn
           retention-days: 7
       - name: Upload DOCX coverage to Codecov

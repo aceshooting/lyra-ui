@@ -61,7 +61,7 @@
   "pnpm run contract-checklist": 0.2,
   "pnpm run llms-freshness": 45.4,
   "pnpm run llms:check": 87.1,
-  "pnpm run manifest:check": 38.4,
+  "pnpm run manifest:check": 145.8,
   "pnpm run manifest:coverage": 0.8,
   "pnpm run provenance-policy": 7.7,
   "pnpm run style-policy": 2.3,

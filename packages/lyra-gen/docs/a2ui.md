@@ -127,16 +127,49 @@ before rendering the newly authorized projection. This scoped rendering
 cohort does not qualify every role or the standard basic catalog.
 
 The pinned `client_capabilities.json` describes the capability object's shape and
-its A2A metadata placement. Schema-shaped data alone does not validate a complete
-A2A message, establish a negotiated extension, or qualify an AG-UI binding. Neither
-binding has an enrolled end-to-end metadata admission cohort here, so this package
-and its browser cohort keep `supportedCatalogIds` empty by default. Host-provided
-`qualifiedCatalogIds` is an explicit host assertion, not a built-in qualification
-registry. Only advertise an identity after independently qualifying its catalog
-and the actual transport binding used by that host.
+its A2A metadata placement. `test/a2ui-bindings.test.mjs` adds a bounded consumer
+cohort using exact published SDKs: `@ag-ui/client` and `@ag-ui/core` 1.0.3, and
+`@a2a-js/sdk` 1.3.0. The fixture provenance records their package integrity values
+and the pinned A2UI sources. Tests use real loopback HTTP, SDK serialization and
+response consumption; accepted operations reach the report processor.
 
-Full catalog coverage, reference-renderer DOM comparisons, AG-UI/A2A binding
-acceptance, candidate rendering, and measured bundle/runtime cost remain separate
+- **AG-UI 1.0 HTTP/SSE:** the report host reads
+  `forwardedProps.a2uiClientCapabilities` after the pinned `RunAgentInputSchema`
+  accepts the request. The host validates the exact capability shape and its
+  catalog allowlist before returning `a2ui-surface` activity snapshots. This
+  metadata location and catalog policy are an explicit host contract. Acceptance
+  by AG-UI does not mean its standard middleware negotiates A2UI catalog IDs.
+- **A2A 1.0 JSON-RPC:** the pinned client and server carry
+  `message.metadata.a2uiClientCapabilities`. This host also requires the exact
+  `https://a2ui.org/a2a-extension/a2ui/v0.9.1` URI to be both advertised and
+  requested, activates it through the SDK's server context, and returns the
+  activation response header. A2A 1.0 uses `A2A-Extensions`; this cohort does not
+  qualify the older `X-A2A-Extensions` transport. Explicit activation is a
+  requirement of this host profile; the A2UI extension specification permits
+  metadata-only negotiation for other hosts.
+
+Both receivers reject malformed capabilities, candidate versions, duplicate IDs,
+inline catalogs, unqualified identities and a mixed qualified/unqualified list.
+An empty supported list produces no generated surface. A2A also rejects absent,
+wrong-version and unadvertised extension activation. Its response fixture uses
+array-valued data parts with `metadata.mimeType: "application/a2ui+json"`, following
+this pinned extension document's examples; it does not qualify the Python
+extension implementation's individual-message data-part behavior.
+
+The stable schema in the pinned `v0_9_1` directory requires the capability key
+`v0.9`, which is what `a2uiClientCapabilities()` emits. Some extension-document
+examples instead use `v0.9.1`. This cohort follows the actual pinned schema and
+rejects that alternate capability key; the surface envelopes and extension URI
+still use `v0.9.1`.
+
+These tests enroll only the owned report host and its explicit catalog allowlist.
+The package and browser cohort still keep `supportedCatalogIds` empty by default.
+Host-provided `qualifiedCatalogIds` remains an explicit host assertion, not a
+built-in qualification registry. Requalify a changed catalog, renderer or binding
+before advertising its identity in your application.
+
+Full catalog coverage, reference-renderer DOM comparisons, broader AG-UI/A2A
+bindings, candidate rendering, and measured bundle/runtime cost remain separate
 qualification work.
 
 Maintainers updating the profile must review the pinned official schema and

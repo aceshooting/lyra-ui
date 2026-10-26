@@ -95,6 +95,12 @@ test('generated UI has one browser and durable-host qualification per engine plu
   assert.deepEqual(visualOwners, ['chromium/1']);
   assert.ok(steps.indexOf(visuals[0]) > steps.indexOf(step), 'visuals run after the companion build');
   assert.match(visuals[0], /lyra-gen test:visual --output=/u);
+  assert.doesNotMatch(visuals[0], /\$\{\{ runner\.temp \}\}/u, 'a host temp expression is not a container filesystem path');
+  assert.match(visuals[0], /mkdir -p artifacts\/gen-recorded-visual/u);
+  assert.match(visuals[0], /--output=\.\.\/\.\.\/artifacts\/gen-recorded-visual\/report\.json/u);
+  assert.ok(visuals[0].indexOf('mkdir -p') < visuals[0].indexOf('lyra-gen test:visual'));
+  const visualArchive = steps.find(candidate => candidate.startsWith('      - name: Archive recorded generated-view visual evidence\n'));
+  assert.match(visualArchive, /path: artifacts\/gen-recorded-visual/u);
   assert.equal(platform.split('pnpm --filter @aceshooting/lyra-gen test:visual').length - 1, 1);
   const staticJob = job(workflow, 'static-checks');
   const tests = staticJob.indexOf("pnpm --filter '!@aceshooting/lyra-ui' -r test");
