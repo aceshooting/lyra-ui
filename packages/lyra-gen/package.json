@@ -1,6 +1,6 @@
 {
   "name": "@aceshooting/lyra-gen",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Catalog-bound generated views, interactive answers and portable dashboard contracts for Lyra UI.",
   "type": "module",
   "license": "MIT",
