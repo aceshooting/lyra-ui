@@ -75,17 +75,19 @@ test('message-parts preserves child tag declarations without emitting child regi
   }
 });
 
-test('A2UI return exceptions apply only to the two reviewed fingerprints', () => {
-  const config = JSON.parse(readFileSync(path.join(packageDir, 'scripts/public-api-semver-exceptions.json'), 'utf8'));
+test('A2UI return exceptions remain fingerprint-bound after their release records retire', () => {
   const ids = ['subpath-export:./ai:adaptA2UiSurface:contract', 'subpath-export:./ai:adaptA2UiSurface:dependencies'];
-  const reviewed = config.exceptions.filter(exception => ids.includes(exception.changeId));
-  assert.equal(reviewed.length, 2);
+  const reviewed = ids.map((changeId, index) => ({
+    changeId, before: `before-${index}`, after: `after-${index}`, requiredBump: 'major', allowedBump: 'minor',
+    reason: 'Optional return fields preserve structural compatibility.', reviewer: 'fixture', reviewedOn: '2026-10-26',
+  }));
   const changes = reviewed.map(exception => ({ id: exception.changeId, bump: 'major', before: exception.before, after: exception.after }));
   assert.deepEqual(applyReviewedExceptions(changes, { exceptions: reviewed }).map(change => change.bump), ['minor', 'minor']);
   for (const field of ['before', 'after']) {
     const changed = changes.map((change, index) => index === 0 ? { ...change, [field]: 'different-contract' } : change);
     assert.throws(() => applyReviewedExceptions(changed, { exceptions: reviewed }), /does not match any current API change/);
   }
+  assert.throws(() => applyReviewedExceptions([], { exceptions: reviewed }), /does not match any current API change/);
   const unrelated = { id: 'subpath-export:./ai:anotherFunction:contract', bump: 'major', before: 'old', after: 'new' };
   assert.equal(applyReviewedExceptions([...changes, unrelated], { exceptions: reviewed }).at(-1).bump, 'major');
 });
