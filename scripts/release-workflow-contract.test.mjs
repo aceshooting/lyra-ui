@@ -275,61 +275,22 @@ test('both bootstrap eligibility checks fail closed on registry and package ambi
   }
 });
 
-test('publishing fails unless the registry serves the released tarball bytes', () => {
+test('publishing embeds the tested byte verifier without checking out or executing repository scripts', () => {
   const workflow = read('.github/workflows/publish.yml');
   const step = workflow.indexOf('      - name: Confirm the registry serves the published tarball\n');
   assert.ok(step >= 0);
-  assert.match(workflow.slice(step, step + 400), /if: \$\{\{ github\.event_name == 'release' \|\| inputs\.dry_run != true \}\}/);
-  const start = workflow.indexOf('        run: |\n', step) + '        run: |\n'.length;
-  const lines = [];
-  for (const line of workflow.slice(start).split('\n')) {
-    if (line.startsWith('          ')) lines.push(line.slice(10));
-    else if (line === '') lines.push('');
-    else break;
-  }
-  const source = lines.join('\n');
-  const fixture = mkdtempSync(path.join(tmpdir(), 'lyra-registry-confirm-'));
-  try {
-    const tarball = path.join(fixture, 'fixture.tgz');
-    writeFileSync(tarball, 'released bytes');
-    const released = `sha512-${createHash('sha512').update('released bytes').digest('base64')}`;
-    const bin = path.join(fixture, 'bin');
-    spawnSync('mkdir', ['-p', bin]);
-    const writeExecutable = (name, script) => {
-      const file = path.join(bin, name);
-      writeFileSync(file, script);
-      chmodSync(file, 0o755);
-    };
-    writeExecutable('curl', '#!/usr/bin/env bash\nif [[ "${CURL_FAIL:-}" == true ]]; then exit 22; fi\nprintf \'%s\' "$REGISTRY_BODY"\n');
-    writeExecutable('sleep', '#!/usr/bin/env bash\nexit 0\n');
-    const run = (body, extraEnv = {}) => spawnSync('bash', ['-c', source], {
-      encoding: 'utf8',
-      env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, RUNNER_TEMP: fixture, TAG: 'lyra-ui@1.2.3', TARBALL: tarball, REGISTRY_BODY: body, ...extraEnv },
-    });
-
-    const served = run(JSON.stringify({ dist: { integrity: released } }));
-    assert.equal(served.status, 0, served.stderr);
-    assert.match(served.stdout, /npm serves @aceshooting\/lyra-ui@1\.2\.3 with the released integrity/);
-
-    const other = run(JSON.stringify({ dist: { integrity: 'sha512-other' } }));
-    assert.equal(other.status, 1);
-    assert.match(other.stdout, /not the released sha512-/);
-
-    // A staged version never appears in the registry: the step must fail instead of finishing green.
-    const staged = run('{"error":"Not found"}');
-    assert.equal(staged.status, 1);
-    assert.match(staged.stdout, /still not served by the npm registry 20 minutes after publish\. It is most likely staged/);
-
-    const malformed = run('{');
-    assert.equal(malformed.status, 1);
-    assert.match(malformed.stdout, /still not served by the npm registry 20 minutes after publish\. It is most likely staged/);
-
-    const unavailable = run('', { CURL_FAIL: 'true' });
-    assert.equal(unavailable.status, 22);
-    assert.doesNotMatch(unavailable.stdout, /npm serves @aceshooting/);
-  } finally {
-    rmSync(fixture, { recursive: true, force: true });
-  }
+  const confirmation = workflow.slice(step, workflow.indexOf('\n  dispatch-freshness:', step));
+  assert.match(confirmation, /if: \$\{\{ github\.event_name == 'release' \|\| inputs\.dry_run != true \}\}/u);
+  assert.match(confirmation, /EXPECTED_SHA256: \$\{\{ needs\.verify\.outputs\.tarball_sha256 \}\}/u);
+  assert.match(confirmation, /node --input-type=module <<'NODE'/u);
+  assert.match(confirmation, /await verifyNpmPublication\(\{ tag: process\.env\.TAG, tarball: process\.env\.TARBALL, expectedSha256: process\.env\.EXPECTED_SHA256 \}\)/u);
+  const authored = read('scripts/verify-npm-publication.mjs').split('// publication-verifier:start\n')[1]
+    .split('// publication-verifier:end')[0].trimEnd().replace(/^export /u, '');
+  const embedded = confirmation.slice(confirmation.indexOf('          async function verifyNpmPublication'), confirmation.indexOf('          try {\n            const result'))
+    .split('\n').map(line => line.startsWith('          ') ? line.slice(10) : line).join('\n').trimEnd();
+  assert.equal(embedded, authored, 'Protected inline code must exactly match the independently tested verifier.');
+  const publish = workflow.slice(workflow.indexOf('\n  publish:\n'), workflow.indexOf('\n  dispatch-freshness:'));
+  assert.doesNotMatch(publish, /actions\/checkout@|npm install|npm ci|node scripts\//u);
 });
 
 test('standalone release assets come from immutable source and reject incomplete or extra downloads', async () => {
