@@ -47,6 +47,37 @@ test('every observation stop cancels watchdog, native and fallback handles and r
   }
 });
 
+test('native pause retires both pending and already-delivered frame requests without updates or rescheduling', () => {
+  for (const deliveryBeforePauseEvent of [false, true]) {
+    let updates = 0; const f = fixture(() => updates++);
+    const cancelled = [];
+    const cancel = f.video.cancelVideoFrameCallback;
+    f.video.cancelVideoFrameCallback = id => {
+      if (f.native.has(id)) cancelled.push(id);
+      cancel(id);
+    };
+    try {
+      assert.equal(f.native.size, 1);
+      f.video.paused = true;
+      if (deliveryBeforePauseEvent) {
+        f.fire(f.native);
+        assert.equal(f.native.size, 0, 'native delivery fulfills the request before the pause event');
+        assert.equal(updates, 0, 'the paused-state check rejects a frame delivered before the stop event');
+      }
+      f.video.dispatchEvent(new Event('pause'));
+      assert.equal(f.native.size + f.frames.size + f.timers.size, 0, 'the native pause event releases all remaining observation');
+      assert.equal(cancelled.length, deliveryBeforePauseEvent ? 0 : 1,
+        'an already fulfilled request needs no pending-request cancellation');
+      assert.equal(updates, 0);
+      f.video.paused = false; f.video.dispatchEvent(new Event('playing'));
+      assert.equal(f.native.size, 1, 'playback can resume observation after either retirement path');
+      assert.equal(f.timers.size, 1);
+      assert.equal(updates, 1);
+    } finally { f.watcher.dispose(); }
+    assert.equal(f.native.size + f.frames.size + f.timers.size, 0);
+  }
+});
+
 test('fallback update can dispose observation without rescheduling any callback', () => {
   const f = fixture(() => f.watcher.dispose());
   f.fire(f.timers); f.video.currentTime = 0.3; f.fire(f.frames);

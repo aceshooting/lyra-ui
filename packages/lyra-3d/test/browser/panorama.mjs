@@ -392,25 +392,34 @@ export const panoramaCases = {
     const requestDescriptor = Object.getOwnPropertyDescriptor(video, 'requestVideoFrameCallback');
     const cancelDescriptor = Object.getOwnPropertyDescriptor(video, 'cancelVideoFrameCallback');
     const nativeRequest = video.requestVideoFrameCallback.bind(video); const nativeCancel = video.cancelVideoFrameCallback.bind(video);
-    const pending = new Set(); let requests = 0; let delivered = 0; let cancellations = 0; let mediaTime;
+    const pending = new Set(), retired = new Map(); let requests = 0; let delivered = 0; let cancellations = 0; let mediaTime;
     video.requestVideoFrameCallback = (callback) => {
       requests += 1;
-      const id = nativeRequest((time, metadata) => { pending.delete(id); delivered += 1; mediaTime = metadata.mediaTime; callback(time, metadata); });
+      const id = nativeRequest((time, metadata) => { pending.delete(id); retired.set(id, 'delivered'); delivered += 1; mediaTime = metadata.mediaTime; callback(time, metadata); });
       pending.add(id); return id;
     };
-    video.cancelVideoFrameCallback = (id) => { if (pending.delete(id)) cancellations += 1; nativeCancel(id); };
+    video.cancelVideoFrameCallback = (id) => { if (pending.delete(id)) { retired.set(id, 'cancelled'); cancellations += 1; } nativeCancel(id); };
     let record;
     try {
       record = await mount({ kind: 'video', video }, {}, fixture.container); ownVideo(record, video);
       await video.play();
       await until(() => video.currentTime > 0.3 && pending.size > 0, () => `Engine did not observe playing video: ${JSON.stringify(nativeVideoState(video))}`);
-      const beforePause = cancellations;
-      video.pause();
-      await until(() => pending.size === 0, 'Pause did not cancel the pending native callback');
-      const pauseCancelled = cancellations > beforePause;
+      const pendingAtPause = [...pending];
+      if (pendingAtPause.length === 0) throw new Error('Pause ownership requires a pending native callback');
       const pausedRequests = requests;
+      let pauseObserved = false;
+      const observePause = () => { pauseObserved = true; };
+      video.addEventListener('pause', observePause, { once: true });
+      try {
+        video.pause();
+        // paused changes before the queued native pause event. A frame already being presented
+        // may fulfill its request in that interval, so retirement can be delivery or cancellation.
+        await until(() => pauseObserved && pending.size === 0, 'Pause did not retire native frame observation');
+      } finally { video.removeEventListener('pause', observePause); }
+      const pauseRetirement = pendingAtPause.map(id => retired.get(id));
+      const pauseRetired = pauseRetirement.every(reason => reason === 'delivered' || reason === 'cancelled');
       await wait(100);
-      if (requests !== pausedRequests) throw new Error('Paused video kept requesting frames');
+      if (requests !== pausedRequests || pending.size !== 0) throw new Error('Paused video kept requesting frames');
       await video.play();
       await until(() => pending.size > 0, 'Playback did not resume frame observation');
       const beforeReplacement = cancellations;
@@ -422,8 +431,9 @@ export const panoramaCases = {
       const beforeDispose = cancellations;
       record.engine.dispose();
       const disposalCancelled = pending.size === 0 && cancellations > beforeDispose;
-      return { passed: pauseCancelled && replacementCancelled && disposalCancelled && playingAfterReplacement,
-        requests, delivered, nativeDelivery: delivered > 1 ? 'observed' : 'unqualified', cancellations, pauseCancelled, replacementCancelled, disposalCancelled, playingAfterReplacement };
+      return { passed: pauseRetired && replacementCancelled && disposalCancelled && playingAfterReplacement,
+        requests, delivered, nativeDelivery: delivered > 1 ? 'observed' : 'unqualified', cancellations, pauseObserved, pauseRetired, pauseRetirement,
+        replacementCancelled, disposalCancelled, playingAfterReplacement };
     } catch (error) {
       return { passed: false, error: String(error?.message ?? error), requests, delivered, cancellations, pending: pending.size, mediaTime,
         currentTime: video.currentTime, duration: video.duration, paused: video.paused, readyState: video.readyState, seeking: video.seeking, lost: record?.calls.lost, native: nativeVideoState(video) };
