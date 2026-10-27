@@ -1,7 +1,10 @@
 import { createHash } from 'node:crypto';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseCpuStat, parseLoadAverage, parseSwapCounters, parseProcessStat, workloadLabels, createOwnershipTracker, intervalObservation, windowMetrics, ruleFailures, validateReview, makeReceipt, quietSnapshotDeadline, validateObserverBaseline, reviewedWindowAdmission, validateReviewedReview, makeReviewedReceipt } from './profile-quiet.mjs';
+import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { parseCpuStat, parseLoadAverage, parseSwapCounters, parseProcessStat, workloadLabels, createOwnershipTracker, intervalObservation, windowMetrics, ruleFailures, validateReview, makeReceipt, quietSnapshotDeadline, validateObserverBaseline, reviewedWindowAdmission, validateReviewedReview, makeReviewedReceipt, readSnapshot, retainMonitorFailure } from './profile-quiet.mjs';
 import { REVIEWED_IDLE_SERVICE_PROFILE, REVIEWED_IDLE_SERVICE_SCOPE, SHARED_HOST_OBSERVED_PROFILE, SHARED_HOST_OBSERVED_SCOPE, SHARED_HOST_AGGREGATE_PROFILE, SHARED_HOST_AGGREGATE_SCOPE, makeReviewedQuietEvidence, parseObserverConfigBytes } from './profile-admission.mjs';
 import { checkFreshQuietReceipt } from './profile-driver.mjs';
 
@@ -26,6 +29,141 @@ function artifacts() {
     precheckSha256: hash('a'), ownershipSha256: hash('b') };
   return { precheck, review, precheckSha256: hash('a'), ownershipSha256: hash('b'), reviewSha256: hash('c') };
 }
+
+function procStat(pid, { start = '10', ppid = '3', flags = '2097152', user = '7', system = '3', comm = 'worker' } = {}) {
+  const fields = Array(20).fill('0');
+  fields[0] = 'S'; fields[1] = ppid; fields[6] = flags; fields[11] = user; fields[12] = system; fields[19] = start;
+  return `${pid} (${comm}) ${fields.join(' ')}`;
+}
+function fakeProc({ pids = ['10', '20'], clocks = [1_000_000_000n, 1_000_000_010n, 1_000_000_020n, 1_000_000_030n], fault, firstStat, secondStat, globals = {} } = {}) {
+  const reads = [], calls = new Map(), command = Buffer.from('node\0--arg=value\0');
+  const files = { '/proc/stat': 'cpu 100 20 30 800 10 5 5 0 10 2\ncpu0 0\ncpu1 0\n', '/proc/loadavg': '0.12 0.1 0.1 1/10 1',
+    '/proc/vmstat': 'pswpin 7\npswpout 9\n', '/proc/uptime': '12.34 0\n', '/proc/sys/kernel/random/boot_id': 'boot\n', ...globals };
+  let clockIndex = 0, wallClockIndex;
+  const io = { readFileSync(path, encoding) {
+    reads.push(path); const count = (calls.get(path) ?? 0) + 1; calls.set(path, count);
+    if (fault?.path === path && (fault.occurrence ?? 1) === count) throw fault.error;
+    if (Object.hasOwn(files, path)) { assert.equal(encoding, 'utf8'); return files[path]; }
+    const [, pid, kind] = /^\/proc\/(\d+)\/(stat|cmdline)$/u.exec(path) ?? [];
+    assert.ok(pid, 'Unexpected fake-proc read.');
+    if (kind === 'cmdline') { assert.equal(encoding, undefined); return pid === '10' ? command : Buffer.from('/usr/bin/esbuild\0--bundle\0'); }
+    assert.equal(encoding, 'utf8');
+    return count === 1 ? firstStat ?? procStat(pid, { flags: '0', ppid: '1', user: '1', system: '1', comm: 'before' }) : secondStat ?? procStat(pid);
+  }, readdirSync(path) { assert.equal(path, '/proc'); reads.push(path); if (fault?.path === path) throw fault.error; return ['self', ...pids, 'sys']; },
+  monotonicNow() { assert.ok(clockIndex < clocks.length, 'Unexpected monotonic observation.'); return clocks[clockIndex++]; }, wallNow() { wallClockIndex = clockIndex; return 123456; } };
+  return { io, reads, calls, command, get wallClockIndex() { return wallClockIndex; } };
+}
+
+test('snapshot scans every listed PID stat-command-stat with actual timestamps and second-stat counters', async () => {
+  const fake = fakeProc(), value = await readSnapshot(100, { idleServices: [{ pid: 10 }] }, fake.io);
+  assert.deepEqual(fake.reads, ['/proc/stat', '/proc/loadavg', '/proc/vmstat', '/proc/uptime', '/proc/sys/kernel/random/boot_id', '/proc',
+    '/proc/10/stat', '/proc/10/cmdline', '/proc/10/stat', '/proc/20/stat', '/proc/20/cmdline', '/proc/20/stat']);
+  assert.deepEqual(value.cpu, { busy: 160n, total: 970n, logicalCpus: 2, cpuIds: 'cpu0,cpu1' });
+  assert.equal(value.bootId, 'boot'); assert.equal(value.uptimeTicks, 1234n); assert.equal(value.load.normalizedOneMinuteLoad, .06);
+  assert.deepEqual(value.swap, { pswpin: 7n, pswpout: 9n }); assert.equal(value.observedAt, 123456);
+  assert.equal(value.monotonicNs, 1_000_000_030n); assert.equal(fake.wallClockIndex, 4);
+  const service = value.processes.get(10);
+  assert.equal(service.cpuTicks, 10n); assert.equal(service.ppid, 3); assert.equal(service.comm, 'worker'); assert.equal(service.flags, 2097152n); assert.equal(service.kernelThread, true);
+  assert.equal(service.readMonotonicNs, 1_000_000_010n); assert.equal(value.processes.get(20).readMonotonicNs, 1_000_000_020n);
+  assert.equal(service.cmdlineSha256, createHash('sha256').update(fake.command).digest('hex'));
+  assert.deepEqual(value.processes.get(20).labels, ['build-or-package-tool']); assert.equal(value.processes.get(20).cmdlineSha256, undefined);
+  assert.deepEqual(value.snapshot, { startMonotonicNs: '1000000000', endMonotonicNs: '1000000030', durationNs: '30',
+    listedPids: 2, completedPids: 2, disappearedPids: 0, stage: 'complete', pid: null, complete: true });
+  const repeated = fakeProc(); repeated.command[0] = 'x'.charCodeAt(0);
+  const next = await readSnapshot(100, { idleServices: [{ pid: 10 }] }, repeated.io);
+  assert.notEqual(next.processes.get(10).cmdlineSha256, service.cmdlineSha256);
+  assert.equal(repeated.calls.get('/proc/10/stat'), 2); assert.equal(repeated.calls.get('/proc/10/cmdline'), 1);
+});
+
+for (const [path, occurrence] of [['/proc/10/stat', 1], ['/proc/10/cmdline', 1], ['/proc/10/stat', 2]]) {
+  for (const code of ['ENOENT', 'ESRCH']) test(`${code} at ${path} read${occurrence} skips only the disappeared PID`, async () => {
+    const fake = fakeProc({ fault: { path, occurrence, error: Object.assign(new Error('Disappeared.'), { code }) } });
+    const value = await readSnapshot(100, undefined, fake.io);
+    assert.deepEqual([...value.processes.keys()], [20]);
+    assert.equal(value.snapshot.listedPids, 2); assert.equal(value.snapshot.completedPids, 1); assert.equal(value.snapshot.disappearedPids, 1);
+    assert.equal(value.snapshot.complete, true); assert.equal(fake.calls.get('/proc/20/stat'), 2);
+  });
+}
+
+test('a disappearing command read still skips the PID before parsing its earlier stat text', async () => {
+  const fake = fakeProc({ pids: ['10'], firstStat: 'invalid', fault: { path: '/proc/10/cmdline', error: Object.assign(new Error('Disappeared.'), { code: 'ENOENT' }) } });
+  const value = await readSnapshot(100, undefined, fake.io);
+  assert.equal(value.processes.size, 0); assert.equal(value.snapshot.completedPids, 0); assert.equal(value.snapshot.disappearedPids, 1);
+  assert.equal(value.snapshot.complete, true);
+});
+
+test('fatal read, malformed stat and PID reuse retain the original failure and incomplete scan position', async () => {
+  for (const [options, stage, pid, expected, listed, completed] of [
+    [{ fault: { path: '/proc/10/cmdline', error: Object.assign(new Error('Denied.'), { code: 'EACCES' }) } }, 'process-cmdline', 10, /Denied/u, 2, 0],
+    [{ fault: { path: '/proc/20/cmdline', error: Object.assign(new Error('I/O failed.'), { code: 'EIO' }) } }, 'process-cmdline', 20, /I\/O failed/u, 2, 1],
+    [{ fault: { path: '/proc/stat', error: Object.assign(new Error('Missing global.'), { code: 'ENOENT' }) } }, 'cpu-stat', null, /Missing global/u, null, 0],
+    [{ fault: { path: '/proc', error: Object.assign(new Error('Listing failed.'), { code: 'EIO' }) } }, 'pid-list', null, /Listing failed/u, null, 0],
+    [{ firstStat: 'invalid' }, 'process-stat-before', 10, /Invalid process stat/u, 2, 0],
+    [{ secondStat: 'invalid' }, 'process-stat-after', 10, /Invalid process stat/u, 2, 0],
+    [{ firstStat: procStat(99) }, 'process-stat-after', 10, /reused/u, 2, 0],
+    [{ secondStat: procStat(10, { start: '11' }) }, 'process-stat-after', 10, /reused/u, 2, 0],
+    [{ globals: { '/proc/uptime': 'invalid' } }, 'uptime', null, /Invalid uptime/u, 2, 2],
+  ]) {
+    const fake = fakeProc(options);
+    await assert.rejects(readSnapshot(100, undefined, fake.io), error => {
+      if (options.fault) assert.equal(error, options.fault.error);
+      assert.match(error.message, expected); assert.match(error.message, /\d+ns/u);
+      assert.equal(error.snapshot.stage, stage); assert.equal(error.snapshot.pid, pid); assert.equal(error.snapshot.complete, false);
+      assert.equal(error.snapshot.listedPids, listed); assert.equal(error.snapshot.completedPids, completed); assert.equal(error.snapshot.disappearedPids, 0);
+      assert.equal(error.snapshot.endMonotonicNs, String(BigInt(error.snapshot.startMonotonicNs) + BigInt(error.snapshot.durationNs)));
+      return true;
+    });
+  }
+});
+
+test('exact 250ms scan completion passes while one extra nanosecond rejects with completed diagnostics', async () => {
+  for (const duration of [250_000_000n, 250_000_001n]) {
+    const fake = fakeProc({ pids: [], clocks: [10n, 10n + duration] });
+    const attempt = readSnapshot(100, undefined, fake.io);
+    if (duration === 250_000_000n) assert.equal((await attempt).snapshot.durationNs, String(duration));
+    else await assert.rejects(attempt, error => {
+      assert.match(error.message, /250000001ns/u);
+      assert.deepEqual(error.snapshot, { startMonotonicNs: '10', endMonotonicNs: '250000011', durationNs: '250000001',
+        listedPids: 0, completedPids: 0, disappearedPids: 0, stage: 'complete', pid: null, complete: true }); return true;
+    });
+    assert.equal(fake.wallClockIndex, duration === 250_000_000n ? 2 : undefined);
+  }
+});
+
+test('an interval retains its actual completed scan diagnostic', async () => {
+  const before = await readSnapshot(100, undefined, fakeProc().io);
+  const after = await readSnapshot(100, undefined, fakeProc({ clocks: [2_000_000_000n, 2_000_000_010n, 2_000_000_020n, 2_000_000_030n],
+    globals: { '/proc/stat': 'cpu 101 20 30 899 10 5 5 0 10 2\ncpu0 0\ncpu1 0\n' } }).io);
+  const row = intervalObservation(before, after, { hz: 100, ownedBefore: new Map(), ownedAfter: new Map() });
+  assert.deepEqual(row.snapshot, after.snapshot); assert.equal(row.snapshot.startMonotonicNs, '2000000000');
+  assert.equal(row.seconds, 1); assert.equal(row.cpuBusyFraction, .01);
+});
+
+test('the stopped writer retains the rejected scan without changing previous valid rows or receipt', async () => {
+  const output = await mkdtemp(join(tmpdir(), 'lyra-quiet-snapshot-'));
+  try {
+    const previous = await readSnapshot(100, undefined, fakeProc().io);
+    const receipt = { kind: 'quiet-live-receipt', observedAt: previous.observedAt, contaminated: false };
+    const prior = structuredClone(receipt), rows = '{"validPreviousInterval":true}\n';
+    await writeFile(join(output, 'samples.jsonl'), rows); await writeFile(join(output, 'receipt.json'), JSON.stringify(receipt));
+    let rejected;
+    await assert.rejects(readSnapshot(100, undefined, fakeProc({ pids: [], clocks: [2_000_000_000n, 2_250_000_001n] }).io), error => { rejected = error; return true; });
+    const stoppedBefore = Date.now();
+    await retainMonitorFailure(rejected, { collectionId: 'synthetic-unit', previous, receipt, output });
+    const failure = JSON.parse(await readFile(join(output, 'stopped.json'), 'utf8'));
+    assert.deepEqual(failure.snapshot, rejected.snapshot); assert.equal(failure.snapshot.complete, true);
+    assert.equal(failure.snapshot.durationNs, '250000001'); assert.equal(failure.observedAt, previous.observedAt);
+    assert.ok(failure.stoppedAt >= stoppedBefore && failure.stoppedAt <= Date.now());
+    assert.deepEqual(failure.lastReceipt, prior); assert.deepEqual(receipt, prior); assert.equal(failure.inspected, false);
+    assert.match(failure.reason, /250000001ns/u);
+    assert.deepEqual(JSON.parse(await readFile(join(output, 'receipt.json'), 'utf8')), failure);
+    assert.equal(await readFile(join(output, 'samples.jsonl'), 'utf8'), rows);
+    rejected.snapshot.durationNs = '0';
+    assert.equal(JSON.parse(await readFile(join(output, 'stopped.json'), 'utf8')).snapshot.durationNs, '250000001');
+    await assert.rejects(retainMonitorFailure(rejected, { collectionId: 'synthetic-unit', previous, receipt, output }), { code: 'EEXIST' });
+    assert.equal(JSON.parse(await readFile(join(output, 'stopped.json'), 'utf8')).snapshot.durationNs, '250000001');
+  } finally { await rm(output, { recursive: true, force: true }); }
+});
 
 test('CPU counters avoid double-counted guest time and normalize real host load', () => {
   const cpu = parseCpuStat('cpu 100 20 30 800 10 5 5 0 10 2\ncpu0 0\ncpu1 0\n');

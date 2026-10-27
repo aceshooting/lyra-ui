@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Linux quiet-host observer. Importing this module reads nothing and starts no monitor.
-import { readFile, readdir, writeFile, appendFile, mkdir, rename } from 'node:fs/promises';
+import { readFile, writeFile, appendFile, mkdir, rename } from 'node:fs/promises';
+import { readFileSync, readdirSync } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
@@ -132,6 +133,7 @@ export function intervalObservation(previous, current, { hz, ownedBefore, ownedA
   const unrelated = processes.filter(process => !process.owned);
   const reviewed = observerConfig ? reviewedInterval(previous, current, processes, coverageIssues, observerConfig, ownedBefore, ownedAfter) : undefined;
   return { observedAt: current.observedAt, monotonicNs: String(current.monotonicNs), seconds, logicalCpus: current.cpu.logicalCpus,
+    ...(current.snapshot ? { snapshot: current.snapshot } : {}),
     cpuTicks: { busy: String(busy), total: String(total) }, cpuBusyFraction: Number(busy) / Number(total),
     normalizedOneMinuteLoad: current.load.normalizedOneMinuteLoad, oneMinuteLoad: current.load.oneMinute,
     maxUnrelatedProcessCpuFractionOfOneCore: Math.max(0, ...unrelated.map(process => process.cpuFractionOfOneCore)),
@@ -278,29 +280,57 @@ async function atomicJson(filename, value) {
   const temporary = `${filename}.tmp-${process.pid}-${randomUUID()}`;
   await writeFile(temporary, encode(value), { flag: 'wx', mode: 0o600 }); await rename(temporary, filename);
 }
-async function readSnapshot(hz, observerConfig) {
-  const monotonicStart = process.hrtime.bigint();
-  const [statText, loadText, vmText, uptimeText, bootId, entries] = await Promise.all([
-    readFile('/proc/stat', 'utf8'), readFile('/proc/loadavg', 'utf8'), readFile('/proc/vmstat', 'utf8'), readFile('/proc/uptime', 'utf8'),
-    readFile('/proc/sys/kernel/random/boot_id', 'utf8'), readdir('/proc'),
-  ]);
-  const cpu = parseCpuStat(statText), processes = new Map(), pids = entries.filter(entry => /^\d+$/u.test(entry));
-  let cursor = 0;
-  await Promise.all(Array.from({ length: 16 }, async () => {
-    while (cursor < pids.length) {
-      const pid = pids[cursor++];
+export async function retainMonitorFailure(error, { collectionId, previous, receipt, output, signal }) {
+  const failure = { schemaVersion: 1, kind: 'quiet-monitor-stopped', collectionId, inspected: false, observedAt: previous.observedAt,
+    stoppedAt: Date.now(), reason: signal?.aborted ? 'operator-stop' : String(error.message), lastReceipt: receipt ?? null,
+    ...(error.snapshot ? { snapshot: error.snapshot } : {}) };
+  await atomicJson(join(output, 'receipt.json'), failure); await writeFile(join(output, 'stopped.json'), encode(failure), { flag: 'wx', mode: 0o600 });
+}
+/** Completion describes the scan, never admission under its duration or host rules. */
+export async function readSnapshot(hz, observerConfig, { readFileSync: read = readFileSync, readdirSync: list = readdirSync,
+  monotonicNow = process.hrtime.bigint, wallNow = Date.now } = {}) {
+  const start = monotonicNow(), processes = new Map();
+  let stage = 'cpu-stat', pid = null, listedPids = null, completedPids = 0, disappearedPids = 0, complete = false, end;
+  const diagnostic = () => ({ startMonotonicNs: String(start), endMonotonicNs: String(end), durationNs: String(end - start),
+    listedPids, completedPids, disappearedPids, stage, pid, complete });
+  try {
+    const statText = read('/proc/stat', 'utf8');
+    stage = 'loadavg'; const loadText = read('/proc/loadavg', 'utf8');
+    stage = 'vmstat'; const vmText = read('/proc/vmstat', 'utf8');
+    stage = 'uptime'; const uptimeText = read('/proc/uptime', 'utf8');
+    stage = 'boot-id'; const bootId = read('/proc/sys/kernel/random/boot_id', 'utf8');
+    stage = 'pid-list'; const pids = list('/proc').filter(entry => /^\d+$/u.test(entry)); listedPids = pids.length;
+    stage = 'cpu-stat'; const cpu = parseCpuStat(statText);
+    for (const entry of pids) {
+      pid = Number(entry);
       try {
-        const [firstText, commandLine] = await Promise.all([readFile(`/proc/${pid}/stat`, 'utf8'), readFile(`/proc/${pid}/cmdline`)]);
-        const first = parseProcessStat(firstText), second = parseProcessStat(await readFile(`/proc/${pid}/stat`, 'utf8'));
-        require(first.pid === Number(pid) && first.startTimeTicks === second.startTimeTicks, 'PID was reused during sampling.');
-        processes.set(first.pid, { ...second, readMonotonicNs: process.hrtime.bigint(), labels: workloadLabels(second.comm, commandLine.toString('utf8')), ...(observerConfig?.idleServices.some(service => service.pid === first.pid) ? { cmdlineSha256: digest(commandLine) } : {}) });
-      } catch (error) { if (error.code !== 'ENOENT' && error.code !== 'ESRCH') throw error; }
+        stage = 'process-stat-before'; const firstText = read(`/proc/${entry}/stat`, 'utf8');
+        stage = 'process-cmdline'; const commandLine = read(`/proc/${entry}/cmdline`);
+        stage = 'process-stat-before'; const first = parseProcessStat(firstText);
+        stage = 'process-stat-after'; const second = parseProcessStat(read(`/proc/${entry}/stat`, 'utf8'));
+        require(first.pid === pid && first.startTimeTicks === second.startTimeTicks, 'PID was reused during sampling.');
+        processes.set(first.pid, { ...second, readMonotonicNs: monotonicNow(), labels: workloadLabels(second.comm, commandLine.toString('utf8')), ...(observerConfig?.idleServices.some(service => service.pid === first.pid) ? { cmdlineSha256: digest(commandLine) } : {}) });
+        completedPids++;
+      } catch (error) {
+        if (error.code !== 'ENOENT' && error.code !== 'ESRCH') throw error;
+        disappearedPids++;
+      }
     }
-  }));
-  const monotonicNs = process.hrtime.bigint();
-  require(monotonicNs - monotonicStart <= 250_000_000n, 'A /proc snapshot took too long to attribute a one-second interval.');
-  const uptime = Number(uptimeText.trim().split(/\s/u)[0]); require(Number.isFinite(uptime) && uptime >= 0, 'Invalid uptime.');
-  return { bootId: bootId.trim(), monotonicNs, observedAt: Date.now(), cpu, load: parseLoadAverage(loadText, cpu.logicalCpus), swap: parseSwapCounters(vmText), uptimeTicks: BigInt(Math.floor(uptime * hz)), processes };
+    pid = null;
+    stage = 'uptime'; const uptime = Number(uptimeText.trim().split(/\s/u)[0]); require(Number.isFinite(uptime) && uptime >= 0, 'Invalid uptime.');
+    const uptimeTicks = BigInt(Math.floor(uptime * hz));
+    stage = 'loadavg'; const load = parseLoadAverage(loadText, cpu.logicalCpus);
+    stage = 'vmstat'; const swap = parseSwapCounters(vmText);
+    stage = 'boot-id'; const observedBootId = bootId.trim();
+    stage = 'complete'; complete = true; end = monotonicNow();
+    require(end - start <= 250_000_000n, 'A /proc snapshot took too long to attribute a one-second interval.');
+    return { bootId: observedBootId, monotonicNs: end, observedAt: wallNow(), cpu, load, swap, uptimeTicks, processes, snapshot: diagnostic() };
+  } catch (error) {
+    if (end === undefined) end = monotonicNow();
+    error.snapshot = diagnostic();
+    error.message = `${error.message} Snapshot duration: ${error.snapshot.durationNs}ns.`;
+    throw error;
+  }
 }
 export async function runMonitor({ collectionId, ownershipPath, reviewPath, observerConfigPath, output, signal }) {
   require(process.platform === 'linux' && process.versions.node === '22.23.2', 'Use Linux and exact Node22.23.2.');
@@ -320,7 +350,7 @@ export async function runMonitor({ collectionId, ownershipPath, reviewPath, obse
   const roots = [...ownership.roots, { pid: self.pid, startTimeTicks: String(self.startTimeTicks), role: 'quiet-monitor' }];
   const tracker = createOwnershipTracker({ bootId: previous.bootId, roots }); let ownedBefore = tracker.classify(previous);
   if (observerConfig) validateObserverBaseline(previous, ownedBefore, observerConfig);
-  const baseline = { collectionId, bootId: previous.bootId, startedAt: previous.observedAt, monotonicNs: String(previous.monotonicNs), hz, logicalCpus: previous.cpu.logicalCpus, roots, ownershipSha256, toolSha256, admissionSha256, ...(observerConfig ? { quietObserver: { profile: observerConfig.profile, configSha256, scope: observerConfig.scope }, observerConfig } : {}),
+  const baseline = { collectionId, bootId: previous.bootId, startedAt: previous.observedAt, monotonicNs: String(previous.monotonicNs), snapshot: previous.snapshot, hz, logicalCpus: previous.cpu.logicalCpus, roots, ownershipSha256, toolSha256, admissionSha256, ...(observerConfig ? { quietObserver: { profile: observerConfig.profile, configSha256, scope: observerConfig.scope }, observerConfig } : {}),
     initialOwnedProcesses: [...previous.processes.values()].filter(process => ownedBefore.has(identity(process))).map(process => ({ pid: process.pid, ppid: process.ppid, startTimeTicks: String(process.startTimeTicks), ...ownedBefore.get(identity(process)) })) };
   await writeFile(join(output, 'baseline.json'), encode(baseline), { flag: 'wx', mode: 0o600 });
   await writeFile(join(output, 'samples.jsonl'), '', { flag: 'wx', mode: 0o600 });
@@ -357,9 +387,7 @@ export async function runMonitor({ collectionId, ownershipPath, reviewPath, obse
     }
     if (signal?.aborted) throw new Error('Operator stopped monitor.');
   } catch (error) {
-    const failure = { schemaVersion: 1, kind: 'quiet-monitor-stopped', collectionId, inspected: false, observedAt: previous.observedAt,
-      stoppedAt: Date.now(), reason: signal?.aborted ? 'operator-stop' : String(error.message), lastReceipt: receipt ?? null };
-    await atomicJson(join(output, 'receipt.json'), failure); await writeFile(join(output, 'stopped.json'), encode(failure), { flag: 'wx', mode: 0o600 });
+    await retainMonitorFailure(error, { collectionId, previous, receipt, output, signal });
     if (!signal?.aborted) throw error;
   }
 }
@@ -376,6 +404,6 @@ function options(args) {
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
   const controller = new AbortController(); const stop = () => controller.abort(); process.once('SIGINT', stop); process.once('SIGTERM', stop);
   try { await runMonitor({ ...options(process.argv.slice(2)), signal: controller.signal }); }
-  catch (error) { process.stderr.write(`${String(error.message)}\n`); process.exitCode = 1; }
+  catch (error) { process.stderr.write(error.snapshot ? encode({ message: String(error.message), snapshot: error.snapshot }) : `${String(error.message)}\n`); process.exitCode = 1; }
   finally { process.removeListener('SIGINT', stop); process.removeListener('SIGTERM', stop); }
 }
