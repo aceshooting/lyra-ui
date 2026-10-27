@@ -7416,6 +7416,7 @@ export interface LyraComponentTypeMap {
       | 'initialization'
       | 'initializationDelay'
       | 'interactiveBasemapLayers'
+      | 'keyboardActivation'
       | 'label'
       | 'legend'
       | 'legendCollapsible'
@@ -7443,6 +7444,7 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraMapEventMap;
     eventNames:       | 'lr-map-anchor-close'
+      | 'lr-map-attribution-toggle'
       | 'lr-map-click'
       | 'lr-map-contextmenu'
       | 'lr-map-draw-cancel'
@@ -7484,6 +7486,7 @@ export interface LyraComponentTypeMap {
       'drawing-measurements'?: LyraMap['drawingMeasurements'];
       'hash-format'?: LyraMap['hashFormat'];
       'initialization-delay'?: LyraMap['initializationDelay'];
+      'keyboard-activation'?: LyraMap['keyboardActivation'];
       'legend-collapsible'?: LyraMap['legendCollapsible'];
       'legend-control-role'?: LyraMap['legendControlRole'];
       'legend-gradient-hi-label'?: LyraMap['legendGradientHiLabel'];

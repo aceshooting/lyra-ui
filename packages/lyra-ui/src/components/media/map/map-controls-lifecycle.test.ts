@@ -32,6 +32,32 @@ function harness() {
   return { manager, map, context, installed, removed, created, events, failures };
 }
 
+/** Peer-shaped compact disclosure: native installation leaves it compact, open and shown. */
+class CompactAttribution extends Control {
+  readonly root = document.createElement('details');
+  constructor(readonly options?: Record<string, unknown>) { super(); }
+  onAdd(): HTMLElement {
+    this.root.className = 'maplibregl-ctrl maplibregl-ctrl-attrib';
+    if (this.options?.['compact'] !== false) this.root.classList.add('maplibregl-compact', 'maplibregl-compact-show');
+    this.root.open = true;
+    return this.root;
+  }
+}
+function attributionHarness() {
+  const created: CompactAttribution[] = []; const corner = document.createElement('div');
+  const manager = new MapControlsLifecycle(async () => class extends CompactAttribution {
+    constructor(input?: Record<string, unknown>) { super(input); created.push(this); }
+  });
+  const map = {
+    controlContainer: () => corner,
+    addControl(control: MapManagedControl) { corner.append(control.onAdd!()); },
+    removeControl(control: MapManagedControl) { (control as CompactAttribution).root.remove(); },
+  };
+  const context = { isCurrent: () => true, onEvent: () => undefined, onFailure: () => undefined };
+  return { manager, map, context, created, corner };
+}
+const shown = (root: HTMLDetailsElement) => [root.open, root.classList.contains('maplibregl-compact-show')];
+
 describe('map controls lifecycle', () => {
   it('retains unchanged installed controls and uses the exact callbacks for retirement', async () => {
     const h = harness(); const desired = options({ geolocate: true, attribution: true });
@@ -435,6 +461,54 @@ describe('map controls lifecycle boundaries', () => {
     }
   });
 
+  it('seeds a compact owned attribution once with open and compact-show aligned, never hiding a full credit surface', async () => {
+    for (const [input, expected] of [
+      [{ compact: true, initialExpanded: false }, [false, false]], [{ compact: true, initialExpanded: true }, [true, true]],
+      [{ compact: true }, [true, true]], [{ compact: false, initialExpanded: false }, [true, false]],
+    ] as const) {
+      const h = attributionHarness();
+      await h.manager.sync(h.map, options({ attribution: input }), h.context);
+      expect(h.created.length).to.equal(1);
+      expect(h.manager.ownedRoot('attribution') === h.created[0]!.root).to.equal(true);
+      expect(shown(h.created[0]!.root), JSON.stringify(input)).to.deep.equal(expected);
+      expect(h.created[0]!.options).to.deep.equal({ compact: input.compact });
+      h.manager.dispose();
+      expect(h.manager.ownedRoot('attribution') === undefined).to.equal(true);
+    }
+  });
+  it('retains the user-selected disclosure on position-only changes and reseeds only a meaningful replacement', async () => {
+    const h = attributionHarness();
+    await h.manager.sync(h.map, options({ attribution: { compact: true, initialExpanded: false } }), h.context);
+    const root = h.created[0]!.root;
+    root.classList.add('maplibregl-compact-show'); root.open = true;
+    await h.manager.sync(h.map, options({ attribution: { compact: true, initialExpanded: false, position: 'top-left', order: 2 } }), h.context);
+    await h.manager.sync(h.map, options({ attribution: { compact: true, initialExpanded: false, position: 'top-left', order: 2 } }), h.context);
+    expect(h.created.length).to.equal(1); expect(h.manager.ownedRoot('attribution') === root).to.equal(true);
+    expect(shown(root)).to.deep.equal([true, true]);
+    await h.manager.sync(h.map, options({ attribution: { compact: true, initialExpanded: true, position: 'top-left', order: 2 } }), h.context);
+    expect(h.created.length).to.equal(2); expect(root.isConnected).to.equal(false);
+    await h.manager.sync(h.map, options({ attribution: { compact: true, position: 'top-left', order: 2 } }), h.context);
+    expect(h.created.length).to.equal(3);
+    await h.manager.sync(h.map, options({ attribution: { compact: true, initialExpanded: false, position: 'top-left', order: 2 } }), h.context);
+    expect(h.created.length).to.equal(4);
+    expect(shown(h.created[3]!.root)).to.deep.equal([false, false]);
+    expect(h.manager.ownedRoot('attribution') === h.created[3]!.root).to.equal(true);
+    h.manager.dispose();
+  });
+  it('reports only explicitly pending kinds while imports are held, excluding retained installed controls', async () => {
+    const h = harness(); const resolves: ((constructor: typeof Control) => void)[] = [];
+    const manager = new MapControlsLifecycle(() => new Promise(resolve => { resolves.push(resolve); }));
+    const first = manager.sync(h.map, options({ navigation: true }), h.context);
+    expect([...manager.pendingKinds()]).to.deep.equal(['navigation']);
+    resolves[0]!(Control); await first;
+    expect([...manager.pendingKinds()]).to.deep.equal([]);
+    const second = manager.sync(h.map, options({ navigation: true, scale: true }), h.context);
+    expect([...manager.pendingKinds()]).to.deep.equal(['scale']);
+    manager.dispose();
+    expect([...manager.pendingKinds()]).to.deep.equal([]);
+    resolves[1]!(Control); await second;
+    expect(h.installed.length).to.equal(1);
+  });
   it('leaves nothing installed or subscribed after disposal, wherever the context turns stale during a rearrangement', async () => {
     const rearrange = async (staleAt: number) => {
       const corners = new Map(['top-right', 'bottom-left'].map(position => [position, document.createElement('div')]));

@@ -74,7 +74,8 @@ export class MapControlsLifecycle {
     for (const [kind, entry] of this.entries) {
       const next = desired.get(kind);
       if (entry.map === map && entry.installed && next && (next.key === entry.options.key ||
-        (entry.root && map.controlContainer && JSON.stringify(next.options) === JSON.stringify(entry.options.options)))) {
+        (entry.root && map.controlContainer && next.initialExpanded === entry.options.initialExpanded &&
+          JSON.stringify(next.options) === JSON.stringify(entry.options.options)))) {
         entry.context = context; entry.options = next;
       }
       else { this.entries.delete(kind); retired.push(entry); }
@@ -147,6 +148,17 @@ export class MapControlsLifecycle {
     }
   }
 
+  /** Kinds whose installation the latest synchronization still awaits; retained installed controls are excluded. */
+  pendingKinds(): ReadonlySet<MapOwnedControlKind> {
+    return new Set([...this.entries].filter(([, entry]) => !entry.installed && !entry.retired).map(([kind]) => kind));
+  }
+
+  /** The exact root an installed owned control returned from its public `onAdd` hook. */
+  ownedRoot(kind: MapOwnedControlKind): HTMLElement | undefined {
+    const entry = this.entries.get(kind);
+    return entry?.installed && !entry.retired ? entry.root : undefined;
+  }
+
   /** Retire subscriptions before the caller removes the native map. Reusable after reconnect. */
   dispose(): void {
     this.generation += 1;
@@ -214,6 +226,15 @@ export class MapControlsLifecycle {
           // Reentrant teardown during addControl cannot assume native installation has finished.
           if (entry.retired) this.retire(entry);
         }
+      }
+      if (!this.current(entry)) { this.release(entry); return; }
+      const seed = entry.options.initialExpanded;
+      // Initial-only seed of a compact native disclosure. The peer renders its credits from both the
+      // details `open` state and its compact-show class, so both move together or the next native
+      // activation would be consumed. A noncompact surface is never hidden.
+      if (entry.options.kind === 'attribution' && seed !== undefined && entry.root?.classList.contains('maplibregl-compact')) {
+        entry.root.classList.toggle('maplibregl-compact-show', seed);
+        entry.root.toggleAttribute('open', seed);
       }
       if (!this.current(entry)) { this.release(entry); return; }
       entry.installed = true;

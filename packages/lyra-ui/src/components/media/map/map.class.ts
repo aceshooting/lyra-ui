@@ -108,7 +108,7 @@ export type { LyraMapInteractionOptions, LyraMapBasemapInteraction, LyraMapStyle
 import type { MapHashOwner } from './map-hash-owner.js';
 import type { MapHashCamera } from './map-hash.js';
 import { MAP_HASH_UNNAMED } from './map-hash-option.js';
-import { normalizeMapControlOptions, type LyraMapGeolocateControlOptions, type LyraMapAttributionControlOptions, type LyraMapGeolocationErrorCode,
+import { normalizeMapControlOptions, type NormalizedMapControlOptions, type LyraMapGeolocateControlOptions, type LyraMapAttributionControlOptions, type LyraMapGeolocationErrorCode,
   type LyraMapNavigationControlOptions, type LyraMapScaleControlOptions } from './map-control-options.js';
 export type { LyraMapControlPosition, LyraMapScaleUnit, LyraMapNavigationControlOptions, LyraMapScaleControlOptions,
   LyraMapGeolocateControlOptions, LyraMapAttributionControlOptions, LyraMapAttributionLink, LyraMapGeolocationErrorCode } from './map-control-options.js';
@@ -660,9 +660,11 @@ function addPartToken(element: Element, token: string): void {
   element.setAttribute('part', [...tokens].join(' '));
 }
 
+/** Rendered credit visibility: a compact peer shows credits only with compact-show, and a details
+ *  root additionally only while open (native drag minimization removes compact-show alone). */
 function attributionExpanded(element: Element): boolean {
-  return element.localName === 'details' ? element.hasAttribute('open')
-    : !element.classList.contains('maplibregl-compact') || element.classList.contains('maplibregl-compact-show');
+  const shown = !element.classList.contains('maplibregl-compact') || element.classList.contains('maplibregl-compact-show');
+  return element.localName === 'details' ? shown && element.hasAttribute('open') : shown;
 }
 
 /**
@@ -1950,6 +1952,11 @@ function setPopupContent(popup: MapLibrePopupCapability, marker: CanonicalMapMar
  */
 export interface LyraMapGeolocateErrorDetail { readonly code: LyraMapGeolocationErrorCode; }
 export interface LyraMapGeolocateOutOfBoundsDetail { readonly code: 'out-of-bounds'; }
+/** Detail of `lr-map-attribution-toggle`: the owned attribution control's settled credit visibility. */
+export interface LyraMapAttributionToggleDetail {
+  /** Whether the native credits are now shown. */
+  readonly expanded: boolean;
+}
 /** Detail of `lr-map-geolocate`: the position the user-activated geolocate control located. */
 export interface LyraMapGeolocateDetail {
   /** `[longitude, latitude]` reported by the browser. */
@@ -2000,6 +2007,12 @@ export type LyraMapBounds = readonly [
   readonly [number, number],
   readonly [number, number],
 ];
+
+/** Options of `getVisibleBounds()`. */
+export interface LyraMapVisibleBoundsOptions {
+  /** `false` reads the whole viewport instead of the box inside `cameraPadding`. Defaults to `true`. */
+  readonly padded?: boolean;
+}
 
 /**
  * Screen pixels kept clear on each side of a fitted box. The sides are the viewport's physical
@@ -2622,6 +2635,8 @@ export interface LyraMapEventMap {
   'lr-map-geolocate': CustomEvent<LyraMapGeolocateDetail>;
   'lr-map-geolocate-error': CustomEvent<LyraMapGeolocateErrorDetail>;
   'lr-map-geolocate-out-of-bounds': CustomEvent<LyraMapGeolocateOutOfBoundsDetail>;
+  /** Non-cancelable notification that the owned attribution disclosure changed after installation. */
+  'lr-map-attribution-toggle': CustomEvent<LyraMapAttributionToggleDetail>;
   'lr-map-export-error': CustomEvent<LyraMapImageExportErrorDetail>;
   'lr-map-style-load': CustomEvent<LyraMapReadinessDetail>;
   'lr-map-idle': CustomEvent<LyraMapReadinessDetail>;
@@ -2650,6 +2665,8 @@ export interface LyraMapEventMap {
     /** `true` when the hit is a choropleth feature without a usable value and `choropleth.noData`
      *  is configured; absent otherwise. */
     readonly noData?: true;
+    /** `'keyboard'` for a `keyboardActivation` at the view centre; absent for pointer clicks. */
+    readonly trigger?: 'keyboard';
   }>;
 }
 /**
@@ -2700,18 +2717,28 @@ export interface LyraMapEventMap {
  * @event lr-map-geolocate-out-of-bounds - `detail: { code: 'out-of-bounds' }`. A user-activated
  *   location lies outside maxBounds; no coordinates are exposed.
  * @event lr-map-export-error - `detail: { code }` (`LyraMapImageExportErrorDetail`). Frozen sanitized export failure.
+ * @event lr-map-attribution-toggle - `detail: { expanded }` (`LyraMapAttributionToggleDetail`). Non-cancelable
+ *   notification after the library-owned attribution control (including the default one) actually shows or
+ *   hides its credits through native activation, resizing or dragging. Synchronous native changes are
+ *   coalesced to their result and repeats are not reported. Installation, the `initialExpanded` seed,
+ *   replacement and reconnect establish a silent baseline. Imperatively added controls are not reported.
  * @csspart initialization-placeholder - Stable surface before native construction. It is
  *   noninteractive except for `initialization-activate`.
  * @csspart initialization-activate - Localized button covering an `initialization="interaction"`
  *   placeholder until the first input builds the map.
- * @csspart initialization-control - Decorative outline of a requested native control before construction.
+ * @csspart initialization-control - Decorative outline of a requested native control before construction, kept
+ *   after construction while that control's lazy code installs. Pending controls install in one pass, so their
+ *   outlines clear together when it settles (installed or failed), on replacement or on disconnect. Outlines use
+ *   the installed controls' glass or solid surface material.
+ *   Unset controls, including the implicit attribution, and already installed retained controls have none.
  * @csspart initialization-navigation - Decorative navigation control placeholder.
  * @csspart initialization-scale - Decorative scale control placeholder.
  * @csspart initialization-geolocate - Decorative geolocation control placeholder.
  * @csspart initialization-attribution - Decorative attribution control placeholder.
  * @csspart initialization-skeleton - Decorative map skeleton before construction.
  * @csspart initialization-activate-label - Visible activation prompt; hiding it preserves the button's localized accessible name.
- * @csspart initialization-controls - Decorative requested controls, also exposing controls.
+ * @csspart initialization-controls - Decorative requested controls, also exposing controls. After construction it
+ *   remains only while requested controls are pending, `aria-hidden`, inert and without pointer events.
  * @csspart initialization-corner - Decorative control corner, also exposing its controls-top-left, controls-top-right, controls-bottom-left or controls-bottom-right token.
  * @event lr-map-style-load - `detail: { generation }` (`LyraMapReadinessDetail`). Fired once per
  *   connection/style after generated and registered overlays, images, style overrides and their
@@ -2776,7 +2803,8 @@ export interface LyraMapEventMap {
  *   properties; a `kind: 'heatmap'` layer is never hit-tested, because MapLibre returns no features
  *   for a density surface. A hit on a choropleth feature without a numeric `field` value reports
  *   `noData: true` when `choropleth.noData` is configured; the key is absent otherwise. A cluster
- *   hit also eases the camera into the cluster when its entry sets `cluster.zoomOnClick`.
+ *   hit also eases the camera into the cluster when its entry sets `cluster.zoomOnClick`. A
+ *   `keyboardActivation` at the view centre adds `trigger: 'keyboard'`; pointer clicks carry no `trigger`.
  * @event lr-map-view-change - Fired once each time the camera settles after a user gesture (drag,
  *   wheel, touch, keyboard, box zoom or a standard peer navigation button), a `fitBounds()` or
  *   `fitToData()` call, or a `flyTo()`/`easeTo()`/`jumpTo()` call, carrying the immutable
@@ -3271,6 +3299,16 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   private pendingHashIssue?: LyraMap['hashIssue'];
   private pendingControlIssue: LyraMap['controlIssue'];
+  /** Requested controls whose lazy installation is still pending on the constructed map. */
+  @state() private controlOutlines: readonly NormalizedMapControlOptions[] = [];
+  private pendingControlOutlines: readonly NormalizedMapControlOptions[] = [];
+
+  private setControlOutlines(outlines: readonly NormalizedMapControlOptions[]): void {
+    if (outlines.length === 0 && this.pendingControlOutlines.length === 0) return;
+    this.pendingControlOutlines = outlines;
+    if (this.mapUpdateActive) this.scheduleAfterUpdate(() => { this.controlOutlines = this.pendingControlOutlines; }, 'map-control-outlines');
+    else this.controlOutlines = outlines;
+  }
 
   private setControlIssue(issue: LyraMap['controlIssue']): void {
     this.pendingControlIssue = issue;
@@ -4039,6 +4077,14 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   @property({ attribute: false }) interactiveBasemapLayers: readonly LyraMapBasemapInteraction[] = [];
   /** Pick coordinates by clicking the map or using the localized center-pick button. */
   @property({ type: Boolean, attribute: 'pick-mode' }) pickMode = false;
+  /**
+   * Opt-in keyboard activation: while the map canvas has focus, an unmodified Enter or Space
+   * activates the interactive feature at the view centre (the camera centre, inside any
+   * `cameraPadding`) exactly as a click there would, emitting `lr-map-click` with
+   * `trigger: 'keyboard'`. Feature priority is the click's. Not active in pick mode, while drawing
+   * is armed, or while the map is disabled or inert. Default `false` leaves both keys untouched.
+   */
+  @property({ type: Boolean, attribute: 'keyboard-activation' }) keyboardActivation = false;
   /** Arms bounded line or polygon drawing. The first accepted vertex starts the session.
    * Pick mode cancels drawing without automatic resumption. Completion/cancellation reset to none.
    * Drawing preserves pan/zoom and temporarily owns double-click zoom. Maximum 512 vertices.
@@ -4661,8 +4707,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (defaultAttribution || projected.diagnostics.some(issue => issue.kind === 'attribution')) wanted.set('attribution', normalizeMapControlOptions({ attribution: true }).controls.get('attribution')!);
     this.setControlIssue(projected.diagnostics.length ? 'mapControlUnavailable' : undefined);
     const current = () => ready.isCurrent() && this.isConnected && this._map === map && this.controls === input && this._connectGeneration === connection;
+    // Explicitly requested controls keep their decorative outlines until installation settles.
+    const requested = [...projected.controls.values()].sort((a, b) => a.order - b.order);
+    this.setControlOutlines(this.controlLifecycle ? [] : requested);
     if (projected.diagnostics.length) ready.fail();
     if (typeof map.addControl !== 'function' || typeof map.removeControl !== 'function') {
+      this.setControlOutlines([]);
       if (wanted.size === 0) ready.resolve();
       else ready.fail();
       return;
@@ -4675,8 +4725,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const peer = this.controlPeer.adapter;
     const run = ({ MapControlsLifecycle }: NonNullable<typeof loadMapControlRuntime.loaded>): Promise<void> => {
       if (!current()) return Promise.resolve();
-      return (this.controlLifecycle ??=
-        new MapControlsLifecycle(kind => loadMapControl(kind, this.engine, this._maplibreModule))).sync(peer, wanted, {
+      const lifecycle = this.controlLifecycle ??= new MapControlsLifecycle(kind => loadMapControl(kind, this.engine, this._maplibreModule));
+      const synchronized = lifecycle.sync(peer, wanted, {
       isCurrent: current,
       onEvent: event => {
         if (!current()) return;
@@ -4699,11 +4749,18 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       onFailure: failure => {
         if (!current()) return;
         ready.fail();
+        this.setControlOutlines(this.pendingControlOutlines.filter(outline => outline.kind !== failure.kind));
         if (defaultAttribution && failure.kind === 'attribution') return;
         this.setControlIssue('mapControlUnavailable');
         this.announcements.announceAssertive(this.localize('mapControlUnavailable'));
       },
       });
+      // Retention and new pending entries are settled synchronously, before the first import resolves.
+      if (current()) {
+        const pending = lifecycle.pendingKinds();
+        this.setControlOutlines(requested.filter(outline => pending.has(outline.kind)));
+      }
+      return synchronized;
     };
     const runtime = loadMapControlRuntime.loaded;
     // Without a previously owned control, an empty request needs no control runtime at all.
@@ -4718,8 +4775,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.trackFeatureLoad(Promise.race([ready.cancelled, sync.then(() => {
       if (!current()) return;
       this.syncPeerChromeParts();
+      if (!current()) return;
+      this.setControlOutlines([]);
+      this.syncAttributionState();
       if (current()) ready.resolve();
-    }).catch(() => { if (current()) ready.fail(); })]));
+    }).catch(() => { if (current()) { this.setControlOutlines([]); ready.fail(); } })]));
   }
 
   /** Placement and close ownership, once a requested coordinate has loaded the anchor runtime. */
@@ -4972,10 +5032,24 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     });
   }
 
+  /**
+   * Synchronously reads the current visible box as frozen `[[west, south], [east, north]]`: by
+   * default inside the applied `cameraPadding` (the box `lr-map-move` and `lr-map-view-change`
+   * report), or the whole viewport with `{ padded: false }`. `west` is wrapped into [-180, 180]
+   * and `east` keeps the span, so it can exceed 180 across the antimeridian; latitudes are clamped
+   * to [-90, 90]. Returns `null` before the engine exists or when the peer cannot report a box.
+   */
+  getVisibleBounds(options?: LyraMapVisibleBoundsOptions): LyraMapBounds | null {
+    const map = this._map;
+    let padded = true;
+    try { padded = options?.padded !== false; } catch { /* An unreadable option keeps the default. */ }
+    return map ? this.readVisibleBounds(map, padded) ?? null : null;
+  }
+
   /** The visible box inside the applied `cameraPadding`, or `undefined` when it cannot be read. */
-  private readVisibleBounds(map: MapLibreMapCapability): LyraMapBounds | undefined {
+  private readVisibleBounds(map: MapLibreMapCapability, padded = true): LyraMapBounds | undefined {
     try {
-      const { top, right, bottom, left } = this.appliedPadding;
+      const { top, right, bottom, left } = padded ? this.appliedPadding : { top: 0, right: 0, bottom: 0, left: 0 };
       const container = this.containerEl;
       let west: number;
       let south: number;
@@ -5337,6 +5411,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.optionalFeatureWorkStarted = false;
     this.controlLifecycle?.dispose();
     this.controlPeer = undefined;
+    this.attributionState = undefined;
+    this.setControlOutlines([]);
     if (this._map) this.peerEvents.clear(this._map);
     try {
       this._map?.remove();
@@ -6255,9 +6331,18 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const cancel = (): void => { if (current()) { this.cancelMapDrawing('pointercancel'); if (!this.drawingController?.active) { this.clearMapHover(); this.mapCursor.clear(); } } };
     const down = (): void => { this.suppressDrawingClick = false; };
     const click = (event: MouseEvent): void => { if (this.suppressDrawingClick) { this.suppressDrawingClick = false; event.preventDefault(); event.stopImmediatePropagation(); } };
+    const key = (event: KeyboardEvent): void => {
+      if (!current() || !this.keyboardActivation || (event.key !== 'Enter' && event.key !== ' ') || event.repeat || event.isComposing ||
+        event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (this.pickMode || this.drawMode !== 'none' || this.drawingController?.active || !this.mapInteractionAllowed()) return;
+      event.preventDefault();
+      this.activateMapCenter();
+    };
     canvas.addEventListener('pointercancel', cancel, true);
     canvas.addEventListener('pointerdown', down, true); canvas.addEventListener('click', click, true);
-    this.pointerCleanup = () => { canvas.removeEventListener('pointercancel', cancel, true); canvas.removeEventListener('pointerdown', down, true); canvas.removeEventListener('click', click, true); };
+    canvas.addEventListener('keydown', key);
+    this.pointerCleanup = () => { canvas.removeEventListener('pointercancel', cancel, true); canvas.removeEventListener('pointerdown', down, true);
+      canvas.removeEventListener('click', click, true); canvas.removeEventListener('keydown', key); };
     this.interactionBlocked = this.mapInteractionBlocked();
     this.interactionObserver = new MutationObserver(() => {
       if (!current()) return;
@@ -6438,9 +6523,24 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     } catch { /* An unavailable center does not produce a pick. */ }
   };
 
-  private handleMapInteraction(kind: 'click' | 'contextmenu' | 'mousemove', event: { readonly point: unknown; readonly lngLat: unknown }): void {
+  /** A keyboard click at the camera centre, through the same hit query and dispatch as a pointer click. */
+  private activateMapCenter(): void {
+    const map = this._map;
+    if (!map) return;
+    try {
+      const lngLat = mapCoordinates(map.getCenter());
+      if (!lngLat || this._map !== map) return;
+      const point = map.project?.([lngLat[0], lngLat[1]]) as { readonly x?: unknown; readonly y?: unknown } | undefined;
+      const x = point?.x, y = point?.y;
+      if (!isFiniteCoordinate(x) || !isFiniteCoordinate(y) || this._map !== map) return;
+      this.handleMapInteraction('click', { point: { x, y }, lngLat: { lng: lngLat[0], lat: lngLat[1] } }, 'keyboard');
+    } catch { /* An unavailable centre does not produce a click. */ }
+  }
+
+  private handleMapInteraction(kind: 'click' | 'contextmenu' | 'mousemove', event: { readonly point: unknown; readonly lngLat: unknown },
+    trigger: 'pointer' | 'keyboard' = 'pointer'): void {
     const drawing = this.drawingController;
-    if (kind === 'click' && (this.suppressDrawingClick || drawing?.consumeClick())) { this.suppressDrawingClick = false; return; }
+    if (kind === 'click' && trigger === 'pointer' && (this.suppressDrawingClick || drawing?.consumeClick())) { this.suppressDrawingClick = false; return; }
     if (drawing?.dispatching) return;
     if (this.queryingMap) { this.interactionQuery++; return; }
     if (!this.mapInteractionAllowed()) { this.clearMapHover(); return; }
@@ -6502,7 +6602,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const choropleth = this.canonicalChoropleth;
     const noData = origin === 'choropleth' && choropleth?.noData !== undefined && typeof hit?.properties[choropleth.field] !== 'number';
     this.emit('lr-map-click', { lngLat, feature: raw, origin, sourceId: origin === 'choropleth' ? undefined : rule?.source,
-      ...(rule?.sourceLayer ? { sourceLayer: rule.sourceLayer } : {}), ...(hit ? { hit, ...(hit.target ? { target: hit.target } : {}) } : {}), ...(noData ? { noData: true } : {}) });
+      ...(rule?.sourceLayer ? { sourceLayer: rule.sourceLayer } : {}), ...(hit ? { hit, ...(hit.target ? { target: hit.target } : {}) } : {}), ...(noData ? { noData: true } : {}),
+      ...(trigger === 'keyboard' ? { trigger } : {}) });
     if (origin === 'cluster' && rule && clickToken === this.clusterZoomToken && current()) this.zoomIntoCluster(rule.source, raw);
   }
 
@@ -8271,6 +8372,22 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     }
   }
 
+  /** The exact owned attribution root and its last reported credit visibility. */
+  private attributionState?: { readonly root: HTMLElement; expanded: boolean };
+
+  /** A new owned root sets a silent baseline; the same root reports each settled change once. */
+  private syncAttributionState(): void {
+    const root = this.controlLifecycle?.ownedRoot('attribution');
+    const container = this.containerEl;
+    if (!root || !container || !this.isConnected || !container.contains(root)) { this.attributionState = undefined; return; }
+    const expanded = attributionExpanded(root);
+    const previous = this.attributionState;
+    if (previous?.root !== root) { this.attributionState = { root, expanded }; return; }
+    if (previous.expanded === expanded) return;
+    previous.expanded = expanded;
+    this.emit('lr-map-attribution-toggle', { expanded });
+  }
+
   private syncPeerAttributionExpansion(container: HTMLElement): void {
     for (const controls of container.querySelectorAll('.maplibregl-control-container')) {
       const expanded = [...controls.querySelectorAll('.maplibregl-ctrl-attrib')].some(attributionExpanded);
@@ -8325,7 +8442,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       }
       if (elementsChanged) syncMapControlRows(container, () => this.isConnected && this.containerEl === container && this.peerChromeObserver === observer);
       if (!this.isConnected || this.containerEl !== container || this.peerChromeObserver !== observer) return;
-      if (elementsChanged || attributionChanged) this.syncPeerAttributionExpansion(container);
+      if (elementsChanged || attributionChanged) {
+        this.syncPeerAttributionExpansion(container);
+        this.syncAttributionState();
+      }
       if (elementsChanged) this.schedulePeerControlInsets(this.peerControlsResizeObserver, container);
     });
     this.peerChromeObserver = observer;
@@ -8662,8 +8782,24 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   override render(): TemplateResult {
     const drawing = this.drawingController;
-    const initializationControls = !this.failure && !this.loading && !this._map
-      ? [...normalizeMapControlOptions(this.controls).controls.values()].sort((a, b) => a.order - b.order) : [];
+    const placeholder = !this.failure && !this.loading && !this._map;
+    // Before construction every requested control is outlined; afterwards only pending installations.
+    const initializationControls = placeholder
+      ? [...normalizeMapControlOptions(this.controls).controls.values()].sort((a, b) => a.order - b.order)
+      : !this.failure && !this.loading && this._map ? this.controlOutlines : [];
+    const outlines = html`<div class="initialization-controls" part="initialization-controls controls" aria-hidden="true" inert>
+            ${(['top', 'bottom'] as const).map(row => html`<div class="initialization-row initialization-row-${row}" part=${row === 'top' ? 'controls-top' : 'controls-bottom'}>
+              ${(['left', 'right'] as const).map(side => html`<div class="initialization-corner initialization-corner-${side}" part=${{
+                'top-left': 'initialization-corner controls-top-left', 'top-right': 'initialization-corner controls-top-right',
+                'bottom-left': 'initialization-corner controls-bottom-left', 'bottom-right': 'initialization-corner controls-bottom-right',
+              }[`${row}-${side}`]}>
+                ${initializationControls.filter(control => control.position === `${row}-${side}`).map(control => html`<span part=${{
+                  navigation: 'initialization-control initialization-navigation', scale: 'initialization-control initialization-scale',
+                  geolocate: 'initialization-control initialization-geolocate', attribution: 'initialization-control initialization-attribution',
+                }[control.kind]} data-control=${control.kind}></span>`)}
+              </div>`)}
+            </div>`)}
+          </div>`;
     // Lit's own whitespace/comment marker nodes around the `${...}` binding mean
     // `[part="legend"]` is never truly `:empty` in CSS even with zero entries, so
     // the panel is omitted only when both the bounded legend and its projection result are empty
@@ -8687,25 +8823,13 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
           <lr-skeleton shape="rect" .announce=${false}></lr-skeleton>
               `
             : html`<div part="container" id="map-container" lang=${this.effectiveLocale}></div>`}
-        ${!this.failure && !this.loading && !this._map ? html`<div part="initialization-placeholder">
+        ${placeholder ? html`<div part="initialization-placeholder">
           ${this.awaitingActivation
             ? html`<button type="button" part="initialization-activate" aria-label=${this.localize('mapActivate')}><span class="activate-label" part="initialization-activate-label">${this.localize('mapActivate')}</span></button>`
             : html`<span class="sr-only">${this.localize('loading')}</span>`}
           <lr-skeleton class="initialization-skeleton" part="initialization-skeleton" shape="rect" .announce=${false}></lr-skeleton>
-          <div class="initialization-controls" part="initialization-controls controls" aria-hidden="true">
-            ${(['top', 'bottom'] as const).map(row => html`<div class="initialization-row initialization-row-${row}" part=${row === 'top' ? 'controls-top' : 'controls-bottom'}>
-              ${(['left', 'right'] as const).map(side => html`<div class="initialization-corner initialization-corner-${side}" part=${{
-                'top-left': 'initialization-corner controls-top-left', 'top-right': 'initialization-corner controls-top-right',
-                'bottom-left': 'initialization-corner controls-bottom-left', 'bottom-right': 'initialization-corner controls-bottom-right',
-              }[`${row}-${side}`]}>
-                ${initializationControls.filter(control => control.position === `${row}-${side}`).map(control => html`<span part=${{
-                  navigation: 'initialization-control initialization-navigation', scale: 'initialization-control initialization-scale',
-                  geolocate: 'initialization-control initialization-geolocate', attribution: 'initialization-control initialization-attribution',
-                }[control.kind]} data-control=${control.kind}></span>`)}
-              </div>`)}
-            </div>`)}
-          </div>
-        </div>` : nothing}
+          ${outlines}
+        </div>` : initializationControls.length ? outlines : nothing}
         ${this.hashIssue || this.controlIssue ? html`<div part="configuration-error">${this.localize(MAP_CONFIGURATION_MESSAGE[this.hashIssue ?? this.controlIssue!])}</div>` : nothing}
         ${this.exportIssue ? html`<div part="configuration-error">${this.localize('mapExportUnavailable')}</div>` : nothing}
         ${this.dataLayerIssue ? html`<div part="configuration-error">${this.localize('mapInitializationFailed')}</div>` : nothing}

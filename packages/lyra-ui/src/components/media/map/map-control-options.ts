@@ -44,6 +44,14 @@ export interface LyraMapAttributionControlOptions extends LyraMapNavigationContr
   readonly compact?: boolean;
   /** Text or guarded links; at most 32 items and 16 KiB of labels and URLs. Caller HTML is never interpreted. */
   readonly customAttribution?: string | LyraMapAttributionLink | readonly (string | LyraMapAttributionLink)[];
+  /**
+   * Initial state of the compact credits disclosure, applied once when the control is installed
+   * and only while the native control is compact; omission keeps the peer's initial state. It never
+   * hides noncompact credits, and later resizing, dragging or user activation stay native. Changing
+   * it replaces the control; reconnecting reapplies it. Observe `lr-map-attribution-toggle` to
+   * persist the user's choice for a later installation.
+   */
+  readonly initialExpanded?: boolean;
 }
 export interface NormalizedMapControlOptions {
   readonly kind: MapOwnedControlKind;
@@ -54,6 +62,8 @@ export interface NormalizedMapControlOptions {
   readonly key: string;
   /** Escaped labels only, for text export without URLs or link markup. */
   readonly attributionText?: readonly string[];
+  /** Attribution wrapper metadata: the compact disclosure seed, never a native constructor option. */
+  readonly initialExpanded?: boolean;
 }
 export interface MapControlOptionsResult {
   readonly controls: ReadonlyMap<MapOwnedControlKind, NormalizedMapControlOptions>;
@@ -145,6 +155,7 @@ export function normalizeMapControlOptions(input: unknown): MapControlOptionsRes
       const corner = position(entry, kind === 'geolocate' ? 'top-right' : 'bottom-right');
       let options: Readonly<Record<string, unknown>>;
       let attributionLabels: readonly string[] | undefined;
+      let initialExpanded: boolean | undefined;
       if (kind === 'geolocate') {
         const rawPosition = own(entry, 'positionOptions'), rawFit = own(entry, 'fitBoundsOptions');
         const positionOptions = rawPosition === undefined ? {} : plain(rawPosition), fit = rawFit === undefined ? {} : plain(rawFit);
@@ -157,13 +168,17 @@ export function normalizeMapControlOptions(input: unknown): MapControlOptionsRes
           ...(zoomToUserAccuracy === undefined ? {} : { zoomToUserAccuracy }),
         });
       } else {
-        const compact = own(entry, 'compact'), custom = own(entry, 'customAttribution');
+        const compact = own(entry, 'compact'), custom = own(entry, 'customAttribution'), seed = own(entry, 'initialExpanded');
         if (compact !== undefined && typeof compact !== 'boolean') throw new TypeError('Invalid attribution mode');
+        if (seed !== undefined && typeof seed !== 'boolean') throw new TypeError('Invalid attribution expansion');
+        initialExpanded = seed;
         const credits = custom === undefined ? undefined : attributionText(custom);
         attributionLabels = credits?.text;
         options = Object.freeze({ ...(compact === undefined ? {} : { compact }), ...(credits === undefined ? {} : { customAttribution: credits.html }) });
       }
-      controls.set(kind, Object.freeze({ kind, position: corner, order, unit: undefined, options, ...(attributionLabels ? { attributionText: attributionLabels } : {}), key: `${corner}:${order}:${JSON.stringify(options)}` }));
+      controls.set(kind, Object.freeze({ kind, position: corner, order, unit: undefined, options, ...(attributionLabels ? { attributionText: attributionLabels } : {}),
+        ...(initialExpanded === undefined ? {} : { initialExpanded }),
+        key: `${corner}:${order}:${JSON.stringify(options)}${initialExpanded === undefined ? '' : `:${initialExpanded}`}` }));
     } catch { diagnostics.push({ kind, code: 'invalid-options' }); }
   }
   return done();

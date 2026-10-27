@@ -39,7 +39,8 @@ export const styles = css`
   }
   [part='initialization-activate']:focus-visible { ${focusRing} outline-offset: calc(-1 * var(--lr-focus-ring-width)); }
   .activate-label { position: relative; padding: var(--lr-space-xs) var(--lr-space-s); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius-button); background: var(--lr-color-surface); }
-  [part~='initialization-control'] { flex-shrink: 0; margin: var(--lr-space-xs); inline-size: var(--lr-icon-button-size); block-size: var(--lr-icon-button-size); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius-button); background: var(--lr-color-surface); }
+  /* The fill comes from the shared control material below, so loading and installed controls match. */
+  [part~='initialization-control'] { position: relative; flex-shrink: 0; margin: var(--lr-space-xs); inline-size: var(--lr-icon-button-size); block-size: var(--lr-icon-button-size); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius-button); }
   [part='pick-controls'], [part='drawing-controls'] {
     position: absolute;
     inset-inline: var(--lr-space-s);
@@ -864,7 +865,7 @@ export const styles = css`
     content: '';
   }
 
-  ${glassSurface('.maplibregl-ctrl-group, .maplibregl-ctrl-scale, .maplibregl-ctrl-attrib', css`var(--lr-color-surface)`)}
+  ${glassSurface('.maplibregl-ctrl-group, .maplibregl-ctrl-scale, .maplibregl-ctrl-attrib, [part~="initialization-control"]', css`var(--lr-color-surface)`)}
   ${glassScrollLayerStyles}
   [part='legend'] > .glass-scroll-layer {
     /* The zero-size anchor must not add a flex gap before the visible legend content. */

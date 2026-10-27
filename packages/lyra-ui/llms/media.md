@@ -789,6 +789,12 @@ owned overlay layer; `interactiveBasemapLayers = []` explicitly enrolls basemap 
 `lr-map-click`, `lr-map-contextmenu`, `lr-map-feature-enter`, and `lr-map-feature-leave` report routed interaction data;
 legacy `lr-map-click` and cluster payloads remain available. `pickMode = false` enables a temporary
 coordinate-picking session when set to true; `lr-map-pick` also supports keyboard center selection.
+`keyboardActivation = false` (attribute `keyboard-activation`) opts in to keyboard activation: while
+the map canvas has focus, an unmodified, non-repeated Enter or Space activates the interactive feature
+at the view center (the camera center, inside any `cameraPadding`) through the same hit query and
+priority as a click there, and emits `lr-map-click` with `trigger: 'keyboard'` (pointer clicks carry no
+`trigger`). An empty center still emits a click without `feature`. It does nothing in pick mode, while
+drawing is armed, or while the map is disabled or inert; unset, both keys are left to the browser.
 `setFeatureState(target, patch)`, `getFeatureState(target)`, and `removeFeatureState(target, key?)`
 use stable source/feature IDs and an optional `origin` (`choropleth`, `data-layer`, `overlay`, or
 `basemap`). Check boolean admission and retain application state across source identity changes;
@@ -1400,7 +1406,7 @@ intensity?: LyraMapHeatmapZoomValue; opacity?: number }`, where `LyraMapHeatmapZ
   engine (`maplibre-gl`, or the companion's granular control entries). Requested controls load
   on demand; unavailable controls show localized feedback while the map remains usable. Geolocation
   starts only on user activation. Attribution is enabled by default; set `attribution: false` to
-  disable it. Attribution options accept `position`, `compact`, and `customAttribution` as a string,
+  disable it. Attribution options accept `position`, `compact`, `initialExpanded`, and `customAttribution` as a string,
   `LyraMapAttributionLink { readonly label: string; readonly url: string }`, or a readonly array of
   either. Labels are escaped text; links open in a new tab with `rel="noopener noreferrer"`.
   Link URLs must be absolute HTTP(S), no longer than 2,048 characters, with no credentials or
@@ -1408,7 +1414,24 @@ intensity?: LyraMapHeatmapZoomValue; opacity?: number }`, where `LyraMapHeatmapZ
   limited to 4,096 characters. Admission snapshots own data properties without invoking accessors.
   An invalid item rejects the whole custom option and shows localized feedback while retaining
   provider credits. Image exports include link labels as text alongside provider credits, without
-  the link URLs or markup. For example:
+  the link URLs or markup. `initialExpanded?: boolean` sets the compact credits disclosure once, when
+  the control is installed and only while the native control is compact; omit it to keep the native
+  initial state. It never hides noncompact credits, and later resizing, dragging or user activation
+  stay native: it is not a controlled state. Changing it replaces the control; position- or
+  order-only changes keep the current user-selected state, and reconnecting applies it again. A
+  malformed value is rejected like other malformed attribution options, with the default credits
+  retained. `lr-map-attribution-toggle` (`LyraMapAttributionToggleDetail { expanded }`) reports each
+  later settled change of the owned (or default) attribution control: synchronous native changes
+  coalesce to their result, repeats are not reported, and installation, seeding, replacement and
+  reconnect emit nothing. Persist `expanded` and pass it as `initialExpanded` for a later
+  installation:
+
+  ```js
+  mapElement.controls = { attribution: { compact: true, initialExpanded: saved ?? false } };
+  mapElement.addEventListener('lr-map-attribution-toggle', event => { saved = event.detail.expanded; });
+  ```
+
+  For example:
 
   ```js
   mapElement.controls = {
@@ -1608,6 +1631,18 @@ camera as it is now and return `undefined` before the map exists, for a non-fini
 the engine cannot project. Pair `project()` with `lr-map-move` to keep an overlay glued to a moving
 map.
 
+`getVisibleBounds(options?: LyraMapVisibleBoundsOptions): LyraMapBounds | null` synchronously reads
+the visible box as frozen `[[west, south], [east, north]]`. By default it is the box inside the
+applied `cameraPadding`, the one `lr-map-move` and `lr-map-view-change` report; `{ padded: false }`
+reads the whole viewport. `west` is wrapped into [-180, 180] and `east` keeps the span, so it can
+exceed 180 across the antimeridian; latitudes are clamped to [-90, 90]. It returns `null` before the
+engine exists or when the engine cannot report a box. Use it instead of reading bounds from `.map`:
+
+```js
+const box = mapElement.getVisibleBounds({ padded: false });
+if (box) loadTiles({ west: box[0][0], south: box[0][1], east: box[1][0], north: box[1][1] });
+```
+
 There is deliberately no declarative `bounds` property. `center` and `zoom` already describe the
 camera; a third camera input would need a precedence rule against them, and a framework that
 rebuilds its arrays on every render would refit on every render, pulling the camera away from a user
@@ -1677,7 +1712,8 @@ Also `lr-map-marker-activate` (non-cancelable; frozen `LyraMapMarkerActivationDe
 marker, source }`; `id` is the trimmed explicit identity or `undefined`, `marker` is the accepted
 declarative snapshot, and `source` is `'pointer' | 'keyboard'`), and `lr-map-click`
 (frozen `detail: { readonly lngLat: readonly [lng, lat], readonly feature?, readonly origin?,
-readonly sourceId?, readonly noData? }`; the tuple and any hit GeoJSON feature are detached and
+readonly sourceId?, readonly noData?, readonly trigger? }`, `trigger` being `'keyboard'` only for a
+`keyboardActivation`; the tuple and any hit GeoJSON feature are detached and
 recursively frozen). `noData` is `true` only for a choropleth hit whose `field` value is missing,
 `null` or not a number while `choropleth.noData` is configured, and is absent otherwise.
 `feature` resolves against the choropleth fill layer **and** every applied `dataLayers`
@@ -1733,8 +1769,10 @@ user-activated geolocate control locates the user.
 Failures: `lr-map-geolocate-error` (frozen `LyraMapGeolocateErrorDetail { code }`, a
 `LyraMapGeolocationErrorCode`) and `lr-map-geolocate-out-of-bounds` (`{ code: 'out-of-bounds' }`)
 expose no coordinates or native messages; `lr-map-export-error` (frozen
-`LyraMapImageExportErrorDetail { code }`) reports a sanitized `exportImage()` failure. None of these
-events is cancelable; all bubble and are composed.
+`LyraMapImageExportErrorDetail { code }`) reports a sanitized `exportImage()` failure.
+Attribution: `lr-map-attribution-toggle` (`LyraMapAttributionToggleDetail { expanded }`) after the owned
+attribution control's credits are shown or hidden. None of these events is cancelable; all bubble and
+are composed.
 
 The outer marker-activation detail is frozen, while an opaque marker `unsafeHtml` value remains the
 original supplied value at the MapLibre popup and marker-activation boundary. Treat it as trusted
@@ -1779,7 +1817,13 @@ its rows expose `controls-top` and `controls-bottom`, and each `initialization-c
 matching corner token. `initialization-control` outlines explicitly requested controls, with
 `initialization-navigation`, `initialization-scale`, `initialization-geolocate` or
 `initialization-attribution` identifying the kind. Placeholder corners and order follow those options;
-implicit default attribution has no placeholder. For `initialization="interaction"`,
+implicit default attribution has no placeholder. Once the map is constructed, the activation surface
+and skeleton are gone, but `initialization-controls` stays (`aria-hidden`, inert, no pointer events)
+with outlines only for requested controls whose lazy code is still installing. Those controls load and
+install in one pass, so their outlines are removed together when the pass settles, whether every
+control installed or one failed; a later `controls` change replaces them and disconnecting clears them.
+Already installed controls gain no outline. Outlines paint with the same glass or solid surface material
+as the installed controls, so the swap does not change their fill. For `initialization="interaction"`,
 `initialization-activate` starts the map and `initialization-activate-label` styles its visible label.
 Hiding that label retains the button's localized accessible name. Pick mode renders `pick-controls` with
 `pick-center` and `pick-cancel`; draw mode renders `drawing-controls` with `drawing-add`,
@@ -5462,6 +5506,10 @@ These named interfaces and helper signatures are available to typed integrations
     readonly left?: number;
   }`
   Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
+  `LyraMapVisibleBoundsOptions {
+    readonly padded?: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapFitBoundsOptions {
     readonly padding?: number | LyraMapPadding;
     readonly maxZoom?: number;
@@ -5837,6 +5885,10 @@ particular country. Representative language mappings also include `lb` (Luxembou
     readonly order?: number;
     readonly compact?: boolean;
     readonly customAttribution?: string | LyraMapAttributionLink | readonly (string | LyraMapAttributionLink)[];
+    readonly initialExpanded?: boolean;
+  }`
+  `LyraMapAttributionToggleDetail {
+    readonly expanded: boolean;
   }`
   `LyraMapGeolocateOutOfBoundsDetail {
     readonly code: 'out-of-bounds';

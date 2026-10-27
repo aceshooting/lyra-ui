@@ -42,3 +42,17 @@ describe('control order properties', () => {
     expect(reads).to.equal(0);
   });
 });
+
+describe('initial attribution expansion properties', () => {
+  it('keeps the seed out of native constructor options for any admitted attribution shape', () => {
+    fc.assert(fc.property(fc.boolean(), fc.option(fc.boolean(), { nil: undefined }), fc.constantFrom('top-left', 'top-right', 'bottom-left', 'bottom-right'),
+      (initialExpanded, compact, position) => {
+        const result = normalizeMapControlOptions({ attribution: { initialExpanded, position, ...(compact === undefined ? {} : { compact }) } });
+        const entry = result.controls.get('attribution')!;
+        expect(result.diagnostics).to.deep.equal([]);
+        expect(Reflect.get(entry, 'initialExpanded')).to.equal(initialExpanded);
+        expect(entry.options).not.to.have.property('initialExpanded');
+        expect(entry.position).to.equal(position);
+      }), propertyRuns());
+  });
+});

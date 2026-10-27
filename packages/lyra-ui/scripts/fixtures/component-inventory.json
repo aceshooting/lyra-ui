@@ -81703,6 +81703,16 @@
             "hasDefault": false
           },
           {
+            "name": "keyboard-activation",
+            "property": "keyboardActivation",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string | undefined",
@@ -82021,6 +82031,16 @@
             "default": "[]"
           },
           {
+            "name": "keyboardActivation",
+            "attribute": "keyboard-activation",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "label",
             "attribute": "label",
             "type": "string | undefined",
@@ -82293,8 +82313,14 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-map-attribution-toggle",
+            "type": "CustomEvent<LyraMapAttributionToggleDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-map-click",
-            "type": "CustomEvent<{ readonly lngLat: readonly [number, number]; readonly feature: Feature | undefined; /** Which layer `feature` was hit on, so a click is attributable when both a choropleth and * `dataLayers` are painted. `'cluster'` marks a hit on a clustered entry's aggregate circle, * whose `point_count`/`cluster_id` properties describe the group rather than one feature. * `undefined` whenever `feature` is. */ readonly origin: LyraMapFeatureOrigin | 'cluster' | undefined; readonly hit?: LyraMapFeatureHit; readonly target?: LyraMapResolvedFeatureStateTarget; /** The authored `dataLayers[].sourceId` the hit belongs to; `undefined` for a choropleth hit * (which has only one possible source) and when nothing was hit. */ readonly sourceId: string | undefined; /** Native vector source layer containing the hit; absent for other source families. */ readonly sourceLayer?: string; /** `true` when the hit is a choropleth feature without a usable value and `choropleth.noData` * is configured; absent otherwise. */ readonly noData?: true; }>",
+            "type": "CustomEvent<{ readonly lngLat: readonly [number, number]; readonly feature: Feature | undefined; /** Which layer `feature` was hit on, so a click is attributable when both a choropleth and * `dataLayers` are painted. `'cluster'` marks a hit on a clustered entry's aggregate circle, * whose `point_count`/`cluster_id` properties describe the group rather than one feature. * `undefined` whenever `feature` is. */ readonly origin: LyraMapFeatureOrigin | 'cluster' | undefined; readonly hit?: LyraMapFeatureHit; readonly target?: LyraMapResolvedFeatureStateTarget; /** The authored `dataLayers[].sourceId` the hit belongs to; `undefined` for a choropleth hit * (which has only one possible source) and when nothing was hit. */ readonly sourceId: string | undefined; /** Native vector source layer containing the hit; absent for other source families. */ readonly sourceLayer?: string; /** `true` when the hit is a choropleth feature without a usable value and `choropleth.noData` * is configured; absent otherwise. */ readonly noData?: true; /** `'keyboard'` for a `keyboardActivation` at the view centre; absent for pointer clicks. */ readonly trigger?: 'keyboard'; }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -82969,6 +82995,22 @@
                   }
                 ],
                 "returnType": "LyraMapFeatureState | undefined"
+              }
+            ]
+          },
+          {
+            "name": "getVisibleBounds",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "LyraMapVisibleBoundsOptions",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "LyraMapBounds | null"
               }
             ]
           },

@@ -90,6 +90,32 @@ describe('map control option projection', () => {
     expect(normalizeMapControlOptions({ attribution: { customAttribution: Array(5).fill({ label: 'x'.repeat(4000), url: 'https://example.com' }) } }).controls.size).to.equal(0);
     expect(normalizeMapControlOptions({ attribution: { customAttribution: new Array(2) } }).controls.size).to.equal(0);
   });
+  it('snapshots initial attribution expansion separately from native constructor options', () => {
+    for (const initialExpanded of [true, false]) {
+      const input = { initialExpanded, compact: true };
+      const result = normalizeMapControlOptions({ attribution: input });
+      input.initialExpanded = !initialExpanded;
+      const entry = result.controls.get('attribution')!;
+      expect(Reflect.get(entry, 'initialExpanded')).to.equal(initialExpanded);
+      expect(entry.options).to.deep.equal({ compact: true });
+      expect(Object.isFrozen(entry)).to.equal(true);
+    }
+    expect(Reflect.get(normalizeMapControlOptions({ attribution: true }).controls.get('attribution')!, 'initialExpanded')).to.equal(undefined);
+    const keys = [undefined, true, false].map(initialExpanded => normalizeMapControlOptions({ attribution: { compact: true,
+      ...(initialExpanded === undefined ? {} : { initialExpanded }) } }).controls.get('attribution')!.key);
+    expect(new Set(keys).size, 'a changed seed is a non-position configuration change').to.equal(3);
+  });
+  it('rejects malformed initial attribution expansion without invoking accessors', () => {
+    let reads = 0;
+    for (const initialExpanded of [null, 0, 1, 'false', {}, []]) {
+      const result = normalizeMapControlOptions({ attribution: { initialExpanded } });
+      expect(result.controls.has('attribution')).to.equal(false);
+      expect(result.diagnostics).to.deep.equal([{ kind: 'attribution', code: 'invalid-options' }]);
+    }
+    const result = normalizeMapControlOptions({ attribution: { get initialExpanded() { reads++; return false; } } });
+    expect(result.controls.has('attribution')).to.equal(false);
+    expect(reads).to.equal(0);
+  });
   it('skips a navigation or scale value that is neither enabled nor a record and flags malformed new-control members', () => {
     const { controls, diagnostics } = normalizeMapControlOptions({ navigation: 'yes', scale: 1, geolocate: { zoomToUserAccuracy: 'yes' }, attribution: { compact: 'yes' } });
     expect(controls.size).to.equal(0);

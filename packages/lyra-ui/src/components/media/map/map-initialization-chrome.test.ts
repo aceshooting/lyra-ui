@@ -4,6 +4,8 @@ import { ControlMapEngine, FakeMapControl, FakeGeolocateControl, FakeAttribution
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { LyraMap, LYRA_MAP_EMPTY_STYLE } from './map.js';
+import { loadMapControlRuntime } from './map-feature-loader.js';
+import { MapControlsLifecycle } from './map-controls-lifecycle.js';
 void LyraMap;
 
 const observerDescriptor = Object.getOwnPropertyDescriptor(window, 'IntersectionObserver');
@@ -26,6 +28,17 @@ async function mount(configure: (element: LyraMap) => void = () => undefined) {
   await waitUntil(() => element.shadowRoot!.querySelector('[part="initialization-placeholder"]') !== null);
   expect(constructions, 'map construction waits for activation').to.equal(0);
   return { element, wrapper, root: element.shadowRoot!, constructions: () => constructions };
+}
+type HeldControl = { readonly kind: string; readonly resolve: (constructor: typeof FakeMapControl | null) => void };
+/** Replaces the lazy control loader with held imports, through the element's own lifecycle seam. */
+function holdControls(element: LyraMap): HeldControl[] {
+  const requests: HeldControl[] = [];
+  (element as unknown as { controlLifecycle: MapControlsLifecycle }).controlLifecycle =
+    new MapControlsLifecycle(kind => new Promise<typeof FakeMapControl | null>(resolve => { requests.push({ kind, resolve }); }));
+  return requests;
+}
+function outlines(root: ParentNode): (string | null)[] {
+  return [...root.querySelectorAll('[part~="initialization-control"]')].map(node => node.getAttribute('data-control'));
 }
 function part<T extends HTMLElement = HTMLElement>(root: ParentNode, name: string): T {
   const value = root.querySelector<T>(`[part~="${name}"]`);
@@ -116,6 +129,132 @@ describe('lr-map deferred initialization chrome', () => {
     await waitUntil(() => h.root.querySelector('[part="initialization-placeholder"]') !== null);
     expect(h.constructions()).to.equal(0);
     expect(part(h.root, 'controls-top-left').querySelectorAll('[data-control]').length).to.equal(2);
+  });
+  it('keeps requested control outlines after activation until lazy controls are installed', async () => {
+    await loadMapControlRuntime();
+    const h = await mount(element => { element.controls = { navigation: true, attribution: false }; });
+    const requests = holdControls(h.element);
+    try {
+      await focusByKeyboard(part(h.root, 'initialization-activate'));
+      await sendKeys({ press: 'Enter' });
+      await waitUntil(() => requests.length === 1 && h.constructions() === 1);
+      await h.element.updateComplete;
+      expect(outlines(h.root)).to.deep.equal(['navigation']);
+      const decoration = part(h.root, 'initialization-controls');
+      expect(decoration.getAttribute('aria-hidden')).to.equal('true');
+      expect(decoration.inert).to.equal(true);
+      expect(getComputedStyle(decoration).pointerEvents).to.equal('none');
+      expect(h.root.querySelector('[part~="initialization-placeholder"]') === null).to.equal(true);
+      expect(h.root.querySelector('[part~="initialization-activate"]') === null).to.equal(true);
+      expect(h.root.querySelector('[part~="initialization-skeleton"]') === null).to.equal(true);
+      expect(h.element.map === undefined).to.equal(false);
+      expect((h.element.map as unknown as ControlMapEngine).controls.size).to.equal(0);
+      requests[0]!.resolve(FakeMapControl);
+      await h.element.whenControlsReady(); await h.element.updateComplete;
+      expect((h.element.map as unknown as ControlMapEngine).controls.size).to.equal(1);
+      expect(outlines(h.root)).to.deep.equal([]);
+      expect(h.root.querySelector('[part~="initialization-controls"]') === null).to.equal(true);
+    } finally { for (const request of requests) request.resolve(FakeMapControl); }
+  });
+  it('keeps implicit default attribution without an outline while its control loads', async () => {
+    await loadMapControlRuntime();
+    const h = await mount();
+    const requests = holdControls(h.element);
+    try {
+      await focusByKeyboard(part(h.root, 'initialization-activate'));
+      await sendKeys({ press: 'Enter' });
+      await waitUntil(() => requests.length === 1 && h.constructions() === 1);
+      await h.element.updateComplete;
+      expect(requests.map(request => request.kind)).to.deep.equal(['attribution']);
+      expect(outlines(h.root)).to.deep.equal([]);
+      expect(h.root.querySelector('[part~="initialization-placeholder"]') === null).to.equal(true);
+    } finally { for (const request of requests) request.resolve(FakeAttributionControl); }
+  });
+  it('clears pending outlines when control installation fails and keeps localized feedback', async () => {
+    await loadMapControlRuntime();
+    const h = await mount(element => { element.controls = { navigation: true, attribution: false }; });
+    const requests = holdControls(h.element);
+    await focusByKeyboard(part(h.root, 'initialization-activate'));
+    await sendKeys({ press: 'Enter' });
+    await waitUntil(() => requests.length === 1 && h.constructions() === 1);
+    await h.element.updateComplete;
+    expect(outlines(h.root)).to.deep.equal(['navigation']);
+    let failure = '';
+    requests[0]!.resolve(null);
+    await h.element.whenControlsReady().catch((error: Error) => { failure = error.name; });
+    await h.element.updateComplete;
+    expect(failure).to.equal('MapReadinessError');
+    expect(outlines(h.root)).to.deep.equal([]);
+    expect(part(h.root, 'configuration-error').textContent).to.equal('A map control could not be loaded');
+    expect(h.element.map === undefined).to.equal(false);
+  });
+  it('replaces superseded pending outlines and ignores the superseded completion', async () => {
+    await loadMapControlRuntime();
+    const h = await mount(element => { element.controls = { navigation: true, attribution: false }; });
+    const requests = holdControls(h.element);
+    try {
+      await focusByKeyboard(part(h.root, 'initialization-activate'));
+      await sendKeys({ press: 'Enter' });
+      await waitUntil(() => requests.length === 1 && h.constructions() === 1);
+      h.element.controls = { scale: { position: 'top-left' }, attribution: false };
+      await waitUntil(() => requests.length === 2);
+      await h.element.updateComplete;
+      expect(outlines(h.root)).to.deep.equal(['scale']);
+      requests[0]!.resolve(FakeMapControl);
+      await new Promise<void>(resolve => setTimeout(resolve, 0)); await h.element.updateComplete;
+      expect(outlines(h.root)).to.deep.equal(['scale']);
+      expect(part(h.root, 'controls-top-left').querySelectorAll('[data-control]').length).to.equal(1);
+      requests[1]!.resolve(FakeMapControl);
+      await h.element.whenControlsReady(); await h.element.updateComplete;
+      expect(outlines(h.root)).to.deep.equal([]);
+    } finally { for (const request of requests) request.resolve(FakeMapControl); }
+  });
+  it('outlines only newly requested controls beside retained installed ones', async () => {
+    await loadMapControlRuntime();
+    const h = await mount(element => { element.controls = { navigation: true, attribution: false }; });
+    const requests = holdControls(h.element);
+    try {
+      await focusByKeyboard(part(h.root, 'initialization-activate'));
+      await sendKeys({ press: 'Enter' });
+      await waitUntil(() => requests.length === 1 && h.constructions() === 1);
+      requests[0]!.resolve(FakeMapControl);
+      await h.element.whenControlsReady(); await h.element.updateComplete;
+      expect(outlines(h.root)).to.deep.equal([]);
+      h.element.controls = { navigation: true, scale: true, attribution: false };
+      await waitUntil(() => requests.length === 2);
+      await h.element.updateComplete;
+      expect(requests[1]!.kind).to.equal('scale');
+      expect(outlines(h.root)).to.deep.equal(['scale']);
+      requests[1]!.resolve(FakeMapControl);
+      await h.element.whenControlsReady(); await h.element.updateComplete;
+      expect(outlines(h.root)).to.deep.equal([]);
+      expect((h.element.map as unknown as ControlMapEngine).controls.size).to.equal(2);
+    } finally { for (const request of requests) request.resolve(FakeMapControl); }
+  });
+  it('drops pending outlines on disconnect so a stale completion cannot clear the next connection', async () => {
+    await loadMapControlRuntime();
+    const h = await mount(element => { element.controls = { navigation: true, attribution: false }; });
+    const requests = holdControls(h.element);
+    try {
+      await focusByKeyboard(part(h.root, 'initialization-activate'));
+      await sendKeys({ press: 'Enter' });
+      await waitUntil(() => requests.length === 1 && h.constructions() === 1);
+      h.element.remove();
+      h.wrapper.append(h.element); await h.element.updateComplete;
+      await waitUntil(() => h.root.querySelector('[part="initialization-activate"]') !== null);
+      expect(outlines(h.root)).to.deep.equal(['navigation']);
+      await focusByKeyboard(part(h.root, 'initialization-activate'));
+      await sendKeys({ press: 'Enter' });
+      await waitUntil(() => requests.length === 2 && h.constructions() === 2);
+      requests[0]!.resolve(FakeMapControl);
+      await new Promise<void>(resolve => setTimeout(resolve, 0)); await h.element.updateComplete;
+      expect(outlines(h.root)).to.deep.equal(['navigation']);
+      expect((h.element.map as unknown as ControlMapEngine).controls.size).to.equal(0);
+      requests[1]!.resolve(FakeMapControl);
+      await h.element.whenControlsReady(); await h.element.updateComplete;
+      expect(outlines(h.root)).to.deep.equal([]);
+      expect((h.element.map as unknown as ControlMapEngine).controls.size).to.equal(1);
+    } finally { for (const request of requests) request.resolve(FakeMapControl); }
   });
   it('allows hiding the localized visible prompt while preserving its name and keyboard or pointer activation', async () => {
     for (const activation of ['Enter', 'Space', 'pointer']) {

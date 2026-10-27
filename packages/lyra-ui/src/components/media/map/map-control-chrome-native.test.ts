@@ -22,6 +22,53 @@ describe('lr-map native peer chrome hooks', function () {
   afterEach(() => { fixtureCleanup(); setWorkerUrl(workerUrl); });
 
   for (const engine of ['modular', 'maplibre'] as const) {
+    it(`seeds ${engine} compact attribution without consuming the next native activation`, async () => {
+      const element = document.createElement('lr-map') as LyraMap;
+      element.engine = engine; element.initialization = 'eager'; element.mapStyle = LYRA_MAP_EMPTY_STYLE;
+      element.style.cssText = 'inline-size:390px;block-size:300px';
+      const attribution = { compact: true, initialExpanded: false, customAttribution: 'Map contributors' };
+      element.controls = { attribution };
+      const events: boolean[] = [];
+      element.addEventListener('lr-map-attribution-toggle', event => {
+        events.push((event as CustomEvent<{ expanded: boolean }>).detail.expanded);
+      });
+      const wrapper = await fixture<HTMLElement>(html`<section></section>`); wrapper.append(element);
+      await element.whenControlsReady();
+      const disclosure = part<HTMLDetailsElement>(element, 'attribution');
+      expect(disclosure.open).to.equal(false);
+      expect(disclosure.classList.contains('maplibregl-compact-show')).to.equal(false);
+      expect(events).to.deep.equal([]);
+      await focusByKeyboard(part(element, 'attribution-toggle'));
+      for (const expanded of [true, false]) {
+        await sendKeys({ press: 'Enter' });
+        await waitUntil(() => disclosure.open === expanded);
+        await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+        expect(events.at(-1)).to.equal(expanded);
+      }
+      expect(events).to.deep.equal([true, false]);
+      expect(part(element, 'attribution-content').textContent).to.include('Map contributors');
+    });
+    it(`reports ${engine} native attribution changes once outside the shadow root`, async () => {
+      const element = document.createElement('lr-map') as LyraMap;
+      element.engine = engine; element.initialization = 'eager'; element.mapStyle = LYRA_MAP_EMPTY_STYLE;
+      element.style.cssText = 'inline-size:390px;block-size:300px';
+      element.controls = { attribution: { compact: true, customAttribution: 'Map contributors' } };
+      const wrapper = await fixture<HTMLElement>(html`<section></section>`);
+      const events: { expanded: boolean; bubbles: boolean; composed: boolean; cancelable: boolean }[] = [];
+      wrapper.addEventListener('lr-map-attribution-toggle', event => {
+        events.push({ ...(event as CustomEvent<{ expanded: boolean }>).detail,
+          bubbles: event.bubbles, composed: event.composed, cancelable: event.cancelable });
+      });
+      wrapper.append(element); await element.whenControlsReady();
+      const disclosure = part<HTMLDetailsElement>(element, 'attribution');
+      expect(disclosure.open).to.equal(true);
+      expect(events).to.deep.equal([]);
+      await focusByKeyboard(part(element, 'attribution-toggle'));
+      await sendKeys({ press: 'Enter' });
+      await waitUntil(() => !disclosure.open);
+      await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+      expect(events).to.deep.equal([{ expanded: false, bubbles: true, composed: true, cancelable: false }]);
+    });
     it(`keeps ${engine} compass rotation, keyboard disclosure and replacement controls behind public parts`, async () => {
       const wrapper = await fixture<HTMLElement>(html`<section style="inline-size:390px"></section>`);
       const element = document.createElement('lr-map') as LyraMap;

@@ -71,6 +71,23 @@ export const CompactAttribution: StoryObj = {
   `,
 };
 
+/** `initialExpanded` seeds the compact credits once; `lr-map-attribution-toggle` reports later changes. */
+export const CollapsedInitialAttribution: StoryObj = {
+  parameters: { docs: { description: { story: 'The compact credits start collapsed through `controls.attribution.initialExpanded: false`, applied once when the control is installed. The native summary still opens and closes them, and each settled change emits a non-cancelable `lr-map-attribution-toggle` with `detail.expanded`, which a host can persist and pass back as `initialExpanded` for a later installation. Installation and the seed itself emit nothing.' } } },
+  render: () => {
+    let status: HTMLElement | undefined;
+    return html`
+      <lr-map label="Map with collapsed credits" .mapStyle=${OFFLINE_RASTER_STYLE}
+        .controls=${{ attribution: { compact: true, initialExpanded: false, customAttribution: 'Local survey contributors' } }}
+        @lr-map-attribution-toggle=${(event: CustomEvent<{ expanded: boolean }>) => {
+          if (status) status.textContent = event.detail.expanded ? 'Credits shown.' : 'Credits hidden.';
+        }}
+        style="inline-size: min(100%, 24rem); block-size: 18rem"></lr-map>
+      <p role="status" ${ref(node => { status = node as HTMLElement | undefined; })}>Credits start hidden.</p>
+    `;
+  },
+};
+
 export const IndependentControlParts: StoryObj = {
   parameters: { docs: { description: { story: 'Public parts can offset the whole geolocation group and bound expanded credits above the attribution toggle. Opening credits keeps the compact control footprint unchanged.' } } },
   render: () => html`
@@ -1547,7 +1564,28 @@ const selectorBasemap = () => ({
   ],
 });
 
+/** `keyboard-activation` lets Enter or Space on the focused map activate the feature at the view centre. */
+export const KeyboardCenterActivation: Story = {
+  parameters: { docs: { description: { story: 'Tab to the map, pan with the arrow keys so a square sits under the centre, then press Enter or Space. The feature at the view centre is activated through the same hit query as a click, and `lr-map-click` carries `trigger: \'keyboard\'`. `getVisibleBounds({ padded: false })` reads the viewport box synchronously.' } } },
+  render: () => {
+    let status: HTMLElement | undefined;
+    return html`
+      <lr-map label="Map with keyboard activation" keyboard-activation style="block-size: 18rem" .mapStyle=${selectorBasemap()}
+        .interactiveBasemapLayers=${[{ layerId: 'places-fill' }]} center="[0, 0]" zoom="2"
+        @lr-map-click=${(event: CustomEvent<{ readonly hit?: { readonly properties: Record<string, unknown> }; readonly trigger?: 'keyboard' }>) => {
+          const map = event.currentTarget as LyraMap;
+          const box = map.getVisibleBounds({ padded: false });
+          const name = event.detail.hit?.properties['name'];
+          if (status) status.textContent = `${typeof name === 'string' ? name : 'No feature'}${event.detail.trigger === 'keyboard' ? ' (keyboard)' : ''}` +
+            (box ? `, viewport ${box[0][0].toFixed(1)} to ${box[1][0].toFixed(1)}` : '');
+        }}></lr-map>
+      <p role="status" ${ref(node => { status = node as HTMLElement | undefined; })}>Nothing activated yet.</p>
+    `;
+  },
+};
+
 export const InteractionInitialization: Story = {
+  parameters: { docs: { description: { story: 'Requested control outlines stay in place, decorative and non-interactive, after the map starts until each control finishes loading, so the corners do not empty and refill.' } } },
   render: () => html`
     <p>Each map shows its placeholder until the first press, touch, wheel or key on it. The second also starts by itself after three seconds.</p>
     <lr-map label="Starts on first input" initialization="interaction" style="block-size: 16rem" .mapStyle=${OFFLINE_RASTER_STYLE}

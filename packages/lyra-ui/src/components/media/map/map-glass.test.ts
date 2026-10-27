@@ -79,6 +79,33 @@ describe('map floating chrome material', () => {
     });
   }
 
+  for (const look of ['lyra', 'shadcn']) for (const mode of ['light', 'dark']) for (const treatment of ['glass', 'solid']) {
+    it(`paints ${look}/${mode}/${treatment} control outlines with the installed control material`, async function () {
+      // The outline appears only on a map that can be built; engines without WebGL2 would show the failure state.
+      const getContext = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, id: string, ...rest: unknown[]) {
+        return id === 'webgl2' ? {} : getContext.call(this, id as never, ...(rest as []));
+      } as typeof getContext;
+      try { await outlineMaterial(look, mode, treatment); } finally { HTMLCanvasElement.prototype.getContext = getContext; }
+    });
+  }
+  async function outlineMaterial(look: string, mode: string, treatment: string) {
+    const host = await fixture<LyraMap>(html`<lr-map engine="maplibre" initialization="interaction" data-lr-look=${look}
+      data-lr-mode=${mode} data-lr-surface=${treatment} .mapStyle=${{ version: 8, sources: {}, layers: [] }}
+      .controls=${{ navigation: true, attribution: false }} style="inline-size:1280px;block-size:300px"></lr-map>`);
+    await waitUntil(() => host.shadowRoot!.querySelector('[part~="initialization-control"]') !== null);
+    const outline = host.shadowRoot!.querySelector<HTMLElement>('[part~="initialization-control"]')!;
+    const control = document.createElement('div');
+    control.className = 'maplibregl-ctrl maplibregl-ctrl-group';
+    host.shadowRoot!.querySelector('[part="base"]')!.append(control);
+    const paint = getComputedStyle(outline).backgroundColor;
+    expect(paint).to.equal(getComputedStyle(control).backgroundColor);
+    expect(getComputedStyle(outline, '::before').backdropFilter).to.equal(getComputedStyle(control, '::before').backdropFilter);
+    const glass = treatment === 'glass' && CSS.supports('backdrop-filter', 'blur(1px)');
+    expect(toRgba(paint)[3] < 255).to.equal(glass);
+    expect(getComputedStyle(outline, '::before').content === 'none').to.equal(!glass);
+  }
+
   it('keeps legend content geometry unchanged when its decorative layer is inserted', async () => {
     const { host, legend } = await chromeFixture();
     const layer = legend.querySelector<HTMLElement>(':scope > .glass-scroll-layer')!;
