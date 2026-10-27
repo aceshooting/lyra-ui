@@ -63,8 +63,8 @@ export function genTypedEntrypoints(manifest, files) {
       if (!file.startsWith(prefix) || !file.endsWith(suffix)) continue;
       const capture = file.slice(prefix.length, file.length - suffix.length);
       assert.ok(capture.length && !capture.split('/').some(part => part === '..'), 'Invalid export capture');
-      assert.ok(files.includes(target.types.replace('*', capture).slice(2)), `${file} has no declaration`);
-      entries.add(entry.replace('*', capture)); matched++;
+      assert.ok(files.includes(target.types.replaceAll('*', capture).slice(2)), `${file} has no declaration`);
+      entries.add(entry.replaceAll('*', capture)); matched++;
     }
     assert.ok(matched > 0, `${entry} must match real archive entries`);
   }
