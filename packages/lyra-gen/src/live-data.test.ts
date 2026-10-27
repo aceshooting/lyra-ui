@@ -86,7 +86,7 @@ test('failures keep the last valid data with its age; row budgets reject oversiz
   assert.deepEqual(controller.snapshot.result?.data, [1]);
   controller.dispose();
 });
-test('partial data discloses unverified lineage and results are copied on exposure', async () => {
+test('partial data discloses unverified lineage and results are immutable on exposure', async () => {
   const registry = new HostQueryRegistry();
   registry.register('sales', { maxBytes: 1000, maxRows: 2, authorize: () => true, execute: async () => ({ data: [1], partial: true, sources: [{ id: 'source', label: 'Source', updatedAt: 1 }], lineage: { '/0': 'missing' } }) });
   const controller = new LiveDataController(registry, context);
@@ -94,7 +94,7 @@ test('partial data discloses unverified lineage and results are copied on exposu
   assert.equal(controller.snapshot.status, 'partial');
   assert.equal(controller.snapshot.stale, true);
   assert.deepEqual(resolveDashboardLineage(controller.snapshot.result!, '/0'), { verified: false });
-  (controller.snapshot.result!.data as number[]).push(3);
+  assert.throws(() => { (controller.snapshot.result!.data as number[]).push(3); }, TypeError);
   assert.deepEqual(controller.snapshot.result?.data, [1]);
   assert.equal(resolveDashboardLineage({ data: 1, sources: [{ id: 's', label: 'Source', updatedAt: 1 }], lineage: { '': 's' } }, '').verified, true);
   controller.dispose();
@@ -146,5 +146,30 @@ test('row limits cover arrays nested in object payloads and missing value paths 
   assert.equal(controller.snapshot.error, 'invalid-result');
   assert.equal(controller.snapshot.result, undefined);
   assert.equal(resolveDashboardLineage({ data: {}, sources: [{ id: 's', label: 'Source', updatedAt: 1 }], lineage: { '/missing': 's' } }, '/missing').verified, false);
+  controller.dispose();
+});
+
+test('listeners and callers share one frozen snapshot per commit', async () => {
+  const registry = new HostQueryRegistry();
+  registry.register('sales', { maxBytes: 1000, maxRows: 20, authorize: () => true, execute: async () => ({ data: [1, 2] }) });
+  const controller = new LiveDataController(registry, context, () => 5);
+  const seen: unknown[] = [];
+  controller.subscribe(snapshot => { seen.push(snapshot); });
+  controller.subscribe(snapshot => { seen.push(snapshot); });
+  const returned = await controller.refresh('sales');
+  const last = seen.slice(-2);
+  assert.equal(last[0], last[1]);
+  assert.equal(last[0], returned);
+  assert.equal(Object.isFrozen(returned), true);
+  assert.equal(Object.isFrozen(returned.result), true);
+  assert.equal(Object.isFrozen(returned.result?.data), true);
+  controller.dispose();
+});
+test('large valid results are admitted and counted without argument spreading', async () => {
+  const registry = new HostQueryRegistry();
+  const rows = Array.from({ length: 2000 }, (_, index) => index % 2);
+  registry.register('big', { maxBytes: 1_000_000, maxRows: 1_000_000, authorize: () => true, execute: async () => ({ data: rows }) });
+  const controller = new LiveDataController(registry, context);
+  assert.equal((await controller.refresh('big')).status, 'ready');
   controller.dispose();
 });

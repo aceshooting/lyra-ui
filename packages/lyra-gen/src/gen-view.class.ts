@@ -35,11 +35,30 @@ interface RenderedNode {
   ready: boolean;
   defaults: Map<string, unknown>;
   assigned: Set<string>;
-  preparedKey?: string;
+  preparedInputs?: { readonly locale: string; readonly values: Readonly<Record<string, JsonValue>> };
   prepared?: Readonly<Record<string, unknown>>;
   text?: Text;
 }
-interface LoadState { status: 'loading' | 'ready' | 'error'; generation: number }
+/** `data` marks an error caused by property preparation, which a later document may repair; module failures stay sticky. */
+interface LoadState { status: 'loading' | 'ready' | 'error'; generation: number; data?: boolean }
+const jsonEqual = (left: unknown, right: unknown): boolean => {
+  if (Object.is(left, right)) return true;
+  if (left === null || right === null || typeof left !== 'object' || typeof right !== 'object') return false;
+  if (Array.isArray(left) !== Array.isArray(right)) return false;
+  const a = left as Record<string, unknown>;
+  const b = right as Record<string, unknown>;
+  const keys = Object.keys(a);
+  if (keys.length !== Object.keys(b).length) return false;
+  for (const key of keys) if (!Object.hasOwn(b, key) || !jsonEqual(a[key], b[key])) return false;
+  return true;
+};
+const sameInputs = (previous: RenderedNode['preparedInputs'], locale: string, values: Readonly<Record<string, JsonValue>>): boolean => {
+  if (!previous || previous.locale !== locale) return false;
+  const keys = Object.keys(values);
+  if (keys.length !== Object.keys(previous.values).length) return false;
+  for (const key of keys) if (!Object.hasOwn(previous.values, key) || !jsonEqual(previous.values[key], values[key])) return false;
+  return true;
+};
 interface PreparedNode {
   readonly record: RenderedNode;
   readonly next: RenderedNode;
@@ -202,12 +221,13 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
     if (changed.has('document') || changed.has('catalog') || changed.has('limits')) {
       this.generation++;
       this.cancelConfirmations();
+      for (const state of this.loads.values()) if (state.status === 'error' && state.data) { state.status = 'ready'; state.data = false; }
       if (changed.has('catalog')) { this.loads.clear(); this.nodes.clear(); }
       if (!this.document) { this.accepted = undefined; this.localState = undefined; this.invalid = false; return; }
       const result = validateView(this.document, this.catalog, { limits: this.resolvedLimits });
       if (!result.ok) { this.rejectView(result.diagnostics); return; }
       const previous = this.accepted;
-      if (previous && previous.surfaceId === result.value.surfaceId && (result.value.revision < previous.revision || (result.value.revision === previous.revision && JSON.stringify(result.value) !== JSON.stringify(previous)))) {
+      if (previous && previous.surfaceId === result.value.surfaceId && (result.value.revision < previous.revision || (result.value.revision === previous.revision && !jsonEqual(result.value, previous)))) {
         this.rejectView([{ code: 'revision.conflict', path: '/revision', message: 'A view revision cannot move backwards.', severity: 'error' }]);
         return;
       }
@@ -542,12 +562,13 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
         if (fallback.ok) values[propertyName] = fallback.value;
       }
     }
-    const preparedKey = JSON.stringify([this.effectiveLocale, values]);
-    if (next.preparedKey !== preparedKey) {
+    const locale = this.effectiveLocale;
+    if (!sameInputs(next.preparedInputs, locale, values)) {
       for (const [propertyName, value] of Object.entries(values)) {
         const schema = definition.properties[propertyName];
         if (!schema || !validateSchema(value, schema, this.resolvedLimits).ok) {
           loading.status = 'error';
+          loading.data = true;
           this.setReadiness('error');
           this.report('genViewInvalidState', 'state.schema');
           return this.prepareNode(node);
@@ -559,14 +580,16 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
         const diagnostics = validateContentProperties(next.prepared, definition);
         if (diagnostics.length) {
           loading.status = 'error';
+          loading.data = true;
           this.setReadiness('error');
           this.emitError(diagnostics);
           if (this.mounted) this.announcement?.announce(this.message('genViewInvalidState'));
           return this.prepareNode(node);
         }
-        next.preparedKey = preparedKey;
+        next.preparedInputs = { locale, values };
       } catch {
         loading.status = 'error';
+        loading.data = true;
         this.setReadiness('error');
         this.report('genViewLoadFailed', 'component.properties');
         return this.prepareNode(node);
@@ -734,7 +757,7 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
     if (!restored.ok) return restored;
     const previous = this.accepted;
     const next = restored.value.view;
-    if (previous && previous.surfaceId === next.surfaceId && (next.revision < previous.revision || (next.revision === previous.revision && JSON.stringify(next) !== JSON.stringify(previous)))) return { ok: false, diagnostics: [{ code: 'revision.conflict', path: '/revision', message: 'A snapshot cannot replace an existing revision with different content.', severity: 'error' }] };
+    if (previous && previous.surfaceId === next.surfaceId && (next.revision < previous.revision || (next.revision === previous.revision && !jsonEqual(next, previous)))) return { ok: false, diagnostics: [{ code: 'revision.conflict', path: '/revision', message: 'A snapshot cannot replace an existing revision with different content.', severity: 'error' }] };
     this.snapshotRestore = { snapshot: restored.value, catalog: this.catalog };
     this.document = restored.value.view;
     this.bindingState = restored.value.state.values;

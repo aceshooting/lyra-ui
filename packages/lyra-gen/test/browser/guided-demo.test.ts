@@ -240,9 +240,9 @@ it('renders custom application copy and explicit RTL in real controls, city data
   expect(tableRows(rendered.table).map(row => row.c0)).to.deep.equal(['Lyon (DE)', 'Lissabon <Demo>', 'Oslo (DE)']);
   expect(rendered.chart.labels).to.deep.equal(['Lyon (DE)', 'Lissabon <Demo>', 'Oslo (DE)']);
   expect(rendered.table.shadowRoot!.textContent).to.contain('Lissabon <Demo>');
-  expect(app.transcript.shadowRoot!.textContent).to.contain(labels.weatherReply);
   const summary = query<LyraGenViewElement>(app.transcript.shadowRoot!, 'lr-gen-view');
   expect(summary.shadowRoot!.textContent).to.contain(labels.weatherReply);
+  expect(app.transcript.shadowRoot!.textContent!.includes(labels.weatherReply), 'The reply is not repeated as prose').to.equal(false);
   expect(summary.shadowRoot!.querySelectorAll('#injected').length).to.equal(0);
   await replace(input(root, 'question'), 'Unsupported question'); await sendKeys({ press: 'Enter' });
   await waitUntil(() => app.controller.snapshot.phase === 'unsupported');

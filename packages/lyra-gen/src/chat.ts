@@ -60,6 +60,26 @@ export interface LyraGenChatSnapshot {
 export type LyraGenChatAskResult = 'accepted' | 'duplicate' | 'disabled' | 'unknown' | 'failed';
 
 const identity = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$/;
+/** Structural equality for plain JSON trees: identity first, then a short-circuiting walk. Key order
+ * is significant, matching the serialized comparison it replaces. */
+function sameTree(left: unknown, right: unknown): boolean {
+  if (left === right) return true;
+  if (typeof left !== 'object' || typeof right !== 'object' || left === null || right === null) return false;
+  if (Array.isArray(left) !== Array.isArray(right)) return false;
+  if (Array.isArray(left)) {
+    const other = right as unknown[];
+    if (left.length !== other.length) return false;
+    for (let index = 0; index < left.length; index++) if (!sameTree(left[index], other[index])) return false;
+    return true;
+  }
+  const a = Object.entries(left as Record<string, unknown>).filter(([, value]) => value !== undefined);
+  const b = Object.entries(right as Record<string, unknown>).filter(([, value]) => value !== undefined);
+  if (a.length !== b.length) return false;
+  for (let index = 0; index < a.length; index++) {
+    if (a[index]![0] !== b[index]![0] || !sameTree(a[index]![1], b[index]![1])) return false;
+  }
+  return true;
+}
 const issue = (code: string, message: string): LyraGenDiagnostic => ({ code, message, path: '', severity: 'error' });
 
 /** Streaming adapter for the existing message-parts renderPart hook. Closed islands validate
@@ -69,7 +89,6 @@ export class LyraGenChatController {
   private result: IslandResult = { parts: [], diagnostics: [] };
   private retryResult?: IslandResult;
   private status: LyraGenChatStatus = 'streaming';
-  private sourceText = '';
   private disposed = false;
   private sourceReleased = false;
   private resumable = false;
@@ -108,7 +127,7 @@ export class LyraGenChatController {
   get snapshot(): LyraGenChatSnapshot { return this.current; }
   get asking(): boolean { return this.requests.size > 0; }
   /** Logical source length, counted once; this is not a heap or backing-store measurement. */
-  get retainedSourceCharacters(): number { return this.sourceText.length; }
+  get retainedSourceCharacters(): number { return this.result.parts.at(-1)?.end ?? 0; }
   get sourceAvailable(): boolean { return !this.disposed && !this.sourceReleased; }
   islandForPart(partId: string): LyraGenChatIsland | undefined { return this.islands.get(partId); }
 
@@ -118,9 +137,7 @@ export class LyraGenChatController {
     if (this.status !== 'streaming') return this.current;
     const previous = this.result;
     this.result = this.parser!.push(chunk);
-    if (!this.result.diagnostics.some(diagnostic => diagnostic.severity === 'error')) this.sourceText += chunk;
-    else this.retryResult = previous;
-    if (this.result.diagnostics.some(diagnostic => diagnostic.severity === 'error')) this.status = 'error';
+    if (this.result.diagnostics.some(diagnostic => diagnostic.severity === 'error')) { this.retryResult = previous; this.status = 'error'; }
     return this.current = this.project();
   }
   finish(): LyraGenChatSnapshot {
@@ -163,13 +180,16 @@ export class LyraGenChatController {
     if (this.disposed) return this.current;
     if (this.sourceReleased) return this.rejectReleasedSource();
     if (this.status === 'streaming') return this.current;
-    const last = (this.retryResult ?? this.result).parts.at(-1);
+    const basis = this.retryResult ?? this.result;
+    const last = basis.parts.at(-1);
     this.retryResult = undefined;
     const lastInvalid = last?.kind === 'island'
       && this.islands.get(`${this.options.messageId}:island:${last.start}`)?.status !== 'ready';
-    const truncate = last && (last.kind === 'prose' || lastInvalid) ? last.start : this.sourceText.length;
-    this.sourceText = this.sourceText.slice(0, truncate);
-    this.abortRequests(); this.parser = this.newParser(); this.result = this.parser.push(this.sourceText);
+    // The parser's parts tile the accepted source, so the retained prefix is their concatenation.
+    const keep = last && (last.kind === 'prose' || lastInvalid) ? last.start : Infinity;
+    let prefix = '';
+    for (const part of basis.parts) if (part.end <= keep) prefix += part.source;
+    this.abortRequests(); this.parser = this.newParser(); this.result = this.parser.push(prefix);
     this.status = 'streaming'; this.resumable = false; this.interruptionReason = undefined;
     return this.current = this.project();
   }
@@ -218,7 +238,7 @@ export class LyraGenChatController {
   releaseSource(): LyraGenChatSnapshot {
     if (this.disposed || this.sourceReleased) return this.current;
     this.abortRequests(); this.parser?.cancel(); this.parser = undefined;
-    this.sourceText = ''; this.result = { parts: [], diagnostics: [] }; this.retryResult = undefined;
+    this.result = { parts: [], diagnostics: [] }; this.retryResult = undefined;
     this.parsedViews = new WeakMap(); this.partCache.clear(); this.sourceReleased = true; this.resumable = false;
     const parts = this.current.parts.some(part => part.interruption?.resumable)
       ? Object.freeze(this.current.parts.map(part => part.interruption?.resumable
@@ -228,7 +248,7 @@ export class LyraGenChatController {
   }
   dispose(): void {
     this.disposed = true; this.abortRequests(); this.parser?.cancel(); this.parser = undefined;
-    this.sourceText = ''; this.result = { parts: [], diagnostics: [] }; this.retryResult = undefined;
+    this.result = { parts: [], diagnostics: [] }; this.retryResult = undefined;
     this.parsedViews = new WeakMap();
     this.islands.clear(); this.rawViews.clear(); this.partCache.clear(); this.suggestions.clear(); this.activations.clear();
     this.current = Object.freeze({ status: 'cancelled', parts: [], islands: [], diagnostics: [], resumable: false });
@@ -282,7 +302,7 @@ export class LyraGenChatController {
       return node.children ? { ...node, children: node.children.map(rewrite) } : node;
     };
     const root = rewrite(raw.root);
-    const changed = previous?.document && JSON.stringify(previous.document.root) !== JSON.stringify(root);
+    const changed = previous?.document && !sameTree(previous.document.root, root);
     const revision = refresh && changed ? previous!.document!.revision + 1 : previous?.document?.revision ?? raw.revision;
     const admitted = validateView({ ...raw, root, revision }, this.options.catalog);
     const island: LyraGenChatIsland = Object.freeze({ kind: 'lyra-gen-island', partId, surfaceId: raw.surfaceId,
@@ -327,7 +347,7 @@ export class LyraGenChatController {
           this.parsedViews.set(part.result.view, checked);
         }
         const old = this.rawViews.get(partId);
-        if (old && checked.ok && old !== checked.value && JSON.stringify(old) !== JSON.stringify(checked.value)) {
+        if (old && checked.ok && old !== checked.value && !sameTree(old, checked.value)) {
           island = Object.freeze({ kind: 'lyra-gen-island', partId, surfaceId: old.surfaceId, status: 'error',
             fallback: this.options.strings.invalid, ...(this.options.provenance ? { provenance: this.options.provenance } : {}), diagnostics: [issue('chat.identity-conflict', 'A replay changed an already published island.')] });
         } else if (checked.ok) island = this.admit(partId, old ?? checked.value);

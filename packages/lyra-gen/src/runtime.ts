@@ -24,6 +24,7 @@ export function validateView(input: unknown, catalog: LyraGenCatalog, options: L
   const limits = resolveLimits(options.limits);
   const ids = new Set<string>();
   const bindings = new Set<string>();
+  const bindingAncestors = new Set<string>();
   const issue = (code: string, path: string, message: string, hint?: string): void => {
     const diagnostic: LyraGenDiagnostic = { code, path, message, severity: 'error', ...(hint ? { hint } : {}) };
     if (diagnostics.length < limits.maxDiagnostics) diagnostics.push(diagnostic);
@@ -61,8 +62,9 @@ export function validateView(input: unknown, catalog: LyraGenCatalog, options: L
         if (isContentUrlProperty(property, component)) issue('content.url-binding', bindingPath, 'URL sinks cannot be state bindings.');
         const parsed = parsePointer(pointer);
         if (!parsed.ok || pointer === '') { issue('binding.pointer', bindingPath, 'Bindings need a safe non-root JSON Pointer.'); continue; }
-        if ([...bindings].some(existing => existing === pointer || existing.startsWith(`${pointer}/`) || pointer.startsWith(`${existing}/`))) issue('identity.binding', bindingPath, 'State paths must have exactly one nonoverlapping owner.');
+        if (overlapsBinding(bindings, bindingAncestors, pointer)) issue('identity.binding', bindingPath, 'State paths must have exactly one nonoverlapping owner.');
         bindings.add(pointer);
+        for (const ancestor of pointerAncestors(pointer)) bindingAncestors.add(ancestor);
       }
     }
     if (value['action'] !== undefined) {
@@ -92,6 +94,16 @@ export function validateView(input: unknown, catalog: LyraGenCatalog, options: L
   validatedViews.add(view as unknown as LyraGenView);
   return { ok: true, value: view as unknown as LyraGenView, diagnostics: [] };
 }
+
+const pointerAncestors = function* (pointer: string): Generator<string> {
+  for (let end = pointer.lastIndexOf('/'); end > 0; end = pointer.lastIndexOf('/', end - 1)) yield pointer.slice(0, end);
+};
+/** A pointer overlaps when it, an ancestor, or a descendant is already owned (`ancestors` holds every owned pointer's proper prefixes). */
+const overlapsBinding = (owned: ReadonlySet<string>, ancestors: ReadonlySet<string>, pointer: string): boolean => {
+  if (owned.has(pointer) || ancestors.has(pointer)) return true;
+  for (const ancestor of pointerAncestors(pointer)) if (owned.has(ancestor)) return true;
+  return false;
+};
 
 export function findNode(view: LyraGenView, nodeId: string): LyraGenNode | undefined {
   const pending = [view.root];
@@ -145,12 +157,49 @@ export interface LyraGenSurfaceState {
   readonly dirty: readonly string[];
   readonly owners: Readonly<Record<string, LyraGenStateOwner>>;
 }
-const ownersFor = (view: LyraGenView): Readonly<Record<string, LyraGenStateOwner>> => {
+const indexView = (view: LyraGenView): { readonly owners: Readonly<Record<string, LyraGenStateOwner>>; readonly nodes: ReadonlyMap<string, LyraGenNode> } => {
   const owners: Record<string, LyraGenStateOwner> = {};
-  const visit = (node: LyraGenNode): void => { for (const [property, pointer] of Object.entries(node.bindings ?? {})) owners[pointer] = Object.freeze({ nodeId: node.id, property, type: node.type }); node.children?.forEach(visit); };
+  const nodes = new Map<string, LyraGenNode>();
+  const visit = (node: LyraGenNode): void => {
+    if (!nodes.has(node.id)) nodes.set(node.id, node);
+    for (const [property, pointer] of Object.entries(node.bindings ?? {})) owners[pointer] = Object.freeze({ nodeId: node.id, property, type: node.type });
+    node.children?.forEach(visit);
+  };
   visit(view.root);
-  return Object.freeze(owners);
+  return { owners: Object.freeze(owners), nodes };
 };
+/** Apply several pointer writes on one copy-on-write draft, freezing each copied container once; the result equals sequential `writePointer` calls. */
+function writePointers(root: JsonValue, writes: readonly (readonly [string, JsonValue])[]): JsonValue {
+  const copies = new Set<object>();
+  const draftOf = (current: JsonValue | undefined): Record<string, JsonValue> | JsonValue[] => {
+    if (current !== null && typeof current === 'object' && copies.has(current)) return current as Record<string, JsonValue> | JsonValue[];
+    const copy = Array.isArray(current) ? [...current] : current !== null && typeof current === 'object' ? { ...(current as Record<string, JsonValue>) } : {};
+    copies.add(copy);
+    return copy;
+  };
+  let result: JsonValue = root;
+  for (const [pointer, value] of writes) {
+    const parsed = parsePointer(pointer);
+    if (!parsed.ok) throw new TypeError('Invalid state pointer.');
+    if (parsed.value.length === 0) { result = value; continue; }
+    const top = draftOf(result);
+    result = top;
+    let container = top;
+    parsed.value.forEach((key, index) => {
+      let slot: string | number = key;
+      if (Array.isArray(container)) {
+        slot = Number(key);
+        if (!/^(0|[1-9][0-9]*)$/u.test(key) || slot > container.length) throw new TypeError('Invalid array state pointer.');
+      }
+      if (index === parsed.value.length - 1) { (container as Record<string | number, JsonValue>)[slot] = value; return; }
+      const child = draftOf((container as Record<string | number, JsonValue>)[slot]);
+      (container as Record<string | number, JsonValue>)[slot] = child;
+      container = child;
+    });
+  }
+  for (const copy of copies) Object.freeze(copy);
+  return result;
+}
 function writePointer(root: JsonValue, pointer: string, value: JsonValue): JsonValue {
   const parsed = parsePointer(pointer);
   if (!parsed.ok) throw new TypeError('Invalid state pointer.');
@@ -173,13 +222,14 @@ function writePointer(root: JsonValue, pointer: string, value: JsonValue): JsonV
 export function createSurfaceState(view: LyraGenView, initialValues: JsonValue = {}): LyraGenSurfaceState {
   const initial = snapshotJson(initialValues);
   if (!initial.ok) throw new TypeError('Initial state must be bounded JSON data.');
-  const owners = ownersFor(view);
-  let values: JsonValue = Object.freeze({});
+  const { owners, nodes } = indexView(view);
+  const writes: (readonly [string, JsonValue])[] = [];
   for (const [pointer, owner] of Object.entries(owners)) {
     const supplied = readPointer(initial.value, pointer);
-    const fallback = findNode(view, owner.nodeId)?.props?.[owner.property];
-    if (supplied.ok || fallback !== undefined) values = writePointer(values, pointer, supplied.ok ? supplied.value : fallback!);
+    const fallback = nodes.get(owner.nodeId)?.props?.[owner.property];
+    if (supplied.ok || fallback !== undefined) writes.push([pointer, supplied.ok ? supplied.value : fallback!]);
   }
+  const values = writePointers(Object.freeze({}), writes);
   return Object.freeze({ surfaceId: view.surfaceId, revision: view.revision, values, dirty: Object.freeze([]), owners });
 }
 
@@ -199,20 +249,23 @@ export function setSurfaceState(state: LyraGenSurfaceState, pointer: string, val
 export function reconcileSurfaceState(state: LyraGenSurfaceState, previous: LyraGenView, next: LyraGenView): LyraGenResult<LyraGenSurfaceState> {
   if (state.surfaceId !== previous.surfaceId || state.revision !== previous.revision || next.surfaceId !== previous.surfaceId || next.revision <= previous.revision) return failure('revision.conflict', 'State reconciliation requires the next revision of the same surface.');
   const fresh = createSurfaceState(next);
-  let values = fresh.values;
+  const previousNodes = indexView(previous).nodes;
+  const nextNodes = indexView(next).nodes;
+  const writes: (readonly [string, JsonValue])[] = [];
   const dirty: string[] = [];
   for (const [pointer, owner] of Object.entries(fresh.owners)) {
     const old = state.owners[pointer];
     if (!old || old.nodeId !== owner.nodeId || old.property !== owner.property || old.type !== owner.type) continue;
     const retained = readPointer(state.values, pointer);
     const edited = state.dirty.includes(pointer);
-    const oldDefault = findNode(previous, owner.nodeId)?.props?.[owner.property];
-    const newDefault = findNode(next, owner.nodeId)?.props?.[owner.property];
+    const oldDefault = previousNodes.get(owner.nodeId)?.props?.[owner.property];
+    const newDefault = nextNodes.get(owner.nodeId)?.props?.[owner.property];
     if (retained.ok && (edited || JSON.stringify(oldDefault) === JSON.stringify(newDefault))) {
-      values = writePointer(values, pointer, retained.value);
+      writes.push([pointer, retained.value]);
       if (edited) dirty.push(pointer);
     }
   }
+  const values = writes.length ? writePointers(fresh.values, writes) : fresh.values;
   return { ok: true, value: Object.freeze({ ...fresh, values, dirty: Object.freeze(dirty) }), diagnostics: [] };
 }
 

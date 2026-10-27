@@ -99,8 +99,16 @@ test('UTF8 byte accounting is independent of surrogate chunking', () => {
   for (const maxBytes of [limit - 1, limit]) {
     const config = { ...options, limits: { maxBytes } };
     const parser = createIslandParser(config);
-    for (let index = 0; index < source.length; index++) parser.push(source[index]!);
-    assert.deepEqual(parser.finish(), parseIslands(source, config));
+    let last = parser.push('');
+    for (let index = 0; index < source.length; index++) {
+      const next = parser.push(source[index]!);
+      if (next.diagnostics.length === 0) last = next;
+    }
+    const whole = parseIslands(source, config);
+    const streamed = parser.finish();
+    assert.deepEqual(streamed.diagnostics, whole.diagnostics);
+    // A budget rejection keeps what streamed in before it; one whole push has nothing earlier.
+    assert.deepEqual(streamed.parts, whole.diagnostics.length ? last.parts : whole.parts);
   }
 });
 test('byte then length overflow has deterministic final diagnostic', () => {
@@ -116,4 +124,29 @@ test('cancellation preserves complete islands and cannot commit incomplete ones'
   assert.equal((result.parts[0] as MarkupIsland).closed, true);
   assert.equal((result.parts[1] as MarkupIsland).closed, false);
   assert.deepEqual(parser.push('\n```\n'), result);
+});
+test('a rejected push keeps completed islands and prose beside the failure diagnostic', () => {
+  for (const limits of [{ maxLength: 60 }, { maxBytes: 60 }]) {
+    const parser = createIslandParser({ ...options, limits });
+    const good = 'Before\n```lyra\n<text id="x">Hi</text>\n```\nAfter';
+    const accepted = parser.push(good);
+    assert.deepEqual(accepted.diagnostics, []);
+    const rejected = parser.push('z'.repeat(60));
+    assert.match(rejected.diagnostics[0]?.code ?? '', /^source-(?:length|byte)-limit$/);
+    assert.deepEqual(rejected.parts, accepted.parts);
+    assert.equal((rejected.parts[1] as MarkupIsland).result.status, 'complete');
+    assert.deepEqual(parser.finish().parts, accepted.parts);
+  }
+  const parser = createIslandParser(options);
+  const accepted = parser.push('Intro\n```lyra\n<text id="x">Hi</text>\n```\n');
+  const invalid = parser.push(42 as unknown as string);
+  assert.equal(invalid.diagnostics[0]?.code, 'invalid-input');
+  assert.deepEqual(invalid.parts, accepted.parts);
+});
+test('single-character pushes and split CRLF terminators match one whole push', () => {
+  const source = `Intro\r\n\`\`\`lyra\r\n${markup}\r\n\`\`\`\r\nTail\r~~~\rcode\r~~~\nend`;
+  const whole = parseIslands(source, options);
+  const parser = createIslandParser(options);
+  for (const unit of source) parser.push(unit);
+  assert.deepEqual(parser.finish(), whole);
 });

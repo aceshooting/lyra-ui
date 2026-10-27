@@ -1,3 +1,4 @@
+import { jsonStringBytes } from './json-bytes.js';
 import type { JsonValue, LyraGenDiagnostic, LyraGenLimits, LyraGenResult, LyraGenSchema } from './types.js';
 
 export const HARD_LIMITS: Readonly<LyraGenLimits> = Object.freeze({
@@ -42,7 +43,6 @@ class AdmissionFailure {
 export function snapshotJson(input: unknown, overrides?: Partial<LyraGenLimits>): LyraGenResult<JsonValue> {
   const limits = resolveLimits(overrides);
   const ancestors = new WeakSet<object>();
-  const encoder = new TextEncoder();
   let nodes = 0;
   let bytes = 0;
   const fail = (code: string, path: string, message: string): never => {
@@ -54,7 +54,7 @@ export function snapshotJson(input: unknown, overrides?: Partial<LyraGenLimits>)
   };
   const stringBytes = (value: string, path: string) => {
     if (value.length > limits.maxStringLength) fail('limit.string', path, 'String exceeds the length limit.');
-    count(encoder.encode(JSON.stringify(value)).byteLength, path);
+    count(jsonStringBytes(value), path);
   };
   const visit = (value: unknown, path: string, depth: number): JsonValue => {
     if (++nodes > limits.maxNodes) fail('limit.nodes', path, 'JSON exceeds the value count limit.');

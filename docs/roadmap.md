@@ -21,7 +21,7 @@ still open.
   chat, bounded generation contracts, protocol adapters and saved dashboard workflows; its numerical
   timing and memory campaign follows the release.
   The detailed backlog separates implemented scope, outstanding qualification and conditional
-  capabilities; the hosted demonstration remains planned.
+  capabilities; a recorded website demo is published and hosted live generation remains planned.
 - **Native document editing:** [delivery sequence](roadmap/document-editing.md) and its
   [qualification record](roadmap/document-editing-feasibility.md). Experimental, in
   `@aceshooting/lyra-docs`; not part of lyra-ui release qualification.

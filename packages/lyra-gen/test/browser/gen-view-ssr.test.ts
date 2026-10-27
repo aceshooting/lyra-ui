@@ -103,4 +103,13 @@ describe('static server snapshots and explicit client restoration', () => {
     expect(section.querySelectorAll('lr-gen-view').length).to.equal(1);
     expect(restored.enabledActions).to.deep.equal([]);
   });
+
+  it('abandons restoration when the container or one of its ancestors leaves the document', async () => {
+    const section = await serverFixture();
+    const wrapper = section.parentElement!;
+    const restoring = restoreGenSnapshotElement(section, catalog);
+    wrapper.remove();
+    expect((await restoring).ok).to.equal(false);
+    expect(section.querySelector('lr-gen-view') === null).to.equal(true);
+  });
 });

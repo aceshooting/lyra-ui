@@ -86,7 +86,16 @@ export interface DashboardStoreOptions {
   readonly allowState?: (key: string, value: JsonValue, context: DashboardContext) => boolean;
   /** Source parameters are rejected unless the host explicitly permits them. */
   readonly allowSourceParameters?: (reference: DashboardDataReference, context: DashboardContext) => boolean;
+  /**
+   * Most superseded draft revisions retained in `history` (default 100, minimum 1). Older entries
+   * are dropped when a write appends a new one, except revisions that are publications or the
+   * followed publication. Publications are never pruned.
+   */
+  readonly maxHistory?: number;
 }
+/** Default for `DashboardStoreOptions.maxHistory`. */
+export const DEFAULT_DASHBOARD_MAX_HISTORY = 100;
+const RECORD_LIMITS = { maxNodes: 20_000_000, maxDepth: 48, maxBytes: 256_000_000 } as const;
 export class DashboardError extends Error {
   readonly code: 'denied' | 'invalid' | 'missing' | 'conflict' | 'unpublished';
   constructor(code: DashboardError['code'], message: string) {
@@ -123,6 +132,12 @@ export function copyDashboardJson(input: unknown): JsonValue {
   const result = snapshotJson(input, { maxNodes: 50000, maxDepth: 48, maxBytes: 2_000_000 });
   if (!result.ok) invalid(result.diagnostics.map(item => item.message).join('; '));
   return result.value;
+}
+
+function copyDashboardRecord(input: unknown): DashboardRecord {
+  const result = snapshotJson(input, RECORD_LIMITS);
+  if (!result.ok) invalid(result.diagnostics.map(item => item.message).join('; '));
+  return result.value as unknown as DashboardRecord;
 }
 
 export function validateDashboardDefinition(input: unknown, catalog: LyraGenCatalog): DashboardDefinition {
@@ -162,14 +177,27 @@ export interface DashboardDifference {
 /** Stable JSON Pointer changes suitable for host rendering as text, never HTML. */
 export function diffDashboardDefinitions(before: DashboardDefinition, after: DashboardDefinition): readonly DashboardDifference[] {
   const changes: DashboardDifference[] = [];
+  const equal = (left: JsonValue | undefined, right: JsonValue | undefined): boolean => {
+    if (left === right) return true;
+    if (left === undefined || right === undefined || left === null || right === null || typeof left !== 'object' || typeof right !== 'object') return false;
+    if (Array.isArray(left) || Array.isArray(right)) {
+      if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) return false;
+      for (let index = 0; index < left.length; index++) if (!equal(left[index], right[index])) return false;
+      return true;
+    }
+    const names = Object.keys(left);
+    if (names.length !== Object.keys(right).length) return false;
+    for (const key of names) if (!Object.hasOwn(right, key) || !equal((left as JsonObject)[key], (right as JsonObject)[key])) return false;
+    return true;
+  };
   const visit = (left: JsonValue | undefined, right: JsonValue | undefined, path: string): void => {
-    if (JSON.stringify(left) === JSON.stringify(right)) return;
     if (left !== undefined && right !== undefined && left !== null && right !== null && typeof left === 'object' && typeof right === 'object' && !Array.isArray(left) && !Array.isArray(right)) {
       for (const key of [...new Set([...Object.keys(left), ...Object.keys(right)])].sort()) {
         visit((left as JsonObject)[key], (right as JsonObject)[key], `${path}/${key.replaceAll('~', '~0').replaceAll('/', '~1')}`);
       }
       return;
     }
+    if (equal(left, right)) return;
     changes.push({ path, kind: left === undefined ? 'added' : right === undefined ? 'removed' : 'changed', ...(left === undefined ? {} : { before: left }), ...(right === undefined ? {} : { after: right }) });
   };
   visit(copyDashboardJson(before), copyDashboardJson(after), '');
@@ -179,7 +207,22 @@ export function diffDashboardDefinitions(before: DashboardDefinition, after: Das
 /** Portable orchestration. Server-side adapter authorization remains the security boundary. */
 export class DashboardStore {
   readonly #options: DashboardStoreOptions;
-  constructor(options: DashboardStoreOptions) { this.#options = options; }
+  readonly #maxHistory: number;
+  constructor(options: DashboardStoreOptions) {
+    this.#options = options;
+    const maxHistory = options.maxHistory ?? DEFAULT_DASHBOARD_MAX_HISTORY;
+    if (!Number.isSafeInteger(maxHistory) || maxHistory < 1) invalid('Invalid history retention.');
+    this.#maxHistory = maxHistory;
+  }
+  /** Append a revision, dropping the oldest drafts beyond the bound but never a publication. */
+  #appendHistory(history: readonly DashboardRevision[], publications: readonly DashboardRevision[], publishedRevision: number | undefined, entry: DashboardRevision): readonly DashboardRevision[] {
+    const next = [...history, entry];
+    if (next.length <= this.#maxHistory) return next;
+    const pinned = new Set(publications.map(item => item.revision));
+    if (publishedRevision !== undefined) pinned.add(publishedRevision);
+    const cutoff = next.length - this.#maxHistory;
+    return next.filter((item, index) => index >= cutoff || pinned.has(item.revision));
+  }
 
   async #check(context: DashboardContext, operation: DashboardOperation, id?: string, metadata?: DashboardMetadata, source?: string): Promise<void> {
     identifier(context.actorId); identifier(context.tenantId); identifier(context.workspaceId);
@@ -198,12 +241,22 @@ export class DashboardStore {
     await this.#check(context, operation, id);
     const raw = await this.#options.adapter.read(context, id, operation);
     if (!raw) throw new DashboardError('missing', 'Dashboard is unavailable.');
-    const record = copyDashboardJson(raw) as unknown as DashboardRecord;
+    const record = copyDashboardRecord(raw);
     await this.#check(context, operation, id, record.metadata);
     return record;
   }
+  /** Metadata only, so a record too large to read in full can still be deleted. */
+  async #readMetadata(context: DashboardContext, id: string, operation: DashboardOperation): Promise<DashboardMetadata> {
+    identifier(id);
+    await this.#check(context, operation, id);
+    const raw = await this.#options.adapter.read(context, id, operation);
+    if (!raw) throw new DashboardError('missing', 'Dashboard is unavailable.');
+    const metadata = copyDashboardJson(raw.metadata) as unknown as DashboardMetadata;
+    await this.#check(context, operation, id, metadata);
+    return metadata;
+  }
   async #write(context: DashboardContext, record: DashboardRecord | null, id: string, expectedRevision: number | null, operation: DashboardOperation, metadata?: DashboardMetadata): Promise<void> {
-    const next = record === null ? null : copyDashboardJson(record) as unknown as DashboardRecord;
+    const next = record === null ? null : copyDashboardRecord(record);
     await this.#check(context, operation, id, metadata);
     if (expectedRevision !== null && (!Number.isSafeInteger(expectedRevision) || expectedRevision < 1 || expectedRevision >= Number.MAX_SAFE_INTEGER)) invalid('Invalid expected revision.');
     const result = await this.#options.adapter.compareAndSwap(context, id, expectedRevision, next, operation);
@@ -237,20 +290,20 @@ export class DashboardStore {
     const current = await this.#read(context, id, 'update');
     if (current.metadata.revision !== expectedRevision) throw new DashboardConflict(expectedRevision, definition);
     const revision = expectedRevision + 1;
-    const next = { ...current, metadata: { ...current.metadata, revision }, definition, history: [...current.history, { revision, definition }] };
+    const next = { ...current, metadata: { ...current.metadata, revision }, definition, history: this.#appendHistory(current.history, current.publications, current.metadata.publishedRevision, { revision, definition }) };
     await this.#write(context, next, id, expectedRevision, 'update', current.metadata);
     return copyDashboardJson({ metadata: next.metadata, definition: next.definition }) as unknown as DashboardDocument;
   }
   async delete(context: DashboardContext, id: string, expectedRevision: number): Promise<void> {
-    const current = await this.#read(context, id, 'delete');
-    await this.#write(context, null, id, expectedRevision, 'delete', current.metadata);
+    const metadata = await this.#readMetadata(context, id, 'delete');
+    await this.#write(context, null, id, expectedRevision, 'delete', metadata);
   }
   async publish(context: DashboardContext, id: string, expectedRevision: number): Promise<DashboardDocument> {
     const current = await this.#read(context, id, 'publish');
     this.#definition(current.definition, context);
     if (current.metadata.revision !== expectedRevision) throw new DashboardConflict(expectedRevision, current.definition);
     const revision = expectedRevision + 1;
-    const next: DashboardRecord = { ...current, metadata: { ...current.metadata, revision, publishedRevision: revision }, history: [...current.history, { revision, definition: current.definition }], publications: [...current.publications, { revision, definition: current.definition }] };
+    const next: DashboardRecord = { ...current, metadata: { ...current.metadata, revision, publishedRevision: revision }, history: this.#appendHistory(current.history, current.publications, revision, { revision, definition: current.definition }), publications: [...current.publications, { revision, definition: current.definition }] };
     await this.#write(context, next, id, expectedRevision, 'publish', current.metadata);
     return copyDashboardJson({ metadata: next.metadata, definition: next.definition }) as unknown as DashboardDocument;
   }
@@ -267,8 +320,8 @@ export class DashboardStore {
   }
   /** Restoring history creates a new draft; it never mutates or silently republishes history. */
   async undo(context: DashboardContext, id: string, expectedRevision: number, targetRevision: number): Promise<DashboardDocument> {
-    const history = await this.history(context, id);
-    const target = history.find(item => item.revision === targetRevision);
+    const record = await this.#read(context, id, 'history');
+    const target = record.history.find(item => item.revision === targetRevision);
     if (!target) throw new DashboardError('missing', 'The requested revision is unavailable.');
     return this.update(context, id, expectedRevision, target.definition);
   }
@@ -278,7 +331,7 @@ export class DashboardStore {
     if (current.metadata.revision !== expectedRevision) throw new DashboardConflict(expectedRevision, current.definition);
     if (!current.publications.some(item => item.revision === publishedRevision)) throw new DashboardError('unpublished', 'The requested publication is unavailable.');
     const revision = expectedRevision + 1;
-    const next = { ...current, metadata: { ...current.metadata, revision, publishedRevision }, history: [...current.history, { revision, definition: current.definition }] };
+    const next = { ...current, metadata: { ...current.metadata, revision, publishedRevision }, history: this.#appendHistory(current.history, current.publications, publishedRevision, { revision, definition: current.definition }) };
     await this.#write(context, next, id, expectedRevision, 'publish', current.metadata);
     return copyDashboardJson({ metadata: next.metadata, definition: next.definition }) as unknown as DashboardDocument;
   }

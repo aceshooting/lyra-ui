@@ -207,7 +207,7 @@ Before designating that profile stable, all of the following must hold:
   entry points that remain outside the stable profile.
 - Numerical delivery, main-thread, memory and layout-shift budgets are recorded before measuring
   the candidate; the scoped workloads pass those budgets with environment, samples and uncertainty
-  retained. Model quality/cost claims have exact model settings, provider usage and approved-budget
+  retained. Any model quality/cost claim needs exact model settings, provider usage and approved-budget
   campaign results. A parser benchmark or fixture replay cannot substitute for those measurements.
 - Every advertised protocol version/catalog has its own normative/reference cohort and capability
   limitations. Candidate fixtures do not count toward stable coverage. No complete-conformance

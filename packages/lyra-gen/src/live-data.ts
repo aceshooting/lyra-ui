@@ -56,11 +56,6 @@ export interface DashboardDataSnapshot {
   readonly error?: 'query-failed' | 'invalid-result' | 'access-denied';
 }
 
-function copyJson<T>(value: T, maxBytes: number): T {
-  const encoded = JSON.stringify(value);
-  if (encoded === undefined || new TextEncoder().encode(encoded).byteLength > maxBytes) throw new Error('Data budget exceeded');
-  return JSON.parse(encoded) as T;
-}
 function admitJson<T>(value: T, maxBytes: number): T {
   const admitted = snapshotJson(value, { maxBytes });
   if (!admitted.ok) throw new Error('Invalid bounded JSON');
@@ -76,8 +71,8 @@ function validResult(value: DashboardQueryResult, maxRows: number): boolean {
     if (Array.isArray(item)) {
       rows += item.length;
       if (rows > maxRows) return false;
-      pending.push(...item);
-    } else if (item !== null && typeof item === 'object') pending.push(...Object.values(item));
+      for (let index = 0; index < item.length; index++) pending.push(item[index]!);
+    } else if (item !== null && typeof item === 'object') for (const child of Object.values(item)) pending.push(child);
   }
   const ids = new Set<string>();
   for (const source of value.sources ?? []) {
@@ -95,6 +90,7 @@ export class LiveDataController {
   private activeQuery?: string;
   private disposed = false;
   private current: DashboardDataSnapshot = { status: 'idle', stale: true };
+  private exposed?: DashboardDataSnapshot;
   private readonly listeners = new Set<(snapshot: DashboardDataSnapshot) => void>();
   private readonly offRevoke: () => void;
   constructor(private readonly registry: HostQueryRegistry, context: DashboardQueryContext, private readonly now: () => number = Date.now, private readonly staleAfterMs = 30000) {
@@ -104,7 +100,9 @@ export class LiveDataController {
   }
   get snapshot(): DashboardDataSnapshot {
     const stale = this.current.stale || this.current.receivedAt === undefined || this.now() - this.current.receivedAt >= this.staleAfterMs;
-    return copyJson({ ...this.current, stale }, Number.MAX_SAFE_INTEGER);
+    // The result inside `current` is admitted (deep-frozen) JSON, so a shallow frozen copy is safe to share.
+    if (this.exposed?.stale !== stale) this.exposed = Object.freeze({ ...this.current, stale });
+    return this.exposed!;
   }
   subscribe(listener: (snapshot: DashboardDataSnapshot) => void): () => void {
     if (this.disposed) throw new Error('Controller disposed');
@@ -112,8 +110,10 @@ export class LiveDataController {
     return () => { this.listeners.delete(listener); };
   }
   private commit(snapshot: DashboardDataSnapshot): void {
-    this.current = snapshot;
-    for (const listener of this.listeners) listener(this.snapshot);
+    this.current = Object.freeze(snapshot);
+    this.exposed = undefined;
+    const shared = this.snapshot;
+    for (const listener of this.listeners) listener(shared);
   }
   setContext(context: DashboardQueryContext): void {
     this.invalidate();
@@ -138,7 +138,7 @@ export class LiveDataController {
     if (this.disposed) throw new Error('Controller disposed');
     this.cancel();
     // A new semantic source cannot inherit data from the preceding source.
-    if (this.activeQuery !== query) this.current = { status: 'idle', stale: true };
+    if (this.activeQuery !== query) { this.current = { status: 'idle', stale: true }; this.exposed = undefined; }
     this.activeQuery = query;
     const generation = this.generation;
     const context = this.context;
@@ -178,6 +178,7 @@ export class LiveDataController {
     this.invalidate();
     this.disposed = true;
     this.current = { status: 'idle', stale: true };
+    this.exposed = undefined;
     this.listeners.clear();
     this.offRevoke();
   }

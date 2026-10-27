@@ -6,8 +6,8 @@ timing and memory campaign follows the release, and opt-in region error isolatio
 1.0. The experimental [0.1.0 release](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-gen%400.1.0)
 preceded it. This roadmap preserves the complete program and
 its acceptance criteria, including remaining work; original stage-version targets remain as
-planning history. Website and hosted live generation remain pending and are sequenced last,
-after the library work.
+planning history. The website publishes a recorded guided demo; hosted live generation remains pending and is
+sequenced last, after the library work.
 
 The objective is to make Lyra a leading foundation for interactive generated answers and persistent
 application dashboards: useful earlier in a stream, responsive during interaction, reliable under

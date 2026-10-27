@@ -375,3 +375,92 @@ test('a newer share-link intent supersedes a direct navigation awaiting context'
     app.dispose();
   } finally { host.cleanup(); }
 });
+
+test('refresh keeps the mounted screen and route when the leave guard answers stay, and restores the route after a failed re-resolve', async () => {
+  const host = fixture();
+  try {
+    const ownerStore = host.session(owner);
+    const created = await ownerStore.create(owner, definition());
+    await ownerStore.publish(owner, created.metadata.id, 1);
+    let stay = false;
+    const changes: (boolean)[] = [];
+    let cleanups = 0;
+    const application = new DashboardApplication({ store: host.session(viewer), context: () => viewer, beforeLeave: () => !stay, onChange: dashboard => { changes.push(dashboard !== undefined); }, mount: () => () => { cleanups++; } });
+    assert.equal(await application.navigate({ documentId: created.metadata.id }), 'mounted');
+    changes.length = 0;
+    stay = true;
+    assert.equal(await application.refresh(), 'cancelled');
+    assert.deepEqual(changes, []);
+    assert.equal(cleanups, 0);
+    assert.notEqual(application.current, undefined);
+    stay = false;
+    host.revoke();
+    await assert.rejects(application.refresh(), { code: 'denied' });
+    assert.equal(application.current, undefined);
+    // The route survives the failed refresh, so a later retry still has something to refresh.
+    assert.notEqual(await application.refresh().catch(() => 'threw'), 'cancelled');
+  } finally { host.cleanup(); }
+});
+
+function memoryStore(options: { readonly maxHistory?: number } = {}) {
+  const records = new Map<string, DashboardRecord>();
+  const adapter: DashboardHostAdapter = {
+    async read(_context, id) { const record = records.get(id); return record ? JSON.parse(JSON.stringify(record)) as DashboardRecord : undefined; },
+    async list() { return { records: [...records.values()] }; },
+    async compareAndSwap(_context, id, expected, next) {
+      if ((records.get(id)?.metadata.revision ?? null) !== expected) return { ok: false };
+      if (next) records.set(id, next); else records.delete(id);
+      return { ok: true };
+    }
+  };
+  const store = new DashboardStore({ adapter, catalog, authorize: () => true, createId: () => 'big', ...options });
+  return { store, records };
+}
+const bulky = (title: string): DashboardDefinition => { const base = definition(title); return { ...base, view: { ...base.view, root: { id: 'root', type: 'text', text: 'x'.repeat(60_000) } } }; };
+
+test('a long revision history never bricks a dashboard (bounded record, default retention)', async () => {
+  const { store, records } = memoryStore();
+  const { metadata } = await store.create(owner, bulky('v1'));
+  let revision = metadata.revision;
+  for (let index = 0; index < 45; index++) revision = (await store.update(owner, 'big', revision, bulky(`v${index + 2}`))).metadata.revision;
+  assert.equal((await store.read(owner, 'big')).metadata.revision, 46);
+  assert.equal((await store.history(owner, 'big')).length, 46);
+  await store.publish(owner, 'big', 46);
+  assert.equal((await store.resolve(owner, 'big')).selectedRevision, 47);
+  await store.delete(owner, 'big', 47);
+  assert.equal(records.size, 0);
+});
+
+test('maxHistory prunes old drafts but keeps the current revision and every publication', async () => {
+  const { store } = memoryStore({ maxHistory: 3 });
+  await store.create(owner, definition('v1'));
+  await store.publish(owner, 'big', 1);
+  let revision = 2;
+  for (let index = 0; index < 8; index++) revision = (await store.update(owner, 'big', revision, definition(`d${index}`))).metadata.revision;
+  const history = await store.history(owner, 'big');
+  assert.deepEqual(history.map(item => item.revision), [2, 8, 9, 10]);
+  assert.equal(history.at(-1)?.definition.title, 'd7');
+  assert.equal((await store.resolve(owner, 'big', { mode: 'pin', revision: 2 })).definition.title, 'v1');
+  await assert.rejects(store.undo(owner, 'big', revision, 4), { code: 'missing' });
+  assert.equal((await store.undo(owner, 'big', revision, 2)).definition.title, 'v1');
+  assert.throws(() => memoryStore({ maxHistory: 0 }), { code: 'invalid' });
+});
+
+test('delete succeeds for a legacy record too large to read in full', async () => {
+  const { store, records } = memoryStore();
+  await store.create(owner, definition());
+  const record = records.get('big') as DashboardRecord;
+  let nested: unknown = 'leaf';
+  for (let depth = 0; depth < 60; depth++) nested = { nested };
+  const huge = { ...record, history: [...record.history, { revision: 2, definition: nested }] } as unknown as DashboardRecord;
+  records.set('big', huge);
+  await assert.rejects(store.read(owner, 'big'), { code: 'invalid' });
+  await store.delete(owner, 'big', 1);
+  assert.equal(records.size, 0);
+});
+
+test('diffDashboardDefinitions reports nested and array changes in sorted pointer order', () => {
+  const left = bulky('a'); const right = { ...bulky('b'), dataSources: [{ id: 'sales', source: 'other' }] };
+  assert.deepEqual(diffDashboardDefinitions(left, right).map(change => change.path), ['/dataSources', '/title']);
+  assert.deepEqual(diffDashboardDefinitions(left, left), []);
+});

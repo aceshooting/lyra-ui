@@ -1,4 +1,4 @@
-import { isSafeKey, parseJson, resolveLimits } from './schema.js';
+import { isSafeKey, resolveLimits, snapshotJson } from './schema.js';
 import { validateView } from './runtime.js';
 import type { LyraGenCatalog, LyraGenDiagnostic, LyraGenLimits, LyraGenView } from './types.js';
 
@@ -23,7 +23,9 @@ type Frame =
   | { kind: 'object'; state: 'key-or-end' | 'key' | 'colon' | 'value' | 'comma-or-end'; keys: Set<string> }
   | { kind: 'array'; state: 'value-or-end' | 'value' | 'comma-or-end'; count: number };
 type Token = { kind: 'string' | 'number' | 'literal'; text: string; start: number; key: boolean; escaped: boolean; unicode: number };
-const whitespace = /^[\t\n\r ]$/u;
+const isSpace = (code: number): boolean => code === 0x20 || code === 0x0a || code === 0x0d || code === 0x09;
+const isDigit = (code: number): boolean => code >= 0x30 && code <= 0x39;
+const isHex = (code: number): boolean => isDigit(code) || (code >= 0x41 && code <= 0x46) || (code >= 0x61 && code <= 0x66);
 const number = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$/u;
 
 /** Scans each arriving code unit once; no generated control is admitted before finish(). */
@@ -92,32 +94,33 @@ export function createJsonViewStream(options: JsonViewStreamOptions): JsonViewSt
     }
   };
   const consume = (character: string): void => {
+    const code = character.charCodeAt(0);
     if (token) {
       if (token.kind === 'string') {
         token.text += character;
         if (token.unicode > 0) {
-          if (!/^[0-9A-Fa-f]$/u.test(character)) fail('json.syntax', 'Invalid Unicode escape.');
+          if (!isHex(code)) fail('json.syntax', 'Invalid Unicode escape.');
           else token.unicode--;
         } else if (token.escaped) {
           token.escaped = false;
           if (character === 'u') token.unicode = 4;
           else if (!'"\\/bfnrt'.includes(character)) fail('json.syntax', 'Invalid JSON escape.');
-        } else if (character === '\\') token.escaped = true;
-        else if (character === '"') finishToken();
-        else if (character.charCodeAt(0) < 32) fail('json.syntax', 'Unescaped control character.');
+        } else if (code === 0x5c) token.escaped = true;
+        else if (code === 0x22) finishToken();
+        else if (code < 32) fail('json.syntax', 'Unescaped control character.');
         return;
       }
-      if (whitespace.test(character) || character === ',' || character === '}' || character === ']') {
+      if (isSpace(code) || code === 0x2c || code === 0x7d || code === 0x5d) {
         finishToken();
         if (terminal) return;
       } else {
         token.text += character;
         if (token.kind === 'literal' && !['true', 'false', 'null'].some(value => value.startsWith(token!.text))) fail('json.syntax', 'Invalid JSON literal.', token.start, offset + 1);
-        else if (token.kind === 'number' && !/^[0-9eE+.-]$/u.test(character)) fail('json.syntax', 'Invalid JSON number.', token.start, offset + 1);
+        else if (token.kind === 'number' && !(isDigit(code) || code === 0x65 || code === 0x45 || code === 0x2b || code === 0x2e || code === 0x2d)) fail('json.syntax', 'Invalid JSON number.', token.start, offset + 1);
         return;
       }
     }
-    if (whitespace.test(character)) return;
+    if (isSpace(code)) return;
     const frame = frames.at(-1);
     if (character === '}' || character === ']') {
       const valid = character === '}'
@@ -144,7 +147,7 @@ export function createJsonViewStream(options: JsonViewStreamOptions): JsonViewSt
     if (character === '{') frames.push({ kind: 'object', state: 'key-or-end', keys: new Set() });
     else if (character === '[') frames.push({ kind: 'array', state: 'value-or-end', count: 0 });
     else if (character === '"') token = { kind: 'string', text: character, start: offset, key, escaped: false, unicode: 0 };
-    else if (character === '-' || /^[0-9]$/u.test(character)) token = { kind: 'number', text: character, start: offset, key: false, escaped: false, unicode: 0 };
+    else if (code === 0x2d || isDigit(code)) token = { kind: 'number', text: character, start: offset, key: false, escaped: false, unicode: 0 };
     else if ('tfn'.includes(character)) token = { kind: 'literal', text: character, start: offset, key: false, escaped: false, unicode: 0 };
     else fail('json.syntax', 'Unexpected JSON token.');
   };
@@ -155,14 +158,23 @@ export function createJsonViewStream(options: JsonViewStreamOptions): JsonViewSt
       if (chunk.length === 0) return result('incomplete');
       // At most maxBytes chunks can be retained because every admitted nonempty chunk has a code unit.
       chunks.push(chunk);
+      // Start of the pending run of ordinary string characters, or -1 when not inside one.
+      let plain = token?.kind === 'string' && !token.escaped && token.unicode === 0 ? 0 : -1;
       for (let index = 0; index < chunk.length && !terminal; index++) {
         const code = chunk.charCodeAt(index);
         bytes += code >= 0xdc00 && code <= 0xdfff && previousHighSurrogate ? 1 : code < 0x80 ? 1 : code < 0x800 ? 2 : 3;
         previousHighSurrogate = code >= 0xd800 && code <= 0xdbff;
         if (bytes > limits.maxBytes) { fail('limit.bytes', 'JSON source exceeds the byte limit.'); break; }
+        if (plain >= 0) {
+          // Inside a string with no pending escape, ordinary characters only extend the text.
+          if (code !== 0x22 && code !== 0x5c && code >= 32) { offset++; continue; }
+          token!.text += chunk.slice(plain, index); plain = -1;
+        }
         consume(chunk[index]!);
         offset++;
+        if (!terminal && token?.kind === 'string' && !token.escaped && token.unicode === 0) plain = index + 1;
       }
+      if (plain >= 0 && plain < chunk.length && token) token.text += chunk.slice(plain);
       return terminal ?? result('incomplete');
     },
     finish(): JsonViewStreamResult {
@@ -176,7 +188,11 @@ export function createJsonViewStream(options: JsonViewStreamOptions): JsonViewSt
       if (!started || frames.length > 0) { fail('json.incomplete', 'JSON ended before its value was complete.', offset, offset); return terminal!; }
       const source = chunks.join('');
       chunks.length = 0;
-      const parsed = parseJson(source, limits);
+      // The scanner already enforced syntax, depth, unsafe and duplicate keys, and the byte limit
+      // (the same rules parseJson's preflight applies), so only the parse and the bounded snapshot remain.
+      let parsed: ReturnType<typeof snapshotJson>;
+      try { parsed = snapshotJson(JSON.parse(source), limits); }
+      catch { parsed = { ok: false, diagnostics: [{ code: 'json.syntax', path: '', severity: 'error', message: 'Invalid JSON syntax.' }] }; }
       const checked = parsed.ok ? validateView(parsed.value, options.catalog, { limits }) : parsed;
       terminal = checked.ok ? result('complete', checked.diagnostics, checked.value) : result('error', checked.diagnostics);
       return terminal;

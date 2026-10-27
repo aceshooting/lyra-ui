@@ -1,7 +1,8 @@
 # Generative UI website and demonstrations
 
-Status: **planned; sequenced last after library implementation and qualification**. This roadmap
-does not announce an implemented generative UI service or a release date. The website workstream
+Status: **recorded demo published; live generation planned**. The lyra-ui.com page runs the guided
+demo with scripted replies and simulated data; this roadmap does not announce a hosted generation
+service or a release date. The website workstream
 is separate from the library runtime and depends on its qualified public contracts. Its eventual
 launch still requires the live path and explicit failure states described below.
 
@@ -41,14 +42,14 @@ They provide reusable renderer/state/action/persistence patterns and automated b
 The development host uses fixture sessions and loopback storage; it is not an authenticated public
 sharing service or the website's hosted live-generation path.
 
-No public feature page, live provider endpoint, playground, comparison campaign or generative UI
-website deployment is established by those library examples. SITE-01–20 remain the final
-workstream. Use their acceptance criteria below when implementing the site, and consume published,
-qualified package versions rather than presenting the unpublished checkout as an installation.
+The published feature page adapts the guided demo as a chat-driven studio pinned to the released
+package. No live provider endpoint, playground or comparison campaign exists yet. Use the acceptance
+criteria below for the remaining work, and consume published, qualified package versions.
 
 ## Delivery stages and tracked work
 
-Every item below has status **planned**. Completion requires its acceptance criteria and the relevant
+Items below are **planned** unless the recorded demo page notes partial delivery (SITE-05–08 without
+a live path). Completion requires its acceptance criteria and the relevant
 runtime/evaluation dependencies; a screenshot or static mockup alone does not complete a live feature.
 
 ### Stage 0 — foundation and truthful boundaries

@@ -83,3 +83,48 @@ test('panel layout maps directly to the public controlled dashboard-grid vocabul
   assert.equal(Object.isFrozen(layout), true);
   assert.equal(Object.isFrozen(layout[0]), true);
 });
+
+test('a rejected enter or back is a no-op and does not cancel a pending valid navigation', async () => {
+  let release!: (allowed: boolean) => void;
+  const navigation = new DashboardNavigation(destination => destination === 'slow' ? new Promise<boolean>(done => { release = done; }) : true, 2);
+  assert.equal(await navigation.enter(frame('root')), true);
+  const pending = navigation.enter(frame('slow'));
+  assert.equal(await navigation.back(), undefined, 'a single-frame back has no parent');
+  await navigation.enter(frame('a'), frame('missing-parent'));
+  release(true);
+  assert.equal(await pending, true);
+  assert.deepEqual(navigation.breadcrumbs.map(crumb => crumb.destination), ['root', 'slow']);
+  assert.equal(await navigation.enter(frame('deep')), false, 'depth limit reached');
+});
+test('depth-limit rejection does not cancel a pending back navigation', async () => {
+  let release!: (allowed: boolean) => void;
+  let hold = false;
+  const navigation = new DashboardNavigation(destination => hold && destination === 'root' ? new Promise<boolean>(done => { release = done; }) : true, 2);
+  await navigation.enter(frame('root'));
+  await navigation.enter(frame('child'));
+  hold = true;
+  const pending = navigation.back();
+  assert.equal(await navigation.enter(frame('over')), false);
+  release(true);
+  assert.equal((await pending)?.destination, 'root');
+});
+test('a throwing listener neither starves the others nor loses the committed update', () => {
+  const state = new SharedDashboardState(() => true);
+  const seen: string[] = [];
+  state.subscribe('s', 'a', () => { throw new Error('boom'); });
+  state.subscribe('s', 'b', event => { seen.push(`b${event.snapshot.revision}`); });
+  state.subscribe('s', 'c', event => { seen.push(`c${event.snapshot.revision}`); });
+  assert.throws(() => state.update('s', 'origin', { selection: ['x'] }), { message: 'boom' });
+  assert.deepEqual(seen, ['b1', 'c1']);
+  assert.deepEqual(state.snapshot('s').selection, ['x']);
+});
+test('shared snapshots are frozen and shared instead of copied', () => {
+  const state = new SharedDashboardState(() => true);
+  let received: unknown;
+  state.subscribe('s', 'a', event => { received = event.snapshot; });
+  state.update('s', 'origin', { filters: { k: 'v' }, selection: ['x'] });
+  assert.equal(received, state.snapshot('s'));
+  assert.equal(Object.isFrozen(state.snapshot('s').selection), true);
+  assert.equal(Object.isFrozen(state.snapshot('s').filters), true);
+  assert.equal(Object.isFrozen(state.snapshot('none')), true);
+});

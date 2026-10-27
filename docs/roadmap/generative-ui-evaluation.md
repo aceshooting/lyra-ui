@@ -2,7 +2,7 @@
 
 Status: **tooling and focused qualification implemented; full campaigns pending**. This remains
 the qualification plan for the [generative UI delivery sequence](generative-ui.md#delivery-sequence),
-not evidence that `@aceshooting/lyra-gen` has shipped or outperforms another framework. The
+not evidence that `@aceshooting/lyra-gen` outperforms another framework. The
 [delivery backlog](generative-ui-backlog.md) owns implementation scope; the
 [website plan](generative-ui-website.md) owns public examples and presentation of results.
 
@@ -13,7 +13,7 @@ workload, implementation, version, configuration and uncertainty.
 
 ## Current implementation and evidence
 
-The experimental implementation now has bounded parsers, runtime/catalog checks, browser workflow
+The published 1.x implementation has bounded parsers, runtime/catalog checks, browser workflow
 fixtures and a provider-neutral evaluation harness. The inventory below distinguishes these from
 the remaining campaign. Final integrated release qualification is pending; no paid model campaign
 or human assistive-technology review is claimed.

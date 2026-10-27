@@ -34,80 +34,109 @@ export function createIslandParser(options: MarkupOptions): IslandParser {
   };
   const ceiling = limit('maxLength');
   const maxBytes = limit('maxBytes');
-  let source = '';
   let bytes = 0;
   let receivedLength = 0;
   let previousHighSurrogate = false;
   let islandCount = 0;
-  let scan = 0;
+  // Offsets are absolute. Text is held per region (never one growing string that is indexed),
+  // so a push scans only its own chunk and a rope is flattened at most once per completed line.
   let lineStart = 0;
+  let lineText = '';
+  let pendingReturn = false;
   let proseStart = 0;
+  let proseText = '';
+  let fenceText = '';
+  let bodyText = '';
   let fence: { character: string; length: number; lyra: boolean; start: number; bodyStart: number } | undefined;
   let done = false;
   let failure: LyraGenDiagnostic | undefined;
+  let retained: readonly IslandPart[] = [];
   const parts: IslandPart[] = [];
   const incomplete: MarkupResult = { status: 'incomplete', diagnostics: [], sourceMap: {} };
-  const addProse = (end: number): void => {
-    if (end > proseStart) parts.push({ kind: 'prose', source: source.slice(proseStart, end), start: proseStart, end });
+  const addProse = (): void => {
+    if (proseText.length > 0) parts.push({ kind: 'prose', source: proseText, start: proseStart, end: lineStart });
   };
-  const line = (start: number, end: number): void => {
-    const text = source.slice(start, end).replace(/(?:\r\n|\r|\n)$/, '');
+  const line = (raw: string, start: number, end: number): void => {
+    const text = raw.replace(/(?:\r\n|\r|\n)$/, '');
     const match = /^ {0,3}(`{3,}|~{3,})([^\r\n]*)$/.exec(text);
     if (!fence) {
-      if (!match) return;
-      const run = match[1]!;
       // Backtick-containing info strings are not valid backtick fence openers.
-      if (run[0] === '`' && match[2]!.includes('`')) return;
+      if (!match || (match[1]![0] === '`' && match[2]!.includes('`'))) { proseText += raw; return; }
+      const run = match[1]!;
       const lyra = /^[ \t]*lyra[ \t]*$/.test(match[2]!);
       fence = { character: run[0]!, length: run.length, lyra, start, bodyStart: end };
-      if (lyra) { addProse(start); proseStart = start; }
+      if (lyra) { addProse(); proseStart = start; proseText = ''; fenceText = raw; bodyText = ''; }
+      else proseText += raw;
       return;
     }
-    if (!match || match[1]![0] !== fence.character || match[1]!.length < fence.length || !/^[ \t]*$/.test(match[2]!)) return;
-    if (fence.lyra) {
-      const body = source.slice(fence.bodyStart, start);
-      parts.push({ kind: 'island', source: source.slice(fence.start, end), body, start: fence.start, end,
-        bodyStart: fence.bodyStart, bodyEnd: start, closed: true, result: parseMarkup(body, { ...options, surfaceId: `${options.surfaceId}:island-${islandCount++}` }) });
-      proseStart = end;
+    if (!match || match[1]![0] !== fence.character || match[1]!.length < fence.length || !/^[ \t]*$/.test(match[2]!)) {
+      if (fence.lyra) { fenceText += raw; bodyText += raw; } else proseText += raw;
+      return;
     }
+    if (fence.lyra) {
+      const body = bodyText;
+      parts.push({ kind: 'island', source: fenceText + raw, body, start: fence.start, end,
+        bodyStart: fence.bodyStart, bodyEnd: start, closed: true, result: parseMarkup(body, { ...options, surfaceId: `${options.surfaceId}:island-${islandCount++}` }) });
+      proseStart = end; proseText = ''; fenceText = ''; bodyText = '';
+    } else proseText += raw;
     fence = undefined;
   };
-  const scanLines = (final: boolean): void => {
-    while (scan < source.length) {
-      const unit = source[scan];
-      if (unit === '\r') {
-        if (!final && scan + 1 === source.length) break;
-        scan += source[scan + 1] === '\n' ? 2 : 1;
-        line(lineStart, scan); lineStart = scan;
-      } else if (unit === '\n') {
-        scan++; line(lineStart, scan); lineStart = scan;
-      } else scan++;
+  const completeLine = (): void => {
+    const raw = lineText;
+    const start = lineStart;
+    lineText = ''; pendingReturn = false; lineStart = start + raw.length;
+    line(raw, start, lineStart);
+  };
+  const scanChunk = (chunk: string): void => {
+    let from = 0;
+    if (pendingReturn) {
+      if (chunk.charCodeAt(0) === 0x0a) { lineText += '\n'; from = 1; }
+      completeLine();
     }
+    for (let index = from; index < chunk.length; index++) {
+      const unit = chunk.charCodeAt(index);
+      if (unit === 0x0a) { lineText += chunk.slice(from, index + 1); from = index + 1; completeLine(); }
+      else if (unit === 0x0d) {
+        if (index + 1 === chunk.length) { lineText += chunk.slice(from); from = chunk.length; pendingReturn = true; break; }
+        const next = chunk.charCodeAt(index + 1) === 0x0a ? index + 2 : index + 1;
+        lineText += chunk.slice(from, next); from = next; index = next - 1; completeLine();
+      }
+    }
+    if (from < chunk.length) lineText += chunk.slice(from);
+  };
+  const snapshotParts = (): IslandPart[] => {
+    const current = parts.slice();
+    const total = lineStart + lineText.length;
+    if (fence?.lyra) {
+      current.push({ kind: 'island', source: fenceText + lineText, body: bodyText + lineText,
+        start: fence.start, end: total, bodyStart: fence.bodyStart, bodyEnd: total,
+        closed: false, result: incomplete });
+    } else if (total > proseStart) {
+      current.push({ kind: 'prose', source: proseText + lineText, start: proseStart, end: total });
+    }
+    return current;
   };
   const snapshot = (): IslandResult => {
-    if (failure) return { parts: [], diagnostics: [failure] };
-    const current = parts.slice();
-    if (fence?.lyra) {
-      current.push({ kind: 'island', source: source.slice(fence.start), body: source.slice(fence.bodyStart),
-        start: fence.start, end: source.length, bodyStart: fence.bodyStart, bodyEnd: source.length,
-        closed: false, result: incomplete });
-    } else if (source.length > proseStart) {
-      current.push({ kind: 'prose', source: source.slice(proseStart), start: proseStart, end: source.length });
-    }
-    return { parts: current, diagnostics: [] };
+    if (failure) return { parts: retained, diagnostics: [failure] };
+    return { parts: snapshotParts(), diagnostics: [] };
+  };
+  // A rejected push keeps everything accepted before it; later input is never admitted.
+  const reject = (diagnostic: LyraGenDiagnostic): void => {
+    if (!failure) retained = snapshotParts();
+    failure = diagnostic;
+    parts.length = 0; lineText = ''; proseText = ''; fenceText = ''; bodyText = ''; pendingReturn = false;
   };
   return {
     push(chunk) {
       if (done) return snapshot();
       if (typeof chunk !== 'string') {
-        failure = { code: 'invalid-input', path: '', severity: 'error', message: 'Markdown island input must be a string.' };
-        source = ''; parts.length = 0; done = true;
+        reject({ code: 'invalid-input', path: '', severity: 'error', message: 'Markdown island input must be a string.' });
+        done = true;
         return snapshot();
       }
       receivedLength = Math.min(ceiling + 1, receivedLength + chunk.length);
       if (receivedLength > ceiling) {
-        failure = { code: 'source-length-limit', path: '', severity: 'error', message: 'Markdown island input exceeds its source limit.', source: { start: ceiling, end: ceiling } };
-        source = ''; parts.length = 0;
+        reject({ code: 'source-length-limit', path: '', severity: 'error', message: 'Markdown island input exceeds its source limit.', source: { start: ceiling, end: ceiling } });
         return snapshot();
       }
       if (failure) return snapshot();
@@ -117,18 +146,15 @@ export function createIslandParser(options: MarkupOptions): IslandParser {
         previousHighSurrogate = unit >= 0xd800 && unit <= 0xdbff;
       }
       if (bytes > maxBytes) {
-        failure = { code: 'source-byte-limit', path: '', severity: 'error', message: 'Markdown island input exceeds its byte limit.', source: { start: 0, end: 0 } };
-        source = ''; parts.length = 0;
+        reject({ code: 'source-byte-limit', path: '', severity: 'error', message: 'Markdown island input exceeds its byte limit.', source: { start: 0, end: 0 } });
         return snapshot();
       }
-      source += chunk;
-      scanLines(false);
+      scanChunk(chunk);
       return snapshot();
     },
     finish() {
       if (!done) {
-        scanLines(true);
-        if (lineStart < source.length) line(lineStart, source.length);
+        if (lineText.length > 0) completeLine();
         done = true;
       }
       return snapshot();

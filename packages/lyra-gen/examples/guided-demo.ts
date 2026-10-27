@@ -252,7 +252,8 @@ export function createGuidedDemo(options: {
     const summary = markup({ id: 'summary', type: 'text', text: scenario === 'travel-budget' ? `${reply} ${labels.rates}` : reply });
     const dashboard = markup(root);
     const split = Math.floor(dashboard.length / 2);
-    const pieces = [`${reply}\n\n\`\`\`lyra\n`, summary, '\n```\n\n```lyra\n', dashboard.slice(0, split), dashboard.slice(split), '\n', '```\n'];
+    // The reply streams once, as the generated summary island; repeating it as prose would show it twice.
+    const pieces = ['```lyra\n', summary, '\n```\n\n```lyra\n', dashboard.slice(0, split), dashboard.slice(split), '\n', '```\n'];
     const offsets = [0, 100, 260, 480, 700, 920, 1180];
     const recording: ReplayRecording = freeze({ version: '1', recordingKind: 'authored-synthetic', source: { kind: 'fixture', id: `guided-${scenario}-${refined ? 'refinement' : 'overview'}-v1` },
       model: null, package: { name: '@aceshooting/lyra-gen', version: options.packageVersion }, catalog: { id: initialCatalog.id, version: initialCatalog.version },

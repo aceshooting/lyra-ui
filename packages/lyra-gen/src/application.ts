@@ -39,12 +39,12 @@ export class DashboardApplication {
     if (this.#disposed) throw new DashboardError('invalid', 'The dashboard application has been disposed.');
     return this.#navigate(route, ++this.#generation);
   }
-  async #navigate(route: DashboardRoute, generation: number): Promise<DashboardNavigationResult> {
+  async #navigate(route: DashboardRoute, generation: number, confirmed = false): Promise<DashboardNavigationResult> {
     const selected = { documentId: route.documentId, ...(route.policy ? { policy: { ...route.policy } } : {}) };
     const isCurrent = (): boolean => generation === this.#generation && !this.#disposed;
     try {
       if (!isCurrent()) return 'superseded';
-      if (this.#options.beforeLeave && !await this.#options.beforeLeave()) return isCurrent() ? 'cancelled' : 'superseded';
+      if (!confirmed && this.#options.beforeLeave && !await this.#options.beforeLeave()) return isCurrent() ? 'cancelled' : 'superseded';
       if (!isCurrent()) return 'superseded';
       this.#clear();
       if (!isCurrent()) return 'superseded';
@@ -93,8 +93,21 @@ export class DashboardApplication {
   async refresh(): Promise<DashboardNavigationResult> {
     if (!this.#route) return 'cancelled';
     const route = this.#route;
+    // Leaving is confirmed before anything is revoked, so a "stay" answer keeps the screen and route intact.
+    const before = this.#generation;
+    if (this.#options.beforeLeave && !await this.#options.beforeLeave()) return before === this.#generation && !this.#disposed ? 'cancelled' : 'superseded';
+    if (before !== this.#generation || this.#disposed) return 'superseded';
     this.revoke();
-    return this.navigate(route);
+    const generation = ++this.#generation;
+    const restore = (): void => { if (generation === this.#generation && !this.#disposed && !this.#route) this.#route = route; };
+    try {
+      const result = await this.#navigate(route, generation, true);
+      if (result === 'cancelled') restore();
+      return result;
+    } catch (error) {
+      restore();
+      throw error;
+    }
   }
   /** Invoke on session, tenant, or grant changes to remove already-mounted private content. */
   revoke(): void { ++this.#generation; this.#route = undefined; this.#clear(); }

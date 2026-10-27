@@ -14,6 +14,7 @@ export interface DashboardSharedEvent {
 }
 export interface DashboardSharedUpdate { readonly filters?: JsonObject; readonly selection?: readonly string[] }
 function clone<T>(value: T): T { return JSON.parse(JSON.stringify(value)) as T; }
+const EMPTY_SHARED: DashboardSharedSnapshot = Object.freeze({ filters: Object.freeze({}), selection: Object.freeze([]), revision: 0 });
 function signature(value: JsonValue): string {
   if (Array.isArray(value)) return `[${value.map(signature).join(',')}]`;
   if (value !== null && typeof value === 'object') return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${signature((value as JsonObject)[key]!)}`).join(',')}}`;
@@ -27,7 +28,8 @@ export class SharedDashboardState {
   constructor(private readonly validateFilters: (scope: string, filters: JsonObject) => boolean, private readonly maxScopes = 64, private readonly maxBytes = 65536) {
     if (![maxScopes, maxBytes].every(value => Number.isSafeInteger(value) && value > 0)) throw new Error('Invalid shared-state limits');
   }
-  snapshot(scope: string): DashboardSharedSnapshot { return clone(this.scopes.get(scope) ?? { filters: {}, selection: [], revision: 0 }); }
+  /** Returns the stored deep-frozen snapshot; it is shared, never copied. */
+  snapshot(scope: string): DashboardSharedSnapshot { return this.scopes.get(scope) ?? EMPTY_SHARED; }
   subscribe(scope: string, source: string, notify: (event: DashboardSharedEvent) => void): () => void {
     const listener = { scope, source, notify };
     this.listeners.add(listener);
@@ -46,11 +48,16 @@ export class SharedDashboardState {
     const selection = [...new Set(safeUpdate.selection ?? previous.selection)];
     if (!this.validateFilters(scope, filters) || selection.some(id => typeof id !== 'string') || new TextEncoder().encode(JSON.stringify({ filters, selection })).byteLength > this.maxBytes) throw new Error('Invalid shared state');
     if (signature(filters) === signature(previous.filters) && signature(selection) === signature(previous.selection)) return false;
-    const snapshot = { filters, selection, revision: previous.revision + 1 };
+    const snapshot: DashboardSharedSnapshot = Object.freeze({ filters, selection: Object.freeze(selection), revision: previous.revision + 1 });
     this.scopes.set(scope, snapshot);
-    for (const listener of this.listeners) {
-      if (listener.scope === scope && listener.source !== source) listener.notify({ scope, source, snapshot: clone(snapshot) });
+    // One failing listener must not starve the others; the first failure is rethrown after every listener has run.
+    const event: DashboardSharedEvent = Object.freeze({ scope, source, snapshot });
+    let failure: { readonly error: unknown } | undefined;
+    for (const listener of [...this.listeners]) {
+      if (listener.scope !== scope || listener.source === source) continue;
+      try { listener.notify(event); } catch (error) { failure ??= { error }; }
     }
+    if (failure) throw failure.error;
     return true;
   }
   clearDangling(scope: string, availableIds: ReadonlySet<string>): boolean {
@@ -87,11 +94,12 @@ export class DashboardNavigation {
     return safe;
   }
   async enter(frame: DashboardNavigationFrame, parent?: DashboardNavigationFrame): Promise<boolean> {
-    const generation = ++this.generation;
     if (this.frames.length >= this.maxDepth) return false;
     const next = this.checked(frame);
     const savedParent = parent ? this.checked(parent) : undefined;
     if (savedParent && savedParent.destination !== this.current?.destination) return false;
+    // Only a navigation that will actually run supersedes a pending one.
+    const generation = ++this.generation;
     const allowed = await this.authorize(next.destination);
     if (generation !== this.generation || !allowed) return false;
     if (savedParent) this.frames[this.frames.length - 1] = savedParent;
@@ -99,9 +107,9 @@ export class DashboardNavigation {
     return true;
   }
   async back(): Promise<DashboardNavigationFrame | undefined> {
-    const generation = ++this.generation;
     const parent = this.frames.at(-2);
     if (!parent) return undefined;
+    const generation = ++this.generation;
     const allowed = await this.authorize(parent.destination);
     if (generation !== this.generation || !allowed) return undefined;
     this.frames.pop();

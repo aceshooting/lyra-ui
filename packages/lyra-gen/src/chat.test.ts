@@ -192,3 +192,27 @@ test('disposal also releases the retained retry prefix after a source-budget rej
   assert.equal(chat.sourceAvailable, false);
   assert.deepEqual(chat.snapshot.parts, []);
 });
+
+test('a source-budget rejection keeps already completed islands and prose visible', () => {
+  const chat = createChatStream(options({ limits: { maxLength: 128 } }));
+  const first = chat.push(ready);
+  const island = first.islands[0];
+  const failed = chat.push('Q'.repeat(200));
+  assert.equal(failed.status, 'error');
+  assert.equal(failed.diagnostics.some(item => item.code === 'source-length-limit'), true);
+  assert.equal(failed.parts.length, first.parts.length);
+  assert.equal(failed.islands[0], island);
+  assert.equal(failed.parts[0]?.type, 'text');
+  assert.equal(chat.retainedSourceCharacters, ready.length);
+  const retried = chat.retry();
+  assert.equal(retried.islands[0]?.status, 'ready');
+});
+test('admitting an unchanged tree after a source refresh keeps the document identity', () => {
+  const sources = new Map([['a', { id: 'a', label: 'Source A' }]]);
+  const chat = createChatStream(options({ sources }));
+  chat.push('```lyra\n<citation id="c" sourceId="a" label="x" />\n```\n');
+  const document = chat.finish().islands[0]?.document;
+  assert.equal(chat.refreshSources().islands[0]?.document, document);
+  sources.set('a', { id: 'a', label: 'Renamed' });
+  assert.equal(chat.refreshSources().islands[0]?.document?.revision, document!.revision + 1);
+});

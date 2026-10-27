@@ -93,6 +93,7 @@
         "DashboardUpdatePolicy": "persistence.d.ts#DashboardUpdatePolicy",
         "DashboardWriteResult": "persistence.d.ts#DashboardWriteResult",
         "dataCatalog": "catalog.d.ts#dataCatalog",
+        "DEFAULT_DASHBOARD_MAX_HISTORY": "persistence.d.ts#DEFAULT_DASHBOARD_MAX_HISTORY",
         "DEFAULT_LIMITS": "schema.d.ts#DEFAULT_LIMITS",
         "diffDashboardDefinitions": "persistence.d.ts#diffDashboardDefinitions",
         "editDashboardLayout": "dashboard.d.ts#editDashboardLayout",
@@ -731,6 +732,7 @@
         "DashboardUpdatePolicy": "persistence.d.ts#DashboardUpdatePolicy",
         "DashboardWriteResult": "persistence.d.ts#DashboardWriteResult",
         "dataCatalog": "catalog.d.ts#dataCatalog",
+        "DEFAULT_DASHBOARD_MAX_HISTORY": "persistence.d.ts#DEFAULT_DASHBOARD_MAX_HISTORY",
         "DEFAULT_LIMITS": "schema.d.ts#DEFAULT_LIMITS",
         "diffDashboardDefinitions": "persistence.d.ts#diffDashboardDefinitions",
         "editDashboardLayout": "dashboard.d.ts#editDashboardLayout",
@@ -1050,6 +1052,7 @@
         "DashboardStoreOptions": "persistence.d.ts#DashboardStoreOptions",
         "DashboardUpdatePolicy": "persistence.d.ts#DashboardUpdatePolicy",
         "DashboardWriteResult": "persistence.d.ts#DashboardWriteResult",
+        "DEFAULT_DASHBOARD_MAX_HISTORY": "persistence.d.ts#DEFAULT_DASHBOARD_MAX_HISTORY",
         "diffDashboardDefinitions": "persistence.d.ts#diffDashboardDefinitions",
         "validateDashboardDefinition": "persistence.d.ts#validateDashboardDefinition"
       },
@@ -2237,7 +2240,7 @@
       "profile": "supported"
     },
     "persistence.d.ts#DashboardStoreOptions": {
-      "hash": "41e8d25304dd438327b276d9252d81374cdd2e0443c69c235698c1f9c3557a24",
+      "hash": "82d422fc4e5a18ba3232e00fc15cab9007d4a0901f71606c7969f1834dc0f809",
       "profile": "supported"
     },
     "persistence.d.ts#DashboardUpdatePolicy": {
@@ -2246,6 +2249,10 @@
     },
     "persistence.d.ts#DashboardWriteResult": {
       "hash": "697cb35f0a5746d3970549289a4b02bca4e6db77dfeac56c7e9da86ce9857a88",
+      "profile": "supported"
+    },
+    "persistence.d.ts#DEFAULT_DASHBOARD_MAX_HISTORY": {
+      "hash": "731f912d11b06ed38928f458d14fef94f7b20a06ca2473df6b037b5fdb1a618d",
       "profile": "supported"
     },
     "persistence.d.ts#diffDashboardDefinitions": {

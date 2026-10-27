@@ -40,9 +40,13 @@ including history, publications and deletion. `expectedRevision: null` creates o
 numeric revisions update or delete only the matching record. Return `{ ok: false }` for a conflict.
 Do not implement this as a separate unprotected read followed by a write.
 
-Records, including retained history and publications, remain subject to document bounds. Plan
-archival and retention in the host before a record reaches those bounds; overflowing a record is
-a failed write, not permission to drop history silently.
+Each definition is bounded individually; the whole record (definition, history and publications)
+is bounded separately and far more generously. `DashboardStoreOptions.maxHistory` (default 100,
+minimum 1) caps retained draft history: when a write appends a revision, older entries beyond the
+cap are dropped, except revisions that are publications or the followed publication. The current
+revision is always kept and publications are never pruned, so plan archival of publications in the
+host. `undo()` can only target retained revisions. `delete()` needs only the record metadata, so
+it works on a legacy record too large to read in full.
 
 ```ts
 import { initialCatalog } from '@aceshooting/lyra-gen/catalog.js';

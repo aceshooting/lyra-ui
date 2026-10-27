@@ -189,7 +189,14 @@ export async function restoreGenSnapshotElement(container: HTMLElement, catalog:
       view.addEventListener('lr-gen-error', () => resolve(false), { once: true });
       controller.signal.addEventListener('abort', () => resolve(false), { once: true });
       observer = new MutationObserver(() => { if (!container.isConnected || !view.isConnected || !container.contains(view)) controller.abort(); });
-      observer.observe(container.ownerDocument, { childList: true, subtree: true });
+      // Removal of the container or any ancestor is a childList change on the node's own parent, so
+      // watch the ancestor chain shallowly instead of every mutation anywhere in the document.
+      observer.observe(container, { childList: true });
+      for (let node: Node | null = container; node;) {
+        const parent: Node | null = node.parentNode ?? (node as ShadowRoot).host ?? null;
+        if (parent) observer.observe(parent, { childList: true });
+        node = parent;
+      }
     });
     container.append(view);
     if (!await ready || controller.signal.aborted || !container.isConnected || view.status !== 'ready' || templates[0]!.parentNode !== container || templates[0]!.getAttribute('data-lyra-gen-state') !== source || container.ownerDocument !== ownerDocument || container.getAttribute('data-surface-id') !== envelope.snapshot.view.surfaceId || container.getAttribute('data-revision') !== String(envelope.snapshot.view.revision) || (container.getAttribute('lang') ?? undefined) !== envelope.locale || (container.getAttribute('dir') ?? undefined) !== envelope.direction) return failure('ssr.interrupted', 'Snapshot restoration could not complete.');

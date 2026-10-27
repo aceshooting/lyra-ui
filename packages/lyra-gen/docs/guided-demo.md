@@ -103,5 +103,5 @@ numbers; prose formats numbers/currency through the supplied locale and the brow
 The library's representative en/fr/ar checks do not qualify every application language or imply
 human translation or assistive-technology review.
 
-Website integration and deployment are separate and pending. This guide covers the library
+The lyra-ui.com demo adapts this example under its own checks. This guide covers the library
 example; adapting it into another application requires that application's own integration checks.
