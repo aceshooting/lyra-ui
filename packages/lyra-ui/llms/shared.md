@@ -1267,8 +1267,9 @@ needs to sit inside a Lyra UI without looking foreign, and the file's header lis
 | Typography            | `--lr-font`, `--lr-font-mono`, the ten `--lr-font-size-*` steps, the four `--lr-font-weight-*` steps                                                                                                                        |
 | State and motion      | `--lr-focus-ring`, `--lr-focus-ring-color`, `--lr-focus-ring-width`, `--lr-focus-ring-offset`, `--lr-opacity-disabled`, `--lr-opacity-muted`, `--lr-duration-fast`, `--lr-duration-base`, `--lr-easing-standard`, `--lr-easing-emphasized`, `--lr-transition-fast`, `--lr-transition-base`, `--lr-transition-interactive` |
 
-The grid is stable as a whole because its contrast guarantee is **per tier** — a `fill-quiet`
-background is only guaranteed legible under the matching `on-quiet` foreground.
+The grid is stable as a whole because its [contrast contract](#semantic-colour-contrast-contract)
+covers matching `on`/`fill` tiers **and** the loud-fill accent text used on quiet fills and page
+surfaces. Custom palettes must preserve both kinds of pairing.
 
 **Visible but internal** (read them at your own risk; they may change in any release): `--lr-size-*`,
 `--lr-layer-*`, `--lr-color-mix-*`, `--lr-hover-brightness`, `--lr-line-height-*`,
@@ -1404,19 +1405,32 @@ the semantic grid instead; it picks the right value per mode and supports theme 
 layer to build on. Its _shape_ is identical in light and dark; the generator resolves different
 ramp steps into each mode's literal fallback, so a rule written against it is mode-independent.
 
-- `fill` — a background. `on` — text and icons that sit **on** the matching `fill`. `border` — an
-  outline.
+- `fill` — a background; `fill-loud` also supplies accent text and icons. `on` — text and icons
+  that sit **on** the matching `fill`. `border` — an outline.
 - `emphasis` runs `quiet → normal → loud`. Louder means more prominent, not lighter or darker: in
   light mode it descends the ramp and in dark mode it climbs it.
 
-**The contrast guarantee is what makes the grid usable without thinking.** For every variant, in
-both modes: `on-<e>` clears WCAG 1.4.3's 4.5:1 against `fill-<e>` at the _same_ emphasis — so
-`background: var(--lr-color-danger-fill-loud); color: var(--lr-color-danger-on-loud)` is legible by
-construction, and no other pairing is promised. `border-normal` and `border-loud` clear 1.4.11's
-3:1 against the page surface, so a control's visible bounds are always discernible. `border-quiet`
-is deliberately exempt: it exists for decoration that is not load-bearing — a rule between table
-rows, a hairline inside an already-bounded card — so never use it as a control's only boundary.
-These guarantees apply in both modes.
+#### Semantic colour contrast contract
+
+The built-in palettes and looks meet these minimum ratios
+for every variant in both modes:
+
+| Foreground or boundary | Background | Minimum contrast |
+| --- | --- | --- |
+| `on-quiet`, `on-normal`, `on-loud` | The matching `fill-quiet`, `fill-normal`, `fill-loud` | 4.5:1 |
+| `fill-loud`, when used as accent text | The same variant's `fill-quiet` | 4.5:1 |
+| `fill-loud`, when used as accent text | Page and raised surfaces | 4.5:1 |
+| `border-normal`, `border-loud` | Page surface | 3:1 |
+
+For example, a non-neutral `lr-badge` with `appearance="filled-outlined"` or `"filled"` uses
+`fill-loud` text on `fill-quiet`; its `"outlined"` and `"plain"` appearances use that text on the
+surrounding surface. A current `lr-app-rail-item` uses brand loud-fill text on the brand quiet
+fill. The flat `--lr-color-brand` alias is the loud fill, so it inherits these accent-text
+requirements. A matching `on-loud`/`fill-loud` pair alone does not qualify a custom palette.
+
+`border-quiet` is deliberately exempt: it exists for decoration that is not load-bearing — a rule
+between table rows, a hairline inside an already-bounded card — so never use it as a control's only
+boundary. Other cross-tier pairings require their own contrast check.
 
 **Every slot has its own `--lr-theme-*` override**, named after the slot, so one decision can be
 rethemed without forking anything beneath it:
@@ -1431,7 +1445,44 @@ rethemed without forking anything beneath it:
 
 The full runtime chain for one colour is your `--lr-theme-*` input, else the grid slot's generated
 fallback. To move a whole tone, set its nine `--lr-theme-color-<variant>-*` inputs; the ramp remains
-a design-tool input rather than a consumer override point.
+a design-tool input rather than a consumer override point. Static CSS inputs are applied as
+authored: Lyra does not repair their contrast. Qualify every affected pairing above in light and
+dark mode, including inherited slots when overriding only part of a row. Also check the actual
+surrounding surface and rendered hover/press states, especially with component foreground or
+background overrides and translucent surfaces.
+
+For a complete static brand row, this example meets the contract on the **Lyra look with a solid
+surface**: its page/raised colours are `#ffffff`/`#f6f8fa` in light mode and
+`#1a1a1a`/`#22272e` in dark mode. Put the inputs on an explicit scope such as
+`<section class="app-brand" data-lr-look="lyra" data-lr-surface="solid" data-lr-accent="custom" data-lr-theme="light" data-lr-theme-scope>`;
+change `data-lr-theme` to `dark` to select the second row. Import `theme.css` as usual.
+
+```css
+.app-brand[data-lr-theme='light'] {
+  --lr-theme-color-brand-fill-quiet: #eef2ff;
+  --lr-theme-color-brand-fill-normal: #c7d2fe;
+  --lr-theme-color-brand-fill-loud: #4338ca;
+  --lr-theme-color-brand-on-quiet: #312e81;
+  --lr-theme-color-brand-on-normal: #312e81;
+  --lr-theme-color-brand-on-loud: #ffffff;
+  --lr-theme-color-brand-border-quiet: #c7d2fe;
+  --lr-theme-color-brand-border-normal: #6366f1;
+  --lr-theme-color-brand-border-loud: #4338ca;
+}
+.app-brand[data-lr-theme='dark'] {
+  --lr-theme-color-brand-fill-quiet: #1e1b4b;
+  --lr-theme-color-brand-fill-normal: #3730a3;
+  --lr-theme-color-brand-fill-loud: #a5b4fc;
+  --lr-theme-color-brand-on-quiet: #e0e7ff;
+  --lr-theme-color-brand-on-normal: #ffffff;
+  --lr-theme-color-brand-on-loud: #1e1b4b;
+  --lr-theme-color-brand-border-quiet: #3730a3;
+  --lr-theme-color-brand-border-normal: #818cf8;
+  --lr-theme-color-brand-border-loud: #a5b4fc;
+}
+```
+
+Recheck these values when changing the look, surfaces, interaction fills or component overrides.
 
 The flat names are aliases into the grid, kept because they read well at the call site:
 
@@ -1858,7 +1909,17 @@ accentBackground is an absolute CSS color used as the accent ramps' reference su
 
 A LyraLook is a named token definition. Define an application look with defineLyraLook({ id, tokens }), then pass it as the look choice. A look supplies --lr-theme-* inputs; overrides applies an independent map of those inputs to the document root. Both accept CSS strings or per-mode { light, dark } values. Overrides replace the previous map wholesale; compose them with object spread. Values are validated, trimmed, and deep-frozen. Invalid entries are ignored, and maps are limited to 512 entries.
 
-The token grammar rejects CSS-wide keywords, control characters, unsafe punctuation, unbalanced functions or quotes, and functions outside the documented color and layout set. Color families checked by the static contrast gate are corrected to meet their contrast floor before painting. The snapshot and stored record retain the normalized requested values. Inline style ownership records only properties Lyra wrote and restores an earlier author value when a choice is cleared.
+The token grammar rejects CSS-wide keywords, control characters, unsafe punctuation, unbalanced
+functions or quotes, and functions outside the documented color and layout set. For resolvable
+colors and references, runtime token maps floor body/quiet text against page and raised surfaces;
+synthesize or correct semantic on-colors when the corresponding fill is supplied; and qualify
+strong-overlay text, boundaries, focus, chart series and terminal colors. This does not repair the
+loud-fill accent-text cross-pairings in the [semantic contrast contract](#semantic-colour-contrast-contract):
+explicit look/override maps and static CSS must supply compatible values. Runtime `accent`
+derivation qualifies those cross-pairings when it generates the ramp; CSS or component overrides
+of the resulting foreground/background still need checking. The snapshot and stored record retain
+the normalized requested values. Inline style ownership records only properties Lyra wrote and
+restores an earlier author value when a choice is cleared.
 
 **Saved styles and the no-flash bootstrap.** getLyraStyle() re-reads storage on each call, so a value written by another tab is visible. If storage is unavailable, the runtime reports its last applied style and continues applying changes without persistence. lyraThemeBootstrap is a self-contained IIFE string for a script in head before stylesheets; it restores the saved style before first paint. createLyraThemeBootstrap({ storageKey }) produces the same string for an application-owned key. Both runtime and bootstrap safely read v1 records using mode: "auto", surface, and tokens, translating them to the current style axes. Keep this reader when migrating old saved preferences; new writes use the current style record.
 

@@ -53,6 +53,10 @@ buttons.
   icon-only trigger always remains named; remove the attribute or assign `null` for the same
   fallback.
 - `disabled: boolean = false` (reflected)
+- `size?: LyraSize` (reflected) — optional built-in trigger density on the shared `2xs` through
+  `xl` ladder; `small`/`medium`/`large` alias `s`/`m`/`l`. Scales the minimum hit area, glyph font
+  and corner radius. Unset preserves the established icon-button footprint and inherited font;
+  custom default-slot triggers keep their own geometry.
 - `feedbackDuration: number = 1500` (attribute `feedback-duration`) — milliseconds before the
   confirmation **or** the failure state returns to the copy icon. A non-finite value falls back to
   `1500` rather than leaving the state stuck; a negative one clamps to `0`.
@@ -188,12 +192,16 @@ import type {
   `copyFailed` (`'Copy failed'`), overridable per instance through `.strings` or app-wide through
   `registerLyraLocale()` (see `llms/shared.md`). Explicit `*-label` properties take precedence.
 - Native `dir`/`lang` remain inherited global attributes. The component is not form-associated.
-- No `size`/`compact` property: the built-in trigger's hit area is `<lr-icon-button>`'s shared
-  `--lr-icon-button-size` floor (2.25rem by default). For a dense action row, lower
-  `--lr-theme-icon-button-size` (not `--lr-icon-button-size`, which every `LyraElement` re-declares
-  on its own `:host` and so never reaches a composed child) on this element or an ancestor, or reach
-  the composed native control directly through `::part(base-control)`. A coarse-pointer/no-hover
-  media rule then floors the rendered hit area at 2.75rem/44px regardless of how far a dense-row
-  override lowered it, so the shrink is safe on a touch device.
+- Use `size="2xs"` or `size="xs"` for dense metadata or action rows. A selected tier follows the
+  shared form-control height, font and radius inputs (`--lr-theme-form-control-height-<tier>`,
+  `--lr-theme-font-size-*`, `--lr-theme-form-control-radius`); larger icon content still grows the
+  trigger beyond its minimum box. The composed icon button retains its coarse-pointer/no-hover
+  floor of 2.75rem/44px for every tier. Public `--lr-icon-button-*` paint tokens and
+  `::part(base-control)` still reach the native control.
+- With `size` unset, the built-in trigger uses the shared `--lr-icon-button-size` floor
+  (2.25rem by default). Ancestor `--lr-icon-button-size-scope` or `--lr-theme-icon-button-size`
+  inputs keep working; setting `--lr-icon-button-size` on the copy-button host does not cross the
+  composed child's token declaration. Removing `size` or assigning an unsupported value restores
+  that established geometry and ancestor override behavior.
 
 ---

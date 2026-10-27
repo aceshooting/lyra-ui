@@ -16,7 +16,11 @@
 
 ## `lr-page`
 
-The mobile navigation drawer remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
+The mobile navigation drawer enters the browser top layer, escaping fixed headers and transformed
+or clipped ancestors while keeping its host and navigation content in place. It also remains
+interactive when opened outside an existing native `dialog.showModal()`, using an internal native
+modal surface. Escape, close vetoes, and focus return keep their usual behavior; desktop navigation
+remains in the page grid.
 
 Semantic application/page shell with page-wide banner/header/subheader/footer regions, a compact
 menu, primary navigation, main header/content/footer, and an aside. It derives mobile versus

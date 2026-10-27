@@ -977,10 +977,21 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
   };
 
   private observeAllocation(): void {
-    const view = this.ownerDocument.defaultView;
+    const ownerDocument = this.ownerDocument;
+    const view = ownerDocument.defaultView;
     const ResizeObserverConstructor = view?.ResizeObserver;
     if (!ResizeObserverConstructor) return;
-    this.resizeObserver ??= new ResizeObserverConstructor((entries) => this.onResize(entries));
+    if (!this.resizeObserver) {
+      const observer = new ResizeObserverConstructor((entries) => {
+        if (
+          this.resizeObserver !== observer ||
+          !this.isConnected ||
+          this.ownerDocument !== ownerDocument
+        ) return;
+        this.onResize(entries);
+      });
+      this.resizeObserver = observer;
+    }
     this.resizeObserver.observe(this);
     this.observedIndicatorTargets.clear();
     this.observeIndicatorTargets();

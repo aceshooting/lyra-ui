@@ -85,6 +85,42 @@ async function recordScheduledUpdateWarnings(run: () => Promise<void>): Promise<
     .filter((message) => message.includes('scheduled an update'));
 }
 
+it('measures the authored initial axis once and preserves later axis and resize measurements', async () => {
+  const spy = installResizeObserverStub();
+  const el = document.createElement('lr-split-panel');
+  el.orientation = 'vertical';
+  el.position = 25;
+  el.style.cssText = 'inline-size:400px;block-size:200px';
+  const originalRect = Element.prototype.getBoundingClientRect;
+  let reads = 0;
+  Element.prototype.getBoundingClientRect = function (): DOMRect {
+    if (this.getRootNode() === el.shadowRoot && this.getAttribute('part') === 'base') reads += 1;
+    return originalRect.call(this);
+  };
+  try {
+    document.body.append(el);
+    await el.updateComplete;
+    expect(reads, 'one initial base-axis measurement').to.equal(1);
+    expect(el.positionInPixels).to.be.closeTo(50, 1);
+    expect(divider(el).getAttribute('aria-orientation')).to.equal('horizontal');
+    reads = 0;
+    el.orientation = 'horizontal';
+    await el.updateComplete;
+    expect(reads, 'later authored axis change is measured').to.equal(1);
+    expect(el.positionInPixels).to.be.closeTo(100, 1);
+    reads = 0;
+    el.style.inlineSize = '600px';
+    const observer: ResizeObserver = { observe(): void {}, unobserve(): void {}, disconnect(): void {} };
+    spy.callbacks[0]!([], observer);
+    expect(reads, 'observer still measures later allocation').to.equal(1);
+    expect(el.positionInPixels).to.be.closeTo(150, 1);
+  } finally {
+    el.remove();
+    Element.prototype.getBoundingClientRect = originalRect;
+    spy.restore();
+  }
+});
+
 it('does not schedule a Lit update from the initial container measurement', async () => {
   let rendered = false;
   const warnings = await recordScheduledUpdateWarnings(async () => {

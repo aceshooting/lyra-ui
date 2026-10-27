@@ -20,6 +20,49 @@ describe('leaseInlineStyleProperty', () => {
     expect(element.style.getPropertyPriority('overflow')).to.equal('important');
   });
 
+  it('restores an absent declaration after CSSOM canonicalizes a zero-length lease', () => {
+    const lease = leaseInlineStyleProperty(element, 'padding', '0');
+    expect(element.style.padding, 'CSSOM canonicalizes the temporary zero length').to.equal('0px');
+    lease.release();
+    expect(element.style.padding, 'the temporary canonical value is not an external write').to.equal('');
+  });
+
+  it('does not reinterpret a canonicalized lease as external after an unrelated style mutation', async () => {
+    element.style.setProperty('padding', '8px', 'important');
+    let resolutions = 0;
+    const lease = leaseInlineStyleProperty(element, 'padding', '0', '', () => {
+      resolutions += 1;
+      return { value: '0' };
+    });
+    try {
+      element.style.color = 'red';
+      await nextMutationDelivery();
+      expect(resolutions, 'an unrelated declaration must not resolve or reassert the lease').to.equal(0);
+      expect(element.style.padding).to.equal('0px');
+    } finally {
+      lease.release();
+    }
+    expect(element.style.padding).to.equal('8px');
+    expect(element.style.getPropertyPriority('padding')).to.equal('important');
+    expect(element.style.color, 'unrelated authored declarations survive release').to.equal('red');
+  });
+
+  it('retains the latest external declaration and priority when set() writes a canonicalized zero', async () => {
+    element.style.setProperty('padding', '8px', 'important');
+    const lease = leaseInlineStyleProperty(element, 'padding', '4px');
+    try {
+      element.style.setProperty('padding', '12px', 'important');
+      await nextMutationDelivery();
+      expect(element.style.padding, 'the lease still reasserts its temporary value').to.equal('4px');
+      lease.set('0');
+      expect(element.style.padding).to.equal('0px');
+    } finally {
+      lease.release();
+    }
+    expect(element.style.padding).to.equal('12px');
+    expect(element.style.getPropertyPriority('padding')).to.equal('important');
+  });
+
   it('release() is idempotent: a second call never reverts what the page wrote after the first', () => {
     element.style.overflow = 'auto';
     const lease = leaseInlineStyleProperty(element, 'overflow', 'hidden');

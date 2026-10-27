@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './responsive-panel.js';
+import '../page/page.js';
 import type { LyraResponsivePanel } from './responsive-panel.js';
 
 const meta: Meta = {
@@ -47,6 +48,41 @@ export const DockedInline: Story = {
         <button>Apply</button>
       </div>
     </lr-responsive-panel>
+  `,
+};
+
+export const PageAsideOverlay: Story = {
+  name: 'Page aside above a sticky header',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The overlay enters the browser top layer while its host remains in the page aside. Sticky headers and clipped ancestors do not cover its controls.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-page style="--lr-page-header-height: 5rem; --lr-page-aside-width: 20rem;">
+      <button
+        slot="header"
+        @click=${(event: Event) => {
+          const page = (event.currentTarget as HTMLElement).closest('lr-page');
+          page?.querySelector('lr-responsive-panel')?.show();
+        }}
+      >Open settings</button>
+      <h1>Page content</h1>
+      <p>The page header and aside retain their default sticky behavior.</p>
+      <lr-responsive-panel slot="aside" mode="overlay" label="Settings">
+        <h2 slot="header">Settings</h2>
+        <label><input type="checkbox" /> Show archived records</label>
+        <button
+          slot="footer"
+          @click=${(event: Event) => {
+            (event.currentTarget as HTMLElement).closest('lr-responsive-panel')?.hide();
+          }}
+        >Close settings</button>
+      </lr-responsive-panel>
+    </lr-page>
   `,
 };
 

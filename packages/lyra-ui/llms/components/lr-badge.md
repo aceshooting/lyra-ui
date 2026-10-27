@@ -41,6 +41,9 @@ other author-supplied role remain authoritative across updates, hydration, and r
   border, `outlined` drops the fill, `accent` fills solidly with on-loud text, and `plain` drops both
   fill and border while keeping the label color. The border-less appearances use a `transparent`
   border rather than `none`, so switching appearance never changes the badge's layout box.
+  For non-neutral variants, loud-fill text needs 4.5:1 contrast with the quiet tint for
+  `filled`/`filled-outlined`, and with the surrounding surface for `outlined`/`plain`; custom
+  palettes must satisfy the [semantic colour contrast contract](../shared/styles-and-tokens.md#semantic-colour-contrast-contract).
 - `pill: boolean = false` (reflected) — Fully-rounded ends instead of the default
   rounded rectangle; see the visual break above. Since it defaults to `false`, `pill="false"` is not
   a way to switch it off — remove the attribute, or assign `.pill = false`.

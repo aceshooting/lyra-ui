@@ -107,7 +107,7 @@ const DEFAULT_VIEWPORT_MIN_SIZE_PX = 40;
  *   node bounds dwarf the visible viewport the raw rectangle collapses to a few pixels, which
  *   leaves the only pointer-drag handle for panning effectively unclickable; the floor grows it
  *   symmetrically about its own centre so it still points at what the viewport shows. The visible
- *   `viewport` stays exact. Defaults to Lyra's 40px interaction floor; set `0` to opt out.
+ *   `viewport` stays exact. Defaults to the shared `--lr-icon-button-size` floor; set `0` to opt out.
  * @status stable
  * @since 4.0.0
  */

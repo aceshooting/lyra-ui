@@ -1,5 +1,9 @@
 ## `lr-multi-split`
 
+The floating drawer enters the browser top layer within the split's allocation. An intrinsically
+sized split reserves its opening block-size footprint until the drawer closes; definite parent
+sizes, scrolling, and resizing remain live.
+
 The floating pane remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
 
 Resizable panels for dashboard layouts. Direct **light-DOM children are the panels**; a divider is
@@ -3020,6 +3024,10 @@ library-wide `--lr-color-brand-quiet`/`--lr-color-brand`/`--lr-font-weight-semib
 repainted every other element reading them. Unset, each falls back to the token its rule used
 before. `--lr-app-rail-item-current-font-weight` mirrors `<lr-stepper>`'s
 `--lr-stepper-current-font-weight` and `<lr-segmented>`'s `--lr-segmented-selected-font-weight`.
+The default current and hover treatments pair brand loud-fill text with brand quiet fill, which
+requires 4.5:1 contrast. Custom brand inputs and item foreground/background overrides must preserve
+the rendered pair across pointer states; see the
+[semantic colour contrast contract](shared/styles-and-tokens.md#semantic-colour-contrast-contract).
 `--lr-app-rail-item-current-indicator-color` (default `var(--lr-color-brand)`),
 `--lr-app-rail-item-current-indicator-width` (default `var(--lr-size-2px)`), and
 `--lr-app-rail-item-current-indicator-inset-inline` (default `0 auto`; set `auto 0` to place the
@@ -3144,7 +3152,11 @@ instead of stretching across the header row (mirroring `<lr-app-rail-item>`'s ow
 
 ## `lr-responsive-panel`
 
-The overlay presentation remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
+The overlay surface enters the browser top layer, so sticky headers, clipped ancestors, and
+stacking contexts cannot cover it. The host stays in its authored slot, and ordinary inline/overlay
+transitions retain the same body and slotted content. When opened outside an existing native
+`dialog.showModal()`, an internal native modal surface preserves interactivity. Escape, close
+vetoes, and focus return keep their usual behavior.
 
 The same slotted content either docked inline in its containing layout or presented as a
 full-screen/bottom-sheet/side-anchored overlay, depending on the panel's allocated inline size.
@@ -5365,7 +5377,11 @@ per-event aliases so a handler can name one event's type without restating the d
 
 ## `lr-page`
 
-The mobile navigation drawer remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
+The mobile navigation drawer enters the browser top layer, escaping fixed headers and transformed
+or clipped ancestors while keeping its host and navigation content in place. It also remains
+interactive when opened outside an existing native `dialog.showModal()`, using an internal native
+modal surface. Escape, close vetoes, and focus return keep their usual behavior; desktop navigation
+remains in the page grid.
 
 Semantic application/page shell with page-wide banner/header/subheader/footer regions, a compact
 menu, primary navigation, main header/content/footer, and an aside. It derives mobile versus

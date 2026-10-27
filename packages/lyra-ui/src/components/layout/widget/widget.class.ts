@@ -1,4 +1,6 @@
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
+import { ModalSurfaceController } from '../../../internal/modal-surface-controller.js';
+import { modalHostStyles } from '../../../internal/modal-host.styles.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
 import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
@@ -290,7 +292,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, nativeModalCarrierStyles, scrollOverflowFadeStyles, styles];
+  static override styles = [LyraElement.styles, nativeModalCarrierStyles, modalHostStyles, scrollOverflowFadeStyles, styles];
 
   // `collapsed` is installed by `definePersistedProperty()` (the static block below), whose
   // accessor records whether the property was ever assigned -- Lit's own dirty-tracking can't
@@ -404,9 +406,10 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     onCancel: () => { if (this.overlayHandle?.isTopmost()) this.dismissFullscreen(); },
     onUnexpectedClose: () => {
       if (this.overlayHandle?.isTopmost()) this.dismissFullscreen();
-      if (this.fullscreen) this.nativeModal.show();
+      if (this.fullscreen) this.modalSurface.show();
     },
   });
+  private readonly modalSurface = new ModalSurfaceController(this, this.nativeModal);
   private explicitTrigger?: HTMLElement;
   private fullscreenOpener?: HTMLElement | null;
   private readonly labelTextObserver = new AccessibleTextController(this, [], () => {
@@ -503,7 +506,10 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   // preserving focus that is still on one of the visible header controls.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (this.fullscreen) this.nativeModal.show();
+    if (this.fullscreen) {
+      this.overlayHandle?.resume();
+      this.modalSurface.show();
+    }
     // Each row's own content can alter scroll reachability without that row's own border box
     // changing at all -- the primary observers above only watch each row container itself, so
     // every current slotted action / rendered view-toggle rides along on its own controller's
@@ -571,7 +577,8 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
         this.activateFullscreenOverlay();
       }
       this.queueOwnerMicrotask(() => {
-        this.nativeModal.show();
+        if (!this.fullscreen) return;
+        this.modalSurface.show();
         this.overlayHandle?.focusInitial();
       });
     }
@@ -589,7 +596,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     this.resetOwnerRealmWork();
     cancelDeferredFocusReturn(this);
     super.disconnectedCallback();
-    this.nativeModal.hide();
+    this.modalSurface.disconnect();
     this.overlayHandle?.suspend();
   }
 
@@ -624,7 +631,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   }
 
   private activateFullscreenOverlay(): void {
-    this.nativeModal.prepare();
+    this.modalSurface.prepare();
     this.fullscreenOpener = this.explicitTrigger ?? captureFocusReturnOpener(this);
     this.overlayHandle = activateOverlay({
       host: this,
@@ -645,7 +652,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   }
 
   private deactivateFullscreenOverlay(): void {
-    this.nativeModal.hide();
+    this.modalSurface.hide();
     this.nativeModal.prepare(false);
     this.overlayHandle?.deactivate();
     this.overlayHandle = undefined;

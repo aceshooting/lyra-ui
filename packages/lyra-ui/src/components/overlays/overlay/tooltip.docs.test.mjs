@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { runInNewContext } from 'node:vm';
 
 // See ../../forms/time-range/time-range.docs.test.mjs for why this reads raw source/markdown
 // instead of going through wtr: esbuild strips JSDoc/comment text from every `.ts` module before a
@@ -36,4 +37,20 @@ test('the pinned wa-tooltip surface really has only the unnamed default slot', (
     [''],
     'wa-tooltip should declare only the unnamed default slot',
   );
+});
+
+test('the graph virtual-anchor example forwards the viewport rectangle without shifting its origin', () => {
+  const example = llmsOverlays.split('**`showAt()` composed with `lr-graph`**')[1]?.match(/```js\n([\s\S]*?)```/u)?.[1];
+  assert.ok(example, 'expected the authored graph composition example');
+  const rectangle = { left: 37, top: 53, width: 84, height: 26 };
+  class Element {
+    matches() { return true; }
+    getBoundingClientRect() { return rectangle; }
+  }
+  let click, anchor;
+  const graph = { addEventListener(type, listener) { assert.equal(type, 'click'); click = listener; } };
+  const detail = { showAt(value) { anchor = value; } };
+  runInNewContext(example, { Element, document: { querySelector: tag => tag === 'lr-graph' ? graph : detail } });
+  click({ composedPath: () => [new Element()] });
+  assert.deepEqual({ ...anchor }, { x: rectangle.left, y: rectangle.top, width: rectangle.width, height: rectangle.height });
 });

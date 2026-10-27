@@ -143,6 +143,91 @@ function installOwnerMatchMediaStub(
   };
 }
 
+it('skips host allocation reads without a usable container orientation breakpoint', async () => {
+  const spy = installResizeObserverSpy({ inert: true });
+  try {
+    for (const breakpoint of [undefined, 'invalid', '500'] as const) {
+      const el = document.createElement('lr-stepper');
+      el.steps = steps();
+      el.orientationBreakpoint = breakpoint;
+      if (breakpoint === '500') el.orientationBreakpointBasis = 'viewport';
+      const originalRect = el.getBoundingClientRect;
+      let reads = 0;
+      el.getBoundingClientRect = (): DOMRect => {
+        reads += 1;
+        return originalRect.call(el);
+      };
+      try {
+        document.body.append(el);
+        await el.updateComplete;
+        expect(reads, `unused host seed for ${String(breakpoint)}`).to.equal(0);
+        el.remove();
+        document.body.append(el);
+        await el.updateComplete;
+        expect(reads, 'reconnect also skips the unused seed').to.equal(0);
+      } finally {
+        el.remove();
+      }
+    }
+  } finally {
+    spy.restore();
+  }
+});
+
+it('uses container width only for overflow when orientation does not consume allocation', async () => {
+  const spy = installResizeObserverSpy({ inert: true });
+  try {
+    for (const viewport of [false, true]) {
+      const el = document.createElement('lr-stepper');
+      el.steps = steps();
+      if (viewport) {
+        el.orientationBreakpoint = '99999';
+        el.orientationBreakpointBasis = 'viewport';
+      }
+      try {
+        document.body.append(el);
+        await el.updateComplete;
+        const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+        const clientWidth = Object.getOwnPropertyDescriptor(Element.prototype, 'clientWidth')!.get!;
+        const scrollWidth = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollWidth')!.get!;
+        let widthReads = 0;
+        let overflowReads = 0;
+        Object.defineProperties(base, {
+          clientWidth: { configurable: true, get(): number { widthReads += 1; return clientWidth.call(base) as number; } },
+          scrollWidth: { configurable: true, get(): number { overflowReads += 1; return scrollWidth.call(base) as number; } },
+        });
+        el.narrowOrientation = 'horizontal';
+        el.orientation = 'vertical';
+        await el.updateComplete;
+        expect(overflowReads, 'the independent overflow controller still measures').to.be.greaterThan(0);
+        expect(widthReads, 'no extra orientation allocation read').to.equal(overflowReads);
+        expect(el.effectiveOrientation).to.equal(viewport ? 'horizontal' : 'vertical');
+      } finally {
+        el.remove();
+      }
+    }
+  } finally {
+    spy.restore();
+  }
+});
+
+it('seeds a container breakpoint assigned after connection before its first render', async () => {
+  const spy = installResizeObserverSpy({ inert: true });
+  const el = document.createElement('lr-stepper');
+  el.style.cssText = 'display:block;inline-size:300px';
+  el.steps = steps();
+  try {
+    document.body.append(el);
+    el.orientationBreakpoint = 500;
+    await el.updateComplete;
+    expect(el.effectiveOrientation).to.equal('vertical');
+    expect(el.getAttribute('data-effective-orientation')).to.equal('vertical');
+  } finally {
+    el.remove();
+    spy.restore();
+  }
+});
+
 describe("lr-stepper", () => {
   it("keeps its snapshot when the same steps array is rebound", async () => {
     const source = steps();

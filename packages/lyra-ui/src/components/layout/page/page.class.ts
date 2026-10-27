@@ -1,4 +1,5 @@
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
+import { ModalSurfaceController } from '../../../internal/modal-surface-controller.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
 import {
   html,
@@ -62,6 +63,8 @@ export interface LyraPageEventMap {
  * from its own allocated inline size. A single static navigation subtree participates in the
  * desktop grid and is promoted in place to a modal mobile drawer, so assigned nodes, component
  * instances, focus, form state, and scroll state are never cloned or replaced at a breakpoint.
+ * The mobile drawer enters the browser top layer, remaining above fixed headers and outside
+ * ancestor clipping or transformed containing blocks while the Page host stays in place.
  *
  * Each instance owns unique main/drawer/navigation IDs. Its skip link therefore targets its own
  * main landmark even when several Pages coexist. The default skip and navigation controls are
@@ -241,6 +244,7 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     | string
     | null = this.getAttribute('tabindex') ?? '-1';
   private resizeObserver?: ResizeObserver;
+  private allocationMeasured = false;
   private readonly allocationFrame = new OwnedFrame(this);
   private resizeView?: Window;
   private overlayHandle?: OverlayHandle;
@@ -248,9 +252,14 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     onCancel: () => { if (this.overlayHandle?.isTopmost()) this.hideNavigation(); },
     onUnexpectedClose: () => {
       if (this.overlayHandle?.isTopmost()) this.hideNavigation();
-      if (this.navOpen && this.view === 'mobile') this.nativeModal.show();
+      if (this.navOpen && this.view === 'mobile') this.modalSurface.show();
     },
   });
+  private readonly modalSurface = new ModalSurfaceController(
+    this,
+    this.nativeModal,
+    () => this.shadowRoot?.querySelector<HTMLElement>('[part="dialog-wrapper"]') ?? null,
+  );
   private navigationTriggerOwner?: HTMLElement;
   /** Whatever held focus outside the drawer when it opened -- the return target of a drawer opened
    *  from script, and the deferred return's candidate when no toggle owns the open. */
@@ -270,13 +279,15 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     // A URL fragment cannot resolve to an id inside a shadow root. Make the host the real,
     // per-instance native fragment target while the click handler below moves focus to the
     // semantic main landmark inside. Preserve an author-supplied host id/tabindex.
+    this.allocationMeasured = false;
     this.measureAllocation();
     this.observeAllocation();
     if (this.hasUpdated && this.view === 'mobile' && this.navOpen) {
       if (this.overlayHandle?.isActive()) this.overlayHandle.resume();
       else this.syncOverlay();
       queueMicrotask(() => {
-        this.nativeModal.show();
+        if (!this.isConnected || this.view !== 'mobile' || !this.navOpen) return;
+        this.modalSurface.show();
         this.overlayHandle?.focusInitial();
       });
     }
@@ -285,7 +296,7 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
   }
 
   override disconnectedCallback(): void {
-    this.nativeModal.hide();
+    this.modalSurface.disconnect();
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
     this.allocationFrame.cancel();
@@ -299,15 +310,16 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
 
   protected override firstUpdated(changed: PropertyValues): void {
     super.firstUpdated(changed);
-    this.measureAllocation();
-    this.observeAllocation();
+    // An empty shadow tree may have no intrinsic width until its slots render.
+    // A positive connection measurement already classified the first render.
+    if (!this.allocationMeasured) this.measureAllocation();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (this.view === 'mobile' && this.navOpen && !this.overlayHandle) this.nativeModal.prepare();
+    if (this.view === 'mobile' && this.navOpen && !this.overlayHandle) this.modalSurface.prepare();
     if (this.view !== 'mobile' || !this.navOpen) {
-      this.nativeModal.hide();
+      this.modalSurface.hide();
       this.nativeModal.prepare(false);
     }
     if (changed.has('fragmentTargetId') && !this.fragmentTargetId) {
@@ -320,7 +332,7 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
-    if (this.view === 'mobile' && this.navOpen) this.nativeModal.show();
+    if (this.view === 'mobile' && this.navOpen) this.modalSurface.show();
     // Idrefs do not cross the shadow boundary: reflect them as element references on the dialog owner.
     const describedBy = this.view === 'mobile' && this.navOpen ? this.getAttribute('aria-describedby') : null;
     for (const dialog of this.renderRoot.querySelectorAll<HTMLElement>('[part="drawer"], [data-native-modal-carrier]')) {
@@ -381,7 +393,10 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
 
   private measureAllocation(): void {
     const width = this.getBoundingClientRect().width;
-    if (width > 0) this.applyMeasuredInlineSize(width);
+    if (width > 0) {
+      this.allocationMeasured = true;
+      this.applyMeasuredInlineSize(width);
+    }
   }
 
   /** Applies an authoritative allocation measurement. Kept separate from ResizeObserver delivery

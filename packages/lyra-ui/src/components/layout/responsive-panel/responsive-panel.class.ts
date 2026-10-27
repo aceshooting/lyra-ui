@@ -1,4 +1,5 @@
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
+import { ModalSurfaceController } from '../../../internal/modal-surface-controller.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -72,8 +73,8 @@ export interface LyraResponsivePanelEventMap {
  * `mode="auto"` (the default) updates the
  * effective presentation without unmounting or re-creating the slotted
  * content: inline and overlay presentation share the exact same shadow DOM
- * structure (only a css class, and the overlay-only `role`/`aria-modal`
- * attributes and backdrop element, differ), so lit-html's diffing keeps
+ * structure (only a css class, top-layer presentation, overlay-only `role`/`aria-modal`
+ * attributes, and backdrop element differ), so lit-html's diffing keeps
  * `[part="body"]` and its `<slot>` as the same DOM node across the
  * transition -- scroll position and focus inside the slotted content survive
  * it for free. When an open inline panel becomes modal, focus already inside
@@ -91,6 +92,8 @@ export interface LyraResponsivePanelEventMap {
  * The overlay presentation uses the library's shared overlay coordinator for
  * focus trapping, Escape/backdrop dismissal, inerting, and stack ordering,
  * while retaining this component's own responsive rendering and close event.
+ * Its surface enters the browser top layer, so sticky headers and ancestor
+ * stacking contexts cannot cover it. The host stays in its authored slot.
  *
  * Accessible name (overlay presentation only -- the inline presentation has
  * no dialog semantics to name), in priority order: if the host element itself
@@ -225,9 +228,14 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
     onCancel: () => { if (this.overlayHandle?.isTopmost()) this.close('escape'); },
     onUnexpectedClose: () => {
       if (this.overlayHandle?.isTopmost()) this.close('escape');
-      if (this.open) this.nativeModal.show();
+      if (this.open) this.modalSurface.show();
     },
   });
+  private readonly modalSurface = new ModalSurfaceController(
+    this,
+    this.nativeModal,
+    () => this.shadowRoot?.querySelector<HTMLElement>('[part="base"]') ?? null,
+  );
   private headerObserver?: MutationObserver;
   private headerObserverDocument?: Document;
   private headerObserverGeneration = 0;
@@ -251,7 +259,11 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
     if (this.isFirstUpdate) {
       this.headingText = this.detectHeadingText();
     }
-    if (!this.isFirstUpdate && changed.has('overlayBreakpoint') && this.isConnected) {
+    if (
+      !this.isFirstUpdate &&
+      (changed.has('overlayBreakpoint') || changed.has('mode')) &&
+      this.isConnected
+    ) {
       this.measureAllocation();
     }
     if (
@@ -306,7 +318,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   // mirrors lr-dialog's identical ordering rationale.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (this.open) this.nativeModal.show();
+    this.showOverlaySurface();
     if (!this.isFirstUpdate && changed.has('resolvedMode')) {
       this.emit('lr-mode-change', {
         mode: this.resolvedMode,
@@ -336,7 +348,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
         this.activateOverlayChrome();
       }
       this.queueOwnerMicrotask(() => {
-        this.nativeModal.show();
+        this.showOverlaySurface();
         this.overlayHandle?.focusInitial();
       });
     }
@@ -361,7 +373,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
     resizeView?.removeEventListener('resize', this.onWindowResize);
     cancelDeferredFocusReturn(this);
     super.disconnectedCallback();
-    this.nativeModal.hide();
+    this.modalSurface.disconnect();
     this.overlayHandle?.suspend();
   }
 
@@ -372,10 +384,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
     this.resizeView?.removeEventListener('resize', this.onWindowResize);
     this.resizeView = undefined;
     this.resetOwnerRealmWork();
-    if (this.isConnected) {
-      this.measureAllocation();
-      this.observeAllocation();
-    }
+    // Connection in the new document owns measurement and observer setup.
   }
 
   private resetOwnerRealmWork(): void {
@@ -403,7 +412,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   }
 
   private activateOverlayChrome(): void {
-    this.nativeModal.prepare();
+    this.modalSurface.prepare();
     this.overlayHandle = activateOverlay({
       host: this,
       panel: () =>
@@ -422,10 +431,17 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   }
 
   private deactivateOverlayChrome(restoreFocus = true): void {
-    this.nativeModal.hide();
+    this.modalSurface.hide();
     this.nativeModal.prepare(false);
     this.overlayHandle?.deactivate({ restoreFocus });
     this.overlayHandle = undefined;
+  }
+
+  private showOverlaySurface(): void {
+    if (!this.isConnected || !this.open || this.effectiveMode !== 'overlay') return;
+    // Reconcile registration against the newly rendered surface before using stack order.
+    this.overlayHandle?.resume();
+    this.modalSurface.show();
   }
 
   private observeAllocation(): void {
@@ -455,6 +471,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   private readonly onWindowResize = (): void => this.measureAllocation();
 
   private measureAllocation(): void {
+    if (this.mode !== 'auto') return;
     const inlineSize = this.getBoundingClientRect().width;
     if (inlineSize > 0) this.applyMeasuredInlineSize(inlineSize);
   }

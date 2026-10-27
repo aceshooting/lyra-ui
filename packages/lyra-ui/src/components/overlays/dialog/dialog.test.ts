@@ -2054,10 +2054,13 @@ it('keeps the z-index fallback usable when browser top-layer methods reject', as
   topLayer.showPopover = () => {
     throw new DOMException('Top layer unavailable', 'NotSupportedError');
   };
+  await el.show();
   expect(() => {
     (el as unknown as { enterTopLayer(): void }).enterTopLayer();
   }).to.not.throw();
-  expect(el.getAttribute('popover')).to.equal('manual');
+  expect(el.hasAttribute('popover'), 'a rejected promotion leaves no hidden popover attribute').to.equal(false);
+  const panel = el.shadowRoot!.querySelector<HTMLElement>('[part~="panel"]')!;
+  expect(panel.getBoundingClientRect().width > 0, 'the open fallback remains rendered').to.equal(true);
 
   topLayer.matches = () => true;
   topLayer.hidePopover = () => {

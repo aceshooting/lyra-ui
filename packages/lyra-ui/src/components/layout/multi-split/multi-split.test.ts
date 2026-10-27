@@ -18,6 +18,64 @@ import { styles } from "./multi-split.styles.js";
 
 expectLocaleFallback('ar-EG', ['resizeDivider', 'resizeValuePercent']);
 
+it('skips host allocation seeds without a container responsive feature', async () => {
+  const OriginalObserver = window.ResizeObserver;
+  class QuietObserver extends OriginalObserver {
+    override observe(): void {}
+  }
+  window.ResizeObserver = QuietObserver;
+  try {
+    for (const breakpoint of [undefined, 'invalid', '500'] as const) {
+      const el = document.createElement('lr-multi-split');
+      el.innerHTML = '<div>A</div><div>B</div>';
+      el.orientationBreakpoint = breakpoint;
+      if (breakpoint === '500') el.orientationBreakpointBasis = 'viewport';
+      const originalRect = el.getBoundingClientRect;
+      let reads = 0;
+      el.getBoundingClientRect = (): DOMRect => {
+        reads += 1;
+        return originalRect.call(el);
+      };
+      try {
+        document.body.append(el);
+        await el.updateComplete;
+        expect(reads, `unused host seed for ${String(breakpoint)}`).to.equal(0);
+        el.remove();
+        document.body.append(el);
+        await el.updateComplete;
+        expect(reads, 'reconnect also skips the unused seed').to.equal(0);
+      } finally {
+        el.remove();
+      }
+    }
+  } finally {
+    window.ResizeObserver = OriginalObserver;
+  }
+});
+
+it('seeds container responsive properties assigned after connection before its first render', async () => {
+  const OriginalObserver = window.ResizeObserver;
+  class QuietObserver extends OriginalObserver {
+    override observe(): void {}
+  }
+  window.ResizeObserver = QuietObserver;
+  const el = document.createElement('lr-multi-split');
+  el.style.cssText = 'inline-size:300px;block-size:200px';
+  el.innerHTML = '<div>A</div><div>B</div>';
+  try {
+    document.body.append(el);
+    el.orientationBreakpoint = 500;
+    el.collapse = 'start';
+    await el.updateComplete;
+    expect(el.effectiveOrientation).to.equal('vertical');
+    expect(el.collapseState).to.equal('floating');
+    expect(el.getAttribute('data-collapse-state')).to.equal('floating');
+  } finally {
+    el.remove();
+    window.ResizeObserver = OriginalObserver;
+  }
+});
+
 it('renders divider ranges from the update measurement without a layout read', async () => {
   const el = await fixture<LyraMultiSplit>(html`
     <lr-multi-split style="inline-size:400px;block-size:160px"><div>A</div><div>B</div></lr-multi-split>

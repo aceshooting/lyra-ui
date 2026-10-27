@@ -14842,6 +14842,12 @@
               "state": "populated"
             },
             {
+              "file": "src/components/utility/copy-button/copy-button-size.test.ts",
+              "test": "keeps localized naming, focused keyboard copy and disabled gating at the smallest tier",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/utility/copy-button/copy-button.test.ts",
               "test": "forwards a host aria-label to the internal semantic button",
               "target": "el",
@@ -14961,7 +14967,7 @@
           "evidence": [
             {
               "file": "src/components/utility/copy-button/copy-button.class.ts",
-              "line": 570,
+              "line": 587,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -15001,6 +15007,7 @@
         "tests": [
           "src/components/utility/copy-button/copy-button-composition.test.ts",
           "src/components/utility/copy-button/copy-button-remediation.test.ts",
+          "src/components/utility/copy-button/copy-button-size.test.ts",
           "src/components/utility/copy-button/copy-button.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -17107,7 +17114,9 @@
           "src/components/overlays/dialog/confirm.test.ts",
           "src/components/overlays/dialog/dialog-close-composition.test.ts",
           "src/components/overlays/dialog/dialog-content-boundaries.test.ts",
+          "src/components/overlays/dialog/dialog-exit-layering.test.ts",
           "src/components/overlays/dialog/dialog-remediation.test.ts",
+          "src/components/overlays/dialog/dialog-reparent-layering.test.ts",
           "src/components/overlays/dialog/dialog-tooltip-tab.test.ts",
           "src/components/overlays/dialog/dialog.test.ts",
           "src/components/overlays/dialog/native-modal.test.ts"
@@ -36139,6 +36148,7 @@
         "tests": [
           "src/components/layout/multi-split/multi-split-collapse-api.test.ts",
           "src/components/layout/multi-split/multi-split-coverage.test.ts",
+          "src/components/layout/multi-split/multi-split-modal-layering.test.ts",
           "src/components/layout/multi-split/multi-split-native-close.test.ts",
           "src/components/layout/multi-split/multi-split-remediation.test.ts",
           "src/components/layout/multi-split/multi-split-trigger.test.ts",
@@ -36708,6 +36718,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/navigation-menu/navigation-menu-allocation.test.ts",
+          "src/components/layout/navigation-menu/navigation-menu-observer.test.ts",
           "src/components/layout/navigation-menu/navigation-menu.test.ts",
           "src/components/layout/navigation-menu/top-layer.test.ts"
         ],
@@ -38195,8 +38206,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/page/page.test.ts",
-              "test": "uses the shared mobile overlay lifecycle for Escape, scroll lock, and focus return",
+              "file": "src/components/layout/page/page-top-layer.test.ts",
+              "test": "keeps mobile navigation above fixed headers and outside transformed ancestor bounds",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -38228,8 +38239,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/page/page.test.ts",
-              "test": "localizes the skip link, navigation landmark, and open/close toggle names",
+              "file": "src/components/layout/page/page-allocation-lifecycle.test.ts",
+              "test": "${name} measures its initial allocation once and reconnects with the current width",
               "kind": "320px allocation test signal"
             }
           ]
@@ -38333,7 +38344,9 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/page/page-allocation-lifecycle.test.ts",
           "src/components/layout/page/page-reconcile-cost.test.ts",
+          "src/components/layout/page/page-top-layer.test.ts",
           "src/components/layout/page/page.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -45586,8 +45599,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/responsive-panel/responsive-panel.test.ts",
-              "test": "anchors the start/end overlay shapes to the inline-start/inline-end edge and flips under RTL without a :dir() escape hatch",
+              "file": "src/components/layout/responsive-panel/responsive-panel-top-layer.test.ts",
+              "line": 9,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -45712,6 +45725,7 @@
           "src/components/layout/responsive-panel/native-modal-premounted.test.ts",
           "src/components/layout/responsive-panel/native-modal-recovery-lifecycle.test.ts",
           "src/components/layout/responsive-panel/native-modal.test.ts",
+          "src/components/layout/responsive-panel/responsive-panel-top-layer.test.ts",
           "src/components/layout/responsive-panel/responsive-panel.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -50318,7 +50332,7 @@
           "evidence": [
             {
               "file": "src/components/layout/split-panel/split-panel.test.ts",
-              "line": 193,
+              "line": 229,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -59050,6 +59064,7 @@
           "src/components/utility/tour/positioning-strategy.test.ts",
           "src/components/utility/tour/svg-backdrop.test.ts",
           "src/components/utility/tour/tour-admission-and-carrier-boundaries.test.ts",
+          "src/components/utility/tour/tour-reparent-layering.test.ts",
           "src/components/utility/tour/tour.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -61702,6 +61717,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/widget/viewport-modal-layering.test.ts",
           "src/components/layout/widget/widget-remediation.test.ts",
           "src/components/layout/widget/widget.test.ts"
         ],

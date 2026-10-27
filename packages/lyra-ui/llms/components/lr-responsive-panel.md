@@ -16,7 +16,11 @@
 
 ## `lr-responsive-panel`
 
-The overlay presentation remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
+The overlay surface enters the browser top layer, so sticky headers, clipped ancestors, and
+stacking contexts cannot cover it. The host stays in its authored slot, and ordinary inline/overlay
+transitions retain the same body and slotted content. When opened outside an existing native
+`dialog.showModal()`, an internal native modal surface preserves interactivity. Escape, close
+vetoes, and focus return keep their usual behavior.
 
 The same slotted content either docked inline in its containing layout or presented as a
 full-screen/bottom-sheet/side-anchored overlay, depending on the panel's allocated inline size.

@@ -1,5 +1,6 @@
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
+import { ModalSurfaceController } from '../../../internal/modal-surface-controller.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -384,6 +385,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
       if (this.open) this.enterTopLayer();
     },
   });
+  private readonly modalPresentation = new ModalSurfaceController(this, this.nativeModal);
   /** Set by `deactivateOverlay()` when a close defers releasing the scroll lock. Flushed once the
    *  exit animation actually finishes (`settleTransition()`'s `'lr-after-hide'` branch), or right
    *  away on disconnect/reopen, since nothing is left to visually protect in either case. */
@@ -445,6 +447,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
         this.focusReturnOpener = captureFocusReturnOpener(this);
         if (this.isConnected && this.modalSurface) this.activateOverlay();
       } else {
+        this.modalPresentation.beginClose();
         // A nonmodal surface has no synchronous return, so focus left inside it is returned here.
         const returnsFocus =
           this.overlay !== undefined || composedContains(this, deepActiveElement(this.ownerDocument));
@@ -527,8 +530,8 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     this.resetHeadingObserver();
     this.resetBodyOverflowObserver();
     super.disconnectedCallback();
+    this.modalPresentation.disconnect();
     this.overlay?.suspend();
-    this.nativeModal.hide();
     cancelDeferredFocusReturn(this);
     // Transient exit-animation state never survives a detach: a reattached dialog re-runs its
     // own lifecycle from scratch, and a pending after-event must not fire for a transition the
@@ -946,25 +949,12 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
    * `z-index` in the stylesheet remains as the fallback for a user agent without popover support.
    */
   protected enterTopLayer(): void {
-    if (!this.isConnected) return;
-    if (this.nativeModal.show()) return;
-    if (typeof this.showPopover !== 'function') return;
-    if (this.getAttribute('popover') !== 'manual') this.setAttribute('popover', 'manual');
-    try {
-      if (!this.isTopLayer()) this.showPopover();
-    } catch {
-      // A user agent that rejects the call leaves the dialog on the z-index fallback path.
-    }
+    if (this.externalModalDepth === 0) this.overlay?.resume();
+    this.modalPresentation.show();
   }
 
   protected leaveTopLayer(): void {
-    this.nativeModal.hide();
-    if (typeof this.hidePopover !== 'function') return;
-    try {
-      if (this.isTopLayer()) this.hidePopover();
-    } catch {
-      // Already hidden, or never promoted.
-    }
+    this.modalPresentation.hide();
   }
 
   private onNativeCancel = (event: Event): void => {
@@ -973,14 +963,6 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     const panel = this.renderRoot.querySelector('[part~="panel"]') ?? this;
     this.requestClose('keyboard', 'escape', panel);
   };
-
-  private isTopLayer(): boolean {
-    try {
-      return this.matches(':popover-open');
-    } catch {
-      return false;
-    }
-  }
 
   private onBackdropClick = (): void => {
     if (!this.lightDismiss) return;

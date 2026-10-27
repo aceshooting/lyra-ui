@@ -3450,6 +3450,7 @@ export interface LyraComponentTypeMap {
       | 'hoist'
       | 'locale'
       | 'role'
+      | 'size'
       | 'strings'
       | 'successLabel'
       | 'tooltip'

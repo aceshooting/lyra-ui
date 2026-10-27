@@ -41,6 +41,22 @@ export const styles = css`
     --_lr-icon-button-color-hover-default: var(--_lr-copy-button-color-hover);
     --_lr-icon-button-color-active-default: var(--_lr-copy-button-color-active);
   }
+  /* Select the shared ladder only when requested. The scope input is re-resolved by the composed
+     icon button's own token layer, including its coarse-pointer floor. Leave the public radius
+     token free for consumer paint overrides and leave custom default-slot triggers untouched. */
+  :host([size='2xs']) [part~='base'],
+  :host([size='xs']) [part~='base'],
+  :host([size='s']) [part~='base'],
+  :host([size='small']) [part~='base'],
+  :host([size='m']) [part~='base'],
+  :host([size='medium']) [part~='base'],
+  :host([size='l']) [part~='base'],
+  :host([size='large']) [part~='base'],
+  :host([size='xl']) [part~='base'] {
+    --lr-icon-button-size-scope: var(--lr-form-control-height);
+    --_lr-icon-button-radius-default: var(--lr-form-control-radius);
+    font-size: var(--lr-form-control-font-size);
+  }
   /* The outcome colours repaint the glyph while the composed control keeps its own hover/press
      background. Unlike the resting rule above (which only ever sets the PRIVATE
      --_lr-icon-button-color*-default tier), these declare the PUBLIC --lr-icon-button-color* token

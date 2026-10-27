@@ -86,6 +86,7 @@ interface OverlayEntry {
 
 export interface OverlayStackEntrySnapshot {
   readonly host: HTMLElement;
+  readonly order: number;
   readonly modal: boolean;
   readonly modalRoot?: () => HTMLElement | null;
   readonly auxiliaryRoots?: () => readonly HTMLElement[];
@@ -296,6 +297,7 @@ function snapshotFor(state: OverlayDocumentState): OverlayStackSnapshot {
   return {
     entries: state.stack.map((entry) => ({
       host: entry.options.host,
+      order: entry.stackOrder,
       modal: entry.options.modal,
       modalRoot: entry.options.modalRoot,
       auxiliaryRoots: entry.options.auxiliaryRoots,

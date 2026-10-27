@@ -51,7 +51,8 @@ token editor. The former camel-case `autoCorrect` property is removed; use the n
 lowercase IDL. `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected —
 same scale as `lr-input`'s `size`, scaling the input-wrapper's row height and text size across six
 tiers, and both `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large` are accepted; the remove
-button's hit area stays fixed at `40px` across all sizes), `pill` (reflected, default `false` —
+button retains the shared `--lr-icon-button-size` minimum hit area across all sizes), `pill`
+(reflected, default `false` —
 rounds the token row's corners by changing the private radius default to `--lr-radius-pill`; the
 chips share the public `--lr-token-input-radius` hook with the row, and an inherited or direct
 value remains authoritative),
@@ -167,8 +168,8 @@ text the part is hidden and no glyph is painted.
 `--lr-token-input-control-min-height` floor only; set it to a length to both floor and cap the row,
 e.g. to pixel-match a sibling field in the same toolbar row). An uncapped row grows as tokens wrap.
 A capped row explicitly clips inline overflow and becomes a block-axis scrollport, preserving every
-wrapped token and 40px-floored remove/edit action instead of clipping them; keyboard focus scrolls
-the destination token into view. `--lr-token-input-input-inline-size`
+wrapped token and remove/edit action with its shared `--lr-icon-button-size` floor instead of
+clipping them; keyboard focus scrolls the destination token into view. `--lr-token-input-input-inline-size`
 (the editable input's `flex-basis` inside the wrapped token row; undeclared by default, falling back
 inline to `--lr-size-8rem`), `--lr-token-input-min-input-inline-size` (default `--lr-size-4rem`, the
 floor that input keeps once tokens have consumed the row), and `--lr-token-input-editor-inline-size`

@@ -319,7 +319,7 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
     this.catalogPicker.setOpen(next);
   }
   /** Visual size on the shared six-tier control ladder. `small`/`medium`/`large` alias
-   *  `s`/`m`/`l`; the preview action keeps the library-wide 40px minimum hit area. */
+   *  `s`/`m`/`l`; the preview action keeps the shared --lr-icon-button-size minimum hit area. */
   @property({ reflect: true }) size: LyraSize = 'm';
 
   private get activeIndex(): number { return this.catalogPicker.activeIndex; }

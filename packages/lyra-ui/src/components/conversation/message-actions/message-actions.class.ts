@@ -220,9 +220,9 @@ export interface LyraMessageActionsEventMap {
  *
  * The toolbar has no `size`/`compact` property of its own: every built-in action composes
  * `<lr-icon-button>` (the embedded `lr-copy-button` does the same one level deeper), so each one's
- * hit area is that component's shared `--lr-icon-button-size` floor (2.5rem/40px), same as
- * everywhere else in the library. For a dense action row where 40px per action is more than the
- * layout can afford, lower `--lr-icon-button-size-scope` (the subtree-scoped input) or
+ * hit area follows that component's shared `--lr-icon-button-size` floor, same as
+ * everywhere else in the library. For a denser action row, lower
+ * `--lr-icon-button-size-scope` (the subtree-scoped input) or
  * `--lr-theme-icon-button-size` (the application-wide one) -- NOT `--lr-icon-button-size` itself,
  * which every `LyraElement` re-declares on its own `:host` and so never reaches a composed child
  * (`internal/tokens.test.ts` proves this) -- on this element or any ancestor of it;

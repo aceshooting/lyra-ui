@@ -16,6 +16,10 @@
 
 ## `lr-multi-split`
 
+The floating drawer enters the browser top layer within the split's allocation. An intrinsically
+sized split reserves its opening block-size footprint until the drawer closes; definite parent
+sizes, scrolling, and resizing remain live.
+
 The floating pane remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
 
 Resizable panels for dashboard layouts. Direct **light-DOM children are the panels**; a divider is

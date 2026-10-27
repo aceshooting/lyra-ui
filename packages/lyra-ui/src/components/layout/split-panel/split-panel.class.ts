@@ -251,6 +251,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
   private _primary?: LyraSplitPanelPrimary;
   private _snapThreshold = DEFAULT_SNAP_THRESHOLD;
   private availableSize = 0;
+  private initialUpdate = true;
   private measuredConstraintBounds = { min: 0, max: 0 };
   private readonly resizeWriteGuard = new VetoWriteGuard();
   private resizeRequestSequence = 0;
@@ -470,10 +471,11 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
     if (changed.has('disabled') && this.disabled) this.stopDragging();
-    if (changed.has('orientation') || changed.has('vertical')) {
+    if (!this.initialUpdate && (changed.has('orientation') || changed.has('vertical'))) {
       this.stopDragging();
       this.measureAndSynchronize(false);
     }
+    this.initialUpdate = false;
   }
 
   private requestSynchronizedUpdate(oldPosition: number, oldPixels: number | undefined): void {

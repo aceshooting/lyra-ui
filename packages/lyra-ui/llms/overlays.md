@@ -1856,8 +1856,8 @@ later text renders normally.
   leaves the tooltip entirely under programmatic control. Note the name collision: this string
   property and the `trigger` _slot_ are different things — the slot holds the element, this property
   says which of its interactions count.
-- `manual: boolean = false` — equivalent to including `manual` in `trigger`; kept because it reads
-  better on a tooltip that is only ever driven from script
+- `manual: boolean = false` (attribute `manual`, not reflected) — equivalent to including `manual`
+  in `trigger`; use `<lr-tooltip manual>` for a tooltip driven only from script
 - `showDelay: number = 150` (attribute `show-delay`) and `hideDelay: number = 0` (attribute
   `hide-delay`) — independent milliseconds values, so a tooltip can linger after the pointer leaves without also
   being slow to appear; `hideDelay` `0` closes the tooltip at once. A non-finite value falls back to the default; a negative one clamps to
@@ -2020,7 +2020,7 @@ or cross-document adoption cancels the old realm, and reconnect creates fresh ob
 `lr-popover` when click-to-open ownership is desired.
 
 **`showAt()` composed with `lr-graph`** — anchoring a popover to a clicked graph node. Note:
-`lr-graph.getNodePosition()` and the `lr-node-click` event's `{ x, y }` are in the graph's own
+`lr-graph.getNodePosition()` and the `lr-node-activate` event's `{ x, y }` are in the graph's own
 _local drawing space_ (pre pan/zoom), not viewport pixels, so they can't be passed to `showAt()`
 directly. For `renderer="svg"` (the default), read the clicked node's own rendered element instead,
 whose `getBoundingClientRect()` is already viewport-relative; for `renderer="canvas"` (no per-node
@@ -2037,7 +2037,7 @@ graph.addEventListener("click", (event) => {
   if (!nodeEl) return; // clicked empty canvas/background, not a node
   const rect = nodeEl.getBoundingClientRect();
   detail.showAt({
-    x: rect.left + rect.width / 2,
+    x: rect.left,
     y: rect.top,
     width: rect.width,
     height: rect.height,
@@ -2652,6 +2652,9 @@ other author-supplied role remain authoritative across updates, hydration, and r
   border, `outlined` drops the fill, `accent` fills solidly with on-loud text, and `plain` drops both
   fill and border while keeping the label color. The border-less appearances use a `transparent`
   border rather than `none`, so switching appearance never changes the badge's layout box.
+  For non-neutral variants, loud-fill text needs 4.5:1 contrast with the quiet tint for
+  `filled`/`filled-outlined`, and with the surrounding surface for `outlined`/`plain`; custom
+  palettes must satisfy the [semantic colour contrast contract](shared/styles-and-tokens.md#semantic-colour-contrast-contract).
 - `pill: boolean = false` (reflected) — Fully-rounded ends instead of the default
   rounded rectangle; see the visual break above. Since it defaults to `false`, `pill="false"` is not
   a way to switch it off — remove the attribute, or assign `.pill = false`.

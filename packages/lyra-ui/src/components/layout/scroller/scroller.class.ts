@@ -93,6 +93,7 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
   private resizeObserver?: ResizeObserver;
   private resizeObserverDocument?: Document;
   private ownerRealmGeneration = 0;
+  private edgeUpdatePending = false;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -155,6 +156,7 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
 
   private resetOwnerRealmWork(): void {
     this.ownerRealmGeneration += 1;
+    this.edgeUpdatePending = false;
     this.cancelScrollFrame();
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
@@ -165,7 +167,8 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
   private scheduleEdgeUpdate(): void {
     const ownerDocument = this.ownerDocument;
     const ownerWindow = ownerDocument.defaultView;
-    if (!ownerWindow || !this.isConnected) return;
+    if (!ownerWindow || !this.isConnected || this.edgeUpdatePending) return;
+    this.edgeUpdatePending = true;
     const generation = this.ownerRealmGeneration;
     ownerWindow.queueMicrotask(() => {
       if (
@@ -175,6 +178,7 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
       ) {
         return;
       }
+      this.edgeUpdatePending = false;
       this.updateEdges();
     });
   }

@@ -320,11 +320,8 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   private resizeObserverGeneration = 0;
   private pendingStepFocus?: { stepId: string; index: number };
   @query('[part="base"]') private baseEl?: HTMLElement;
-  /** Best-known inline size before `baseEl` exists (or as a fallback while it's momentarily
-   *  unmeasured) -- seeded from a real reading of the host's own box in `connectedCallback()`
-   *  (see its comment) so the very first render already classifies correctly under the default
-   *  `'container'` basis, instead of falling back to the always-'wide' `Number.POSITIVE_INFINITY`
-   *  sentinel until the `ResizeObserver`'s own necessarily async first callback lands. */
+  /** Container width seeded before the first render only when its orientation breakpoint
+   *  consumes it, then refreshed on reconnect and by the allocation observer. */
   private measuredInlineSize = Number.POSITIVE_INFINITY;
   /** Owns breakpoint resolution, basis selection, and the viewport `MediaQueryList` lifecycle
    *  (including teardown on disconnect) -- see `OrientationBreakpointController`. */
@@ -332,7 +329,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     this,
     () =>
       this.updateEffectiveOrientation(
-        this.baseEl?.clientWidth ?? this.measuredInlineSize,
+        this.orientationInlineSize(),
         true
       )
   );
@@ -361,15 +358,21 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    // Seeds `measuredInlineSize` with a real reading of the host's own box, taken before the
-    // very first render (and again on every reconnect) -- [part="base"] is a block-level flex
-    // container with no width of its own (see stepper.styles.ts), so it fills the host's
-    // content-box width, making the host's own box a safe stand-in for it before that part even
-    // exists. See the field's own comment for why this matters.
-    const hostWidth = this.getBoundingClientRect().width;
-    if (hostWidth > 0) this.measuredInlineSize = hostWidth;
+    if (this.hasUpdated && this.orientationBreakpoints.containerObservationEnabled)
+      this.seedInlineSize();
     if (this.orientationBreakpoints.containerObservationEnabled)
       this.armResizeObserver();
+  }
+
+  private seedInlineSize(): void {
+    const hostWidth = this.getBoundingClientRect().width;
+    if (hostWidth > 0) this.measuredInlineSize = hostWidth;
+  }
+
+  private orientationInlineSize(): number {
+    return this.orientationBreakpoints.containerObservationEnabled
+      ? this.baseEl?.clientWidth ?? this.measuredInlineSize
+      : this.measuredInlineSize;
   }
 
   override disconnectedCallback(): void {
@@ -408,6 +411,10 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
         this.orientationBreakpointBasis
       );
     }
+    // Property bindings can be committed after connection in the same turn. Resolve them before
+    // taking the first container measurement so the initial layout uses the authored breakpoint.
+    if (!this.hasUpdated && this.isConnected && this.orientationBreakpoints.containerObservationEnabled)
+      this.seedInlineSize();
     if (
       changed.has('orientation') ||
       changed.has('narrowOrientation') ||
@@ -422,12 +429,11 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
       // after this update completes), and `_effectiveOrientation` has no committed prior value to
       // transition away from yet, so the very first read must never emit -- matching this event's
       // documented "changes the effective axis" contract. Under 'container' basis there's no fresh
-      // read here at all -- only `measuredInlineSize`, which `connectedCallback()` already seeded
-      // with a real reading of the host's own box before this first render (see its comment), so
+      // read here at all -- only `measuredInlineSize`, seeded above before this first render, so
       // the first paint is already correct here too; the `ResizeObserver` callback's own fresh
       // measurement still owns every subsequent transition.
       this.updateEffectiveOrientation(
-        this.baseEl?.clientWidth ?? this.measuredInlineSize,
+        this.orientationInlineSize(),
         this.hasUpdated && this.orientationBreakpointBasis === 'viewport'
       );
     }

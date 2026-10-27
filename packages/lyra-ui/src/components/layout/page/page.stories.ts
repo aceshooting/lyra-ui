@@ -19,6 +19,24 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
+export const DrawerInTransformedLayout: Story = {
+  name: 'Mobile drawer in a transformed layout',
+  render: () => html`
+    <div style="transform: translateZ(0); inline-size: 20rem; margin: 2rem;">
+      <lr-page>
+        <strong slot="header">Workspace</strong>
+        <button slot="navigation-toggle">Navigation</button>
+        <div slot="navigation">
+          <a href="#viewport-overview">Overview</a>
+          <button data-toggle-nav>Close navigation</button>
+        </div>
+        <h1 id="viewport-overview">Overview</h1>
+        <p>The mobile drawer covers the viewport while the page stays in this layout.</p>
+      </lr-page>
+    </div>
+  `,
+};
+
 const shell = () => html`
   <div
     slot="banner"

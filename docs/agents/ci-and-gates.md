@@ -689,10 +689,11 @@ changes need at least a minor. Pending changesets must meet that minimum unless 
 entry in `scripts/public-api-semver-exceptions.json` matches the before/after values. Parser and
 semver logic stay network-free under `test:public-api`.
 
-Operational caveat: `.changeset/config.json`'s `"updateInternalDependencies": "patch"` governs only
-regular `dependencies`/`devDependencies`. `@aceshooting/lyra-ui`'s `peerDependency` on
-`@aceshooting/lyra-flags` (`workspace:^x.y.z`) escalates to a **major** bump the moment that peer's
-version changes in the same `pnpm changeset version` run, whatever the pending changesets declare.
+Dependency planning: `.changeset/config.json`'s `"updateInternalDependencies": "patch"` controls
+internal dependency-range updates. A peer's version change that satisfies the declared range does
+not by itself force a dependent version bump. When a peer moves outside that range, Changesets can
+add a dependent release; inspect the full `pnpm changeset status` plan before `pnpm release:prepare`
+rather than inferring the release set from the pending changesets alone.
 
 ## Coverage floors (`scripts/coverage-floors.json`)
 

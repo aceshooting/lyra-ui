@@ -19,6 +19,26 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
+export const AllocatedFloatingDrawer: Story = {
+  name: 'Floating drawer keeps its allocation',
+  render: () => html`<div style="inline-size:24rem;padding:1rem;border:1px solid var(--lr-color-border)">
+    <button @click=${(event: Event) => {
+      const split = (event.currentTarget as HTMLElement).parentElement?.querySelector('lr-multi-split');
+      if (split) split.open = true;
+    }}>Open tools</button>
+    <lr-multi-split collapse="start" style="block-size:auto">
+      <div aria-label="Tools">
+        <button @click=${(event: Event) => {
+          const split = (event.currentTarget as HTMLElement).closest('lr-multi-split');
+          if (split) split.open = false;
+        }}>Close tools</button>
+      </div>
+      <div style="min-block-size:12rem">The drawer covers this split's allocation.</div>
+    </lr-multi-split>
+    <p>Following content keeps its place while the drawer is open.</p>
+  </div>`,
+};
+
 export const PixelMinimumWithGutter: Story = {
   parameters: { docs: { description: { story: 'A 600px allocation with a 40px divider leaves 560px for panels. The first panel keeps its feasible 300px minimum and the second receives 260px; percentage sizes remain unchanged.' } } },
   render: () => html`<lr-multi-split style="inline-size:600px;block-size:12rem;--lr-multi-split-divider-target-size:40px"

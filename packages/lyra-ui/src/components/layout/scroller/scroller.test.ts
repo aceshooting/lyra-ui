@@ -14,6 +14,53 @@ const nextFrame = (): Promise<void> =>
   new Promise((resolve) => requestAnimationFrame(() => resolve()));
 
 describe("<lr-scroller>", () => {
+  it('coalesces initial edge measurements and later same-turn slot changes', async () => {
+    const el = document.createElement('lr-scroller');
+    el.controls = true;
+    el.style.inlineSize = '100px';
+    el.innerHTML = '<div style="inline-size:500px">Items</div>';
+    const OriginalObserver = window.ResizeObserver;
+    class QuietObserver extends OriginalObserver {
+      override observe(): void {}
+    }
+    const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollWidth')!;
+    const readScrollWidth = descriptor.get!;
+    let reads = 0;
+    window.ResizeObserver = QuietObserver;
+    Object.defineProperty(Element.prototype, 'scrollWidth', {
+      ...descriptor,
+      get(this: Element): number {
+        if (this.getRootNode() === el.shadowRoot && this.getAttribute('part') === 'viewport') reads += 1;
+        return readScrollWidth.call(this) as number;
+      },
+    });
+    try {
+      document.body.append(el);
+      await el.updateComplete;
+      await Promise.resolve();
+      await el.updateComplete;
+      expect(reads, 'initial lifecycle and slot triggers share one geometry pass').to.equal(1);
+      const next = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="next"]')!;
+      expect(next.disabled).to.equal(false);
+      const slot = el.shadowRoot!.querySelector('slot')!;
+      reads = 0;
+      slot.dispatchEvent(new Event('slotchange'));
+      slot.dispatchEvent(new Event('slotchange'));
+      await Promise.resolve();
+      expect(reads, 'later synchronous slot changes share one geometry pass').to.equal(1);
+      reads = 0;
+      el.orientation = 'vertical';
+      await el.updateComplete;
+      await Promise.resolve();
+      await el.updateComplete;
+      expect(next.disabled, 'later orientation uses the new axis').to.equal(true);
+    } finally {
+      el.remove();
+      window.ResizeObserver = OriginalObserver;
+      Object.defineProperty(Element.prototype, 'scrollWidth', descriptor);
+    }
+  });
+
   it("defaults the upstream without-* flags to false", async () => {
     const el = await fixture<LyraScroller>(
       html`<lr-scroller label="Items"><span>Content</span></lr-scroller>`

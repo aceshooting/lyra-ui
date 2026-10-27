@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A standalone copy-to-clipboard affordance for a plain text `value` or an element named by `from`, with no positioning opinion of its own. The built-in icon button supports localized feedback labels, three tooltip modes, icon slots, and success/error theme hooks; a default-slot trigger can replace it. A resolved write emits `lr-copy`; source and clipboard failures emit `lr-error` plus the retained detailed `lr-copy-error` alias.',
+          'A standalone copy-to-clipboard affordance for a plain text `value` or an element named by `from`, with no positioning opinion of its own. The built-in icon button supports optional shared size tiers, localized feedback labels, three tooltip modes, icon slots, and success/error theme hooks; a default-slot trigger can replace it. A resolved write emits `lr-copy`; source and clipboard failures emit `lr-error` plus the retained detailed `lr-copy-error` alias.',
       },
     },
   },
@@ -21,6 +21,37 @@ type Story = StoryObj;
 
 export const Default: Story = {
   render: () => html`<lr-copy-button value="npm install @aceshooting/lyra-ui"></lr-copy-button>`,
+};
+
+export const Sizes: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The optional size ladder scales the built-in trigger and glyph. Unset keeps the established icon-button footprint; small/medium/large alias s/m/l. All tiers retain a 44px hit-area floor on coarse pointers or devices without hover. Custom default-slot triggers keep their own sizing.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: var(--lr-space-l);">
+      ${(['2xs', 'xs', 's', 'm', 'l', 'xl'] as const).map((size) => html`
+        <div style="display: flex; align-items: center; gap: var(--lr-space-xs);">
+          <code>${size}</code>
+          <lr-copy-button size=${size} value=${`Copied at size ${size}`}></lr-copy-button>
+        </div>
+      `)}
+    </div>
+  `,
+};
+
+export const DenseMetadata: Story = {
+  render: () => html`
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: var(--lr-space-xs); font-size: var(--lr-font-size-xs);">
+      <span>Reference</span>
+      <code>REF-2026-0042</code>
+      <lr-copy-button size="2xs" value="REF-2026-0042" copy-label="Copy reference"></lr-copy-button>
+    </div>
+  `,
 };
 
 export const CustomAccessibleLabel: Story = {

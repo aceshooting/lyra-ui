@@ -36508,6 +36508,15 @@
             "default": ""
           },
           {
+            "name": "size",
+            "property": "size",
+            "type": "LyraSize | undefined",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "success-label",
             "property": "successLabel",
             "type": "string | undefined",
@@ -36635,6 +36644,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "group"
+          },
+          {
+            "name": "size",
+            "attribute": "size",
+            "type": "LyraSize | undefined",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "successLabel",

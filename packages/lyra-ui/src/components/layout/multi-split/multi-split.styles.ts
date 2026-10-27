@@ -30,6 +30,19 @@ export const styles = css`
       var(--lr-color-mix-partner) var(--lr-color-mix-active)
     );
   }
+  .allocation {
+    inline-size: 100%;
+    block-size: 100%;
+    min-inline-size: 0;
+    min-block-size: 0;
+  }
+  .allocation-reservation {
+    max-block-size: 100%;
+    pointer-events: none;
+  }
+  .allocation-reservation[hidden] {
+    display: none;
+  }
   [part="base"] {
     --_lr-multi-split-panel-min: 0;
     --_lr-multi-split-gutters: 0;

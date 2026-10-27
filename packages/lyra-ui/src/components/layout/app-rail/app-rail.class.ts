@@ -1,4 +1,6 @@
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
+import { ModalSurfaceController } from '../../../internal/modal-surface-controller.js';
+import { modalHostStyles } from '../../../internal/modal-host.styles.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import {
@@ -418,7 +420,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  them keeps the rail from reporting its own output as an unknown attribute. */
   protected static readonly knownUnobservedAttributes: readonly string[] = ['mode', 'dragging', 'peeking'];
 
-  static override styles = [LyraElement.styles, nativeModalCarrierStyles, styles];
+  static override styles = [LyraElement.styles, nativeModalCarrierStyles, modalHostStyles, styles];
 
   /** Below this viewport width, the rail switches from `'full'` to
    *  `'icon-only'`. Any valid CSS length, used directly in a `max-width`
@@ -964,9 +966,10 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     onCancel: () => { if (this.overlayHandle?.isTopmost()) this.setOpen(false); },
     onUnexpectedClose: () => {
       if (this.overlayHandle?.isTopmost()) this.setOpen(false);
-      if (this.overlayActive) this.nativeModal.show();
+      if (this.overlayActive) this.modalSurface.show();
     },
   });
+  private readonly modalSurface = new ModalSurfaceController(this, this.nativeModal);
   private explicitTrigger?: HTMLElement;
   /** The focus-return target the open overlay was activated with, and whatever held focus outside
    *  this rail at that moment -- the first two candidates of the deferred focus return. */
@@ -1275,7 +1278,10 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   // rationale.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (this.overlayActive) this.nativeModal.show();
+    if (this.overlayActive) {
+      this.overlayHandle?.resume();
+      this.modalSurface.show();
+    }
     if (changed.has('topLayer')) {
       for (const item of this.querySelectorAll<HTMLElement & { syncRailTopLayer?: () => void }>(
         tag('app-rail-item'),
@@ -1384,8 +1390,10 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       } else {
         this.activateMobileOverlay();
       }
+      const document = this.ownerDocument;
       queueMicrotask(() => {
-        this.nativeModal.show();
+        if (!this.isConnected || this.ownerDocument !== document || this._mode !== 'mobile' || !this.open) return;
+        this.modalSurface.show();
         this.overlayHandle?.focusInitial();
       });
     }
@@ -1408,7 +1416,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   override disconnectedCallback(): void {
     this.resetPeek({ silent: true });
     this.disconnectResizerPosition();
-    this.nativeModal.hide();
+    this.modalSurface.disconnect();
     if (this.hotkeyWindow) {
       this.hotkeyWindow.removeEventListener('keydown', this.onHotkeyKeyDown);
       unregisterHotkeyOwner(this.hotkeyWindow, this);
@@ -1462,7 +1470,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   }
 
   private activateMobileOverlay(): void {
-    this.nativeModal.prepare();
+    this.modalSurface.prepare();
     const explicitTrigger = this.explicitTrigger;
     this.explicitTrigger = undefined;
     // A plain `undefined` (both `explicitTrigger` and the external `trigger`/`for` association
@@ -1504,7 +1512,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   }
 
   private deactivateMobileOverlay(restoreFocus = true): void {
-    this.nativeModal.hide();
+    this.modalSurface.hide();
     this.nativeModal.prepare(false);
     const handle = this.overlayHandle;
     this.overlayHandle = undefined;

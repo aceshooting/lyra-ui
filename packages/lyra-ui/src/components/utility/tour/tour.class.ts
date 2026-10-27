@@ -1,4 +1,5 @@
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
+import { ModalSurfaceController } from '../../../internal/modal-surface-controller.js';
 import { isCrossRealmPlainRecord } from '../../../internal/object-guards.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
 import { html, svg, nothing, type ComplexAttributeConverter, type TemplateResult, type PropertyValues } from 'lit';
@@ -490,9 +491,10 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     onCancel: () => { if (this.overlay?.isTopmost()) this.end('escape'); },
     onUnexpectedClose: () => {
       this.end('escape');
-      if (this.open) this.nativeModal.show();
+      if (this.open) this.escapeContainingBlock();
     },
   });
+  private readonly modalSurface = new ModalSurfaceController(this, this.nativeModal, () => this);
   private placeCleanup?: DeferredOperationHandle;
   private spotlightCleanup?: () => void;
   private interactiveKeyboardTarget?: HTMLElement;
@@ -527,7 +529,10 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     }
     if (this.open && (changed.has('open') || changed.has('activeIndex') || changed.has('steps'))) {
       const interactive = !!this.steps[this.activeIndex]?.interactiveTarget;
-      if (interactive) this.nativeModal.hide();
+      if (interactive) {
+        this.modalSurface.hide();
+        this.releaseContainingBlockEscape();
+      }
       this.nativeModal.prepare(!interactive);
     }
     const cannotOpen = this.open && this.steps.length === 0;
@@ -575,7 +580,6 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     if (this.open && (activationChanged || geometryChanged)) {
       const preserveInteractiveTargetFocus = changed.has('steps') && this.canPreserveInteractiveTargetFocus();
       const overlayChanged = this.activateOverlayInternal();
-      this.nativeModal.show();
       const shouldFocus =
         changed.has('open') ||
         changed.has('activeIndex') ||
@@ -612,7 +616,6 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
         this.unanchored = step ? !this.activeTargetSnapshot : false;
         await this.updateComplete;
         if (!this.isConnected || !this.open) return;
-        this.nativeModal.show();
         const placement = this.activateStep({ scroll: true, announceMissing: true });
         this.focusAfterPlacement(placement);
       });
@@ -622,7 +625,8 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.disposePositioning();
-    this.nativeModal.hide();
+    this.modalSurface.disconnect();
+    this.releaseContainingBlockEscape();
     this.overlay?.suspend();
     cancelDeferredFocusReturn(this);
     if (this.open) {
@@ -873,6 +877,12 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
    *  escape (trapped, or its target is in the top layer), so overlays its target opens stay above. */
   private escapeContainingBlock(): void {
     const target = this.activeTargetSnapshot;
+    if (!this.steps[this.activeIndex]?.interactiveTarget) {
+      this.overlay?.resume();
+      this.modalSurface.show();
+      this.applyViewportInset();
+      return;
+    }
     if (
       this.steps[this.activeIndex]?.interactiveTarget &&
       !needsTopLayerEscape(this) &&
@@ -882,6 +892,10 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       return;
     }
     if (!promoteToTopLayer(this)) return;
+    this.applyViewportInset();
+  }
+
+  private applyViewportInset(): void {
     if (!this.escapedInset) {
       const previous = ['top', 'right', 'bottom', 'left'].map((property) => ({
         property,
@@ -960,7 +974,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     this.disposePositioning();
     this.releaseContainingBlockEscape();
     this.activeTargetSnapshot = null;
-    this.nativeModal.hide();
+    this.modalSurface.hide();
     this.overlay?.deactivate();
     this.overlay = undefined;
     this.overlayInteractive = undefined;

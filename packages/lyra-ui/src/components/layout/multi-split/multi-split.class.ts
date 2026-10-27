@@ -1,5 +1,7 @@
 import { resolveIdReferencesIn } from '../../../internal/aria-reflection.js';
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
+import { ModalSurfaceController } from '../../../internal/modal-surface-controller.js';
+import { leaseInlineStyleProperty, type InlineStylePropertyLease } from '../../../internal/style-property-lease.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
@@ -196,6 +198,9 @@ export interface LyraMultiSplitEventMap {
  * (`min-block-size: 0; overflow: auto`) so long content stays within the
  * split instead of escaping into following content. Set an individual
  * panel's own `overflow` when it needs a different scrolling surface.
+ * The floating drawer enters the browser top layer while retaining this split's allocation.
+ * An intrinsically sized split reserves its opening block-size footprint until the drawer closes;
+ * definite parent allocations, scrolling, and resizing continue to position the same pane tree.
  *
  * Optionally, one pane can opt in to responsive collapse via `collapse`
  * (`"start"`/`"end"`, default `"none"` — no behavior change when unset): as
@@ -573,12 +578,16 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     onCancel: () => { if (this.overlayHandle?.isTopmost()) this.setOpen(false); },
     onUnexpectedClose: () => {
       if (this.overlayHandle?.isTopmost()) this.setOpen(false);
-      if (this.overlayActive) this.nativeModal.show();
+      if (this.overlayActive) this.modalSurface.show();
     },
   });
+  private readonly modalSurface = new ModalSurfaceController(this, this.nativeModal, () => this.baseEl ?? null);
 
   private nativeModalView?: Window & typeof globalThis;
   private nativeModalResizeObserver?: ResizeObserver;
+  private floatingFrame?: HTMLElement;
+  private readonly floatingGeometry = new Map<string, InlineStylePropertyLease>();
+  private openingBlockSize = 0;
 
   private stopNativeModalGeometry(): void {
     this.nativeModalView?.removeEventListener('scroll', this.syncNativeModalGeometry, true);
@@ -586,6 +595,15 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     this.nativeModalView = undefined;
     this.nativeModalResizeObserver?.disconnect();
     this.nativeModalResizeObserver = undefined;
+    for (const lease of this.floatingGeometry.values()) lease.release();
+    this.floatingGeometry.clear();
+    this.floatingFrame = undefined;
+    this.openingBlockSize = 0;
+    const reservation = this.shadowRoot?.querySelector<HTMLElement>('.allocation-reservation');
+    if (reservation) {
+      reservation.hidden = true;
+      reservation.style.removeProperty('block-size');
+    }
   }
 
   private nativeModalLabel(): string | null {
@@ -597,7 +615,13 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   }
 
   private readonly syncNativeModalGeometry = (): void => {
-    if (!this.nativeModal.requested || !this.isConnected) return;
+    if (!this.overlayActive || !this.isConnected) return;
+    const allocation = this.shadowRoot?.querySelector<HTMLElement>('.allocation');
+    const reservation = this.shadowRoot?.querySelector<HTMLElement>('.allocation-reservation');
+    const frame = this.nativeModal.requested
+      ? this.shadowRoot?.querySelector<HTMLElement>('[data-native-modal-carrier]')
+      : this.baseEl;
+    if (!allocation || !reservation || !frame) return;
     if (!this.nativeModalView) {
       this.nativeModalView = this.ownerDocument.defaultView ?? undefined;
       this.nativeModalView?.addEventListener('scroll', this.syncNativeModalGeometry, true);
@@ -606,16 +630,35 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       if (Observer) {
         const observer = new Observer(this.syncNativeModalGeometry);
         this.nativeModalResizeObserver = observer;
-        observer.observe(this);
+        observer.observe(allocation);
       }
     }
-    const frame = this.shadowRoot?.querySelector<HTMLDialogElement>('[data-native-modal-carrier]');
-    if (!frame) return;
-    const rect = this.getBoundingClientRect();
-    Object.assign(frame.style, {
-      top: `${rect.top}px`, left: `${rect.left}px`, right: 'auto', bottom: 'auto',
-      width: `${rect.width}px`, height: `${rect.height}px`, padding: '0',
-    });
+    if (this.floatingFrame !== frame) {
+      for (const lease of this.floatingGeometry.values()) lease.release();
+      this.floatingGeometry.clear();
+      this.floatingFrame = frame;
+    }
+    const set = (property: string, value: string): void => {
+      const lease = this.floatingGeometry.get(property);
+      if (lease) {
+        if (frame.style.getPropertyValue(property) !== value || frame.style.getPropertyPriority(property)) lease.set(value);
+      }
+      else this.floatingGeometry.set(property, leaseInlineStyleProperty(frame, property, value));
+    };
+    if (reservation.hidden) {
+      const height = this.baseEl?.getBoundingClientRect().height ?? 0;
+      this.openingBlockSize = height || this.openingBlockSize || allocation.getBoundingClientRect().height;
+      // The base leaves normal flow; reserve its opening footprint before measuring the frame.
+      set('position', 'fixed');
+      reservation.style.blockSize = `${this.openingBlockSize}px`;
+      reservation.hidden = false;
+    }
+    const rect = allocation.getBoundingClientRect();
+    for (const [property, value] of Object.entries({
+      position: 'fixed', top: `${rect.top}px`, left: `${rect.left}px`, right: 'auto', bottom: 'auto',
+      width: `${rect.width}px`, height: `${rect.height}px`, padding: '0', 'box-sizing': 'border-box',
+      'max-inline-size': 'none',
+    })) set(property, value);
   };
 
   private triggerAria?: AriaOwnershipLease;
@@ -678,17 +721,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    // Seeds `measuredInlineSize` with a real reading of the host's own box, taken before the
-    // very first render (and again on every reconnect) -- [part="base"] always spans the full
-    // host inline-size (see multi-split.styles.ts's `inline-size: 100%`), so the host's own box is a
-    // safe stand-in for it before that part even exists. Without this, `willUpdate()`'s
-    // first-render classification would fall back to the `Number.POSITIVE_INFINITY` sentinel
-    // ("wide"/"horizontal") and only correct itself once the ResizeObserver's own necessarily
-    // async first callback lands -- a visible flash of the wrong layout under the default
-    // 'container' basis (mirrors 'viewport' basis's already-synchronous correctness). The real
-    // observer's own first callback still supersedes this approximation as soon as it fires.
-    const hostWidth = this.getBoundingClientRect().width;
-    if (hostWidth > 0) this.measuredInlineSize = hostWidth;
+    if (this.hasUpdated && this.responsiveObservationEnabled) this.seedInlineSize();
     this.seedFirstRenderState(() => this.syncPanelMembership(false));
     if (this.hasUpdated) this.syncPanelMembership(false);
     // Initialization waits for the first willUpdate() so property bindings committed later in
@@ -715,17 +748,23 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
         this.activateFloatingOverlay();
       }
       queueMicrotask(() => {
+        if (!this.isConnected || !this.overlayActive) return;
         this.syncNativeModalGeometry();
-        this.nativeModal.show();
+        this.modalSurface.show();
         this.overlayHandle?.focusInitial();
       });
     }
     if (this.hasUpdated) this.syncExternalTriggerA11y();
   }
 
+  private seedInlineSize(): void {
+    const hostWidth = this.getBoundingClientRect().width;
+    if (hostWidth > 0) this.measuredInlineSize = hostWidth;
+  }
+
   override disconnectedCallback(): void {
+    this.modalSurface.disconnect();
     this.stopNativeModalGeometry();
-    this.nativeModal.hide();
     super.disconnectedCallback();
     // Clean up any remaining event listeners from an in-flight drag.
     this.endDragGestures();
@@ -803,6 +842,10 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
         this.orientationBreakpointBasis
       );
     }
+    // Wait until authored property bindings have committed before seeding a responsive first
+    // render. Plain splits and viewport-only orientation breakpoints do not consume host width.
+    if (!this.hasUpdated && this.isConnected && this.responsiveObservationEnabled)
+      this.seedInlineSize();
     if (
       changed.has('orientation') ||
       changed.has('narrowOrientation') ||
@@ -851,8 +894,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       // what makes `data-collapse-state` correct on the *first paint* under viewport basis --
       // `configure()` just armed both queries synchronously, so `classify()` is already a live,
       // authoritative read (mirrors the orientation branch above). Under container basis this
-      // re-maps `measuredInlineSize`, which `connectedCallback()` already seeded with a real
-      // reading of the host's own box before this first render (see its own comment) -- so the
+      // re-maps `measuredInlineSize`, seeded above from the host before this first render -- so the
       // first paint is already correct here too, with no `ResizeObserver` round-trip needed; the
       // observer's own fresh callback still owns every subsequent transition.
       //
@@ -1349,7 +1391,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     // At least one CSS length string. `currentMeasuredWidth()` (baseEl) is 0 before the first render,
     // which is when `initializeSizes()` runs from `willUpdate()`; fall back to the host's own box --
     // [part="base"] is `inline-size: 100%` of the host, so they are equal (the same stand-in
-    // `connectedCallback()` uses to seed `measuredInlineSize`).
+    // responsive first render uses to seed `measuredInlineSize`).
     const containerSize =
       this.currentMeasuredWidth() || this.getBoundingClientRect().width;
     if (!(containerSize > 0)) return null;
@@ -2230,7 +2272,8 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   }
 
   private activateFloatingOverlay(): void {
-    this.nativeModal.prepare();
+    this.openingBlockSize = this.baseEl?.getBoundingClientRect().height ?? 0;
+    this.modalSurface.prepare();
     const opener = deepActiveElement(this.ownerDocument);
     this.overlayOpener = isHtmlElement(opener) ? opener : null;
     const trigger = this.resolveExternalTrigger();
@@ -2280,8 +2323,8 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   }
 
   private deactivateFloatingOverlay(): void {
+    this.modalSurface.hide();
     this.stopNativeModalGeometry();
-    this.nativeModal.hide();
     this.nativeModal.prepare(false);
     const trigger = this.resolveExternalTrigger();
     // The deferred return reads the panel during deactivation, so it is released afterwards.
@@ -2470,7 +2513,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     super.updated(changed);
     if (this.overlayActive) {
       this.syncNativeModalGeometry();
-      this.nativeModal.show();
+      this.modalSurface.show();
     }
     if (
       changed.has('collapse') ||
@@ -2819,14 +2862,17 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       ></div>`);
     }
     const showBackdrop = this.collapseState === 'floating' && this.open;
-    return this.nativeModal.render(html`<div part="base" @click=${this.onModalLayerClick}>
+    return html`<div class="allocation">
+      <div class="allocation-reservation" aria-hidden="true" inert hidden></div>
+      ${this.nativeModal.render(html`<div part="base" @click=${this.onModalLayerClick}>
       <slot @slotchange=${this.onSlotChange}></slot>
       ${this.nativeModal.renderHelperSlot()}
       ${dividers}
       ${showBackdrop
         ? html`<div part="backdrop" @click=${this.onBackdropClick}></div>`
         : nothing}
-    </div>`, { label: this.nativeModalLabel() });
+    </div>`, { label: this.nativeModalLabel() })}
+    </div>`;
   }
 }
 

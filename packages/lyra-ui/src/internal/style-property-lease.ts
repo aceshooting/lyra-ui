@@ -61,6 +61,7 @@ export function leaseInlineStyleProperty(
   const applyOwned = (): void => {
     observer?.disconnect();
     writeProperty(element, property, owned);
+    owned = readProperty(element, property);
     observe();
   };
   const captureExternal = (): void => {

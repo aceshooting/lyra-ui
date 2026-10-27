@@ -7,6 +7,12 @@ import { finiteDuration } from '../../../internal/numbers.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import {
+  normalizeReflectedOptionalSize,
+  optionalSizeConverter,
+  type LyraSize,
+} from '../../../internal/variants.js';
+import { sizes } from '../../../internal/sizes.styles.js';
+import {
   writeClipboardText,
   type LyraClipboardWriteFailure,
   type LyraClipboardWriteSuccess,
@@ -146,19 +152,15 @@ export interface LyraCopyButtonEventMap {
  * glyph, announces itself through the live region, and emits both `lr-error` and the retained,
  * detailed `lr-copy-error` alias.
  *
- * This trigger has no `size` property of its own: it composes `<lr-icon-button>`, so the built-in
- * trigger's hit area is that component's shared `--lr-icon-button-size` floor (2.25rem by default), same
- * as everywhere else in the library. For a dense action row (e.g. several copy buttons packed into
- * a toolbar) where that floor is more than the layout can afford, lower `--lr-icon-button-size-scope`
- * (the subtree-scoped input) or `--lr-theme-icon-button-size` (the application-wide one) -- NOT
- * `--lr-icon-button-size` itself, which every `LyraElement` re-declares on its own `:host` and so
- * never reaches a composed child (`internal/tokens.test.ts` proves this) -- on this element or
- * any ancestor of it; `::part(base-control)` also reaches the same composed native control
- * directly for a one-off override. Either way the shrink is local to the elements it targets, not
- * a library-wide floor change. A coarse-pointer/no-hover safety net (`internal/tokens.styles.ts`'s
- * `baseTokens`) then floors the rendered hit area back at 2.75rem/44px regardless of how far the
- * dense-row override lowered it, so an intentionally cramped desktop toolbar is still comfortably
- * tappable the moment the pointer reaching it is a finger rather than a mouse.
+ * Optional `size` selects the shared `2xs` through `xl` height, glyph-font and radius ladder for
+ * the built-in trigger; `small`/`medium`/`large` alias `s`/`m`/`l`. Unset preserves its established
+ * shared `--lr-icon-button-size` floor (2.25rem by default) and inherited glyph font. A selected
+ * tier supplies the composed icon button's `--lr-icon-button-size-scope` input, retaining its
+ * coarse-pointer/no-hover minimum of 2.75rem/44px and allowing larger icon content to grow it.
+ * Shared form-control theme inputs retune the selected tier; public `--lr-icon-button-*` paint
+ * tokens and `::part(base-control)` remain available. With `size` unset, ancestor
+ * `--lr-icon-button-size-scope` and `--lr-theme-icon-button-size` inputs still control the hit
+ * area. A custom default-slot trigger keeps its caller-owned geometry at every tier.
  *
  * @customElement lr-copy-button
  * @slot - A custom trigger. When present, it replaces the built-in icon button.
@@ -215,7 +217,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, sizes, styles];
 
   /** The plain text to copy. */
   @property() value = '';
@@ -255,6 +257,21 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
 
   /** Prevent activation and remove the internal button from the tab order. */
   @property({ type: Boolean, reflect: true }) disabled = false;
+
+  private _size?: LyraSize;
+
+  /** Optional shared density tier for the built-in trigger. Unset preserves its original geometry. */
+  @property({ reflect: true, converter: optionalSizeConverter })
+  get size(): LyraSize | undefined {
+    return this._size;
+  }
+  set size(next: LyraSize | undefined) {
+    const normalized = normalizeReflectedOptionalSize(this, next);
+    const old = this._size;
+    if (old === normalized) return;
+    this._size = normalized;
+    this.requestUpdate('size', old);
+  }
 
   /** How long, in milliseconds, the copied confirmation or failure state remains visible. */
   @property({ type: Number, attribute: 'feedback-duration' }) feedbackDuration: number = DEFAULT_FEEDBACK_DURATION;
