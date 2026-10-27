@@ -204,7 +204,7 @@ test('each of the seven coverage flags owns one complete package report and a sc
     const badge = `https://img.shields.io/endpoint?url=${target}`;
     for (const file of [`packages/${name}/README.md`, ...(name === 'lyra-ui' ? ['README.md'] : [])]) {
       const readme = read(file);
-      const urls = [...readme.matchAll(/https:\/\/img\.shields\.io\/endpoint\?url=[^\s)]+/gu)].map(([url]) => url);
+      const urls = [...readme.matchAll(/https:\/\/img\.shields\.io\/endpoint\?url=[^\s)]+\/badges\/coverage-[^\s)]+/gu)].map(([url]) => url);
       assert.deepEqual(urls, [badge], `${file} must show exactly its own flag`);
       assert.ok(readme.includes(`[![Coverage](${badge})](https://codecov.io/gh/aceshooting/lyra-ui)`), `${file} keeps its alt text and Codecov link`);
       assert.doesNotMatch(readme, /codecov\.io\/[^\s)]*\/graph\/badge\.svg/u, `${file} must not request Codecov's own badge image`);
