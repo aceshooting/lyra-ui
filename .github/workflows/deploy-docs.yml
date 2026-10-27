@@ -203,6 +203,39 @@ jobs:
             [[ "$origin" == Codecov ]] || echo "::warning::Codecov gave no figure for $flag; publishing $message from $origin."
             jq -nc --arg message "$message" --arg color "$color" '{schemaVersion: 1, label: "CodeCov", message: $message, color: $color, namedLogo: "codecov"}' > "storybook-static/badges/coverage-$flag.json"
           done
+      - name: Write the downloads badge
+        if: steps.head.outputs.current == 'true'
+        run: |
+          set -euo pipefail
+          # npm's last-month point endpoint can lag by months, so the 30-day figure sums the daily
+          # range endpoint over the 30 days ending yesterday (UTC). Like the coverage badges it
+          # cannot fail the deploy: an unusable answer republishes the figure the live site serves.
+          site="https://${GITHUB_REPOSITORY%%/*}.github.io/${GITHUB_REPOSITORY#*/}/badges"
+          window="$(date -u -d '-30 day' +%F):$(date -u -d '-1 day' +%F)"
+          total=''
+          status="$(curl --silent --show-error --proto '=https' --max-time 30 --output "$RUNNER_TEMP/downloads.json" --write-out '%{http_code}' "https://api.npmjs.org/downloads/range/$window/@aceshooting/lyra-ui" || true)"
+          if [[ "$status" == 200 ]]; then
+            total="$(jq -r 'select((.downloads | type) == "array" and (.downloads | length) == 30) | [.downloads[].downloads | select(type == "number" and . >= 0)] | if length == 30 then add else empty end' "$RUNNER_TEMP/downloads.json" 2>/dev/null || true)"
+          fi
+          if [[ "$total" =~ ^[0-9]{1,12}$ ]]; then
+            if (( total >= 1000000 )); then
+              message="$(( total / 1000000 )).$(( total % 1000000 / 100000 ))M/30 days"
+            elif (( total >= 1000 )); then
+              message="$(( total / 1000 )).$(( total % 1000 / 100 ))k/30 days"
+            else
+              message="$total/30 days"
+            fi
+            color=blue
+          else
+            echo "::warning::npm gave no usable 30-day downloads (HTTP $status); republishing the previous figure."
+            message='' color=blue
+            status="$(curl --silent --show-error --location --max-redirs 3 --proto '=https,http' --proto-redir '=https,http' --max-time 20 --output "$RUNNER_TEMP/previous-downloads.json" --write-out '%{http_code}' "$site/downloads-30d.json" || true)"
+            if [[ "$status" == 200 ]]; then
+              message="$(jq -r '.message // empty' "$RUNNER_TEMP/previous-downloads.json" 2>/dev/null || true)"
+            fi
+            [[ "$message" =~ ^[0-9]{1,3}(\.[0-9])?[kM]?/30\ days$ ]] || { message=unknown color=lightgrey; }
+          fi
+          jq -nc --arg message "$message" --arg color "$color" '{schemaVersion: 1, label: "downloads", message: $message, color: $color, namedLogo: "npm"}' > storybook-static/badges/downloads-30d.json
       - if: steps.head.outputs.current == 'true'
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
