@@ -1,4 +1,4 @@
-import { ascii, deep, deepAll, visible, delay, settle, waitForCommit, announceCommit } from './text.js';
+import { ascii, deep, deepAll, visible, delay, settle, waitForCommit, announceCommit, readerReleaseVisible, armNativeHomeSettlement } from './text.js';
 
 const encode = value => JSON.stringify(value);
 const canonical = value => JSON.stringify(value, (_key, item) => item && typeof item === 'object' && !Array.isArray(item)
@@ -30,7 +30,8 @@ const tags = { stack: 'div', heading: 'h2', text: 'p', input: 'lr-input', button
 const operation = (id, kind, trigger, projection, native) => ({ id, kind, trigger, expectedFingerprint: encode(projection), ...(native ? { native } : {}) });
 const cProjection = (phase, islands, status, value = '', panel = false) => ({ phase, messages: 1, islands, status, value, panel, actions: 0 });
 const lProjection = (phase, messages, value = '', panel = false, sourcesReleased = false) => ({ phase, messages, baseCharacters: 51200,
-  islands: messages === 51 ? 12 : 10, value, panel, sourcesReleased, actions: 0 });
+  islands: messages === 51 ? 12 : 10, value, panel, sourcesReleased, actions: 0,
+  ...(phase === 'release-reader' ? { readerReleaseEndpoint: 'follow-release-visible-v1' } : {}) });
 const c = (id, kind, trigger, islands, status, value = '', panel = false, native) => operation(id, kind, trigger, cProjection(id, islands, status, value, panel), native);
 const l = (id, kind, trigger, messages, value = '', panel = false, released = false, native) => operation(id, kind, trigger, lProjection(id, messages, value, panel, released), native);
 
@@ -50,7 +51,7 @@ export const fixtureDefinitions = Object.freeze({
     ] },
   L: { workload: 'L', recording: recordingIdentity, sizes: { initialMessages: 50, charactersPerMessage: 1024, initialCharacters: 51200, generatedForms: 10, nodesPerForm: 8,
     inputsPerForm: 5, finalMessages: 51, appendedRecordingCharacters: 379, appendedChunks: 9, finalIslands: 12 },
-    oracleIds: ['full-retained-transcript', 'ten-independent-eight-node-forms', 'middle-answer-edit-and-selection', 'released-reader-position', 'panel-control-identity', 'source-release', 'exact-51-message-restore-no-actions'],
+    oracleIds: ['full-retained-transcript', 'ten-independent-eight-node-forms', 'middle-answer-edit-and-selection', 'follow-release-visible-v1', 'native-home-top-settlement-v1', 'panel-control-identity', 'source-release', 'exact-51-message-restore-no-actions'],
     operations: [
       l('mount', 'ready', 'host', 50),
       l('edit-middle', 'interaction', 'event', 50, edited, false, false, { action: 'fill', selector: '[data-message-index="25"] [data-gen-id="field-2"] input', value: edited }),
@@ -123,6 +124,7 @@ export function createFixture({ workload, host, measurement, signal, services },
   let root, viewport, panel, echo, suggestions, openPanel, app, context, generation, phase, committed, disposed = false;
   let recording, replayStart, archiveToken, retainedInput, retainedSelection, panelInput, releasedTop, actions = 0, resumes = 0, sourceReleased = false;
   let records = [], arrivals = [], retainedAfterDispose = 0;
+  let homeSettlement, readerRelease;
   const states = new Map();
   const scroll = () => viewport?.shadowRoot?.querySelector('[part="scroll"]');
   const viewList = () => root ? deepAll(root, 'lr-gen-view').sort((left, right) => (left.document?.surfaceId ?? '').localeCompare(right.document?.surfaceId ?? '')) : [];
@@ -252,7 +254,7 @@ export function createFixture({ workload, host, measurement, signal, services },
         valid &&= exactProse(records[50].body, prose) && appended.length === 2 && renderedTree(appended[0].view, review) && renderedTree(appended[1].view, detail);
         if (panelInput && ['open-panel', 'return-panel', 'release-source'].includes(id)) valid &&= nativeInput(appended[0].view, 'note') === panelInput;
       }
-      if (id === 'release-reader') valid &&= viewport.follow === false && scroll().scrollTop <= 1;
+      if (id === 'release-reader') valid &&= readerReleaseVisible(viewport);
       else if (!['mount', 'edit-middle'].includes(id)) valid &&= viewport.follow === false && Math.abs(scroll().scrollTop - releasedTop) <= 1;
       if (sourceReleased) valid &&= !recording && records.every(record => !record.controller || record.controller.retainedSourceCharacters === 0 && !record.controller.sourceAvailable);
     }
@@ -314,6 +316,7 @@ export function createFixture({ workload, host, measurement, signal, services },
   };
   return {
     prepare(value) {
+      homeSettlement?.dispose();
       context = value; generation = `${workload}:${crypto.randomUUID()}`;
       if (services.chatRecording?.sha256 !== recordingIdentity.sha256 || services.chatRecording?.url !== recordingIdentity.url
         || typeof services.loadChatRecording !== 'function' || workload === 'L' && ['saveChatArchive', 'loadChatArchive', 'releaseChatArchive'].some(name => typeof services[name] !== 'function')) throw new Error('Chat fixture services are required.');
@@ -324,6 +327,7 @@ export function createFixture({ workload, host, measurement, signal, services },
         if (disposed || requested !== generation || operationSignal?.aborted || pending?.aborted) throw new Error('Stale or aborted chat operation.');
       };
       active();
+      if (homeSettlement) throw new Error('Previous native Home settlement is pending.');
       phase = current.id; committed = undefined;
       if (phase === 'interrupt') { await loadRecording(); await prefix(0, 3, operationSignal); }
       if (phase === 'first-ready') await delay(replayStart + cadence[4] - performance.now(), operationSignal);
@@ -390,6 +394,11 @@ export function createFixture({ workload, host, measurement, signal, services },
           : phase === 'release-reader' ? scroll() : deep(root, `[data-chat-action="${phase === 'resume' ? 'resume' : phase === 'open-panel' ? workload === 'C' ? 'open-review' : 'open' : 'return'}"]`);
         const type = phase === 'edit' || phase === 'edit-middle' ? 'input' : phase === 'release-reader' ? 'keydown' : 'click';
         if (!target) throw new Error('Native chat control is missing.');
+        if (phase === 'release-reader') {
+          homeSettlement = armNativeHomeSettlement({ viewport, signal: operationSignal, isCurrent: () => !disposed && requested === generation,
+            isReady: () => readOracle({ operation: current, generation }).status === 'committed' });
+          readerRelease = { measurement: null, completion: homeSettlement.diagnose() };
+        }
         let completion = Promise.resolve();
         const finish = () => { completion = delay(0, operationSignal).then(async () => {
           await settle(host);
@@ -397,8 +406,18 @@ export function createFixture({ workload, host, measurement, signal, services },
           await complete(operationSignal);
         }); void completion.catch(() => {}); };
         target.addEventListener(type, finish, { once: true });
-        try { result = await measurement.measureOperation({ ...options, event: { target, type }, onArmed }); }
-        finally { target.removeEventListener(type, finish); await completion; }
+        try {
+          result = await measurement.measureOperation({ ...options, event: { target, type }, onArmed });
+          if (homeSettlement) {
+            readerRelease.measurement = result; readerRelease.completion = await homeSettlement.wait; active();
+            if (readOracle({ operation: current, generation }).status !== 'committed') throw new Error('Settled reader lost its complete oracle.');
+            result = { ...result, extras: { readerRelease: readerRelease.completion } };
+          }
+        } finally {
+          target.removeEventListener(type, finish);
+          if (homeSettlement) { readerRelease.completion = homeSettlement.diagnose(); homeSettlement.dispose(); homeSettlement = undefined; }
+          await completion;
+        }
       }
       if (phase === 'release-reader') releasedTop = scroll().scrollTop;
       if (phase === 'append') panelInput = nativeInput(records[50].islands.values().next().value.view, 'note');
@@ -406,8 +425,9 @@ export function createFixture({ workload, host, measurement, signal, services },
         ? { ...result, extras: { replayStart, authoredOffsetsMs: cadence, arrivalsMs: [...arrivals] } } : result;
     },
     readOracle,
+    diagnose() { return workload === 'L' ? { readerRelease: readerRelease ?? null } : {}; },
     async dispose() {
-      if (!disposed) { disposed = true; recording = undefined; detach(); retainedInput = undefined; retainedSelection = undefined; panelInput = undefined; arrivals = [];
+      if (!disposed) { disposed = true; homeSettlement?.dispose(); recording = undefined; detach(); retainedInput = undefined; retainedSelection = undefined; panelInput = undefined; arrivals = [];
         if (archiveToken !== undefined) { await services.releaseChatArchive(archiveToken); archiveToken = undefined; } }
       return { connectedNodes: 0, connectedElements: 0, retainedSources: retainedAfterDispose, pendingOperations: measurement.pendingOperations };
     },

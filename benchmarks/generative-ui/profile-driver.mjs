@@ -30,6 +30,17 @@ export function prepareBrowserFixture(page, context) {
     return window.__genProfile.prepare(value);
   }, context);
 }
+export async function runBrowserOperation(page, context) {
+  try { return await page.evaluate(args => window.__genProfile.runOperation(args), context); }
+  catch (error) {
+    let diagnostic = { unavailable: 'page-diagnostic-failed' };
+    try { diagnostic = JSON.parse(JSON.stringify(await page.evaluate(args => window.__genProfile.diagnose(args), context))); }
+    catch { /* The original operation failure remains authoritative. */ }
+    try { error.diagnostic = diagnostic; }
+    catch { /* A nonextensible thrown value still retains its original identity. */ }
+    throw error;
+  }
+}
 export function beginProfileObservation(page) {
   return page.evaluate(() => {
     const preparation = performance.getEntriesByType('resource').map(item => ({ path: new URL(item.name).pathname,
@@ -480,7 +491,7 @@ export function createProfileDriver(options) {
         prepare: context => prepare(state, context),
         async runOperation({ operation, generation, onArmed }) {
           state.onArmed = onArmed;
-          try { return await state.page.evaluate(args => window.__genProfile.runOperation(args), { operation, generation }); }
+          try { return await runBrowserOperation(state.page, { operation, generation }); }
           finally { state.onArmed = undefined; }
         },
         readOracle: args => state.page.evaluate(value => window.__genProfile.readOracle(value), args),

@@ -86,6 +86,21 @@ test('text inventory retains the full transcript and final-required-chunk append
   assert.equal(JSON.parse(definition.operations[3].expectedFingerprint).following, true);
 });
 
+test('T and L give visible release and mandatory native top settlement distinct identities while C is unchanged', () => {
+  for (const definition of [textDefinitions.T, chatDefinitions.L]) {
+    assert.ok(definition.oracleIds.includes('follow-release-visible-v1'));
+    assert.ok(definition.oracleIds.includes('native-home-top-settlement-v1'));
+    assert.equal(definition.oracleIds.includes('released-reader-position'), false);
+    for (const operation of definition.operations) assert.equal(JSON.parse(operation.expectedFingerprint).readerReleaseEndpoint,
+      operation.id === 'release-reader' ? 'follow-release-visible-v1' : undefined);
+  }
+  assert.deepEqual(JSON.parse(textDefinitions.T.operations[1].expectedFingerprint), { phase: 'release-reader', messages: 100, characters: 102400,
+    following: false, readerReleaseEndpoint: 'follow-release-visible-v1' });
+  assert.deepEqual(JSON.parse(chatDefinitions.L.operations[2].expectedFingerprint), { phase: 'release-reader', messages: 50, baseCharacters: 51200,
+    islands: 10, value: 'Keep this reviewed answer', panel: false, sourcesReleased: false, actions: 0, readerReleaseEndpoint: 'follow-release-visible-v1' });
+  assert.equal(createHash('sha256').update(JSON.stringify(chatDefinitions.C)).digest('hex'), 'adfa66238109ab8333691445d106a0f5428f98be87c0992c20b59fb433872f0f');
+});
+
 test('chat recording identity and cadence match the untouched authored fixture', async () => {
   const bytes = await readFile(new URL('../../../../packages/lyra-gen/examples/recordings/chat-review.v1.json', import.meta.url));
   const recording = JSON.parse(bytes);

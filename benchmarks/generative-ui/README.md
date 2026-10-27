@@ -252,6 +252,14 @@ and replay cadence. `memory-profile.mjs` covers complete chat/dashboard lifecycl
 adapter admissions, isolated fresh controls, and the large-view observation. Neither contacts a
 provider. The earlier replay/session tools above remain separate experiments.
 
+For T/L, `follow-release-visible-v1` measures native Home input through released follow state and
+a visible jump button, then the same two animation-frame opportunities. The 100/200 ms response
+limits exclude completion of the browser's native scroll animation. Reaching the top and settling
+remain mandatory before append and reader-position checks; their durations are retained separately.
+This prospective correction follows an observed full-top failure and separate native-event
+diagnostics. Earlier failures remain failures, and records with different fixture definitions or
+measurement designs cannot be pooled.
+
 Use the pinned Node, built public UI/Gen exports, already-installed Playwright browsers, and a
 frozen source/candidate archive. Keep evidence outside the checkout: reports contain machine and
 process identities. All paths below are caller-supplied environment variables. Inspect the fixed

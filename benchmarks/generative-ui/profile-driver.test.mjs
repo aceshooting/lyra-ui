@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { runInNewContext } from 'node:vm';
-import { fixtureModuleFor, validateNativeAction, requestAllowed, validateControlProbe, definitionDigest, parseDriverOptions, checkFreshQuietReceipt, quietEvidenceFromBytes, profileHarnessIdentity, requireFixtureModules, createProfileDriver, profileInputKey, prepareBrowserFixture, beginProfileObservation } from './profile-driver.mjs';
+import { fixtureModuleFor, validateNativeAction, requestAllowed, validateControlProbe, definitionDigest, parseDriverOptions, checkFreshQuietReceipt, quietEvidenceFromBytes, profileHarnessIdentity, requireFixtureModules, createProfileDriver, profileInputKey, prepareBrowserFixture, runBrowserOperation, beginProfileObservation } from './profile-driver.mjs';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { reviewedQuietFixture, sharedHostQuietFixture, aggregateHostQuietFixture } from './profile-reviewed.test-fixture.mjs';
@@ -192,4 +192,30 @@ test('functional preparation does not collect or reset a delivery timeline', asy
     performance: { clearResourceTimings() { throw new Error('Functional smoke must not collect delivery metrics.'); } },
     window: { __genProfile: { prepare() { return 'prepared'; } } } }); } };
   assert.equal(await prepareBrowserFixture(page, { functionalSmoke: true }), 'prepared');
+});
+
+for (const diagnosticFails of [false, true]) test(`rejected collection operation preserves its original error when page diagnosis ${diagnosticFails ? 'fails' : 'captures partial settlement'}`, async () => {
+  const context = { operation: { id: 'release-reader' }, generation: 'g1' }, original = new Error('Native settlement timed out.');
+  const diagnostic = { readerRelease: { measurement: { id: 'release-reader', generation: 'g1', start: 10, semanticCommit: 40, renderOpportunity: 50 },
+    completion: { schemaVersion: 1, endpoint: 'follow-release-visible-v1', nativeEventStart: 10, firstTopAt: null, scrollEndAt: null,
+      settledAt: null, finalTop: 25, finalFollowing: false, eventToTopMs: null, eventToScrollEndMs: null, eventToSettledMs: null } } };
+  const trace = [], fixture = {
+    runOperation(args) { assert.deepEqual(JSON.parse(JSON.stringify(args)), context); trace.push('operation'); throw original; },
+    diagnose(args) { assert.deepEqual(JSON.parse(JSON.stringify(args)), context); trace.push('diagnose'); if (diagnosticFails) throw new Error('Page closed.'); return diagnostic; },
+  };
+  const page = { async evaluate(callback, argument) { return runInNewContext(`(${callback.toString()})(argument)`, { argument, window: { __genProfile: fixture } }); } };
+  await assert.rejects(runBrowserOperation(page, context), error => {
+    assert.equal(error, original);
+    assert.deepEqual(error.diagnostic, diagnosticFails ? { unavailable: 'page-diagnostic-failed' } : diagnostic);
+    if (!diagnosticFails) { diagnostic.readerRelease.completion.finalTop = 0; assert.equal(error.diagnostic.readerRelease.completion.finalTop, 25); }
+    return true;
+  });
+  assert.deepEqual(trace, ['operation', 'diagnose']);
+});
+
+test('successful collection operation returns its original measurement without page diagnosis', async () => {
+  const measurement = { id: 'append', renderOpportunity: 50 };
+  const page = { async evaluate(callback, argument) { return runInNewContext(`(${callback.toString()})(argument)`, { argument,
+    window: { __genProfile: { runOperation: () => measurement, diagnose() { assert.fail('Successful operations must not collect failure diagnostics.'); } } } }); } };
+  assert.equal(await runBrowserOperation(page, { operation: { id: 'append' }, generation: 'g1' }), measurement);
 });

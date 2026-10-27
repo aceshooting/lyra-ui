@@ -190,6 +190,33 @@ test('a synthetic contract mismatch cleans up a prepared session and cannot prod
   assert.equal(retained[1].value.qualification, 'not-assessed');
 });
 
+test('rejected operation retains completed response measurement and partial settlement before cleanup', async () => {
+  const input = manifest(), trace = [], retained = [];
+  input.fixtures.T.operations = [{ ...input.fixtures.T.operations[0], id: 'release-reader' }];
+  const diagnostic = { readerRelease: { measurement: { id: 'release-reader', generation: 'g1', start: 10, semanticCommit: 40, renderOpportunity: 50 },
+    completion: { schemaVersion: 1, endpoint: 'follow-release-visible-v1', nativeEventStart: 10, firstTopAt: 90, scrollEndAt: null,
+      settledAt: null, finalTop: 0, finalFollowing: false, eventToTopMs: 80, eventToScrollEndMs: null, eventToSettledMs: null } } };
+  const original = Object.assign(new Error('Native settlement timed out.'), { diagnostic });
+  const session = { temperatureEvidence: { freshContext: true, primedMounts: 0, fullyDisposedBeforeSample: true },
+    async prepare() { return { generation: 'g1', manifest: { workload: 'T', sha256: input.fixtures.T.sha256 }, operations: input.fixtures.T.operations }; },
+    async startObservation() {}, async phase() { trace.push('phase'); }, async activate() {},
+    async runOperation() { trace.push('operation'); throw original; },
+    async readOracle() { assert.fail('A rejected operation cannot commit its oracle.'); }, async finishObservation() { assert.fail('A rejected operation cannot finish a sample.'); },
+    async dispose() { trace.push('dispose'); diagnostic.readerRelease.measurement.renderOpportunity = 999; },
+    async close() { trace.push('close'); } };
+  const driver = { kind: 'playwright-profile-v1', async verify() { return { kind: 'browser-artifact-verification', actual: { candidate: input.candidate, harness: input.harness, environment: input.environment, fixtures: input.fixtures, controls: input.controls, fixtureBuild: input.fixtureBuild } }; },
+    async openSample() { return session; }, async checkQuiet() { return { contaminated: false, receiptSha256: '1'.repeat(64) }; }, async close() { trace.push('driver-close'); } };
+  await assert.rejects(runProfile({ driver, manifest: input, retain: async row => { retained.push(structuredClone(row)); if (row.kind === 'failure') trace.push('retain-failure'); } }), error => {
+    assert.equal(error.cause, original); assert.equal(error.report.status, 'incomplete'); assert.equal(error.report.qualification, 'not-assessed');
+    assert.equal(error.report.samples.length, 0); assert.equal(error.report.warmups.length, 0); assert.deepEqual(error.report.lastAttempt.operations, []);
+    assert.equal(error.report.lastAttempt.diagnostic.readerRelease.measurement.renderOpportunity, 50);
+    assert.equal(error.report.lastAttempt.diagnostic.readerRelease.completion.scrollEndAt, null); return true;
+  });
+  assert.deepEqual(trace, ['phase', 'operation', 'retain-failure', 'dispose', 'close', 'driver-close']);
+  assert.equal(retained.at(-1).value.lastAttempt.diagnostic.readerRelease.measurement.renderOpportunity, 50);
+  assert.equal(retained.at(-1).value.lastAttempt.diagnostic.readerRelease.completion.firstTopAt, 90);
+});
+
 test('input byte inventories cannot omit identity or substitute character counts for byte counts', () => {
   const input = { json: { sha256: 'a'.repeat(64), utf8Bytes: 4, utf16Units: 2 } };
   assert.doesNotThrow(() => validateInputInventory(input));

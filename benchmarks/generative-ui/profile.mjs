@@ -168,6 +168,10 @@ export async function runProfile({ driver, manifest, signal, retain } = {}) {
     for (const cell of profileCells()) report.summaries.push(summarizeCell(cell, report.samples.filter(item => item.cellId === cell.id), owned.fixtures[cell.workload].operations, admission));
     report.status = report.summaries.every(item => item.status === 'within-scoped-budgets') ? 'collected-needs-review' : 'budget-exceeded';
   } catch (error) {
+    if (error.diagnostic !== undefined && report.lastAttempt) {
+      try { report.lastAttempt.diagnostic = JSON.parse(JSON.stringify(error.diagnostic)); }
+      catch { report.lastAttempt.diagnostic = { unavailable: 'page-diagnostic-failed' }; }
+    }
     if (error.quietEvidence) {
       report.refusedQuietEvidence = error.quietEvidence;
       if (report.lastAttempt && quietPhase) report.lastAttempt.quietEvidence[quietPhase] = error.quietEvidence;
