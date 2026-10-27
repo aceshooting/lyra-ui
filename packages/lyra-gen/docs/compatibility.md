@@ -113,6 +113,10 @@ Cancellation invalidates ownership; it does not roll back an external effect:
 | Dashboard application | Prevent stale mounting and abort the mount signal; context, storage and link-resolution callbacks have no cancellation signal. |
 | A2UI local host effects | Authorize before dispatch; execution receives no abort signal, and a started effect cannot be undone. Completion does not grant fresh surface authority. |
 
+Opt-in error isolation (`recovery: 'isolate'`) is available since 1.2; the strict default is unchanged.
+Persist the original input, never an isolated result, and isolate again on load
+([details](recovery-and-diagnostics.md#error-isolation)).
+
 ## Independent versions
 
 Package SemVer, catalog identity/version, wire protocol, storage revision and renderer revision are

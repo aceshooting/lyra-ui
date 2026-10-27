@@ -9,8 +9,9 @@ import { readPointer } from './references.js';
 import { resolveLimits, snapshotJson, validateSchema } from './schema.js';
 import { notifyFailureCategories, type LyraGenFailureCallback } from './diagnostics.js';
 import { LYRA_GEN_STRINGS } from './localization.js';
+import { LYRA_GEN_ISOLATED_TYPE } from './isolation.js';
 import { styles } from './gen-view.styles.js';
-import type { JsonValue, LyraGenAction, LyraGenCatalog, LyraGenComponent, LyraGenDiagnostic, LyraGenLimits, LyraGenNode, LyraGenResult, LyraGenView } from './types.js';
+import type { JsonValue, LyraGenAction, LyraGenCatalog, LyraGenComponent, LyraGenDiagnostic, LyraGenLimits, LyraGenNode, LyraGenRecoveryMode, LyraGenResult, LyraGenView } from './types.js';
 
 export type LyraGenViewStatus = 'empty' | 'loading' | 'ready' | 'error' | 'interrupted';
 export interface LyraGenReady { readonly surfaceId: string; readonly revision: number }
@@ -75,6 +76,9 @@ interface RenderPlan {
   readonly commits: PreparedNode[];
 }
 
+/** Stand-in definition for isolation markers: a plain, non-interactive paragraph with no properties or events. */
+const ISOLATED_DEFINITION: LyraGenComponent = Object.freeze({ tag: 'p', properties: Object.freeze({}) }) as LyraGenComponent;
+
 // Cooperative limits: one trusted constructor, adapter or setter cannot be preempted.
 const RENDER_SLICE_STEPS = 64;
 const RENDER_SLICE_MS = 4;
@@ -101,6 +105,7 @@ const RENDER_SLICE_MS = 4;
  * @csspart loading - A pending component's localized placeholder.
  * @csspart error - A localized failure message.
  * @csspart empty - Empty-document message.
+ * @csspart isolated - Non-interactive fallback that replaces one component contained by `recovery="isolate"`.
  * @cssprop --lr-gen-loading-block-size - Default reserved block size during loading.
  */
 export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
@@ -112,6 +117,13 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
   @property({ attribute: false }) failureCategories?: LyraGenFailureCallback;
   /** Host resource limits; omitted values keep defaults and overrides cannot exceed hard ceilings. */
   @property({ attribute: false }) limits?: Partial<LyraGenLimits>;
+  /**
+   * Validation recovery. `strict` (default; any other value behaves as strict) rejects the whole view on
+   * any error; `isolate` replaces only a component-local defective node by a localized fallback with
+   * part `isolated` and keeps every other node, its state, focus and actions.
+   * @attr recovery
+   */
+  @property({ reflect: true }) recovery: LyraGenRecoveryMode = 'strict';
   /** Complete view; publish a higher revision to patch the same surface. */
   @property({ attribute: false }) document?: LyraGenView;
   /** Trusted catalog; only its declared tags, properties, and loaders are used. */
@@ -218,14 +230,15 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
     this.processedBindingState = this.bindingState;
     this.processedLimits = this.limits;
     this.setReadiness(this.document ? 'loading' : 'empty');
-    if (changed.has('document') || changed.has('catalog') || changed.has('limits')) {
+    if (changed.has('document') || changed.has('catalog') || changed.has('limits') || changed.has('recovery')) {
       this.generation++;
       this.cancelConfirmations();
       for (const state of this.loads.values()) if (state.status === 'error' && state.data) { state.status = 'ready'; state.data = false; }
       if (changed.has('catalog')) { this.loads.clear(); this.nodes.clear(); }
       if (!this.document) { this.accepted = undefined; this.localState = undefined; this.invalid = false; return; }
-      const result = validateView(this.document, this.catalog, { limits: this.resolvedLimits });
+      const result = validateView(this.document, this.catalog, { limits: this.resolvedLimits, recovery: this.recovery === 'isolate' ? 'isolate' : 'strict' });
       if (!result.ok) { this.rejectView(result.diagnostics); return; }
+      if (result.isolated?.length && result.diagnostics.length) this.emitError(result.diagnostics);
       const previous = this.accepted;
       if (previous && previous.surfaceId === result.value.surfaceId && (result.value.revision < previous.revision || (result.value.revision === previous.revision && !jsonEqual(result.value, previous)))) {
         this.rejectView([{ code: 'revision.conflict', path: '/revision', message: 'A view revision cannot move backwards.', severity: 'error' }]);
@@ -501,7 +514,7 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
   private retainLoads(root: LyraGenNode): void {
     const definitions = new Set<LyraGenComponent>();
     const visit = (node: LyraGenNode): void => {
-      definitions.add(this.catalog.components[node.type]!);
+      definitions.add(this.definitionOf(node));
       node.children?.forEach(visit);
     };
     visit(root);
@@ -532,8 +545,13 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
     return state;
   }
 
+  private definitionOf(node: LyraGenNode): LyraGenComponent {
+    return node.type === LYRA_GEN_ISOLATED_TYPE ? ISOLATED_DEFINITION : this.catalog.components[node.type]!;
+  }
+
   private prepareNode(node: LyraGenNode): PreparedNode {
-    const definition = this.catalog.components[node.type]!;
+    const isolated = node.type === LYRA_GEN_ISOLATED_TYPE;
+    const definition = this.definitionOf(node);
     const loading = this.load(definition);
     const previous = this.nodes.get(node.id);
     const ready = loading.status === 'ready';
@@ -545,8 +563,9 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
     const prepared: PreparedNode = { record, next, loading, fresh, children: [], canAssemble: fresh };
     if (fresh) {
       record.element.dataset['genId'] = node.id;
-      if (ready) this.installEvents(record);
+      if (ready && !isolated) this.installEvents(record);
     }
+    if (isolated) { if (fresh) this.applyPrepared(prepared); return prepared; }
     if (!ready) {
       if (fresh) this.applyPrepared(prepared);
       return prepared;
@@ -605,6 +624,14 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
     Object.assign(record, next);
     const { element, node, definition } = record;
     element.slot = node.slot ?? '';
+    if (node.type === LYRA_GEN_ISOLATED_TYPE) {
+      element.setAttribute('part', 'isolated');
+      element.setAttribute('role', 'group');
+      element.dataset['genType'] = node.type;
+      const text = this.message('genViewInvalid');
+      if (element.textContent !== text) element.textContent = text;
+      return;
+    }
     if (!record.ready) {
       element.setAttribute('part', loading.status === 'error' ? 'error' : 'loading');
       element.setAttribute('aria-busy', loading.status === 'loading' ? 'true' : 'false');

@@ -14,6 +14,7 @@ export * from './functions.js';
 export * from './repair.js';
 export * from './repair-workflow.js';
 export * from './recovery.js';
+export { LYRA_GEN_ISOLATED_TYPE } from './isolation.js';
 export * from './diagnostics.js';
 export * from './dashboard.js';
 export * from './live-data.js';

@@ -16,6 +16,7 @@
       "profile": "supported",
       "exports": {
         "agentOpsCatalog": "catalog.d.ts#agentOpsCatalog",
+        "answerBlocksCatalog": "catalog.d.ts#answerBlocksCatalog",
         "applyViewPatch": "runtime.d.ts#applyViewPatch",
         "assertComponentContentPolicy": "content-policy.d.ts#assertComponentContentPolicy",
         "buildCatalogPrompt": "prompts.d.ts#buildCatalogPrompt",
@@ -144,6 +145,7 @@
         "JsonViewStreamResult": "json-stream.d.ts#JsonViewStreamResult",
         "LiveDataController": "live-data.d.ts#LiveDataController",
         "LYRA_GEN_FAILURE_CATEGORIES": "diagnostics.d.ts#LYRA_GEN_FAILURE_CATEGORIES",
+        "LYRA_GEN_ISOLATED_TYPE": "isolation.d.ts#LYRA_GEN_ISOLATED_TYPE",
         "LyraGenAccessibleName": "types.d.ts#LyraGenAccessibleName",
         "LyraGenAction": "types.d.ts#LyraGenAction",
         "LyraGenActionBinding": "types.d.ts#LyraGenActionBinding",
@@ -191,12 +193,14 @@
         "LyraGenFunction": "functions.d.ts#LyraGenFunction",
         "LyraGenFunctionCall": "functions.d.ts#LyraGenFunctionCall",
         "LyraGenFunctionRegistry": "functions.d.ts#LyraGenFunctionRegistry",
+        "LyraGenIsolation": "types.d.ts#LyraGenIsolation",
         "LyraGenLimits": "types.d.ts#LyraGenLimits",
         "LyraGenMigratedAnswer": "answer-migrations.d.ts#LyraGenMigratedAnswer",
         "LyraGenNode": "types.d.ts#LyraGenNode",
         "LyraGenPatch": "runtime.d.ts#LyraGenPatch",
         "LyraGenPatchOperation": "runtime.d.ts#LyraGenPatchOperation",
         "LyraGenPromptOptions": "prompts.d.ts#LyraGenPromptOptions",
+        "LyraGenRecoveryMode": "types.d.ts#LyraGenRecoveryMode",
         "LyraGenReferenceContext": "references.d.ts#LyraGenReferenceContext",
         "LyraGenReferenceValue": "references.d.ts#LyraGenReferenceValue",
         "LyraGenRepairBoundary": "repair-workflow.d.ts#LyraGenRepairBoundary",
@@ -228,6 +232,7 @@
         "LyraGenUrlPolicy": "types.d.ts#LyraGenUrlPolicy",
         "LyraGenUrlSink": "types.d.ts#LyraGenUrlSink",
         "LyraGenValidationOptions": "runtime.d.ts#LyraGenValidationOptions",
+        "LyraGenValidationResult": "types.d.ts#LyraGenValidationResult",
         "LyraGenView": "types.d.ts#LyraGenView",
         "MARKUP_LIMITS": "parser.d.ts#MARKUP_LIMITS",
         "MarkupIsland": "islands.d.ts#MarkupIsland",
@@ -404,6 +409,7 @@
       "profile": "supported",
       "exports": {
         "agentOpsCatalog": "catalog.d.ts#agentOpsCatalog",
+        "answerBlocksCatalog": "catalog.d.ts#answerBlocksCatalog",
         "catalogPresetNames": "catalogs/presets.d.ts#catalogPresetNames",
         "catalogPresetRoles": "catalogs/presets.d.ts#catalogPresetRoles",
         "catalogPresets": "catalog.d.ts#catalogPresets",
@@ -655,6 +661,7 @@
       "profile": "supported",
       "exports": {
         "agentOpsCatalog": "catalog.d.ts#agentOpsCatalog",
+        "answerBlocksCatalog": "catalog.d.ts#answerBlocksCatalog",
         "applyViewPatch": "runtime.d.ts#applyViewPatch",
         "assertComponentContentPolicy": "content-policy.d.ts#assertComponentContentPolicy",
         "buildCatalogPrompt": "prompts.d.ts#buildCatalogPrompt",
@@ -783,6 +790,7 @@
         "JsonViewStreamResult": "json-stream.d.ts#JsonViewStreamResult",
         "LiveDataController": "live-data.d.ts#LiveDataController",
         "LYRA_GEN_FAILURE_CATEGORIES": "diagnostics.d.ts#LYRA_GEN_FAILURE_CATEGORIES",
+        "LYRA_GEN_ISOLATED_TYPE": "isolation.d.ts#LYRA_GEN_ISOLATED_TYPE",
         "LyraGenAccessibleName": "types.d.ts#LyraGenAccessibleName",
         "LyraGenAction": "types.d.ts#LyraGenAction",
         "LyraGenActionBinding": "types.d.ts#LyraGenActionBinding",
@@ -830,12 +838,14 @@
         "LyraGenFunction": "functions.d.ts#LyraGenFunction",
         "LyraGenFunctionCall": "functions.d.ts#LyraGenFunctionCall",
         "LyraGenFunctionRegistry": "functions.d.ts#LyraGenFunctionRegistry",
+        "LyraGenIsolation": "types.d.ts#LyraGenIsolation",
         "LyraGenLimits": "types.d.ts#LyraGenLimits",
         "LyraGenMigratedAnswer": "answer-migrations.d.ts#LyraGenMigratedAnswer",
         "LyraGenNode": "types.d.ts#LyraGenNode",
         "LyraGenPatch": "runtime.d.ts#LyraGenPatch",
         "LyraGenPatchOperation": "runtime.d.ts#LyraGenPatchOperation",
         "LyraGenPromptOptions": "prompts.d.ts#LyraGenPromptOptions",
+        "LyraGenRecoveryMode": "types.d.ts#LyraGenRecoveryMode",
         "LyraGenReferenceContext": "references.d.ts#LyraGenReferenceContext",
         "LyraGenReferenceValue": "references.d.ts#LyraGenReferenceValue",
         "LyraGenRepairBoundary": "repair-workflow.d.ts#LyraGenRepairBoundary",
@@ -867,6 +877,7 @@
         "LyraGenUrlPolicy": "types.d.ts#LyraGenUrlPolicy",
         "LyraGenUrlSink": "types.d.ts#LyraGenUrlSink",
         "LyraGenValidationOptions": "runtime.d.ts#LyraGenValidationOptions",
+        "LyraGenValidationResult": "types.d.ts#LyraGenValidationResult",
         "LyraGenView": "types.d.ts#LyraGenView",
         "MARKUP_LIMITS": "parser.d.ts#MARKUP_LIMITS",
         "MarkupIsland": "islands.d.ts#MarkupIsland",
@@ -1272,13 +1283,16 @@
         "LyraGenDiagnostic": "types.d.ts#LyraGenDiagnostic",
         "LyraGenFieldPolicy": "types.d.ts#LyraGenFieldPolicy",
         "LyraGenFieldPurpose": "types.d.ts#LyraGenFieldPurpose",
+        "LyraGenIsolation": "types.d.ts#LyraGenIsolation",
         "LyraGenLimits": "types.d.ts#LyraGenLimits",
         "LyraGenNode": "types.d.ts#LyraGenNode",
+        "LyraGenRecoveryMode": "types.d.ts#LyraGenRecoveryMode",
         "LyraGenResult": "types.d.ts#LyraGenResult",
         "LyraGenSchema": "types.d.ts#LyraGenSchema",
         "LyraGenSourceRange": "types.d.ts#LyraGenSourceRange",
         "LyraGenUrlPolicy": "types.d.ts#LyraGenUrlPolicy",
         "LyraGenUrlSink": "types.d.ts#LyraGenUrlSink",
+        "LyraGenValidationResult": "types.d.ts#LyraGenValidationResult",
         "LyraGenView": "types.d.ts#LyraGenView"
       },
       "globals": [
@@ -1400,11 +1414,11 @@
       "profile": "supported"
     },
     "ai-sdk.d.ts#LyraGenAiSdkOptions": {
-      "hash": "84c566084bf4a5e5a7c7187a37a6e9b93a5d521e639df69df49201c9056992c8",
+      "hash": "53d173ed6e08f945245c8f685e41a02578caa24f9944842a7ad5b4350e35102b",
       "profile": "supported"
     },
     "ai-sdk.d.ts#LyraGenAiSdkPart": {
-      "hash": "17b772b3a3c1e4bb91a7b8ba906146cbd05ff10426bbbc84de3f5587de77060b",
+      "hash": "ac919263bc28c495d032888460e521351ac689745b1a03c15e54bdeee2d87e46",
       "profile": "supported"
     },
     "answer-migrations.d.ts#global": {
@@ -1473,6 +1487,10 @@
     },
     "catalog.d.ts#agentOpsCatalog": {
       "hash": "094a088943591696e87f0427ed769887447406d17a630c6e63dc2f45b13b494b",
+      "profile": "supported"
+    },
+    "catalog.d.ts#answerBlocksCatalog": {
+      "hash": "5bd5446f76af3a2d3f9185c6de521173866f3792cbbd123fd0f04e6b391fb97a",
       "profile": "supported"
     },
     "catalog.d.ts#catalogPresets": {
@@ -1548,7 +1566,7 @@
       "profile": "supported"
     },
     "chat.d.ts#LyraGenChatIsland": {
-      "hash": "d2a3d00c4737fb9b72dffd3bac8f29a6ffafe1d398aeb28442b20bea4f413d6d",
+      "hash": "6fdbbb7db59075d4af9f751ebc36d47fb14aa6a30a71a6bdcdbf95b9e0b399fe",
       "profile": "supported"
     },
     "chat.d.ts#LyraGenChatIslandStatus": {
@@ -1556,7 +1574,7 @@
       "profile": "supported"
     },
     "chat.d.ts#LyraGenChatOptions": {
-      "hash": "0437b075b244c190b490dd918e5902b25fb04f170d9616ee51c3cdb249607367",
+      "hash": "985c5929f9fda93797a0111ba13e3850eaaeeec6028c20a31600cee5205c1dfb",
       "profile": "supported"
     },
     "chat.d.ts#LyraGenChatSnapshot": {
@@ -1976,7 +1994,7 @@
       "profile": "supported"
     },
     "gen-view.class.d.ts#LyraGenViewElement": {
-      "hash": "77b59d60d69bfc09ed4c04c3381b7bf50083f94967834c96f03757b3c5b9bc27",
+      "hash": "35774cac368b5cebd7a508894bf60443119a3ad4a3249d1610014292c246299e",
       "profile": "supported"
     },
     "gen-view.class.d.ts#LyraGenViewEventMap": {
@@ -1992,7 +2010,7 @@
       "profile": "supported"
     },
     "index.d.ts#global": {
-      "hash": "c0bd13a12bc0583da2f929a45f7b19c71deea19e9f0831c1ec2c59092d1d1d2b",
+      "hash": "8a4d3f1078345a77c9cd73661d12ee1811b816c60f5c1cc7285d54730fea955b",
       "profile": "supported"
     },
     "islands.d.ts#createIslandParser": {
@@ -2027,6 +2045,10 @@
       "hash": "1e4cb7e1fe031e52bea6dec20549e92bed9bcea89e3ca58598529550df653fc5",
       "profile": "supported"
     },
+    "isolation.d.ts#LYRA_GEN_ISOLATED_TYPE": {
+      "hash": "670483e10f7f873a7b8f9f2c1f0774311f5aaab0b4df3bf24800c59c9babd3e2",
+      "profile": "supported"
+    },
     "json-stream.d.ts#createJsonViewStream": {
       "hash": "56e644ee5a7da16bf60db61cacc30c31d57076925d48616e6e24b844db2ae4d7",
       "profile": "supported"
@@ -2040,11 +2062,11 @@
       "profile": "supported"
     },
     "json-stream.d.ts#JsonViewStreamOptions": {
-      "hash": "5f34d36dee330b6c8d424589cb6c9d6fa446e81c9213fcd0b3fd005d1bdf56da",
+      "hash": "4ecfb168390ca8058c574c3f2d1b8cd66b04c702afab636312a2b0225a69d539",
       "profile": "supported"
     },
     "json-stream.d.ts#JsonViewStreamResult": {
-      "hash": "7aa56fa3ac6cb83e96fa8656ed2348a334fb74dffa4986b75f181ae98f48cea1",
+      "hash": "0d4a8d7ba9c64cdf516d11ce152eea5d305bb6f97b20571d784edc1b45653d6a",
       "profile": "supported"
     },
     "json-stream.d.ts#parseJsonView": {
@@ -2304,11 +2326,11 @@
       "profile": "supported"
     },
     "recovery.d.ts#LyraGenCompletedView": {
-      "hash": "671700926c5289d600d41f1a1e3e053f38e3baff2d410d34b44fbc2c562f9ed8",
+      "hash": "3ad130b4f648e9eac92ae91b4bbfee5e756a415d008f47a1964a96a150a383ef",
       "profile": "supported"
     },
     "recovery.d.ts#LyraGenCompletionOptions": {
-      "hash": "83dd74348f0e2347c7ddb22ddd85b4a01c253c94202ce5cae11aace3afd4be3a",
+      "hash": "483f75b7349b81a1b94027cd249f176c9c8c26d2f544b9081f3a58386bce8447",
       "profile": "supported"
     },
     "recovery.d.ts#LyraGenCompletionPolicy": {
@@ -2444,7 +2466,7 @@
       "profile": "supported"
     },
     "runtime.d.ts#applyViewPatch": {
-      "hash": "4d33865ce185a442bfde0cb2b6a8b72bf9cba257721ff2694096548fc9212801",
+      "hash": "480cc5fca4d1bbbc221abde79ef489c4ee8ed5198e85448a5204c1035c17acc5",
       "profile": "supported"
     },
     "runtime.d.ts#createAction": {
@@ -2488,7 +2510,7 @@
       "profile": "supported"
     },
     "runtime.d.ts#LyraGenValidationOptions": {
-      "hash": "8b91767dd4b4228baa2c40912e25961f1469c26c2f7ca13db9669febfb95f0a5",
+      "hash": "af558ec4e45879a0dd6f09c3f60e6ea6a36b83e0745774e1746c29b5882cf6e2",
       "profile": "supported"
     },
     "runtime.d.ts#reconcileSurfaceState": {
@@ -2508,7 +2530,7 @@
       "profile": "supported"
     },
     "runtime.d.ts#validateView": {
-      "hash": "0e7103e692a1081c4d789d96b1e5f40b8e2423b00bfe588b098483b4b4ecd593",
+      "hash": "06d21334e5fb050d712164f34f0c620bbad192ea443394529a37d814487be54c",
       "profile": "supported"
     },
     "schema.d.ts#DEFAULT_LIMITS": {
@@ -2692,7 +2714,7 @@
       "profile": "supported"
     },
     "types.d.ts#LyraGenComponent": {
-      "hash": "cb573b862b8621e67b47b168a89f9bd9d5f7c50cc7872d86f896c49be6e215d6",
+      "hash": "d3bf116191b129038e0925baccc346aa0752ed0d3d76835ad290ef6ff07c24c2",
       "profile": "supported"
     },
     "types.d.ts#LyraGenDataReference": {
@@ -2711,12 +2733,20 @@
       "hash": "bcca66d28c54a69beb6283d61eab180a85d326f96a42a2f52838c42a4b4bfca7",
       "profile": "supported"
     },
+    "types.d.ts#LyraGenIsolation": {
+      "hash": "871fac628b99587b74fc23145ea479d97742a246135549680bfe6848bdaa0f8c",
+      "profile": "supported"
+    },
     "types.d.ts#LyraGenLimits": {
       "hash": "62515d263164bb3f04335826eda8df7df45065b148a3aee873a494bc3bee7ebc",
       "profile": "supported"
     },
     "types.d.ts#LyraGenNode": {
       "hash": "19483130a1c5a5e63fbdaa7826c0ea257e695c3b1fa405615d365c02ba5717e7",
+      "profile": "supported"
+    },
+    "types.d.ts#LyraGenRecoveryMode": {
+      "hash": "9ef5cd78154dc5cefc45462c1909a3a9a8f9e54684b99385c0a1f1ff4f0177d6",
       "profile": "supported"
     },
     "types.d.ts#LyraGenResult": {
@@ -2737,6 +2767,10 @@
     },
     "types.d.ts#LyraGenUrlSink": {
       "hash": "15275ac474399b86e07be0967824c9bff9ce51cc148a596cfabdd9936ed67d84",
+      "profile": "supported"
+    },
+    "types.d.ts#LyraGenValidationResult": {
+      "hash": "fb7a0b39dc558bb38818010c24066b570c3eee75dfb799a6e8d4c0f7e6d5d8af",
       "profile": "supported"
     },
     "types.d.ts#LyraGenView": {

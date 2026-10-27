@@ -26,5 +26,15 @@ export const styles = css`
     margin: 0;
     color: var(--lr-color-text-quiet);
   }
+  [part='isolated'] {
+    box-sizing: border-box;
+    margin: 0;
+    padding: var(--lr-space-s) var(--lr-space-m);
+    border: var(--lr-border-width-thin) dashed var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+    pointer-events: none;
+  }
   [part='loading'] { min-block-size: var(--lr-gen-loading-block-size, var(--lr-icon-button-size)); }
 `;

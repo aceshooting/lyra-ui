@@ -79,6 +79,11 @@ new message-part wire type. The stable widget-v2 route remains available through
 `widget` root, `widgetRegistry` and `widgetBindingState`; its documents and events differ from
 Lyra Gen's [view contract](compatibility.md#other-contracts).
 
+Set `recovery: 'isolate'` in `LyraGenChatOptions` to contain component-local defects instead of showing
+the invalid fallback for the whole island. The island stays `ready`, its `document` holds the isolation
+markers and `LyraGenChatIsland.isolated` lists them; the default `'strict'` is unchanged. See
+[error isolation](recovery-and-diagnostics.md#error-isolation).
+
 ## Stream boundaries
 
 Use `createIslandParser()` from `@aceshooting/lyra-gen/islands.js` when the model returns prose

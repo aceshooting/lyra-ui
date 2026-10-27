@@ -1,18 +1,54 @@
 import { escapePointerSegment, snapshotJson, validateSchema, resolveLimits } from './schema.js';
 import { isContentUrlProperty, validateContentProperties, validateFieldPurpose } from './content-policy.js';
 import { parsePointer, readPointer } from './references.js';
-import type { JsonValue, LyraGenAction, LyraGenCatalog, LyraGenDiagnostic, LyraGenLimits, LyraGenNode, LyraGenResult, LyraGenView } from './types.js';
+import { classifyDiagnostic, LYRA_GEN_ISOLATED_TYPE } from './isolation.js';
+import type { JsonValue, LyraGenAction, LyraGenCatalog, LyraGenDiagnostic, LyraGenIsolation, LyraGenLimits, LyraGenNode, LyraGenRecoveryMode, LyraGenResult, LyraGenValidationResult, LyraGenView } from './types.js';
 
-export interface LyraGenValidationOptions { readonly limits?: Partial<LyraGenLimits> }
+export interface LyraGenValidationOptions {
+  readonly limits?: Partial<LyraGenLimits>;
+  /** `'strict'` (default) rejects any error; `'isolate'` replaces component-local failures in place and rejects everything else. */
+  readonly recovery?: LyraGenRecoveryMode;
+}
 /** Only content failures may be submitted to an explicit host repair request. */
 export const REPAIRABLE_DIAGNOSTIC_CODES: readonly string[] = Object.freeze(['schema.type', 'schema.enum', 'schema.length', 'schema.range', 'schema.required', 'schema.any-of', 'props.required', 'a11y.name']);
 const identityPattern = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/u;
 const validatedViews = new WeakSet<LyraGenView>();
+/** Views produced by this module that contain isolation markers; only these may be re-validated with their markers. */
+const isolatedViews = new WeakSet<object>();
+/** Validated views whose tree differs from the supplied input (block expansion or isolation). */
+const rewrittenViews = new WeakSet<object>();
+const NO_MARKERS: ReadonlySet<string> = new Set();
+const markersIn = (root: JsonValue | undefined): { readonly nodeId: string; readonly path: string }[] => {
+  const found: { nodeId: string; path: string }[] = [];
+  const walk = (node: JsonValue | undefined, path: string): void => {
+    if (!object(node as JsonValue)) return;
+    const record = node as Record<string, JsonValue>;
+    if (record['type'] === LYRA_GEN_ISOLATED_TYPE) { if (typeof record['id'] === 'string') found.push({ nodeId: record['id'], path }); return; }
+    const kids = record['children'];
+    if (Array.isArray(kids)) kids.forEach((child, index) => walk(child, `${path}/children/${index}`));
+  };
+  walk(root, '/root');
+  return found;
+};
+/** Nearest enclosing node path of a diagnostic path inside the node tree. */
+const ownerPattern = /^\/root(?:\/children\/\d+)*/u;
 const object = (value: unknown): value is Record<string, JsonValue> => value !== null && typeof value === 'object' && !Array.isArray(value);
 const failure = <T>(code: string, message: string, path = ''): LyraGenResult<T> => ({ ok: false, diagnostics: [{ code, path, message, severity: 'error' }] });
 
-/** Validate the whole generated boundary; identities and security failures are never repaired. */
-export function validateView(input: unknown, catalog: LyraGenCatalog, options: LyraGenValidationOptions = {}): LyraGenResult<LyraGenView> {
+/**
+ * Validate the whole generated boundary; identities and security failures are never repaired.
+ * With `recovery: 'isolate'`, component-local failures (see `classifyDiagnostic`) replace only their
+ * outermost failing node by an isolation marker and are reported in `isolated`; any other failure
+ * rejects exactly as strict mode does. Components with `expand` are expanded into their primitive
+ * nodes, which the returned view contains.
+ */
+export function validateView(input: unknown, catalog: LyraGenCatalog, options: LyraGenValidationOptions = {}): LyraGenValidationResult {
+  // Markers are accepted only inside a view this module returned; generated input can never carry one.
+  const trusted = input !== null && typeof input === 'object' && isolatedViews.has(input) ? new Set(markersIn((input as LyraGenView).root as unknown as JsonValue).map(marker => marker.nodeId)) : NO_MARKERS;
+  return validateWithMarkers(input, catalog, options, trusted);
+}
+
+function validateWithMarkers(input: unknown, catalog: LyraGenCatalog, options: LyraGenValidationOptions, allowedMarkers: ReadonlySet<string>): LyraGenValidationResult {
   const admitted = snapshotJson(input, options.limits);
   if (!admitted.ok) return admitted;
   const view = admitted.value;
@@ -23,20 +59,36 @@ export function validateView(input: unknown, catalog: LyraGenCatalog, options: L
   const diagnostics: LyraGenDiagnostic[] = [];
   const limits = resolveLimits(options.limits);
   const ids = new Set<string>();
+  /** Valid unique identity of each visited node, keyed by its path. */
+  const nodeIds = new Map<string, string>();
+  const expansionRoots = new Set<string>();
+  const forcedBoundary = new Set<LyraGenDiagnostic>();
+  let errorCount = 0;
+  let overflowed = false;
   const bindings = new Set<string>();
   const bindingAncestors = new Set<string>();
-  const issue = (code: string, path: string, message: string, hint?: string): void => {
+  const issue = (code: string, path: string, message: string, hint?: string, boundary = false): void => {
     const diagnostic: LyraGenDiagnostic = { code, path, message, severity: 'error', ...(hint ? { hint } : {}) };
+    errorCount++;
+    if (boundary) forcedBoundary.add(diagnostic);
     if (diagnostics.length < limits.maxDiagnostics) diagnostics.push(diagnostic);
-    else if (!REPAIRABLE_DIAGNOSTIC_CODES.includes(code)) diagnostics[diagnostics.length - 1] = diagnostic;
+    else { overflowed = true; if (!REPAIRABLE_DIAGNOSTIC_CODES.includes(code)) diagnostics[diagnostics.length - 1] = diagnostic; }
   };
-  const visit = (value: JsonValue | undefined, path: string, parent?: LyraGenNode, inForm = false): void => {
-    if (!object(value)) { issue('node.invalid', path, 'Expected a node object.'); return; }
+  /** Validate one node; returns the node to keep (the block's expansion, a rebuilt parent, or the input). `expanded` skips identity registration for a block's own replacement. */
+  const visit = (value: JsonValue | undefined, path: string, parent?: LyraGenNode, inForm = false, expanded = false): JsonValue | undefined => {
+    if (!object(value)) { issue('node.invalid', path, 'Expected a node object.'); return value; }
+    const startErrors = errorCount;
     if (Object.keys(value).some(key => !['id', 'type', 'props', 'children', 'text', 'slot', 'bindings', 'action'].includes(key))) issue('node.member', path, 'Unknown node member.');
-    if (typeof value['id'] !== 'string' || !identityPattern.test(value['id'])) issue('identity.invalid', `${path}/id`, 'A node needs an explicit valid identity.');
+    if (expanded) { /* identity was admitted with the block node */ }
+    else if (typeof value['id'] !== 'string' || !identityPattern.test(value['id'])) issue('identity.invalid', `${path}/id`, 'A node needs an explicit valid identity.');
     else if (ids.has(value['id'])) issue('identity.duplicate', `${path}/id`, 'Node identities must be unique.');
-    else ids.add(value['id']);
-    if (typeof value['type'] !== 'string' || !Object.hasOwn(catalog.components, value['type'])) { issue('catalog.component', `${path}/type`, 'Component is not in the active catalog.'); return; }
+    else { ids.add(value['id']); nodeIds.set(path, value['id']); }
+    if (value['type'] === LYRA_GEN_ISOLATED_TYPE) {
+      if (!expanded && typeof value['id'] === 'string' && allowedMarkers.has(value['id']) && Object.keys(value).length === 2) return value;
+      issue('catalog.component', `${path}/type`, 'Component is not in the active catalog.', undefined, true);
+      return value;
+    }
+    if (typeof value['type'] !== 'string' || !Object.hasOwn(catalog.components, value['type'])) { issue('catalog.component', `${path}/type`, 'Component is not in the active catalog.'); return value; }
     const component = catalog.components[value['type']]!;
     for (const diagnostic of validateFieldPurpose(value as unknown as LyraGenNode, view['surfaceId'] as string, catalog)) issue(diagnostic.code, path + diagnostic.path, diagnostic.message);
     if (component.tag === 'form' && inForm) issue('node.nested-form', path, 'Forms cannot be nested.');
@@ -78,21 +130,81 @@ export function validateView(input: unknown, catalog: LyraGenCatalog, options: L
       const named = object(props) && component.accessibleName.properties?.some(key => typeof props[key] === 'string' && (props[key] as string).trim().length > 0);
       if (!named && !(component.accessibleName.text && typeof value['text'] === 'string' && value['text'].trim())) issue('a11y.name', path, 'This component requires an accessible name.');
     }
+    if (component.expand) {
+      if (expanded) issue('block.expansion', path, 'Block expansion cannot produce another expandable block.', undefined, true);
+      else {
+        if (Array.isArray(value['children']) && value['children'].length) issue('children.forbidden', `${path}/children`, 'This component does not accept children.');
+        if (errorCount === startErrors) return expand(value, component.expand, path, parent, inForm);
+      }
+    }
     if (value['children'] !== undefined) {
       if (!Array.isArray(value['children'])) issue('children.invalid', `${path}/children`, 'Children must be an array.');
       else {
         if (value['children'].length && !component.children) issue('children.forbidden', `${path}/children`, 'This component does not accept children.');
-        value['children'].forEach((child, index) => {
+        const next = value['children'].map((child, index) => {
           if (Array.isArray(component.children) && object(child) && !component.children.includes(child['type'] as string)) issue('children.type', `${path}/children/${index}`, 'Child component type is not allowed here.');
-          visit(child, `${path}/children/${index}`, value as unknown as LyraGenNode, inForm || component.tag === 'form');
+          return visit(child, `${path}/children/${index}`, value as unknown as LyraGenNode, inForm || component.tag === 'form') ?? child;
         });
+        if (next.some((child, index) => child !== (value['children'] as JsonValue[])[index])) return Object.freeze({ ...value, children: Object.freeze(next) });
       }
     }
+    return value;
   };
-  visit(view['root'], '/root');
-  if (diagnostics.length) return { ok: false, diagnostics };
-  validatedViews.add(view as unknown as LyraGenView);
-  return { ok: true, value: view as unknown as LyraGenView, diagnostics: [] };
+  /** Run a trusted block expansion for a node whose own members are already valid, then validate the result in its place. */
+  const expand = (value: Record<string, JsonValue>, run: (node: LyraGenNode) => LyraGenNode, path: string, parent: LyraGenNode | undefined, inForm: boolean): JsonValue | undefined => {
+    let produced: unknown;
+    try { produced = run(value as unknown as LyraGenNode); } catch (error) {
+      const message = error instanceof Error && error.message.length > 0 && error.message.length <= 200 ? error.message : 'The block content is invalid.';
+      issue('block.invalid', path, message);
+      return value;
+    }
+    const copy = snapshotJson(produced, options.limits);
+    if (!copy.ok) { issue('block.expansion', path, 'Block expansion must produce bounded JSON data.', undefined, true); return value; }
+    const result = copy.value;
+    if (!object(result)) { issue('block.expansion', path, 'Block expansion must produce a node object.', undefined, true); return value; }
+    // Identity is derived, never invented: the block id is retained and children are `<id>--<index>`.
+    if (result['id'] !== value['id']) { issue('block.expansion', path, 'An expanded block must retain its identity.', undefined, true); return value; }
+    if (Array.isArray(result['children']) && result['children'].some((child, index) => object(child) && child['id'] !== `${value['id'] as string}--${index}`)) { issue('block.expansion', path, 'Expanded children must use the identities <id>--<index>.', undefined, true); return value; }
+    expansionRoots.add(path);
+    return visit(result, path, parent, inForm, true);
+  };
+  const root = visit(view['root'], '/root');
+  const finish = (finalRoot: JsonValue | undefined, warnings: readonly LyraGenDiagnostic[], contained: ReadonlyMap<string, readonly LyraGenDiagnostic[]>): LyraGenValidationResult => {
+    const rewritten = finalRoot !== view['root'];
+    const final = (rewritten ? Object.freeze({ ...view, root: finalRoot }) : view) as unknown as LyraGenView;
+    validatedViews.add(final);
+    if (rewritten) rewrittenViews.add(final);
+    const isolated: LyraGenIsolation[] = markersIn(finalRoot).map(marker => Object.freeze({ nodeId: marker.nodeId, path: marker.path, diagnostics: Object.freeze([...(contained.get(marker.path) ?? [])]) }));
+    if (isolated.length) isolatedViews.add(final);
+    return isolated.length ? { ok: true, value: final, diagnostics: warnings, isolated: Object.freeze(isolated) } : { ok: true, value: final, diagnostics: warnings };
+  };
+  if (!diagnostics.length) return finish(root, [], new Map());
+  if (options.recovery !== 'isolate' || overflowed) return { ok: false, diagnostics };
+  // Group every error under its nearest enclosing node; any boundary error rejects as strict does.
+  const owners: { readonly diagnostic: LyraGenDiagnostic; readonly path: string }[] = [];
+  for (const diagnostic of diagnostics) {
+    const nodePath = ownerPattern.exec(diagnostic.path)?.[0];
+    if (!nodePath || forcedBoundary.has(diagnostic) || classifyDiagnostic(diagnostic.code, diagnostic.path.slice(nodePath.length)) === 'boundary') return { ok: false, diagnostics };
+    // A failure inside an expanded block isolates the block, which is the component the author wrote.
+    const block = [...expansionRoots].filter(candidate => nodePath === candidate || nodePath.startsWith(`${candidate}/`)).sort((a, b) => a.length - b.length)[0];
+    const owner = block ?? nodePath;
+    if (owner === '/root' || !nodeIds.has(owner)) return { ok: false, diagnostics };
+    owners.push({ diagnostic, path: owner });
+  }
+  const failing = [...new Set(owners.map(entry => entry.path))];
+  const outermost = (path: string): string => failing.filter(candidate => path === candidate || path.startsWith(`${candidate}/`)).sort((a, b) => a.length - b.length)[0]!;
+  const contained = new Map<string, LyraGenDiagnostic[]>();
+  for (const entry of owners) { const key = outermost(entry.path); contained.set(key, [...(contained.get(key) ?? []), entry.diagnostic]); }
+  const replace = (node: JsonValue | undefined, path: string): JsonValue | undefined => {
+    if (!object(node as JsonValue)) return node;
+    const record = node as Record<string, JsonValue>;
+    if (contained.has(path)) return Object.freeze({ id: record['id'] as string, type: LYRA_GEN_ISOLATED_TYPE });
+    if (!Array.isArray(record['children'])) return node;
+    const kids = record['children'].map((child, index) => replace(child, `${path}/children/${index}`) ?? child);
+    return kids.some((child, index) => child !== (record['children'] as JsonValue[])[index]) ? Object.freeze({ ...record, children: Object.freeze(kids) }) : node;
+  };
+  const warnings = diagnostics.map(diagnostic => ({ ...diagnostic, severity: 'warning' as const }));
+  return finish(replace(root, '/root'), warnings, contained);
 }
 
 const pointerAncestors = function* (pointer: string): Generator<string> {
@@ -115,7 +227,7 @@ export type LyraGenPatchOperation = { readonly op: 'replace'; readonly nodeId: s
 export interface LyraGenPatch { readonly surfaceId: string; readonly expectedRevision: number; readonly operations: readonly LyraGenPatchOperation[] }
 
 /** Apply a single atomic revision. Untouched branches retain their object identities. */
-export function applyViewPatch(view: LyraGenView, patch: LyraGenPatch, catalog: LyraGenCatalog, options: LyraGenValidationOptions = {}): LyraGenResult<LyraGenView> {
+export function applyViewPatch(view: LyraGenView, patch: LyraGenPatch, catalog: LyraGenCatalog, options: LyraGenValidationOptions = {}): LyraGenValidationResult {
   const current = validateView(view, catalog, options);
   if (!current.ok) return current;
   // Only already-admitted immutable input can be shared with the next revision.
@@ -142,12 +254,18 @@ export function applyViewPatch(view: LyraGenView, patch: LyraGenPatch, catalog: 
     return children?.some((child, index) => child !== node.children?.[index]) || children?.length !== node.children?.length ? Object.freeze({ ...node, children: Object.freeze(children ?? []) }) : node;
   };
   const root = map(view.root)!;
+  if (hasReservedType(safe.operations as unknown as JsonValue)) return failure('catalog.component', 'The reserved isolation type cannot be supplied.');
   if (conflict) return failure('identity.conflict', 'Patch targets cannot overlap their ancestors.');
   const next: LyraGenView = Object.freeze({ ...view, root, revision: view.revision + 1 });
-  const checked = validateView(next, catalog, options);
-  if (checked.ok) validatedViews.add(next);
-  return checked.ok ? { ok: true, value: next, diagnostics: [] } : checked;
+  // Markers already present in the base view stay; the patch itself can never add one (checked above).
+  const checked = validateWithMarkers(next, catalog, options, isolatedViews.has(view) ? new Set(markersIn(view.root as unknown as JsonValue).map(marker => marker.nodeId)) : NO_MARKERS);
+  if (!checked.ok) return checked;
+  if (rewrittenViews.has(checked.value)) return checked;
+  validatedViews.add(next);
+  if (checked.isolated) isolatedViews.add(next);
+  return { ...checked, value: next };
 }
+const hasReservedType = (value: JsonValue): boolean => Array.isArray(value) ? value.some(hasReservedType) : object(value) && (value['type'] === LYRA_GEN_ISOLATED_TYPE || Object.values(value).some(hasReservedType));
 
 export interface LyraGenStateOwner { readonly nodeId: string; readonly property: string; readonly type: string }
 export interface LyraGenSurfaceState {

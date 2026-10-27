@@ -69,3 +69,23 @@ node packages/lyra-gen/scripts/report-catalog-presets.mjs --write
 ```
 
 Build the package first. The [checked report](../scripts/fixtures/catalog-preset-prompts.json) includes prompt UTF-16/code-point counts, UTF-8 bytes and SHA-256; compact serialized-schema bytes and SHA-256; and their combined content bytes. Trailing newlines, provider wrappers and request metadata are excluded. Provider tokens and model error rates remain unmeasured; smaller content does not establish token, quality, latency, caching or cost improvements.
+
+## Composite answer blocks (opt-in overlay)
+
+`answerBlocksCatalog(base = initialCatalog)` returns a new catalog with id `${base.id}+blocks` (built-in: `lyra-reviewed+blocks`) and the base version. It adds three compact roles that let a model express common answer patterns in one node. Nothing changes for existing catalogs or stored views, and the overlay is a different catalog identity: retain its reference with the answer. It throws a `TypeError` when the base lacks `row`, `stat` or `table`, or already defines one of the added roles.
+
+| Role | Props | Expands to |
+| --- | --- | --- |
+| `kpi-row` | `items`: 1-6 of `label`, `value` (string or number), optional `caption`, `deltaPercent`, `goodDirection` (`up`/`down`) | `row` of `stat`, children `<id>--<index>` |
+| `comparison` | `caption`, optional `rowLabel` (first column header, default `Item`), `columns`: 2-6 labels, `rows`: 1-50 of `label` and `values` (one scalar per column) | `table`; column keys `c0` (row label), `c1`... |
+| `steps` | `label`, `items`: 1-12 of `label`, optional `description`; optional zero-based `current` | read-only `stepper` (`lr-stepper`); earlier steps completed, later pending |
+
+The overlay also adds the `stepper` primitive role and extends `stat` with optional `deltaPercent` and `goodDirection`. A `comparison` row whose `values` length differs from `columns` is rejected at that row. Expansion happens during validation, so renderers and stored output only ever contain primitive nodes; an expanded id that collides with an existing id is a duplicate-identity failure.
+
+```ts
+import { answerBlocksCatalog } from '@aceshooting/lyra-gen/catalog.js';
+import { buildCatalogPrompt } from '@aceshooting/lyra-gen/prompts.js';
+
+const catalog = answerBlocksCatalog();
+const prompt = buildCatalogPrompt(catalog);
+```

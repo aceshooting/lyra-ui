@@ -3,7 +3,7 @@ import { createIslandParser, type IslandParser, type IslandResult } from './isla
 import { validateView } from './runtime.js';
 import { snapshotJson } from './schema.js';
 import type { MarkupOptions } from './parser.js';
-import type { JsonValue, LyraGenCatalog, LyraGenDiagnostic, LyraGenNode, LyraGenResult, LyraGenView } from './types.js';
+import type { JsonValue, LyraGenCatalog, LyraGenDiagnostic, LyraGenIsolation, LyraGenNode, LyraGenRecoveryMode, LyraGenValidationResult, LyraGenView } from './types.js';
 
 export type LyraGenChatStatus = 'streaming' | 'complete' | 'interrupted' | 'cancelled' | 'error';
 export type LyraGenChatIslandStatus = 'loading' | 'ready' | 'incomplete' | 'error';
@@ -29,6 +29,8 @@ export interface LyraGenChatOptions {
   readonly revision?: number;
   readonly catalog: LyraGenCatalog;
   readonly limits?: MarkupOptions['limits'];
+  /** `'strict'` (default) shows the invalid fallback for any error; `'isolate'` contains component-local defects in place and keeps the island ready. */
+  readonly recovery?: LyraGenRecoveryMode;
   /** Host-localized strings; this DOM-free controller does not choose a UI locale. */
   readonly strings: LyraGenChatStrings;
   /** Host-only provenance text, rendered outside the generated view. */
@@ -48,6 +50,8 @@ export interface LyraGenChatIsland {
   readonly provenance?: string;
   readonly document?: LyraGenView;
   readonly diagnostics: readonly LyraGenDiagnostic[];
+  /** Subtrees contained by `recovery: 'isolate'`; the island stays `ready`. Absent in strict mode or when nothing was contained. */
+  readonly isolated?: readonly LyraGenIsolation[];
 }
 export interface LyraGenChatSnapshot {
   readonly status: LyraGenChatStatus;
@@ -94,9 +98,10 @@ export class LyraGenChatController {
   private resumable = false;
   private interruptionReason?: string;
   private readonly options: LyraGenChatOptions;
-  private parsedViews = new WeakMap<LyraGenView, LyraGenResult<LyraGenView>>();
+  private parsedViews = new WeakMap<LyraGenView, LyraGenValidationResult>();
   private readonly rawViews = new Map<string, LyraGenView>();
   private readonly islands = new Map<string, LyraGenChatIsland>();
+  private readonly admittedRoots = new Map<string, LyraGenNode>();
   private readonly partCache = new Map<string, MessagePart>();
   private readonly suggestions = new Map<string, LyraGenChatSuggestion>();
   private readonly activations = new Set<string>();
@@ -250,7 +255,7 @@ export class LyraGenChatController {
     this.disposed = true; this.abortRequests(); this.parser?.cancel(); this.parser = undefined;
     this.result = { parts: [], diagnostics: [] }; this.retryResult = undefined;
     this.parsedViews = new WeakMap();
-    this.islands.clear(); this.rawViews.clear(); this.partCache.clear(); this.suggestions.clear(); this.activations.clear();
+    this.islands.clear(); this.rawViews.clear(); this.admittedRoots.clear(); this.partCache.clear(); this.suggestions.clear(); this.activations.clear();
     this.current = Object.freeze({ status: 'cancelled', parts: [], islands: [], diagnostics: [], resumable: false });
   }
   private rejectReleasedSource(): LyraGenChatSnapshot {
@@ -280,6 +285,9 @@ export class LyraGenChatController {
         ? Object.freeze({ id, label: source.label }) : undefined;
     } catch { return undefined; }
   }
+  private validation(): { readonly recovery: LyraGenRecoveryMode } {
+    return { recovery: this.options.recovery === 'isolate' ? 'isolate' : 'strict' };
+  }
   private admit(partId: string, raw: LyraGenView, refresh = false): LyraGenChatIsland {
     const previous = this.islands.get(partId);
     if (!refresh && this.rawViews.get(partId) === raw && previous) return previous;
@@ -302,14 +310,16 @@ export class LyraGenChatController {
       return node.children ? { ...node, children: node.children.map(rewrite) } : node;
     };
     const root = rewrite(raw.root);
-    const changed = previous?.document && !sameTree(previous.document.root, root);
+    const previousRoot = this.admittedRoots.get(partId) ?? previous?.document?.root;
+    const changed = previous?.document && previousRoot && !sameTree(previousRoot, root);
     const revision = refresh && changed ? previous!.document!.revision + 1 : previous?.document?.revision ?? raw.revision;
-    const admitted = validateView({ ...raw, root, revision }, this.options.catalog);
+    const admitted = validateView({ ...raw, root, revision }, this.options.catalog, this.validation());
     const island: LyraGenChatIsland = Object.freeze({ kind: 'lyra-gen-island', partId, surfaceId: raw.surfaceId,
       status: admitted.ok ? 'ready' : 'error', fallback: admitted.ok ? '' : this.options.strings.invalid,
       ...(this.options.provenance ? { provenance: this.options.provenance } : {}),
-      ...(admitted.ok ? { document: !changed && previous?.document ? previous.document : admitted.value } : {}), diagnostics: admitted.diagnostics });
-    this.rawViews.set(partId, raw); this.islands.set(partId, island);
+      ...(admitted.ok ? { document: !changed && previous?.document ? previous.document : admitted.value } : {}), diagnostics: admitted.diagnostics,
+      ...(admitted.ok && admitted.isolated ? { isolated: admitted.isolated } : {}) });
+    this.rawViews.set(partId, raw); this.islands.set(partId, island); this.admittedRoots.set(partId, root);
     return island;
   }
 
@@ -343,14 +353,16 @@ export class LyraGenChatController {
       if (part.closed && part.result.status === 'complete' && part.result.view) {
         let checked = this.parsedViews.get(part.result.view);
         if (!checked) {
-          checked = validateView(part.result.view, this.options.catalog);
+          checked = validateView(part.result.view, this.options.catalog, this.validation());
           this.parsedViews.set(part.result.view, checked);
         }
         const old = this.rawViews.get(partId);
-        if (old && checked.ok && old !== checked.value && !sameTree(old, checked.value)) {
+        // An isolated view only re-validates as the very object returned, so keep the original parse as the raw view.
+        const source = checked.ok && checked.isolated ? part.result.view : checked.ok ? checked.value : part.result.view;
+        if (old && checked.ok && old !== source && !sameTree(old, source)) {
           island = Object.freeze({ kind: 'lyra-gen-island', partId, surfaceId: old.surfaceId, status: 'error',
             fallback: this.options.strings.invalid, ...(this.options.provenance ? { provenance: this.options.provenance } : {}), diagnostics: [issue('chat.identity-conflict', 'A replay changed an already published island.')] });
-        } else if (checked.ok) island = this.admit(partId, old ?? checked.value);
+        } else if (checked.ok) island = this.admit(partId, old ?? source);
         else island = Object.freeze({ kind: 'lyra-gen-island', partId, surfaceId: part.result.view.surfaceId,
           status: 'error', fallback: this.options.strings.invalid, ...(this.options.provenance ? { provenance: this.options.provenance } : {}), diagnostics: checked.diagnostics });
       } else {

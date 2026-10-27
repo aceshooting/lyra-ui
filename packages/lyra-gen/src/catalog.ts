@@ -9,6 +9,7 @@ import { formComponents } from './catalogs/forms.js';
 import { conversationComponents } from './catalogs/conversation.js';
 import { dataComponents } from './catalogs/data.js';
 import { retrievalComponents } from './catalogs/retrieval.js';
+import { answerBlockComponents } from './catalogs/blocks.js';
 import { appearance, boolean, choice, documentation, label, size, string, variant } from './catalogs/shared.js';
 
 function freeze<T>(value: T): T {
@@ -115,3 +116,14 @@ export const agentOpsCatalog = reviewedPreset('agent-ops');
 export const catalogPresets: Readonly<Record<LyraGenCatalogPresetName, LyraGenCatalog>> = Object.freeze({
   chat: chatCatalog, forms: formsCatalog, data: dataCatalog, retrieval: retrievalCatalog, 'agent-ops': agentOpsCatalog,
 });
+
+/**
+ * Opt-in overlay adding the composite answer blocks `kpi-row`, `comparison` and `steps` and the
+ * read-only `stepper` primitive they expand into. The result has id `<base id>+blocks` and the base
+ * version; `stat` additionally accepts `deltaPercent` and `goodDirection`. The base catalog is not
+ * modified. Throws a `TypeError` when the base lacks `row`, `stat` or `table`, or already defines
+ * a block or `stepper` role.
+ */
+export function answerBlocksCatalog(base: LyraGenCatalog = initialCatalog): LyraGenCatalog {
+  return createCatalog({ ...base, id: `${base.id}+blocks`, version: base.version, components: { ...base.components, ...answerBlockComponents(base) } });
+}

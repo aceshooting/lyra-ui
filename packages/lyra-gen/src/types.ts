@@ -44,6 +44,18 @@ export type LyraGenResult<T> =
   | { readonly ok: true; readonly value: T; readonly diagnostics: readonly LyraGenDiagnostic[] }
   | { readonly ok: false; readonly diagnostics: readonly LyraGenDiagnostic[] };
 
+/** `'strict'` (default) rejects any error; `'isolate'` contains component-local errors in place. */
+export type LyraGenRecoveryMode = 'strict' | 'isolate';
+/** One subtree replaced by an isolation marker; its diagnostics are also reported as warnings. */
+export interface LyraGenIsolation {
+  readonly nodeId: string;
+  /** JSON Pointer of the isolated node in the supplied view. */
+  readonly path: string;
+  readonly diagnostics: readonly LyraGenDiagnostic[];
+}
+/** View validation result; `isolated` is present only in `'isolate'` mode when a subtree was contained. */
+export type LyraGenValidationResult = LyraGenResult<LyraGenView> & { readonly isolated?: readonly LyraGenIsolation[] };
+
 export interface LyraGenDataReference { readonly $ref: string }
 export interface LyraGenActionBinding { readonly name: string; readonly payload?: JsonValue }
 export interface LyraGenNode {
@@ -120,6 +132,12 @@ export interface LyraGenComponent {
   /** Trusted host-only adaptation after JSON validation; never supplied by generated content. */
   readonly prepareProperties?: (props: Readonly<Record<string, JsonValue>>, context?: { readonly locale: string }) => Readonly<Record<string, unknown>>;
   readonly load?: () => Promise<unknown>;
+  /**
+   * Trusted block expansion. Called only after the node's own properties validate; returns the
+   * primitive replacement node (same `id`, children ids derived as `<id>--<index>`), which is then
+   * validated like any generated node.
+   */
+  readonly expand?: (node: LyraGenNode) => LyraGenNode;
   readonly minimumBlockSize?: string;
   readonly description?: string;
   readonly useWhen?: string;

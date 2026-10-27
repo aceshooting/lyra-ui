@@ -1,7 +1,7 @@
 import type { MessagePart } from '@aceshooting/lyra-ui/ai';
 import { resolveLimits } from './schema.js';
 import { validateView } from './runtime.js';
-import type { LyraGenCatalog, LyraGenDiagnostic, LyraGenLimits, LyraGenView } from './types.js';
+import type { LyraGenCatalog, LyraGenDiagnostic, LyraGenIsolation, LyraGenLimits, LyraGenRecoveryMode, LyraGenView } from './types.js';
 
 export interface LyraGenAiSdkOptions {
   /** One bridge belongs to one SDK message; create a new bridge when that identity changes. */
@@ -13,6 +13,8 @@ export interface LyraGenAiSdkOptions {
   readonly toolNames?: readonly string[];
   /** Also bounds the combined serialized documents retained for stable identity. */
   readonly limits?: Partial<LyraGenLimits>;
+  /** `'strict'` (default) rejects any validation error; `'isolate'` contains component-local defects in place. */
+  readonly recovery?: LyraGenRecoveryMode;
 }
 
 export interface LyraGenAiSdkPart {
@@ -22,11 +24,13 @@ export interface LyraGenAiSdkPart {
   /** Only validated complete views; interruption may retain the previous safe view. */
   readonly document?: LyraGenView;
   readonly diagnostics: readonly LyraGenDiagnostic[];
+  /** Subtrees contained by `recovery: 'isolate'`; the status stays `ready`. */
+  readonly isolated?: readonly LyraGenIsolation[];
   readonly resumable?: boolean;
   readonly reason?: string;
 }
 
-interface RetainedView { readonly document: LyraGenView; readonly serialized: string; readonly bytes: number }
+interface RetainedView { readonly document: LyraGenView; readonly isolated?: readonly LyraGenIsolation[]; readonly serialized: string; readonly bytes: number }
 const encoder = new TextEncoder();
 
 /** Selects host-authorized SDK data and complete tool input for the existing renderPart hook.
@@ -57,8 +61,8 @@ export class LyraGenAiSdkBridge {
     const data = part.type === 'data' && part.name && this.dataNames.has(part.name) && Object.hasOwn(part, 'data');
     const tool = part.type === 'tool-call' && this.toolNames.has(part.invocation.name);
     if (!data && !tool) return undefined;
-    const result = (status: LyraGenAiSdkPart['status'], diagnostics: readonly LyraGenDiagnostic[] = [], document?: LyraGenView): LyraGenAiSdkPart => ({
-      messageId: this.options.messageId, partId: part.id, status, diagnostics, ...(document ? { document } : {}),
+    const result = (status: LyraGenAiSdkPart['status'], diagnostics: readonly LyraGenDiagnostic[] = [], document?: LyraGenView, isolated?: readonly LyraGenIsolation[]): LyraGenAiSdkPart => ({
+      messageId: this.options.messageId, partId: part.id, status, diagnostics, ...(document ? { document } : {}), ...(isolated ? { isolated } : {}),
     });
     const failure = (code: string, message: string): LyraGenAiSdkPart => result('error', [{ code, message, path: '', severity: 'error' }]);
     if (typeof part.id !== 'string' || !part.id || part.id.length > 1024) return failure('identity.invalid', 'A generated part needs a bounded explicit identity.');
@@ -79,7 +83,7 @@ export class LyraGenAiSdkBridge {
       if (part.state !== 'complete') return result('loading');
       input = part.data;
     }
-    const checked = validateView(input, this.options.catalog, { limits: this.limits });
+    const checked = validateView(input, this.options.catalog, { limits: this.limits, recovery: this.options.recovery });
     if (!checked.ok) return result('error', checked.diagnostics);
     const serialized = JSON.stringify(checked.value, (_key, value: unknown) => value !== null
       && typeof value === 'object' && !Array.isArray(value)
@@ -88,7 +92,7 @@ export class LyraGenAiSdkBridge {
     const owner = this.owners.get(checked.value.surfaceId);
     if (owner !== undefined && owner !== part.id) return failure('identity.conflict', 'A generated surface must belong to exactly one message part.');
     if (previous) {
-      if (serialized === previous.serialized) return result('ready', [], previous.document);
+      if (serialized === previous.serialized) return result('ready', [], previous.document, previous.isolated);
       if (checked.value.surfaceId !== previous.document.surfaceId || checked.value.revision <= previous.document.revision) {
         return failure('revision.conflict', 'A changed part must retain its surface identity and advance its revision.');
       }
@@ -98,9 +102,9 @@ export class LyraGenAiSdkBridge {
     if (total > this.limits.maxBytes || (!previous && this.retained.size >= this.limits.maxNodes)) {
       return failure('limit.bytes', 'Generated SDK parts exceed the retained-content limit.');
     }
-    this.retained.set(part.id, { document: checked.value, serialized, bytes });
+    this.retained.set(part.id, { document: checked.value, serialized, bytes, ...(checked.isolated ? { isolated: checked.isolated } : {}) });
     this.owners.set(checked.value.surfaceId, part.id);
     this.retainedBytes = total;
-    return result('ready', [], checked.value);
+    return result('ready', [], checked.value, checked.isolated);
   }
 }

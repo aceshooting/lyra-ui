@@ -1,0 +1,35 @@
+{
+  "version": "1",
+  "catalog": {
+    "id": "iso",
+    "version": "1"
+  },
+  "surfaceId": "s",
+  "revision": 0,
+  "root": {
+    "id": "root",
+    "type": "row",
+    "children": [
+      {
+        "id": "i1",
+        "type": "input",
+        "props": {
+          "label": "L"
+        },
+        "bindings": {
+          "value": "/x"
+        }
+      },
+      {
+        "id": "i2",
+        "type": "input",
+        "props": {
+          "label": "L"
+        },
+        "bindings": {
+          "value": "/x"
+        }
+      }
+    ]
+  }
+}

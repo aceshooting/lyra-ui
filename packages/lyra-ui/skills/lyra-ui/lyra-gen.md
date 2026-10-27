@@ -40,6 +40,22 @@ const admitted = validateView(receivedValue, selected.value);
 // Render only admitted.value when admitted.ok is true, using the same selected catalog.
 ```
 
+## Composite answer blocks
+
+`answerBlocksCatalog()` from `catalog.js` is an opt-in overlay (id `<base id>+blocks`) adding
+`kpi-row`, `comparison` and `steps`. Each is expanded during validation into `row`/`stat`, `table`
+and a read-only `stepper`, with child ids `<id>--<index>`. Generate views against the overlay's own
+catalog reference; the base catalog and stored views are unchanged.
+
+## Opt-in error isolation
+
+Strict rejection is the default. Pass `recovery: 'isolate'` to `validateView`, the parse routes,
+chat options or `<lr-gen-view recovery="isolate">` to replace a component-local failure (bad
+properties, unknown role, missing accessible name) by an in-place fallback while siblings keep
+their state, focus and actions; check `result.isolated`. Identity, binding, action, URL/security,
+budget and root failures still reject the whole view. Persist the original input, not an isolated
+view, and isolate again on load.
+
 ## Preserve state and host authority
 
 Bind `.document`, `.catalog` and JSON-valued `.bindingState` as properties. For `.controlled`

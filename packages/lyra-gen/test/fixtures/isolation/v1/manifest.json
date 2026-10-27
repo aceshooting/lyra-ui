@@ -1,0 +1,309 @@
+{
+  "version": 1,
+  "catalog": "iso",
+  "cases": [
+    {
+      "name": "unknown-component",
+      "file": "unknown-component.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "catalog.component",
+      "note": ""
+    },
+    {
+      "name": "unknown-prop",
+      "file": "unknown-prop.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "props.unknown",
+      "note": ""
+    },
+    {
+      "name": "invalid-props-object",
+      "file": "invalid-props-object.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "props.invalid",
+      "note": ""
+    },
+    {
+      "name": "required-prop",
+      "file": "required-prop.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "props.required",
+      "note": ""
+    },
+    {
+      "name": "schema-type",
+      "file": "schema-type.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "schema.type",
+      "note": ""
+    },
+    {
+      "name": "schema-enum",
+      "file": "schema-enum.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "schema.enum",
+      "note": ""
+    },
+    {
+      "name": "text-on-container",
+      "file": "text-on-container.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "node.text",
+      "note": ""
+    },
+    {
+      "name": "slot-not-declared",
+      "file": "slot-not-declared.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "node.slot",
+      "note": ""
+    },
+    {
+      "name": "unknown-member",
+      "file": "unknown-member.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "node.member",
+      "note": ""
+    },
+    {
+      "name": "child-type-not-allowed",
+      "file": "child-type-not-allowed.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "children.type",
+      "note": ""
+    },
+    {
+      "name": "children-forbidden",
+      "file": "children-forbidden.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "children.forbidden",
+      "note": ""
+    },
+    {
+      "name": "missing-accessible-name",
+      "file": "missing-accessible-name.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "a11y.name",
+      "note": ""
+    },
+    {
+      "name": "nested-outermost",
+      "file": "nested-outermost.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "outer"
+      ],
+      "code": "schema.type",
+      "note": "failing ancestor isolates its descendants"
+    },
+    {
+      "name": "two-siblings",
+      "file": "two-siblings.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "b1",
+        "b2"
+      ],
+      "code": "catalog.component",
+      "note": ""
+    },
+    {
+      "name": "sibling-state-survives",
+      "file": "sibling-state-survives.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "a11y.name",
+      "note": ""
+    },
+    {
+      "name": "isolated-action-dropped",
+      "file": "isolated-action-dropped.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "props.unknown",
+      "note": ""
+    },
+    {
+      "name": "valid-view",
+      "file": "valid-view.json",
+      "strict": "accept",
+      "isolate": "accept",
+      "isolatedIds": [],
+      "code": null,
+      "note": ""
+    },
+    {
+      "name": "root-failure",
+      "file": "root-failure.json",
+      "strict": "reject",
+      "isolate": "reject",
+      "isolatedIds": [],
+      "code": "schema.enum",
+      "note": "failure at the root rejects"
+    },
+    {
+      "name": "invalid-identity",
+      "file": "invalid-identity.json",
+      "strict": "reject",
+      "isolate": "reject",
+      "isolatedIds": [],
+      "code": "identity.invalid",
+      "note": ""
+    },
+    {
+      "name": "duplicate-identity",
+      "file": "duplicate-identity.json",
+      "strict": "reject",
+      "isolate": "reject",
+      "isolatedIds": [],
+      "code": "identity.duplicate",
+      "note": ""
+    },
+    {
+      "name": "unknown-binding",
+      "file": "unknown-binding.json",
+      "strict": "reject",
+      "isolate": "reject",
+      "isolatedIds": [],
+      "code": "binding.unknown",
+      "note": ""
+    },
+    {
+      "name": "overlapping-binding",
+      "file": "overlapping-binding.json",
+      "strict": "reject",
+      "isolate": "reject",
+      "isolatedIds": [],
+      "code": "identity.binding",
+      "note": ""
+    },
+    {
+      "name": "unknown-action",
+      "file": "unknown-action.json",
+      "strict": "reject",
+      "isolate": "reject",
+      "isolatedIds": [],
+      "code": "action.unknown",
+      "note": ""
+    },
+    {
+      "name": "action-payload",
+      "file": "action-payload.json",
+      "strict": "reject",
+      "isolate": "reject",
+      "isolatedIds": [],
+      "code": "schema.type",
+      "note": "schema code under an action payload is boundary"
+    },
+    {
+      "name": "navigation-property",
+      "file": "navigation-property.json",
+      "strict": "reject",
+      "isolate": "reject",
+      "isolatedIds": [],
+      "code": "content.navigation",
+      "note": ""
+    },
+    {
+      "name": "nested-form",
+      "file": "nested-form.json",
+      "strict": "reject",
+      "isolate": "reject",
+      "isolatedIds": [],
+      "code": "node.nested-form",
+      "note": ""
+    },
+    {
+      "name": "children-not-array",
+      "file": "children-not-array.json",
+      "strict": "reject",
+      "isolate": "reject",
+      "isolatedIds": [],
+      "code": "children.invalid",
+      "note": ""
+    },
+    {
+      "name": "node-not-object",
+      "file": "node-not-object.json",
+      "strict": "reject",
+      "isolate": "reject",
+      "isolatedIds": [],
+      "code": "node.invalid",
+      "note": ""
+    },
+    {
+      "name": "reserved-type-input",
+      "file": "reserved-type-input.json",
+      "strict": "reject",
+      "isolate": "reject",
+      "isolatedIds": [],
+      "code": "catalog.component",
+      "note": "generated input can never carry the marker"
+    },
+    {
+      "name": "mixed-isolatable-and-boundary",
+      "file": "mixed-isolatable-and-boundary.json",
+      "strict": "reject",
+      "isolate": "reject",
+      "isolatedIds": [],
+      "code": "catalog.component",
+      "note": ""
+    }
+  ]
+}

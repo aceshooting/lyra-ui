@@ -1,17 +1,21 @@
 import { parseJson } from './schema.js';
 import { validateView } from './runtime.js';
-import type { LyraGenCatalog, LyraGenLimits, LyraGenResult, LyraGenView } from './types.js';
+import type { LyraGenCatalog, LyraGenIsolation, LyraGenLimits, LyraGenRecoveryMode, LyraGenResult, LyraGenView } from './types.js';
 
 export type LyraGenCompletionPolicy = 'reject' | 'close-envelope-eof';
 export interface LyraGenCompletionOptions {
   /** Omitted means strict rejection. This policy never applies to Lyra Markup. */
   readonly policy?: LyraGenCompletionPolicy;
   readonly limits?: Partial<LyraGenLimits>;
+  /** `'strict'` (default) rejects any validation error; `'isolate'` contains component-local defects in place. */
+  readonly recovery?: LyraGenRecoveryMode;
 }
 export interface LyraGenCompletedView {
   readonly view: LyraGenView;
   readonly source: string;
   readonly completion: 'none' | 'closed-envelope';
+  /** Subtrees contained by `recovery: 'isolate'`; absent when nothing was contained. */
+  readonly isolated?: readonly LyraGenIsolation[];
 }
 
 /**
@@ -23,7 +27,7 @@ export function completeJsonView(source: string, catalog: LyraGenCatalog, option
   if (strict.ok) {
     const validated = validateView(strict.value, catalog, options);
     return validated.ok
-      ? { ok: true, value: Object.freeze({ view: validated.value, source, completion: 'none' }), diagnostics: validated.diagnostics }
+      ? { ok: true, value: Object.freeze({ view: validated.value, source, completion: 'none', ...(validated.isolated ? { isolated: validated.isolated } : {}) }), diagnostics: validated.diagnostics }
       : validated;
   }
   if (options.policy !== 'close-envelope-eof' || typeof source !== 'string'
@@ -37,7 +41,7 @@ export function completeJsonView(source: string, catalog: LyraGenCatalog, option
   if (!validated.ok) return validated;
   return {
     ok: true,
-    value: Object.freeze({ view: validated.value, source: completedSource, completion: 'closed-envelope' }),
-    diagnostics: [{ code: 'recovery.envelope-closed', path: '', message: 'Completed one explicitly authorized final envelope delimiter.', severity: 'warning', source: { start: source.length, end: source.length } }]
+    value: Object.freeze({ view: validated.value, source: completedSource, completion: 'closed-envelope', ...(validated.isolated ? { isolated: validated.isolated } : {}) }),
+    diagnostics: [...validated.diagnostics, { code: 'recovery.envelope-closed', path: '', message: 'Completed one explicitly authorized final envelope delimiter.', severity: 'warning', source: { start: source.length, end: source.length } }]
   };
 }

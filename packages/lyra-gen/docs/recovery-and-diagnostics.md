@@ -74,6 +74,31 @@ handling is application-owned. Omitting the callback changes no rendering, statu
 action or `lr-gen-error` behavior. Throwing callbacks and rejected callback promises are isolated;
 the library does not await them or use their return values to decide how to render.
 
+## Error isolation
+
+Strict rejection is the default. Pass `recovery: 'isolate'` to contain a defect that is local to one
+component instead of rejecting the whole view. The option is accepted by `validateView`,
+`applyViewPatch`, `completeJsonView`, `parseJsonView`/`createJsonViewStream`, the AI SDK bridge, the
+chat controller (`LyraGenChatOptions.recovery`) and the `recovery` property or attribute of
+`<lr-gen-view>`. Any value other than `'isolate'` behaves as strict.
+
+In isolate mode the outermost failing node and its subtree are replaced in place by
+`{ id, type: LYRA_GEN_ISOLATED_TYPE }` (`'lyra-gen:isolated'`, reserved: generated input can never
+use it). The result is `ok: true`, carries `isolated` (`nodeId`, `path`, `diagnostics`) and repeats
+the diagnostics as warnings, so failure-category callbacks still fire; check `isolated`, not the
+diagnostic count. Only component-local codes (unknown role, property and schema value errors under
+`/props`, text, slot, member, child type, accessible name) are contained. Identity, binding,
+action, URL and sink policy, nesting and resource-limit failures, and any failure at the root
+reject the whole document exactly as strict mode does.
+
+`<lr-gen-view>` renders each marker as a non-interactive element with part `isolated`,
+`role="group"` and the localized `genViewInvalid` text; unaffected nodes keep their state, focus and
+actions, and no action is emitted for a marker. A chat island whose defects were contained stays
+`ready` and lists them in `LyraGenChatIsland.isolated`.
+
+An isolated view is accepted again only as the very object that was returned; a JSON copy carries the
+reserved type and is rejected. Persist the original input and isolate again when loading.
+
 ## Host-owned asynchronous repair
 
 The granular `repair-workflow.js` module exports `repairView()`. It validates the current view,

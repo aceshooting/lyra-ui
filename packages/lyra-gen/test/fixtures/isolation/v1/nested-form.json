@@ -1,0 +1,25 @@
+{
+  "version": "1",
+  "catalog": {
+    "id": "iso",
+    "version": "1"
+  },
+  "surfaceId": "s",
+  "revision": 0,
+  "root": {
+    "id": "root",
+    "type": "row",
+    "children": [
+      {
+        "id": "f1",
+        "type": "form",
+        "children": [
+          {
+            "id": "f2",
+            "type": "form"
+          }
+        ]
+      }
+    ]
+  }
+}

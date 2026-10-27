@@ -1,0 +1,46 @@
+{
+  "version": "1",
+  "catalog": {
+    "id": "iso",
+    "version": "1"
+  },
+  "surfaceId": "s",
+  "revision": 0,
+  "root": {
+    "id": "root",
+    "type": "row",
+    "children": [
+      {
+        "id": "in",
+        "type": "input",
+        "props": {
+          "label": "L"
+        },
+        "bindings": {
+          "value": "/keep"
+        }
+      },
+      {
+        "id": "bad",
+        "type": "input",
+        "props": {
+          "value": "v"
+        },
+        "bindings": {
+          "value": "/drop"
+        }
+      },
+      {
+        "id": "btn",
+        "type": "button",
+        "text": "go",
+        "action": {
+          "name": "save",
+          "payload": {
+            "title": "t"
+          }
+        }
+      }
+    ]
+  }
+}

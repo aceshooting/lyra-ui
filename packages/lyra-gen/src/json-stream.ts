@@ -1,16 +1,20 @@
 import { isSafeKey, resolveLimits, snapshotJson } from './schema.js';
 import { validateView } from './runtime.js';
-import type { LyraGenCatalog, LyraGenDiagnostic, LyraGenLimits, LyraGenView } from './types.js';
+import type { LyraGenCatalog, LyraGenDiagnostic, LyraGenIsolation, LyraGenLimits, LyraGenRecoveryMode, LyraGenView } from './types.js';
 
 export interface JsonViewStreamOptions {
   readonly catalog: LyraGenCatalog;
   readonly limits?: Partial<LyraGenLimits>;
+  /** `'strict'` (default) rejects any validation error; `'isolate'` contains component-local defects in place. */
+  readonly recovery?: LyraGenRecoveryMode;
 }
 export interface JsonViewStreamResult {
   readonly status: 'incomplete' | 'complete' | 'error' | 'cancelled';
   /** Available only after an explicit finish and successful full-view validation. */
   readonly view?: LyraGenView;
   readonly diagnostics: readonly LyraGenDiagnostic[];
+  /** Subtrees contained by `recovery: 'isolate'`; the status stays `complete`. */
+  readonly isolated?: readonly LyraGenIsolation[];
   readonly receivedBytes: number;
   readonly receivedCodeUnits: number;
 }
@@ -41,8 +45,8 @@ export function createJsonViewStream(options: JsonViewStreamOptions): JsonViewSt
   let previousHighSurrogate = false;
   let terminal: JsonViewStreamResult | undefined;
 
-  const result = (status: JsonViewStreamResult['status'], diagnostics: readonly LyraGenDiagnostic[] = [], view?: LyraGenView): JsonViewStreamResult =>
-    Object.freeze({ status, diagnostics: Object.freeze([...diagnostics]), receivedBytes: bytes, receivedCodeUnits: offset, ...(view ? { view } : {}) });
+  const result = (status: JsonViewStreamResult['status'], diagnostics: readonly LyraGenDiagnostic[] = [], view?: LyraGenView, isolated?: readonly LyraGenIsolation[]): JsonViewStreamResult =>
+    Object.freeze({ status, diagnostics: Object.freeze([...diagnostics]), receivedBytes: bytes, receivedCodeUnits: offset, ...(view ? { view } : {}), ...(isolated ? { isolated } : {}) });
   const fail = (code: string, message: string, start = offset, end = start + 1): void => {
     if (terminal) return;
     terminal = result('error', [{ code, message, path: '', severity: 'error', source: { start, end } }]);
@@ -193,8 +197,8 @@ export function createJsonViewStream(options: JsonViewStreamOptions): JsonViewSt
       let parsed: ReturnType<typeof snapshotJson>;
       try { parsed = snapshotJson(JSON.parse(source), limits); }
       catch { parsed = { ok: false, diagnostics: [{ code: 'json.syntax', path: '', severity: 'error', message: 'Invalid JSON syntax.' }] }; }
-      const checked = parsed.ok ? validateView(parsed.value, options.catalog, { limits }) : parsed;
-      terminal = checked.ok ? result('complete', checked.diagnostics, checked.value) : result('error', checked.diagnostics);
+      const checked = parsed.ok ? validateView(parsed.value, options.catalog, { limits, recovery: options.recovery }) : parsed;
+      terminal = checked.ok ? result('complete', checked.diagnostics, checked.value, 'isolated' in checked ? checked.isolated : undefined) : result('error', checked.diagnostics);
       return terminal;
     },
     cancel(): JsonViewStreamResult {
