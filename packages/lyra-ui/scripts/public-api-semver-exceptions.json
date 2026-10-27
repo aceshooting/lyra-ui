@@ -1,14 +1,3 @@
 {
-  "exceptions": [
-    {
-      "changeId": "cem:lr-map:event:lr-map-click:type",
-      "before": "CustomEvent<{readonly lngLat:readonly[number,number];readonly feature:Feature | undefined;/** Which layer `feature` was hit on,so a click is attributable when both a choropleth and * `dataLayers` are painted. `'cluster'` marks a hit on a clustered entry's aggregate circle,* whose `point_count`/`cluster_id` properties describe the group rather than one feature. * `undefined` whenever `feature` is. */ readonly origin:LyraMapFeatureOrigin | 'cluster' | undefined;readonly hit?:LyraMapFeatureHit;readonly target?:LyraMapResolvedFeatureStateTarget;/** The authored `dataLayers[].sourceId` the hit belongs to;`undefined` for a choropleth hit *(which has only one possible source)and when nothing was hit. */ readonly sourceId:string | undefined;/** Native vector source layer containing the hit;absent for other source families. */ readonly sourceLayer?:string;/** `true` when the hit is a choropleth feature without a usable value and `choropleth.noData` * is configured;absent otherwise. */ readonly noData?:true;}>",
-      "after": "CustomEvent<{readonly lngLat:readonly[number,number];readonly feature:Feature | undefined;/** Which layer `feature` was hit on,so a click is attributable when both a choropleth and * `dataLayers` are painted. `'cluster'` marks a hit on a clustered entry's aggregate circle,* whose `point_count`/`cluster_id` properties describe the group rather than one feature. * `undefined` whenever `feature` is. */ readonly origin:LyraMapFeatureOrigin | 'cluster' | undefined;readonly hit?:LyraMapFeatureHit;readonly target?:LyraMapResolvedFeatureStateTarget;/** The authored `dataLayers[].sourceId` the hit belongs to;`undefined` for a choropleth hit *(which has only one possible source)and when nothing was hit. */ readonly sourceId:string | undefined;/** Native vector source layer containing the hit;absent for other source families. */ readonly sourceLayer?:string;/** `true` when the hit is a choropleth feature without a usable value and `choropleth.noData` * is configured;absent otherwise. */ readonly noData?:true;/** `'keyboard'` for a `keyboardActivation` at the view centre;absent for pointer clicks. */ readonly trigger?:'keyboard';}>",
-      "requiredBump": "major",
-      "allowedBump": "minor",
-      "reason": "The lr-map-click detail gains only an optional readonly trigger?: 'keyboard' member, present when keyboardActivation dispatches the click and absent for pointer clicks. No existing member is removed, renamed or narrowed. Strict TypeScript consumer checks (strict, exactOptionalPropertyTypes) confirm that listeners and handlers typed with the 30.4.0 detail, consumer-constructed and createLyraEvent-dispatched 30.4.0 details, and interfaces extending LyraMapEventMap with the 30.4.0 member all still compile.",
-      "reviewer": "claude",
-      "reviewedOn": "2026-10-27"
-    }
-  ]
+  "exceptions": []
 }
