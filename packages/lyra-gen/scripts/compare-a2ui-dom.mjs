@@ -65,12 +65,9 @@ try {
     }
     report.builds[side] = { sha256: hash(await readFile(join(scratch, `${side}.js`))), inputCount: sources.length, inputsSha256: hash(JSON.stringify(sources)) };
   }
-  /** Served files come from this fixed table, never from the request path. */
-  const BUNDLES = new Map([['/reference.js', 'reference.js'], ['/lyra.js', 'lyra.js']]);
   server = createServer(async (request, response) => {
-    const bundle = BUNDLES.get(request.url ?? '');
-    if (bundle) {
-      response.writeHead(200, { 'content-type': 'text/javascript' }); response.end(await readFile(join(scratch, bundle)));
+    if (request.url === '/reference.js' || request.url === '/lyra.js') {
+      response.writeHead(200, { 'content-type': 'text/javascript' }); response.end(await readFile(join(scratch, request.url.slice(1))));
     } else {
       const side = request.url === '/reference' ? 'reference' : 'lyra';
       response.writeHead(200, { 'content-type': 'text/html' });
