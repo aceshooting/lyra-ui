@@ -37,6 +37,19 @@ export const Default: Story = {
 };
 
 /**
+ * `label-display="hidden"` removes the label visually for a compact toolbar while it stays the
+ * trigger's accessible name; hint and error text are unaffected.
+ */
+export const HiddenLabel: Story = {
+  render: () => html`
+    <lr-select label="Sort order" label-display="hidden" hint="Applies to the list below" style="max-width: 20rem">
+      <lr-option value="a">Newest</lr-option>
+      <lr-option value="b">Oldest</lr-option>
+    </lr-select>
+  `,
+};
+
+/**
  * Open the list and move the keyboard-active row before using these controls. Reordering preserves
  * the active option by identity; removing or disabling it rehomes activity to the nearest enabled
  * survivor so the next Enter still commits a real row.

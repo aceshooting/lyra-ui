@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createCatalog, initialCatalog, subsetCatalog } from './catalog.js';
 import { buildCatalogPrompt, exportCatalogArtifact, exportCatalogJsonSchema } from './prompts.js';
+import { validateView } from './runtime.js';
 import { validateSchema } from './schema.js';
 
 test('reviewed catalog exposes only frozen schemas and explicit lazy component loaders', () => {
@@ -59,4 +60,34 @@ test('trusted table adapter displays primitive cells as text including false and
   assert.equal(columns[0]!.cell({ get c0() { calls++; return 'unsafe'; } }), '');
   assert.equal(calls, 0);
   assert.ok(!JSON.stringify(exportCatalogArtifact(initialCatalog)).includes('prepareProperties'));
+});
+
+test('optional child roles may be left out of a subset and are then no longer allowed under their parent', () => {
+  for (const [parent, props] of [['alert', {}], ['empty', { heading: 'Nothing here' }]] as const) {
+    const selected = subsetCatalog(initialCatalog, ['stack', 'text', parent]);
+    assert.equal(selected.ok, true, parent);
+    if (!selected.ok) continue;
+    assert.equal(Object.hasOwn(selected.value.components, 'button'), false);
+    assert.equal((selected.value.components[parent]!.children as readonly string[]).includes('button'), false);
+    const plain = { version: '1', catalog: { id: selected.value.id, version: selected.value.version }, surfaceId: 's', revision: 0, root: { id: 'a', type: parent, props, ...(parent === 'alert' ? { text: 'Heads up' } : {}) } };
+    assert.equal(validateView(plain, selected.value).ok, true, parent);
+    const withButton = { ...plain, root: { ...plain.root, children: [{ id: 'b', type: 'button', text: 'Go' }] } };
+    const rejected = validateView(withButton, selected.value);
+    assert.equal(rejected.ok, false);
+    if (!rejected.ok) assert.ok(rejected.diagnostics.some(item => item.path.endsWith('/children/0') && /not allowed here|does not accept children/.test(item.message)), parent);
+  }
+  const withButton = subsetCatalog(initialCatalog, ['alert', 'button']);
+  assert.ok(withButton.ok && (withButton.value.components['alert']!.children as readonly string[]).includes('button'));
+  assert.equal(initialCatalog.components['alert']!.optionalChildren?.includes('button'), true);
+});
+
+test('required child roles still fail the subset with catalog.dependency, optional ones do not', () => {
+  const missing = subsetCatalog(initialCatalog, ['select']);
+  assert.equal(missing.ok, false);
+  if (!missing.ok) assert.deepEqual(missing.diagnostics.map(item => item.code), ['catalog.dependency']);
+  const host = createCatalog({ id: 'h', version: '1', components: { box: { tag: 'div', properties: {}, children: ['item', 'extra'], optionalChildren: ['extra'] }, item: { tag: 'span', properties: {}, text: true }, extra: { tag: 'b', properties: {}, text: true } } });
+  assert.equal(subsetCatalog(host, ['box']).ok, false);
+  const ok = subsetCatalog(host, ['box', 'item']);
+  assert.ok(ok.ok && (ok.value.components['box']!.children as readonly string[]).join() === 'item' && ok.value.components['box']!.optionalChildren?.length === 0);
+  assert.throws(() => createCatalog({ id: 'h', version: '1', components: { box: { tag: 'div', properties: {}, children: ['item'], optionalChildren: ['other'] }, item: { tag: 'span', properties: {}, text: true } } }), TypeError);
 });

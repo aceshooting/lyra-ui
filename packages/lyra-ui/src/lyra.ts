@@ -2128,6 +2128,7 @@ export type {
 export type {
   LyraAppearance,
   LyraFrame,
+  LyraLabelDisplay,
   LyraSize,
   LyraSizeAlias,
   LyraSizeStep,

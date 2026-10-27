@@ -16,6 +16,8 @@
 
 ## `lr-textarea`
 
+`labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
+
 A multiline plain-text input primitive, form-associated (participates in native `<form>`
 submission/validation/reset via `name`/`value`/`disabled`/`required`/`checkValidity()`/
 `reportValidity()`). Ships an opt-in `label`/`hint`/`errorText` form-control chrome mirroring

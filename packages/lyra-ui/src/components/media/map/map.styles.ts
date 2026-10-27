@@ -673,6 +673,10 @@ export const styles = css`
   .maplibregl-ctrl-bottom-right { grid-column: 2; justify-content: flex-end; }
   .maplibregl-ctrl {
     box-sizing: border-box;
+    /* The corner shrinks to fit, so this percentage resolves against the control's own width.
+       The floor keeps a control at least as wide as its content when a part changes its margin;
+       wrapping controls such as attribution still narrow to the map. */
+    min-inline-size: min-content;
     max-inline-size: calc(100% - 2 * var(--lr-space-xs));
     flex-shrink: 0;
     margin: var(--lr-space-xs);

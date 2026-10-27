@@ -35,7 +35,7 @@ import {
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraSize } from '../../../internal/variants.js';
+import type { LyraSize, LyraLabelDisplay } from '../../../internal/variants.js';
 import { styles } from './token-input.styles.js';
 import {
   createStringArrayFormDataState,
@@ -276,6 +276,13 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
   };
 
   @property() label = '';
+  /**
+   * Whether the `label` renders on screen. `hidden` keeps the label as the accessible name but
+   * removes it visually (compact toolbars, table cells); hint, error and required semantics are
+   * unaffected. Reflected so styles and `[label-display]` selectors match.
+   * @attr label-display
+   */
+  @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   @property() placeholder = '';

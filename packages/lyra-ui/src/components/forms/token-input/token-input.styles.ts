@@ -4,6 +4,7 @@ import {
   formControlTextWrap,
   formControlFocusHalo,
   formControlRequiredMarker,
+  formControlLabelDisplay,
 } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
@@ -93,6 +94,7 @@ export const styles = css`
     display: none;
   }
   ${formControlRequiredMarker}
+  ${formControlLabelDisplay}
   /* min-block-size is a FLOOR on a border-box, so it sets the height only while content stays
      under it -- and the content is the draft input, whose line-height: normal box is an
      ambient-font metric varying by machine. Hence shared-ladder block padding, not the denser

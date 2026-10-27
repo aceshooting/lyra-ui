@@ -38,6 +38,14 @@ export type LyraAppearance = 'accent' | 'filled' | 'outlined' | 'filled-outlined
  */
 export type LyraFrame = 'card' | 'plain';
 
+/**
+ * Whether a labelled form control renders its `label` on screen. `hidden` keeps the label in the
+ * accessibility tree (it remains the accessible name) and removes it from the layout, for compact
+ * toolbars and table cells where the surrounding UI already shows what the field is. Hint and error
+ * text are unaffected. A closed literal union, never an `enum`.
+ */
+export type LyraLabelDisplay = 'visible' | 'hidden';
+
 /** The canonical six-step size ladder. */
 export type LyraSizeStep = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
 

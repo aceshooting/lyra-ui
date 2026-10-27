@@ -16,6 +16,8 @@
 
 ## `lr-number-input`
 
+Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
+
 A numeric field with the complete `lr-input` form, validation and native-editing contract, plus its
 own increment/decrement stepper pair. Its constructor and `connectedCallback()` both force
 `type = 'number'`; all inherited `lr-input` form and editing APIs remain available.

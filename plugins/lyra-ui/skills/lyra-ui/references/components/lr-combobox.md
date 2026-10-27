@@ -117,6 +117,8 @@ other value (a plain object, a function) is dropped from the row instead of reac
 
 ### `lr-combobox`
 
+`labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
+
 **Properties:**
 
 - `multiple: boolean = false` (reflected)

@@ -42,7 +42,7 @@ import {
 import type { LyraLocaleDirection } from '../../../internal/localization.js';
 import { localeNativeName } from '../../media/flag/language-map.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraSize } from '../../../internal/variants.js';
+import type { LyraSize, LyraLabelDisplay } from '../../../internal/variants.js';
 import { styles } from './locale-picker.styles.js';
 import { autocorrectConverter, declaredDefaultConverter, spellcheckConverter } from '../../../internal/converters.js';
 import {
@@ -444,6 +444,13 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
   override set autocorrect(next: boolean) { this.autocorrectValue = Boolean(next); this.requestUpdate(); }
 
   @property() label = '';
+  /**
+   * Whether the `label` renders on screen. `hidden` keeps the label as the accessible name but
+   * removes it visually (compact toolbars, table cells); hint, error and required semantics are
+   * unaffected. Reflected so styles and `[label-display]` selectors match.
+   * @attr label-display
+   */
+  @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   /** Whether the option popup is open. Disabled controls reject direct reopen attempts, including

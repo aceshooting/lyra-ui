@@ -20,7 +20,7 @@ import { setCustomState } from '../../../internal/custom-states.js';
 import { lengthLimitConverter, lengthViolations, normalizeLengthLimit } from '../../../internal/length-constraints.js';
 import { styles } from './textarea.styles.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
+import type { LyraAppearance, LyraSize, LyraLabelDisplay } from '../../../internal/variants.js';
 import type {
   LyraSelectionDirection,
   LyraTextWrap,
@@ -276,6 +276,13 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
    *  property is unset. */
   @property({ type: Boolean, reflect: true }) readonly = false;
   @property() label = '';
+  /**
+   * Whether the `label` renders on screen. `hidden` keeps the label as the accessible name but
+   * removes it visually (compact toolbars, table cells); hint, error and required semantics are
+   * unaffected. Reflected so styles and `[label-display]` selectors match.
+   * @attr label-display
+   */
+  @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
   @property() hint = '';
   /** Shoelace alias for {@link hint}. `hint` wins when both are set. */
   @property({ attribute: 'help-text' }) helpText = '';

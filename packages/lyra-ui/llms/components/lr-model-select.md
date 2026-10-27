@@ -16,6 +16,8 @@
 
 ## `lr-model-select`
 
+`labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
+
 The model list follows the [shared surface treatment](../shared/styles-and-tokens.md);
 its editing field retains an opaque fill.
 

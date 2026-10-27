@@ -20,6 +20,8 @@ claims; provider/comparator campaigns and human assistive-technology review are 
 - Select the smallest reviewed catalog with `subsetCatalog()` or `selectCatalogPreset()` from
   `catalog.js`. Catalog roles map to trusted components; registration does not expose their full
   APIs. Read the selected property schemas, child/slot rules and required accessible names.
+  A subset must include each role's required child roles (`catalog.dependency` otherwise); optional
+  ones (`alert`/`empty` -> `button`) may be omitted and are then rejected under that parent.
 - `buildCatalogPrompt()` and `exportCatalogJsonSchema()` from `prompts.js` supply request context,
   not a provider client or proof of provider schema support. Keep transport and token budgets in
   the host. Runtime `validateView()` from `runtime.js` remains required for every input route.

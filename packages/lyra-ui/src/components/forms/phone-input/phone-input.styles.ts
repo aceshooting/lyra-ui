@@ -4,6 +4,7 @@ import {
   formControlAppearance,
   formControlFocusHalo,
   formControlRequiredMarker,
+  formControlLabelDisplay,
 } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
@@ -89,6 +90,7 @@ export const styles = css`
   }
 
   ${formControlRequiredMarker}
+  ${formControlLabelDisplay}
 
   [part='input-wrapper'] {
     display: flex;

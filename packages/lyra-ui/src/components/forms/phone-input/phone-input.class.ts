@@ -11,7 +11,7 @@ import { FormAssociated, isBarredFromValidation } from '../../../internal/form-a
 import { getDisplayNames } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
+import type { LyraAppearance, LyraSize, LyraLabelDisplay } from '../../../internal/variants.js';
 import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
 import { styles } from './phone-input.styles.js';
 import {
@@ -255,6 +255,13 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   /** Country selected when no explicit `country` has been set. */
   @property({ attribute: 'default-country' }) defaultCountry = '';
   @property() label = '';
+  /**
+   * Whether the `label` renders on screen. `hidden` keeps the label as the accessible name but
+   * removes it visually (compact toolbars, table cells); hint, error and required semantics are
+   * unaffected. Reflected so styles and `[label-display]` selectors match.
+   * @attr label-display
+   */
+  @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   /** SSR slot-presence hint for label content that cannot be inspected before hydration. */

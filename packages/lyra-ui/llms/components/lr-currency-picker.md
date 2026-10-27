@@ -16,6 +16,8 @@
 
 ## `lr-currency-picker`
 
+Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
+
 A form-associated, single-currency selector with a compact ISO-code trigger and localized currency
 names and symbols in its options. It composes `lr-select` (or `lr-combobox` when searchable) and `lr-option`; no additional popover,
 currency-name table or optional peer is needed. Selection changes the field value only: exchange

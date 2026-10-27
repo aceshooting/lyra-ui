@@ -2950,6 +2950,7 @@ export interface LyraComponentTypeMap {
       | 'inputMode'
       | 'inputValue'
       | 'label'
+      | 'labelDisplay'
       | 'loading'
       | 'loadingText'
       | 'locale'
@@ -3050,6 +3051,7 @@ export interface LyraComponentTypeMap {
       'enterkeyhint'?: LyraCombobox['enterKeyHint'];
       'error-text'?: LyraCombobox['errorText'];
       'inputmode'?: LyraCombobox['inputMode'];
+      'label-display'?: LyraCombobox['labelDisplay'];
       'loading-text'?: LyraCombobox['loadingText'];
       'max-options-visible'?: LyraCombobox['maxOptionsVisible'];
       'max-render'?: LyraCombobox['maxRender'];
@@ -3494,6 +3496,7 @@ export interface LyraComponentTypeMap {
       | 'hint'
       | 'inputMode'
       | 'label'
+      | 'labelDisplay'
       | 'locale'
       | 'name'
       | 'placeholder'
@@ -3526,6 +3529,7 @@ export interface LyraComponentTypeMap {
       'enterkeyhint'?: LyraCountryPicker['enterKeyHint'];
       'error-text'?: LyraCountryPicker['errorText'];
       'inputmode'?: LyraCountryPicker['inputMode'];
+      'label-display'?: LyraCountryPicker['labelDisplay'];
       'positioning-strategy'?: LyraCountryPicker['positioningStrategy'];
       'top-layer'?: LyraCountryPicker['topLayer'];
       'value'?: LyraCountryPicker['defaultValue'];
@@ -3587,6 +3591,7 @@ export interface LyraComponentTypeMap {
       | 'hint'
       | 'inputMode'
       | 'label'
+      | 'labelDisplay'
       | 'locale'
       | 'name'
       | 'placeholder'
@@ -3617,6 +3622,7 @@ export interface LyraComponentTypeMap {
       'enterkeyhint'?: LyraCurrencyPicker['enterKeyHint'];
       'error-text'?: LyraCurrencyPicker['errorText'];
       'inputmode'?: LyraCurrencyPicker['inputMode'];
+      'label-display'?: LyraCurrencyPicker['labelDisplay'];
       'positioning-strategy'?: LyraCurrencyPicker['positioningStrategy'];
       'top-layer'?: LyraCurrencyPicker['topLayer'];
       'value'?: LyraCurrencyPicker['defaultValue'];
@@ -3857,6 +3863,7 @@ export interface LyraComponentTypeMap {
       | 'inputMode'
       | 'isDateDisabled'
       | 'label'
+      | 'labelDisplay'
       | 'locale'
       | 'max'
       | 'maxRange'
@@ -3952,6 +3959,7 @@ export interface LyraComponentTypeMap {
       'error-text'?: LyraDateInput['errorText'];
       'first-day-of-week'?: LyraDateInput['firstDayOfWeek'];
       'inputmode'?: LyraDateInput['inputMode'];
+      'label-display'?: LyraDateInput['labelDisplay'];
       'max-range'?: LyraDateInput['maxRange'];
       'min-range'?: LyraDateInput['minRange'];
       'open-label'?: LyraDateInput['openLabel'];
@@ -6631,6 +6639,7 @@ export interface LyraComponentTypeMap {
       | 'inputmode'
       | 'inputMode'
       | 'label'
+      | 'labelDisplay'
       | 'locale'
       | 'match'
       | 'max'
@@ -6710,6 +6719,7 @@ export interface LyraComponentTypeMap {
       'error-text'?: LyraInput['errorText'];
       'help-text'?: LyraInput['helpText'];
       'inputmode'?: LyraInput['inputMode'];
+      'label-display'?: LyraInput['labelDisplay'];
       'no-spin-buttons'?: LyraInput['noSpinButtons'];
       'password-toggle'?: LyraInput['passwordToggle'];
       'password-visible'?: LyraInput['passwordVisible'];
@@ -7322,6 +7332,7 @@ export interface LyraComponentTypeMap {
       | 'hint'
       | 'inputMode'
       | 'label'
+      | 'labelDisplay'
       | 'locale'
       | 'localeLoader'
       | 'locales'
@@ -7384,6 +7395,7 @@ export interface LyraComponentTypeMap {
       'enterkeyhint'?: LyraLocalePicker['enterKeyHint'];
       'error-text'?: LyraLocalePicker['errorText'];
       'inputmode'?: LyraLocalePicker['inputMode'];
+      'label-display'?: LyraLocalePicker['labelDisplay'];
       'option-display'?: LyraLocalePicker['optionDisplay'];
       'top-layer'?: LyraLocalePicker['topLayer'];
       'trigger-display'?: LyraLocalePicker['triggerDisplay'];
@@ -8051,6 +8063,7 @@ export interface LyraComponentTypeMap {
       | 'hint'
       | 'inputMode'
       | 'label'
+      | 'labelDisplay'
       | 'locale'
       | 'name'
       | 'open'
@@ -8113,6 +8126,7 @@ export interface LyraComponentTypeMap {
       'enterkeyhint'?: LyraModelSelect['enterKeyHint'];
       'error-text'?: LyraModelSelect['errorText'];
       'inputmode'?: LyraModelSelect['inputMode'];
+      'label-display'?: LyraModelSelect['labelDisplay'];
       'value'?: LyraModelSelect['defaultValue'];
     };
   };
@@ -8280,6 +8294,7 @@ export interface LyraComponentTypeMap {
       | 'inputmode'
       | 'inputMode'
       | 'label'
+      | 'labelDisplay'
       | 'locale'
       | 'match'
       | 'max'
@@ -8357,6 +8372,7 @@ export interface LyraComponentTypeMap {
       'error-text'?: LyraNativeTimeInput['errorText'];
       'help-text'?: LyraNativeTimeInput['helpText'];
       'inputmode'?: LyraNativeTimeInput['inputMode'];
+      'label-display'?: LyraNativeTimeInput['labelDisplay'];
       'password-toggle'?: LyraNativeTimeInput['passwordToggle'];
       'password-visible'?: LyraNativeTimeInput['passwordVisible'];
       'value'?: LyraNativeTimeInput['defaultValue'];
@@ -8581,6 +8597,7 @@ export interface LyraComponentTypeMap {
       | 'inputmode'
       | 'inputMode'
       | 'label'
+      | 'labelDisplay'
       | 'locale'
       | 'match'
       | 'max'
@@ -8661,6 +8678,7 @@ export interface LyraComponentTypeMap {
       'error-text'?: LyraNumberInput['errorText'];
       'help-text'?: LyraNumberInput['helpText'];
       'inputmode'?: LyraNumberInput['inputMode'];
+      'label-display'?: LyraNumberInput['labelDisplay'];
       'no-spin-buttons'?: LyraNumberInput['noSpinButtons'];
       'password-toggle'?: LyraNumberInput['passwordToggle'];
       'password-visible'?: LyraNumberInput['passwordVisible'];
@@ -9088,6 +9106,7 @@ export interface LyraComponentTypeMap {
       | 'inputMode'
       | 'invalidText'
       | 'label'
+      | 'labelDisplay'
       | 'locale'
       | 'name'
       | 'phoneLabel'
@@ -9143,6 +9162,7 @@ export interface LyraComponentTypeMap {
       'incomplete-text'?: LyraPhoneInput['incompleteText'];
       'inputmode'?: LyraPhoneInput['inputMode'];
       'invalid-text'?: LyraPhoneInput['invalidText'];
+      'label-display'?: LyraPhoneInput['labelDisplay'];
       'phone-label'?: LyraPhoneInput['phoneLabel'];
       'value'?: LyraPhoneInput['defaultValue'];
       'with-hint'?: LyraPhoneInput['withHint'];
@@ -10924,6 +10944,7 @@ export interface LyraComponentTypeMap {
       | 'hint'
       | 'hoist'
       | 'label'
+      | 'labelDisplay'
       | 'loading'
       | 'locale'
       | 'maxOptionsVisible'
@@ -11008,6 +11029,7 @@ export interface LyraComponentTypeMap {
       'default-value'?: LyraSelect['defaultValue'];
       'error-text'?: LyraSelect['errorText'];
       'help-text'?: LyraSelect['helpText'];
+      'label-display'?: LyraSelect['labelDisplay'];
       'max-options-visible'?: LyraSelect['maxOptionsVisible'];
       'max-render'?: LyraSelect['maxRender'];
       'positioning-strategy'?: LyraSelect['positioningStrategy'];
@@ -12363,6 +12385,7 @@ export interface LyraComponentTypeMap {
       | 'inputmode'
       | 'inputMode'
       | 'label'
+      | 'labelDisplay'
       | 'locale'
       | 'maxlength'
       | 'minlength'
@@ -12419,6 +12442,7 @@ export interface LyraComponentTypeMap {
       'error-text'?: LyraTextarea['errorText'];
       'help-text'?: LyraTextarea['helpText'];
       'inputmode'?: LyraTextarea['inputMode'];
+      'label-display'?: LyraTextarea['labelDisplay'];
       'value'?: LyraTextarea['defaultValue'];
       'with-count'?: LyraTextarea['withCount'];
       'with-hint'?: LyraTextarea['withHint'];
@@ -12559,6 +12583,7 @@ export interface LyraComponentTypeMap {
       | 'hint'
       | 'hourFormat'
       | 'label'
+      | 'labelDisplay'
       | 'locale'
       | 'max'
       | 'min'
@@ -12637,6 +12662,7 @@ export interface LyraComponentTypeMap {
       'custom-error'?: LyraTimeInput['customError'];
       'error-text'?: LyraTimeInput['errorText'];
       'hour-format'?: LyraTimeInput['hourFormat'];
+      'label-display'?: LyraTimeInput['labelDisplay'];
       'value'?: LyraTimeInput['defaultValue'];
       'with-clear'?: LyraTimeInput['withClear'];
       'with-hint'?: LyraTimeInput['withHint'];
@@ -12722,6 +12748,7 @@ export interface LyraComponentTypeMap {
       | 'hint'
       | 'inputMode'
       | 'label'
+      | 'labelDisplay'
       | 'locale'
       | 'name'
       | 'placeholder'
@@ -12755,6 +12782,7 @@ export interface LyraComponentTypeMap {
       'enterkeyhint'?: LyraTimeZonePicker['enterKeyHint'];
       'error-text'?: LyraTimeZonePicker['errorText'];
       'inputmode'?: LyraTimeZonePicker['inputMode'];
+      'label-display'?: LyraTimeZonePicker['labelDisplay'];
       'positioning-strategy'?: LyraTimeZonePicker['positioningStrategy'];
       'top-layer'?: LyraTimeZonePicker['topLayer'];
       'value'?: LyraTimeZonePicker['defaultValue'];
@@ -12950,6 +12978,7 @@ export interface LyraComponentTypeMap {
       | 'form'
       | 'hint'
       | 'label'
+      | 'labelDisplay'
       | 'locale'
       | 'maxTokensVisible'
       | 'name'
@@ -13009,6 +13038,7 @@ export interface LyraComponentTypeMap {
       'aria-label'?: LyraTokenInput['accessibleLabel'];
       'custom-error'?: LyraTokenInput['customError'];
       'error-text'?: LyraTokenInput['errorText'];
+      'label-display'?: LyraTokenInput['labelDisplay'];
       'max-tokens-visible'?: LyraTokenInput['maxTokensVisible'];
       'value'?: LyraTokenInput['defaultValue'];
     };
@@ -13597,6 +13627,7 @@ export interface LyraComponentTypeMap {
       | 'hint'
       | 'inputMode'
       | 'label'
+      | 'labelDisplay'
       | 'locale'
       | 'name'
       | 'placeholder'
@@ -13630,6 +13661,7 @@ export interface LyraComponentTypeMap {
       'enterkeyhint'?: LyraUnitPicker['enterKeyHint'];
       'error-text'?: LyraUnitPicker['errorText'];
       'inputmode'?: LyraUnitPicker['inputMode'];
+      'label-display'?: LyraUnitPicker['labelDisplay'];
       'positioning-strategy'?: LyraUnitPicker['positioningStrategy'];
       'top-layer'?: LyraUnitPicker['topLayer'];
       'value'?: LyraUnitPicker['defaultValue'];
@@ -13818,6 +13850,7 @@ export interface LyraComponentTypeMap {
       | 'hint'
       | 'inputMode'
       | 'label'
+      | 'labelDisplay'
       | 'locale'
       | 'name'
       | 'open'
@@ -13887,6 +13920,7 @@ export interface LyraComponentTypeMap {
       'enterkeyhint'?: LyraVoicePicker['enterKeyHint'];
       'error-text'?: LyraVoicePicker['errorText'];
       'inputmode'?: LyraVoicePicker['inputMode'];
+      'label-display'?: LyraVoicePicker['labelDisplay'];
       'value'?: LyraVoicePicker['defaultValue'];
       'without-preview'?: LyraVoicePicker['withoutPreview'];
     };

@@ -44,6 +44,7 @@ export function createCatalog(definition: LyraGenCatalog): LyraGenCatalog {
     if (Array.isArray(component.children)) for (const child of component.children) {
       if (!Object.hasOwn(components, child)) throw new TypeError(`Missing child role ${role}.${child}`);
     }
+    for (const child of component.optionalChildren ?? []) if (!Array.isArray(component.children) || !component.children.includes(child)) throw new TypeError(`Optional child ${role}.${child} must also be listed in children`);
   }
   return freeze({ ...definition, components, ...(fieldPolicy ? { fieldPolicy } : {}) });
 }
@@ -55,8 +56,8 @@ const structuralComponents: Readonly<Record<string, LyraGenComponent>> = {
   heading: { tag: 'h2', properties: {}, text: true, accessibleName: { required: true, text: true } },
   card: { tag: 'lr-card', properties: { appearance }, children: true, slots: ['', 'header', 'footer', 'actions'], load: () => import('@aceshooting/lyra-ui/components/lr-card.js'), documentation: documentation('lr-card') },
   badge: { tag: 'lr-badge', properties: { variant, appearance, size, pill: boolean }, text: true, load: () => import('@aceshooting/lyra-ui/components/lr-badge.js'), documentation: documentation('lr-badge') },
-  alert: { tag: 'lr-alert', properties: { variant, open: boolean, closable: boolean }, text: true, children: ['text', 'button'], slots: [''], load: () => import('@aceshooting/lyra-ui/components/lr-alert.js'), documentation: documentation('lr-alert') },
-  empty: { tag: 'lr-empty', properties: { heading: label, description: string(1024), size }, required: ['heading'], children: ['button'], slots: ['actions'], load: () => import('@aceshooting/lyra-ui/components/lr-empty.js'), documentation: documentation('lr-empty') },
+  alert: { tag: 'lr-alert', properties: { variant, open: boolean, closable: boolean }, text: true, children: ['text', 'button'], optionalChildren: ['text', 'button'], slots: [''], load: () => import('@aceshooting/lyra-ui/components/lr-alert.js'), documentation: documentation('lr-alert') },
+  empty: { tag: 'lr-empty', properties: { heading: label, description: string(1024), size }, required: ['heading'], children: ['button'], optionalChildren: ['button'], slots: ['actions'], load: () => import('@aceshooting/lyra-ui/components/lr-empty.js'), documentation: documentation('lr-empty') },
   skeleton: { tag: 'lr-skeleton', properties: { label, shape: choice('rect', 'circle', 'text'), effect: choice('none', 'pulse', 'sheen') }, load: () => import('@aceshooting/lyra-ui/components/lr-skeleton.js'), documentation: documentation('lr-skeleton') },
   stat: { tag: 'lr-stat', properties: { label, value: string(256), unit: string(64), caption: string(512), variant }, required: ['label', 'value'], load: () => import('@aceshooting/lyra-ui/components/lr-stat.js'), documentation: documentation('lr-stat') },
 };
@@ -82,7 +83,11 @@ export function subsetCatalog(catalog: LyraGenCatalog, roles: readonly string[],
     else components[role] = catalog.components[role]!;
   }
   for (const [role, definition] of Object.entries(components)) if (Array.isArray(definition.children)) {
-    for (const child of definition.children) if (!Object.hasOwn(components, child)) diagnostics.push({ code: 'catalog.dependency', path: `/components/${role}/children`, message: `Role ${role} requires selected child role ${child}.`, severity: 'error' });
+    const optional = new Set(definition.optionalChildren);
+    const selected = definition.children.filter(child => Object.hasOwn(components, child));
+    for (const child of definition.children) if (!Object.hasOwn(components, child) && !optional.has(child)) diagnostics.push({ code: 'catalog.dependency', path: `/components/${role}/children`, message: `Role ${role} requires selected child role ${child}.`, severity: 'error' });
+    // An unselected optional child becomes unavailable, so generated content cannot place it here.
+    if (selected.length !== definition.children.length) components[role] = { ...definition, children: selected, optionalChildren: selected.filter(child => optional.has(child)) };
   }
   const actions = Object.fromEntries(actionNames.filter(name => {
     if (catalog.actions && Object.hasOwn(catalog.actions, name)) return true;

@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { visuallyHidden } from './a11y.js';
 import { focusRing } from './interactive-control.styles.js';
 
 /**
@@ -131,6 +132,20 @@ export const formControlSupportingText = css`
   [part~='hint'][hidden], [part~='error'][hidden] { display: none; }
 `;
 
+/**
+ * The shared `label-display="hidden"` rule: the `form-control-label` box leaves the layout and the
+ * eye but stays in the accessibility tree, so the `<label for>` association (and the required
+ * marker that rides on it) keeps naming the control. The hint and error parts are untouched.
+ * Uses the library's one `visuallyHidden` declaration block, never a re-typed copy, and is written
+ * once here for every control that renders the part. The attribute reflects from each adopting
+ * control's `labelDisplay` property, so the selector needs no per-component state.
+ */
+export const formControlLabelDisplay = css`
+  :host([label-display='hidden']) [part~='form-control-label'] {
+    ${visuallyHidden}
+  }
+`;
+
 /** Field label and supporting text; component-specific layout remains in the adopting sheet. */
 export const formControlChrome = css`
   [part~='form-control-label'] {
@@ -141,6 +156,7 @@ export const formControlChrome = css`
   }
   [part~='form-control-label'][hidden] { display: none; }
   ${formControlSupportingText}
+  ${formControlLabelDisplay}
 `;
 
 /** Allow form chrome to shrink and wrap within its allocated inline space. */

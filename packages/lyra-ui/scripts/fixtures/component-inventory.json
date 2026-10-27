@@ -30504,6 +30504,16 @@
             "default": ""
           },
           {
+            "name": "label-display",
+            "property": "labelDisplay",
+            "type": "LyraLabelDisplay",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
+          },
+          {
             "name": "loading",
             "property": "loading",
             "type": "boolean",
@@ -30990,6 +31000,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "labelDisplay",
+            "attribute": "label-display",
+            "type": "LyraLabelDisplay",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
           },
           {
             "name": "labels",
@@ -37067,6 +37087,16 @@
             "default": ""
           },
           {
+            "name": "label-display",
+            "property": "labelDisplay",
+            "type": "LyraLabelDisplay",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -37324,6 +37354,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "labelDisplay",
+            "attribute": "label-display",
+            "type": "LyraLabelDisplay",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
           },
           {
             "name": "labels",
@@ -38349,6 +38389,16 @@
             "default": ""
           },
           {
+            "name": "label-display",
+            "property": "labelDisplay",
+            "type": "LyraLabelDisplay",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -38596,6 +38646,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "labelDisplay",
+            "attribute": "label-display",
+            "type": "LyraLabelDisplay",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
           },
           {
             "name": "labels",
@@ -41877,6 +41937,16 @@
             "default": ""
           },
           {
+            "name": "label-display",
+            "property": "labelDisplay",
+            "type": "LyraLabelDisplay",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -42430,6 +42500,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "labelDisplay",
+            "attribute": "label-display",
+            "type": "LyraLabelDisplay",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
           },
           {
             "name": "labels",
@@ -72732,6 +72812,16 @@
             "default": ""
           },
           {
+            "name": "label-display",
+            "property": "labelDisplay",
+            "type": "LyraLabelDisplay",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -73183,6 +73273,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "labelDisplay",
+            "attribute": "label-display",
+            "type": "LyraLabelDisplay",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
           },
           {
             "name": "labels",
@@ -80650,6 +80750,16 @@
             "default": ""
           },
           {
+            "name": "label-display",
+            "property": "labelDisplay",
+            "type": "LyraLabelDisplay",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -80901,6 +81011,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "labelDisplay",
+            "attribute": "label-display",
+            "type": "LyraLabelDisplay",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
           },
           {
             "name": "labels",
@@ -89331,6 +89451,16 @@
             "default": ""
           },
           {
+            "name": "label-display",
+            "property": "labelDisplay",
+            "type": "LyraLabelDisplay",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -89562,6 +89692,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "labelDisplay",
+            "attribute": "label-display",
+            "type": "LyraLabelDisplay",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
           },
           {
             "name": "labels",
@@ -92004,6 +92144,16 @@
             "default": ""
           },
           {
+            "name": "label-display",
+            "property": "labelDisplay",
+            "type": "LyraLabelDisplay",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -92444,6 +92594,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "labelDisplay",
+            "attribute": "label-display",
+            "type": "LyraLabelDisplay",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
           },
           {
             "name": "labels",
@@ -95584,6 +95744,16 @@
             "default": ""
           },
           {
+            "name": "label-display",
+            "property": "labelDisplay",
+            "type": "LyraLabelDisplay",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -96045,6 +96215,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "labelDisplay",
+            "attribute": "label-display",
+            "type": "LyraLabelDisplay",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
           },
           {
             "name": "labels",
@@ -102164,6 +102344,16 @@
             "default": ""
           },
           {
+            "name": "label-display",
+            "property": "labelDisplay",
+            "type": "LyraLabelDisplay",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -102546,6 +102736,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "labelDisplay",
+            "attribute": "label-display",
+            "type": "LyraLabelDisplay",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
           },
           {
             "name": "labels",
@@ -123085,6 +123285,16 @@
             "default": ""
           },
           {
+            "name": "label-display",
+            "property": "labelDisplay",
+            "type": "LyraLabelDisplay",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
+          },
+          {
             "name": "loading",
             "property": "loading",
             "type": "boolean",
@@ -123462,6 +123672,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "labelDisplay",
+            "attribute": "label-display",
+            "type": "LyraLabelDisplay",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
           },
           {
             "name": "labels",
@@ -139555,6 +139775,16 @@
             "default": ""
           },
           {
+            "name": "label-display",
+            "property": "labelDisplay",
+            "type": "LyraLabelDisplay",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -139939,6 +140169,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "labelDisplay",
+            "attribute": "label-display",
+            "type": "LyraLabelDisplay",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
           },
           {
             "name": "labels",
@@ -142054,6 +142294,16 @@
             "default": ""
           },
           {
+            "name": "label-display",
+            "property": "labelDisplay",
+            "type": "LyraLabelDisplay",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -142334,6 +142584,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "labelDisplay",
+            "attribute": "label-display",
+            "type": "LyraLabelDisplay",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
           },
           {
             "name": "labels",
@@ -144061,6 +144321,16 @@
             "default": ""
           },
           {
+            "name": "label-display",
+            "property": "labelDisplay",
+            "type": "LyraLabelDisplay",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -144299,6 +144569,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "labelDisplay",
+            "attribute": "label-display",
+            "type": "LyraLabelDisplay",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
           },
           {
             "name": "labels",
@@ -146669,6 +146949,16 @@
             "default": ""
           },
           {
+            "name": "label-display",
+            "property": "labelDisplay",
+            "type": "LyraLabelDisplay",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -146899,6 +147189,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "labelDisplay",
+            "attribute": "label-display",
+            "type": "LyraLabelDisplay",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
           },
           {
             "name": "labels",
@@ -154365,6 +154665,16 @@
             "default": ""
           },
           {
+            "name": "label-display",
+            "property": "labelDisplay",
+            "type": "LyraLabelDisplay",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -154603,6 +154913,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "labelDisplay",
+            "attribute": "label-display",
+            "type": "LyraLabelDisplay",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
           },
           {
             "name": "labels",
@@ -157248,6 +157568,16 @@
             "default": ""
           },
           {
+            "name": "label-display",
+            "property": "labelDisplay",
+            "type": "LyraLabelDisplay",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -157489,6 +157819,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "labelDisplay",
+            "attribute": "label-display",
+            "type": "LyraLabelDisplay",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
           },
           {
             "name": "labels",

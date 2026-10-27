@@ -17,7 +17,7 @@ import { styles } from './input.styles.js';
 import { isDateObject } from '../../../internal/dom-guards.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { srOnly } from '../../../internal/a11y.js';
-import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
+import type { LyraAppearance, LyraSize, LyraLabelDisplay } from '../../../internal/variants.js';
 import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
 import {
   autocorrectConverter,
@@ -306,6 +306,13 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
   /** Forwards native read-only behavior to the internal input and disables the clear action. */
   @property({ type: Boolean, reflect: true }) readonly = false;
   @property() label = '';
+  /**
+   * Whether the `label` renders on screen. `hidden` keeps the label as the accessible name but
+   * removes it visually (compact toolbars, table cells); hint, error and required semantics are
+   * unaffected. Reflected so styles and `[label-display]` selectors match.
+   * @attr label-display
+   */
+  @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
   @property() hint = '';
   /** Shoelace alias for {@link hint}. `hint` wins when both are supplied. */
   @property({ attribute: 'help-text' }) helpText = '';

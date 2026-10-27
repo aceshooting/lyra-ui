@@ -24,6 +24,21 @@ The direct exports are `chatCatalog`, `formsCatalog`, `dataCatalog`, `retrievalC
 
 Common roles are `stack`, `row`, `text`, `heading`, `card`, `badge`, `alert`, `empty`, `skeleton`, and `button`. The role lists are explicit; no unreviewed roles are substituted when a host source catalog lacks one of them.
 
+### Companion roles for `subsetCatalog()`
+
+`subsetCatalog()` refuses a role whose required child role is not selected (`catalog.dependency`). A parent can declare some child roles optional with `optionalChildren`; leaving one out is accepted and the role is removed from that parent's allowed children, so a generated `button` under `alert` in a read-only subset is rejected by `validateView()` (`children.type`, or `children.forbidden` when no child remains) instead of being accepted as an unknown role.
+
+| Parent role | Required companions | Optional companions |
+| --- | --- | --- |
+| `alert` | none | `text`, `button` |
+| `empty` | none | `button` |
+| `source-card` | none | `text` |
+| `source-list` | `source-card` | none |
+| `select` | `option` | none |
+| `chat-viewport` | `chat-message` | none |
+
+A host catalog declares `optionalChildren` as a subset of `children`; `createCatalog()` rejects an optional entry that is not also a listed child.
+
 Each preset identity is `${source.id}/${name}` and retains `source.version`. The built-in data preset is therefore `lyra-reviewed/data` version `1`. Use that selected catalog reference in the generated view and retain it with stored answers. A preset is not interchangeable with the full catalog or another preset. Selecting a preset does not qualify a new A2UI catalog identity.
 
 `selectExamples()` from `examples.js` accepts the five exact built-in preset references and validates every candidate against the active preset's actual roles and schemas. Missing roles are skipped. Compatibility does not rely on an ID prefix or automatically extend to future versions. A custom host catalog identity requires host-authored examples; the built-in example selector refuses it.

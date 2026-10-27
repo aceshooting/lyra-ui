@@ -16,6 +16,8 @@
 
 ## `lr-native-time-input`
 
+Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
+
 The Lyra 7 browser-native time field preserved under an explicit tag. It shares the input
 implementation with `lr-input`, forces its internal native input to `type="time"` on construction and reconnect, and retypes
 `min`/`max` so time-shaped attributes such as `09:00:30` are forwarded verbatim instead of parsed

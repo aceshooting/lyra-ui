@@ -16,6 +16,8 @@
 
 ## `lr-country-picker`
 
+Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
+
 A form-associated country/territory selector with localized names and decorative emoji flags.
 Import `@aceshooting/lyra-ui/components/lr-country-picker.js`. The default catalog is the pinned
 249-code ISO alpha-2 list. `value` defaults to `''`; valid two-letter values are trimmed and

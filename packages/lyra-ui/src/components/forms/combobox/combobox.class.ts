@@ -35,7 +35,7 @@ import { PopupController, emitPopupEvent } from '../../../internal/popup-control
 import { revealRow } from '../../../internal/reveal-row.js';
 import { DebounceController } from '../../../internal/debounce-controller.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
+import type { LyraAppearance, LyraSize, LyraLabelDisplay } from '../../../internal/variants.js';
 import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
 import { styles } from './combobox.styles.js';
 import type { LyraOption } from './option.class.js';
@@ -790,6 +790,13 @@ export class LyraCombobox<
 
   @property() placeholder = '';
   @property() label = '';
+  /**
+   * Whether the `label` renders on screen. `hidden` keeps the label as the accessible name but
+   * removes it visually (compact toolbars, table cells); hint, error and required semantics are
+   * unaffected. Reflected so styles and `[label-display]` selectors match.
+   * @attr label-display
+   */
+  @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   /** Whether the listbox is open. Disabled or readonly controls reject direct reopen attempts,

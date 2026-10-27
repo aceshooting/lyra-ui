@@ -16,6 +16,8 @@
 
 ## `lr-input`
 
+Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
+
 A single-line plain-text input primitive, the `lr-*` equivalent of a plain `wa-input`,
 form-associated via the same `FormAssociated` mixin as `lr-textarea`. Ships the same opt-in
 `label`/`hint`/`errorText` form-control chrome as `lr-textarea`/`lr-select`, and the same

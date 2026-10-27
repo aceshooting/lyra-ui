@@ -39,7 +39,7 @@ import {
 import { setCustomState } from '../../../internal/custom-states.js';
 import { submitOnEnter } from '../../../internal/submit-on-enter.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
+import type { LyraAppearance, LyraSize, LyraLabelDisplay } from '../../../internal/variants.js';
 import {
   dayPeriodLabels,
   hasTimeStepMismatch,
@@ -378,6 +378,13 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   @property() hint = '';
   @property({ attribute: 'hour-format', converter: hourFormatConverter, reflect: true }) hourFormat: LyraTimeInputHourFormat = 'auto';
   @property() label = '';
+  /**
+   * Whether the `label` renders on screen. `hidden` keeps the label as the accessible name but
+   * removes it visually (compact toolbars, table cells); hint, error and required semantics are
+   * unaffected. Reflected so styles and `[label-display]` selectors match.
+   * @attr label-display
+   */
+  @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
   @property({ reflect: true }) min = '';
   @property({ reflect: true }) max = '';
   @property({ type: Boolean, reflect: true }) pill = false;

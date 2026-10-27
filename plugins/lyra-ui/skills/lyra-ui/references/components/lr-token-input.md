@@ -16,6 +16,8 @@
 
 ## `lr-token-input`
 
+`labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
+
 An editable form-associated token list. Enter, comma, Tab, or blur commits a token; Tab is not
 prevented, so focus still advances normally. Backspace removes the last token. `value` is a
 readonly owned `readonly string[]` snapshot and repeated values are submitted under `name`; mutate

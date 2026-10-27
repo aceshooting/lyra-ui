@@ -16,6 +16,8 @@
 
 ## `lr-locale-picker`
 
+`labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
+
 A closed-list locale switcher over the library's own locale registry. First-party invention (no
 Web Awesome equivalent). With `locales` unset (the default), the offered rows are exactly
 `getRegisteredLyraLocales()` — every locale with strings registered via `registerLyraLocale()`,

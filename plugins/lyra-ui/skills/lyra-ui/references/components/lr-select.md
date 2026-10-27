@@ -16,6 +16,8 @@
 
 ## `lr-select`
 
+`labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
+
 Floating form-control panels follow the [shared surface treatment](../shared/styles-and-tokens.md).
 Editing fields and inline color editors retain opaque interiors.
 

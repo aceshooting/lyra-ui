@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard marginal gzip KiB ceilings for splitting-aware production ESM. Each route adds one anchored component to the representative shell in $baseline. Initial bytes include only the entry and transitively static chunks; dynamic chunks remain covered by total-cost budgets. Preserve passing canaries, shell imports and optional-peer exclusions. Reviewed increases use exact measurements or the next 64-byte boundary, with at most 4% headroom. Shared modal ordering and reconnect handling measure 19,848 initial marginal gzip bytes for tour; only its exceeded ceiling advances to 19,904 bytes.",
+  "$comment": "Hard marginal gzip KiB ceilings for splitting-aware production ESM. Each route adds one anchored component to the representative shell in $baseline. Initial bytes include only the entry and transitively static chunks; dynamic chunks remain covered by total-cost budgets. Preserve passing canaries, shell imports and optional-peer exclusions. Reviewed increases use exact measurements or the next 64-byte boundary, with at most 4% headroom. Shared modal ordering and reconnect handling measure 19,848 initial marginal gzip bytes for tour; only its exceeded ceiling advances to 19,904 bytes. The shared visually hidden form-control label option advances only the exceeded marginal ceilings to the next 64-byte boundary.",
   "$baseline": [
     "dist/components/data/stat/stat.js",
     "dist/components/overlays/callout/callout.js",
@@ -19,11 +19,11 @@
     "dist/components/conversation/usage-badge/usage-badge.js": 4.4375,
     "dist/components/conversation/voice-picker/voice-picker.js": 30.1875,
     "dist/components/forms/color-picker/color-picker.js": 28.4462890625,
-    "dist/components/forms/combobox/combobox.js": 41.1875,
+    "dist/components/forms/combobox/combobox.js": 41.25,
     "dist/components/forms/date-picker/date-input.js": 41.75,
-    "dist/components/forms/input/time-input.js": 26.9375,
-    "dist/components/forms/locale-picker/locale-picker.js": 29.25,
-    "dist/components/forms/select/select.js": 36.4375,
+    "dist/components/forms/input/time-input.js": 27,
+    "dist/components/forms/locale-picker/locale-picker.js": 29.3125,
+    "dist/components/forms/select/select.js": 36.5,
     "dist/components/layout/app-rail/app-rail-item.js": 8.1875,
     "dist/components/layout/menu/menu.js": 17.75,
     "dist/components/overlays/overlay/popover.js": 17.6875,

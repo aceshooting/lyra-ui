@@ -49,7 +49,7 @@ import { renderInertPresentation } from '../../../internal/inert-presentation.js
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { styles } from './select.styles.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
+import type { LyraAppearance, LyraSize, LyraLabelDisplay } from '../../../internal/variants.js';
 import type { LyraOption } from '../combobox/option.class.js';
 import '../combobox/option.class.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
@@ -551,6 +551,13 @@ export class LyraSelect<
   /** Visible label. A host `aria-label` wins on the internal trigger by attribute presence,
    * including an explicitly empty value that suppresses this label's naming fallback. */
   @property() label = '';
+  /**
+   * Whether the `label` renders on screen. `hidden` keeps the label as the accessible name but
+   * removes it visually (compact toolbars, table cells); hint, error and required semantics are
+   * unaffected. Reflected so styles and `[label-display]` selectors match.
+   * @attr label-display
+   */
+  @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
   @property() hint = '';
   /** Shoelace alias for {@link hint}. `hint` wins when both are present. */
   @property({ attribute: 'help-text' }) helpText = '';

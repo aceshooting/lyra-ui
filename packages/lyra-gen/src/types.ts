@@ -119,6 +119,13 @@ export interface LyraGenComponent {
   readonly slots?: readonly string[];
   /** Allowed child catalog types; true allows all types in the active catalog. */
   readonly children?: boolean | readonly string[];
+  /**
+   * The subset of the listed `children` roles that this component renders fine without. A subset
+   * catalog may leave an optional child role out; it is then removed from the allowed children, so
+   * generated content placing it under this parent is rejected. Every other listed child is required
+   * and fails `subsetCatalog()` with `catalog.dependency` when unselected.
+   */
+  readonly optionalChildren?: readonly string[];
   readonly text?: boolean;
   readonly interactive?: boolean;
   /** Trusted intent for any role that accepts user input, even without state bindings. */

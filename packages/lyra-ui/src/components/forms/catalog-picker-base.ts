@@ -19,7 +19,7 @@ import { resolveEffectivePositioningStrategy } from '../../internal/positioning-
 import { hasCustomState } from '../../internal/custom-states.js';
 import { normalizeSelectionValue, selectionCatalogTruncation, type SelectionCatalogEntry, type SelectionCatalogRow } from '../../internal/selection-catalog.js';
 import type { PlaceStrategy } from '../../internal/positioner.js';
-import type { LyraSize } from '../../internal/variants.js';
+import type { LyraLabelDisplay, LyraSize } from '../../internal/variants.js';
 import type { LyraSelect } from './select/select.class.js';
 import type { LyraCombobox } from './combobox/combobox.class.js';
 import { styles } from './catalog-picker-base.styles.js';
@@ -53,6 +53,8 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
   protected static override readonly immutableEventDetails = Object.freeze(['lr-input', 'lr-change']);
   /** Visible field label; the label slot takes precedence. */
   @property() label = '';
+  /** Whether the `label` renders on screen; `hidden` keeps it as the accessible name. */
+  @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
   /** Field guidance; the hint slot takes precedence. */
   @property() hint = '';
   /** Validation guidance; the error slot takes precedence. */
@@ -341,7 +343,7 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
       .positioningStrategy=${this.ownerDocument ? resolveEffectivePositioningStrategy(this, this.positioningStrategy, 'absolute') : this.positioningStrategy}
       .strings=${this.strings} .customError=${this.validity.valid ? null : this.validationMessage}
       .value=${this.usingCombobox ? this.value || null : this.value}
-      .label=${this.label} .hint=${this.hint} .errorText=${this.errorText}
+      .label=${this.label} .labelDisplay=${this.labelDisplay} .hint=${this.hint} .errorText=${this.errorText}
       .placeholder=${this.placeholder ?? this.localize('select')}
       aria-label=${this.accessibleLabel ?? (hasLabel ? nothing : this.pickerLabel)}
       .required=${this.required} .disabled=${this.effectiveDisabled} .size=${this.size}

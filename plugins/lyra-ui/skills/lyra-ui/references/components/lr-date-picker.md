@@ -209,6 +209,8 @@ day-cell/grid-column size; its private default follows the `size` tier — `2xs`
 
 ### `lr-date-input`
 
+`labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
+
 Text field + calendar popover, **form-associated** via the shared `FormAssociated` mixin (`name`,
 `value`, `disabled`, `required` all inherited).
 

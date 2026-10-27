@@ -16,6 +16,8 @@
 
 ## `lr-phone-input`
 
+`labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
+
 A form-associated, country-aware telephone field. The submitted `value` is either canonical E.164
 (for example `+352621123456`) or `''` while the editable input is empty, incomplete, or invalid.
 Numbering-plan metadata and national formatting stay outside Lyra's base bundle: supply a

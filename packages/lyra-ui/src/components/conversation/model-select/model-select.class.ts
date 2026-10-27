@@ -8,7 +8,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { LyraCatalogPickerElement } from '../catalog-picker-element.js';
-import type { LyraSize } from '../../../internal/variants.js';
+import type { LyraSize, LyraLabelDisplay } from '../../../internal/variants.js';
 import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
@@ -240,6 +240,13 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
    * associated name. Leaving both empty keeps the `aria-label || placeholder || 'Model'` chain.
    */
   @property() label = '';
+  /**
+   * Whether the `label` renders on screen. `hidden` keeps the label as the accessible name but
+   * removes it visually (compact toolbars, table cells); hint, error and required semantics are
+   * unaffected. Reflected so styles and `[label-display]` selectors match.
+   * @attr label-display
+   */
+  @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
   /** Hint text below the field. Unset (the default): no hint chrome renders. */
   @property() hint = '';
   /** Error text below the field (overridden by slotted `error` content). Unset (the default): no

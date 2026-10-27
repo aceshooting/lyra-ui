@@ -16,6 +16,8 @@
 
 ## `lr-time-zone-picker`
 
+Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
+
 A form-associated identifier selector. Import
 `@aceshooting/lyra-ui/components/lr-time-zone-picker.js`. It follows the
 [shared field contract](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/components/lr-country-picker.md),

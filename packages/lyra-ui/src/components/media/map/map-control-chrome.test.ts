@@ -212,6 +212,51 @@ describe('lr-map public native control chrome', () => {
     }
   });
 
+  for (const corner of ['top-left', 'bottom-right'] as const) {
+    it(`never clamps a ${corner} group below its own buttons when consumer parts zero its margin`, async () => {
+      const { root, wrapper } = await mount();
+      const style = document.createElement('style');
+      style.textContent = `lr-map { --lr-icon-button-size: 44px; }
+        lr-map::part(navigation), lr-map::part(geolocate-control) { margin: 0; }
+        lr-map::part(zoom-in), lr-map::part(zoom-out), lr-map::part(compass), lr-map::part(geolocate) { inline-size: 44px; min-inline-size: 44px; }`;
+      wrapper.prepend(style);
+      const target = query(root, `.maplibregl-ctrl-${corner}`);
+      const groups = [query(root, '[part~="navigation"]'), query(root, '[part~="geolocate-control"]')];
+      // No wide sibling widens the shrink-to-fit corner, as in a corner holding only these groups.
+      query(root, '.maplibregl-ctrl-attrib').remove();
+      for (const group of groups) target.append(group);
+      await mutations();
+      const container = query(root, '[part="container"]').getBoundingClientRect();
+      for (const group of groups) {
+        const box = group.getBoundingClientRect();
+        expect(box.right, group.className).to.be.at.most(container.right + 1);
+        for (const button of group.querySelectorAll<HTMLElement>('button')) {
+          const face = button.getBoundingClientRect();
+          expect(face.width, button.className).to.equal(44);
+          expect(box.width, button.className).to.be.at.least(face.width);
+          const icon = query(button, '.maplibregl-ctrl-icon').getBoundingClientRect();
+          expect(Math.abs((icon.left + icon.right) / 2 - (box.left + box.right) / 2), button.className).to.be.below(0.5);
+        }
+      }
+    });
+  }
+
+  it('keeps long attribution wrapped inside a 320px map', async () => {
+    const { root } = await mount(320);
+    const attribution = query(root, '.maplibregl-ctrl-attrib');
+    const inner = query(attribution, '.maplibregl-ctrl-attrib-inner');
+    inner.textContent = 'Survey'; await mutations();
+    const line = inner.getBoundingClientRect().height;
+    inner.textContent = 'Local survey contributors and regional licensing partners '.repeat(4);
+    await mutations();
+    const container = query(root, '[part="container"]').getBoundingClientRect();
+    const box = attribution.getBoundingClientRect();
+    expect(box.left).to.be.at.least(container.left - 1);
+    expect(box.right).to.be.at.most(container.right + 1);
+    expect(box.width).to.be.below(320);
+    expect(inner.getBoundingClientRect().height).to.be.greaterThan(2 * line);
+  });
+
   for (const occupiedOpposites of [false, true]) {
     it(`allocates top and bottom widths independently with ${occupiedOpposites ? 'four' : 'diagonal'} occupied corners`, async () => {
       const { root } = await mount(320);

@@ -76,6 +76,27 @@ Three consumer-settable properties replace it, retune its colour, or suppress it
 once. Full description, worked examples, and why the content string is never localized by the
 library: `llms/shared.md` → "The required-field marker".
 
+## Hiding the label visually: `label-display`
+
+Form controls need a `label` for their accessible name. In a compact toolbar or table cell where
+the surrounding UI already says what the field is, set `label-display="hidden"` (property
+`labelDisplay: 'visible' | 'hidden'`, default `'visible'`) instead of styling the `form-control-label`
+part yourself. The label box leaves the layout and the screen but stays in the accessibility tree, so
+it remains the control's accessible name (a native `<label for>` association, plus the required
+marker that rides on it). The `hint` and `error` parts, the `required` semantics and validation are
+unaffected, and an unset control renders exactly as before.
+
+```html
+<lr-select label="Sort order" label-display="hidden"> … </lr-select>
+```
+
+It is one shared rule, so it is identical on `lr-select`, `lr-combobox`, `lr-input`,
+`lr-time-input`, `lr-textarea`, `lr-locale-picker`, `lr-date-input`, `lr-phone-input`,
+`lr-token-input`, the catalog pickers (`lr-country-picker`, `lr-currency-picker`,
+`lr-time-zone-picker`, `lr-unit-picker`) and, in the conversation family, `lr-model-select` and
+`lr-voice-picker`. Prefer it to dropping `label`: a control with no label has no name. The attribute
+reflects, so `[label-display='hidden']` is also a styling hook.
+
 ## Disabled and readonly controls publish no invalid state
 
 A control **barred from constraint validation** — its own `disabled`, an ancestor
@@ -206,6 +227,8 @@ An async `source` row can carry the same two fields (`start`, `end`) alongside i
 other value (a plain object, a function) is dropped from the row instead of reaching the renderer.
 
 ### `lr-combobox`
+
+`labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
 **Properties:**
 
@@ -859,6 +882,8 @@ synchronous and fires no `input`/`change`/`lr-change` event.
 <a id="popup-select-keyboard"></a>
 
 ## `lr-select`
+
+`labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
 Floating form-control panels follow the [shared surface treatment](shared/styles-and-tokens.md).
 Editing fields and inline color editors retain opaque interiors.
@@ -1602,6 +1627,8 @@ day-cell/grid-column size; its private default follows the `size` tier — `2xs`
 
 ### `lr-date-input`
 
+`labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
+
 Text field + calendar popover, **form-associated** via the shared `FormAssociated` mixin (`name`,
 `value`, `disabled`, `required` all inherited).
 
@@ -1934,6 +1961,8 @@ and `dateTimeFormat(locale, options)`.
 ---
 
 ## `lr-textarea`
+
+`labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
 A multiline plain-text input primitive, form-associated (participates in native `<form>`
 submission/validation/reset via `name`/`value`/`disabled`/`required`/`checkValidity()`/
@@ -2732,6 +2761,8 @@ them leaves rendering unchanged.
 
 ## `lr-input`
 
+Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
+
 A single-line plain-text input primitive, the `lr-*` equivalent of a plain `wa-input`,
 form-associated via the same `FormAssociated` mixin as `lr-textarea`. Ships the same opt-in
 `label`/`hint`/`errorText` form-control chrome as `lr-textarea`/`lr-select`, and the same
@@ -3181,6 +3212,8 @@ first field's, referenced here by id.
 
 ## `lr-number-input`
 
+Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
+
 A numeric field with the complete `lr-input` form, validation and native-editing contract, plus its
 own increment/decrement stepper pair. Its constructor and `connectedCallback()` both force
 `type = 'number'`; all inherited `lr-input` form and editing APIs remain available.
@@ -3340,6 +3373,8 @@ The exact-320px RTL story keeps long label/hint copy and both fixed-size stepper
 <a id="date-and-time-controls"></a>
 
 ## `lr-time-input`
+
+`labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
 A locale-aware segmented field and column picker mirroring `wa-time-input`. Its wire and submitted
 value is always timezone-free, 24-hour ASCII: `HH:mm`, or `HH:mm:ss` when seconds are visible.
@@ -3535,6 +3570,8 @@ ancestor to change every unset time input beneath it.
 
 ## `lr-native-time-input`
 
+Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
+
 The Lyra 7 browser-native time field preserved under an explicit tag. It shares the input
 implementation with `lr-input`, forces its internal native input to `type="time"` on construction and reconnect, and retypes
 `min`/`max` so time-shaped attributes such as `09:00:30` are forwarded verbatim instead of parsed
@@ -3620,6 +3657,8 @@ entry for the flush and cancellation rules.
 ---
 
 ## `lr-phone-input`
+
+`labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
 A form-associated, country-aware telephone field. The submitted `value` is either canonical E.164
 (for example `+352621123456`) or `''` while the editable input is empty, incomplete, or invalid.
@@ -5843,6 +5882,8 @@ a `.value=${...}` binding on first render) is applied once they arrive.
 
 ## `lr-token-input`
 
+`labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
+
 An editable form-associated token list. Enter, comma, Tab, or blur commits a token; Tab is not
 prevented, so focus still advances normally. Backspace removes the last token. `value` is a
 readonly owned `readonly string[]` snapshot and repeated values are submitted under `name`; mutate
@@ -6829,6 +6870,8 @@ the same library-wide token every other disabled control reads.
 
 ## `lr-locale-picker`
 
+`labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
+
 A closed-list locale switcher over the library's own locale registry. First-party invention (no
 Web Awesome equivalent). With `locales` unset (the default), the offered rows are exactly
 `getRegisteredLyraLocales()` — every locale with strings registered via `registerLyraLocale()`,
@@ -7625,6 +7668,8 @@ toggles join, and `var(--lr-space-2xs)` when vertical) and `--lr-toggle-group-wr
 
 ## `lr-currency-picker`
 
+Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
+
 A form-associated, single-currency selector with a compact ISO-code trigger and localized currency
 names and symbols in its options. It composes `lr-select` (or `lr-combobox` when searchable) and `lr-option`; no additional popover,
 currency-name table or optional peer is needed. Selection changes the field value only: exchange
@@ -7793,6 +7838,8 @@ const displayedAmount = convertCurrency(100, 'EUR', 'USD', snapshot);
 
 ## `lr-country-picker`
 
+Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
+
 A form-associated country/territory selector with localized names and decorative emoji flags.
 Import `@aceshooting/lyra-ui/components/lr-country-picker.js`. The default catalog is the pinned
 249-code ISO alpha-2 list. `value` defaults to `''`; valid two-letter values are trimmed and
@@ -7896,6 +7943,8 @@ the catalog property. Shared form-control and surface tokens apply, including RT
 
 ## `lr-time-zone-picker`
 
+Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
+
 A form-associated identifier selector. Import
 `@aceshooting/lyra-ui/components/lr-time-zone-picker.js`. It follows the
 [shared field contract](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/components/lr-country-picker.md),
@@ -7941,6 +7990,8 @@ Defaults and form/editing methods follow the
 ```
 
 ## `lr-unit-picker`
+
+Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
 A form-associated measurement-unit selector. Import
 `@aceshooting/lyra-ui/components/lr-unit-picker.js`. It follows the

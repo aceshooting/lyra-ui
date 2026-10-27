@@ -16,6 +16,8 @@
 
 ## `lr-time-input`
 
+`labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
+
 A locale-aware segmented field and column picker mirroring `wa-time-input`. Its wire and submitted
 value is always timezone-free, 24-hour ASCII: `HH:mm`, or `HH:mm:ss` when seconds are visible.
 Locale changes segment order, separators, digits, and day-period labels — never the wire value.
