@@ -1,5 +1,12 @@
 # @aceshooting/lyra-ide
 
+## 30.4.0
+
+### Patch Changes
+
+- Updated dependencies [fea5203]
+  - @aceshooting/lyra-ui@30.4.0
+
 ## 30.3.0
 
 ### Patch Changes
