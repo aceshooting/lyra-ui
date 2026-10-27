@@ -1,9 +1,10 @@
 # Generative UI: Lyra Gen
 
-Status: **experimental 0.1.0 published; 1.0.0 candidate qualification in progress**. The
-experimental [`@aceshooting/lyra-gen` 0.1.0 release](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-gen%400.1.0)
-is published. [Current source](../../packages/lyra-gen/README.md) is the 1.0.0 candidate; final
-qualification and publication remain pending. This roadmap preserves the complete program and
+Status: **`@aceshooting/lyra-gen` 1.0.0 is the stable release**; see its
+[compatibility profile](../../packages/lyra-gen/docs/compatibility.md#criteria-for-10). Its numerical
+timing and memory campaign follows the release, and opt-in region error isolation is not part of
+1.0. The experimental [0.1.0 release](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-gen%400.1.0)
+preceded it. This roadmap preserves the complete program and
 its acceptance criteria, including remaining work; original stage-version targets remain as
 planning history. Website and hosted live generation remain pending and are sequenced last,
 after the library work.
@@ -133,7 +134,7 @@ Source entry points: [AI adapters](../../packages/lyra-ui/src/ai/adapters/a2ui.t
 
 ### Package boundary
 
-`@aceshooting/lyra-gen` is an independently versioned experimental companion at
+`@aceshooting/lyra-gen` is an independently versioned companion at
 `packages/lyra-gen`. Lyra UI is its required peer; Lyra UI must not import
 the companion. Public integration APIs must avoid imports from another package's private internals.
 Any necessary reusable library helper receives an intentional public contract and qualification.
@@ -412,7 +413,7 @@ previews carry explicit status and do not become production capability claims.
 | Saved sharing | Required for stage 3; host storage/authentication/authorization, versioned publishable definitions and optimistic concurrency |
 | Catalog scope | Reviewed overlays and extensible subsets; no automatic exposure of every library component |
 | A2UI processor | Lyra-owned implementation, qualified against pinned official protocol profiles; no upstream processor runtime dependency |
-| Markup parser | Decide reuse versus a new implementation from stage-0 evidence, including dependency and maintenance costs |
+| Markup parser | Decided: a Lyra-owned restricted parser (`packages/lyra-gen/src/parser.ts`), chosen over reuse for dependency and maintenance cost |
 | Evaluation lineup | Opus, Astra, Sonnet and Luna; pin executable model identifiers and settings before each campaign; spending ceiling still to be set |
 | Open-ended execution | Independent conditional research; not a blocker for chat, A2UI or saved dashboards |
 | Public claims | Workload-specific, reproducible and versioned; comparative ambitions remain goals until measured |

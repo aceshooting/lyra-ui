@@ -9,7 +9,7 @@ qualification, planned features and conditional work.
 The package provides catalog subsets, deterministic JSON generation prompts, a restricted Markup
 parser, view validation, revision-checked patches, local binding state, a browser renderer and host
 persistence contracts. The [compatibility profile](docs/compatibility.md) defines the 1.x contract,
-separately experimental A2UI candidate entry and criteria for a 1.0 designation. Each protocol and
+separately experimental A2UI candidate entry and 1.0 qualification status. Each protocol and
 host integration retains its documented limits; API availability does not establish full protocol
 conformance or qualify an application's deployment.
 

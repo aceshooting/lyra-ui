@@ -8,11 +8,11 @@ their full acceptance criteria and are not a blanket completion or release claim
 deferred capabilities remain labeled explicitly. Priority applies within the stated stage, not
 as a calendar estimate.
 
-`@aceshooting/lyra-gen` now exists as an unpublished experimental package in `packages/lyra-gen`. It depends on the
+`@aceshooting/lyra-gen` is published as the stable 1.0.0 companion in `packages/lyra-gen`. It depends on the
 qualified public Lyra UI surface; `lyra-ui` never imports it. Lyra Markup is a restricted,
 validated model-facing syntax, not permission to render arbitrary HTML. Stable widget-v2
-contracts remain fail-closed. Safe-region recovery never overrides identity, security or resource
-boundaries, and generated controls require independent composition-level accessibility qualification.
+contracts remain fail-closed. Any future opt-in safe-region recovery (not part of 1.0) must never override identity, security or
+resource boundaries, and generated controls require independent composition-level accessibility qualification.
 
 Stages are **0 foundations/evidence**, **1 useful chat**, **2 interoperability**,
 **3 persistent dashboards**, and **4 advanced/demand-gated**. P0 blocks the stage's release,
@@ -29,7 +29,7 @@ takes priority over new lyra-3d and lyra-docs features while maintenance continu
 
 ## Current implementation snapshot
 
-This is a source inventory for the experimental `0.1.0` work, not an accepted-release checklist.
+This is a source inventory for the 1.0.0 release, not its acceptance checklist.
 Focused Node, type, catalog and browser checks exist and have been exercised; final integrated
 qualification remains pending. Test code links describe coverage, while committed experiment
 reports describe only their explicitly measured scope. The [package guide](../../packages/lyra-gen/README.md)

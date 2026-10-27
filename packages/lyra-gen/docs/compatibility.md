@@ -213,8 +213,9 @@ Before designating that profile stable, all of the following must hold:
   limitations. Candidate fixtures do not count toward stable coverage. No complete-conformance
   claim is made for a deliberately restricted host or protocol profile.
 
-The record must link the corresponding raw results and reproduction commands. Until this checklist
-is satisfied for a named profile, a 1.0 candidate does not establish stable qualification.
+The record must link the corresponding raw results and reproduction commands. 1.0.0 meets this
+checklist except the numerical timing/memory campaign, which follows release. Opt-in region error
+isolation is not part of 1.0.
 
 ## Criteria for promotion into Lyra UI
 

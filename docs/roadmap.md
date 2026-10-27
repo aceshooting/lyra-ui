@@ -15,10 +15,11 @@ still open.
 - **Generative UI and shared dashboards:** [Lyra Gen program](roadmap/generative-ui.md),
   [detailed backlog](roadmap/generative-ui-backlog.md),
   [evaluation and performance](roadmap/generative-ui-evaluation.md), and
-  [website, showcases and live generation](roadmap/generative-ui-website.md). Experimental
-  [Lyra Gen 0.1.0 is published](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-gen%400.1.0).
-  The current 1.0.0 candidate includes interactive chat, bounded generation contracts, protocol
-  adapters and saved dashboard workflows; its qualification and publication remain pending.
+  [website, showcases and live generation](roadmap/generative-ui-website.md). Lyra Gen
+  1.0.0 is the stable release, following the experimental
+  [0.1.0](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-gen%400.1.0). It includes interactive
+  chat, bounded generation contracts, protocol adapters and saved dashboard workflows; its numerical
+  timing and memory campaign follows the release.
   The detailed backlog separates implemented scope, outstanding qualification and conditional
   capabilities; the hosted demonstration remains planned.
 - **Native document editing:** [delivery sequence](roadmap/document-editing.md) and its
