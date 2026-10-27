@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard archive ceilings: UI downloads stay below 10,000,000 bytes, unpacked UI size retains the 25% historical-baseline reduction, and its file-count derivation reserves seven scaffold artifacts. Required files and artifact hygiene are checked independently; companions have separate ceilings. Only exceeded byte ceilings advance to a 64-byte boundary. Measured UI: 21,977,538 unpacked archive / 21,978,160 estimated after updated Gen guidance. Measured Gen: 226,827 packed / 836,226 unpacked across 143 files, including the guided-demo guide and two example sources with host-provided localization. Runtime bundle ceilings remain unchanged.",
+  "$comment": "Hard archive ceilings: UI downloads stay below 10,000,000 bytes, unpacked UI size retains the 25% historical-baseline reduction, and its file-count derivation reserves seven scaffold artifacts. Required files and artifact hygiene are checked independently; companions have separate ceilings. Only exceeded byte ceilings advance to a 64-byte boundary. Shared modal fixes, copy-button sizing and required guides measure 21,995,709 unpacked UI archive bytes. Generated IDE API data measures 1,709,957 packed and 10,584,872 unpacked bytes. Other archive ceilings remain unchanged.",
   "baseline": {
     "packedBytes": 7829794,
     "unpackedBytes": 38510084,
@@ -20,7 +20,7 @@
   },
   "maximum": {
     "packedBytes": 9999999,
-    "unpackedBytes": 21978176,
+    "unpackedBytes": 21995712,
     "fileCount": 3352
   },
   "companions": {
@@ -47,8 +47,8 @@
     },
     "@aceshooting/lyra-ide": {
       "maximum": {
-        "packedBytes": 1709824,
-        "unpackedBytes": 10583232,
+        "packedBytes": 1710016,
+        "unpackedBytes": 10584896,
         "fileCount": 10
       }
     },
