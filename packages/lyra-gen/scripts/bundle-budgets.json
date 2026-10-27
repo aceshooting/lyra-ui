@@ -38,8 +38,8 @@
     },
     "runtime": {
       "measured": {
-        "eagerJsBytes": 22530,
-        "eagerJsGzipBytes": 7738,
+        "eagerJsBytes": 23729,
+        "eagerJsGzipBytes": 8190,
         "lazyJsBytes": 0,
         "lazyJsGzipBytes": 0,
         "eagerCssBytes": 0,
@@ -49,8 +49,8 @@
         "assetBytes": 0
       },
       "ceilings": {
-        "eagerJsBytes": 22980,
-        "eagerJsGzipBytes": 7892,
+        "eagerJsBytes": 24203,
+        "eagerJsGzipBytes": 8353,
         "lazyJsBytes": 0,
         "lazyJsGzipBytes": 0,
         "eagerCssBytes": 0,
@@ -63,8 +63,8 @@
     },
     "chat": {
       "measured": {
-        "eagerJsBytes": 38644,
-        "eagerJsGzipBytes": 12184,
+        "eagerJsBytes": 39607,
+        "eagerJsGzipBytes": 12589,
         "lazyJsBytes": 0,
         "lazyJsGzipBytes": 0,
         "eagerCssBytes": 0,
@@ -74,8 +74,8 @@
         "assetBytes": 0
       },
       "ceilings": {
-        "eagerJsBytes": 39416,
-        "eagerJsGzipBytes": 12427,
+        "eagerJsBytes": 40399,
+        "eagerJsGzipBytes": 12840,
         "lazyJsBytes": 0,
         "lazyJsGzipBytes": 0,
         "eagerCssBytes": 0,
