@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard archive ceilings: UI downloads stay below 10,000,000 bytes, unpacked UI size retains the 25% historical-baseline reduction, and its file-count derivation reserves seven scaffold artifacts. Required files and artifact hygiene are checked independently; companions have separate ceilings. Only exceeded byte ceilings advance to a 64-byte boundary. The 30.4.0 changes, versioned references and changelogs measure 21,997,749 unpacked UI bytes in the npm dry-run estimate, 6,225,888 unpacked translation archive bytes and 10,584,968 unpacked IDE archive bytes. lr-map attribution state, pending control outlines, keyboard centre activation, getVisibleBounds() and their guides measure 22,009,103 unpacked UI bytes; the generated IDE API data measures 1,711,176 packed and 10,590,419 unpacked bytes. Passing archive ceilings remain unchanged.",
+  "$comment": "Hard archive ceilings: UI downloads stay below 10,000,000 bytes, unpacked UI size retains the 25% historical-baseline reduction, and its file-count derivation reserves seven scaffold artifacts. Required files and artifact hygiene are checked independently; companions have separate ceilings. Only exceeded byte ceilings advance to a 64-byte boundary. The 30.4.0 changes, versioned references and changelogs measure 21,997,749 unpacked UI bytes in the npm dry-run estimate, 6,225,888 unpacked translation archive bytes and 10,584,968 unpacked IDE archive bytes. lr-map attribution state, pending control outlines, keyboard centre activation, getVisibleBounds() and their guides measure 22,009,103 unpacked UI bytes; the generated IDE API data measures 1,711,176 packed and 10,590,419 unpacked bytes. The 30.5.0 changelogs and version stamps measure 22,011,393 unpacked UI, 6,225,984 unpacked translation and 10,590,515 unpacked IDE archive bytes; lyra-gen 1.2.0 component error isolation and composite answer blocks measure 243,325 packed and 890,993 unpacked bytes in 150 files. Passing archive ceilings remain unchanged.",
   "baseline": {
     "packedBytes": 7829794,
     "unpackedBytes": 38510084,
@@ -20,7 +20,7 @@
   },
   "maximum": {
     "packedBytes": 9999999,
-    "unpackedBytes": 22009152,
+    "unpackedBytes": 22011456,
     "fileCount": 3352
   },
   "companions": {
@@ -41,22 +41,22 @@
     "@aceshooting/lyra-translations": {
       "maximum": {
         "packedBytes": 1500000,
-        "unpackedBytes": 6225920,
+        "unpackedBytes": 6225984,
         "fileCount": 911
       }
     },
     "@aceshooting/lyra-ide": {
       "maximum": {
         "packedBytes": 1711232,
-        "unpackedBytes": 10590464,
+        "unpackedBytes": 10590528,
         "fileCount": 10
       }
     },
     "@aceshooting/lyra-gen": {
       "maximum": {
-        "packedBytes": 231424,
-        "unpackedBytes": 853248,
-        "fileCount": 145
+        "packedBytes": 243328,
+        "unpackedBytes": 891008,
+        "fileCount": 150
       }
     }
   }
