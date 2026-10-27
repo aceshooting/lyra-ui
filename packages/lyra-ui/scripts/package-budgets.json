@@ -54,9 +54,9 @@
     },
     "@aceshooting/lyra-gen": {
       "maximum": {
-        "packedBytes": 226880,
-        "unpackedBytes": 836288,
-        "fileCount": 143
+        "packedBytes": 231424,
+        "unpackedBytes": 853248,
+        "fileCount": 145
       }
     }
   }
