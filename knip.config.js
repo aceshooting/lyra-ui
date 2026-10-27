@@ -70,7 +70,7 @@ export default {
         'src/adapters/a2ui-candidate.ts!', 'src/replay.ts!', 'src/evaluation.ts!',
         'src/**/*.test.ts', 'test/**/*.{ts,mjs}', 'scripts/*.test.mjs',
         // Published examples and maintainer qualification CLIs are explicit runnable entries.
-        'examples/chat.ts!', 'examples/dashboard.ts!', 'examples/saved-dashboard/{app.js,host.mjs}!',
+        'examples/chat.ts!', 'examples/dashboard.ts!', 'examples/answer-blocks.ts!', 'examples/saved-dashboard/{app.js,host.mjs}!',
         'scripts/{check-catalog-consumer,compare-a2ui-reference,compare-a2ui-dom,openui-experiment,report-catalog-presets}.mjs',
         '*.config.mjs',
       ],
@@ -103,5 +103,11 @@ export default {
       project: ['scripts/**/*.mjs'],
       ignoreDependencies: ['@aceshooting/lyra-ui'],
     },
+  },
+  // These modules export block expanders and diagnostic-code tables only for their colocated tests;
+  // a JSDoc @internal tag would ship in lyra-gen's published files.
+  ignoreIssues: {
+    'packages/lyra-gen/src/catalogs/blocks.ts': ['exports'],
+    'packages/lyra-gen/src/isolation.ts': ['exports'],
   },
 };

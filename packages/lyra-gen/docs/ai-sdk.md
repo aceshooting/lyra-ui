@@ -1,9 +1,9 @@
 # Interactive SDK answers
 
-This integration is tested against the exact `ai@7.0.153` development dependency.
+This integration is tested against the exact `ai@7.0.154` development dependency.
 It uses the SDK's public
-[`UIMessageChunk`](https://github.com/vercel/ai/blob/ai%407.0.153/packages/ai/src/ui-message-stream/ui-message-chunks.ts)
-and [`readUIMessageStream`](https://github.com/vercel/ai/blob/ai%407.0.153/packages/ai/src/ui-message-stream/read-ui-message-stream.ts)
+[`UIMessageChunk`](https://github.com/vercel/ai/blob/ai%407.0.154/packages/ai/src/ui-message-stream/ui-message-chunks.ts)
+and [`readUIMessageStream`](https://github.com/vercel/ai/blob/ai%407.0.154/packages/ai/src/ui-message-stream/read-ui-message-stream.ts)
 APIs. This qualification covers the fixture paths below, not arbitrary SDK versions or every
 provider. Lyra UI does not import the SDK at runtime.
 
