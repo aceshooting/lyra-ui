@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'Bu URL alanını başka bir harita kullanıyor',
   mapHashInvalid: 'Harita URL alanının adı geçersiz',
   mapControlUnavailable: 'Bir harita denetimi yüklenemedi',
+  mapGlobe: 'Yerküre',
+  mapTerrain: 'Arazi',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

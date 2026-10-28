@@ -56,3 +56,24 @@ describe('initial attribution expansion properties', () => {
       }), propertyRuns());
   });
 });
+
+describe('scene control option properties', () => {
+  it('admits every finite nonnegative terrain scale and finite order without forwarding layout options', () => {
+    fc.assert(fc.property(fc.double({ min: 0, noNaN: true, noDefaultInfinity: true }), fc.double({ noNaN: true, noDefaultInfinity: true }),
+      (exaggeration, order) => {
+        const result = normalizeMapControlOptions({ terrain: { source: 'dem', exaggeration, order } });
+        const entry = [...result.controls.values()].find(value => String(value.kind) === 'terrain');
+        expect(result.diagnostics).to.deep.equal([]);
+        expect(entry?.order).to.equal(order);
+        expect(entry?.options).to.deep.equal({ source: 'dem', exaggeration });
+      }), propertyRuns());
+  });
+
+  it('retains arbitrary bounded nonblank source identifiers without source discovery', () => {
+    fc.assert(fc.property(fc.string({ minLength: 1, maxLength: 200 }).filter(value => value.trim().length > 0), source => {
+      const result = normalizeMapControlOptions({ terrain: { source } });
+      const entry = [...result.controls.values()].find(value => String(value.kind) === 'terrain');
+      expect(entry?.options).to.deep.equal({ source, exaggeration: 1 });
+    }), propertyRuns());
+  });
+});

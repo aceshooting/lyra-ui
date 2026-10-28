@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'Een andere kaart gebruikt dit URL-veld',
   mapHashInvalid: 'De naam van het URL-veld van de kaart is ongeldig',
   mapControlUnavailable: 'Een kaartbedieningselement kon niet worden geladen',
+  mapGlobe: 'Wereldbol',
+  mapTerrain: 'Terrein',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

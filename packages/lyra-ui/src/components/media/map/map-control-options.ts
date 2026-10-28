@@ -1,7 +1,8 @@
+import { admitMapTerrain, type LyraMapTerrain } from './map-scene-configuration.js';
 import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
 
-export type MapOwnedControlKind = 'navigation' | 'scale' | 'geolocate' | 'attribution';
+export type MapOwnedControlKind = 'navigation' | 'scale' | 'geolocate' | 'globe' | 'terrain' | 'attribution';
 /** Corner a declarative control is added to. The corners follow text direction under RTL. */
 export type LyraMapControlPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 /** Unit system of the scale control. */
@@ -10,14 +11,18 @@ export type LyraMapScaleUnit = 'metric' | 'imperial';
 export interface LyraMapNavigationControlOptions {
   /** Corner to add the control to. Defaults to `'top-right'`. */
   readonly position?: LyraMapControlPosition;
-  /** Ascending visual and keyboard order within the corner. Defaults to 0; ties use navigation, scale, geolocate, attribution. */
+  /** Ascending visual and keyboard order within the corner. Defaults to 0; ties use navigation, scale, geolocate, globe, terrain, attribution. */
   readonly order?: number;
 }
+/** Placement of the component-owned globe toggle; scene state follows the map projection. */
+export interface LyraMapGlobeControlOptions extends LyraMapNavigationControlOptions {}
+/** Explicit elevation source requested when the component-owned terrain toggle enables terrain. */
+export interface LyraMapTerrainControlOptions extends LyraMapNavigationControlOptions, LyraMapTerrain {}
 /** Options of the declarative scale control. */
 export interface LyraMapScaleControlOptions {
   /** Corner to add the control to. Defaults to `'bottom-left'`. */
   readonly position?: LyraMapControlPosition;
-  /** Ascending visual and keyboard order within the corner. Defaults to 0; ties use navigation, scale, geolocate, attribution. */
+  /** Ascending visual and keyboard order within the corner. Defaults to 0; ties use navigation, scale, geolocate, globe, terrain, attribution. */
   readonly order?: number;
   /** Unit system. Defaults to `'metric'`. */
   readonly unit?: LyraMapScaleUnit;
@@ -135,7 +140,7 @@ export function normalizeMapControlOptions(input: unknown): MapControlOptionsRes
   const diagnostics: { kind: MapOwnedControlKind; code: 'invalid-options' }[] = [];
   const done = (): MapControlOptionsResult => Object.freeze({ controls, diagnostics: Object.freeze(diagnostics.map((item) => Object.freeze(item))) });
   if (!runtimeRecord(input)) return done();
-  for (const kind of ['navigation', 'scale', 'geolocate', 'attribution'] as const) {
+  for (const kind of ['navigation', 'scale', 'geolocate', 'globe', 'terrain', 'attribution'] as const) {
     try {
       const value = kind === 'navigation' || kind === 'scale' ? optionalLegacy(input, kind) : own(input, kind);
       if (value === undefined || value === false) continue;
@@ -150,13 +155,20 @@ export function normalizeMapControlOptions(input: unknown): MapControlOptionsRes
         controls.set(kind, Object.freeze({ kind, position: corner, order, unit, options: Object.freeze(kind === 'scale' ? { unit } : {}), key: `${corner}:${order}:${unit ?? ''}` }));
         continue;
       }
+      if (kind === 'terrain' && value === true) throw new TypeError('Terrain control source is required');
       const entry = value === true ? {} : plain(value);
       const order = controlOrder(entry);
-      const corner = position(entry, kind === 'geolocate' ? 'top-right' : 'bottom-right');
+      const corner = position(entry, kind === 'attribution' ? 'bottom-right' : 'top-right');
       let options: Readonly<Record<string, unknown>>;
       let attributionLabels: readonly string[] | undefined;
       let initialExpanded: boolean | undefined;
-      if (kind === 'geolocate') {
+      if (kind === 'globe') {
+        options = Object.freeze({});
+      } else if (kind === 'terrain') {
+        const terrain = admitMapTerrain(entry);
+        if (!terrain) throw new TypeError('Terrain control source is required');
+        options = Object.freeze({ source: terrain.source, exaggeration: terrain.exaggeration });
+      } else if (kind === 'geolocate') {
         const rawPosition = own(entry, 'positionOptions'), rawFit = own(entry, 'fitBoundsOptions');
         const positionOptions = rawPosition === undefined ? {} : plain(rawPosition), fit = rawFit === undefined ? {} : plain(rawFit);
         const showUserLocation = bool(entry, 'showUserLocation', true), showAccuracyCircle = bool(entry, 'showAccuracyCircle', true);

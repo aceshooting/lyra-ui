@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'Bu URL maydonidan boshqa xarita foydalanmoqda',
   mapHashInvalid: 'Xarita URL maydoni nomi notoʻgʻri',
   mapControlUnavailable: 'Xarita boshqaruvini yuklab boʻlmadi',
+  mapGlobe: 'Yer shari',
+  mapTerrain: 'Relyef',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

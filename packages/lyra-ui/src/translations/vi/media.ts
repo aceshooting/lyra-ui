@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'Một bản đồ khác đang sử dụng trường URL này',
   mapHashInvalid: 'Tên trường URL của bản đồ không hợp lệ',
   mapControlUnavailable: 'Không thể tải bộ điều khiển bản đồ',
+  mapGlobe: 'Quả địa cầu',
+  mapTerrain: 'Địa hình',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

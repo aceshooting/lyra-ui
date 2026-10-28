@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'Toinen kartta käyttää tätä URL-kenttää',
   mapHashInvalid: 'Kartan URL-kentän nimi on virheellinen',
   mapControlUnavailable: 'Kartan ohjainta ei voitu ladata',
+  mapGlobe: 'Maapallo',
+  mapTerrain: 'Maasto',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

@@ -702,7 +702,7 @@ export type {
   LyraMapChoroplethLayer,
   LyraMapChoroplethNoData,
   LyraMapControlPosition,
-  LyraMapControls,
+  LyraMapControls, LyraMapGlobeControlOptions, LyraMapTerrainControlOptions, LyraMapProjectionChangeDetail, LyraMapTerrainChangeDetail,
   LyraMapLegendGradientTick,
   LyraMapNavigationControlOptions,
   LyraMapScaleControlOptions,

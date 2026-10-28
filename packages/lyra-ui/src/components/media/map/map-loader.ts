@@ -80,6 +80,8 @@ export interface MapLibreMapCapability {
   getZoom(): number;
   getBearing?(): number;
   getPitch?(): number;
+  /** Optional cancellation, required only for session-owned animated camera commands. */
+  stop?(): unknown;
   setCenter(center: [number, number]): unknown;
   setZoom(zoom: number): unknown;
   resize(): unknown;
@@ -125,7 +127,7 @@ export interface MapLibreMapCapability {
   on(type: 'moveend', listener: (event: Readonly<Record<string, unknown>> | undefined) => void): this;
   on(type: 'move', listener: () => void): this;
   on(type: 'boxzoomend', listener: () => void): this;
-  on(type: 'movestart' | 'boxzoomstart', listener: (event: Readonly<Record<string, unknown>> | undefined) => void): this;
+  on(type: 'movestart' | 'boxzoomstart' | 'dragstart' | 'zoomstart' | 'rotatestart' | 'pitchstart', listener: (event: Readonly<Record<string, unknown>> | undefined) => void): this;
   on(type: 'click', listener: (event: {
     point: unknown;
     lngLat: { lng: number; lat: number };
@@ -349,7 +351,7 @@ export function loadModularMap(): Promise<ModularMapModule | null> {
 }
 
 /** The standard peer controls `<lr-map controls>` can add, by kind. */
-export type MapControlKind = 'navigation' | 'scale' | 'geolocate' | 'attribution';
+export type MapControlKind = 'navigation' | 'scale' | 'geolocate' | 'globe' | 'terrain' | 'attribution';
 
 /**
  * Loads one standard control constructor for the selected engine. The full engine carries every
@@ -362,6 +364,10 @@ export async function loadMapControl(
   engine: 'modular' | 'maplibre',
   module: MaplibreModule | undefined,
 ): Promise<MapLibreControlConstructor | null> {
+  if (kind === 'globe' || kind === 'terrain') {
+    const runtime = await import('./map-scene-controls.js');
+    return kind === 'globe' ? runtime.MapGlobeControl : runtime.MapTerrainControl;
+  }
   const name = ({ navigation: 'NavigationControl', scale: 'ScaleControl', geolocate: 'GeolocateControl', attribution: 'AttributionControl' } as const)[kind];
   const provided = module?.[name];
   if (isConstructor(provided)) return provided as MapLibreControlConstructor;

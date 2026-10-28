@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'Drug zemljevid že uporablja to polje URL-ja',
   mapHashInvalid: 'Ime polja URL-ja zemljevida ni veljavno',
   mapControlUnavailable: 'Kontrolnika zemljevida ni bilo mogoče naložiti',
+  mapGlobe: 'Globus',
+  mapTerrain: 'Relief',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

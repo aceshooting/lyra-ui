@@ -1440,9 +1440,9 @@ intensity?: LyraMapHeatmapZoomValue; opacity?: number }`, where `LyraMapHeatmapZ
   `LyraMapScaleUnit = 'metric' | 'imperial'`. The element adds the engine's standard controls once
   the map exists, moves one whose corner changes, replaces one whose other options change and removes one that
   is dropped, so an application no longer imports control classes and calls `map.addControl()`.
-  All four control option objects accept finite `order` numbers, defaulting to `0`. Within each
+  All control option objects accept finite `order` numbers, defaulting to `0`. Within each
   corner, ascending order controls both visual and keyboard order; ties retain the existing
-  navigation, scale, geolocate, attribution sequence. Changing only order moves existing controls
+  navigation, scale, geolocate, globe, terrain, attribution sequence. Changing only order moves existing controls
   without reconstructing them. Invalid order values produce localized configuration feedback.
   `true` takes the defaults (navigation `'top-right'`, scale `'bottom-left'` and `'metric'`); an
   unknown navigation/scale position or unit falls back to its default. Malformed geolocate or
@@ -1488,7 +1488,7 @@ intensity?: LyraMapHeatmapZoomValue; opacity?: number }`, where `LyraMapHeatmapZ
   };
   ```
 
-  Within each corner the visual and keyboard order is navigation, scale, geolocate, attribution,
+  Within each corner the visual and keyboard order is navigation, scale, geolocate, globe, terrain, attribution,
   including when constructors load in a different order or one fails. A subset keeps that relative
   order. Changing only a corner moves the existing controls and retains focused buttons. Corners
   continue to follow text direction under RTL. Geolocation is never activated by reconfiguration
@@ -2351,9 +2351,40 @@ are not an atomic transaction; a failed application retires the map instead of r
 partially configured scene as ready. Reconnect or assign a valid `mapStyle` to retry. Do not
 mutate native projection/terrain while the matching declarative override owns it; clear the
 override first. Native toolbar controls are not added by these properties: compose ordinary
-Lyra buttons and a slider around the map, as in the globe/terrain story. Terrain exaggeration is
+Lyra buttons and a slider around the map, or opt into the component-owned toggles below. Terrain exaggeration is
 a display scale, not a physical simulation.
 
+### Component-owned globe and terrain controls
+
+`controls.globe` accepts `true` or `{ position?, order? }`. `controls.terrain` accepts
+`false` or `{ source, exaggeration?, position?, order? }`; the source is required and `true`
+is not accepted. Both default to `top-right`, order 0. Equal-order controls read navigation,
+scale, geolocate, globe, terrain, attribution. Existing corner mirroring follows RTL.
+
+```ts
+map.controls = {
+  globe: true,
+  terrain: { source: 'elevation', exaggeration: 1.5 },
+};
+```
+
+Installing or changing these controls does not change the scene. Activation assigns `projection`
+or `terrain` first, then emits a noncancelable request event: `lr-map-projection-change` carries
+`{ projection, source: 'control' }`; `lr-map-terrain-change` carries
+`{ terrain, source: 'control' }`. Await `whenIdle()` for application. Programmatic changes and
+style replay do not emit either event. A controlled application can synchronously reassign the
+property in the event handler; its latest assignment wins.
+
+Pressed state reflects settled native configuration. Literal globe is pressed, mercator is not;
+expression-valued projection is mixed. Transition metadata does not change a literal's state.
+The terrain toggle disables any active terrain, including a different source; enabling uses its
+configured source and scale. A missing enable source disables that action with localized feedback;
+disabling active terrain remains available. Source availability recovers after style/source updates.
+Controls are disabled while scene changes are pending. `whenControlsReady()` covers installation,
+not terrain tiles or scene application. Showing a control never downloads or guesses a DEM source.
+
+Use `globe-control`, `globe-button`, `globe-icon`, `terrain-control`, `terrain-button` and
+`terrain-icon` parts for the owned chrome. Labels use `mapGlobe` and `mapTerrain` localization keys.
 
 ## `lr-map-anchor`
 
@@ -5527,10 +5558,30 @@ These named interfaces and helper signatures are available to typed integrations
   }`
   Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapControls {
+    readonly globe?: boolean | LyraMapGlobeControlOptions;
+    readonly terrain?: false | LyraMapTerrainControlOptions;
     readonly navigation?: boolean | LyraMapNavigationControlOptions;
     readonly scale?: boolean | LyraMapScaleControlOptions;
     readonly geolocate?: boolean | LyraMapGeolocateControlOptions;
     readonly attribution?: boolean | LyraMapAttributionControlOptions;
+  }`
+  `LyraMapGlobeControlOptions {
+    readonly position?: LyraMapControlPosition;
+    readonly order?: number;
+  }`
+  `LyraMapTerrainControlOptions {
+    readonly position?: LyraMapControlPosition;
+    readonly order?: number;
+    readonly source: string;
+    readonly exaggeration?: number;
+  }`
+  `LyraMapProjectionChangeDetail {
+    readonly projection: LyraMapProjection;
+    readonly source: 'control';
+  }`
+  `LyraMapTerrainChangeDetail {
+    readonly terrain: LyraMapTerrain | null;
+    readonly source: 'control';
   }`
   Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapNavigationControlOptions {

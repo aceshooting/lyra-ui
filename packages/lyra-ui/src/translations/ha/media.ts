@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'Wata taswira tana amfani da wannan filin URL',
   mapHashInvalid: 'Sunan filin URL na taswira bai dace ba',
   mapControlUnavailable: 'Ba a iya loda abin sarrafa taswira ba',
+  mapGlobe: 'Ƙwallon duniya',
+  mapTerrain: 'Yanayin ƙasa',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

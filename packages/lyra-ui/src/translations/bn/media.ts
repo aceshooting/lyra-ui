@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'অন্য একটি মানচিত্র এই URL ক্ষেত্রটি ব্যবহার করছে',
   mapHashInvalid: 'মানচিত্রের URL ক্ষেত্রের নামটি বৈধ নয়',
   mapControlUnavailable: 'মানচিত্রের একটি নিয়ন্ত্রণ লোড করা যায়নি',
+  mapGlobe: 'পৃথিবীর গোলক',
+  mapTerrain: 'ভূপ্রকৃতি',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

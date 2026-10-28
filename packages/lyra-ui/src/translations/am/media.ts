@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'ሌላ ካርታ ይህን የURL መስክ እየተጠቀመበት ነው',
   mapHashInvalid: 'የካርታው የURL መስክ ስም ልክ አይደለም',
   mapControlUnavailable: 'የካርታ መቆጣጠሪያ መጫን አልተቻለም',
+  mapGlobe: 'የምድር ሉል',
+  mapTerrain: 'የመሬት አቀማመጥ',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

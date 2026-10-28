@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'மற்றொரு வரைபடம் இந்த URL புலத்தைப் பயன்படுத்துகிறது',
   mapHashInvalid: 'வரைபட URL புலத்தின் பெயர் செல்லாது',
   mapControlUnavailable: 'வரைபடக் கட்டுப்பாட்டை ஏற்ற முடியவில்லை',
+  mapGlobe: 'புவிக்கோளம்',
+  mapTerrain: 'நிலத்தோற்றம்',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

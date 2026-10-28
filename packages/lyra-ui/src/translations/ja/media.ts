@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: '別の地図がこのURLフィールドを使用しています',
   mapHashInvalid: '地図のURLフィールド名が無効です',
   mapControlUnavailable: '地図の操作コントロールを読み込めませんでした',
+  mapGlobe: '地球儀',
+  mapTerrain: '地形',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

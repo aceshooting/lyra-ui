@@ -733,6 +733,28 @@ export const styles = css`
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
+  .map-scene-control-icon {
+    display: block;
+    inline-size: var(--lr-size-1em);
+    block-size: var(--lr-size-1em);
+    margin-inline: auto;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .maplibregl-ctrl-group button:where([aria-pressed='true'], [aria-pressed='mixed']) {
+    --_map-scene-control-fill: var(--lr-color-brand-quiet);
+    background: var(--_map-scene-control-fill);
+    color: var(--lr-color-brand);
+  }
+  .maplibregl-ctrl-group button:where([aria-pressed='true'], [aria-pressed='mixed']):hover:where(:not(:disabled)) {
+    background: color-mix(in oklab, var(--_map-scene-control-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+  }
+  .maplibregl-ctrl-group button:where([aria-pressed='true'], [aria-pressed='mixed']):active:where(:not(:disabled)) {
+    background: color-mix(in oklab, var(--_map-scene-control-fill), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
   .maplibregl-ctrl-icon {
     position: relative;
     display: block;

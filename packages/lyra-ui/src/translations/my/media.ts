@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'အခြားမြေပုံတစ်ခုက ဤ URL အကွက်ကို အသုံးပြုနေသည်',
   mapHashInvalid: 'မြေပုံ URL အကွက်အမည် မမှန်ကန်ပါ',
   mapControlUnavailable: 'မြေပုံထိန်းချုပ်မှုတစ်ခုကို မဖွင့်နိုင်ပါ',
+  mapGlobe: 'ကမ္ဘာလုံး',
+  mapTerrain: 'မြေမျက်နှာသွင်ပြင်',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

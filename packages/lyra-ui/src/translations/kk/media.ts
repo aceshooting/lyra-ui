@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'Басқа карта осы URL өрісін пайдаланып жатыр',
   mapHashInvalid: 'Картаның URL өрісінің атауы жарамсыз',
   mapControlUnavailable: 'Картаның басқару элементін жүктеу мүмкін болмады',
+  mapGlobe: 'Жер шары',
+  mapTerrain: 'Жер бедері',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

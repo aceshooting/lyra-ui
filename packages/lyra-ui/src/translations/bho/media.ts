@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'एह URL फ़ील्ड के दोसर नक्शा इस्तेमाल करत बा',
   mapHashInvalid: 'नक्शा के URL फ़ील्ड के नाम सही नइखे',
   mapControlUnavailable: 'नक्शा के एगो नियंत्रण लोड ना हो सकल',
+  mapGlobe: 'पृथ्वी के गोला',
+  mapTerrain: 'भूभाग',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

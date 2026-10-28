@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'Ramani nyingine inatumia sehemu hii ya URL',
   mapHashInvalid: 'Jina la sehemu ya URL ya ramani si halali',
   mapControlUnavailable: 'Kidhibiti cha ramani hakikuweza kupakiwa',
+  mapGlobe: 'Tufe la dunia',
+  mapTerrain: 'Mandhari ya ardhi',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

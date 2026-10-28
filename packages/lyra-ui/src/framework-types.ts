@@ -7486,7 +7486,9 @@ export interface LyraComponentTypeMap {
       | 'lr-map-pick'
       | 'lr-map-pointer-leave'
       | 'lr-map-pointer-move'
+      | 'lr-map-projection-change'
       | 'lr-map-style-load'
+      | 'lr-map-terrain-change'
       | 'lr-map-view-change';
     cssNames:       | '--lr-map-choropleth-fill-opacity'
       | '--lr-map-drawing-color'

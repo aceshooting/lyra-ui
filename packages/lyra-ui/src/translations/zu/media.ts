@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'Enye imephu isebenzisa le nkambu ye-URL',
   mapHashInvalid: 'Igama lenkambu ye-URL yemephu alivumelekile',
   mapControlUnavailable: 'Isilawuli semephu asikwazanga ukulayishwa',
+  mapGlobe: 'Imbulunga yomhlaba',
+  mapTerrain: 'Ukwakheka komhlaba',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

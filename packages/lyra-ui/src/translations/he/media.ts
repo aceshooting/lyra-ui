@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'מפה אחרת משתמשת בשדה URL זה',
   mapHashInvalid: 'שם שדה ה־URL של המפה אינו תקין',
   mapControlUnavailable: 'לא ניתן היה לטעון פקד של המפה',
+  mapGlobe: 'כדור הארץ',
+  mapTerrain: 'תבליט',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

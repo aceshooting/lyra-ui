@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'Et andet kort bruger dette URL-felt',
   mapHashInvalid: 'Navnet på kortets URL-felt er ugyldigt',
   mapControlUnavailable: 'En kortkontrol kunne ikke indlæses',
+  mapGlobe: 'Globus',
+  mapTerrain: 'Terræn',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

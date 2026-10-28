@@ -3,8 +3,8 @@
   "schemaVersion": 2,
   "source": {
     "path": "src/internal/localization.ts#DEFAULT_STRINGS",
-    "keyCount": 1612,
-    "sha256": "sha256:a0cf6b95723459120e8f6ef645fee9cb672939a8e9040c3ac595ef8cf7e960ef"
+    "keyCount": 1617,
+    "sha256": "sha256:7905049c099255b158517b33caa36b356b1f5c8a1823368e74e2dc744aaeb4bb"
   },
   "upstreamLocaleBreadth": {
     "webAwesome": {
@@ -161,7 +161,7 @@
       "Hindi, Indonesian, Italian, Dutch, Polish, Turkish, Ukrainian, Simplified/Traditional Chinese, Persian and Hebrew provide the requested broad regional coverage while preserving the pinned upstream locale vocabulary.",
       "Korean, European Portuguese and Romanian are additional regional catalogs outside the pinned union, recorded explicitly so exact locale selection and independent review remain auditable.",
       "Every promoted catalog covers the complete DEFAULT_STRINGS snapshot with preserved placeholders, locale-appropriate CLDR plural categories, and no untranslated English prose beyond independently allowlisted technical terms, units, keyboard names, abbreviations, or format templates.",
-      "Czech, Danish, Swiss Standard German, Finnish, Croatian, Hungarian, Kazakh, Norwegian Bokm\u00e5l and Nynorsk, Slovenian and Swedish complete the pinned upstream union apart from generic pt, which resolves to the shipped pt-BR catalog through base-language fallback.",
+      "Czech, Danish, Swiss Standard German, Finnish, Croatian, Hungarian, Kazakh, Norwegian Bokmål and Nynorsk, Slovenian and Swedish complete the pinned upstream union apart from generic pt, which resolves to the shipped pt-BR catalog through base-language fallback.",
       "The shippedBeforeV8 and regionalExtensions catalogs (ar, de, es, fr, ja, pt-BR, ru, zh-CN) predate this review ledger; each now carries its own catalogs[] review record too, so every shipped, non-deferred locale is reviewed under the same englishIdenticalAllowlist discipline rather than only the ones newly promoted this release.",
       "Bengali (bn), Greek (el), Tamil (ta), Urdu (ur) and Vietnamese (vi) are complete original catalogs with independent AI-assisted review and entry-specific English-identical rationales; no human or native-speaker certification is claimed.",
       "All 34 population-prioritized additions have complete original catalogs, independent AI-assisted review records tied to the current content, and entry-specific English-identical rationales. No human or native-speaker certification is claimed.",

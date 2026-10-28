@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'O altă hartă folosește acest câmp URL',
   mapHashInvalid: 'Numele câmpului URL al hărții nu este valid',
   mapControlUnavailable: 'Un element de control al hărții nu a putut fi încărcat',
+  mapGlobe: 'Glob',
+  mapTerrain: 'Relief',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

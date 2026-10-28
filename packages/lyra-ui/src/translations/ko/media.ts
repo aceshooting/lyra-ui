@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: '다른 지도가 이 URL 필드를 사용하고 있습니다',
   mapHashInvalid: '지도 URL 필드 이름이 유효하지 않습니다',
   mapControlUnavailable: '지도 컨트롤을 불러올 수 없습니다',
+  mapGlobe: '지구본',
+  mapTerrain: '지형',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

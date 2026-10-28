@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'Une autre carte utilise ce champ d’URL',
   mapHashInvalid: 'Le nom du champ d’URL de la carte est invalide',
   mapControlUnavailable: 'Une commande de la carte n’a pas pu être chargée',
+  mapGlobe: 'Globe',
+  mapTerrain: 'Relief',
   mapScaleFeet: 'pi',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

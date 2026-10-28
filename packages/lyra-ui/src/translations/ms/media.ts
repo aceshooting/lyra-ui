@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'Peta lain sedang menggunakan medan URL ini',
   mapHashInvalid: 'Nama medan URL peta tidak sah',
   mapControlUnavailable: 'Kawalan peta tidak dapat dimuatkan',
+  mapGlobe: 'Glob',
+  mapTerrain: 'Bentuk muka bumi',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

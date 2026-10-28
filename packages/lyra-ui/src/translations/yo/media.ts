@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'Màpù mìíràn ń lo pápá URL yìí',
   mapHashInvalid: 'Orúkọ pápá URL màpù kò tọ́',
   mapControlUnavailable: 'A kò lè gbé ohun ìdarí màpù wọlé',
+  mapGlobe: 'Bọ́ọ̀lù ayé',
+  mapTerrain: 'Ìrísí ilẹ̀',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

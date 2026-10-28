@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'Ένας άλλος χάρτης χρησιμοποιεί αυτό το πεδίο URL',
   mapHashInvalid: 'Το όνομα του πεδίου URL του χάρτη δεν είναι έγκυρο',
   mapControlUnavailable: 'Δεν ήταν δυνατή η φόρτωση ενός στοιχείου ελέγχου του χάρτη',
+  mapGlobe: 'Υδρόγειος',
+  mapTerrain: 'Ανάγλυφο',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'μ.',
   mapScaleKilometers: 'χλμ.',

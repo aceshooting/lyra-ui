@@ -47,7 +47,7 @@ const RASTER_STYLE = {
 const OFFLINE_RASTER_TILE =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAA/0lEQVR4AeXBsY1YMQxEwXeL3wJBqP+aHDm5jCBYhK0aqHBnfv78/f2HsY/rZLBVPZwMtqqHk8FW9XAy2BLmhDlhTpgT5oQ5YU6YE+aEOWFOmBPmhLmPq3p4UT28qB5eVA9bH9fJYKt6OBlsVQ8ng63q4WSwJcwJc8KcMCfMCXPCnDAnzAlzwpwwJ8wJcx9X9fCienhRPbyoHrY+rpPBVvVwMtiqHk4GW9XDyWBLmBPmhDlhTpgT5oQ5YU6YE+aEOWFOmBPmPq7q4UX18KJ6eFE9bH1cJ4Ot6uFksFU9nAy2qoeTwZYwJ8wJc8KcMCfMCXPCnDAnzAlzwpwwJ8z9B2UdSfWg4cuTAAAAAElFTkSuQmCC';
 const OFFLINE_RASTER_STYLE = {
-  version: 8,
+  version: 8 as const,
   sources: {
     demo: {
       type: 'raster',
@@ -1859,9 +1859,9 @@ function sceneElevationTile(): string {
 export const GlobeAndTerrain: Story = {
   args: { lang: 'en' },
   argTypes: { lang: { control: 'select', options: ['en', 'fr', 'ar'] } },
-  parameters: { docs: { description: { story: 'Typed projection and terrain settings with caller-owned controls and synthetic offline elevation. The scale slider is an example choice, not a limit of the terrain API. Missing elevation demonstrates the localized fallback; Retry restores the valid style. Native globe/terrain toolbar controls are not installed.' } } },
+  parameters: { docs: { description: { story: 'Typed projection and terrain settings with caller-owned controls and synthetic offline elevation. The scale slider is an example choice, not a limit of the terrain API. Missing elevation demonstrates the localized fallback; Retry restores the valid style. Component-owned globe and terrain toggles share the same properties with the surrounding controls.' } } },
   render: args => {
-    const language = args.lang === 'fr' ? 'fr' : args.lang === 'ar' ? 'ar' : 'en';
+    const language = args['lang'] === 'fr' ? 'fr' : args['lang'] === 'ar' ? 'ar' : 'en';
     const messages = {
       en: { title: 'Globe and terrain', flat: 'Flat map', globe: 'Globe', terrain: 'Terrain', scale: 'Terrain exaggeration', fit: 'Overview', move: 'Explore the hill', reset: 'Use style defaults', missing: 'Try missing elevation', retry: 'Retry', loading: 'Applying map settings…', ready: 'Map ready', failure: 'Map unavailable. Retry with the valid elevation source.', description: 'Synthetic elevation for demonstration. Exaggeration changes appearance, not physical measurements.' },
       fr: { title: 'Globe et relief', flat: 'Carte plane', globe: 'Globe', terrain: 'Relief', scale: 'Exagération du relief', fit: 'Vue générale', move: 'Explorer la colline', reset: 'Réglages du style', missing: 'Tester une source absente', retry: 'Réessayer', loading: 'Application des réglages…', ready: 'Carte prête', failure: 'Carte indisponible. Réessayez avec la source valide.', description: 'Relief synthétique de démonstration. L’exagération modifie l’apparence, pas les mesures physiques.' },
@@ -1881,7 +1881,15 @@ export const GlobeAndTerrain: Story = {
       try { await owner.updateComplete; await owner.whenIdle(); if (status && map === owner && request === revision) status.textContent = messages.ready; }
       catch { if (status && map === owner && request === revision) status.textContent = messages.failure; }
     };
-    const apply = () => { if (map) { map.projection = projection; map.terrain = enabled ? { source: 'elevation', exaggeration: scale } : null; } void report(); };
+    const apply = () => { if (map) { map.controls = { navigation: true, scale: true, globe: true, terrain: { source: 'elevation', exaggeration: scale }, attribution: false }; map.projection = projection; map.terrain = enabled ? { source: 'elevation', exaggeration: scale } : null; } void report(); };
+    const controlRequest = () => {
+      if (!map) return;
+      projection = map.projection; enabled = map.terrain != null;
+      const section = map.closest('section');
+      section?.querySelectorAll('.projection-choice').forEach(button => { Reflect.set(button, 'pressed', button.getAttribute('data-projection') === projection); });
+      const control = section?.querySelector('.terrain-choice'); if (control) Reflect.set(control, 'checked', enabled);
+      void report();
+    };
     const toggleProjection = (value: 'mercator' | 'globe', event: Event) => {
       projection = value; apply();
       const row = (event.currentTarget as HTMLElement).parentElement;
@@ -1908,7 +1916,9 @@ export const GlobeAndTerrain: Story = {
           style="block-size:24rem;inline-size:100%;min-inline-size:0" .mapStyle=${sourceStyle}
           .projection=${'globe'} .terrain=${null} .center=${[0, 0]} .zoom=${1}
           .markers=${[{ id: 'hill', lngLat: [0, 0], label: messages.move }]}
-          .controls=${{ navigation: true, scale: true, attribution: false }}
+          .controls=${{ navigation: true, scale: true, globe: true, terrain: { source: 'elevation', exaggeration: scale }, attribution: false }}
+          .strings=${{ mapGlobe: messages.globe, mapTerrain: messages.terrain }}
+          @lr-map-projection-change=${controlRequest} @lr-map-terrain-change=${controlRequest}
           @lr-map-style-load=${() => { void report(); }}></lr-map>
         <output ${ref(element => { status = element as HTMLElement | undefined; })} aria-live="polite">${messages.loading}</output>
       </section>`;

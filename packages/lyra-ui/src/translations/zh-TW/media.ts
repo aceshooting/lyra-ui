@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: '另一張地圖正在使用這個 URL 欄位',
   mapHashInvalid: '地圖 URL 欄位名稱無效',
   mapControlUnavailable: '無法載入地圖控制項',
+  mapGlobe: '地球檢視',
+  mapTerrain: '地形',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

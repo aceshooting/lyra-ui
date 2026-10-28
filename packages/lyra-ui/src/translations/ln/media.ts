@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'Carte mosusu ezali kosalela esika oyo ya URL',
   mapHashInvalid: 'Nkombo ya esika ya URL ya carte ebongi te',
   mapControlUnavailable: 'Ekoki kokɔtisa te commande ya carte',
+  mapGlobe: 'Globe ya mabele',
+  mapTerrain: 'Lolenge ya mabele',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'Ginagamit ng ibang mapa ang field na ito sa URL',
   mapHashInvalid: 'Hindi wasto ang pangalan ng field sa URL ng mapa',
   mapControlUnavailable: 'Hindi ma-load ang kontrol ng mapa',
+  mapGlobe: 'Globo',
+  mapTerrain: 'Anyong lupa',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'ಬೇರೊಂದು ನಕ್ಷೆಯು ಈ URL ಕ್ಷೇತ್ರವನ್ನು ಬಳಸುತ್ತಿದೆ',
   mapHashInvalid: 'ನಕ್ಷೆಯ URL ಕ್ಷೇತ್ರದ ಹೆಸರು ಅಮಾನ್ಯವಾಗಿದೆ',
   mapControlUnavailable: 'ನಕ್ಷೆಯ ನಿಯಂತ್ರಣವನ್ನು ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ',
+  mapGlobe: 'ಭೂಗೋಳ',
+  mapTerrain: 'ಭೂಪ್ರದೇಶ',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

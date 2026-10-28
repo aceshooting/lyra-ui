@@ -1657,6 +1657,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   mapHashConflict: 'Another map is using this URL field',
   mapHashInvalid: 'The map URL field name is invalid',
   mapControlUnavailable: 'A map control could not be loaded',
+  mapGlobe: 'Globe',
+  mapTerrain: 'Terrain',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

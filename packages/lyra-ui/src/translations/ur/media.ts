@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'ایک اور نقشہ اس URL فیلڈ کو استعمال کر رہا ہے',
   mapHashInvalid: 'نقشے کے URL فیلڈ کا نام درست نہیں ہے',
   mapControlUnavailable: 'نقشے کا کنٹرول لوڈ نہیں ہو سکا',
+  mapGlobe: 'دنیا کا گولا',
+  mapTerrain: 'زمینی ساخت',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

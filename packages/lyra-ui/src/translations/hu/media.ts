@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'Ezt az URL-mezőt egy másik térkép használja',
   mapHashInvalid: 'A térkép URL-mezőjének neve érvénytelen',
   mapControlUnavailable: 'Nem sikerült betölteni a térkép egyik vezérlőelemét',
+  mapGlobe: 'Földgömb',
+  mapTerrain: 'Domborzat',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'Kaartaan biraa dirree URL kana fayyadamaa jira',
   mapHashInvalid: 'Maqaan dirree URL kaartaa sirrii miti',
   mapControlUnavailable: 'To’annoon kaartaa fe’amuun hin danda’amne',
+  mapGlobe: 'Kubbaa lafaa',
+  mapTerrain: 'Teessuma lafaa',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'Maapụ ọzọ na-eji ubi URL a',
   mapHashInvalid: 'Aha ubi URL maapụ adịghị mma',
   mapControlUnavailable: 'Enweghị ike ibunye njikwa maapụ',
+  mapGlobe: 'Glọb ụwa',
+  mapTerrain: 'Ọdịdị ala',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

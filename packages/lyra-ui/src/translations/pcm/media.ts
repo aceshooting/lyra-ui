@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'Anoda map dey use dis URL field',
   mapHashInvalid: 'Di map URL field name no correct',
   mapControlUnavailable: 'E no fit load map control',
+  mapGlobe: 'World globe',
+  mapTerrain: 'Land shape',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

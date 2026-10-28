@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'Peta liyane nggunakake kolom URL iki',
   mapHashInvalid: 'Jeneng kolom URL peta ora sah',
   mapControlUnavailable: 'Salah siji kontrol peta ora bisa dimuat',
+  mapGlobe: 'Globe bumi',
+  mapTerrain: 'Wangun lemah',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

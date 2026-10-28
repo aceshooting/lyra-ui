@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'ଅନ୍ୟ ଏକ ମାନଚିତ୍ର ଏହି URL ଫିଲ୍ଡ ବ୍ୟବହାର କରୁଛି',
   mapHashInvalid: 'ମାନଚିତ୍ରର URL ଫିଲ୍ଡ ନାମ ଅବୈଧ',
   mapControlUnavailable: 'ମାନଚିତ୍ରର ଏକ ନିୟନ୍ତ୍ରଣ ଲୋଡ୍ କରିହେଲା ନାହିଁ',
+  mapGlobe: 'ପୃଥିବୀ ଗୋଲକ',
+  mapTerrain: 'ଭୂପ୍ରକୃତି',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

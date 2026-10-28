@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'మరొక మ్యాప్ ఈ URL ఫీల్డ్‌ను ఉపయోగిస్తోంది',
   mapHashInvalid: 'మ్యాప్ URL ఫీల్డ్ పేరు చెల్లదు',
   mapControlUnavailable: 'మ్యాప్ నియంత్రణను లోడ్ చేయలేకపోయాం',
+  mapGlobe: 'భూగోళం',
+  mapTerrain: 'భూభాగం',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

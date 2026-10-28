@@ -1614,6 +1614,8 @@ export type LyraMessageKey =
   | 'mapHashConflict'
   | 'mapHashInvalid'
   | 'mapControlUnavailable'
+  | 'mapGlobe'
+  | 'mapTerrain'
   | 'mapScaleFeet'
   | 'mapScaleMeters'
   | 'mapScaleKilometers'

@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'نقشهٔ دیگری از این فیلد URL استفاده می‌کند',
   mapHashInvalid: 'نام فیلد URL نقشه نامعتبر است',
   mapControlUnavailable: 'یکی از کنترل‌های نقشه بارگذاری نشد',
+  mapGlobe: 'کرهٔ زمین',
+  mapTerrain: 'ناهمواری‌های زمین',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

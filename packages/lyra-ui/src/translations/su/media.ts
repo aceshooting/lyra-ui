@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'Peta séjén keur maké widang URL ieu',
   mapHashInvalid: 'Ngaran widang URL peta teu sah',
   mapControlUnavailable: 'Kadali peta teu bisa dimuat',
+  mapGlobe: 'Globe bumi',
+  mapTerrain: 'Wangun taneuh',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

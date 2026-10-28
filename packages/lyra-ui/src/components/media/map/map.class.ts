@@ -26,6 +26,10 @@ import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { DEFAULT_CANVAS_COLOR, resolveCanvasColor } from '../../../internal/canvas-color.js';
 import { finiteDuration, finiteRange } from '../../../internal/numbers.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
+import { observeReducedMotion } from '../../../internal/motion-observer.js';
+import { admitMapViewpoint, type MapViewpoint } from '../../../internal/map-camera-session-data.js';
+import { registerMapCameraSession, type CameraOwnerReason, type MapCameraPreparedCommand,
+  type MapCameraSessionCallbacks, type MapCameraSessionLease } from '../../../internal/map-camera-session.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { notifyMapCanvasReady } from '../../../internal/map-canvas-ready.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
@@ -109,8 +113,8 @@ import type { MapHashOwner } from './map-hash-owner.js';
 import type { MapHashCamera } from './map-hash.js';
 import { MAP_HASH_UNNAMED } from './map-hash-option.js';
 import { normalizeMapControlOptions, type NormalizedMapControlOptions, type LyraMapGeolocateControlOptions, type LyraMapAttributionControlOptions, type LyraMapGeolocationErrorCode,
-  type LyraMapNavigationControlOptions, type LyraMapScaleControlOptions } from './map-control-options.js';
-export type { LyraMapControlPosition, LyraMapScaleUnit, LyraMapNavigationControlOptions, LyraMapScaleControlOptions,
+  type LyraMapGlobeControlOptions, type LyraMapTerrainControlOptions, type LyraMapNavigationControlOptions, type LyraMapScaleControlOptions } from './map-control-options.js';
+export type { LyraMapGlobeControlOptions, LyraMapTerrainControlOptions, LyraMapControlPosition, LyraMapScaleUnit, LyraMapNavigationControlOptions, LyraMapScaleControlOptions,
   LyraMapGeolocateControlOptions, LyraMapAttributionControlOptions, LyraMapAttributionLink, LyraMapGeolocationErrorCode } from './map-control-options.js';
 import type { MapControlLifecyclePeer, MapControlsLifecycle } from './map-controls-lifecycle.js';
 import { MapEngineEvents } from './map-engine-events.js';
@@ -190,7 +194,7 @@ import {
 import '../../overlays/skeleton/skeleton.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_mapActivate, LYRA_DEFAULT_mapCancelDrawing, LYRA_DEFAULT_mapCancelPick, LYRA_DEFAULT_mapCompleteDrawing, LYRA_DEFAULT_mapControlUnavailable, LYRA_DEFAULT_mapDrawAtCenter, LYRA_DEFAULT_mapDrawingArea, LYRA_DEFAULT_mapDrawingControls, LYRA_DEFAULT_mapDrawingDuplicateVertex, LYRA_DEFAULT_mapDrawingEditInstructions, LYRA_DEFAULT_mapDrawingInvalidCoordinate, LYRA_DEFAULT_mapDrawingInvalidGeometry, LYRA_DEFAULT_mapDrawingLength, LYRA_DEFAULT_mapDrawingTooFewVertices, LYRA_DEFAULT_mapDrawingUnavailable, LYRA_DEFAULT_mapDrawingVertex, LYRA_DEFAULT_mapDrawingVertexLimit, LYRA_DEFAULT_mapDrawingVertices, LYRA_DEFAULT_mapExportUnavailable, LYRA_DEFAULT_mapFeatureStateUnavailable, LYRA_DEFAULT_mapFeedback, LYRA_DEFAULT_mapGeolocateError, LYRA_DEFAULT_mapGeolocateFindLocation, LYRA_DEFAULT_mapGeolocateOutOfBounds, LYRA_DEFAULT_mapGeolocatePermissionDenied, LYRA_DEFAULT_mapGeolocatePositionUnavailable, LYRA_DEFAULT_mapGeolocateTimeout, LYRA_DEFAULT_mapGeolocateUnavailable, LYRA_DEFAULT_mapHashConflict, LYRA_DEFAULT_mapHashInvalid, LYRA_DEFAULT_mapInitializationFailed, LYRA_DEFAULT_mapLegend, LYRA_DEFAULT_mapMarker, LYRA_DEFAULT_mapMissingLibrary, LYRA_DEFAULT_mapPickAtCenter, LYRA_DEFAULT_mapResetNorth, LYRA_DEFAULT_mapScaleFeet, LYRA_DEFAULT_mapScaleKilometers, LYRA_DEFAULT_mapScaleMeters, LYRA_DEFAULT_mapScaleMiles, LYRA_DEFAULT_mapScaleNauticalMiles, LYRA_DEFAULT_mapSquareKilometers, LYRA_DEFAULT_mapSquareMeters, LYRA_DEFAULT_mapStyleRequired, LYRA_DEFAULT_mapToggleAttribution, LYRA_DEFAULT_mapUndoDrawing, LYRA_DEFAULT_mapWebglUnavailable } from '../../../internal/default-strings/media.generated.js';
+import { LYRA_DEFAULT_mapActivate, LYRA_DEFAULT_mapCancelDrawing, LYRA_DEFAULT_mapCancelPick, LYRA_DEFAULT_mapCompleteDrawing, LYRA_DEFAULT_mapControlUnavailable, LYRA_DEFAULT_mapGlobe, LYRA_DEFAULT_mapTerrain, LYRA_DEFAULT_mapDrawAtCenter, LYRA_DEFAULT_mapDrawingArea, LYRA_DEFAULT_mapDrawingControls, LYRA_DEFAULT_mapDrawingDuplicateVertex, LYRA_DEFAULT_mapDrawingEditInstructions, LYRA_DEFAULT_mapDrawingInvalidCoordinate, LYRA_DEFAULT_mapDrawingInvalidGeometry, LYRA_DEFAULT_mapDrawingLength, LYRA_DEFAULT_mapDrawingTooFewVertices, LYRA_DEFAULT_mapDrawingUnavailable, LYRA_DEFAULT_mapDrawingVertex, LYRA_DEFAULT_mapDrawingVertexLimit, LYRA_DEFAULT_mapDrawingVertices, LYRA_DEFAULT_mapExportUnavailable, LYRA_DEFAULT_mapFeatureStateUnavailable, LYRA_DEFAULT_mapFeedback, LYRA_DEFAULT_mapGeolocateError, LYRA_DEFAULT_mapGeolocateFindLocation, LYRA_DEFAULT_mapGeolocateOutOfBounds, LYRA_DEFAULT_mapGeolocatePermissionDenied, LYRA_DEFAULT_mapGeolocatePositionUnavailable, LYRA_DEFAULT_mapGeolocateTimeout, LYRA_DEFAULT_mapGeolocateUnavailable, LYRA_DEFAULT_mapHashConflict, LYRA_DEFAULT_mapHashInvalid, LYRA_DEFAULT_mapInitializationFailed, LYRA_DEFAULT_mapLegend, LYRA_DEFAULT_mapMarker, LYRA_DEFAULT_mapMissingLibrary, LYRA_DEFAULT_mapPickAtCenter, LYRA_DEFAULT_mapResetNorth, LYRA_DEFAULT_mapScaleFeet, LYRA_DEFAULT_mapScaleKilometers, LYRA_DEFAULT_mapScaleMeters, LYRA_DEFAULT_mapScaleMiles, LYRA_DEFAULT_mapScaleNauticalMiles, LYRA_DEFAULT_mapSquareKilometers, LYRA_DEFAULT_mapSquareMeters, LYRA_DEFAULT_mapStyleRequired, LYRA_DEFAULT_mapToggleAttribution, LYRA_DEFAULT_mapUndoDrawing, LYRA_DEFAULT_mapWebglUnavailable } from '../../../internal/default-strings/media.generated.js';
 import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_duration, LYRA_DEFAULT_items, LYRA_DEFAULT_legendTypeHidden, LYRA_DEFAULT_legendTypeShown, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_remove, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -1968,11 +1972,25 @@ export interface LyraMapGeolocateDetail {
   readonly accuracy: number;
 }
 
+/** Desired projection accepted from a component-owned globe control, before asynchronous application. */
+export interface LyraMapProjectionChangeDetail {
+  readonly projection: LyraMapProjection;
+  readonly source: 'control';
+}
+/** Desired terrain accepted from a component-owned terrain control, before asynchronous application. */
+export interface LyraMapTerrainChangeDetail {
+  readonly terrain: LyraMapTerrain | null;
+  readonly source: 'control';
+}
 export interface LyraMapControls {
+  /** Component-owned projection toggle; showing it does not acquire a projection override. */
+  readonly globe?: boolean | LyraMapGlobeControlOptions;
+  /** Component-owned terrain toggle; enabling uses this explicit existing raster elevation source. */
+  readonly terrain?: false | LyraMapTerrainControlOptions;
   readonly navigation?: boolean | LyraMapNavigationControlOptions;
   readonly scale?: boolean | LyraMapScaleControlOptions;
   readonly geolocate?: boolean | LyraMapGeolocateControlOptions;
-  /** Text or guarded linked credits. Controls in a corner read navigation, scale, geolocate, attribution from top to bottom. */
+  /** Text or guarded linked credits. Controls in a corner read navigation, scale, geolocate, globe, terrain, attribution from top to bottom. */
   readonly attribution?: boolean | LyraMapAttributionControlOptions;
 }
 
@@ -2103,6 +2121,26 @@ interface PendingMapFit {
 const FIT_EVENT_KEY = 'lyraMapFit';
 /** The same for this component's own camera commands (`flyTo()`, `easeTo()`, `jumpTo()`). */
 const COMMAND_EVENT_KEY = 'lyraMapCommand';
+const SESSION_COMMAND_EVENT_KEY = 'lyraMapCameraSession';
+interface MapCameraSessionOwner {
+  readonly map: MapLibreMapCapability;
+  readonly callbacks: MapCameraSessionCallbacks;
+  readonly connection: number;
+  readonly markers: WeakSet<object>;
+  revision: number;
+  released: boolean;
+  interrupted: boolean;
+  contextLost?: boolean;
+  pendingAction?: object;
+  active?: { readonly action: object; readonly marker: object; readonly animated: boolean; invoking: boolean; completionPending: boolean };
+  stopping?: object;
+  lease?: MapCameraSessionLease;
+  stopMotion(): void;
+  stopContext(): void;
+}
+function cameraSessionFailure(code: 'already-bound' | 'unavailable'): Error & { readonly code: string } {
+  return Object.assign(new Error(code), { code });
+}
 
 const ZERO_CAMERA_PADDING: Readonly<Required<LyraMapPadding>> = Object.freeze({
   top: 0,
@@ -2622,6 +2660,8 @@ function featureStatePeer(map: MapLibreMapCapability): map is MapLibreMapCapabil
 }
 
 export interface LyraMapEventMap {
+  'lr-map-projection-change': CustomEvent<LyraMapProjectionChangeDetail>;
+  'lr-map-terrain-change': CustomEvent<LyraMapTerrainChangeDetail>;
   'lr-map-anchor-close': CustomEvent<LyraMapAnchorCloseDetail>;
   'lr-map-draw-start': CustomEvent<LyraMapDrawingSnapshot>;
   'lr-map-draw-change': CustomEvent<LyraMapDrawingSnapshot>;
@@ -2738,6 +2778,8 @@ export interface LyraMapEventMap {
  * @csspart initialization-scale - Decorative scale control placeholder.
  * @csspart initialization-geolocate - Decorative geolocation control placeholder.
  * @csspart initialization-attribution - Decorative attribution control placeholder.
+ * @csspart initialization-globe - Decorative globe control placeholder.
+ * @csspart initialization-terrain - Decorative terrain control placeholder.
  * @csspart initialization-skeleton - Decorative map skeleton before construction.
  * @csspart initialization-activate-label - Visible activation prompt; hiding it preserves the button's localized accessible name.
  * @csspart initialization-controls - Decorative requested controls, also exposing controls. After construction it
@@ -2776,6 +2818,14 @@ export interface LyraMapEventMap {
  * @event lr-map-pointer-move - Fired at most once per animation frame while a mouse pointer moves over the map, whatever lies under it, carrying the frozen `detail: { lngLat, point }` (`LyraMapPointerDetail`): the coordinate and the container position, for tooltips and coordinate read-outs. Not fired while the map is inert or disabled.
  * @event lr-map-pointer-leave - The pointer left the map after an `lr-map-pointer-move`; `detail` is `null`.
  * @event lr-map-contextmenu - Frozen `detail: { lngLat, hit?, feature? }`; does not prevent the native context menu.
+ * @event lr-map-projection-change - A component-owned globe control accepted a desired projection, `detail: { projection, source: 'control' }`. The property is assigned before this noncancelable event; await `whenIdle()` for application. Programmatic assignments do not emit it.
+ * @event lr-map-terrain-change - A component-owned terrain control accepted desired terrain, `detail: { terrain, source: 'control' }`. The property is assigned before this noncancelable event; await `whenIdle()` for application. Programmatic assignments do not emit it.
+ * @csspart globe-control - Component-owned globe control group.
+ * @csspart globe-button - Globe toggle button.
+ * @csspart globe-icon - Decorative globe glyph.
+ * @csspart terrain-control - Component-owned terrain control group.
+ * @csspart terrain-button - Terrain toggle button.
+ * @csspart terrain-icon - Decorative terrain glyph.
  * @event lr-map-pick - Pick mode selection, `detail: { lngLat, hit?, feature?, trigger }`. Pointer picks replace ordinary click dispatch; keyboard picks use the current camera center.
  * @event lr-map-anchor-close - Frozen `detail: { reason }` after an actually open anchor closes by API, close action or Escape.
  * @csspart anchor-close - Optional localized anchor close button.
@@ -2973,6 +3023,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     mapCancelPick: LYRA_DEFAULT_mapCancelPick,
     mapCompleteDrawing: LYRA_DEFAULT_mapCompleteDrawing,
     mapControlUnavailable: LYRA_DEFAULT_mapControlUnavailable,
+    mapGlobe: LYRA_DEFAULT_mapGlobe,
+    mapTerrain: LYRA_DEFAULT_mapTerrain,
     mapDrawAtCenter: LYRA_DEFAULT_mapDrawAtCenter,
     mapDrawingArea: LYRA_DEFAULT_mapDrawingArea,
     mapDrawingControls: LYRA_DEFAULT_mapDrawingControls,
@@ -3142,12 +3194,13 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   private sceneConfiguration?: MapSceneConfigurationController;
   private sceneRequest = 0;
+  private sceneControlsRequestPending = false;
   private syncSceneConfiguration(): void {
     const map = this._map;
     if (!map || !this._styleLoaded || this.failure) return;
     if (!this.sceneConfiguration && this.projection === undefined && this.terrain === undefined && !this.terrainInvalid) return;
     this.sceneConfiguration ??= new MapSceneConfigurationController({
-      changed: () => { this.readiness.check(); this.flushMapLoad(); },
+      changed: () => { this.readiness.check(); this.flushMapLoad(); this.controlLifecycle?.refreshSceneControls(); },
       failed: () => { this.failInitialization('initialization-failed'); },
     });
     const generation = this._styleGeneration, connection = this._connectGeneration, style = this.mapStyle, request = this.sceneRequest;
@@ -3346,6 +3399,15 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private applyingHash = false;
   @state() private hashIssue?: 'mapHashConflict' | 'mapHashInvalid' | 'mapControlUnavailable';
   @state() private controlIssue?: Exclude<keyof typeof MAP_CONFIGURATION_MESSAGE, 'mapHashConflict' | 'mapHashInvalid'>;
+
+  @state() private sceneControlIssue = false;
+  private pendingSceneControlIssue = false;
+  private setSceneControlIssue(unavailable: boolean): void {
+    if (this.pendingSceneControlIssue === unavailable) return;
+    this.pendingSceneControlIssue = unavailable;
+    if (this.mapUpdateActive) this.scheduleAfterUpdate(() => { this.sceneControlIssue = this.pendingSceneControlIssue; }, 'map-scene-control-feedback');
+    else this.sceneControlIssue = unavailable;
+  }
 
   private pendingHashIssue?: LyraMap['hashIssue'];
   private pendingControlIssue: LyraMap['controlIssue'];
@@ -4068,6 +4130,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   // set before `_map` itself is (see that closure) -- so any code path gated
   // on `this._map` being truthy can rely on this being set too, without
   // re-awaiting the (already-settled) loadMaplibre() promise.
+  private cameraSessionConfigurationRevision = 0;
+  private cameraSessionConfigurationApplied = 0;
+  private cameraSessionConfigurationApplying = 0;
+  private cameraSession?: MapCameraSessionOwner;
+  private unregisterCameraSession?: () => void;
   private _maplibreModule?: MaplibreModule;
   /** True only after WebGL2 has been proved in the current owner-document realm. */
   private _webglReady = false;
@@ -4515,6 +4582,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       maxZoom: isFiniteCoordinate(maxZoom) ? finiteRange(maxZoom, 24, 0, 24) : undefined,
       animate: settings.animate !== false,
     });
+    if (!this.interruptCameraSession('external', true)) return false;
     this.clusterZoomToken += 1;
     if (this.deferUntilCameraSettled(() => this.executeFit(fit))) return true;
     return this.executeFit(fit);
@@ -4586,6 +4654,192 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     return this.runCameraCommand('jumpTo', options);
   }
 
+  private acquireCameraSession(callbacks: MapCameraSessionCallbacks): MapCameraSessionLease {
+    if (this.cameraSession) throw cameraSessionFailure('already-bound');
+    const map = this._map;
+    if (!map || !this.cameraSessionReady() || typeof map.getBearing !== 'function' || typeof map.getPitch !== 'function') {
+      throw cameraSessionFailure('unavailable');
+    }
+    const owner: MapCameraSessionOwner = { map, callbacks, connection: this._connectGeneration, revision: 0,
+      released: false, interrupted: false, markers: new WeakSet(), stopMotion: () => {}, stopContext: () => {} };
+    const current = (): boolean => this.cameraSession === owner && !owner.released && this.isConnected &&
+      this._map === map && this._connectGeneration === owner.connection;
+    const prepared = new WeakMap<MapCameraPreparedCommand, { revision: number; style: number; reduced: boolean }>();
+    const capture = (): MapViewpoint => {
+      if (!current() || typeof map.getBearing !== 'function' || typeof map.getPitch !== 'function') throw cameraSessionFailure('unavailable');
+      try {
+        const camera = readPeerCamera(map);
+        if (!camera) throw cameraSessionFailure('unavailable');
+        const result = admitMapViewpoint({ ...camera, bearing: map.getBearing(), pitch: map.getPitch() });
+        if (!current()) throw cameraSessionFailure('unavailable');
+        return result;
+      } catch { throw cameraSessionFailure('unavailable'); }
+    };
+    const retire = (action: object, stopAnimation: boolean): void => {
+      if (!current()) return;
+      if (owner.pendingAction === action) { owner.pendingAction = undefined; owner.interrupted = true; }
+      const active = owner.active;
+      if (active?.action !== action) return;
+      owner.active = undefined;
+      if (stopAnimation && active.animated && typeof map.stop === 'function') {
+        owner.stopping = active.marker;
+        try { map.stop(); } finally { if (owner.stopping === active.marker) owner.stopping = undefined; }
+      }
+    };
+    const lease: MapCameraSessionLease = {
+      current, capture, reducedMotion: () => prefersReducedMotion(this),
+      start: action => {
+        if (!current() || !this.cameraSessionReady() || owner.contextLost || owner.active ||
+          (owner.pendingAction !== undefined && owner.pendingAction !== action)) return false;
+        owner.pendingAction = action; owner.interrupted = false;
+        return true;
+      },
+      prepare: (action, input, transition) => {
+        if (!current() || !this.cameraSessionReady() || owner.contextLost) throw cameraSessionFailure('unavailable');
+        const revision = owner.revision, style = this._styleGeneration, pending = owner.pendingAction;
+        const valid = (): boolean => current() && this.cameraSessionReady() && !owner.contextLost &&
+          owner.revision === revision && this._styleGeneration === style && owner.pendingAction === pending;
+        const accepted = admitMapViewpoint(input), reduced = prefersReducedMotion(this);
+        const kind = reduced ? 'jump' : transition.kind;
+        const method = kind === 'jump' ? 'jumpTo' : kind === 'ease' ? 'easeTo' : 'flyTo';
+        const readMoving = map.isMoving;
+        if (typeof readMoving !== 'function' || !valid()) throw cameraSessionFailure('unavailable');
+        const moving = readMoving.call(map);
+        if (typeof moving !== 'boolean' || !valid()) throw cameraSessionFailure('unavailable');
+        const move = map[method];
+        if (typeof move !== 'function' || !valid()) throw cameraSessionFailure('unavailable');
+        if (moving || kind !== 'jump') {
+          const stop = map.stop;
+          if (typeof stop !== 'function' || !valid()) throw cameraSessionFailure('unavailable');
+        }
+        const command: MapCameraPreparedCommand = Object.freeze({ action,
+          view: Object.freeze({ ...accepted, zoom: finiteRange(accepted.zoom, 2, ...this.zoomLimits) }), kind,
+          ...(transition.duration === undefined ? {} : { duration: transition.duration }) });
+        prepared.set(command, { revision: owner.revision, style: this._styleGeneration, reduced });
+        return command;
+      },
+      commit: command => {
+        const admission = prepared.get(command);
+        if (!admission) return false;
+        const pending = owner.pendingAction;
+        if (pending !== undefined && pending !== command.action) return false;
+        const valid = (): boolean => current() && this.cameraSessionReady() && !owner.contextLost && admission.revision === owner.revision &&
+          admission.style === this._styleGeneration && admission.reduced === prefersReducedMotion(this) &&
+          owner.pendingAction === pending;
+        if (!valid()) return false;
+        prepared.delete(command);
+        const method = command.kind === 'jump' ? 'jumpTo' : command.kind === 'ease' ? 'easeTo' : 'flyTo';
+        let move: MapLibreMapCapability[typeof method];
+        try {
+          let readMoving = map.isMoving;
+          if (typeof readMoving !== 'function' || !valid()) return false;
+          const moving = readMoving.call(map);
+          if (typeof moving !== 'boolean' || !valid()) return false;
+          if (moving || command.kind !== 'jump') {
+            const stop = map.stop;
+            if (typeof stop !== 'function' || !valid()) return false;
+            if (moving) {
+              // Native camera commands stop their previous animation before writing. Perform
+              // that implied replacement first so a newer action from its event wins.
+              stop.call(map);
+              if (!valid()) return false;
+              readMoving = map.isMoving;
+              if (typeof readMoving !== 'function' || !valid()) return false;
+              if (readMoving.call(map) !== false || !valid()) return false;
+            }
+          }
+          move = map[method];
+          if (typeof move !== 'function' || !valid()) return false;
+        } catch { return false; }
+        owner.pendingAction = undefined; owner.revision += 1; owner.interrupted = false;
+        const marker = {}; owner.markers.add(marker);
+        const active = { action: command.action, marker, animated: command.kind !== 'jump', invoking: true, completionPending: false };
+        owner.active = active;
+        this.pendingCommand = undefined; this.pendingFit = undefined; this.clusterZoomToken += 1;
+        this.readiness.invalidate();
+        try {
+          move.call(map, { ...command.view, center: [...command.view.center],
+            ...(command.kind !== 'jump' && command.duration !== undefined ? { duration: command.duration } : {}) },
+          { [SESSION_COMMAND_EVENT_KEY]: marker });
+        } catch { if (owner.active === active) owner.active = undefined; return false; }
+        finally { active.invoking = false; }
+        if (current() && owner.active === active && active.completionPending) {
+          owner.active = undefined; callbacks.complete(active.action);
+        }
+        return true;
+      },
+      retire,
+      release: () => {
+        if (!current()) return;
+        owner.pendingAction = undefined;
+        const active = owner.active;
+        if (active) retire(active.action, true);
+        // stop() may synchronously release/reacquire through a reflected camera callback.
+        if (!current()) return;
+        owner.released = true; owner.stopMotion(); owner.stopContext(); this.cameraSession = undefined;
+      },
+    };
+    owner.lease = lease; this.cameraSession = owner;
+    try { capture(); } catch (error) { lease.release(); throw error; }
+    try {
+      owner.stopMotion = observeReducedMotion(this, reduced => { if (current()) callbacks.motion(reduced); });
+      const canvas = map.getCanvas();
+      if (!current()) throw cameraSessionFailure('unavailable');
+      if (!canvas || typeof canvas.addEventListener !== 'function' || typeof canvas.removeEventListener !== 'function') throw cameraSessionFailure('unavailable');
+      const lost = (): void => { owner.contextLost = true; if (current()) this.interruptCameraSession('engine', false); };
+      const restored = (): void => { owner.contextLost = false; };
+      owner.stopContext = () => { canvas.removeEventListener('webglcontextlost', lost); canvas.removeEventListener('webglcontextrestored', restored); };
+      canvas.addEventListener('webglcontextlost', lost);
+      if (!current()) throw cameraSessionFailure('unavailable');
+      canvas.addEventListener('webglcontextrestored', restored);
+      if (!current()) throw cameraSessionFailure('unavailable');
+      return lease;
+    } catch {
+      // Installation can reenter disconnect. Clean this attempt even after its lease is stale;
+      // never clear a replacement owner that a callback acquired in the meantime.
+      owner.stopMotion(); owner.stopContext(); owner.released = true;
+      if (this.cameraSession === owner) this.cameraSession = undefined;
+      throw cameraSessionFailure('unavailable');
+    }
+  }
+
+  private cameraSessionReady(): boolean {
+    return this.isConnected && !!this._map && this._styleLoaded && !this.failure && !this.preparingFeatures &&
+      !this.mapUpdateActive && !this.cameraUpdatePending && this.deferredCameraWork.length === 0 &&
+      this.cameraSessionConfigurationRevision === this.cameraSessionConfigurationApplied &&
+      !this.sceneControlsRequestPending && this.sceneConfiguration?.pending !== true;
+  }
+
+  private interruptCameraSession(reason: CameraOwnerReason, stopAnimation: boolean): boolean {
+    const owner = this.cameraSession;
+    if (!owner || owner.released) return true;
+    const revision = ++owner.revision;
+    owner.pendingAction = undefined;
+    // One action may produce several start events or property notifications. They all retire
+    // the same ownership once; a later committed action opens a new interruption lifetime.
+    if (owner.interrupted && reason !== 'disconnect' && reason !== 'engine') return true;
+    owner.interrupted = true;
+    const active = owner.active;
+    // Retire both owners before stop can synchronously deliver a reflected event. A callback
+    // that starts a newer action wins and must not have its animation stopped by this one.
+    owner.active = undefined;
+    owner.callbacks.interrupt(reason);
+    if (this.cameraSession === owner && !owner.released && owner.revision === revision && !owner.active && owner.pendingAction === undefined &&
+      stopAnimation && active?.animated && typeof owner.map.stop === 'function') {
+      owner.stopping = active.marker;
+      try { owner.map.stop(); } finally { if (owner.stopping === active.marker) owner.stopping = undefined; }
+    }
+    return !this.cameraSession || (this.cameraSession === owner && owner.revision === revision && owner.pendingAction === undefined);
+  }
+
+  private cameraSessionMovement(event: Readonly<Record<string, unknown>> | undefined): void {
+    const owner = this.cameraSession;
+    if (!owner || this.writingCamera) return;
+    const marker = event?.[SESSION_COMMAND_EVENT_KEY];
+    if (typeof marker === 'object' && marker !== null && owner.markers.has(marker)) return;
+    this.interruptCameraSession(event?.['originalEvent'] ? 'user' : 'external', false);
+  }
+
   private runCameraCommand(kind: MapCommandKind, options: LyraMapCameraOptions): boolean {
     const target = normalizeCameraOptions(options, this.zoomLimits);
     if (!target) {
@@ -4596,6 +4850,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       );
       return false;
     }
+    if (!this.interruptCameraSession('external', true)) return false;
     this.clusterZoomToken += 1;
     if (this.deferUntilCameraSettled(() => this.executeCameraCommand(kind, target))) return true;
     return this.executeCameraCommand(kind, target);
@@ -4750,6 +5005,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const ready = this.controlsReadiness.begin();
     const input = this.controls, connection = this._connectGeneration;
     const projected = normalizeMapControlOptions(input);
+    this.setSceneControlIssue(false);
     const wanted = new Map(projected.controls);
     const attribution = isRuntimeRecord(input) ? getOwnDataDescriptor(input, 'attribution') : MISSING_OWN_DATA_DESCRIPTOR;
     const defaultAttribution = attribution === MISSING_OWN_DATA_DESCRIPTOR ||
@@ -4778,8 +5034,28 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       const lifecycle = this.controlLifecycle ??= new MapControlsLifecycle(kind => loadMapControl(kind, this.engine, this._maplibreModule));
       const synchronized = lifecycle.sync(peer, wanted, {
       isCurrent: current,
+      scene: {
+        isCurrent: current,
+        state: kind => ({ ready: this._styleLoaded && !this.failure,
+          busy: !this._styleLoaded || this.sceneControlsRequestPending || this.sceneConfiguration?.pending === true,
+          label: this.localize(kind === 'globe' ? 'mapGlobe' : 'mapTerrain') }),
+        unavailable: (kind, unavailable) => { if (current() && kind === 'terrain') this.setSceneControlIssue(unavailable); },
+      },
       onEvent: event => {
         if (!current()) return;
+        if (event.kind === 'scene-action') {
+          if (event.action.kind === 'globe') {
+            const projection = event.action.pressed === true ? 'mercator' : 'globe';
+            this.projection = projection;
+            this.emit('lr-map-projection-change', Object.freeze({ projection, source: 'control' }) satisfies LyraMapProjectionChangeDetail);
+          } else {
+            const terrain = event.action.pressed === true ? null : event.action.terrain;
+            if (terrain === undefined) return;
+            this.terrain = terrain;
+            this.emit('lr-map-terrain-change', Object.freeze({ terrain: this.terrain!, source: 'control' }) satisfies LyraMapTerrainChangeDetail);
+          }
+          return;
+        }
         if (event.kind === 'geolocate-success') {
           if (this.pendingControlIssue !== 'mapControlUnavailable') this.setControlIssue(undefined);
           if (event.lngLat && event.accuracy !== undefined) {
@@ -4828,6 +5104,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       if (!current()) return;
       this.setControlOutlines([]);
       this.syncAttributionState();
+      this.controlLifecycle?.refreshSceneControls();
       if (current()) ready.resolve();
     }).catch(() => { if (current()) { this.setControlOutlines([]); ready.fail(); } })]));
   }
@@ -5298,6 +5575,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     const generation = ++this._connectGeneration;
+    this.unregisterCameraSession?.();
+    this.unregisterCameraSession = registerMapCameraSession(this, { acquire: callbacks => this.acquireCameraSession(callbacks) });
     this.readiness.reset();
     this.controlsReadiness.reset();
     this.hashRuntimeFailed = false;
@@ -5380,6 +5659,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.interruptCameraSession('disconnect', false);
+    const session = this.cameraSession;
+    if (session) { session.released = true; session.active = undefined; session.stopMotion(); session.stopContext(); this.cameraSession = undefined; }
+    this.unregisterCameraSession?.(); this.unregisterCameraSession = undefined;
     this.hashOwner?.dispose();
     this.disposeMap();
     this.constructionScheduler?.disconnect();
@@ -5438,7 +5721,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   private disposeMap(cancelReadiness = true): void {
+    this.interruptCameraSession('engine', false);
+    const session = this.cameraSession;
+    if (session) { session.released = true; session.stopMotion(); session.stopContext(); this.cameraSession = undefined; }
     this.sceneConfiguration?.cancel();
+    this.sceneControlsRequestPending = false;
+    this.setSceneControlIssue(false);
     this.cancelImageExport();
     this.pendingExportIssue = false;
     if (!this.isConnected) this.exportIssue = false;
@@ -5603,11 +5891,17 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         if (this._map === candidate) { this.clearMapHover(); this.endPointerReports(); this.drawingController?.preview(undefined); }
       });
       this.peerEvents.subscribe(candidate, 'movestart', (event: Readonly<Record<string, unknown>> | undefined) => {
-        if (this._map === candidate && event?.['originalEvent']) this.clusterZoomToken += 1;
+        if (this._map !== candidate) return;
+        if (event?.['originalEvent']) this.clusterZoomToken += 1;
+        this.cameraSessionMovement(event);
       });
-      this.peerEvents.subscribe(candidate, 'boxzoomstart', () => {
-        if (this._map === candidate) this.clusterZoomToken += 1;
+      this.peerEvents.subscribe(candidate, 'boxzoomstart', event => {
+        if (this._map !== candidate) return;
+        this.clusterZoomToken += 1; this.cameraSessionMovement(event);
       });
+      for (const eventName of ['dragstart', 'zoomstart', 'rotatestart', 'pitchstart'] as const) {
+        this.peerEvents.subscribe(candidate, eventName, event => { if (this._map === candidate) this.cameraSessionMovement(event); });
+      }
       this.peerEvents.subscribe(candidate, 'boxzoomend', () => {
         if (this._map === candidate) this.boxZoomSettling = true;
       });
@@ -5626,13 +5920,21 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         // stopped. Anything else -- this element's own `center`/`zoom` push, a resize, a move made
         // directly through `map` -- is not a camera change this element reports.
         const fit = event?.[FIT_EVENT_KEY] === this.fitToken;
-        const command = event?.[COMMAND_EVENT_KEY] === this.commandToken;
+        const session = this.cameraSession;
+        const sessionMarker = event?.[SESSION_COMMAND_EVENT_KEY];
+        const sessionAction = session?.active && session.active.marker === sessionMarker ? session.active : undefined;
+        const sessionStopping = sessionMarker !== undefined && session?.stopping === sessionMarker;
+        const command = event?.[COMMAND_EVENT_KEY] === this.commandToken || sessionAction !== undefined || sessionStopping;
         const afterBoxZoom = !fit && !command && this.boxZoomSettling;
         if (!fit && !command) this.boxZoomSettling = false;
         if (this.writingCamera) return;
         const source: LyraMapViewChangeSource | undefined =
           fit ? 'fit' : command ? 'command' : event?.['originalEvent'] || afterBoxZoom ? 'user' : undefined;
         if (source) this.reflectCamera(candidate!, source);
+        if (session && sessionAction && this.cameraSession === session && session.active === sessionAction && !session.released) {
+          if (sessionAction.invoking) sessionAction.completionPending = true;
+          else { session.active = undefined; session.callbacks.complete(sessionAction.action); }
+        }
       });
       const canvas = candidate.getCanvas?.() as HTMLCanvasElement | undefined;
       if (canvas) notifyMapCanvasReady(this, canvas);
@@ -5714,6 +6016,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       this._styleLoaded = true;
       this.captureStyleCatalog(map);
       this.syncSceneConfiguration();
+      this.controlLifecycle?.refreshSceneControls();
       if (!current()) return;
       this._appliedChoroplethSourceId = undefined;
       this._appliedFillLayerId = undefined;
@@ -5804,7 +6107,27 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (args[0] === 'zoom' && !this.reflectingCamera) this.zoomLimitRevision = (this.zoomLimitRevision ?? 0) + 1;
     super.requestUpdate(...args);
     const valueChanged = args[0] === undefined || !Object.is(args[1], Reflect.get(this, args[0]));
-    if ((args[0] === 'projection' || args[0] === 'terrain') && this.isUpdatePending) this.sceneRequest = (this.sceneRequest ?? 0) + 1;
+    if (this.isConnected && valueChanged && ['mapStyle', 'projection', 'terrain', 'minZoom', 'maxZoom', 'maxBounds', 'cameraPadding'].includes(String(args[0]))) {
+      this.cameraSessionConfigurationRevision += 1;
+    }
+    if (this.cameraSession && valueChanged && !this.reflectingCamera) {
+      const property = args[0];
+      if (property === 'mapStyle' || property === 'projection' || property === 'terrain') this.interruptCameraSession('style', true);
+      else if (property === 'minZoom' || property === 'maxZoom' || property === 'maxBounds' || property === 'cameraPadding') this.interruptCameraSession('external', true);
+      else if (property === 'center' || property === 'zoom') {
+        const shown = this._map && readPeerCamera(this._map);
+        const equal = property === 'center' ? shown && sameCenterValue(this.safeCenter, shown.center) : shown?.zoom === this.safeZoom;
+        if (!equal) { this.cameraUpdatePending = true; this.interruptCameraSession('external', true); }
+      }
+    }
+    if ((args[0] === 'projection' || args[0] === 'terrain') && this.isUpdatePending) {
+      this.sceneRequest = (this.sceneRequest ?? 0) + 1;
+      this.sceneControlsRequestPending = true;
+      this.controlLifecycle?.refreshSceneControls();
+    }
+    if (valueChanged && args[0] === 'mapStyle' && this.isUpdatePending) {
+      this.sceneControlsRequestPending = true; this.controlLifecycle?.refreshSceneControls();
+    }
     if (valueChanged && (args[0] === undefined || ['mapStyle', 'dataLayers', 'choropleth', 'overlays', 'images', 'styleOverrides', 'interactiveBasemapLayers'].includes(String(args[0])))) {
       this.drawingConfigRevision = (this.drawingConfigRevision ?? 0) + 1;
     }
@@ -5909,6 +6232,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       (changed.has('imageProvider') && this.preparingFeatures))) {
       void this.reconcileGeneratedLayers();
     }
+    this.sceneControlsRequestPending = false;
+    this.controlLifecycle?.refreshSceneControls();
     const constructionMode = this.initializationMode, constructionDelay = this.safeInitializationDelay;
     if ((changed.has('initialization') || changed.has('initializationDelay')) &&
       (constructionMode !== this.constructionMode || (constructionMode === 'interaction' && constructionDelay !== this.constructionDelay))) {
@@ -5933,6 +6258,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       this.markerSemanticsStale = false;
     }
     this.drawingConfigApplied = this.drawingConfigApplying;
+    this.cameraSessionConfigurationApplied = this.cameraSessionConfigurationApplying;
     this.syncDrawing();
     this.readiness.check();
     const map = this._map;
@@ -5941,6 +6267,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     this.drawingConfigApplying = this.drawingConfigRevision;
+    this.cameraSessionConfigurationApplying = this.cameraSessionConfigurationRevision;
     super.willUpdate(changed);
     // Placement reads direction after the DOM commit. Consume it during this update too so the
     // inherited-context observer commits the new baseline before overlay style writes recheck it.
@@ -8266,7 +8593,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         !this.isConnected
       ) return;
       try {
-        map.resize();
+        if (this.cameraSession) this.writeCamera(() => map.resize());
+        else map.resize();
         this.drawingController?.scheduleHandles();
       } catch {
         // A peer can be disposing in the same delivery turn; the next live allocation retries.
@@ -8852,6 +9180,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
                 ${initializationControls.filter(control => control.position === `${row}-${side}`).map(control => html`<span part=${{
                   navigation: 'initialization-control initialization-navigation', scale: 'initialization-control initialization-scale',
                   geolocate: 'initialization-control initialization-geolocate', attribution: 'initialization-control initialization-attribution',
+                  globe: 'initialization-control initialization-globe', terrain: 'initialization-control initialization-terrain',
                 }[control.kind]} data-control=${control.kind}></span>`)}
               </div>`)}
             </div>`)}
@@ -8886,7 +9215,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
           <lr-skeleton class="initialization-skeleton" part="initialization-skeleton" shape="rect" .announce=${false}></lr-skeleton>
           ${outlines}
         </div>` : initializationControls.length ? outlines : nothing}
-        ${this.hashIssue || this.controlIssue ? html`<div part="configuration-error">${this.localize(MAP_CONFIGURATION_MESSAGE[this.hashIssue ?? this.controlIssue!])}</div>` : nothing}
+        ${this.hashIssue || this.controlIssue || this.sceneControlIssue ? html`<div part="configuration-error">${this.localize(MAP_CONFIGURATION_MESSAGE[this.hashIssue ?? this.controlIssue ?? 'mapControlUnavailable'])}</div>` : nothing}
         ${this.exportIssue ? html`<div part="configuration-error">${this.localize('mapExportUnavailable')}</div>` : nothing}
         ${this.dataLayerIssue ? html`<div part="configuration-error">${this.localize('mapInitializationFailed')}</div>` : nothing}
         ${this.featureStateIssue ? html`<div part="configuration-error">${this.localize('mapFeatureStateUnavailable')}</div>` : nothing}

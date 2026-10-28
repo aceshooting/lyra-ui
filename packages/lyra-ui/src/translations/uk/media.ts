@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'Інша мапа вже використовує це поле URL',
   mapHashInvalid: 'Недійсна назва поля URL мапи',
   mapControlUnavailable: 'Не вдалося завантажити елемент керування мапою',
+  mapGlobe: 'Глобус',
+  mapTerrain: 'Рельєф',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',

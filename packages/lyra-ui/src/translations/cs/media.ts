@@ -126,6 +126,8 @@ const strings: LyraLocaleStrings = {
   mapHashConflict: 'Toto pole URL používá jiná mapa',
   mapHashInvalid: 'Název pole URL mapy je neplatný',
   mapControlUnavailable: 'Ovládací prvek mapy se nepodařilo načíst',
+  mapGlobe: 'Glóbus',
+  mapTerrain: 'Terén',
   mapScaleFeet: 'ft',
   mapScaleMeters: 'm',
   mapScaleKilometers: 'km',
