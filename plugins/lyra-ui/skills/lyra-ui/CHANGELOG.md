@@ -1,5 +1,16 @@
 # Changelog
 
+## 30.6.0
+
+### Minor Changes
+
+- 0bd9ba4: Add `label-display="hidden"` (`labelDisplay: 'visible' | 'hidden'`, type `LyraLabelDisplay`) to the form controls that render the shared label chrome: `lr-select`, `lr-combobox`, `lr-input`, `lr-time-input`, `lr-textarea`, `lr-locale-picker`, `lr-date-input`, `lr-phone-input`, `lr-token-input`, the catalog pickers, `lr-model-select` and `lr-voice-picker`. The label stays the accessible name while it is removed visually, for compact toolbars, so consumers no longer restyle the `form-control-label` part. Hint and error text are unaffected, and an unset control renders as before.
+
+### Patch Changes
+
+- 0bd9ba4: Keep `lr-map` native controls at least as wide as their own content. When a consumer removes a control's margin through its part and enlarges its buttons, the shrink-to-fit corner no longer clamps the group below its buttons and clips their icons off-centre; long attribution still wraps inside the map.
+- @aceshooting/lyra-translations@30.6.0
+
 ## 30.5.0
 
 ### Minor Changes

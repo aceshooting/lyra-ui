@@ -162,10 +162,10 @@ const rootHelperRegisteredTags = [];
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/7859878f724ef4237ee93a5414fa6b54f204313a/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'Shared modal ordering, allocation-preserving drawers and copy-button sizing bring the full non-optional graph to 5,647,739 raw bytes across 64 files. Only its ceiling advances to the next 64-byte boundary, with 5 bytes of headroom. The explicit Oniguruma canary retains its separate exact binary requirement.',
-  reviewedCoreMeasurementBytes: 5_647_739,
+  $comment: 'The shared visually hidden form-control label option and the native map control content floor bring the full non-optional graph to 5,649,199 raw bytes across 64 files. Only its ceiling advances to the next 64-byte boundary, with 17 bytes of headroom. The explicit Oniguruma canary retains its separate exact binary requirement.',
+  reviewedCoreMeasurementBytes: 5_649_199,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 5,
+  selectedRegressionHeadroomBytes: 17,
 };
 
 /**
