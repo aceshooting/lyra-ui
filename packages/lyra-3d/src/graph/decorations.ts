@@ -10,6 +10,7 @@ import { spatialEdgePoint, spatialNodeWorldRadius } from './spatial-paths.js';
 import { changedVisualRows } from '../core/visual-state.js';
 import { markAttributeFull, markAttributeRows } from '../core/attribute-updates.js';
 import { createPaintColors, type PaintColors } from '../core/paint-colors.js';
+import { createGraphLabelAdmission, graphDecorationMode, graphDecorationScalar, graphEdgeLabelsVisible, isGraphDirectedValue } from './decoration-admission.js';
 
 export type GraphNodeLabelsMode = 'always' | 'zoom' | 'none';
 export interface GraphDecorationData {
@@ -26,37 +27,24 @@ export interface GraphDecorationData {
 }
 const GRAPH_MAX_PAINTED_LABELS = 256;
 const GRAPH_MAX_PARTICLES = 16_384;
-const MAX_LABEL_LENGTH = 256;
-const MAX_LABEL_TEXT = 4 * 1024 * 1024;
 const MAX_LABEL_CANVAS = 2048;
 
 /** Copies and admits decoration inputs before a replacement retires the current scene. */
 export function admitGraphDecorations(input: GraphDecorationData, nodes: number, edges: number): GraphDecorationData {
-  let total = 0;
+  const admitLabel = createGraphLabelAdmission();
   const labels = (value: readonly string[] | undefined, count: number) => {
     if (value === undefined) return undefined;
     if (!Array.isArray(value) || value.length !== count) throw new RangeError('Invalid graph label rows');
-    return Array.from(value, (text) => {
-      if (typeof text !== 'string') throw new TypeError('Graph labels must be plain strings');
-      total += text.length;
-      if (total > MAX_LABEL_TEXT) throw new RangeError('Graph label text exceeds its limit');
-      return text.slice(0, MAX_LABEL_LENGTH);
-    });
+    return Array.from(value, admitLabel);
   };
-  const scalar = (value: number | undefined, fallback: number, min: number, max: number, integer = false) => {
-    const result = value ?? fallback;
-    if (!Number.isFinite(result) || result < min || result > max || (integer && !Number.isInteger(result))) throw new RangeError('Invalid graph decoration option');
-    return result;
-  };
-  const mode = input.nodeLabels ?? 'zoom';
-  if (!['always', 'zoom', 'none'].includes(mode)) throw new RangeError('Invalid graph label mode');
-  if (input.withEdgeLabels !== undefined && typeof input.withEdgeLabels !== 'boolean') throw new TypeError('Invalid graph edge label visibility');
-  if (input.directed !== undefined && (!(input.directed instanceof Uint8Array) || !(input.directed.buffer instanceof ArrayBuffer) || input.directed.length !== edges || !input.directed.every((entry) => entry === 0 || entry === 1))) throw new RangeError('Invalid graph directed mask');
+  const mode = graphDecorationMode(input.nodeLabels);
+  if (input.withEdgeLabels !== undefined) graphEdgeLabelsVisible(input.withEdgeLabels);
+  if (input.directed !== undefined && (!(input.directed instanceof Uint8Array) || !(input.directed.buffer instanceof ArrayBuffer) || input.directed.length !== edges || !input.directed.every(isGraphDirectedValue))) throw new RangeError('Invalid graph directed mask');
   return {
     labels: labels(input.labels, nodes), edgeLabels: labels(input.edgeLabels, edges), nodeLabels: mode,
-    withEdgeLabels: input.withEdgeLabels ?? false, edgeLabelMinZoom: scalar(input.edgeLabelMinZoom, 0.6, 0.001, 1000),
-    directed: input.directed?.slice(), particlesPerEdge: scalar(input.particlesPerEdge, 0, 0, 8, true),
-    particleSpeed: scalar(input.particleSpeed, 0.25, 0, 10),
+    withEdgeLabels: input.withEdgeLabels ?? false, edgeLabelMinZoom: graphDecorationScalar('edgeLabelMinZoom', input.edgeLabelMinZoom),
+    directed: input.directed?.slice(), particlesPerEdge: graphDecorationScalar('particlesPerEdge', input.particlesPerEdge),
+    particleSpeed: graphDecorationScalar('particleSpeed', input.particleSpeed),
   };
 }
 
