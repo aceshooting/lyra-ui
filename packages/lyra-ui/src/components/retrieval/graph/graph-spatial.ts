@@ -1,6 +1,8 @@
 /** Perspective geometry for the graph's spatial view. Coordinates remain in three dimensions
  * until clipping and projection; no renderer or DOM state is needed by these helpers. */
 import { finiteRange } from '../../../internal/numbers.js';
+import { graphCurvePoint, graphCurveTangent, graphCurveExtrema, normalizeGraphCurvature } from './graph-curvature.js';
+export { graphCurvePoint, graphCurveExtrema, normalizeGraphCurvature } from './graph-curvature.js';
 import { normalizeGraphCamera } from './graph-spatial-model.js';
 export { normalizeGraphCamera, spatialNodePosition } from './graph-spatial-model.js';
 import { graphLinkIdentity, type LyraGraphCamera, type LyraGraphEdge, type LyraGraphNode, type LyraGraphPosition } from './graph-model.js';
@@ -29,6 +31,8 @@ export interface SpatialSegment {
   readonly labelPoint?: SpatialProjectedPoint;
   readonly dangling: boolean;
   readonly offset: number;
+  readonly arrowDirection?: { readonly x: number; readonly y: number };
+  readonly curved?: boolean;
 }
 type SpatialPrimitive = { readonly kind: 'node'; readonly value: SpatialProjectedNode; readonly depth: number } |
   { readonly kind: 'link'; readonly value: SpatialSegment; readonly depth: number };
@@ -62,7 +66,7 @@ export function projectSpatialPoint(point: LyraGraphPosition, camera: LyraGraphC
   return transformed.z < nearPlane(camera) ? undefined : perspective(transformed, viewport);
 }
 
-export function fittedGraphCamera(nodes: readonly SpatialWorldNode[], viewport: SpatialViewport, padding = 24): LyraGraphCamera {
+export function fittedGraphCamera(nodes: readonly SpatialWorldNode[], viewport: SpatialViewport, padding = 24, edges: readonly LyraGraphEdge[] = []): LyraGraphCamera {
   if (!nodes.length) return normalizeGraphCamera(undefined, { yaw: 0, pitch: 0, distance: 500, target: NO_POSITION });
   let minX = Infinity, minY = Infinity, minZ = Infinity, maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
   for (const { position: p, radius } of nodes) {
@@ -70,8 +74,26 @@ export function fittedGraphCamera(nodes: readonly SpatialWorldNode[], viewport: 
     minY = Math.min(minY, p.y - radius); maxY = Math.max(maxY, p.y + radius);
     minZ = Math.min(minZ, p.z - radius); maxZ = Math.max(maxZ, p.z + radius);
   }
-  const target = { x: (minX + maxX) / 2, y: (minY + maxY) / 2, z: (minZ + maxZ) / 2 };
-  const radius = Math.max(1, Math.hypot(maxX - minX, maxY - minY, maxZ - minZ) / 2);
+  let hasCurve = false;
+  let byId: Map<string, SpatialWorldNode> | undefined;
+  for (const edge of edges) {
+    const curvature = normalizeGraphCurvature(edge.curvature);
+    if (edge.source === edge.target || curvature === 0) continue;
+    byId ??= new Map(nodes.map(node => [node.node.id, node]));
+    const a = byId.get(edge.source), b = byId.get(edge.target);
+    if (!a || !b) continue;
+    hasCurve = true;
+    for (const p of graphCurveExtrema(a.position, b.position, curvature)) {
+      minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+      minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+      minZ = Math.min(minZ, p.z); maxZ = Math.max(maxZ, p.z);
+    }
+  }
+  let target = { x: (minX + maxX) / 2, y: (minY + maxY) / 2, z: (minZ + maxZ) / 2 };
+  if (hasCurve) target = normalizeGraphCamera({ target }, { yaw: 0, pitch: 0, distance: 500, target: NO_POSITION }).target;
+  const radius = hasCurve ? Math.max(1, Math.hypot(Math.max(Math.abs(maxX - target.x), Math.abs(minX - target.x)),
+    Math.max(Math.abs(maxY - target.y), Math.abs(minY - target.y)), Math.max(Math.abs(maxZ - target.z), Math.abs(minZ - target.z)))) :
+    Math.max(1, Math.hypot(maxX - minX, maxY - minY, maxZ - minZ) / 2);
   const safePadding = finiteRange(padding, 24, 0, Math.min(viewport.width, viewport.height) * 0.45);
   const aspect = Math.min((viewport.width - 2 * safePadding) / viewport.height, (viewport.height - 2 * safePadding) / viewport.height);
   const angle = Math.atan(Math.tan(FIELD_OF_VIEW / 2) * Math.max(0.01, aspect));
@@ -147,16 +169,30 @@ export function projectSpatialScene(nodes: readonly SpatialWorldNode[], edges: r
     const target = byId.get(edge.target);
     const self = edge.source === edge.target;
     const end = target?.position ?? { x: source.position.x + 28, y: source.position.y - 28, z: source.position.z };
+    const curvature = target && !self ? normalizeGraphCurvature(edge.curvature) : 0;
     const sourceDepth = cameraPoint(source.position, camera).z;
     const targetDepth = cameraPoint(end, camera).z;
-    const count = self ? EDGE_SEGMENTS : Math.max(1, Math.min(EDGE_SEGMENTS,
+    const count = self || curvature !== 0 ? EDGE_SEGMENTS : Math.max(1, Math.min(EDGE_SEGMENTS,
       Math.ceil(Math.abs(sourceDepth - targetDepth) / Math.max(1, Math.min(sourceDepth, targetDepth) / EDGE_SEGMENTS))));
     const at = (t: number) => self ? {
       x: source.position.x + Math.sin(t * Math.PI * 2) * source.radius * 1.6,
       y: source.position.y - (1 - Math.cos(t * Math.PI * 2)) * source.radius * 1.6,
       z: source.position.z,
-    } : interpolate(source.position, end, t);
+    } : curvature !== 0 ? graphCurvePoint(source.position, end, curvature, t) : interpolate(source.position, end, t);
     const midpoint = projectSpatialPoint(at(0.5), camera, viewport);
+    let arrowDirection: { x: number; y: number } | undefined;
+    if (curvature !== 0) {
+      const endpoint = cameraPoint(end, camera);
+      const tangent = graphCurveTangent(source.position, end, curvature);
+      const cy = Math.cos(camera.yaw), sy = Math.sin(camera.yaw), cp = Math.cos(camera.pitch), sp = Math.sin(camera.pitch);
+      const tx = cy * tangent.x - sy * tangent.z;
+      const rotatedZ = sy * tangent.x + cy * tangent.z;
+      const ty = cp * tangent.y - sp * rotatedZ;
+      const tz = -(sp * tangent.y + cp * rotatedZ);
+      const dx = tx * endpoint.z - endpoint.x * tz, dy = ty * endpoint.z - endpoint.y * tz;
+      const length = Math.hypot(dx, dy);
+      if (endpoint.z >= nearPlane(camera) && length > 0) arrowDirection = { x: dx / length, y: dy / length };
+    }
     let offset = 0;
     for (let index = 0; index < count; index++) {
       let a = cameraPoint(at(index / count), camera);
@@ -166,8 +202,9 @@ export function projectSpatialScene(nodes: readonly SpatialWorldNode[], edges: r
       if (a.z < near) a = interpolate(a, b, (near - a.z) / (b.z - a.z));
       if (b.z < near) b = interpolate(b, a, (near - b.z) / (a.z - b.z));
       const entry: SpatialSegment = { edge, id: graphLinkIdentity(edge), a: perspective(a, viewport), b: perspective(b, viewport),
-        depth: (a.z + b.z) / 2, last: index === count - 1, middle: index === Math.floor(count / 2) && midpoint !== undefined,
-        labelPoint: index === Math.floor(count / 2) ? midpoint : undefined, dangling: !target, offset };
+        depth: curvature !== 0 ? Math.max(near, cameraPoint(at((index + 0.5) / count), camera).z) : (a.z + b.z) / 2, last: index === count - 1, middle: index === Math.floor(count / 2) && midpoint !== undefined,
+        labelPoint: index === Math.floor(count / 2) ? midpoint : undefined, dangling: !target, offset, curved: curvature !== 0,
+        arrowDirection: index === count - 1 ? arrowDirection : undefined };
       offset += Math.hypot(entry.b.x - entry.a.x, entry.b.y - entry.a.y);
       segments.push(entry);
       primitives.push({ kind: 'link', value: entry, depth: entry.depth });

@@ -26,6 +26,7 @@ back to built-in spatial rendering and then the paginated list. Localized feedba
 `graphColumns: LyraGraphColumns | undefined` (property only) replaces local arrays in 3D/list;
 `graphSource` remains authoritative. Columns support 200,000 nodes and 1,000,000 edges.
 Required `ids` supplies string node IDs; optional Float32Array columns are `x`, `y`, `z`, `size`;
+optional `edgeCurvature` is a Float32Array with one signed curvature per source edge, before filtering.
 optional Uint16Array columns are `category`, `edgeCategory`. Required Uint32Array `source` and
 `target` contain node indices. Optional `categories`/`labels` are string arrays. Validation
 checks lengths, coordinates and indices; coordinates are bounded to ±10,000,000 graph units.
@@ -82,6 +83,23 @@ and a Canvas 2D raster surface, with near-plane clipping, depth-ordered node/edg
 frontmost picking. Adaptive edge subdivision approximates crossings; this is not a mesh renderer or
 a guarantee of perfect translucent intersections. Use modest graphs, typically low hundreds;
 the 2D canvas capacity claim below does not apply to 3D.
+
+`LyraGraphEdge.curvature?: number` bends ordinary 3D edges along a quadratic curve. Its signed
+value is the midpoint deflection divided by endpoint distance, clamped to `[-1, 1]`.
+Unset, non-number and nonfinite local values mean a straight edge. Typed `edgeCurvature` columns
+and provider scenes reject nonfinite values; provider accessors and non-number values are also
+rejected. Finite values clamp without changing caller data. The perpendicular is the endpoint
+direction crossed with the least-aligned world axis (ties X, then Y, then Z);
+reversing endpoints reverses the bend. Camera movement does not change that world orientation.
+Self-loops and dangling stubs keep their existing shape; 2D ignores curvature.
+
+Curves use 16 strokes. Labels use the curve midpoint, arrows follow the endpoint tangent, and
+dash patterns continue across segments. Initial fitting and explicit `fit()` include analytic
+curve extrema, which can extend beyond node-coordinate bounds; existing camera limits can still
+prevent full containment. Changing curvature alone does not refit the camera. Typed columns render
+curves with the optional WebGL engine; their fallback remains the paginated list. Local records and
+provider scenes also support curves in the built-in renderer. In the companion, each curved edge
+reserves 16 strokes plus its directed arrow against the existing 2,000,000-primitive ceiling.
 
 `camera?: LyraGraphCamera` (property only) accepts readonly `{ yaw, pitch, distance, target }`,
 where `target: LyraGraphPosition`, yaw/pitch use radians and distance uses graph units. Without an
@@ -162,7 +180,7 @@ color?: string; shape?: 'circle' | 'square' | 'diamond' }`, one entry per `LyraG
   layout even when no matching `nodeTypes` entry exists
 - `edges: LyraGraphEdge[] = []` (attribute: false) — readonly `LyraGraphEdge { id?: string; source: string; target:
 string; width?: number; label?: string; accessibleLabel?: string; description?: string; directed?:
-boolean; color?: string; dash?: number[] }` (source/target are node ids). `directed` adds an
+boolean; color?: string; dash?: number[]; curvature?: number }` (source/target are node ids). `directed` adds an
   arrowhead; `color` and `dash` style the individual stroke; `label` provides a spoken-name and SVG
   tooltip fallback and is drawn as visible edge text only with `withEdgeLabels`; `accessibleLabel` and `description`
   can override the spoken name and tooltip independently. `width` is normalized before reaching

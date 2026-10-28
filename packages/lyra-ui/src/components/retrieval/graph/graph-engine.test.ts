@@ -138,3 +138,19 @@ it('rejects a companion without paint transactions instead of resetting its data
   expect(await adapter.open(request({ failure: (reason: string) => reasons.push(reason) }))).to.equal(null);
   expect(mounts).to.equal(0); expect(value.disposals()).to.equal(1); expect(reasons).to.deep.equal(['unavailable']);
 });
+
+
+it('projects clamped curvature by original edge rows without mutating borrowed columns', () => {
+  const edgeCurvature = new Float32Array([-4, 0.25, -0.5, 4]);
+  const input = { ids: ['a', 'b', 'c'], category: new Uint16Array([0, 1, 0]), categories: ['keep', 'hide'],
+    source: new Uint32Array([0, 0, 1, 2]), target: new Uint32Array([2, 1, 2, 0]), edgeCurvature };
+  const admitted = admitGraphEngineColumns(input); expect(admitted.ok).to.equal(true); if (!admitted.ok) return;
+  const scene = graphEngineColumnScene(admitted.value, ['hide']);
+  const curves = (scene.data as unknown as { edgeCurvature?: Float32Array }).edgeCurvature;
+  expect(curves instanceof Float32Array).to.equal(true);
+  expect(Array.from(curves ?? [])).to.deep.equal([-1, 1]); expect([...scene.edgeRows]).to.deep.equal([0, 3]);
+  expect([...edgeCurvature]).to.deep.equal([-4, 0.25, -0.5, 4]); expect(curves === edgeCurvature).to.equal(false);
+  expect(scene.item(3)).to.deep.equal({ kind: 'edge', row: 3, source: 'c', target: 'a' });
+  const straight = admitGraphEngineColumns(columns(2)); if (!straight.ok) return;
+  expect((graphEngineColumnScene(straight.value, []).data as unknown as { edgeCurvature?: Float32Array }).edgeCurvature).to.equal(undefined);
+});

@@ -19,3 +19,22 @@ test('invalid appearance fields fail without mutating a prior admission', () => 
 test('sparse dash patterns reject instead of uploading NaN', () => {
   assert.throws(() => admitGraphSpatialAppearance({ edgeDashes: [new Array(1)] }, 2, 1));
 });
+
+test('signed curvature admission owns and clamps finite Float32 rows', () => {
+  const input = new Float32Array([-3, -0.5, 0, 0.5, 3]);
+  const result = admitGraphSpatialAppearance({ edgeCurvatures: input }, 2, 5);
+  assert.deepEqual(result.edgeCurvatures, new Float32Array([-1, -0.5, 0, 0.5, 1]));
+  input.fill(0);
+  assert.equal(result.edgeCurvatures[1], -0.5);
+  assert.equal(admitGraphSpatialAppearance({}, 2, 1).edgeCurvatures, undefined);
+});
+
+test('curvature rejects nonfinite, wrong-kind, shared and detached columns', () => {
+  const detached = new Float32Array([0.5]); structuredClone(detached.buffer, { transfer: [detached.buffer] });
+  const invalid = [new Float64Array([0.5]), [0.5], new Float32Array(2), new Float32Array([NaN]), new Float32Array([Infinity]), detached];
+  if (typeof SharedArrayBuffer === 'function') invalid.push(new Float32Array(new SharedArrayBuffer(4)));
+  for (const edgeCurvatures of invalid) assert.throws(() => admitGraphSpatialAppearance({ edgeCurvatures }, 2, 1));
+  let reads = 0;
+  const accessor = Object.defineProperty({}, 'edgeCurvatures', { get() { reads++; return new Float32Array([0.5]); } });
+  assert.throws(() => admitGraphSpatialAppearance(accessor, 2, 1)); assert.equal(reads, 0);
+});

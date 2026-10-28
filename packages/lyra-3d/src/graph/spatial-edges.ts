@@ -6,13 +6,13 @@ import type { Lyra3dState, Lyra3dWorldPoint } from '../core/contract.js';
 import { encodePickId } from '../core/picking.js';
 import type { Lyra3dViewport } from '../core/viewport.js';
 import { validateGraphSpatialSizes } from './spatial-appearance.js';
-import { GRAPH_ARROW_HALF_ANGLE, graphSpatialEdgeVertexChunk, graphSpatialProjectionChunk, graphSpatialView, spatialEdgeSegments, spatialPrimitiveCount, type GraphPositionLookup, type GraphSpatialData } from './spatial-paths.js';
+import { GRAPH_ARROW_HALF_ANGLE, graphSpatialEdgeVertexChunk, graphSpatialProjectionChunk, graphSpatialView, spatialCurvePoint, spatialEdgeSegments, spatialPrimitiveCount, type GraphPositionLookup, type GraphSpatialData } from './spatial-paths.js';
 
 type EdgeView = Pick<Lyra3dViewport, 'width' | 'height' | 'orbit'>;
 const vertex = graphSpatialProjectionChunk + graphSpatialEdgeVertexChunk + `
 attribute vec3 edgeStart; attribute vec3 edgeEnd; attribute vec4 edgePath; attribute vec3 stroke;
-attribute vec4 edgeColor; attribute vec3 pickColor; attribute float dash;
-void main(){ graphSpatialEdgeVertex(edgeStart, edgeEnd, edgePath, stroke, edgeColor, pickColor, dash); }`;
+attribute vec4 edgeColor; attribute vec3 pickColor; attribute float dash; attribute float edgeCurvature;
+void main(){ graphSpatialEdgeVertex(edgeStart, edgeEnd, edgePath, stroke, edgeColor, pickColor, dash, edgeCurvature); }`;
 export const graphSpatialEdgeFragment = `
 uniform sampler2D dashAtlas; uniform float atlasHeight;
 varying vec4 tint; varying vec2 pattern; varying vec3 arrowUv; varying vec3 cap; varying float strokeRadius; flat varying vec2 depthEnds;
@@ -57,7 +57,7 @@ export function createGraphSpatialEdges(data: GraphSpatialData) {
     geometry.setAttribute(name, result); return result;
   };
   const start = attribute('edgeStart', 3), end = attribute('edgeEnd', 3), path = attribute('edgePath', 4), stroke = attribute('stroke', 3);
-  const colors = attribute('edgeColor', 4), picks = attribute('pickColor', 3), dash = attribute('dash', 1);
+  const colors = attribute('edgeColor', 4), picks = attribute('pickColor', 3), dash = attribute('dash', 1), curvature = attribute('edgeCurvature', 1);
   /** World anchor of each primitive, from which the composite derives painter order. */
   const anchors = new Float32Array(count * 3);
   const mutablePatterns: number[][] = [[]]; const byPattern = new Map<string, number>([['', 0]]); const patternRows = new Uint32Array(data.source.length);
@@ -73,9 +73,11 @@ export function createGraphSpatialEdges(data: GraphSpatialData) {
   for (let edge = 0, index = 0; edge < data.source.length; edge++) {
     offsets[edge] = index;
     const segments = spatialEdgeSegments(data, edge), primitives = segments + (data.directed?.[edge] ? 1 : 0), id = encodePickId(data.nodeCount + edge)!;
+    const bend = !appearance.dangling?.[edge] && data.source[edge] !== data.target[edge] ? appearance.edgeCurvatures?.[edge] ?? 0 : 0;
     for (let primitive = 0; primitive < primitives; primitive++, index++) {
       const arrow = primitive === segments;
       picks.setXYZ(index, id[0] / 255, id[1] / 255, id[2] / 255); dash.setX(index, arrow ? 0 : patternRows[edge]!);
+      curvature.setX(index, bend);
       path.setXY(index, arrow ? 1 - 1 / segments : primitive / segments, arrow ? 1 : (primitive + 1) / segments);
     }
   }
@@ -125,6 +127,9 @@ export function createGraphSpatialEdges(data: GraphSpatialData) {
         else if (loop && worldSizes) {
           const mid = (t0 + t1) * Math.PI;
           anchor(index, a.x + Math.sin(mid) * loopRadius, a.y - (1 - Math.cos(mid)) * loopRadius, a.z);
+        } else if (!loop && curvature.getX(index) !== 0) {
+          const point = spatialCurvePoint(a, b, curvature.getX(index), (t0 + t1) / 2);
+          anchor(index, point.x, point.y, point.z);
         } else {
           const mid = loop ? 0 : (t0 + t1) / 2;
           anchor(index, a.x + (b.x - a.x) * mid, a.y + (b.y - a.y) * mid, a.z + (b.z - a.z) * mid);

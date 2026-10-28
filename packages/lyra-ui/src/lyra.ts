@@ -684,6 +684,8 @@ export type { LyraNodeTypeStyle } from './internal/node-type-style.js';
 export type { LyraMapCameraOptions } from './components/media/map/map-camera.js';
 export type {
   LyraMapBounds,
+  LyraMapProjection,
+  LyraMapTerrain,
   LyraMapFitBoundsOptions,
   LyraMapMoveDetail,
   LyraMapPadding,

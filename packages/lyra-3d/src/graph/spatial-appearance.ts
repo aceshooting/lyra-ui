@@ -9,6 +9,8 @@ export interface GraphSpatialAppearance {
   readonly edgeColors?: Float32Array;
   /** CSS-pixel widths in [0,1000]; zero removes line, label, arrow and pick geometry. */
   readonly edgeWidths?: Float32Array;
+  /** Signed world-space quadratic bow per edge, clamped to [-1,1]. Zero is straight; loops and dangling stubs ignore it. */
+  readonly edgeCurvatures?: Float32Array;
   /** One CSS-pixel dash sequence per edge, each at most 32 entries; empty means solid. At most 65,534 authored distinct patterns. */
   readonly edgeDashes?: readonly (readonly number[])[];
   /** Dangling rows draw a non-pickable stub; their layout target must equal their source. */
@@ -30,6 +32,15 @@ export function admitGraphSpatialAppearance(value: GraphSpatialAppearance, nodes
     if (!(array instanceof Float32Array) || !(array.buffer instanceof ArrayBuffer) || array.length !== count || !array.every((item) => Number.isFinite(item) && item >= 0 && item <= max)) throw new RangeError('Invalid graph appearance values');
     return array.slice();
   };
+  // Signed curvature has its own admission rule; paint widths and colors stay nonnegative.
+  const curvatureDescriptor = Object.getOwnPropertyDescriptor(value, 'edgeCurvatures');
+  if (curvatureDescriptor && !('value' in curvatureDescriptor)) throw new TypeError('Invalid graph curvature column');
+  const rawCurvatures: unknown = curvatureDescriptor?.value;
+  let edgeCurvatures: Float32Array | undefined;
+  if (rawCurvatures !== undefined) {
+    if (!(rawCurvatures instanceof Float32Array) || !(rawCurvatures.buffer instanceof ArrayBuffer) || rawCurvatures.length !== edges || !rawCurvatures.every(Number.isFinite)) throw new RangeError('Invalid graph curvature values');
+    edgeCurvatures = rawCurvatures.map((curvature) => Math.max(-1, Math.min(1, curvature)));
+  }
   const sizeUnits = value.sizeUnits ?? 'css', dimmedOpacity = value.dimmedOpacity ?? 0.35;
   if (sizeUnits !== 'css' && sizeUnits !== 'world') throw new TypeError('Invalid graph size units');
   const labelLimit = value.labelLimit ?? 256;
@@ -45,7 +56,7 @@ export function admitGraphSpatialAppearance(value: GraphSpatialAppearance, nodes
       return Object.freeze([...dash]);
     });
   }
-  return { sizeUnits, dimmedOpacity, labelLimit, nodeShapes: bytes(value.nodeShapes, nodes, 2), nodeColors: floats(value.nodeColors, nodes * 4, 1), expandable: bytes(value.expandable, nodes, 1), edgeColors: floats(value.edgeColors, edges * 4, 1), edgeWidths: floats(value.edgeWidths, edges, 1000), dangling: bytes(value.dangling, edges, 1), edgeDashes };
+  return { sizeUnits, dimmedOpacity, labelLimit, nodeShapes: bytes(value.nodeShapes, nodes, 2), nodeColors: floats(value.nodeColors, nodes * 4, 1), expandable: bytes(value.expandable, nodes, 1), edgeColors: floats(value.edgeColors, edges * 4, 1), edgeWidths: floats(value.edgeWidths, edges, 1000), edgeCurvatures, dangling: bytes(value.dangling, edges, 1), edgeDashes };
 }
 
 /** Explicit spatial glyph bounds keep derived loop coordinates finite in GPU attributes. */

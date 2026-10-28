@@ -115,6 +115,9 @@ export type { LyraMapControlPosition, LyraMapScaleUnit, LyraMapNavigationControl
 import type { MapControlLifecyclePeer, MapControlsLifecycle } from './map-controls-lifecycle.js';
 import { MapEngineEvents } from './map-engine-events.js';
 import { MapReadiness } from './map-readiness.js';
+import { MapSceneConfigurationController } from './map-scene-configuration-controller.js';
+import { admitMapTerrain, normalizeMapProjection, type LyraMapProjection, type LyraMapTerrain } from './map-scene-configuration.js';
+export type { LyraMapProjection, LyraMapTerrain } from './map-scene-configuration.js';
 import { MapControlsReadiness } from './map-controls-readiness.js';
 import { LyraMapImageExportError, type LyraMapImageExportOptions, type LyraMapImageExportErrorCode } from './map-image-export-error.js';
 import type { MapImageExportController, MapImageExportHost, MapImageExportRequest } from './map-image-export-controller.js';
@@ -3107,6 +3110,53 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     new GlassScrollLayer(this, '[part="legend"]');
   }
 
+  private _projection?: LyraMapProjection;
+  /** Optional projection override. Unset follows the current mapStyle, including its full
+   * projection expression. Invalid values normalize to unset. Clearing restores that style's
+   * captured projection. Same-style changes are covered by whenIdle(), not a new style-load event. */
+  @property({ reflect: true, hasChanged: () => true, converter: {
+    fromAttribute: (value: string | null) => normalizeMapProjection(value),
+    toAttribute: (value: LyraMapProjection | undefined) => value ?? null,
+  } })
+  get projection(): LyraMapProjection | undefined { return this._projection; }
+  set projection(value: LyraMapProjection | undefined) {
+    const old = this._projection; this._projection = normalizeMapProjection(value);
+    this.requestUpdate('projection', old);
+  }
+
+  private _terrain?: LyraMapTerrain | null;
+  private terrainInvalid = false;
+  /** Optional terrain override using an existing raster-dem source in mapStyle. Exaggeration
+   * defaults to 1 and must be finite and nonnegative (there is no upper cap). Null disables
+   * terrain; undefined restores the current style's terrain. The value is snapshotted on assignment.
+   * Invalid configuration or unavailable capabilities show the localized map fallback; reconnect
+   * or assign a valid mapStyle to retry. Sources remain caller-owned. Await whenIdle() after changes. */
+  @property({ attribute: false, hasChanged: () => true })
+  get terrain(): LyraMapTerrain | null | undefined { return this._terrain; }
+  set terrain(value: LyraMapTerrain | null | undefined) {
+    const old = this._terrain;
+    try { this._terrain = admitMapTerrain(value); this.terrainInvalid = false; }
+    catch { this._terrain = undefined; this.terrainInvalid = true; }
+    this.requestUpdate('terrain', old);
+  }
+
+  private sceneConfiguration?: MapSceneConfigurationController;
+  private sceneRequest = 0;
+  private syncSceneConfiguration(): void {
+    const map = this._map;
+    if (!map || !this._styleLoaded || this.failure) return;
+    if (!this.sceneConfiguration && this.projection === undefined && this.terrain === undefined && !this.terrainInvalid) return;
+    this.sceneConfiguration ??= new MapSceneConfigurationController({
+      changed: () => { this.readiness.check(); this.flushMapLoad(); },
+      failed: () => { this.failInitialization('initialization-failed'); },
+    });
+    const generation = this._styleGeneration, connection = this._connectGeneration, style = this.mapStyle, request = this.sceneRequest;
+    this.sceneConfiguration.sync(map, generation,
+      () => this.isConnected && this._map === map && this._styleGeneration === generation &&
+        this._connectGeneration === connection && this.mapStyle === style && this.sceneRequest === request,
+      this.projection, this.terrainInvalid ? {} : this.terrain);
+  }
+
   /** Initial and controlled map center as `[longitude, latitude]`. Once the camera settles after
    * a user gesture or `fitBounds()`, it holds that camera (see `lr-map-view-change`), so a map
    * rebuilt after a reconnect opens where the user left it. Assigning a value the map already
@@ -4151,7 +4201,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   /**
    * Resolves when the current connection/style has restored generated and registered overlays,
-   * images and basemap overrides, including asynchronous image and feature preparation. Callable while the connected map is still loading or
+   * images, basemap overrides and declarative projection/terrain, including asynchronous image and feature preparation. Callable while the connected map is still loading or
    * waiting to become visible. Rejects with AbortError when disconnected or superseded, and
    * MapReadinessError on a current load/preparation failure. A completed promise describes only
    * that style; call again after assigning a new mapStyle.
@@ -5388,6 +5438,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   private disposeMap(cancelReadiness = true): void {
+    this.sceneConfiguration?.cancel();
     this.cancelImageExport();
     this.pendingExportIssue = false;
     if (!this.isConnected) this.exportIssue = false;
@@ -5643,7 +5694,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   private flushMapLoad(map: MapLibreMapCapability | undefined = this._map): void {
     if (!map || this._map !== map || !this.isConnected || !this.pendingMapLoad ||
-      !this._styleLoaded || this.preparingFeatures || this.isUpdatePending) return;
+      !this._styleLoaded || this.preparingFeatures || this.sceneConfiguration?.pending || this.isUpdatePending) return;
     this.pendingMapLoad = false;
     this.mapLoadEmitted = true;
     this.emit('lr-map-load');
@@ -5662,6 +5713,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       started = true;
       this._styleLoaded = true;
       this.captureStyleCatalog(map);
+      this.syncSceneConfiguration();
+      if (!current()) return;
       this._appliedChoroplethSourceId = undefined;
       this._appliedFillLayerId = undefined;
       this.appliedChoroplethPaintKey = undefined;
@@ -5715,22 +5768,22 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         if (typeof map.isMoving === 'function' && map.isMoving()) return false;
         return typeof map.loaded === 'function' ? map.loaded() === true : undefined;
       },
-      ownerPending: () => this.isUpdatePending || this.preparingFeatures || this.drawingPending || this.featureLoads > 0 || !current(),
+      ownerPending: () => this.isUpdatePending || this.preparingFeatures || this.drawingPending || this.sceneConfiguration?.pending === true || this.featureLoads > 0 || !current(),
       restore: async signal => {
         if (!current() || signal.aborted) return;
         startRestoration();
-        let work = this.featureWork, drawingWork = this.drawingWork;
+        let work = this.featureWork, drawingWork = this.drawingWork, sceneWork = this.sceneConfiguration?.work;
         // A same-style property update may supersede preparation while the old peer promise is
         // pending. Cancellation releases that wait, and restoration follows the newest work.
         for (;;) {
-          await Promise.all([work, drawingWork]);
+          await Promise.all([work, drawingWork, sceneWork]);
           if (!current() || signal.aborted) return;
           if (this.isUpdatePending) {
             await this.updateComplete;
             if (!current() || signal.aborted) return;
           }
-          if (work === this.featureWork && drawingWork === this.drawingWork) return;
-          work = this.featureWork; drawingWork = this.drawingWork;
+          if (work === this.featureWork && drawingWork === this.drawingWork && sceneWork === this.sceneConfiguration?.work) return;
+          work = this.featureWork; drawingWork = this.drawingWork; sceneWork = this.sceneConfiguration?.work;
         }
       },
       onStyleReady: generation => { this.emit('lr-map-style-load', { generation } satisfies LyraMapReadinessDetail); },
@@ -5751,6 +5804,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (args[0] === 'zoom' && !this.reflectingCamera) this.zoomLimitRevision = (this.zoomLimitRevision ?? 0) + 1;
     super.requestUpdate(...args);
     const valueChanged = args[0] === undefined || !Object.is(args[1], Reflect.get(this, args[0]));
+    if ((args[0] === 'projection' || args[0] === 'terrain') && this.isUpdatePending) this.sceneRequest = (this.sceneRequest ?? 0) + 1;
     if (valueChanged && (args[0] === undefined || ['mapStyle', 'dataLayers', 'choropleth', 'overlays', 'images', 'styleOverrides', 'interactiveBasemapLayers'].includes(String(args[0])))) {
       this.drawingConfigRevision = (this.drawingConfigRevision ?? 0) + 1;
     }
@@ -5776,8 +5830,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       if (this.failure) this.controlsReadiness.fail();
     }
     if (valueChanged && this.readiness && this.isConnected && this.isUpdatePending) {
-      if (args[0] === 'mapStyle' && !Object.is(args[1], this.mapStyle)) this.readiness.reset();
-      else if (args[0] === undefined || ['center', 'zoom', 'minZoom', 'maxZoom', 'cameraPadding', 'maxBounds', 'dataLayers',
+      if (args[0] === 'mapStyle' && !Object.is(args[1], this.mapStyle)) { this.sceneConfiguration?.cancel(); this.readiness.reset(); }
+      else if (args[0] === undefined || ['projection', 'terrain', 'center', 'zoom', 'minZoom', 'maxZoom', 'cameraPadding', 'maxBounds', 'dataLayers',
         'choropleth', 'markers', 'hiddenCategories', 'overlays', 'images', 'styleOverrides', 'interactiveBasemapLayers'].includes(String(args[0]))) this.readiness.invalidate();
     }
     if ((args[0] === 'center' || args[0] === 'zoom') && this.isUpdatePending && !this.reflectingCamera) {
@@ -5826,6 +5880,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       // A new style retries a feature-state runtime whose import failed.
       if (this.featureStateLoad === 'failed') this.featureStateLoad = undefined;
     }
+
+    if (!changed.has('mapStyle') && (changed.has('projection') || changed.has('terrain'))) this.syncSceneConfiguration();
 
     // Provider configuration replaces its image reservation; finish it before resource work
     // reserves the same atlas, including when both first load the ownership runtime.

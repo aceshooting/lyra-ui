@@ -2263,6 +2263,54 @@ undefined`, or changing `choropleth.sourceId` to a different value, now calls `r
 
 ---
 
+### Declarative globe and terrain configuration
+
+`lr-map.projection` accepts `'mercator'` or `'globe'`. Leaving it unset preserves the projection
+in `mapStyle`, including a native projection expression. Clearing an override restores the
+captured configuration of the **current** style; an asynchronous style replacement establishes
+a new baseline after that replacement actually loads. Removing the `projection` attribute or
+assigning `undefined` releases ownership. Invalid projection strings normalize to unset.
+
+The property-only `terrain` accepts `{ source, exaggeration? }`. `source` must name an existing
+`raster-dem` source in the current `mapStyle`; the component never adds a DEM provider or removes
+caller-owned sources. Exaggeration defaults to 1 and accepts finite numbers greater than or equal
+to zero, with no upper cap. Assign `null` to disable terrain explicitly, or `undefined` to restore
+the current style's terrain. The record is snapshotted on assignment; replace the record to change
+it. The new settings do not change the existing camera, overlay or control ownership contracts.
+
+```ts
+import '@aceshooting/lyra-ui/components/lr-map.js';
+import type { LyraMapTerrain } from '@aceshooting/lyra-ui/components/lr-map.js';
+
+const map = document.querySelector('lr-map')!;
+// Supply mapStyle with a raster-dem source named "elevation" before enabling terrain.
+const terrain: LyraMapTerrain = { source: 'elevation', exaggeration: 1.5 };
+map.projection = 'globe';
+map.terrain = terrain;
+await map.whenIdle();
+
+map.terrain = null;       // Disable terrain, preserving its source.
+await map.whenIdle();
+map.projection = undefined;
+map.terrain = undefined;  // Restore this style's original configuration.
+await map.whenIdle();
+```
+
+Initial overrides and style-replacement replay are included in `whenStyleReady()` and
+`lr-map-style-load`. A same-style change leaves that completed style barrier alone; await
+`whenIdle()` for each new configuration. An equal effective configuration does not call the
+native setters again. Superseded preparation cannot mutate a newer style or a disconnected map.
+
+Unsupported capabilities, malformed terrain or a missing/wrong-kind elevation source reject
+readiness with `MapReadinessError` and show the existing localized map fallback. Native setters
+are not an atomic transaction; a failed application retires the map instead of reporting a
+partially configured scene as ready. Reconnect or assign a valid `mapStyle` to retry. Do not
+mutate native projection/terrain while the matching declarative override owns it; clear the
+override first. Native toolbar controls are not added by these properties: compose ordinary
+Lyra buttons and a slider around the map, as in the globe/terrain story. Terrain exaggeration is
+a display scale, not a physical simulation.
+
+
 ## `lr-map-anchor`
 
 Experimental. An independent panel of rich, interactive content anchored to a coordinate of its
@@ -5262,6 +5310,10 @@ These named interfaces and helper signatures are available to typed integrations
     once(type: 'style.load', listener: () => void): this;
     setStyle(style: unknown, options?: { diff?: boolean }): this;
     getStyle?(): { readonly layers?: readonly { readonly id: string }[] };
+    getProjection?(): unknown;
+    getTerrain?(): unknown;
+    setProjection?(value: unknown): unknown;
+    setTerrain?(value: unknown): unknown;
     moveLayer?(id: string, before?: string): unknown;
     getPaintProperty?(id: string, property: string): unknown;
     getLayoutProperty?(id: string, property: string): unknown;
@@ -5313,6 +5365,15 @@ These named interfaces and helper signatures are available to typed integrations
     getElement?(): HTMLElement | undefined;
     options?: { focusAfterOpen?: boolean };
   }`
+
+- **`components-media-map-scene-configuration-contracts`** — Declarative projection and terrain overrides.
+  Import: `@aceshooting/lyra-ui/components/lr-map.js`.
+  `LyraMapProjection = 'mercator' | 'globe'`
+  `LyraMapTerrain {
+    readonly source: string;
+    readonly exaggeration?: number;
+  }`
+  The source names an existing raster elevation source. Exaggeration defaults to 1 and must be finite and nonnegative.
 
 - **`components-media-map-map-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.

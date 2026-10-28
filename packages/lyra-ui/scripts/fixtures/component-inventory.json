@@ -81939,6 +81939,15 @@
             "default": false
           },
           {
+            "name": "projection",
+            "property": "projection",
+            "type": "LyraMapProjection | undefined",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "zoom",
             "property": "zoom",
             "type": "number",
@@ -82360,6 +82369,15 @@
             "default": false
           },
           {
+            "name": "projection",
+            "attribute": "projection",
+            "type": "LyraMapProjection | undefined",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "renderWorldCopies",
             "attribute": null,
             "type": "boolean | undefined",
@@ -82392,6 +82410,15 @@
             "attribute": null,
             "type": "readonly LyraMapStyleSource[]",
             "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "terrain",
+            "attribute": null,
+            "type": "LyraMapTerrain | null | undefined",
+            "readonly": false,
             "reflects": false,
             "deprecated": null,
             "hasDefault": false

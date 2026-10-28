@@ -345,3 +345,23 @@ it('rejects invalid edge dash patterns atomically without reading accessor entri
   }
   expect(reads).to.equal(0);
 });
+
+
+it('strictly admits and owns finite signed provider curvature while rejecting hostile fields', async () => {
+  const fixture = makeHost(); const control = new GraphSourceController(fixture.host, { onChange: () => {} });
+  let reads = 0;
+  for (const curvature of [-4, 0.25, 4, NaN, Infinity, '0.5']) {
+    const value = { id: 'e', source: 'a', target: 'a', curvature };
+    const raw = { ...scene(), edges: [{ key: 'edge:e', source: 'node:a', target: 'node:a', value }] };
+    control.bind({ source: source(async () => raw as Scene), epoch: 0, locale: 'en' });
+    const valid = typeof curvature === 'number' && Number.isFinite(curvature);
+    expect(await control.request(intent())).to.equal(valid);
+    if (valid) {
+      expect((control.state.scene!.edges[0]!.value as unknown as { curvature: number }).curvature).to.equal(Math.max(-1, Math.min(1, curvature as number)));
+      expect(Object.isFrozen(control.state.scene!.edges[0]!.value)).to.equal(true);
+    }
+  }
+  const value = { id: 'e', source: 'a', target: 'a', get curvature() { reads++; return 0.5; } };
+  control.bind({ source: source(async () => ({ ...scene(), edges: [{ key: 'edge:e', source: 'node:a', target: 'node:a', value }] })), epoch: 0, locale: 'en' });
+  expect(await control.request(intent())).to.equal(false); expect(reads).to.equal(0);
+});

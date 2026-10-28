@@ -17,14 +17,45 @@ export function spatialNodeWorldRadius(data: GraphSpatialData, row: number, poin
   const projection = viewport.project(point); return projection ? diameter / (2 * projection.scale) : 0;
 }
 export function spatialEdgeSegments(data: GraphSpatialData, edge: number): number {
-  return !data.spatialAppearance.dangling?.[edge] && data.source[edge] === data.target[edge] ? 16 : 1;
+  return !data.spatialAppearance.dangling?.[edge] && (data.source[edge] === data.target[edge] || !!data.spatialAppearance.edgeCurvatures?.[edge]) ? 16 : 1;
+}
+/** World-space quadratic control; equal axis magnitudes choose X, then Y, then Z. */
+function spatialCurveControl(a: Lyra3dWorldPoint, b: Lyra3dWorldPoint, curvature: number): Lyra3dWorldPoint {
+  const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z;
+  const length = Math.hypot(dx, dy, dz);
+  let nx: number, ny: number, nz: number;
+  if (Math.abs(dx) <= Math.abs(dy) && Math.abs(dx) <= Math.abs(dz)) { nx = 0; ny = dz; nz = -dy; }
+  else if (Math.abs(dy) <= Math.abs(dz)) { nx = -dz; ny = 0; nz = dx; }
+  else { nx = dy; ny = -dx; nz = 0; }
+  const normal = Math.hypot(nx, ny, nz), scale = normal > 0 ? 2 * curvature * length / normal : 0;
+  return { x: (a.x + b.x) / 2 + nx * scale, y: (a.y + b.y) / 2 + ny * scale, z: (a.z + b.z) / 2 + nz * scale };
+}
+/** Samples an ordinary quadratic edge without clamping finite derived world coordinates. */
+export function spatialCurvePoint(a: Lyra3dWorldPoint, b: Lyra3dWorldPoint, curvature: number, t: number): Lyra3dWorldPoint {
+  if (t <= 0) return { ...a };
+  if (t >= 1) return { ...b };
+  if (!curvature || (a.x === b.x && a.y === b.y && a.z === b.z)) return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: a.z + (b.z - a.z) * t };
+  const c = spatialCurveControl(a, b, curvature), u = 1 - t;
+  return { x: u * u * a.x + 2 * u * t * c.x + t * t * b.x, y: u * u * a.y + 2 * u * t * c.y + t * t * b.y, z: u * u * a.z + 2 * u * t * c.z + t * t * b.z };
+}
+/** Endpoints and analytic interior axis extrema for bounds of the continuous curve. */
+export function spatialCurveExtrema(a: Lyra3dWorldPoint, b: Lyra3dWorldPoint, curvature: number): Lyra3dWorldPoint[] {
+  const points = [{ ...a }, { ...b }];
+  if (!curvature) return points;
+  const c = spatialCurveControl(a, b, curvature);
+  for (const axis of ['x', 'y', 'z'] as const) {
+    const denominator = a[axis] - 2 * c[axis] + b[axis];
+    const t = denominator === 0 ? 0 : (a[axis] - c[axis]) / denominator;
+    if (t > 0 && t < 1) points.push(spatialCurvePoint(a, b, curvature, t));
+  }
+  return points;
 }
 /** Samples the same world path used by edge paint, arrows, labels and directional particles. */
 export function spatialEdgePoint(data: GraphSpatialData, edge: number, t: number, position: GraphPositionLookup, viewport: Lyra3dViewport): Lyra3dWorldPoint | null {
   const source = data.source[edge]!; const a = position(source); if (!a) return null;
   if (data.spatialAppearance.dangling?.[edge]) return { x: a.x + 28 * t, y: a.y - 28 * t, z: a.z };
   if (source === data.target[edge]) { const radius = spatialNodeWorldRadius(data, source, a, viewport) * 1.6; return { x: a.x + Math.sin(t * Math.PI * 2) * radius, y: a.y - (1 - Math.cos(t * Math.PI * 2)) * radius, z: a.z }; }
-  const b = position(data.target[edge]!); return b ? { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: a.z + (b.z - a.z) * t } : null;
+  const b = position(data.target[edge]!); return b ? spatialCurvePoint(a, b, data.spatialAppearance.edgeCurvatures?.[edge] ?? 0, t) : null;
 }
 
 /** Bound expanded GPU attributes independently of the logical edge ceiling. */
@@ -85,13 +116,24 @@ bool lyraGraphClip(inout vec3 a, inout vec3 b){
   else if(b.z<near){ float t=(near-b.z)/(a.z-b.z); b=vec3(b.xy+(a.xy-b.xy)*t,near); }
   return true;
 }
-vec3 lyraGraphPathPoint(vec3 start, vec3 end, float loopRadius, float t, float centreDepth){
-  if(loopRadius<=0.0) return t<=0.0?start:t>=1.0?end:start+(end-start)*t;
+vec3 lyraGraphCurveControl(vec3 start, vec3 end, float curvature){
+  vec3 delta=end-start, magnitude=abs(delta);
+  vec3 basis=magnitude.x<=magnitude.y && magnitude.x<=magnitude.z?vec3(1.0,0.0,0.0):magnitude.y<=magnitude.z?vec3(0.0,1.0,0.0):vec3(0.0,0.0,1.0);
+  vec3 normal=cross(delta,basis); float normalLength=length(normal);
+  return (start+end)*0.5+(normalLength>0.0?normal*(2.0*curvature*length(delta)/normalLength):vec3(0.0));
+}
+vec3 lyraGraphPathPoint(vec3 start, vec3 end, float loopRadius, float t, float centreDepth, float curvature){
+  if(loopRadius<=0.0){
+    if(t<=0.0) return start; if(t>=1.0) return end;
+    if(curvature==0.0 || all(equal(start,end))) return start+(end-start)*t;
+    float u=1.0-t; return u*u*start+2.0*u*t*lyraGraphCurveControl(start,end,curvature)+t*t*end;
+  }
   if(t<=0.0 || t>=1.0) return start;
   float radius=worldSizes>0.5?loopRadius:centreDepth<lyraView.z?0.0:loopRadius/lyraGraphScale(centreDepth);
   float angle=t*${glsl(Math.PI * 2)};
   return start+vec3(sin(angle)*radius,-(1.0-cos(angle))*radius,0.0);
 }
+vec3 lyraGraphPathPoint(vec3 start, vec3 end, float loopRadius, float t, float centreDepth){ return lyraGraphPathPoint(start,end,loopRadius,t,centreDepth,0.0); }
 `;
 
 /** Node glyph vertex stage; the fragment stage is `graphSpatialNodeFragment`. */
@@ -130,19 +172,19 @@ void graphSpatialNodeVertex(vec3 centre, float size, float glyph, vec2 state, ve
 export const graphSpatialEdgeVertexChunk = `
 uniform vec4 viewWindow;
 varying vec4 tint; varying vec2 pattern; varying vec3 arrowUv; varying vec3 cap; varying float strokeRadius; flat varying vec2 depthEnds;
-float lyraGraphLoopOffset(vec3 centre, float loopRadius, float t0, float centreDepth){
+float lyraGraphPathOffset(vec3 start, vec3 end, float loopRadius, float t0, float centreDepth, float curvature){
   float offset=0.0; int count=int(t0*16.0+0.5);
-  vec3 previous=lyraGraphEye(centre);
+  vec3 previous=lyraGraphEye(start);
   for(int i=0;i<16;i++){
     if(i>=count) break;
-    vec3 next=lyraGraphEye(lyraGraphPathPoint(centre,centre,loopRadius,float(i+1)/16.0,centreDepth));
+    vec3 next=lyraGraphEye(lyraGraphPathPoint(start,end,loopRadius,float(i+1)/16.0,centreDepth,curvature));
     vec3 a=previous, b=next;
     if(lyraGraphClip(a,b)) offset+=length(lyraGraphScreen(b).xy-lyraGraphScreen(a).xy);
     previous=next;
   }
   return offset;
 }
-void graphSpatialEdgeVertex(vec3 start, vec3 end, vec4 path, vec3 stroke, vec4 color, vec3 pickId, float dashRow){
+void graphSpatialEdgeVertex(vec3 start, vec3 end, vec4 path, vec3 stroke, vec4 color, vec3 pickId, float dashRow, float curvature){
   #ifdef PICKING
     float width=stroke.y; tint=vec4(pickId,1.0);
   #else
@@ -153,14 +195,19 @@ void graphSpatialEdgeVertex(vec3 start, vec3 end, vec4 path, vec3 stroke, vec4 c
   gl_Position=vec4(2.0,2.0,2.0,1.0);
   if(width<=0.0) return;
   float centreDepth=path.z>0.0?lyraGraphEye(start).z:0.0;
-  vec3 a=lyraGraphEye(lyraGraphPathPoint(start,end,path.z,path.x,centreDepth));
-  vec3 b=lyraGraphEye(lyraGraphPathPoint(start,end,path.z,path.y,centreDepth));
+  vec3 a=lyraGraphEye(lyraGraphPathPoint(start,end,path.z,path.x,centreDepth,curvature));
+  vec3 b=lyraGraphEye(lyraGraphPathPoint(start,end,path.z,path.y,centreDepth,curvature));
   vec3 screenStart; vec3 screenEnd;
   if(stroke.z>0.5){
     if(b.z<lyraView.z) return;
     lyraGraphClip(a,b);
     vec3 tail=lyraGraphScreen(a), head=lyraGraphScreen(b);
     vec2 toward=head.xy-tail.xy; float reach=length(toward);
+    if(curvature!=0.0 && path.z<=0.0){
+      vec3 tangent=mat3(modelViewMatrix)*(2.0*(end-lyraGraphCurveControl(start,end,curvature)));
+      tangent=vec3(tangent.x,-tangent.y,-tangent.z);
+      toward=tangent.xy*b.z-b.xy*tangent.z; reach=length(toward);
+    }
     if(!(reach>0.0)) return;
     vec2 direction=toward/reach;
     float height=width/(2.0*tan(${glsl(GRAPH_ARROW_HALF_ANGLE)}));
@@ -172,7 +219,7 @@ void graphSpatialEdgeVertex(vec3 start, vec3 end, vec4 path, vec3 stroke, vec4 c
     #ifdef PICKING
       depthEnds=vec2(lyraGraphNdcDepth(a.z+0.001),lyraGraphNdcDepth(b.z+0.001))*0.5+0.5+${glsl(GRAPH_EDGE_DEPTH_BIAS)};
     #else
-      if(path.z>0.0 && path.x>0.0) pattern.y=lyraGraphLoopOffset(start,path.z,path.x,centreDepth);
+      if((path.z>0.0 || curvature!=0.0) && path.x>0.0) pattern.y=lyraGraphPathOffset(start,end,path.z,path.x,centreDepth,curvature);
     #endif
   }
   vec2 delta=screenEnd.xy-screenStart.xy; float span=length(delta);
@@ -192,4 +239,5 @@ void graphSpatialEdgeVertex(vec3 start, vec3 end, vec4 path, vec3 stroke, vec4 c
   vec2 ndc=(point.xy-viewWindow.xy)/viewWindow.zw*2.0-1.0;
   gl_Position=vec4(ndc.x,-ndc.y,point.z,1.0);
 }
+void graphSpatialEdgeVertex(vec3 start, vec3 end, vec4 path, vec3 stroke, vec4 color, vec3 pickId, float dashRow){ graphSpatialEdgeVertex(start,end,path,stroke,color,pickId,dashRow,0.0); }
 `;

@@ -90,6 +90,27 @@ objects. Shared-memory buffers are unsupported: admission rejects them before in
 their elements. Accepted numeric columns are copied for the engine revision; application callbacks
 and native media objects remain caller-owned integrations.
 
+Spatial graph presentation accepts `spatialAppearance.edgeCurvatures`, a `Float32Array` with one
+finite signed value per edge. Admission owns a copy and clamps values to `[-1, 1]`; omitted or
+zero values retain straight strokes. Nonzero ordinary edges reserve 16 stroke segments plus any
+directed arrow. Self-loops and dangling stubs retain their existing shapes. The legacy graph
+route without `spatialAppearance` keeps its cylinder rendering.
+
+The quadratic bow is defined in world space: choose the positive axis least aligned with the
+source-to-target direction (ties X, Y, Z), then cross that direction with the axis. Curvature
+scales the midpoint displacement along this normal by the endpoint distance. Reversing an edge
+reverses its bow; camera rotation does not change it. Labels use the curve midpoint and particles
+advance in the curve parameter, without an arc-length speed guarantee. Derived curve positions
+may extend beyond the node coordinate bounds. Explicit fit includes analytic curve extrema,
+subject to the existing camera target and distance limits.
+
+`setAppearance()` can replace spatial presentation, including curvature, without restarting
+layout, moving the camera, changing pins or clearing selection. Omitting `spatialAppearance`
+retains it; supplying one replaces that entire object, so omitting `edgeCurvatures` inside the
+replacement clears curves. Invalid columns or expanded geometry above the 2,000,000 primitive
+limit reject before replacing the accepted scene. Curves increase geometry and delivery cost;
+their throughput depends on the scene and renderer.
+
 ## Core building blocks
 
 - `createLyra3dViewport(container, host, options)` creates the renderer, a scene whose world

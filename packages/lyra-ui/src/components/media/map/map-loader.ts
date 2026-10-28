@@ -134,6 +134,11 @@ export interface MapLibreMapCapability {
   setStyle(style: unknown, options?: { diff?: boolean }): this;
   /** Optional native style capabilities, required only for declarative owned overlays/overrides. */
   getStyle?(): { readonly layers?: readonly { readonly id: string }[] };
+  /** Optional scene capabilities, required only for declarative projection/terrain overrides. */
+  getProjection?(): unknown;
+  getTerrain?(): unknown;
+  setProjection?(value: unknown): unknown;
+  setTerrain?(value: unknown): unknown;
   moveLayer?(id: string, before?: string): unknown;
   getPaintProperty?(id: string, property: string): unknown;
   getLayoutProperty?(id: string, property: string): unknown;

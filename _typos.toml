@@ -95,6 +95,10 @@ extend-ignore-re = ['(?ms)^  fr: \{\n.*?^  \},\n']
 extend-glob = ["*.test.ts", "*.test.mjs", "*.stories.ts", "emit.ts", "corpus.ts"]
 
 [type.fixtures.extend-words]
+# French map-story copy: valid, appearance and measurements.
+valide = "valide"
+apparence = "apparence"
+mesures = "mesures"
 # French, German and Polish sample strings (localization overrides under test).
 sur = "sur"
 Sur = "Sur"

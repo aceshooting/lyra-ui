@@ -7448,9 +7448,11 @@ export interface LyraComponentTypeMap {
       | 'minZoom'
       | 'overlays'
       | 'pickMode'
+      | 'projection'
       | 'renderWorldCopies'
       | 'strings'
       | 'styleOverrides'
+      | 'terrain'
       | 'zoom',
       {}
     >;

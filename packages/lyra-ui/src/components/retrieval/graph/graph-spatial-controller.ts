@@ -8,7 +8,7 @@ import { finiteRange } from '../../../internal/numbers.js';
 import { nextId } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { graphLinkIdentity, type LyraGraphCamera, type LyraGraphCommunity, type LyraGraphEdge, type LyraGraphNode, type LyraGraphPosition, type LyraGraphView, type NormalizedGraphModel } from './graph-model.js';
-import { fittedGraphCamera, normalizeGraphCamera, panGraphCamera, projectSpatialPoint, spatialNodePosition,
+import { fittedGraphCamera, graphCurvePoint, normalizeGraphCurvature, normalizeGraphCamera, panGraphCamera, projectSpatialPoint, spatialNodePosition,
   type SpatialHit, type SpatialViewport, type SpatialWorldNode } from './graph-spatial.js';
 import { GraphBuiltin3dEngine, type GraphBuiltin3dFrame, type GraphBuiltin3dPaint } from './graph-builtin-3d-engine.js';
 
@@ -256,7 +256,7 @@ export class GraphSpatialController {
     const labelLimit = Math.min(256, Math.floor(4 * 1024 * 1024 / Math.max(1, data.nodeCount)));
     const labels = data.labels ?? Array.from(scene.nodeRows, (row) => this.columns!.columns.ids[row]!.slice(0, labelLimit));
     return { ...data, labels, nodeLabels: this.host.nodeLabels === 'always' ? 'always' as const : this.host.nodeLabels === 'none' ? 'none' as const : 'zoom' as const, withEdgeLabels: false,
-      spatialAppearance: { ...data.spatialAppearance, nodeColors: colors, edgeColors: edges, dimmedOpacity: paint.dimmedOpacity } };
+      spatialAppearance: { ...data.spatialAppearance, edgeCurvatures: data.edgeCurvature, nodeColors: colors, edgeColors: edges, dimmedOpacity: paint.dimmedOpacity } };
   }
   private panCamera(dx: number, dy: number): LyraGraphCamera {
     if (this.preference !== 'webgl') return panGraphCamera(this.currentCamera, dx, dy, this.viewport());
@@ -312,7 +312,8 @@ export class GraphSpatialController {
       if (!edge.label || !paint.visibleEdges.has(graphLinkIdentity(edge))) continue;
       const a = this.position(edge.source), b = this.position(edge.target); if (!a) continue;
       const radius = this.worldById.get(edge.source)?.radius ?? 15;
-      const anchor = edge.source === edge.target ? { x: a.x, y: a.y - radius * 3.2, z: a.z } : b ? { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: (a.z + b.z) / 2 } : { x: a.x + 14, y: a.y - 14, z: a.z };
+      const curvature = normalizeGraphCurvature(edge.curvature);
+      const anchor = edge.source === edge.target ? { x: a.x, y: a.y - radius * 3.2, z: a.z } : b ? curvature !== 0 ? graphCurvePoint(a, b, curvature, 0.5) : { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: (a.z + b.z) / 2 } : { x: a.x + 14, y: a.y - 14, z: a.z };
       const point = projectSpatialPoint(anchor, this.currentCamera, size); if (!point) continue;
       ctx.globalAlpha = selectedIds(this.host.dimmedEdgeIds).has(graphLinkIdentity(edge)) ? paint.dimmedOpacity : 1; ctx.fillText(edge.label, point.x, point.y - paint.fontSize);
     }
@@ -373,7 +374,7 @@ export class GraphSpatialController {
       this.builtin?.invalidate();
       this.setHover(undefined);
       if (!this.cameraInitialized && this.world.length) {
-        this.currentCamera = fittedGraphCamera(this.world, this.viewport());
+        this.currentCamera = fittedGraphCamera(this.world, this.viewport(), undefined, this.edges);
         this.fittedDistance = this.currentCamera.distance;
         this.cameraInitialized = true;
         this.pendingInitialFit = true;
@@ -387,7 +388,7 @@ export class GraphSpatialController {
     if (this.authoredCamera !== this.host.camera) {
       this.authoredCamera = this.host.camera;
       this.pendingInitialFit = false;
-      this.currentCamera = this.authoredCamera ? this.normalizeCamera(this.authoredCamera) : this.engine?.fit ? this.normalizeCamera(this.engine.fit()) : fittedGraphCamera(this.world, this.viewport());
+      this.currentCamera = this.authoredCamera ? this.normalizeCamera(this.authoredCamera) : this.engine?.fit ? this.normalizeCamera(this.engine.fit()) : fittedGraphCamera(this.world, this.viewport(), undefined, this.edges);
       this.engine?.setCamera(this.currentCamera);
       this.builtin?.invalidate();
     }
@@ -452,7 +453,7 @@ export class GraphSpatialController {
   private fitInitialCanvas(): void {
     if (!this.pendingInitialFit || !this.canvas?.clientWidth || !this.canvas.clientHeight) return;
     this.pendingInitialFit = false;
-    this.currentCamera = fittedGraphCamera(this.world, this.viewport());
+    this.currentCamera = fittedGraphCamera(this.world, this.viewport(), undefined, this.edges);
     this.fittedDistance = this.currentCamera.distance;
     this.builtin?.invalidate();
   }
@@ -485,7 +486,7 @@ export class GraphSpatialController {
     this.prepare();
     if (this.selection.renderer === 'webgl' && this.engine?.fit) { const camera = this.engine.fit(padding); this.currentCamera = this.normalizeCamera(camera); this.fittedDistance = this.currentCamera.distance; this.changeCamera(this.currentCamera); return; }
     if (!this.world.length) return;
-    const camera = fittedGraphCamera(this.world, this.viewport(), padding);
+    const camera = fittedGraphCamera(this.world, this.viewport(), padding, this.edges);
     this.fittedDistance = camera.distance;
     this.changeCamera(camera);
   }

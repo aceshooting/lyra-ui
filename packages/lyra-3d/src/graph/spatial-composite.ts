@@ -31,7 +31,7 @@ void main() {
   fill=vec4(0.0); ring=vec4(0.0); marker=vec4(0.0);
   tint=vec4(0.0); pattern=vec2(0.0); arrowUv=vec3(0.0); cap=vec3(0.0); strokeRadius=0.0; depthEnds=vec2(0.0);
   if (primitiveKind > 0.5) graphSpatialNodeVertex(payload0.xyz, payload0.w, payload1.x, payload1.yz, payload2, payload3, payload4, vec3(0.0));
-  else graphSpatialEdgeVertex(payload0.xyz, payload1.xyz, vec4(payload0.w, payload1.w, payload3.xy), vec3(payload3.z, 0.0, payload3.w), payload2, vec3(0.0), payload4.x);
+  else graphSpatialEdgeVertex(payload0.xyz, payload1.xyz, vec4(payload0.w, payload1.w, payload3.xy), vec3(payload3.z, 0.0, payload3.w), payload2, vec3(0.0), payload4.x, payload4.y);
 }`;
 const fragment = graphSpatialNodeFragment + graphSpatialEdgeFragment + `
 varying float primitiveKind;
@@ -85,7 +85,7 @@ export function createGraphSpatialComposite(nodes: ReturnType<typeof createGraph
     const node = (name: string) => nodes.mesh.geometry.getAttribute(name).array as Float32Array;
     const edge = (name: string) => edges.mesh.geometry.getAttribute(name).array as Float32Array;
     const [p0, p1, p2, p3, p4] = staged as [Float32Array, Float32Array, Float32Array, Float32Array, Float32Array];
-    const start = edge('edgeStart'), end = edge('edgeEnd'), path = edge('edgePath'), stroke = edge('stroke'), color = edge('edgeColor'), dash = edge('dash');
+    const start = edge('edgeStart'), end = edge('edgeEnd'), path = edge('edgePath'), stroke = edge('stroke'), color = edge('edgeColor'), dash = edge('dash'), curvature = edge('edgeCurvature');
     for (let i = 0; i < edgeCount; i++) {
       if (!(stroke[i * 3]! > 0 && color[i * 4 + 3]! > 0)) continue;
       primitiveSlot[i] = active;
@@ -94,7 +94,7 @@ export function createGraphSpatialComposite(nodes: ReturnType<typeof createGraph
       p1[o] = end[i * 3]!; p1[o + 1] = end[i * 3 + 1]!; p1[o + 2] = end[i * 3 + 2]!; p1[o + 3] = path[i * 4 + 1]!;
       p2.set(color.subarray(i * 4, i * 4 + 4), o);
       p3[o] = path[i * 4 + 2]!; p3[o + 1] = path[i * 4 + 3]!; p3[o + 2] = stroke[i * 3]!; p3[o + 3] = stroke[i * 3 + 2]!;
-      p4[o] = dash[i]!; p4[o + 1] = 0; p4[o + 2] = 0; p4[o + 3] = -1;
+      p4[o] = dash[i]!; p4[o + 1] = curvature[i]!; p4[o + 2] = 0; p4[o + 3] = -1;
       anchors.set(edges.anchors.subarray(i * 3, i * 3 + 3), active * 3);
       if (nodeUniforms['worldSizes']!.value < 0.5 && path[i * 4 + 2]! > 0 && stroke[i * 3 + 2]! < 0.5) {
         // CSS loop endpoints are expanded in world XY by the shader. Store their midpoint in

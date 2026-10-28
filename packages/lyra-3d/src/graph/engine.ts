@@ -10,7 +10,7 @@ import { createGraphIncrementalTaskKernel, type GraphTaskInput, type GraphTaskOu
 import type { GraphLayoutInput, GraphLayoutPinUpdate } from './types.js';
 import { admitGraphSpatialAppearance, validateGraphSpatialSizes, type GraphSpatialAppearance } from './spatial-appearance.js';
 import { createGraphSpatialNodes } from './spatial-nodes.js';
-import { spatialPrimitiveCount } from './spatial-paths.js';
+import { spatialCurveExtrema, spatialPrimitiveCount } from './spatial-paths.js';
 import { createGraphSpatialEdges } from './spatial-edges.js';
 import { createGraphSpatialComposite } from './spatial-composite.js';
 import { admitGraphDecorations, createGraphDecorations, graphItemColor, type GraphDecorationData } from './decorations.js';
@@ -29,15 +29,16 @@ export interface GraphEngineData extends GraphLayoutInput, GraphDecorationData {
   spatialAppearance?: GraphSpatialAppearance;
   categories?: Uint16Array;
 }
-/** Paint-only replacements for an already admitted spatial graph. Layout, positions, sizes,
- * categories and topology are not accepted; omitted fields retain their current values. */
+/** Presentation replacements for an admitted spatial graph, including curved strokes and arrows.
+ * Layout, positions, sizes, categories and topology are not accepted. Omitted top-level fields
+ * retain their values; a supplied spatialAppearance replaces that entire appearance object. */
 export interface GraphEngineAppearance extends GraphDecorationData {
   readonly spatialAppearance?: GraphSpatialAppearance;
 }
 export interface GraphEngine extends Lyra3dEngine<GraphEngineData, Lyra3dOrbitCamera> {
   /** Applies pins atomically. Coordinates outside ±10,000,000 throw without changing positions or pins. */
   setPins(update: GraphLayoutPinUpdate): void;
-  /** Validates and replaces spatial paint atomically without restarting layout or changing pins. */
+  /** Replaces spatial presentation atomically without restarting layout, changing pins or fitting the camera. */
   setAppearance(appearance: GraphEngineAppearance): void;
 }
 export interface GraphEngineServices {
@@ -399,7 +400,29 @@ export function createGraphEngine(services: GraphEngineServices = {}): GraphEngi
       state = update.state; paint(update.rows);
     },
     setCamera(next) { if (!disposed) { camera = normalizeOrbitCamera(next); viewport?.setOrbit(camera); } },
-    fit(padding) { camera = fitOrbitCamera(boundsOfPositions(positions, data?.spatialAppearance?.sizeUnits === 'world' ? Array.from({ length: data.nodeCount }, (_, row) => (data?.sizes?.[row] ?? viewport?.style.pointSize ?? 6) / 2) : undefined), viewport ?? { width: 1, height: 1 }, padding); fittedDistance = camera.distance; viewport?.setOrbit(camera); return camera; },
+    fit(padding) {
+      let bounds = boundsOfPositions(positions, data?.spatialAppearance?.sizeUnits === 'world' ? Array.from({ length: data.nodeCount }, (_, row) => (data?.sizes?.[row] ?? viewport?.style.pointSize ?? 6) / 2) : undefined);
+      let curved = false;
+      const appearance = data?.spatialAppearance;
+      if (data && bounds && appearance?.edgeCurvatures) {
+        for (let edge = 0; edge < data.source.length; edge++) {
+          const curvature = appearance.edgeCurvatures[edge] ?? 0;
+          if (!curvature || appearance.dangling?.[edge] || data.source[edge] === data.target[edge]) continue;
+          const a = positionOf(data.source[edge]!), b = positionOf(data.target[edge]!);
+          if (!a || !b) continue;
+          curved = true;
+          for (const point of spatialCurveExtrema(a, b, curvature)) {
+            bounds = {
+              min: { x: Math.min(bounds.min.x, point.x), y: Math.min(bounds.min.y, point.y), z: Math.min(bounds.min.z, point.z) },
+              max: { x: Math.max(bounds.max.x, point.x), y: Math.max(bounds.max.y, point.y), z: Math.max(bounds.max.z, point.z) },
+            };
+          }
+        }
+      }
+      const size = viewport ?? { width: 1, height: 1 };
+      camera = curved ? fitOrbitCamera(bounds, size, padding, undefined, { preserveDerivedBounds: true }) : fitOrbitCamera(bounds, size, padding);
+      fittedDistance = camera.distance; viewport?.setOrbit(camera); return camera;
+    },
     focus(item, zoom) { const point = positionOf(item); if (!point) return null; camera = focusOrbitCamera(viewport?.orbit ?? camera, point, zoom); viewport?.setOrbit(camera); return camera; },
     pick: (x, y) => viewport?.pickAt(x, y) ?? null,
     project(item) { const point = positionOf(item); return point ? viewport?.project(point) ?? null : null; },

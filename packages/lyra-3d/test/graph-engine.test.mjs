@@ -263,6 +263,44 @@ test('appearance transactions preserve positions, pins, task, revision and selec
   engine.setData(data(), 1); assert.equal(job.stopped, true); engine.dispose();
 });
 
+test('over-budget curved appearance is rejected before scene or revision replacement', () => {
+  const { engine } = harness();
+  const count = 117648;
+  const input = { ...data(), source: new Uint32Array(count), target: new Uint32Array(count).fill(1), directed: new Uint8Array(count).fill(1), spatialAppearance: {} };
+  engine.setData(input, 0);
+  const curved = { edgeCurvatures: new Float32Array(count).fill(0.5) };
+  assert.throws(() => engine.setAppearance({ spatialAppearance: curved }), /primitive limit/);
+  assert.deepEqual(engine.positionOf(0), { x: -10, y: 0, z: 0 });
+  assert.throws(() => engine.setData({ ...input, spatialAppearance: curved }, 1), /primitive limit/);
+  engine.setData(data(), 1); engine.dispose();
+});
+
+test('curvature replacement reserves strokes and preserves the active transaction state', async () => {
+  const { engine, viewport, host, jobs, events } = harness();
+  const edgeMesh = () => viewport.pickWorld.children.find(mesh => mesh.geometry.hasAttribute('edgePath'));
+  engine.setData({ ...data(), directed: new Uint8Array([1]), spatialAppearance: {} }, 0); await engine.mount({}, host);
+  engine.setPins({ indices: new Uint32Array([0]), positions: new Float32Array([7, 8, 9]), pinned: new Uint8Array([1]) });
+  engine.setState({ selected: new Set([2]), dimmed: new Set(), hover: -1, focus: -1 });
+  const job = jobs[0], camera = viewport.orbit, eventCount = events.length;
+  assert.equal(edgeMesh().geometry.instanceCount, 2);
+  const curvature = new Float32Array([0.5]);
+  engine.setAppearance({ spatialAppearance: { edgeCurvatures: curvature } }); curvature[0] = 0;
+  assert.equal(edgeMesh().geometry.instanceCount, 17);
+  assert.equal(edgeMesh().geometry.getAttribute('edgeCurvature').getX(0), 0.5);
+  engine.setAppearance({ nodeLabels: 'none' });
+  assert.equal(edgeMesh().geometry.instanceCount, 17, 'omitting the appearance object retains curvature');
+  assert.deepEqual(engine.positionOf(0), { x: 7, y: 8, z: 9 });
+  assert.equal(jobs.length, 1); assert.equal(job.stopped, false); assert.equal(viewport.orbit, camera); assert.equal(events.length, eventCount);
+  assert.equal(edgeMesh().geometry.getAttribute('stroke').getX(0), viewport.style.lineWidth + 2);
+  const accepted = edgeMesh();
+  assert.throws(() => engine.setData({ ...data(), spatialAppearance: { edgeCurvatures: new Float32Array([NaN]) } }, 1));
+  assert.throws(() => engine.setAppearance({ spatialAppearance: { edgeCurvatures: new Float32Array([Infinity]) } }));
+  assert.equal(edgeMesh(), accepted); assert.equal(job.stopped, false);
+  engine.setAppearance({ spatialAppearance: {} });
+  assert.equal(edgeMesh().geometry.instanceCount, 2, 'replacing the whole appearance clears curvature');
+  engine.setData(data(), 1); assert.equal(job.stopped, true); engine.dispose();
+});
+
 test('appearance resource failure retains the prior scene and accepts a later retry', async () => {
   const canvas = new EventTarget(); const view = { canvas, world: new Group(), pickWorld: new Group(), scene: new Group(), width: 640, height: 480, orbit: DEFAULT_ORBIT_CAMERA, style: resolveLyra3dStyle(),
     setStyle(v) { this.style = resolveLyra3dStyle(v); }, setOrbit(v) { this.orbit = v; }, project(p) { return projectOrbitPoint(p, this.orbit, this); }, invalidate() {}, onFrame() { return () => {}; }, dispose() {} };

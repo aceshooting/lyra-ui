@@ -157,25 +157,39 @@ export function boundsOfPositions(positions: ArrayLike<number>, radii?: ArrayLik
  * bounds keep default framing. Dimensions are finite and at least one CSS pixel. Required distances
  * beyond the renderer's finite Float32 headroom saturate, so arbitrarily extreme aspect ratios
  * need not fit inside the padding.
+ * `preserveDerivedBounds` retains finite geometry extents beyond the node coordinate range;
+ * the target still follows camera policy and the enclosing radius uses that clamped target.
  */
 export function fitOrbitCamera(
   bounds: Lyra3dBounds | null,
   viewport: Lyra3dViewportSize,
   padding = 24,
   orientation: { readonly yaw: number; readonly pitch: number } = { yaw: 0, pitch: 0 },
+  options: { readonly preserveDerivedBounds?: boolean } = {},
 ): Lyra3dOrbitCamera {
   if (!bounds) return normalizeOrbitCamera({ ...orientation }, DEFAULT_ORBIT_CAMERA);
-  const min = normalizeWorldPoint(bounds.min);
-  const max = normalizeWorldPoint(bounds.max);
+  const finitePoint = (value: unknown): Lyra3dWorldPoint | undefined => {
+    const x = ownNumber(value, 'x'), y = ownNumber(value, 'y'), z = ownNumber(value, 'z');
+    return x === undefined || y === undefined || z === undefined ? undefined : { x, y, z };
+  };
+  const min = options.preserveDerivedBounds ? finitePoint(bounds.min) : normalizeWorldPoint(bounds.min);
+  const max = options.preserveDerivedBounds ? finitePoint(bounds.max) : normalizeWorldPoint(bounds.max);
   if (!min || !max || min.x > max.x || min.y > max.y || min.z > max.z) {
     return normalizeOrbitCamera({ ...orientation }, DEFAULT_ORBIT_CAMERA);
   }
-  const target = {
-    x: (min.x + max.x) / 2,
-    y: (min.y + max.y) / 2,
-    z: (min.z + max.z) / 2,
+  const midpoint = {
+    x: options.preserveDerivedBounds ? min.x / 2 + max.x / 2 : (min.x + max.x) / 2,
+    y: options.preserveDerivedBounds ? min.y / 2 + max.y / 2 : (min.y + max.y) / 2,
+    z: options.preserveDerivedBounds ? min.z / 2 + max.z / 2 : (min.z + max.z) / 2,
   };
-  const radius = Math.max(1, Math.hypot(max.x - min.x, max.y - min.y, max.z - min.z) / 2);
+  const target = options.preserveDerivedBounds ? normalizeWorldPoint(midpoint)! : midpoint;
+  const radius = options.preserveDerivedBounds
+    ? Math.min(MAX_CAMERA_DISTANCE, Math.max(1, Math.hypot(
+      Math.max(Math.abs(min.x - target.x), Math.abs(max.x - target.x)),
+      Math.max(Math.abs(min.y - target.y), Math.abs(max.y - target.y)),
+      Math.max(Math.abs(min.z - target.z), Math.abs(max.z - target.z)),
+    )))
+    : Math.max(1, Math.hypot(max.x - min.x, max.y - min.y, max.z - min.z) / 2);
   const width = Number.isFinite(viewport.width) ? Math.max(1, viewport.width) : 1;
   const height = Number.isFinite(viewport.height) ? Math.max(1, viewport.height) : 1;
   const safePadding = clamp(Number.isFinite(padding) ? padding : 24, 0, Math.min(width, height) * 0.45);

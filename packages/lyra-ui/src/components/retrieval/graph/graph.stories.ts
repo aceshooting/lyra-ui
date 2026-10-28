@@ -529,6 +529,23 @@ export const SpatialPerspective: Story = {
   ></lr-graph>`,
 };
 
+export const SpatialCurves: Story = {
+  parameters: { docs: { description: { story: 'Signed world-space curvature separates parallel directed relationships in 3D. Orbit and fit use the existing controls; the List view preserves every relationship.' } } },
+  render: () => html`<lr-graph view="3d" label="Curved relationships" height="520" with-edge-labels
+    .camera=${{ yaw: 0.65, pitch: 0.25, distance: 550, target: { x: 0, y: 0, z: 0 } }}
+    .nodes=${[
+      { id: 'source', label: 'Source', position: { x: -90, y: 0, z: 0 } },
+      { id: 'target', label: 'Target', position: { x: 90, y: 0, z: 0 } },
+      { id: 'related', label: 'Related', position: { x: 0, y: -100, z: -40 } },
+    ]}
+    .edges=${[
+      { id: 'upper', source: 'source', target: 'target', curvature: 0.45, directed: true, label: 'Supports' },
+      { id: 'lower', source: 'source', target: 'target', curvature: -0.45, directed: true, label: 'References', dash: [6, 3] },
+      { id: 'straight', source: 'source', target: 'related', directed: true, label: 'Related' },
+    ]}
+  ></lr-graph>`,
+};
+
 export const SpatialNarrow: Story = {
   render: () => html`<div style="inline-size:20rem;max-inline-size:100%"><lr-graph
     view="3d" height="600" aria-label="Graph in a narrow panel"

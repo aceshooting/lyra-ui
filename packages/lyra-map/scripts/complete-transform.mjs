@@ -159,6 +159,14 @@ export const completePlugin = {
       );
     code = transformMetadata(code, rel) ?? code;
     code = transformSpriteKeys(code, rel) ?? code;
+    if (rel === 'webgl/draw/draw_terrain.ts') {
+      // Globe terrain bypasses fog blending; its transform has no fog matrix.
+      code = "import {mat4} from 'gl-matrix';\n" + replace(
+        code,
+        'const fogMatrix = tr.calculateFogMatrix(tile.tileID.toUnwrapped());',
+        'const fogMatrix = isRenderingGlobe ? mat4.create() : tr.calculateFogMatrix(tile.tileID.toUnwrapped());'
+      );
+    }
     if (rel === 'shaders/shaders.ts') code = await shaderTable(original, id);
     if (rel === 'webgl/program/program_uniforms.ts') code = uniformTable(original, id);
     if (rel === 'source/source.ts')

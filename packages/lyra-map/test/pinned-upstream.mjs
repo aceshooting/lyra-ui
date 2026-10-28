@@ -30,6 +30,7 @@ export const CHANGED_SOURCE_FILES = [
   'util/actor_messages.ts',
   'util/config.ts',
   'util/web_worker_transfer.ts',
+  'webgl/draw/draw_terrain.ts',
   'webgl/draw/index.ts',
   'webgl/program/program_uniforms.ts',
   'webgl/render_to_texture.ts',

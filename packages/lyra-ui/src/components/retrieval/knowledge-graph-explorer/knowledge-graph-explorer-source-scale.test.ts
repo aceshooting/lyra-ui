@@ -179,3 +179,19 @@ it('resets source navigation when page size changes and renders the normalized r
   currentSize = expected;
  }
 });
+
+it('preserves strictly accepted source curvature through the wrapper child scene', async () => {
+  const data = provider();
+  const source: GraphSource = { ...data.source, scene: async () => ({
+    nodes: [{ key: 'node:0', value: { id: '0', position: { x: -40, y: 0, z: 0 } } }, { key: 'node:1', value: { id: '1', position: { x: 40, y: 0, z: 0 } } }],
+    edges: [{ key: 'edge:0', source: 'node:0', target: 'node:1', value: { id: '0', source: '0', target: '1', curvature: -4 } }],
+    total: { nodes: 1_000_000, edges: 1_000_000 }, coverage: 'neighborhood', worldBounds: null,
+  }) };
+  const el = await fixture<Explorer>(html`<lr-knowledge-graph-explorer view="3d" .graphSource=${source} selected-node-id="0"></lr-knowledge-graph-explorer>`);
+  const child = graph(el);
+  const seam = child as unknown as { sourceScene: { state: { scene?: { edges: readonly { value: { curvature?: number } }[] } } } };
+  await waitUntil(() => seam.sourceScene.state.scene !== undefined, 'accepted wrapper source scene');
+  expect(child.graphSource === source).to.equal(true);
+  expect(seam.sourceScene.state.scene!.edges[0]!.value.curvature).to.equal(-1);
+  expect(child.engine).to.equal('builtin');
+});

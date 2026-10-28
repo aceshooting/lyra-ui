@@ -2,6 +2,7 @@ import type { ReactiveControllerHost } from 'lit';
 import type { LyraGraphSource } from '../../../data-sources.js';
 import { GraphSceneController, type SceneDomain } from '../../../internal/graph-scene-controller.js';
 import type { LyraGraphEdge, LyraGraphNode } from './graph-model.js';
+import { normalizeGraphCurvature } from './graph-curvature.js';
 
 export type GraphSourceEdge = LyraGraphEdge & { readonly id: string };
 export type GraphSceneSource = LyraGraphSource<LyraGraphNode, GraphSourceEdge>;
@@ -23,6 +24,7 @@ const graphSceneDomain: SceneDomain<LyraGraphNode, GraphSourceEdge> = {
       const source = reader.text(reader.field(value, 'source'), true);
       const target = reader.text(reader.field(value, 'target'), true);
       const width = reader.field(value, 'width');
+      const curvature = reader.field(value, 'curvature');
       const directed = reader.flag(value, 'directed');
       const rawDash = reader.field(value, 'dash');
       let dash: readonly number[] | undefined;
@@ -36,6 +38,7 @@ const graphSceneDomain: SceneDomain<LyraGraphNode, GraphSourceEdge> = {
       }
       return Object.freeze({ id, source, target, ...reader.texts(value, ['label', 'accessibleLabel', 'description', 'color']),
         ...(width === undefined ? {} : { width: Math.max(0, reader.number(width, 1_000_000)) }),
+        ...(curvature === undefined ? {} : { curvature: normalizeGraphCurvature(reader.number(curvature)) }),
         ...(directed === undefined ? {} : { directed }), ...(dash === undefined ? {} : { dash }) });
     },
   }),

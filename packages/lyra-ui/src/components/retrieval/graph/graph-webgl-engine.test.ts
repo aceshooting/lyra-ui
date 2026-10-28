@@ -22,3 +22,17 @@ describe('graph WebGL component translation', () => {
     expect(graphWebglCamera({ distance: Infinity }, fallback).distance).to.equal(500);
   });
 });
+
+
+it('owns normalized record curvature only when an effective curve exists', () => {
+  const edges = [-4, 0.25, 4, NaN, Infinity].map((curvature, i) => ({ id: `e${i}`, source: 'a', target: 'b', curvature }));
+  const value = graphWebglData(world, edges, paint, () => [1, 0, 0, 1]);
+  const curves = (value.spatialAppearance as unknown as { edgeCurvatures?: Float32Array }).edgeCurvatures;
+  expect(curves instanceof Float32Array).to.equal(true); expect(Array.from(curves ?? [])).to.deep.equal([-1, 0.25, 1, 0, 0]);
+  edges[0]!.curvature = 0; expect(curves?.[0]).to.equal(-1);
+  for (const curvature of [undefined, 0, NaN, Infinity, '0.5' as unknown as number]) {
+    const straightEdges = [{ source: 'a', target: 'b', curvature }];
+    const straight = graphWebglData(world, straightEdges, paint, () => [1, 0, 0, 1]);
+    expect((straight.spatialAppearance as unknown as { edgeCurvatures?: Float32Array }).edgeCurvatures).to.equal(undefined);
+  }
+});
