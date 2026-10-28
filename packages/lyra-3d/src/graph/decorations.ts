@@ -1,3 +1,4 @@
+import { disposeAll } from '../core/dispose.js';
 import { CanvasTexture, Color, ConeGeometry, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, Quaternion, ShaderMaterial, SphereGeometry, SRGBColorSpace, Vector3 } from 'three';
 import type { Lyra3dState, Lyra3dWorldPoint } from '../core/contract.js';
 import { encodePickId, createPickMaterial } from '../core/picking.js';
@@ -124,6 +125,7 @@ export function createGraphDecorations(viewport: Lyra3dViewport, data: Decoratio
   const matrix = new Matrix4(); const point = new Vector3(); const scale = new Vector3();
   const direction = new Vector3(); const rotation = new Quaternion(); const up = new Vector3(0, 1, 0);
   let phase = 0; let previousTime: number | undefined;
+  let disposed = false;
   let lastLabels = '';
   let lastPainted = -1;
   let lastArrowTransforms = '';
@@ -189,6 +191,7 @@ export function createGraphDecorations(viewport: Lyra3dViewport, data: Decoratio
   };
   return {
     update(frame: GraphDecorationFrame) {
+      if (disposed) return false;
       const style = viewport.style;
       const repaint = lastPaintState !== frame.state || lastPaintStyle !== style;
       const paintColor = repaint ? createPaintColors(style) : undefined;
@@ -253,11 +256,22 @@ export function createGraphDecorations(viewport: Lyra3dViewport, data: Decoratio
       drawLabels(frame);
       return enabled && particleCount > 0 && (data.particleSpeed ?? 0.25) > 0;
     },
+    allocationBuffers(): readonly ArrayBufferLike[] {
+      const arrays: ArrayBufferView[] = [edgeIndices];
+      for (const mesh of [arrows, arrowPick, particles, ...(labelMesh ? [labelMesh] : [])]) {
+        for (const attribute of Object.values(mesh.geometry.attributes)) arrays.push(attribute.array);
+        if (mesh.geometry.index) arrays.push(mesh.geometry.index.array);
+        if (mesh instanceof InstancedMesh) { arrays.push(mesh.instanceMatrix.array); if (mesh.instanceColor) arrays.push(mesh.instanceColor.array); }
+      }
+      return [...new Set(arrays.map(value => value.buffer))];
+    },
     dispose() {
-      for (const mesh of [arrows, arrowPick, particles]) { mesh.removeFromParent(); mesh.material.dispose(); mesh.dispose(); }
-      arrows.geometry.dispose(); particles.geometry.dispose();
-      labelMesh?.removeFromParent(); labelMesh?.geometry.dispose(); labelMesh?.material.dispose(); labelTexture?.dispose();
-      if (canvas) { canvas.width = 1; canvas.height = 1; }
+      if (disposed) return; disposed = true;
+      disposeAll([
+        ...[arrows, arrowPick, particles].flatMap(mesh => [() => mesh.removeFromParent(), () => mesh.material.dispose(), () => mesh.dispose()]),
+        () => arrows.geometry.dispose(), () => particles.geometry.dispose(), () => labelMesh?.removeFromParent(), () => labelMesh?.geometry.dispose(),
+        () => labelMesh?.material.dispose(), () => labelTexture?.dispose(), () => { if (canvas) { canvas.width = 1; canvas.height = 1; } },
+      ]);
     },
   };
 }

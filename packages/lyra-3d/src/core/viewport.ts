@@ -23,6 +23,7 @@ import {
 import { Lyra3dIdPicker } from './picking.js';
 import { guardContextEpoch } from './context-epoch.js';
 import { resolveLyra3dStyle, type Lyra3dRgba, type ResolvedLyra3dStyle } from './style.js';
+import type { Lyra3dGlow } from './glow.js';
 
 /** Thrown by {@link createLyra3dViewport} when the browser cannot create a WebGL2 context. */
 export class Lyra3dUnsupportedError extends Error {
@@ -91,6 +92,11 @@ export interface Lyra3dViewportOptions {
   readonly onRestore?: () => void;
 }
 
+/** Injectable module loading for deterministic viewport lifecycle checks. */
+export interface Lyra3dViewportServices {
+  readonly loadGlow?: () => Promise<Pick<typeof import('./glow.js'), 'createLyra3dGlow'>>;
+}
+
 export interface Lyra3dViewport {
   readonly canvas: HTMLCanvasElement;
   readonly renderer: WebGLRenderer;
@@ -117,6 +123,8 @@ export interface Lyra3dViewport {
   /** Moves to `camera`, animated unless the style asks for reduced motion; the host is notified. */
   transitionTo(camera: Lyra3dOrbitCamera): void;
   setStyle(style: Lyra3dStyle): ResolvedLyra3dStyle;
+  /** Enables a lazily loaded static halo. False releases its render targets. */
+  setGlow(enabled: boolean): Promise<void>;
   resize(width: number, height: number): void;
   /** Schedules one render on the next animation frame. */
   invalidate(): void;
@@ -149,7 +157,7 @@ function mirroredGroup(): Group {
  * optional wheel zoom, hover and activation through `options.pick`); keyboard input stays with
  * the component, which drives the camera through {@link Lyra3dViewport.transitionTo}.
  */
-export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, options: Lyra3dViewportOptions = {}): Lyra3dViewport {
+export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, options: Lyra3dViewportOptions = {}, services: Lyra3dViewportServices = {}): Lyra3dViewport {
   const caveat = probeSoftwareRendering();
   const canvas = document.createElement('canvas');
   canvas.style.display = 'block';
@@ -200,10 +208,17 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
     let style = resolveLyra3dStyle(undefined);
     let width = 1;
     let height = 1;
+    let allocatedWidth = 0, allocatedHeight = 0;
+    const glowAllocated = () => allocatedWidth > 0 && allocatedHeight > 0;
     let orbit: Lyra3dOrbitCamera = DEFAULT_ORBIT_CAMERA;
     let lost = false;
     let failed = false;
     let disposed = false;
+    let restoring = false;
+    let glowRequested = false;
+    let glowPending = false;
+    let glowGeneration = 0;
+    let glow: Lyra3dGlow | undefined;
     let frame = 0;
     let cameraChanged = false;
     let transition: { from: Lyra3dOrbitCamera; to: Lyra3dOrbitCamera; start: number } | undefined;
@@ -228,7 +243,10 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
         try { canvas.releasePointerCapture(captured); } catch { /* Capture may already be released. */ }
       }
     };
-    stopInitialization = () => { disposed = true; stopInteraction(); frameCallbacks.clear(); };
+    const releaseGlow = () => { const previous = glow; glow = undefined; previous?.dispose(); };
+    stopInitialization = () => {
+      disposed = true; glowGeneration++; glowPending = false; stopInteraction(); frameCallbacks.clear(); releaseGlow();
+    };
     // Host callbacks stay outside the renderer catch so application errors remain observable.
     const renderOperation = (operation: () => void): boolean => {
       let threw = false;
@@ -236,13 +254,49 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
       if (threw) {
         if (!disposed && !failed) {
           failed = true;
-          lost = true;
+          lost = true; restoring = false; glowGeneration++; glowPending = false;
           stopInteraction();
+          try { releaseGlow(); } catch { /* Preserve the rendering failure and still notify the host. */ }
           if (!disposed) host.lost('error', 'Rendering failed.');
         }
         return false;
       }
       return !disposed && !lost;
+    };
+    const abortGlow = () => { const error = new Error('Glow setup was superseded'); error.name = 'AbortError'; return error; };
+    const finishRestore = (generation: number) => {
+      if (!restoring || disposed || lost || glowPending || generation !== glowGeneration) return;
+      restoring = false;
+      if (pointer && !gesture) hoverPoint = pointer;
+      invalidate(); host.restored?.();
+    };
+    const syncGlow = async (): Promise<void> => {
+      const generation = ++glowGeneration;
+      const current = () => !disposed && !lost && generation === glowGeneration;
+      let created: Lyra3dGlow | undefined;
+      try {
+        if (!glowRequested || style.forcedColors || !glowAllocated() || disposed || lost) {
+          glowPending = false; releaseGlow(); invalidate(); return;
+        }
+        if (glow) { glow.resize(width, height, style.devicePixelRatio); applyCamera(); glow.prepare(scene, camera); invalidate(); return; }
+        glowPending = true;
+        const module = await (services.loadGlow ?? (() => import('./glow.js')))();
+        if (!current()) throw abortGlow();
+        if (!module || typeof module.createLyra3dGlow !== 'function') throw new Error('Glow module is unavailable');
+        created = module.createLyra3dGlow(renderer);
+        if (!current()) throw abortGlow();
+        created.resize(width, height, style.devicePixelRatio);
+        if (!current()) throw abortGlow();
+        applyCamera(); created.prepare(scene, camera);
+        if (!current()) throw abortGlow();
+        glow = created; created = undefined; glowPending = false; invalidate();
+      } catch (error) {
+        try { created?.dispose(); } catch { /* Preserve the setup error after independent resource cleanup. */ }
+        if (generation === glowGeneration) glowPending = false;
+        if (!current()) throw abortGlow();
+        renderOperation(() => { throw error; });
+        throw error;
+      }
     };
     const applyCamera = () => {
       const pose = orbitCameraPose(orbit);
@@ -261,7 +315,7 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
       renderer.setClearColor(setColor(clear, style.background), style.background.a);
     };
     const render = (time: number) => {
-      if (disposed || lost) return;
+      if (disposed || lost || restoring || glowPending) return;
       if (transition) {
         const t = Math.min(1, (time - transition.start) / TRANSITION_MS);
         const eased = 1 - Math.pow(1 - t, 3);
@@ -274,10 +328,10 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
       }
       for (const callback of frameCallbacks) {
         callback(time);
-        if (disposed || lost) return;
+        if (disposed || lost || restoring || glowPending) return;
       }
       applyCamera();
-      if (!renderOperation(() => { renderer.render(scene, camera); })) return;
+      if (!renderOperation(() => { if (glow) glow.render(scene, camera); else renderer.render(scene, camera); })) return;
       if (cameraChanged) {
         cameraChanged = false;
         host.camera(orbit);
@@ -411,8 +465,12 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
     const contextLost = () => {
       if (disposed || lost) return;
       lost = true;
+      restoring = false; glowGeneration++; glowPending = false;
       stopInteraction(true);
+      let cleanupError: unknown, cleanupFailed = false;
+      try { releaseGlow(); } catch (error) { cleanupFailed = true; cleanupError = error; }
       if (!disposed) host.lost('context-lost');
+      if (cleanupFailed) throw cleanupError;
     };
     const contextRestored = () => {
       // The renderer restores its programs and buffers itself, but not renderer-level state such as
@@ -420,8 +478,17 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
       if (disposed || failed || !lost) return;
       lost = false;
       if (!renderOperation(applyRendererState)) return;
-      options.onRestore?.();
+      restoring = glowRequested && !style.forcedColors && glowAllocated();
+      try { options.onRestore?.(); }
+      catch (error) { renderOperation(() => { throw error; }); throw error; }
       if (disposed || lost) return;
+      if (glowRequested && !style.forcedColors && glowAllocated()) {
+        restoring = true;
+        const pending = syncGlow(), active = glowGeneration;
+        void pending.then(() => finishRestore(active), () => { /* Current failure reports lost; stale work has no owner. */ });
+        return;
+      }
+      restoring = false;
       // The item under a resting pointer is checked again against the restored pick scene.
       if (pointer && !gesture) hoverPoint = pointer;
       invalidate();
@@ -473,7 +540,7 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
         return style;
       },
       get lost() {
-        return lost;
+        return lost || restoring;
       },
       get disposed() {
         return disposed;
@@ -499,6 +566,7 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
         invalidate();
       },
       setStyle(next) {
+        const wasForced = style.forcedColors;
         style = resolveLyra3dStyle(next);
         if (style.reducedMotion && transition) {
           orbit = transition.to;
@@ -506,13 +574,30 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
           cameraChanged = true;
         }
         if (!disposed && !lost) renderOperation(applyRendererState);
+        if (wasForced !== style.forcedColors && glowRequested) {
+          const pending = syncGlow(), active = glowGeneration;
+          void pending.then(() => finishRestore(active), () => {});
+        }
+        else if (glow && !disposed && !lost) renderOperation(() => glow?.resize(width, height, style.devicePixelRatio));
         invalidate();
         return style;
       },
+      async setGlow(enabled) {
+        if (typeof enabled !== 'boolean') throw new TypeError('Glow must be a boolean');
+        if (disposed) return;
+        glowRequested = enabled;
+        const pending = syncGlow(), active = glowGeneration;
+        await pending; finishRestore(active);
+      },
       resize(nextWidth, nextHeight) {
-        width = Number.isFinite(nextWidth) ? Math.max(1, Math.round(nextWidth)) : width;
-        height = Number.isFinite(nextHeight) ? Math.max(1, Math.round(nextHeight)) : height;
-        if (!disposed && !lost) renderOperation(applyRendererState);
+        const wasAllocated = glowAllocated();
+        if (Number.isFinite(nextWidth)) { allocatedWidth = Math.max(0, Math.round(nextWidth)); width = Math.max(1, allocatedWidth); }
+        if (Number.isFinite(nextHeight)) { allocatedHeight = Math.max(0, Math.round(nextHeight)); height = Math.max(1, allocatedHeight); }
+        if (!disposed && !lost) renderOperation(() => { applyRendererState(); if (glowAllocated()) glow?.resize(width, height, style.devicePixelRatio); });
+        if (glowRequested && wasAllocated !== glowAllocated()) {
+          const pending = syncGlow(), active = glowGeneration;
+          void pending.then(() => finishRestore(active), () => {});
+        }
         invalidate();
       },
       invalidate,
@@ -521,7 +606,7 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
         return () => frameCallbacks.delete(callback);
       },
       pickAt(x, y) {
-        if (disposed || lost) return null;
+        if (disposed || lost || restoring) return null;
         applyCamera();
         let item: number | null = null;
         return renderOperation(() => { item = picker.read(pickScene, camera, x, y, width, height); }) ? item : null;
@@ -537,11 +622,13 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
       dispose() {
         if (disposed) return;
         disposed = true;
+        glowGeneration++; glowPending = false;
         stopInteraction();
         frameCallbacks.clear();
         for (const [target, type, listener, listenerOptions] of listeners) target.removeEventListener(type, listener, listenerOptions);
         let failure: unknown; let threw = false;
         const cleanup = (run: () => void) => { try { run(); } catch (error) { if (!threw) { threw = true; failure = error; } } };
+        cleanup(releaseGlow);
         cleanup(() => picker.dispose());
         cleanup(() => renderer.dispose());
         // Frees the GPU context now instead of at garbage collection; pages hold only a few at once.

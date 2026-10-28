@@ -1,3 +1,5 @@
+import type { LyraGraphNodeRenderer, LyraGraphNodeRenderErrorDetail } from './graph-node-renderer.js';
+export type { LyraGraphNodeRenderContext, LyraGraphNodeMesh, LyraGraphNodeRenderer, LyraGraphNodeRenderErrorDetail } from './graph-node-renderer.js';
 import { ENGINE_3D_PREFERENCE, ENGINE_3D_REASON_MESSAGE, ENGINE_3D_SHOWING_MESSAGE, type Engine3dPreference, type Engine3dFallbackDetail } from '../../../internal/engine-3d.js';
 import type { LyraGraphColumns } from '../../../internal/typed-columns.js';
 import { admitGraphEngineColumns, type GraphEngineColumns } from './graph-engine-columns.js';
@@ -104,7 +106,7 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import '../../overlays/skeleton/skeleton.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_graphCommunity, LYRA_DEFAULT_graphDataList, LYRA_DEFAULT_graphDataListLimit, LYRA_DEFAULT_graphDiagram, LYRA_DEFAULT_graphEdgeLimit, LYRA_DEFAULT_graphExpandableItem, LYRA_DEFAULT_graphFit, LYRA_DEFAULT_graphItemAnnouncement, LYRA_DEFAULT_graphLink, LYRA_DEFAULT_graphMissingLibrary, LYRA_DEFAULT_graphNode, LYRA_DEFAULT_graphNodeFocused, LYRA_DEFAULT_graphNodeLimit, LYRA_DEFAULT_graphNodesHidden, LYRA_DEFAULT_graphOrbitDown, LYRA_DEFAULT_graphOrbitLeft, LYRA_DEFAULT_graphOrbitRight, LYRA_DEFAULT_graphOrbitUp, LYRA_DEFAULT_graphSelectionCount, LYRA_DEFAULT_graphSpatialControls, LYRA_DEFAULT_graphSpatialInstructions, LYRA_DEFAULT_graphSpatialPage, LYRA_DEFAULT_graphSpatialUnavailable, LYRA_DEFAULT_graphTypedNode, LYRA_DEFAULT_graphView3d, LYRA_DEFAULT_graphViewList } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_graphCustomNodesError, LYRA_DEFAULT_graphCustomNodesUnavailable, LYRA_DEFAULT_graphGlowUnavailable, LYRA_DEFAULT_graphCommunity, LYRA_DEFAULT_graphDataList, LYRA_DEFAULT_graphDataListLimit, LYRA_DEFAULT_graphDiagram, LYRA_DEFAULT_graphEdgeLimit, LYRA_DEFAULT_graphExpandableItem, LYRA_DEFAULT_graphFit, LYRA_DEFAULT_graphItemAnnouncement, LYRA_DEFAULT_graphLink, LYRA_DEFAULT_graphMissingLibrary, LYRA_DEFAULT_graphNode, LYRA_DEFAULT_graphNodeFocused, LYRA_DEFAULT_graphNodeLimit, LYRA_DEFAULT_graphNodesHidden, LYRA_DEFAULT_graphOrbitDown, LYRA_DEFAULT_graphOrbitLeft, LYRA_DEFAULT_graphOrbitRight, LYRA_DEFAULT_graphOrbitUp, LYRA_DEFAULT_graphSelectionCount, LYRA_DEFAULT_graphSpatialControls, LYRA_DEFAULT_graphSpatialInstructions, LYRA_DEFAULT_graphSpatialPage, LYRA_DEFAULT_graphSpatialUnavailable, LYRA_DEFAULT_graphTypedNode, LYRA_DEFAULT_graphView3d, LYRA_DEFAULT_graphViewList } from '../../../internal/default-strings/retrieval.generated.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_graphSourceAllRecords, LYRA_DEFAULT_graphSourceBothDirections, LYRA_DEFAULT_graphSourceCoverageAggregate, LYRA_DEFAULT_graphSourceCoverageComplete, LYRA_DEFAULT_graphSourceCoverageNeighborhood, LYRA_DEFAULT_graphSourceDirection, LYRA_DEFAULT_graphSourceEdges, LYRA_DEFAULT_graphSourceIncidentEdges, LYRA_DEFAULT_graphSourceNodes, LYRA_DEFAULT_graphSourceRecordMissing, LYRA_DEFAULT_graphSourceRecords, LYRA_DEFAULT_graphSourceRecordsError, LYRA_DEFAULT_graphSourceSceneError, LYRA_DEFAULT_graphSourceTotals, LYRA_DEFAULT_largeDataInvalid, LYRA_DEFAULT_largeDataLimit, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_neighborDirectionIn, LYRA_DEFAULT_neighborDirectionOut, LYRA_DEFAULT_next, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_previous, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -323,6 +325,7 @@ function identitySet(values: readonly string[]): ReadonlySet<string> {
 export interface LyraGraphEventMap {
   'lr-node-activate': CustomEvent<{ nodeId: string; x: number; y: number; z?: number }>;
   'lr-engine-fallback': CustomEvent<Engine3dFallbackDetail>;
+  'lr-node-render-error': CustomEvent<LyraGraphNodeRenderErrorDetail>;
   'lr-camera-change': CustomEvent<{ camera: LyraGraphCamera }>;
   'lr-view-change': CustomEvent<{ view: LyraGraphView }>;
   'lr-edge-activate': CustomEvent<{ sourceNodeId: string; targetNodeId: string; edgeId?: string }>;
@@ -412,6 +415,8 @@ export interface LyraGraphEventMap {
  * @csspart source-row-active - The record holding the navigator's roving tab stop.
  * @csspart source-status - Source loading, unavailable-record, and error text.
  * @csspart source-coverage - Full-source totals and current diagram coverage.
+ * @csspart custom-node-notice - Localized custom mesh availability or refusal notice.
+ * @csspart glow-notice - Localized optional halo availability notice.
  * @customElement lr-graph
  * Empty/blank node, link, node-type, and community identities are omitted, and later duplicate
  * effective identities are first-wins before layout, keyed DOM, selection, focus, or events.
@@ -420,6 +425,7 @@ export interface LyraGraphEventMap {
  * @event lr-node-activate - Pointer or keyboard node activation with `{ nodeId, x, y }` detail;
  *   `x` and `y` are the node's current coordinates in the graph's local drawing space.
  *   Spatial/list activation returns world x/y and adds `z`; these are never screen pixels.
+ * @event lr-node-render-error - A custom mesh batch was refused, with a sanitized reason and optional nodeId.
  * @event lr-engine-fallback - Renderer fell back, with `{ from, to, reason }`.
  * @event lr-camera-change - Spatial camera changed by a gesture, fit or focus, with `{ camera }`.
  *   Coalesced to one event per animation frame. Property assignments are silent.
@@ -535,6 +541,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     engine3dSoftwareRendering: LYRA_DEFAULT_engine3dSoftwareRendering,
     engine3dUnavailable: LYRA_DEFAULT_engine3dUnavailable,
     engine3dUnsupported: LYRA_DEFAULT_engine3dUnsupported,
+    graphCustomNodesError: LYRA_DEFAULT_graphCustomNodesError,
+    graphCustomNodesUnavailable: LYRA_DEFAULT_graphCustomNodesUnavailable,
+    graphGlowUnavailable: LYRA_DEFAULT_graphGlowUnavailable,
     graphCommunity: LYRA_DEFAULT_graphCommunity,
     graphDataList: LYRA_DEFAULT_graphDataList,
     graphDataListLimit: LYRA_DEFAULT_graphDataListLimit,
@@ -998,6 +1007,11 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     }
     return this.normalizedGraphModel!;
   }
+  /** Synchronous trusted callback for bounded 3D WebGL node meshes. Assign a new function to
+   * refresh closure state. Null/undefined restores ordinary nodes; never used by source, 2D or list views. */
+  @property({ attribute: false }) nodeRenderer: LyraGraphNodeRenderer | null | undefined = undefined;
+  /** Opt-in static WebGL glow. Adds offscreen rendering cost; labels and picking are unchanged. */
+  @property({ type: Boolean, reflect: true }) glow = false;
   private _engine: Engine3dPreference = 'builtin';
   /** Optional 3D renderer preference. The default never downloads the companion. Failures use
    * the builtin spatial renderer, then the paginated list. Has no effect in the 2D view. */
@@ -1470,6 +1484,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.announcements.announceAssertive(`${this.localize(ENGINE_3D_REASON_MESSAGE[detail.reason])} ${this.localize(ENGINE_3D_SHOWING_MESSAGE[detail.to])}`);
     },
     engineMessage: (key) => this.localize(key),
+    nodeRenderError: (detail) => { this.emit('lr-node-render-error', detail); this.announcements.announceAssertive(this.localize('graphCustomNodesError')); },
+    effectNotice: (key) => this.announcements.announceAssertive(this.localize(key)),
     categoryColors: () => this.withCanvasColorResolver((resolve) => Array.from({ length: 8 }, (_, index) => resolve(categoricalPaletteColor(index)))),
     locale: () => this.effectiveLocale,
     direction: () => this.effectiveDirection,
@@ -1525,6 +1541,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   private spatialMessages(): Readonly<Record<string, string>> {
     return {
+      customError: this.localize('graphCustomNodesError'), customUnavailable: this.localize('graphCustomNodesUnavailable'), glowUnavailable: this.localize('graphGlowUnavailable'),
       controls: this.localize('graphSpatialControls'),
       view3d: this.localize('graphView3d'), viewList: this.localize('graphViewList'),
       fit: this.localize('graphFit'), left: this.localize('graphOrbitLeft'), right: this.localize('graphOrbitRight'),
@@ -3547,6 +3564,12 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // caches below).
     if (this.paintUpdate) this.navigableLinksCache = undefined;
     this.syncGraphHostRole();
+    if (!this.isMounting && this.view === '2d' && (changed.has('nodeRenderer') || changed.has('view')) && this.nodeRenderer != null) {
+      this.scheduleAfterUpdate(() => { if (this.isConnected && this.view === '2d' && this.nodeRenderer != null) this.announcements.announceAssertive(this.localize('graphCustomNodesUnavailable')); }, 'graph-custom-nodes-unavailable');
+    }
+    if (!this.isMounting && this.view === '2d' && (changed.has('glow') || changed.has('view')) && this.glow === true) {
+      this.scheduleAfterUpdate(() => { if (this.isConnected && this.view === '2d' && this.glow === true) this.announcements.announceAssertive(this.localize('graphGlowUnavailable')); }, 'graph-glow-unavailable');
+    }
     if (this.view !== '2d') {
       this.spatial?.prepare();
       if (this.focusNodeId == null) this.lastAppliedFocusNodeId = null;
@@ -4967,7 +4990,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (!this.sourceMode && this.graphColumns !== undefined && (this.engineColumnsInvalid || this.view === '2d')) return html`<div part="base"><p part="error">${this.localize('largeDataInvalid')}</p></div>`;
     const nodeLimit = this.sourceMode || this.graphColumns !== undefined ? undefined : publicCollectionTruncation(this, 'nodes');
     const edgeLimit = this.sourceMode || this.graphColumns !== undefined ? undefined : publicCollectionTruncation(this, 'edges');
-    const limitNotices = html`${nodeLimit ? html`<p part="limit" role="note">${this.localize('graphNodeLimit', undefined, {
+    const limitNotices = html`${this.view === '2d' && this.nodeRenderer != null ? html`<p part="custom-node-notice">${this.localize('graphCustomNodesUnavailable')}</p>` : nothing}${this.view === '2d' && this.glow === true ? html`<p part="glow-notice">${this.localize('graphGlowUnavailable')}</p>` : nothing}${nodeLimit ? html`<p part="limit" role="note">${this.localize('graphNodeLimit', undefined, {
       shown: getNumberFormat(this.effectiveLocale).format(nodeLimit.retained),
       total: getNumberFormat(this.effectiveLocale).format(nodeLimit.source),
     })}</p>` : nothing}${edgeLimit ? html`<p part="limit" role="note">${this.localize('graphEdgeLimit', undefined, {

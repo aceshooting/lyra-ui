@@ -49,6 +49,8 @@ try {
   }
   await copyFile(resolve(root, '../lyra-ui/src/components/media/media-card/fixtures/sample.mp4'), resolve(scratch, 'panorama-video.mp4'));
   await copyFile(resolve(root, 'test/graph-spatial-curves.browser.mjs'), resolve(scratch, 'graph-spatial-curves.browser.mjs'));
+  await copyFile(resolve(root, 'test/graph-spatial-node-meshes.browser.mjs'), resolve(scratch, 'graph-spatial-node-meshes.browser.mjs'));
+  await copyFile(resolve(root, 'test/graph-glow.browser.mjs'), resolve(scratch, 'graph-glow.browser.mjs'));
   await writeFile(resolve(scratch, 'index.html'),
     '<!doctype html><link rel="icon" href="data:,"><body style="margin:0"><script type="module" src="./fixture.mjs"></script></body>');
   const output = resolve(scratch, 'out');

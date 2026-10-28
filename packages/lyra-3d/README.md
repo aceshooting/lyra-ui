@@ -198,6 +198,60 @@ The `lr-graph` Directed acyclic layout story demonstrates the same helper with i
 `LyraGraphNode.position` records, curved parallel links and the component's existing Fit and List
 controls. Component position limits still apply independently of the helper's world bounds.
 
+## Custom graph nodes and glow
+
+Spatial `GraphEngineData.spatialAppearance.nodeMeshes` accepts one `GraphNodeMesh | null`
+per node. Import `GraphNodeMesh` and `GraphNodeMeshData` types from
+`@aceshooting/lyra-3d/graph`. Each mesh supplies non-indexed Float32Array `positions` (9 floats
+per triangle), Float32Array `normals` (one outward unit XYZ normal per triangle) and an optional
+four-number sRGB RGBA `color`. Color omission inherits resolved node paint. A null row keeps its
+standard glyph. For an admitted spatial graph, `engine.setNodeMeshes(rows)` replaces only these
+bodies; `engine.setNodeMeshes(undefined)` clears them. It preserves topology, positions, layout,
+pins, selection and camera. It is also preserved when `setAppearance` omits `spatialAppearance`;
+a supplied whole appearance without `nodeMeshes` clears it.
+
+Mesh-local vertices use the graph's XYZ/y-down world axes, lie inside the unit sphere and have
+consistent outward winding. World-sized bodies multiply coordinates by half the existing node
+diameter. CSS-sized bodies convert that radius at the node center using the full view; perspective
+across the face still affects its silhouette. A CSS-sized center at or behind the near plane is
+hidden, while world-sized faces clip by their actual vertices. Flat directional face lighting
+makes geometry depth visible; forced colors uses accessible flat paint. Labels and focus rings
+keep their existing semantic anchors.
+
+Admission owns copies, rejects accessor-backed descriptors, wrong/shared/resizable buffers,
+nonfinite coordinates, zero-area triangles and invalid normals/color. Joint limits are 64 faces
+per node, 16,384 custom rows, 65,536 faces per scene and 4 MiB reserved mesh payload per owner.
+Custom byte-addressable storage accounting is capped at 32 MiB CPU and 16 MiB GPU attributes,
+including both host/engine mesh copies, mixed sorting, shared pick backing and staging. An atomic
+replacement can retain two generations. These bounds exclude JS object metadata, driver storage
+and the existing ordinary scene; ordinary current/candidate buffers are accounted separately.
+They are allocation limits, rather than a total-process memory or frame-rate guarantee.
+
+Positive-alpha custom faces pick their exact triangle silhouette and return the original node
+row, including when visual dimming reaches zero. Authored alpha-zero bodies have no body pick.
+Custom triangles share opaque depth testing and translucent primitive ordering with glyphs and
+strokes. Translucent sorting retains the existing approximate ordering during movement and for
+intersecting faces. Camera movement never re-runs the component callback or replaces immutable
+local geometry. Direct engine users supply data; the component owns its application callback,
+keyboard/list alternatives, localized refusal and `lr-node-render-error` event.
+
+`await engine.setGlow(true)` enables a lazily imported static soft halo; false cancels setup and
+releases attachments. The default is false, and setting it never changes id picking. Glow captures
+the visual scene, blurs premultiplied linear RGBA in two passes, then composites a halo behind the
+normal full-resolution base. It preserves transparent backgrounds and leaves the component's
+separate label canvas unchanged. The fixed radius is 8 CSS pixels with strength 0.6. Three RGBA8
+attachments are half-resolution or smaller, at most 2,048 per side and 1,048,576 pixels each;
+combined color/depth storage is estimated at 16 MiB, or 32 MiB during bounded resize replacement,
+excluding driver overhead. Software contexts retain the same resource limits. Forced colors
+suppresses the effect, and reduced motion keeps it static. Real-GPU qualification is required
+before making workload-specific performance claims.
+
+Hosts with older companions can check `setNodeMeshes`/`setGlow` capability only when requesting
+those optional features. The core viewport also exposes `setGlow(boolean)`; ordinary engines
+keep it disabled. Current effect load/allocation/render failure reports the existing host
+lost-error signal, so components use their normal fallback chain. A restored enabled effect must
+be ready before the host receives `restored`.
+
 ## Core building blocks
 
 - `createLyra3dViewport(container, host, options)` creates the renderer, a scene whose world

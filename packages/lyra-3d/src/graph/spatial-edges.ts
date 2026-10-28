@@ -1,3 +1,4 @@
+import { disposeAll } from '../core/dispose.js';
 import { DoubleSide, Color, DataTexture, FloatType, InstancedBufferAttribute, InstancedBufferGeometry, Mesh, NearestFilter, NoBlending, PerspectiveCamera, PlaneGeometry, RedFormat, ShaderMaterial, Vector4 } from 'three';
 import { markAttributeFull, markAttributeRows } from '../core/attribute-updates.js';
 import type { VisualStateRows } from '../core/visual-state.js';
@@ -207,6 +208,10 @@ export function createGraphSpatialEdges(data: GraphSpatialData) {
     paint(viewport, state, null, true);
   };
   return { mesh, pick, anchors,
+    /** Retained path lookup, atlas and validity storage beyond geometry attributes. */
+    allocationBuffers(): readonly ArrayBufferLike[] {
+      return [...new Set([anchors, patternRows, offsets, valid, partialRows, values].map(value => value.buffer))];
+    },
     get translucent() { return translucent; },
     get revision() { return revision; },
     takeChanges(): { full: boolean; rows: VisualStateRows } {
@@ -223,6 +228,6 @@ export function createGraphSpatialEdges(data: GraphSpatialData) {
       updatePositions(viewport, position); paint(viewport, state, null, true);
       revision = previousRevision + 1;
     },
-    dispose() { if (disposed) return; disposed = true; mesh.removeFromParent(); pick.removeFromParent(); geometry.dispose(); material.dispose(); pickMaterial.dispose(); texture.dispose(); },
+    dispose() { if (disposed) return; disposed = true; disposeAll([() => mesh.removeFromParent(), () => pick.removeFromParent(), () => geometry.dispose(), () => material.dispose(), () => pickMaterial.dispose(), () => texture.dispose()]); },
   };
 }

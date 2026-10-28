@@ -2102,6 +2102,12 @@ export type LyraNodeLeaveEvent = LyraGraphEventMap['lr-node-leave'];
 export type LyraNodeMoveEvent = LyraFlowCanvasEventMap['lr-node-move'];
 
 /**
+ * `lr-node-render-error` — dispatched by `<lr-graph>`; detail
+ * `LyraGraphEventMap['lr-node-render-error']`.
+ */
+export type LyraNodeRenderErrorEvent = LyraGraphEventMap['lr-node-render-error'];
+
+/**
  * `lr-node-select` — dispatched by 2 components: `<lr-tree-item>`, `<lr-tree>`; detail union of 2,
  * e.g. `LyraTreeEventMap['lr-node-select']`.
  */
@@ -3794,6 +3800,7 @@ export interface LyraGlobalEventMap {
   'lr-node-expand': LyraNodeExpandEvent;
   'lr-node-leave': LyraNodeLeaveEvent;
   'lr-node-move': LyraNodeMoveEvent;
+  'lr-node-render-error': LyraNodeRenderErrorEvent;
   'lr-node-select': LyraNodeSelectEvent;
   'lr-node-toggle': LyraNodeToggleEvent;
   'lr-open': LyraOpenEvent;

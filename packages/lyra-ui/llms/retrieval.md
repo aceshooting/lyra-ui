@@ -29,6 +29,46 @@ back to built-in spatial rendering and then the paginated list. Localized feedba
 `lr-engine-fallback` with `{ from, to, reason }`; reasons are `'unavailable'`, `'unsupported'`,
 `'context-lost'` or `'error'`.
 
+**Custom 3D bodies:** `nodeRenderer: LyraGraphNodeRenderer | null | undefined = undefined`
+(property only) supplies a synchronous mesh callback for local `view="3d" engine="webgl"` scenes.
+`LyraGraphNodeRenderContext` contains frozen `{ id, index, node? }`; `index` is the filtered render
+row, and `node` is present for record inputs. Typed columns supply identity/index without record
+materialization. Return `null`/`undefined` for the standard body, or `LyraGraphNodeMesh` with
+non-indexed Float32Array `positions` (9 values per triangle), `normals` (one outward unit XYZ
+normal per triangle), and optional sRGB RGBA `color` in [0,1]. Vertices fit the unit sphere;
+triangles have consistent outward winding and nonzero area. Geometry uses the graph's world axes,
+scaled by the existing node radius, with flat face lighting. The optional color inherits the
+resolved node fill when omitted. The **Custom spatial nodes** story shows a tetrahedron.
+
+Geometry is copied without changing caller buffers. Limits are 64 triangles per custom node,
+16,384 custom rows and 65,536 triangles per scene, with a 4 MiB per-owner mesh payload ceiling.
+Mixed-scene storage preflight can refuse a smaller scene when combined staging/sorting costs
+exceed its bounds. The callback runs in cancellable scheduled slices; each callback itself is
+trusted synchronous application code. Promise results, accessors, shared/resizable buffers and
+invalid geometry are refused. Assign a new callback identity to refresh captured application data;
+hover, selection, theme and camera changes preserve the admitted geometry. Reset with `null` or
+`undefined`. Source-provider, builtin, 2D and list branches retain standard nodes and show a
+localized availability notice without invoking the callback. Keyboard/list identities and labels
+remain available. Custom bodies use exact triangle picks with their original node id; their
+irregular silhouette has no ordinary circular hit padding. Authored alpha zero removes body picks;
+positive-alpha bodies remain pickable when dimmed to zero. Forced colors uses accessible paint.
+
+A rejected batch keeps standard nodes and emits noncancelable `lr-node-render-error` with
+`LyraGraphNodeRenderErrorDetail { reason: 'callback' | 'invalid' | 'budget'; nodeId?: string }` once
+for that callback/model generation. Exceptions are represented by localized text. The visible
+`custom-node-notice` part reports refusal or availability. Renderer failures retain the existing
+`lr-engine-fallback` chain.
+
+**Optional halo:** `glow: boolean = false` (reflected attribute `glow`) enables static WebGL
+postprocessing. It follows the same explicit 3D/WebGL preference and adds no request or render
+target while unset. It leaves picks and the component's separate label canvas unchanged. The
+**Spatial glow** story provides an on/off control. Enabled glow adds two offscreen blur passes
+and a scene capture; it has an 8 CSS-pixel radius and 0.6 strength. Half-resolution attachments
+have at most 1,048,576 pixels each and a 16 MiB combined color/depth storage estimate, excluding
+driver overhead; resizing can temporarily retain two sets. Forced colors suppresses it; reduced
+motion keeps a static halo. Builtin/list alternatives show a localized `glow-notice`. Genuine
+current effect failures enter the existing renderer fallback chain.
+
 `graphColumns: LyraGraphColumns | undefined` (property only) replaces local arrays in 3D/list;
 `graphSource` remains authoritative. Columns support 200,000 nodes and 1,000,000 edges.
 Required `ids` supplies string node IDs; optional Float32Array columns are `x`, `y`, `z`, `size`;
@@ -378,7 +418,8 @@ the offscreen keyboard-roving items), `spatial-toolbar` (3D/list view and camera
 `spatial-control` (each toolbar or pagination button), `spatial-canvas` (the 3D drawing and camera
 interaction surface), `spatial-instructions` (camera keyboard instructions), `spatial-list` (the
 visible paginated fallback), `spatial-list-item` (each activatable node, edge or community),
-`spatial-page-count` (localized total and page status), and `spatial-pagination` (page controls).
+`spatial-page-count` (localized total and page status), `spatial-pagination` (page controls),
+`custom-node-notice` (custom body availability/refusal), and `glow-notice` (halo availability).
 Source-mode parts: `source-navigator` (global query, record list and pagination), `source-row`
 (a mounted record activation button), `source-row-active` (the navigator's roving tab stop),
 `source-status` (loading, unavailable-record or error text), and `source-coverage` (full-source
@@ -2443,7 +2484,10 @@ tokens.
 
 `engine: Engine3dPreference = 'builtin'` forwards the renderer preference to the composed graph.
 `engine="webgl"` requests its companion for the 3D view. `lr-engine-fallback` bubbles unchanged
-with `{ from, to, reason }`.
+with `{ from, to, reason }`. `nodeRenderer: LyraGraphNodeRenderer | null | undefined = undefined`
+and `glow: boolean = false` forward the same custom-body and static-halo preferences to the graph;
+`nodeRenderer` is property-only and `glow` reflects its boolean attribute. The graph
+`lr-node-render-error` event bubbles through with its sanitized reason and optional nodeId.
 
 Orchestration-level knowledge-graph surface: the `lr-graph` canvas plus entity search, type filters,
 neighborhood expansion, pinned nodes, path finding between pins, node selection, and a details

@@ -1,5 +1,13 @@
+import { admitGraphNodeMeshes, type GraphNodeMesh, type GraphNodeMeshData } from './node-mesh.js';
+
+const meshData = new WeakMap<GraphSpatialAppearance, GraphNodeMeshData>();
+/** Internal owned geometry associated with an admitted appearance. */
+export function graphSpatialNodeMeshData(appearance: GraphSpatialAppearance): GraphNodeMeshData | undefined { return meshData.get(appearance); }
+
 /** Resolved spatial graph paint. All colors are interleaved sRGB RGBA in [0,1]. */
 export interface GraphSpatialAppearance {
+  /** Optional bounded triangle bodies in original node row order. Null keeps the ordinary glyph. */
+  readonly nodeMeshes?: readonly (GraphNodeMesh | null)[];
   /** Node sizes remain diameters (CSS up to 1024, world up to 20,000,000); world mode preserves perspective scaling. */
   readonly sizeUnits?: 'css' | 'world';
   /** 0 circle, 1 square, 2 diamond. Squares and diamonds have the circle's area. */
@@ -20,7 +28,7 @@ export interface GraphSpatialAppearance {
   readonly labelLimit?: number;
 }
 /** Validates and copies all appearance columns before a live graph revision changes. */
-export function admitGraphSpatialAppearance(value: GraphSpatialAppearance, nodes: number, edges: number): GraphSpatialAppearance {
+export function admitGraphSpatialAppearance(value: GraphSpatialAppearance, nodes: number, edges: number, isCurrent?: () => boolean): GraphSpatialAppearance {
   if (value === null || typeof value !== 'object') throw new TypeError('Invalid graph spatial appearance');
   const bytes = (array: Uint8Array | undefined, count: number, max: number) => {
     if (array === undefined) return undefined;
@@ -56,7 +64,12 @@ export function admitGraphSpatialAppearance(value: GraphSpatialAppearance, nodes
       return Object.freeze([...dash]);
     });
   }
-  return { sizeUnits, dimmedOpacity, labelLimit, nodeShapes: bytes(value.nodeShapes, nodes, 2), nodeColors: floats(value.nodeColors, nodes * 4, 1), expandable: bytes(value.expandable, nodes, 1), edgeColors: floats(value.edgeColors, edges * 4, 1), edgeWidths: floats(value.edgeWidths, edges, 1000), edgeCurvatures, dangling: bytes(value.dangling, edges, 1), edgeDashes };
+  const descriptor = Object.getOwnPropertyDescriptor(value, 'nodeMeshes');
+  if (descriptor && !('value' in descriptor)) throw new TypeError('Invalid graph node meshes');
+  const meshes = admitGraphNodeMeshes(descriptor?.value, nodes, isCurrent);
+  const result: GraphSpatialAppearance = { ...(meshes ? { nodeMeshes: meshes.nodeMeshes } : {}), sizeUnits, dimmedOpacity, labelLimit, nodeShapes: bytes(value.nodeShapes, nodes, 2), nodeColors: floats(value.nodeColors, nodes * 4, 1), expandable: bytes(value.expandable, nodes, 1), edgeColors: floats(value.edgeColors, edges * 4, 1), edgeWidths: floats(value.edgeWidths, edges, 1000), edgeCurvatures, dangling: bytes(value.dangling, edges, 1), edgeDashes };
+  if (meshes) meshData.set(result, meshes);
+  return result;
 }
 
 /** Explicit spatial glyph bounds keep derived loop coordinates finite in GPU attributes. */

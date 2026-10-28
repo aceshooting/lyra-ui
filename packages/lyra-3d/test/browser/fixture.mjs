@@ -15,6 +15,8 @@ import { cleanupViewport, viewportCases, viewportPointerCases, viewportPointerCh
 import { cleanupGraph, graphCases, graphPointerCases, graphPointerCheckpoint } from './graph.mjs';
 import { cleanupGraphSpatial, graphSpatialCases } from './graph-spatial.mjs';
 import { cleanupGraphSpatialCurves, graphSpatialCurveCases } from './graph-spatial-curves.browser.mjs';
+import { cleanupGraphSpatialNodeMeshes, graphSpatialNodeMeshCases } from './graph-spatial-node-meshes.browser.mjs';
+import { cleanupGraphGlow, graphGlowCases } from './graph-glow.browser.mjs';
 import { cleanupPoints, pointsCases, pointsPointerCases, pointsPointerCheckpoint, pointsGpuCases } from './points.mjs';
 import { cleanupPanorama, panoramaCases, panoramaPointerCases, panoramaPointerCheckpoint } from './panorama.mjs';
 import { cleanupModel, modelCases } from './model.mjs';
@@ -125,7 +127,7 @@ const cleanup = () => {
   active = undefined;
   let failed = false;
   let failure;
-  for (const release of [() => old?.viewport.dispose(), cleanupViewport, cleanupGraph, cleanupGraphSpatial, cleanupGraphSpatialCurves, cleanupPoints, cleanupPanorama, cleanupModel, cleanupModelAsync]) {
+  for (const release of [() => old?.viewport.dispose(), cleanupViewport, cleanupGraph, cleanupGraphSpatial, cleanupGraphSpatialCurves, cleanupGraphSpatialNodeMeshes, cleanupGraphGlow, cleanupPoints, cleanupPanorama, cleanupModel, cleanupModelAsync]) {
     try { release(); } catch (error) { if (!failed) { failed = true; failure = error; } }
   }
   if (failed) throw failure;
@@ -396,7 +398,7 @@ const pointerCases = {
 };
 
 Object.assign(cases, Object.fromEntries(modelAsyncCases.map(name => [`model-async:${name}`, async () => ({ model: await runModelAsyncCase(name), passed: true })])));
-Object.assign(cases, viewportCases, graphCases, graphSpatialCases, graphSpatialCurveCases, pointsCases, panoramaCases, modelCases);
+Object.assign(cases, viewportCases, graphCases, graphSpatialCases, graphSpatialCurveCases, graphSpatialNodeMeshCases, graphGlowCases, pointsCases, panoramaCases, modelCases);
 Object.assign(performanceCases, pointsGpuCases);
 Object.assign(pointerCases, viewportPointerCases, graphPointerCases, pointsPointerCases, panoramaPointerCases);
 

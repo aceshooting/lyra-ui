@@ -2016,6 +2016,12 @@ export type {
 export type { LyraExportButtonEventMap } from './components/utility/export-button/export-button.class.js';
 export type { LyraFileInputEventMap } from './components/media/file-input/file-input.class.js';
 export type { LyraGraphEventMap } from './components/retrieval/graph/graph.class.js';
+export type {
+  LyraGraphNodeRenderContext,
+  LyraGraphNodeMesh,
+  LyraGraphNodeRenderer,
+  LyraGraphNodeRenderErrorDetail,
+} from './components/retrieval/graph/graph-node-renderer.js';
 export type { LyraHeatmapEventMap } from './components/data/heatmap/heatmap.class.js';
 export type { LyraInputEventMap } from './components/forms/input/input.class.js';
 export type { LyraNumberInputEventMap } from './components/forms/input/number-input.class.js';

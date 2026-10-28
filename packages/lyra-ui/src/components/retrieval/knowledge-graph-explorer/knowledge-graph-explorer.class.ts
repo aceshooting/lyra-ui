@@ -2,6 +2,7 @@ import { ENGINE_3D_PREFERENCE, type Engine3dPreference, type Engine3dFallbackDet
 import { ref } from 'lit/directives/ref.js';
 import { setGraphSourceComposition, resolveGraphSourceComposition, focusGraphSourceComposition, type GraphSourceCompositionSnapshot } from '../graph/graph-source-composition.js';
 import type { GraphSource } from '../graph/graph.class.js';
+import type { LyraGraphNodeRenderer, LyraGraphNodeRenderErrorDetail } from '../graph/graph-node-renderer.js';
 export type KnowledgeGraphExplorerSource = GraphSource;
 const EMPTY_SOURCE_NODES: readonly LyraGraphNode[] = Object.freeze([]);
 const EMPTY_SOURCE_EDGES: readonly LyraGraphEdge[] = Object.freeze([]);
@@ -137,6 +138,7 @@ export interface LyraKnowledgeGraphExplorerEventMap {
   >;
   'lr-node-activate': CustomEvent<{ nodeId: string; x: number; y: number; z?: number }>;
   'lr-engine-fallback': CustomEvent<Engine3dFallbackDetail>;
+  'lr-node-render-error': CustomEvent<LyraGraphNodeRenderErrorDetail>;
   'lr-camera-change': CustomEvent<{ camera: LyraGraphCamera }>;
   'lr-view-change': CustomEvent<{ view: LyraGraphView }>;
   'lr-edge-activate': CustomEvent<{ sourceNodeId: string; targetNodeId: string; edgeId?: string }>;
@@ -232,6 +234,7 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * @event lr-node-activate - Bubbles unchanged with `{ nodeId, x, y, z? }`; spatial activation
  *   includes world z, while 2D retains its existing local x/y coordinates.
  * @event lr-engine-fallback - Bubbles unchanged from the composed graph with `{ from, to, reason }`.
+ * @event lr-node-render-error - Bubbles unchanged from the composed graph with a sanitized custom mesh refusal.
  * @event lr-camera-change - Bubbles unchanged from the composed graph with `{ camera }`.
  *   Spatial detail popovers follow the newly projected node position.
  * @event lr-view-change - Bubbles from the graph toolbar with `{ view }`; the explorer updates
@@ -555,6 +558,11 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   @property({ converter: ENGINE_3D_PREFERENCE })
   get engine(): Engine3dPreference { return this._engine; }
   set engine(value: Engine3dPreference) { const old = this._engine; this._engine = ENGINE_3D_PREFERENCE.normalize(value); this.requestUpdate('engine', old); }
+  /** Application-owned custom node meshes forwarded to `lr-graph.nodeRenderer`. Used only by
+   * the WebGL 3D view; unset or null keeps ordinary node glyphs. */
+  @property({ attribute: false }) nodeRenderer: LyraGraphNodeRenderer | null | undefined = undefined;
+  /** Static soft halo forwarded to `lr-graph.glow`, available only in the WebGL 3D view. */
+  @property({ type: Boolean, reflect: true }) glow = false;
   /** Optional orbit-camera input forwarded to lr-graph.camera; camera changes bubble as
    * lr-camera-change. Angles use radians, distance and target use graph units. */
   @property({ attribute: false }) camera?: LyraGraphCamera;
@@ -1560,6 +1568,8 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
           renderer=${this.renderer}
           .view=${this.view}
           .engine=${this.engine}
+          .nodeRenderer=${this.nodeRenderer}
+          .glow=${this.glow}
           .camera=${this.camera}
           fit-to=${this.fitTo}
           node-labels=${this.nodeLabels ?? nothing}

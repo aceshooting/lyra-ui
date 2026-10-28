@@ -1,3 +1,7 @@
+import { disposeAll } from '../core/dispose.js';
+import type { GraphNodeMeshData } from './node-mesh.js';
+import { graphNodeMeshStorage } from './node-mesh-storage.js';
+import { createGraphSpatialMeshPick, graphSpatialMeshVertexChunk, graphSpatialMeshFragment, packGraphMeshFace } from './spatial-node-meshes.js';
 import { DoubleSide, InstancedBufferAttribute, InstancedBufferGeometry, Mesh, PlaneGeometry, ShaderMaterial, Vector2, Vector4 } from 'three';
 import { markAttributeFull, markAttributeRanges, markAttributeRows } from '../core/attribute-updates.js';
 import type { VisualStateRows } from '../core/visual-state.js';
@@ -22,27 +26,41 @@ const RESORT_COSINE = Math.cos(GRAPH_RESORT_ANGLE);
 const INDEX_BITS = 2 ** 22;
 const KEY_STEPS = 2 ** 31 - 1;
 
-const vertex = graphSpatialProjectionChunk + graphSpatialNodeVertexChunk + graphSpatialEdgeVertexChunk + `
+const vertex = graphSpatialProjectionChunk + graphSpatialNodeVertexChunk + graphSpatialEdgeVertexChunk + graphSpatialMeshVertexChunk + `
 attribute vec4 payload0; attribute vec4 payload1; attribute vec4 payload2; attribute vec4 payload3; attribute vec4 payload4;
-varying float primitiveKind;
+flat varying float primitiveKind;
 void main() {
-  primitiveKind = payload4.a < 0.0 ? 0.0 : 1.0;
+  primitiveKind = payload4.a <= -2.0 ? 2.0 : payload4.a < 0.0 ? 0.0 : 1.0;
+  meshNormal=vec3(0.0,0.0,1.0); meshPaint=vec4(0.0);
   offset=vec2(0.0); radius=0.0; shape=0.0; flags=vec2(0.0); pickDepth=0.0;
   fill=vec4(0.0); ring=vec4(0.0); marker=vec4(0.0);
   tint=vec4(0.0); pattern=vec2(0.0); arrowUv=vec3(0.0); cap=vec3(0.0); strokeRadius=0.0; depthEnds=vec2(0.0);
-  if (primitiveKind > 0.5) graphSpatialNodeVertex(payload0.xyz, payload0.w, payload1.x, payload1.yz, payload2, payload3, payload4, vec3(0.0));
+  if (primitiveKind > 1.5) graphSpatialMeshVertex(payload0,payload1,payload2,payload3,payload4);
+  else if (primitiveKind > 0.5) graphSpatialNodeVertex(payload0.xyz, payload0.w, payload1.x, payload1.yz, payload2, payload3, payload4, vec3(0.0));
   else graphSpatialEdgeVertex(payload0.xyz, payload1.xyz, vec4(payload0.w, payload1.w, payload3.xy), vec3(payload3.z, 0.0, payload3.w), payload2, vec3(0.0), payload4.x, payload4.y);
 }`;
-const fragment = graphSpatialNodeFragment + graphSpatialEdgeFragment + `
-varying float primitiveKind;
-void main(){ if(primitiveKind>0.5) paintGraphSpatialNode(); else paintGraphSpatialEdge(); }
+const fragment = graphSpatialNodeFragment + graphSpatialEdgeFragment + graphSpatialMeshFragment + `
+flat varying float primitiveKind;
+void main(){ if(primitiveKind>1.5) paintGraphSpatialMesh(); else if(primitiveKind>0.5) paintGraphSpatialNode(); else paintGraphSpatialEdge(); }
 `;
+
+/** Conservative preflight before any custom composite backing or GPU objects exist. */
+export function preflightGraphSpatialMeshes(nodeCount: number, edgePrimitiveCount: number, custom: GraphNodeMeshData) {
+  const ordinaryPrimitiveCount = nodeCount + edgePrimitiveCount;
+  return graphNodeMeshStorage({ nodeCount, customNodeCount: custom.customNodeCount, triangleCount: custom.triangleCount,
+    ordinaryPrimitiveCount, sortKeyBytesBefore: 0, sortKeyBytesAfter: (ordinaryPrimitiveCount + custom.triangleCount) * 8,
+    scratchBytes: custom.triangleCount * 12 });
+}
 
 /** One visual draw across glyphs and strokes; pick meshes retain row identity. Payloads are
  * rebuilt only when the batches' attributes change, and re-ordered only for translucent paint. */
-export function createGraphSpatialComposite(nodes: ReturnType<typeof createGraphSpatialNodes>, edges: ReturnType<typeof createGraphSpatialEdges>) {
+export function createGraphSpatialComposite(nodes: ReturnType<typeof createGraphSpatialNodes>, edges: ReturnType<typeof createGraphSpatialEdges>, custom?: GraphNodeMeshData) {
   const nodeCount = nodes.mesh.geometry.instanceCount, edgeCount = edges.mesh.geometry.instanceCount;
-  const count = nodeCount + edgeCount;
+  const ordinaryCount = nodeCount + edgeCount, customCount = custom?.triangleCount ?? 0;
+  const count = ordinaryCount + customCount;
+  if (custom) preflightGraphSpatialMeshes(nodeCount, edgeCount, custom);
+  const ranges = custom ? new Uint32Array(nodeCount + 1) : undefined;
+  if (ranges && custom) for (let row = 0; row < nodeCount; row++) ranges[row + 1] = ranges[row]! + (custom.nodeMeshes[row]?.positions.length ?? 0) / 9;
   const plane = new PlaneGeometry(2, 2), geometry = new InstancedBufferGeometry();
   geometry.index = plane.index; geometry.attributes = { ...plane.attributes }; plane.dispose(); geometry.instanceCount = 0;
   const payloads = Array.from({ length: 5 }, (_, i) => {
@@ -58,10 +76,47 @@ export function createGraphSpatialComposite(nodes: ReturnType<typeof createGraph
   const nodeUniforms = nodes.mesh.material.uniforms, edgeUniforms = edges.mesh.material.uniforms;
   const material = new ShaderMaterial({ side: DoubleSide, forceSinglePass: true, vertexShader: vertex, fragmentShader: fragment, transparent: true, depthWrite: false, depthTest: true,
     uniforms: { viewportSize: { value: viewportSize }, viewWindow: { value: viewWindow }, lyraView: { value: lyraView }, worldSizes: nodeUniforms['worldSizes']!, markerArm: nodeUniforms['markerArm']!,
-      dashAtlas: edgeUniforms['dashAtlas']!, atlasHeight: edgeUniforms['atlasHeight']! } });
+      meshForcedColors: { value: 0 }, dashAtlas: edgeUniforms['dashAtlas']!, atlasHeight: edgeUniforms['atlasHeight']! } });
+  const customPick = custom ? createGraphSpatialMeshPick(staged, ordinaryCount, customCount, material.uniforms, geometry) : undefined;
+  if (custom) for (let row = 0; row < nodeCount; row++) {
+    const body = custom.nodeMeshes[row]; if (!body) continue;
+    for (let face = 0; face < body.positions.length / 9; face++) packGraphMeshFace(staged, ordinaryCount + ranges![row]! + face, row,
+      [0, 0, 0], 0, body.positions, face * 9, body.normals.subarray(face * 3, face * 3 + 3), [0, 0, 0, 0]);
+  }
   const mesh = new Mesh(geometry, material); mesh.frustumCulled = false; let disposed = false;
   let seenNodes = -1, seenEdges = -1, active = 0, translucent = false, sorted: [number, number, number] | undefined;
-  let activeEdges = 0;
+  let activeEdges = 0, activeOrdinary = 0, transientCustomScratchBytes = 0;
+  const physicalSlot = (logical: number) => logical < activeOrdinary ? logical : ordinaryCount + logical - activeOrdinary;
+  const customPaint = (rows: VisualStateRows) => {
+    if (!customPick || !ranges) return;
+    const position = nodes.mesh.geometry.getAttribute('nodePosition').array;
+    const sizes = nodes.mesh.geometry.getAttribute('nodeSize').array;
+    const fill = nodes.mesh.geometry.getAttribute('nodeFill').array;
+    const changed = new Map<number, number[]>();
+    const write = (face: number, payload: number, channel: number, value: number) => {
+      const slot = ordinaryCount + face, offset = slot * 4 + channel;
+      if (staged[payload]![offset] === value) return;
+      staged[payload]![offset] = value;
+      const list = changed.get(payload) ?? []; list.push(face); changed.set(payload, list);
+      const output = outputRow[slot]!;
+      if (output >= 0) (payloads[payload]!.array as Float32Array)[output * 4 + channel] = value;
+    };
+    for (let index = 0, length = rows?.length ?? nodeCount; index < length; index++) {
+      const row = rows === null ? index : rows[index]!;
+      for (let face = ranges[row]!; face < ranges[row + 1]!; face++) {
+        for (let axis = 0; axis < 3; axis++) { write(face, 0, axis, position[row * 3 + axis]!); write(face, 4, axis, fill[row * 4 + axis]!); }
+        write(face, 0, 3, sizes[row]!); write(face, 3, 3, fill[row * 4 + 3]!);
+        write(face, 4, 3, -2 - row - (nodes.bodyPickable(row) ? 0 : 0.25));
+        const slot = ordinaryCount + face;
+        for (let axis = 0; axis < 3; axis++) anchors[slot * 3 + axis] = position[row * 3 + axis]!;
+      }
+    }
+    for (const [payload, faces] of changed) {
+      markAttributeRows(customPick.geometry.getAttribute(`payload${payload}`) as InstancedBufferAttribute, faces);
+      const outputs = faces.map(face => outputRow[ordinaryCount + face]!).filter(row => row >= 0);
+      if (outputs.length) markAttributeRows(payloads[payload]!, outputs);
+    }
+  };
   const sourcePaint = [
     ...['nodeFlags', 'nodeFill', 'nodeRing', 'nodeMarker'].map(name => nodes.mesh.geometry.getAttribute(name) as InstancedBufferAttribute),
     ...['edgeColor', 'stroke'].map(name => edges.mesh.geometry.getAttribute(name) as InstancedBufferAttribute),
@@ -119,6 +174,9 @@ export function createGraphSpatialComposite(nodes: ReturnType<typeof createGraph
       p2.set(fill.subarray(i * 4, i * 4 + 4), o); p3.set(ring.subarray(i * 4, i * 4 + 4), o); p4.set(marker.subarray(i * 4, i * 4 + 4), o);
       anchors.set(position.subarray(i * 3, i * 3 + 3), active * 3); active++;
     }
+    activeOrdinary = active;
+    customPaint(null);
+    active += customCount;
     translucent = nodes.translucent || edges.translucent;
     if (material.transparent !== translucent) { material.transparent = translucent; material.needsUpdate = true; }
     material.depthWrite = !translucent;
@@ -128,8 +186,10 @@ export function createGraphSpatialComposite(nodes: ReturnType<typeof createGraph
     rememberPaint();
     if (!translucent) {
       if (active > activeEdges) denseNodeRanges.push({ start: activeEdges * 4, count: (active - activeEdges) * 4 });
-      for (let row = 0; row < active; row++) outputRow[row] = row;
-      payloads.forEach((payload, slot) => { (payload.array as Float32Array).set(staged[slot]!.subarray(0, active * 4)); markAttributeFull(payload); });
+      for (let row = 0; row < active; row++) outputRow[physicalSlot(row)] = row;
+      payloads.forEach((payload, slot) => { const target = payload.array as Float32Array;
+        target.set(staged[slot]!.subarray(0, activeOrdinary * 4));
+        if (customCount) target.set(staged[slot]!.subarray(ordinaryCount * 4), activeOrdinary * 4); markAttributeFull(payload); });
     }
   };
   const patch = (nodeRows: VisualStateRows, edgeRows: VisualStateRows) => {
@@ -192,6 +252,7 @@ export function createGraphSpatialComposite(nodes: ReturnType<typeof createGraph
       for (let payload = 1; payload < payloads.length; payload++) {
         if (changedPayloads & (1 << payload)) markAttributeRanges(payloads[payload]!, payload === 1 || payload === 4 ? denseNodeRanges : denseAllRanges);
       }
+      customPaint(nodeRows);
       rememberPaint(); seenNodes = nodes.revision; seenEdges = edges.revision;
       return true;
     }
@@ -234,6 +295,7 @@ export function createGraphSpatialComposite(nodes: ReturnType<typeof createGraph
       write(slot, 2, colors[offset]!, colors[offset + 1]!, colors[offset + 2]!, colors[offset + 3]!);
       write(slot, 3, staged[3]![slot * 4]!, staged[3]![slot * 4 + 1]!, stroke[row * 3]!, stroke[row * 3 + 2]!);
     }
+    transientCustomScratchBytes = Math.max(transientCustomScratchBytes, masks.size * customCount);
     for (const [payload, rows] of dirty) markAttributeRows(payloads[payload]!, rows);
     for (const [payload, mask] of masks) {
       if ((changedPayloads & (1 << payload)) === 0) continue;
@@ -245,6 +307,7 @@ export function createGraphSpatialComposite(nodes: ReturnType<typeof createGraph
       }
       markAttributeRanges(payloads[payload]!, ranges);
     }
+    customPaint(nodeRows);
     rememberPaint(); seenNodes = nodes.revision; seenEdges = edges.revision;
     return true;
   };
@@ -254,18 +317,24 @@ export function createGraphSpatialComposite(nodes: ReturnType<typeof createGraph
     if (keys.length < active) keys = new Float64Array(count);
     let min = Infinity, max = -Infinity;
     for (let i = 0; i < active; i++) {
-      let key = anchors[i * 3]! * forward[0] + anchors[i * 3 + 1]! * forward[1] + anchors[i * 3 + 2]! * forward[2];
+      const slot = physicalSlot(i);
+      let key = anchors[slot * 3]! * forward[0] + anchors[slot * 3 + 1]! * forward[1] + anchors[slot * 3 + 2]! * forward[2];
       if (hasCssLoops) {
         const depth = depthOrigin - key;
         // Match lyraGraphPathPoint: CSS loops collapse while their centre is behind near.
-        if (depth >= view.near) key += (loopOffsets![i * 2]! * forward[0] + loopOffsets![i * 2 + 1]! * forward[1]) / graphScale(depth, view);
+        if (depth >= view.near) key += (loopOffsets![slot * 2]! * forward[0] + loopOffsets![slot * 2 + 1]! * forward[1]) / graphScale(depth, view);
+      }
+      if (customCount && slot >= ordinaryCount) {
+        const o = slot * 4, depth = depthOrigin - key;
+        const radius = staged[0]![o + 3]! * (nodeUniforms['worldSizes']!.value > 0.5 ? 1 : depth > view.near ? 1 / graphScale(depth, view) : 0);
+        for (let axis = 0; axis < 3; axis++) key += (staged[1]![o + axis]! + staged[2]![o + axis]! + staged[3]![o + axis]!) / 3 * radius * forward[axis]!;
       }
       keys[i] = key; if (key < min) min = key; if (key > max) max = key;
     }
     // Quantized key and original index share one exactly representable double, so the native
     // numeric sort orders by depth and breaks ties by index without a comparator.
     const scale = max > min ? KEY_STEPS / (max - min) : 0;
-    for (let i = 0; i < active; i++) keys[i] = Math.min(KEY_STEPS, Math.floor((keys[i]! - min) * scale)) * INDEX_BITS + i;
+    for (let i = 0; i < active; i++) keys[i] = Math.min(KEY_STEPS, Math.floor((keys[i]! - min) * scale)) * INDEX_BITS + physicalSlot(i);
     const order = keys.subarray(0, active).sort();
     denseNodeRanges = [];
     let nodeStart = -1;
@@ -284,12 +353,34 @@ export function createGraphSpatialComposite(nodes: ReturnType<typeof createGraph
       markAttributeFull(payload);
     });
   };
-  return { mesh,
+  return { mesh, customPick,
+    /** Unique backing stores, including staging shared with the independent pick upload. */
+    allocations() {
+      const baseArrays = ['position', 'normal', 'uv'].map(name => geometry.getAttribute(name).array);
+      if (geometry.index) baseArrays.push(geometry.index.array);
+      const arrays: ArrayBufferView[] = [...staged, ...payloads.map(payload => payload.array), anchors, primitiveSlot, outputRow, keys, ...baseArrays];
+      if (ranges) arrays.push(ranges); if (loopOffsets) arrays.push(loopOffsets);
+      const buffers = [...new Set(arrays.map(array => array.buffer))];
+      const cpuBytes = buffers.reduce((sum, buffer) => sum + buffer.byteLength, 0);
+      const baseGeometryBytes = baseArrays.reduce((sum, array) => sum + array.byteLength, 0);
+      let customStorage;
+      if (custom) {
+        customStorage = graphNodeMeshStorage({ nodeCount, customNodeCount: custom.customNodeCount, triangleCount: customCount,
+          ordinaryPrimitiveCount: ordinaryCount, sortKeyBytesBefore: 0, sortKeyBytesAfter: keys.byteLength,
+          scratchBytes: (loopOffsets ? customCount * 8 : 0) + transientCustomScratchBytes });
+        const ordinaryCpu = ordinaryCount * 180 + (loopOffsets ? ordinaryCount * 8 : 0) + baseGeometryBytes;
+        const addedCpu = cpuBytes - ordinaryCpu + custom.payloadBytes * 2 + nodeCount * 16 + transientCustomScratchBytes;
+        if (addedCpu > customStorage.cpuBytes || customCount * 160 > customStorage.gpuBytes) throw new RangeError('Graph custom allocations exceed planned storage');
+      }
+      return { buffers, cpuBytes, baseGeometryBytes, customStorage, transientCustomScratchBytes,
+        gpuAttributeBytes: count * 80 + customCount * 80, sortKeyBytes: keys.byteLength };
+    },
     /** Per frame: uniforms always; payload rewrites only after a batch update or, for translucent
      * paint, a material change of view direction. */
     update(viewport: Pick<Lyra3dViewport, 'width' | 'height' | 'orbit' | 'invalidate'>) {
       if (disposed) return;
       const view = graphSpatialView(viewport.width, viewport.height, viewport.orbit);
+      material.uniforms['meshForcedColors']!.value = nodes.forcedColors ? 1 : 0;
       viewportSize.set(view.width, view.height); viewWindow.set(0, 0, viewport.width, viewport.height); lyraView.set(view.width, view.height, view.near, view.far);
       if (nodes.revision !== seenNodes || edges.revision !== seenEdges) {
         const nodeChanges = nodes.takeChanges(), edgeChanges = edges.takeChanges();
@@ -298,7 +389,7 @@ export function createGraphSpatialComposite(nodes: ReturnType<typeof createGraph
       if (!translucent) return;
       const forward = graphViewForward(viewport.orbit);
       const camera = viewport.orbit;
-      const loopView = hasCssLoops ? [camera.distance, camera.target.x, camera.target.y, camera.target.z, view.height] : undefined;
+      const loopView = hasCssLoops || (customCount > 0 && nodeUniforms['worldSizes']!.value < 0.5) ? [camera.distance, camera.target.x, camera.target.y, camera.target.z, view.height, view.width, view.near] : undefined;
       const loopChanged = loopView !== undefined && (!lastLoopView || loopView.some((value, index) => value !== lastLoopView![index]));
       lastLoopView = loopView;
       const depthOrigin = camera.distance + camera.target.x * forward[0] + camera.target.y * forward[1] + camera.target.z * forward[2];
@@ -315,6 +406,6 @@ export function createGraphSpatialComposite(nodes: ReturnType<typeof createGraph
         }, SETTLE_MS);
       }
     },
-    dispose() { if (disposed) return; disposed = true; cancelSettling(); mesh.removeFromParent(); geometry.dispose(); material.dispose(); },
+    dispose() { if (disposed) return; disposed = true; disposeAll([cancelSettling, () => mesh.removeFromParent(), () => geometry.dispose(), () => material.dispose(), () => customPick?.removeFromParent(), () => customPick?.geometry.dispose(), () => customPick?.material.dispose()]); },
   };
 }

@@ -1,3 +1,5 @@
+import { admitGraphNodeRenderer, GraphNodeRendererError, type LyraGraphNodeMesh, type LyraGraphNodeRenderer, type LyraGraphNodeRenderErrorDetail } from './graph-node-renderer.js';
+import { yieldViewerTask } from '../../../internal/resource-loader.js';
 import { composedParentElement, isAccessibilityVisible } from '../../../internal/accessibility-visibility.js';
 import { Engine3dSelection, engine3dFallbackNotice, type Engine3dFallbackDetail, type Engine3dFallbackReason, type Engine3dMessageKey } from '../../../internal/engine-3d.js';
 import { GraphEngineAdapter, type GraphEngineAdapterServices, type GraphComponentEngine } from './graph-engine-adapter.js';
@@ -11,6 +13,11 @@ import { graphLinkIdentity, type LyraGraphCamera, type LyraGraphCommunity, type 
 import { fittedGraphCamera, graphCurvePoint, normalizeGraphCurvature, normalizeGraphCamera, panGraphCamera, projectSpatialPoint, spatialNodePosition,
   type SpatialHit, type SpatialViewport, type SpatialWorldNode } from './graph-spatial.js';
 import { GraphBuiltin3dEngine, type GraphBuiltin3dFrame, type GraphBuiltin3dPaint } from './graph-builtin-3d-engine.js';
+
+/** The scheduler's pending promise retains only cancellation authority, never a graph scene. */
+function yieldGraphNodeRendererTask(view: Window | null, signal: AbortSignal): Promise<void> {
+  return yieldViewerTask(view, () => !signal.aborted);
+}
 
 const selectionSets = new WeakMap<readonly string[], ReadonlySet<string>>();
 function selectedIds(ids: readonly string[]): ReadonlySet<string> {
@@ -26,6 +33,8 @@ interface GraphSpatialHost extends Pick<HTMLElement, 'isConnected' | 'ownerDocum
   readonly label: string | null;
   readonly camera?: LyraGraphCamera;
   readonly engine?: string;
+  readonly nodeRenderer?: LyraGraphNodeRenderer | null;
+  readonly glow?: boolean;
   view: LyraGraphView;
   readonly hiddenTypes: readonly string[];
   readonly selectedNodeIds: readonly string[];
@@ -45,6 +54,8 @@ export interface GraphSpatialOptions {
   readonly repaint: () => void;
   readonly columns?: () => GraphEngineColumns | undefined;
   readonly sourceMode?: () => boolean;
+  readonly nodeRenderError?: (detail: LyraGraphNodeRenderErrorDetail) => void;
+  readonly effectNotice?: (key: 'graphCustomNodesUnavailable' | 'graphGlowUnavailable') => void;
   readonly engineFallback?: (detail: Engine3dFallbackDetail) => void;
   readonly engineMessage?: (key: Engine3dMessageKey) => string;
   readonly engineServices?: GraphEngineAdapterServices;
@@ -84,6 +95,23 @@ export class GraphSpatialController {
   private readonly selection = new Engine3dSelection(true);
   private adapter: GraphEngineAdapter;
   private engine?: GraphComponentEngine;
+  private meshKey?: object;
+  private meshRenderer: unknown;
+  private meshEpoch = 0;
+  private meshPending = false;
+  private meshAbort?: AbortController;
+  private meshTask?: Promise<void>;
+  private meshNext?: () => Promise<void> | undefined;
+  private meshes?: readonly (LyraGraphNodeMesh | null)[];
+  private meshAppliedEngine?: GraphComponentEngine;
+  private meshFailed = false;
+  private meshUnavailable = false;
+  private glowEngine?: GraphComponentEngine;
+  private glowRequested?: boolean;
+  private glowEpoch = 0;
+  private glowUnavailable = false;
+  private noticeState = '';
+  private noticeMounted = false;
   private engineSurface?: HTMLElement;
   private observedSurface?: HTMLElement;
   private enginePending = false;
@@ -167,6 +195,9 @@ export class GraphSpatialController {
   retryEngine(): void { this.closeEngine(); this.selection.prefer(this.preference); this.fallback = undefined; this.contextFailed = false; this.options.repaint(); }
   private closeEngine(): void {
     this.snapshotEnginePositions();
+    this.meshAbort?.abort(); this.meshAbort = undefined; this.meshNext = undefined;
+    this.meshEpoch++; if (this.meshPending || this.meshUnavailable) { this.meshPending = false; this.meshKey = undefined; this.meshUnavailable = false; }
+    this.meshAppliedEngine = undefined; this.glowEpoch++; this.glowEngine = undefined; this.glowRequested = undefined;
     this.eligibility?.disconnect(); this.eligibility = undefined;
     this.engineEpoch++; this.enginePending = false; this.engine = undefined; this.engineDataKey = this.enginePaintKey = undefined; this.engineStyleKey = this.engineSizeKey = ''; this.stateInputs = undefined; this.edgeRowsKey = undefined; this.adapter.close();
   }
@@ -222,10 +253,46 @@ export class GraphSpatialController {
     }).then((engine) => {
       if (epoch !== this.engineEpoch || !this.host.isConnected || this.engineSurface !== surface) return;
       this.enginePending = false; this.engine = engine ?? undefined;
-      if (engine) { const canvas = surface.querySelector('canvas:not([data-graph-labels])'); canvas?.setAttribute('aria-hidden', 'true'); this.drawEngine(true); }
+      if (engine) { this.observeMountedEligibility(surface); const canvas = surface.querySelector('canvas:not([data-graph-labels])'); canvas?.setAttribute('aria-hidden', 'true'); this.drawEngine(true); }
       this.options.repaint();
     });
   }
+  private spatialEligible(): boolean {
+    const surface = this.engineSurface;
+    return this.visible && this.host.isConnected && this.host.view === '3d' && !!surface &&
+      isAccessibilityVisible(surface) && surface.clientWidth > 0 && surface.clientHeight > 0;
+  }
+
+  private syncVisibility(): void {
+    const engine = this.engine; if (!engine) return;
+    if (!this.spatialEligible()) {
+      if (this.meshPending) { this.meshAbort?.abort(); this.meshAbort = undefined; this.meshNext = undefined; this.meshEpoch++; this.meshPending = false; this.meshKey = undefined; }
+      try {
+        if (this.engineSizeKey !== '0|0') { engine.resize(0, 0); this.engineSizeKey = '0|0'; }
+        this.syncGlow(engine);
+      } catch { this.closeEngine(); this.failEngine('error'); }
+      return;
+    }
+    this.schedule();
+  }
+
+  private observeMountedEligibility(surface: HTMLElement): void {
+    const view = this.host.ownerDocument.defaultView;
+    if (!view?.MutationObserver || this.eligibility) return;
+    const epoch = this.engineEpoch;
+    this.eligibility = new view.MutationObserver(() => {
+      if (epoch !== this.engineEpoch || this.engineSurface !== surface || !this.host.isConnected) return;
+      if (!view.IntersectionObserver) this.visible = surface.clientWidth > 0 && surface.clientHeight > 0;
+      this.syncVisibility();
+    });
+    let ancestor: Element | null = surface;
+    let depth = 0;
+    while (ancestor && depth++ <= 256) {
+      this.eligibility.observe(ancestor, { attributes: true, attributeFilter: ['aria-hidden', 'inert', 'hidden', 'style', 'class', 'open'] });
+      ancestor = composedParentElement(ancestor);
+    }
+  }
+
   private rgba(value: string): readonly [number, number, number, number] {
     const previous = this.rgbaCache.get(value); if (previous) return previous;
     if (!this.rgbaContext) { const canvas = this.host.ownerDocument.createElement('canvas'); canvas.width = canvas.height = 1; this.rgbaContext = canvas.getContext('2d', { willReadFrequently: true }) ?? undefined; }
@@ -266,13 +333,14 @@ export class GraphSpatialController {
   }
   private drawEngine(initial = false): void {
     const engine = this.engine; if (!engine || this.selection.renderer !== 'webgl') return;
+    if (!this.spatialEligible()) { this.syncVisibility(); return; }
     const paint = this.paint ??= this.options.paint(this.world, this.edges), size = this.viewport();
     const key = this.columnScene ?? this.world;
     try {
       if (key !== this.engineDataKey || paint !== this.enginePaintKey) {
         const input = this.columnScene ? this.columnData(paint) : graphWebglData(this.world, this.edges, paint, (color) => this.rgba(color));
         if (key !== this.engineDataKey) engine.setData(input, this.engineRevision++);
-        else engine.setAppearance({ spatialAppearance: input.spatialAppearance, labels: 'labels' in input ? input.labels : undefined, nodeLabels: input.nodeLabels, withEdgeLabels: input.withEdgeLabels });
+        else engine.setAppearance({ spatialAppearance: { ...input.spatialAppearance, ...(this.meshKey === key && this.meshRenderer === this.host.nodeRenderer && this.meshes ? { nodeMeshes: this.meshes } : {}) }, labels: 'labels' in input ? input.labels : undefined, nodeLabels: input.nodeLabels, withEdgeLabels: input.withEdgeLabels });
         this.engineDataKey = key; this.enginePaintKey = paint;
       }
       const view = this.host.ownerDocument.defaultView;
@@ -285,9 +353,107 @@ export class GraphSpatialController {
       const sizeKey = `${size.width}|${size.height}`; if (sizeKey !== this.engineSizeKey) { this.engineSizeKey = sizeKey; engine.resize(size.width, size.height); }
       if (initial && !this.host.camera && !this.cameraInitialized && engine.fit) { this.currentCamera = graphWebglCamera(engine.fit(), this.currentCamera); this.fittedDistance = this.currentCamera.distance; this.cameraInitialized = true; }
       if (initial) engine.setCamera(this.currentCamera);
+      this.syncCustomNodes(engine, key);
+      this.syncGlow(engine);
       this.drawEngineLabels(paint, size);
     } catch { this.closeEngine(); this.failEngine('error'); }
   }
+  private syncCustomNodes(engine: GraphComponentEngine, key: object): void {
+    if (!this.spatialEligible()) return;
+    const renderer = this.host.nodeRenderer;
+    if (this.meshKey === key && this.meshRenderer === renderer) {
+      if (this.meshAppliedEngine !== engine && !this.meshPending && !this.meshUnavailable) {
+        if (this.meshes) engine.setNodeMeshes?.(this.meshes);
+        this.meshAppliedEngine = engine;
+      }
+      return;
+    }
+    const hadMeshes = this.meshes !== undefined, hadNotice = this.meshFailed || this.meshUnavailable;
+    this.meshAbort?.abort(); this.meshAbort = undefined; this.meshNext = undefined;
+    this.meshEpoch++; this.meshKey = key; this.meshRenderer = renderer; this.meshes = undefined;
+    this.meshPending = false; this.meshFailed = false; this.meshUnavailable = false; this.meshAppliedEngine = engine;
+    if (hadMeshes && typeof engine.setNodeMeshes === 'function') engine.setNodeMeshes(undefined);
+    if (renderer === undefined || renderer === null) { if (hadMeshes || hadNotice) this.options.repaint(); return; }
+    let capability = false;
+    try { capability = typeof engine.setNodeMeshes === 'function'; } catch { /* Optional capability is unavailable. */ }
+    if (!capability) { this.meshUnavailable = true; this.options.repaint(); return; }
+    const epoch = this.meshEpoch, columns = this.columns, source = this.source, hidden = this.host.hiddenTypes, preference = this.host.engine;
+    const abort = new AbortController(); this.meshAbort = abort;
+    const current = () => !abort.signal.aborted && epoch === this.meshEpoch && this.host.engine === preference && this.host.isConnected && this.host.view === '3d' && this.engine === engine && this.selection.renderer === 'webgl' &&
+      this.host.nodeRenderer === renderer && this.host.hiddenTypes === hidden && this.spatialEligible() && !this.options.sourceMode?.() &&
+      (columns ? this.options.columns?.() === columns : !this.options.columns?.() && this.options.model() === source);
+    const count = this.columnScene?.data.nodeCount ?? this.world.length;
+    const scene = this.columnScene, world = this.world;
+    this.meshPending = true;
+    const start = () => {
+      if (!current()) return;
+      return this.admitNodeRenderer(renderer, count, (index) => {
+        if (scene) return Object.freeze({ id: columns!.columns.ids[scene.nodeRows[index]!]!, index });
+        const node = Object.freeze({ ...world[index]!.node });
+        return Object.freeze({ id: node.id, index, node });
+      }, current, () => yieldGraphNodeRendererTask(this.host.ownerDocument.defaultView, abort.signal), abort.signal).then((meshes) => {
+        if (!current()) return;
+        this.meshPending = false;
+        try { engine.setNodeMeshes!(meshes); }
+        catch (error) {
+          if (!current()) return;
+          let reason: 'invalid' | 'budget' = 'invalid';
+          if (error && typeof error === 'object') {
+            const descriptor = Object.getOwnPropertyDescriptor(error, 'reason');
+            if (!current()) return;
+            if (descriptor && 'value' in descriptor && descriptor.value === 'budget') reason = 'budget';
+          }
+          throw new GraphNodeRendererError(reason);
+        }
+        if (!current()) return;
+        this.meshes = meshes; this.options.repaint();
+      }).catch((error: unknown) => {
+        if (!current()) return;
+        this.meshPending = false; this.meshes = undefined; this.meshFailed = true;
+        try { engine.setNodeMeshes!(undefined); } catch { /* Keep the current ordinary scene after refusal. */ }
+        if (!current()) return;
+        const detail: LyraGraphNodeRenderErrorDetail = error instanceof GraphNodeRendererError ?
+          { reason: error.reason, ...(error.nodeId === undefined ? {} : { nodeId: error.nodeId }) } : { reason: 'invalid' };
+        this.options.afterUpdate(() => { if (current()) this.options.nodeRenderError?.(detail); }, 'graph-node-render-error');
+        this.options.repaint();
+      });
+    };
+    this.startMeshTask(start);
+  }
+
+  private startMeshTask(start: () => Promise<void> | undefined): void {
+    this.meshNext = start;
+    if (this.meshTask) return;
+    const next = this.meshNext; this.meshNext = undefined;
+    const task = Promise.resolve(next()); this.meshTask = task;
+    void task.then(() => {
+      if (this.meshTask !== task) return;
+      this.meshTask = undefined;
+      const pending = this.meshNext; if (pending) this.startMeshTask(pending);
+    });
+  }
+
+  protected admitNodeRenderer(...args: Parameters<typeof admitGraphNodeRenderer>): ReturnType<typeof admitGraphNodeRenderer> { return admitGraphNodeRenderer(...args); }
+
+  private syncGlow(engine: GraphComponentEngine): void {
+    const preference = this.host.glow === true;
+    const enabled = preference && this.spatialEligible();
+    if (this.glowEngine === engine && this.glowRequested === enabled) return;
+    if (!enabled && this.glowEngine !== engine) { this.glowUnavailable = false; return; }
+    const epoch = ++this.glowEpoch; this.glowEngine = engine; this.glowRequested = enabled; this.glowUnavailable = false;
+    let capability = false; try { capability = typeof engine.setGlow === 'function'; } catch { /* Optional capability is unavailable. */ }
+    if (!capability) { this.glowUnavailable = enabled; this.options.repaint(); return; }
+    const current = () => epoch === this.glowEpoch && this.host.isConnected && this.engine === engine && this.host.view === '3d' && (this.host.glow === true) === preference && (preference && this.spatialEligible()) === enabled;
+    if (!current()) return;
+    let pending: Promise<void>;
+    try { pending = engine.setGlow!(enabled); }
+    catch { if (current()) { this.glowUnavailable = enabled; this.closeEngine(); this.failEngine('error'); this.options.repaint(); } return; }
+    void Promise.resolve(pending).then(() => { if (current()) this.options.repaint(); }).catch(() => {
+      if (!current()) return;
+      this.glowUnavailable = enabled; this.closeEngine(); this.failEngine('error'); this.options.repaint();
+    });
+  }
+
   private drawEngineLabels(paint: GraphBuiltin3dPaint, size: SpatialViewport): void {
     const canvas = this.engineSurface?.querySelector<HTMLCanvasElement>('[data-graph-labels]'); const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx || !this.engine) return;
@@ -416,9 +582,9 @@ export class GraphSpatialController {
       const view = this.host.ownerDocument.defaultView;
       if (surface && view) {
         const Resize = view.ResizeObserver;
-        if (Resize) { this.resize = new Resize(() => { this.fitInitialCanvas(); this.builtin?.invalidate(); this.schedule(); }); this.resize.observe(surface); }
+        if (Resize) { this.resize = new Resize(() => { this.fitInitialCanvas(); this.builtin?.invalidate(); this.syncVisibility(); this.schedule(); }); this.resize.observe(surface); }
         const Intersection = view.IntersectionObserver;
-        if (Intersection) { this.intersection = new Intersection((entries) => { this.visible = entries[0]?.isIntersecting ?? false; if (this.visible) { this.ensureEngine(); this.schedule(); } }); this.intersection.observe(surface); }
+        if (Intersection) { this.intersection = new Intersection((entries) => { this.visible = entries[0]?.isIntersecting ?? false; this.syncVisibility(); if (this.visible) { this.ensureEngine(); this.schedule(); } }); this.intersection.observe(surface); }
         else this.visible = surface.clientWidth > 0 && surface.clientHeight > 0;
       }
     }
@@ -430,7 +596,7 @@ export class GraphSpatialController {
   }
 
   disconnect(): void {
-    this.closeEngine(); this.preference = undefined; this.fallback = undefined; this.engineSurface = undefined; this.observedSurface = undefined;
+    this.closeEngine(); this.meshes = undefined; this.meshKey = undefined; this.meshRenderer = undefined; this.meshFailed = false; this.meshUnavailable = false; this.noticeMounted = false; this.noticeState = ''; this.preference = undefined; this.fallback = undefined; this.engineSurface = undefined; this.observedSurface = undefined;
     this.cancelHover();
     this.builtin?.dispose(); this.builtin = undefined;
     this.cancelGesture();
@@ -693,6 +859,14 @@ export class GraphSpatialController {
   render(limitNotices: TemplateResult): TemplateResult {
     this.prepare();
     const messages = this.options.messages();
+    const customUnavailable = this.host.nodeRenderer != null && !this.meshFailed && (this.meshUnavailable || this.host.view !== '3d' || this.selection.renderer !== 'webgl');
+    const glowUnavailable = this.host.glow === true && (this.glowUnavailable || this.host.view !== '3d' || this.selection.renderer !== 'webgl');
+    const notice = customUnavailable ? 'graphCustomNodesUnavailable' : glowUnavailable ? 'graphGlowUnavailable' : '';
+    if (notice !== this.noticeState) {
+      this.noticeState = notice;
+      if (this.noticeMounted && notice) this.options.afterUpdate(() => { if (this.host.isConnected && this.noticeState === notice) this.options.effectNotice?.(notice); }, 'graph-effect-notice');
+    }
+    this.noticeMounted = true;
     const list = this.host.view === 'list' || this.contextFailed || this.selection.renderer === 'list';
     const pageItems = this.pageItems();
     const number = getNumberFormat(this.options.locale());
@@ -704,6 +878,8 @@ export class GraphSpatialController {
         <button type="button" part="spatial-control" data-spatial-action="list" aria-pressed=${String(list)} @click=${() => this.changeView('list')}>${messages['viewList']}</button>
         ${!list ? html`${button('fit', messages['fit']!, () => this.fit())}${button('left', messages['left']!, () => this.orbit(-ORBIT_STEP, 0))}${button('right', messages['right']!, () => this.orbit(ORBIT_STEP, 0))}${button('up', messages['up']!, () => this.orbit(0, ORBIT_STEP))}${button('down', messages['down']!, () => this.orbit(0, -ORBIT_STEP))}${button('zoom-in', messages['zoomIn']!, () => this.zoom(1.2))}${button('zoom-out', messages['zoomOut']!, () => this.zoom(1 / 1.2))}` : nothing}
       </div>
+      ${this.meshFailed ? html`<p part="custom-node-notice">${messages['customError']}</p>` : customUnavailable ? html`<p part="custom-node-notice">${messages['customUnavailable']}</p>` : nothing}
+      ${glowUnavailable ? html`<p part="glow-notice">${messages['glowUnavailable']}</p>` : nothing}
       ${this.contextFailed ? html`<p part="error">${messages['unavailable']}</p>` : nothing}
       ${this.fallback ? html`<p part="engine-notice">${this.options.engineMessage?.(engine3dFallbackNotice(this.fallback).reason)} ${this.options.engineMessage?.(engine3dFallbackNotice(this.fallback).showing)}</p>` : nothing}
       ${this.enginePending ? html`<p part="loading">${this.options.engineMessage?.('engine3dLoading')}</p>` : nothing}

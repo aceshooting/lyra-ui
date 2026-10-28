@@ -1,3 +1,5 @@
+import { disposeAll } from '../core/dispose.js';
+import type { GraphNodeMeshData } from './node-mesh.js';
 import { DoubleSide, Color, InstancedBufferAttribute, InstancedBufferGeometry, Mesh, PerspectiveCamera, PlaneGeometry, ShaderMaterial, Vector2, Vector4 } from 'three';
 import { markAttributeFull, markAttributeRows } from '../core/attribute-updates.js';
 import type { VisualStateRows } from '../core/visual-state.js';
@@ -21,7 +23,15 @@ type NodeView = Pick<Lyra3dViewport, 'width' | 'height' | 'orbit'>;
 const vertex = graphSpatialProjectionChunk + graphSpatialNodeVertexChunk + `
 attribute vec3 nodePosition; attribute float nodeSize; attribute float nodeShape; attribute vec2 nodeFlags;
 attribute vec4 nodeFill; attribute vec4 nodeRing; attribute vec4 nodeMarker; attribute vec3 pickColor;
-void main() { graphSpatialNodeVertex(nodePosition, nodeSize, nodeShape, nodeFlags, nodeFill, nodeRing, nodeMarker, pickColor); }`;
+void main() { graphSpatialNodeVertex(nodePosition, nodeSize, nodeShape, nodeFlags, nodeFill, nodeRing, nodeMarker, pickColor);
+  #ifdef PICKING
+    if(nodeShape < -0.5) {
+      vec2 previous = offset;
+      offset = position.xy * max(radius + 5.0, radius + markerArm);
+      gl_Position.xy += (offset - previous) * 2.0 / viewportSize * gl_Position.w;
+    }
+  #endif
+}`;
 export const graphSpatialNodeFragment = `
 uniform float markerArm;
 #ifdef PICKING
@@ -52,12 +62,17 @@ bool inside(vec2 p, float r) {
 }
 void paintGraphSpatialNode() {
   #ifdef PICKING
-    if (!inside(offset, max(12.0, radius))) discard;
+    if (shape < -0.5) {
+      bool selectedRing = flags.x > 0.5 && ring.a > 0.0 && abs(length(offset) - radius - 4.0) <= 1.0;
+      vec2 plus = abs(offset - vec2(radius));
+      bool expandedMarker = flags.y > 0.5 && marker.a > 0.0 && ((plus.x <= 0.75 && plus.y <= markerArm) || (plus.y <= 0.75 && plus.x <= markerArm));
+      if (!selectedRing && !expandedMarker) discard;
+    } else if (!inside(offset, max(12.0, radius))) discard;
     gl_FragDepth = pickDepth;
     gl_FragColor = fill;
   #else
     vec4 paint = vec4(0.0);
-    if (radius > 0.0 && inside(offset, radius)) paint = fill;
+    if (shape >= 0.0 && radius > 0.0 && inside(offset, radius)) paint = fill;
     if (flags.x > 0.5 && abs(length(offset) - radius - 4.0) <= 1.0) paint = over(ring, paint);
     vec2 plus = abs(offset - vec2(radius));
     if (flags.y > 0.5 && ((plus.x <= 0.75 && plus.y <= markerArm) || (plus.y <= 0.75 && plus.x <= markerArm))) paint = over(marker, paint);
@@ -69,7 +84,7 @@ void paintGraphSpatialNode() {
 const fragment = graphSpatialNodeFragment + '\nvoid main() { paintGraphSpatialNode(); }';
 
 /** Batched screen-facing spatial glyphs. Pick colors always identify the original node row. */
-export function createGraphSpatialNodes(input: SpatialNodeData) {
+export function createGraphSpatialNodes(input: SpatialNodeData, meshes?: GraphNodeMeshData) {
   const count = input.nodeCount;
   if (!Number.isInteger(count) || count < 0 || count > 200_000) throw new RangeError('Invalid spatial node count');
   const appearance = input.spatialAppearance;
@@ -103,6 +118,7 @@ export function createGraphSpatialNodes(input: SpatialNodeData) {
   const flags = attribute('nodeFlags', 2), fill = attribute('nodeFill', 4), ring = attribute('nodeRing', 4), marker = attribute('nodeMarker', 4), pickColor = attribute('pickColor', 3);
   (pickColor.array as Float32Array).set(createPickColors(count));
   if (shapes) (shape.array as Float32Array).set(shapes);
+  if (meshes) for (let row = 0; row < count; row++) if (meshes.nodeMeshes[row]) shape.setX(row, -1);
   const viewportSize = new Vector2(1, 1), pickViewportSize = new Vector2(1, 1), lyraView = new Vector4(1, 1, 0.5, 1e4);
   const shared = { lyraView: { value: lyraView }, worldSizes: { value: worldSize ? 1 : 0 }, markerArm: { value: 3 } };
   const material = new ShaderMaterial({ side: DoubleSide, forceSinglePass: true, uniforms: { ...shared, viewportSize: { value: viewportSize } }, vertexShader: vertex, fragmentShader: fragment });
@@ -114,7 +130,7 @@ export function createGraphSpatialNodes(input: SpatialNodeData) {
     if (view?.enabled) pickViewportSize.set(viewportSize.x * view.width / view.fullWidth, viewportSize.y * view.height / view.fullHeight);
     pickMaterial.uniformsNeedUpdate = true;
   };
-  const color = new Color(); let disposed = false, translucent = false, revision = 0;
+  const color = new Color(); let disposed = false, translucent = false, revision = 0, forcedColors = false;
   const setView = (viewport: NodeView) => {
     const next = graphSpatialView(viewport.width, viewport.height, viewport.orbit);
     viewportSize.set(next.width, next.height); lyraView.set(next.width, next.height, next.near, next.far);
@@ -123,7 +139,7 @@ export function createGraphSpatialNodes(input: SpatialNodeData) {
   let partialCount = 0, fullChange = true, denseChange = false;
   const changedRows = new Set<number>();
   const paint = (viewport: NodeViewport, state: Lyra3dState, rows: VisualStateRows, full: boolean) => {
-    const style = viewport.style, dense = rows === null;
+    const style = viewport.style, dense = rows === null; forcedColors = style.forcedColors;
     const paintColor = createPaintColors(style);
     const dirty = new Map<InstancedBufferAttribute, number[]>();
     const touched = new Set<InstancedBufferAttribute>();
@@ -152,7 +168,12 @@ export function createGraphSpatialNodes(input: SpatialNodeData) {
       const selected = state.selected.has(row) || state.hover === row || state.focus === row;
       const expanded = expandable?.[row] === 1;
       const alpha = style.forcedColors || !state.dimmed.has(row) ? 1 : opacity;
-      const source = style.forcedColors ? style.foreground : colors ? { r: colors[row * 4]!, g: colors[row * 4 + 1]!, b: colors[row * 4 + 2]!, a: colors[row * 4 + 3]! } : style.palette[(categories?.[row] ?? 0) % style.palette.length]!;
+      const customColor = meshes?.nodeMeshes[row]?.color;
+      const source = style.forcedColors ? style.foreground : customColor ? { r: customColor[0], g: customColor[1], b: customColor[2], a: customColor[3] } : colors ? { r: colors[row * 4]!, g: colors[row * 4 + 1]!, b: colors[row * 4 + 2]!, a: colors[row * 4 + 3]! } : style.palette[(categories?.[row] ?? 0) % style.palette.length]!;
+      if (meshes?.nodeMeshes[row]) {
+        const nextShape = source.a > 0 ? -1 : -2;
+        if (shape.getX(row) !== nextShape) { shape.setX(row, nextShape); record(shape, row); }
+      }
       const blends = partial(source.a * alpha) || (selected && partial(style.accent.a * alpha)) || (expanded && partial(style.foreground.a * alpha));
       const nextPartial = blends ? 1 : 0;
       partialCount += nextPartial - partialRows[row]!; partialRows[row] = nextPartial;
@@ -162,7 +183,7 @@ export function createGraphSpatialNodes(input: SpatialNodeData) {
     translucent = partialCount > 0;
     if (material.transparent !== translucent) { material.transparent = translucent; material.needsUpdate = true; }
     material.depthWrite = !translucent;
-    if (full) for (const buffer of [flags, fill, ring, marker]) markAttributeFull(buffer);
+    if (full) for (const buffer of [flags, fill, ring, marker, ...(meshes ? [shape] : [])]) markAttributeFull(buffer);
     else if (dense) for (const buffer of touched) markAttributeFull(buffer);
     else for (const [buffer, changed] of dirty) markAttributeRows(buffer, changed);
     if (full) { fullChange = true; denseChange = false; changedRows.clear(); }
@@ -180,7 +201,14 @@ export function createGraphSpatialNodes(input: SpatialNodeData) {
   };
   return {
     mesh, pick,
+    /** Retained batch-owned copies and masks; geometry backing is inventoried separately. */
+    allocationBuffers(): readonly ArrayBufferLike[] {
+      const values = [shapes, expandable, colors, sizes, categories, partialRows];
+      return [...new Set(values.filter(value => value !== undefined).map(value => value.buffer))];
+    },
     get translucent() { return translucent; },
+    get forcedColors() { return forcedColors; },
+    bodyPickable(row: number) { return shape.getX(row) === -1; },
     get revision() { return revision; },
     takeChanges(): { full: boolean; rows: VisualStateRows } {
       const result = { full: fullChange, rows: fullChange ? [] : denseChange ? null : [...changedRows] };
@@ -196,6 +224,6 @@ export function createGraphSpatialNodes(input: SpatialNodeData) {
       updatePositions(viewport, positions); updateStyle(viewport, state);
       revision = previousRevision + 1;
     },
-    dispose() { if (disposed) return; disposed = true; mesh.removeFromParent(); pick.removeFromParent(); material.dispose(); pickMaterial.dispose(); geometry.dispose(); },
+    dispose() { if (disposed) return; disposed = true; disposeAll([() => mesh.removeFromParent(), () => pick.removeFromParent(), () => material.dispose(), () => pickMaterial.dispose(), () => geometry.dispose()]); },
   };
 }

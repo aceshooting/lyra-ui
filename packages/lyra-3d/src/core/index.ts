@@ -56,6 +56,7 @@ export {
   probeSoftwareRendering,
   type Lyra3dViewport,
   type Lyra3dViewportOptions,
+  type Lyra3dViewportServices,
 } from './viewport.js';
 export {
   serveLyra3dTask,

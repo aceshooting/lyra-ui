@@ -4,6 +4,8 @@ import type {
   LyraGraphCommunity,
   LyraGraphEdge,
   LyraGraphNode,
+  LyraGraphNodeMesh,
+  LyraGraphNodeRenderer,
   LyraGraph,
   GraphSource,
 } from './graph.js';
@@ -615,4 +617,49 @@ export const WebglTypedColumns: Story = {
     const source = Uint32Array.from({ length: count - 1 }, (_, row) => row), target = Uint32Array.from(source, (row) => row + 1);
     return html`<lr-graph view="3d" engine="webgl" style="height:30rem" .graphColumns=${{ ids, x, y, z, source, target, category, categories: ['First', 'Second', 'Third'] }}></lr-graph>`;
   },
+};
+
+
+const tetrahedronBody: LyraGraphNodeMesh = (() => {
+  const vertices = [[0.5, 0.5, 0.5], [-0.5, -0.5, 0.5], [-0.5, 0.5, -0.5], [0.5, -0.5, -0.5]];
+  const positions: number[] = [], normals: number[] = [];
+  for (const face of [[0, 1, 2], [0, 3, 1], [0, 2, 3], [1, 3, 2]]) {
+    const a = vertices[face[0]!]!, b = vertices[face[1]!]!, c = vertices[face[2]!]!;
+    const u = b.map((value, axis) => value - a[axis]!), v = c.map((value, axis) => value - a[axis]!);
+    let normal = [u[1]! * v[2]! - u[2]! * v[1]!, u[2]! * v[0]! - u[0]! * v[2]!, u[0]! * v[1]! - u[1]! * v[0]!];
+    const outward = normal.reduce((sum, value, axis) => sum + value * a[axis]!, 0) > 0;
+    positions.push(...a, ...(outward ? b : c), ...(outward ? c : b));
+    if (!outward) normal = normal.map(value => -value);
+    const length = Math.hypot(...normal); normals.push(...normal.map(value => value / length));
+  }
+  return { positions: new Float32Array(positions), normals: new Float32Array(normals) };
+})();
+const tetrahedronRenderer: LyraGraphNodeRenderer = ({ id }) => id === 'standard' ? null : tetrahedronBody;
+
+export const SpatialCustomNodes: Story = {
+  parameters: { docs: { description: { story: 'A synchronous nodeRenderer supplies bounded XYZ triangle bodies. Orbit to see face shading and depth. The standard node keeps its ordinary body; List retains every label and action.' } } },
+  render: () => html`<lr-graph view="3d" engine="webgl" label="Custom spatial nodes" height="520"
+    .nodeRenderer=${tetrahedronRenderer}
+    .camera=${{ yaw: 0.5, pitch: 0.25, distance: 260, target: { x: 0, y: 0, z: 0 } }}
+    .nodes=${[
+      { id: 'first', label: 'First tetrahedron', radius: 24, position: { x: -55, y: 0, z: 20 } },
+      { id: 'second', label: 'Second tetrahedron', radius: 24, position: { x: 55, y: 0, z: -20 } },
+      { id: 'standard', label: 'Standard body', position: { x: 0, y: -60, z: 0 }, expandable: true },
+    ]}
+    .edges=${[{ source: 'first', target: 'second', directed: true, curvature: 0.4 }, { source: 'first', target: 'standard' }]}
+  ></lr-graph>`,
+};
+
+export const SpatialGlow: Story = {
+  args: { glow: true },
+  argTypes: { glow: { control: 'boolean' } },
+  parameters: { docs: { description: { story: 'Glow adds a static soft halo through an optional image-space pass. Toggle the control to compare. Picking and keyboard/List actions stay unchanged; forced colors suppresses the halo.' } } },
+  render: (args) => html`<lr-graph view="3d" engine="webgl" label="Spatial graph with optional glow" height="520" .glow=${args['glow'] === true}
+    .nodes=${[
+      { id: 'a', label: 'Source', position: { x: -60, y: 0, z: 0 } },
+      { id: 'b', label: 'Target', position: { x: 60, y: 0, z: 20 } },
+      { id: 'c', label: 'Related', position: { x: 0, y: -70, z: -20 } },
+    ]}
+    .edges=${[{ source: 'a', target: 'b', directed: true, curvature: 0.4 }, { source: 'a', target: 'c' }]}
+  ></lr-graph>`,
 };
