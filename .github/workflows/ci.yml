@@ -384,7 +384,8 @@ jobs:
       # so this surfaces as a Firefox-only failure. /root is root-owned, and staying constant for
       # the whole job keeps the pnpm store on one path.
       HOME: /root
-    timeout-minutes: 15
+    # Covers two bounded installs, setup, the measured nine-minute shard and artifact upload.
+    timeout-minutes: 20
     steps:
       - name: Match the runner's default font resolution
         run: |
@@ -408,7 +409,19 @@ jobs:
         with:
           node-version-file: .nvmrc
           package-manager-cache: false
-      - run: pnpm install --frozen-lockfile
+      - name: Install coverage dependencies
+        run: |
+          for attempt in 1 2; do
+            if timeout --signal=TERM --kill-after=10s 180s pnpm install --frozen-lockfile; then
+              exit 0
+            fi
+            echo "::warning::Dependency installation attempt $attempt failed or timed out"
+            if [[ "$attempt" == 1 ]]; then
+              sleep 10
+            fi
+          done
+          echo "::error::Dependency installation failed after two bounded attempts"
+          exit 1
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: lyra-ui-dist

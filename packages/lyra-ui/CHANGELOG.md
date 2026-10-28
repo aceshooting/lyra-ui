@@ -6,6 +6,13 @@
 
 - 0bd9ba4: Add `label-display="hidden"` (`labelDisplay: 'visible' | 'hidden'`, type `LyraLabelDisplay`) to the form controls that render the shared label chrome: `lr-select`, `lr-combobox`, `lr-input`, `lr-time-input`, `lr-textarea`, `lr-locale-picker`, `lr-date-input`, `lr-phone-input`, `lr-token-input`, the catalog pickers, `lr-model-select` and `lr-voice-picker`. The label stays the accessible name while it is removed visually, for compact toolbars, so consumers no longer restyle the `form-control-label` part. Hint and error text are unaffected, and an unset control renders as before.
 
+  One seven-sample quick Chromium comparison against 30.5.0 recorded eight of 150 timing series
+  above the advisory 15% and 1 ms regression thresholds. All 15 semantic scenarios passed. Select
+  metadata-update p95 increased from 16.2 to 23.0 ms; document-library filtering paint median
+  increased from 8.7 to 13.4 ms. The shared workstation had background activity, and the causes
+  remain unresolved. This comparison is not a performance pass; its observations remain separate
+  from the hosted A/B qualification.
+
 ### Patch Changes
 
 - 0bd9ba4: Keep `lr-map` native controls at least as wide as their own content. When a consumer removes a control's margin through its part and enlarges its buttons, the shrink-to-fit corner no longer clamps the group below its buttons and clips their icons off-centre; long attribution still wraps inside the map.

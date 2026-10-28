@@ -237,8 +237,8 @@ minimumReleaseAgeExclude:
   - '@stryker-mutator/tap-runner@10.1.1'
   - '@stryker-mutator/util@10.1.1'
   - '@maplibre/vt-pbf@4.3.3'
-  - '@ai-sdk/gateway@4.0.127'
-  - '@ai-sdk/provider-utils@5.0.69'
+  - '@ai-sdk/gateway@4.0.127 || 4.0.128'
+  - '@ai-sdk/provider-utils@5.0.69 || 5.0.70'
   - '@modelcontextprotocol/ext-apps@2.0.4'
   - '@oxlint/binding-android-arm-eabi@1.90.0'
   - '@oxlint/binding-android-arm64@1.90.0'
@@ -259,7 +259,7 @@ minimumReleaseAgeExclude:
   - '@oxlint/binding-win32-arm64-msvc@1.90.0'
   - '@oxlint/binding-win32-ia32-msvc@1.90.0'
   - '@oxlint/binding-win32-x64-msvc@1.90.0'
-  - ai@7.0.154
+  - ai@7.0.154 || 7.0.155
   - oxlint@1.90.0
 allowBuilds:
   esbuild: true

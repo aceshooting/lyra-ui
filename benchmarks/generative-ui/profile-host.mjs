@@ -114,7 +114,7 @@ export async function prepareProfileHost({ fixtureDirectory = new URL('./profile
   };
   const genResolver = createRequire(join(root, 'packages/lyra-gen/package.json'));
   const aiMetadata = JSON.parse(await readFile(genResolver.resolve('ai/package.json'), 'utf8'));
-  require(aiMetadata.version === '7.0.154', 'The SDK workload requires its exact pinned peer.');
+  require(aiMetadata.version === '7.0.155', 'The SDK workload requires its exact pinned peer.');
   const sdkPlugin = { name: 'profile-sdk-public-peer', setup(build) { build.onResolve({ filter: /^ai$/ }, () => ({ path: genResolver.resolve('ai') })); } };
   const scratch = await mkdtemp(join(tmpdir(), 'lyra-gen-profile-'));
   const processes = new Set(); let closed = false;

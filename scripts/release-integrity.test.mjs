@@ -3966,3 +3966,31 @@ test('post-publish dispatch validates the tag and propagates scheduling failure'
     }
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
+
+test('coverage dependency installation retries a bounded attempt and fails closed on exhaustion', () => {
+  const workflow = readFileSync(path.join(repoRoot, '.github/workflows/ci.yml'), 'utf8');
+  const job = workflow.split('\n  build_and_coverage_coverage_shard:')[1].split('\n  build_and_coverage_coverage:')[0];
+  const step = job.match(/^      - (?:name: Install coverage dependencies\n        run: \|\n((?:          .*\n)+)|run: (pnpm install --frozen-lockfile)\n)/m);
+  assert.ok(step, 'The coverage dependency step must remain executable.');
+  const commands = step[1] ? step[1].replace(/^          /gm, '') : step[2];
+  const scratch = mkdtempSync(path.join(tmpdir(), 'lyra-coverage-install-'));
+  try {
+    const stub = (name, body) => {
+      const file = path.join(scratch, name);
+      writeFileSync(file, `#!/bin/bash\nset -euo pipefail\n${body}\n`);
+      chmodSync(file, 0o755);
+    };
+    stub('pnpm', '[[ "$*" == "install --frozen-lockfile" ]] || exit 91\ncount=0; [[ ! -f "$ATTEMPT_FILE" ]] || read -r count < "$ATTEMPT_FILE"\ncount=$((count + 1)); echo "$count" > "$ATTEMPT_FILE"\n[[ "$MODE" == transient && "$count" == 2 ]]');
+    stub('timeout', '[[ "$1 $2 $3 $4" == "--signal=TERM --kill-after=10s 180s pnpm" ]] || exit 92\nprintf "bounded\\n" >> "$TIMEOUT_FILE"\nshift 3\nexec "$@"');
+    stub('sleep', '[[ "$*" == 10 ]] || exit 93\nprintf "delay\\n" >> "$SLEEP_FILE"');
+    for (const mode of ['transient', 'persistent']) {
+      const env = { ...process.env, PATH: `${scratch}:${process.env.PATH}`, MODE: mode,
+        ATTEMPT_FILE: path.join(scratch, `${mode}-attempts`), TIMEOUT_FILE: path.join(scratch, `${mode}-timeouts`), SLEEP_FILE: path.join(scratch, `${mode}-sleeps`) };
+      const result = spawnSync('bash', ['-euo', 'pipefail', '-c', commands], { env, encoding: 'utf8', timeout: 5000 });
+      assert.equal(result.status === 0, mode === 'transient', result.stderr);
+      assert.equal(readFileSync(env.ATTEMPT_FILE, 'utf8').trim(), '2');
+      assert.equal(readFileSync(env.TIMEOUT_FILE, 'utf8'), 'bounded\nbounded\n');
+      assert.equal(readFileSync(env.SLEEP_FILE, 'utf8'), 'delay\n');
+    }
+  } finally { rmSync(scratch, { recursive: true, force: true }); }
+});

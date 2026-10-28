@@ -3,7 +3,7 @@ import { createViewCatalog, createViewDefinition, assertViewSemantics, waitForCh
 
 const encode = value => JSON.stringify(value);
 const require = (condition, message) => { if (!condition) throw new Error(message); };
-export const sdkIdentity = Object.freeze({ sdkVersion: '7.0.154', messageId: 'profile-sdk-answer', dataId: 'view-data', toolId: 'view-call',
+export const sdkIdentity = Object.freeze({ sdkVersion: '7.0.155', messageId: 'profile-sdk-answer', dataId: 'view-data', toolId: 'view-call',
   toolPartId: 'view-call:call', dataSurface: 'profile-K-data', toolSurface: 'profile-K-tool' });
 export const proseDelta = index => `SDK prose ${String(index).padStart(2, '0')}: `.padEnd(64, String.fromCharCode(65 + index % 26));
 export function sdkPayloads() {

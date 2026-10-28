@@ -223,7 +223,7 @@
     "@web/dev-server-esbuild": "^2.0.0",
     "@web/test-runner": "^1.0.0",
     "@web/test-runner-commands": "^1.0.1",
-    "ai": "7.0.154",
+    "ai": "7.0.155",
     "ajv": "8.20.0",
     "esbuild": "^0.28.2",
     "fast-check": "^4.10.2",

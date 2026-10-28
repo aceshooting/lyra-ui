@@ -67,7 +67,7 @@ test('owned A2UI report preserves exact counts, catalog identity, all updates an
 });
 
 test('SDK payloads retain two independent V-sized surfaces and exact prose/tool chunk boundaries', () => {
-  assert.equal(sdkRequire('ai/package.json').version, '7.0.154');
+  assert.equal(sdkRequire('ai/package.json').version, '7.0.155');
   const { data, tool, prose } = sdkPayloads();
   assert.equal(data.surfaceId, 'profile-K-data'); assert.equal(tool.surfaceId, 'profile-K-tool');
   assert.equal(prose.length, 3200); assert.equal(new TextEncoder().encode(prose).length, 3200);
