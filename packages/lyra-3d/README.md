@@ -21,6 +21,7 @@ resolves one shared copy.
 | --- | --- |
 | `@aceshooting/lyra-3d/core` | The engine contract, renderer setup, orbit camera, GPU picking, style input and worker tasks shared by every engine |
 | `@aceshooting/lyra-3d/graph` | Graph rendering, worker-backed layout, decorations and graph appearance |
+| `@aceshooting/lyra-3d/graph-layout` | Deterministic DAG preprocessing with synchronous and cancellable asynchronous helpers; no renderer import |
 | `@aceshooting/lyra-3d/points` | Point clouds, line segments and axes in two or three dimensions |
 | `@aceshooting/lyra-3d/panorama` | Equirectangular images or existing video elements, with camera controls and hotspots |
 | `@aceshooting/lyra-3d/model` | Bounded model admission and rendering for glTF/GLB, OBJ, STL, PLY, XYZ and PCD |
@@ -110,6 +111,92 @@ retains it; supplying one replaces that entire object, so omitting `edgeCurvatur
 replacement clears curves. Invalid columns or expanded geometry above the 2,000,000 primitive
 limit reject before replacing the accepted scene. Curves increase geometry and delivery cost;
 their throughput depends on the scene and renderer.
+
+## Directed acyclic graph layouts
+
+The granular `graph-layout` entry computes positions before rendering. It does not import three.js,
+create an engine or change a component's layout mode. Directed cycles, including self-loops, cause
+the synchronous helper to throw `GraphDagLayoutError` with code `cyclic-graph`; the asynchronous
+helper rejects its promise with that error. Edges are never reversed to make a graph acyclic.
+
+```ts
+import { layoutGraphDag } from '@aceshooting/lyra-3d/graph-layout';
+
+const input = {
+  nodeCount: 4,
+  source: new Uint32Array([0, 0, 1, 2]),
+  target: new Uint32Array([1, 2, 3, 3]),
+};
+const { positions, ranks, layerCount } = layoutGraphDag(input, { direction: 'y' });
+// ranks: [0, 1, 1, 2]; layerCount: 3.
+// positions contains xyz triples in the original node-row order.
+```
+
+Longest-path ranks place sources before their targets. Nodes within each layer retain their
+original row order on a centered grid; parallel edges do not change the layout. Directions are
+`x`, `-x`, `y`, `-y`, `z` and `-z` (default `y`). `layerGap` defaults to 100 and `nodeGap` to 50;
+each must be between 0.001 and 1,000,000 world units. Coordinates outside
+±10,000,000 world units fail with `coordinate-range`, rather than being clamped. Results own their
+`Float32Array` positions and `Uint32Array` ranks; Float32 rounding can reduce precision at large
+coordinates. Input columns remain unchanged.
+
+`layoutGraphDag` accepts up to 10,000 nodes and 100,000 edges. `layoutGraphDagAsync` accepts up to
+200,000 nodes and 1,000,000 edges. Both require ordinary, non-shared, non-resizable Uint32Array
+endpoint columns with equal lengths and valid node-row indices. The asynchronous helper copies
+and validates columns in bounded main-thread tasks; keep the input columns unchanged until its
+promise settles. It does not use a worker or promise a fixed completion time. Native buffer
+allocation cannot be interrupted within a task.
+
+An application can cancel superseded layouts before installing positions into a mounted graph
+engine:
+
+```ts
+import { layoutGraphDagAsync, type GraphDagLayoutInput } from '@aceshooting/lyra-3d/graph-layout';
+import type { GraphEngine } from '@aceshooting/lyra-3d/graph';
+
+function dagUpdates(engine: GraphEngine) {
+  let pending: AbortController | undefined;
+  let generation = 0;
+  let disposed = false;
+  return {
+    async replace(input: GraphDagLayoutInput) {
+      if (disposed) return;
+      pending?.abort();
+      const controller = new AbortController();
+      pending = controller;
+      const revision = ++generation;
+      try {
+        const result = await layoutGraphDagAsync(input, undefined, { signal: controller.signal });
+        if (disposed || controller.signal.aborted || revision !== generation) return;
+        engine.setData({ ...input, positions: result.positions }, revision);
+        engine.fit?.();
+      } catch (error) {
+        if (controller.signal.aborted || revision !== generation) return;
+        throw error; // The application presents a message using the stable error code.
+      }
+    },
+    dispose() {
+      if (disposed) return;
+      disposed = true;
+      generation++;
+      pending?.abort();
+      engine.dispose();
+    },
+  };
+}
+```
+
+Supplied engine positions default to pinned; no competing force layout moves this geometry.
+A rejected replacement keeps the previous scene. `onProgress`, when supplied as an execution
+option beside `signal`, receives immutable phase and cumulative-operation snapshots. Abort or
+throwing from the callback prevents completion, including during its final `complete` notification.
+
+The [standalone example](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-3d/examples/graph-dag.ts) mounts the actual engine, observes allocation,
+installs a small DAG and releases the engine, observer and pending request on disposal. Call its
+`dispose()` when the application view disconnects, and retain an accessible list or text view.
+The `lr-graph` Directed acyclic layout story demonstrates the same helper with immutable
+`LyraGraphNode.position` records, curved parallel links and the component's existing Fit and List
+controls. Component position limits still apply independently of the helper's world bounds.
 
 ## Core building blocks
 

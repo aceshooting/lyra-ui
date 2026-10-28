@@ -35,7 +35,16 @@ assert.deepEqual(manifest.exports, {
   './points': { types: './dist/points/index.d.ts', default: './dist/points/index.js' },
   './panorama': { types: './dist/panorama/index.d.ts', default: './dist/panorama/index.js' },
   './model': { types: './dist/model/index.d.ts', default: './dist/model/index.js' },
+  './graph-layout': { types: './dist/graph-layout/index.d.ts', default: './dist/graph-layout/index.js' },
   './package.json': './package.json',
+});
+assert.deepEqual(manifest.imports, {
+  '#graph-layout-signal-brand': {
+    types: './dist/graph-layout/signal-brand-browser.d.ts',
+    browser: './dist/graph-layout/signal-brand-browser.js',
+    node: './dist/graph-layout/signal-brand-node.js',
+    default: './dist/graph-layout/signal-brand-browser.js',
+  },
 });
 assert.deepEqual(Object.keys(manifest.dependencies), ['three']);
 assert.match(manifest.dependencies.three, /^\^0\.\d+\.\d+$/u, 'three is one caret range so applications dedupe it');
@@ -75,7 +84,16 @@ if (existsSync(path.join(packageRoot, 'dist'))) {
     if (!file.endsWith('.js')) continue;
     // Engines import nothing from Lyra UI; the component validates them structurally instead.
     for (const specifier of staticModuleSpecifiers(file, code)) {
-      assert(specifier.startsWith('./') || specifier.startsWith('../') || specifier === 'three' || specifier.startsWith('three/'),
+      const relativeFile = path.relative(packageRoot, file).split(path.sep).join('/');
+      const signalAdapter = relativeFile === 'dist/graph-layout/async.js' && specifier === '#graph-layout-signal-brand';
+      const nodeSignalBrand = relativeFile === 'dist/graph-layout/signal-brand-node.js' && specifier === 'node:util';
+      if (relativeFile.startsWith('dist/graph-layout/')) {
+        const siblingHelper = /^\.\/[a-z][a-z0-9-]*\.js$/u.test(specifier)
+          && path.dirname(path.resolve(path.dirname(file), specifier)) === path.dirname(file);
+        assert(siblingHelper || signalAdapter || nodeSignalBrand,
+          `Graph layout must not import renderer dependencies: ${specifier} in ${file}`);
+      }
+      assert(specifier.startsWith('./') || specifier.startsWith('../') || specifier === 'three' || specifier.startsWith('three/') || signalAdapter || nodeSignalBrand,
         `Unexpected import ${specifier} in ${file}`);
     }
   }

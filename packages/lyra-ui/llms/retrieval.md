@@ -107,6 +107,63 @@ curves with the optional WebGL engine; their fallback remains the paginated list
 provider scenes also support curves in the built-in renderer. In the companion, each curved edge
 reserves 16 strokes plus its directed arrow against the existing 2,000,000-primitive ceiling.
 
+**DAG preprocessing:** import `@aceshooting/lyra-3d/graph-layout` explicitly to compute a directed
+acyclic graph's positions before assigning them. The helper is independent of the renderer;
+`lr-graph` keeps the supplied positions and its existing 3D, Fit and List controls. There is no
+new layout selector. Keep original node-row order when mapping xyz results back to ids:
+
+```ts
+import type { LyraGraph, LyraGraphNode } from '@aceshooting/lyra-ui/components/retrieval/graph/graph.js';
+
+function createDagUpdates(graph: LyraGraph) {
+  let pending: AbortController | undefined;
+  let generation = 0;
+  let disposed = false;
+  return {
+    async replace(nodes: readonly LyraGraphNode[], source: Uint32Array, target: Uint32Array) {
+      if (disposed) return;
+      pending?.abort();
+      const controller = new AbortController();
+      pending = controller;
+      const revision = ++generation;
+      const current = () => !disposed && !controller.signal.aborted && revision === generation;
+      try {
+        const { layoutGraphDagAsync } = await import('@aceshooting/lyra-3d/graph-layout');
+        if (!current()) return;
+        const result = await layoutGraphDagAsync({ nodeCount: nodes.length, source, target },
+          { direction: 'y', layerGap: 100, nodeGap: 50 }, { signal: controller.signal });
+        if (!current()) return;
+        graph.nodes = nodes.map((node, row) => ({ ...node, position: {
+          x: result.positions[row * 3]!,
+          y: result.positions[row * 3 + 1]!,
+          z: result.positions[row * 3 + 2]!,
+        } }));
+        await graph.updateComplete;
+        if (current() && graph.isConnected) graph.fit();
+      } catch (error) {
+        if (current()) throw error;
+      }
+    },
+    dispose() { disposed = true; generation++; pending?.abort(); },
+  };
+}
+```
+
+Assign matching edge records separately, use `view="3d"`, and call the returned `dispose()` when
+the owning view disconnects. Handle replacement errors with application-localized status while
+retaining the previous graph. Do not mutate endpoint columns while a request is pending. Returned
+positions and ranks are owned buffers; coordinates use Float32 precision. The synchronous helper
+accepts up to 10,000 nodes/100,000 edges; the cancellable asynchronous helper accepts up to
+200,000 nodes/1,000,000 edges through bounded main-thread tasks, not a worker. These are helper
+admission ceilings, not renderer capacity claims.
+
+Both helpers reject cycles rather than reversing edges. The six directions are `x`, `-x`, `y`,
+`-y`, `z` and `-z`; default layer/node gaps are 100/50 world units. The helper rejects coordinates
+outside ±10,000,000 world units; local `LyraGraphNode.position` retains its separate ±1,000,000
+limit, so choose gaps and graph depth that fit the target component. The **Retrieval / Graph /
+Directed acyclic layout** story shows axis replacement, cancellation, strict cycle refusal,
+empty-data fallback and signed curvature on parallel directed links.
+
 `camera?: LyraGraphCamera` (property only) accepts readonly `{ yaw, pitch, distance, target }`,
 where `target: LyraGraphPosition`, yaw/pitch use radians and distance uses graph units. Without an
 input, the initial spatial scene is fitted. Camera inputs are copied; invalid fields use safe
