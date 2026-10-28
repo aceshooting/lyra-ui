@@ -2863,7 +2863,7 @@ test('upgrade dependency-only mode refreshes transitive dependencies before sync
     const dependencyPasses = dependencyOnly.commands.split('\n').filter((line) => line.includes('npm-check-updates@latest'));
     const generalPass = dependencyPasses.find((line) => line.includes('--target latest') && line.includes('--dep prod,dev,optional,packageManager'));
     const nodeTypesPass = dependencyPasses.find((line) => line.includes('--filter @types/node'));
-    assert.match(generalPass ?? '', /--reject @types\/node,@docx-editor\.dev\/core,maplibre-gl(?: |$)/u);
+    assert.match(generalPass ?? '', /--reject @types\/node,@docx-editor\.dev\/core,maplibre-gl,xlsx(?: |$)/u);
     assert.match(nodeTypesPass ?? '', /--target minor(?: |$)/u);
     assert.match(nodeTypesPass ?? '', /--dep prod,dev,optional(?: |$)/u);
     assert.match(nodeTypesPass ?? '', /--workspaces --root/u);
