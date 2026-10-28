@@ -168,6 +168,8 @@ overrides:
   '@codecov/bundler-plugin-core@2.0.1>zod': 4.6.7
   '@ag-ui/client@1.0.3>zod': 4.6.7
   '@ag-ui/proto@1.0.3>zod': 4.6.7
+  '@rollup/plugin-node-resolve@15.3.1>deepmerge': 4.1.1
+  '@web/dev-server@1.0.0>deepmerge': 4.1.1
   '@docx-editor.dev/core@2.32.0>@docx-editor.dev/i18n': 2.32.0
   '@docx-editor.dev/core@2.32.0>prosemirror-view': 1.42.7
   prosemirror-state@1.4.4>prosemirror-view: 1.42.7
@@ -188,6 +190,7 @@ patchedDependencies:
   '@codecov/bundler-plugin-core@2.0.1': 7116b3d1b1e41ccfa91c3d7d58e661d2594288534c589b18520a01e60b65dfbe
   '@web/test-runner-coverage-v8@1.0.0': 1678e3d6a33f48e696cbc7599b4588a07e2b653412890cde7fe8729e53f02ddc
   braces@3.0.3: 6a51944e47fdf849394529628931b895d58dbf01ce01aa96ce460a6f9f45e6b8
+  deepmerge@4.1.1: 4e32e68c49fe3eb85931ddd73f814a200bfe03b748cc0cf0a69288fd2c19403d
   sprintf-js@1.0.3: 3cc545bd22e591995f0a9f7841330069463717b32798e92b23976cd8a96d9b69
 
 importers:
@@ -4487,8 +4490,8 @@ packages:
   deep-equal@1.0.1:
     resolution: {integrity: sha512-bHtC0iYvWhyaTzvV3CZgPeZQqCOBGyGsVV7v4eevpdkLHfiSrXUdBG+qAuSz4RI70sszvjQ1QSZ98An1yNwpSw==}
 
-  deepmerge@4.3.1:
-    resolution: {integrity: sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A==}
+  deepmerge@4.1.1:
+    resolution: {integrity: sha512-+qO5WbNBKBaZez95TffdUDnGIo4+r5kmsX8aOb7PDHvXsTbghAmleuxjs6ytNaf5Eg4FGBXDS5vqO61TRi6BMg==}
     engines: {node: '>=0.10.0'}
 
   default-browser-id@5.0.1:
@@ -9054,7 +9057,7 @@ snapshots:
     dependencies:
       '@rollup/pluginutils': 5.5.1(rollup@4.65.1)
       '@types/resolve': 1.20.2
-      deepmerge: 4.3.1
+      deepmerge: 4.1.1(patch_hash=4e32e68c49fe3eb85931ddd73f814a200bfe03b748cc0cf0a69288fd2c19403d)
       is-module: 1.0.0
       resolve: 1.22.13
     optionalDependencies:
@@ -9956,7 +9959,7 @@ snapshots:
       command-line-args: 5.2.1
       command-line-usage: 7.0.4
       debounce: 1.2.1
-      deepmerge: 4.3.1
+      deepmerge: 4.1.1(patch_hash=4e32e68c49fe3eb85931ddd73f814a200bfe03b748cc0cf0a69288fd2c19403d)
       internal-ip: 6.2.0
       nanocolors: 0.2.13
       open: 8.4.2
@@ -10635,7 +10638,7 @@ snapshots:
 
   deep-equal@1.0.1: {}
 
-  deepmerge@4.3.1: {}
+  deepmerge@4.1.1(patch_hash=4e32e68c49fe3eb85931ddd73f814a200bfe03b748cc0cf0a69288fd2c19403d): {}
 
   default-browser-id@5.0.1: {}
 

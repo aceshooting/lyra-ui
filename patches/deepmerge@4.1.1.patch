@@ -1,0 +1,201 @@
+diff --git a/dist/cjs.js b/dist/cjs.js
+--- a/dist/cjs.js
++++ b/dist/cjs.js
+@@ -52,7 +52,7 @@ function getMergeFunction(key, options) {
+ function getEnumerableOwnPropertySymbols(target) {
+ 	return Object.getOwnPropertySymbols
+ 		? Object.getOwnPropertySymbols(target).filter(function(symbol) {
+-			return target.propertyIsEnumerable(symbol)
++			return Object.propertyIsEnumerable.call(target, symbol)
+ 		})
+ 		: []
+ }
+@@ -61,18 +61,51 @@ function getKeys(target) {
+ 	return Object.keys(target).concat(getEnumerableOwnPropertySymbols(target))
+ }
+ 
++function propertyIsOnObject(object, property) {
++	try {
++		return property in object
++	} catch(_) {
++		return false
++	}
++}
++
++// Protects from prototype poisoning and unexpected merging up the prototype chain.
++function propertyIsUnsafe(target, key) {
++	return propertyIsOnObject(target, key) // Properties are safe to merge if they don't exist in the target yet,
++		&& !(Object.hasOwnProperty.call(target, key) // unsafe if they exist up the prototype chain,
++			&& Object.propertyIsEnumerable.call(target, key)) // and also unsafe if they're nonenumerable.
++}
++
++// Rejects unsafe keys by name, whatever the target's shape: a null-prototype target, a null or
++// primitive placeholder, or an own `__proto__` key must never reach the destination.
++function propertyIsForbidden(key) {
++	return key === '__proto__' || key === 'constructor' || key === 'prototype'
++}
++
++// Writes a data property, so an inherited setter such as `__proto__` is never invoked.
++function defineDataProperty(object, key, value) {
++	Object.defineProperty(object, key, { value: value, writable: true, enumerable: true, configurable: true });
++}
++
+ function mergeObject(target, source, options) {
+ 	var destination = {};
+ 	if (options.isMergeableObject(target)) {
+ 		getKeys(target).forEach(function(key) {
+-			destination[key] = cloneUnlessOtherwiseSpecified(target[key], options);
++			if (propertyIsForbidden(key)) {
++				return
++			}
++			defineDataProperty(destination, key, cloneUnlessOtherwiseSpecified(target[key], options));
+ 		});
+ 	}
+ 	getKeys(source).forEach(function(key) {
++		if (propertyIsForbidden(key) || propertyIsUnsafe(target, key)) {
++			return
++		}
++
+ 		if (!options.isMergeableObject(source[key]) || !target[key]) {
+-			destination[key] = cloneUnlessOtherwiseSpecified(source[key], options);
++			defineDataProperty(destination, key, cloneUnlessOtherwiseSpecified(source[key], options));
+ 		} else {
+-			destination[key] = getMergeFunction(key, options)(target[key], source[key], options);
++			defineDataProperty(destination, key, getMergeFunction(key, options)(target[key], source[key], options));
+ 		}
+ 	});
+ 	return destination
+diff --git a/dist/umd.js b/dist/umd.js
+--- a/dist/umd.js
++++ b/dist/umd.js
+@@ -56,7 +56,7 @@
+ 	function getEnumerableOwnPropertySymbols(target) {
+ 		return Object.getOwnPropertySymbols
+ 			? Object.getOwnPropertySymbols(target).filter(function(symbol) {
+-				return target.propertyIsEnumerable(symbol)
++				return Object.propertyIsEnumerable.call(target, symbol)
+ 			})
+ 			: []
+ 	}
+@@ -65,18 +65,51 @@
+ 		return Object.keys(target).concat(getEnumerableOwnPropertySymbols(target))
+ 	}
+ 
++	function propertyIsOnObject(object, property) {
++		try {
++			return property in object
++		} catch(_) {
++			return false
++		}
++	}
++
++	// Protects from prototype poisoning and unexpected merging up the prototype chain.
++	function propertyIsUnsafe(target, key) {
++		return propertyIsOnObject(target, key) // Properties are safe to merge if they don't exist in the target yet,
++			&& !(Object.hasOwnProperty.call(target, key) // unsafe if they exist up the prototype chain,
++				&& Object.propertyIsEnumerable.call(target, key)) // and also unsafe if they're nonenumerable.
++	}
++
++	// Rejects unsafe keys by name, whatever the target's shape: a null-prototype target, a null or
++	// primitive placeholder, or an own `__proto__` key must never reach the destination.
++	function propertyIsForbidden(key) {
++		return key === '__proto__' || key === 'constructor' || key === 'prototype'
++	}
++
++	// Writes a data property, so an inherited setter such as `__proto__` is never invoked.
++	function defineDataProperty(object, key, value) {
++		Object.defineProperty(object, key, { value: value, writable: true, enumerable: true, configurable: true });
++	}
++
+ 	function mergeObject(target, source, options) {
+ 		var destination = {};
+ 		if (options.isMergeableObject(target)) {
+ 			getKeys(target).forEach(function(key) {
+-				destination[key] = cloneUnlessOtherwiseSpecified(target[key], options);
++				if (propertyIsForbidden(key)) {
++					return
++				}
++				defineDataProperty(destination, key, cloneUnlessOtherwiseSpecified(target[key], options));
+ 			});
+ 		}
+ 		getKeys(source).forEach(function(key) {
++			if (propertyIsForbidden(key) || propertyIsUnsafe(target, key)) {
++				return
++			}
++
+ 			if (!options.isMergeableObject(source[key]) || !target[key]) {
+-				destination[key] = cloneUnlessOtherwiseSpecified(source[key], options);
++				defineDataProperty(destination, key, cloneUnlessOtherwiseSpecified(source[key], options));
+ 			} else {
+-				destination[key] = getMergeFunction(key, options)(target[key], source[key], options);
++				defineDataProperty(destination, key, getMergeFunction(key, options)(target[key], source[key], options));
+ 			}
+ 		});
+ 		return destination
+diff --git a/index.js b/index.js
+--- a/index.js
++++ b/index.js
+@@ -27,7 +27,7 @@ function getMergeFunction(key, options) {
+ function getEnumerableOwnPropertySymbols(target) {
+ 	return Object.getOwnPropertySymbols
+ 		? Object.getOwnPropertySymbols(target).filter(function(symbol) {
+-			return target.propertyIsEnumerable(symbol)
++			return Object.propertyIsEnumerable.call(target, symbol)
+ 		})
+ 		: []
+ }
+@@ -36,18 +36,51 @@ function getKeys(target) {
+ 	return Object.keys(target).concat(getEnumerableOwnPropertySymbols(target))
+ }
+ 
++function propertyIsOnObject(object, property) {
++	try {
++		return property in object
++	} catch(_) {
++		return false
++	}
++}
++
++// Protects from prototype poisoning and unexpected merging up the prototype chain.
++function propertyIsUnsafe(target, key) {
++	return propertyIsOnObject(target, key) // Properties are safe to merge if they don't exist in the target yet,
++		&& !(Object.hasOwnProperty.call(target, key) // unsafe if they exist up the prototype chain,
++			&& Object.propertyIsEnumerable.call(target, key)) // and also unsafe if they're nonenumerable.
++}
++
++// Rejects unsafe keys by name, whatever the target's shape: a null-prototype target, a null or
++// primitive placeholder, or an own `__proto__` key must never reach the destination.
++function propertyIsForbidden(key) {
++	return key === '__proto__' || key === 'constructor' || key === 'prototype'
++}
++
++// Writes a data property, so an inherited setter such as `__proto__` is never invoked.
++function defineDataProperty(object, key, value) {
++	Object.defineProperty(object, key, { value: value, writable: true, enumerable: true, configurable: true })
++}
++
+ function mergeObject(target, source, options) {
+ 	var destination = {}
+ 	if (options.isMergeableObject(target)) {
+ 		getKeys(target).forEach(function(key) {
+-			destination[key] = cloneUnlessOtherwiseSpecified(target[key], options)
++			if (propertyIsForbidden(key)) {
++				return
++			}
++			defineDataProperty(destination, key, cloneUnlessOtherwiseSpecified(target[key], options))
+ 		})
+ 	}
+ 	getKeys(source).forEach(function(key) {
++		if (propertyIsForbidden(key) || propertyIsUnsafe(target, key)) {
++			return
++		}
++
+ 		if (!options.isMergeableObject(source[key]) || !target[key]) {
+-			destination[key] = cloneUnlessOtherwiseSpecified(source[key], options)
++			defineDataProperty(destination, key, cloneUnlessOtherwiseSpecified(source[key], options))
+ 		} else {
+-			destination[key] = getMergeFunction(key, options)(target[key], source[key], options)
++			defineDataProperty(destination, key, getMergeFunction(key, options)(target[key], source[key], options))
+ 		}
+ 	})
+ 	return destination

@@ -7,6 +7,7 @@ patchedDependencies:
   '@codecov/bundler-plugin-core@2.0.1': patches/@codecov__bundler-plugin-core@2.0.1.patch
   '@web/test-runner-coverage-v8@1.0.0': patches/@web__test-runner-coverage-v8@1.0.0.patch
   braces@3.0.3: patches/braces@3.0.3.patch
+  deepmerge@4.1.1: patches/deepmerge@4.1.1.patch
   sprintf-js@1.0.3: patches/sprintf-js@1.0.3.patch
 # dependency-cruiser parses TypeScript through the legacy compiler API, which typescript@7 no longer
 # exports (its range is >=2 <7). Give it a private typescript@6 instead of the hoisted workspace copy;
@@ -50,6 +51,14 @@ overrides:
   # These AG-UI versions already import Zod v4; use its patched collection validators.
   '@ag-ui/client@1.0.3>zod': 4.6.7
   '@ag-ui/proto@1.0.3>zod': 4.6.7
+  # GHSA-gcqx-w48m-w2h4 covers deepmerge >=4.2.0 <=4.3.1 and has no fixed release. Both test-server
+  # call sites merge trusted configuration only (Rollup's constant resolver defaults, and the dev
+  # server's defaults with this repo's runner nodeResolve options), using the deepmerge(target, source)
+  # API that 4.1.1 already provides. 4.1.1 lacks any prototype-key guard, so patches/deepmerge@4.1.1.patch
+  # makes mergeObject skip __proto__, constructor and prototype keys in every shipped build. Drop both
+  # when a fixed deepmerge is released.
+  '@rollup/plugin-node-resolve@15.3.1>deepmerge': 4.1.1
+  '@web/dev-server@1.0.0>deepmerge': 4.1.1
   # Keep the reviewed DOCX engine dependency graph aligned with its source lock.
   '@docx-editor.dev/core@2.32.0>@docx-editor.dev/i18n': 2.32.0
   '@docx-editor.dev/core@2.32.0>prosemirror-view': 1.42.7
