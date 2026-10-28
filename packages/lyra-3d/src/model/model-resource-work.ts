@@ -46,6 +46,7 @@ export function* readModelDataUri<Mime extends string>(value: unknown, mimes: re
   } };
   for (let i = value.length - padding; i < value.length; i++) { yield 'scalars'; check(character(i) === '='); }
   if (padding) check((base64Value(character(value.length - padding - 1).charCodeAt(0)) & (padding === 2 ? 15 : 3)) === 0);
+  budget.allocations?.reserve('embedded', length);
   const bytes = new Uint8Array(length); let output = 0;
   const encoded = new ModelJsonStringCursor(value, start);
   yield { unit: 'records', run(limit) {

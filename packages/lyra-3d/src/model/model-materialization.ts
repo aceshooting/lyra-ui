@@ -2,16 +2,23 @@ import { Box3, BufferAttribute, BufferGeometry, Color, Group, InterleavedBuffer,
 import { MODEL_LIMITS } from './limits.js';
 import { ModelAdmissionError } from './admission.js';
 import { aborted, type ParsedModel } from './model-parser-common.js';
-import type { AdmittedModelInput, ModelAttributeDescriptor, ModelDescriptor, ModelMaterialDescriptor } from './model-prepared-types.js';
+import type { AdmittedModelInput, ModelAllocationHooks, ModelAttributeDescriptor, ModelDescriptor, ModelMaterialDescriptor, ModelPreparedResource } from './model-prepared-types.js';
 import { createModelGeneratorWork, type ModelWorkGenerator } from './model-work-generator.js';
 
-export async function decodePreparedImages(admitted: AdmittedModelInput, signal?: AbortSignal): Promise<Map<number, ImageBitmap>> {
+export interface ModelImageServices {
+  readonly decodeImage?: (resource: ModelPreparedResource, signal?: AbortSignal) => Promise<ImageBitmap>;
+  readonly beforeDecode?: (resource: number, width: number, height: number) => void;
+}
+export async function decodePreparedImages(admitted: AdmittedModelInput, signal?: AbortSignal, services: ModelImageServices = {}): Promise<Map<number, ImageBitmap>> {
   const images = new Map<number, ImageBitmap>();
   try {
     for (let index = 0; index < admitted.resources.length; index++) {
       const resource = admitted.resources[index]!; if (resource.kind !== 'image') continue;
-      aborted(signal); if (typeof createImageBitmap !== 'function') throw new ModelAdmissionError('unsupported');
-      const image = await createImageBitmap(new Blob([resource.bytes], { type: resource.mimeType }), { imageOrientation: 'none', premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+      aborted(signal);
+      services.beforeDecode?.(index, resource.width!, resource.height!);
+      aborted(signal);
+      if (!services.decodeImage && typeof createImageBitmap !== 'function') throw new ModelAdmissionError('unsupported');
+      const image = services.decodeImage ? await services.decodeImage(resource, signal) : await createImageBitmap(new Blob([resource.bytes], { type: resource.mimeType }), { imageOrientation: 'none', premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
       images.set(index, image); aborted(signal);
       if (image.width !== resource.width || image.height !== resource.height) throw new ModelAdmissionError('invalid');
     }
@@ -19,7 +26,7 @@ export async function decodePreparedImages(admitted: AdmittedModelInput, signal?
   } catch (error) { for (const image of images.values()) try { image.close(); } catch { /* Release every owned image. */ } throw error; }
 }
 
-export function createModelMaterialization(descriptor: ModelDescriptor, admitted: AdmittedModelInput, images: Map<number, ImageBitmap>) {
+export function createModelMaterialization(descriptor: ModelDescriptor, admitted: AdmittedModelInput, images: Map<number, ImageBitmap>, options: { readonly closeImages?: boolean; readonly allocations?: ModelAllocationHooks } = {}) {
   const geometries: BufferGeometry[] = []; const materials: Material[] = []; const textures: Texture[] = []; const nodes: Object3D[] = [];
   let disposed = false; let published = false;
   const textureSources = new Map<number, Texture>();
@@ -28,7 +35,7 @@ export function createModelMaterialization(descriptor: ModelDescriptor, admitted
     for (const texture of textures) try { texture.dispose(); } catch { /* Continue releasing owned resources. */ }
     for (const material of materials) try { material.dispose(); } catch { /* Continue releasing owned resources. */ }
     for (const geometry of geometries) try { geometry.dispose(); } catch { /* Continue releasing owned resources. */ }
-    for (const image of images.values()) try { image.close(); } catch { /* Continue releasing owned resources. */ }
+    if (options.closeImages !== false) for (const image of images.values()) try { image.close(); } catch { /* Continue releasing owned resources. */ }
     for (const node of nodes) node.removeFromParent(); images.clear(); textureSources.clear();
   };
   const attributes = new Map<ModelAttributeDescriptor, BufferAttribute | InterleavedBufferAttribute>();
@@ -43,7 +50,8 @@ export function createModelMaterialization(descriptor: ModelDescriptor, admitted
       const conversion = source.colorConversion;
       const size = conversion.output === 'f32' ? 4 : 1;
       allocation += source.count * 3 * size; if (allocation > admitted.counts.decodedBytes) throw new ModelAdmissionError('limit');
-      yield 'records'; const output = conversion.output === 'f32' ? new Float32Array(source.count * 3) : new Uint8Array(source.count * 3);
+      yield 'records'; options.allocations?.reserve('color-conversion', source.count * 3 * size);
+      const output = conversion.output === 'f32' ? new Float32Array(source.count * 3) : new Uint8Array(source.count * 3);
       for (let row = 0; row < source.count; row++) {
         yield 'records'; const offset = row * 3;
         if (conversion.authoredRows && conversion.authoredRows[row] === 0) { output[offset] = array[offset]!; output[offset + 1] = array[offset + 1]!; output[offset + 2] = array[offset + 2]!; continue; }

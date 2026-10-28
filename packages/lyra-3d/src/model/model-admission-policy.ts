@@ -1,9 +1,9 @@
 import { ModelAdmissionError } from './model-admission-error.js';
 import { MODEL_LIMITS as LIMIT } from './limits.js';
 import type { ModelAdmissionFailure, ModelFormat } from './types.js';
-import type { ModelPreparedResource, OwnedModelInput } from './model-prepared-types.js';
+import type { ModelAllocationHooks, ModelPreparedResource, OwnedModelInput } from './model-prepared-types.js';
 
-export interface ModelResourceBudget { decoded: number; vertices: number; indices: number; pixels: number; resources: ModelPreparedResource[] }
+export interface ModelResourceBudget { decoded: number; vertices: number; indices: number; pixels: number; resources: ModelPreparedResource[]; readonly allocations?: ModelAllocationHooks }
 export function modelAdmissionCheck(condition: unknown, code: ModelAdmissionFailure = 'invalid'): asserts condition {
   if (!condition) throw new ModelAdmissionError(code);
 }
@@ -25,7 +25,7 @@ export function chargeModelGeometry(budget: ModelResourceBudget, vertices: numbe
   modelAdmissionCheck(budget.vertices <= LIMIT.vertices && budget.indices <= LIMIT.indices, 'limit');
   chargeModelBytes(budget, vertices * 160 + indices * 16);
 }
-export function createModelResourceBudget(): ModelResourceBudget { return { decoded: 0, vertices: 0, indices: 0, pixels: 0, resources: [] }; }
+export function createModelResourceBudget(allocations?: ModelAllocationHooks): ModelResourceBudget { return { decoded: 0, vertices: 0, indices: 0, pixels: 0, resources: [], ...(allocations ? { allocations } : {}) }; }
 
 export function snapshotModelInput(input: ArrayBuffer | Uint8Array, format: ModelFormat): OwnedModelInput {
   modelAdmissionCheck(['gltf', 'glb', 'stl', 'obj', 'ply', 'xyz', 'pcd'].includes(format), 'unsupported');
