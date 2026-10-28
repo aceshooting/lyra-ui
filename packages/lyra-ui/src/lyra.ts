@@ -2269,3 +2269,13 @@ export type {
   LyraPanoramaHotspot,
   LyraPanoramaHotspotSelectDetail,
 } from './components/media/image-viewer/image-viewer-panorama.js';
+
+export { createSimulationClock, SimulationClockError } from './simulation-clock.js';
+export type {
+  SimulationClock, SimulationClockOptions, SimulationClockCapabilities, ClockScheduler, ClockSnapshot,
+  SimulationClockMode, SimulationClockReason, SimulationClockErrorCode,
+} from './simulation-clock.js';
+export { createTimeIndex, TimeIndexError } from './time-index.js';
+export type { TimeIndex, TimeLocation, TimeIndexErrorCode } from './time-index.js';
+export { bindSequencePlayback, SequenceTimeBindingError } from './sequence-time-binding.js';
+export type { SequenceTimeBindingOptions, SequenceTimeBindingErrorCode } from './sequence-time-binding.js';

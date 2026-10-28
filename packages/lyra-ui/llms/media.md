@@ -351,6 +351,50 @@ dimming at `itemCount <= 1`), `--lr-focus-ring-*`.
 
 ---
 
+### Shared epoch-time binding
+
+Import `createSimulationClock` from `@aceshooting/lyra-ui/simulation-clock.js`, `createTimeIndex`
+from `@aceshooting/lyra-ui/time-index.js`, and `bindSequencePlayback` from
+`@aceshooting/lyra-ui/sequence-time-binding.js`. Register the control separately with
+`@aceshooting/lyra-ui/components/lr-sequence-playback.js`; the helper registers nothing.
+
+```js
+const samples = createTimeIndex([Date.UTC(2026, 0, 1), Date.UTC(2026, 0, 1) + 4000,
+  Date.UTC(2026, 0, 1) + 13000]);
+const clock = createSimulationClock({ range: [samples.instantAt(0), samples.instantAt(2)],
+  instant: samples.instantAt(0) });
+const release = bindSequencePlayback(playback, clock, samples);
+const unsubscribe = clock.subscribe(({ instant }) => updateApplicationViews(instant));
+// When the application scope ends:
+release(); unsubscribe(); clock.dispose();
+```
+
+The bound slider remains sample-index based; irregular sample durations come from the shared clock.
+`itemCount` and `currentIndex` report the displayed count and lower sample index. The binding owns
+those values: direct property/attribute writes do not seek shared time. `intervalMs` and
+`withoutLoop` remain dormant while bound. Playback is forward-only and stops at the clock range end.
+`goTo()` requests a sample timestamp, pauses, then emits one step even at the same index;
+`next()`/`previous()` retain replay state and do nothing at their displayed endpoints. Clock range
+clamping wins: event detail reports the actual mapped index, not an unreachable requested sample.
+Empty bindings disable navigation/play without pausing other clock consumers. Singleton `goTo(0)`
+can explicitly seek/pause; disabled UI prevents accidental activation.
+
+`lr-play`/`lr-pause` reflect effective replay transitions; `lr-sequence-step` retains exactly
+`{ currentIndex }`. Fractional movement within a sample emits no step, crossing several samples
+emits one, and manual actions do not duplicate their subscription-driven projection. A pause
+transition precedes its manual step. Commands are synchronous except commands issued during clock
+fan-out, whose accepted projection is deferred to the next delivery. Reentrant release/disconnect
+retires the old event continuation.
+
+Attach/detach and restoration emit no synthetic play/pause/step events. Release restores standalone
+index values paused. Host `hidden = true`, disconnect, adoption, or abort releases only that
+control; other subscribers continue. Clock disposal releases all of its bindings and subscribers.
+Show/reconnect requires explicit rebinding. Ancestor
+CSS visibility is not observed. Import helper and control from the same package module instance;
+duplicate installed copies do not share private attachment authority. Unsupported, inactive or
+already-bound hosts fail before ownership transfer. See the shared clock utilities guide for
+scheduling, live/replay, disposal and error-code contracts.
+
 ## `lr-map`
 
 A MapLibre-compatible wrapper using the optional `@aceshooting/lyra-map` modular engine by default,

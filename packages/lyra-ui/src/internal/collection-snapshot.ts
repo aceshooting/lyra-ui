@@ -1,4 +1,5 @@
 import { LitElement } from 'lit';
+import { PUBLIC_COLLECTION_ENTRY_LIMIT } from './collection-policy.js';
 import type { LyraElement, LyraCollectionSupport } from './lyra-element.js';
 import {
   MISSING_OWN_DATA_DESCRIPTOR,
@@ -9,8 +10,6 @@ import {
 } from './data-descriptors.js';
 import { devWarnOnce } from './dev-warning.js';
 
-/** Maximum number of array entries retained by the shared public-collection snapshot boundary. */
-const PUBLIC_COLLECTION_ENTRY_LIMIT = 10_000;
 /** Maximum number of plain-record properties retained across one snapshot. */
 const PUBLIC_COLLECTION_NODE_LIMIT = 50_000;
 /** Maximum non-rollback source positions inspected while producing one snapshot. */

@@ -1865,7 +1865,19 @@
       "default": "./dist/internal/docx-zip-admission.js"
     },
     "./theme/presets.js": null,
-    "./theme/presets/shadcn.js": null
+    "./theme/presets/shadcn.js": null,
+    "./simulation-clock.js": {
+      "types": "./dist/simulation-clock.d.ts",
+      "default": "./dist/simulation-clock.js"
+    },
+    "./time-index.js": {
+      "types": "./dist/time-index.d.ts",
+      "default": "./dist/time-index.js"
+    },
+    "./sequence-time-binding.js": {
+      "types": "./dist/sequence-time-binding.d.ts",
+      "default": "./dist/sequence-time-binding.js"
+    }
   },
   "sideEffects": [
     "./dist/accents.css",
