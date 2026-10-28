@@ -1,11 +1,79 @@
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { readFile, readdir, realpath } from 'node:fs/promises';
+import { readFile, readdir, realpath, lstat } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
+const SHEETJS_INTEGRITY = 'sha512-oLDq3jw7AcLqKWH2AhCpVTZl8mf6X2YReP+Neh0SJUzV/BdZYjth94tG5toiMB1PPrYtxOCfaoUCkvtuH+3AJA==';
+const SHEETJS_LICENSE_SHA256 = '4d2a38ac35cda06a555c84074a819d413339cd3691b822cae50f8f322fe01f64';
 const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+
+/** Verify the original development-only archive before interpreting any package data. */
+export async function verifyVendoredSheetJs(root, overrides = {}) {
+  const directory = root instanceof URL ? fileURLToPath(root) : root;
+  const manifest = overrides.manifest ?? JSON.parse(await readFile(join(directory, 'packages/lyra-ui/package.json'), 'utf8'));
+  if (manifest.devDependencies?.xlsx !== 'file:../../vendor/xlsx-0.20.3.tgz' ||
+      manifest.peerDependencies?.xlsx !== '>=0.20.3 <0.21.0' ||
+      manifest.peerDependenciesMeta?.xlsx?.optional !== true || manifest.dependencies?.xlsx || manifest.optionalDependencies?.xlsx) {
+    throw new Error('Vendored SheetJS must retain its exact development pin and optional peer contract');
+  }
+  const file = join(directory, 'vendor/xlsx-0.20.3.tgz');
+  let bytes = overrides.bytes;
+  if (bytes === undefined) {
+    const metadata = await lstat(file);
+    if (!metadata.isFile() || metadata.size > 10 * 1024 * 1024) throw new Error('Invalid vendored SheetJS archive file');
+    bytes = await readFile(file);
+    if (bytes.length !== metadata.size) throw new Error('Vendored SheetJS archive changed while reading');
+  }
+  if (!Buffer.isBuffer(bytes) || bytes.length > 10 * 1024 * 1024 ||
+      `sha512-${createHash('sha512').update(bytes).digest('base64')}` !== SHEETJS_INTEGRITY) {
+    throw new Error('Vendored SheetJS archive integrity mismatch');
+  }
+  const { inspectPeerTarballArchive } = await import('./check-peer-compatibility.mjs');
+  const archive = inspectPeerTarballArchive(bytes, { expectedPackage: { name: 'xlsx', version: '0.20.3' } });
+  if (archive.files.find(entry => entry.path === 'LICENSE')?.sha256 !== SHEETJS_LICENSE_SHA256) {
+    throw new Error('Vendored SheetJS Apache-2.0 license mismatch');
+  }
+  return archive;
+}
+
+/** Local tarball dependencies are omitted by pnpm's bulk advisory request. */
+export function parseSheetJsAdvisories(response) {
+  if (!object(response) || Object.keys(response).some(key => key !== 'xlsx') ||
+      (Object.hasOwn(response, 'xlsx') && !Array.isArray(response.xlsx))) {
+    throw new Error('Invalid SheetJS advisory response');
+  }
+  const advisories = response.xlsx ?? [];
+  if (advisories.length !== 0) throw new Error('Unmitigated advisory reported for vendored SheetJS 0.20.3');
+  return [];
+}
+
+/** Query the exact vendored version with a bounded request and streamed response. */
+export async function auditSheetJs(fetcher = fetch) {
+  const response = await fetcher('https://registry.npmjs.org/-/npm/v1/security/advisories/bulk', {
+    method: 'POST', redirect: 'error', signal: AbortSignal.timeout(30_000),
+    headers: { 'content-type': 'application/json', accept: 'application/json' },
+    body: JSON.stringify({ xlsx: ['0.20.3'] }),
+  });
+  if (!response.ok || !response.body) throw new Error('SheetJS advisory request failed');
+  const reader = response.body.getReader();
+  const chunks = []; let size = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > 1024 * 1024) throw new Error('SheetJS advisory response exceeds byte limit');
+      chunks.push(Buffer.from(value));
+    }
+    const text = new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks));
+    return parseSheetJsAdvisories(JSON.parse(text));
+  } finally {
+    await reader.cancel();
+    reader.releaseLock();
+  }
+}
 
 /** Accept only the complete pnpm audit report, including an internally consistent total. */
 export function parseAudit(stdout, status) {
@@ -137,6 +205,8 @@ export async function collectEvidence(root, mitigations) {
 
 async function main() {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+  await verifyVendoredSheetJs(root);
+  await auditSheetJs();
   const mitigations = JSON.parse(await readFile(join(root, 'scripts/fixtures/dependency-security.json'), 'utf8'));
   const evidence = await collectEvidence(root, mitigations);
   const audit = spawnSync('pnpm', ['audit', '--json'], {

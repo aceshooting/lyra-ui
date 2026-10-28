@@ -117,3 +117,57 @@ test('checks reachable installed sources and ignores unused virtual-store copies
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test('vendored SheetJS retains exact bytes, package identity and development-only registration', async () => {
+  const { verifyVendoredSheetJs } = await import('./check-dependency-security.mjs');
+  const root = new URL('../', import.meta.url);
+  await verifyVendoredSheetJs(root);
+  const manifest = JSON.parse(await readFile(new URL('packages/lyra-ui/package.json', root)));
+  for (const change of [
+    value => { value.devDependencies.xlsx = 'https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz'; },
+    value => { value.peerDependencies.xlsx = '*'; },
+    value => { value.peerDependenciesMeta.xlsx.optional = false; },
+  ]) {
+    const altered = structuredClone(manifest); change(altered);
+    await assert.rejects(verifyVendoredSheetJs(root, { manifest: altered }));
+  }
+  await assert.rejects(verifyVendoredSheetJs(root, { bytes: Buffer.from('tampered archive') }));
+});
+
+test('explicit SheetJS advisory response rejects vulnerabilities and malformed registry data', async () => {
+  const { parseSheetJsAdvisories } = await import('./check-dependency-security.mjs');
+  assert.deepEqual(parseSheetJsAdvisories({}), []);
+  assert.deepEqual(parseSheetJsAdvisories({ xlsx: [] }), []);
+  for (const value of [null, [], { error: 'unavailable' }, { xlsx: {} }, { other: [] }, { xlsx: [null] },
+    { xlsx: [{ id: 1, name: 'xlsx', severity: 'high', vulnerable_versions: '<1', title: 'vulnerability', url: 'https://example.com' }] }]) {
+    assert.throws(() => parseSheetJsAdvisories(value));
+  }
+});
+
+test('explicit SheetJS audit sends exact installed version and bounds response failures', async () => {
+  const { auditSheetJs } = await import('./check-dependency-security.mjs');
+  const request = async (url, options) => {
+    assert.equal(url, 'https://registry.npmjs.org/-/npm/v1/security/advisories/bulk');
+    assert.equal(options.method, 'POST');
+    assert.deepEqual(JSON.parse(options.body), { xlsx: ['0.20.3'] });
+    assert.ok(options.signal instanceof AbortSignal);
+    return new Response('{}');
+  };
+  await auditSheetJs(request);
+  for (const response of [new Response('unavailable', { status: 503 }), new Response('not-json'),
+    new Response(' '.repeat(1024 * 1024 + 1)), new Response('{"xlsx":[{}]}')]) {
+    await assert.rejects(auditSheetJs(async () => response));
+  }
+  await assert.rejects(auditSheetJs(async () => { throw new Error('network failure'); }));
+});
+
+test('dependency upgrades preserve the manually reviewed SheetJS development archive and peer floor', async () => {
+  const script = await readFile(new URL('./upgrade.sh', import.meta.url), 'utf8');
+  const passes = script.split('pnpm dlx npm-check-updates@latest').slice(1);
+  for (const scope of ['prod,dev,optional,packageManager', 'peer']) {
+    const pass = passes.find(value => value.includes(`--dep ${scope} `));
+    assert.ok(pass, `Missing dependency upgrade pass ${scope}`);
+    const rejected = pass.match(/--reject ([^\n]+)/u)?.[1].trim().replace(/\s*\\$/u, '').split(',');
+    assert.ok(rejected?.includes('xlsx'), `The ${scope} pass must preserve the reviewed SheetJS identity`);
+  }
+});

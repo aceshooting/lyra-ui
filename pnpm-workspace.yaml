@@ -40,7 +40,7 @@ peerDependencyRules:
     '@codecov/vite-plugin>vite': '8'
   allowAny:
     # lyra-ui's optional xlsx peer is `>=0.20.3 <0.21.0`. The only maintained 0.20 build is the
-    # SheetJS CDN tarball, whose resolved version is a URL that pnpm cannot compare with a range.
+    # vendored SheetJS tarball, whose file resolution pnpm cannot compare with a range.
     - xlsx
 overrides:
   # Keep renderer-owned declaration sources aligned with the reviewed MapLibre source lock.

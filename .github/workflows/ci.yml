@@ -416,7 +416,7 @@ jobs:
               exit 0
             fi
             echo "::warning::Dependency installation attempt $attempt failed or timed out"
-            if [[ "$attempt" == 1 ]]; then
+            if [ "$attempt" = 1 ]; then
               sleep 10
             fi
           done

@@ -3986,7 +3986,7 @@ test('coverage dependency installation retries a bounded attempt and fails close
     for (const mode of ['transient', 'persistent']) {
       const env = { ...process.env, PATH: `${scratch}:${process.env.PATH}`, MODE: mode,
         ATTEMPT_FILE: path.join(scratch, `${mode}-attempts`), TIMEOUT_FILE: path.join(scratch, `${mode}-timeouts`), SLEEP_FILE: path.join(scratch, `${mode}-sleeps`) };
-      const result = spawnSync('bash', ['-euo', 'pipefail', '-c', commands], { env, encoding: 'utf8', timeout: 5000 });
+      const result = spawnSync('sh', ['-eu', '-c', commands], { env, encoding: 'utf8', timeout: 5000 });
       assert.equal(result.status === 0, mode === 'transient', result.stderr);
       assert.equal(readFileSync(env.ATTEMPT_FILE, 'utf8').trim(), '2');
       assert.equal(readFileSync(env.TIMEOUT_FILE, 'utf8'), 'bounded\nbounded\n');
