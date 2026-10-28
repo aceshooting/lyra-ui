@@ -857,7 +857,7 @@ process.exit(result.status ?? 1);
     assert.match(missingBase.stderr, /Failed to find where HEAD diverged from "main"/u);
 
     const workflow = readFileSync(path.join(repoRoot, '.github/workflows/prepare-artifacts.yml'), 'utf8');
-    const releaseStep = /      - name: Prepare release source from pending changesets\n        if: inputs.mode == 'release'\n        run: \|\n(?<commands>(?:          .*\n)+)/u.exec(workflow);
+    const releaseStep = /      - name: Prepare release source from pending changesets\n        if: inputs.mode == 'release' && inputs.candidateSha == ''\n        run: \|\n(?<commands>(?:          .*\n)+)/u.exec(workflow);
     assert.ok(releaseStep, 'the hosted release step must expose its exact checkout preparation');
     const commands = releaseStep.groups.commands.replace(/^          /gmu, '');
     const runReleaseStep = (sourceSha) => spawnSync('bash', ['-euo', 'pipefail', '-c', commands], {
@@ -3311,7 +3311,7 @@ test('static and local CI run the release-tooling self-tests and package-manager
   const toolingCommand = rootPackage.scripts['check:release-tooling'];
   assert.equal(
     toolingCommand,
-    'node --test scripts/release-prepare.test.mjs scripts/release-integrity.test.mjs scripts/verify-npm-publication.test.mjs scripts/check-peer-compatibility.test.mjs scripts/check-node-version.test.mjs scripts/sync-package-manager-docs.test.mjs scripts/sync-playwright-images.test.mjs scripts/update-framework-recipe-versions.test.mjs scripts/ci-workflow-policy.test.mjs scripts/prepare-codecov-lcov.test.mjs scripts/prepare-codecov-lcov.property.test.mjs scripts/quality-tools.test.mjs scripts/release-sbom.test.mjs && node scripts/sync-package-manager-docs.mjs --check',
+    'node --test scripts/prepare-artifacts.test.mjs scripts/prepare-source-contracts.test.mjs scripts/prepare-candidate-source.test.mjs scripts/release-prepare.test.mjs scripts/release-integrity.test.mjs scripts/verify-npm-publication.test.mjs scripts/check-peer-compatibility.test.mjs scripts/check-node-version.test.mjs scripts/sync-package-manager-docs.test.mjs scripts/sync-playwright-images.test.mjs scripts/update-framework-recipe-versions.test.mjs scripts/ci-workflow-policy.test.mjs scripts/prepare-codecov-lcov.test.mjs scripts/prepare-codecov-lcov.property.test.mjs scripts/quality-tools.test.mjs scripts/release-sbom.test.mjs && node scripts/sync-package-manager-docs.mjs --check',
     'one root command must keep all release-tooling unit tests and synchronized package-manager prose together',
   );
 

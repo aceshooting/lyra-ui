@@ -128,6 +128,23 @@ gate. Read `EXEMPTIONS` for the current list and reasons.
 
 ### Hosted preparation (`prepare-artifacts.yml`)
 
+- **Immutable candidate source.** Dispatch on `main` with optional `candidateSha` set to a full
+  lowercase commit SHA from this repository, containing the dispatch's current main commit.
+  Candidate preparation requires source mode, no publication capture and no dependency upgrade.
+  A fresh isolated namespace of origin branch heads must contain the candidate; shared Git objects
+  or fork-only commits are insufficient. The trusted main verifier checks ancestry and unchanged executable preparation tooling under
+  `scripts/` and `packages/lyra-ui/scripts/`, including tests; fixture JSON may regenerate. It
+  rechecks the checkout and tooling bytes/modes before enrollment and bundling using a frozen
+  verifier. Tooling changes must qualify and merge separately first. The artifact's `baseCommit`
+  identifies the candidate; `preparation` retains the trusted workflow commit/ref, source and
+  candidate commits, mode and source-contract request digest. Artifact names use the candidate
+  SHA. There is no automatic source-delta applier: the maintainer must review the complete delta
+  and verify every before hash/mode against that candidate before applying it;
+  preparation is not feature or release qualification. An empty candidate preserves main/release
+  preparation. Candidate builds execute maintainer-reviewed same-repository source; this is not
+  a hostile-code sandbox. The workflow retains read-only contents permission and never changes Git refs
+  remotely, publishes packages or relaxes the hosted/main/source enrollment guards.
+
 - **Reviewed source-contract enrollment.** The optional `sourceContracts` JSON input (source mode
   only) has `schemaVersion: 1` and any of: `updates` (`{ module, exportName, kind,
   expectedFingerprint }`: an existing documented owner and its exact old census fingerprint),
