@@ -7,7 +7,7 @@ const hiddenGenerated = new Set([
   'plugins/lyra-ui/.claude-plugin/plugin.json', 'plugins/lyra-ui/.codex-plugin/plugin.json',
 ]);
 
-export function assertPreparationInputs(mode = 'source', publication = '', sourceContracts = '', upgradeDependencies = 'false') {
+export function assertPreparationInputs(mode = 'source', publication = '', sourceContracts = '', upgradeDependencies = 'false', candidateSha = '') {
   assert.ok(['source', 'release'].includes(mode), `Unknown preparation mode ${mode}`);
   assert.ok(['false', 'true'].includes(upgradeDependencies), 'Dependency upgrade flag must be true or false');
   if (upgradeDependencies === 'true') {
@@ -17,6 +17,12 @@ export function assertPreparationInputs(mode = 'source', publication = '', sourc
   }
   assert.ok(mode !== 'release' || publication === '',
     'Release preparation cannot capture a publication; capture and commit it in source mode first');
+  if (candidateSha !== '') {
+    assert.ok(typeof candidateSha === 'string' && candidateSha.length === 40 && /^[a-f0-9]{40}$/u.test(candidateSha), 'Candidate requires a complete lowercase commit SHA');
+    assert.equal(mode, 'source', 'Candidate preparation requires source mode');
+    assert.equal(publication, '', 'Candidate preparation cannot capture a publication');
+    assert.equal(upgradeDependencies, 'false', 'Candidate preparation cannot upgrade dependencies');
+  }
   parseSourceContractRequest(sourceContracts, mode);
 }
 

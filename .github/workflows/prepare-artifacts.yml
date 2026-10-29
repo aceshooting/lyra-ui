@@ -11,6 +11,11 @@ on:
         options:
           - source
           - release
+      candidateSha:
+        description: 'Optional exact same-repository descendant commit; source preparation only'
+        required: false
+        type: string
+        default: ''
       publication:
         description: 'Optional immutable capture JSON: version, tagObject, commit, tarballSha256, registryIntegrity'
         required: false
@@ -42,6 +47,7 @@ jobs:
     env:
       PREPARATION_MODE: ${{ inputs.mode }}
       SOURCE_CONTRACTS_JSON: ${{ inputs.sourceContracts }}
+      PREPARATION_CANDIDATE_SHA: ${{ inputs.candidateSha }}
       UPGRADE_DEPENDENCIES: ${{ inputs.upgradeDependencies }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -49,6 +55,27 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
+      - name: Select immutable preparation source using trusted main control
+        env:
+          CANDIDATE_SHA: ${{ inputs.candidateSha }}
+          PUBLICATION_JSON: ${{ inputs.publication }}
+        run: |
+          set -euo pipefail
+          # Freeze this builtin-only verifier before executing any candidate code.
+          cp scripts/prepare-candidate-source.mjs "$RUNNER_TEMP/lyra-preparation-control.mjs"
+          source_sha="$GITHUB_SHA"
+          if [[ -n "$CANDIDATE_SHA" ]]; then
+            [[ "$CANDIDATE_SHA" =~ ^[a-f0-9]{40}$ ]]
+            [[ "$PREPARATION_MODE" == source && -z "$PUBLICATION_JSON" && "$UPGRADE_DEPENDENCIES" == false ]]
+            # Only freshly fetched origin branch heads establish same-repository membership.
+            git for-each-ref --format='delete %(refname)' refs/lyra-preparation-origin/ | git update-ref --stdin
+            git fetch --no-tags origin '+refs/heads/*:refs/lyra-preparation-origin/*'
+            node "$RUNNER_TEMP/lyra-preparation-control.mjs" validate "$PWD" "$GITHUB_SHA" "$CANDIDATE_SHA"
+            git checkout --detach "$CANDIDATE_SHA"
+            source_sha="$CANDIDATE_SHA"
+            node "$RUNNER_TEMP/lyra-preparation-control.mjs" verify "$PWD" "$GITHUB_SHA" "$source_sha"
+          fi
+          echo "PREPARATION_SOURCE_SHA=$source_sha" >> "$GITHUB_ENV"
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -73,20 +100,20 @@ jobs:
         run: |
           node --input-type=module <<'NODE'
           import { assertPreparationInputs } from './scripts/prepare-artifacts-paths.mjs';
-          assertPreparationInputs(process.env.PREPARATION_MODE, process.env.PUBLICATION_JSON, process.env.SOURCE_CONTRACTS_JSON, process.env.UPGRADE_DEPENDENCIES);
+          assertPreparationInputs(process.env.PREPARATION_MODE, process.env.PUBLICATION_JSON, process.env.SOURCE_CONTRACTS_JSON, process.env.UPGRADE_DEPENDENCIES, process.env.PREPARATION_CANDIDATE_SHA);
           NODE
-          node --test scripts/prepare-artifacts.test.mjs
+          node --test scripts/prepare-artifacts.test.mjs scripts/prepare-candidate-source.test.mjs
       - run: pnpm install --frozen-lockfile
       - name: Check scoped source-contract preparation
         run: node --test scripts/prepare-source-contracts.test.mjs
       - name: Capture an explicitly pinned publication
-        if: inputs.mode == 'source'
+        if: inputs.mode == 'source' && inputs.candidateSha == ''
         env:
           PUBLICATION_JSON: ${{ inputs.publication }}
           GH_TOKEN: ${{ github.token }}
         run: node scripts/prepare-artifacts.mjs capture
       - name: Upgrade workspace dependencies
-        if: inputs.mode == 'source' && inputs.upgradeDependencies
+        if: inputs.mode == 'source' && inputs.candidateSha == '' && inputs.upgradeDependencies
         # Canonical regeneration below performs the build and measurements once, after upgrading.
         run: VERIFY=0 ./scripts/upgrade.sh
       # History reconciliation needs a current manifest and pinned inventory first.
@@ -102,9 +129,13 @@ jobs:
           ./scripts/regen.sh
       - name: Apply explicitly reviewed source-contract enrollment
         if: inputs.mode == 'source'
-        run: node scripts/prepare-artifacts.mjs source-contracts
+        run: |
+          if [[ -n "$PREPARATION_CANDIDATE_SHA" ]]; then
+            node "$RUNNER_TEMP/lyra-preparation-control.mjs" verify "$PWD" "$GITHUB_SHA" "$PREPARATION_SOURCE_SHA"
+          fi
+          node scripts/prepare-artifacts.mjs source-contracts
       - name: Prepare release source from pending changesets
-        if: inputs.mode == 'release'
+        if: inputs.mode == 'release' && inputs.candidateSha == ''
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
@@ -123,10 +154,14 @@ jobs:
           pnpm check:secrets
           git diff --check
       - name: Package source delta for review
-        run: node scripts/prepare-artifacts.mjs bundle
+        run: |
+          if [[ -n "$PREPARATION_CANDIDATE_SHA" ]]; then
+            node "$RUNNER_TEMP/lyra-preparation-control.mjs" verify "$PWD" "$GITHUB_SHA" "$PREPARATION_SOURCE_SHA"
+          fi
+          node scripts/prepare-artifacts.mjs bundle
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: generated-source-${{ github.sha }}
+          name: generated-source-${{ inputs.candidateSha || github.sha }}
           path: ${{ runner.temp }}/lyra-generated-source
           if-no-files-found: error
           retention-days: 14

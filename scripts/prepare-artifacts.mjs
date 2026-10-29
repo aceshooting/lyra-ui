@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { capturePublishedCompatibility } from '../packages/lyra-ui/scripts/capture-published-compatibility.mjs';
 import { capturePolicyWitnesses } from '../packages/lyra-ui/scripts/capture-published-policy-witnesses.mjs';
 import { checkPublishedCompatibilitySync } from '../packages/lyra-ui/scripts/check-published-compatibility.mjs';
 import { decodeEvidence, encodeEvidence, jsonBytes, readPublishedCaptureSync, sha256, verifyPolicyWitnesses } from '../packages/lyra-ui/scripts/published-compatibility-io.mjs';
-import { assertGeneratedAddition, assertPreparationInputs, assertSourcePath } from './prepare-artifacts-paths.mjs';
+import { assertPreparationInputs } from './prepare-artifacts-paths.mjs';
+import { bundlePreparedSource } from './prepare-source-bundle.mjs';
 import { parseSourceContractRequest } from './source-contract-request.mjs';
 
 // This runner prepares reviewable source only. Qualification and publication retain their
@@ -15,7 +16,7 @@ import { parseSourceContractRequest } from './source-contract-request.mjs';
 assert.equal(process.env.GITHUB_ACTIONS, 'true', 'Use the hosted generation workflow');
 assert.equal(process.env.GITHUB_REF, 'refs/heads/main', 'Generation requires main');
 const preparationMode = process.env.PREPARATION_MODE ?? 'source';
-assertPreparationInputs(preparationMode, process.env.PUBLICATION_JSON ?? '', process.env.SOURCE_CONTRACTS_JSON ?? '', process.env.UPGRADE_DEPENDENCIES ?? 'false');
+assertPreparationInputs(preparationMode, process.env.PUBLICATION_JSON ?? '', process.env.SOURCE_CONTRACTS_JSON ?? '', process.env.UPGRADE_DEPENDENCIES ?? 'false', process.env.PREPARATION_CANDIDATE_SHA ?? '');
 const root = process.cwd();
 const git = args => execFileSync('git', args, { cwd: root, maxBuffer: 128 * 1024 * 1024 });
 const historyDir = join(root, 'packages/lyra-ui/scripts/fixtures/compatibility-history');
@@ -119,51 +120,6 @@ async function capture() {
   }
 }
 
-function bundle() {
-  const commit = git(['rev-parse', 'HEAD']).toString().trim();
-  assert.equal(commit, process.env.GITHUB_SHA);
-  const tracked = new Map(git(['ls-tree', '-rz', 'HEAD']).toString().split('\0').filter(Boolean).map(line => {
-    const [header, file] = line.split('\t');
-    const [mode, kind, oid] = header.split(' ');
-    return [file, { mode, kind, oid }];
-  }));
-  const modified = git(['diff', 'HEAD', '--name-only', '-z']).toString().split('\0').filter(Boolean);
-  const added = git(['ls-files', '--others', '--exclude-standard', '-z']).toString().split('\0').filter(Boolean);
-  for (const file of added) assertGeneratedAddition(file);
-  const output = join(process.env.RUNNER_TEMP, 'lyra-generated-source');
-  assert.ok(!existsSync(output));
-  mkdirSync(join(output, 'blobs'), { recursive: true });
-  const changes = [];
-  for (const file of [...new Set([...modified, ...added])].sort()) {
-    const old = tracked.get(file);
-    if (old) assert.equal(old.kind, 'blob');
-    if (old) assert.ok(['100644', '100755'].includes(old.mode));
-    const before = old ? { sha256: sha256(git(['cat-file', 'blob', old.oid])), gitBlob: old.oid, mode: old.mode } : null;
-    const target = resolve(root, file);
-    // lstat detects dangling symlinks too; they cannot masquerade as a consumed changeset.
-    const stat = lstatSync(target, { throwIfNoEntry: false });
-    assertSourcePath(file, { mode: preparationMode, tracked: old, deleted: stat === undefined });
-    let after = null;
-    if (stat) {
-      assert.ok(stat.isFile() && !stat.isSymbolicLink(), `Non-regular source ${file}`);
-      const bytes = readFileSync(target);
-      const hash = sha256(bytes);
-      const gitBlob = createHash('sha1').update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
-      after = { sha256: hash, gitBlob, mode: stat.mode & 0o111 ? '100755' : '100644', bytes: bytes.length };
-      const blob = join(output, 'blobs', hash);
-      if (!existsSync(blob)) writeFileSync(blob, bytes, { flag: 'wx' });
-    }
-    changes.push({ path: file, before, after });
-  }
-  const manifest = { schemaVersion: 1, repository: process.env.GITHUB_REPOSITORY, baseCommit: commit,
-    runId: process.env.GITHUB_RUN_ID, runAttempt: process.env.GITHUB_RUN_ATTEMPT, changes };
-  const bytes = jsonBytes(manifest);
-  writeFileSync(join(output, 'manifest.json'), bytes);
-  writeFileSync(join(output, 'manifest.sha256'), `${sha256(bytes)}  manifest.json\n`);
-  writeFileSync(join(output, 'changes.patch'), git(['diff', 'HEAD', '--binary', '--full-index']));
-  writeFileSync(join(output, 'README.txt'), 'Review manifest.json and every changed path before applying. Verify the repository/baseCommit and all current before hashes/modes (null means absent), then every blob hash/length before any write. A null after means deletion. Apply regular files with the recorded modes. changes.patch previews tracked changes only; the manifest also includes new files. This artifact is generated source, not release qualification.\n');
-  console.log(`Prepared ${changes.length} source changes against ${commit}`);
-}
 
 if (process.argv[2] === 'capture') await capture();
 else if (process.argv[2] === 'source-contracts') {
@@ -173,5 +129,5 @@ else if (process.argv[2] === 'source-contracts') {
     writePreparedSourceContracts(root, request);
   }
 }
-else if (process.argv[2] === 'bundle') bundle();
+else if (process.argv[2] === 'bundle') bundlePreparedSource(root);
 else throw new Error('Expected capture, source-contracts, or bundle');
