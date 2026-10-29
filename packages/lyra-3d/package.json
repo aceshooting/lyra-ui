@@ -55,6 +55,10 @@
       "types": "./dist/model/index.d.ts",
       "default": "./dist/model/index.js"
     },
+    "./xr": {
+      "types": "./dist/xr/index.d.ts",
+      "default": "./dist/xr/index.js"
+    },
     "./package.json": "./package.json",
     "./graph-layout": {
       "types": "./dist/graph-layout/index.d.ts",

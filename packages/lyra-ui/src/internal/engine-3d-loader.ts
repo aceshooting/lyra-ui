@@ -34,6 +34,22 @@ export interface Engine3dHost {
   restored?(): void;
 }
 
+/** Platform-independent states of an optional immersive presentation. */
+export type Engine3dXrState = 'ready' | 'requesting' | 'presenting' | 'ending' | 'disposed';
+
+/** Structural options owned here without importing the optional companion's declarations. */
+export interface Engine3dXrOptions {
+  readonly onStateChange?: (state: Engine3dXrState) => void;
+}
+
+/** A prepared presentation owns its native lifetime independently of the loader. */
+export interface Engine3dXrPresentation {
+  readonly state: Engine3dXrState;
+  enter(): Promise<void>;
+  exit(): Promise<void>;
+  dispose(): void;
+}
+
 /** The engine surface a component calls; data, camera and style stay opaque to the loader. */
 export interface Engine3dInstance {
   readonly contract: typeof ENGINE_3D_CONTRACT;
@@ -53,6 +69,7 @@ export interface Engine3dInstance {
   project?(item: number): { readonly x: number; readonly y: number } | null;
   positionOf?(item: number): { readonly x: number; readonly y: number; readonly z: number } | null;
   resize(width: number, height: number): void;
+  prepareXrPresentation?(options?: Engine3dXrOptions): Promise<Engine3dXrPresentation>;
   dispose(): void;
 }
 
@@ -62,7 +79,7 @@ export interface Engine3dModule {
 }
 
 const REQUIRED_METHODS = ['mount', 'setData', 'setStyle', 'setCamera', 'resize', 'dispose'] as const;
-const OPTIONAL_METHODS = ['setState', 'fit', 'focus', 'pick', 'project', 'positionOf'] as const;
+const OPTIONAL_METHODS = ['setState', 'fit', 'focus', 'pick', 'project', 'positionOf', 'prepareXrPresentation'] as const;
 
 function isObjectLike(value: unknown): value is Record<PropertyKey, unknown> {
   return (typeof value === 'object' || typeof value === 'function') && value !== null;

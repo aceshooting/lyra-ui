@@ -25,6 +25,7 @@ resolves one shared copy.
 | `@aceshooting/lyra-3d/points` | Point clouds, line segments and axes in two or three dimensions |
 | `@aceshooting/lyra-3d/panorama` | Equirectangular images or existing video elements, with camera controls and hotspots |
 | `@aceshooting/lyra-3d/model` | Bounded model admission and rendering for glTF/GLB, OBJ, STL, PLY, XYZ and PCD |
+| `@aceshooting/lyra-3d/xr` | Explicit immersive support query, fixed errors and presentation types; no renderer import |
 
 Each engine entry point exports `createEngine()` and its data types. Graph, points and model
 engines use the core orbit camera; panorama exports its own yaw/pitch/field-of-view camera.
@@ -78,7 +79,7 @@ import { LYRA_3D_CONTRACT, type Lyra3dEngine, type Lyra3dHost } from '@aceshooti
 - `mount(container, host)` creates the engine's own canvas inside the component's container and
   rejects with `Lyra3dUnsupportedError` (`code: 'webgl-unavailable'`) without WebGL2.
 - `setData`, `setStyle`, `setCamera` (silent), `resize` and `dispose` are required; `setState`,
-  `fit`, `focus`, `pick`, `project` and `positionOf` are optional.
+  `fit`, `focus`, `pick`, `project`, `positionOf` and `prepareXrPresentation` are optional.
 - The engine calls the host's `hover`, `pick` and `camera` (at most once per animation frame),
   `progress` for file loads, and `lost` when its WebGL context is lost or it fails. It also calls
   `rendering({ software })` once after mounting, so a component can lower its detail when the
@@ -111,6 +112,76 @@ retains it; supplying one replaces that entire object, so omitting `edgeCurvatur
 replacement clears curves. Invalid columns or expanded geometry above the 2,000,000 primitive
 limit reject before replacing the accepted scene. Curves increase geometry and delivery cost;
 their throughput depends on the scene and renderer.
+
+## Optional immersive points presentation
+
+The points engine implements `prepareXrPresentation(options?)` for a bounded 3D scene profile.
+Other engines may omit this optional method. Importing the `xr` entry does not access browser
+capabilities or load a renderer. Explicitly calling `isLyra3dXrSupported()` queries
+`immersive-vr` support in a secure context; it does not request permission or create a session.
+A positive result does not guarantee that a later request will succeed on a particular browser
+or headset.
+
+Prepare the already-mounted engine before the entry gesture. Then call the prepared
+presentation's `enter()` directly from that gesture, with no intervening `await`:
+
+```ts
+import { isLyra3dXrSupported, Lyra3dXrError } from '@aceshooting/lyra-3d/xr';
+
+// engine, enterButton, exitButton and showMessage belong to the host application.
+if (engine.prepareXrPresentation && await isLyra3dXrSupported()) {
+  const showFailure = (error: unknown) => {
+    showMessage(error instanceof Lyra3dXrError ? error.code : 'failed');
+  };
+  try {
+    const presentation = await engine.prepareXrPresentation();
+    enterButton.addEventListener('click', () => {
+      void presentation.enter().catch(showFailure);
+    });
+    exitButton.addEventListener('click', () => {
+      void presentation.exit().catch(showFailure);
+    });
+    // Call presentation.dispose() when the host removes these controls.
+  } catch (error) {
+    showFailure(error);
+  }
+}
+```
+
+Use fixed codes to select the host's localized messages. Codes are `unavailable`, `not-allowed`,
+`busy`, `unsupported-scene`, `context-lost`, `failed` and `aborted`; platform error details are
+not exposed. `onStateChange` receives `ready`, `requesting`, `presenting`, `ending` or `disposed`
+transitions. The initial state is `ready`; the callback does not replay it. Explicit disposal
+suppresses further callbacks. Each preparation permits one native entry attempt; prepare again
+after completion rather than reusing it. A `busy` document refusal before an attempt leaves the
+preparation ready. Disposing an unused preparation leaves inline rendering intact.
+
+The current points profile accepts `mode: '3d'`, at most 100,000 points and 100,000 explicit
+segments, plus the existing bounded axes and grids. Every point, axis and tick label must be
+empty, and glow must be absent. Labels are not hidden to obtain entry. Unsupported scenes reject
+preparation with `unsupported-scene` before requesting a session and preserve the inline view.
+Coordinates must be normal finite Float32 values or zero. Size, scale and coordinate-offset
+limits can also reject an otherwise valid inline scene.
+
+Native point diameters and stroke widths use 0.002 metres per configured size unit; inline sizes
+remain CSS pixels. The scene fits inside a sphere of radius 0.75 metres, including glyph widths
+and a numerical margin. Its centre is placed two metres ahead at the first valid viewer pose's
+height and horizontal heading, preserving the semantic y-down orientation. This placement stays
+fixed as the viewer moves. A vertical initial view uses the inline camera heading. Rendering uses
+0.01–100 metre clipping; strokes crossing an eye's near plane are omitted.
+
+Accepted data, style or visual-state changes end a requesting or presenting session and retain
+the latest values for inline recovery. Invalid inputs retain their ordinary synchronous errors
+and leave the presentation unchanged. Camera, fit, focus and resize calls update only the return
+view. Changes to prepared scene facts require a fresh preparation before entry.
+
+`enter()` resolves after binding and the first successful valid-pose submission. `exit()` resolves
+after the old native ownership and renderer have retired; it does not certify replacement drawing.
+The engine constructs a fresh inline viewport from its latest state and calls the host's
+`restored()` only after a successful default-target draw. Zero-sized allocation waits for a
+nonzero resize. Recovery failure follows the ordinary `lost('error')` fallback. Disposing the
+engine prevents reconstruction and further host callbacks. The host retains responsibility for
+accessible controls and inline alternatives; this entry does not add component XR controls.
 
 ## Directed acyclic graph layouts
 

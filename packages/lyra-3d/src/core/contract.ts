@@ -1,3 +1,5 @@
+import type { Lyra3dXrOptions, Lyra3dXrPresentation } from '../xr/types.js';
+
 /**
  * The engine contract shared by every entry point. A component owns data, selection, keyboard
  * handling, localization and accessibility; an engine only renders, lays out and picks, and
@@ -104,6 +106,8 @@ export interface Lyra3dEngine<Data, Camera> {
   positionOf?(item: number): Lyra3dWorldPoint | null;
   /** The container's new size in CSS pixels. */
   resize(width: number, height: number): void;
+  /** Prepares an optional, single-attempt immersive presentation without requesting a session. */
+  prepareXrPresentation?(options?: Lyra3dXrOptions): Promise<Lyra3dXrPresentation>;
   /** Releases the WebGL context, listeners, workers and the canvas. Idempotent. */
   dispose(): void;
 }

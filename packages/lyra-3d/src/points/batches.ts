@@ -31,6 +31,7 @@ attribute float pointSize;
 attribute vec3 pointColor;
 attribute vec3 pickColor;
 uniform vec2 viewportSize;
+uniform float worldUnitsPerSize;
 varying vec2 disk;
 varying vec3 tint;
 void main() {
@@ -40,8 +41,14 @@ void main() {
   #else
     tint = pointColor;
   #endif
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(pointPosition, 1.0);
-  gl_Position.xy += position.xy * pointSize / viewportSize * gl_Position.w;
+  if (worldUnitsPerSize > 0.0) {
+    vec4 centre = modelViewMatrix * vec4(pointPosition, 1.0);
+    centre.xy += position.xy * pointSize * worldUnitsPerSize * 0.5;
+    gl_Position = projectionMatrix * centre;
+  } else {
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(pointPosition, 1.0);
+    gl_Position.xy += position.xy * pointSize / viewportSize * gl_Position.w;
+  }
 }`;
 const pointFragment = `
 varying vec2 disk;
@@ -63,9 +70,9 @@ export function createPointBatch(data: AdmittedPointsData) {
   geometry.setAttribute('pointColor', new InstancedBufferAttribute(new Float32Array(count * 3), 3));
   geometry.setAttribute('pickColor', new InstancedBufferAttribute(createPickColors(count), 3));
   const viewportSize = new Vector2(1, 1);
-  const material = new ShaderMaterial({ side: DoubleSide, forceSinglePass: true, uniforms: { viewportSize: { value: viewportSize } }, vertexShader: pointVertex, fragmentShader: pointFragment });
+  const material = new ShaderMaterial({ side: DoubleSide, forceSinglePass: true, uniforms: { viewportSize: { value: viewportSize }, worldUnitsPerSize: { value: 0 } }, vertexShader: pointVertex, fragmentShader: pointFragment });
   const pickViewportSize = new Vector2(1, 1);
-  const pickMaterial = new ShaderMaterial({ side: DoubleSide, forceSinglePass: true, uniforms: { viewportSize: { value: pickViewportSize } }, defines: { PICKING: 1 }, vertexShader: pointVertex, fragmentShader: pointFragment, toneMapped: false });
+  const pickMaterial = new ShaderMaterial({ side: DoubleSide, forceSinglePass: true, uniforms: { viewportSize: { value: pickViewportSize }, worldUnitsPerSize: { value: 0 } }, defines: { PICKING: 1 }, vertexShader: pointVertex, fragmentShader: pointFragment, toneMapped: false });
   const mesh = new Mesh(geometry, material); const pick = new Mesh(geometry, pickMaterial);
   mesh.frustumCulled = pick.frustumCulled = false;
   pick.onBeforeRender = pointPickHook(viewportSize, pickViewportSize, pickMaterial);
@@ -116,7 +123,31 @@ attribute vec3 lineStart;
 attribute vec3 lineEnd;
 uniform vec2 viewportSize;
 uniform float lineWidth;
+uniform float worldUnitsPerSize;
 void main() {
+  if (worldUnitsPerSize > 0.0) {
+    vec4 eyeStart = modelViewMatrix * vec4(lineStart, 1.0);
+    vec4 eyeEnd = modelViewMatrix * vec4(lineEnd, 1.0);
+    vec4 a = projectionMatrix * eyeStart;
+    vec4 b = projectionMatrix * eyeEnd;
+    vec3 direction = eyeEnd.xyz - eyeStart.xyz;
+    vec3 midpoint = (eyeStart.xyz + eyeEnd.xyz) * 0.5;
+    float segmentLength = length(direction);
+    float eyeDistance = length(midpoint);
+    vec3 perpendicular = vec3(0.0);
+    if (segmentLength > 0.0 && eyeDistance > 0.0) {
+      perpendicular = cross(direction / segmentLength, midpoint / eyeDistance);
+    }
+    float perpendicularLength = length(perpendicular);
+    if (a.z < -a.w || b.z < -b.w || perpendicularLength < 0.000001) {
+      gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+    } else {
+      vec4 endpoint = mix(eyeStart, eyeEnd, uv.x);
+      endpoint.xyz += perpendicular / perpendicularLength * position.y * lineWidth * worldUnitsPerSize * 0.5;
+      gl_Position = projectionMatrix * endpoint;
+    }
+    return;
+  }
   vec4 a = projectionMatrix * modelViewMatrix * vec4(lineStart, 1.0);
   vec4 b = projectionMatrix * modelViewMatrix * vec4(lineEnd, 1.0);
   vec2 delta = (b.xy / b.w - a.xy / a.w) * viewportSize;
@@ -136,7 +167,7 @@ export function createLineBatch(endpoints: Float32Array) {
   const start = new Float32Array(count * 3); const end = new Float32Array(count * 3);
   for (let row = 0; row < count; row += 1) { start.set(endpoints.subarray(row * 6, row * 6 + 3), row * 3); end.set(endpoints.subarray(row * 6 + 3, row * 6 + 6), row * 3); }
   geometry.setAttribute('lineStart', new InstancedBufferAttribute(start, 3)); geometry.setAttribute('lineEnd', new InstancedBufferAttribute(end, 3));
-  const material = new ShaderMaterial({ side: DoubleSide, forceSinglePass: true, uniforms: { viewportSize: { value: new Vector2(1, 1) }, lineWidth: { value: 1 }, tint: { value: new Color() } }, vertexShader: lineVertex,
+  const material = new ShaderMaterial({ side: DoubleSide, forceSinglePass: true, uniforms: { viewportSize: { value: new Vector2(1, 1) }, lineWidth: { value: 1 }, worldUnitsPerSize: { value: 0 }, tint: { value: new Color() } }, vertexShader: lineVertex,
     fragmentShader: 'uniform vec3 tint; void main() { gl_FragColor = vec4(tint, 1.0);\n#include <colorspace_fragment>\n}' });
   const mesh = new Mesh(geometry, material); mesh.frustumCulled = false;
   const resources: LineBatchResources = { geometry, material, mesh, disposed: false };
@@ -150,4 +181,21 @@ export function createLineBatch(endpoints: Float32Array) {
     },
     dispose() { disposeLineBatchResources(resources); },
   };
+}
+
+/** Configure only visible resources; the ID pass retains its inline pixel calibration. */
+export function configurePointBatchXr(resources: PointBatchResources, units: number): void {
+  configureWorldSize(resources, units);
+}
+
+/** Native ribbons retain their endpoint attributes and configured relative widths. */
+export function configureLineBatchXr(resources: LineBatchResources, units: number): void {
+  configureWorldSize(resources, units);
+}
+
+function configureWorldSize(resources: PointBatchResources | LineBatchResources, units: number): void {
+  if (resources.disposed || !resources.material) throw new DOMException('The batch is disposed.', 'InvalidStateError');
+  if (!Number.isFinite(units) || units <= 0 || !Number.isFinite(Math.fround(units)) || Math.fround(units) === 0) throw new RangeError('Invalid world size units.');
+  resources.material.uniforms['worldUnitsPerSize']!.value = units;
+  resources.material.uniformsNeedUpdate = true;
 }

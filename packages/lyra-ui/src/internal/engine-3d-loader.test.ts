@@ -62,6 +62,17 @@ describe('engine-3d-loader', () => {
     expect(engine3dContractViolation(42)).to.equal('engine object');
   });
 
+  it('validates optional immersive preparation without calling it or requiring it', () => {
+    let preparations = 0;
+    expect(engine3dContractViolation(fakeEngine())).to.equal(undefined);
+    expect(engine3dContractViolation(fakeEngine({ prepareXrPresentation: undefined }))).to.equal(undefined);
+    expect(engine3dContractViolation(fakeEngine({ prepareXrPresentation: () => { preparations++; } }))).to.equal(undefined);
+    for (const value of [null, true, 1, 'prepare', {}]) {
+      expect(engine3dContractViolation(fakeEngine({ prepareXrPresentation: value }))).to.equal('prepareXrPresentation');
+    }
+    expect(preparations).to.equal(0);
+  });
+
   it('creates a validated engine from a default-export module and shares the load', async () => {
     let imports = 0;
     const engine = fakeEngine();

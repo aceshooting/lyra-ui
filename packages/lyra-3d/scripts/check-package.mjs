@@ -35,6 +35,7 @@ assert.deepEqual(manifest.exports, {
   './points': { types: './dist/points/index.d.ts', default: './dist/points/index.js' },
   './panorama': { types: './dist/panorama/index.d.ts', default: './dist/panorama/index.js' },
   './model': { types: './dist/model/index.d.ts', default: './dist/model/index.js' },
+  './xr': { types: './dist/xr/index.d.ts', default: './dist/xr/index.js' },
   './graph-layout': { types: './dist/graph-layout/index.d.ts', default: './dist/graph-layout/index.js' },
   './package.json': './package.json',
 });
@@ -75,6 +76,29 @@ if (existsSync(path.join(packageRoot, 'dist'))) {
     for (const target of typeof entry === 'string' ? [entry] : Object.values(entry)) {
       assert(existsSync(path.join(packageRoot, target)), `Missing export target ${target}`);
     }
+  }
+  // The granular support/types entry must not acquire native or renderer dependencies,
+  // including through declarations that consumers load without the optional engines.
+  for (const extension of ['.js', '.d.ts']) {
+    const visited = new Set();
+    const inspectXrEntry = (name) => {
+      assert(['index', 'support', 'types'].includes(name), `Unexpected public XR dependency ${name}`);
+      if (visited.has(name)) return;
+      visited.add(name);
+      const file = path.join(packageRoot, 'dist/xr', name + extension);
+      const source = readFileSync(file, 'utf8');
+      assert(!/\bimport\s*\(/u.test(source), `Dynamic dependency in public XR entry ${file}`);
+      if (extension === '.d.ts') {
+        assert(!/\b(?:XR[A-Z]\w*|WebGL\w*|WebXR|THREE)\b/u.test(source), `Platform type in public XR declarations ${file}`);
+        assert(!/\/\/\/\s*<reference\b/u.test(source), `Ambient dependency in public XR declarations ${file}`);
+      }
+      for (const specifier of staticModuleSpecifiers(file, source)) {
+        const match = /^\.\/(support|types)\.js$/u.exec(specifier);
+        assert(match, `Unexpected public XR import ${specifier} in ${file}`);
+        inspectXrEntry(match[1]);
+      }
+    };
+    inspectXrEntry('index');
   }
   for (const file of files(path.join(packageRoot, 'dist'))) {
     assert(/\.(?:js|d\.ts)$/u.test(file), `Unexpected build output ${file}`);
