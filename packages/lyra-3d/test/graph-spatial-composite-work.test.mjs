@@ -3182,3 +3182,196 @@ function snapshot(batch, nodes, edges) {
       cpuBytes: allocation.cpuBytes, baseGeometryBytes: allocation.baseGeometryBytes, customStorage: allocation.customStorage ?? null,
       transientCustomScratchBytes: allocation.transientCustomScratchBytes, gpuAttributeBytes: allocation.gpuAttributeBytes, sortKeyBytes: allocation.sortKeyBytes } };
 }
+
+for (const [name, options, baseOperations] of cases) {
+  test(`deferred initial changes preserve frozen ${name} native output and fresh children`, () => {
+    let expectedOperations, expectedSortOperations;
+    for (const budget of [1, 7, 4096]) {
+      const data = owned(name === 'empty' ? empty() : input(options)), view = presentation(options), child = children(data, view);
+      const work = createGraphSpatialCompositeWork(child.nodes, child.edges, view, child.custom, undefined, true); let result;
+      try {
+        assert.equal(child.nodes.batch.revision, 1); assert.equal(child.edges.batch.revision, 1);
+        result = finish(work, budget);
+        assert.equal(result.operations, baseOperations + result.sortOperations);
+        expectedOperations ??= result.operations; expectedSortOperations ??= result.sortOperations;
+        assert.equal(result.operations, expectedOperations); assert.equal(result.sortOperations, expectedSortOperations);
+        assert.equal(result.allocatedBytes, ORACLES[name].after.allocations.cpuBytes);
+        assert.deepEqual(snapshot(result.value.batch, child.nodes.batch, child.edges.batch), ORACLES[name].after);
+        assert.equal(child.nodes.batch.revision, 1); assert.equal(child.edges.batch.revision, 1);
+        assert.deepEqual(child.nodes.batch.takeChanges(), { full: true, rows: [] });
+        assert.deepEqual(child.edges.batch.takeChanges(), { full: true, rows: [] });
+        assert.deepEqual(child.nodes.batch.takeChanges(), { full: false, rows: [] });
+        assert.deepEqual(child.edges.batch.takeChanges(), { full: false, rows: [] });
+        work.dispose(); assert.equal(result.value.resources.disposed, false);
+        assert.equal(child.nodes.resources.disposed, false); assert.equal(child.edges.resources.disposed, false);
+        assert.throws(() => work.step(1), { name: 'InvalidStateError' });
+      } finally { work.dispose(); try { result?.value.batch.dispose(); } finally { child.dispose(); } }
+    }
+  });
+}
+
+test('an explicit false sixth argument preserves the default initial child consumption', () => {
+  for (const name of ['empty', 'customCss']) for (const budget of [1, 7, 4096]) {
+    const options = name === 'customCss' ? { custom: true } : {}, view = presentation(options);
+    const child = children(owned(name === 'empty' ? empty() : input(options)), view);
+    const work = createGraphSpatialCompositeWork(child.nodes, child.edges, view, child.custom, undefined, false); let result;
+    try {
+      result = finish(work, budget);
+      assert.deepEqual(snapshot(result.value.batch, child.nodes.batch, child.edges.batch), ORACLES[name].after);
+      assert.equal(child.nodes.batch.revision, 1); assert.equal(child.edges.batch.revision, 1);
+      assert.deepEqual(child.nodes.batch.takeChanges(), { full: false, rows: [] });
+      assert.deepEqual(child.edges.batch.takeChanges(), { full: false, rows: [] });
+    } finally { work.dispose(); try { result?.value.batch.dispose(); } finally { child.dispose(); } }
+  }
+});
+
+for (const [name, options] of [['customWorld', { custom: true, world: true }], ['opaqueCustomWorld', { custom: true, world: true, opaque: true }]]) {
+  test(`two deferred ${name} views share children until one coordinator consumption`, () => {
+    for (const budget of [1, 7, 4096]) {
+      const primaryView = presentation(options), child = children(owned(input(options)), primaryView);
+      const fittedView = { ...primaryView, width: 800, height: 600 };
+      const primaryWork = createGraphSpatialCompositeWork(child.nodes, child.edges, primaryView, child.custom, undefined, true);
+      const fittedWork = createGraphSpatialCompositeWork(child.nodes, child.edges, fittedView, child.custom, undefined, true);
+      const childBefore = [geometry(child.nodes.resources.geometry), geometry(child.edges.resources.geometry)];
+      const expectedFitted = structuredClone(ORACLES[name].after);
+      // World-sized payloads keep their order at this unchanged view direction.
+      for (const entry of [expectedFitted.material, expectedFitted.customPick.material]) {
+        entry.uniforms.viewportSize = [800, 600]; entry.uniforms.viewWindow = [0, 0, 800, 600];
+        entry.uniforms.lyraView = [800, 600, 0.5, 12000];
+      }
+      let primary, fitted, nodeConsumptions = 0, edgeConsumptions = 0;
+      try {
+        withMethod(child.nodes.batch, 'takeChanges', original => function (...args) {
+          nodeConsumptions++; return original.apply(this, args);
+        }, () => withMethod(child.edges.batch, 'takeChanges', original => function (...args) {
+          edgeConsumptions++; return original.apply(this, args);
+        }, () => {
+          primary = finish(primaryWork, budget); assert.equal(nodeConsumptions, 0); assert.equal(edgeConsumptions, 0);
+          fitted = finish(fittedWork, budget); assert.equal(nodeConsumptions, 0); assert.equal(edgeConsumptions, 0);
+          assert.deepEqual(snapshot(primary.value.batch, child.nodes.batch, child.edges.batch), ORACLES[name].after);
+          assert.deepEqual(snapshot(fitted.value.batch, child.nodes.batch, child.edges.batch), expectedFitted);
+          assert.equal(child.nodes.batch.revision, 1); assert.equal(child.edges.batch.revision, 1);
+          assert.deepEqual([geometry(child.nodes.resources.geometry), geometry(child.edges.resources.geometry)], childBefore);
+          assert.notEqual(primary.value.resources.geometry, fitted.value.resources.geometry);
+          assert.notEqual(primary.value.resources.material, fitted.value.resources.material);
+          assert.notEqual(primary.value.resources.customPick, fitted.value.resources.customPick);
+          for (const buffer of primary.value.ownedBuffers) assert.equal(fitted.value.ownedBuffers.includes(buffer), false);
+          assert.deepEqual(new Set(primary.value.borrowedBuffers), new Set(fitted.value.borrowedBuffers));
+          assert.equal(primary.value.resources.material.uniforms.dashAtlas.value, child.edges.resources.texture);
+          assert.equal(fitted.value.resources.material.uniforms.dashAtlas.value, child.edges.resources.texture);
+          assert.deepEqual(child.nodes.batch.takeChanges(), { full: true, rows: [] });
+          assert.deepEqual(child.edges.batch.takeChanges(), { full: true, rows: [] });
+          assert.equal(nodeConsumptions, 1); assert.equal(edgeConsumptions, 1);
+          primary.value.batch.update(primaryView); fitted.value.batch.update(fittedView);
+          assert.equal(nodeConsumptions, 1); assert.equal(edgeConsumptions, 1);
+          assert.deepEqual(snapshot(primary.value.batch, child.nodes.batch, child.edges.batch), ORACLES[name].after);
+          assert.deepEqual(snapshot(fitted.value.batch, child.nodes.batch, child.edges.batch), expectedFitted);
+        }));
+        primary.value.batch.dispose(); assert.equal(primary.value.resources.disposed, true);
+        assert.equal(fitted.value.resources.disposed, false);
+        assert.equal(child.nodes.resources.disposed, false); assert.equal(child.edges.resources.disposed, false);
+        assert.equal(child.nodes.batch.revision, 1); assert.equal(child.edges.batch.revision, 1);
+        assert.deepEqual(snapshot(fitted.value.batch, child.nodes.batch, child.edges.batch), expectedFitted);
+      } finally {
+        primaryWork.dispose(); fittedWork.dispose();
+        try { primary?.value.batch.dispose(); } finally { try { fitted?.value.batch.dispose(); } finally { child.dispose(); } }
+      }
+    }
+  });
+}
+
+test('deferred closure currentness loss and child revision staleness leave child changes unconsumed', () => {
+  for (const mode of ['close', 'stale', 'revision']) for (const budget of [1, 7, 4096]) {
+    const view = presentation(), child = children(owned(input({ custom: true })), view); let current = true;
+    const work = createGraphSpatialCompositeWork(child.nodes, child.edges, view, child.custom, () => current, true);
+    try {
+      let pending = false;
+      for (let calls = 0; calls < 100000; calls++) {
+        const step = work.step(1); assert.equal(step.done, false); assert.equal(step.value, undefined);
+        if (step.paintedFaces > 0) { pending = true; break; }
+      }
+      assert.equal(pending, true);
+      if (mode === 'close') { work.dispose(); assert.throws(() => work.step(budget), { name: 'InvalidStateError' }); }
+      else {
+        if (mode === 'stale') current = false; else child.nodes.batch.updateStyle(view, view.state);
+        assert.throws(() => finish(work, budget), aborted);
+        assert.throws(() => work.step(1), { name: 'InvalidStateError' });
+      }
+      assert.equal(child.nodes.batch.revision, mode === 'revision' ? 2 : 1); assert.equal(child.edges.batch.revision, 1);
+      assert.deepEqual(child.nodes.batch.takeChanges(), { full: true, rows: [] });
+      assert.deepEqual(child.edges.batch.takeChanges(), { full: true, rows: [] });
+      assert.equal(child.nodes.resources.disposed, false); assert.equal(child.edges.resources.disposed, false);
+    } finally { work.dispose(); child.dispose(); }
+  }
+});
+
+test('deferred final currentness fence rejects before child consumption at every budget', () => {
+  for (const budget of [1, 7, 4096]) {
+    const view = presentation(), child = children(owned(empty()), view); let final = false, calls = 0;
+    const work = createGraphSpatialCompositeWork(child.nodes, child.edges, view, child.custom,
+      () => !(final && ++calls === 2), true);
+    try {
+      let remaining = 21;
+      while (remaining > 0) {
+        const step = work.step(Math.min(budget, remaining)); assert.equal(step.done, false); assert.equal(step.value, undefined);
+        assert.ok(step.operations > 0 && step.operations <= remaining); remaining -= step.operations;
+      }
+      final = true; assert.throws(() => work.step(budget), aborted); assert.equal(calls, 2);
+      assert.equal(child.nodes.batch.revision, 1); assert.equal(child.edges.batch.revision, 1);
+      assert.deepEqual(child.nodes.batch.takeChanges(), { full: true, rows: [] });
+      assert.deepEqual(child.edges.batch.takeChanges(), { full: true, rows: [] });
+      assert.equal(child.nodes.resources.disposed, false); assert.equal(child.edges.resources.disposed, false);
+      assert.throws(() => work.step(1), { name: 'InvalidStateError' });
+    } finally { work.dispose(); child.dispose(); }
+  }
+});
+
+test('deferred composites at distinct orbits match separate legacy owners and seed unchanged caches', () => {
+  for (const budget of [1, 7, 4096]) {
+    const data = owned(input({ custom: true })), primaryView = presentation();
+    const secondView = { ...primaryView, width: 800, height: 600,
+      orbit: { ...primaryView.orbit, yaw: 1.1, pitch: 0.35, distance: 750, target: { x: 5, y: -3, z: 7 } } };
+    const child = children(data, primaryView), primaryReferenceChildren = legacyChildren(data, primaryView), secondReferenceChildren = legacyChildren(data, secondView);
+    const primaryWork = createGraphSpatialCompositeWork(child.nodes, child.edges, primaryView, child.custom, undefined, true);
+    const secondWork = createGraphSpatialCompositeWork(child.nodes, child.edges, secondView, child.custom, undefined, true);
+    let primaryReference, secondReference, primary, second, nodeConsumptions = 0, edgeConsumptions = 0;
+    try {
+      primaryReference = createGraphSpatialComposite(primaryReferenceChildren.nodes, primaryReferenceChildren.edges, primaryReferenceChildren.custom);
+      secondReference = createGraphSpatialComposite(secondReferenceChildren.nodes, secondReferenceChildren.edges, secondReferenceChildren.custom);
+      primaryReference.update(primaryView); secondReference.update(secondView);
+      const expectedPrimary = snapshot(primaryReference, primaryReferenceChildren.nodes, primaryReferenceChildren.edges);
+      const expectedSecond = snapshot(secondReference, secondReferenceChildren.nodes, secondReferenceChildren.edges);
+      assert.notDeepEqual(expectedPrimary.geometry, expectedSecond.geometry);
+      assert.notEqual(child.nodes.batch, primaryReferenceChildren.nodes); assert.notEqual(child.nodes.batch, secondReferenceChildren.nodes);
+      assert.notEqual(child.edges.batch, primaryReferenceChildren.edges); assert.notEqual(child.edges.batch, secondReferenceChildren.edges);
+      withMethod(child.nodes.batch, 'takeChanges', original => function (...args) {
+        nodeConsumptions++; return original.apply(this, args);
+      }, () => withMethod(child.edges.batch, 'takeChanges', original => function (...args) {
+        edgeConsumptions++; return original.apply(this, args);
+      }, () => {
+        primary = finish(primaryWork, budget); assert.equal(nodeConsumptions, 0); assert.equal(edgeConsumptions, 0);
+        second = finish(secondWork, budget); assert.equal(nodeConsumptions, 0); assert.equal(edgeConsumptions, 0);
+        assert.deepEqual(snapshot(primary.value.batch, child.nodes.batch, child.edges.batch), expectedPrimary);
+        assert.deepEqual(snapshot(second.value.batch, child.nodes.batch, child.edges.batch), expectedSecond);
+        assert.equal(child.nodes.batch.revision, 1); assert.equal(child.edges.batch.revision, 1);
+        assert.deepEqual(child.nodes.batch.takeChanges(), { full: true, rows: [] });
+        assert.deepEqual(child.edges.batch.takeChanges(), { full: true, rows: [] });
+        primary.value.batch.update(primaryView); second.value.batch.update(secondView);
+        assert.equal(nodeConsumptions, 1); assert.equal(edgeConsumptions, 1);
+        assert.deepEqual(snapshot(primary.value.batch, child.nodes.batch, child.edges.batch), expectedPrimary);
+        assert.deepEqual(snapshot(second.value.batch, child.nodes.batch, child.edges.batch), expectedSecond);
+      }));
+    } finally {
+      primaryWork.dispose(); secondWork.dispose();
+      try { primary?.value.batch.dispose(); } finally {
+        try { second?.value.batch.dispose(); } finally {
+          try { primaryReference?.dispose(); } finally {
+            try { secondReference?.dispose(); } finally {
+              try { primaryReferenceChildren.dispose(); } finally { try { secondReferenceChildren.dispose(); } finally { child.dispose(); } }
+            }
+          }
+        }
+      }
+    }
+  }
+});

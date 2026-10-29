@@ -702,7 +702,7 @@ function recordInitialPickRanges(state: CompositeWorkState, face: number, change
  * allocates one backing, performs fixed native work, or visits one slot, primitive, face or range.
  * Exact initial painter ordering uses the existing key encoding with scalar heap operations.
  */
-export function createGraphSpatialCompositeWork(nodes: GraphPreparedSpatialNodes, edges: GraphPreparedSpatialEdges, presentation: GraphSpatialCompositePresentation, custom?: GraphNodeMeshData, isCurrent?: () => boolean): GraphSpatialCompositeWork {
+export function createGraphSpatialCompositeWork(nodes: GraphPreparedSpatialNodes, edges: GraphPreparedSpatialEdges, presentation: GraphSpatialCompositePresentation, custom?: GraphNodeMeshData, isCurrent?: () => boolean, deferInitialChanges = false): GraphSpatialCompositeWork {
   const state: CompositeWorkState = { nodes, edges, presentation, custom, guard: isCurrent, active: true, owner: undefined, phase: 'setup', row: 0, face: 0,
     customRow: 0, customRows: [], borrowed: [], borrowedSet: new Set(), nodeRevision: 0, edgeRevision: 0,
     dirty: [0, 3, 4].map(payload => ({ payload, ranges: [], covered: 0, publish: [] })), range: 0,
@@ -841,7 +841,7 @@ export function createGraphSpatialCompositeWork(nodes: GraphPreparedSpatialNodes
               if (nodeInput.resources.disposed || edgeInput.resources.disposed || nodeInput.batch.revision !== state.nodeRevision || edgeInput.batch.revision !== state.edgeRevision) abort();
               // These are the trusted fresh child controllers. Consume only after the final fence;
               // no callback, guard or fallible candidate construction follows ownership transfer.
-              nodeInput.batch.takeChanges(); edgeInput.batch.takeChanges();
+              if (deferInitialChanges !== true) { nodeInput.batch.takeChanges(); edgeInput.batch.takeChanges(); }
               state.owner = undefined; clearCompositeAssembly(prepared); releaseInputs();
               return result;
             }
