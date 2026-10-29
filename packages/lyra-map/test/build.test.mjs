@@ -120,7 +120,8 @@ test('publishes declarations that describe the asynchronous preparation API', as
 
 test('vendors the declaration packages that use extensionless relative imports', async () => {
   const declarations = await text(built.directory, 'dist/index.d.ts');
-  assert.deepEqual((await readdir(join(built.directory, 'dist/types'))).sort(), ['geojson-vt.d.ts', 'vt-pbf.d.ts']);
+  assert.deepEqual((await readdir(join(built.directory, 'dist/types'))).sort(),
+    ['geojson-vt.d.ts', 'scene-entry.d.ts', 'scene.d.ts', 'vt-pbf.d.ts']);
   for (const { package: name } of pin.declarationSources) {
     const file = name.split('/').at(-1);
     assert.ok(!declarations.includes(`from "${name}"`), `${name} is no longer imported by name`);

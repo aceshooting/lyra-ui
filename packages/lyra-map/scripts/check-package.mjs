@@ -52,5 +52,12 @@ for (const name of Object.keys(upstream)) assert.ok(name in actual, `Missing ups
 assert.equal(typeof actual.Map.prototype.prepareFeatures, 'function');
 assert.equal(typeof actual.Map.prototype.addPreparedFeatures, 'function');
 assert.equal(typeof actual.prepareStyle, 'function');
+assert.deepEqual(manifest.exports['./scene'], { types: './dist/scene.d.ts', import: './dist/scene.mjs' });
+const scene = await import(new URL('../dist/scene.mjs', import.meta.url));
+assert.deepEqual(Object.keys(scene), ['createSceneBridge']);
+assert.equal(typeof scene.createSceneBridge, 'function');
+for (const name of ['createSceneBridge', 'withNativeTerrainHookScope', 'captureNativeTerrainAuthority', 'assertNativeTerrainAuthority'])
+  assert.ok(!Object.hasOwn(actual, name), `Unexpected default map export ${name}`);
+for (const file of ['scene.d.ts', 'scene-entry.d.ts']) await readFile(resolve(root, 'dist/types', file));
 assert.ok((await readdir(resolve(root, 'dist'))).includes('map.css'));
 console.log('Map package exports, provenance, and generated module checks passed.');

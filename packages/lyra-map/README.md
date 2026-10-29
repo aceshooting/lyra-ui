@@ -114,6 +114,87 @@ configuration error; it does not load a different engine automatically.
 `lr-map` in `@aceshooting/lyra-ui` uses this companion by default. Its explicit `engine="maplibre"`
 mode uses the separate native `maplibre-gl` peer and retains that engine's full payload.
 
+## Optional scene markers
+
+`@aceshooting/lyra-map/scene` exports `createSceneBridge(map, host)` and the types `SceneBridge`,
+`SceneBridgeHost`, `SceneBridgeNativeMap`, `SceneRenderInput`, `SceneMarker`, and `SceneBridgeStatus`.
+Import this entry only where scene markers are needed; the default map entry does not load its
+bridge or glyph renderer. The bridge owns one native custom layer for geographic circle markers.
+It does not provide models, Three rendering, labels, picking, clustering, or whole-scene readiness.
+
+The host supplies a synchronous snapshot and subscription. Keep each accepted packet immutable,
+return the same object until replacing it, and notify subscribers after replacement. Host methods
+must be own data properties; getters are not accepted. The bridge subscribes before its initial
+capture. All host-supplied revision fields are positive safe integers; advance the corresponding revision when
+accepted positions, presentation, or allocation changes.
+
+```ts
+import { createSceneBridge, type SceneRenderInput } from '@aceshooting/lyra-map/scene';
+
+const lifetime = new AbortController();
+const listeners = new Set<() => void>();
+let input: SceneRenderInput = {
+  acceptedSceneRevision: 1,
+  presentationRevision: 1,
+  allocation: undefined,
+  reducedMotion: false,
+  markers: [{
+    id: 'place',
+    acceptedPositionRevision: 1,
+    position: { lngLat: [6.13, 49.61], altitude: 0, altitudeReference: 'sea-level' },
+    radiusCss: 6,
+    rgba: [0.1, 0.4, 0.8, 1]
+  }]
+};
+
+const bridge = createSceneBridge(map, {
+  signal: lifetime.signal,
+  isCurrent: () => !lifetime.signal.aborted,
+  captureRenderInput: () => input,
+  subscribeRenderInput: changed => {
+    listeners.add(changed);
+    return () => { listeners.delete(changed); };
+  },
+  onState: status => { console.log(status.state); },
+  onError: code => { console.warn(code); }
+});
+
+function replaceInput(next: SceneRenderInput) {
+  input = next;
+  for (const changed of listeners) changed();
+}
+```
+
+Publish an `allocation` object with `revision`, positive finite CSS `width` and `height`, positive
+finite `pixelRatio`, and nonnegative finite `padding: { top, right, bottom, left }` matching the
+current map allocation. The `allocation` field is required even when its value is `undefined`;
+nonempty input remains pending until an allocation is available. Publish `reducedMotion` with the
+current user preference. Replace packets and nested values instead of mutating a captured packet.
+
+Each marker needs a unique nonblank `id`, `acceptedPositionRevision`, geographic `position`, positive
+finite `radiusCss`, and an RGBA tuple whose four values lie between zero and one. Supply straight RGB;
+the alpha value must already include authored opacity. The renderer applies edge coverage and
+premultiplication. Resolve presentation defaults and theme colors before publishing the packet.
+There are at most 2000 markers per packet. Altitude is meters; omitted altitude and reference mean
+zero above sea level. With `altitudeReference: 'terrain'`, the bridge waits for current displayed
+terrain height and adds the authored altitude once. Pending or unavailable terrain never substitutes
+a sea-level marker. Terrain must be configured on the native map; the bridge does not add a DEM source.
+
+`requestFrame()` requests a repaint, and `setVisible(false)` pauses the owned layer. Call
+`invalidateStyle()` before `map.setStyle(...)`; the bridge waits for `style.load` before reinstalling.
+Call the idempotent `dispose()` before `map.remove()`. Aborting the host signal also disposes the
+bridge. The subscription must return a function that removes its listener.
+
+Status reports contain `state` (`pending`, `installed`, `empty`, or `unavailable`),
+`acceptedSceneRevision`, `presentationRevision`, `allocationRevision` (possibly `undefined`), and
+`markerInstallationRevision`. Optional status codes and `onError` use `engine`, `limit`, `render`,
+or `context-lost`. `installed` describes accepted marker-layer installation; it does not establish
+that terrain has resolved, a marker passed native depth/horizon tests, or pixels are visible.
+
+The current bridge uses the full terrain GL state profile. No reduced UBO profile is enabled.
+Package build, export, graph, and declaration checks establish the optional entry boundary; they do
+not establish native terrain pixels, cross-browser rendering, or application-adapter behavior.
+
 ## Right-to-left labels
 
 The pinned renderer includes Arabic shaping and bidirectional text layout. Mixed Arabic, Latin

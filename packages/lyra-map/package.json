@@ -42,6 +42,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs"
     },
+    "./scene": {
+      "types": "./dist/scene.d.ts",
+      "import": "./dist/scene.mjs"
+    },
     "./vite": {
       "types": "./dist/vite.d.ts",
       "import": "./dist/vite.mjs"
@@ -93,7 +97,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "prepack": "pnpm build",
-    "lint": "node scripts/check-package.mjs && tsc --noEmit -p tsconfig.test.json",
+    "lint": "node scripts/check-package.mjs && tsc --noEmit -p tsconfig.test.json && tsc --noEmit -p tsconfig.scene-native-peer.test.json",
     "test": "node --test test/*.test.mjs",
     "test:browser": "node scripts/browser-test.mjs",
     "test:coverage": "node scripts/coverage.mjs",

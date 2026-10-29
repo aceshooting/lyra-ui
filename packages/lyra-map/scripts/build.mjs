@@ -49,6 +49,7 @@ await rm(outputRoot, { recursive: true, force: true });
 await mkdir(resolve(outputRoot, 'controls'), { recursive: true });
 const entry = '\0lyra-map-entry';
 const workerEntry = resolve(src, 'source/worker.ts');
+const sceneEntry = resolve(packageRoot, 'src/scene/index.mjs');
 const controls = {
   attribution: 'AttributionControl',
   navigation: 'NavigationControl',
@@ -59,7 +60,7 @@ const controls = {
   globe: 'GlobeControl',
   logo: 'LogoControl'
 };
-const inputs = { index: entry, worker: workerEntry };
+const inputs = { index: entry, worker: workerEntry, scene: sceneEntry };
 for (const name of Object.keys(controls)) inputs[`control-${name}`] = resolve(src, `ui/control/${name}_control.ts`);
 const build = await rolldown({
   input: inputs,
@@ -126,6 +127,7 @@ const facade = (id) => {
 };
 await writeFile(resolve(outputRoot, 'index.mjs'), `export * from './${facade(entry)}';\n`);
 await writeFile(resolve(outputRoot, 'worker.mjs'), `import './${facade(workerEntry)}';\n`);
+await writeFile(resolve(outputRoot, 'scene.mjs'), `export {createSceneBridge} from './${facade(sceneEntry)}';\n`);
 for (const [name, exported] of Object.entries(controls)) {
   const target = facade(resolve(src, `ui/control/${name}_control.ts`));
   await writeFile(resolve(outputRoot, `controls/${name}.mjs`), `export {${exported}} from '../${target}';\n`);
@@ -142,6 +144,11 @@ let declarations =
 // Retain their exact public type definitions locally so NodeNext consumers need no skipLibCheck.
 const upstreamRequire = createRequire(resolve(upstreamRoot, 'package.json'));
 await mkdir(resolve(outputRoot, 'types'), { recursive: true });
+for (const file of ['scene.d.ts', 'scene-entry.d.ts'])
+  await copyFile(resolve(packageRoot, 'types', file), resolve(outputRoot, 'types', file));
+await writeFile(resolve(outputRoot, 'scene.d.ts'),
+  "export { createSceneBridge } from './types/scene-entry.js';\n" +
+  "export type { SceneBridge, SceneBridgeHost, SceneBridgeNativeMap, SceneRenderInput, SceneMarker, SceneBridgeStatus } from './types/scene-entry.js';\n");
 for (const source of expected.declarationSources) {
   const packageEntry = upstreamRequire.resolve(source.package);
   const packageRoot = resolve(dirname(packageEntry), '..');
