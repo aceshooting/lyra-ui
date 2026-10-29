@@ -9,6 +9,7 @@ coverage/
 *storybook.log
 storybook-static
 *.tgz
+!vendor/xlsx-0.20.3.tgz
 
 # scripts/visual-regression.mjs scratch output (current captures + diffs + report); the
 # reviewed baselines it diffs against live in packages/lyra-ui/visual-baselines/ and ARE

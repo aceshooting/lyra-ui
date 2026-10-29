@@ -102,13 +102,15 @@ peer_manifest_before="$(mktemp "${TMPDIR:-/tmp}/lyra-ui-peer-manifest.XXXXXX")"
 trap 'rm -f "$peer_manifest_before"' EXIT
 cp packages/lyra-ui/package.json "$peer_manifest_before"
 
+# The verified SheetJS development archive and its optional peer floor are maintained together,
+# outside registry-driven upgrades; the dependency-security gate verifies their exact identity.
 echo "==> Upgrading dependencies in the workspace root and all workspace packages"
 pnpm dlx npm-check-updates@latest \
   --packageManager pnpm \
   --workspaces \
   --root \
   --dep prod,dev,optional,packageManager \
-  --reject @types/node,@docx-editor.dev/core,maplibre-gl \
+  --reject @types/node,@docx-editor.dev/core,maplibre-gl,xlsx \
   --target latest \
   --install never \
   --upgrade
@@ -142,7 +144,7 @@ pnpm dlx npm-check-updates@latest \
   --workspaces \
   --root \
   --dep peer \
-  --reject @sgratzl/chartjs-chart-boxplot,chart.js,chartjs-plugin-annotation,chartjs-plugin-datalabels,chartjs-plugin-zoom,dompurify,katex,mammoth,marked,pdfjs-dist,libphonenumber-js,maplibre-gl,postal-mime,shiki,vite \
+  --reject @sgratzl/chartjs-chart-boxplot,chart.js,chartjs-plugin-annotation,chartjs-plugin-datalabels,chartjs-plugin-zoom,dompurify,katex,mammoth,marked,pdfjs-dist,libphonenumber-js,maplibre-gl,postal-mime,shiki,vite,xlsx \
   --target latest \
   --install never \
   --upgrade

@@ -2863,7 +2863,7 @@ test('upgrade dependency-only mode refreshes transitive dependencies before sync
     const dependencyPasses = dependencyOnly.commands.split('\n').filter((line) => line.includes('npm-check-updates@latest'));
     const generalPass = dependencyPasses.find((line) => line.includes('--target latest') && line.includes('--dep prod,dev,optional,packageManager'));
     const nodeTypesPass = dependencyPasses.find((line) => line.includes('--filter @types/node'));
-    assert.match(generalPass ?? '', /--reject @types\/node,@docx-editor\.dev\/core,maplibre-gl(?: |$)/u);
+    assert.match(generalPass ?? '', /--reject @types\/node,@docx-editor\.dev\/core,maplibre-gl,xlsx(?: |$)/u);
     assert.match(nodeTypesPass ?? '', /--target minor(?: |$)/u);
     assert.match(nodeTypesPass ?? '', /--dep prod,dev,optional(?: |$)/u);
     assert.match(nodeTypesPass ?? '', /--workspaces --root/u);
@@ -3986,7 +3986,7 @@ test('coverage dependency installation retries a bounded attempt and fails close
     for (const mode of ['transient', 'persistent']) {
       const env = { ...process.env, PATH: `${scratch}:${process.env.PATH}`, MODE: mode,
         ATTEMPT_FILE: path.join(scratch, `${mode}-attempts`), TIMEOUT_FILE: path.join(scratch, `${mode}-timeouts`), SLEEP_FILE: path.join(scratch, `${mode}-sleeps`) };
-      const result = spawnSync('bash', ['-euo', 'pipefail', '-c', commands], { env, encoding: 'utf8', timeout: 5000 });
+      const result = spawnSync('sh', ['-eu', '-c', commands], { env, encoding: 'utf8', timeout: 5000 });
       assert.equal(result.status === 0, mode === 'transient', result.stderr);
       assert.equal(readFileSync(env.ATTEMPT_FILE, 'utf8').trim(), '2');
       assert.equal(readFileSync(env.TIMEOUT_FILE, 'utf8'), 'bounded\nbounded\n');
