@@ -6955,6 +6955,7 @@ export interface LyraComponentTypeMap {
       | 'lr-hidden-types-change'
       | 'lr-node-activate'
       | 'lr-node-expand'
+      | 'lr-node-render-error'
       | 'lr-path-request'
       | 'lr-pin-change'
       | 'lr-relation-activate'

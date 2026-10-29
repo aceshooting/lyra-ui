@@ -1853,14 +1853,16 @@ which only reaches rows projected from `legend`.
 `geolocate`, `geolocate-control`, `controls`, `controls-top`, `controls-bottom`, `controls-top-left`, `controls-top-right`,
 `controls-bottom-left`, `controls-bottom-right`, `zoom-in-icon`, `zoom-out-icon`, `compass-icon`,
 `geolocate-icon`, `geolocate-waiting`, `geolocate-active`, `geolocate-background`, `geolocate-error`,
+`globe-control`, `globe-button`, `globe-icon`, `terrain-control`, `terrain-button`, `terrain-icon`,
 `attribution-link`, `attribution-expanded`, `controls-attribution-expanded`,
 `configuration-error`, `error`.
 Before native construction, `initialization-placeholder` is the stable surface and
 `initialization-skeleton` is its decorative skeleton. `initialization-controls` also exposes `controls`;
 its rows expose `controls-top` and `controls-bottom`, and each `initialization-corner` also exposes its
 matching corner token. `initialization-control` outlines explicitly requested controls, with
-`initialization-navigation`, `initialization-scale`, `initialization-geolocate` or
-`initialization-attribution` identifying the kind. Placeholder corners and order follow those options;
+`initialization-navigation`, `initialization-scale`, `initialization-geolocate`,
+`initialization-attribution`, `initialization-globe` or `initialization-terrain` identifying the kind.
+Placeholder corners and order follow those options;
 implicit default attribution has no placeholder. Once the map is constructed, the activation surface
 and skeleton are gone, but `initialization-controls` stays (`aria-hidden`, inert, no pointer events)
 with outlines only for requested controls whose lazy code is still installing. Those controls load and
@@ -5353,6 +5355,7 @@ These named interfaces and helper signatures are available to typed integrations
     getZoom(): number;
     getBearing?(): number;
     getPitch?(): number;
+    stop?(): unknown;
     setCenter(center: [number, number]): unknown;
     setZoom(zoom: number): unknown;
     resize(): unknown;

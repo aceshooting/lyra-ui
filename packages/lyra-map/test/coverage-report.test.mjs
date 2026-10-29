@@ -74,13 +74,13 @@ test('the census lists the original modules and says why anything else is left o
   ]);
 });
 
-test('the census of this package covers the plugin and its scripts but not the harness', async () => {
+test('the census of this package covers the plugin, scene modules and scripts but not the harness', async () => {
   const { included, excluded } = await sourceInventory(packageRoot);
   const names = included.map((entry) => relative(packageRoot, entry.source));
-  for (const name of ['src/vite.mjs', 'scripts/build.mjs', 'scripts/check-package.mjs', 'scripts/complete-transform.mjs',
+  for (const name of ['src/vite.mjs', 'src/scene/projection.mjs', 'scripts/build.mjs', 'scripts/check-package.mjs', 'scripts/complete-transform.mjs',
     'scripts/prepared-mutations.mjs', 'scripts/feature-requirements.mjs', 'scripts/preparation-runtime.mjs',
     'scripts/scratch-package.mjs']) assert.ok(names.includes(name), name);
-  assert.ok(names.every((name) => /^(?:src|scripts)\/[\w.-]+\.mjs$/u.test(name)));
+  assert.ok(names.every((name) => /^(?:src|scripts)\/(?:[\w-]+\/)*[\w.-]+\.mjs$/u.test(name)));
   assert.ok(!names.includes('scripts/coverage.mjs') && !names.includes('scripts/report-coverage.mjs'));
   assert.deepEqual(excluded.map((entry) => entry.source).sort(), ['scripts/coverage.mjs', 'scripts/report-coverage.mjs', 'src/vite.d.ts']);
 });

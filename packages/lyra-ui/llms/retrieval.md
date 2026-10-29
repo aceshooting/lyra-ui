@@ -4031,6 +4031,17 @@ These named interfaces and helper signatures are available to typed integrations
   `loadD3Modules(importForce?: () => Promise<unknown>, importDrag?: () => Promise<unknown>, importZoom?: () => Promise<unknown>, importSelection?: () => Promise<unknown>): Promise<D3Modules | null>`
 
 - **`components-retrieval-graph-graph-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/lr-graph.js`.
+  `LyraGraphNodeRenderContext {
+    readonly id: string;
+    readonly index: number;
+    readonly node?: Readonly<LyraGraphNode>;
+  }`
+  `LyraGraphNodeMesh {
+    readonly positions: Float32Array;
+    readonly normals: Float32Array;
+    readonly color?: readonly [number, number, number, number];
+  }`
   Import: `@aceshooting/lyra-ui/components/retrieval/graph/graph.class.js`.
   `LyraGraphPosition {
     readonly x: number;

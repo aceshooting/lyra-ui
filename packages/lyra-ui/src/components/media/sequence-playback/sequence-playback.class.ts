@@ -7,7 +7,7 @@ import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { finiteCount, finiteDuration } from '../../../internal/numbers.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { styles } from './sequence-playback.styles.js';
-import { registerSequencePlayback, type SequencePlaybackCommands, type SequencePlaybackProjection } from '../../../internal/sequence-playback-binding.js';
+import { registerSequencePlayback, type SequencePlaybackCommands, type SequencePlaybackOwner, type SequencePlaybackProjection } from '../../../internal/sequence-playback-binding.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition, LYRA_DEFAULT_playbackStepPosition } from '../../../internal/default-strings/media.generated.js';
@@ -114,35 +114,37 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
     super();
     registerSequencePlayback(this, {
       available: () => !this.boundCommands,
-      attach: (commands, released) => {
-        const count = this.itemCount, index = this.currentIndex;
-        const generation = ++this.bindingGeneration;
-        this.clearTimer(); this._playing = false; this.toggleAttribute('playing', false);
-        this.boundCommands = commands;
-        this.releaseBinding = released;
-        const current = (): boolean => this.bindingGeneration === generation && this.boundCommands === commands;
-        return {
-          current,
-          project: (value, forceStep = false, silent = false) => {
-            if (!current()) return;
-            const previousIndex = this.currentIndex, previousPlaying = this._playing;
-            this.boundProjection = value;
-            this.itemCount = value.count; this.currentIndex = value.index; this._playing = value.playing;
-            this.toggleAttribute('playing', value.playing); this.requestUpdate();
-            if (!silent && previousPlaying !== value.playing) this.emit(value.playing ? 'lr-play' : 'lr-pause');
-            if (current() && !silent && (forceStep || previousIndex !== value.index)) this.emit('lr-sequence-step', { currentIndex: value.index });
-          },
-          release: () => {
-            if (!current()) return;
-            this.bindingGeneration++; this.boundCommands = undefined; this.boundProjection = undefined; this.releaseBinding = undefined;
-            this.clearTimer(); this._playing = false; this.toggleAttribute('playing', false);
-            this.silentRestoration = true;
-            this.itemCount = finiteCount(count); this.currentIndex = finiteCount(index, 0, Math.max(0, finiteCount(count) - 1));
-            this.requestUpdate();
-          },
-        };
-      },
+      attach: (commands, released) => this.attachBinding(commands, released),
     });
+  }
+
+  private attachBinding(commands: SequencePlaybackCommands, released: () => void): SequencePlaybackOwner {
+    const count = this.itemCount, index = this.currentIndex;
+    const generation = ++this.bindingGeneration;
+    this.clearTimer(); this._playing = false; this.toggleAttribute('playing', false);
+    this.boundCommands = commands;
+    this.releaseBinding = released;
+    const current = (): boolean => this.bindingGeneration === generation && this.boundCommands === commands;
+    return {
+      current,
+      project: (value, forceStep = false, silent = false) => {
+        if (!current()) return;
+        const previousIndex = this.currentIndex, previousPlaying = this._playing;
+        this.boundProjection = value;
+        this.itemCount = value.count; this.currentIndex = value.index; this._playing = value.playing;
+        this.toggleAttribute('playing', value.playing); this.requestUpdate();
+        if (!silent && previousPlaying !== value.playing) this.emit(value.playing ? 'lr-play' : 'lr-pause');
+        if (current() && !silent && (forceStep || previousIndex !== value.index)) this.emit('lr-sequence-step', { currentIndex: value.index });
+      },
+      release: () => {
+        if (!current()) return;
+        this.bindingGeneration++; this.boundCommands = undefined; this.boundProjection = undefined; this.releaseBinding = undefined;
+        this.clearTimer(); this._playing = false; this.toggleAttribute('playing', false);
+        this.silentRestoration = true;
+        this.itemCount = finiteCount(count); this.currentIndex = finiteCount(index, 0, Math.max(0, finiteCount(count) - 1));
+        this.requestUpdate();
+      },
+    };
   }
 
   override adoptedCallback(): void {

@@ -2114,10 +2114,13 @@ export type LyraNodeLeaveEvent = LyraGraphEventMap['lr-node-leave'];
 export type LyraNodeMoveEvent = LyraFlowCanvasEventMap['lr-node-move'];
 
 /**
- * `lr-node-render-error` — dispatched by `<lr-graph>`; detail
+ * `lr-node-render-error` — dispatched by 2 components: `<lr-graph>`,
+ * `<lr-knowledge-graph-explorer>`; detail union of 2, e.g.
  * `LyraGraphEventMap['lr-node-render-error']`.
  */
-export type LyraNodeRenderErrorEvent = LyraGraphEventMap['lr-node-render-error'];
+export type LyraNodeRenderErrorEvent =
+  | LyraGraphEventMap['lr-node-render-error']
+  | LyraKnowledgeGraphExplorerEventMap['lr-node-render-error'];
 
 /**
  * `lr-node-select` — dispatched by 2 components: `<lr-tree-item>`, `<lr-tree>`; detail union of 2,

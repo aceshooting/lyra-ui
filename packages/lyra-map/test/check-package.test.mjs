@@ -52,6 +52,9 @@ test('accepts a complete build', async () => {
 const refusals = [
   ['a provenance version other than the reviewed one', (directory) => editProvenance(directory, (record) => { record.version = '6.14.0'; }), /6\.14\.0[\s\S]*6\.15\.0/u],
   ['a changed-source list that lost a reviewed file', (directory) => editProvenance(directory, (record) => { record.changedSourceFiles.pop(); }), /strictly deep-equal[\s\S]*render_to_texture/u],
+  ['a changed-source list that lost the terrain transform', (directory) => editProvenance(directory, (record) => {
+    record.changedSourceFiles = record.changedSourceFiles.filter((file) => file !== 'webgl/draw/draw_terrain.ts');
+  }), /strictly deep-equal[\s\S]*draw_terrain/u],
   ['a changed-source list with an unreviewed file', (directory) => editProvenance(directory, (record) => { record.changedSourceFiles.push('util/unreviewed.ts'); }), /strictly deep-equal[\s\S]*unreviewed/u],
   ['a module graph of 700 files or more', (directory) => editProvenance(directory, (record) => {
     while (record.modules.length < 700) record.modules.push(structuredClone(record.modules[0]));
