@@ -57,8 +57,8 @@ export interface LyraArtifactPanelEventMap {
  *   navigation moves to a different version. Not fired when a `versions` reassignment drops the
  *   currently-active version id: `activeVersionId` resets to `null` silently, since `null` is
  *   already a documented steady state ("the latest version"), not itself a selection.
- * @event lr-restore - `detail: { versionId }`. Fired by the restore-this-version button;
- *   mutates nothing itself — `versions` and the resulting content stay host-owned state.
+ * @event lr-restore - `detail: { versionId }`. Fired by the restore-this-version button only
+ *   while `hideRestore` is false; mutates nothing itself — `versions` and the resulting content stay host-owned state.
  * @event lr-copy - `detail: { ok: true, text }`. Fired after the clipboard write fulfills.
  * @event lr-error - The clipboard write failed; generic no-detail notification.
  * @event lr-copy-error - `detail: { ok: false, text, reason, error }` — typed clipboard failure.
@@ -83,7 +83,7 @@ export interface LyraArtifactPanelEventMap {
  * @csspart version-position - The "Version N of M" text.
  * @csspart version-label - The active `ArtifactVersion.label`, when supplied.
  * @csspart restore-button - The restore-this-version button, rendered only while the active
- *   version isn't the latest one.
+ *   version isn't the latest one and `hideRestore` is false.
  * @csspart actions - The `actions` slot wrapper.
  * @csspart copy-button - The copy button, rendered only while `copyText` is non-empty.
  * @csspart download-button - The download button, rendered only while `downloadSrc` is non-empty.
@@ -139,6 +139,10 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
 
   /** The currently viewed version's id, or `null` to mean "the latest version". */
   @property({ attribute: 'active-version-id' }) activeVersionId: string | null = null;
+
+  /** Hide the built-in Restore action while keeping version browsing available. This controls
+   *  presentation only; the host remains responsible for authorizing restoration. */
+  @property({ type: Boolean, reflect: true, attribute: 'hide-restore' }) hideRestore = false;
 
   /** Whether the artifact is still being generated. Sets `aria-busy` on the body and shows a
    *  text indicator instead of an animated one, so it stays legible under reduced motion. */
@@ -222,6 +226,15 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
       }),
     );
   }
+
+  private onRestore = (): void => {
+    if (this.hideRestore) return;
+    const versions = this.normalizedVersions;
+    const index = this.currentIndex;
+    const version = versions[index];
+    if (!version || this.activeVersionId === null || index === versions.length - 1) return;
+    this.emit('lr-restore', { versionId: version.id });
+  };
 
   private onCopy = async (): Promise<void> => {
     const text = this.copyText;
@@ -317,14 +330,12 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
                   >
                     <span part="version-next-glyph" aria-hidden="true">›</span>
                   </button>
-                  ${!isLatest
+                  ${!isLatest && !this.hideRestore
                     ? html`<button
                         part="restore-button"
                         data-agent-action="neutral"
                         type="button"
-                        @click=${() =>
-                          // safe: inside the hasVersions branch, `index` is an in-bounds version index
-                          this.emit('lr-restore', { versionId: versions[index]!.id })}
+                        @click=${this.onRestore}
                       >
                         ${this.localize('artifactPanelRestore')}
                       </button>`

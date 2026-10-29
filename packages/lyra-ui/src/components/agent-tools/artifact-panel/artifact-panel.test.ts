@@ -276,6 +276,95 @@ describe('lr-artifact-panel', () => {
     expect((latestEl.shadowRoot!.querySelector('[part="restore-button"]')) == null).to.be.true;
   });
 
+  it('keeps restore and navigation unchanged when hideRestore is unset', async () => {
+    const el = await fixture<LyraArtifactPanel>(html`
+      <lr-artifact-panel .versions=${[{ id: 'v1' }, { id: 'v2' }]}></lr-artifact-panel>
+    `);
+    const navigation = oneEvent(el, 'lr-version-change');
+    (el.shadowRoot!.querySelector('[part="version-previous"]') as HTMLButtonElement).click();
+    expect(((await navigation) as CustomEvent<{ versionId: string }>).detail).to.deep.equal({ versionId: 'v1' });
+    await el.updateComplete;
+    const restore = el.shadowRoot!.querySelector('[part="restore-button"]') as HTMLButtonElement;
+    expect(restore !== null).to.equal(true);
+    const restored = oneEvent(el, 'lr-restore');
+    restore.click();
+    const event = await restored as CustomEvent<{ versionId: string }>;
+    expect(event.detail).to.deep.equal({ versionId: 'v1' });
+    expect(event.bubbles).to.equal(true);
+    expect(event.composed).to.equal(true);
+    expect(event.cancelable).to.equal(false);
+    expect(el.activeVersionId).to.equal('v1');
+    expect(el.versions.map((version) => version.id)).to.deep.equal(['v1', 'v2']);
+  });
+
+  it('hides only Restore with hide-restore while preserving version navigation and announcements', async () => {
+    const el = await fixture<LyraArtifactPanel>(html`
+      <lr-artifact-panel hide-restore active-version-id="v2"
+        .versions=${[{ id: 'v1', label: 'Initial' }, { id: 'v2', label: 'Reviewed' }, { id: 'v3', label: 'Latest' }]}
+        copy-text="text" download-src="https://example.com/report.txt">
+        <pre slot="code">code</pre>
+        <button slot="actions">Custom action</button>
+      </lr-artifact-panel>
+    `);
+    expect(el.shadowRoot!.querySelectorAll('[part="restore-button"]').length).to.equal(0);
+    for (const part of ['version-nav', 'view-toggle', 'actions', 'copy-button', 'download-button']) {
+      expect(el.shadowRoot!.querySelectorAll(`[part="${part}"]`).length, part).to.equal(1);
+    }
+    const announcements: string[] = [];
+    const live = el.shadowRoot!.querySelector('lr-live-region') as HTMLElement & { announce(text: string): void };
+    const original = live.announce;
+    live.announce = (text: string) => { announcements.push(text); };
+    try {
+      const previous = oneEvent(el, 'lr-version-change');
+      (el.shadowRoot!.querySelector('[part="version-previous"]') as HTMLButtonElement).click();
+      expect(((await previous) as CustomEvent<{ versionId: string }>).detail.versionId).to.equal('v1');
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="version-position"]')?.textContent).to.equal('Version 1 of 3');
+      expect(el.shadowRoot!.querySelector('[part="version-label"]')?.textContent).to.equal('Initial');
+      expect(el.shadowRoot!.querySelectorAll('[part="restore-button"]').length).to.equal(0);
+      const next = oneEvent(el, 'lr-version-change');
+      (el.shadowRoot!.querySelector('[part="version-next"]') as HTMLButtonElement).click();
+      expect(((await next) as CustomEvent<{ versionId: string }>).detail.versionId).to.equal('v2');
+      await el.updateComplete;
+      expect(announcements).to.deep.equal(['Version 1 of 3', 'Version 2 of 3']);
+    } finally {
+      live.announce = original;
+    }
+  });
+
+  it('toggles hideRestore without changing history and gates a retained Restore button immediately', async () => {
+    const el = await fixture<LyraArtifactPanel>(html`
+      <lr-artifact-panel active-version-id="v1" .versions=${[{ id: 'v1' }, { id: 'v2' }]}></lr-artifact-panel>
+    `);
+    const restore = el.shadowRoot!.querySelector('[part="restore-button"]') as HTMLButtonElement;
+    const events: string[] = [];
+    el.addEventListener('lr-restore', (event) => events.push(event.detail.versionId));
+    el.hideRestore = true;
+    restore.click();
+    expect(events).to.deep.equal([]);
+    await el.updateComplete;
+    expect(el.hasAttribute('hide-restore')).to.equal(true);
+    expect(el.shadowRoot!.querySelectorAll('[part="restore-button"]').length).to.equal(0);
+    restore.click();
+    expect(events).to.deep.equal([]);
+    expect(el.activeVersionId).to.equal('v1');
+    expect(el.versions.map((version) => version.id)).to.deep.equal(['v1', 'v2']);
+    el.hideRestore = false;
+    await el.updateComplete;
+    expect(el.hasAttribute('hide-restore')).to.equal(false);
+    expect(el.shadowRoot!.querySelectorAll('[part="restore-button"]').length).to.equal(1);
+    (el.shadowRoot!.querySelector('[part="restore-button"]') as HTMLButtonElement).click();
+    expect(events).to.deep.equal(['v1']);
+    el.setAttribute('hide-restore', '');
+    await el.updateComplete;
+    expect(el.hideRestore).to.equal(true);
+    expect(el.shadowRoot!.querySelectorAll('[part="restore-button"]').length).to.equal(0);
+    el.removeAttribute('hide-restore');
+    await el.updateComplete;
+    expect(el.hideRestore).to.equal(false);
+    expect(el.shadowRoot!.querySelectorAll('[part="restore-button"]').length).to.equal(1);
+  });
+
   it('sets aria-busy on the body while streaming and shows a reduced-motion-safe indicator', async () => {
     const el = (await fixture(html`<lr-artifact-panel streaming></lr-artifact-panel>`)) as LyraArtifactPanel;
     await el.updateComplete;
