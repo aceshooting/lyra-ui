@@ -28,7 +28,8 @@ import {
   createViewportResources, replaceViewportGlow, restoreViewportContextMethods, retireViewportExtras,
   type ViewportResourceRecord,
 } from './viewport-resources.js';
-import { invalidateViewportXr, registerViewportXr, unregisterViewportXr } from './viewport-xr.js';
+import { getViewportXrLifetimeStamp, invalidateViewportXr, registerViewportXr, unregisterViewportXr } from './viewport-xr.js';
+import { registerViewportTransaction, unregisterViewportTransaction, type ViewportTransactionCell } from './viewport-transaction.js';
 
 /** Thrown by {@link createLyra3dViewport} when the browser cannot create a WebGL2 context. */
 export class Lyra3dUnsupportedError extends Error {
@@ -244,34 +245,37 @@ function createViewport(container: HTMLElement, application: ViewportApplication
     };
     const constrain = (value: Lyra3dOrbitCamera) => (application?.constrain ? normalizeOrbitCamera(application.constrain(value), value) : value);
 
-    let style = resolveLyra3dStyle(undefined);
-    let width = 1;
-    let height = 1;
-    let allocatedWidth = 0, allocatedHeight = 0;
-    const glowAllocated = () => allocatedWidth > 0 && allocatedHeight > 0;
-    let orbit: Lyra3dOrbitCamera = DEFAULT_ORBIT_CAMERA;
-    let lost = false;
-    let failed = false;
+    const cell: ViewportTransactionCell = {
+      active: true, lost: false, failed: false, restoring: false,
+      epoch: 0, sizeEpoch: 0, cameraEpoch: 0, styleEpoch: 0,
+      width: 1, height: 1, allocatedWidth: 0, allocatedHeight: 0,
+      style: resolveLyra3dStyle(undefined), orbit: DEFAULT_ORBIT_CAMERA,
+      transition: undefined, gesture: undefined, cameraChanged: false, pendingRender: false,
+      pendingEffects: undefined, pendingReducedMotion: undefined,
+      glowGeneration: 0, glowRequested: false, glowPending: false,
+    };
+    const advance = (key: 'epoch' | 'sizeEpoch' | 'cameraEpoch' | 'styleEpoch' | 'glowGeneration') => {
+      if (Number.isSafeInteger(cell[key]) && cell[key] < Number.MAX_SAFE_INTEGER) cell[key]++;
+      else cell.active = false;
+    };
+    const glowAllocated = () => cell.allocatedWidth > 0 && cell.allocatedHeight > 0;
     let disposed = false;
-    let restoring = false;
-    let glowRequested = false;
-    let glowPending = false;
-    let glowGeneration = 0;
     let frame = 0;
-    let cameraChanged = false;
-    let transition: { from: Lyra3dOrbitCamera; to: Lyra3dOrbitCamera; start: number } | undefined;
+    let effectsInProgress = false;
+    let glowWork: object | undefined;
     let hoverPoint: { x: number; y: number } | undefined;
     /** The last pointer position over the canvas, re-picked after a restored context. */
     let pointer: { x: number; y: number } | undefined;
     let hovered: number | null = null;
-    let gesture: { id: number; startX: number; startY: number; x: number; y: number; moved: boolean; pan: boolean } | undefined;
     let suppressContextMenu = false;
 
     const stopInteraction = (preservePointer = false) => {
-      const captured = gesture?.id;
-      gesture = undefined;
-      transition = undefined;
-      cameraChanged = false;
+      const captured = cell.gesture?.id;
+      cell.gesture = undefined;
+      if (cell.transition) advance('cameraEpoch');
+      cell.pendingReducedMotion = undefined;
+      cell.transition = undefined;
+      cell.cameraChanged = false;
       hoverPoint = undefined;
       if (!preservePointer) pointer = undefined;
       suppressContextMenu = false;
@@ -283,16 +287,19 @@ function createViewport(container: HTMLElement, application: ViewportApplication
     };
     const releaseGlow = () => { replaceViewportGlow(resources, undefined)?.dispose(); };
     const detachApplication = (removeCanvas: boolean) => {
+      unregisterViewportTransaction(viewport);
       if (disposed) return;
-      disposed = true; glowGeneration++; glowPending = false; glowRequested = false;
+      glowWork = undefined;
+      cell.active = false; cell.pendingEffects = undefined; cell.pendingReducedMotion = undefined;
+      disposed = true; advance('glowGeneration'); cell.glowPending = false; cell.glowRequested = false;
       application = undefined;
-      const captured = gesture?.id, scheduled = frame;
-      gesture = undefined; transition = undefined; cameraChanged = false;
+      const captured = cell.gesture?.id, scheduled = frame;
+      cell.gesture = undefined; cell.transition = undefined; cell.cameraChanged = false;
       hoverPoint = undefined; pointer = undefined; hovered = null; suppressContextMenu = false;
-      frame = 0; pendingRender = false; restoring = false;
+      frame = 0; cell.pendingRender = false; cell.restoring = false;
       frameCallbacks.clear();
-      let failed = false, failure: unknown;
-      const cleanup = (run: () => void) => { try { run(); } catch (error) { if (!failed) { failed = true; failure = error; } } };
+      let cleanupFailed = false, failure: unknown;
+      const cleanup = (run: () => void) => { try { run(); } catch (error) { if (!cleanupFailed) { cleanupFailed = true; failure = error; } } };
       for (const [target, type, listener, listenerOptions] of installedListeners) {
         cleanup(() => target.removeEventListener(type, listener, listenerOptions));
       }
@@ -302,7 +309,7 @@ function createViewport(container: HTMLElement, application: ViewportApplication
         try { canvas.releasePointerCapture(captured); } catch { /* Capture may already be released. */ }
       }
       if (removeCanvas) cleanup(() => canvas.remove());
-      if (failed) throw failure;
+      if (cleanupFailed) throw failure;
     };
     stopInitialization = () => { detachApplication(false); };
     // Host callbacks stay outside the renderer catch so application errors remain observable.
@@ -310,9 +317,10 @@ function createViewport(container: HTMLElement, application: ViewportApplication
       let threw = false;
       try { operation(); } catch { threw = true; }
       if (threw) {
-        if (!disposed && !failed) {
-          failed = true;
-          lost = true; restoring = false; glowGeneration++; glowPending = false;
+        if (!disposed && !cell.failed) {
+          cell.failed = true;
+          cell.lost = true; cell.restoring = false; advance('epoch'); advance('glowGeneration'); cell.glowPending = false;
+          cell.pendingEffects = undefined; glowWork = undefined;
           stopInteraction();
           try { releaseGlow(); } catch { /* Preserve the rendering failure and still notify the host. */ }
           invalidateViewportXr(viewport);
@@ -320,117 +328,168 @@ function createViewport(container: HTMLElement, application: ViewportApplication
         }
         return false;
       }
-      return !disposed && !lost;
+      return !disposed && !cell.lost;
     };
     const abortGlow = () => { const error = new Error('Glow setup was superseded'); error.name = 'AbortError'; return error; };
-    const finishRestore = (generation: number) => {
-      if (!restoring || disposed || lost || glowPending || generation !== glowGeneration) return;
-      restoring = false;
-      if (pointer && !gesture) hoverPoint = pointer;
+    const finishRestore = (generation: number, work: object | undefined) => {
+      if (!cell.restoring || disposed || cell.lost || cell.glowPending || generation !== cell.glowGeneration || work !== glowWork) return;
+      cell.restoring = false;
+      if (pointer && !cell.gesture) hoverPoint = pointer;
       invalidate(); application?.restored?.();
     };
     const syncGlow = async (): Promise<void> => {
-      const generation = ++glowGeneration;
-      const current = () => !disposed && !lost && generation === glowGeneration;
+      advance('glowGeneration');
+      const work = glowWork = {};
+      const generation = cell.glowGeneration, lifetime = getViewportXrLifetimeStamp(viewport);
+      const current = () => !disposed && !cell.lost && work === glowWork && generation === cell.glowGeneration &&
+        lifetime === getViewportXrLifetimeStamp(viewport);
       let created: Lyra3dGlow | undefined;
       try {
         if (disposed) return;
-        if (!glowRequested || style.forcedColors || !glowAllocated() || lost) {
-          glowPending = false; releaseGlow(); invalidate(); return;
+        if (!cell.glowRequested || cell.style.forcedColors || !glowAllocated() || cell.lost) {
+          cell.glowPending = false; releaseGlow(); if (current()) invalidate(); return;
         }
-        if (resources.glow) { resources.glow.resize(width, height, style.devicePixelRatio); applyCamera(); resources.glow.prepare(scene, camera); invalidate(); return; }
-        glowPending = true;
+        const existing = resources.glow;
+        if (existing) {
+          existing.resize(cell.width, cell.height, cell.style.devicePixelRatio);
+          if (!current() || resources.glow !== existing) throw abortGlow();
+          applyCamera();
+          if (!current() || resources.glow !== existing) throw abortGlow();
+          existing.prepare(scene, camera);
+          if (!current() || resources.glow !== existing) throw abortGlow();
+          invalidate(); return;
+        }
+        cell.glowPending = true;
         const module = await (application?.loadGlow ?? loadGlowModule)();
         if (!current()) throw abortGlow();
         if (!module || typeof module.createLyra3dGlow !== 'function') throw new Error('Glow module is unavailable');
         created = module.createLyra3dGlow(renderer);
         if (!current()) throw abortGlow();
-        created.resize(width, height, style.devicePixelRatio);
+        created.resize(cell.width, cell.height, cell.style.devicePixelRatio);
         if (!current()) throw abortGlow();
-        applyCamera(); created.prepare(scene, camera);
+        applyCamera();
         if (!current()) throw abortGlow();
-        replaceViewportGlow(resources, created); created = undefined; glowPending = false; invalidate();
+        created.prepare(scene, camera);
+        if (!current()) throw abortGlow();
+        replaceViewportGlow(resources, created); created = undefined; cell.glowPending = false; invalidate();
       } catch (error) {
         try { created?.dispose(); } catch { /* Preserve the setup error after independent resource cleanup. */ }
-        if (generation === glowGeneration) glowPending = false;
+        if (work === glowWork && generation === cell.glowGeneration) cell.glowPending = false;
         if (!current()) throw abortGlow();
         renderOperation(() => { throw error; });
         throw error;
       }
     };
     const applyCamera = () => {
-      const pose = orbitCameraPose(orbit);
+      const pose = orbitCameraPose(cell.orbit);
       camera.position.set(...pose.position);
       camera.up.set(...pose.up);
       camera.lookAt(...pose.target);
       camera.near = pose.near;
-      camera.far = Math.max(pose.near * 10, orbit.distance * 4 + 1e4);
-      camera.aspect = width / height;
+      camera.far = Math.max(pose.near * 10, cell.orbit.distance * 4 + 1e4);
+      camera.aspect = cell.width / cell.height;
       camera.updateProjectionMatrix();
       camera.updateMatrixWorld();
     };
-    const applyRendererState = () => {
+    const applyRendererState = (valid?: () => boolean) => {
+      const style = cell.style, sizeEpoch = cell.sizeEpoch, styleEpoch = cell.styleEpoch;
+      const current = () => !disposed && !cell.lost && cell.style === style &&
+        cell.sizeEpoch === sizeEpoch && cell.styleEpoch === styleEpoch && (valid?.() ?? true);
+      if (!current()) return;
       renderer.setPixelRatio(style.devicePixelRatio);
-      renderer.setSize(width, height, false);
+      if (!current()) return;
+      renderer.setSize(cell.width, cell.height, false);
+      if (!current()) return;
       renderer.setClearColor(setColor(clear, style.background), style.background.a);
     };
+    const flushEffects = (): boolean => {
+      if (disposed || cell.lost) return false;
+      const pending = cell.pendingEffects;
+      if (!pending) return true;
+      cell.pendingEffects = undefined;
+      const current = () => !disposed && !cell.lost &&
+        pending.lifetime === getViewportXrLifetimeStamp(viewport) &&
+        pending.styleEpoch === cell.styleEpoch && pending.glowGeneration === cell.glowGeneration;
+      if (!current()) return false;
+      const outerEffects = effectsInProgress;
+      effectsInProgress = true;
+      try {
+        if (!renderOperation(() => applyRendererState(current))) return false;
+        if (!current()) return !disposed && !cell.lost && !cell.pendingEffects;
+        if (cell.glowRequested || cell.glowPending || resources.glow) {
+          const setup = syncGlow(), generation = cell.glowGeneration, work = glowWork;
+          void setup.then(() => finishRestore(generation, work), () => {});
+        }
+        return !disposed && !cell.lost && !cell.pendingEffects;
+      } finally { effectsInProgress = outerEffects; }
+    };
     const render = (time: number) => {
-      if (disposed || lost || restoring || glowPending) return;
-      if (transition) {
-        const t = Math.min(1, (time - transition.start) / TRANSITION_MS);
+      if (!flushEffects() || cell.restoring || cell.glowPending) return;
+      const completion = cell.pendingReducedMotion;
+      cell.pendingReducedMotion = undefined;
+      if (completion && completion.transition === cell.transition && completion.styleEpoch === cell.styleEpoch) {
+        cell.orbit = completion.transition.to;
+        cell.transition = undefined;
+        cell.cameraChanged = true;
+        advance('cameraEpoch');
+      }
+      if (cell.transition) {
+        advance('cameraEpoch');
+        const t = Math.min(1, (time - cell.transition.start) / TRANSITION_MS);
         const eased = 1 - Math.pow(1 - t, 3);
-        orbit = interpolateOrbit(transition.from, transition.to, eased);
-        cameraChanged = true;
+        cell.orbit = interpolateOrbit(cell.transition.from, cell.transition.to, eased);
+        cell.cameraChanged = true;
         if (t >= 1) {
-          orbit = transition.to;
-          transition = undefined;
+          cell.orbit = cell.transition.to;
+          cell.transition = undefined;
         }
       }
       for (const callback of frameCallbacks) {
         callback(time);
-        if (disposed || lost || restoring || glowPending) return;
+        if (disposed || cell.lost || cell.restoring || cell.glowPending || cell.pendingEffects) return;
       }
       applyCamera();
-      if (!renderOperation(() => { if (resources.glow) resources.glow.render(scene, camera); else renderer.render(scene, camera); })) return;
-      if (cameraChanged) {
-        cameraChanged = false;
-        application?.camera(orbit);
-        if (disposed || lost) return;
+      if (!renderOperation(() => { if (resources.glow) resources.glow.render(scene, camera); else renderer.render(scene, camera); }) || cell.pendingEffects) return;
+      if (cell.cameraChanged) {
+        cell.cameraChanged = false;
+        application?.camera(cell.orbit);
+        if (disposed || cell.lost || cell.pendingEffects) return;
       }
-      if (hoverPoint && !gesture && application?.pickAt !== null) {
+      if (hoverPoint && !cell.gesture && application?.pickAt !== null) {
         const item = pick(hoverPoint.x, hoverPoint.y);
-        if (disposed || lost) return;
+        if (disposed || cell.lost || cell.pendingEffects) return;
         hoverPoint = undefined;
         if (item !== hovered) {
           hovered = item;
           application?.hover(item);
         }
       }
-      if (transition) invalidate();
+      if (!cell.pendingEffects && cell.transition) invalidate();
     };
     // After each render one idle frame stays armed, so a host that changes the camera from its own
     // animation-frame callback is drawn in that same frame. A request made from inside an animation
     // frame otherwise lands in the next one, and a per-frame camera writer would render every other frame.
-    let pendingRender = false;
     const tick = (time: number) => {
       frame = 0;
-      if (!pendingRender) return;
-      pendingRender = false;
+      if (!cell.pendingRender) return;
+      cell.pendingRender = false;
       render(time);
-      if (!disposed && !lost && frame === 0) frame = requestAnimationFrame(tick);
+      if (!disposed && !cell.lost && frame === 0) frame = requestAnimationFrame(tick);
     };
     function invalidate(): void {
-      if (disposed || lost) return;
-      pendingRender = true;
+      if (disposed || cell.lost) return;
+      cell.pendingRender = true;
       if (frame === 0) frame = requestAnimationFrame(tick);
     }
     const userCamera = (next: Lyra3dOrbitCamera) => {
-      if (disposed || lost) return;
+      if (disposed || cell.lost) return;
       const target = constrain(next);
-      if (disposed || lost) return;
-      transition = undefined;
-      orbit = target;
-      cameraChanged = true;
+      if (disposed || cell.lost) return;
+      cell.pendingReducedMotion = undefined;
+      advance('cameraEpoch');
+      cell.transition = undefined;
+      cell.orbit = target;
+      cell.cameraChanged = true;
       invalidate();
     };
     const local = (event: MouseEvent) => {
@@ -444,10 +503,10 @@ function createViewport(container: HTMLElement, application: ViewportApplication
     });
 
     const pointerDown = (event: PointerEvent) => {
-      if (disposed || lost || gesture || (event.button !== 0 && event.button !== 1 && event.button !== 2)) return;
+      if (disposed || cell.lost || cell.gesture || (event.button !== 0 && event.button !== 1 && event.button !== 2)) return;
       const pan = event.shiftKey || event.button !== 0 || application?.primaryPan?.() === true;
-      if (disposed || lost) return;
-      gesture = {
+      if (disposed || cell.lost) return;
+      cell.gesture = {
         id: event.pointerId,
         startX: event.clientX,
         startY: event.clientY,
@@ -464,34 +523,34 @@ function createViewport(container: HTMLElement, application: ViewportApplication
       }
     };
     const pointerMove = (event: PointerEvent) => {
-      if (disposed || lost) return;
+      if (disposed || cell.lost) return;
       pointer = local(event);
-      if (!gesture) {
+      if (!cell.gesture) {
         hoverPoint = pointer;
         invalidate();
         return;
       }
-      if (gesture.id !== event.pointerId) return;
-      gesture.moved ||= Math.hypot(event.clientX - gesture.startX, event.clientY - gesture.startY) > CLICK_SLOP;
-      const dx = event.clientX - gesture.x, dy = event.clientY - gesture.y;
-      gesture.x = event.clientX;
-      gesture.y = event.clientY;
-      if (!gesture.moved) return;
-      userCamera(gesture.pan ? panBy(orbit, dx, dy, { width, height }) : orbitBy(orbit, dx * ORBIT_RADIANS_PER_PIXEL, -dy * ORBIT_RADIANS_PER_PIXEL));
+      if (cell.gesture.id !== event.pointerId) return;
+      cell.gesture.moved ||= Math.hypot(event.clientX - cell.gesture.startX, event.clientY - cell.gesture.startY) > CLICK_SLOP;
+      const dx = event.clientX - cell.gesture.x, dy = event.clientY - cell.gesture.y;
+      cell.gesture.x = event.clientX;
+      cell.gesture.y = event.clientY;
+      if (!cell.gesture.moved) return;
+      userCamera(cell.gesture.pan ? panBy(cell.orbit, dx, dy, { width: cell.width, height: cell.height }) : orbitBy(cell.orbit, dx * ORBIT_RADIANS_PER_PIXEL, -dy * ORBIT_RADIANS_PER_PIXEL));
     };
     const endGesture = (event: PointerEvent, activate: boolean) => {
-      const current = gesture;
+      const current = cell.gesture;
       if (!current || current.id !== event.pointerId) return;
-      gesture = undefined;
+      cell.gesture = undefined;
       try {
         canvas.releasePointerCapture(event.pointerId);
       } catch {
         // Already released.
       }
-      if (!disposed && !lost && activate && event.button === 0 && !current.moved && application?.pickAt !== null) {
+      if (!disposed && !cell.lost && activate && event.button === 0 && !current.moved && application?.pickAt !== null) {
         const point = local(event);
         const item = pick(point.x, point.y);
-        if (!disposed && !lost) application?.pick(item, modifiers(event, false));
+        if (!disposed && !cell.lost) application?.pick(item, modifiers(event, false));
       }
     };
     const pointerUp = (event: PointerEvent) => endGesture(event, true);
@@ -499,23 +558,23 @@ function createViewport(container: HTMLElement, application: ViewportApplication
     const pointerLeave = () => {
       hoverPoint = undefined;
       pointer = undefined;
-      if (!disposed && !lost && !gesture && hovered !== null) {
+      if (!disposed && !cell.lost && !cell.gesture && hovered !== null) {
         hovered = null;
         application?.hover(null);
       }
     };
     const doubleClick = (event: MouseEvent) => {
-      if (application?.pickAt === null || disposed || lost) return;
+      if (application?.pickAt === null || disposed || cell.lost) return;
       const point = local(event);
       const item = pick(point.x, point.y);
-      if (!disposed && !lost) application?.pick(item, modifiers(event, true));
+      if (!disposed && !cell.lost) application?.pick(item, modifiers(event, true));
     };
     const wheel = (event: WheelEvent) => {
-      if (disposed || lost || !application?.wheelZoom?.(event)) return;
-      if (disposed || lost) return;
+      if (disposed || cell.lost || !application?.wheelZoom?.(event)) return;
+      if (disposed || cell.lost) return;
       event.preventDefault();
       const delta = Math.min(300, Math.max(-300, Number.isFinite(event.deltaY) ? event.deltaY : 0));
-      userCamera(zoomBy(orbit, Math.exp(delta * 0.002)));
+      userCamera(zoomBy(cell.orbit, Math.exp(delta * 0.002)));
     };
     const contextMenu = (event: MouseEvent) => {
       if (!suppressContextMenu) return;
@@ -523,10 +582,11 @@ function createViewport(container: HTMLElement, application: ViewportApplication
       event.preventDefault();
     };
     const contextLost = () => {
-      if (disposed || lost) return;
-      lost = true;
+      if (disposed || cell.lost) return;
+      cell.lost = true;
+      advance('epoch'); cell.pendingEffects = undefined; glowWork = undefined;
       invalidateViewportXr(viewport);
-      restoring = false; glowGeneration++; glowPending = false;
+      cell.restoring = false; advance('glowGeneration'); cell.glowPending = false;
       stopInteraction(true);
       let cleanupError: unknown, cleanupFailed = false;
       try { releaseGlow(); } catch (error) { cleanupFailed = true; cleanupError = error; }
@@ -536,23 +596,24 @@ function createViewport(container: HTMLElement, application: ViewportApplication
     const contextRestored = () => {
       // The renderer restores its programs and buffers itself, but not renderer-level state such as
       // the clear color, so every setting is applied again before the first restored frame.
-      if (disposed || failed || !lost) return;
-      lost = false;
+      if (disposed || cell.failed || !cell.lost) return;
+      cell.lost = false;
+      advance('epoch'); cell.pendingEffects = undefined; cell.pendingReducedMotion = undefined;
       invalidateViewportXr(viewport);
       if (!renderOperation(applyRendererState)) return;
-      restoring = glowRequested && !style.forcedColors && glowAllocated();
+      cell.restoring = cell.glowRequested && !cell.style.forcedColors && glowAllocated();
       try { application?.onRestore?.(); }
       catch (error) { renderOperation(() => { throw error; }); throw error; }
-      if (disposed || lost) return;
-      if (glowRequested && !style.forcedColors && glowAllocated()) {
-        restoring = true;
-        const pending = syncGlow(), active = glowGeneration;
-        void pending.then(() => finishRestore(active), () => { /* Current failure reports lost; stale work has no owner. */ });
+      if (disposed || cell.lost) return;
+      if (cell.glowRequested && !cell.style.forcedColors && glowAllocated()) {
+        cell.restoring = true;
+        const pending = syncGlow(), active = cell.glowGeneration, work = glowWork;
+        void pending.then(() => finishRestore(active, work), () => { /* Current failure reports lost; stale work has no owner. */ });
         return;
       }
-      restoring = false;
+      cell.restoring = false;
       // The item under a resting pointer is checked again against the restored pick scene.
-      if (pointer && !gesture) hoverPoint = pointer;
+      if (pointer && !cell.gesture) hoverPoint = pointer;
       invalidate();
       application?.restored?.();
     };
@@ -579,76 +640,93 @@ function createViewport(container: HTMLElement, application: ViewportApplication
       camera,
       software,
       get width() {
-        return width;
+        return cell.width;
       },
       get height() {
-        return height;
+        return cell.height;
       },
       get orbit() {
-        return orbit;
+        return cell.orbit;
       },
       get style() {
-        return style;
+        return cell.style;
       },
       get lost() {
-        return lost || restoring;
+        return cell.lost || cell.restoring;
       },
       get disposed() {
         return disposed;
       },
       setOrbit(next) {
         if (disposed) return;
-        transition = undefined;
-        cameraChanged = false;
-        orbit = normalizeOrbitCamera(next, orbit);
+        cell.pendingReducedMotion = undefined;
+        advance('cameraEpoch');
+        cell.transition = undefined;
+        cell.cameraChanged = false;
+        cell.orbit = normalizeOrbitCamera(next, cell.orbit);
         invalidate();
       },
       transitionTo(next) {
-        if (disposed || lost) return;
-        const target = constrain(normalizeOrbitCamera(next, orbit));
-        if (disposed || lost) return;
-        if (style.reducedMotion) {
-          transition = undefined;
-          orbit = target;
-          cameraChanged = true;
+        if (disposed || cell.lost) return;
+        const target = constrain(normalizeOrbitCamera(next, cell.orbit));
+        if (disposed || cell.lost) return;
+        cell.pendingReducedMotion = undefined;
+        advance('cameraEpoch');
+        if (cell.style.reducedMotion) {
+          cell.transition = undefined;
+          cell.orbit = target;
+          cell.cameraChanged = true;
           invalidate();
           return;
         }
-        transition = { from: orbit, to: target, start: performance.now() };
+        cell.transition = { from: cell.orbit, to: target, start: performance.now() };
         invalidate();
       },
       setStyle(next) {
-        const wasForced = style.forcedColors;
-        style = resolveLyra3dStyle(next);
-        if (style.reducedMotion && transition) {
-          orbit = transition.to;
-          transition = undefined;
-          cameraChanged = true;
+        const wasForced = cell.style.forcedColors, deferred = cell.pendingEffects !== undefined || effectsInProgress;
+        cell.style = resolveLyra3dStyle(next);
+        advance('styleEpoch');
+        cell.pendingEffects = undefined; cell.pendingReducedMotion = undefined;
+        if (cell.style.reducedMotion && cell.transition) {
+          advance('cameraEpoch');
+          cell.orbit = cell.transition.to;
+          cell.transition = undefined;
+          cell.cameraChanged = true;
         }
-        if (!disposed && !lost) renderOperation(applyRendererState);
-        if (!disposed && wasForced !== style.forcedColors && glowRequested) {
-          const pending = syncGlow(), active = glowGeneration;
-          void pending.then(() => finishRestore(active), () => {});
+        if (!disposed && !cell.lost) renderOperation(applyRendererState);
+        if (!disposed && cell.glowRequested && (wasForced !== cell.style.forcedColors || deferred)) {
+          const pending = syncGlow(), active = cell.glowGeneration, work = glowWork;
+          void pending.then(() => finishRestore(active, work), () => {});
         }
-        else if (resources.glow && !disposed && !lost) renderOperation(() => resources.glow?.resize(width, height, style.devicePixelRatio));
+        else if (resources.glow && !disposed && !cell.lost) renderOperation(() => resources.glow?.resize(cell.width, cell.height, cell.style.devicePixelRatio));
         invalidate();
-        return style;
+        return cell.style;
       },
       async setGlow(enabled) {
         if (typeof enabled !== 'boolean') throw new TypeError('Glow must be a boolean');
         if (disposed) return;
-        glowRequested = enabled;
-        const pending = syncGlow(), active = glowGeneration;
-        await pending; finishRestore(active);
+        cell.glowRequested = enabled;
+        if (cell.pendingEffects || effectsInProgress) {
+          cell.pendingEffects = undefined;
+          if (!cell.lost && !renderOperation(applyRendererState)) return;
+          if (disposed || cell.lost) return;
+        }
+        const pending = syncGlow(), active = cell.glowGeneration, work = glowWork;
+        await pending; finishRestore(active, work);
       },
       resize(nextWidth, nextHeight) {
-        const wasAllocated = glowAllocated();
-        if (Number.isFinite(nextWidth)) { allocatedWidth = Math.max(0, Math.round(nextWidth)); width = Math.max(1, allocatedWidth); }
-        if (Number.isFinite(nextHeight)) { allocatedHeight = Math.max(0, Math.round(nextHeight)); height = Math.max(1, allocatedHeight); }
-        if (!disposed && !lost) renderOperation(() => { applyRendererState(); if (glowAllocated()) resources.glow?.resize(width, height, style.devicePixelRatio); });
-        if (!disposed && glowRequested && wasAllocated !== glowAllocated()) {
-          const pending = syncGlow(), active = glowGeneration;
-          void pending.then(() => finishRestore(active), () => {});
+        const wasAllocated = glowAllocated(), oldWidth = cell.allocatedWidth, oldHeight = cell.allocatedHeight;
+        if (Number.isFinite(nextWidth)) { cell.allocatedWidth = Math.max(0, Math.round(nextWidth)); cell.width = Math.max(1, cell.allocatedWidth); }
+        if (Number.isFinite(nextHeight)) { cell.allocatedHeight = Math.max(0, Math.round(nextHeight)); cell.height = Math.max(1, cell.allocatedHeight); }
+        if (oldWidth !== cell.allocatedWidth || oldHeight !== cell.allocatedHeight) advance('sizeEpoch');
+        if (cell.pendingEffects) { flushEffects(); invalidate(); return; }
+        if (!disposed && !cell.lost) renderOperation(() => {
+          applyRendererState();
+          if (!disposed && !cell.lost && glowAllocated()) resources.glow?.resize(cell.width, cell.height, cell.style.devicePixelRatio);
+        });
+        if (!disposed && cell.glowRequested && wasAllocated !== glowAllocated()) {
+          const pending = syncGlow(), active = cell.glowGeneration, work = glowWork;
+          void pending.then(() => finishRestore(active, work), () => {});
         }
         invalidate();
       },
@@ -659,20 +737,21 @@ function createViewport(container: HTMLElement, application: ViewportApplication
         return () => frameCallbacks.delete(callback);
       },
       pickAt(x, y) {
-        if (disposed || lost || restoring) return null;
+        if (!flushEffects() || cell.restoring) return null;
         applyCamera();
         let item: number | null = null;
-        return renderOperation(() => { item = resources.picker?.read(pickScene, camera, x, y, width, height) ?? null; }) ? item : null;
+        return renderOperation(() => { item = resources.picker?.read(pickScene, camera, x, y, cell.width, cell.height) ?? null; }) ? item : null;
       },
       project(point) {
-        return projectOrbitPoint(point, orbit, { width, height });
+        return projectOrbitPoint(point, cell.orbit, { width: cell.width, height: cell.height });
       },
       renderNow() {
         if (frame !== 0) cancelAnimationFrame(frame);
-        frame = 0; pendingRender = false;
+        frame = 0; cell.pendingRender = false;
         render(performance.now());
       },
       dispose() {
+        unregisterViewportTransaction(viewport);
         unregisterViewportXr(viewport);
         if (disposed) return;
         let failure: unknown; let threw = false;
@@ -699,6 +778,7 @@ function createViewport(container: HTMLElement, application: ViewportApplication
     applyCamera();
     application?.rendering?.({ software });
     registerViewportXr(viewport, resources, {}, () => { detachApplication(true); });
+    registerViewportTransaction(viewport, cell);
     return viewport;
   } catch (error) {
     // No caller received the viewport, so release every acquired resource independently while
