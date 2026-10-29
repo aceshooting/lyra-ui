@@ -10,7 +10,7 @@ export interface XrOwnedSession {
 export interface XrNativeOwner {
   request(): Promise<XrOwnedSession>;
   bind(session: XrOwnedSession, submitted: () => void): Promise<void>;
-  observeFailure(listener: (reason: 'failed' | 'context-lost') => void): () => void;
+  observeFailure(listener: (reason: 'failed' | 'context-lost' | 'aborted') => void): () => void;
   detach(): void;
   retire(): Promise<void>;
 }
@@ -65,7 +65,7 @@ interface CapturedServices {
   validatePrepared: () => Lyra3dXrErrorCode | null;
   request: () => Promise<XrOwnedSession>;
   bind: (session: XrOwnedSession, submitted: () => void) => Promise<void>;
-  observeFailure: (listener: (reason: 'failed' | 'context-lost') => void) => () => void;
+  observeFailure: XrNativeOwner['observeFailure'];
   detach: () => void;
   retire: () => Promise<void>;
   enqueueFinalizer: (job: () => void) => void;
@@ -186,9 +186,9 @@ function createController(captured: CapturedServices): Lyra3dXrPresentation {
     if (!active || nativeEnded) return;
     submitted = true; markPresented();
   };
-  const observeNativeFailure = (reason: 'failed' | 'context-lost'): void => {
+  const observeNativeFailure: Parameters<XrNativeOwner['observeFailure']>[0] = reason => {
     if (!active || cleaned) return;
-    detach(reason === 'context-lost' ? 'context-lost' : 'failed');
+    detach(reason === 'context-lost' ? 'context-lost' : reason === 'aborted' ? 'aborted' : 'failed');
   };
   const granted = (value: XrOwnedSession): void => {
     requestSettled = true; session = value;

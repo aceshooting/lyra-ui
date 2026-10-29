@@ -112,3 +112,79 @@ test('retirement failure is terminal failed-release quarantine, not a fresh cont
   f.controller.dispose(); await turns(); assert.equal(f.controller.state, 'disposed'); assert.equal(f.documentBusy(), true);
   assert.equal(f.trace.filter(value => value === 'retire').length, 1);
 });
+
+test('an aborted stop before first submission rejects entry without certifying native or binding quiescence', async () => {
+  for (const first of ['native-end', 'binding']) {
+    const f = fixture(), entered = f.controller.enter(), rejection = assert.rejects(entered, { code: 'aborted' });
+    let released = false;
+    void f.lease.released.then(() => { released = true; });
+    await f.grant(); f.fail('aborted'); await rejection;
+    assert.equal(f.controller.state, 'ending');
+    assert.equal(f.trace.filter(value => value === 'detach').length, 1);
+    assert.equal(f.trace.filter(value => value === 'end').length, 1);
+    const exiting = f.controller.exit(); let settled = false;
+    void exiting.then(() => { settled = true; });
+    assert.equal(f.controller.exit(), exiting);
+    f.ending.resolve(); f.submit(); f.lateFailure('aborted'); await f.flush();
+    assert.equal(f.trace.includes('state:presenting'), false);
+    assert.equal(f.trace.includes('retire'), false, 'end fulfillment and aborted stop do not certify cleanup');
+    assert.equal(f.documentBusy(), true); assert.equal(released, false); assert.equal(settled, false);
+    if (first === 'native-end') f.end(); else f.binding.resolve();
+    await f.flush();
+    assert.equal(f.trace.includes('retire'), false, 'both native end and binding settlement are required');
+    assert.equal(f.documentBusy(), true); assert.equal(released, false); assert.equal(settled, false);
+    if (first === 'native-end') f.binding.resolve(); else f.end();
+    await turns(); assert.equal(f.trace.includes('retire'), false, 'retirement waits for its later task');
+    await f.flush(); assert.equal(f.trace.filter(value => value === 'retire').length, 1);
+    assert.equal(f.documentBusy(), true); assert.equal(released, false); assert.equal(settled, false);
+    f.retirement.resolve(); await exiting; await turns();
+    assert.equal(f.controller.state, 'disposed'); assert.equal(f.documentBusy(), false);
+    assert.equal(released, true); assert.equal(settled, true);
+    assert.equal(f.trace.filter(value => value === 'end').length, 1);
+  }
+});
+
+test('an aborted stop after entry preserves the successful receipt and waits for observed end and retirement', async () => {
+  const f = fixture(), entered = f.controller.enter();
+  await f.grant(); f.binding.resolve(); await turns(); f.submit(); await entered;
+  assert.equal(f.controller.state, 'presenting');
+  let released = false;
+  void f.lease.released.then(() => { released = true; });
+  f.fail('aborted'); assert.equal(f.controller.state, 'ending');
+  await entered;
+  const exiting = f.controller.exit(); let settled = false;
+  void exiting.then(() => { settled = true; });
+  f.ending.resolve(); await f.flush();
+  assert.equal(f.trace.includes('retire'), false); assert.equal(f.documentBusy(), true);
+  assert.equal(released, false); assert.equal(settled, false);
+  f.end(); await f.flush();
+  assert.equal(f.trace.filter(value => value === 'retire').length, 1);
+  assert.equal(f.documentBusy(), true); assert.equal(released, false); assert.equal(settled, false);
+  f.retirement.resolve(); await exiting; await turns(); await entered;
+  assert.equal(f.controller.state, 'disposed'); assert.equal(f.documentBusy(), false); assert.equal(released, true);
+  assert.equal(f.trace.filter(value => value === 'state:presenting').length, 1);
+  assert.equal(f.trace.filter(value => value === 'end').length, 1);
+});
+
+test('explicit disposal during an aborted stop silences late callbacks without releasing pending cleanup', async () => {
+  const f = fixture(), entered = f.controller.enter(), rejection = assert.rejects(entered, { code: 'aborted' });
+  let released = false;
+  void f.lease.released.then(() => { released = true; });
+  await f.grant(); f.fail('aborted'); await rejection;
+  const exiting = f.controller.exit(); let settled = false;
+  void exiting.then(() => { settled = true; });
+  const notifications = f.trace.filter(value => value.startsWith('state:')).length;
+  f.controller.dispose();
+  assert.equal(f.controller.state, 'disposed'); assert.equal(f.controller.exit(), exiting);
+  assert.equal(f.trace.filter(value => value.startsWith('state:')).length, notifications);
+  f.lateFailure('aborted'); f.submit(); f.ending.resolve(); f.end(); await f.flush();
+  assert.equal(f.trace.includes('retire'), false, 'binding remains pending after disposal and native end');
+  assert.equal(f.documentBusy(), true); assert.equal(released, false); assert.equal(settled, false);
+  f.binding.resolve(); await f.flush();
+  assert.equal(f.trace.filter(value => value === 'retire').length, 1);
+  assert.equal(f.documentBusy(), true); assert.equal(released, false); assert.equal(settled, false);
+  f.retirement.resolve(); await exiting; await turns(); f.lateFailure('aborted'); f.submit();
+  assert.equal(f.trace.filter(value => value.startsWith('state:')).length, notifications);
+  assert.equal(f.documentBusy(), false); assert.equal(released, true); assert.equal(settled, true);
+  assert.equal(f.trace.filter(value => value === 'end').length, 1); assert.equal(f.listeners, 0);
+});
