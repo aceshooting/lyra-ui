@@ -10,6 +10,9 @@ updates:
       production-dependencies:
         dependency-type: "production"
     ignore:
+      # The renderer input advances with its reviewed source hashes and transformations;
+      # scripts/upgrade.sh updates native development consumers separately.
+      - dependency-name: "maplibre-gl"
       # Node type definitions follow the oldest supported Node major (package engines and .nvmrc);
       # scripts/upgrade.sh takes their latest minor and patch releases.
       - dependency-name: "@types/node"
