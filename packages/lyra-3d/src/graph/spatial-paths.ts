@@ -59,7 +59,7 @@ export function spatialEdgePoint(data: GraphSpatialData, edge: number, t: number
 }
 
 /** Bound expanded GPU attributes independently of the logical edge ceiling. */
-const GRAPH_MAX_SPATIAL_PRIMITIVES = 2_000_000;
+export const GRAPH_MAX_SPATIAL_PRIMITIVES = 2_000_000;
 export function spatialPrimitiveCount(data: GraphSpatialData): number {
   let count = 0;
   for (let edge = 0; edge < data.source.length; edge++) {
