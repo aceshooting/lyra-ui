@@ -5,6 +5,8 @@ import { createMapCameraSessionController } from '../../../internal/map-camera-s
 import { createSimulationClock } from '../../../simulation-clock.js';
 import { LyraMap, LYRA_MAP_EMPTY_STYLE } from './map.js';
 import { loadMapOwnedFeatureRuntime, loadMapControlRuntime } from './map-feature-loader.js';
+import { sceneMarker, sceneModel, scenePath } from '../../../../test/map-scene-admission-fixtures.js';
+import { mapSceneSessionAttachment } from '../../../internal/map-scene-session.js';
 
 type PeerEvent = Record<string, unknown>;
 interface CameraOptions { center?: readonly number[]; zoom?: number; bearing?: number; pitch?: number; duration?: number; }
@@ -278,5 +280,167 @@ describe('map camera session component attachment', () => {
     wrapper.append(element); await waitUntil(() => element.map !== undefined);
     const peer = element.map as unknown as CameraPeer; peer.ready = true; peer.fire('load'); await element.whenStyleReady();
     expect(acquire(element).lease.current()).to.equal(true); expect(lease.current()).to.equal(false);
+  });
+
+  it('follows actual accepted scene replacements through missing, clear and same-position reappearance', async () => {
+    const { element, peer } = await mount(); const controller = createMapCameraSessionController(element);
+    const events: string[] = [];
+    element.addEventListener('lr-map-view-change', event => events.push(event.detail.source));
+    controller.follow({ objectId: 'target', mode: 'ground', zoom: 6, bearing: 30, pitch: 40 });
+    expect(controller.snapshot).to.include({ mode: 'follow', trackingStatus: 'missing', active: false });
+    expect(peer.calls.filter(name => name === 'jumpTo').length).to.equal(0);
+    element.scene = { objects: [sceneMarker('target', 12)] }; await element.updateComplete;
+    expect(controller.capture()).to.deep.equal({ center: [12, 0], zoom: 6, bearing: 30, pitch: 40 });
+    expect(controller.snapshot).to.include({ mode: 'follow', trackingStatus: 'ground', active: true });
+    expect(element.center).to.deep.equal([12, 0]); expect(element.zoom).to.equal(6);
+    element.scene = undefined;
+    expect(controller.snapshot).to.include({ trackingStatus: 'missing', active: false });
+    element.scene = { objects: [sceneMarker('target', 12)] }; await element.updateComplete;
+    expect(controller.snapshot).to.include({ trackingStatus: 'ground', active: true });
+    expect(events).to.deep.equal(['command']);
+    element.scene = { objects: [sceneMarker('target', 18)] }; await element.updateComplete;
+    expect(controller.capture()).to.deep.equal({ center: [18, 0], zoom: 6, bearing: 30, pitch: 40 });
+    expect(events).to.deep.equal(['command', 'command']);
+    expect(peer.calls.filter(name => name === 'setCenter' || name === 'setZoom')).to.deep.equal([]);
+  });
+
+  it('uses accepted model geography without waiting for rendering and ignores source-only updates', async () => {
+    const { element, peer } = await mount(); const controller = createMapCameraSessionController(element);
+    controller.restore(view());
+    const bytes = new Uint8Array([1, 2, 3]);
+    const model = { ...sceneModel('asset', { format: 'glb', bytes }),
+      position: { lngLat: [8, 4] as [number, number], altitude: 250, altitudeReference: 'terrain' as const } };
+    element.scene = { objects: [model] };
+    controller.follow({ objectId: 'asset', mode: 'ground' });
+    structuredClone(bytes.buffer, { transfer: [bytes.buffer] }); model.position.lngLat[0] = 90;
+    await element.updateComplete;
+    expect(controller.capture()).to.deep.equal({ center: [8, 4], zoom: 6, bearing: 30, pitch: 40 });
+    const writes = peer.calls.filter(name => name === 'jumpTo').length;
+    element.scene = { objects: [{ ...sceneModel('asset'), label: 'Replacement source',
+      position: { lngLat: [8, 4], altitude: 250, altitudeReference: 'terrain' } }] };
+    await element.updateComplete;
+    expect(peer.calls.filter(name => name === 'jumpTo').length).to.equal(writes);
+    const fact = mapSceneSessionAttachment(element)!.target('asset');
+    expect(fact.status === 'accepted' && fact.target.position.altitude).to.equal(250);
+    expect(fact.status === 'accepted' && fact.target.position.altitudeReference).to.equal('terrain');
+    expect(controller.snapshot).to.include({ trackingStatus: 'ground', active: true });
+  });
+
+  it('preserves the accepted follow target when a replacement scene is invalid', async () => {
+    const { element, peer } = await mount(); const controller = createMapCameraSessionController(element);
+    element.scene = { objects: [sceneMarker('target', 5)] };
+    controller.follow({ objectId: 'target', mode: 'ground' });
+    const writes = peer.calls.filter(name => name === 'jumpTo').length;
+    element.scene = { objects: [sceneMarker('target', 25), sceneMarker('target', 35)] };
+    await element.updateComplete;
+    expect(peer.center).to.deep.equal([5, 0]);
+    expect(peer.calls.filter(name => name === 'jumpTo').length).to.equal(writes);
+    expect(controller.snapshot).to.include({ trackingStatus: 'ground', active: true });
+    element.scene = { objects: [sceneMarker('target', 15)] }; await element.updateComplete;
+    expect(peer.center).to.deep.equal([15, 0]);
+  });
+
+  it('rejects a real scene path before stopping an existing camera animation', async () => {
+    const { element, peer } = await mount(); const controller = createMapCameraSessionController(element);
+    element.scene = { objects: [scenePath('route')] };
+    controller.restore(view(), { kind: 'ease', duration: 100 });
+    expect(() => controller.follow({ objectId: 'route', mode: 'ground' })).to.throw('invalid-follow');
+    expect(peer.calls.includes('stop')).to.equal(false); expect(peer.moving).to.equal(true);
+    expect(controller.snapshot).to.include({ mode: 'viewpoint', active: true });
+    peer.finish(); expect(controller.snapshot.reason).to.equal('complete');
+  });
+
+  it('keeps a reentrant restore from the follow command event ahead of later scene updates', async () => {
+    const { element, peer } = await mount(); const controller = createMapCameraSessionController(element);
+    element.scene = { objects: [sceneMarker('target', 5)] }; let replaced = false;
+    element.addEventListener('lr-map-view-change', event => {
+      if (replaced || event.detail.source !== 'command') return;
+      replaced = true; controller.restore(view(45));
+      element.scene = { objects: [sceneMarker('target', 25)] };
+    });
+    controller.follow({ objectId: 'target', mode: 'ground' }); await element.updateComplete;
+    expect(replaced).to.equal(true); expect(controller.capture()).to.deep.equal(view(45));
+    expect(controller.snapshot).to.include({ mode: 'viewpoint', active: false, reason: 'complete' });
+    expect(peer.calls.filter(name => name === 'jumpTo').length).to.equal(2);
+    element.scene = { objects: [sceneMarker('target', 35)] }; await element.updateComplete;
+    expect(controller.capture()).to.deep.equal(view(45));
+  });
+
+  it('retains scene intent across style replacement without automatically resuming follow', async () => {
+    const { element, peer } = await mount(); const controller = createMapCameraSessionController(element);
+    element.scene = { objects: [sceneMarker('target', 5)] };
+    const attachment = mapSceneSessionAttachment(element);
+    controller.follow({ objectId: 'target', mode: 'ground' });
+    element.mapStyle = { ...LYRA_MAP_EMPTY_STYLE, name: 'Replacement' };
+    expect(controller.snapshot).to.include({ active: false, reason: 'style' });
+    await element.updateComplete; await element.whenStyleReady();
+    const writes = peer.calls.filter(name => name === 'jumpTo').length;
+    element.scene = { objects: [sceneMarker('target', 25)] }; await element.updateComplete;
+    expect(mapSceneSessionAttachment(element) === attachment).to.equal(true);
+    expect(peer.calls.filter(name => name === 'jumpTo').length).to.equal(writes);
+    controller.follow({ objectId: 'target', mode: 'ground' });
+    expect(peer.center).to.deep.equal([25, 0]);
+    expect(controller.snapshot).to.include({ trackingStatus: 'ground', active: true });
+  });
+
+  it('retires scene-driven follow permanently on disconnect and requires a fresh session on reconnect', async () => {
+    const { wrapper, element, peer } = await mount(); const controller = createMapCameraSessionController(element);
+    element.scene = { objects: [sceneMarker('target', 5)] };
+    controller.follow({ objectId: 'target', mode: 'ground' });
+    const oldAttachment = mapSceneSessionAttachment(element);
+    element.remove(); expect(controller.snapshot.reason).to.equal('disconnect');
+    const writes = peer.calls.filter(name => name === 'jumpTo').length;
+    element.scene = { objects: [sceneMarker('target', 25)] };
+    wrapper.append(element); await waitUntil(() => element.map !== undefined);
+    const next = element.map as unknown as CameraPeer;
+    next.ready = true; next.fire('load'); await element.whenStyleReady(); await element.updateComplete;
+    expect(mapSceneSessionAttachment(element) === oldAttachment).to.equal(false);
+    expect(peer.calls.filter(name => name === 'jumpTo').length).to.equal(writes);
+    expect(next.calls.filter(name => name === 'jumpTo').length).to.equal(0);
+    expect(() => controller.follow({ objectId: 'target', mode: 'ground' })).to.throw('disposed');
+    const fresh = createMapCameraSessionController(element); fresh.follow({ objectId: 'target', mode: 'ground' });
+    expect(next.center).to.deep.equal([25, 0]); expect(fresh.snapshot.active).to.equal(true);
+  });
+
+  it('keeps equal controlled camera mirrors but lets unequal intent interrupt scene follow', async () => {
+    const { element, peer } = await mount(); const controller = createMapCameraSessionController(element);
+    element.scene = { objects: [sceneMarker('target', 5)] };
+    controller.follow({ objectId: 'target', mode: 'ground', zoom: 6 }); await element.updateComplete;
+    element.center = [...element.center]; element.zoom = element.zoom; await element.updateComplete;
+    expect(controller.snapshot).to.include({ active: true, trackingStatus: 'ground' });
+    element.scene = { objects: [sceneMarker('target', 15)] }; await element.updateComplete;
+    expect(peer.center).to.deep.equal([15, 0]);
+    element.center = [30, 10]; expect(controller.snapshot).to.include({ active: false, reason: 'external' });
+    await element.updateComplete;
+    const writes = peer.calls.filter(name => name === 'jumpTo').length;
+    element.scene = { objects: [sceneMarker('target', 25)] }; await element.updateComplete;
+    expect(peer.center).to.deep.equal([30, 10]);
+    expect(peer.calls.filter(name => name === 'jumpTo').length).to.equal(writes);
+    controller.follow({ objectId: 'target', mode: 'ground' });
+    expect(element.jumpTo({ center: [40, 20], zoom: 7 })).to.equal(true);
+    expect(controller.snapshot).to.include({ active: false, reason: 'external' });
+    element.scene = { objects: [sceneMarker('target', 35)] }; await element.updateComplete;
+    expect(peer.center).to.deep.equal([40, 20]); expect(peer.zoom).to.equal(7);
+  });
+
+  it('disposes the camera and scene connection together when a following map is adopted', async () => {
+    const { element, peer } = await mount(); const controller = createMapCameraSessionController(element);
+    element.scene = { objects: [sceneMarker('target', 5)] };
+    controller.follow({ objectId: 'target', mode: 'ground' });
+    const attachment = mapSceneSessionAttachment(element);
+    const frame = await fixture<HTMLIFrameElement>(html`<iframe title="Map camera owner document"></iframe>`);
+    const targetDocument = frame.contentDocument;
+    if (!targetDocument?.body) throw new Error('Expected owner document');
+    targetDocument.body.append(targetDocument.adoptNode(element));
+    try {
+      expect(controller.snapshot).to.include({ active: false, reason: 'disconnect' });
+      expect(() => controller.capture()).to.throw('disposed');
+      expect(mapSceneSessionAttachment(element) === attachment).to.equal(false);
+      expect(attachment?.target('target').status).to.equal('absent');
+      const writes = peer.calls.filter(name => name === 'jumpTo').length;
+      element.scene = { objects: [sceneMarker('target', 25)] }; await element.updateComplete;
+      expect(peer.calls.filter(name => name === 'jumpTo').length).to.equal(writes);
+      expect(mapSceneSessionAttachment(element)?.target('target').status).to.equal('accepted');
+    } finally { element.remove(); }
   });
 });

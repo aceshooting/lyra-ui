@@ -4119,6 +4119,145 @@ so a bundler drops the unused catalog; an unbundled graph that imports it still 
 - `formResetCallback()` restores the _content attribute_ default, so `el.value = 'x'` never redefines
   what `form.reset()` restores to (native `defaultValue`/`defaultSelected` semantics).
 
+### Shared simulation clock and irregular time indices
+
+These granular modules are registration-free and require no map or 3D engine:
+
+- `@aceshooting/lyra-ui/simulation-clock.js`: `createSimulationClock(options, capabilities?)`,
+  `SimulationClockError`; types `SimulationClock`, `SimulationClockOptions`,
+  `SimulationClockCapabilities`, `ClockScheduler`, `ClockSnapshot`, `SimulationClockMode`,
+  `SimulationClockReason`, `SimulationClockErrorCode`.
+- `@aceshooting/lyra-ui/time-index.js`: `createTimeIndex(timestamps)`, `TimeIndexError`;
+  types `TimeIndex`, `TimeLocation`, `TimeIndexErrorCode`.
+- `@aceshooting/lyra-ui/sequence-time-binding.js`: `bindSequencePlayback(control, clock, index,
+  options?)`, `SequenceTimeBindingError`; types `SequenceTimeBindingOptions`,
+  `SequenceTimeBindingErrorCode`. Register the sequence control separately.
+
+#### Clock contract
+
+`SimulationClockOptions` has readonly `range: readonly [number, number]`, `instant: number` and
+optional `rate: number` (default 1). Numbers are epoch milliseconds within ±8.64e15; fractional
+milliseconds are allowed. Range start must not exceed end. Instants clamp to range; rates must be
+finite and positive, without a fixed maximum. Plain records and tuples reject accessors/invalid
+structure. Optional second-argument `SimulationClockCapabilities` carries the deliberately trusted
+`scheduler?: ClockScheduler` and `onSubscriberError?: (error: unknown) => void` callbacks separately
+from plain data. Scheduler methods are `monotonicNow(): number`, `epochNow(): number`,
+`requestFrame(callback: () => void): unknown`, `cancelFrame(handle: unknown): void`.
+
+`clock.snapshot` is immutable `ClockSnapshot { instant, range, mode, playing, rate, revision, reason }`.
+`mode` is `'replay' | 'live'`. `reason` is
+`'initial' | 'tick' | 'seek' | 'play' | 'pause' | 'rate' | 'range' | 'mode' | 'live'`.
+`currentInstant()` samples current time without notification. `play()`, `pause()`, `seek(instant)`,
+`stepTo(instant)`, `setRate(rate)`, `setRange(range)`, `setMode(mode)` update shared state.
+Seek pauses and enters replay; stepTo preserves replay playing unless clamped at end, and leaves
+live for paused replay. Play from live starts replay at current live instant; play at end does not
+rewind. Pause from live freezes replay. Selecting an already-current mode does nothing. No looping
+or reverse playback is implied. Live follows clamped wall time, including wall-clock corrections;
+rate affects replay only. Applications own rolling ranges and incoming data.
+
+`subscribe(listener, { signal? })` immediately supplies caught-up state and returns an idempotent
+release function. Each registration is independent, including repeated use of one callback.
+Reentrant writes coalesce into one later desired-state delivery. Listener errors are isolated.
+Every subscriber in a fan-out sees the same instant/revision, not a promise of simultaneous paint.
+Use revision checks before committing asynchronous map/chart work. Time zones/locales belong to
+`Intl.DateTimeFormat` presentation and never change the shared instant.
+
+Replay derives from a monotonic anchor rather than counting frames. Hidden/background documents
+skip intermediate frames and catch up; they do not pause analytical replay or burst old updates.
+No subscribers means no delivery scheduling, while replay still advances analytically. Import,
+construction and paused use are SSR-safe and side-effect free; replay/live needs a usable injected
+time source in SSR even without subscribers. Browser delivery uses one owner-realm animation-frame
+chain. `dispose()` cancels jobs, clears subscribers and silently releases bindings. It is idempotent;
+final getters remain readable, while later mutation/subscribe throws `disposed`.
+
+`SimulationClockError(code, message?)` exposes readonly `code`:
+`'invalid-options' | 'invalid-instant' | 'invalid-range' | 'invalid-rate' |
+'invalid-capabilities' | 'invalid-listener' | 'disposed'`. Failures leave rejected commands
+unpublished. Developer diagnostics are not localized product copy; applications localize by code.
+
+#### Time index contract
+
+`createTimeIndex` snapshots and freezes at most 10,000 strictly increasing timestamps. Empty and
+singleton inputs are legal. Duplicate, descending, sparse, accessor, nonfinite and out-of-Date-range
+values fail rather than sorting, truncating or reindexing. `TimeIndex` exposes readonly
+`timestamps`, `length`, `instantAt(index): number`, and `locate(instant): TimeLocation | undefined`.
+`TimeLocation` has readonly `lowerIndex`, `upperIndex`, `nearestIndex`, `fraction`; exact samples
+have equal indices/fraction zero, endpoint queries clamp, nearest ties choose lower. Empty indices
+return undefined. Consumers explicitly select hold/nearest/linear interpretation; the utility never
+interpolates application records, geographic wrapping, categories or physical trajectories.
+`TimeIndexError(code, message?)` codes are
+`'invalid-timestamps' | 'invalid-instant' | 'invalid-index'`.
+
+Binding signature: `bindSequencePlayback(control: HTMLElement, clock: SimulationClock,
+index: TimeIndex, options?: SequenceTimeBindingOptions): () => void`; options has readonly
+`signal?: AbortSignal`. Clock/index must come from these factories in the same package module graph.
+`SequenceTimeBindingError(code, message?)` codes are `'unsupported-control' | 'inactive-control' |
+'already-bound' | 'invalid-clock' | 'invalid-index' | 'invalid-options'`. A disposed clock raises
+`SimulationClockError('disposed')`. Abort signals are trusted lifecycle capabilities; a preaborted
+signal performs no attachment. Releasing never pauses other consumers.
+
+- **`simulation-clock-contracts`** — Shared replay and live time.
+  Import: `@aceshooting/lyra-ui/simulation-clock.js`.
+  `createSimulationClock(options: SimulationClockOptions, capabilities?: SimulationClockCapabilities): SimulationClock`
+  `SimulationClockOptions {
+    readonly range: readonly [number, number];
+    readonly instant: number;
+    readonly rate?: number;
+  }`
+  `ClockScheduler {
+    monotonicNow(): number;
+    epochNow(): number;
+    requestFrame(callback: () => void): unknown;
+    cancelFrame(handle: unknown): void;
+  }`
+  `SimulationClockCapabilities {
+    readonly scheduler?: ClockScheduler;
+    readonly onSubscriberError?: (error: unknown) => void;
+  }`
+  `ClockSnapshot {
+    readonly instant: number;
+    readonly range: readonly [number, number];
+    readonly mode: SimulationClockMode;
+    readonly playing: boolean;
+    readonly rate: number;
+    readonly revision: number;
+    readonly reason: SimulationClockReason;
+  }`
+  `SimulationClock {
+    readonly snapshot: ClockSnapshot;
+    currentInstant(): number;
+    seek(instant: number): void;
+    stepTo(instant: number): void;
+    play(): void;
+    pause(): void;
+    setRate(rate: number): void;
+    setRange(range: readonly [number, number]): void;
+    setMode(mode: SimulationClockMode): void;
+    subscribe(listener: (snapshot: ClockSnapshot) => void, options?: { readonly signal?: AbortSignal }): () => void;
+    dispose(): void;
+  }`
+
+- **`time-index-contracts`** — Immutable irregular timestamp indices.
+  Import: `@aceshooting/lyra-ui/time-index.js`.
+  `createTimeIndex(timestamps: readonly number[]): TimeIndex`
+  `TimeLocation {
+    readonly lowerIndex: number;
+    readonly upperIndex: number;
+    readonly nearestIndex: number;
+    readonly fraction: number;
+  }`
+  `TimeIndex {
+    readonly timestamps: readonly number[];
+    readonly length: number;
+    locate(instant: number): TimeLocation | undefined;
+    instantAt(index: number): number;
+  }`
+
+- **`sequence-time-binding-contracts`** — Shared time binding for a registered sequence control.
+  Import: `@aceshooting/lyra-ui/sequence-time-binding.js`.
+  `bindSequencePlayback(control: HTMLElement, clock: SimulationClock, index: TimeIndex, options?: SequenceTimeBindingOptions): () => void`
+  `SequenceTimeBindingOptions { readonly signal?: AbortSignal; }`
+
 ## Reference artifacts
 
 The package includes authored family and shared references plus derived index, component, token,
@@ -33477,6 +33616,50 @@ dimming at `itemCount <= 1`), `--lr-focus-ring-*`.
 
 ---
 
+### Shared epoch-time binding
+
+Import `createSimulationClock` from `@aceshooting/lyra-ui/simulation-clock.js`, `createTimeIndex`
+from `@aceshooting/lyra-ui/time-index.js`, and `bindSequencePlayback` from
+`@aceshooting/lyra-ui/sequence-time-binding.js`. Register the control separately with
+`@aceshooting/lyra-ui/components/lr-sequence-playback.js`; the helper registers nothing.
+
+```js
+const samples = createTimeIndex([Date.UTC(2026, 0, 1), Date.UTC(2026, 0, 1) + 4000,
+  Date.UTC(2026, 0, 1) + 13000]);
+const clock = createSimulationClock({ range: [samples.instantAt(0), samples.instantAt(2)],
+  instant: samples.instantAt(0) });
+const release = bindSequencePlayback(playback, clock, samples);
+const unsubscribe = clock.subscribe(({ instant }) => updateApplicationViews(instant));
+// When the application scope ends:
+release(); unsubscribe(); clock.dispose();
+```
+
+The bound slider remains sample-index based; irregular sample durations come from the shared clock.
+`itemCount` and `currentIndex` report the displayed count and lower sample index. The binding owns
+those values: direct property/attribute writes do not seek shared time. `intervalMs` and
+`withoutLoop` remain dormant while bound. Playback is forward-only and stops at the clock range end.
+`goTo()` requests a sample timestamp, pauses, then emits one step even at the same index;
+`next()`/`previous()` retain replay state and do nothing at their displayed endpoints. Clock range
+clamping wins: event detail reports the actual mapped index, not an unreachable requested sample.
+Empty bindings disable navigation/play without pausing other clock consumers. Singleton `goTo(0)`
+can explicitly seek/pause; disabled UI prevents accidental activation.
+
+`lr-play`/`lr-pause` reflect effective replay transitions; `lr-sequence-step` retains exactly
+`{ currentIndex }`. Fractional movement within a sample emits no step, crossing several samples
+emits one, and manual actions do not duplicate their subscription-driven projection. A pause
+transition precedes its manual step. Commands are synchronous except commands issued during clock
+fan-out, whose accepted projection is deferred to the next delivery. Reentrant release/disconnect
+retires the old event continuation.
+
+Attach/detach and restoration emit no synthetic play/pause/step events. Release restores standalone
+index values paused. Host `hidden = true`, disconnect, adoption, or abort releases only that
+control; other subscribers continue. Clock disposal releases all of its bindings and subscribers.
+Show/reconnect requires explicit rebinding. Ancestor
+CSS visibility is not observed. Import helper and control from the same package module instance;
+duplicate installed copies do not share private attachment authority. Unsupported, inactive or
+already-bound hosts fail before ownership transfer. See the shared clock utilities guide for
+scheduling, live/replay, disposal and error-code contracts.
+
 ## `lr-map`
 
 A MapLibre-compatible wrapper using the optional `@aceshooting/lyra-map` modular engine by default,
@@ -34521,9 +34704,9 @@ intensity?: LyraMapHeatmapZoomValue; opacity?: number }`, where `LyraMapHeatmapZ
   `LyraMapScaleUnit = 'metric' | 'imperial'`. The element adds the engine's standard controls once
   the map exists, moves one whose corner changes, replaces one whose other options change and removes one that
   is dropped, so an application no longer imports control classes and calls `map.addControl()`.
-  All four control option objects accept finite `order` numbers, defaulting to `0`. Within each
+  All control option objects accept finite `order` numbers, defaulting to `0`. Within each
   corner, ascending order controls both visual and keyboard order; ties retain the existing
-  navigation, scale, geolocate, attribution sequence. Changing only order moves existing controls
+  navigation, scale, geolocate, globe, terrain, attribution sequence. Changing only order moves existing controls
   without reconstructing them. Invalid order values produce localized configuration feedback.
   `true` takes the defaults (navigation `'top-right'`, scale `'bottom-left'` and `'metric'`); an
   unknown navigation/scale position or unit falls back to its default. Malformed geolocate or
@@ -34569,7 +34752,7 @@ intensity?: LyraMapHeatmapZoomValue; opacity?: number }`, where `LyraMapHeatmapZ
   };
   ```
 
-  Within each corner the visual and keyboard order is navigation, scale, geolocate, attribution,
+  Within each corner the visual and keyboard order is navigation, scale, geolocate, globe, terrain, attribution,
   including when constructors load in a different order or one fails. A subset keeps that relative
   order. Changing only a corner moves the existing controls and retains focused buttons. Corners
   continue to follow text direction under RTL. Geolocation is never activated by reconfiguration
@@ -34934,14 +35117,27 @@ which only reaches rows projected from `legend`.
 `geolocate`, `geolocate-control`, `controls`, `controls-top`, `controls-bottom`, `controls-top-left`, `controls-top-right`,
 `controls-bottom-left`, `controls-bottom-right`, `zoom-in-icon`, `zoom-out-icon`, `compass-icon`,
 `geolocate-icon`, `geolocate-waiting`, `geolocate-active`, `geolocate-background`, `geolocate-error`,
+`globe-control`, `globe-button`, `globe-icon`, `terrain-control`, `terrain-button`, `terrain-icon`,
 `attribution-link`, `attribution-expanded`, `controls-attribution-expanded`,
-`configuration-error`, `error`.
+`configuration-error`, `error`, `scene-panel`, `scene-toggle`, `scene-list`, `scene-item`,
+`scene-pagination`, `scene-status`.
+
+| Scene part | Description |
+| --- | --- |
+| `scene-panel` | Accessible section containing accepted scene text controls and status. |
+| `scene-toggle` | Native button that expands or collapses the scene object list. |
+| `scene-list` | List containing the current page of accepted scene objects. |
+| `scene-item` | An object's interactive native button or noninteractive text row. |
+| `scene-pagination` | Previous/next page buttons and localized page summary, present when more than one page exists. |
+| `scene-status` | Localized accepted-scene or rejected-update status text. |
+
 Before native construction, `initialization-placeholder` is the stable surface and
 `initialization-skeleton` is its decorative skeleton. `initialization-controls` also exposes `controls`;
 its rows expose `controls-top` and `controls-bottom`, and each `initialization-corner` also exposes its
 matching corner token. `initialization-control` outlines explicitly requested controls, with
-`initialization-navigation`, `initialization-scale`, `initialization-geolocate` or
-`initialization-attribution` identifying the kind. Placeholder corners and order follow those options;
+`initialization-navigation`, `initialization-scale`, `initialization-geolocate`,
+`initialization-attribution`, `initialization-globe` or `initialization-terrain` identifying the kind.
+Placeholder corners and order follow those options;
 implicit default attribution has no placeholder. Once the map is constructed, the activation surface
 and skeleton are gone, but `initialization-controls` stays (`aria-hidden`, inert, no pointer events)
 with outlines only for requested controls whose lazy code is still installing. Those controls load and
@@ -35388,6 +35584,94 @@ undefined`, or changing `choropleth.sourceId` to a different value, now calls `r
 
 ---
 
+### Geographic scene input and text fallback
+
+The property-only `scene` accepts a `LyraMapScene` with an `objects` array of `marker`,
+`path`, `arc` and `model` records. Every object has a unique exact-string `id` and a required
+plain-text `label`. Positions use `{ lngLat: [longitude, latitude], altitude?,
+altitudeReference? }`; altitude is in meters and defaults to 0 above `sea-level`, with `terrain`
+as the other reference. Model sources use `{ format, bytes }` or `{ format, src }`, with formats
+`gltf`, `glb`, `stl`, `obj`, `ply`, `xyz` and `pcd`. Use a property binding, never an attribute.
+
+Optional descriptor fields use these admission defaults:
+
+| Field | Default |
+| --- | --- |
+| Position `altitude` / `altitudeReference` | `0` meters / `'sea-level'` |
+| Object `color` / `opacity` | No authored color override / `1` |
+| Object `interactive` / `showLabel` | `true` / `false` |
+| Marker `radius` | `6` |
+| Path `interpolation` / `width` | `'great-circle'` / `2` |
+| Arc `width` | `2` (`height` is required) |
+| Model `metersPerUnit` / `orientation` | `1` / identity `[0, 0, 0, 1]` |
+
+Opacity must be between 0 and 1; radius, width and model scale must be positive. Model orientation
+is a scalar-last quaternion normalized during admission. Style, interpolation and model fields
+describe requested rendering, which is currently unavailable. `interactive` controls text-row
+activation; `showLabel` does not hide the required label from the text fallback.
+
+```ts
+import '@aceshooting/lyra-ui/components/lr-map.js';
+import type { LyraMapScene } from '@aceshooting/lyra-ui/components/lr-map.js';
+
+const scene: LyraMapScene = { objects: [
+  { kind: 'marker', id: 'station', label: 'Central station',
+    position: { lngLat: [6.134, 49.6] }, interactive: true },
+] };
+const map = document.querySelector('lr-map')!;
+map.scene = scene;
+```
+
+Current scene support accepts geographic intent and provides an accessible text fallback.
+Nonempty accepted input reports `unavailable` with code `engine`: scene objects are not drawn,
+models are not fetched or parsed, and no scene depth, terrain resolution or completed-frame
+projection is supplied. Existing `markers`, `dataLayers`, projection and terrain configuration
+remain separate APIs.
+
+A connected assignment snapshots and admits input synchronously before returning. A detached
+assignment is accepted on connection in that document's realm. Assign a new scene object to
+request an update; mutating an existing graph in place is not an update API. Invalid updates
+retain the last accepted rows and report the rejected update. `{ objects: [] }` accepts an empty
+scene; `undefined` clears accepted ownership. Leaving `scene` unset preserves existing behavior
+and adds no scene panel.
+
+Direct source bytes are copied on admission. Reusing the same source record with unchanged
+metadata reuses its owned snapshot, including after its original buffer detaches. Replace the
+source record to supply new content. Clearing, disconnecting or adopting the map revokes that
+reuse; reconnect accepts current authored input again. Relative source URLs resolve against the
+connected owner document; acceptance alone does not fetch them.
+
+Admission rejects the complete update rather than truncating it:
+
+| Input | Ceiling |
+| --- | --- |
+| Objects / model objects per scene | 2,000 / 32 |
+| Authored positions per scene / positions per path | 65,536 / 4,096 |
+| ID / required label / optional color | 1–1,024 / 16,384 / 1,024 UTF-16 units |
+| Model `src` / resolved absolute source URL | 1,048,576 UTF-16 units each |
+| Aggregate authored IDs, labels, colors and model `src` occurrences | 4,194,304 UTF-16 units per request |
+| Aggregate resolved source URLs | 4,194,304 UTF-16 units per source stage |
+| Library-owned encoded source snapshots, including staged replacements and retained associations | 64 MiB shared per connection |
+
+A marker/model counts as one authored position and an arc as two. Text field limits apply before
+trimming or resolution; repeated authored references may count again. Resolved URL accounting
+counts each source-record association once, including reused associations, while distinct records
+count separately. These are admission limits, not a total JavaScript heap bound; the public
+property still retains caller input, including a rejected assignment. Generated geometry and
+rendering resources need separate limits.
+
+The expandable text panel pages accepted objects with at most 100 rows rendered at once.
+Interactive rows support pointer, Enter and Space activation without implicitly panning; other
+rows remain text. Caller labels render as text. Style the surface with `scene-panel`,
+`scene-toggle`, `scene-list`, `scene-item`, `scene-pagination` and `scene-status` parts.
+
+`lr-map-scene-state` emits immutable `{ revision, state, code? }` detail against the accepted
+revision: accepted empty input and clear report `empty`, nonempty input reports `unavailable`
+with `engine`, and rejected input reports `error` with `invalid` or `limit` while retaining the
+previous accepted revision. `lr-map-scene-activate` emits immutable `{ id, kind, source,
+position? }` detail, with `source: 'pointer' | 'keyboard'`; positional marker/model actions include
+the accepted geographic position. Both events bubble, are composed and are noncancelable.
+
 ### Declarative globe and terrain configuration
 
 `lr-map.projection` accepts `'mercator'` or `'globe'`. Leaving it unset preserves the projection
@@ -35432,8 +35716,40 @@ are not an atomic transaction; a failed application retires the map instead of r
 partially configured scene as ready. Reconnect or assign a valid `mapStyle` to retry. Do not
 mutate native projection/terrain while the matching declarative override owns it; clear the
 override first. Native toolbar controls are not added by these properties: compose ordinary
-Lyra buttons and a slider around the map, as in the globe/terrain story. Terrain exaggeration is
+Lyra buttons and a slider around the map, or opt into the component-owned toggles below. Terrain exaggeration is
 a display scale, not a physical simulation.
+
+### Component-owned globe and terrain controls
+
+`controls.globe` accepts `true` or `{ position?, order? }`. `controls.terrain` accepts
+`false` or `{ source, exaggeration?, position?, order? }`; the source is required and `true`
+is not accepted. Both default to `top-right`, order 0. Equal-order controls read navigation,
+scale, geolocate, globe, terrain, attribution. Existing corner mirroring follows RTL.
+
+```ts
+map.controls = {
+  globe: true,
+  terrain: { source: 'elevation', exaggeration: 1.5 },
+};
+```
+
+Installing or changing these controls does not change the scene. Activation assigns `projection`
+or `terrain` first, then emits a noncancelable request event: `lr-map-projection-change` carries
+`{ projection, source: 'control' }`; `lr-map-terrain-change` carries
+`{ terrain, source: 'control' }`. Await `whenIdle()` for application. Programmatic changes and
+style replay do not emit either event. A controlled application can synchronously reassign the
+property in the event handler; its latest assignment wins.
+
+Pressed state reflects settled native configuration. Literal globe is pressed, mercator is not;
+expression-valued projection is mixed. Transition metadata does not change a literal's state.
+The terrain toggle disables any active terrain, including a different source; enabling uses its
+configured source and scale. A missing enable source disables that action with localized feedback;
+disabling active terrain remains available. Source availability recovers after style/source updates.
+Controls are disabled while scene changes are pending. `whenControlsReady()` covers installation,
+not terrain tiles or scene application. Showing a control never downloads or guesses a DEM source.
+
+Use `globe-control`, `globe-button`, `globe-icon`, `terrain-control`, `terrain-button` and
+`terrain-icon` parts for the owned chrome. Labels use `mapGlobe` and `mapTerrain` localization keys.
 
 ## `lr-map-anchor`
 
@@ -38402,6 +38718,7 @@ These named interfaces and helper signatures are available to typed integrations
     getZoom(): number;
     getBearing?(): number;
     getPitch?(): number;
+    stop?(): unknown;
     setCenter(center: [number, number]): unknown;
     setZoom(zoom: number): unknown;
     resize(): unknown;
@@ -38607,10 +38924,30 @@ These named interfaces and helper signatures are available to typed integrations
   }`
   Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapControls {
+    readonly globe?: boolean | LyraMapGlobeControlOptions;
+    readonly terrain?: false | LyraMapTerrainControlOptions;
     readonly navigation?: boolean | LyraMapNavigationControlOptions;
     readonly scale?: boolean | LyraMapScaleControlOptions;
     readonly geolocate?: boolean | LyraMapGeolocateControlOptions;
     readonly attribution?: boolean | LyraMapAttributionControlOptions;
+  }`
+  `LyraMapGlobeControlOptions {
+    readonly position?: LyraMapControlPosition;
+    readonly order?: number;
+  }`
+  `LyraMapTerrainControlOptions {
+    readonly position?: LyraMapControlPosition;
+    readonly order?: number;
+    readonly source: string;
+    readonly exaggeration?: number;
+  }`
+  `LyraMapProjectionChangeDetail {
+    readonly projection: LyraMapProjection;
+    readonly source: 'control';
+  }`
+  `LyraMapTerrainChangeDetail {
+    readonly terrain: LyraMapTerrain | null;
+    readonly source: 'control';
   }`
   Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapNavigationControlOptions {
@@ -39109,6 +39446,97 @@ particular country. Representative language mappings also include `lb` (Luxembou
   `LyraMapReadinessDetail {
     readonly generation: number;
   }`
+
+- **`components-media-map-scene-types-contracts`** — Geographic scene input and event data.
+  Import these types from `@aceshooting/lyra-ui/components/lr-map.js`.
+  `LyraMapPosition {
+    readonly lngLat: readonly [longitude: number, latitude: number];
+    readonly altitude?: number;
+    readonly altitudeReference?: 'sea-level' | 'terrain';
+  }`
+  `LyraMapSceneObjectBase {
+    readonly id: string;
+    readonly label: string;
+    readonly color?: string;
+    readonly opacity?: number;
+    readonly interactive?: boolean;
+    readonly showLabel?: boolean;
+  }`
+  The following object interfaces include all inherited `LyraMapSceneObjectBase` members.
+  `LyraMapSceneMarker {
+    readonly id: string;
+    readonly label: string;
+    readonly color?: string;
+    readonly opacity?: number;
+    readonly interactive?: boolean;
+    readonly showLabel?: boolean;
+    readonly kind: 'marker';
+    readonly position: LyraMapPosition;
+    readonly radius?: number;
+  }`
+  `LyraMapScenePath {
+    readonly id: string;
+    readonly label: string;
+    readonly color?: string;
+    readonly opacity?: number;
+    readonly interactive?: boolean;
+    readonly showLabel?: boolean;
+    readonly kind: 'path';
+    readonly positions: readonly LyraMapPosition[];
+    readonly interpolation?: 'linear' | 'great-circle';
+    readonly width?: number;
+  }`
+  `LyraMapSceneArc {
+    readonly id: string;
+    readonly label: string;
+    readonly color?: string;
+    readonly opacity?: number;
+    readonly interactive?: boolean;
+    readonly showLabel?: boolean;
+    readonly kind: 'arc';
+    readonly start: LyraMapPosition;
+    readonly end: LyraMapPosition;
+    readonly height: number;
+    readonly width?: number;
+  }`
+  `LyraMapSceneModel {
+    readonly id: string;
+    readonly label: string;
+    readonly color?: string;
+    readonly opacity?: number;
+    readonly interactive?: boolean;
+    readonly showLabel?: boolean;
+    readonly kind: 'model';
+    readonly position: LyraMapPosition;
+    readonly source: LyraMapModelSource;
+    readonly metersPerUnit?: number;
+    readonly orientation?: LyraMapQuaternion;
+  }`
+  `LyraMapScene {
+    readonly objects: readonly LyraMapSceneObject[];
+  }`
+  `LyraMapSceneStateDetail {
+    readonly revision: number;
+    readonly state: 'loading' | 'ready' | 'partial' | 'empty' | 'unavailable' | 'error';
+    readonly code?: LyraMapSceneErrorCode;
+  }`
+  `LyraMapSceneActivateDetail {
+    readonly id: string;
+    readonly kind: 'marker' | 'path' | 'arc' | 'model' | 'custom';
+    readonly layerId?: string;
+    readonly source: 'pointer' | 'keyboard';
+    readonly position?: LyraMapPosition;
+  }`
+  Supporting aliases are exported from the same entry:
+  `LyraMapQuaternion = readonly [x: number, y: number, z: number, w: number]`,
+  `LyraMapModelFormat = 'gltf' | 'glb' | 'stl' | 'obj' | 'ply' | 'xyz' | 'pcd'`,
+  `LyraMapModelSource = { readonly format: LyraMapModelFormat; readonly bytes: ArrayBuffer | Uint8Array } | { readonly format: LyraMapModelFormat; readonly src: string }`,
+  `LyraMapSceneObject = LyraMapSceneMarker | LyraMapScenePath | LyraMapSceneArc | LyraMapSceneModel`,
+  and `LyraMapSceneErrorCode = 'invalid' | 'limit' | 'model' | 'resource' | 'engine' | 'projection' | 'terrain' | 'context-lost'`.
+  The state and activation types include renderer-facing alternatives; current accepted-scene
+  support emits `empty`, `unavailable` or `error`, and text activation uses the four declared
+  object kinds without `layerId`. It does not draw scene objects or supply completed-frame
+  visibility. See Geographic scene input and text fallback above for defaults, limits and ownership.
 
 - **`components-media-image-viewer-panorama-contracts`** — Shared panorama camera, hotspot and selection data for image and video viewers.
   Import types from `@aceshooting/lyra-ui/components/lr-image-viewer.js` or
@@ -53234,6 +53662,9 @@ position counts, and restore events. The active entry's optional `label` renders
 position. `activeVersionId: string | null = null` (attribute `active-version-id`) — the currently
 viewed version's id, or `null` for "the latest version." Removing the named version reconciles the
 property to `null` without a user-action event, so reinserting that id cannot unexpectedly repin it.
+`hideRestore: boolean = false` (attribute `hide-restore`, reflected) — omit the built-in Restore
+action while keeping version navigation, labels, and announcements available. Toggling it preserves
+the selected version and history. This controls presentation; the host still authorizes restoration.
 `streaming: boolean = false` (reflected) — whether the artifact is still being generated; sets
 `aria-busy` on the body and shows a text indicator (not animated, so it stays legible under reduced
 motion). `copyText: string = ''` (attribute `copy-text`) — the text copied to the clipboard by the
@@ -53244,7 +53675,7 @@ sanitizer runs at click time, not render time, so a _non-empty but rejected_ URL
 button and simply emits nothing when pressed. The component never navigates on its own: it emits
 non-cancelable `lr-download` with the sanitized `src`; the host owns the actual download.
 `downloadName: string = ''` (attribute `download-name`) — the suggested filename reported in the
-`lr-download-request` event detail.
+`lr-download` event detail.
 
 **Slots:** default — preview-view content (markdown/html-viewer/browser-frame/image). `code` —
 code-view content (typically a `lr-code-block`); the preview/code toggle only renders once this
@@ -53256,7 +53687,8 @@ navigation and the built-in copy/download buttons.
 fired when the previous/next navigation moves to a different version; not fired when a `versions`
 reassignment drops the currently-active version id — `activeVersionId` resets to `null` silently,
 since `null` is already a documented steady state meaning "the latest version"), `lr-restore` (`detail: {
-versionId }`, fired by the restore-this-version button; mutates nothing itself), `lr-copy`
+versionId }`, fired by the restore-this-version button only while `hideRestore` is false; mutates
+nothing itself), `lr-copy`
 (`detail: { ok: true, text }`, after the clipboard write fulfills), `lr-error` plus
 `lr-copy-error` (`detail: { ok: false, text, reason, error }`) on a localized failure, and
 non-cancelable `lr-download` (`detail: { filename, src }`, with the required sanitized download URL).
@@ -53269,7 +53701,8 @@ has content), `view-button` (carries `data-view="preview"` or `data-view="code"`
 chevron inside `version-previous`, mirrored via `scaleX(-1)` under `:dir(rtl)`), `version-next`,
 `version-next-glyph` (the `›` chevron inside `version-next`, mirrored the same way), `version-position`
 (the "Version N of M" text), `version-label` (the active version's optional caller-supplied label),
-`restore-button` (rendered only while the active version isn't the latest), `actions`, `copy-button`
+`restore-button` (rendered only while the active version isn't the latest and `hideRestore` is false),
+`actions`, `copy-button`
 (rendered only while `copyText` is non-empty), `download-button`
 (rendered only while `downloadSrc` is non-empty), `body`, `streaming-indicator` (rendered only while
 `streaming`).
@@ -55595,6 +56028,46 @@ back to built-in spatial rendering and then the paginated list. Localized feedba
 `lr-engine-fallback` with `{ from, to, reason }`; reasons are `'unavailable'`, `'unsupported'`,
 `'context-lost'` or `'error'`.
 
+**Custom 3D bodies:** `nodeRenderer: LyraGraphNodeRenderer | null | undefined = undefined`
+(property only) supplies a synchronous mesh callback for local `view="3d" engine="webgl"` scenes.
+`LyraGraphNodeRenderContext` contains frozen `{ id, index, node? }`; `index` is the filtered render
+row, and `node` is present for record inputs. Typed columns supply identity/index without record
+materialization. Return `null`/`undefined` for the standard body, or `LyraGraphNodeMesh` with
+non-indexed Float32Array `positions` (9 values per triangle), `normals` (one outward unit XYZ
+normal per triangle), and optional sRGB RGBA `color` in [0,1]. Vertices fit the unit sphere;
+triangles have consistent outward winding and nonzero area. Geometry uses the graph's world axes,
+scaled by the existing node radius, with flat face lighting. The optional color inherits the
+resolved node fill when omitted. The **Custom spatial nodes** story shows a tetrahedron.
+
+Geometry is copied without changing caller buffers. Limits are 64 triangles per custom node,
+16,384 custom rows and 65,536 triangles per scene, with a 4 MiB per-owner mesh payload ceiling.
+Mixed-scene storage preflight can refuse a smaller scene when combined staging/sorting costs
+exceed its bounds. The callback runs in cancellable scheduled slices; each callback itself is
+trusted synchronous application code. Promise results, accessors, shared/resizable buffers and
+invalid geometry are refused. Assign a new callback identity to refresh captured application data;
+hover, selection, theme and camera changes preserve the admitted geometry. Reset with `null` or
+`undefined`. Source-provider, builtin, 2D and list branches retain standard nodes and show a
+localized availability notice without invoking the callback. Keyboard/list identities and labels
+remain available. Custom bodies use exact triangle picks with their original node id; their
+irregular silhouette has no ordinary circular hit padding. Authored alpha zero removes body picks;
+positive-alpha bodies remain pickable when dimmed to zero. Forced colors uses accessible paint.
+
+A rejected batch keeps standard nodes and emits noncancelable `lr-node-render-error` with
+`LyraGraphNodeRenderErrorDetail { reason: 'callback' | 'invalid' | 'budget'; nodeId?: string }` once
+for that callback/model generation. Exceptions are represented by localized text. The visible
+`custom-node-notice` part reports refusal or availability. Renderer failures retain the existing
+`lr-engine-fallback` chain.
+
+**Optional halo:** `glow: boolean = false` (reflected attribute `glow`) enables static WebGL
+postprocessing. It follows the same explicit 3D/WebGL preference and adds no request or render
+target while unset. It leaves picks and the component's separate label canvas unchanged. The
+**Spatial glow** story provides an on/off control. Enabled glow adds two offscreen blur passes
+and a scene capture; it has an 8 CSS-pixel radius and 0.6 strength. Half-resolution attachments
+have at most 1,048,576 pixels each and a 16 MiB combined color/depth storage estimate, excluding
+driver overhead; resizing can temporarily retain two sets. Forced colors suppresses it; reduced
+motion keeps a static halo. Builtin/list alternatives show a localized `glow-notice`. Genuine
+current effect failures enter the existing renderer fallback chain.
+
 `graphColumns: LyraGraphColumns | undefined` (property only) replaces local arrays in 3D/list;
 `graphSource` remains authoritative. Columns support 200,000 nodes and 1,000,000 edges.
 Required `ids` supplies string node IDs; optional Float32Array columns are `x`, `y`, `z`, `size`;
@@ -55672,6 +56145,63 @@ prevent full containment. Changing curvature alone does not refit the camera. Ty
 curves with the optional WebGL engine; their fallback remains the paginated list. Local records and
 provider scenes also support curves in the built-in renderer. In the companion, each curved edge
 reserves 16 strokes plus its directed arrow against the existing 2,000,000-primitive ceiling.
+
+**DAG preprocessing:** import `@aceshooting/lyra-3d/graph-layout` explicitly to compute a directed
+acyclic graph's positions before assigning them. The helper is independent of the renderer;
+`lr-graph` keeps the supplied positions and its existing 3D, Fit and List controls. There is no
+new layout selector. Keep original node-row order when mapping xyz results back to ids:
+
+```ts
+import type { LyraGraph, LyraGraphNode } from '@aceshooting/lyra-ui/components/retrieval/graph/graph.js';
+
+function createDagUpdates(graph: LyraGraph) {
+  let pending: AbortController | undefined;
+  let generation = 0;
+  let disposed = false;
+  return {
+    async replace(nodes: readonly LyraGraphNode[], source: Uint32Array, target: Uint32Array) {
+      if (disposed) return;
+      pending?.abort();
+      const controller = new AbortController();
+      pending = controller;
+      const revision = ++generation;
+      const current = () => !disposed && !controller.signal.aborted && revision === generation;
+      try {
+        const { layoutGraphDagAsync } = await import('@aceshooting/lyra-3d/graph-layout');
+        if (!current()) return;
+        const result = await layoutGraphDagAsync({ nodeCount: nodes.length, source, target },
+          { direction: 'y', layerGap: 100, nodeGap: 50 }, { signal: controller.signal });
+        if (!current()) return;
+        graph.nodes = nodes.map((node, row) => ({ ...node, position: {
+          x: result.positions[row * 3]!,
+          y: result.positions[row * 3 + 1]!,
+          z: result.positions[row * 3 + 2]!,
+        } }));
+        await graph.updateComplete;
+        if (current() && graph.isConnected) graph.fit();
+      } catch (error) {
+        if (current()) throw error;
+      }
+    },
+    dispose() { disposed = true; generation++; pending?.abort(); },
+  };
+}
+```
+
+Assign matching edge records separately, use `view="3d"`, and call the returned `dispose()` when
+the owning view disconnects. Handle replacement errors with application-localized status while
+retaining the previous graph. Do not mutate endpoint columns while a request is pending. Returned
+positions and ranks are owned buffers; coordinates use Float32 precision. The synchronous helper
+accepts up to 10,000 nodes/100,000 edges; the cancellable asynchronous helper accepts up to
+200,000 nodes/1,000,000 edges through bounded main-thread tasks, not a worker. These are helper
+admission ceilings, not renderer capacity claims.
+
+Both helpers reject cycles rather than reversing edges. The six directions are `x`, `-x`, `y`,
+`-y`, `z` and `-z`; default layer/node gaps are 100/50 world units. The helper rejects coordinates
+outside ±10,000,000 world units; local `LyraGraphNode.position` retains its separate ±1,000,000
+limit, so choose gaps and graph depth that fit the target component. The **Retrieval / Graph /
+Directed acyclic layout** story shows axis replacement, cancellation, strict cycle refusal,
+empty-data fallback and signed curvature on parallel directed links.
 
 `camera?: LyraGraphCamera` (property only) accepts readonly `{ yaw, pitch, distance, target }`,
 where `target: LyraGraphPosition`, yaw/pitch use radians and distance uses graph units. Without an
@@ -55887,7 +56417,8 @@ the offscreen keyboard-roving items), `spatial-toolbar` (3D/list view and camera
 `spatial-control` (each toolbar or pagination button), `spatial-canvas` (the 3D drawing and camera
 interaction surface), `spatial-instructions` (camera keyboard instructions), `spatial-list` (the
 visible paginated fallback), `spatial-list-item` (each activatable node, edge or community),
-`spatial-page-count` (localized total and page status), and `spatial-pagination` (page controls).
+`spatial-page-count` (localized total and page status), `spatial-pagination` (page controls),
+`custom-node-notice` (custom body availability/refusal), and `glow-notice` (halo availability).
 Source-mode parts: `source-navigator` (global query, record list and pagination), `source-row`
 (a mounted record activation button), `source-row-active` (the navigator's roving tab stop),
 `source-status` (loading, unavailable-record or error text), and `source-coverage` (full-source
@@ -57952,7 +58483,10 @@ tokens.
 
 `engine: Engine3dPreference = 'builtin'` forwards the renderer preference to the composed graph.
 `engine="webgl"` requests its companion for the 3D view. `lr-engine-fallback` bubbles unchanged
-with `{ from, to, reason }`.
+with `{ from, to, reason }`. `nodeRenderer: LyraGraphNodeRenderer | null | undefined = undefined`
+and `glow: boolean = false` forward the same custom-body and static-halo preferences to the graph;
+`nodeRenderer` is property-only and `glow` reflects its boolean attribute. The graph
+`lr-node-render-error` event bubbles through with its sanitized reason and optional nodeId.
 
 Orchestration-level knowledge-graph surface: the `lr-graph` canvas plus entity search, type filters,
 neighborhood expansion, pinned nodes, path finding between pins, node selection, and a details
@@ -59496,6 +60030,17 @@ These named interfaces and helper signatures are available to typed integrations
   `loadD3Modules(importForce?: () => Promise<unknown>, importDrag?: () => Promise<unknown>, importZoom?: () => Promise<unknown>, importSelection?: () => Promise<unknown>): Promise<D3Modules | null>`
 
 - **`components-retrieval-graph-graph-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/lr-graph.js`.
+  `LyraGraphNodeRenderContext {
+    readonly id: string;
+    readonly index: number;
+    readonly node?: Readonly<LyraGraphNode>;
+  }`
+  `LyraGraphNodeMesh {
+    readonly positions: Float32Array;
+    readonly normals: Float32Array;
+    readonly color?: readonly [number, number, number, number];
+  }`
   Import: `@aceshooting/lyra-ui/components/retrieval/graph/graph.class.js`.
   `LyraGraphPosition {
     readonly x: number;

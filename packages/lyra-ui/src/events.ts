@@ -1870,6 +1870,17 @@ export type LyraMapPointerMoveEvent = LyraMapEventMap['lr-map-pointer-move'];
 export type LyraMapProjectionChangeEvent = LyraMapEventMap['lr-map-projection-change'];
 
 /**
+ * `lr-map-scene-activate` — dispatched by `<lr-map>`; detail
+ * `LyraMapEventMap['lr-map-scene-activate']`.
+ */
+export type LyraMapSceneActivateEvent = LyraMapEventMap['lr-map-scene-activate'];
+
+/**
+ * `lr-map-scene-state` — dispatched by `<lr-map>`; detail `LyraMapEventMap['lr-map-scene-state']`.
+ */
+export type LyraMapSceneStateEvent = LyraMapEventMap['lr-map-scene-state'];
+
+/**
  * `lr-map-style-load` — dispatched by `<lr-map>`; detail `LyraMapEventMap['lr-map-style-load']`.
  */
 export type LyraMapStyleLoadEvent = LyraMapEventMap['lr-map-style-load'];
@@ -3778,6 +3789,8 @@ export interface LyraGlobalEventMap {
   'lr-map-pointer-leave': LyraMapPointerLeaveEvent;
   'lr-map-pointer-move': LyraMapPointerMoveEvent;
   'lr-map-projection-change': LyraMapProjectionChangeEvent;
+  'lr-map-scene-activate': LyraMapSceneActivateEvent;
+  'lr-map-scene-state': LyraMapSceneStateEvent;
   'lr-map-style-load': LyraMapStyleLoadEvent;
   'lr-map-terrain-change': LyraMapTerrainChangeEvent;
   'lr-map-view-change': LyraMapViewChangeEvent;

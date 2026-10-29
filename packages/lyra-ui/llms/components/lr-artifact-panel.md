@@ -34,6 +34,9 @@ position counts, and restore events. The active entry's optional `label` renders
 position. `activeVersionId: string | null = null` (attribute `active-version-id`) — the currently
 viewed version's id, or `null` for "the latest version." Removing the named version reconciles the
 property to `null` without a user-action event, so reinserting that id cannot unexpectedly repin it.
+`hideRestore: boolean = false` (attribute `hide-restore`, reflected) — omit the built-in Restore
+action while keeping version navigation, labels, and announcements available. Toggling it preserves
+the selected version and history. This controls presentation; the host still authorizes restoration.
 `streaming: boolean = false` (reflected) — whether the artifact is still being generated; sets
 `aria-busy` on the body and shows a text indicator (not animated, so it stays legible under reduced
 motion). `copyText: string = ''` (attribute `copy-text`) — the text copied to the clipboard by the
@@ -44,7 +47,7 @@ sanitizer runs at click time, not render time, so a _non-empty but rejected_ URL
 button and simply emits nothing when pressed. The component never navigates on its own: it emits
 non-cancelable `lr-download` with the sanitized `src`; the host owns the actual download.
 `downloadName: string = ''` (attribute `download-name`) — the suggested filename reported in the
-`lr-download-request` event detail.
+`lr-download` event detail.
 
 **Slots:** default — preview-view content (markdown/html-viewer/browser-frame/image). `code` —
 code-view content (typically a `lr-code-block`); the preview/code toggle only renders once this
@@ -56,7 +59,8 @@ navigation and the built-in copy/download buttons.
 fired when the previous/next navigation moves to a different version; not fired when a `versions`
 reassignment drops the currently-active version id — `activeVersionId` resets to `null` silently,
 since `null` is already a documented steady state meaning "the latest version"), `lr-restore` (`detail: {
-versionId }`, fired by the restore-this-version button; mutates nothing itself), `lr-copy`
+versionId }`, fired by the restore-this-version button only while `hideRestore` is false; mutates
+nothing itself), `lr-copy`
 (`detail: { ok: true, text }`, after the clipboard write fulfills), `lr-error` plus
 `lr-copy-error` (`detail: { ok: false, text, reason, error }`) on a localized failure, and
 non-cancelable `lr-download` (`detail: { filename, src }`, with the required sanitized download URL).
@@ -69,7 +73,8 @@ has content), `view-button` (carries `data-view="preview"` or `data-view="code"`
 chevron inside `version-previous`, mirrored via `scaleX(-1)` under `:dir(rtl)`), `version-next`,
 `version-next-glyph` (the `›` chevron inside `version-next`, mirrored the same way), `version-position`
 (the "Version N of M" text), `version-label` (the active version's optional caller-supplied label),
-`restore-button` (rendered only while the active version isn't the latest), `actions`, `copy-button`
+`restore-button` (rendered only while the active version isn't the latest and `hideRestore` is false),
+`actions`, `copy-button`
 (rendered only while `copyText` is non-empty), `download-button`
 (rendered only while `downloadSrc` is non-empty), `body`, `streaming-indicator` (rendered only while
 `streaming`).

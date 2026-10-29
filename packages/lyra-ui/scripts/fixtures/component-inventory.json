@@ -8567,6 +8567,16 @@
             "default": ""
           },
           {
+            "name": "hide-restore",
+            "property": "hideRestore",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "kind",
             "property": "kind",
             "type": "string",
@@ -8656,6 +8666,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "hideRestore",
+            "attribute": "hide-restore",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "kind",
@@ -64546,6 +64566,16 @@
             "default": null
           },
           {
+            "name": "glow",
+            "property": "glow",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "height",
             "property": "height",
             "type": "number | string",
@@ -64812,6 +64842,16 @@
             "default": null
           },
           {
+            "name": "glow",
+            "attribute": "glow",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "graphColumns",
             "attribute": null,
             "type": "LyraGraphColumns | undefined",
@@ -64906,6 +64946,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "nodeRenderer",
+            "attribute": null,
+            "type": "LyraGraphNodeRenderer | null | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "undefined"
           },
           {
             "name": "nodes",
@@ -65098,6 +65148,12 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-node-render-error",
+            "type": "CustomEvent<LyraGraphNodeRenderErrorDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-selection-change",
             "type": "CustomEvent< LyraEventDetailSnapshot<{ selectedNodeIds: string[]; selectedEdgeIds: string[] }> >",
             "cancelable": "never",
@@ -65142,6 +65198,10 @@
             "deprecated": null
           },
           {
+            "name": "custom-node-notice",
+            "deprecated": null
+          },
+          {
             "name": "data-list",
             "deprecated": null
           },
@@ -65159,6 +65219,10 @@
           },
           {
             "name": "focus-halo",
+            "deprecated": null
+          },
+          {
+            "name": "glow-notice",
             "deprecated": null
           },
           {
@@ -76199,6 +76263,16 @@
             "default": "none"
           },
           {
+            "name": "glow",
+            "property": "glow",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "height",
             "property": "height",
             "type": "number | string",
@@ -76375,6 +76449,16 @@
             "default": "none"
           },
           {
+            "name": "glow",
+            "attribute": "glow",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "graphSource",
             "attribute": null,
             "type": "KnowledgeGraphExplorerSource | undefined",
@@ -76440,6 +76524,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "nodeRenderer",
+            "attribute": null,
+            "type": "LyraGraphNodeRenderer | null | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "undefined"
           },
           {
             "name": "nodes",
@@ -76626,6 +76720,14 @@
             "cancelable": "never",
             "constructor": "CustomEvent",
             "bubbles": true
+          },
+          {
+            "name": "lr-node-render-error",
+            "type": "CustomEvent<LyraGraphNodeRenderErrorDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent",
+            "bubbles": true,
+            "composed": true
           },
           {
             "name": "lr-path-request",
@@ -82387,6 +82489,15 @@
             "hasDefault": false
           },
           {
+            "name": "scene",
+            "attribute": null,
+            "type": "LyraMapScene | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "styleLayers",
             "attribute": null,
             "type": "readonly LyraMapStyleLayer[]",
@@ -82599,8 +82710,32 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-map-projection-change",
+            "type": "CustomEvent<LyraMapProjectionChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-map-scene-activate",
+            "type": "CustomEvent<LyraMapSceneActivateDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-map-scene-state",
+            "type": "CustomEvent<LyraMapSceneStateDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-map-style-load",
             "type": "CustomEvent<LyraMapReadinessDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-map-terrain-change",
+            "type": "CustomEvent<LyraMapTerrainChangeDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -82769,6 +82904,18 @@
             "deprecated": null
           },
           {
+            "name": "globe-button",
+            "deprecated": null
+          },
+          {
+            "name": "globe-control",
+            "deprecated": null
+          },
+          {
+            "name": "globe-icon",
+            "deprecated": null
+          },
+          {
             "name": "initialization-activate",
             "deprecated": null
           },
@@ -82797,6 +82944,10 @@
             "deprecated": null
           },
           {
+            "name": "initialization-globe",
+            "deprecated": null
+          },
+          {
             "name": "initialization-navigation",
             "deprecated": null
           },
@@ -82810,6 +82961,10 @@
           },
           {
             "name": "initialization-skeleton",
+            "deprecated": null
+          },
+          {
+            "name": "initialization-terrain",
             "deprecated": null
           },
           {
@@ -82906,6 +83061,42 @@
           },
           {
             "name": "scale",
+            "deprecated": null
+          },
+          {
+            "name": "scene-item",
+            "deprecated": null
+          },
+          {
+            "name": "scene-list",
+            "deprecated": null
+          },
+          {
+            "name": "scene-pagination",
+            "deprecated": null
+          },
+          {
+            "name": "scene-panel",
+            "deprecated": null
+          },
+          {
+            "name": "scene-status",
+            "deprecated": null
+          },
+          {
+            "name": "scene-toggle",
+            "deprecated": null
+          },
+          {
+            "name": "terrain-button",
+            "deprecated": null
+          },
+          {
+            "name": "terrain-control",
+            "deprecated": null
+          },
+          {
+            "name": "terrain-icon",
             "deprecated": null
           },
           {

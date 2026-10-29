@@ -1009,6 +1009,7 @@ export interface LyraComponentTypeMap {
       | 'copyText'
       | 'downloadName'
       | 'downloadSrc'
+      | 'hideRestore'
       | 'kind'
       | 'label'
       | 'locale'
@@ -1033,6 +1034,7 @@ export interface LyraComponentTypeMap {
       'copy-text'?: LyraArtifactPanel['copyText'];
       'download-name'?: LyraArtifactPanel['downloadName'];
       'download-src'?: LyraArtifactPanel['downloadSrc'];
+      'hide-restore'?: LyraArtifactPanel['hideRestore'];
     };
   };
   'lr-attachment-chip': {
@@ -7456,6 +7458,7 @@ export interface LyraComponentTypeMap {
       | 'pickMode'
       | 'projection'
       | 'renderWorldCopies'
+      | 'scene'
       | 'strings'
       | 'styleOverrides'
       | 'terrain'
@@ -7488,6 +7491,8 @@ export interface LyraComponentTypeMap {
       | 'lr-map-pointer-leave'
       | 'lr-map-pointer-move'
       | 'lr-map-projection-change'
+      | 'lr-map-scene-activate'
+      | 'lr-map-scene-state'
       | 'lr-map-style-load'
       | 'lr-map-terrain-change'
       | 'lr-map-view-change';

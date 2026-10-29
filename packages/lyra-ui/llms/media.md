@@ -1855,7 +1855,18 @@ which only reaches rows projected from `legend`.
 `geolocate-icon`, `geolocate-waiting`, `geolocate-active`, `geolocate-background`, `geolocate-error`,
 `globe-control`, `globe-button`, `globe-icon`, `terrain-control`, `terrain-button`, `terrain-icon`,
 `attribution-link`, `attribution-expanded`, `controls-attribution-expanded`,
-`configuration-error`, `error`.
+`configuration-error`, `error`, `scene-panel`, `scene-toggle`, `scene-list`, `scene-item`,
+`scene-pagination`, `scene-status`.
+
+| Scene part | Description |
+| --- | --- |
+| `scene-panel` | Accessible section containing accepted scene text controls and status. |
+| `scene-toggle` | Native button that expands or collapses the scene object list. |
+| `scene-list` | List containing the current page of accepted scene objects. |
+| `scene-item` | An object's interactive native button or noninteractive text row. |
+| `scene-pagination` | Previous/next page buttons and localized page summary, present when more than one page exists. |
+| `scene-status` | Localized accepted-scene or rejected-update status text. |
+
 Before native construction, `initialization-placeholder` is the stable surface and
 `initialization-skeleton` is its decorative skeleton. `initialization-controls` also exposes `controls`;
 its rows expose `controls-top` and `controls-bottom`, and each `initialization-corner` also exposes its
@@ -2308,6 +2319,94 @@ undefined`, or changing `choropleth.sourceId` to a different value, now calls `r
   without `ResizeObserver` retain MapLibre's own window-resize behavior.
 
 ---
+
+### Geographic scene input and text fallback
+
+The property-only `scene` accepts a `LyraMapScene` with an `objects` array of `marker`,
+`path`, `arc` and `model` records. Every object has a unique exact-string `id` and a required
+plain-text `label`. Positions use `{ lngLat: [longitude, latitude], altitude?,
+altitudeReference? }`; altitude is in meters and defaults to 0 above `sea-level`, with `terrain`
+as the other reference. Model sources use `{ format, bytes }` or `{ format, src }`, with formats
+`gltf`, `glb`, `stl`, `obj`, `ply`, `xyz` and `pcd`. Use a property binding, never an attribute.
+
+Optional descriptor fields use these admission defaults:
+
+| Field | Default |
+| --- | --- |
+| Position `altitude` / `altitudeReference` | `0` meters / `'sea-level'` |
+| Object `color` / `opacity` | No authored color override / `1` |
+| Object `interactive` / `showLabel` | `true` / `false` |
+| Marker `radius` | `6` |
+| Path `interpolation` / `width` | `'great-circle'` / `2` |
+| Arc `width` | `2` (`height` is required) |
+| Model `metersPerUnit` / `orientation` | `1` / identity `[0, 0, 0, 1]` |
+
+Opacity must be between 0 and 1; radius, width and model scale must be positive. Model orientation
+is a scalar-last quaternion normalized during admission. Style, interpolation and model fields
+describe requested rendering, which is currently unavailable. `interactive` controls text-row
+activation; `showLabel` does not hide the required label from the text fallback.
+
+```ts
+import '@aceshooting/lyra-ui/components/lr-map.js';
+import type { LyraMapScene } from '@aceshooting/lyra-ui/components/lr-map.js';
+
+const scene: LyraMapScene = { objects: [
+  { kind: 'marker', id: 'station', label: 'Central station',
+    position: { lngLat: [6.134, 49.6] }, interactive: true },
+] };
+const map = document.querySelector('lr-map')!;
+map.scene = scene;
+```
+
+Current scene support accepts geographic intent and provides an accessible text fallback.
+Nonempty accepted input reports `unavailable` with code `engine`: scene objects are not drawn,
+models are not fetched or parsed, and no scene depth, terrain resolution or completed-frame
+projection is supplied. Existing `markers`, `dataLayers`, projection and terrain configuration
+remain separate APIs.
+
+A connected assignment snapshots and admits input synchronously before returning. A detached
+assignment is accepted on connection in that document's realm. Assign a new scene object to
+request an update; mutating an existing graph in place is not an update API. Invalid updates
+retain the last accepted rows and report the rejected update. `{ objects: [] }` accepts an empty
+scene; `undefined` clears accepted ownership. Leaving `scene` unset preserves existing behavior
+and adds no scene panel.
+
+Direct source bytes are copied on admission. Reusing the same source record with unchanged
+metadata reuses its owned snapshot, including after its original buffer detaches. Replace the
+source record to supply new content. Clearing, disconnecting or adopting the map revokes that
+reuse; reconnect accepts current authored input again. Relative source URLs resolve against the
+connected owner document; acceptance alone does not fetch them.
+
+Admission rejects the complete update rather than truncating it:
+
+| Input | Ceiling |
+| --- | --- |
+| Objects / model objects per scene | 2,000 / 32 |
+| Authored positions per scene / positions per path | 65,536 / 4,096 |
+| ID / required label / optional color | 1–1,024 / 16,384 / 1,024 UTF-16 units |
+| Model `src` / resolved absolute source URL | 1,048,576 UTF-16 units each |
+| Aggregate authored IDs, labels, colors and model `src` occurrences | 4,194,304 UTF-16 units per request |
+| Aggregate resolved source URLs | 4,194,304 UTF-16 units per source stage |
+| Library-owned encoded source snapshots, including staged replacements and retained associations | 64 MiB shared per connection |
+
+A marker/model counts as one authored position and an arc as two. Text field limits apply before
+trimming or resolution; repeated authored references may count again. Resolved URL accounting
+counts each source-record association once, including reused associations, while distinct records
+count separately. These are admission limits, not a total JavaScript heap bound; the public
+property still retains caller input, including a rejected assignment. Generated geometry and
+rendering resources need separate limits.
+
+The expandable text panel pages accepted objects with at most 100 rows rendered at once.
+Interactive rows support pointer, Enter and Space activation without implicitly panning; other
+rows remain text. Caller labels render as text. Style the surface with `scene-panel`,
+`scene-toggle`, `scene-list`, `scene-item`, `scene-pagination` and `scene-status` parts.
+
+`lr-map-scene-state` emits immutable `{ revision, state, code? }` detail against the accepted
+revision: accepted empty input and clear report `empty`, nonempty input reports `unavailable`
+with `engine`, and rejected input reports `error` with `invalid` or `limit` while retaining the
+previous accepted revision. `lr-map-scene-activate` emits immutable `{ id, kind, source,
+position? }` detail, with `source: 'pointer' | 'keyboard'`; positional marker/model actions include
+the accepted geographic position. Both events bubble, are composed and are noncancelable.
 
 ### Declarative globe and terrain configuration
 
@@ -6083,6 +6182,97 @@ particular country. Representative language mappings also include `lb` (Luxembou
   `LyraMapReadinessDetail {
     readonly generation: number;
   }`
+
+- **`components-media-map-scene-types-contracts`** — Geographic scene input and event data.
+  Import these types from `@aceshooting/lyra-ui/components/lr-map.js`.
+  `LyraMapPosition {
+    readonly lngLat: readonly [longitude: number, latitude: number];
+    readonly altitude?: number;
+    readonly altitudeReference?: 'sea-level' | 'terrain';
+  }`
+  `LyraMapSceneObjectBase {
+    readonly id: string;
+    readonly label: string;
+    readonly color?: string;
+    readonly opacity?: number;
+    readonly interactive?: boolean;
+    readonly showLabel?: boolean;
+  }`
+  The following object interfaces include all inherited `LyraMapSceneObjectBase` members.
+  `LyraMapSceneMarker {
+    readonly id: string;
+    readonly label: string;
+    readonly color?: string;
+    readonly opacity?: number;
+    readonly interactive?: boolean;
+    readonly showLabel?: boolean;
+    readonly kind: 'marker';
+    readonly position: LyraMapPosition;
+    readonly radius?: number;
+  }`
+  `LyraMapScenePath {
+    readonly id: string;
+    readonly label: string;
+    readonly color?: string;
+    readonly opacity?: number;
+    readonly interactive?: boolean;
+    readonly showLabel?: boolean;
+    readonly kind: 'path';
+    readonly positions: readonly LyraMapPosition[];
+    readonly interpolation?: 'linear' | 'great-circle';
+    readonly width?: number;
+  }`
+  `LyraMapSceneArc {
+    readonly id: string;
+    readonly label: string;
+    readonly color?: string;
+    readonly opacity?: number;
+    readonly interactive?: boolean;
+    readonly showLabel?: boolean;
+    readonly kind: 'arc';
+    readonly start: LyraMapPosition;
+    readonly end: LyraMapPosition;
+    readonly height: number;
+    readonly width?: number;
+  }`
+  `LyraMapSceneModel {
+    readonly id: string;
+    readonly label: string;
+    readonly color?: string;
+    readonly opacity?: number;
+    readonly interactive?: boolean;
+    readonly showLabel?: boolean;
+    readonly kind: 'model';
+    readonly position: LyraMapPosition;
+    readonly source: LyraMapModelSource;
+    readonly metersPerUnit?: number;
+    readonly orientation?: LyraMapQuaternion;
+  }`
+  `LyraMapScene {
+    readonly objects: readonly LyraMapSceneObject[];
+  }`
+  `LyraMapSceneStateDetail {
+    readonly revision: number;
+    readonly state: 'loading' | 'ready' | 'partial' | 'empty' | 'unavailable' | 'error';
+    readonly code?: LyraMapSceneErrorCode;
+  }`
+  `LyraMapSceneActivateDetail {
+    readonly id: string;
+    readonly kind: 'marker' | 'path' | 'arc' | 'model' | 'custom';
+    readonly layerId?: string;
+    readonly source: 'pointer' | 'keyboard';
+    readonly position?: LyraMapPosition;
+  }`
+  Supporting aliases are exported from the same entry:
+  `LyraMapQuaternion = readonly [x: number, y: number, z: number, w: number]`,
+  `LyraMapModelFormat = 'gltf' | 'glb' | 'stl' | 'obj' | 'ply' | 'xyz' | 'pcd'`,
+  `LyraMapModelSource = { readonly format: LyraMapModelFormat; readonly bytes: ArrayBuffer | Uint8Array } | { readonly format: LyraMapModelFormat; readonly src: string }`,
+  `LyraMapSceneObject = LyraMapSceneMarker | LyraMapScenePath | LyraMapSceneArc | LyraMapSceneModel`,
+  and `LyraMapSceneErrorCode = 'invalid' | 'limit' | 'model' | 'resource' | 'engine' | 'projection' | 'terrain' | 'context-lost'`.
+  The state and activation types include renderer-facing alternatives; current accepted-scene
+  support emits `empty`, `unavailable` or `error`, and text activation uses the four declared
+  object kinds without `layerId`. It does not draw scene objects or supply completed-frame
+  visibility. See Geographic scene input and text fallback above for defaults, limits and ownership.
 
 - **`components-media-image-viewer-panorama-contracts`** — Shared panorama camera, hotspot and selection data for image and video viewers.
   Import types from `@aceshooting/lyra-ui/components/lr-image-viewer.js` or

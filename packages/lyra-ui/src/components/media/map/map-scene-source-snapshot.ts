@@ -5,6 +5,7 @@ import {
   readOwnArrayLength,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
+import { createMapSceneAdmissionError, mapSceneAdmissionErrorCode } from './map-scene-errors.js';
 
 export type SceneRequest = Readonly<{ connection: object; revision: number }>;
 export type SceneSourceRole = 'candidate' | 'accepted' | 'installed';
@@ -35,7 +36,7 @@ export type SceneSourceSnapshot =
   | Readonly<{ kind: 'bytes'; format: SceneSourceFormat; bytes: Uint8Array }>
   | Readonly<{ kind: 'url'; format: SceneSourceFormat; request: SceneResolvedRequest }>;
 export interface SceneSourceOwner {
-  stage(values: readonly SceneSourceValue[], request: SceneRequest): SceneSourceStage;
+  stage(values: readonly SceneSourceValue[], request: SceneRequest, expected?: readonly SceneSourceMetadata[]): SceneSourceStage;
   publish(stage: SceneSourceStage): readonly SceneSourceLease[];
   retain(receipt: SceneSourceReceipt, role: 'candidate' | 'installed'): SceneSourceLease;
   /** Internal borrowed view; the receiver must not mutate the owned bytes. */
@@ -52,9 +53,10 @@ export interface SceneSourceOwnerOptions {
   readonly maxEncodedBytes: number;
 }
 
-type SourceMetadata =
+export type SceneSourceMetadata =
   | Readonly<{ record: SceneSourceValue; kind: 'bytes'; format: SceneSourceFormat; bytes: object }>
   | Readonly<{ record: SceneSourceValue; kind: 'url'; format: SceneSourceFormat; src: string }>;
+type SourceMetadata = SceneSourceMetadata;
 interface ByteRange {
   readonly buffer: ArrayBuffer;
   readonly byteOffset: number;
@@ -80,10 +82,21 @@ interface StageState {
 
 const SOURCE_FORMATS: readonly SceneSourceFormat[] = ['gltf', 'glb', 'stl', 'obj', 'ply', 'xyz', 'pcd'];
 const MAX_STAGE_SOURCES = 32;
+const MAX_SOURCE_TEXT = 1_048_576;
+const MAX_RESOLVED_TEXT = 4_194_304;
 const staleErrors = new WeakSet<object>();
 
 function invalid(): never {
-  throw new TypeError('Invalid map scene source');
+  throw createMapSceneAdmissionError('invalid');
+}
+
+function limit(): never {
+  throw createMapSceneAdmissionError('limit');
+}
+
+function sanitized(error: unknown): never {
+  if (mapSceneAdmissionErrorCode(error) !== undefined) throw error;
+  return invalid();
 }
 
 function stale(): never {
@@ -120,7 +133,9 @@ function metadata(value: unknown): SourceMetadata {
   }
   if (keys.includes('src')) {
     const src = field(value, 'src');
-    if (typeof src !== 'string' || src.trim().length === 0) return invalid();
+    if (typeof src !== 'string') return invalid();
+    if (src.length > MAX_SOURCE_TEXT) return limit();
+    if (src.trim().length === 0) return invalid();
     return { record: value as SceneSourceValue, kind: 'url', format: format as SceneSourceFormat, src };
   }
   return invalid();
@@ -128,7 +143,12 @@ function metadata(value: unknown): SourceMetadata {
 
 /** Validate source metadata without inspecting an already retained byte container. */
 export function readMapSceneSource(value: unknown): SceneSourceValue {
-  try { return metadata(value).record; } catch { return invalid(); }
+  try { return metadata(value).record; } catch (error) { return sanitized(error); }
+}
+
+/** Capture the exact metadata counted by admission before nested caller reflection. */
+export function captureMapSceneSourceMetadata(value: unknown): SceneSourceMetadata {
+  try { return Object.freeze(metadata(value)); } catch (error) { return sanitized(error); }
 }
 
 function sameMetadata(first: SourceMetadata, second: SourceMetadata): boolean {
@@ -185,6 +205,7 @@ function resolvedRequest(value: SceneResolvedRequest | null): SceneResolvedReque
   const url = field(value, 'url');
   const owner = field(value, 'owner');
   if (typeof url !== 'string' || url.length === 0 || !objectValue(owner)) return invalid();
+  if (url.length > MAX_SOURCE_TEXT) return limit();
   return Object.freeze({ url, owner });
 }
 
@@ -271,7 +292,7 @@ export function createMapSceneSourceOwner(options: SceneSourceOwnerOptions): Sce
     }
 
     const range = byteRange(meta.bytes);
-    if (range.byteLength > maxEncodedBytes - liveBytes) return invalid();
+    if (range.byteLength > maxEncodedBytes - liveBytes) return limit();
     // Charge the in-flight reservation before calling the host: it may stage another scene.
     liveBytes += range.byteLength;
     let reservation: SceneByteReservation | undefined;
@@ -296,7 +317,8 @@ export function createMapSceneSourceOwner(options: SceneSourceOwnerOptions): Sce
     }
   }
 
-  function stage(values: readonly SceneSourceValue[], value: SceneRequest): SceneSourceStage {
+  function stage(values: readonly SceneSourceValue[], value: SceneRequest,
+    expected?: readonly SceneSourceMetadata[]): SceneSourceStage {
     const acquired: SourceEntry[] = [];
     try {
       const request = requestSnapshot(value, connection);
@@ -308,14 +330,19 @@ export function createMapSceneSourceOwner(options: SceneSourceOwnerOptions): Sce
       const expectedGeneration = generation;
       if (!Array.isArray(values)) return invalid();
       const length = readOwnArrayLength(values);
-      if (length === undefined || length > MAX_STAGE_SOURCES) return invalid();
+      if (length === undefined) return invalid();
+      if (length > MAX_STAGE_SOURCES) return limit();
       if (Reflect.ownKeys(values).length !== length + 1) return invalid();
+      if (expected !== undefined && expected.length !== length) return invalid();
       const descriptors: SourceMetadata[] = [];
       const seen = new Set<SceneSourceValue>();
       for (let index = 0; index < length; index++) {
-        const meta = metadata(field(values, String(index)));
+        const current = metadata(field(values, String(index)));
+        const meta = expected?.[index] ?? current;
+        if (!sameMetadata(meta, current)) return invalid();
         if (!seen.has(meta.record)) { seen.add(meta.record); descriptors.push(meta); }
       }
+      let resolvedText = 0;
       for (const meta of descriptors) {
         checkCurrent(request, expectedGeneration);
         const existing = reusable.get(meta.record);
@@ -325,6 +352,9 @@ export function createMapSceneSourceOwner(options: SceneSourceOwnerOptions): Sce
           existing.candidate++;
           acquired.push(existing);
         } else acquired.push(newEntry(meta, request, expectedGeneration));
+        const snapshot = acquired[acquired.length - 1]!.snapshot;
+        if (snapshot?.kind === 'url') resolvedText += snapshot.request.url.length;
+        if (resolvedText > MAX_RESOLVED_TEXT) return limit();
       }
       for (const meta of descriptors) if (!sameMetadata(meta, metadata(meta.record))) return invalid();
       checkCurrent(request, expectedGeneration);
@@ -334,9 +364,9 @@ export function createMapSceneSourceOwner(options: SceneSourceOwnerOptions): Sce
       stages.set(result, state);
       pendingStages.add(state);
       return result;
-    } catch {
+    } catch (error) {
       for (const entry of acquired) release(entry, 'candidate');
-      return invalid();
+      return sanitized(error);
     }
   }
 
@@ -366,7 +396,7 @@ export function createMapSceneSourceOwner(options: SceneSourceOwnerOptions): Sce
       return result;
     } catch (error) {
       if (isStaleMapSceneSourceError(error)) throw error;
-      return invalid();
+      return sanitized(error);
     }
   }
 

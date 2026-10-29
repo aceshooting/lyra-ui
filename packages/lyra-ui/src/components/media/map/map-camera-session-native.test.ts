@@ -6,6 +6,7 @@ import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { createMapCameraSessionController } from '../../../internal/map-camera-session-controller.js';
 import { createSimulationClock, type ClockScheduler } from '../../../simulation-clock.js';
 import { LyraMap, LYRA_MAP_EMPTY_STYLE } from './map.js';
+import { sceneMarker, sceneModel, scenePath } from '../../../../test/map-scene-admission-fixtures.js';
 void LyraMap;
 
 interface NativeCamera {
@@ -76,6 +77,124 @@ describe('camera sessions with native map engines', function () {
   });
 
   for (const engine of ['modular', 'maplibre'] as const) {
+    it(`follows accepted marker and model positions through the real ${engine} camera`, async () => {
+      const { element, map, controller } = await mount(engine);
+      controller.restore({ center: [0, 0], zoom: 6, bearing: 20, pitch: 30 });
+      const commands: { center: readonly number[]; zoom: number }[] = [];
+      element.addEventListener('lr-map-view-change', event => {
+        const detail = (event as CustomEvent<{ source: string; center: readonly number[]; zoom: number }>).detail;
+        if (detail.source === 'command') commands.push({ center: [...detail.center], zoom: detail.zoom });
+      });
+      element.scene = { objects: [sceneMarker('target', 5)] };
+      controller.follow({ objectId: 'target', mode: 'ground' }); await element.updateComplete;
+      element.scene = { objects: [{ ...sceneModel('target'),
+        position: { lngLat: [12, 4], altitude: 250, altitudeReference: 'terrain' } }] };
+      await element.updateComplete;
+      const captured = controller.capture();
+      expect(captured.center[0]).to.be.closeTo(12, 1e-6); expect(captured.center[1]).to.be.closeTo(4, 1e-6);
+      expect(captured.zoom).to.be.closeTo(6, 1e-6); expect(captured.bearing).to.be.closeTo(20, 1e-6);
+      expect(captured.pitch).to.be.closeTo(30, 1e-6);
+      expect(position(map)).to.deep.equal(captured.center); expect(element.center).to.deep.equal(captured.center);
+      expect(element.zoom).to.be.closeTo(captured.zoom, 1e-6);
+      expect(commands.length).to.equal(2); expect(commands[1]!.center).to.deep.equal(captured.center);
+      expect(controller.snapshot).to.include({ mode: 'follow', active: true, trackingStatus: 'ground' });
+      element.scene = { objects: [{ ...sceneModel('target'), label: 'Updated model source',
+        position: { lngLat: [12, 4], altitude: 250, altitudeReference: 'terrain' } }] };
+      await element.updateComplete; expect(commands.length).to.equal(2);
+      controller.follow({ objectId: 'target', mode: 'ground', zoom: 7, bearing: 10, pitch: 15 });
+      await element.updateComplete;
+      expect(controller.capture().zoom).to.be.closeTo(7, 1e-6);
+      expect(controller.capture().bearing).to.be.closeTo(10, 1e-6);
+      expect(controller.capture().pitch).to.be.closeTo(15, 1e-6);
+      expect(commands.length).to.equal(3);
+    });
+
+    it(`keeps missing ${engine} follow armed and prevents scene writes after stop or disposal`, async () => {
+      const { element, map, controller } = await mount(engine); let commands = 0;
+      element.addEventListener('lr-map-view-change', event => { if ((event as CustomEvent).detail.source === 'command') commands++; });
+      controller.follow({ objectId: 'target', mode: 'ground', zoom: 6 });
+      expect(controller.snapshot).to.include({ trackingStatus: 'missing', active: false }); expect(commands).to.equal(0);
+      element.scene = { objects: [sceneMarker('target', 5)] }; await element.updateComplete;
+      expect(position(map)[0]).to.be.closeTo(5, 1e-6); expect(commands).to.equal(1);
+      element.scene = undefined;
+      expect(controller.snapshot).to.include({ trackingStatus: 'missing', active: false });
+      element.scene = { objects: [sceneMarker('target', 5)] }; await element.updateComplete;
+      expect(controller.snapshot).to.include({ trackingStatus: 'ground', active: true }); expect(commands).to.equal(1);
+      controller.stop(); const stopped = controller.capture();
+      element.scene = { objects: [sceneMarker('target', 15)] }; await element.updateComplete;
+      expect(controller.capture()).to.deep.equal(stopped); expect(commands).to.equal(1);
+      controller.follow({ objectId: 'target', mode: 'ground' }); await element.updateComplete;
+      expect(position(map)[0]).to.be.closeTo(15, 1e-6); expect(commands).to.equal(2);
+      controller.dispose(); const disposedPosition = position(map);
+      element.scene = { objects: [sceneMarker('target', 25)] }; await element.updateComplete;
+      expect(position(map)).to.deep.equal(disposedPosition); expect(commands).to.equal(2);
+      expect(controller.snapshot).to.include({ active: false, reason: 'disposed' });
+    });
+
+    it(`keeps reduced-motion ${engine} follow static until another explicit attachment`, async () => {
+      const { element, map, controller } = await mount(engine, true); let commands = 0;
+      element.addEventListener('lr-map-view-change', event => { if ((event as CustomEvent).detail.source === 'command') commands++; });
+      element.scene = { objects: [sceneMarker('target', 5)] };
+      controller.follow({ objectId: 'target', mode: 'ground', zoom: 6 }); await element.updateComplete;
+      expect(position(map)[0]).to.be.closeTo(5, 1e-6); expect(commands).to.equal(1);
+      element.scene = { objects: [sceneMarker('target', 15)] }; await element.updateComplete;
+      expect(position(map)[0]).to.be.closeTo(5, 1e-6); expect(commands).to.equal(1);
+      expect(controller.snapshot).to.include({ trackingStatus: 'ground', active: true });
+      controller.follow({ objectId: 'target', mode: 'ground' }); await element.updateComplete;
+      expect(position(map)[0]).to.be.closeTo(15, 1e-6); expect(commands).to.equal(2);
+      expect(map.isMoving()).to.equal(false);
+    });
+
+    it(`preserves native ${engine} animation when a scene path cannot be followed`, async () => {
+      const { element, map, controller } = await mount(engine);
+      element.scene = { objects: [scenePath('route')] }; await element.updateComplete;
+      controller.restore({ center: [10, 5], zoom: 5, bearing: 0, pitch: 0 }, { kind: 'ease', duration: 500 });
+      expect(map.isMoving()).to.equal(true);
+      expect(() => controller.follow({ objectId: 'route', mode: 'ground' })).to.throw('invalid-follow');
+      expect(controller.snapshot).to.include({ mode: 'viewpoint', active: true }); expect(map.isMoving()).to.equal(true);
+      await waitUntil(() => controller.snapshot.reason === 'complete', 'Existing native animation completes', { timeout: 10000 });
+      expect(position(map)[0]).to.be.closeTo(10, 1e-6); expect(position(map)[1]).to.be.closeTo(5, 1e-6);
+      expect(map.getZoom()).to.be.closeTo(5, 1e-6);
+    });
+
+    it(`lets native keyboard navigation finish after interrupting ${engine} scene follow`, async () => {
+      const { element, map, controller } = await mount(engine);
+      element.scene = { objects: [sceneMarker('target', 5)] }; await element.updateComplete;
+      await focusByKeyboard(zoomIn(element));
+      controller.follow({ objectId: 'target', mode: 'ground', zoom: 6 });
+      const initial = map.getZoom(); let movingAtInterruption = false;
+      controller.subscribe(snapshot => { if (snapshot.reason === 'user') movingAtInterruption = map.isMoving(); });
+      await sendKeys({ press: 'Enter' });
+      await waitUntil(() => controller.snapshot.reason === 'user', 'Native keyboard control interrupts follow');
+      expect(movingAtInterruption, 'Incoming navigation remains active').to.equal(true);
+      element.scene = { objects: [sceneMarker('target', 25)] }; await element.updateComplete;
+      await waitUntil(() => !map.isMoving(), 'Native navigation finishes after scene update', { timeout: 10000 });
+      expect(map.getZoom()).to.be.closeTo(initial + 1, 1e-5); expect(position(map)[0]).to.be.closeTo(5, 1e-6);
+      expect(controller.snapshot).to.include({ active: false, reason: 'user' });
+    });
+
+    it(`preserves continued native dragging after ${engine} scene follow is interrupted`, async () => {
+      const { element, map, controller } = await mount(engine);
+      element.scene = { objects: [sceneMarker('target', 5)] }; await element.updateComplete;
+      controller.follow({ objectId: 'target', mode: 'ground', zoom: 6 }); await element.updateComplete;
+      const canvas = map.getCanvas(), box = canvas.getBoundingClientRect();
+      const x = Math.round(box.left + box.width / 2), y = Math.round(box.top + box.height / 2);
+      const initial = position(map);
+      await sendMouse({ type: 'move', position: [x, y] }); await sendMouse({ type: 'down' });
+      try {
+        await sendMouse({ type: 'move', position: [x + 35, y + 10] });
+        await waitUntil(() => controller.snapshot.reason === 'user' && changed(initial, position(map)), 'Drag interrupts follow and moves');
+        element.scene = { objects: [sceneMarker('target', 25)] }; await element.updateComplete;
+        const first = position(map); expect(Math.abs(first[0] - 25)).to.be.greaterThan(1);
+        await sendMouse({ type: 'move', position: [x + 75, y + 25] });
+        await waitUntil(() => changed(first, position(map)), 'Incoming drag continues after scene update');
+      } finally { await sendMouse({ type: 'up' }); }
+      await waitUntil(() => !map.isMoving(), 'Drag and inertia finish', { timeout: 10000 });
+      const settled = position(map);
+      element.scene = { objects: [sceneMarker('target', 35)] }; await element.updateComplete;
+      expect(position(map)).to.deep.equal(settled); expect(controller.snapshot).to.include({ active: false, reason: 'user' });
+    });
+
     it(`completes a real ${engine} ease after its single reflected command event`, async () => {
       const { element, map, controller } = await mount(engine);
       const commands: { zoom: number; active: boolean }[] = [];

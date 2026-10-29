@@ -10144,7 +10144,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "loadMaplibre",
       "kind": "function",
-      "fingerprint": "6d4edcc5144ca4996d37",
+      "fingerprint": "28ecbbe962e744b0351d",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -10192,7 +10192,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MapLibreMapCapability",
       "kind": "interface",
-      "fingerprint": "49a22d379d83775b042f",
+      "fingerprint": "27c7dca21d02e7924a63",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -10208,7 +10208,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MapLibreMarkerCapability",
       "kind": "interface",
-      "fingerprint": "fe308310dfe5d807cdfa",
+      "fingerprint": "600a4521363dc2854196",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -10224,7 +10224,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MaplibreModule",
       "kind": "interface",
-      "fingerprint": "b1c17d4f0922c42bae00",
+      "fingerprint": "5969b7773b7bd97e72bc",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -11885,7 +11885,7 @@
       "module": "src/components/retrieval/graph/graph-model.ts",
       "exportName": "LyraGraphEdge",
       "kind": "interface",
-      "fingerprint": "3e3e8f81923ac52488bc",
+      "fingerprint": "4f8953d27f4790f22558",
       "routes": [
         "src/all.ts",
         "src/components/lr-graph.ts",
@@ -14695,7 +14695,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "8f13d81bbc5873415e14",
+      "fingerprint": "74a58427a627eb444e34",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15602,7 +15602,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "2cfbcd69350833ee8486",
+      "fingerprint": "25ee72191b99c069b171",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15736,7 +15736,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "6c7aab463d9ad82c016a",
+      "fingerprint": "09d6c8ce0b901e09bdc0",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -16320,7 +16320,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "2b505efe84bcf27f8e15",
+      "fingerprint": "b1d0ca253cc900cb0f1b",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16336,7 +16336,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "43b3dc20174baa826f97",
+      "fingerprint": "e6795900e764760e5718",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16352,7 +16352,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "8a96123e27d947c56650",
+      "fingerprint": "30ef4482bc04e111d4b2",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16879,7 +16879,7 @@
       "module": "src/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "a95dcea8174d681f78a5",
+      "fingerprint": "84bd99fee7814552b67c",
       "routes": [
         "src/localization.ts",
         "src/utilities/index.ts"
@@ -16896,7 +16896,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "d6f4e9bac3afd2403501",
+      "fingerprint": "2ef83a0eb0201f7d5db5",
       "routes": [
         "src/vue.ts"
       ],
@@ -17305,7 +17305,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "17374af172467377bd82",
+      "fingerprint": "8b38452a1aa853485e15",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -17330,7 +17330,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocaleDelta",
       "kind": "function",
-      "fingerprint": "8e4acea7066d0e57012c",
+      "fingerprint": "23d6affc90a9a20954e1",
       "routes": [
         "src/localization.ts"
       ],
@@ -18742,7 +18742,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "loadModularMap",
       "kind": "function",
-      "fingerprint": "0da301354974678b03b4",
+      "fingerprint": "fdf9f52bcfb4a9828da9",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -18781,7 +18781,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "ModularMapModule",
       "kind": "interface",
-      "fingerprint": "ca27f174271fed67c6b6",
+      "fingerprint": "b19881672feb53471ffa",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -20953,7 +20953,7 @@
       "module": "src/components/media/map/map.class.ts",
       "exportName": "LyraMapControls",
       "kind": "interface",
-      "fingerprint": "e38506543d588ad0a60d",
+      "fingerprint": "6db8660ee652e326920c",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -21288,7 +21288,7 @@
       "module": "src/internal/typed-columns.ts",
       "exportName": "LyraGraphColumns",
       "kind": "interface",
-      "fingerprint": "be5a8fbc9d6384db8ae7",
+      "fingerprint": "ecabf482873a39f68aa5",
       "routes": [
         "src/all.ts",
         "src/lyra.ts",
@@ -21864,6 +21864,391 @@
         "kind": "utility",
         "name": "components-media-map-map-contracts",
         "declaration": "LyraMapVisibleBoundsOptions"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-control-options.ts",
+      "exportName": "LyraMapGlobeControlOptions",
+      "kind": "interface",
+      "fingerprint": "14c3efbe464cd16294c7",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-map-contracts",
+        "declaration": "LyraMapGlobeControlOptions"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-control-options.ts",
+      "exportName": "LyraMapTerrainControlOptions",
+      "kind": "interface",
+      "fingerprint": "e74653aad1d562f4c9d2",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-map-contracts",
+        "declaration": "LyraMapTerrainControlOptions"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-scene-configuration.ts",
+      "exportName": "LyraMapTerrain",
+      "kind": "interface",
+      "fingerprint": "4f7d5dba6984540c4e82",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-scene-configuration-contracts",
+        "declaration": "LyraMapTerrain"
+      }
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapProjectionChangeDetail",
+      "kind": "interface",
+      "fingerprint": "3df23172c29aa261d667",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-map-contracts",
+        "declaration": "LyraMapProjectionChangeDetail"
+      }
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapTerrainChangeDetail",
+      "kind": "interface",
+      "fingerprint": "80a16f2882bf227fb31a",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-map-contracts",
+        "declaration": "LyraMapTerrainChangeDetail"
+      }
+    },
+    {
+      "module": "src/components/retrieval/graph/graph-node-renderer.ts",
+      "exportName": "LyraGraphNodeMesh",
+      "kind": "interface",
+      "fingerprint": "2512cd0e54fe147931d7",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-graph.ts",
+        "src/components/retrieval/graph/graph.class.ts",
+        "src/components/retrieval/graph/graph.ts",
+        "src/components/retrieval/index.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/retrieval.md",
+      "family": "retrieval",
+      "locator": {
+        "kind": "utility",
+        "name": "components-retrieval-graph-graph-contracts",
+        "declaration": "LyraGraphNodeMesh"
+      }
+    },
+    {
+      "module": "src/components/retrieval/graph/graph-node-renderer.ts",
+      "exportName": "LyraGraphNodeRenderContext",
+      "kind": "interface",
+      "fingerprint": "1caab8d39755ed105832",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-graph.ts",
+        "src/components/retrieval/graph/graph.class.ts",
+        "src/components/retrieval/graph/graph.ts",
+        "src/components/retrieval/index.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/retrieval.md",
+      "family": "retrieval",
+      "locator": {
+        "kind": "utility",
+        "name": "components-retrieval-graph-graph-contracts",
+        "declaration": "LyraGraphNodeRenderContext"
+      }
+    },
+    {
+      "module": "src/components/retrieval/graph/graph-node-renderer.ts",
+      "exportName": "LyraGraphNodeRenderErrorDetail",
+      "kind": "interface",
+      "fingerprint": "40167c1f2a5e4056c68f",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-graph.ts",
+        "src/components/retrieval/graph/graph.class.ts",
+        "src/components/retrieval/graph/graph.ts",
+        "src/components/retrieval/index.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/retrieval.md",
+      "family": "retrieval",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-graph",
+        "declaration": "LyraGraphNodeRenderErrorDetail"
+      }
+    },
+    {
+      "module": "src/sequence-time-binding.ts",
+      "exportName": "bindSequencePlayback",
+      "kind": "function",
+      "fingerprint": "1233c7316a19410c7555",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/sequence-time-binding.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/testing-and-utilities.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "sequence-time-binding-contracts",
+        "declaration": "bindSequencePlayback"
+      }
+    },
+    {
+      "module": "src/sequence-time-binding.ts",
+      "exportName": "SequenceTimeBindingOptions",
+      "kind": "interface",
+      "fingerprint": "31f61bf611d347f17e22",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/sequence-time-binding.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/testing-and-utilities.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "sequence-time-binding-contracts",
+        "declaration": "SequenceTimeBindingOptions"
+      }
+    },
+    {
+      "module": "src/simulation-clock.ts",
+      "exportName": "ClockScheduler",
+      "kind": "interface",
+      "fingerprint": "3f8c359d3c2b12aca5ec",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/simulation-clock.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/testing-and-utilities.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "simulation-clock-contracts",
+        "declaration": "ClockScheduler"
+      }
+    },
+    {
+      "module": "src/simulation-clock.ts",
+      "exportName": "ClockSnapshot",
+      "kind": "interface",
+      "fingerprint": "99f35012850215d72ba8",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/simulation-clock.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/testing-and-utilities.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "simulation-clock-contracts",
+        "declaration": "ClockSnapshot"
+      }
+    },
+    {
+      "module": "src/simulation-clock.ts",
+      "exportName": "createSimulationClock",
+      "kind": "function",
+      "fingerprint": "496668a97522dd3080ef",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/simulation-clock.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/testing-and-utilities.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "simulation-clock-contracts",
+        "declaration": "createSimulationClock"
+      }
+    },
+    {
+      "module": "src/simulation-clock.ts",
+      "exportName": "SimulationClockCapabilities",
+      "kind": "interface",
+      "fingerprint": "54316bb5063244f0ec17",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/simulation-clock.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/testing-and-utilities.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "simulation-clock-contracts",
+        "declaration": "SimulationClockCapabilities"
+      }
+    },
+    {
+      "module": "src/simulation-clock.ts",
+      "exportName": "SimulationClock",
+      "kind": "interface",
+      "fingerprint": "c98cba1cfc9a3c5b2c9a",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/simulation-clock.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/testing-and-utilities.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "simulation-clock-contracts",
+        "declaration": "SimulationClock"
+      }
+    },
+    {
+      "module": "src/simulation-clock.ts",
+      "exportName": "SimulationClockOptions",
+      "kind": "interface",
+      "fingerprint": "8b326b0ca935822cff46",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/simulation-clock.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/testing-and-utilities.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "simulation-clock-contracts",
+        "declaration": "SimulationClockOptions"
+      }
+    },
+    {
+      "module": "src/time-index.ts",
+      "exportName": "createTimeIndex",
+      "kind": "function",
+      "fingerprint": "7eb66a5a10b8edfdd3ac",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/time-index.ts"
+      ],
+      "document": "llms/shared/testing-and-utilities.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "time-index-contracts",
+        "declaration": "createTimeIndex"
+      }
+    },
+    {
+      "module": "src/time-index.ts",
+      "exportName": "TimeIndex",
+      "kind": "interface",
+      "fingerprint": "78fb40eda04c11df5eec",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/time-index.ts"
+      ],
+      "document": "llms/shared/testing-and-utilities.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "time-index-contracts",
+        "declaration": "TimeIndex"
+      }
+    },
+    {
+      "module": "src/time-index.ts",
+      "exportName": "TimeLocation",
+      "kind": "interface",
+      "fingerprint": "b4f0d6acc721b4f358c8",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/time-index.ts"
+      ],
+      "document": "llms/shared/testing-and-utilities.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "time-index-contracts",
+        "declaration": "TimeLocation"
       }
     }
   ],

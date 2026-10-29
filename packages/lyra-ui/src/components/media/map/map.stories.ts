@@ -13,6 +13,8 @@ import type {
   LyraMapMarkerActivationDetail,
   LyraMapOverlays,
   LyraMapPointIcon,
+  LyraMapScene,
+  LyraMapSceneActivateDetail,
   LyraMapViewChangeDetail,
 } from './map.js';
 import { LYRA_MAP_EMPTY_STYLE } from './map.js';
@@ -158,6 +160,33 @@ export const Default: Story = {
       .mapStyle=${OFFLINE_RASTER_STYLE}
     ></lr-map>
   `,
+};
+
+/** Geographic intent remains readable and actionable while scene rendering is unavailable. */
+export const SceneTextFallback: Story = {
+  parameters: { docs: { description: { story: 'Assign a real scene through the property binding. Expand its text panel and activate Central station with pointer, Enter or Space. Scene rendering currently reports unavailable with code engine; these objects are not drawn and activation does not pan the map.' } } },
+  render: () => {
+    const scene: LyraMapScene = { objects: [
+      { kind: 'marker', id: 'station', label: 'Central station', interactive: true,
+        position: { lngLat: [6.134, 49.6] } },
+      { kind: 'path', id: 'walk', label: 'Walk to the park', interactive: false, positions: [
+        { lngLat: [6.134, 49.6] }, { lngLat: [6.128, 49.605] },
+      ] },
+      { kind: 'arc', id: 'connection', label: 'Station to park connection', interactive: false, height: 80,
+        start: { lngLat: [6.134, 49.6] }, end: { lngLat: [6.128, 49.605] } },
+    ] };
+    let status: HTMLElement | undefined;
+    return html`
+      <p>Scene objects are available in the text panel. Geographic scene rendering is unavailable.</p>
+      <lr-map label="Station and park scene" .mapStyle=${LYRA_MAP_EMPTY_STYLE}
+        .center=${[6.131, 49.6025]} .zoom=${13} .scene=${scene}
+        @lr-map-scene-activate=${(event: CustomEvent<LyraMapSceneActivateDetail>) => {
+          if (status) status.textContent = `Activated ${event.detail.id} using ${event.detail.source}.`;
+        }}
+        style="block-size: var(--lr-size-24rem)"></lr-map>
+      <p role="status" ${ref(node => { status = node as HTMLElement | undefined; })}>No scene object activated.</p>
+    `;
+  },
 };
 
 /** The legend owns a frozen 100-row projection, keeps a required non-color pattern for every

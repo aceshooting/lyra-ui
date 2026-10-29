@@ -3422,7 +3422,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/artifact-panel/artifact-panel.class.ts",
-              "line": 235,
+              "line": 248,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -25645,7 +25645,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/graph/graph-engine-adapter.ts",
-              "line": 32,
+              "line": 33,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -25695,8 +25695,10 @@
           "src/components/retrieval/graph/graph-coverage.test.ts",
           "src/components/retrieval/graph/graph-curvature-admission.test.ts",
           "src/components/retrieval/graph/graph-curvature.property.test.ts",
+          "src/components/retrieval/graph/graph-custom-nodes-glow.test.ts",
           "src/components/retrieval/graph/graph-engine.test.ts",
           "src/components/retrieval/graph/graph-fallbacks.test.ts",
+          "src/components/retrieval/graph/graph-glow-visibility.test.ts",
           "src/components/retrieval/graph/graph-hull.test.ts",
           "src/components/retrieval/graph/graph-identity.test.ts",
           "src/components/retrieval/graph/graph-layout.test.ts",
@@ -25704,6 +25706,8 @@
           "src/components/retrieval/graph/graph-loader.test.ts",
           "src/components/retrieval/graph/graph-model-boundaries.test.ts",
           "src/components/retrieval/graph/graph-native.test.ts",
+          "src/components/retrieval/graph/graph-node-renderer.property.test.ts",
+          "src/components/retrieval/graph/graph-node-renderer.test.ts",
           "src/components/retrieval/graph/graph-rebinding.test.ts",
           "src/components/retrieval/graph/graph-refresh.test.ts",
           "src/components/retrieval/graph/graph-remediation.test.ts",
@@ -29985,7 +29989,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts",
-              "line": 694,
+              "line": 702,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -30024,6 +30028,7 @@
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-admission.test.ts",
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-aliases.test.ts",
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-coverage.test.ts",
+          "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-custom-nodes-glow.test.ts",
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-lazy.test.ts",
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-rebinding.test.ts",
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-remediation.test.ts",
@@ -31438,7 +31443,6 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
-          "reducedMotion",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -31486,6 +31490,30 @@
               "file": "src/components/media/map/map-legend-icon.test.ts",
               "test": "stays axe-clean with a populated glyph legend",
               "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/media/map/map-scene-component.test.ts",
+              "test": "keeps populated, empty and invalid text states accessible at narrow RTL allocation",
+              "target": "element",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/media/map/map-scene-component.test.ts",
+              "test": "keeps populated, empty and invalid text states accessible at narrow RTL allocation",
+              "target": "element",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/media/map/map-scene-component.test.ts",
+              "test": "keeps populated, empty and invalid text states accessible at narrow RTL allocation",
+              "target": "element",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/media/map/map-scene-controls-native.test.ts",
+              "test": "uses keyboard activation with property-first events and preserves the ${engine} map",
+              "target": "element",
               "state": "populated"
             },
             {
@@ -31581,9 +31609,14 @@
         },
         "reducedMotion": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/media/map/map-scene-controls-native.test.ts",
+              "test": "renders themed ${engine} toggles with mirrored corners and reduced motion",
+              "kind": "reduced-motion test signal"
+            }
+          ]
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -31695,7 +31728,6 @@
       },
       "knownLimitations": [
         "Recorded budgets cover the named scenarios; current pass/fail evidence comes from the Chromium scale gate.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
@@ -31721,6 +31753,8 @@
           "src/components/media/map/map-attribution-state.test.ts",
           "src/components/media/map/map-basemap-order.property.test.ts",
           "src/components/media/map/map-basemap-order.test.ts",
+          "src/components/media/map/map-camera-session-component.test.ts",
+          "src/components/media/map/map-camera-session-native.test.ts",
           "src/components/media/map/map-camera.test.ts",
           "src/components/media/map/map-composition-pattern.property.test.ts",
           "src/components/media/map/map-composition-pattern.test.ts",
@@ -31806,11 +31840,30 @@
           "src/components/media/map/map-resource-lifecycle.test.ts",
           "src/components/media/map/map-resource-transition-boundaries.test.ts",
           "src/components/media/map/map-scale.test.ts",
+          "src/components/media/map/map-scene-admission.property.test.ts",
+          "src/components/media/map/map-scene-admission.test.ts",
+          "src/components/media/map/map-scene-component-lifecycle.test.ts",
+          "src/components/media/map/map-scene-component.test.ts",
           "src/components/media/map/map-scene-configuration-component.test.ts",
           "src/components/media/map/map-scene-configuration-controller.test.ts",
           "src/components/media/map/map-scene-configuration-native.test.ts",
           "src/components/media/map/map-scene-configuration.property.test.ts",
           "src/components/media/map/map-scene-configuration.test.ts",
+          "src/components/media/map/map-scene-controls-component.test.ts",
+          "src/components/media/map/map-scene-controls-lifecycle.test.ts",
+          "src/components/media/map/map-scene-controls-native.test.ts",
+          "src/components/media/map/map-scene-input-limits.property.test.ts",
+          "src/components/media/map/map-scene-input-limits.test.ts",
+          "src/components/media/map/map-scene-input-reentry.test.ts",
+          "src/components/media/map/map-scene-interaction-state-reentry.test.ts",
+          "src/components/media/map/map-scene-interaction-state.test.ts",
+          "src/components/media/map/map-scene-owner.property.test.ts",
+          "src/components/media/map/map-scene-owner.test.ts",
+          "src/components/media/map/map-scene-position-registry-capture.test.ts",
+          "src/components/media/map/map-scene-position-registry.property.test.ts",
+          "src/components/media/map/map-scene-position-registry.test.ts",
+          "src/components/media/map/map-scene-source-snapshot.property.test.ts",
+          "src/components/media/map/map-scene-source-snapshot.test.ts",
           "src/components/media/map/map-source-updates.test.ts",
           "src/components/media/map/map-style-failure-supersession.test.ts",
           "src/components/media/map/map-style-input.property.test.ts",
@@ -31839,7 +31892,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "reducedMotion",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -31891,9 +31943,14 @@
         },
         "reducedMotion": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/media/map/map-scene-controls-native.test.ts",
+              "test": "renders themed ${engine} toggles with mirrored corners and reduced motion",
+              "kind": "reduced-motion test signal"
+            }
+          ]
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -31988,7 +32045,6 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
@@ -32014,6 +32070,8 @@
           "src/components/media/map/map-attribution-state.test.ts",
           "src/components/media/map/map-basemap-order.property.test.ts",
           "src/components/media/map/map-basemap-order.test.ts",
+          "src/components/media/map/map-camera-session-component.test.ts",
+          "src/components/media/map/map-camera-session-native.test.ts",
           "src/components/media/map/map-camera.test.ts",
           "src/components/media/map/map-composition-pattern.property.test.ts",
           "src/components/media/map/map-composition-pattern.test.ts",
@@ -32099,11 +32157,30 @@
           "src/components/media/map/map-resource-lifecycle.test.ts",
           "src/components/media/map/map-resource-transition-boundaries.test.ts",
           "src/components/media/map/map-scale.test.ts",
+          "src/components/media/map/map-scene-admission.property.test.ts",
+          "src/components/media/map/map-scene-admission.test.ts",
+          "src/components/media/map/map-scene-component-lifecycle.test.ts",
+          "src/components/media/map/map-scene-component.test.ts",
           "src/components/media/map/map-scene-configuration-component.test.ts",
           "src/components/media/map/map-scene-configuration-controller.test.ts",
           "src/components/media/map/map-scene-configuration-native.test.ts",
           "src/components/media/map/map-scene-configuration.property.test.ts",
           "src/components/media/map/map-scene-configuration.test.ts",
+          "src/components/media/map/map-scene-controls-component.test.ts",
+          "src/components/media/map/map-scene-controls-lifecycle.test.ts",
+          "src/components/media/map/map-scene-controls-native.test.ts",
+          "src/components/media/map/map-scene-input-limits.property.test.ts",
+          "src/components/media/map/map-scene-input-limits.test.ts",
+          "src/components/media/map/map-scene-input-reentry.test.ts",
+          "src/components/media/map/map-scene-interaction-state-reentry.test.ts",
+          "src/components/media/map/map-scene-interaction-state.test.ts",
+          "src/components/media/map/map-scene-owner.property.test.ts",
+          "src/components/media/map/map-scene-owner.test.ts",
+          "src/components/media/map/map-scene-position-registry-capture.test.ts",
+          "src/components/media/map/map-scene-position-registry.property.test.ts",
+          "src/components/media/map/map-scene-position-registry.test.ts",
+          "src/components/media/map/map-scene-source-snapshot.property.test.ts",
+          "src/components/media/map/map-scene-source-snapshot.test.ts",
           "src/components/media/map/map-source-updates.test.ts",
           "src/components/media/map/map-style-failure-supersession.test.ts",
           "src/components/media/map/map-style-input.property.test.ts",

@@ -7,10 +7,12 @@ import {
 } from '../../../internal/data-descriptors.js';
 import type { CanonicalScenePosition } from '../../../internal/map-scene-contract.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
-import { readMapSceneSource } from './map-scene-source-snapshot.js';
+import { createMapSceneAdmissionError, mapSceneAdmissionErrorCode } from './map-scene-errors.js';
+import { captureMapSceneSourceMetadata, readMapSceneSource } from './map-scene-source-snapshot.js';
 import type {
   SceneRequest,
   SceneSourceOwner,
+  SceneSourceMetadata,
   SceneSourceReceipt,
   SceneSourceStage,
   SceneSourceValue,
@@ -78,7 +80,11 @@ const latitudeLimit = 85.0511287798066;
 const radians = Math.PI / 180;
 
 function invalid(): never {
-  throw new TypeError('Invalid map scene descriptor');
+  throw createMapSceneAdmissionError('invalid');
+}
+
+function limit(): never {
+  throw createMapSceneAdmissionError('limit');
 }
 
 function own(record: object, key: string): unknown {
@@ -89,18 +95,26 @@ function own(record: object, key: string): unknown {
 
 function record(value: unknown, fields: readonly string[]): Record<string, unknown> {
   if (!isPlainDataRecord(value)) invalid();
+  const snapshot: Record<string, unknown> = {};
   for (const key of Reflect.ownKeys(value)) {
     if (typeof key !== 'string' || !fields.includes(key)) invalid();
-    own(value, key);
+    snapshot[key] = own(value, key);
   }
-  return value;
+  return snapshot;
+}
+
+function arrayLength(value: unknown, minimum: number, maximum: number, capped = false): number {
+  if (!Array.isArray(value)) invalid();
+  const length = readOwnArrayLength(value);
+  if (length === undefined || length < minimum) invalid();
+  if (length > maximum) return capped ? limit() : invalid();
+  return length;
 }
 
 /** Copy dense own data without consulting caller iterators or inherited array entries. */
-function array(value: unknown, minimum: number, maximum: number): readonly unknown[] {
+function array(value: unknown, minimum: number, maximum: number, capped = false): readonly unknown[] {
+  const length = arrayLength(value, minimum, maximum, capped);
   if (!Array.isArray(value)) invalid();
-  const length = readOwnArrayLength(value);
-  if (length === undefined || length < minimum || length > maximum) invalid();
   if (Reflect.ownKeys(value).length !== length + 1) invalid();
   const result: unknown[] = [];
   for (let index = 0; index < length; index++) {
@@ -173,7 +187,7 @@ function segment(start: CanonicalScenePosition, end: CanonicalScenePosition): bo
   return start.lngLat[0] !== end.lngLat[0] || start.lngLat[1] !== end.lngLat[1];
 }
 
-function object(value: unknown): UnstagedSceneObject {
+function objectDescriptor(value: unknown): Record<string, unknown> {
   if (!isPlainDataRecord(value)) invalid();
   const kind = own(value, 'kind');
   let fields: readonly string[];
@@ -184,7 +198,54 @@ function object(value: unknown): UnstagedSceneObject {
     case 'model': fields = ['position', 'source', 'metersPerUnit', 'orientation']; break;
     default: return invalid();
   }
-  const data = record(value, [...baseFields, ...fields]);
+  const snapshot = record(value, [...baseFields, ...fields]);
+  if (own(snapshot, 'kind') !== kind) invalid();
+  return snapshot;
+}
+
+/** Bound the complete request before inspecting or owning any nested position. */
+function preflight(values: readonly unknown[], sourceMetadata: Map<SceneSourceValue, SceneSourceMetadata>): readonly Record<string, unknown>[] {
+  const descriptors = values.map(objectDescriptor);
+  const pathLengths = new Map<Record<string, unknown>, number>();
+  let positions = 0, text = 0, models = 0;
+  for (const data of descriptors) {
+    const kind = own(data, 'kind');
+    if (kind === 'path') {
+      const length = arrayLength(own(data, 'positions'), 2, 4096, true);
+      pathLengths.set(data, length);
+      positions += length;
+    } else positions += kind === 'arc' ? 2 : 1;
+    if (positions > 65_536) limit();
+    for (const [key, maximum] of [['id', 1024], ['label', 16_384], ['color', 1024]] as const) {
+      const value = own(data, key);
+      if (value === undefined && key === 'color') continue;
+      if (typeof value !== 'string') invalid();
+      if (value.length > maximum) limit();
+      text += value.length;
+    }
+    if (kind === 'model') {
+      if (++models > 32) limit();
+      const source = captureMapSceneSourceMetadata(own(data, 'source'));
+      const prior = sourceMetadata.get(source.record);
+      if (prior && (prior.kind !== source.kind || prior.format !== source.format ||
+          (prior.kind === 'url' && source.kind === 'url' ? prior.src !== source.src :
+            prior.kind === 'bytes' && source.kind === 'bytes' && prior.bytes !== source.bytes))) invalid();
+      sourceMetadata.set(source.record, source);
+      if (source.kind === 'url') text += source.src.length;
+    }
+    if (text > 4_194_304) limit();
+  }
+  // Freeze the counted array shape before nested descriptor reflection can reenter caller code.
+  for (const [data, length] of pathLengths) {
+    const positions = array(own(data, 'positions'), 2, 4096, true);
+    if (positions.length !== length) invalid();
+    data['positions'] = Object.freeze(positions);
+  }
+  return descriptors;
+}
+
+function object(data: Record<string, unknown>): UnstagedSceneObject {
+  const kind = own(data, 'kind');
   const id = own(data, 'id'), label = own(data, 'label');
   if (typeof id !== 'string' || id.length === 0 || id.length > 1024 || id.trim().length === 0 ||
       typeof label !== 'string' || label.trim().length === 0) invalid();
@@ -221,6 +282,7 @@ function object(value: unknown): UnstagedSceneObject {
     case 'model': return Object.freeze({ ...base, kind, position: position(own(data, 'position')),
       source: readMapSceneSource(own(data, 'source')), metersPerUnit: positive(own(data, 'metersPerUnit'), 1),
       orientation: orientation(own(data, 'orientation')) });
+    default: return invalid();
   }
 }
 
@@ -244,22 +306,21 @@ export function stageMapSceneAdmission(value: unknown, options: {
   try {
     const request = snapshotMapSceneRequest(options.request);
     const scene = record(value, ['objects']);
-    const objects = array(own(scene, 'objects'), 0, 2000).map(object);
+    const sourceMetadata = new Map<SceneSourceValue, SceneSourceMetadata>();
+    const objects = preflight(array(own(scene, 'objects'), 0, 2000, true), sourceMetadata).map(object);
     const ids = new Set<string>();
     const sources: SceneSourceValue[] = [];
     const sourceIndices = new Map<SceneSourceValue, number>();
-    let models = 0;
     for (const admitted of objects) {
       if (ids.has(admitted.id)) invalid();
       ids.add(admitted.id);
       if (admitted.kind !== 'model') continue;
-      if (++models > 32) invalid();
       if (!sourceIndices.has(admitted.source)) {
         sourceIndices.set(admitted.source, sources.length);
         sources.push(admitted.source);
       }
     }
-    sourceStage = options.sources.stage(sources, request);
+    sourceStage = options.sources.stage(sources, request, sources.map(source => sourceMetadata.get(source)!));
     const stage = sourceStage;
     const admitted: readonly AdmittedSceneObject[] = Object.freeze(objects.map(entry => {
       if (entry.kind !== 'model') return entry;
@@ -272,8 +333,9 @@ export function stageMapSceneAdmission(value: unknown, options: {
       dispose() { state.consumed = true; stage.dispose(); } });
     candidates.set(candidate, state);
     return candidate;
-  } catch {
+  } catch (error) {
     sourceStage?.dispose();
+    if (mapSceneAdmissionErrorCode(error) !== undefined) throw error;
     return invalid();
   }
 }

@@ -18,7 +18,10 @@
 
 `engine: Engine3dPreference = 'builtin'` forwards the renderer preference to the composed graph.
 `engine="webgl"` requests its companion for the 3D view. `lr-engine-fallback` bubbles unchanged
-with `{ from, to, reason }`.
+with `{ from, to, reason }`. `nodeRenderer: LyraGraphNodeRenderer | null | undefined = undefined`
+and `glow: boolean = false` forward the same custom-body and static-halo preferences to the graph;
+`nodeRenderer` is property-only and `glow` reflects its boolean attribute. The graph
+`lr-node-render-error` event bubbles through with its sanitized reason and optional nodeId.
 
 Orchestration-level knowledge-graph surface: the `lr-graph` canvas plus entity search, type filters,
 neighborhood expansion, pinned nodes, path finding between pins, node selection, and a details

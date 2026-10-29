@@ -5,6 +5,7 @@ import { snapshotMapStyle } from './map-style-input.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
+import { repeat } from 'lit/directives/repeat.js';
 import type { Feature, FeatureCollection } from 'geojson';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
@@ -30,6 +31,14 @@ import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { admitMapViewpoint, type MapViewpoint } from '../../../internal/map-camera-session-data.js';
 import { registerMapCameraSession, type CameraOwnerReason, type MapCameraPreparedCommand,
   type MapCameraSessionCallbacks, type MapCameraSessionLease } from '../../../internal/map-camera-session.js';
+import { createMapSceneSessionFacade, registerMapSceneSession } from '../../../internal/map-scene-session.js';
+import { createMapSceneOwner, type SceneOwnerView } from './map-scene-owner.js';
+import type { AdmittedSceneObject } from './map-scene-admission.js';
+import type { LyraMapScene, LyraMapSceneActivateDetail, LyraMapSceneStateDetail } from './map-scene-types.js';
+export type { LyraMapPosition, LyraMapQuaternion, LyraMapModelFormat, LyraMapModelSource,
+  LyraMapSceneObjectBase, LyraMapSceneMarker, LyraMapScenePath, LyraMapSceneArc, LyraMapSceneModel,
+  LyraMapSceneObject, LyraMapScene, LyraMapSceneErrorCode, LyraMapSceneStateDetail,
+  LyraMapSceneActivateDetail } from './map-scene-types.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { notifyMapCanvasReady } from '../../../internal/map-canvas-ready.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
@@ -194,8 +203,8 @@ import {
 import '../../overlays/skeleton/skeleton.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_mapActivate, LYRA_DEFAULT_mapCancelDrawing, LYRA_DEFAULT_mapCancelPick, LYRA_DEFAULT_mapCompleteDrawing, LYRA_DEFAULT_mapControlUnavailable, LYRA_DEFAULT_mapDrawAtCenter, LYRA_DEFAULT_mapDrawingArea, LYRA_DEFAULT_mapDrawingControls, LYRA_DEFAULT_mapDrawingDuplicateVertex, LYRA_DEFAULT_mapDrawingEditInstructions, LYRA_DEFAULT_mapDrawingInvalidCoordinate, LYRA_DEFAULT_mapDrawingInvalidGeometry, LYRA_DEFAULT_mapDrawingLength, LYRA_DEFAULT_mapDrawingTooFewVertices, LYRA_DEFAULT_mapDrawingUnavailable, LYRA_DEFAULT_mapDrawingVertex, LYRA_DEFAULT_mapDrawingVertexLimit, LYRA_DEFAULT_mapDrawingVertices, LYRA_DEFAULT_mapExportUnavailable, LYRA_DEFAULT_mapFeatureStateUnavailable, LYRA_DEFAULT_mapFeedback, LYRA_DEFAULT_mapGeolocateError, LYRA_DEFAULT_mapGeolocateFindLocation, LYRA_DEFAULT_mapGeolocateOutOfBounds, LYRA_DEFAULT_mapGeolocatePermissionDenied, LYRA_DEFAULT_mapGeolocatePositionUnavailable, LYRA_DEFAULT_mapGeolocateTimeout, LYRA_DEFAULT_mapGeolocateUnavailable, LYRA_DEFAULT_mapGlobe, LYRA_DEFAULT_mapHashConflict, LYRA_DEFAULT_mapHashInvalid, LYRA_DEFAULT_mapInitializationFailed, LYRA_DEFAULT_mapLegend, LYRA_DEFAULT_mapMarker, LYRA_DEFAULT_mapMissingLibrary, LYRA_DEFAULT_mapPickAtCenter, LYRA_DEFAULT_mapResetNorth, LYRA_DEFAULT_mapScaleFeet, LYRA_DEFAULT_mapScaleKilometers, LYRA_DEFAULT_mapScaleMeters, LYRA_DEFAULT_mapScaleMiles, LYRA_DEFAULT_mapScaleNauticalMiles, LYRA_DEFAULT_mapSquareKilometers, LYRA_DEFAULT_mapSquareMeters, LYRA_DEFAULT_mapStyleRequired, LYRA_DEFAULT_mapTerrain, LYRA_DEFAULT_mapToggleAttribution, LYRA_DEFAULT_mapUndoDrawing, LYRA_DEFAULT_mapWebglUnavailable } from '../../../internal/default-strings/media.generated.js';
-import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_duration, LYRA_DEFAULT_items, LYRA_DEFAULT_legendTypeHidden, LYRA_DEFAULT_legendTypeShown, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_remove, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_mapActivate, LYRA_DEFAULT_mapCancelDrawing, LYRA_DEFAULT_mapCancelPick, LYRA_DEFAULT_mapCompleteDrawing, LYRA_DEFAULT_mapControlUnavailable, LYRA_DEFAULT_mapDrawAtCenter, LYRA_DEFAULT_mapDrawingArea, LYRA_DEFAULT_mapDrawingControls, LYRA_DEFAULT_mapDrawingDuplicateVertex, LYRA_DEFAULT_mapDrawingEditInstructions, LYRA_DEFAULT_mapDrawingInvalidCoordinate, LYRA_DEFAULT_mapDrawingInvalidGeometry, LYRA_DEFAULT_mapDrawingLength, LYRA_DEFAULT_mapDrawingTooFewVertices, LYRA_DEFAULT_mapDrawingUnavailable, LYRA_DEFAULT_mapDrawingVertex, LYRA_DEFAULT_mapDrawingVertexLimit, LYRA_DEFAULT_mapDrawingVertices, LYRA_DEFAULT_mapExportUnavailable, LYRA_DEFAULT_mapFeatureStateUnavailable, LYRA_DEFAULT_mapFeedback, LYRA_DEFAULT_mapGeolocateError, LYRA_DEFAULT_mapGeolocateFindLocation, LYRA_DEFAULT_mapGeolocateOutOfBounds, LYRA_DEFAULT_mapGeolocatePermissionDenied, LYRA_DEFAULT_mapGeolocatePositionUnavailable, LYRA_DEFAULT_mapGeolocateTimeout, LYRA_DEFAULT_mapGeolocateUnavailable, LYRA_DEFAULT_mapGlobe, LYRA_DEFAULT_mapHashConflict, LYRA_DEFAULT_mapHashInvalid, LYRA_DEFAULT_mapInitializationFailed, LYRA_DEFAULT_mapLegend, LYRA_DEFAULT_mapMarker, LYRA_DEFAULT_mapMissingLibrary, LYRA_DEFAULT_mapPickAtCenter, LYRA_DEFAULT_mapResetNorth, LYRA_DEFAULT_mapScaleFeet, LYRA_DEFAULT_mapScaleKilometers, LYRA_DEFAULT_mapScaleMeters, LYRA_DEFAULT_mapScaleMiles, LYRA_DEFAULT_mapScaleNauticalMiles, LYRA_DEFAULT_mapScene, LYRA_DEFAULT_mapSceneArc, LYRA_DEFAULT_mapSceneEmpty, LYRA_DEFAULT_mapSceneHide, LYRA_DEFAULT_mapSceneInvalid, LYRA_DEFAULT_mapSceneLimit, LYRA_DEFAULT_mapSceneMarker, LYRA_DEFAULT_mapSceneModel, LYRA_DEFAULT_mapSceneNext, LYRA_DEFAULT_mapScenePage, LYRA_DEFAULT_mapScenePath, LYRA_DEFAULT_mapScenePrevious, LYRA_DEFAULT_mapSceneShow, LYRA_DEFAULT_mapSceneUnavailable, LYRA_DEFAULT_mapSquareKilometers, LYRA_DEFAULT_mapSquareMeters, LYRA_DEFAULT_mapStyleRequired, LYRA_DEFAULT_mapTerrain, LYRA_DEFAULT_mapToggleAttribution, LYRA_DEFAULT_mapUndoDrawing, LYRA_DEFAULT_mapWebglUnavailable } from '../../../internal/default-strings/media.generated.js';
+import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_close, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_duration, LYRA_DEFAULT_items, LYRA_DEFAULT_legendTypeHidden, LYRA_DEFAULT_legendTypeShown, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_model, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_remove, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** A caller-authored GeoJSON source diff; feature IDs must be unique and stable. */
@@ -2660,6 +2669,8 @@ function featureStatePeer(map: MapLibreMapCapability): map is MapLibreMapCapabil
 }
 
 export interface LyraMapEventMap {
+  'lr-map-scene-state': CustomEvent<LyraMapSceneStateDetail>;
+  'lr-map-scene-activate': CustomEvent<LyraMapSceneActivateDetail>;
   'lr-map-projection-change': CustomEvent<LyraMapProjectionChangeDetail>;
   'lr-map-terrain-change': CustomEvent<LyraMapTerrainChangeDetail>;
   'lr-map-anchor-close': CustomEvent<LyraMapAnchorCloseDetail>;
@@ -2998,6 +3009,14 @@ export interface LyraMapEventMap {
  * Navigation, scale, attribution and the legend follow the surrounding Glass or Solid treatment.
  * The legend material remains stationary while its public surface scrolls. Opaque accessibility
  * fallbacks preserve native peer controls and map data paint.
+ * @event lr-map-scene-state - `detail: { revision, state, code? }`. Accepted scene status; rejected updates retain the preceding accepted revision.
+ * @event lr-map-scene-activate - `detail: { id, kind, source, position? }`. A current interactive scene object was activated without moving the camera.
+ * @csspart scene-panel - Accessible accepted scene object panel.
+ * @csspart scene-toggle - Expands or collapses the scene object list.
+ * @csspart scene-list - The current page of accepted scene objects.
+ * @csspart scene-item - An interactive button or noninteractive object row.
+ * @csspart scene-pagination - Scene page navigation and page summary.
+ * @csspart scene-status - Localized accepted scene or rejected update status.
  * @status stable
  * @since 4.0.0
  */
@@ -3060,6 +3079,20 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     mapScaleMeters: LYRA_DEFAULT_mapScaleMeters,
     mapScaleMiles: LYRA_DEFAULT_mapScaleMiles,
     mapScaleNauticalMiles: LYRA_DEFAULT_mapScaleNauticalMiles,
+    mapScene: LYRA_DEFAULT_mapScene,
+    mapSceneArc: LYRA_DEFAULT_mapSceneArc,
+    mapSceneEmpty: LYRA_DEFAULT_mapSceneEmpty,
+    mapSceneHide: LYRA_DEFAULT_mapSceneHide,
+    mapSceneInvalid: LYRA_DEFAULT_mapSceneInvalid,
+    mapSceneLimit: LYRA_DEFAULT_mapSceneLimit,
+    mapSceneMarker: LYRA_DEFAULT_mapSceneMarker,
+    mapSceneModel: LYRA_DEFAULT_mapSceneModel,
+    mapSceneNext: LYRA_DEFAULT_mapSceneNext,
+    mapScenePage: LYRA_DEFAULT_mapScenePage,
+    mapScenePath: LYRA_DEFAULT_mapScenePath,
+    mapScenePrevious: LYRA_DEFAULT_mapScenePrevious,
+    mapSceneShow: LYRA_DEFAULT_mapSceneShow,
+    mapSceneUnavailable: LYRA_DEFAULT_mapSceneUnavailable,
     mapSquareKilometers: LYRA_DEFAULT_mapSquareKilometers,
     mapSquareMeters: LYRA_DEFAULT_mapSquareMeters,
     mapStyleRequired: LYRA_DEFAULT_mapStyleRequired,
@@ -3067,6 +3100,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     mapToggleAttribution: LYRA_DEFAULT_mapToggleAttribution,
     mapUndoDrawing: LYRA_DEFAULT_mapUndoDrawing,
     mapWebglUnavailable: LYRA_DEFAULT_mapWebglUnavailable,
+    model: LYRA_DEFAULT_model,
     navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
     open: LYRA_DEFAULT_open,
@@ -3081,6 +3115,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-map-scene-state', 'lr-map-scene-activate',
     'lr-map-click',
     'lr-map-feature-enter',
     'lr-map-feature-leave',
@@ -3099,6 +3134,124 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     'lr-map-idle',
     'lr-map-view-change',
   ]);
+  private geographicSceneValue?: LyraMapScene;
+  private geographicSceneOwner?: ReturnType<typeof createMapSceneOwner>;
+  private geographicSceneFacade?: ReturnType<typeof createMapSceneSessionFacade>;
+  private geographicSceneDocument?: Document;
+  private unregisterGeographicScene?: () => void;
+  private geographicScenePublished?: SceneOwnerView['status'];
+  private sceneRepairFocus = false;
+  @state() private scenePanelOpen = false;
+  @state() private scenePage = 0;
+
+  /** Geographic objects with an accessible text alternative. Connected assignments synchronously
+   * admit an owned snapshot; invalid input preserves accepted objects. Undefined clears ownership.
+   * Nonempty accepted input reports rendering unavailable until a geographic renderer is installed.
+   * The authored property remains caller-owned; mutate by assigning a new scene object. */
+  @property({ attribute: false })
+  get scene(): LyraMapScene | undefined { return this.geographicSceneValue; }
+  set scene(value: LyraMapScene | undefined) {
+    const previous = this.geographicSceneValue;
+    if (Object.is(previous, value)) return;
+    this.geographicSceneValue = value;
+    this.requestUpdate('scene', previous);
+    this.geographicSceneOwner?.assign(value);
+  }
+
+  private connectGeographicScene(): void {
+    this.closeGeographicScene();
+    const connection = Object.freeze({}), document = this.ownerDocument, generation = this._connectGeneration;
+    const facade = createMapSceneSessionFacade({ connection });
+    const owner = createMapSceneOwner({ element: this, connection,
+      isCurrentConnection: () => this.isConnected && this.ownerDocument === document &&
+        this._connectGeneration === generation && this.geographicSceneOwner === owner,
+      changed: () => this.geographicSceneChanged(owner),
+    });
+    this.geographicSceneDocument = document; this.geographicSceneOwner = owner; this.geographicSceneFacade = facade;
+    this.unregisterGeographicScene = registerMapSceneSession(this, facade.attachment);
+    if (!facade.bindState(owner.state)) { this.closeGeographicScene(); return; }
+    owner.assign(this.geographicSceneValue);
+  }
+
+  private closeGeographicScene(): void {
+    const owner = this.geographicSceneOwner, facade = this.geographicSceneFacade;
+    const unregister = this.unregisterGeographicScene;
+    this.geographicSceneOwner = undefined; this.geographicSceneFacade = undefined;
+    this.geographicSceneDocument = undefined; this.unregisterGeographicScene = undefined;
+    this.geographicScenePublished = undefined; this.sceneRepairFocus = false;
+    this.scenePanelOpen = false; this.scenePage = 0;
+    facade?.close(); unregister?.(); owner?.close();
+  }
+
+  private geographicSceneChanged(owner: ReturnType<typeof createMapSceneOwner>): void {
+    if (!this.isConnected || this.geographicSceneOwner !== owner) return;
+    const view = owner.captureView();
+    const focusedId = this.shadowRoot?.activeElement?.getAttribute('data-scene-id');
+    this.scenePage = Math.min(this.scenePage, Math.max(0, Math.ceil(view.accepted.objects.length / 100) - 1));
+    if (focusedId && !view.accepted.objects.slice(this.scenePage * 100, (this.scenePage + 1) * 100)
+      .some(object => object.id === focusedId && object.interactive)) this.sceneRepairFocus = true;
+    // A keyed task can survive reconnect; resolve both the current owner and its latest view.
+    this.scheduleAfterUpdate(() => {
+      const currentOwner = this.geographicSceneOwner;
+      if (!this.isConnected || !currentOwner) return;
+      const latest = currentOwner.captureView(), status = latest.status;
+      if (!status || this.geographicScenePublished === status) return;
+      this.geographicScenePublished = status;
+      this.emit('lr-map-scene-state', status);
+      if (!this.isConnected || this.geographicSceneOwner !== currentOwner || currentOwner.captureView() !== latest) return;
+      if (latest.active) this.announcements.announceAssertive(this.sceneStatusMessage(status));
+    }, 'map-geographic-scene-status');
+  }
+
+  private sceneStatusMessage(status: NonNullable<SceneOwnerView['status']>): string {
+    if (status.state === 'empty') return this.localize('mapSceneEmpty');
+    if (status.code === 'limit') return this.localize('mapSceneLimit');
+    if (status.code === 'invalid') return this.localize('mapSceneInvalid');
+    return this.localize('mapSceneUnavailable');
+  }
+
+  private sceneInteractionAllowed(owner: ReturnType<typeof createMapSceneOwner>): boolean {
+    return this.isConnected && this.geographicSceneOwner === owner && !this.mapInteractionBlocked();
+  }
+
+  private activateSceneObject(owner: ReturnType<typeof createMapSceneOwner>, revision: number,
+    object: AdmittedSceneObject, event: MouseEvent): void {
+    if (!this.sceneInteractionAllowed(owner) || !object.interactive) return;
+    const accepted = owner.captureAccepted();
+    if (accepted.acceptedSceneRevision !== revision || !accepted.objects.includes(object)) return;
+    const detail: LyraMapSceneActivateDetail = Object.freeze({ id: object.id, kind: object.kind,
+      source: event.detail === 0 ? 'keyboard' : 'pointer',
+      ...((object.kind === 'marker' || object.kind === 'model') ? { position: object.position } : {}),
+    });
+    this.emit('lr-map-scene-activate', detail);
+  }
+
+  private renderGeographicScene(): TemplateResult | typeof nothing {
+    const owner = this.geographicSceneOwner, view = owner?.captureView();
+    if (!owner || !view?.active) return nothing;
+    const { objects, acceptedSceneRevision } = view.accepted;
+    const blocked = this.interactionBlocked;
+    const pages = Math.max(1, Math.ceil(objects.length / 100)), page = Math.min(this.scenePage, pages - 1);
+    const kinds = { marker: 'mapSceneMarker', path: 'mapScenePath', arc: 'mapSceneArc', model: 'mapSceneModel' } as const;
+    return html`<section part="scene-panel" aria-label=${this.localize('mapScene')}>
+      <button type="button" part="scene-toggle" aria-expanded=${String(this.scenePanelOpen)} aria-controls="scene-objects-list"
+        ?disabled=${blocked}
+        @click=${() => { if (this.sceneInteractionAllowed(owner)) this.scenePanelOpen = !this.scenePanelOpen; }}>${this.localize(this.scenePanelOpen ? 'mapSceneHide' : 'mapSceneShow')}</button>
+      ${view.status ? html`<div part="scene-status">${this.sceneStatusMessage(view.status)}</div>` : nothing}
+      <div id="scene-objects-list" ?hidden=${!this.scenePanelOpen}>
+        <ul part="scene-list">${repeat(objects.slice(page * 100, (page + 1) * 100), object => object.id, object => html`<li>
+          ${object.interactive ? html`<button type="button" part="scene-item" data-scene-id=${object.id} ?disabled=${blocked}
+            @click=${(event: MouseEvent) => this.activateSceneObject(owner, acceptedSceneRevision, object, event)}><span>${object.label}</span><span class="scene-kind">${this.localize(kinds[object.kind])}</span></button>` :
+            html`<div part="scene-item"><span>${object.label}</span><span class="scene-kind">${this.localize(kinds[object.kind])}</span></div>`}
+        </li>`)}</ul>
+        ${pages > 1 ? html`<div part="scene-pagination">
+          <button type="button" ?disabled=${blocked || page === 0} @click=${() => { if (this.sceneInteractionAllowed(owner)) this.scenePage = Math.max(0, page - 1); }}>${this.localize('mapScenePrevious')}</button>
+          <span>${this.localize('mapScenePage', undefined, { page: this.formatCount(page + 1), pages: this.formatCount(pages) })}</span>
+          <button type="button" ?disabled=${blocked || page + 1 === pages} @click=${() => { if (this.sceneInteractionAllowed(owner)) this.scenePage = Math.min(pages - 1, page + 1); }}>${this.localize('mapSceneNext')}</button>
+        </div>` : nothing}
+      </div>
+    </section>`;
+  }
   /** MapLibre features and admitted marker snapshots carry opaque peer values that the generic
    *  event-detail snapshotter must not walk. The marker is already a frozen canonical record; its
    *  `unsafeHtml` value therefore reaches both Popup and activation consumers by identity. */
@@ -5575,8 +5728,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     const generation = ++this._connectGeneration;
+    this.observeMapInteractionState();
     this.unregisterCameraSession?.();
     this.unregisterCameraSession = registerMapCameraSession(this, { acquire: callbacks => this.acquireCameraSession(callbacks) });
+    this.connectGeographicScene();
     this.readiness.reset();
     this.controlsReadiness.reset();
     this.hashRuntimeFailed = false;
@@ -5659,10 +5814,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.stopObservingMapInteractionState();
     this.interruptCameraSession('disconnect', false);
     const session = this.cameraSession;
     if (session) { session.released = true; session.active = undefined; session.stopMotion(); session.stopContext(); this.cameraSession = undefined; }
     this.unregisterCameraSession?.(); this.unregisterCameraSession = undefined;
+    this.closeGeographicScene();
     this.hashOwner?.dispose();
     this.disposeMap();
     this.constructionScheduler?.disconnect();
@@ -5736,7 +5893,6 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (cancelReadiness) { this.readiness.cancel(); this.controlsReadiness.cancel(); }
     this.cancelFeaturePreparation();
     this.pointerCleanup?.(); this.pointerCleanup = undefined;
-    this.interactionObserver?.disconnect(); this.interactionObserver = undefined;
     this.mapCursor.clear(); this.hovered = undefined; this.endPointerReports(false);
     this.featureStates?.dispose(); this.featureStates = undefined; this.stateRouter.configure([]);
     if (this.featureStateLoad === 'failed') this.featureStateLoad = undefined;
@@ -5789,6 +5945,14 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.observeMapInteractionState();
+    if (this.geographicSceneDocument && this.geographicSceneDocument !== this.ownerDocument) {
+      this.interruptCameraSession('disconnect', false);
+      const session = this.cameraSession;
+      if (session) { session.released = true; session.active = undefined; session.stopMotion(); session.stopContext(); this.cameraSession = undefined; }
+      this.closeGeographicScene();
+      if (this.isConnected) this.connectGeographicScene();
+    }
     this.hostDescription.adopted();
     this.stopObservingMapAllocation();
     this.stopObservingPeerChrome();
@@ -6176,6 +6340,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.sceneRepairFocus) {
+      this.sceneRepairFocus = false;
+      this.shadowRoot?.querySelector<HTMLButtonElement>('[part="scene-toggle"]')?.focus({ preventScroll: true });
+    }
     this.cameraUpdatePending = false;
     this.setAttribute('aria-busy', String(this.loading || (!this._map && !this.failure && !this.awaitingActivation)));
     if (this.legendCollapsed && (changed.has('legendOpen') || changed.has('legendCollapsible'))) {
@@ -6708,6 +6876,45 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     } catch { if (this._map === map && generation === this.interactionGeneration) this.mapCursor.clear(); }
   }
 
+  private stopObservingMapInteractionState(): void {
+    const observer = this.interactionObserver;
+    this.interactionObserver = undefined;
+    observer?.disconnect();
+  }
+
+  private observeMapInteractionState(): void {
+    this.stopObservingMapInteractionState();
+    if (!this.isConnected) return;
+    this.interactionBlocked = this.mapInteractionBlocked();
+    const document = this.ownerDocument, generation = this._connectGeneration;
+    const MutationObserverCtor = document.defaultView?.MutationObserver;
+    if (!MutationObserverCtor) return;
+    const current = (): boolean => this.isConnected && this.ownerDocument === document &&
+      this._connectGeneration === generation && this.interactionObserver === observer;
+    const observer = new MutationObserverCtor(() => {
+      if (!current()) return;
+      const blocked = this.mapInteractionBlocked(), map = this._map;
+      this.interactionBlocked = blocked;
+      const unchanged = (): boolean => current() && this._map === map && this.mapInteractionBlocked() === blocked;
+      if (blocked) {
+        this.cancelMapDrawing('disabled');
+        if (!unchanged()) return;
+        this.clearMapHover();
+        if (!unchanged()) return;
+        this.anchorController?.hide();
+        if (!unchanged()) return;
+        this.childAnchors?.hide();
+      } else {
+        this.syncMapCursor();
+        if (unchanged()) this.scheduleAnchorSync();
+      }
+    });
+    this.interactionObserver = observer;
+    for (let node: Element | null = this; node; node = flattenedParentElement(node)) {
+      observer.observe(node, { attributes: true, attributeFilter: ['inert', 'disabled'] });
+    }
+  }
+
   private observeMapInteractions(canvas: HTMLCanvasElement): void {
     const map = this._map;
     const current = (): boolean => this._map === map && this.isConnected;
@@ -6726,13 +6933,6 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     canvas.addEventListener('keydown', key);
     this.pointerCleanup = () => { canvas.removeEventListener('pointercancel', cancel, true); canvas.removeEventListener('pointerdown', down, true);
       canvas.removeEventListener('click', click, true); canvas.removeEventListener('keydown', key); };
-    this.interactionBlocked = this.mapInteractionBlocked();
-    this.interactionObserver = new MutationObserver(() => {
-      if (!current()) return;
-      this.interactionBlocked = this.mapInteractionBlocked();
-      if (this.interactionBlocked) { this.cancelMapDrawing('disabled'); this.clearMapHover(); this.anchorController?.hide(); this.childAnchors?.hide(); } else { this.syncMapCursor(); this.scheduleAnchorSync(); }
-    });
-    for (let node: Element | null = this; node; node = flattenedParentElement(node)) this.interactionObserver.observe(node, { attributes: true, attributeFilter: ['inert', 'disabled'] });
   }
 
   private pointerFrame?: number;
@@ -9221,6 +9421,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
           <lr-skeleton class="initialization-skeleton" part="initialization-skeleton" shape="rect" .announce=${false}></lr-skeleton>
           ${outlines}
         </div>` : initializationControls.length ? outlines : nothing}
+        ${this.renderGeographicScene()}
         ${this.hashIssue || this.controlIssue || this.sceneControlIssue ? html`<div part="configuration-error">${this.localize(MAP_CONFIGURATION_MESSAGE[this.hashIssue ?? this.controlIssue ?? 'mapControlUnavailable'])}</div>` : nothing}
         ${this.exportIssue ? html`<div part="configuration-error">${this.localize('mapExportUnavailable')}</div>` : nothing}
         ${this.dataLayerIssue ? html`<div part="configuration-error">${this.localize('mapInitializationFailed')}</div>` : nothing}

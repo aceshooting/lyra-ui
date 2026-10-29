@@ -841,6 +841,145 @@ so a bundler drops the unused catalog; an unbundled graph that imports it still 
 - `formResetCallback()` restores the _content attribute_ default, so `el.value = 'x'` never redefines
   what `form.reset()` restores to (native `defaultValue`/`defaultSelected` semantics).
 
+### Shared simulation clock and irregular time indices
+
+These granular modules are registration-free and require no map or 3D engine:
+
+- `@aceshooting/lyra-ui/simulation-clock.js`: `createSimulationClock(options, capabilities?)`,
+  `SimulationClockError`; types `SimulationClock`, `SimulationClockOptions`,
+  `SimulationClockCapabilities`, `ClockScheduler`, `ClockSnapshot`, `SimulationClockMode`,
+  `SimulationClockReason`, `SimulationClockErrorCode`.
+- `@aceshooting/lyra-ui/time-index.js`: `createTimeIndex(timestamps)`, `TimeIndexError`;
+  types `TimeIndex`, `TimeLocation`, `TimeIndexErrorCode`.
+- `@aceshooting/lyra-ui/sequence-time-binding.js`: `bindSequencePlayback(control, clock, index,
+  options?)`, `SequenceTimeBindingError`; types `SequenceTimeBindingOptions`,
+  `SequenceTimeBindingErrorCode`. Register the sequence control separately.
+
+#### Clock contract
+
+`SimulationClockOptions` has readonly `range: readonly [number, number]`, `instant: number` and
+optional `rate: number` (default 1). Numbers are epoch milliseconds within ±8.64e15; fractional
+milliseconds are allowed. Range start must not exceed end. Instants clamp to range; rates must be
+finite and positive, without a fixed maximum. Plain records and tuples reject accessors/invalid
+structure. Optional second-argument `SimulationClockCapabilities` carries the deliberately trusted
+`scheduler?: ClockScheduler` and `onSubscriberError?: (error: unknown) => void` callbacks separately
+from plain data. Scheduler methods are `monotonicNow(): number`, `epochNow(): number`,
+`requestFrame(callback: () => void): unknown`, `cancelFrame(handle: unknown): void`.
+
+`clock.snapshot` is immutable `ClockSnapshot { instant, range, mode, playing, rate, revision, reason }`.
+`mode` is `'replay' | 'live'`. `reason` is
+`'initial' | 'tick' | 'seek' | 'play' | 'pause' | 'rate' | 'range' | 'mode' | 'live'`.
+`currentInstant()` samples current time without notification. `play()`, `pause()`, `seek(instant)`,
+`stepTo(instant)`, `setRate(rate)`, `setRange(range)`, `setMode(mode)` update shared state.
+Seek pauses and enters replay; stepTo preserves replay playing unless clamped at end, and leaves
+live for paused replay. Play from live starts replay at current live instant; play at end does not
+rewind. Pause from live freezes replay. Selecting an already-current mode does nothing. No looping
+or reverse playback is implied. Live follows clamped wall time, including wall-clock corrections;
+rate affects replay only. Applications own rolling ranges and incoming data.
+
+`subscribe(listener, { signal? })` immediately supplies caught-up state and returns an idempotent
+release function. Each registration is independent, including repeated use of one callback.
+Reentrant writes coalesce into one later desired-state delivery. Listener errors are isolated.
+Every subscriber in a fan-out sees the same instant/revision, not a promise of simultaneous paint.
+Use revision checks before committing asynchronous map/chart work. Time zones/locales belong to
+`Intl.DateTimeFormat` presentation and never change the shared instant.
+
+Replay derives from a monotonic anchor rather than counting frames. Hidden/background documents
+skip intermediate frames and catch up; they do not pause analytical replay or burst old updates.
+No subscribers means no delivery scheduling, while replay still advances analytically. Import,
+construction and paused use are SSR-safe and side-effect free; replay/live needs a usable injected
+time source in SSR even without subscribers. Browser delivery uses one owner-realm animation-frame
+chain. `dispose()` cancels jobs, clears subscribers and silently releases bindings. It is idempotent;
+final getters remain readable, while later mutation/subscribe throws `disposed`.
+
+`SimulationClockError(code, message?)` exposes readonly `code`:
+`'invalid-options' | 'invalid-instant' | 'invalid-range' | 'invalid-rate' |
+'invalid-capabilities' | 'invalid-listener' | 'disposed'`. Failures leave rejected commands
+unpublished. Developer diagnostics are not localized product copy; applications localize by code.
+
+#### Time index contract
+
+`createTimeIndex` snapshots and freezes at most 10,000 strictly increasing timestamps. Empty and
+singleton inputs are legal. Duplicate, descending, sparse, accessor, nonfinite and out-of-Date-range
+values fail rather than sorting, truncating or reindexing. `TimeIndex` exposes readonly
+`timestamps`, `length`, `instantAt(index): number`, and `locate(instant): TimeLocation | undefined`.
+`TimeLocation` has readonly `lowerIndex`, `upperIndex`, `nearestIndex`, `fraction`; exact samples
+have equal indices/fraction zero, endpoint queries clamp, nearest ties choose lower. Empty indices
+return undefined. Consumers explicitly select hold/nearest/linear interpretation; the utility never
+interpolates application records, geographic wrapping, categories or physical trajectories.
+`TimeIndexError(code, message?)` codes are
+`'invalid-timestamps' | 'invalid-instant' | 'invalid-index'`.
+
+Binding signature: `bindSequencePlayback(control: HTMLElement, clock: SimulationClock,
+index: TimeIndex, options?: SequenceTimeBindingOptions): () => void`; options has readonly
+`signal?: AbortSignal`. Clock/index must come from these factories in the same package module graph.
+`SequenceTimeBindingError(code, message?)` codes are `'unsupported-control' | 'inactive-control' |
+'already-bound' | 'invalid-clock' | 'invalid-index' | 'invalid-options'`. A disposed clock raises
+`SimulationClockError('disposed')`. Abort signals are trusted lifecycle capabilities; a preaborted
+signal performs no attachment. Releasing never pauses other consumers.
+
+- **`simulation-clock-contracts`** — Shared replay and live time.
+  Import: `@aceshooting/lyra-ui/simulation-clock.js`.
+  `createSimulationClock(options: SimulationClockOptions, capabilities?: SimulationClockCapabilities): SimulationClock`
+  `SimulationClockOptions {
+    readonly range: readonly [number, number];
+    readonly instant: number;
+    readonly rate?: number;
+  }`
+  `ClockScheduler {
+    monotonicNow(): number;
+    epochNow(): number;
+    requestFrame(callback: () => void): unknown;
+    cancelFrame(handle: unknown): void;
+  }`
+  `SimulationClockCapabilities {
+    readonly scheduler?: ClockScheduler;
+    readonly onSubscriberError?: (error: unknown) => void;
+  }`
+  `ClockSnapshot {
+    readonly instant: number;
+    readonly range: readonly [number, number];
+    readonly mode: SimulationClockMode;
+    readonly playing: boolean;
+    readonly rate: number;
+    readonly revision: number;
+    readonly reason: SimulationClockReason;
+  }`
+  `SimulationClock {
+    readonly snapshot: ClockSnapshot;
+    currentInstant(): number;
+    seek(instant: number): void;
+    stepTo(instant: number): void;
+    play(): void;
+    pause(): void;
+    setRate(rate: number): void;
+    setRange(range: readonly [number, number]): void;
+    setMode(mode: SimulationClockMode): void;
+    subscribe(listener: (snapshot: ClockSnapshot) => void, options?: { readonly signal?: AbortSignal }): () => void;
+    dispose(): void;
+  }`
+
+- **`time-index-contracts`** — Immutable irregular timestamp indices.
+  Import: `@aceshooting/lyra-ui/time-index.js`.
+  `createTimeIndex(timestamps: readonly number[]): TimeIndex`
+  `TimeLocation {
+    readonly lowerIndex: number;
+    readonly upperIndex: number;
+    readonly nearestIndex: number;
+    readonly fraction: number;
+  }`
+  `TimeIndex {
+    readonly timestamps: readonly number[];
+    readonly length: number;
+    locate(instant: number): TimeLocation | undefined;
+    instantAt(index: number): number;
+  }`
+
+- **`sequence-time-binding-contracts`** — Shared time binding for a registered sequence control.
+  Import: `@aceshooting/lyra-ui/sequence-time-binding.js`.
+  `bindSequencePlayback(control: HTMLElement, clock: SimulationClock, index: TimeIndex, options?: SequenceTimeBindingOptions): () => void`
+  `SequenceTimeBindingOptions { readonly signal?: AbortSignal; }`
+
 ## Reference artifacts
 
 The package includes authored family and shared references plus derived index, component, token,

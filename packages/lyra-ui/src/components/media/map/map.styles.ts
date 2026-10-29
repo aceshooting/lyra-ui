@@ -10,6 +10,51 @@ export const styles = css`
     inline-size: 100%;
     block-size: var(--lr-map-height, var(--lr-size-24rem));
   }
+  [part='scene-panel'] {
+    position: absolute;
+    inset-inline: var(--lr-space-s);
+    inset-block-end: var(--lr-space-s);
+    z-index: 1;
+    max-block-size: 60%;
+    min-inline-size: 0;
+    overflow: auto;
+    padding: var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
+    overflow-wrap: anywhere;
+  }
+  [part='scene-list'] { list-style: none; margin: var(--lr-space-s) 0; padding: 0; min-inline-size: 0; }
+  [part='scene-list'] > li { min-inline-size: 0; margin-block: var(--lr-space-xs); }
+  [part='scene-item'] { display: block; inline-size: 100%; text-align: start; }
+  .scene-kind { display: block; color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm); }
+  [part='scene-status'] { margin-block-start: var(--lr-space-xs); }
+  [part='scene-pagination'] { display: flex; flex-wrap: wrap; align-items: center; gap: var(--lr-space-xs); }
+  [part='scene-toggle'], button[part='scene-item'], [part='scene-pagination'] button {
+    ${iconHitTarget}
+    max-inline-size: 100%;
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius-button);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
+    font: inherit;
+    text-align: start;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+  }
+  [part='scene-toggle']:where(:hover), button[part='scene-item']:where(:hover), [part='scene-pagination'] button:where(:hover) {
+    background: var(--lr-color-surface-raised);
+  }
+  [part='scene-toggle']:where(:active), button[part='scene-item']:where(:active), [part='scene-pagination'] button:where(:active) {
+    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+  }
+  [part='scene-toggle']:focus-visible, button[part='scene-item']:focus-visible, [part='scene-pagination'] button:focus-visible {
+    ${focusRing}
+  }
+  [part='scene-pagination'] button:where(:disabled) { opacity: var(--lr-opacity-disabled); cursor: not-allowed; }
   [part='initialization-placeholder'] { position: absolute; inset: 0; pointer-events: none; }
   .initialization-skeleton { inline-size: 100%; block-size: 100%; }
   .initialization-controls { position: absolute; inset: 0; display: grid; grid-template-rows: auto 1fr auto; pointer-events: none; }
