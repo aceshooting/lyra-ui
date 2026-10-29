@@ -1,7 +1,7 @@
-import { panoramaStyles } from '../image-viewer/image-viewer-panorama.styles.js';
+import { panoramaStyles } from '../../../internal/media-panorama.styles.js';
 import { ENGINE_3D_PREFERENCE, type Engine3dPreference, type Engine3dFallbackDetail } from '../../../internal/engine-3d.js';
-import { PanoramaController, PANORAMA_PROJECTION, PANORAMA_DEFAULT_CAMERA, normalizePanoramaCamera, snapshotPanoramaHotspots, type LyraMediaProjection, type LyraPanoramaCamera, type LyraPanoramaHotspot, type LyraPanoramaHotspotSelectDetail } from '../image-viewer/image-viewer-panorama.js';
-export type { LyraMediaProjection, LyraPanoramaCamera, LyraPanoramaHotspot, LyraPanoramaHotspotSelectDetail } from '../image-viewer/image-viewer-panorama.js';
+import { PanoramaController, PANORAMA_PROJECTION, PANORAMA_DEFAULT_CAMERA, normalizePanoramaCamera, snapshotPanoramaHotspots, type LyraMediaProjection, type LyraPanoramaCamera, type LyraPanoramaHotspot, type LyraPanoramaHotspotSelectDetail } from '../../../internal/media-panorama.js';
+export type { LyraMediaProjection, LyraPanoramaCamera, LyraPanoramaHotspot, LyraPanoramaHotspotSelectDetail } from '../../../internal/media-panorama.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { ref } from 'lit/directives/ref.js';

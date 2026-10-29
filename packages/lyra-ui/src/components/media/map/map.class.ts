@@ -33,6 +33,7 @@ import { registerMapCameraSession, type CameraOwnerReason, type MapCameraPrepare
   type MapCameraSessionCallbacks, type MapCameraSessionLease } from '../../../internal/map-camera-session.js';
 import { createMapSceneSessionFacade, registerMapSceneSession } from '../../../internal/map-scene-session.js';
 import { createMapSceneOwner, type SceneOwnerView } from './map-scene-owner.js';
+import type { MapSceneRenderController } from './map-scene-render-controller.js';
 import type { AdmittedSceneObject } from './map-scene-admission.js';
 import type { LyraMapScene, LyraMapSceneActivateDetail, LyraMapSceneStateDetail } from './map-scene-types.js';
 export type { LyraMapPosition, LyraMapQuaternion, LyraMapModelFormat, LyraMapModelSource,
@@ -135,7 +136,7 @@ import { MapControlsReadiness } from './map-controls-readiness.js';
 import { LyraMapImageExportError, type LyraMapImageExportOptions, type LyraMapImageExportErrorCode } from './map-image-export-error.js';
 import type { MapImageExportController, MapImageExportHost, MapImageExportRequest } from './map-image-export-controller.js';
 import { loadMapAnchorRuntime, loadMapControlRuntime, loadMapDrawingRuntime, loadMapFeatureStateRuntime, loadMapHashRuntime,
-  loadMapImageExportRuntime, loadMapOwnedFeatureRuntime } from './map-feature-loader.js';
+  loadMapImageExportRuntime, loadMapOwnedFeatureRuntime, loadMapSceneRenderRuntime, loadMapSceneBridge } from './map-feature-loader.js';
 export { LyraMapImageExportError } from './map-image-export-error.js';
 export type { LyraMapImageExportOptions, LyraMapImageExportType, LyraMapImageExportErrorCode } from './map-image-export-error.js';
 export interface LyraMapImageExportErrorDetail { readonly code: LyraMapImageExportErrorCode; }
@@ -3139,6 +3140,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private geographicSceneFacade?: ReturnType<typeof createMapSceneSessionFacade>;
   private geographicSceneDocument?: Document;
   private unregisterGeographicScene?: () => void;
+  private geographicSceneRender?: MapSceneRenderController;
+  private geographicSceneRenderAttempt?: object;
+  private geographicSceneRenderFailure?: number;
   private geographicScenePublished?: SceneOwnerView['status'];
   private sceneRepairFocus = false;
   @state() private scenePanelOpen = false;
@@ -3174,6 +3178,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   private closeGeographicScene(): void {
+    this.stopGeographicSceneRender();
     const owner = this.geographicSceneOwner, facade = this.geographicSceneFacade;
     const unregister = this.unregisterGeographicScene;
     this.geographicSceneOwner = undefined; this.geographicSceneFacade = undefined;
@@ -3186,6 +3191,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private geographicSceneChanged(owner: ReturnType<typeof createMapSceneOwner>): void {
     if (!this.isConnected || this.geographicSceneOwner !== owner) return;
     const view = owner.captureView();
+    this.syncGeographicSceneRender();
+    if (this.geographicSceneOwner !== owner || owner.captureView() !== view) return;
     const focusedId = this.shadowRoot?.activeElement?.getAttribute('data-scene-id');
     this.scenePage = Math.min(this.scenePage, Math.max(0, Math.ceil(view.accepted.objects.length / 100) - 1));
     if (focusedId && !view.accepted.objects.slice(this.scenePage * 100, (this.scenePage + 1) * 100)
@@ -3201,6 +3208,50 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       if (!this.isConnected || this.geographicSceneOwner !== currentOwner || currentOwner.captureView() !== latest) return;
       if (latest.active) this.announcements.announceAssertive(this.sceneStatusMessage(status));
     }, 'map-geographic-scene-status');
+  }
+
+  private stopGeographicSceneRender(): void {
+    const controller = this.geographicSceneRender, owner = this.geographicSceneOwner;
+    this.geographicSceneRender = undefined; this.geographicSceneRenderAttempt = undefined;
+    this.geographicSceneRenderFailure = undefined;
+    owner?.setViewport(undefined);
+    controller?.dispose();
+  }
+
+  private syncGeographicSceneRender(): void {
+    const owner = this.geographicSceneOwner, map = this._map, container = this.containerEl;
+    if (!owner || !map || !container || !this.isConnected || !owner.captureAccepted().objects.some(row => row.kind === 'marker')) {
+      this.stopGeographicSceneRender(); return;
+    }
+    if (this.geographicSceneRender) { this.geographicSceneRender.sync(); return; }
+    if (this.geographicSceneRenderAttempt || this.geographicSceneRenderFailure === owner.captureAccepted().acceptedSceneRevision) return;
+    const attempt = Object.freeze({}), document = this.ownerDocument;
+    this.geographicSceneRenderAttempt = attempt;
+    const current = () => this.isConnected && this.ownerDocument === document && this._map === map &&
+      this.containerEl === container && this.geographicSceneOwner === owner && this.geographicSceneRenderAttempt === attempt;
+    const start = (runtime: NonNullable<typeof loadMapSceneRenderRuntime.loaded>): void => {
+      if (!current()) return;
+      let controller: MapSceneRenderController | undefined;
+      try {
+        controller = runtime.createMapSceneRenderController({ element: this, map, container, owner,
+          accentToken: TONE_TOKEN.accent, loadBridge: loadMapSceneBridge, isCurrent: current });
+        if (!current()) { controller.dispose(); return; }
+        this.geographicSceneRender = controller;
+      } catch {
+        controller?.dispose();
+        if (current()) {
+          this.geographicSceneRenderFailure = owner.captureAccepted().acceptedSceneRevision;
+          this.geographicSceneRenderAttempt = undefined;
+        }
+      }
+    };
+    const runtime = loadMapSceneRenderRuntime.loaded;
+    if (runtime) start(runtime);
+    else void loadMapSceneRenderRuntime().then(start, () => {
+      if (!current()) return;
+      this.geographicSceneRenderFailure = owner.captureAccepted().acceptedSceneRevision;
+      this.geographicSceneRenderAttempt = undefined;
+    });
   }
 
   private sceneStatusMessage(status: NonNullable<SceneOwnerView['status']>): string {
@@ -3307,6 +3358,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   constructor() {
     super();
     new ThemeWatcher(this, () => {
+      this.geographicSceneRender?.refreshPresentation();
       if (!this.syncPaintTheme()) return;
       const coordinated = this.refreshThemePaint();
       this.legendIsLine = this.legendDescribesLine();
@@ -5878,6 +5930,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   private disposeMap(cancelReadiness = true): void {
+    this.stopGeographicSceneRender();
     this.interruptCameraSession('engine', false);
     const session = this.cameraSession;
     if (session) { session.released = true; session.stopMotion(); session.stopContext(); this.cameraSession = undefined; }
@@ -6108,6 +6161,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       if (!this.isConnected || this._map !== candidate) return;
       this.syncMapSemantics();
       this.observeMapAllocation(candidate, this.containerEl);
+      this.syncGeographicSceneRender();
+      if (!this.isConnected || this._map !== candidate) return;
       this.observePeerChrome();
       this.failure = undefined;
     } catch {
@@ -6393,6 +6448,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         // Rebuild modular and URL styles so even unchanged inputs emit a committed style.load.
         // Modular object diffs prepare asynchronously while the old style still reports ready.
         // Any superseding style replaces an unloaded basemap instead of attempting to diff it.
+        this.geographicSceneRender?.invalidateStyle();
+        if (!this.isConnected || this._map !== map) return;
         map.setStyle(this.mapStyle as never, replaceStyle ? { diff: false } : undefined);
       }, replaceStyle);
     } else if (this._styleLoaded && (this.refreshingGeoJson || changed.has('dataLayers') || changed.has('choropleth') ||
@@ -6410,7 +6467,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     }
     this.constructionScheduler?.setReady(!!this.containerEl && this._webglReady && !!this._maplibreModule && hasMapStyle(this.mapStyle));
     if (changed.has('hiddenCategories') && this._map && this._styleLoaded) this.refreshThemePaint();
-    if (changed.has('cameraPadding') && this._map) this.applyCameraPadding();
+    if (changed.has('cameraPadding') && this._map) {
+      this.applyCameraPadding();
+      this.geographicSceneRender?.refreshAllocation();
+    }
     this.pushCamera(changed);
     if (changed.has('maxBounds') && this._map) this.writeCamera(() => this.applyMaxBounds());
     if ((changed.has('minZoom') || changed.has('maxZoom')) && this._map) this.applyZoomLimits();
@@ -8799,6 +8859,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       } catch {
         // A peer can be disposing in the same delivery turn; the next live allocation retries.
       }
+      this.geographicSceneRender?.refreshAllocation();
       const next = renderedSizeKey(container);
       if (next === size) return;
       size = next;

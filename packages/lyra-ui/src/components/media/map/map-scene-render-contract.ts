@@ -1,5 +1,11 @@
-import type { CanonicalScenePosition, SceneSessionStateSnapshot, SceneViewportNotice } from '../../../internal/map-scene-contract.js';
-import type { SceneAcceptedSnapshot } from './map-scene-owner.js';
+import type { CanonicalScenePosition, SceneCameraProfile, SceneCompletedFrame, SceneTargetProjection,
+  SceneSessionStateSnapshot, SceneViewportNotice } from '../../../internal/map-scene-contract.js';
+import type { AdmittedSceneObject } from './map-scene-admission.js';
+
+export interface SceneAcceptedSnapshot {
+  readonly acceptedSceneRevision: number;
+  readonly objects: readonly AdmittedSceneObject[];
+}
 
 export type ScenePresentationPhase = 'pending' | 'resolved' | 'unavailable';
 export type SceneViewportInput = Omit<SceneViewportNotice, 'allocationRevision'>;
@@ -42,4 +48,39 @@ export interface SceneRenderPublication {
   readonly state: SceneSessionStateSnapshot;
   readonly phase: ScenePresentationPhase;
   readonly input: SceneRenderInput;
+}
+
+export interface SceneCompletionTarget {
+  readonly token: object;
+  readonly acceptedPositionRevision: number;
+  readonly position: CanonicalScenePosition;
+}
+export interface SceneCompletionMember {
+  readonly id: string;
+  readonly kind: 'marker' | 'path' | 'arc' | 'model';
+  readonly rowToken: object;
+  readonly target: SceneCompletionTarget | undefined;
+}
+export interface SceneCompletionInput {
+  readonly publicationToken: object;
+  readonly stateToken: object;
+  readonly phase: ScenePresentationPhase;
+  readonly acceptedSceneRevision: number;
+  readonly renderInput: SceneRenderInput;
+  readonly members: readonly SceneCompletionMember[];
+}
+export type SceneCompletionCameraFacts = Omit<SceneCameraProfile,
+  'width' | 'height' | 'padding' | 'nativeControlTransition'>;
+export interface SceneCompletionHost {
+  captureInput(): SceneCompletionInput;
+  subscribeInput(listener: () => void): () => void;
+  claimPaintSerial(expected: SceneCompletionInput): number | undefined;
+  captureCameraFacts(expected: SceneCompletionInput): SceneCompletionCameraFacts | undefined;
+}
+export interface SceneCompletionPort {
+  watchTarget(id: string): () => void;
+  subscribeCompletedFrames(listener: (frame: SceneCompletedFrame) => void): () => void;
+  projectTarget(frame: SceneCompletedFrame, id: string): SceneTargetProjection | undefined;
+  current(frame: SceneCompletedFrame, id: string, targetToken: object): boolean;
+  requestFrame(): void;
 }

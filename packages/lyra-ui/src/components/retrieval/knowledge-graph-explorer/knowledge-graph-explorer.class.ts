@@ -2,7 +2,7 @@ import { ENGINE_3D_PREFERENCE, type Engine3dPreference, type Engine3dFallbackDet
 import { ref } from 'lit/directives/ref.js';
 import { setGraphSourceComposition, resolveGraphSourceComposition, focusGraphSourceComposition, type GraphSourceCompositionSnapshot } from '../graph/graph-source-composition.js';
 import type { GraphSource } from '../graph/graph.class.js';
-import type { LyraGraphNodeRenderer, LyraGraphNodeRenderErrorDetail } from '../graph/graph-node-renderer.js';
+import type { LyraGraphNodeRenderer, LyraGraphNodeRenderErrorDetail } from '../graph/graph.class.js';
 export type KnowledgeGraphExplorerSource = GraphSource;
 const EMPTY_SOURCE_NODES: readonly LyraGraphNode[] = Object.freeze([]);
 const EMPTY_SOURCE_EDGES: readonly LyraGraphEdge[] = Object.freeze([]);

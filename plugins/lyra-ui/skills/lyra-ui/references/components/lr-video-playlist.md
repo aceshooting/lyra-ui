@@ -8,7 +8,7 @@
 - **Status** `experimental` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [media](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/media.md)
 - **Deprecations** none
-- **Optional peers** `dompurify` — see `llms/peers.md`
+- **Optional peers** `@aceshooting/lyra-3d`, `dompurify` — see `llms/peers.md`
 - **Themeable via** 6 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 

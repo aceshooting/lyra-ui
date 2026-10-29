@@ -33,10 +33,12 @@ import * as scene from '@aceshooting/lyra-map/scene';
 import * as map from '@aceshooting/lyra-map';
 assert.deepEqual(Object.keys(scene), ['createSceneBridge']);
 assert.equal(typeof scene.createSceneBridge, 'function');
-for (const name of ['createSceneBridge', 'withNativeTerrainHookScope', 'captureNativeTerrainAuthority', 'assertNativeTerrainAuthority']) {
+for (const name of ['createSceneBridge', 'withNativeTerrainHookScope', 'captureNativeTerrainAuthority', 'assertNativeTerrainAuthority',
+  'registerNativeFrameDemand', 'beginNativeFrame', 'captureNativeFrameAuthority', 'readNativeFrameAuthority']) {
   assert.equal(Object.hasOwn(map, name), false, name + ' is not a default map export');
 }
-for (const path of ['native-terrain-authority', 'src/scene/native-terrain-authority.mjs', 'dist/scene/native-terrain-authority.mjs']) {
+for (const path of ['native-terrain-authority', 'src/scene/native-terrain-authority.mjs', 'dist/scene/native-terrain-authority.mjs',
+  'native-frame-authority', 'src/scene/native-frame-authority.mjs', 'dist/scene/native-frame-authority.mjs']) {
   await assert.rejects(import('@aceshooting/lyra-map/' + path), { code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' });
 }
 `);
@@ -72,7 +74,7 @@ test('a full-fallback scene build does not claim native specialization from a he
   assert.equal(registryModules.length, authorities.length, 'a registry must come from the package-owned source');
   const provenance = JSON.parse(await readFile(join(built.directory, 'dist/provenance.json'), 'utf8'));
   const changed = provenance.changedSourceFiles.includes('webgl/draw/draw_custom.ts');
-  assert.equal(changed, false, 'unqualified package entry uses the full terrain profile');
+  assert.equal(changed, true, 'the reviewed native phase hooks are independent of terrain specialization');
   const issuers = built.graph.filter(chunk => chunk.modules.some(id => id.endsWith('/webgl/draw/draw_custom.ts')));
   assert.equal(issuers.length, 1, 'the actual native custom-layer implementation is present once');
   const issuerReachable = built.reachable(issuers[0]);

@@ -13,9 +13,9 @@ import {
   type ResolvedNode,
   type ResolvedElement,
   type LyraWidgetNode,
-} from './resolve.js';
-import type { LyraWidgetTypeRegistry } from './registry.js';
-import { DEFAULT_WIDGET_TYPE_REGISTRY } from './default-registry.js';
+} from '../../../internal/widget-document.js';
+import type { LyraWidgetTypeRegistry } from '../../../internal/widget-type-registry.js';
+import { DEFAULT_WIDGET_TYPE_REGISTRY } from '../../../internal/widget-default-registry.js';
 
 // `unsafeStatic()` must return the SAME StaticValue instance for the same tag string on every
 // render -- Lit's static-html caches a call site's expanded template by that instance's identity,

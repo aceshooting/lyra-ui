@@ -5,6 +5,7 @@ import { basename, dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { rolldown } from 'rolldown';
 import { completePlugin, src, virtual, changed } from './complete-transform.mjs';
+import { createNativeFramePlugin, nativeFrameSourcesMatch } from './native-frame-transform.mjs';
 
 const packageRoot = fileURLToPath(new URL('..', import.meta.url));
 const outputRoot = resolve(packageRoot, 'dist');
@@ -44,6 +45,15 @@ if (sha256(JSON.stringify(sourceManifest)) !== expected.sourceTreeSha256) {
 if (sha256(await readFile(resolve(upstreamRoot, 'LICENSE.txt'))) !== expected.license.sha256) {
   throw new Error('MapLibre license differs from the reviewed source pin.');
 }
+
+const [painterSource, customSource] = await Promise.all([
+  readFile(resolve(src, 'render/painter.ts'), 'utf8'),
+  readFile(resolve(src, 'webgl/draw/draw_custom.ts'), 'utf8')
+]);
+const nativeFramePlugin = createNativeFramePlugin(Object.freeze({
+  enabled: nativeFrameSourcesMatch({ painter: painterSource, drawCustom: customSource }),
+  registryId: resolve(packageRoot, 'src/scene/native-frame-authority.mjs'), upstreamRoot
+}));
 
 await rm(outputRoot, { recursive: true, force: true });
 await mkdir(resolve(outputRoot, 'controls'), { recursive: true });
@@ -100,6 +110,7 @@ const build = await rolldown({
         };
       }
     },
+    nativeFramePlugin,
     completePlugin
   ]
 });
@@ -148,7 +159,7 @@ for (const file of ['scene.d.ts', 'scene-entry.d.ts'])
   await copyFile(resolve(packageRoot, 'types', file), resolve(outputRoot, 'types', file));
 await writeFile(resolve(outputRoot, 'scene.d.ts'),
   "export { createSceneBridge } from './types/scene-entry.js';\n" +
-  "export type { SceneBridge, SceneBridgeHost, SceneBridgeNativeMap, SceneRenderInput, SceneMarker, SceneBridgeStatus } from './types/scene-entry.js';\n");
+  "export type { SceneBridge, SceneBridgeHost, SceneBridgeNativeMap, SceneRenderInput, SceneMarker, SceneBridgeStatus, SceneCompletionPhase, SceneCompletionToken, SceneCompletionTarget, SceneCompletionMember, SceneCompletionInput, SceneCompletionCameraFacts, SceneCompletionHost, SceneBridgeCameraProfile, SceneBridgeCompletedFrame, SceneBridgeTargetProjection, SceneCompletionPort, SceneBridgeWithCompletion, SceneBridgeHostWithCompletion } from './types/scene-entry.js';\n");
 for (const source of expected.declarationSources) {
   const packageEntry = upstreamRequire.resolve(source.package);
   const packageRoot = resolve(dirname(packageEntry), '..');
@@ -194,7 +205,7 @@ await writeFile(
       upstream: expected.upstream,
       version: expected.version,
       sourceTreeSha256: expected.sourceTreeSha256,
-      changedSourceFiles: [...changed.keys()].sort(),
+      changedSourceFiles: [...new Set([...changed.keys(), ...nativeFramePlugin.changed.keys()])].sort(),
       generatedFeatureModules: virtual.size,
       modules: chunks.map((chunk) => ({
         file: chunk.fileName,

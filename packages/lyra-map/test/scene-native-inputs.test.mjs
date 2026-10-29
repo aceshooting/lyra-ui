@@ -9,9 +9,10 @@ const sha256 = value => createHash('sha256').update(value).digest('hex');
 const sourceTreeSha256 = '0653c9c9880d6584333721595eb7e3ca39b581132c91b75648a3b08b49acd107';
 const scripts = ['build', 'complete-transform', 'base-transform', 'worker-transform', 'metadata-transform',
   'sprite-key-transform', 'prepared-mutations', 'feature-requirements', 'preparation-runtime',
-  'code-serialization', 'native-terrain-contract'];
-const sceneModules = ['index', 'bridge', 'bridge-glyph', 'frame', 'geographic', 'geometry-chart', 'gl-state',
-  'lifetime', 'native-terrain-authority', 'projection', 'resource-ledger', 'terrain-native', 'terrain-points'];
+  'code-serialization', 'native-frame-transform', 'native-terrain-contract'];
+const sceneModules = ['index', 'bridge', 'bridge-glyph', 'completion-data', 'completion', 'completion-observation',
+  'frame', 'geographic', 'geometry-chart', 'gl-state', 'lifetime', 'native-frame-authority',
+  'native-terrain-authority', 'projection', 'resource-ledger', 'terrain-native', 'terrain-points'];
 const patches = ['@codecov__bundler-plugin-core@2.0.1.patch', '@web__test-runner-coverage-v8@1.0.0.patch',
   'braces@3.0.3.patch', 'deepmerge@4.1.1.patch', 'sprintf-js@1.0.3.patch'];
 const exists = file => access(file).then(() => true, () => false);
@@ -77,6 +78,8 @@ test('captures exact staged root, transform and scene inputs in canonical immuta
     const bytes = await readFile(join(fixture.workspace, file));
     assert.deepEqual(records.find(record => record.file === file), { file, bytes: bytes.length, sha256: sha256(bytes) });
   }
+  await fixture.write('packages/lyra-map/src/scene/unexpected.mjs', 'export {};\n');
+  disabled(await capture(fixture), 'unsafe-input');
 });
 
 test('relocation and process cwd do not change the canonical captured inputs', async context => {

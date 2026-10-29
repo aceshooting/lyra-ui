@@ -1,3 +1,4 @@
+import { PanoramaController as SharedPanoramaController, panoramaLoader as sharedPanoramaLoader } from '../../../internal/media-panorama.js';
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { sendKeys } from '@web/test-runner-commands';
@@ -10,6 +11,11 @@ import { PanoramaController, normalizePanoramaCamera, PANORAMA_DEFAULT_CAMERA, p
 const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
 
 describe('lr-image-viewer panorama', () => {
+  it('preserves panorama identity through compatibility entry points', () => {
+    expect(PanoramaController).to.equal(SharedPanoramaController);
+    expect(panoramaLoader).to.equal(sharedPanoramaLoader);
+  });
+
   const available = panoramaEnvironment.available;
   let creates: number, disposed: number;
   let source: unknown, camera: unknown, style: unknown;

@@ -1,8 +1,17 @@
+import { createWidgetTypeRegistry as sharedCreateWidgetTypeRegistry, isWidgetTypeRegistry as sharedIsWidgetTypeRegistry } from '../../../internal/widget-type-registry.js';
+import { DEFAULT_WIDGET_TYPE_REGISTRY as sharedDefaultRegistry } from '../../../internal/widget-default-registry.js';
 import { expect } from "@open-wc/testing";
 import { createWidgetTypeRegistry, isWidgetTypeRegistry } from "./registry.js";
 import { DEFAULT_WIDGET_TYPE_REGISTRY } from "./default-registry.js";
 
 describe("widget-renderer immutable registries", () => {
+  it('preserves registry identity through compatibility entry points', () => {
+    expect(createWidgetTypeRegistry).to.equal(sharedCreateWidgetTypeRegistry);
+    expect(isWidgetTypeRegistry).to.equal(sharedIsWidgetTypeRegistry);
+    expect(DEFAULT_WIDGET_TYPE_REGISTRY).to.equal(sharedDefaultRegistry);
+    expect(sharedIsWidgetTypeRegistry(createWidgetTypeRegistry())).to.equal(true);
+  });
+
   it("creates an immutable isolated snapshot", () => {
     const definition = {
       tag: "lr-sparkline",

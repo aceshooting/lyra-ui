@@ -1,7 +1,6 @@
 import { isPlainDataRecord, readOwnArrayLength, readOwnDataValue } from '../../../internal/data-descriptors.js';
 import type { SceneSessionStateSnapshot, SceneTargetFact, SceneViewportNotice } from '../../../internal/map-scene-contract.js';
-import type { SceneAcceptedSnapshot } from './map-scene-owner.js';
-import type { ScenePresentationPhase, SceneRenderInput, SceneRenderMarker, SceneResolvedPresentation, SceneViewportInput } from './map-scene-render-contract.js';
+import type { SceneAcceptedSnapshot, ScenePresentationPhase, SceneRenderInput, SceneRenderMarker, SceneResolvedPresentation, SceneViewportInput } from './map-scene-render-contract.js';
 
 const MAX_MARKERS = 2000;
 const EMPTY_MARKERS: readonly SceneRenderMarker[] = Object.freeze([]);

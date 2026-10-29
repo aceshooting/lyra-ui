@@ -1,4 +1,8 @@
-import { createSceneGlyphRenderer } from './bridge-glyph.mjs';
+import { captureSceneGlyphObservation, createSceneGlyphRenderer } from './bridge-glyph.mjs';
+import { readCompletionInput } from './completion-data.mjs';
+import { createSceneCompletionDiagnostics, createSceneCompletionOwner } from './completion.mjs';
+import { createSceneCompletionObservation } from './completion-observation.mjs';
+import { captureNativeFrameAuthority, loseNativeFrameContext, readNativeFrameAuthority, registerNativeFrameDemand } from './native-frame-authority.mjs';
 import { createEpochGeographicServices, createGeographicFrameLease } from './frame.mjs';
 import { geographicFromEnu, geographicToTile } from './geographic.mjs';
 import { createSceneGlEnvelope } from './gl-state.mjs';
@@ -61,11 +65,15 @@ function readInput(value) {
   return Object.freeze({ acceptedSceneRevision, presentationRevision, allocation, reducedMotion, markers: Object.freeze(markers) });
 }
 
-/** Composes one owned marker layer without publishing completed visibility or whole-scene readiness. */
+/** Composes an owned marker layer with an optional authenticated completion service. */
 export function createSceneBridge(map, host) {
   const signal = field(host, 'signal'), hostCurrent = field(host, 'isCurrent');
   const capture = field(host, 'captureRenderInput'), subscribe = field(host, 'subscribeRenderInput');
   const onState = field(host, 'onState'), onError = field(host, 'onError');
+  const completionHost = field(host, 'completion', true);
+  if (completionHost !== undefined) for (const name of ['captureInput', 'subscribeInput', 'claimPaintSerial', 'captureCameraFacts']) {
+    if (typeof field(completionHost, name) !== 'function') fail();
+  }
   if (!signal || typeof signal.addEventListener !== 'function' ||
       [hostCurrent, capture, subscribe, onState, onError].some(value => typeof value !== 'function')) fail();
   for (const name of ['addLayer', 'removeLayer', 'getLayer', 'getCanvas', 'isStyleLoaded', 'triggerRepaint',
@@ -75,12 +83,139 @@ export function createSceneBridge(map, host) {
   if (!positive(++bridgeSequence)) fail();
   const layerID = `scene-markers-${bridgeSequence}`;
   // Two bounded queue packets, one native sampler and two scalar staging records may overlap.
-  const ledger = createSceneResourceLedger({ bytes: 2000 * 56 + 400 + 72 });
+  const ledger = createSceneResourceLedger({ bytes: 2000 * 56 + 400 + 72 + 512 });
   const contexts = new WeakMap(), retainedContexts = new Set(), owners = new Set(), listeners = [];
   let disposed = false, visible = true, contextLost = false, awaitingStyle = false, waitingStyleReady = false, scheduled = false, wakeup = false;
   let pollingStyleReady = false;
   let active, operation, activeCallback, releaseInput, reconcileRevision = 0, installationRevision = 0, ownerSequence = 0, contextSequence = 0;
   let viewRevision = 1, styleRevision = 1, stamp = Object.freeze({}), layout, zoom = 0, terrainSource;
+  let completion, completionDemand = false, completionGeneration = 1, releaseCompletionVisibility;
+  const installedRecords = completionHost ? new WeakMap() : undefined;
+  const observationRecords = completionHost ? new WeakMap() : undefined;
+  const completionResults = completionHost ? new WeakMap() : undefined;
+  const completionOwnerToken = completionHost ? Object.freeze({}) : undefined;
+  const completionDiagnostics = completionHost ? createSceneCompletionDiagnostics(() => {}) : undefined;
+
+  function completionInput() {
+    if (!completionHost || !baseCurrent()) return undefined;
+    const value = completionHost.captureInput(), renderInput = capture();
+    if (!baseCurrent() || !readCompletionInput(value, renderInput)) return undefined;
+    return completionHost.captureInput() === value && capture() === renderInput && baseCurrent() ? value : undefined;
+  }
+  function completionCurrent(owner, input) {
+    if (!completion || !visible || canvas.ownerDocument?.hidden || !current(owner) || !owner.committed ||
+        owner.context?.lost || !completionDemand || completionInput() !== input) return false;
+    if (typeof map.loaded !== 'function' || typeof map.isMoving !== 'function' || map.loaded() !== true || map.isMoving() !== false) return false;
+    return completionInput() === input && current(owner) && visible && !canvas.ownerDocument?.hidden;
+  }
+  function updateCompletionDemand(owner) {
+    if (!owner) return;
+    const gl = owner.context?.gl ?? owner.nativeGl;
+    const wanted = Boolean(completionDemand && !disposed && !contextLost && visible && !canvas.ownerDocument?.hidden &&
+      !owner.retired && gl && !owner.context?.lost && owner.layer);
+    if (!wanted && owner.releaseCompletion) { const release = owner.releaseCompletion; owner.releaseCompletion = undefined; release(); }
+    if (wanted && !owner.releaseCompletion) owner.releaseCompletion = registerNativeFrameDemand(gl, owner.layer, owner.layer.render);
+    if (!wanted) { owner.observation?.invalidate(); completionDiagnostics?.unavailable(undefined); }
+  }
+  function invalidateCompletion(reason) {
+    if (!completion) return;
+    if (!Number.isSafeInteger(completionGeneration + 1)) { completion.dispose(); return; }
+    completionGeneration++; completionDiagnostics.unavailable(undefined);
+    for (const owner of owners) owner.observation?.invalidate();
+    completion.invalidate(reason);
+  }
+  function observationAuthorityCurrent(record) {
+    if (!record || record.generation !== completionGeneration || !completionCurrent(record.owner, record.input)) return false;
+    try { readNativeFrameAuthority(record.authority, record.owner.context.gl, 'render'); }
+    catch {
+      try { readNativeFrameAuthority(record.authority, record.owner.context.gl, 'completed'); }
+      catch { return false; }
+    }
+    if (record.generation !== completionGeneration || !completionCurrent(record.owner, record.input)) return false;
+    try { readNativeFrameAuthority(record.authority, record.owner.context.gl, 'render'); return true; }
+    catch {
+      try { readNativeFrameAuthority(record.authority, record.owner.context.gl, 'completed'); return true; }
+      catch { return false; }
+    }
+  }
+  function installedCurrent(record, input) {
+    const owned = installedRecords.get(record);
+    return Boolean(owned && owned.input === input && owned.generation === completionGeneration &&
+      owned.identity === owned.owner.identity && completionCurrent(owned.owner, input) &&
+      owned.generation === completionGeneration && owned.identity === owned.owner.identity && !owned.owner.retired && owned.owner.committed && !owned.owner.context?.lost);
+  }
+  function observationFor(owner) {
+    if (owner.observation) return owner.observation;
+    const window = canvas.ownerDocument?.defaultView;
+    if (!window || typeof window.requestAnimationFrame !== 'function' || typeof window.cancelAnimationFrame !== 'function' ||
+        typeof window.performance?.now !== 'function') return undefined;
+    const tickets = new WeakMap();
+    owner.observation = createSceneCompletionObservation({ gl: owner.context.gl,
+      isCurrent: () => owner.observationGeneration === completionGeneration && completionCurrent(owner, owner.observationInput),
+      requestAnimationFrame: callback => window.requestAnimationFrame(callback),
+      cancelAnimationFrame: handle => window.cancelAnimationFrame(handle), now: () => window.performance.now(),
+      onComplete(ticket, value) {
+        const issued = tickets.get(ticket); if (!issued) return;
+        tickets.delete(ticket);
+        const result = Object.freeze({ targets: Object.freeze([Object.freeze({ id: issued.id, anchor: value.anchor, object: value.object })]) });
+        completionResults.set(result, issued.issue);
+        if (completion.complete(issued.issue, result) && completionInput() === owner.observationInput &&
+            owner.observationGeneration === completionGeneration) completionDiagnostics.unavailable(undefined);
+      },
+      onUnavailable(ticket) {
+        const issued = tickets.get(ticket); if (issued) tickets.delete(ticket);
+        if (owner.observationInput) completionDiagnostics.unavailable(owner.observationInput, owner.observationGeneration);
+        completion.invalidate('observation');
+      }
+    });
+    owner.observationTickets = tickets;
+    return owner.observation;
+  }
+  function completeMarkerPaint(owner, frame, authority) {
+    const input = completionInput(), callback = activeCallback, generation = completionGeneration;
+    if (!input || !completionCurrent(owner, input)) return;
+    const refuse = () => completionDiagnostics.unavailable(input, generation);
+    let facts;
+    try { facts = readNativeFrameAuthority(authority, owner.context.gl, 'render'); }
+    catch { refuse(); return; }
+    const layers = facts.frame.orderedLayers, phase = facts.phase;
+    if (input.phase !== 'resolved' || input.members.length !== 1 || input.members[0].kind !== 'marker' ||
+        owner.input.markers.length !== 1 || input.members[0].id !== owner.input.markers[0].id ||
+        input.members[0].target?.position.altitudeReference !== 'sea-level' || facts.frame.terrainEnabled ||
+        facts.frame.projection !== 'mercator' || facts.frame.projectionTransition !== 0 || facts.frame.debug || facts.frame.tailDraws ||
+        phase.pass !== 'translucent' || phase.currentLayer !== layers.length - 1 || layers.at(-1)?.id !== layerID ||
+        layers.at(-1)?.type !== 'custom' || layers.slice(0, -1).some(layer => !['background', 'fill-extrusion'].includes(layer.type))) { refuse(); return; }
+    const member = input.members[0], marker = owner.input.markers[0];
+    const plan = captureSceneGlyphObservation(owner.glyph, frame, marker, authority);
+    const projected = frame.geographic.project(marker.position);
+    if (!completionCurrent(owner, input) || generation !== completionGeneration || activeCallback !== callback) return;
+    const installed = Object.freeze({ input, members: Object.freeze([Object.freeze({ id: member.id, kind: member.kind,
+      rowToken: member.rowToken, targetToken: member.target.token })]) });
+    installedRecords.set(installed, { owner, input, identity: owner.identity, generation });
+    completion.acceptInstalled(installed);
+    const allocation = owner.input.allocation, rawTransition = callback.rawTransition;
+    if (rawTransition !== 0) { refuse(); return; }
+    const data = Object.freeze({ stamp: Object.freeze({ ownerToken: completionOwnerToken, contextEpoch: owner.context.epoch,
+      styleRevision, samplingViewRevision: viewRevision, layoutRevision: layout.revision, allocationRevision: allocation.revision,
+      acceptedSceneRevision: input.acceptedSceneRevision, installedSceneRevision: input.acceptedSceneRevision,
+      placementRevision: viewRevision, paintRevision: owner.input.presentationRevision }),
+      width: allocation.width, height: allocation.height, pixelRatio: allocation.pixelRatio, padding: allocation.padding,
+      projectionTransition: Math.fround(rawTransition), cameraProfile: Object.freeze({ nativeControlTransition: rawTransition }) });
+    const observation = Object.freeze({ input, installed, phase: authority, scope: authority, frame: data,
+      targets: Object.freeze([Object.freeze({ id: member.id, targetToken: member.target.token,
+        acceptedPositionRevision: member.target.acceptedPositionRevision,
+        status: projected.status === 'visibility-pending' ? 'resolved' : projected.status,
+        ...(projected.point ? { point: Object.freeze([...projected.point]) } : {}) })]) });
+    observationRecords.set(observation, { owner, input, authority, generation });
+    const issue = completion.issue(observation);
+    if (!issue || !observationAuthorityCurrent(observationRecords.get(observation))) return;
+    const manager = observationFor(owner);
+    if (!manager) { completion.invalidate('observation'); refuse(); return; }
+    owner.observationInput = input; owner.observationGeneration = generation;
+    const ticket = manager.issue({ plan, authority });
+    if (ticket) owner.observationTickets.set(ticket, { issue, id: member.id });
+    else { completion.invalidate('observation'); refuse(); }
+  }
 
   function baseCurrent() {
     if (disposed || signal.aborted || contextLost) return false;
@@ -99,6 +234,21 @@ export function createSceneBridge(map, host) {
     if (!local() || !identityCurrent(identity) || !local()) return false;
     if (owner.committed && map.getLayer(layerID) !== owner.handle) return false;
     return local();
+  }
+  function deferPendingInput(owner, nativeSignal) {
+    const identity = owner.identity;
+    const local = () => owner.committed && active === owner && !owner.retired && owner.identity === identity &&
+      owner.styleRevision === styleRevision && !disposed && !signal.aborted && !nativeSignal.aborted &&
+      !contextLost && !owner.context?.lost && !awaitingStyle;
+    try {
+      if (!local() || !baseCurrent() || !local() || capture() === identity || !local()) return false;
+      const handle = map.getLayer(layerID);
+      if (!local() || handle !== owner.handle || !baseCurrent() || !local() || capture() === identity || !local()) return false;
+      if (map.getLayer(layerID) !== handle || !local() || !baseCurrent() || !local()) return false;
+      // A synchronous native redraw can precede the queued publication reconciliation.
+      wakeup = false; schedule();
+      return true;
+    } catch { return false; }
   }
   function report(code) {
     if (disposed || signal.aborted) return;
@@ -208,6 +358,7 @@ export function createSceneBridge(map, host) {
   function observeContextLoss(context) {
     if (context.lost) return;
     context.lost = true;
+    if (completion) { loseNativeFrameContext(context.gl); invalidateCompletion('context'); }
     if (active?.context === context) contextLost = true;
     queueMicrotask(() => {
       if (active?.context === context) retire(active, 'context-lost');
@@ -231,11 +382,15 @@ export function createSceneBridge(map, host) {
         owner.queueDisposed = true;
         try { owner.queue.dispose(); } catch { report('render'); }
       }
+      if (owner.releaseCompletion) { const release = owner.releaseCompletion; owner.releaseCompletion = undefined; release(); }
+      if (owner.observation) {
+        try { owner.observation.dispose({ contextLost: Boolean(owner.context?.lost) }); } catch { /* Keep retained observation ownership reachable. */ }
+      }
       retireSampler(owner.sampler, owner.context?.lost);
       if (owner.glyph) {
         try { owner.glyph.dispose({ contextLost: Boolean(owner.context?.lost) }); } catch { report('render'); }
       }
-      if (!owner.leases.size && (!owner.glyph || owner.glyph.retired()) && (!owner.sampler || !owner.sampler.leases.size)) {
+      if (!owner.leases.size && (!owner.observation || owner.observation.retired()) && (!owner.glyph || owner.glyph.retired()) && (!owner.sampler || !owner.sampler.leases.size)) {
         owner.context?.owners.delete(owner); owners.delete(owner);
       }
     } finally { owner.cleaning = false; cleanupListeners(); }
@@ -243,6 +398,8 @@ export function createSceneBridge(map, host) {
   function retire(owner, reason) {
     if (!owner) return;
     owner.retired = true;
+    if (completion) invalidateCompletion(reason ?? 'owner');
+    updateCompletionDemand(owner);
     if (active === owner) active = undefined;
     if (reason === 'context-lost' && owner.context) owner.context.lost = true;
     owner.lifetime?.invalidate(reason === 'context-lost' ? reason : 'style');
@@ -274,13 +431,15 @@ export function createSceneBridge(map, host) {
     owner.requests = next; owner.terrainByCoordinate = resolved;
   }
   function invalidateTerrain() {
+    invalidateCompletion('view');
     viewRevision++; stamp = Object.freeze({});
     try {
       readView();
       if (active && !active.retired) {
         active.queue.setStamp(stamp); active.batch = undefined; active.terrainUnavailable = false;
         retireSampler(active.sampler); active.sampler = undefined;
-        registerMarkers(active, active.input);
+        if (current(active)) registerMarkers(active, active.input);
+        else schedule();
       }
       requestFrame();
     } catch { report('engine'); }
@@ -326,6 +485,7 @@ export function createSceneBridge(map, host) {
           isCurrent: () => operation ? operation.owner === owner && operationCurrent(operation) : current(owner) && Boolean(activeCallback?.live),
           withState: (kind, work) => withOperation(owner.context, owner, kind === 'dispose' ? 'point-dispose' : 'point', work)
         });
+        updateCompletionDemand(owner);
         return owner;
       },
       prerender(value, _frame, hook) {
@@ -350,7 +510,22 @@ export function createSceneBridge(map, host) {
       },
       render(value, frame) {
         if (value !== owner || !current(owner) || !visible) return;
-        owner.glyph.render(frame, owner.input.markers);
+        let authority;
+        if (completionDemand && completion) {
+          const captured = captureNativeFrameAuthority(owner.context.gl, owner.layer, owner.layer.render, activeCallback?.originalArgs);
+          if (captured.status === 'admitted') authority = captured.authority;
+          if (owner.lastCompletionAuthority !== authority) {
+            invalidateCompletion('paint');
+            owner.lastCompletionAuthority = authority;
+          }
+        }
+        owner.glyph.render(frame, owner.input.markers, authority);
+        if (authority) {
+          try { completeMarkerPaint(owner, frame, authority); }
+          catch { if (completion) { completion.invalidate('observation'); const input = completionInput(); if (input) completionDiagnostics.unavailable(input, completionGeneration); } }
+        } else if (completionDemand && completion) {
+          const input = completionInput(); if (input) completionDiagnostics.unavailable(input, completionGeneration);
+        }
       },
       dispose(value, options) {
         if (value !== owner) fail();
@@ -383,12 +558,29 @@ export function createSceneBridge(map, host) {
       participant,
       prepare(layer, nativeSignal) {
         owner.layer = layer;
+        let enteringCallback = false;
+        for (const method of ['prerender', 'render']) {
+          const callback = layer[method];
+          if (typeof callback === 'function') layer[method] = function (...args) {
+            if (enteringCallback) return;
+            enteringCallback = true;
+            try {
+              if (deferPendingInput(owner, nativeSignal)) return;
+              return Reflect.apply(callback, this, args);
+            } finally { enteringCallback = false; }
+          };
+        }
         const onAdd = layer.onAdd, onRemove = layer.onRemove;
         layer.onAdd = function (nativeMap, gl) {
           onAdd.call(this, nativeMap, gl);
           if (!nativeSignal.aborted && current(owner)) {
             const handle = map.getLayer(layer.id);
-            if (handle && handle === map.getLayer(layer.id) && current(owner)) owner.installationHandle = handle;
+            if (handle && handle === map.getLayer(layer.id) && current(owner)) {
+              owner.installationHandle = handle;
+              if (completion && gl.canvas === canvas && current(owner)) {
+                owner.nativeGl = gl; updateCompletionDemand(owner);
+              }
+            }
           }
         };
         layer.onRemove = function (...args) {
@@ -419,6 +611,7 @@ export function createSceneBridge(map, host) {
         const originalHook = args.renderTerrainHeightMap;
         const callback = { owner, identity, stamp, live: true, originalHook,
           authority: captureNativeTerrainAuthority(owner.context.gl, originalHook) };
+        if (completionDemand) { callback.originalArgs = args; callback.rawTransition = undefined; }
         if (callback.authority.status === 'refused') fail();
         activeCallback = callback; wakeup = false;
         const valid = () => callback.live && activeCallback === callback && !nativeSignal.aborted && current(owner) && owner.identity === identity && revision === viewRevision;
@@ -431,6 +624,7 @@ export function createSceneBridge(map, host) {
               const data = args.getProjectionData({ tileID: { canonical: { z: origin.tile.z, x: origin.tile.x, y: origin.tile.y }, wrap: origin.tile.wrap },
                 applyGlobeMatrix: true, applyTerrainMatrix: false });
               if (!valid()) fail();
+              if (completionDemand) callback.rawTransition = data.projectionTransition;
               return { ...data, shaderData: args.shaderData };
             }
           });
@@ -494,10 +688,11 @@ export function createSceneBridge(map, host) {
       void reconcile().catch(() => { report('engine'); });
     });
   }
-  function inputChanged() { reconcileRevision++; schedule(); }
+  function inputChanged() { invalidateCompletion('input'); reconcileRevision++; schedule(); }
   function lost() {
     contextLost = true; waitingStyleReady = false; wakeup = false; reconcileRevision++;
-    for (const context of retainedContexts) context.lost = true;
+    for (const context of retainedContexts) { context.lost = true; if (completion) loseNativeFrameContext(context.gl); }
+    invalidateCompletion('context');
     retire(active, 'context-lost');
     for (const owner of [...owners]) { owner.retired = true; cleanupOwner(owner); }
     for (const context of retainedContexts) for (const sampler of [...context.samplers]) retireSampler(sampler, true);
@@ -509,12 +704,15 @@ export function createSceneBridge(map, host) {
   }
   function invalidateStyle() {
     if (disposed) return;
+    invalidateCompletion('style');
     awaitingStyle = true; waitingStyleReady = false; styleRevision++; viewRevision++; stamp = Object.freeze({}); reconcileRevision++; wakeup = false;
     retire(active);
   }
   function dispose() {
     if (disposed) return;
     disposed = true; waitingStyleReady = false; reconcileRevision++; wakeup = false;
+    completion?.dispose(); completionDiagnostics?.unavailable(undefined);
+    if (releaseCompletionVisibility) { const release = releaseCompletionVisibility; releaseCompletionVisibility = undefined; release(); }
     signal.removeEventListener('abort', dispose);
     if (releaseInput) { const release = releaseInput; releaseInput = undefined; try { release(); } catch { /* Retain resource cleanup independently. */ } }
     for (const [name, listener] of listeners) map.off(name, listener);
@@ -536,6 +734,29 @@ export function createSceneBridge(map, host) {
     } catch { report('engine'); }
     finally { pollingStyleReady = false; }
   });
+  if (completionHost) {
+    completion = createSceneCompletionOwner({
+      captureInput() { const value = completionInput(); if (!value) fail(); return value; },
+      subscribeInput: changed => completionHost.subscribeInput(changed),
+      claimPaintSerial: expected => completionHost.claimPaintSerial(expected),
+      captureCameraFacts: expected => completionHost.captureCameraFacts(expected)
+    }, {
+      isCurrent: () => baseCurrent() && visible && !canvas.ownerDocument?.hidden,
+      isInstalled: installedCurrent,
+      isObservationCurrent: (observation, input) => observation.input === input && observationAuthorityCurrent(observationRecords.get(observation)),
+      isResultCurrent: (issue, result) => completionResults.get(result) === issue,
+      requestFrame,
+      setDemand(value) { completionDemand = Boolean(value); updateCompletionDemand(active); },
+      retireIssue() { for (const owner of owners) owner.observation?.invalidate(); }
+    });
+    const hidden = () => {
+      completion.setVisible(visible && !canvas.ownerDocument.hidden);
+      invalidateCompletion('visibility'); updateCompletionDemand(active);
+    };
+    canvas.ownerDocument?.addEventListener('visibilitychange', hidden);
+    releaseCompletionVisibility = () => canvas.ownerDocument?.removeEventListener('visibilitychange', hidden);
+    for (const name of ['data', 'dataloading', 'styledata', 'sourcedata']) listen(name, () => invalidateCompletion('content'));
+  }
   canvas.addEventListener('webglcontextlost', lost, true);
   canvas.addEventListener('webglcontextrestored', restored);
   signal.addEventListener('abort', dispose, { once: true });
@@ -543,9 +764,11 @@ export function createSceneBridge(map, host) {
   if (typeof releaseInput !== 'function') { dispose(); fail(); }
   if (disposed) { const release = releaseInput; releaseInput = undefined; release(); }
   else if (signal.aborted) dispose(); else schedule();
-  return Object.freeze({ invalidateStyle, requestFrame, dispose,
+  return Object.freeze({ invalidateStyle, requestFrame, dispose, ...(completion ? { completion: completion.port } : {}),
     setVisible(value) {
       const previous = visible; visible = Boolean(value); active?.lifetime.setVisible(visible);
+      completion?.setVisible(visible && !canvas.ownerDocument?.hidden);
+      if (completion) { invalidateCompletion('visibility'); updateCompletionDemand(active); }
       if (!visible) { wakeup = false; if (active) { retireSampler(active.sampler); active.sampler = undefined; if (active.batch) active.queue.cancelBatch(active.batch.token); active.batch = undefined; } }
       else if (!previous) requestFrame();
     }

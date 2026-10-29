@@ -58,6 +58,10 @@ export interface SceneBridgeNativeMap {
   getLayer(id: string): object | undefined;
   getCanvas(): HTMLCanvasElement;
   isStyleLoaded(): boolean | void;
+  /** Required only for qualified completed-frame observations. */
+  loaded?(): boolean;
+  /** Required only for qualified completed-frame observations. */
+  isMoving?(): boolean;
   triggerRepaint(): void;
   getCenter(): { readonly lng: number; readonly lat: number };
   getZoom(): number;
@@ -65,9 +69,9 @@ export interface SceneBridgeNativeMap {
   getBearing(): number;
   getTerrain(): { readonly source: string } | null;
   getProjection(): unknown;
-  on(type: 'move' | 'resize' | 'terrain' | 'projectiontransition' | 'sourcedata' | 'style.load' | 'render',
+  on(type: 'move' | 'resize' | 'terrain' | 'projectiontransition' | 'sourcedata' | 'data' | 'dataloading' | 'styledata' | 'style.load' | 'render',
     listener: (event: { readonly sourceId?: string }) => void): unknown;
-  off(type: 'move' | 'resize' | 'terrain' | 'projectiontransition' | 'sourcedata' | 'style.load' | 'render',
+  off(type: 'move' | 'resize' | 'terrain' | 'projectiontransition' | 'sourcedata' | 'data' | 'dataloading' | 'styledata' | 'style.load' | 'render',
     listener: (event: { readonly sourceId?: string }) => void): unknown;
   prepareFeatures?(requirements: MapFeatureRequirements, options?: MapFeaturePreparationOptions): Promise<void>;
 }
@@ -82,4 +86,104 @@ export interface SceneBridge {
   dispose(): void;
 }
 
+export type SceneCompletionPhase = 'pending' | 'resolved' | 'unavailable';
+export type SceneCompletionToken = object;
+
+/** Detached canonical geography; source capabilities never cross this boundary. */
+export interface SceneCompletionTarget {
+  readonly token: SceneCompletionToken;
+  readonly acceptedPositionRevision: number;
+  readonly position: {
+    readonly lngLat: readonly [number, number];
+    readonly altitude: number;
+    readonly altitudeReference: 'sea-level' | 'terrain';
+  };
+}
+export interface SceneCompletionMember {
+  readonly id: string;
+  readonly kind: 'marker' | 'path' | 'arc' | 'model';
+  readonly rowToken: SceneCompletionToken;
+  readonly target: SceneCompletionTarget | undefined;
+}
+/** Exhaustive accepted membership paired with the exact marker render input object. */
+export interface SceneCompletionInput {
+  readonly publicationToken: SceneCompletionToken;
+  readonly stateToken: SceneCompletionToken;
+  readonly phase: SceneCompletionPhase;
+  readonly acceptedSceneRevision: number;
+  readonly renderInput: SceneRenderInput;
+  readonly members: readonly SceneCompletionMember[];
+}
+export interface SceneCompletionCameraFacts {
+  readonly latitude: number;
+  readonly zoom: number;
+  readonly pitch: number;
+  readonly explicitBounds: boolean;
+  readonly explicitZoomLimits: boolean;
+  readonly nativeBounds: boolean;
+  readonly nativeMinZoom: number;
+  readonly nativeMaxZoom: number;
+  readonly terrain: boolean;
+  readonly canPan: boolean;
+  readonly canObserveMotion: boolean;
+  readonly canStop: boolean;
+  readonly moving: boolean;
+  readonly hasProjection: boolean;
+}
+export interface SceneCompletionHost {
+  captureInput(): SceneCompletionInput;
+  subscribeInput(changed: () => void): () => void;
+  claimPaintSerial(expected: SceneCompletionInput): number | undefined;
+  captureCameraFacts(expected: SceneCompletionInput): SceneCompletionCameraFacts | undefined;
+}
+export interface SceneBridgeCameraProfile extends SceneCompletionCameraFacts {
+  readonly width: number;
+  readonly height: number;
+  readonly nativeControlTransition: number;
+  readonly padding: { readonly top: number; readonly right: number; readonly bottom: number; readonly left: number };
+}
+export interface SceneBridgeCompletedFrame {
+  readonly stamp: {
+    readonly ownerToken: object;
+    readonly contextEpoch: number;
+    readonly styleRevision: number;
+    readonly samplingViewRevision: number;
+    readonly layoutRevision: number;
+    readonly allocationRevision: number;
+    readonly acceptedSceneRevision: number;
+    readonly installedSceneRevision: number;
+    readonly placementRevision: number;
+    readonly paintRevision: number;
+    readonly paintFrameSerial: number;
+  };
+  readonly width: number;
+  readonly height: number;
+  readonly pixelRatio: number;
+  readonly padding: { readonly top: number; readonly right: number; readonly bottom: number; readonly left: number };
+  readonly projectionTransition: number;
+  readonly cameraProfile: SceneBridgeCameraProfile | undefined;
+}
+export interface SceneBridgeTargetProjection {
+  readonly acceptedPositionRevision: number;
+  readonly status: 'resolved' | 'terrain-pending' | 'terrain-unavailable' | 'model-pending' |
+    'visibility-pending' | 'clipped' | 'occluded' | 'unavailable';
+  readonly point?: readonly [number, number];
+  readonly visible: boolean;
+}
+/** Observes genuine completed work; a port's existence does not establish native scope support. */
+export interface SceneCompletionPort {
+  watchTarget(id: string): () => void;
+  subscribeCompletedFrames(listener: (frame: SceneBridgeCompletedFrame) => void): () => void;
+  projectTarget(frame: SceneBridgeCompletedFrame, id: string): SceneBridgeTargetProjection | undefined;
+  current(frame: SceneBridgeCompletedFrame, id: string, targetToken: SceneCompletionToken): boolean;
+  requestFrame(): void;
+}
+export interface SceneBridgeWithCompletion extends SceneBridge {
+  readonly completion: SceneCompletionPort;
+}
+export interface SceneBridgeHostWithCompletion extends SceneBridgeHost {
+  readonly completion: SceneCompletionHost;
+}
+
+export declare function createSceneBridge(map: SceneBridgeNativeMap, host: SceneBridgeHostWithCompletion): SceneBridgeWithCompletion;
 export declare function createSceneBridge(map: SceneBridgeNativeMap, host: SceneBridgeHost): SceneBridge;

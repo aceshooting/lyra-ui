@@ -6,9 +6,10 @@ import { types } from 'node:util';
 
 const scriptNames = ['build', 'complete-transform', 'base-transform', 'worker-transform', 'metadata-transform',
   'sprite-key-transform', 'prepared-mutations', 'feature-requirements', 'preparation-runtime',
-  'code-serialization', 'native-terrain-contract'];
-const sceneNames = ['index', 'bridge', 'bridge-glyph', 'frame', 'geographic', 'geometry-chart', 'gl-state',
-  'lifetime', 'native-terrain-authority', 'projection', 'resource-ledger', 'terrain-native', 'terrain-points'];
+  'code-serialization', 'native-frame-transform', 'native-terrain-contract'];
+const sceneNames = ['index', 'bridge', 'bridge-glyph', 'completion-data', 'completion', 'completion-observation',
+  'frame', 'geographic', 'geometry-chart', 'gl-state', 'lifetime', 'native-frame-authority',
+  'native-terrain-authority', 'projection', 'resource-ledger', 'terrain-native', 'terrain-points'];
 const optionalConfig = ['.npmrc', '.pnpmfile.cjs', '.pnpmfile.mjs'];
 const manifestFields = ['name', 'type', 'imports', 'exports', 'main', 'module', 'browser', 'sideEffects',
   'dependencies', 'optionalDependencies', 'peerDependencies', 'packageManager', 'engines'];

@@ -249,9 +249,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 300735,
+        "bytes": 300761,
         "kib": 293.7,
-        "bundleSha256": "54d037062d61dcf77c74cf6e92191a34df568bbd10a491f46ca2d23d9efa267c",
+        "bundleSha256": "c8db5fdc69385e275234c08d686459975406009cd4b0036697a1e6e3d84c000d",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -3031,9 +3031,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 249982,
-        "kib": 244.1,
-        "bundleSha256": "3c474567fa887d7f5476ef8b4b6abcce5d125357b0f82e53e53c0ae2a622edd5",
+        "bytes": 252307,
+        "kib": 246.4,
+        "bundleSha256": "c0ad9308cf818862a0b4ed5e73580284eff9bf430ac9326966f65e826f5d34cb",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -3763,9 +3763,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 199298,
-        "kib": 194.6,
-        "bundleSha256": "159dbac7d728d4d53126074b00470f4314e78cd034025adcd5c7cc0e54112df0",
+        "bytes": 201679,
+        "kib": 197,
+        "bundleSha256": "6b013ca2c78f6d6a84958c25d6934a284439a3b4bc6c19e5b59e16e06fb2fe00",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -4139,9 +4139,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 203626,
+        "bytes": 203641,
         "kib": 198.9,
-        "bundleSha256": "d1ebdfead65334d91a973e8cad6ca99a798b8a06529b69f38fc6e63e40622675",
+        "bundleSha256": "7771c81d73279a5d126cc2b0733e814a418209e1a51787ac2b4c44b9da3868f5",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },

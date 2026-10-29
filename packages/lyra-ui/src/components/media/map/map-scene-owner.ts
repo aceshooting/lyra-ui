@@ -6,14 +6,11 @@ import { createMapSceneAdmissionError, mapSceneAdmissionErrorCode } from './map-
 import { createMapScenePositionRegistry } from './map-scene-position-registry.js';
 import { buildSceneRenderInput, emptySceneRenderInput, nextSceneRenderRevision,
   snapshotScenePresentation, snapshotSceneViewport } from './map-scene-render-input.js';
-import type { SceneRenderPublication, SceneResolvedPresentation, SceneViewportInput } from './map-scene-render-contract.js';
+import type { SceneAcceptedSnapshot, SceneRenderPublication, SceneResolvedPresentation, SceneViewportInput } from './map-scene-render-contract.js';
 import { createMapSceneSourceOwner, isStaleMapSceneSourceError } from './map-scene-source-snapshot.js';
 import type { SceneRequest } from './map-scene-source-snapshot.js';
 
-export interface SceneAcceptedSnapshot {
-  readonly acceptedSceneRevision: number;
-  readonly objects: readonly AdmittedSceneObject[];
-}
+export type { SceneAcceptedSnapshot } from './map-scene-render-contract.js';
 export interface SceneOwnerView {
   readonly active: boolean;
   readonly accepted: SceneAcceptedSnapshot;
@@ -24,6 +21,11 @@ interface Observer<T> { readonly listener: () => void; baseline: T }
 
 const MAX_ENCODED_BYTES = 64 * 1024 * 1024;
 const MAX_NOTIFICATION_PASSES = 6144;
+
+/** Advances the connection's issue serial without wrapping or coercing invalid counters. */
+export function nextPaintFrameSerial(previous: number): number | undefined {
+  return Number.isSafeInteger(previous) && previous >= 0 && previous < Number.MAX_SAFE_INTEGER ? previous + 1 : undefined;
+}
 
 /** Owns accepted descriptors and geographic state independently from native rendering. */
 export function createMapSceneOwner(options: {
@@ -38,6 +40,7 @@ export function createMapSceneOwner(options: {
   captureView(): SceneOwnerView;
   subscribeAccepted(listener: () => void): () => void;
   captureRenderPublication(): SceneRenderPublication;
+  claimPaintFrameSerial(expected: SceneRenderPublication): number | undefined;
   subscribeRenderPublication(listener: () => void): () => void;
   invalidatePresentation(): boolean;
   commitPresentation(expected: SceneRenderPublication, value: SceneResolvedPresentation): boolean;
@@ -66,6 +69,7 @@ export function createMapSceneOwner(options: {
   let stateSnapshot: SceneSessionStateSnapshot = Object.freeze({ acceptedSceneRevision: 0,
     registryRevision: 0, targets: Object.freeze([]), viewport: undefined });
   let allocationRevision = 0;
+  let paintFrameSerial = 0;
   let resolvedPresentation: SceneResolvedPresentation | undefined;
   let renderPublication: SceneRenderPublication = Object.freeze({ accepted, state: stateSnapshot, phase: 'resolved',
     input: emptySceneRenderInput(0, 1, undefined) });
@@ -198,6 +202,12 @@ export function createMapSceneOwner(options: {
     captureView: () => view,
     subscribeAccepted: (listener: () => void) => subscribe(acceptedObservers, listener, accepted),
     captureRenderPublication: () => renderPublication,
+    claimPaintFrameSerial(expected: SceneRenderPublication): number | undefined {
+      if (expected !== renderPublication || expected.phase !== 'resolved' || !currentPublication(expected)) return undefined;
+      const next = nextPaintFrameSerial(paintFrameSerial);
+      if (next !== undefined) paintFrameSerial = next;
+      return next;
+    },
     subscribeRenderPublication: (listener: () => void) => subscribe(renderObservers, listener, renderPublication),
     invalidatePresentation(): boolean {
       const expected = renderPublication;

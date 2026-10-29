@@ -1,3 +1,5 @@
+import { resolveOptionalPeerCapability } from '../../../internal/optional-peer-capabilities.js';
+import type { MapSceneBridgeRuntime } from './map-scene-render-controller.js';
 import { mapFeatureLoader, __setMapFeatureImporterForTesting as setImporter, type MapFeatureLoader } from './map-feature-loader-core.js';
 
 export type { MapFeatureLoader } from './map-feature-loader-core.js';
@@ -24,4 +26,24 @@ export function __setMapFeatureImporterForTesting<T>(
   importer?: () => Promise<T>,
 ): void {
   setImporter(loader, importer);
+}
+
+/** Optional geographic scene connection; unset maps never load this controller. */
+export const loadMapSceneRenderRuntime = /* @__PURE__ */ mapFeatureLoader(() => import('./map-scene-render-controller.js'));
+
+const sceneBridgeImporter = () => import('@aceshooting/lyra-map/scene');
+let importSceneBridge: () => Promise<unknown> = sceneBridgeImporter;
+async function importSceneBridgeRuntime(): Promise<MapSceneBridgeRuntime> {
+  const runtime = resolveOptionalPeerCapability(await importSceneBridge(), (value): value is MapSceneBridgeRuntime =>
+    typeof value === 'object' && value !== null && 'createSceneBridge' in value && typeof value.createSceneBridge === 'function');
+  if (!runtime) throw new TypeError('Map scene renderer unavailable');
+  return runtime;
+}
+/** Validates the factory before a successful optional import enters the shared cache. */
+export const loadMapSceneBridge = /* @__PURE__ */ mapFeatureLoader(importSceneBridgeRuntime);
+
+/** @internal Replaces the raw optional namespace while retaining capability validation. */
+export function __setMapSceneBridgeImporterForTesting(importer?: () => Promise<unknown>): void {
+  importSceneBridge = importer ?? sceneBridgeImporter;
+  setImporter(loadMapSceneBridge);
 }

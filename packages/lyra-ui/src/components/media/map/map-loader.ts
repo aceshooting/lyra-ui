@@ -76,6 +76,10 @@ export interface MapLibreMapCapability {
    *  peer without it, so holding this type already implies the method is present. Call sites still
    *  guard with `?.()` against a peer that satisfies the shape check and then lies at runtime. */
   getCanvas(): HTMLCanvasElement;
+  /** Optional native allocation capabilities, feature-detected by opted-in scene rendering. */
+  getContainer?(): HTMLElement;
+  getPixelRatio?(): number;
+  getPadding?(): { top: number; right: number; bottom: number; left: number };
   getCenter(): { lng: number; lat: number };
   getZoom(): number;
   getBearing?(): number;
