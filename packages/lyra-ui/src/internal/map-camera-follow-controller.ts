@@ -49,6 +49,7 @@ export interface MapCameraFollowSnapshot {
 /** Every method is bound by the caller to one already-started camera action. */
 export interface MapCameraFollowOwner {
   current(): boolean;
+  ready?(runner: MapCameraFollowRunner): void;
   prepareGround(view: MapViewpoint): object;
   commitGround(prepared: object): boolean;
   preparePan(offset: readonly [number, number], stamp: MapCameraFollowStamp): object;
@@ -279,6 +280,8 @@ export function startMapCameraFollow(plan: MapCameraFollowPlan, owner: MapCamera
     restricted = dependencies.reducedMotion();
     if (!live()) { dispose(); return runner; }
     attempt = createMapCameraFollowAttempt({ reducedMotion: restricted });
+    owner.ready?.(runner);
+    if (!live()) { dispose(); return runner; }
     if (!scene) { publish({ status: 'unavailable', reason: 'scene', corrections: 0 }); return runner; }
     add(scene.subscribeTargets(notice));
     if (!live()) return runner;
