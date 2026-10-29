@@ -46,67 +46,81 @@ export function createSceneGlEnvelope(gl, options) {
       typeof gl?.isContextLost !== 'function' || typeof gl.bindVertexArray !== 'function' ||
       typeof gl.getQuery !== 'function') fail();
   const isCurrent = options.isCurrent;
-  let disposed = false, running = false;
+  let disposed = false, running = false, lost = false;
+  function liveContext() {
+    if (lost) return false;
+    if (gl.isContextLost()) { lost = true; return false; }
+    return true;
+  }
+  function invoke(name, ...args) {
+    if (!liveContext()) fail();
+    const result = gl[name](...args);
+    if (!liveContext()) fail();
+    return result;
+  }
   function current() {
-    if (disposed) return false;
+    if (disposed || !liveContext()) return false;
     const result = isCurrent();
-    return !disposed && Boolean(result);
+    return !disposed && Boolean(result) && liveContext();
   }
   function baseline() {
-    if (gl.isContextLost() || !current()) fail();
+    if (!current()) fail();
     for (const name of ['ANY_SAMPLES_PASSED', 'ANY_SAMPLES_PASSED_CONSERVATIVE', 'TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN']) {
-      if (gl.getQuery(gl[name], gl.CURRENT_QUERY) !== null) fail();
+      if (invoke('getQuery', gl[name], gl.CURRENT_QUERY) !== null) fail();
     }
-    const timer = gl.getExtension('EXT_disjoint_timer_query_webgl2');
-    if (timer && gl.getQuery(timer.TIME_ELAPSED_EXT, gl.CURRENT_QUERY) !== null) fail();
+    const timer = invoke('getExtension', 'EXT_disjoint_timer_query_webgl2');
+    if (timer && invoke('getQuery', timer.TIME_ELAPSED_EXT, gl.CURRENT_QUERY) !== null) fail();
     // ACTIVE remains true while feedback is paused; never end or resume another owner's operation.
-    if (gl.getParameter(gl.TRANSFORM_FEEDBACK_ACTIVE)) fail();
-    if (gl.isContextLost() || !current()) fail();
+    if (invoke('getParameter', gl.TRANSFORM_FEEDBACK_ACTIVE)) fail();
+    if (!current()) fail();
   }
   function capture() {
     const state = Object.create(null);
     for (const name of scalars) {
-      const value = gl.getParameter(gl[name]), length = tupleLengths[name];
+      const value = invoke('getParameter', gl[name]), length = tupleLengths[name];
       state[name] = length ? Array.from({ length }, (_, index) => value[index]) : value;
     }
-    state.enabled = capabilities.map(name => gl.isEnabled(gl[name]));
+    state.enabled = capabilities.map(name => invoke('isEnabled', gl[name]));
     for (const [name, validator] of [['CURRENT_PROGRAM', 'isProgram'],
       ['VERTEX_ARRAY_BINDING', 'isVertexArray'], ['ARRAY_BUFFER_BINDING', 'isBuffer']]) {
-      if (state[name] !== null && !gl[validator](state[name])) fail();
+      if (state[name] !== null && !invoke(validator, state[name])) fail();
     }
     return state;
   }
   function restore(state) {
+    let failed = false;
+    const attempt = work => {
+      try { work(); } catch { failed = true; }
+    };
+    for (const name of ['DRAW_FRAMEBUFFER_BINDING', 'READ_FRAMEBUFFER_BINDING']) {
+      attempt(() => { if (invoke('getParameter', gl[name]) !== state[name]) failed = true; });
+    }
     // Native/default VAO element bindings are untouched; restore the VAO before generic ARRAY_BUFFER.
-    gl.bindVertexArray(state.VERTEX_ARRAY_BINDING);
-    gl.bindBuffer(gl.ARRAY_BUFFER, state.ARRAY_BUFFER_BINDING);
-    for (const [method, ...args] of rasterOperations(gl, state)) gl[method](...args);
-    gl.useProgram(state.CURRENT_PROGRAM);
+    attempt(() => invoke('bindVertexArray', state.VERTEX_ARRAY_BINDING));
+    attempt(() => invoke('bindBuffer', gl.ARRAY_BUFFER, state.ARRAY_BUFFER_BINDING));
+    for (const [method, ...args] of rasterOperations(gl, state)) attempt(() => invoke(method, ...args));
+    attempt(() => invoke('useProgram', state.CURRENT_PROGRAM));
+    return !failed && liveContext();
   }
   return Object.freeze({
     run(work) {
-      if (running || disposed || typeof work !== 'function') fail();
+      if (running || disposed || lost || typeof work !== 'function') fail();
       running = true;
       let state, result, failed = false;
       try {
         baseline(); state = capture();
-        if (gl.isContextLost() || !current()) fail();
+        if (!current()) fail();
         result = work();
         if (result !== null && (typeof result === 'object' || typeof result === 'function') && typeof result.then === 'function') {
           void Promise.resolve(result).catch(() => undefined);
           fail();
         }
-        if (gl.isContextLost() || !current()) fail();
+        if (!current()) fail();
       } catch { failed = true; }
       finally {
         if (state) {
           try {
-            if (gl.isContextLost()) failed = true;
-            else {
-              if (gl.getParameter(gl.DRAW_FRAMEBUFFER_BINDING) !== state.DRAW_FRAMEBUFFER_BINDING ||
-                  gl.getParameter(gl.READ_FRAMEBUFFER_BINDING) !== state.READ_FRAMEBUFFER_BINDING) failed = true;
-              restore(state);
-            }
+            if (!restore(state)) failed = true;
           } catch { failed = true; }
         }
         running = false;

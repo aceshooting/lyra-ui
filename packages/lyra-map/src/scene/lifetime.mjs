@@ -15,6 +15,17 @@ export function createLayerLifetime(map, host, services) {
   for (const name of ['prepare', 'geographic', 'openFrame', 'withState']) {
     if (typeof services?.[name] !== 'function') invalid();
   }
+  const suppliedParticipant = field(services, 'participant', true);
+  let participant;
+  if (suppliedParticipant !== undefined) {
+    const methods = {};
+    for (const name of ['factory', 'create', 'prerender', 'render', 'dispose']) {
+      const method = field(suppliedParticipant, name);
+      if (typeof method !== 'function') invalid();
+      methods[name] = method;
+    }
+    participant = Object.freeze(methods);
+  }
   let desired, active, serial = 0, disposed = false, visible = true;
   const notifyError = (id, code) => { try { host.onError(id, code); } catch { /* Host callbacks cannot escape native drawing. */ } };
   const live = entry => !disposed && active === entry && !host.signal.aborted && !entry.controller.signal.aborted;
@@ -41,7 +52,9 @@ export function createLayerLifetime(map, host, services) {
     if (!owned || owned.disposed) return;
     owned.disposed = true;
     try {
-      if (entry.lost || !entry.gl || entry.gl.isContextLost?.()) owned.dispose.call(owned.value);
+      const contextLost = Boolean(entry.lost || entry.gl?.isContextLost?.());
+      if (entry.participant) entry.participant.dispose(owned.value, Object.freeze({ contextLost }));
+      else if (contextLost || !entry.gl) owned.dispose.call(owned.value);
       else services.withState(entry.gl, () => owned.dispose.call(owned.value));
     } catch { notifyError(entry.descriptor.id, 'render'); }
   }
@@ -76,6 +89,11 @@ export function createLayerLifetime(map, host, services) {
   }
   function capture(value, entry) {
     if (!value || typeof value !== 'object' || thenable(value)) invalid();
+    if (entry?.participant) {
+      const owned = { value, disposed: false, render: entry.participant.render, prerender: entry.participant.prerender };
+      entry.instance = owned;
+      return owned;
+    }
     const dispose = value.dispose;
     const owned = { value, dispose, disposed: false };
     if (typeof dispose === 'function' && entry) entry.instance = owned;
@@ -86,6 +104,8 @@ export function createLayerLifetime(map, host, services) {
     return Object.assign(owned, { render, prerender, items, pick, setInteraction });
   }
   function callback(entry, method, gl, args) {
+    // A selected participant owns its inner guards; never recursively create or render that owner.
+    if (entry.participant && entry.depth) return;
     entry.depth++;
     let lease, failed = false, completed = false;
     try {
@@ -102,7 +122,8 @@ export function createLayerLifetime(map, host, services) {
             if (['loading', 'ready', 'unavailable'].includes(value)) state(entry, value, code);
           }
         });
-        const result = services.withState(context.gl, () => current(entry) ? entry.descriptor.create(context) : undefined);
+        const create = () => current(entry) ? entry.participant ? entry.participant.create(context) : entry.descriptor.create(context) : undefined;
+        const result = entry.participant ? create() : services.withState(context.gl, create);
         if (result === undefined && !current(entry)) return;
         if (thenable(result)) {
           void Promise.resolve(result).then(value => {
@@ -119,7 +140,12 @@ export function createLayerLifetime(map, host, services) {
       lease = services.openFrame(args, entry.epoch, entry.controller.signal);
       if (!current(entry)) return;
       if (work) {
-        const result = services.withState(entry.gl ?? gl, () => current(entry) ? work.call(entry.instance.value, lease.frame) : undefined);
+        const invoke = () => {
+          if (!current(entry)) return undefined;
+          if (!entry.participant) return work.call(entry.instance.value, lease.frame);
+          return method === 'prerender' ? work(entry.instance.value, lease.frame, lease.terrainHook) : work(entry.instance.value, lease.frame);
+        };
+        const result = entry.participant ? invoke() : services.withState(entry.gl ?? gl, invoke);
         if (thenable(result)) {
           void Promise.resolve(result).catch(() => undefined);
           invalid();
@@ -157,7 +183,8 @@ export function createLayerLifetime(map, host, services) {
     retire(active);
     const entry = {
       ...wanted, epoch: ++serial, controller: new AbortController(), depth: 0,
-      lost: false, installed: false, completed: false, repaint: false, remove: false
+      lost: false, installed: false, completed: false, repaint: false, remove: false,
+      participant: participant?.factory === wanted.descriptor.create ? participant : undefined
     };
     active = entry;
     entry.layer = {

@@ -11,11 +11,15 @@ const nativeProjection = () => ({
   clippingPlane: [0, 0, 1, -1 / 3], projectionTransition: 0
 });
 
-function fixture() {
+function fixture(options = {}) {
   let epochCurrent = true, frameCurrent = true;
   let layout = { revision: 1, tileZoom: 0, centerLongitude: 0 };
   let calls = 0;
-  const services = createEpochGeographicServices({ epoch: 1, isCurrent: () => epochCurrent, layout: () => layout });
+  const epochInput = { epoch: 1, isCurrent: () => epochCurrent, layout: () => layout };
+  if (Object.hasOwn(options, 'resolveTerrain')) {
+    Object.defineProperty(epochInput, 'resolveTerrain', Object.getOwnPropertyDescriptor(options, 'resolveTerrain'));
+  }
+  const services = createEpochGeographicServices(epochInput);
   const source = nativeProjection();
   const input = { epoch: 1, revision: 2, time: 123, width: 200, height: 100, pixelRatio: 2,
     reducedMotion: false, services, isCurrent: () => frameCurrent,
@@ -179,3 +183,184 @@ test('distant origins and native pole sentinel values require a fresh tile parti
   assert.deepEqual(lease.frame.geographic.encode(f.services.resolve(at(0, 80)), origin).slice(2), [0]);
   lease.close();
 });
+
+const terrainAt = (longitude = 0, latitude = 0, altitude = 0) => ({ ...at(longitude, latitude, altitude), altitudeReference: 'terrain' });
+const terrainOperations = ['epoch.resolve', 'frame.resolve', 'frame.project'];
+function terrainOperation(f, lease, operation, position = terrainAt()) {
+  return operation === 'epoch.resolve' ? f.services.resolve(position) :
+    lease.frame.geographic[operation === 'frame.resolve' ? 'resolve' : 'project'](position);
+}
+
+for (const [height, offset] of [[125.5, 7], [-40.25, -6], [0, 0]]) {
+  test(`terrain height ${height} adds authored altitude ${offset} once in epoch, frame and projection services`, () => {
+    let samples = 0;
+    const f = fixture({ resolveTerrain() { samples++; return { status: 'resolved', height }; } });
+    const position = terrainAt(0, 0, offset), resolved = { lngLat: [0, 0], altitude: height + offset, status: 'resolved' };
+    const origin = f.services.frameFor(position), lease = createGeographicFrameLease(f.input);
+    assert.equal(samples, 0, 'origin partitioning does not sample terrain');
+    assert.deepEqual(f.services.resolve(position), resolved);
+    const frameResolved = lease.frame.geographic.resolve(position);
+    assert.deepEqual(frameResolved, resolved);
+    assert.equal(Object.isFrozen(frameResolved), true); assert.equal(Object.isFrozen(frameResolved.lngLat), true);
+    assert.equal(lease.frame.geographic.encode(frameResolved, origin)[2], height + offset);
+    assert.deepEqual(lease.frame.geographic.project(position),
+      lease.frame.geographic.project({ ...at(0, 0, height + offset), altitudeReference: 'sea-level' }));
+    assert.equal(samples, 3); assert.equal(f.calls(), 1);
+    lease.close();
+  });
+}
+
+test('terrain resolver receives only frozen canonical coordinates and a copied current layout', () => {
+  const layout = { revision: 2, tileZoom: 3, centerLongitude: 540 }, position = terrainAt(540, 20, 3);
+  let argumentsSeen;
+  const f = fixture({ resolveTerrain(...args) { argumentsSeen = args; return { status: 'resolved', height: 12 }; } });
+  f.setLayout(layout);
+  const resolved = f.services.resolve(position);
+  assert.deepEqual(argumentsSeen, [[-180, 20], layout]); assert.equal(argumentsSeen.length, 2);
+  assert.equal(argumentsSeen[0] === position.lngLat, false); assert.equal(argumentsSeen[1] === layout, false);
+  assert.equal(Object.isFrozen(argumentsSeen[0]), true); assert.equal(Object.isFrozen(argumentsSeen[1]), true);
+  position.lngLat[0] = 1; layout.centerLongitude = 0;
+  assert.deepEqual(argumentsSeen, [[-180, 20], { revision: 2, tileZoom: 3, centerLongitude: 540 }]);
+  assert.deepEqual(resolved, { lngLat: [-180, 20], altitude: 15, status: 'resolved' });
+});
+
+test('terrain altitude defaults to zero and absolute references never invoke the terrain resolver', () => {
+  let samples = 0;
+  const f = fixture({ resolveTerrain() { samples++; return { status: 'resolved', height: -12 }; } });
+  const lease = createGeographicFrameLease(f.input), position = { lngLat: [0, 0], altitudeReference: 'terrain' };
+  assert.deepEqual(f.services.resolve(position), { lngLat: [0, 0], altitude: -12, status: 'resolved' });
+  assert.deepEqual(lease.frame.geographic.resolve(position), { lngLat: [0, 0], altitude: -12, status: 'resolved' });
+  for (const absolute of [at(0, 0, 9), { ...at(0, 0, 9), altitudeReference: 'sea-level' }]) {
+    assert.equal(f.services.resolve(absolute).altitude, 9);
+    assert.equal(lease.frame.geographic.resolve(absolute).altitude, 9);
+    lease.frame.geographic.project(absolute);
+  }
+  assert.equal(samples, 2); lease.close();
+});
+
+for (const status of ['terrain-pending', 'terrain-unavailable']) {
+  test(`${status} remains unresolved in every geographic service without native projection`, () => {
+    let samples = 0;
+    const f = fixture({ resolveTerrain() { samples++; return { status }; } });
+    const lease = createGeographicFrameLease(f.input), position = terrainAt(12, 20, 7);
+    assert.deepEqual(f.services.resolve(position), { lngLat: [12, 20], status });
+    assert.deepEqual(lease.frame.geographic.resolve(position), { lngLat: [12, 20], status });
+    assert.deepEqual(lease.frame.geographic.project(position), { visible: false, status });
+    assert.equal(samples, 3); assert.equal(f.calls(), 0); lease.close();
+  });
+}
+
+test('missing terrain resolver keeps terrain unavailable in epoch and frame resolution', () => {
+  const f = fixture({ resolveTerrain: undefined }), lease = createGeographicFrameLease(f.input);
+  for (const operation of terrainOperations) {
+    const value = terrainOperation(f, lease, operation);
+    assert.equal(value.status, 'terrain-unavailable'); assert.equal(Object.hasOwn(value, 'altitude'), false);
+  }
+  assert.equal(f.calls(), 0); lease.close();
+});
+
+test('terrain-pending origins use canonical geography and the selected layout wrap without resolving height', () => {
+  let samples = 0;
+  const f = fixture({ resolveTerrain() { samples++; return { status: 'terrain-pending' }; } });
+  f.setLayout({ revision: 2, tileZoom: 2, centerLongitude: 180 });
+  const origin = f.services.frameFor(terrainAt(-179, 0, 27));
+  assert.deepEqual(origin.tile, { z: 2, x: 0, y: 2, wrap: 1 });
+  assert.equal(origin, f.services.frameFor(at(-179, 0, -12)));
+  assert.equal(samples, 0); assert.equal(f.calls(), 0);
+});
+
+for (const [label, result] of [['null', null], ['missing status', {}], ['unknown status', { status: 'ready', height: 0 }],
+  ['missing height', { status: 'resolved' }], ['NaN height', { status: 'resolved', height: NaN }],
+  ['infinite height', { status: 'resolved', height: Infinity }], ['negative infinite height', { status: 'resolved', height: -Infinity }],
+  ['string height', { status: 'resolved', height: '12' }],
+  ['inherited result', Object.create({ status: 'resolved', height: 0 })]]) {
+  test(`terrain resolver refuses ${label} before resolution or projection can succeed`, () => {
+    for (const operation of terrainOperations) {
+      let samples = 0;
+      const f = fixture({ resolveTerrain() { samples++; return result; } }), lease = createGeographicFrameLease(f.input);
+      assert.throws(() => terrainOperation(f, lease, operation), TypeError);
+      assert.equal(samples, 1); assert.equal(f.calls(), 0); lease.close();
+    }
+  });
+}
+
+for (const member of ['status', 'height']) {
+  test(`terrain result ${member} accessors are rejected without getter execution`, () => {
+    for (const operation of terrainOperations) {
+      let reads = 0, samples = 0;
+      const result = { status: 'resolved', height: 12 };
+      Object.defineProperty(result, member, { get() { reads++; throw new Error('result getter contents'); } });
+      const f = fixture({ resolveTerrain() { samples++; return result; } }), lease = createGeographicFrameLease(f.input);
+      assert.throws(() => terrainOperation(f, lease, operation), TypeError);
+      assert.equal(samples, 1); assert.equal(reads, 0); assert.equal(f.calls(), 0); lease.close();
+    }
+  });
+}
+
+test('terrain resolver admission rejects accessors and nonfunction capabilities', () => {
+  let reads = 0;
+  const options = {};
+  Object.defineProperty(options, 'resolveTerrain', { get() { reads++; throw new Error('resolver getter contents'); } });
+  assert.throws(() => fixture(options), TypeError); assert.equal(reads, 0);
+  for (const resolveTerrain of [null, false, 42, 'resolve', {}]) assert.throws(() => fixture({ resolveTerrain }), TypeError);
+});
+
+for (const operation of terrainOperations) {
+  for (const invalidate of operation === 'epoch.resolve' ? ['expireEpoch', 'layout'] : ['expireEpoch', 'expireFrame', 'layout', 'close']) {
+    test(`${operation} rejects terrain results after resolver reentry changes ${invalidate}`, () => {
+      let lease, f, samples = 0;
+      f = fixture({ resolveTerrain() {
+        samples++;
+        if (invalidate === 'layout') f.setLayout({ revision: 2, tileZoom: 1, centerLongitude: 360 });
+        else if (invalidate === 'close') lease.close();
+        else f[invalidate]();
+        return { status: 'resolved', height: 12 };
+      } });
+      lease = createGeographicFrameLease(f.input);
+      assert.throws(() => terrainOperation(f, lease, operation), TypeError);
+      assert.equal(samples, 1); assert.equal(f.calls(), 0); lease.close();
+    });
+  }
+}
+
+for (const operation of terrainOperations) {
+  test(`${operation} refuses stale terrain work before calling the resolver`, () => {
+    let samples = 0;
+    const f = fixture({ resolveTerrain() { samples++; return { status: 'resolved', height: 0 }; } });
+    const lease = createGeographicFrameLease(f.input);
+    if (operation === 'epoch.resolve') f.expireEpoch(); else lease.close();
+    assert.throws(() => terrainOperation(f, lease, operation), TypeError);
+    assert.equal(samples, 0); assert.equal(f.calls(), 0); lease.close();
+  });
+
+  test(`${operation} cannot publish a terrain result when the resolver throws`, () => {
+    let samples = 0;
+    const f = fixture({ resolveTerrain() { samples++; throw new Error('terrain callback contents'); } });
+    const lease = createGeographicFrameLease(f.input);
+    assert.throws(() => terrainOperation(f, lease, operation));
+    assert.equal(samples, 1); assert.equal(f.calls(), 0); lease.close();
+  });
+}
+
+for (const operation of terrainOperations) {
+  for (const invalidate of operation === 'epoch.resolve' ? ['expireEpoch', 'layout'] : ['expireEpoch', 'expireFrame', 'layout', 'close']) {
+    test(`${operation} refuses terrain callbacks invalidated during position descriptor reads by ${invalidate}`, () => {
+      let samples = 0, invalidated = false;
+      const f = fixture({ resolveTerrain() { samples++; return { status: 'resolved', height: 12 }; } });
+      const lease = createGeographicFrameLease(f.input);
+      const position = new Proxy(terrainAt(), {
+        getOwnPropertyDescriptor(target, key) {
+          if (!invalidated && key === 'lngLat') {
+            invalidated = true;
+            if (invalidate === 'layout') f.setLayout({ revision: 2, tileZoom: 1, centerLongitude: 360 });
+            else if (invalidate === 'close') lease.close();
+            else f[invalidate]();
+          }
+          return Reflect.getOwnPropertyDescriptor(target, key);
+        }
+      });
+      assert.throws(() => terrainOperation(f, lease, operation, position), TypeError);
+      assert.equal(invalidated, true); assert.equal(samples, 0); assert.equal(f.calls(), 0); lease.close();
+    });
+  }
+}

@@ -18,13 +18,23 @@ function field(value, key, optional = false) {
   return descriptor.value;
 }
 
-function resolvePosition(value) {
+function resolvePosition(value, root, layout, checkTerrain) {
   const reference = field(value, 'altitudeReference', true);
   if (reference !== undefined && reference !== 'sea-level' && reference !== 'terrain') fail();
   const result = geographicFromEnu({ lngLat: field(value, 'lngLat'), altitude: field(value, 'altitude', true) }, [0, 0, 0]);
   const lngLat = Object.freeze(result.lngLat);
-  return reference === 'terrain' ? Object.freeze({ lngLat, status: 'terrain-unavailable' }) :
-    Object.freeze({ lngLat, altitude: result.altitude, status: 'resolved' });
+  if (reference !== 'terrain') return Object.freeze({ lngLat, altitude: result.altitude, status: 'resolved' });
+  if (!root?.resolveTerrain) return Object.freeze({ lngLat, status: 'terrain-unavailable' });
+  checkTerrain();
+  const sampled = root.resolveTerrain(lngLat, layout);
+  checkTerrain();
+  const status = field(sampled, 'status');
+  if (status === 'terrain-pending' || status === 'terrain-unavailable') return Object.freeze({ lngLat, status });
+  if (status !== 'resolved') fail();
+  const height = field(sampled, 'height');
+  if (!finite(height)) fail();
+  const absolute = geographicFromEnu({ lngLat, altitude: height + result.altitude }, [0, 0, 0]);
+  return Object.freeze({ lngLat, altitude: absolute.altitude, status: 'resolved' });
 }
 
 function readLayout(root) {
@@ -62,12 +72,20 @@ function originFor(root, position, layout) {
 /** Owns absolute geographic services for one context epoch, without retaining native frame state. */
 export function createEpochGeographicServices(input) {
   const epoch = field(input, 'epoch'), isCurrent = field(input, 'isCurrent'), layout = field(input, 'layout');
-  if (!positiveInteger(epoch) || typeof isCurrent !== 'function' || typeof layout !== 'function') fail();
-  const root = { epoch, isCurrent, layout, cachedOrigins: new Map() };
+  const resolveTerrain = field(input, 'resolveTerrain', true);
+  if (!positiveInteger(epoch) || typeof isCurrent !== 'function' || typeof layout !== 'function' ||
+      resolveTerrain !== undefined && typeof resolveTerrain !== 'function') fail();
+  const root = { epoch, isCurrent, layout, resolveTerrain, cachedOrigins: new Map() };
   readLayout(root);
   const services = Object.freeze({
     limits,
-    resolve(position) { readLayout(root); const result = resolvePosition(position); readLayout(root); return result; },
+    resolve(position) {
+      const current = readLayout(root);
+      const check = () => { if (!sameLayout(current, readLayout(root))) fail(); };
+      const result = resolvePosition(position, root, current, check);
+      check();
+      return result;
+    },
     frameFor(position) {
       const current = readLayout(root), origin = originFor(root, position, current);
       if (!sameLayout(current, readLayout(root))) fail();
@@ -213,10 +231,11 @@ export function createGeographicFrameLease(input) {
   };
   check();
   const geographic = Object.freeze({
-    resolve(position) { check(); const result = resolvePosition(position); check(); return result; },
+    resolve(position) { check(); const result = resolvePosition(position, root, layout, check); check(); return result; },
     project(position) {
       check();
-      const resolved = resolvePosition(position);
+      const resolved = resolvePosition(position, root, layout, check);
+      check();
       if (resolved.status !== 'resolved') { check(); return Object.freeze({ visible: false, status: resolved.status }); }
       const origin = originFor(root, resolved, layout);
       const result = projectScenePosition(resolved, projection(origin).snapshot);

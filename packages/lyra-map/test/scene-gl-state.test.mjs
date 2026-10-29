@@ -32,8 +32,9 @@ function fakeGl() {
     'ANY_SAMPLES_PASSED', 'ANY_SAMPLES_PASSED_CONSERVATIVE', 'TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN',
     'ARRAY_BUFFER', 'FRONT', 'BACK', 'FRONT_AND_BACK']) gl[key] = key;
   const record = (name, work) => (...args) => {
+    calls.push([name, ...args]);
     assert.equal(lost, false, `${name} must not be forwarded after loss`);
-    calls.push([name, ...args]); return work(...args);
+    return work(...args);
   };
   gl.isContextLost = () => { calls.push(['isContextLost']); return lost; };
   gl.getParameter = record('getParameter', name => {
@@ -78,8 +79,8 @@ function fakeGl() {
   for (const name of ['bindFramebuffer', 'bindRenderbuffer', 'bindTexture', 'bindSampler', 'pixelStorei',
     'bufferData', 'bufferSubData', 'texImage2D', 'framebufferTexture2D', 'clear', 'getError',
     'beginQuery', 'endQuery', 'beginTransformFeedback', 'endTransformFeedback', 'pauseTransformFeedback',
-    'resumeTransformFeedback', 'deleteProgram', 'deleteVertexArray', 'deleteBuffer']) {
-    gl[name] = () => { assert.fail(`point envelope must not call ${name}`); };
+    'resumeTransformFeedback', 'deleteProgram', 'deleteVertexArray', 'deleteBuffer', 'drawArrays', 'drawElements']) {
+    gl[name] = (...args) => { calls.push([name, ...args]); assert.fail(`point envelope must not call ${name}`); };
   }
   return { gl, calls, state, enabled, queries, program, vao, buffer, drawFbo, readFbo,
     lose() { lost = true; }, timer() { extension = { TIME_ELAPSED_EXT: 'TIME_ELAPSED_EXT' }; return extension; },
@@ -103,6 +104,24 @@ function perturb(item) {
   gl.lineWidth(1); gl.viewport(0, 0, 1, 1); gl.scissor(0, 0, 1, 1);
 }
 const envelope = (item, isCurrent = () => true) => createSceneGlEnvelope(item.gl, { profile: 'point', isCurrent });
+
+function unavailable(work) {
+  assert.throws(work, error => error instanceof TypeError && error.message === 'Scene GL operation unavailable.');
+}
+
+function afterCall(item, method, matches, work) {
+  const original = item.gl[method];
+  item.gl[method] = (...args) => {
+    const result = original(...args);
+    if (matches(...args)) work();
+    return result;
+  };
+}
+
+function assertNoForwardAfterLoss(item, boundary) {
+  assert.equal(Number.isInteger(boundary), true, 'the injected loss must be reached');
+  assert.deepEqual(item.calls.slice(boundary).filter(call => call[0] !== 'isContextLost'), []);
+}
 
 test('point operations restore the entire admitted scalar and binding inventory on success', () => {
   const item = fakeGl(), guard = envelope(item), before = item.snapshot();
@@ -190,6 +209,99 @@ test('context loss during work skips every restoration GL forward', () => {
   assert.equal(item.calls.slice(afterLoss).some(call => call[0] !== 'isContextLost'), false);
   guard.dispose();
 });
+
+for (const [method, parameter] of [['getParameter', 'COLOR_WRITEMASK'], ['isEnabled', 'CULL_FACE'], ['isVertexArray', undefined]]) {
+  test(`point capture loss after ${method}${parameter ? ` ${parameter}` : ''} stops later raw GL and refuses partial work`, () => {
+    const item = fakeGl(), guard = envelope(item); let boundary, work = 0;
+    afterCall(item, method, value => parameter === undefined || value === item.gl[parameter], () => {
+      item.lose(); boundary = item.calls.length;
+    });
+    unavailable(() => guard.run(() => { work++; }));
+    assert.equal(work, 0); assertNoForwardAfterLoss(item, boundary);
+    guard.dispose();
+  });
+}
+
+for (const method of ['getParameter', 'isEnabled', 'isVertexArray']) {
+  test(`point ${method} capture failure refuses work and does not restore an incomplete snapshot`, () => {
+    const item = fakeGl(), guard = envelope(item), before = item.snapshot(); let work = 0, failed = false;
+    const original = item.gl[method];
+    item.gl[method] = (...args) => {
+      if ((method === 'getParameter' && args[0] === item.gl.VIEWPORT) ||
+          (method === 'isEnabled' && args[0] === item.gl.CULL_FACE) || method === 'isVertexArray') {
+        failed = true; throw new Error('driver capture detail');
+      }
+      return original(...args);
+    };
+    unavailable(() => guard.run(() => { work++; }));
+    assert.equal(failed, true); assert.equal(work, 0); assert.deepEqual(item.snapshot(), before);
+    assert.equal(item.calls.some(call => ['bindVertexArray', 'bindBuffer', 'colorMask', 'useProgram'].includes(call[0])), false);
+    guard.dispose();
+  });
+}
+
+test('loss from an owned program call refuses the result without forwarding restoration', () => {
+  const item = fakeGl(), guard = envelope(item); let boundary, work = 0;
+  afterCall(item, 'useProgram', () => true, () => { item.lose(); boundary = item.calls.length; });
+  unavailable(() => guard.run(() => { work++; item.gl.useProgram({}); return 29; }));
+  assert.equal(work, 1); assertNoForwardAfterLoss(item, boundary);
+  guard.dispose();
+});
+
+for (const [method, parameter] of [['getParameter', 'DRAW_FRAMEBUFFER_BINDING'],
+  ['getParameter', 'READ_FRAMEBUFFER_BINDING'], ['bindVertexArray', undefined],
+  ['colorMask', undefined], ['useProgram', undefined]]) {
+  test(`point restoration loss after ${method}${parameter ? ` ${parameter}` : ''} stops every later raw GL call`, () => {
+    const item = fakeGl(), guard = envelope(item); let restoring = false, boundary;
+    afterCall(item, method, value => restoring && (parameter === undefined || value === item.gl[parameter]), () => {
+      item.lose(); boundary = item.calls.length;
+    });
+    unavailable(() => guard.run(() => { perturb(item); restoring = true; return 31; }));
+    assertNoForwardAfterLoss(item, boundary);
+    guard.dispose();
+  });
+}
+
+for (const failures of [['bindVertexArray'], ['colorMask'], ['useProgram'], ['bindVertexArray', 'colorMask', 'useProgram']]) {
+  test(`live point restoration continues independent groups after ${failures.join(', ')} failure`, () => {
+    const item = fakeGl(), guard = envelope(item), before = item.snapshot();
+    let restoring = false; const attempts = [];
+    for (const method of ['bindVertexArray', 'bindBuffer', 'colorMask', 'depthRange', 'stencilOpSeparate',
+      'blendFuncSeparate', 'polygonOffset', 'sampleCoverage', 'viewport', 'scissor', 'useProgram']) {
+      const original = item.gl[method];
+      item.gl[method] = (...args) => {
+        if (restoring) {
+          attempts.push(method);
+          if (failures.includes(method)) throw new Error(`driver ${method} detail`);
+        }
+        return original(...args);
+      };
+    }
+    unavailable(() => guard.run(() => { perturb(item); restoring = true; return 41; }));
+    for (const method of ['bindVertexArray', 'bindBuffer', 'colorMask', 'depthRange', 'stencilOpSeparate',
+      'blendFuncSeparate', 'polygonOffset', 'sampleCoverage', 'viewport', 'scissor', 'useProgram']) {
+      assert.equal(attempts.includes(method), true, `${method} restoration was not attempted`);
+    }
+    const omitted = new Set(failures.map(method => ({ bindVertexArray: 'VERTEX_ARRAY_BINDING',
+      colorMask: 'COLOR_WRITEMASK', useProgram: 'CURRENT_PROGRAM' })[method]));
+    const comparable = snapshot => ({ ...snapshot, state: snapshot.state.filter(([key]) => !omitted.has(key)) });
+    assert.deepEqual(comparable(item.snapshot()), comparable(before));
+    for (const method of failures) assert.equal(attempts.filter(value => value === method).length, 1);
+    guard.dispose();
+  });
+}
+
+for (const target of ['DRAW_FRAMEBUFFER_BINDING', 'READ_FRAMEBUFFER_BINDING']) {
+  test(`point work that changes ${target} fails without target writes or restoring another owner's target`, () => {
+    const item = fakeGl(), guard = envelope(item), replacement = {};
+    unavailable(() => guard.run(() => { perturb(item); item.state.set(target, replacement); return 43; }));
+    assert.equal(item.state.get(target) === replacement, true);
+    assert.equal(item.state.get(target === 'DRAW_FRAMEBUFFER_BINDING' ? 'READ_FRAMEBUFFER_BINDING' : 'DRAW_FRAMEBUFFER_BINDING') ===
+      (target === 'DRAW_FRAMEBUFFER_BINDING' ? item.readFbo : item.drawFbo), true);
+    assert.equal(item.calls.some(call => ['bindFramebuffer', 'framebufferTexture2D', 'clear', 'drawArrays', 'drawElements'].includes(call[0])), false);
+    guard.dispose();
+  });
+}
 
 test('stale ownership guards client work and restores when cancellation occurs after mutation', () => {
   const item = fakeGl(); let current = false, work = 0;

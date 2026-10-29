@@ -45,13 +45,17 @@ function fixture(options = {}) {
       return { frame, close() { assert.equal(closed, false); closed = true; calls.close.push(epoch); } };
     },
     withState(value, work) {
-      assert.equal(value, gl); calls.guards++; const previous = guarded; guarded = true;
+      assert.equal(value, gl); assert.equal(guarded, false, 'state operations must not nest');
+      calls.guards++; const previous = guarded; guarded = true;
       try { return work(); } finally { guarded = previous; }
     }
   };
+  if (Object.hasOwn(options, 'participant')) {
+    Object.defineProperty(services, 'participant', Object.getOwnPropertyDescriptor(options, 'participant'));
+  }
   const lifetime = createLayerLifetime(map, host, services);
   return {
-    lifetime, map, host, services, layers, calls, events, gl, frame, geographic, controller,
+    lifetime, map, host, services, layers, calls, events, gl, args, frame, geographic, controller,
     guarded: () => guarded,
     setStyleReady(value) { styleReady = value; },
     request(create, change = {}) {
@@ -340,4 +344,227 @@ test('missing or unstable public lookup during onAdd never grants ownership of a
     item.lifetime.dispose();
     assert.equal(item.calls.remove.length, 0); assert.equal(item.layers.get('scene') === stable, true);
   }
+});
+
+function participantFixture(overrides = {}) {
+  const instance = {}, invocations = [];
+  let item, context;
+  const participant = {
+    factory() { invocations.push('factory'); throw new Error('participant factory must be routed internally'); },
+    create(value) { context = value; invocations.push('create'); return instance; },
+    prerender(value, frame, hook) { invocations.push('prerender'); assert.equal(value, instance); assert.equal(frame, item.frame); assert.equal(hook, undefined); },
+    render(value, frame) { invocations.push('render'); assert.equal(value, instance); assert.equal(frame, item.frame); },
+    dispose(value, options) { invocations.push('dispose'); assert.equal(value, instance); assert.deepEqual(options, { contextLost: false }); },
+    ...overrides
+  };
+  item = fixture({ participant });
+  return { item, participant, instance, invocations, context: () => context };
+}
+
+test('exact participant factory routes CPU orchestration around sequential inner state operations', async () => {
+  let owner;
+  const hook = () => { assert.equal(owner.item.guarded(), true); owner.invocations.push('hook'); };
+  const inner = name => {
+    const { item, invocations } = owner;
+    assert.equal(item.guarded(), false, `${name} CPU orchestration must run outside a state guard`);
+    item.services.withState(item.gl, () => { assert.equal(item.guarded(), true); invocations.push(name); });
+  };
+  owner = participantFixture({
+    create(context) {
+      assert.equal(context.gl, owner.item.gl); assert.equal(context.geographic, owner.item.geographic);
+      assert.equal(Object.hasOwn(context, 'terrainHook'), false); inner('create'); return owner.instance;
+    },
+    prerender(value, frame, terrainHook) {
+      assert.equal(value, owner.instance); assert.equal(frame, owner.item.frame); assert.equal(terrainHook, hook);
+      assert.equal(Object.hasOwn(frame, 'terrainHook'), false); inner('terrain-prepare');
+      assert.equal(owner.item.guarded(), false); owner.item.services.withState(owner.item.gl, terrainHook);
+    },
+    render(value, frame) { assert.equal(value, owner.instance); assert.equal(frame, owner.item.frame); inner('point'); },
+    dispose(value, options) {
+      assert.equal(value, owner.instance); assert.deepEqual(options, { contextLost: false });
+      inner('terrain-retire'); inner('point-retire');
+    }
+  });
+  const { item, participant, invocations } = owner, originalOpen = item.services.openFrame;
+  item.services.openFrame = (...args) => ({ ...originalOpen(...args), terrainHook: hook });
+  await item.mount(item.request(participant.factory)); await item.callback('prerender'); await item.callback();
+  item.lifetime.dispose();
+  assert.deepEqual(invocations, ['create', 'terrain-prepare', 'hook', 'point', 'terrain-retire', 'point-retire']);
+  assert.equal(item.calls.guards, 6); assert.equal(item.calls.open.length, 2); assert.equal(item.calls.close.length, 2);
+  assert.equal(item.ready(), 1); assert.equal(item.events.some(event => event.error), false);
+});
+
+test('a foreign factory retains the full state guard and receives no private terrain hook', async () => {
+  const { item, invocations } = participantFixture(); let creates = 0, renders = 0, disposals = 0;
+  const hook = () => { throw new Error('ordinary work must not receive the private hook'); };
+  const originalOpen = item.services.openFrame;
+  item.services.openFrame = (...args) => ({ ...originalOpen(...args), terrainHook: hook });
+  await item.mount(item.request(context => {
+    assert.equal(item.guarded(), true); assert.equal(Object.hasOwn(context, 'terrainHook'), false); creates++;
+    return {
+      prerender(...args) { assert.equal(item.guarded(), true); assert.deepEqual(args, [item.frame]); renders++; },
+      render(...args) { assert.equal(item.guarded(), true); assert.deepEqual(args, [item.frame]); renders++; },
+      dispose() { assert.equal(item.guarded(), true); disposals++; }
+    };
+  }));
+  await item.callback('prerender'); await item.callback(); item.lifetime.dispose();
+  assert.deepEqual(invocations, []); assert.equal(creates, 1); assert.equal(renders, 2); assert.equal(disposals, 1);
+  assert.equal(item.calls.guards, 4); assert.equal(item.calls.close.length, 2);
+});
+
+for (const name of ['participant', 'factory', 'create', 'prerender', 'render', 'dispose']) {
+  test(`participant admission rejects a ${name} accessor without evaluating it`, () => {
+    let reads = 0;
+    const participant = { factory() {}, create() {}, prerender() {}, render() {}, dispose() {} };
+    const options = { participant };
+    Object.defineProperty(name === 'participant' ? options : participant, name, {
+      get() { reads++; throw new Error('accessor contents'); }, configurable: true
+    });
+    assert.throws(() => fixture(options), TypeError);
+    assert.equal(reads, 0);
+  });
+}
+
+test('participant method and factory identities are captured before mutable service records change', async () => {
+  const { item, participant, invocations } = participantFixture(), factory = participant.factory;
+  for (const name of ['factory', 'create', 'prerender', 'render', 'dispose']) {
+    participant[name] = () => { throw new Error('replacement method must not run'); };
+  }
+  item.services.participant = { ...participant };
+  await item.mount(item.request(factory)); await item.callback('prerender'); await item.callback();
+  item.lifetime.dispose();
+  assert.deepEqual(invocations, ['create', 'prerender', 'render', 'dispose']);
+  assert.equal(item.calls.guards, 0); assert.equal(item.calls.open.length, 2); assert.equal(item.calls.close.length, 2);
+});
+
+test('participant creation that retires reentrantly cleans its returned owner without opening a frame', async () => {
+  let owner, disposed = 0, rendered = 0, signal;
+  owner = participantFixture({
+    create(context) { signal = context.signal; owner.item.lifetime.dispose(); return owner.instance; },
+    render() { rendered++; },
+    dispose(value, options) {
+      assert.equal(owner.item.guarded(), false); assert.equal(value, owner.instance);
+      assert.deepEqual(options, { contextLost: false }); disposed++;
+    }
+  });
+  const { item, participant } = owner;
+  await item.mount(item.request(participant.factory)); await item.callback();
+  assert.equal(Boolean(signal?.aborted), true); assert.equal(disposed, 1); assert.equal(rendered, 0);
+  assert.equal(item.calls.open.length, 0); assert.equal(item.ready(), 0); assert.equal(item.calls.remove.length, 1);
+});
+
+for (const method of ['prerender', 'render']) {
+  test(`reentrant participant ${method} retirement closes its lease and suppresses later work and readiness`, async () => {
+    let owner, work = 0, disposed = 0;
+    owner = participantFixture({
+      [method]() { work++; assert.equal(owner.item.guarded(), false); owner.item.lifetime.dispose(); },
+      dispose(value, options) {
+        assert.equal(value, owner.instance); assert.deepEqual(options, { contextLost: false });
+        assert.equal(owner.item.guarded(), false); disposed++;
+      }
+    });
+    const { item, participant } = owner;
+    await item.mount(item.request(participant.factory)); const layer = item.layers.get('scene');
+    await item.callback(method, layer); await item.callback(method, layer);
+    assert.equal(work, 1); assert.equal(disposed, 1); assert.equal(item.ready(), 0);
+    assert.equal(item.calls.open.length, 1); assert.equal(item.calls.close.length, 1); assert.equal(item.calls.remove.length, 1);
+  });
+}
+
+test('participant work is suppressed when opening its lease retires the entry', async () => {
+  const { item, participant, invocations } = participantFixture(); let closes = 0;
+  item.services.openFrame = () => {
+    item.lifetime.dispose(); return { frame: item.frame, terrainHook() { assert.fail('retired hook'); }, close() { closes++; } };
+  };
+  await item.mount(item.request(participant.factory)); await item.callback('prerender');
+  assert.deepEqual(invocations, ['create', 'dispose']); assert.equal(closes, 1); assert.equal(item.ready(), 0);
+});
+
+test('participant prerender receives only its callback lease hook and retained hooks expire on close', async () => {
+  let owner, retained, nativeCalls = 0, closes = 0;
+  owner = participantFixture({
+    prerender(value, frame, hook) {
+      assert.equal(value, owner.instance); assert.equal(frame, owner.item.frame);
+      assert.equal(Object.hasOwn(frame, 'terrainHook'), false); assert.equal(owner.item.guarded(), false);
+      retained = hook; owner.item.services.withState(owner.item.gl, hook);
+    },
+    render(...args) { assert.deepEqual(args, [owner.instance, owner.item.frame]); retained(); }
+  });
+  const { item, participant } = owner;
+  item.services.openFrame = () => {
+    let live = true;
+    return {
+      frame: item.frame,
+      terrainHook() { if (live) { assert.equal(item.guarded(), true); nativeCalls++; } },
+      close() { assert.equal(live, true); live = false; closes++; }
+    };
+  };
+  await item.mount(item.request(participant.factory)); await item.callback('prerender');
+  assert.equal(typeof retained, 'function'); assert.equal(nativeCalls, 1); assert.equal(closes, 1);
+  retained(); assert.equal(nativeCalls, 1);
+  await item.callback(); assert.equal(nativeCalls, 1); assert.equal(closes, 2);
+  item.lifetime.dispose();
+});
+
+test('throwing participant work closes its frame before unguarded retirement and sanitizes the error', async () => {
+  let owner, disposed = 0;
+  owner = participantFixture({
+    render() { throw new Error('participant callback contents'); },
+    dispose(value) {
+      assert.equal(value, owner.instance); assert.equal(owner.item.guarded(), false);
+      assert.equal(owner.item.calls.close.length, 1); disposed++;
+    }
+  });
+  const { item, participant } = owner;
+  await item.mount(item.request(participant.factory)); await item.callback();
+  assert.equal(disposed, 1); assert.equal(item.calls.open.length, 1); assert.equal(item.calls.close.length, 1);
+  assert.equal(item.events.filter(event => event.error === 'render').length, 1);
+  assert.equal(JSON.stringify(item.events).includes('participant callback contents'), false); assert.equal(item.ready(), 0);
+  item.lifetime.dispose(); assert.equal(disposed, 1);
+});
+
+for (const lost of [false, true]) {
+  test(`participant retirement reports contextLost=${lost} outside an outer state wrapper exactly once`, async () => {
+    let owner, disposals = 0, actualLost = false;
+    owner = participantFixture({
+      dispose(value, options) {
+        assert.equal(owner.item.guarded(), false); assert.equal(value, owner.instance);
+        assert.deepEqual(options, { contextLost: lost }); disposals++;
+        if (!options.contextLost) owner.item.services.withState(owner.item.gl, () => {});
+        owner.item.lifetime.dispose();
+      }
+    });
+    const { item, participant } = owner;
+    item.gl.isContextLost = () => actualLost;
+    await item.mount(item.request(participant.factory)); await item.callback();
+    const layer = item.layers.get('scene'), guards = item.calls.guards;
+    actualLost = lost; item.lifetime.invalidate(lost ? 'context-lost' : 'style');
+    layer.onRemove(item.map, item.gl); item.lifetime.dispose();
+    assert.equal(disposals, 1); assert.equal(item.calls.guards - guards, lost ? 0 : 1);
+    assert.equal(item.calls.remove.length, 1);
+  });
+}
+
+test('same-entry callback reentry during participant creation cannot overwrite an opaque owner', async () => {
+  let owner, reentered = false;
+  const created = [], retired = [], rendered = [];
+  owner = participantFixture({
+    create() {
+      const value = Object.freeze({ index: created.length }); created.push(value);
+      if (!reentered) {
+        reentered = true;
+        const { item } = owner;
+        item.layers.get('scene').render(item.gl, item.args);
+      }
+      return value;
+    },
+    render(value) { rendered.push(value); },
+    dispose(value) { retired.push(value); }
+  });
+  const { item, participant } = owner;
+  await item.mount(item.request(participant.factory)); await item.callback(); item.lifetime.dispose();
+  assert.equal(reentered, true);
+  assert.equal(created.length, 1, 'nested native callbacks must not create another participant owner');
+  assert.deepEqual(retired, created); assert.deepEqual(rendered, created);
+  assert.equal(item.calls.open.length, 1); assert.equal(item.calls.close.length, 1);
 });

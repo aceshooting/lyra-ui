@@ -27,3 +27,30 @@ test('nearby canonical origins keep local coordinates bounded and preserve meter
       lease.close();
     }), runs);
 });
+
+test('terrain heights add finite authored offsets once while keeping origin partitioning independent', () => {
+  fc.assert(fc.property(scalar(-179, 179), scalar(-80, 80), scalar(-1000, 10000), scalar(-100, 100),
+    fc.integer({ min: 0, max: 22 }), (longitude, latitude, height, offset, tileZoom) => {
+      let samples = 0;
+      const lngLat = [longitude === 0 ? 0 : longitude, latitude];
+      const services = createEpochGeographicServices({ epoch: 1, isCurrent: () => true,
+        layout: () => ({ revision: 1, tileZoom, centerLongitude: longitude }),
+        resolveTerrain(point, layout) {
+          samples++; assert.deepEqual(point, lngLat);
+          assert.equal(Object.isFrozen(point), true); assert.equal(Object.isFrozen(layout), true);
+          return { status: 'resolved', height };
+        } });
+      const position = { lngLat: [longitude, latitude], altitude: offset, altitudeReference: 'terrain' };
+      const origin = services.frameFor(position);
+      assert.equal(samples, 0);
+      const lease = createGeographicFrameLease({ epoch: 1, revision: 1, time: 0, width: 400, height: 300,
+        pixelRatio: 1, reducedMotion: true, services, isCurrent: () => true,
+        projectionFor() { throw new Error('Terrain resolution and encoding do not require native projection.'); } });
+      const expected = { lngLat, altitude: height + offset, status: 'resolved' };
+      assert.deepEqual(services.resolve(position), expected);
+      const resolved = lease.frame.geographic.resolve(position);
+      assert.deepEqual(resolved, expected);
+      assert.equal(lease.frame.geographic.encode(resolved, origin)[2], height + offset);
+      assert.equal(samples, 2); lease.close();
+    }), runs);
+});
