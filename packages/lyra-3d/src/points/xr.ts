@@ -9,9 +9,13 @@ import { Lyra3dXrError, type Lyra3dXrErrorCode, type Lyra3dXrOptions, type Lyra3
 import { configureLineBatchXr, configurePointBatchXr } from './batches.js';
 import { disposeLineBatchResources, disposePointBatchResources, type LineBatchResources, type PointBatchResources } from './resources.js';
 import { createPointsXrPlacement, validatePointsXrPose, type PointsXrProfile } from './xr-profile.js';
+import { disposePointsLabelResources, type PointsLabelResources } from './label-resources.js';
+import { disposePointsXrLabelResources, type PointsXrLabelResources } from './xr-label-resources.js';
 
 export { createPointsXrProfile } from './xr-profile.js';
 export { isLyra3dXrSupported } from '../xr/support.js';
+export { createPointsXrAllocationAccount } from './xr-label-layout.js';
+export { preparePointsXrLabels } from './xr-labels.js';
 
 export interface PointsXrDrawGate { allowed: boolean; transferred: boolean }
 export interface PointsXrEntryCell {
@@ -24,6 +28,8 @@ export interface PointsNativeScene {
   world: Group;
   pointResources: PointBatchResources | undefined;
   lineResources: LineBatchResources[];
+  labels: PointsXrLabelResources | undefined;
+  ordinaryLabels: PointsLabelResources | undefined;
   profile: PointsXrProfile;
   placement: { matrix: readonly number[] | undefined; yaw: number };
   drawAllowed: PointsXrDrawGate;
@@ -56,6 +62,8 @@ function entryCommit(entry: PointsXrEntryCell, scene: PointsNativeScene): () => 
     // Mark the attempt before the fallible, irreversible application handoff.
     scene.drawAllowed.transferred = true;
     commit(viewport, preparation);
+    if (scene.ordinaryLabels?.mesh) { scene.ordinaryLabels.mesh.visible = false; scene.ordinaryLabels.mesh.removeFromParent(); }
+    if (scene.labels?.meshes) for (const mesh of scene.labels.meshes) scene.world.add(mesh);
     if (scene.pointResources) configurePointBatchXr(scene.pointResources, scene.profile.units);
     for (const line of scene.lineResources) configureLineBatchXr(line, scene.profile.units);
     scene.viewportResources.camera.near = scene.profile.near;
@@ -85,10 +93,12 @@ function nativeDetach(scene: PointsNativeScene, entry: PointsXrEntryCell): () =>
 function nativeRetirement(scene: PointsNativeScene): () => void {
   return () => {
     scene.drawAllowed.allowed = false;
-    const points = scene.pointResources, lines = scene.lineResources;
-    scene.pointResources = undefined; scene.lineResources = [];
+    const points = scene.pointResources, lines = scene.lineResources, labels = scene.labels, ordinaryLabels = scene.ordinaryLabels;
+    scene.pointResources = undefined; scene.lineResources = []; scene.labels = undefined; scene.ordinaryLabels = undefined;
     let failed = false, failure: unknown;
     const cleanup = (run: () => void): void => { try { run(); } catch (error) { if (!failed) { failed = true; failure = error; } } };
+    cleanup(() => { if (labels) disposePointsXrLabelResources(labels); });
+    cleanup(() => { if (ordinaryLabels) disposePointsLabelResources(ordinaryLabels); });
     cleanup(() => { if (points) disposePointBatchResources(points); });
     for (const line of lines) cleanup(() => { disposeLineBatchResources(line); });
     cleanup(() => { retireViewportExtras(scene.viewportResources); });

@@ -2,6 +2,7 @@ import { Matrix4 } from 'three';
 import type { ResolvedLyra3dStyle } from '../core/style.js';
 import { Lyra3dXrError } from '../xr/types.js';
 import type { AdmittedPointsData } from './data.js';
+import type { PointsXrAllocationAccount, PointsXrLabelLayout } from './xr-label-layout.js';
 
 type Xyz = readonly [number, number, number];
 
@@ -18,6 +19,12 @@ export interface PointsXrProfile {
   readonly far: number;
 }
 
+export interface PointsXrLabelProfileInput {
+  readonly identity: object;
+  readonly layout: PointsXrLabelLayout;
+  readonly account: PointsXrAllocationAccount;
+}
+
 const normalMinimum = 2 ** -126;
 const unsupported = (): never => { throw new Lyra3dXrError('unsupported-scene'); };
 const failed = (): never => { throw new Lyra3dXrError('failed'); };
@@ -29,25 +36,36 @@ function coordinate(value: number): number {
   return uploaded;
 }
 
-function downwardScale(value: number): number {
-  const floats = new Float32Array(1);
-  floats[0] = value;
-  if (!Number.isFinite(value) || !Number.isFinite(floats[0])) return unsupported();
-  // Positive IEEE-754 bit patterns are ordered by value, including the normal boundary.
-  if (floats[0]! > value) {
-    const bits = new Uint32Array(floats.buffer);
-    bits[0] = bits[0]! - 1;
-  }
-  const result = floats[0]!;
-  if (!Number.isFinite(result) || result < normalMinimum) return unsupported();
-  return result;
+function downwardScale(value: number, account?: PointsXrAllocationAccount): number {
+  const buffer = account ? account.allocate(4) : new ArrayBuffer(4);
+  try {
+    const floats = new Float32Array(buffer);
+    floats[0] = value;
+    if (!Number.isFinite(value) || !Number.isFinite(floats[0])) return unsupported();
+    // Positive IEEE-754 bit patterns are ordered by value, including the normal boundary.
+    if (floats[0]! > value) {
+      const bits = new Uint32Array(buffer);
+      bits[0] = bits[0]! - 1;
+    }
+    const result = floats[0]!;
+    if (!Number.isFinite(result) || result < normalMinimum) return unsupported();
+    return result;
+  } finally { account?.release(buffer); }
 }
 
 /** Admit the complete scene before acquiring native presentation ownership. */
-export function createPointsXrProfile(data: AdmittedPointsData, style: ResolvedLyra3dStyle): PointsXrProfile {
+export function createPointsXrProfile(data: AdmittedPointsData, style: ResolvedLyra3dStyle, labels?: PointsXrLabelProfileInput): PointsXrProfile {
   const count = data.positions.length / 3;
-  if (data.mode !== '3d' || count > 100_000 || (data.segments?.length ?? 0) / 2 > 100_000 ||
-    data.labels?.some(label => label.length > 0) || data.axes.some(axis => Boolean(axis.label) || axis.ticks.some(tick => tick.label.length > 0))) return unsupported();
+  if (data.mode !== '3d' || count > 100_000 || (data.segments?.length ?? 0) / 2 > 100_000) return unsupported();
+  if (!labels && (data.labels?.some(label => label.length > 0) ||
+    data.axes.some(axis => Boolean(axis.label) || axis.ticks.some(tick => tick.label.length > 0)))) return unsupported();
+  if (labels) {
+    let axisRows = 0;
+    for (const axis of data.axes) { if (axis.label) axisRows++; for (const tick of axis.ticks) if (tick.label) axisRows++; }
+    if (labels.layout.identity !== labels.identity || labels.layout.pointRows !== count || labels.layout.axisRows !== axisRows ||
+      labels.layout.axisAnchors.length !== axisRows * 3 || labels.layout.instanceData.length !== (count + axisRows) * 9 ||
+      !Number.isFinite(labels.layout.padding) || labels.layout.padding < 0) return unsupported();
+  }
 
   const min: [number, number, number] = [Infinity, Infinity, Infinity];
   const max: [number, number, number] = [-Infinity, -Infinity, -Infinity];
@@ -77,6 +95,9 @@ export function createPointsXrProfile(data: AdmittedPointsData, style: ResolvedL
       start[otherDimension] = 0; end[otherDimension] = 0;
     }
   }
+  if (labels) for (let offset = 0; offset < labels.layout.axisAnchors.length; offset += 3) {
+    include(labels.layout.axisAnchors[offset]!, labels.layout.axisAnchors[offset + 1]!, labels.layout.axisAnchors[offset + 2]!);
+  }
   if (min[0] === Infinity) { min.fill(0); max.fill(0); }
   const center: [number, number, number] = [
     (min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2,
@@ -85,9 +106,9 @@ export function createPointsXrProfile(data: AdmittedPointsData, style: ResolvedL
   let largest = count === 0 ? 0 : data.sizes ? 0 : style.pointSize;
   if (data.sizes) for (const size of data.sizes) largest = Math.max(largest, size);
   if ((data.segments?.length ?? 0) > 0 || data.axes.length > 0) largest = Math.max(largest, style.lineWidth);
-  const padding = largest * .001;
+  const padding = Math.max(largest * .001, labels?.layout.padding ?? 0);
   if (!Number.isFinite(padding) || padding < 0 || padding + .001 >= .75 || !Number.isFinite(radius)) return unsupported();
-  const scale = radius === 0 ? 1 : downwardScale((.75 - padding - .001) / radius);
+  const scale = radius === 0 ? 1 : downwardScale((.75 - padding - .001) / radius, labels?.account);
   for (let axis = 0; axis < 3; axis++) {
     // Dividing the limit first avoids overflowing even when the scene cannot fit.
     const limit = 64 / scale;
