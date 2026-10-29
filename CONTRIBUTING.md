@@ -15,7 +15,7 @@ from the repository root:
 ```bash
 nvm install
 nvm use
-npm install --global pnpm@12.15.0
+npm install --global pnpm@12.16.1
 pnpm install --frozen-lockfile
 pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium
 pnpm build
@@ -37,7 +37,7 @@ qualification commands.
 
 The published package supports Node ≥ 22. Contributor, generation and release commands use the
 exact Node `22.23.2` in [`.nvmrc`](.nvmrc) (run `nvm use`); package-manager installs need
-Node ≥ 22, `pnpm@12.15.0` (pinned via `packageManager` in `package.json`).
+Node ≥ 22, `pnpm@12.16.1` (pinned via `packageManager` in `package.json`).
 
 ## Running things locally
 

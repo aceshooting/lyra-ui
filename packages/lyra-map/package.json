@@ -30,7 +30,7 @@
   "engines": {
     "node": ">=22"
   },
-  "packageManager": "pnpm@12.15.0",
+  "packageManager": "pnpm@12.16.1",
   "sideEffects": [
     "./dist/modules/**/*.mjs",
     "./dist/worker.mjs",
@@ -102,7 +102,7 @@
   "dependencies": {
     "@mapbox/point-geometry": "1.1.0",
     "@mapbox/tiny-sdf": "2.3.0",
-    "@maplibre/maplibre-gl-style-spec": "26.4.4",
+    "@maplibre/maplibre-gl-style-spec": "26.5.0",
     "@types/geojson": "^7946.0.16",
     "gl-matrix": "3.4.4",
     "kdbush": "4.1.0"

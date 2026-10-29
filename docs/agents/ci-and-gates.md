@@ -277,7 +277,7 @@ leg installs with `--frozen-lockfile` and enables strict browser console checkin
 jobs cover the Node floor, declarations, tree shaking and framework recipes without repeating that
 matrix per browser. DOCX qualification runs on Firefox shard 2, leaving the map and 3D companions
 on Firefox shard 1; Chromium and WebKit qualify DOCX on their single shard.
-Node 22 uses `package.json#packageManager` (`pnpm@12.15.0`).
+Node 22 uses `package.json#packageManager` (`pnpm@12.16.1`).
 
 ### Package coverage reporting
 
@@ -444,7 +444,7 @@ Codecov reports to check source ownership; it does not upload them.
   its automatic default and WebKit/Safari use the smaller of four pages or half the CPUs. The
   aggregate runner budgets shard pages from Firefox's one-page and WebKit's four-page allocations.
 - `./scripts/ci.sh --platform-matrix` (or `--all`) runs the primary aggregate and the same six
-  Node 22 browser/shard legs as CI. Node 22 needs pnpm 12.15.0.
+  Node 22 browser/shard legs as CI. Node 22 needs pnpm 12.16.1.
   Its 6 legs are source-derived: Node 22 runs Chromium (1 shard), Chrome (1 shard), Edge (1 shard), Firefox (2 shards), and Safari (1 shard).
   `CI_SH_NODE22_BIN` and `CI_SH_PNPM22_BIN` accept explicit executable paths; the selected Node
   must match the exact `.nvmrc` patch.
