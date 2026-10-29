@@ -65,9 +65,9 @@ export interface SceneBridgeNativeMap {
   getBearing(): number;
   getTerrain(): { readonly source: string } | null;
   getProjection(): unknown;
-  on(type: 'move' | 'resize' | 'terrain' | 'projectiontransition' | 'sourcedata' | 'style.load',
+  on(type: 'move' | 'resize' | 'terrain' | 'projectiontransition' | 'sourcedata' | 'style.load' | 'render',
     listener: (event: { readonly sourceId?: string }) => void): unknown;
-  off(type: 'move' | 'resize' | 'terrain' | 'projectiontransition' | 'sourcedata' | 'style.load',
+  off(type: 'move' | 'resize' | 'terrain' | 'projectiontransition' | 'sourcedata' | 'style.load' | 'render',
     listener: (event: { readonly sourceId?: string }) => void): unknown;
   prepareFeatures?(requirements: MapFeatureRequirements, options?: MapFeaturePreparationOptions): Promise<void>;
 }

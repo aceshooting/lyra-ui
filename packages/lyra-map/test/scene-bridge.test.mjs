@@ -319,6 +319,90 @@ test('style replacement creates a fresh layer epoch and cannot reuse stale terra
   assert.ok(item.gpu.draws.some(draw => hasUniform(draw, [4096, 4096, 257]))); item.stop();
 });
 
+test('style load before source readiness waits for a native render before installing the replacement', async () => {
+  const item = fixture({ input: packet({ markers: [absolute()] }) }); item.start(); await item.ready(); await item.frames(1);
+  const old = item.calls.add[0].layer, revision = latest(item).markerInstallationRevision;
+  item.bridge.invalidateStyle(); item.style(false); item.nativeEvents.emit('style.load'); await item.ready();
+  const draws = item.gpu.draws.length;
+  for (let index = 0; index < 3; index++) { item.nativeEvents.emit('render'); await item.ready(); }
+  assert.equal(item.calls.add.length, 1); assert.equal(latest(item).markerInstallationRevision, revision);
+  await item.callback('render', [old]); assert.equal(item.gpu.draws.length, draws);
+  item.style(true); for (let index = 0; index < 3; index++) item.nativeEvents.emit('render'); await item.ready();
+  assert.equal(item.calls.add.length, 2, 'fully loaded native render resumes the pending style installation once');
+  assert.notEqual(item.calls.add[1].layer, old); assert.ok(latest(item).markerInstallationRevision > revision);
+  await item.frames(1); assert.ok(item.gpu.draws.length > draws); assert.deepEqual(item.errors, []); item.stop();
+});
+
+test('first installation resumes from style readiness with only the latest accepted input', async () => {
+  const item = fixture({ input: packet({ markers: [absolute()] }) }); item.style(false); item.start(); await item.ready();
+  assert.equal(item.calls.add.length, 0); assert.equal(item.gpu.created.size, 0);
+  item.replace(packet({ acceptedSceneRevision: 2, presentationRevision: 2,
+    markers: [absolute('latest', { rgba: [0.8, 0.3, 0.1, 0.25] })] })); await item.ready();
+  item.style(true); item.nativeEvents.emit('render'); await item.ready(); await item.frames(1);
+  assert.equal(item.calls.add.length, 1, 'initial source readiness resumes installation');
+  assert.equal(latest(item).state, 'installed'); assert.equal(latest(item).acceptedSceneRevision, 2);
+  assert.ok(item.gpu.draws.length > 0); assert.ok(item.gpu.draws.every(draw => hasUniform(draw, [0.8, 0.3, 0.1, 0.25])));
+  assert.deepEqual(item.errors, []); item.stop();
+});
+
+test('native readiness wakes coalesce without replacing an in-flight feature preparation', async () => {
+  const item = fixture({ input: packet({ markers: [absolute()] }) }), pending = deferred();
+  item.style(false); item.start(); await item.ready(); item.controls.onPrepare = () => pending.promise;
+  item.style(true); item.nativeEvents.emit('render'); await item.ready();
+  assert.equal(item.calls.prepare.length, 1, 'readiness starts one feature preparation');
+  for (let index = 0; index < 3; index++) { item.nativeEvents.emit('render'); await item.ready(); }
+  assert.equal(item.calls.prepare.length, 1); assert.equal(item.calls.add.length, 0);
+  pending.resolve(); await item.ready(); assert.equal(item.calls.add.length, 1);
+  const revision = latest(item).markerInstallationRevision;
+  for (let index = 0; index < 3; index++) { item.nativeEvents.emit('render'); await item.ready(); }
+  assert.equal(item.calls.prepare.length, 1); assert.equal(latest(item).markerInstallationRevision, revision); item.stop();
+});
+
+test('readiness wake cannot cross a new style barrier or a disposed bridge', async () => {
+  const item = fixture({ input: packet({ markers: [absolute()] }) }); item.style(false); item.start(); await item.ready();
+  item.bridge.invalidateStyle(); item.style(true); item.nativeEvents.emit('render'); await item.ready();
+  assert.equal(item.calls.prepare.length, 0); assert.equal(item.calls.add.length, 0);
+  item.nativeEvents.emit('style.load'); await item.ready(); assert.equal(item.calls.add.length, 1);
+  item.bridge.invalidateStyle(); item.style(false); item.nativeEvents.emit('style.load'); await item.ready(); item.stop();
+  item.style(true); item.nativeEvents.emit('render'); item.nativeEvents.emit('style.load'); await item.ready();
+  assert.equal(item.calls.add.length, 1); assert.equal(item.nativeEvents.count(), 0); assert.equal(item.calls.unsubscribe, 1);
+});
+
+test('same-style source loading cannot retire a committed layer or its glyph resources', async () => {
+  const item = fixture({ input: packet({ markers: [absolute()] }) }); item.start(); await item.ready(); await item.frames(1);
+  const installed = item.calls.add[0], revision = latest(item).markerInstallationRevision;
+  const programs = ownedLive(item, 'Program'), resources = item.gpu.created.size;
+  item.style(false); item.nativeEvents.emit('sourcedata', { sourceId: 'labels', sourceDataType: 'content' });
+  await item.frames(1);
+  assert.equal(item.map.getLayer(installed.layer.id), installed.handle, 'full source readiness is not committed style identity');
+  assert.equal(item.calls.remove.length, 0); assert.ok(programs.every(program => !item.gpu.deleted.has(program)));
+  const draws = item.gpu.draws.length;
+  item.style(true); item.nativeEvents.emit('render'); await item.ready(); await item.frames(1);
+  assert.ok(item.gpu.draws.length > draws); assert.equal(item.calls.add.length, 1); assert.equal(item.gpu.created.size, resources);
+  assert.equal(latest(item).markerInstallationRevision, revision); assert.deepEqual(item.errors, []); item.stop();
+});
+
+for (const replaceInput of [false, true]) {
+  test(`readiness interruption during held preparation preserves ${replaceInput ? 'replacement' : 'original'} startup intent`, async () => {
+    const item = fixture({ input: packet({ markers: [absolute()] }) }), pending = deferred();
+    item.controls.onPrepare = () => pending.promise; item.start(); await item.ready();
+    assert.equal(item.calls.prepare.length, 1); item.style(false);
+    if (replaceInput) {
+      item.replace(packet({ acceptedSceneRevision: 2, presentationRevision: 2,
+        markers: [absolute('latest', { rgba: [0.8, 0.3, 0.1, 0.25] })] })); await item.ready();
+    }
+    pending.resolve(); await item.ready();
+    assert.equal(item.calls.add.length, 0, 'startup remains pending while full native readiness is false');
+    assert.equal(item.gpu.created.size, 0);
+    item.style(true); item.nativeEvents.emit('render'); await item.ready(); await item.frames(1);
+    assert.equal(item.calls.add.length, 1, 'a later ready render resumes the latest startup intent');
+    assert.equal(latest(item).state, 'installed'); assert.equal(latest(item).acceptedSceneRevision, replaceInput ? 2 : 1);
+    assert.ok(item.gpu.draws.length > 0);
+    const color = replaceInput ? [0.8, 0.3, 0.1, 0.25] : [0.2, 0.4, 0.8, 0.5];
+    assert.ok(item.gpu.draws.every(draw => hasUniform(draw, color))); assert.deepEqual(item.errors, []); item.stop();
+  });
+}
+
 for (const pixelRatio of [1, 1.25, 2]) {
   test(`CSS radius has the same clip offsets at pixel ratio ${pixelRatio} without point-size clamping`, async () => {
     const input = packet({ allocation: { revision: 1, width: 640, height: 480, pixelRatio, padding: { top: 0, right: 0, bottom: 0, left: 0 } },

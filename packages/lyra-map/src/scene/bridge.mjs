@@ -77,7 +77,8 @@ export function createSceneBridge(map, host) {
   // Two bounded queue packets, one native sampler and two scalar staging records may overlap.
   const ledger = createSceneResourceLedger({ bytes: 2000 * 56 + 400 + 72 });
   const contexts = new WeakMap(), retainedContexts = new Set(), owners = new Set(), listeners = [];
-  let disposed = false, visible = true, contextLost = false, awaitingStyle = false, scheduled = false, wakeup = false;
+  let disposed = false, visible = true, contextLost = false, awaitingStyle = false, waitingStyleReady = false, scheduled = false, wakeup = false;
+  let pollingStyleReady = false;
   let active, operation, activeCallback, releaseInput, reconcileRevision = 0, installationRevision = 0, ownerSequence = 0, contextSequence = 0;
   let viewRevision = 1, styleRevision = 1, stamp = Object.freeze({}), layout, zoom = 0, terrainSource;
 
@@ -363,7 +364,16 @@ export function createSceneBridge(map, host) {
       signal,
       isCurrent: request => baseCurrent() && active === owner && !owner.retired && owner.styleRevision === styleRevision && request === owner.request &&
         (owner.committed || identityCurrent(owner.identity)),
-      isStyleReady: () => !awaitingStyle && map.isStyleLoaded(),
+      isStyleReady() {
+        if (awaitingStyle) return false;
+        // Source loading does not revoke an already committed style and layer identity.
+        if (owner.committed) return true;
+        const ready = map.isStyleLoaded();
+        if (!ready && !disposed && !contextLost && !awaitingStyle && active === owner && !owner.retired && owner.styleRevision === styleRevision) {
+          waitingStyleReady = true;
+        }
+        return ready;
+      },
       onState() {},
       onError(_id, code) {
         report(code === 'engine' ? 'engine' : 'render');
@@ -441,6 +451,7 @@ export function createSceneBridge(map, host) {
   async function reconcile() {
     const attempt = ++reconcileRevision;
     if (!baseCurrent() || awaitingStyle) return;
+    waitingStyleReady = false;
     const identity = capture();
     if (!identityCurrent(identity)) return;
     const input = readInput(identity);
@@ -485,7 +496,7 @@ export function createSceneBridge(map, host) {
   }
   function inputChanged() { reconcileRevision++; schedule(); }
   function lost() {
-    contextLost = true; wakeup = false; reconcileRevision++;
+    contextLost = true; waitingStyleReady = false; wakeup = false; reconcileRevision++;
     for (const context of retainedContexts) context.lost = true;
     retire(active, 'context-lost');
     for (const owner of [...owners]) { owner.retired = true; cleanupOwner(owner); }
@@ -498,12 +509,12 @@ export function createSceneBridge(map, host) {
   }
   function invalidateStyle() {
     if (disposed) return;
-    awaitingStyle = true; styleRevision++; viewRevision++; stamp = Object.freeze({}); reconcileRevision++; wakeup = false;
+    awaitingStyle = true; waitingStyleReady = false; styleRevision++; viewRevision++; stamp = Object.freeze({}); reconcileRevision++; wakeup = false;
     retire(active);
   }
   function dispose() {
     if (disposed) return;
-    disposed = true; reconcileRevision++; wakeup = false;
+    disposed = true; waitingStyleReady = false; reconcileRevision++; wakeup = false;
     signal.removeEventListener('abort', dispose);
     if (releaseInput) { const release = releaseInput; releaseInput = undefined; try { release(); } catch { /* Retain resource cleanup independently. */ } }
     for (const [name, listener] of listeners) map.off(name, listener);
@@ -515,6 +526,16 @@ export function createSceneBridge(map, host) {
   for (const name of ['move', 'resize', 'terrain', 'projectiontransition']) listen(name, () => { if (!disposed && !contextLost) invalidateTerrain(); });
   listen('sourcedata', event => { if (!disposed && !contextLost && terrainSource && event?.sourceId === terrainSource) invalidateTerrain(); });
   listen('style.load', () => { if (!disposed) { awaitingStyle = false; schedule(); } });
+  listen('render', () => {
+    if (!waitingStyleReady || pollingStyleReady || awaitingStyle || disposed || contextLost) return;
+    pollingStyleReady = true;
+    try {
+      if (!baseCurrent() || !waitingStyleReady || awaitingStyle || !map.isStyleLoaded()) return;
+      if (!waitingStyleReady || awaitingStyle || disposed || contextLost) return;
+      waitingStyleReady = false; schedule();
+    } catch { report('engine'); }
+    finally { pollingStyleReady = false; }
+  });
   canvas.addEventListener('webglcontextlost', lost, true);
   canvas.addEventListener('webglcontextrestored', restored);
   signal.addEventListener('abort', dispose, { once: true });
