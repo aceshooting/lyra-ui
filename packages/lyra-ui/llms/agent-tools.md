@@ -2899,7 +2899,7 @@ sanitizer runs at click time, not render time, so a _non-empty but rejected_ URL
 button and simply emits nothing when pressed. The component never navigates on its own: it emits
 non-cancelable `lr-download` with the sanitized `src`; the host owns the actual download.
 `downloadName: string = ''` (attribute `download-name`) — the suggested filename reported in the
-`lr-download-request` event detail.
+`lr-download` event detail.
 
 **Slots:** default — preview-view content (markdown/html-viewer/browser-frame/image). `code` —
 code-view content (typically a `lr-code-block`); the preview/code toggle only renders once this

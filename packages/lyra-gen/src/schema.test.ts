@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DEFAULT_LIMITS, HARD_LIMITS, parseJson, resolveLimits, snapshotJson, validateSchema } from './schema.js';
-import type { LyraGenSchema } from './types.js';
+import type { LyraGenLimits, LyraGenSchema } from './types.js';
 
 test('owns and freezes admitted data without invoking getters or serialization hooks', () => {
   const input = { rows: [{ value: 3 }] };
@@ -92,6 +92,64 @@ test('unsupported or malformed schemas reject rather than weakening validation',
     assert.equal(result.ok, false);
     assert.equal(result.diagnostics[0]?.code, 'schema.invalid');
   }
+});
+
+test('schema JSON value budgets preserve the exact admission failure at their boundary', () => {
+  const schema: LyraGenSchema = { type: 'string', enum: ['first', 'second'] };
+  const result = validateSchema('first', schema, { maxNodes: 4 });
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.diagnostics, [{
+    code: 'limit.nodes', path: '/enum/1', message: 'JSON exceeds the value count limit.', severity: 'error'
+  }]);
+  assert.equal('value' in result, false);
+  assert.equal(validateSchema('first', schema, { maxNodes: 5 }).ok, true);
+});
+
+test('schema admission preserves every resource-limit diagnostic rather than schema.invalid', () => {
+  const cases: readonly { input: unknown; schema: LyraGenSchema; limits: Partial<LyraGenLimits>; code: string }[] = [
+    { input: null, schema: { type: 'null' }, limits: { maxBytes: 14 }, code: 'limit.bytes' },
+    { input: [], schema: { type: 'array', items: { type: 'null' } }, limits: { maxDepth: 1 }, code: 'limit.depth' },
+    { input: 'first', schema: { type: 'string', enum: ['first', 'second'] }, limits: { maxNodes: 4 }, code: 'limit.nodes' },
+    { input: '', schema: { type: 'string' }, limits: { maxStringLength: 5 }, code: 'limit.string' },
+    { input: null, schema: { type: 'null', enum: [null, false] }, limits: { maxArrayLength: 1 }, code: 'limit.array' },
+    { input: null, schema: { type: 'null', description: 'value' }, limits: { maxObjectKeys: 1 }, code: 'limit.keys' }
+  ];
+  for (const entry of cases) {
+    assert.equal(snapshotJson(entry.input, entry.limits).ok, true, `${entry.code}: input fits`);
+    const expected = snapshotJson(entry.schema, entry.limits);
+    assert.equal(expected.ok, false, entry.code);
+    assert.equal(expected.diagnostics[0]?.code, entry.code);
+    const result = validateSchema(entry.input, entry.schema, entry.limits);
+    assert.equal(result.ok, false, entry.code);
+    assert.equal('value' in result, false, entry.code);
+    assert.deepEqual(result.diagnostics, expected.diagnostics, entry.code);
+  }
+});
+
+test('unsafe schemas remain invalid without invoking accessors or serialization hooks', () => {
+  let calls = 0;
+  const accessor = Object.defineProperty({}, 'type', { enumerable: true, get() { calls++; return 'null'; } });
+  const cycle: Record<string, unknown> = { type: 'null' };
+  cycle['default'] = cycle;
+  const revoked = Proxy.revocable({}, {});
+  revoked.revoke();
+  for (const schema of [accessor, cycle, revoked.proxy, new Date(), { type: 'null', constructor: 1 }, { type: 'null', toJSON() { calls++; return {}; } }]) {
+    const result = validateSchema(null, schema as LyraGenSchema);
+    assert.equal(result.ok, false);
+    assert.equal('value' in result, false);
+    assert.deepEqual(result.diagnostics, [{ code: 'schema.invalid', path: '', message: 'Schema must be bounded plain JSON.', severity: 'error' }]);
+  }
+  assert.equal(calls, 0);
+});
+
+test('input admission and value mismatch diagnostics retain their own classifications', () => {
+  const schema: LyraGenSchema = { type: 'string' };
+  const input = [1, 2];
+  const limits = { maxNodes: 2 };
+  assert.deepEqual(validateSchema(input, schema, limits), snapshotJson(input, limits));
+  assert.equal(validateSchema(undefined, schema).diagnostics[0]?.code, 'json.type');
+  assert.equal(validateSchema(1, schema).diagnostics[0]?.code, 'schema.type');
+  assert.equal(validateSchema('other', { type: 'string', enum: ['allowed'] }).diagnostics[0]?.code, 'schema.enum');
 });
 
 test('later valid union branches discard failed-branch diagnostics', () => {

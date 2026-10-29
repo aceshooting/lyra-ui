@@ -60,6 +60,15 @@ integers and clamped to the hard ceiling; invalid overrides retain the default.
 | `maxObjectKeys` | 256 | 1024 |
 | `maxDiagnostics` | 20 | 100 |
 
+`maxNodes` counts every JSON value: the root, each object or array, and each primitive property
+value or array item. Property names do not add values. The limit applies independently to each
+input snapshot and each schema snapshot, including schema annotations and enum values. Schema
+validation also uses this limit as a separate work ceiling, including alternative branches, enum
+comparisons and required-property checks. It does not count rendered components. A small view
+can therefore exceed a schema budget even when its input fits. Snapshot exhaustion reports
+`limit.nodes`; validation-work exhaustion reports `limit.validation`. Other snapshot limits also
+apply to schemas. See [resource-limit diagnostics](recovery-and-diagnostics.md#resource-limit-diagnostics).
+
 Markup has independent `MARKUP_LIMITS`: 262144 bytes and UTF-16 code units, depth 32, 1000 nodes,
 64 attributes per node, JSON depth 32 and 10000 JSON entries. Its overrides accept only positive
 safe integers and can only lower those ceilings. Default structural tags are `stack`, `row`,

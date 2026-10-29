@@ -39,6 +39,26 @@ test('validation copies, freezes, enforces identity, catalog, slots and structur
   ]) assert.equal(validateView(bad, catalog).ok, false);
 });
 
+test('schema admission budgets reject the whole view in strict and isolate modes', () => {
+  const boundedCatalog: LyraGenCatalog = {
+    id: 'budget', version: '1',
+    components: { text: { tag: 'span', properties: { value: { type: 'integer', enum: Array.from({ length: 32 }, (_, index) => index) } } } }
+  };
+  const source: LyraGenView = {
+    version: '1', catalog: { id: 'budget', version: '1' }, surfaceId: 'surface', revision: 0,
+    root: { id: 'root', type: 'text', props: { value: 0 } }
+  };
+  for (const recovery of ['strict', 'isolate'] as const) {
+    const result = validateView(source, boundedCatalog, { limits: { maxNodes: 20 }, recovery });
+    assert.equal(result.ok, false, recovery);
+    assert.equal('value' in result, false, recovery);
+    assert.deepEqual(result.diagnostics, [{
+      code: 'limit.nodes', path: '/root/props/value/enum/17', message: 'JSON exceeds the value count limit.', severity: 'error'
+    }]);
+    assert.equal(validateView(source, boundedCatalog, { limits: { maxNodes: 35 }, recovery }).ok, true, recovery);
+  }
+});
+
 test('atomic patches retain untouched references and reject stale, duplicate, nested and invalid targets', () => {
   const initial = validateView(view(), catalog);
   assert.equal(initial.ok, true); if (!initial.ok) return;

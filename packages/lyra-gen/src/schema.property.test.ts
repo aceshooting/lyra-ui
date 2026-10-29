@@ -27,6 +27,20 @@ test('schema integer range agrees with an independent numeric predicate', () => 
   }), propertyRuns());
 });
 
+test('schema enum snapshots count the root, type, array and each primitive value', () => {
+  fc.assert(fc.property(fc.integer({ min: 2, max: 50 }), length => {
+    const schema = { type: 'integer' as const, enum: Array.from({ length }, (_, index) => index) };
+    const exact = length + 3;
+    const rejected = validateSchema(0, schema, { maxNodes: exact - 1 });
+    assert.equal(rejected.ok, false);
+    assert.equal('value' in rejected, false);
+    assert.deepEqual(rejected.diagnostics.map(item => ({ code: item.code, path: item.path })), [
+      { code: 'limit.nodes', path: `/enum/${length - 1}` }
+    ]);
+    assert.equal(validateSchema(0, schema, { maxNodes: exact }).ok, true);
+  }), propertyRuns());
+});
+
 test('arbitrary source text returns a bounded result without throwing', () => {
   fc.assert(fc.property(fc.string(), source => {
     const result = parseJson(source, { maxBytes: 500, maxDepth: 8, maxNodes: 50 });

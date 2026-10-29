@@ -22,6 +22,7 @@ export type LyraGenSchema = SchemaAnnotations & (
 export interface LyraGenLimits {
   readonly maxBytes: number;
   readonly maxDepth: number;
+  /** JSON value count per input or schema snapshot, and schema validation work ceiling; not a rendered component count. */
   readonly maxNodes: number;
   readonly maxStringLength: number;
   readonly maxArrayLength: number;
