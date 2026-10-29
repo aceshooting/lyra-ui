@@ -26,7 +26,16 @@ export function createPointsEngine(services: PointsEngineServices = {}): PointsE
     const next = normalizeOrbitCamera(value);
     return data?.mode === '2d' ? { ...next, yaw: 0, pitch: 0, target: { ...next.target, z: 0 } } : next;
   };
-  const clear = () => { labels?.dispose(); labels = undefined; points?.dispose(); points = undefined; for (const line of lines) line.dispose(); lines = []; };
+  const clear = () => {
+    const previousLabels = labels, previousPoints = points, previousLines = lines;
+    labels = undefined; points = undefined; lines = [];
+    let failed = false, failure: unknown;
+    const cleanup = (run: () => void): void => { try { run(); } catch (error) { if (!failed) { failed = true; failure = error; } } };
+    cleanup(() => { previousLabels?.dispose(); });
+    cleanup(() => { previousPoints?.dispose(); });
+    for (const line of previousLines) cleanup(() => { line.dispose(); });
+    if (failed) throw failure;
+  };
   const frame = () => {
     if (!viewport || disposed) return;
     points?.resize(viewport.width, viewport.height);
@@ -102,6 +111,17 @@ export function createPointsEngine(services: PointsEngineServices = {}): PointsE
     project(item) { const point = positionOf(item); return point ? viewport?.project(point) ?? null : null; },
     positionOf,
     resize(width, height) { viewport?.resize(width, height); frame(); },
-    dispose() { if (disposed) return; disposed = true; unframe?.(); clear(); viewport?.dispose(); viewport = undefined; host = undefined; data = undefined; },
+    dispose() {
+      if (disposed) return;
+      disposed = true;
+      const stopFrame = unframe, previousViewport = viewport;
+      unframe = undefined; viewport = undefined; host = undefined; data = undefined;
+      let failed = false, failure: unknown;
+      const cleanup = (run: () => void): void => { try { run(); } catch (error) { if (!failed) { failed = true; failure = error; } } };
+      cleanup(() => { stopFrame?.(); });
+      cleanup(clear);
+      cleanup(() => { previousViewport?.dispose(); });
+      if (failed) throw failure;
+    },
   };
 }

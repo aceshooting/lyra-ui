@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { stripTypeScriptTypes } from 'node:module';
+import { join } from 'node:path';
 import test from 'node:test';
+import { src } from '../scripts/complete-transform.mjs';
 import { createTerrainNativeBatch } from '../src/scene/terrain-native.mjs';
 import { createSceneGlEnvelope } from '../src/scene/gl-state.mjs';
 
@@ -42,6 +46,8 @@ function fixture({ offscreen = false, colors = true, mirrorDefaultDrawBuffer = f
   }));
   const ubos = [{ buffer: handle('ubo-range'), start: 16, size: 48 }, { buffer: null, start: 0, size: 0 }];
   const attributes = [new Float32Array([0.25, 0.5, 0.75, 1]), new Int32Array([-2, 3, 4, 5]), new Uint32Array([2, 3, 4, 5])];
+  const entryVao = values.get('VERTEX_ARRAY_BINDING');
+  const elementBuffers = new Map([[null, handle('default-element-buffer')], [entryVao, handle('entry-element-buffer')]]);
   let drawBuffers = offscreen ? [300, 301] : ['BACK', 'NONE'];
   let lost = false, current = true, timer = null, duringGet;
   const queries = new Map(), gl = { TEXTURE0: 100, DRAW_BUFFER0: 200, COLOR_ATTACHMENT0: 300, COLOR_ATTACHMENT1: 301,
@@ -50,7 +56,7 @@ function fixture({ offscreen = false, colors = true, mirrorDefaultDrawBuffer = f
     'CURRENT_QUERY', 'CURRENT_VERTEX_ATTRIB', 'ANY_SAMPLES_PASSED', 'ANY_SAMPLES_PASSED_CONSERVATIVE',
     'TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN', 'UNIFORM_BUFFER_START', 'UNIFORM_BUFFER_SIZE',
     'DRAW_FRAMEBUFFER', 'READ_FRAMEBUFFER', 'FRAMEBUFFER', 'RENDERBUFFER', 'FRONT', 'BACK', 'FRONT_AND_BACK',
-    'NONE', 'BROWSER_DEFAULT_WEBGL']) if (!(name in gl)) gl[name] = name;
+    'NONE', 'BROWSER_DEFAULT_WEBGL', 'ELEMENT_ARRAY_BUFFER', 'ELEMENT_ARRAY_BUFFER_BINDING']) if (!(name in gl)) gl[name] = name;
   let drawingColor = 'srgb', unpackColor = 'display-p3';
   if (colors) for (const name of ['drawingBufferColorSpace', 'unpackColorSpace']) Object.defineProperty(gl, name, {
     configurable: true,
@@ -65,6 +71,7 @@ function fixture({ offscreen = false, colors = true, mirrorDefaultDrawBuffer = f
   gl.isContextLost = function () { assert.equal(this, gl); calls.push(['isContextLost']); return lost; };
   method('getParameter', name => {
     duringGet?.(name);
+    if (name === gl.ELEMENT_ARRAY_BUFFER_BINDING) return elementBuffers.get(values.get('VERTEX_ARRAY_BINDING')) ?? null;
     if (textureBindings.includes(name)) return units[values.get('ACTIVE_TEXTURE') - 100].textures[textureBindings.indexOf(name)];
     if (name === 'SAMPLER_BINDING') return units[values.get('ACTIVE_TEXTURE') - 100].sampler;
     if (name === 200 || name === 201) return drawBuffers[mirrorDefaultDrawBuffer && values.get('DRAW_FRAMEBUFFER_BINDING') === null ? 0 : name - 200];
@@ -81,7 +88,10 @@ function fixture({ offscreen = false, colors = true, mirrorDefaultDrawBuffer = f
   method('activeTexture', unit => values.set('ACTIVE_TEXTURE', unit));
   method('bindTexture', (target, value) => { units[values.get('ACTIVE_TEXTURE') - 100].textures[textures.indexOf(target)] = value; });
   method('bindSampler', (index, value) => { units[index].sampler = value; });
-  method('bindBuffer', (target, value) => values.set(`${target}_BINDING`, value));
+  method('bindBuffer', (target, value) => {
+    if (target === gl.ELEMENT_ARRAY_BUFFER) elementBuffers.set(values.get('VERTEX_ARRAY_BINDING'), value);
+    else values.set(`${target}_BINDING`, value);
+  });
   method('bindBufferBase', (target, index, value) => { assert.equal(target, gl.UNIFORM_BUFFER); ubos[index] = { buffer: value, start: 0, size: 0 }; values.set('UNIFORM_BUFFER_BINDING', value); });
   method('bindBufferRange', (target, index, value, start, size) => { assert.equal(target, gl.UNIFORM_BUFFER); ubos[index] = { buffer: value, start, size }; values.set('UNIFORM_BUFFER_BINDING', value); });
   for (const [name, Type] of [['vertexAttrib4fv', Float32Array], ['vertexAttribI4iv', Int32Array], ['vertexAttribI4uiv', Uint32Array]]) {
@@ -120,13 +130,13 @@ function fixture({ offscreen = false, colors = true, mirrorDefaultDrawBuffer = f
   method('sampleCoverage', (value, invert) => { values.set('SAMPLE_COVERAGE_VALUE', value); values.set('SAMPLE_COVERAGE_INVERT', invert); });
   for (const name of ['getError', 'clear', 'bufferData', 'bufferSubData', 'texImage2D', 'texImage3D', 'framebufferTexture2D',
     'deleteTexture', 'deleteBuffer', 'deleteFramebuffer', 'beginQuery', 'endQuery', 'beginTransformFeedback', 'endTransformFeedback']) gl[name] = () => assert.fail(`envelope must not call ${name}`);
-  const item = { gl, calls, values, enabled, units, ubos, attributes, queries,
+  const item = { gl, calls, values, enabled, units, ubos, attributes, queries, elementBuffers,
     current: () => current, stale() { current = false; }, lose() { lost = true; }, timer() { timer = { TIME_ELAPSED_EXT: 'TIMER' }; },
     duringGet(callback) { duringGet = callback; },
     colors(drawing, unpack) { drawingColor = drawing; unpackColor = unpack; },
     snapshot() { return structuredClone({ values: [...values], enabled: [...enabled].sort(), units, ubos,
       attributes: attributes.map(value => ({ type: value.constructor.name, value: [...value] })), drawBuffers,
-      drawingColor, unpackColor }); }
+      drawingColor, unpackColor, defaultElementBuffer: elementBuffers.get(null), entryElementBuffer: elementBuffers.get(entryVao) }); }
   };
   return item;
 }
@@ -193,6 +203,129 @@ test('terrain-point establishes numeric transfer baseline and restores the compl
     assert.ok(last('useProgram') > last('pixelStorei'));
     guard.dispose();
   }
+});
+
+for (const native of [false, true]) for (const throws of [false, true]) test(`terrain-point restores default and entry VAO element buffers after ${native ? 'pinned IndexBuffer' : 'modeled cold mesh'} ${throws ? 'failure' : 'success'}`, async () => {
+  const item = fixture(), guard = create(item), { gl } = item;
+  let IndexBuffer;
+  if (native) {
+    const original = await readFile(join(src, 'webgl/index_buffer.ts'), 'utf8');
+    const javascript = stripTypeScriptTypes(original, { mode: 'transform' }).replace('export class IndexBuffer', 'class IndexBuffer');
+    IndexBuffer = new Function(`${javascript}\nreturn IndexBuffer;`)();
+  }
+  const entryVao = gl.getParameter(gl.VERTEX_ARRAY_BINDING);
+  const entryElementBuffer = gl.getParameter(gl.ELEMENT_ARRAY_BUFFER_BINDING);
+  const defaultElementBuffer = item.elementBuffers.get(null);
+  assert.notEqual(entryElementBuffer, defaultElementBuffer);
+  let work = 0, error;
+  try {
+    const result = guard.run(() => {
+      work++;
+      if (native) {
+        const ownedBuffer = handle('native-cold-index-buffer');
+        const arrayBuffer = new ArrayBuffer(6);
+        let uploaded = false, freed = false;
+        gl.STATIC_DRAW = 'STATIC_DRAW';
+        gl.createBuffer = function () { assert.equal(this, gl); return ownedBuffer; };
+        gl.bufferData = function (target, data, usage) {
+          assert.equal(this, gl); assert.equal(target, gl.ELEMENT_ARRAY_BUFFER);
+          assert.equal(data, arrayBuffer); assert.equal(usage, gl.STATIC_DRAW);
+          assert.equal(gl.getParameter(gl.VERTEX_ARRAY_BINDING), null);
+          assert.equal(gl.getParameter(gl.ELEMENT_ARRAY_BUFFER_BINDING), ownedBuffer);
+          uploaded = true;
+        };
+        const context = { gl, unbindVAO: () => gl.bindVertexArray(null),
+          bindElementBuffer: { set: buffer => gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer) } };
+        const indexBuffer = new IndexBuffer(context, { arrayBuffer, freeBufferAfterUpload() { freed = true; } });
+        assert.equal(indexBuffer.buffer, ownedBuffer);
+        assert.equal(uploaded, true); assert.equal(freed, true);
+        assert.equal(item.elementBuffers.get(null), ownedBuffer);
+      } else {
+        gl.bindVertexArray(null);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, handle('native-cold-index-buffer'));
+      }
+      gl.bindVertexArray(handle('native-fresh-mesh-vao'));
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, handle('native-mesh-index-buffer'));
+      if (throws) throw new Error('sensitive cold mesh diagnostic');
+      return 29;
+    });
+    assert.equal(result, 29);
+  } catch (value) { error = value; }
+  assert.equal(work, 1);
+  if (throws) {
+    assert.ok(error instanceof TypeError);
+    assert.equal(error.message.includes('sensitive cold mesh diagnostic'), false);
+  } else assert.equal(error, undefined);
+  assert.equal(gl.getParameter(gl.VERTEX_ARRAY_BINDING), entryVao);
+  assert.equal(gl.getParameter(gl.ELEMENT_ARRAY_BUFFER_BINDING), entryElementBuffer);
+  assert.equal(item.elementBuffers.get(null), defaultElementBuffer);
+  guard.dispose();
+});
+
+for (const throws of [false, true]) test(`terrain-point restores an already-default entry VAO element buffer after ${throws ? 'failure' : 'success'}`, () => {
+  const item = fixture(), guard = create(item), { gl } = item;
+  gl.bindVertexArray(null); const before = item.snapshot();
+  const work = () => {
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, handle('native-cold-index-buffer'));
+    gl.bindVertexArray(handle('native-fresh-vao'));
+    if (throws) throw new Error('private native failure');
+  };
+  if (throws) assert.throws(() => guard.run(work), TypeError); else guard.run(work);
+  assert.deepEqual(item.snapshot(), before); guard.dispose();
+});
+
+test('default VAO element capture failure rebinds the entry VAO before refusing work', () => {
+  const item = fixture(), guard = create(item), { gl } = item, before = item.snapshot();
+  let work = 0, refused = false;
+  item.duringGet(name => {
+    if (!refused && name === gl.ELEMENT_ARRAY_BUFFER_BINDING && item.values.get('VERTEX_ARRAY_BINDING') === null) {
+      refused = true; throw new Error('private element capture failure');
+    }
+  });
+  assert.throws(() => guard.run(() => { work++; }), TypeError);
+  assert.equal(refused, true); assert.equal(work, 0); assert.deepEqual(item.snapshot(), before);
+  guard.dispose();
+});
+
+test('context loss during default VAO element capture prevents subsequent native work', () => {
+  const item = fixture(), guard = create(item), { gl } = item;
+  let work = 0, afterLoss;
+  item.duringGet(name => {
+    if (name === gl.ELEMENT_ARRAY_BUFFER_BINDING && item.values.get('VERTEX_ARRAY_BINDING') === null) {
+      item.lose(); afterLoss = item.calls.length;
+    }
+  });
+  assert.throws(() => guard.run(() => { work++; }), TypeError);
+  assert.equal(work, 0); assert.notEqual(afterLoss, undefined);
+  assert.equal(item.calls.slice(afterLoss).some(call => call[0] !== 'isContextLost'), false);
+  guard.dispose();
+});
+
+for (const failedTarget of ['default', 'entry']) test(`failed ${failedTarget} VAO restoration skips target-dependent element writes and continues other state restoration`, () => {
+  const item = fixture(), guard = create(item), { gl } = item;
+  const entryVao = item.values.get('VERTEX_ARRAY_BINDING'), entryEbo = item.elementBuffers.get(entryVao);
+  const defaultEbo = item.elementBuffers.get(null), nativeEbo = handle('cold-native-ebo');
+  const freshVao = handle('fresh-native-vao'), freshEbo = handle('fresh-native-ebo');
+  const program = item.values.get('CURRENT_PROGRAM'), viewport = [...item.values.get('VIEWPORT')];
+  const bind = gl.bindVertexArray; let attempted = false;
+  assert.throws(() => guard.run(() => {
+    gl.bindVertexArray(null); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, nativeEbo);
+    gl.bindVertexArray(freshVao); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, freshEbo);
+    gl.useProgram(null); gl.viewport(0, 0, 1, 1);
+    gl.bindVertexArray = function (value) {
+      if (value === (failedTarget === 'default' ? null : entryVao)) {
+        attempted = true; throw new Error('private VAO restoration failure');
+      }
+      return bind.call(this, value);
+    };
+  }), TypeError);
+  assert.equal(attempted, true);
+  assert.equal(item.elementBuffers.get(entryVao), entryEbo);
+  assert.equal(item.elementBuffers.get(freshVao), freshEbo);
+  assert.equal(item.elementBuffers.get(null), failedTarget === 'default' ? nativeEbo : defaultEbo);
+  assert.equal(item.values.get('VERTEX_ARRAY_BINDING'), failedTarget === 'default' ? entryVao : null);
+  assert.equal(item.values.get('CURRENT_PROGRAM'), program); assert.deepEqual(item.values.get('VIEWPORT'), viewport);
+  guard.dispose();
 });
 
 test('default framebuffer captures and restores only its selectable draw buffer when indexed queries mirror it', () => {

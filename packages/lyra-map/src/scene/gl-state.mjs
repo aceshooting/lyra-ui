@@ -201,6 +201,24 @@ function createCompleteEnvelope(gl, options) {
     for (const [name, validator] of [['CURRENT_PROGRAM', 'isProgram'], ['VERTEX_ARRAY_BINDING', 'isVertexArray'], ['ARRAY_BUFFER_BINDING', 'isBuffer']]) {
       if (state[name] !== null && !invoke(validator, state[name])) fail();
     }
+    if (terrain) {
+      const readElementBuffer = () => {
+        const buffer = invoke('getParameter', gl.ELEMENT_ARRAY_BUFFER_BINDING);
+        if (buffer !== null && !invoke('isBuffer', buffer)) fail();
+        return buffer;
+      };
+      const entry = readElementBuffer();
+      let defaultBuffer = entry;
+      if (state.VERTEX_ARRAY_BINDING !== null) {
+        try {
+          invoke('bindVertexArray', null);
+          defaultBuffer = readElementBuffer();
+        } finally {
+          if (liveContext()) invoke('bindVertexArray', state.VERTEX_ARRAY_BINDING);
+        }
+      }
+      state.elementBuffers = Object.freeze({ entry, defaultBuffer });
+    }
     state.enabled = Object.freeze(capabilities.map(name => invoke('isEnabled', gl[name])));
     state.RENDERBUFFER_BINDING = invoke('getParameter', gl.RENDERBUFFER_BINDING);
     state.READ_BUFFER = invoke('getParameter', gl.READ_BUFFER);
@@ -305,7 +323,13 @@ function createCompleteEnvelope(gl, options) {
     }
     call('activeTexture', state.ACTIVE_TEXTURE);
     for (let index = 0; index < state.attributes.length; index++) call(state.attributes[index].method, index, state.attributes[index].value);
-    call('bindVertexArray', state.VERTEX_ARRAY_BINDING); call('bindBuffer', gl.ARRAY_BUFFER, state.ARRAY_BUFFER_BINDING);
+    if (terrain) {
+      if (call('bindVertexArray', null)) call('bindBuffer', gl.ELEMENT_ARRAY_BUFFER, state.elementBuffers.defaultBuffer);
+      if (state.VERTEX_ARRAY_BINDING !== null && call('bindVertexArray', state.VERTEX_ARRAY_BINDING)) {
+        call('bindBuffer', gl.ELEMENT_ARRAY_BUFFER, state.elementBuffers.entry);
+      }
+    } else call('bindVertexArray', state.VERTEX_ARRAY_BINDING);
+    call('bindBuffer', gl.ARRAY_BUFFER, state.ARRAY_BUFFER_BINDING);
     for (const [method, ...args] of rasterOperations(gl, state)) call(method, ...args);
     for (let index = 0; index < pixelParameters.length; index++) call('pixelStorei', gl[pixelParameters[index]], state.pixels[index]);
     attempt(() => {

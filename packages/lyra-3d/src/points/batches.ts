@@ -6,6 +6,17 @@ import type { AdmittedPointsData } from './data.js';
 import { markAttributeFull, markAttributeRows } from '../core/attribute-updates.js';
 import type { VisualStateRows } from '../core/visual-state.js';
 import { createPaintColors, type PaintColors } from '../core/paint-colors.js';
+import { disposeLineBatchResources, disposePointBatchResources, type LineBatchResources, type PointBatchResources } from './resources.js';
+
+// The draw hook retains only uniform resources, not the semantic batch factory's scope.
+function pointPickHook(viewportSize: Vector2, pickViewportSize: Vector2, pickMaterial: ShaderMaterial): Mesh['onBeforeRender'] {
+  return (_renderer, _scene, camera) => {
+    const view = camera instanceof PerspectiveCamera ? camera.view : null;
+    pickViewportSize.copy(viewportSize);
+    if (view?.enabled) pickViewportSize.set(viewportSize.x * view.width / view.fullWidth, viewportSize.y * view.height / view.fullHeight);
+    pickMaterial.uniformsNeedUpdate = true;
+  };
+}
 
 function quads(count: number): InstancedBufferGeometry {
   const plane = new PlaneGeometry(2, 2);
@@ -57,12 +68,8 @@ export function createPointBatch(data: AdmittedPointsData) {
   const pickMaterial = new ShaderMaterial({ side: DoubleSide, forceSinglePass: true, uniforms: { viewportSize: { value: pickViewportSize } }, defines: { PICKING: 1 }, vertexShader: pointVertex, fragmentShader: pointFragment, toneMapped: false });
   const mesh = new Mesh(geometry, material); const pick = new Mesh(geometry, pickMaterial);
   mesh.frustumCulled = pick.frustumCulled = false;
-  pick.onBeforeRender = (_renderer, _scene, camera) => {
-    const view = camera instanceof PerspectiveCamera ? camera.view : null;
-    pickViewportSize.copy(viewportSize);
-    if (view?.enabled) pickViewportSize.set(viewportSize.x * view.width / view.fullWidth, viewportSize.y * view.height / view.fullHeight);
-    pickMaterial.uniformsNeedUpdate = true;
-  };
+  pick.onBeforeRender = pointPickHook(viewportSize, pickViewportSize, pickMaterial);
+  const resources: PointBatchResources = { geometry, material, pickMaterial, mesh, pick, disposed: false };
   const color = new Color();
   const pointColors = geometry.getAttribute('pointColor') as InstancedBufferAttribute;
   const paintRow = (row: number, style: ResolvedLyra3dStyle, state: Lyra3dState, paintColor: PaintColors) => {
@@ -78,7 +85,7 @@ export function createPointBatch(data: AdmittedPointsData) {
     pointColors.setXYZ(row, color.r, color.g, color.b);
   };
   return {
-    mesh, pick,
+    mesh, pick, resources,
     resize(width: number, height: number) { viewportSize.set(Math.max(1, width), Math.max(1, height)); },
     paint(style: ResolvedLyra3dStyle, state: Lyra3dState) {
       const paintColor = createPaintColors(style);
@@ -100,7 +107,7 @@ export function createPointBatch(data: AdmittedPointsData) {
         markAttributeRows(pointColors, rows);
       }
     },
-    dispose() { mesh.removeFromParent(); pick.removeFromParent(); material.dispose(); pickMaterial.dispose(); geometry.dispose(); },
+    dispose() { disposePointBatchResources(resources); },
   };
 }
 
@@ -132,14 +139,15 @@ export function createLineBatch(endpoints: Float32Array) {
   const material = new ShaderMaterial({ side: DoubleSide, forceSinglePass: true, uniforms: { viewportSize: { value: new Vector2(1, 1) }, lineWidth: { value: 1 }, tint: { value: new Color() } }, vertexShader: lineVertex,
     fragmentShader: 'uniform vec3 tint; void main() { gl_FragColor = vec4(tint, 1.0);\n#include <colorspace_fragment>\n}' });
   const mesh = new Mesh(geometry, material); mesh.frustumCulled = false;
+  const resources: LineBatchResources = { geometry, material, mesh, disposed: false };
   return {
-    mesh,
+    mesh, resources,
     update(style: ResolvedLyra3dStyle, width: number, height: number, axis = false) {
       (material.uniforms['viewportSize']!.value as Vector2).set(Math.max(1, width), Math.max(1, height));
       material.uniforms['lineWidth']!.value = style.lineWidth;
       const value = style.forcedColors || axis ? style.foreground : style.muted;
       (material.uniforms['tint']!.value as Color).setRGB(value.r, value.g, value.b, SRGBColorSpace);
     },
-    dispose() { mesh.removeFromParent(); geometry.dispose(); material.dispose(); },
+    dispose() { disposeLineBatchResources(resources); },
   };
 }
