@@ -2,6 +2,8 @@ import { expect, fixture, html } from '@open-wc/testing';
 import { createMapSceneSessionFacade } from '../../../internal/map-scene-session.js';
 import { sceneArc, sceneMarker, sceneModel, scenePath } from '../../../../test/map-scene-admission-fixtures.js';
 import { createMapSceneOwner } from './map-scene-owner.js';
+import { publicationCoherent, renderOwner, scenePresentation, sceneViewport } from '../../../../test/map-scene-render-fixtures.js';
+import type { TestScenePublication, TestSceneRenderOwner } from '../../../../test/map-scene-render-fixtures.js';
 
 async function harness() {
   const element = await fixture<HTMLElement>(html`<div></div>`);
@@ -299,5 +301,306 @@ describe('map scene owner', () => {
       expect(h.facade.attachment.target('B').status).to.equal('accepted');
       expect(h.owner.captureView().status?.revision).to.equal(h.owner.captureAccepted().acceptedSceneRevision);
     } finally { release(); h.close(); }
+  });
+});
+
+describe('map scene owner render publication', () => {
+  it('publishes accepted state and pending input before earlier state observers run', async () => {
+    const h = await harness();
+    const coherent: boolean[] = [], order: string[] = [];
+    const releaseState = h.owner.state.subscribe(() => {
+      order.push('state');
+      const capture: unknown = Reflect.get(h.owner, 'captureRenderPublication');
+      if (typeof capture !== 'function') { coherent.push(false); return; }
+      const publication = (capture as () => TestScenePublication).call(h.owner);
+      coherent.push(publicationCoherent(publication) && publication.accepted === h.owner.captureAccepted() &&
+        publication.state === h.owner.state.capture());
+    });
+    const releaseAccepted = h.owner.subscribeAccepted(() => { order.push('accepted'); });
+    try {
+      h.owner.assign({ objects: [sceneMarker('A')] });
+      expect(coherent.length).to.be.greaterThan(0);
+      expect(coherent.every(Boolean)).to.equal(true);
+      expect(order.indexOf('state')).to.be.lessThan(order.indexOf('accepted'));
+      const publication = renderOwner(h.owner).captureRenderPublication();
+      expect(publication.phase).to.equal('pending');
+      expect(publication.input.markers).to.deep.equal([]);
+      expect(publication.accepted === h.owner.captureAccepted() && publication.state === h.owner.state.capture()).to.equal(true);
+    } finally { releaseState(); releaseAccepted(); h.close(); }
+  });
+
+  it('contains an observer throw and drains synchronous resolved publication to remaining listeners', async () => {
+    const h = await harness(), owner = renderOwner(h.owner);
+    const coherent: boolean[] = [], phases: string[] = [];
+    let laterState = 0;
+    const releaseThrow = owner.state.subscribe(() => { throw new Error('Observer failure is contained'); });
+    const releaseLater = owner.state.subscribe(() => { laterState++; });
+    let releasePrepare: (() => void) | undefined, releaseObserve: (() => void) | undefined;
+    try {
+      releasePrepare = owner.subscribeRenderPublication(() => {
+        const publication = owner.captureRenderPublication();
+        coherent.push(publicationCoherent(publication) && publication.accepted === owner.captureAccepted() && publication.state === owner.state.capture());
+        if (publication.phase === 'pending') owner.commitPresentation(publication, scenePresentation(publication.accepted));
+      });
+      releaseObserve = owner.subscribeRenderPublication(() => {
+        const publication = owner.captureRenderPublication();
+        coherent.push(publicationCoherent(publication) && publication.accepted === owner.captureAccepted() && publication.state === owner.state.capture());
+        phases.push(publication.phase);
+      });
+      owner.assign({ objects: [sceneMarker()] });
+      expect(laterState).to.be.greaterThan(0);
+      expect(coherent.length).to.be.greaterThan(0);
+      expect(coherent.every(Boolean)).to.equal(true);
+      expect(phases.at(-1)).to.equal('resolved');
+      const current = owner.captureRenderPublication();
+      expect(owner.captureRenderPublication() === current).to.equal(true);
+      expect(current.input.markers.map(marker => marker.id)).to.deep.equal(['target']);
+    } finally { releaseThrow(); releaseLater(); releasePrepare?.(); releaseObserve?.(); h.close(); }
+  });
+
+  it('keeps position and allocation identity on metadata-only acceptance while advancing input revision', async () => {
+    const h = await harness(), owner = renderOwner(h.owner);
+    try {
+      expect(owner.setViewport(sceneViewport())).to.equal(true);
+      owner.assign({ objects: [sceneMarker()] });
+      const before = owner.captureRenderPublication(), fact = owner.state.capture().targets[0];
+      expect(owner.commitPresentation(before, scenePresentation(before.accepted))).to.equal(true);
+      owner.assign({ objects: [{ ...sceneMarker(), label: 'Updated label' }] });
+      const after = owner.captureRenderPublication();
+      expect(after.accepted.acceptedSceneRevision).to.be.greaterThan(before.accepted.acceptedSceneRevision);
+      expect(after.input.acceptedSceneRevision).to.equal(after.accepted.acceptedSceneRevision);
+      expect(after.input.presentationRevision).to.be.greaterThan(before.input.presentationRevision);
+      expect(after.state.targets[0] === fact).to.equal(true);
+      expect(after.state.viewport === before.state.viewport).to.equal(true);
+      expect(publicationCoherent(after)).to.equal(true);
+    } finally { h.close(); }
+  });
+
+  it('clears accepted source ownership while preserving viewport and resolved empty work without preparation', async () => {
+    const h = await harness(), owner = renderOwner(h.owner);
+    let release: (() => void) | undefined, preparations = 0;
+    try {
+      const bytes = new Uint8Array([1, 2]), source = { format: 'glb' as const, bytes };
+      owner.setViewport(sceneViewport()); owner.assign({ objects: [sceneModel('model', source), sceneMarker()] });
+      const pending = owner.captureRenderPublication(), viewport = pending.state.viewport;
+      owner.commitPresentation(pending, scenePresentation(pending.accepted));
+      structuredClone(bytes.buffer, { transfer: [bytes.buffer] });
+      release = owner.subscribeRenderPublication(() => { if (owner.captureRenderPublication().phase === 'pending') preparations++; });
+      owner.assign(undefined);
+      const cleared = owner.captureRenderPublication();
+      expect(cleared.phase).to.equal('resolved'); expect(cleared.input.markers).to.deep.equal([]);
+      expect(cleared.accepted.objects.length).to.equal(0);
+      expect(cleared.state.viewport === viewport).to.equal(true);
+      expect(cleared.input.allocation?.revision).to.equal(viewport?.allocationRevision);
+      expect(preparations).to.equal(0);
+      owner.assign({ objects: [sceneModel('model', source)] });
+      expect(owner.captureView().status?.code).to.equal('invalid');
+      expect(owner.captureRenderPublication() === cleared).to.equal(true);
+    } finally { release?.(); h.close(); }
+  });
+
+  it('treats equal viewport values as an exact identity and notification no-op', async () => {
+    const h = await harness(), owner = renderOwner(h.owner);
+    let releaseRender: (() => void) | undefined, releaseState: (() => void) | undefined;
+    let renderNotices = 0, stateNotices = 0;
+    try {
+      owner.setViewport(sceneViewport()); owner.assign({ objects: [sceneMarker()] });
+      const pending = owner.captureRenderPublication(); owner.commitPresentation(pending, scenePresentation(pending.accepted));
+      const before = owner.captureRenderPublication();
+      releaseRender = owner.subscribeRenderPublication(() => { renderNotices++; });
+      releaseState = owner.state.subscribe(() => { stateNotices++; });
+      expect(owner.setViewport(sceneViewport())).to.equal(false);
+      expect(owner.captureRenderPublication() === before && owner.state.capture() === before.state).to.equal(true);
+      expect([renderNotices, stateNotices]).to.deep.equal([0, 0]);
+    } finally { releaseRender?.(); releaseState?.(); h.close(); }
+  });
+
+  it('updates allocation with cached resolved presentation without resetting accepted facts or preparing colors', async () => {
+    const h = await harness(), owner = renderOwner(h.owner);
+    let release: (() => void) | undefined, preparations = 0;
+    try {
+      owner.setViewport(sceneViewport()); owner.assign({ objects: [sceneMarker()] });
+      const pending = owner.captureRenderPublication(); owner.commitPresentation(pending, scenePresentation(pending.accepted, 0.4));
+      const before = owner.captureRenderPublication();
+      release = owner.subscribeRenderPublication(() => { if (owner.captureRenderPublication().phase === 'pending') preparations++; });
+      expect(owner.setViewport({ ...sceneViewport(800, 600, 2), padding: { top: 13, right: 17, bottom: 19, left: 23 } })).to.equal(true);
+      const after = owner.captureRenderPublication();
+      expect(after.phase).to.equal('resolved'); expect(preparations).to.equal(0);
+      expect(after.accepted === before.accepted && after.state.targets === before.state.targets).to.equal(true);
+      expect(after.state.registryRevision).to.equal(before.state.registryRevision);
+      expect(after.state.viewport!.allocationRevision).to.be.greaterThan(before.state.viewport!.allocationRevision);
+      expect(after.input.presentationRevision).to.be.greaterThan(before.input.presentationRevision);
+      expect(after.input.markers[0]!.rgba).to.deep.equal(before.input.markers[0]!.rgba);
+      expect(publicationCoherent(after)).to.equal(true);
+    } finally { release?.(); h.close(); }
+  });
+
+  it('retains allocation high-water through absence and identical-size restoration', async () => {
+    const h = await harness(), owner = renderOwner(h.owner);
+    try {
+      owner.assign({ objects: [sceneMarker()] }); owner.setViewport(sceneViewport());
+      const before = owner.captureRenderPublication();
+      expect(owner.setViewport(undefined)).to.equal(true);
+      expect(owner.captureRenderPublication().state.viewport).to.equal(undefined);
+      expect(owner.captureRenderPublication().input.allocation).to.equal(undefined);
+      expect(owner.setViewport(sceneViewport())).to.equal(true);
+      const after = owner.captureRenderPublication();
+      expect(after.state.viewport!.allocationRevision).to.be.greaterThan(before.state.viewport!.allocationRevision);
+      expect(after.accepted === before.accepted && after.state.targets === before.state.targets).to.equal(true);
+    } finally { h.close(); }
+  });
+
+  it('keeps allocation sequence across native replacement while new connections own independent authority', async () => {
+    const h = await harness(), second = await harness(), owner = renderOwner(h.owner), other = renderOwner(second.owner);
+    const revisions: number[] = [];
+    const release = h.facade.attachment.subscribeViewport(viewport => { revisions.push(viewport.allocationRevision); });
+    try {
+      owner.setViewport(sceneViewport()); const first = owner.state.capture().viewport!.allocationRevision;
+      owner.setViewport(undefined); owner.setViewport(sceneViewport(900, 600, 2));
+      const next = owner.state.capture().viewport!.allocationRevision;
+      expect(next).to.be.greaterThan(first);
+      expect(revisions).to.deep.equal([first, next]);
+      other.setViewport(sceneViewport());
+      expect(other.state.capture().viewport!.allocationRevision).to.equal(first);
+      expect(owner.captureRenderPublication().input.allocation!.revision).to.equal(next);
+    } finally { release(); h.close(); second.close(); }
+  });
+
+  it('supersedes even pending presentation on a new theme invalidation without changing accepted targets', async () => {
+    const h = await harness(), owner = renderOwner(h.owner);
+    try {
+      owner.assign({ objects: [sceneMarker()] }); const initial = owner.captureRenderPublication();
+      owner.commitPresentation(initial, scenePresentation(initial.accepted));
+      const resolved = owner.captureRenderPublication();
+      expect(owner.invalidatePresentation()).to.equal(true); const firstPending = owner.captureRenderPublication();
+      expect(firstPending.phase).to.equal('pending'); expect(firstPending.input.markers).to.deep.equal([]);
+      expect(firstPending.accepted === resolved.accepted && firstPending.state === resolved.state).to.equal(true);
+      expect(owner.invalidatePresentation()).to.equal(true); const secondPending = owner.captureRenderPublication();
+      expect(secondPending === firstPending).to.equal(false);
+      expect(owner.commitPresentation(firstPending, scenePresentation(firstPending.accepted))).to.equal(false);
+      expect(owner.captureRenderPublication() === secondPending).to.equal(true);
+      expect(owner.commitPresentation(secondPending, scenePresentation(secondPending.accepted, 0.3))).to.equal(true);
+      expect(owner.captureRenderPublication().input.markers[0]!.rgba[3]).to.equal(0.3);
+    } finally { h.close(); }
+  });
+
+  it('rechecks presentation currency after reflection and connection callbacks that accept a newer scene', async () => {
+    const h = await harness();
+    try {
+      for (const mode of ['reflection', 'current'] as const) {
+        let armed = false, reentered = false, nested: TestScenePublication | undefined;
+        let owner: TestSceneRenderOwner;
+        const replace = () => {
+          if (armed) {
+            armed = false; reentered = true; owner.assign({ objects: [sceneMarker('B')] });
+            nested = owner.captureRenderPublication();
+          }
+        };
+        owner = renderOwner(createMapSceneOwner({ element: h.element, connection: Object.freeze({}),
+          isCurrentConnection() { if (mode === 'current') replace(); return true; }, changed() {} }));
+        try {
+          owner.assign({ objects: [sceneMarker('A')] }); const expected = owner.captureRenderPublication();
+          const value = scenePresentation(expected.accepted);
+          const presentation = mode === 'reflection' ? new Proxy(value, {
+            getOwnPropertyDescriptor(target, key) { replace(); return Reflect.getOwnPropertyDescriptor(target, key); },
+          }) : value;
+          armed = true;
+          expect(owner.commitPresentation(expected, presentation)).to.equal(false);
+          expect(reentered).to.equal(true);
+          const current = owner.captureRenderPublication();
+          expect(current === nested).to.equal(true);
+          expect(current.accepted.objects.map(object => object.id)).to.deep.equal(['B']);
+          expect(current.phase).to.equal('pending'); expect(current.input.markers).to.deep.equal([]);
+          expect(publicationCoherent(current)).to.equal(true);
+          expect(owner.invalidatePresentation()).to.equal(true);
+          expect(owner.captureRenderPublication().input.presentationRevision).to.equal(current.input.presentationRevision + 1);
+        } finally { owner.close(); }
+      }
+    } finally { h.close(); }
+  });
+
+  it('refuses an outer viewport after validation reenters a newer viewport on the same owner', async () => {
+    const h = await harness(), owner = renderOwner(h.owner);
+    try {
+      owner.assign({ objects: [sceneMarker()] }); owner.setViewport(sceneViewport());
+      const expected = owner.captureRenderPublication(); let reentered = false, nested: TestScenePublication | undefined;
+      const outer = new Proxy(sceneViewport(800, 600, 1), {
+        getOwnPropertyDescriptor(target, key) {
+          if (!reentered) {
+            reentered = true; owner.setViewport(sceneViewport(900, 700, 2));
+            nested = owner.captureRenderPublication();
+          }
+          return Reflect.getOwnPropertyDescriptor(target, key);
+        },
+      });
+      expect(owner.setViewport(outer)).to.equal(false); expect(reentered).to.equal(true);
+      const current = owner.captureRenderPublication();
+      expect(current === nested).to.equal(true);
+      expect(current.state.viewport!.width).to.equal(900); expect(current.input.allocation!.height).to.equal(700);
+      expect(owner.commitPresentation(expected, scenePresentation(expected.accepted))).to.equal(false);
+      expect(owner.captureRenderPublication() === current).to.equal(true);
+      expect(publicationCoherent(current)).to.equal(true);
+      expect(owner.setViewport(sceneViewport(1000, 700, 2))).to.equal(true);
+      const next = owner.captureRenderPublication();
+      expect(next.input.presentationRevision).to.equal(current.input.presentationRevision + 1);
+      expect(next.state.viewport!.allocationRevision).to.equal(current.state.viewport!.allocationRevision + 1);
+    } finally { h.close(); }
+  });
+
+  it('refuses malformed presentation without a partial swap and keeps accepted ownership on explicit failure', async () => {
+    const h = await harness(), owner = renderOwner(h.owner);
+    try {
+      owner.assign({ objects: [sceneModel(), sceneMarker()] });
+      const expected = owner.captureRenderPublication(), receipt = modelReceipt(owner);
+      expect(owner.commitPresentation(expected, { markers: [{ id: 'target', rgba: [1, 0, 0, NaN] }], reducedMotion: false })).to.equal(false);
+      expect(owner.captureRenderPublication() === expected).to.equal(true);
+      expect(owner.failPresentation(expected)).to.equal(true);
+      const failed = owner.captureRenderPublication();
+      expect(failed.phase).to.equal('unavailable'); expect(failed.input.markers).to.deep.equal([]);
+      expect(failed.accepted === expected.accepted && failed.state === expected.state).to.equal(true);
+      expect(modelReceipt(owner) === receipt).to.equal(true);
+      expect(owner.captureView().status?.state).to.equal('unavailable');
+      expect(h.facade.attachment.target('target').status).to.equal('accepted');
+      expect(owner.failPresentation(expected)).to.equal(false);
+      expect(owner.captureRenderPublication() === failed).to.equal(true);
+    } finally { h.close(); }
+  });
+
+  it('keeps exact rendered publication on rejected replacement while changing only the rejection notice', async () => {
+    const h = await harness(), owner = renderOwner(h.owner);
+    let release: (() => void) | undefined, notices = 0;
+    try {
+      owner.setViewport(sceneViewport()); owner.assign({ objects: [sceneMarker()] });
+      const pending = owner.captureRenderPublication(); owner.commitPresentation(pending, scenePresentation(pending.accepted));
+      const before = owner.captureRenderPublication();
+      release = owner.subscribeRenderPublication(() => { notices++; });
+      owner.assign({ objects: [sceneMarker('bad'), sceneMarker('bad')] });
+      expect(owner.captureRenderPublication() === before).to.equal(true);
+      expect(owner.captureAccepted() === before.accepted && owner.state.capture() === before.state).to.equal(true);
+      expect(owner.captureView().status?.code).to.equal('invalid'); expect(notices).to.equal(0);
+      expect(owner.captureRenderPublication().input.markers.map(marker => marker.id)).to.deep.equal(['target']);
+    } finally { release?.(); h.close(); }
+  });
+
+  it('keeps releases independent and refuses every late transaction after close', async () => {
+    const h = await harness(), owner = renderOwner(h.owner);
+    let first = 0, second = 0;
+    let releaseFirst: (() => void) | undefined, releaseSecond: (() => void) | undefined;
+    try {
+      const initial = owner.captureRenderPublication();
+      expect(initial.phase).to.equal('resolved'); expect(initial.accepted.acceptedSceneRevision).to.equal(0);
+      expect(initial.input.presentationRevision).to.equal(1); expect(initial.input.markers).to.deep.equal([]);
+      releaseFirst = owner.subscribeRenderPublication(() => { first++; });
+      releaseSecond = owner.subscribeRenderPublication(() => { second++; });
+      releaseFirst(); releaseFirst(); owner.assign({ objects: [sceneMarker()] });
+      expect(first).to.equal(0); expect(second).to.be.greaterThan(0);
+      const pending = owner.captureRenderPublication(), count = second;
+      owner.close(); const closed = owner.captureRenderPublication();
+      expect(owner.commitPresentation(pending, scenePresentation(pending.accepted))).to.equal(false);
+      expect(owner.failPresentation(pending)).to.equal(false);
+      expect(owner.invalidatePresentation()).to.equal(false);
+      expect(owner.setViewport(sceneViewport())).to.equal(false);
+      expect(owner.captureRenderPublication() === closed).to.equal(true); expect(second).to.equal(count);
+    } finally { releaseFirst?.(); releaseSecond?.(); h.close(); }
   });
 });

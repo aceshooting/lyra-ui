@@ -4,6 +4,9 @@ import { stageMapSceneAdmission } from './map-scene-admission.js';
 import type { AdmittedSceneObject, SceneAdmissionCandidate } from './map-scene-admission.js';
 import { createMapSceneAdmissionError, mapSceneAdmissionErrorCode } from './map-scene-errors.js';
 import { createMapScenePositionRegistry } from './map-scene-position-registry.js';
+import { buildSceneRenderInput, emptySceneRenderInput, nextSceneRenderRevision,
+  snapshotScenePresentation, snapshotSceneViewport } from './map-scene-render-input.js';
+import type { SceneRenderPublication, SceneResolvedPresentation, SceneViewportInput } from './map-scene-render-contract.js';
 import { createMapSceneSourceOwner, isStaleMapSceneSourceError } from './map-scene-source-snapshot.js';
 import type { SceneRequest } from './map-scene-source-snapshot.js';
 
@@ -34,6 +37,12 @@ export function createMapSceneOwner(options: {
   captureAccepted(): SceneAcceptedSnapshot;
   captureView(): SceneOwnerView;
   subscribeAccepted(listener: () => void): () => void;
+  captureRenderPublication(): SceneRenderPublication;
+  subscribeRenderPublication(listener: () => void): () => void;
+  invalidatePresentation(): boolean;
+  commitPresentation(expected: SceneRenderPublication, value: SceneResolvedPresentation): boolean;
+  failPresentation(expected: SceneRenderPublication): boolean;
+  setViewport(value: SceneViewportInput | undefined): boolean;
   close(): void;
 } {
   const { element, connection } = options;
@@ -44,16 +53,22 @@ export function createMapSceneOwner(options: {
   let changedBaseline = view;
   const acceptedObservers = new Set<Observer<SceneAcceptedSnapshot>>();
   const stateObservers = new Set<Observer<SceneSessionStateSnapshot>>();
+  const renderObservers = new Set<Observer<SceneRenderPublication>>();
 
   function current(request: SceneRequest): boolean {
     if (closed || request.connection !== connection || request.revision !== requestRevision) return false;
     const result = options.isCurrentConnection();
-    return result && !closed && request.connection === connection && request.revision === requestRevision;
+    return result && !closed && request.connection === connection && request.revision === requestRevision &&
+      nextSceneRenderRevision(renderPublication.input.presentationRevision) !== undefined;
   }
 
   let resources: ReturnType<typeof createResources> | undefined;
   let stateSnapshot: SceneSessionStateSnapshot = Object.freeze({ acceptedSceneRevision: 0,
     registryRevision: 0, targets: Object.freeze([]), viewport: undefined });
+  let allocationRevision = 0;
+  let resolvedPresentation: SceneResolvedPresentation | undefined;
+  let renderPublication: SceneRenderPublication = Object.freeze({ accepted, state: stateSnapshot, phase: 'resolved',
+    input: emptySceneRenderInput(0, 1, undefined) });
 
   function createResources() {
     const sources = createMapSceneSourceOwner({ connection, maxEncodedBytes: MAX_ENCODED_BYTES,
@@ -112,6 +127,12 @@ export function createMapSceneOwner(options: {
           observer.baseline = accepted; delivered = true;
           invoke(observer.listener);
         }
+        for (const observer of [...renderObservers]) {
+          if (closed) return;
+          if (!renderObservers.has(observer) || observer.baseline === renderPublication) continue;
+          observer.baseline = renderPublication; delivered = true;
+          invoke(observer.listener);
+        }
         if (closed) return;
         if (changedBaseline !== view) {
           changedBaseline = view; delivered = true;
@@ -127,15 +148,111 @@ export function createMapSceneOwner(options: {
     notify();
   }
 
+  function currentPublication(expected: SceneRenderPublication): boolean {
+    if (closed || renderPublication !== expected) return false;
+    try {
+      const result = options.isCurrentConnection();
+      return result && !closed && renderPublication === expected;
+    } catch { return false; }
+  }
+
+  function commitRender(expected: SceneRenderPublication, next: SceneRenderPublication,
+    presentation: SceneResolvedPresentation | undefined, nextAllocation: number): boolean {
+    // Reflection and composition finished before this final callback and identity check.
+    if (!currentPublication(expected)) return false;
+    stateSnapshot = next.state;
+    renderPublication = next;
+    resolvedPresentation = presentation;
+    allocationRevision = nextAllocation;
+    notify();
+    return true;
+  }
+
+  function publishAccepted(objects: readonly AdmittedSceneObject[], active: boolean): void {
+    const snapshot = resources!.registry.capture();
+    const nextAccepted = Object.freeze({ acceptedSceneRevision: snapshot.acceptedSceneRevision, objects });
+    const nextState = Object.freeze({ ...snapshot, viewport: stateSnapshot.viewport });
+    // The registry's final current check reserved counter space; its private transfer invokes no observers.
+    const revision = nextSceneRenderRevision(renderPublication.input.presentationRevision)!;
+    const next: SceneRenderPublication = Object.freeze({ accepted: nextAccepted, state: nextState,
+      phase: objects.some(object => object.kind === 'marker') ? 'pending' : 'resolved',
+      input: emptySceneRenderInput(nextAccepted.acceptedSceneRevision, revision, nextState.viewport) });
+    accepted = nextAccepted;
+    stateSnapshot = nextState;
+    renderPublication = next;
+    resolvedPresentation = undefined;
+    publish(active, objects.length === 0 ?
+      Object.freeze({ revision: accepted.acceptedSceneRevision, state: 'empty' }) :
+      Object.freeze({ revision: accepted.acceptedSceneRevision, state: 'unavailable', code: 'engine' }));
+  }
+
+  function sameViewport(first: SceneViewportInput | undefined, second: SceneViewportInput | undefined): boolean {
+    return first === undefined ? second === undefined : second !== undefined && first.width === second.width &&
+      first.height === second.height && first.pixelRatio === second.pixelRatio &&
+      first.padding.top === second.padding.top && first.padding.right === second.padding.right &&
+      first.padding.bottom === second.padding.bottom && first.padding.left === second.padding.left;
+  }
+
   return Object.freeze({ state,
     captureAccepted: () => accepted,
     captureView: () => view,
     subscribeAccepted: (listener: () => void) => subscribe(acceptedObservers, listener, accepted),
+    captureRenderPublication: () => renderPublication,
+    subscribeRenderPublication: (listener: () => void) => subscribe(renderObservers, listener, renderPublication),
+    invalidatePresentation(): boolean {
+      const expected = renderPublication;
+      if (closed || !accepted.objects.some(object => object.kind === 'marker')) return false;
+      const revision = nextSceneRenderRevision(expected.input.presentationRevision);
+      if (revision === undefined) return false;
+      const next: SceneRenderPublication = Object.freeze({ ...expected, phase: 'pending',
+        input: emptySceneRenderInput(accepted.acceptedSceneRevision, revision, expected.state.viewport) });
+      return commitRender(expected, next, undefined, allocationRevision);
+    },
+    commitPresentation(expected: SceneRenderPublication, value: SceneResolvedPresentation): boolean {
+      if (closed || renderPublication !== expected || expected.phase !== 'pending') return false;
+      const presentation = snapshotScenePresentation(value);
+      if (!presentation) return false;
+      const revision = nextSceneRenderRevision(expected.input.presentationRevision);
+      if (revision === undefined) return false;
+      const input = buildSceneRenderInput({ accepted: expected.accepted, state: expected.state,
+        phase: 'resolved', presentationRevision: revision, presentation });
+      if (!input) return false;
+      const next: SceneRenderPublication = Object.freeze({ ...expected, phase: 'resolved', input });
+      return commitRender(expected, next, presentation, allocationRevision);
+    },
+    failPresentation(expected: SceneRenderPublication): boolean {
+      if (closed || renderPublication !== expected || expected.phase !== 'pending') return false;
+      const revision = nextSceneRenderRevision(expected.input.presentationRevision);
+      if (revision === undefined) return false;
+      const next: SceneRenderPublication = Object.freeze({ ...expected, phase: 'unavailable',
+        input: emptySceneRenderInput(accepted.acceptedSceneRevision, revision, expected.state.viewport) });
+      return commitRender(expected, next, undefined, allocationRevision);
+    },
+    setViewport(value: SceneViewportInput | undefined): boolean {
+      const expected = renderPublication;
+      if (closed) return false;
+      const copied = value === undefined ? undefined : snapshotSceneViewport(value);
+      if (value !== undefined && !copied) return false;
+      if (sameViewport(expected.state.viewport, copied)) return false;
+      const revision = nextSceneRenderRevision(expected.input.presentationRevision);
+      const nextAllocation = copied === undefined ? allocationRevision : nextSceneRenderRevision(allocationRevision);
+      if (revision === undefined || nextAllocation === undefined) return false;
+      const viewport = copied === undefined ? undefined : Object.freeze({ ...copied, allocationRevision: nextAllocation });
+      const nextState = Object.freeze({ ...expected.state, viewport });
+      const input = expected.phase === 'resolved' && resolvedPresentation !== undefined ?
+        buildSceneRenderInput({ accepted: expected.accepted, state: nextState, phase: 'resolved',
+          presentationRevision: revision, presentation: resolvedPresentation }) :
+        emptySceneRenderInput(expected.accepted.acceptedSceneRevision, revision, viewport);
+      if (!input) return false;
+      const next = Object.freeze({ ...expected, state: nextState, input });
+      return commitRender(expected, next, resolvedPresentation, nextAllocation);
+    },
     assign(value: unknown): void {
       if (closed) return;
       const before = requestRevision;
       if (!options.isCurrentConnection() || closed || before !== requestRevision) return;
       if (value === undefined && !view.active && accepted.acceptedSceneRevision === 0) return;
+      if (nextSceneRenderRevision(renderPublication.input.presentationRevision) === undefined) return;
       if (!Number.isSafeInteger(requestRevision + 1)) return;
       const request = Object.freeze({ connection, revision: ++requestRevision });
       let candidate: SceneAdmissionCandidate | undefined;
@@ -143,18 +260,12 @@ export function createMapSceneOwner(options: {
         const { sources, registry } = resources ??= createResources();
         if (value === undefined) {
           if (!registry.clear(request)) return;
-          accepted = Object.freeze({ acceptedSceneRevision: registry.acceptedSceneRevision, objects: Object.freeze([]) });
-          stateSnapshot = Object.freeze({ ...registry.capture(), viewport: undefined });
-          publish(false, Object.freeze({ revision: accepted.acceptedSceneRevision, state: 'empty' }));
+          publishAccepted(Object.freeze([]), false);
           return;
         }
         candidate = stageMapSceneAdmission(value, { request, sources });
         if (!registry.commit(candidate)) return;
-        accepted = Object.freeze({ acceptedSceneRevision: registry.acceptedSceneRevision, objects: candidate.objects });
-        stateSnapshot = Object.freeze({ ...registry.capture(), viewport: undefined });
-        publish(true, accepted.objects.length === 0 ?
-          Object.freeze({ revision: accepted.acceptedSceneRevision, state: 'empty' }) :
-          Object.freeze({ revision: accepted.acceptedSceneRevision, state: 'unavailable', code: 'engine' }));
+        publishAccepted(candidate.objects, true);
       } catch (error) {
         candidate?.dispose();
         if (!current(request) || isStaleMapSceneSourceError(error)) return;
@@ -165,7 +276,8 @@ export function createMapSceneOwner(options: {
     close(): void {
       if (closed) return;
       closed = true;
-      acceptedObservers.clear(); stateObservers.clear();
+      acceptedObservers.clear(); stateObservers.clear(); renderObservers.clear();
+      resolvedPresentation = undefined;
       resources?.registry.dispose(); resources?.sources.dispose();
       resources = undefined;
     },
