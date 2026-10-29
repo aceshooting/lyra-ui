@@ -24,6 +24,11 @@ import { Lyra3dIdPicker } from './picking.js';
 import { guardContextEpoch } from './context-epoch.js';
 import { resolveLyra3dStyle, type Lyra3dRgba, type ResolvedLyra3dStyle } from './style.js';
 import type { Lyra3dGlow } from './glow.js';
+import {
+  createViewportResources, replaceViewportGlow, restoreViewportContextMethods, retireViewportExtras,
+  type ViewportResourceRecord,
+} from './viewport-resources.js';
+import { invalidateViewportXr, registerViewportXr, unregisterViewportXr } from './viewport-xr.js';
 
 /** Thrown by {@link createLyra3dViewport} when the browser cannot create a WebGL2 context. */
 export class Lyra3dUnsupportedError extends Error {
@@ -148,6 +153,23 @@ function mirroredGroup(): Group {
   return group;
 }
 
+interface ViewportApplication {
+  hover: Lyra3dHost['hover'];
+  pick: Lyra3dHost['pick'];
+  camera: Lyra3dHost['camera'];
+  lost: Lyra3dHost['lost'];
+  rendering: Lyra3dHost['rendering'];
+  restored: Lyra3dHost['restored'];
+  primaryPan: Lyra3dViewportOptions['primaryPan'];
+  wheelZoom: Lyra3dViewportOptions['wheelZoom'];
+  pickAt: Lyra3dViewportOptions['pick'];
+  constrain: Lyra3dViewportOptions['constrain'];
+  onRestore: Lyra3dViewportOptions['onRestore'];
+  loadGlow: Lyra3dViewportServices['loadGlow'];
+}
+
+function loadGlowModule(): Promise<typeof import('./glow.js')> { return import('./glow.js'); }
+
 /**
  * Creates the renderer, scene, orbit camera and pointer handling every engine shares, inside
  * `container`. The viewport owns its canvas: a fallback renderer always gets a fresh canvas,
@@ -158,6 +180,16 @@ function mirroredGroup(): Group {
  * the component, which drives the camera through {@link Lyra3dViewport.transitionTo}.
  */
 export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, options: Lyra3dViewportOptions = {}, services: Lyra3dViewportServices = {}): Lyra3dViewport {
+  return createViewport(container, {
+    hover: host.hover?.bind(host), pick: host.pick?.bind(host), camera: host.camera?.bind(host), lost: host.lost?.bind(host),
+    rendering: host.rendering?.bind(host), restored: host.restored?.bind(host),
+    primaryPan: options.primaryPan?.bind(options), wheelZoom: options.wheelZoom?.bind(options), pickAt: options.pick,
+    constrain: options.constrain?.bind(options), onRestore: options.onRestore?.bind(options), loadGlow: services.loadGlow,
+  }, options.antialias);
+}
+
+// Nested work sees only this clearable callback cell, never the caller's host/options/services bags.
+function createViewport(container: HTMLElement, application: ViewportApplication | undefined, antialias: boolean | undefined): Lyra3dViewport {
   const caveat = probeSoftwareRendering();
   const canvas = document.createElement('canvas');
   canvas.style.display = 'block';
@@ -169,7 +201,7 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
   let restoreContextMethods: () => void = () => {};
   try {
     const attributes: WebGLContextAttributes = {
-      alpha: true, depth: true, stencil: false, antialias: options.antialias ?? !caveat,
+      alpha: true, depth: true, stencil: false, antialias: antialias ?? !caveat,
       premultipliedAlpha: true, preserveDrawingBuffer: false,
       powerPreference: 'high-performance', failIfMajorPerformanceCaveat: false,
     };
@@ -182,6 +214,7 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
     throw new Lyra3dUnsupportedError();
   }
   let ownedPicker: Lyra3dIdPicker | undefined;
+  let ownedResources: ViewportResourceRecord | undefined;
   let stopInitialization: (() => void) | undefined;
   const installedListeners: [EventTarget, string, EventListener, AddEventListenerOptions?][] = [];
   try {
@@ -199,11 +232,17 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
     const pickWorld = mirroredGroup();
     pickScene.add(pickWorld);
     const camera = new PerspectiveCamera((LYRA_3D_FIELD_OF_VIEW * 180) / Math.PI, 1, 0.01, 1e8);
-    const picker = ownedPicker = new Lyra3dIdPicker(renderer);
+    ownedPicker = new Lyra3dIdPicker(renderer);
+    const resources = ownedResources = createViewportResources({ renderer, canvas, scene, pickScene, camera, picker: ownedPicker, restoreContextMethods });
+    ownedPicker = undefined;
+    restoreContextMethods = () => {};
     const clear = new Color();
     const frameCallbacks = new Set<(time: number) => void>();
-    const pick = options.pick === null ? undefined : (options.pick ?? ((x: number, y: number) => viewport.pickAt(x, y)));
-    const constrain = (value: Lyra3dOrbitCamera) => (options.constrain ? normalizeOrbitCamera(options.constrain(value), value) : value);
+    const pick = (x: number, y: number) => {
+      const custom = application?.pickAt;
+      return custom ? custom(x, y) : viewport.pickAt(x, y);
+    };
+    const constrain = (value: Lyra3dOrbitCamera) => (application?.constrain ? normalizeOrbitCamera(application.constrain(value), value) : value);
 
     let style = resolveLyra3dStyle(undefined);
     let width = 1;
@@ -218,7 +257,6 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
     let glowRequested = false;
     let glowPending = false;
     let glowGeneration = 0;
-    let glow: Lyra3dGlow | undefined;
     let frame = 0;
     let cameraChanged = false;
     let transition: { from: Lyra3dOrbitCamera; to: Lyra3dOrbitCamera; start: number } | undefined;
@@ -243,10 +281,30 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
         try { canvas.releasePointerCapture(captured); } catch { /* Capture may already be released. */ }
       }
     };
-    const releaseGlow = () => { const previous = glow; glow = undefined; previous?.dispose(); };
-    stopInitialization = () => {
-      disposed = true; glowGeneration++; glowPending = false; stopInteraction(); frameCallbacks.clear(); releaseGlow();
+    const releaseGlow = () => { replaceViewportGlow(resources, undefined)?.dispose(); };
+    const detachApplication = (removeCanvas: boolean) => {
+      if (disposed) return;
+      disposed = true; glowGeneration++; glowPending = false; glowRequested = false;
+      application = undefined;
+      const captured = gesture?.id, scheduled = frame;
+      gesture = undefined; transition = undefined; cameraChanged = false;
+      hoverPoint = undefined; pointer = undefined; hovered = null; suppressContextMenu = false;
+      frame = 0; pendingRender = false; restoring = false;
+      frameCallbacks.clear();
+      let failed = false, failure: unknown;
+      const cleanup = (run: () => void) => { try { run(); } catch (error) { if (!failed) { failed = true; failure = error; } } };
+      for (const [target, type, listener, listenerOptions] of installedListeners) {
+        cleanup(() => target.removeEventListener(type, listener, listenerOptions));
+      }
+      installedListeners.length = 0; listeners.length = 0;
+      if (scheduled !== 0) cleanup(() => cancelAnimationFrame(scheduled));
+      if (captured !== undefined) {
+        try { canvas.releasePointerCapture(captured); } catch { /* Capture may already be released. */ }
+      }
+      if (removeCanvas) cleanup(() => canvas.remove());
+      if (failed) throw failure;
     };
+    stopInitialization = () => { detachApplication(false); };
     // Host callbacks stay outside the renderer catch so application errors remain observable.
     const renderOperation = (operation: () => void): boolean => {
       let threw = false;
@@ -257,7 +315,8 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
           lost = true; restoring = false; glowGeneration++; glowPending = false;
           stopInteraction();
           try { releaseGlow(); } catch { /* Preserve the rendering failure and still notify the host. */ }
-          if (!disposed) host.lost('error', 'Rendering failed.');
+          invalidateViewportXr(viewport);
+          if (!disposed) application?.lost('error', 'Rendering failed.');
         }
         return false;
       }
@@ -268,19 +327,20 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
       if (!restoring || disposed || lost || glowPending || generation !== glowGeneration) return;
       restoring = false;
       if (pointer && !gesture) hoverPoint = pointer;
-      invalidate(); host.restored?.();
+      invalidate(); application?.restored?.();
     };
     const syncGlow = async (): Promise<void> => {
       const generation = ++glowGeneration;
       const current = () => !disposed && !lost && generation === glowGeneration;
       let created: Lyra3dGlow | undefined;
       try {
-        if (!glowRequested || style.forcedColors || !glowAllocated() || disposed || lost) {
+        if (disposed) return;
+        if (!glowRequested || style.forcedColors || !glowAllocated() || lost) {
           glowPending = false; releaseGlow(); invalidate(); return;
         }
-        if (glow) { glow.resize(width, height, style.devicePixelRatio); applyCamera(); glow.prepare(scene, camera); invalidate(); return; }
+        if (resources.glow) { resources.glow.resize(width, height, style.devicePixelRatio); applyCamera(); resources.glow.prepare(scene, camera); invalidate(); return; }
         glowPending = true;
-        const module = await (services.loadGlow ?? (() => import('./glow.js')))();
+        const module = await (application?.loadGlow ?? loadGlowModule)();
         if (!current()) throw abortGlow();
         if (!module || typeof module.createLyra3dGlow !== 'function') throw new Error('Glow module is unavailable');
         created = module.createLyra3dGlow(renderer);
@@ -289,7 +349,7 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
         if (!current()) throw abortGlow();
         applyCamera(); created.prepare(scene, camera);
         if (!current()) throw abortGlow();
-        glow = created; created = undefined; glowPending = false; invalidate();
+        replaceViewportGlow(resources, created); created = undefined; glowPending = false; invalidate();
       } catch (error) {
         try { created?.dispose(); } catch { /* Preserve the setup error after independent resource cleanup. */ }
         if (generation === glowGeneration) glowPending = false;
@@ -331,19 +391,19 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
         if (disposed || lost || restoring || glowPending) return;
       }
       applyCamera();
-      if (!renderOperation(() => { if (glow) glow.render(scene, camera); else renderer.render(scene, camera); })) return;
+      if (!renderOperation(() => { if (resources.glow) resources.glow.render(scene, camera); else renderer.render(scene, camera); })) return;
       if (cameraChanged) {
         cameraChanged = false;
-        host.camera(orbit);
+        application?.camera(orbit);
         if (disposed || lost) return;
       }
-      if (hoverPoint && !gesture && pick) {
+      if (hoverPoint && !gesture && application?.pickAt !== null) {
         const item = pick(hoverPoint.x, hoverPoint.y);
         if (disposed || lost) return;
         hoverPoint = undefined;
         if (item !== hovered) {
           hovered = item;
-          host.hover(item);
+          application?.hover(item);
         }
       }
       if (transition) invalidate();
@@ -385,7 +445,7 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
 
     const pointerDown = (event: PointerEvent) => {
       if (disposed || lost || gesture || (event.button !== 0 && event.button !== 1 && event.button !== 2)) return;
-      const pan = event.shiftKey || event.button !== 0 || options.primaryPan?.() === true;
+      const pan = event.shiftKey || event.button !== 0 || application?.primaryPan?.() === true;
       if (disposed || lost) return;
       gesture = {
         id: event.pointerId,
@@ -428,10 +488,10 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
       } catch {
         // Already released.
       }
-      if (!disposed && !lost && activate && event.button === 0 && !current.moved && pick) {
+      if (!disposed && !lost && activate && event.button === 0 && !current.moved && application?.pickAt !== null) {
         const point = local(event);
         const item = pick(point.x, point.y);
-        if (!disposed && !lost) host.pick(item, modifiers(event, false));
+        if (!disposed && !lost) application?.pick(item, modifiers(event, false));
       }
     };
     const pointerUp = (event: PointerEvent) => endGesture(event, true);
@@ -441,17 +501,17 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
       pointer = undefined;
       if (!disposed && !lost && !gesture && hovered !== null) {
         hovered = null;
-        host.hover(null);
+        application?.hover(null);
       }
     };
     const doubleClick = (event: MouseEvent) => {
-      if (!pick || disposed || lost) return;
+      if (application?.pickAt === null || disposed || lost) return;
       const point = local(event);
       const item = pick(point.x, point.y);
-      if (!disposed && !lost) host.pick(item, modifiers(event, true));
+      if (!disposed && !lost) application?.pick(item, modifiers(event, true));
     };
     const wheel = (event: WheelEvent) => {
-      if (disposed || lost || !options.wheelZoom?.(event)) return;
+      if (disposed || lost || !application?.wheelZoom?.(event)) return;
       if (disposed || lost) return;
       event.preventDefault();
       const delta = Math.min(300, Math.max(-300, Number.isFinite(event.deltaY) ? event.deltaY : 0));
@@ -465,11 +525,12 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
     const contextLost = () => {
       if (disposed || lost) return;
       lost = true;
+      invalidateViewportXr(viewport);
       restoring = false; glowGeneration++; glowPending = false;
       stopInteraction(true);
       let cleanupError: unknown, cleanupFailed = false;
       try { releaseGlow(); } catch (error) { cleanupFailed = true; cleanupError = error; }
-      if (!disposed) host.lost('context-lost');
+      if (!disposed) application?.lost('context-lost');
       if (cleanupFailed) throw cleanupError;
     };
     const contextRestored = () => {
@@ -477,9 +538,10 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
       // the clear color, so every setting is applied again before the first restored frame.
       if (disposed || failed || !lost) return;
       lost = false;
+      invalidateViewportXr(viewport);
       if (!renderOperation(applyRendererState)) return;
       restoring = glowRequested && !style.forcedColors && glowAllocated();
-      try { options.onRestore?.(); }
+      try { application?.onRestore?.(); }
       catch (error) { renderOperation(() => { throw error; }); throw error; }
       if (disposed || lost) return;
       if (glowRequested && !style.forcedColors && glowAllocated()) {
@@ -492,7 +554,7 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
       // The item under a resting pointer is checked again against the restored pick scene.
       if (pointer && !gesture) hoverPoint = pointer;
       invalidate();
-      host.restored?.();
+      application?.restored?.();
     };
     const listeners: [EventTarget, string, EventListener, AddEventListenerOptions?][] = [
       [canvas, 'pointerdown', pointerDown as EventListener],
@@ -507,17 +569,6 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
       [canvas, 'webglcontextlost', contextLost],
       [canvas, 'webglcontextrestored', contextRestored],
     ];
-    for (const entry of listeners) {
-      installedListeners.push(entry);
-      const [target, type, listener, listenerOptions] = entry;
-      target.addEventListener(type, listener, listenerOptions);
-    }
-
-    container.append(canvas);
-    applyRendererState();
-    applyCamera();
-    host.rendering?.({ software });
-
     const viewport: Lyra3dViewport = {
       canvas,
       renderer,
@@ -546,6 +597,7 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
         return disposed;
       },
       setOrbit(next) {
+        if (disposed) return;
         transition = undefined;
         cameraChanged = false;
         orbit = normalizeOrbitCamera(next, orbit);
@@ -574,11 +626,11 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
           cameraChanged = true;
         }
         if (!disposed && !lost) renderOperation(applyRendererState);
-        if (wasForced !== style.forcedColors && glowRequested) {
+        if (!disposed && wasForced !== style.forcedColors && glowRequested) {
           const pending = syncGlow(), active = glowGeneration;
           void pending.then(() => finishRestore(active), () => {});
         }
-        else if (glow && !disposed && !lost) renderOperation(() => glow?.resize(width, height, style.devicePixelRatio));
+        else if (resources.glow && !disposed && !lost) renderOperation(() => resources.glow?.resize(width, height, style.devicePixelRatio));
         invalidate();
         return style;
       },
@@ -593,8 +645,8 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
         const wasAllocated = glowAllocated();
         if (Number.isFinite(nextWidth)) { allocatedWidth = Math.max(0, Math.round(nextWidth)); width = Math.max(1, allocatedWidth); }
         if (Number.isFinite(nextHeight)) { allocatedHeight = Math.max(0, Math.round(nextHeight)); height = Math.max(1, allocatedHeight); }
-        if (!disposed && !lost) renderOperation(() => { applyRendererState(); if (glowAllocated()) glow?.resize(width, height, style.devicePixelRatio); });
-        if (glowRequested && wasAllocated !== glowAllocated()) {
+        if (!disposed && !lost) renderOperation(() => { applyRendererState(); if (glowAllocated()) resources.glow?.resize(width, height, style.devicePixelRatio); });
+        if (!disposed && glowRequested && wasAllocated !== glowAllocated()) {
           const pending = syncGlow(), active = glowGeneration;
           void pending.then(() => finishRestore(active), () => {});
         }
@@ -602,6 +654,7 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
       },
       invalidate,
       onFrame(callback) {
+        if (disposed) return () => {};
         frameCallbacks.add(callback);
         return () => frameCallbacks.delete(callback);
       },
@@ -609,7 +662,7 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
         if (disposed || lost || restoring) return null;
         applyCamera();
         let item: number | null = null;
-        return renderOperation(() => { item = picker.read(pickScene, camera, x, y, width, height); }) ? item : null;
+        return renderOperation(() => { item = resources.picker?.read(pickScene, camera, x, y, width, height) ?? null; }) ? item : null;
       },
       project(point) {
         return projectOrbitPoint(point, orbit, { width, height });
@@ -620,36 +673,46 @@ export function createLyra3dViewport(container: HTMLElement, host: Lyra3dHost, o
         render(performance.now());
       },
       dispose() {
+        unregisterViewportXr(viewport);
         if (disposed) return;
-        disposed = true;
-        glowGeneration++; glowPending = false;
-        stopInteraction();
-        frameCallbacks.clear();
-        for (const [target, type, listener, listenerOptions] of listeners) target.removeEventListener(type, listener, listenerOptions);
         let failure: unknown; let threw = false;
         const cleanup = (run: () => void) => { try { run(); } catch (error) { if (!threw) { threw = true; failure = error; } } };
-        cleanup(releaseGlow);
-        cleanup(() => picker.dispose());
-        cleanup(() => renderer.dispose());
-        // Frees the GPU context now instead of at garbage collection; pages hold only a few at once.
-        cleanup(() => releaseContext(gl));
-        cleanup(restoreContextMethods);
+        cleanup(() => detachApplication(false));
+        if (!resources.transferred) {
+          cleanup(() => retireViewportExtras(resources));
+          cleanup(() => renderer.dispose());
+          // Frees the GPU context now instead of at garbage collection; pages hold only a few at once.
+          cleanup(() => releaseContext(gl));
+          cleanup(() => restoreViewportContextMethods(resources));
+        }
         cleanup(() => canvas.remove());
         if (threw) throw failure;
       },
     };
+    for (const entry of listeners) {
+      installedListeners.push(entry);
+      const [target, type, listener, listenerOptions] = entry;
+      target.addEventListener(type, listener, listenerOptions);
+    }
+    container.append(canvas);
+    applyRendererState();
+    applyCamera();
+    application?.rendering?.({ software });
+    registerViewportXr(viewport, resources, {}, () => { detachApplication(true); });
     return viewport;
   } catch (error) {
     // No caller received the viewport, so release every acquired resource independently while
     // preserving the initialization or application callback error that made mounting fail.
+    application = undefined;
     try { stopInitialization?.(); } catch { /* Continue with native resource cleanup. */ }
     for (const [target, type, listener, listenerOptions] of installedListeners) {
       try { target.removeEventListener(type, listener, listenerOptions); } catch { /* Continue detaching. */ }
     }
-    try { ownedPicker?.dispose(); } catch { /* Renderer and context still need release. */ }
+    installedListeners.length = 0;
+    try { if (ownedResources) retireViewportExtras(ownedResources); else ownedPicker?.dispose(); } catch { /* Renderer and context still need release. */ }
     try { renderer.dispose(); } catch { /* The WebGL context remains independently owned. */ }
     try { releaseContext(ownedContext); } catch { /* Preserve the original failure. */ }
-    try { restoreContextMethods(); } catch { /* Preserve the original failure. */ }
+    try { if (ownedResources) restoreViewportContextMethods(ownedResources); else restoreContextMethods(); } catch { /* Preserve the original failure. */ }
     try { canvas.remove(); } catch { /* Preserve the original failure. */ }
     throw error;
   }
