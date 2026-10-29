@@ -47,7 +47,7 @@ class SceneControl {
     }
     this.peer = peer;
     const document = peer.getCanvas().ownerDocument;
-    const root = document.createElement('div'); root.className = 'maplibregl-ctrl maplibregl-ctrl-group'; root.part.add(`${this.kind}-control`);
+    const root = document.createElement('div'); root.className = `maplibregl-ctrl maplibregl-ctrl-group map-scene-${this.kind}-control`; root.part.add(`${this.kind}-control`);
     const button = document.createElement('button'); button.type = 'button'; button.part.add(`${this.kind}-button`);
     const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     icon.setAttribute('viewBox', '0 0 24 24'); icon.setAttribute('aria-hidden', 'true'); icon.setAttribute('focusable', 'false');

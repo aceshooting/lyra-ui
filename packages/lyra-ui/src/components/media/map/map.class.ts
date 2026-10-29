@@ -8708,6 +8708,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       ['.maplibregl-ctrl-zoom-out .maplibregl-ctrl-icon', 'zoom-out-icon'],
       ['.maplibregl-ctrl-compass .maplibregl-ctrl-icon', 'compass-icon'],
       ['.maplibregl-ctrl-geolocate .maplibregl-ctrl-icon', 'geolocate-icon'],
+      ['.map-scene-globe-control', 'globe-control'],
+      ['.map-scene-globe-control button', 'globe-button'],
+      ['.map-scene-globe-control .map-scene-control-icon', 'globe-icon'],
+      ['.map-scene-terrain-control', 'terrain-control'],
+      ['.map-scene-terrain-control button', 'terrain-button'],
+      ['.map-scene-terrain-control .map-scene-control-icon', 'terrain-icon'],
     ];
     for (const [selector, part] of selectors) {
       const candidate = root as ParentNode & { matches?: (value: string) => boolean };
