@@ -14695,7 +14695,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "74a58427a627eb444e34",
+      "fingerprint": "a79de93cc8f884050f3f",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15602,7 +15602,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "25ee72191b99c069b171",
+      "fingerprint": "a587bca95961afdca48a",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15736,7 +15736,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "09d6c8ce0b901e09bdc0",
+      "fingerprint": "479eb5bb2df3bc95fa97",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -16320,7 +16320,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "b1d0ca253cc900cb0f1b",
+      "fingerprint": "2c93173766138730af0e",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16336,7 +16336,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "e6795900e764760e5718",
+      "fingerprint": "5056e6dc1a5ddaa7cd0d",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16352,7 +16352,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "30ef4482bc04e111d4b2",
+      "fingerprint": "57966ba33052909e312a",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16879,7 +16879,7 @@
       "module": "src/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "84bd99fee7814552b67c",
+      "fingerprint": "330f99e9f2bf564e1343",
       "routes": [
         "src/localization.ts",
         "src/utilities/index.ts"
@@ -16896,7 +16896,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "2ef83a0eb0201f7d5db5",
+      "fingerprint": "1eed448c3f0e21446e17",
       "routes": [
         "src/vue.ts"
       ],
@@ -17305,7 +17305,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "8b38452a1aa853485e15",
+      "fingerprint": "9e53f916c67d458b29f3",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -17330,7 +17330,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocaleDelta",
       "kind": "function",
-      "fingerprint": "23d6affc90a9a20954e1",
+      "fingerprint": "fd7ae438384fc0b675d1",
       "routes": [
         "src/localization.ts"
       ],
@@ -22249,6 +22249,177 @@
         "kind": "utility",
         "name": "time-index-contracts",
         "declaration": "TimeLocation"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-scene-types.ts",
+      "exportName": "LyraMapPosition",
+      "kind": "interface",
+      "fingerprint": "2c47ae451e50445bb0d6",
+      "routes": [
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-scene-types-contracts",
+        "declaration": "LyraMapPosition"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-scene-types.ts",
+      "exportName": "LyraMapSceneActivateDetail",
+      "kind": "interface",
+      "fingerprint": "2f0af36de4a1debd8377",
+      "routes": [
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-scene-types-contracts",
+        "declaration": "LyraMapSceneActivateDetail"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-scene-types.ts",
+      "exportName": "LyraMapSceneArc",
+      "kind": "interface",
+      "fingerprint": "e921e103c1973ac40f19",
+      "routes": [
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-scene-types-contracts",
+        "declaration": "LyraMapSceneArc"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-scene-types.ts",
+      "exportName": "LyraMapScene",
+      "kind": "interface",
+      "fingerprint": "429aa4fe087ee298c080",
+      "routes": [
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-scene-types-contracts",
+        "declaration": "LyraMapScene"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-scene-types.ts",
+      "exportName": "LyraMapSceneMarker",
+      "kind": "interface",
+      "fingerprint": "eb65275967c9c7065a16",
+      "routes": [
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-scene-types-contracts",
+        "declaration": "LyraMapSceneMarker"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-scene-types.ts",
+      "exportName": "LyraMapSceneModel",
+      "kind": "interface",
+      "fingerprint": "e6f9caefaa8824bf2d61",
+      "routes": [
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-scene-types-contracts",
+        "declaration": "LyraMapSceneModel"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-scene-types.ts",
+      "exportName": "LyraMapSceneObjectBase",
+      "kind": "interface",
+      "fingerprint": "4d0fe168b276b1db587a",
+      "routes": [
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-scene-types-contracts",
+        "declaration": "LyraMapSceneObjectBase"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-scene-types.ts",
+      "exportName": "LyraMapScenePath",
+      "kind": "interface",
+      "fingerprint": "bd745aaafc4da3d55141",
+      "routes": [
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-scene-types-contracts",
+        "declaration": "LyraMapScenePath"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-scene-types.ts",
+      "exportName": "LyraMapSceneStateDetail",
+      "kind": "interface",
+      "fingerprint": "ca12060cab03669611ce",
+      "routes": [
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-scene-types-contracts",
+        "declaration": "LyraMapSceneStateDetail"
       }
     }
   ],
