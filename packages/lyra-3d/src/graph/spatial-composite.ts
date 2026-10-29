@@ -6,8 +6,8 @@ import { DoubleSide, InstancedBufferAttribute, InstancedBufferGeometry, Mesh, Pl
 import { markAttributeFull, markAttributeRanges, markAttributeRows } from '../core/attribute-updates.js';
 import type { VisualStateRows } from '../core/visual-state.js';
 import type { Lyra3dViewport } from '../core/viewport.js';
-import { graphSpatialNodeFragment, type createGraphSpatialNodes } from './spatial-nodes.js';
-import { graphSpatialEdgeFragment, type createGraphSpatialEdges } from './spatial-edges.js';
+import { graphSpatialNodeFragment, type createGraphSpatialNodes, type GraphPreparedSpatialNodes } from './spatial-nodes.js';
+import { graphSpatialEdgeFragment, type createGraphSpatialEdges, type GraphPreparedSpatialEdges } from './spatial-edges.js';
 import { graphSpatialEdgeVertexChunk, graphSpatialNodeVertexChunk, graphSpatialProjectionChunk, graphSpatialView, graphViewForward, graphScale, type GraphSpatialView } from './spatial-paths.js';
 
 /**
@@ -52,64 +52,97 @@ export function preflightGraphSpatialMeshes(nodeCount: number, edgePrimitiveCoun
     scratchBytes: custom.triangleCount * 12 });
 }
 
-/** One visual draw across glyphs and strokes; pick meshes retain row identity. Payloads are
- * rebuilt only when the batches' attributes change, and re-ordered only for translucent paint. */
-export function createGraphSpatialComposite(nodes: ReturnType<typeof createGraphSpatialNodes>, edges: ReturnType<typeof createGraphSpatialEdges>, custom?: GraphNodeMeshData) {
+type CompositePresentation = Pick<Lyra3dViewport, 'width' | 'height' | 'orbit'>;
+export type GraphSpatialCompositePresentation = CompositePresentation;
+/** Native draw objects only. Child batches and the shared dash texture remain separately owned. */
+export interface GraphSpatialCompositeResources {
+  readonly geometry: InstancedBufferGeometry;
+  readonly material: ShaderMaterial;
+  readonly mesh: Mesh<InstancedBufferGeometry, ShaderMaterial>;
+  readonly customPick?: ReturnType<typeof createGraphSpatialMeshPick>;
+  disposed: boolean;
+}
+export interface GraphPreparedSpatialComposite {
+  readonly batch: ReturnType<typeof createGraphSpatialComposite>;
+  readonly resources: GraphSpatialCompositeResources;
+  readonly ownedBuffers: readonly ArrayBufferLike[];
+  readonly borrowedBuffers: readonly ArrayBufferLike[];
+}
+export interface GraphSpatialCompositeWorkStep {
+  readonly done: boolean;
+  readonly operations: number;
+  readonly allocatedBytes: number;
+  readonly visitedNodes: number;
+  readonly visitedEdgePrimitives: number;
+  readonly packedFaces: number;
+  readonly paintedFaces: number;
+  readonly initializedSlots: number;
+  readonly orderedRows: number;
+  readonly sortOperations: number;
+  readonly publishedRanges: number;
+  readonly value?: GraphPreparedSpatialComposite;
+}
+export interface GraphSpatialCompositeWork { step(maxOperations: number): GraphSpatialCompositeWorkStep; dispose(): void; }
+export function disposeGraphSpatialCompositeResources(resources: GraphSpatialCompositeResources): void {
+  if (resources.disposed) return;
+  resources.disposed = true;
+  disposeAll([
+    () => resources.mesh.removeFromParent(), () => resources.geometry.dispose(), () => resources.material.dispose(),
+    () => resources.customPick?.removeFromParent(), () => resources.customPick?.geometry.dispose(), () => resources.customPick?.material.dispose(),
+  ]);
+}
+interface CompositeStorage {
+  output: Float32Array[];
+  staged: Float32Array[];
+  anchors: Float32Array;
+  primitiveSlot: Int32Array;
+  outputRow: Int32Array;
+  keys: Float64Array;
+  ranges?: Uint32Array;
+  loopOffsets?: Float32Array;
+}
+interface CompositeUniforms { viewportSize: Vector2; viewWindow: Vector4; lyraView: Vector4; }
+
+function createCompositeController(nodes: ReturnType<typeof createGraphSpatialNodes>, edges: ReturnType<typeof createGraphSpatialEdges>, custom: GraphNodeMeshData | undefined,
+  resources: GraphSpatialCompositeResources, storage: CompositeStorage, payloads: InstancedBufferAttribute[], uniforms: CompositeUniforms) {
   const nodeCount = nodes.mesh.geometry.instanceCount, edgeCount = edges.mesh.geometry.instanceCount;
-  const ordinaryCount = nodeCount + edgeCount, customCount = custom?.triangleCount ?? 0;
-  const count = ordinaryCount + customCount;
-  if (custom) preflightGraphSpatialMeshes(nodeCount, edgeCount, custom);
-  const ranges = custom ? new Uint32Array(nodeCount + 1) : undefined;
-  if (ranges && custom) for (let row = 0; row < nodeCount; row++) ranges[row + 1] = ranges[row]! + (custom.nodeMeshes[row]?.positions.length ?? 0) / 9;
-  const plane = new PlaneGeometry(2, 2), geometry = new InstancedBufferGeometry();
-  geometry.index = plane.index; geometry.attributes = { ...plane.attributes }; plane.dispose(); geometry.instanceCount = 0;
-  const payloads = Array.from({ length: 5 }, (_, i) => {
-    const attribute = new InstancedBufferAttribute(new Float32Array(count * 4), 4);
-    geometry.setAttribute(`payload${i}`, attribute); return attribute;
-  });
-  // Unsorted payloads and world anchors of the active primitives, in edge-then-node order.
-  const staged = Array.from({ length: 5 }, () => new Float32Array(count * 4));
-  const anchors = new Float32Array(count * 3);
-  const primitiveSlot = new Int32Array(count).fill(-1), outputRow = new Int32Array(count).fill(-1);
-  let keys = new Float64Array(0);
-  const viewportSize = new Vector2(1, 1), viewWindow = new Vector4(0, 0, 1, 1), lyraView = new Vector4(1, 1, 0.5, 1e4);
-  const nodeUniforms = nodes.mesh.material.uniforms, edgeUniforms = edges.mesh.material.uniforms;
-  const material = new ShaderMaterial({ side: DoubleSide, forceSinglePass: true, vertexShader: vertex, fragmentShader: fragment, transparent: true, depthWrite: false, depthTest: true,
-    uniforms: { viewportSize: { value: viewportSize }, viewWindow: { value: viewWindow }, lyraView: { value: lyraView }, worldSizes: nodeUniforms['worldSizes']!, markerArm: nodeUniforms['markerArm']!,
-      meshForcedColors: { value: 0 }, dashAtlas: edgeUniforms['dashAtlas']!, atlasHeight: edgeUniforms['atlasHeight']! } });
-  const customPick = custom ? createGraphSpatialMeshPick(staged, ordinaryCount, customCount, material.uniforms, geometry) : undefined;
-  if (custom) for (let row = 0; row < nodeCount; row++) {
-    const body = custom.nodeMeshes[row]; if (!body) continue;
-    for (let face = 0; face < body.positions.length / 9; face++) packGraphMeshFace(staged, ordinaryCount + ranges![row]! + face, row,
-      [0, 0, 0], 0, body.positions, face * 9, body.normals.subarray(face * 3, face * 3 + 3), [0, 0, 0, 0]);
-  }
-  const mesh = new Mesh(geometry, material); mesh.frustumCulled = false; let disposed = false;
+  const ordinaryCount = nodeCount + edgeCount, customCount = custom?.triangleCount ?? 0, count = ordinaryCount + customCount;
+  const { geometry, material, mesh, customPick } = resources;
+  const { ranges, staged, anchors, primitiveSlot, outputRow } = storage;
+  const { viewportSize, viewWindow, lyraView } = uniforms;
+  const nodeUniforms = nodes.mesh.material.uniforms;
+  let quiesced = false;
   let seenNodes = -1, seenEdges = -1, active = 0, translucent = false, sorted: [number, number, number] | undefined;
   let activeEdges = 0, activeOrdinary = 0, transientCustomScratchBytes = 0;
   const physicalSlot = (logical: number) => logical < activeOrdinary ? logical : ordinaryCount + logical - activeOrdinary;
-  const customPaint = (rows: VisualStateRows) => {
-    if (!customPick || !ranges) return;
+  const writeCustom = (face: number, payload: number, channel: number, value: number): boolean => {
+    const slot = ordinaryCount + face, offset = slot * 4 + channel;
+    if (staged[payload]![offset] === value) return false;
+    staged[payload]![offset] = value;
+    const output = outputRow[slot]!;
+    if (output >= 0) (payloads[payload]!.array as Float32Array)[output * 4 + channel] = value;
+    return true;
+  };
+  const paintCustomFace = (row: number, face: number, write: (face: number, payload: number, channel: number, value: number) => void) => {
     const position = nodes.mesh.geometry.getAttribute('nodePosition').array;
     const sizes = nodes.mesh.geometry.getAttribute('nodeSize').array;
     const fill = nodes.mesh.geometry.getAttribute('nodeFill').array;
+    for (let axis = 0; axis < 3; axis++) { write(face, 0, axis, position[row * 3 + axis]!); write(face, 4, axis, fill[row * 4 + axis]!); }
+    write(face, 0, 3, sizes[row]!); write(face, 3, 3, fill[row * 4 + 3]!);
+    write(face, 4, 3, -2 - row - (nodes.bodyPickable(row) ? 0 : 0.25));
+    const slot = ordinaryCount + face;
+    for (let axis = 0; axis < 3; axis++) anchors[slot * 3 + axis] = position[row * 3 + axis]!;
+  };
+  const customPaint = (rows: VisualStateRows) => {
+    if (!customPick || !ranges) return;
     const changed = new Map<number, number[]>();
     const write = (face: number, payload: number, channel: number, value: number) => {
-      const slot = ordinaryCount + face, offset = slot * 4 + channel;
-      if (staged[payload]![offset] === value) return;
-      staged[payload]![offset] = value;
+      if (!writeCustom(face, payload, channel, value)) return;
       const list = changed.get(payload) ?? []; list.push(face); changed.set(payload, list);
-      const output = outputRow[slot]!;
-      if (output >= 0) (payloads[payload]!.array as Float32Array)[output * 4 + channel] = value;
     };
     for (let index = 0, length = rows?.length ?? nodeCount; index < length; index++) {
       const row = rows === null ? index : rows[index]!;
-      for (let face = ranges[row]!; face < ranges[row + 1]!; face++) {
-        for (let axis = 0; axis < 3; axis++) { write(face, 0, axis, position[row * 3 + axis]!); write(face, 4, axis, fill[row * 4 + axis]!); }
-        write(face, 0, 3, sizes[row]!); write(face, 3, 3, fill[row * 4 + 3]!);
-        write(face, 4, 3, -2 - row - (nodes.bodyPickable(row) ? 0 : 0.25));
-        const slot = ordinaryCount + face;
-        for (let axis = 0; axis < 3; axis++) anchors[slot * 3 + axis] = position[row * 3 + axis]!;
-      }
+      for (let face = ranges[row]!; face < ranges[row + 1]!; face++) paintCustomFace(row, face, write);
     }
     for (const [payload, faces] of changed) {
       markAttributeRows(customPick.geometry.getAttribute(`payload${payload}`) as InstancedBufferAttribute, faces);
@@ -129,51 +162,57 @@ export function createGraphSpatialComposite(nodes: ReturnType<typeof createGraph
   let denseAllRanges: { start: number; count: number }[] = [];
   let settling: ReturnType<typeof setTimeout> | undefined;
   let lastForward: [number, number, number] | undefined;
-  let loopOffsets: Float32Array | undefined, hasCssLoops = false;
+  let hasCssLoops = false;
   let lastLoopView: number[] | undefined;
-  const cancelSettling = () => { if (settling !== undefined) clearTimeout(settling); settling = undefined; };
+  const cancelSettling = () => { const timer = settling; settling = undefined; if (timer !== undefined) clearTimeout(timer); };
+  const [p0, p1, p2, p3, p4] = staged as [Float32Array, Float32Array, Float32Array, Float32Array, Float32Array];
+  const edgeArray = (name: string) => edges.mesh.geometry.getAttribute(name).array as Float32Array;
+  const nodeArray = (name: string) => nodes.mesh.geometry.getAttribute(name).array as Float32Array;
+  const needsLoopOffsets = (i: number) => {
+    const stroke = edgeArray('stroke'), color = edgeArray('edgeColor'), path = edgeArray('edgePath');
+    return stroke[i * 3]! > 0 && color[i * 4 + 3]! > 0 && nodeUniforms['worldSizes']!.value < 0.5 && path[i * 4 + 2]! > 0 && stroke[i * 3 + 2]! < 0.5;
+  };
+  const packEdge = (i: number) => {
+    const start = edgeArray('edgeStart'), end = edgeArray('edgeEnd'), path = edgeArray('edgePath'), stroke = edgeArray('stroke'), color = edgeArray('edgeColor'), dash = edgeArray('dash'), curvature = edgeArray('edgeCurvature');
+    if (!(stroke[i * 3]! > 0 && color[i * 4 + 3]! > 0)) return;
+    primitiveSlot[i] = active;
+    const o = active * 4;
+    p0[o] = start[i * 3]!; p0[o + 1] = start[i * 3 + 1]!; p0[o + 2] = start[i * 3 + 2]!; p0[o + 3] = path[i * 4]!;
+    p1[o] = end[i * 3]!; p1[o + 1] = end[i * 3 + 1]!; p1[o + 2] = end[i * 3 + 2]!; p1[o + 3] = path[i * 4 + 1]!;
+    p2.set(color.subarray(i * 4, i * 4 + 4), o);
+    p3[o] = path[i * 4 + 2]!; p3[o + 1] = path[i * 4 + 3]!; p3[o + 2] = stroke[i * 3]!; p3[o + 3] = stroke[i * 3 + 2]!;
+    p4[o] = dash[i]!; p4[o + 1] = curvature[i]!; p4[o + 2] = 0; p4[o + 3] = -1;
+    anchors.set(edges.anchors.subarray(i * 3, i * 3 + 3), active * 3);
+    if (nodeUniforms['worldSizes']!.value < 0.5 && path[i * 4 + 2]! > 0 && stroke[i * 3 + 2]! < 0.5) {
+      // CSS loop endpoints are expanded in world XY by the shader. Store their midpoint in
+      // CSS units; only its sort key needs the camera-dependent conversion to world units.
+      storage.loopOffsets ??= new Float32Array(count * 2);
+      const a = path[i * 4]! * Math.PI * 2, b = path[i * 4 + 1]! * Math.PI * 2, radius = path[i * 4 + 2]!;
+      storage.loopOffsets[active * 2] = (Math.sin(a) + Math.sin(b)) * radius / 2;
+      storage.loopOffsets[active * 2 + 1] = -(2 - Math.cos(a) - Math.cos(b)) * radius / 2;
+      hasCssLoops = true;
+    }
+    active++;
+  };
+  const packNode = (i: number) => {
+    const position = nodeArray('nodePosition'), size = nodeArray('nodeSize'), shape = nodeArray('nodeShape'), flags = nodeArray('nodeFlags');
+    const fill = nodeArray('nodeFill'), ring = nodeArray('nodeRing'), marker = nodeArray('nodeMarker');
+    if (!(size[i]! > 0 || flags[i * 2]! > 0 || flags[i * 2 + 1]! > 0)) return;
+    primitiveSlot[edgeCount + i] = active;
+    const o = active * 4;
+    p0[o] = position[i * 3]!; p0[o + 1] = position[i * 3 + 1]!; p0[o + 2] = position[i * 3 + 2]!; p0[o + 3] = size[i]!;
+    p1[o] = shape[i]!; p1[o + 1] = flags[i * 2]!; p1[o + 2] = flags[i * 2 + 1]!; p1[o + 3] = 0;
+    p2.set(fill.subarray(i * 4, i * 4 + 4), o); p3.set(ring.subarray(i * 4, i * 4 + 4), o); p4.set(marker.subarray(i * 4, i * 4 + 4), o);
+    anchors.set(position.subarray(i * 3, i * 3 + 3), active * 3); active++;
+  };
   const rebuild = () => {
     cancelSettling(); lastForward = undefined; lastLoopView = undefined; hasCssLoops = false;
-    loopOffsets?.fill(0);
+    storage.loopOffsets?.fill(0);
     seenNodes = nodes.revision; seenEdges = edges.revision; active = 0;
     primitiveSlot.fill(-1); outputRow.fill(-1);
-    const node = (name: string) => nodes.mesh.geometry.getAttribute(name).array as Float32Array;
-    const edge = (name: string) => edges.mesh.geometry.getAttribute(name).array as Float32Array;
-    const [p0, p1, p2, p3, p4] = staged as [Float32Array, Float32Array, Float32Array, Float32Array, Float32Array];
-    const start = edge('edgeStart'), end = edge('edgeEnd'), path = edge('edgePath'), stroke = edge('stroke'), color = edge('edgeColor'), dash = edge('dash'), curvature = edge('edgeCurvature');
-    for (let i = 0; i < edgeCount; i++) {
-      if (!(stroke[i * 3]! > 0 && color[i * 4 + 3]! > 0)) continue;
-      primitiveSlot[i] = active;
-      const o = active * 4;
-      p0[o] = start[i * 3]!; p0[o + 1] = start[i * 3 + 1]!; p0[o + 2] = start[i * 3 + 2]!; p0[o + 3] = path[i * 4]!;
-      p1[o] = end[i * 3]!; p1[o + 1] = end[i * 3 + 1]!; p1[o + 2] = end[i * 3 + 2]!; p1[o + 3] = path[i * 4 + 1]!;
-      p2.set(color.subarray(i * 4, i * 4 + 4), o);
-      p3[o] = path[i * 4 + 2]!; p3[o + 1] = path[i * 4 + 3]!; p3[o + 2] = stroke[i * 3]!; p3[o + 3] = stroke[i * 3 + 2]!;
-      p4[o] = dash[i]!; p4[o + 1] = curvature[i]!; p4[o + 2] = 0; p4[o + 3] = -1;
-      anchors.set(edges.anchors.subarray(i * 3, i * 3 + 3), active * 3);
-      if (nodeUniforms['worldSizes']!.value < 0.5 && path[i * 4 + 2]! > 0 && stroke[i * 3 + 2]! < 0.5) {
-        // CSS loop endpoints are expanded in world XY by the shader. Store their midpoint in
-        // CSS units; only its sort key needs the camera-dependent conversion to world units.
-        loopOffsets ??= new Float32Array(count * 2);
-        const a = path[i * 4]! * Math.PI * 2, b = path[i * 4 + 1]! * Math.PI * 2, radius = path[i * 4 + 2]!;
-        loopOffsets[active * 2] = (Math.sin(a) + Math.sin(b)) * radius / 2;
-        loopOffsets[active * 2 + 1] = -(2 - Math.cos(a) - Math.cos(b)) * radius / 2;
-        hasCssLoops = true;
-      }
-      active++;
-    }
+    for (let i = 0; i < edgeCount; i++) packEdge(i);
     activeEdges = active;
-    const position = node('nodePosition'), size = node('nodeSize'), shape = node('nodeShape'), flags = node('nodeFlags');
-    const fill = node('nodeFill'), ring = node('nodeRing'), marker = node('nodeMarker');
-    for (let i = 0; i < nodeCount; i++) {
-      if (!(size[i]! > 0 || flags[i * 2]! > 0 || flags[i * 2 + 1]! > 0)) continue;
-      primitiveSlot[edgeCount + i] = active;
-      const o = active * 4;
-      p0[o] = position[i * 3]!; p0[o + 1] = position[i * 3 + 1]!; p0[o + 2] = position[i * 3 + 2]!; p0[o + 3] = size[i]!;
-      p1[o] = shape[i]!; p1[o + 1] = flags[i * 2]!; p1[o + 2] = flags[i * 2 + 1]!; p1[o + 3] = 0;
-      p2.set(fill.subarray(i * 4, i * 4 + 4), o); p3.set(ring.subarray(i * 4, i * 4 + 4), o); p4.set(marker.subarray(i * 4, i * 4 + 4), o);
-      anchors.set(position.subarray(i * 3, i * 3 + 3), active * 3); active++;
-    }
+    for (let i = 0; i < nodeCount; i++) packNode(i);
     activeOrdinary = active;
     customPaint(null);
     active += customCount;
@@ -311,31 +350,41 @@ export function createGraphSpatialComposite(nodes: ReturnType<typeof createGraph
     rememberPaint(); seenNodes = nodes.revision; seenEdges = edges.revision;
     return true;
   };
+  const depthKey = (slot: number, forward: [number, number, number], depthOrigin: number, view: GraphSpatialView): number => {
+    let key = anchors[slot * 3]! * forward[0] + anchors[slot * 3 + 1]! * forward[1] + anchors[slot * 3 + 2]! * forward[2];
+    if (hasCssLoops) {
+      const depth = depthOrigin - key;
+      // Match lyraGraphPathPoint: CSS loops collapse while their centre is behind near.
+      if (depth >= view.near) key += (storage.loopOffsets![slot * 2]! * forward[0] + storage.loopOffsets![slot * 2 + 1]! * forward[1]) / graphScale(depth, view);
+    }
+    if (customCount && slot >= ordinaryCount) {
+      const o = slot * 4, depth = depthOrigin - key;
+      const radius = staged[0]![o + 3]! * (nodeUniforms['worldSizes']!.value > 0.5 ? 1 : depth > view.near ? 1 / graphScale(depth, view) : 0);
+      for (let axis = 0; axis < 3; axis++) key += (staged[1]![o + axis]! + staged[2]![o + axis]! + staged[3]![o + axis]!) / 3 * radius * forward[axis]!;
+    }
+    return key;
+  };
+  const copyPayloadRow = (row: number, slot: number) => {
+    const from = slot * 4, to = row * 4;
+    for (let payload = 0; payload < 5; payload++) {
+      const target = payloads[payload]!.array, source = staged[payload]!;
+      target[to] = source[from]!; target[to + 1] = source[from + 1]!; target[to + 2] = source[from + 2]!; target[to + 3] = source[from + 3]!;
+    }
+  };
   // Back-to-front is ascending `dot(anchor, forward)`; equal depths keep edges before nodes.
   const sort = (forward: [number, number, number], depthOrigin: number, view: GraphSpatialView) => {
     sorted = forward;
-    if (keys.length < active) keys = new Float64Array(count);
+    if (storage.keys.length < active) storage.keys = new Float64Array(count);
     let min = Infinity, max = -Infinity;
     for (let i = 0; i < active; i++) {
-      const slot = physicalSlot(i);
-      let key = anchors[slot * 3]! * forward[0] + anchors[slot * 3 + 1]! * forward[1] + anchors[slot * 3 + 2]! * forward[2];
-      if (hasCssLoops) {
-        const depth = depthOrigin - key;
-        // Match lyraGraphPathPoint: CSS loops collapse while their centre is behind near.
-        if (depth >= view.near) key += (loopOffsets![slot * 2]! * forward[0] + loopOffsets![slot * 2 + 1]! * forward[1]) / graphScale(depth, view);
-      }
-      if (customCount && slot >= ordinaryCount) {
-        const o = slot * 4, depth = depthOrigin - key;
-        const radius = staged[0]![o + 3]! * (nodeUniforms['worldSizes']!.value > 0.5 ? 1 : depth > view.near ? 1 / graphScale(depth, view) : 0);
-        for (let axis = 0; axis < 3; axis++) key += (staged[1]![o + axis]! + staged[2]![o + axis]! + staged[3]![o + axis]!) / 3 * radius * forward[axis]!;
-      }
-      keys[i] = key; if (key < min) min = key; if (key > max) max = key;
+      const key = depthKey(physicalSlot(i), forward, depthOrigin, view);
+      storage.keys[i] = key; if (key < min) min = key; if (key > max) max = key;
     }
     // Quantized key and original index share one exactly representable double, so the native
     // numeric sort orders by depth and breaks ties by index without a comparator.
     const scale = max > min ? KEY_STEPS / (max - min) : 0;
-    for (let i = 0; i < active; i++) keys[i] = Math.min(KEY_STEPS, Math.floor((keys[i]! - min) * scale)) * INDEX_BITS + physicalSlot(i);
-    const order = keys.subarray(0, active).sort();
+    for (let i = 0; i < active; i++) storage.keys[i] = Math.min(KEY_STEPS, Math.floor((storage.keys[i]! - min) * scale)) * INDEX_BITS + physicalSlot(i);
+    const order = storage.keys.subarray(0, active).sort();
     denseNodeRanges = [];
     let nodeStart = -1;
     for (let row = 0; row <= active; row++) {
@@ -344,44 +393,42 @@ export function createGraphSpatialComposite(nodes: ReturnType<typeof createGraph
       if (slot >= activeEdges) { if (nodeStart < 0) nodeStart = row; }
       else if (nodeStart >= 0) { denseNodeRanges.push({ start: nodeStart * 4, count: (row - nodeStart) * 4 }); nodeStart = -1; }
     }
-    payloads.forEach((payload, slot) => {
-      const target = payload.array as Float32Array, source = staged[slot]!;
-      for (let row = 0; row < active; row++) {
-        const from = (order[row]! % INDEX_BITS) * 4, to = row * 4;
-        target[to] = source[from]!; target[to + 1] = source[from + 1]!; target[to + 2] = source[from + 2]!; target[to + 3] = source[from + 3]!;
-      }
-      markAttributeFull(payload);
-    });
+    for (let row = 0; row < active; row++) copyPayloadRow(row, order[row]! % INDEX_BITS);
+    for (const payload of payloads) markAttributeFull(payload);
   };
-  return { mesh, customPick,
+  const setView = (viewport: CompositePresentation): GraphSpatialView => {
+    const view = graphSpatialView(viewport.width, viewport.height, viewport.orbit);
+    material.uniforms['meshForcedColors']!.value = nodes.forcedColors ? 1 : 0;
+    viewportSize.set(view.width, view.height); viewWindow.set(0, 0, viewport.width, viewport.height); lyraView.set(view.width, view.height, view.near, view.far);
+    return view;
+  };
+  const batch = { mesh, customPick,
     /** Unique backing stores, including staging shared with the independent pick upload. */
     allocations() {
       const baseArrays = ['position', 'normal', 'uv'].map(name => geometry.getAttribute(name).array);
       if (geometry.index) baseArrays.push(geometry.index.array);
-      const arrays: ArrayBufferView[] = [...staged, ...payloads.map(payload => payload.array), anchors, primitiveSlot, outputRow, keys, ...baseArrays];
-      if (ranges) arrays.push(ranges); if (loopOffsets) arrays.push(loopOffsets);
+      const arrays: ArrayBufferView[] = [...staged, ...payloads.map(payload => payload.array), anchors, primitiveSlot, outputRow, storage.keys, ...baseArrays];
+      if (ranges) arrays.push(ranges); if (storage.loopOffsets) arrays.push(storage.loopOffsets);
       const buffers = [...new Set(arrays.map(array => array.buffer))];
       const cpuBytes = buffers.reduce((sum, buffer) => sum + buffer.byteLength, 0);
       const baseGeometryBytes = baseArrays.reduce((sum, array) => sum + array.byteLength, 0);
       let customStorage;
       if (custom) {
         customStorage = graphNodeMeshStorage({ nodeCount, customNodeCount: custom.customNodeCount, triangleCount: customCount,
-          ordinaryPrimitiveCount: ordinaryCount, sortKeyBytesBefore: 0, sortKeyBytesAfter: keys.byteLength,
-          scratchBytes: (loopOffsets ? customCount * 8 : 0) + transientCustomScratchBytes });
-        const ordinaryCpu = ordinaryCount * 180 + (loopOffsets ? ordinaryCount * 8 : 0) + baseGeometryBytes;
+          ordinaryPrimitiveCount: ordinaryCount, sortKeyBytesBefore: 0, sortKeyBytesAfter: storage.keys.byteLength,
+          scratchBytes: (storage.loopOffsets ? customCount * 8 : 0) + transientCustomScratchBytes });
+        const ordinaryCpu = ordinaryCount * 180 + (storage.loopOffsets ? ordinaryCount * 8 : 0) + baseGeometryBytes;
         const addedCpu = cpuBytes - ordinaryCpu + custom.payloadBytes * 2 + nodeCount * 16 + transientCustomScratchBytes;
         if (addedCpu > customStorage.cpuBytes || customCount * 160 > customStorage.gpuBytes) throw new RangeError('Graph custom allocations exceed planned storage');
       }
       return { buffers, cpuBytes, baseGeometryBytes, customStorage, transientCustomScratchBytes,
-        gpuAttributeBytes: count * 80 + customCount * 80, sortKeyBytes: keys.byteLength };
+        gpuAttributeBytes: count * 80 + customCount * 80, sortKeyBytes: storage.keys.byteLength };
     },
     /** Per frame: uniforms always; payload rewrites only after a batch update or, for translucent
      * paint, a material change of view direction. */
     update(viewport: Pick<Lyra3dViewport, 'width' | 'height' | 'orbit' | 'invalidate'>) {
-      if (disposed) return;
-      const view = graphSpatialView(viewport.width, viewport.height, viewport.orbit);
-      material.uniforms['meshForcedColors']!.value = nodes.forcedColors ? 1 : 0;
-      viewportSize.set(view.width, view.height); viewWindow.set(0, 0, viewport.width, viewport.height); lyraView.set(view.width, view.height, view.near, view.far);
+      if (resources.disposed || quiesced) return;
+      const view = setView(viewport);
       if (nodes.revision !== seenNodes || edges.revision !== seenEdges) {
         const nodeChanges = nodes.takeChanges(), edgeChanges = edges.takeChanges();
         if (seenNodes < 0 || seenEdges < 0 || nodeChanges.full || edgeChanges.full || !patch(nodeChanges.rows, edgeChanges.rows)) rebuild();
@@ -401,11 +448,414 @@ export function createGraphSpatialComposite(nodes: ReturnType<typeof createGraph
         // rotation settles, and explicitly request the frame that displays the corrected buffers.
         settling = setTimeout(() => {
           settling = undefined;
-          if (disposed) return;
+          if (resources.disposed || quiesced) return;
           sort(forward, depthOrigin, view); viewport.invalidate();
         }, SETTLE_MS);
       }
     },
-    dispose() { if (disposed) return; disposed = true; disposeAll([cancelSettling, () => mesh.removeFromParent(), () => geometry.dispose(), () => material.dispose(), () => customPick?.removeFromParent(), () => customPick?.geometry.dispose(), () => customPick?.material.dispose()]); },
+    quiesce() { quiesced = true; cancelSettling(); },
+    dispose() { disposeAll([() => batch.quiesce(), () => disposeGraphSpatialCompositeResources(resources)]); },
+  };
+  let initialNodeStart = -1;
+  return { batch, needsLoopOffsets, packEdge, packNode,
+    get active() { return active; }, get translucent() { return translucent; },
+    finishEdges() { activeEdges = active; },
+    finishNodes() { activeOrdinary = active; },
+    initializeLocalFace(row: number, face: number) {
+      const body = custom!.nodeMeshes[row]!, localFace = face - ranges![row]!;
+      packGraphMeshFace(staged, ordinaryCount + face, row, [0, 0, 0], 0, body.positions, localFace * 9,
+        body.normals.subarray(localFace * 3, localFace * 3 + 3), [0, 0, 0, 0]);
+    },
+    initializeFacePaint(row: number, face: number): number {
+      let changed = 0;
+      paintCustomFace(row, face, (index, payload, channel, value) => { if (writeCustom(index, payload, channel, value)) changed |= 1 << payload; });
+      return changed;
+    },
+    finishCompaction() {
+      active += customCount; translucent = nodes.translucent || edges.translucent;
+      if (material.transparent !== translucent) { material.transparent = translucent; material.needsUpdate = true; }
+      material.depthWrite = !translucent; geometry.instanceCount = active;
+      denseAllRanges = active ? [{ start: 0, count: active * 4 }] : []; denseNodeRanges = [];
+    },
+    initializeOrder(viewport: CompositePresentation) {
+      const view = graphSpatialView(viewport.width, viewport.height, viewport.orbit), forward = graphViewForward(viewport.orbit), camera = viewport.orbit;
+      sorted = forward; lastForward = forward;
+      lastLoopView = hasCssLoops || (customCount > 0 && nodeUniforms['worldSizes']!.value < 0.5)
+        ? [camera.distance, camera.target.x, camera.target.y, camera.target.z, view.height, view.width, view.near] : undefined;
+      const depthOrigin = camera.distance + camera.target.x * forward[0] + camera.target.y * forward[1] + camera.target.z * forward[2];
+      return { view, forward, depthOrigin };
+    },
+    initialDepthKey(row: number, order: { view: GraphSpatialView; forward: [number, number, number]; depthOrigin: number }) {
+      return depthKey(physicalSlot(row), order.forward, order.depthOrigin, order.view);
+    },
+    encodeInitialKey(row: number, min: number, scale: number) {
+      storage.keys[row] = Math.min(KEY_STEPS, Math.floor((storage.keys[row]! - min) * scale)) * INDEX_BITS + physicalSlot(row);
+    },
+    initializeOutputRow(row: number) {
+      const slot = translucent ? storage.keys[row]! % INDEX_BITS : physicalSlot(row);
+      outputRow[slot] = row; copyPayloadRow(row, slot);
+      if (slot >= activeEdges) { if (initialNodeStart < 0) initialNodeStart = row; }
+      else if (initialNodeStart >= 0) { denseNodeRanges.push({ start: initialNodeStart * 4, count: (row - initialNodeStart) * 4 }); initialNodeStart = -1; }
+    },
+    finishInitialization(viewport: CompositePresentation) {
+      if (initialNodeStart >= 0) { denseNodeRanges.push({ start: initialNodeStart * 4, count: (active - initialNodeStart) * 4 }); initialNodeStart = -1; }
+      setView(viewport); seenNodes = nodes.revision; seenEdges = edges.revision; rememberPaint();
+      for (const payload of payloads) markAttributeFull(payload);
+    },
+  };
+}
+
+interface CompositeAssembly {
+  nodes: ReturnType<typeof createGraphSpatialNodes> | undefined;
+  edges: ReturnType<typeof createGraphSpatialEdges> | undefined;
+  custom: GraphNodeMeshData | undefined;
+  nodeCount: number;
+  edgeCount: number;
+  count: number;
+  allocation: number;
+  native: number;
+  storage: Partial<CompositeStorage> & Pick<CompositeStorage, 'output' | 'staged'>;
+  plane: PlaneGeometry | undefined;
+  geometry: InstancedBufferGeometry | undefined;
+  payloads: InstancedBufferAttribute[];
+  uniforms: CompositeUniforms | undefined;
+  material: ShaderMaterial | undefined;
+  customPick: ReturnType<typeof createGraphSpatialMeshPick> | undefined;
+  mesh: Mesh<InstancedBufferGeometry, ShaderMaterial> | undefined;
+  resources: GraphSpatialCompositeResources | undefined;
+  controller: ReturnType<typeof createCompositeController> | undefined;
+}
+function compositeAssembly(nodes: ReturnType<typeof createGraphSpatialNodes>, edges: ReturnType<typeof createGraphSpatialEdges>, custom?: GraphNodeMeshData): CompositeAssembly {
+  const nodeCount = nodes.mesh.geometry.instanceCount, edgeCount = edges.mesh.geometry.instanceCount;
+  if (custom) preflightGraphSpatialMeshes(nodeCount, edgeCount, custom);
+  return { nodes, edges, custom, nodeCount, edgeCount, count: nodeCount + edgeCount + (custom?.triangleCount ?? 0), allocation: 0, native: 0,
+    storage: { output: [], staged: [] }, plane: undefined, geometry: undefined, payloads: [], uniforms: undefined, material: undefined,
+    customPick: undefined, mesh: undefined, resources: undefined, controller: undefined };
+}
+function allocateComposite(owner: CompositeAssembly): number {
+  const stage = owner.allocation++, storage = owner.storage;
+  if (stage < 10) {
+    const buffer = new Float32Array(owner.count * 4);
+    (stage < 5 ? storage.output : storage.staged).push(buffer); return buffer.byteLength;
+  }
+  if (stage === 10) { storage.anchors = new Float32Array(owner.count * 3); return storage.anchors.byteLength; }
+  if (stage === 11) { storage.primitiveSlot = new Int32Array(owner.count); return storage.primitiveSlot.byteLength; }
+  if (stage === 12) { storage.outputRow = new Int32Array(owner.count); return storage.outputRow.byteLength; }
+  if (stage === 13) { storage.keys = new Float64Array(0); return 0; }
+  storage.ranges = new Uint32Array(owner.nodeCount + 1); return storage.ranges.byteLength;
+}
+function constructComposite(owner: CompositeAssembly): number {
+  // The optional pick factory performs fixed work and retires its own partial handles on failure.
+  if (owner.native === 4 && !owner.custom) owner.native++;
+  switch (owner.native++) {
+    case 0: {
+      const plane = owner.plane = new PlaneGeometry(2, 2);
+      return plane.index!.array.byteLength + plane.getAttribute('position').array.byteLength
+        + plane.getAttribute('normal').array.byteLength + plane.getAttribute('uv').array.byteLength;
+    }
+    case 1: {
+      const geometry = owner.geometry = new InstancedBufferGeometry(), plane = owner.plane!;
+      geometry.index = plane.index; geometry.attributes = { ...plane.attributes }; geometry.instanceCount = 0;
+      owner.plane = undefined; plane.dispose(); break;
+    }
+    case 2:
+      for (let index = 0; index < 5; index++) {
+        const attribute = new InstancedBufferAttribute(owner.storage.output[index]!, 4);
+        owner.payloads.push(attribute); owner.geometry!.setAttribute(`payload${index}`, attribute);
+      }
+      owner.uniforms = { viewportSize: new Vector2(1, 1), viewWindow: new Vector4(0, 0, 1, 1), lyraView: new Vector4(1, 1, 0.5, 1e4) };
+      break;
+    case 3: {
+      const { viewportSize, viewWindow, lyraView } = owner.uniforms!;
+      const nodeUniforms = owner.nodes!.mesh.material.uniforms, edgeUniforms = owner.edges!.mesh.material.uniforms;
+      owner.material = new ShaderMaterial({ side: DoubleSide, forceSinglePass: true, vertexShader: vertex, fragmentShader: fragment, transparent: true, depthWrite: false, depthTest: true,
+        uniforms: { viewportSize: { value: viewportSize }, viewWindow: { value: viewWindow }, lyraView: { value: lyraView }, worldSizes: nodeUniforms['worldSizes']!, markerArm: nodeUniforms['markerArm']!,
+          meshForcedColors: { value: 0 }, dashAtlas: edgeUniforms['dashAtlas']!, atlasHeight: edgeUniforms['atlasHeight']! } });
+      break;
+    }
+    case 4:
+      owner.customPick = createGraphSpatialMeshPick(owner.storage.staged, owner.nodeCount + owner.edgeCount, owner.custom!.triangleCount, owner.material!.uniforms, owner.geometry!); break;
+    case 5:
+      owner.mesh = new Mesh(owner.geometry!, owner.material!); owner.mesh.frustumCulled = false; break;
+    case 6:
+      owner.resources = { geometry: owner.geometry!, material: owner.material!, mesh: owner.mesh!, customPick: owner.customPick, disposed: false };
+      owner.controller = createCompositeController(owner.nodes!, owner.edges!, owner.custom, owner.resources, owner.storage as CompositeStorage, owner.payloads, owner.uniforms!);
+      break;
+  }
+  return 0;
+}
+function clearCompositeAssembly(owner: CompositeAssembly): void {
+  owner.nodes = undefined; owner.edges = undefined; owner.custom = undefined; owner.storage = { output: [], staged: [] };
+  owner.plane = undefined; owner.geometry = undefined; owner.payloads = []; owner.uniforms = undefined; owner.material = undefined;
+  owner.customPick = undefined; owner.mesh = undefined; owner.resources = undefined; owner.controller = undefined;
+}
+function retireCompositeAssembly(owner: CompositeAssembly): void {
+  const { resources, plane, geometry, material, customPick, mesh } = owner;
+  clearCompositeAssembly(owner);
+  if (resources) disposeGraphSpatialCompositeResources(resources);
+  else disposeAll([
+    () => mesh?.removeFromParent(), () => plane?.dispose(), () => geometry?.dispose(), () => material?.dispose(),
+    () => customPick?.removeFromParent(), () => customPick?.geometry.dispose(), () => customPick?.material.dispose(),
+  ]);
+}
+
+/** One visual draw across glyphs and strokes; pick meshes retain row identity. */
+export function createGraphSpatialComposite(nodes: ReturnType<typeof createGraphSpatialNodes>, edges: ReturnType<typeof createGraphSpatialEdges>, custom?: GraphNodeMeshData) {
+  const owner = compositeAssembly(nodes, edges, custom);
+  try {
+    while (owner.allocation < 14 + Number(Boolean(custom))) allocateComposite(owner);
+    if (custom) for (let row = 0; row < owner.nodeCount; row++) owner.storage.ranges![row + 1] = owner.storage.ranges![row]! + (custom.nodeMeshes[row]?.positions.length ?? 0) / 9;
+    owner.storage.primitiveSlot!.fill(-1); owner.storage.outputRow!.fill(-1);
+    while (owner.native < 7) constructComposite(owner);
+    const controller = owner.controller!;
+    if (custom) for (let row = 0; row < owner.nodeCount; row++) {
+      for (let face = owner.storage.ranges![row]!; face < owner.storage.ranges![row + 1]!; face++) controller.initializeLocalFace(row, face);
+    }
+    clearCompositeAssembly(owner); return controller.batch;
+  } catch (error) {
+    try { retireCompositeAssembly(owner); } catch { /* Preserve the construction error after attempting every acquired handle. */ }
+    throw error;
+  }
+}
+
+interface HeapOrder {
+  end: number;
+  build: number;
+  building: boolean;
+  root: number;
+  child: number;
+  phase: 'root' | 'choose' | 'compare' | 'swap' | 'extract' | 'done';
+}
+function heapOrder(length: number): HeapOrder { return { end: length, build: Math.floor(length / 2) - 1, building: true, root: 0, child: 0, phase: 'root' }; }
+/** One comparison or swap per successful call; heap transitions retain only scalar state. */
+function advanceHeap(keys: Float64Array, state: HeapOrder): boolean {
+  for (;;) {
+    switch (state.phase) {
+      case 'root':
+        if (state.build < 0) { state.building = false; state.phase = 'extract'; continue; }
+        state.root = state.build--; state.phase = 'choose'; continue;
+      case 'choose': {
+        const left = state.root * 2 + 1;
+        if (left >= state.end) { state.phase = state.building ? 'root' : 'extract'; continue; }
+        state.child = left; state.phase = 'compare';
+        if (left + 1 < state.end) { if (keys[left + 1]! > keys[left]!) state.child++; return true; }
+        continue;
+      }
+      case 'compare':
+        state.phase = keys[state.root]! >= keys[state.child]! ? state.building ? 'root' : 'extract' : 'swap'; return true;
+      case 'swap': {
+        const previous = keys[state.root]!; keys[state.root] = keys[state.child]!; keys[state.child] = previous;
+        state.root = state.child; state.phase = 'choose'; return true;
+      }
+      case 'extract': {
+        if (state.end < 2) { state.phase = 'done'; continue; }
+        const previous = keys[0]!; keys[0] = keys[--state.end]!; keys[state.end] = previous;
+        state.root = 0; state.phase = 'choose'; return true;
+      }
+      case 'done': return false;
+    }
+  }
+}
+
+type CompositePhase = 'setup' | 'allocate' | 'prefix' | 'slots' | 'native' | 'local-faces' | 'edges' | 'nodes' | 'face-paint' | 'range-setup' | 'ranges' | 'keys' | 'depth' | 'encode' | 'heap' | 'output' | 'finish';
+interface InitialPickRanges { payload: number; ranges: { start: number; count: number }[]; covered: number; publish: { start: number; count: number }[]; }
+interface CompositeWorkState {
+  nodes: GraphPreparedSpatialNodes | undefined;
+  edges: GraphPreparedSpatialEdges | undefined;
+  presentation: GraphSpatialCompositePresentation | undefined;
+  custom: GraphNodeMeshData | undefined;
+  guard: (() => boolean) | undefined;
+  active: boolean;
+  owner: CompositeAssembly | undefined;
+  phase: CompositePhase;
+  row: number;
+  face: number;
+  customRow: number;
+  customRows: number[];
+  borrowed: ArrayBufferLike[];
+  borrowedSet: Set<ArrayBufferLike> | undefined;
+  nodeRevision: number;
+  edgeRevision: number;
+  dirty: InitialPickRanges[];
+  range: number;
+  order: ReturnType<ReturnType<typeof createCompositeController>['initializeOrder']> | undefined;
+  min: number;
+  max: number;
+  scale: number;
+  heap: HeapOrder | undefined;
+}
+function addCompositeBorrow(state: CompositeWorkState, buffer: ArrayBufferLike): void {
+  if (state.borrowedSet!.has(buffer)) return;
+  state.borrowedSet!.add(buffer); state.borrowed.push(buffer);
+}
+function recordInitialPickRanges(state: CompositeWorkState, face: number, changed: number): void {
+  for (const entry of state.dirty) if (changed & (1 << entry.payload)) {
+    const previous = entry.ranges.at(-1), start = face * 4;
+    if (previous && previous.start + previous.count === start) previous.count += 4;
+    else entry.ranges.push({ start, count: 4 });
+    entry.covered += 4;
+  }
+}
+
+/**
+ * Prepares one detached visual owner from fresh, exclusively borrowed child batches. Each step
+ * allocates one backing, performs fixed native work, or visits one slot, primitive, face or range.
+ * Exact initial painter ordering uses the existing key encoding with scalar heap operations.
+ */
+export function createGraphSpatialCompositeWork(nodes: GraphPreparedSpatialNodes, edges: GraphPreparedSpatialEdges, presentation: GraphSpatialCompositePresentation, custom?: GraphNodeMeshData, isCurrent?: () => boolean): GraphSpatialCompositeWork {
+  const state: CompositeWorkState = { nodes, edges, presentation, custom, guard: isCurrent, active: true, owner: undefined, phase: 'setup', row: 0, face: 0,
+    customRow: 0, customRows: [], borrowed: [], borrowedSet: new Set(), nodeRevision: 0, edgeRevision: 0,
+    dirty: [0, 3, 4].map(payload => ({ payload, ranges: [], covered: 0, publish: [] })), range: 0,
+    order: undefined, min: Infinity, max: -Infinity, scale: 0, heap: undefined };
+  nodes = undefined as never; edges = undefined as never; presentation = undefined as never; custom = undefined; isCurrent = undefined;
+  let running = false;
+  const abort = (): never => { const error = new Error('Graph spatial composite preparation was superseded'); error.name = 'AbortError'; throw error; };
+  const checkpoint = (): void => {
+    const current = state.active && (!state.guard || state.guard());
+    if (!current || !state.active) abort();
+  };
+  const releaseInputs = (): void => {
+    state.active = false; state.nodes = undefined; state.edges = undefined; state.presentation = undefined; state.custom = undefined; state.guard = undefined;
+    state.customRows = []; state.borrowed = []; state.borrowedSet = undefined; state.dirty = []; state.order = undefined; state.heap = undefined;
+  };
+  const close = (): void => {
+    releaseInputs();
+    if (running) return;
+    const owner = state.owner; state.owner = undefined;
+    if (owner) retireCompositeAssembly(owner);
+  };
+  return {
+    step(maxOperations) {
+      if (!state.active || running) throw new DOMException('Graph spatial composite preparation is closed or running', 'InvalidStateError');
+      if (!Number.isSafeInteger(maxOperations) || maxOperations < 1) throw new RangeError('Invalid graph spatial composite preparation budget');
+      let operations = 0, allocatedBytes = 0, visitedNodes = 0, visitedEdgePrimitives = 0, packedFaces = 0, paintedFaces = 0;
+      let initializedSlots = 0, orderedRows = 0, sortOperations = 0, publishedRanges = 0;
+      running = true;
+      try {
+        while (operations < maxOperations) {
+          checkpoint();
+          const owner = state.owner;
+          switch (state.phase) {
+            case 'setup': {
+              const nodeInput = state.nodes!, edgeInput = state.edges!;
+              state.nodeRevision = nodeInput.batch.revision; state.edgeRevision = edgeInput.batch.revision;
+              if (nodeInput.resources.disposed || edgeInput.resources.disposed || state.nodeRevision !== 1 || state.edgeRevision !== 1) {
+                throw new DOMException('Fresh spatial child batches are required', 'InvalidStateError');
+              }
+              state.owner = compositeAssembly(nodeInput.batch, edgeInput.batch, state.custom);
+              for (const buffer of [...nodeInput.ownedBuffers, ...nodeInput.borrowedBuffers, ...edgeInput.ownedBuffers, ...edgeInput.borrowedBuffers]) addCompositeBorrow(state, buffer);
+              state.phase = 'allocate'; break;
+            }
+            case 'allocate':
+              if (owner!.allocation === 14 + Number(Boolean(state.custom))) { state.phase = 'prefix'; state.row = 0; continue; }
+              allocatedBytes += allocateComposite(owner!); break;
+            case 'prefix': {
+              if (!state.custom || state.row === owner!.nodeCount) { state.phase = 'slots'; state.row = 0; continue; }
+              const row = state.row++, body = state.custom.nodeMeshes[row], ranges = owner!.storage.ranges!;
+              ranges[row + 1] = ranges[row]! + (body?.positions.length ?? 0) / 9;
+              if (body) { state.customRows.push(row); addCompositeBorrow(state, body.positions.buffer); addCompositeBorrow(state, body.normals.buffer); }
+              visitedNodes++; break;
+            }
+            case 'slots':
+              if (state.row === owner!.count) { state.phase = 'native'; continue; }
+              owner!.storage.primitiveSlot![state.row] = -1; owner!.storage.outputRow![state.row++] = -1; initializedSlots++; break;
+            case 'native':
+              if (owner!.native === 7) { state.phase = 'local-faces'; continue; }
+              allocatedBytes += constructComposite(owner!); break;
+            case 'local-faces': {
+              if (state.face === (state.custom?.triangleCount ?? 0)) { state.phase = 'edges'; state.row = 0; continue; }
+              const row = state.customRows[state.customRow]!;
+              owner!.controller!.initializeLocalFace(row, state.face++); packedFaces++;
+              if (state.face === owner!.storage.ranges![row + 1]) state.customRow++;
+              break;
+            }
+            case 'edges':
+              if (state.row === owner!.edgeCount) { owner!.controller!.finishEdges(); state.phase = 'nodes'; state.row = 0; continue; }
+              if (!owner!.storage.loopOffsets && owner!.controller!.needsLoopOffsets(state.row)) {
+                owner!.storage.loopOffsets = new Float32Array(owner!.count * 2); allocatedBytes += owner!.storage.loopOffsets.byteLength; break;
+              }
+              owner!.controller!.packEdge(state.row++); visitedEdgePrimitives++; break;
+            case 'nodes':
+              if (state.row === owner!.nodeCount) {
+                owner!.controller!.finishNodes(); state.phase = 'face-paint'; state.face = 0; state.customRow = 0; continue;
+              }
+              owner!.controller!.packNode(state.row++); visitedNodes++; break;
+            case 'face-paint': {
+              if (state.face === (state.custom?.triangleCount ?? 0)) {
+                owner!.controller!.finishCompaction(); state.phase = 'range-setup'; state.row = 0; continue;
+              }
+              const row = state.customRows[state.customRow]!, face = state.face++;
+              recordInitialPickRanges(state, face, owner!.controller!.initializeFacePaint(row, face)); paintedFaces++;
+              if (state.face === owner!.storage.ranges![row + 1]) state.customRow++;
+              break;
+            }
+            case 'range-setup': {
+              if (!state.custom || state.row === 3) { state.phase = 'ranges'; state.row = 0; state.range = 0; continue; }
+              const entry = state.dirty[state.row++]!, attribute = owner!.customPick!.geometry.getAttribute(`payload${entry.payload}`) as InstancedBufferAttribute;
+              if (entry.ranges.length) {
+                const last = entry.ranges.at(-1)!;
+                entry.publish = entry.ranges.length > 64 && entry.covered >= attribute.array.length / 4
+                  ? [{ start: entry.ranges[0]!.start, count: last.start + last.count - entry.ranges[0]!.start }] : entry.ranges;
+                // Install the same native-only upload cleanup and one version change, then publish
+                // the already ordered ranges one at a time while this owner remains detached.
+                markAttributeFull(attribute); attribute.clearUpdateRanges();
+              }
+              break;
+            }
+            case 'ranges': {
+              if (!state.custom || state.row === 3) { state.phase = 'keys'; continue; }
+              const entry = state.dirty[state.row]!;
+              if (state.range === entry.publish.length) { state.row++; state.range = 0; continue; }
+              const range = entry.publish[state.range++]!;
+              (owner!.customPick!.geometry.getAttribute(`payload${entry.payload}`) as InstancedBufferAttribute).addUpdateRange(range.start, range.count); publishedRanges++; break;
+            }
+            case 'keys': {
+              const controller = owner!.controller!;
+              if (!controller.translucent) { state.phase = 'output'; state.row = 0; continue; }
+              state.order = controller.initializeOrder(state.presentation!); state.phase = 'depth'; state.row = 0;
+              if (controller.active === 0) continue;
+              owner!.storage.keys = new Float64Array(owner!.count); allocatedBytes += owner!.storage.keys.byteLength; break;
+            }
+            case 'depth': {
+              if (state.row === owner!.controller!.active) { state.scale = state.max > state.min ? KEY_STEPS / (state.max - state.min) : 0; state.phase = 'encode'; state.row = 0; continue; }
+              const key = owner!.controller!.initialDepthKey(state.row, state.order!);
+              owner!.storage.keys![state.row++] = key; if (key < state.min) state.min = key; if (key > state.max) state.max = key; break;
+            }
+            case 'encode':
+              if (state.row === owner!.controller!.active) { state.heap = heapOrder(owner!.controller!.active); state.phase = 'heap'; continue; }
+              owner!.controller!.encodeInitialKey(state.row++, state.min, state.scale); break;
+            case 'heap':
+              if (!advanceHeap(owner!.storage.keys!, state.heap!)) { state.phase = 'output'; state.row = 0; continue; }
+              sortOperations++; break;
+            case 'output':
+              if (state.row === owner!.controller!.active) { state.phase = 'finish'; continue; }
+              owner!.controller!.initializeOutputRow(state.row++); orderedRows++; break;
+            case 'finish': {
+              const prepared = owner!, controller = prepared.controller!, nodeInput = state.nodes!, edgeInput = state.edges!;
+              controller.finishInitialization(state.presentation!);
+              const value: GraphPreparedSpatialComposite = { batch: controller.batch, resources: prepared.resources!,
+                ownedBuffers: controller.batch.allocations().buffers, borrowedBuffers: state.borrowed };
+              const result: GraphSpatialCompositeWorkStep = { done: true, operations: operations + 1, allocatedBytes, visitedNodes, visitedEdgePrimitives,
+                packedFaces, paintedFaces, initializedSlots, orderedRows, sortOperations, publishedRanges, value };
+              checkpoint();
+              if (nodeInput.resources.disposed || edgeInput.resources.disposed || nodeInput.batch.revision !== state.nodeRevision || edgeInput.batch.revision !== state.edgeRevision) abort();
+              // These are the trusted fresh child controllers. Consume only after the final fence;
+              // no callback, guard or fallible candidate construction follows ownership transfer.
+              nodeInput.batch.takeChanges(); edgeInput.batch.takeChanges();
+              state.owner = undefined; clearCompositeAssembly(prepared); releaseInputs();
+              return result;
+            }
+          }
+          operations++; checkpoint();
+        }
+        return { done: false, operations, allocatedBytes, visitedNodes, visitedEdgePrimitives, packedFaces, paintedFaces, initializedSlots, orderedRows, sortOperations, publishedRanges };
+      } catch (error) {
+        releaseInputs();
+        const owner = state.owner; state.owner = undefined;
+        try { if (owner) retireCompositeAssembly(owner); } catch { /* Preserve the operation failure after every acquired resource was attempted. */ }
+        throw error;
+      } finally { running = false; }
+    },
+    dispose: close,
   };
 }

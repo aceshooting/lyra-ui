@@ -1,4 +1,5 @@
 import { DoubleSide, InstancedBufferAttribute, InstancedBufferGeometry, Mesh, ShaderMaterial } from 'three';
+import { disposeAll } from '../core/dispose.js';
 import { graphSpatialProjectionChunk } from './spatial-paths.js';
 
 /** Octahedral unit-normal encoding; both coordinates remain in the closed unit square. */
@@ -67,15 +68,21 @@ void paintGraphSpatialMesh() {
 /** A distinct GPU upload sharing the compositor's fixed unsorted CPU tail. */
 export function createGraphSpatialMeshPick(staged: readonly Float32Array[], first: number, count: number, uniforms: ShaderMaterial['uniforms'], base: InstancedBufferGeometry) {
   const geometry = new InstancedBufferGeometry();
-  geometry.index = base.index;
-  for (const name of ['position', 'normal', 'uv']) geometry.setAttribute(name, base.getAttribute(name));
-  geometry.instanceCount = count;
-  for (let slot = 0; slot < 5; slot++) geometry.setAttribute(`payload${slot}`, new InstancedBufferAttribute(staged[slot]!.subarray(first * 4, (first + count) * 4), 4));
-  const material = new ShaderMaterial({ side: DoubleSide, forceSinglePass: true, toneMapped: false, uniforms, defines: { PICKING: 1 },
-    vertexShader: graphSpatialProjectionChunk + graphSpatialMeshVertexChunk + `
+  let material: ShaderMaterial | undefined;
+  try {
+    geometry.index = base.index;
+    for (const name of ['position', 'normal', 'uv']) geometry.setAttribute(name, base.getAttribute(name));
+    geometry.instanceCount = count;
+    for (let slot = 0; slot < 5; slot++) geometry.setAttribute(`payload${slot}`, new InstancedBufferAttribute(staged[slot]!.subarray(first * 4, (first + count) * 4), 4));
+    material = new ShaderMaterial({ side: DoubleSide, forceSinglePass: true, toneMapped: false, uniforms, defines: { PICKING: 1 },
+      vertexShader: graphSpatialProjectionChunk + graphSpatialMeshVertexChunk + `
 attribute vec4 payload0; attribute vec4 payload1; attribute vec4 payload2; attribute vec4 payload3; attribute vec4 payload4;
 void main(){graphSpatialMeshVertex(payload0,payload1,payload2,payload3,payload4);}`,
-    fragmentShader: graphSpatialMeshFragment + '\nvoid main(){paintGraphSpatialMesh();}' });
-  const pick = new Mesh(geometry, material); pick.frustumCulled = false;
-  return pick;
+      fragmentShader: graphSpatialMeshFragment + '\nvoid main(){paintGraphSpatialMesh();}' });
+    const pick = new Mesh(geometry, material); pick.frustumCulled = false;
+    return pick;
+  } catch (error) {
+    try { disposeAll([() => geometry.dispose(), () => material?.dispose()]); } catch { /* Preserve the construction failure after all acquired handles were attempted. */ }
+    throw error;
+  }
 }
