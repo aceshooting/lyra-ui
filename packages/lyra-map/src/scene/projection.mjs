@@ -158,6 +158,43 @@ export function evaluateSceneProjection(value, compiled) {
   return rawProjection(position, snapshot, encoded, state.viewpoint);
 }
 
+/** Encodes exact chart boundaries without changing their canonical sphere position. */
+export function evaluateSceneChartBoundary(value, compiled, boundary) {
+  const state = compiledProjections.get(compiled);
+  if (!state) fail();
+  const kind = field(boundary, 'kind'), side = field(boundary, 'side');
+  const position = geographicFromEnu(value, [0, 0, 0]), snapshot = state.snapshot;
+  const [longitude, latitude] = position.lngLat, center = snapshot.layout.centerLongitude;
+  const cutLongitude = geographicFromEnu({ lngLat: [center - 180, 0] }, [0, 0, 0]).lngLat[0];
+  // Coincident longitude seams and world-cut ties require a combined chart policy.
+  if (longitude === -180 && cutLongitude === -180) fail();
+  const ordinary = projectionOriginFor(position, snapshot.layout), size = 2 ** snapshot.tile.z;
+  let wrap, x = ordinary.tile.x, representativeLongitude = longitude;
+  if (kind === 'antimeridian') {
+    if (longitude !== -180 || (side !== 'west' && side !== 'east')) fail();
+    if (side === 'west') { wrap = Math.ceil(center / 360); x = 0; representativeLongitude = -180; }
+    else { wrap = Math.floor(center / 360); x = size - 1; representativeLongitude = 180; }
+  } else if (kind === 'world-cut') {
+    if (side !== 'lower-wrap' && side !== 'upper-wrap') fail();
+    if (longitude !== cutLongitude) fail();
+    const lower = Math.floor((center - longitude) / 360);
+    wrap = lower + (side === 'upper-wrap' ? 1 : 0);
+  } else fail();
+  wrap = wrap || 0;
+  if (!Number.isSafeInteger(wrap) || Math.abs(wrap) > 1000000 || snapshot.tile.wrap !== wrap) fail();
+  const encoded = geographicToTile(position, snapshot.tile);
+  if (kind === 'antimeridian' && side === 'east') encoded[0] += size * 8192;
+  const xy = encoded.slice(0, 2).map(Math.fround);
+  if (xy.some(number => !finite(number) || number < -32767.5 || number > 32766.5)) {
+    const tile = Object.freeze({ z: snapshot.tile.z, x, y: ordinary.tile.y, wrap });
+    const request = Object.freeze({ layoutRevision: snapshot.layout.revision, tile,
+      key: `${snapshot.layout.revision}:${tile.z}:${tile.x}:${tile.y}:${tile.wrap}`,
+      representative: Object.freeze([representativeLongitude, latitude]) });
+    return Object.freeze({ status: 'origin-needed', request });
+  }
+  return rawProjection(position, snapshot, encoded, state.viewpoint);
+}
+
 /** Copies one native tile projection and CSS viewport without retaining native objects. */
 export function createProjectionSnapshot(value) {
   const sourceTile = field(value, 'tile');

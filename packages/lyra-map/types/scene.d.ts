@@ -242,3 +242,15 @@ export declare function projectionOriginFor(position: MapPosition, layout: MapPr
 export declare function compileProjectionSnapshot(snapshot: MapProjectionSnapshot): MapCompiledProjection;
 /** Evaluates raw homogeneous coordinates without division or completed visibility claims. */
 export declare function evaluateSceneProjection(position: MapPosition, projection: MapCompiledProjection): MapRawProjection;
+
+export type MapSceneChartBoundary =
+  | { readonly kind: 'antimeridian'; readonly side: 'west' | 'east' }
+  | { readonly kind: 'world-cut'; readonly side: 'lower-wrap' | 'upper-wrap' };
+/**
+ * Evaluates an exact chart boundary using its selected encoding and world copy.
+ * Any canonical tile in that copy may be used within native submitted Float32 xy bounds.
+ * A distant origin returns a side-aware request whose explicit tile must be preserved.
+ * Invalid boundaries, wrong wraps and coincident antimeridian/world-cut seams throw TypeError.
+ * The tighter tessellation margin is a separate admission check.
+ */
+export declare function evaluateSceneChartBoundary(position: MapPosition, projection: MapCompiledProjection, boundary: MapSceneChartBoundary): MapRawProjection;
