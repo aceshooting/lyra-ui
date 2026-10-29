@@ -1,8 +1,7 @@
 import { disposeAll } from '../core/dispose.js';
-import { Group, Scene, Color, CylinderGeometry, InstancedMesh, Matrix4, MeshBasicMaterial, Quaternion, SphereGeometry, Vector3, type Object3D, type Texture } from 'three';
+import { Group, Scene, InstancedMesh, type MeshBasicMaterial, type Object3D, type Texture } from 'three';
 import { LYRA_3D_CONTRACT, type Lyra3dEngine, type Lyra3dHost, type Lyra3dState, type Lyra3dStyle } from '../core/contract.js';
 import { boundsOfPositions, DEFAULT_ORBIT_CAMERA, LYRA_3D_WORLD_LIMIT, fitOrbitCamera, focusOrbitCamera, normalizeOrbitCamera, panBy, type Lyra3dOrbitCamera } from '../core/orbit.js';
-import { createPickColors, createPickMaterial } from '../core/picking.js';
 import { createLyra3dViewport, type Lyra3dViewport } from '../core/viewport.js';
 import { DEFAULT_LYRA_3D_STYLE } from '../core/style.js';
 import { startLyra3dTask, type Lyra3dTask, type Lyra3dTaskOptions } from '../core/worker.js';
@@ -15,10 +14,9 @@ import { createGraphSpatialNodes } from './spatial-nodes.js';
 import { spatialCurveExtrema, spatialPrimitiveCount } from './spatial-paths.js';
 import { createGraphSpatialEdges } from './spatial-edges.js';
 import { createGraphSpatialComposite, preflightGraphSpatialMeshes } from './spatial-composite.js';
-import { admitGraphDecorations, createGraphDecorations, graphItemColor, type GraphDecorationData } from './decorations.js';
+import { admitGraphDecorations, createGraphDecorations, type GraphDecorationData } from './decorations.js';
 import { changedVisualRows, snapshotVisualState, type VisualStateRows } from '../core/visual-state.js';
-import { markAttributeFull, markAttributeRows } from '../core/attribute-updates.js';
-import { createPaintColors } from '../core/paint-colors.js';
+import { createGraphOrdinaryBatch } from './ordinary-batches.js';
 
 /** Renderable graph inputs use the core world range: every coordinate is within ±10,000,000.
  * The standalone numerical layout kernel accepts a wider finite Float32 range. */
@@ -99,6 +97,7 @@ export function createGraphEngine(services: GraphEngineServices = {}): GraphEngi
   let state: Lyra3dState = { selected: new Set(), dimmed: new Set(), hover: -1, focus: -1 };
   let task: Lyra3dTask<GraphTaskInput> | undefined;
   let meshes: InstancedMesh[] = [];
+  let ordinary: ReturnType<typeof createGraphOrdinaryBatch> | undefined;
   let spatialNodes: ReturnType<typeof createGraphSpatialNodes> | undefined;
   let spatialComposite: ReturnType<typeof createGraphSpatialComposite> | undefined;
   let spatialEdges: ReturnType<typeof createGraphSpatialEdges> | undefined;
@@ -107,17 +106,9 @@ export function createGraphEngine(services: GraphEngineServices = {}): GraphEngi
   let decorations: ReturnType<typeof createGraphDecorations> | undefined;
   let positionRevision = 0;
   let fittedDistance = DEFAULT_ORBIT_CAMERA.distance;
-  let lastTransforms = '';
   let lastTransformStyle: Lyra3dViewport['style'] | undefined;
   let unframe: (() => void) | undefined;
   let detach: (() => void) | undefined;
-  const matrix = new Matrix4();
-  const point = new Vector3();
-  const scale = new Vector3();
-  const rotation = new Quaternion();
-  const direction = new Vector3();
-  const up = new Vector3(0, 1, 0);
-  const color = new Color();
   const abortPresentation = () => { const error = new Error('Graph presentation replacement was superseded'); error.name = 'AbortError'; return error; };
   const refuseNestedPresentation = () => {
     if (!presentationOwner) return;
@@ -204,13 +195,11 @@ export function createGraphEngine(services: GraphEngineServices = {}): GraphEngi
   };
   const stop = () => { generation += 1; const old = task; task = undefined; old?.stop(); };
   const clear = () => {
-    const previous = { composite: spatialComposite, nodes: spatialNodes, edges: spatialEdges, decorations, meshes };
-    spatialComposite = undefined; spatialNodes = undefined; spatialEdges = undefined; decorations = undefined; meshes = [];
-    lastTransformState = undefined; lastSpatialRevision = -1; lastTransforms = ''; lastTransformStyle = undefined;
-    const geometries = new Set(previous.meshes.map(mesh => mesh.geometry));
+    const previous = { composite: spatialComposite, nodes: spatialNodes, edges: spatialEdges, decorations, ordinary };
+    spatialComposite = undefined; spatialNodes = undefined; spatialEdges = undefined; decorations = undefined; ordinary = undefined; meshes = [];
+    lastTransformState = undefined; lastSpatialRevision = -1; lastTransformStyle = undefined;
     disposeAll([() => previous.composite?.dispose(), () => previous.nodes?.dispose(), () => previous.edges?.dispose(), () => previous.decorations?.dispose(),
-      ...previous.meshes.flatMap(mesh => [() => mesh.removeFromParent(), () => (mesh.material as MeshBasicMaterial).dispose(), () => mesh.dispose()]),
-      ...[...geometries].map(geometry => () => geometry.dispose())]);
+      () => previous.ordinary?.dispose()]);
   };
   const positionOf = (item: number) => {
     if (!data || !Number.isInteger(item) || item < 0 || item >= data.nodeCount) return null;
@@ -220,28 +209,7 @@ export function createGraphEngine(services: GraphEngineServices = {}): GraphEngi
     if (!viewport || !data) return;
     if (spatialNodes) { transforms(rows); viewport.invalidate(); return; }
     if (meshes.length === 0) return;
-    const resolved = viewport.style;
-    const paintColor = createPaintColors(resolved);
-    const currentData = data;
-    for (let kind = 0; kind < 2; kind += 1) {
-      const mesh = meshes[kind * 2]!;
-      const changed: number[] = [];
-      const paintRow = (index: number) => {
-        const item = kind === 0 ? index : currentData.nodeCount + index;
-        const base = kind === 0 ? resolved.palette[(currentData.categories?.[index] ?? 0) % resolved.palette.length]! : resolved.muted;
-        mesh.setColorAt(index, graphItemColor(resolved, state, item, base, color, paintColor));
-      };
-      if (rows === undefined || rows === null) for (let index = 0; index < mesh.count; index++) paintRow(index);
-      else for (const item of rows) {
-        const index = kind === 0 ? item : item - currentData.nodeCount;
-        if (index < 0 || index >= mesh.count) continue;
-        paintRow(index); changed.push(index);
-      }
-      if (mesh.instanceColor) {
-        if (rows === undefined || rows === null) markAttributeFull(mesh.instanceColor);
-        else markAttributeRows(mesh.instanceColor, changed);
-      }
-    }
+    ordinary?.paint(viewport.style, state, rows);
     viewport.invalidate();
   };
   const transforms = (stateRows?: VisualStateRows) => {
@@ -267,35 +235,7 @@ export function createGraphEngine(services: GraphEngineServices = {}): GraphEngi
       lastSpatialRevision = positionRevision; lastTransformStyle = viewport.style; lastTransformState = state;
       spatialComposite?.update(viewport); return;
     }
-    const orbit = viewport.orbit;
-    const key = [positionRevision, viewport.width, viewport.height, orbit.yaw, orbit.pitch, orbit.distance, orbit.target.x, orbit.target.y, orbit.target.z].join('|');
-    if (lastTransforms === key && lastTransformStyle === viewport.style) return;
-    lastTransforms = key; lastTransformStyle = viewport.style;
-    for (let kind = 0; kind < 2; kind += 1) {
-      const mesh = meshes[kind * 2]!;
-      const pick = meshes[kind * 2 + 1]!;
-      for (let i = 0; i < mesh.count; i += 1) {
-        const a = positionOf(kind === 0 ? i : data.source[i]!)!;
-        if (kind === 0) {
-          point.set(a.x, a.y, a.z); rotation.identity();
-          const projection = viewport.project(a);
-          const radius = projection ? (data.sizes?.[i] ?? viewport.style.pointSize) / (2 * projection.scale) : 0;
-          scale.setScalar(radius);
-        } else {
-          const b = positionOf(data.target[i]!)!;
-          point.set((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
-          direction.set(b.x - a.x, b.y - a.y, b.z - a.z);
-          const length = direction.length();
-          rotation.setFromUnitVectors(up, length ? direction.divideScalar(length) : up);
-          const projection = viewport.project(point);
-          const radius = projection ? viewport.style.lineWidth / (2 * projection.scale) : 0;
-          scale.set(radius, length, radius);
-        }
-        matrix.compose(point, rotation, scale);
-        mesh.setMatrixAt(i, matrix); pick.setMatrixAt(i, matrix);
-      }
-      mesh.instanceMatrix.needsUpdate = true; pick.instanceMatrix.needsUpdate = true;
-    }
+    ordinary?.updateTransforms(viewport, positions, positionRevision);
   };
   const preparePresentation = (current: Lyra3dViewport, next: GraphEngineData, coordinates: Float32Array, isCurrent: () => boolean, candidatePins = pins) => {
     refuseNestedPresentation();
@@ -305,17 +245,16 @@ export function createGraphEngine(services: GraphEngineServices = {}): GraphEngi
     const releaseOwner = () => { if (presentationOwner === owner) presentationOwner = undefined; };
     let staging: Lyra3dViewport;
     let nodes: typeof spatialNodes, edges: typeof spatialEdges, composite: typeof spatialComposite, ornaments: typeof decorations;
-    const legacy: InstancedMesh[] = [];
+    let ordinaryOwner: typeof ordinary;
+    let legacy: InstancedMesh[] = [];
     const nextPositionOf = (row: number) => Number.isInteger(row) && row >= 0 && row < next.nodeCount
       ? { x: coordinates[row * 3]!, y: coordinates[row * 3 + 1]!, z: coordinates[row * 3 + 2]! } : null;
     let retired = false;
     const dispose = () => {
       if (retired) return; retired = true;
-      const geometries = new Set(legacy.map(mesh => mesh.geometry));
       try {
         disposeAll([() => ornaments?.dispose(), () => composite?.dispose(), () => edges?.dispose(), () => nodes?.dispose(),
-          ...legacy.flatMap(mesh => [() => mesh.removeFromParent(), () => (mesh.material as MeshBasicMaterial).dispose(), () => mesh.dispose()]),
-          ...[...geometries].map(geometry => () => geometry.dispose())]);
+          () => ordinaryOwner?.dispose()]);
       } finally { releaseOwner(); }
     };
     try {
@@ -326,30 +265,8 @@ export function createGraphEngine(services: GraphEngineServices = {}): GraphEngi
         nodes.pick.renderOrder = 1; nodes.update(current, coordinates, state); edges.update(current, nextPositionOf, state); composite.update(current);
         if (custom) composite.allocations();
       } else {
-        const colors = createPickColors(next.nodeCount + next.source.length), paintColor = createPaintColors(current.style);
-        for (let kind = 0; kind < 2; kind++) {
-          const geometry = kind === 0 ? new SphereGeometry(1, 8, 6) : new CylinderGeometry(1, 1, 1, 6);
-          const count = kind === 0 ? next.nodeCount : next.source.length;
-          const mesh = new InstancedMesh(geometry, new MeshBasicMaterial(), count), pick = new InstancedMesh(geometry, createPickMaterial(), count);
-          mesh.frustumCulled = pick.frustumCulled = false; legacy.push(mesh, pick);
-          for (let row = 0; row < count; row++) {
-            const item = kind === 0 ? row : next.nodeCount + row, a = nextPositionOf(kind === 0 ? row : next.source[row]!)!;
-            if (kind === 0) {
-              point.set(a.x, a.y, a.z); rotation.identity(); const projection = current.project(a);
-              scale.setScalar(projection ? (next.sizes?.[row] ?? current.style.pointSize) / (2 * projection.scale) : 0);
-            } else {
-              const b = nextPositionOf(next.target[row]!)!; point.set((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
-              direction.set(b.x - a.x, b.y - a.y, b.z - a.z); const length = direction.length();
-              rotation.setFromUnitVectors(up, length ? direction.divideScalar(length) : up);
-              const projection = current.project(point), radius = projection ? current.style.lineWidth / (2 * projection.scale) : 0;
-              scale.set(radius, length, radius);
-            }
-            matrix.compose(point, rotation, scale); mesh.setMatrixAt(row, matrix); pick.setMatrixAt(row, matrix);
-            color.setRGB(colors[item * 3]!, colors[item * 3 + 1]!, colors[item * 3 + 2]!); pick.setColorAt(row, color);
-            const base = kind === 0 ? current.style.palette[(next.categories?.[row] ?? 0) % current.style.palette.length]! : current.style.muted;
-            mesh.setColorAt(row, graphItemColor(current.style, state, item, base, color, paintColor));
-          }
-        }
+        ordinaryOwner = createGraphOrdinaryBatch(current, next); legacy = ordinaryOwner.meshes;
+        ordinaryOwner.initializeStaging(coordinates, state);
       }
       const createCanvas = services.labelCanvas ? () => { const canvas = services.labelCanvas!(); if (!live()) throw abortPresentation(); return canvas; } : undefined;
       ornaments = createGraphDecorations(staging, next, createCanvas);
@@ -360,7 +277,7 @@ export function createGraphEngine(services: GraphEngineServices = {}): GraphEngi
         [...(nodes ? [nodes] : []), ...(edges ? [edges] : []), ornaments]);
       if (!live()) { dispose(); return undefined; }
       handedOff = true;
-      return { staging, nodes, edges, composite, ornaments, legacy, dispose, owner, releaseOwner };
+      return { staging, nodes, edges, composite, ornaments, ordinary: ordinaryOwner, legacy, dispose, owner, releaseOwner };
     } catch (error) {
       try { dispose(); } catch { /* Keep the construction error; every owner was attempted. */ }
       if (!live()) return undefined;
@@ -368,18 +285,16 @@ export function createGraphEngine(services: GraphEngineServices = {}): GraphEngi
     } finally { if (!handedOff) releaseOwner(); }
   };
   const attachPresentation = (current: Lyra3dViewport, prepared: NonNullable<ReturnType<typeof preparePresentation>>) => {
-    const previous = { nodes: spatialNodes, edges: spatialEdges, composite: spatialComposite, decorations, meshes };
-    spatialNodes = prepared.nodes; spatialEdges = prepared.edges; spatialComposite = prepared.composite; decorations = prepared.ornaments; meshes = prepared.legacy;
-    lastTransformState = undefined; lastSpatialRevision = -1; lastTransforms = ''; lastTransformStyle = undefined;
+    const previous = { nodes: spatialNodes, edges: spatialEdges, composite: spatialComposite, decorations, ordinary };
+    spatialNodes = prepared.nodes; spatialEdges = prepared.edges; spatialComposite = prepared.composite; decorations = prepared.ornaments; ordinary = prepared.ordinary; meshes = prepared.legacy;
+    lastTransformState = undefined; lastSpatialRevision = -1; lastTransformStyle = undefined;
     current.world.add(...prepared.legacy.filter((_, index) => index % 2 === 0), ...(prepared.composite ? [prepared.composite.mesh] : []), ...prepared.staging.world.children);
     current.pickWorld.add(...prepared.legacy.filter((_, index) => index % 2 === 1), ...(prepared.nodes ? [prepared.nodes.pick] : []), ...(prepared.edges ? [prepared.edges.pick] : []), ...prepared.staging.pickWorld.children);
     if (prepared.composite?.customPick) { prepared.composite.customPick.renderOrder = 1; current.pickWorld.add(prepared.composite.customPick); }
     if (prepared.staging.scene.children.length) current.scene.add(...prepared.staging.scene.children);
     current.invalidate();
-    const geometries = new Set(previous.meshes.map(mesh => mesh.geometry));
     disposeAll([() => previous.composite?.dispose(), () => previous.nodes?.dispose(), () => previous.edges?.dispose(), () => previous.decorations?.dispose(),
-      ...previous.meshes.flatMap(mesh => [() => mesh.removeFromParent(), () => (mesh.material as MeshBasicMaterial).dispose(), () => mesh.dispose()]),
-      ...[...geometries].map(geometry => () => geometry.dispose())]);
+      () => previous.ordinary?.dispose()]);
   };
   const build = () => {
     if (data?.spatialAppearance) {
@@ -406,20 +321,8 @@ export function createGraphEngine(services: GraphEngineServices = {}): GraphEngi
       if (spatialComposite.customPick) { spatialComposite.customPick.renderOrder = 1; viewport.pickWorld.add(spatialComposite.customPick); }
       decorations = createGraphDecorations(viewport, data, services.labelCanvas); transforms(); paint(); return;
     }
-    const colors = createPickColors(data.nodeCount + data.source.length);
-    for (let kind = 0; kind < 2; kind += 1) {
-      const geometry = kind === 0 ? new SphereGeometry(1, 8, 6) : new CylinderGeometry(1, 1, 1, 6);
-      const count = kind === 0 ? data.nodeCount : data.source.length;
-      const mesh = new InstancedMesh(geometry, new MeshBasicMaterial(), count);
-      const pick = new InstancedMesh(geometry, createPickMaterial(), count);
-      mesh.frustumCulled = pick.frustumCulled = false;
-      for (let index = 0; index < count; index += 1) {
-        const offset = (kind === 0 ? index : data.nodeCount + index) * 3;
-        color.setRGB(colors[offset]!, colors[offset + 1]!, colors[offset + 2]!);
-        pick.setColorAt(index, color);
-      }
-      meshes.push(mesh, pick); viewport.world.add(mesh); viewport.pickWorld.add(pick);
-    }
+    ordinary = createGraphOrdinaryBatch(viewport, data); meshes = ordinary.meshes;
+    ordinary.initializeLive();
     decorations = createGraphDecorations(viewport, data, services.labelCanvas);
     transforms(); paint();
   };
