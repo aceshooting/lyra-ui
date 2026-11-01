@@ -99,7 +99,7 @@ export type DocxRefusalCode =
   | 'busy' | 'composing' | 'read-only' | 'unsupported' | 'no-selection'
   | 'stale-revision' | 'stale-selection' | 'stale-search' | 'stale-save'
   | 'aborted' | 'destroyed' | 'engine-unavailable' | 'invalid-document'
-  | 'resource-limit' | 'external-resource' | 'open-failed' | 'save-failed' | 'engine-failed';
+  | 'resource-limit' | 'external-resource' | 'open-failed' | 'save-failed' | 'engine-failed' | 'fetch-failed';
 export type DocxResult<T> = Readonly<{ ok: true; value: T }> | Readonly<{ ok: false; code: DocxRefusalCode }>;
 
 export interface DocxSessionOptions {

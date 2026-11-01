@@ -1,6 +1,7 @@
 import { createDocxSession, type DocxSession, type DocxSnapshot, type DocxAction, type DocxEdit, type DocxCommand, type DocxFormatting, type DocxImageDirection, type DocxImageAction, type DocxImageContext, type DocxImageDescription, type DocxTableAction, type DocxTableContext, type DocxParagraphStyles, type DocxFontFamilies, type DocxSearchOptions, type DocxSearchResults, type DocxSearchMatch } from '@aceshooting/lyra-docs/docx';
 import type { LyraDocxEditor } from '@aceshooting/lyra-docs/docx/editor.class';
 import type { DocxImageSource, DocxInsertImageOptions, DocxRevision, DocxResult, DocxTableBorderStyle, DocxTableBorderTarget } from '@aceshooting/lyra-docs/docx';
+import { DOCX_REMOTE_LIMITS, fetchDocxBytes, type DocxFetchOptions } from '@aceshooting/lyra-docs/docx';
 import { DOCX_COMMAND_CATALOG, buildDocxCommandAction, type DocxCommandDescriptor, type DocxOutline,
   type DocxDocumentInspection, type DocxReviewReport } from '@aceshooting/lyra-docs/docx';
 // @ts-expect-error DOCX-specific contracts belong to the format subpath.
@@ -118,3 +119,17 @@ function editingContracts(session: DocxSession): void {
   }
 }
 void editingContracts;
+
+async function remoteContracts(editor: LyraDocxEditor): Promise<void> {
+  const fetched: DocxResult<Uint8Array> = await fetchDocxBytes('/files/report.docx', { signal: new AbortController().signal, baseUrl: 'https://example.test/' });
+  const limits: { readonly bytes: number; readonly chunks: number } = DOCX_REMOTE_LIMITS;
+  const options: DocxFetchOptions = { fetch: globalThis.fetch };
+  void fetched; void limits; void options;
+  const opened: DocxResult<DocxRevision> = await editor.openUrl('report.docx', { name: 'Report.docx' });
+  void opened;
+  // @ts-expect-error Remote loading takes a URL string, not a Request.
+  await editor.openUrl(new Request('https://example.test/report.docx'));
+  // @ts-expect-error Credentials and request options stay with the host's own fetch.
+  await fetchDocxBytes('report.docx', { credentials: 'include' });
+}
+void remoteContracts;

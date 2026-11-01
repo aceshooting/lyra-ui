@@ -27,6 +27,7 @@ import { captureImageInsertionIntent, imageInsertionDefaults, imageInsertionDraf
 import { AvailabilityMemo } from './availability-memo.js';
 import { returnFocusAfterHide, trackDeferredFocusReturn } from './deferred-focus-return.js';
 import { inspectDocxImageForInsertion } from './image-bytes.js';
+import { fetchDocxBytes } from './remote-source.js';
 import type {
   DocxAction, DocxCommand, DocxEdit, DocxRefusalCode, DocxResult, DocxRevision, DocxSaveReceipt,
   DocxSelectionLease, DocxSession, DocxSnapshot, DocxSource, DocxSearchResults, DocxTableAction,
@@ -189,7 +190,7 @@ const tableActions = [
 const maxInputBytes = DOCX_LIMITS.inputBytes;
 const maxImageBytes = 4 * 1024 * 1024;
 const errorMessages: Partial<Record<DocxRefusalCode, string>> = {
-  'resource-limit': 'docxEditorErrorTooLarge', 'external-resource': 'docxEditorErrorExternal',
+  'resource-limit': 'docxEditorErrorTooLarge', 'external-resource': 'docxEditorErrorExternal', 'fetch-failed': 'docxEditorErrorFetch',
   'invalid-document': 'docxEditorErrorInvalid', 'invalid-mount': 'docxEditorErrorMount',
   'engine-unavailable': 'docxEditorErrorEngine', destroyed: 'docxEditorDisconnected',
 };
@@ -550,6 +551,8 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   private toolbarSelection: DocxSelectionLease | null = null;
   @state() private openInProgress = false;
   private sourceReadSequence = 0;
+  /** Cancels the in-flight `openUrl()` request when a newer source supersedes it. */
+  private remoteLoad: AbortController | null = null;
   private politeSink: AnnouncementSink | null = null;
   private assertiveSink: AnnouncementSink | null = null;
   private announcementsArmed = false;
@@ -588,7 +591,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   }
 
   override disconnectedCallback(): void {
-    this.sourceReadSequence++;
+    this.supersedeSource();
     this.removeEventListener('keydown', this.onHostKeyDown, { capture: true });
     this.removeEventListener('scroll', this.scheduleImageFrame, { capture: true });
     this.cancelImageDrag();
@@ -849,9 +852,17 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     return result;
   }
 
+  /** Invalidate pending source reads, cancelling a URL request, and return the new read generation. */
+  private supersedeSource(): number {
+    const pending = this.remoteLoad;
+    this.remoteLoad = null;
+    pending?.abort();
+    return ++this.sourceReadSequence;
+  }
+
   /** Open caller-owned DOCX bytes or a local file. Replacing dirty content can be vetoed. */
   async open(input: Uint8Array | File, options: { signal?: AbortSignal; name?: string } = {}): Promise<DocxResult<DocxRevision>> {
-    const sourceRead = ++this.sourceReadSequence;
+    const sourceRead = this.supersedeSource();
     if (input instanceof Uint8Array) {
       this.openingFile = false;
       return this.load({ kind: 'docx', bytes: input }, options.name ?? '', options.signal);
@@ -876,9 +887,43 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     }
   }
 
+  /**
+   * Download and open a DOCX document. Opt-in: the element never fetches on its own. The URL must be
+   * relative, HTTP(S), `blob:` or `data:`; it resolves against the document base URL and is requested
+   * with the owner window's `fetch()` and same-origin credentials. The response is read with the 16 MiB
+   * input ceiling, then admitted like any other bytes. A newer open, new document or disconnect cancels
+   * the request. Failures show the localized error state; `fetch-failed` covers network errors and
+   * non-OK responses, `invalid-option` an unsafe URL.
+   */
+  async openUrl(url: string, options: { signal?: AbortSignal; name?: string } = {}): Promise<DocxResult<DocxRevision>> {
+    const sourceRead = this.supersedeSource();
+    const view = this.ownerDocument?.defaultView;
+    if (!this.isConnected || !this.mount || !view || typeof view.fetch !== 'function') return refused('invalid-mount');
+    if (options.signal?.aborted) return refused('aborted');
+    const controller = new AbortController();
+    const abort = () => controller.abort();
+    options.signal?.addEventListener('abort', abort, { once: true });
+    this.remoteLoad = controller;
+    this.openingFile = true;
+    try {
+      const fetched = await fetchDocxBytes(url, { signal: controller.signal, baseUrl: this.ownerDocument.baseURI,
+        fetch: view.fetch.bind(view) });
+      if (options.signal?.aborted || sourceRead !== this.sourceReadSequence || !this.isConnected) return refused('aborted');
+      if (!fetched.ok) {
+        if (fetched.code !== 'aborted') this.reportError(fetched.code);
+        return fetched;
+      }
+      return await this.load({ kind: 'docx', bytes: fetched.value }, options.name ?? '', options.signal);
+    } finally {
+      options.signal?.removeEventListener('abort', abort);
+      if (this.remoteLoad === controller) this.remoteLoad = null;
+      if (sourceRead === this.sourceReadSequence) this.openingFile = false;
+    }
+  }
+
   /** Create a blank document. Replacing dirty content can be vetoed. */
   newDocument(options: { signal?: AbortSignal } = {}): Promise<DocxResult<DocxRevision>> {
-    this.sourceReadSequence++;
+    this.supersedeSource();
     this.openingFile = false;
     return this.load({ kind: 'blank' }, '', options.signal);
   }
