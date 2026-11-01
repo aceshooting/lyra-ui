@@ -86,8 +86,11 @@ export interface DocxInsertImageOptions {
 }
 export type DocxAction = DocxCommand | DocxEdit | DocxReviewAction;
 /** Edits that apply to a paragraph wherever the caret is inside it; a targeted batch step accepts only these. */
-export type DocxParagraphEdit = Extract<DocxEdit, { type: 'paragraph-style' | 'alignment' | 'toggle-list' | 'indent' | 'line-spacing' }>;
-/** Formatting a batch can apply: paragraph edits, character formatting toggles and run formatting. */
+export type DocxParagraphEdit = Extract<DocxEdit, { type: 'paragraph-style' | 'alignment' | 'line-spacing' }>;
+/**
+ * Formatting a batch can apply: paragraph edits, character formatting toggles and run formatting.
+ * Lists and indentation remain single `execute()` actions.
+ */
 export type DocxBatchEdit =
   | DocxParagraphEdit
   | Exclude<DocxCommand, 'undo' | 'redo'>

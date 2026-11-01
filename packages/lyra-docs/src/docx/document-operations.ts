@@ -19,7 +19,8 @@ export const DOCX_BATCH_LIMITS: Readonly<{ steps: number; fingerprintNodes: numb
   steps: 32, fingerprintNodes: 300_000,
 });
 
-const paragraphEdits: ReadonlySet<string> = new Set(['paragraph-style', 'alignment', 'toggle-list', 'indent', 'line-spacing']);
+// List and indent commands write numbering and cannot join an engine history group, so they stay single actions.
+const paragraphEdits: ReadonlySet<string> = new Set(['paragraph-style', 'alignment', 'line-spacing']);
 const runEdits: ReadonlySet<string> = new Set(['font-family', 'font-size', 'text-color', 'highlight', 'clear-formatting']);
 const toggles: ReadonlySet<string> = new Set(['bold', 'italic', 'underline', 'strikethrough', 'superscript', 'subscript']);
 

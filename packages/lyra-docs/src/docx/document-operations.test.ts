@@ -42,6 +42,8 @@ test('batch refusals name the failing step, or none for the batch as a whole', (
     [Array.from({ length: DOCX_BATCH_LIMITS.steps + 1 }, () => ({ edit: 'bold' })), ok, 'resource-limit', null],
     [[{ edit: 'bold' }, { edit: 'undo' }], ok, 'unsupported', 1],
     [[{ edit: 'bold' }, { edit: { type: 'page-break' } }], ok, 'unsupported', 1],
+    [[{ edit: { type: 'toggle-list', kind: 'bullet' } }], ok, 'unsupported', 0],
+    [[{ edit: { type: 'indent', direction: 'increase' } }], ok, 'unsupported', 0],
     [[{ edit: { type: 'link', href: 'https://example.test' } }], ok, 'unsupported', 0],
     [[{ edit: { type: 'insert-table', rows: 1, columns: 1 } }], ok, 'unsupported', 0],
     [[{ edit: { type: 'add-comment', text: 'x', author: 'y' } }], ok, 'unsupported', 0],
