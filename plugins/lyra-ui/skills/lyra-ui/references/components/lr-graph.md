@@ -393,6 +393,8 @@ coalesced to one event per frame), and `lr-view-change` (`detail: { view: LyraGr
 Direct camera and view property assignments are silent.
 With `engine="webgl"`, `lr-engine-fallback` (`detail: { from, to, reason }`, frozen; `reason` is
 `'unavailable'`, `'unsupported'`, `'context-lost'` or `'error'`) reports each step down the fallback chain.
+Also `lr-node-render-error` (`detail: LyraGraphNodeRenderErrorDetail { reason, nodeId? }`) when a custom
+`nodeRenderer` mesh batch is refused; the reason is sanitized and the node keeps its default body.
 
 **Slots:** none.
 

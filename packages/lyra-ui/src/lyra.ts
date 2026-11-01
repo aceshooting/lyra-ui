@@ -683,6 +683,22 @@ export type {
 export type { LyraNodeTypeStyle } from './internal/node-type-style.js';
 export type { LyraMapCameraOptions } from './components/media/map/map-camera.js';
 export type {
+  LyraMapModelFormat,
+  LyraMapModelSource,
+  LyraMapPosition,
+  LyraMapQuaternion,
+  LyraMapScene,
+  LyraMapSceneActivateDetail,
+  LyraMapSceneArc,
+  LyraMapSceneErrorCode,
+  LyraMapSceneMarker,
+  LyraMapSceneModel,
+  LyraMapSceneObject,
+  LyraMapSceneObjectBase,
+  LyraMapScenePath,
+  LyraMapSceneStateDetail,
+} from './components/media/map/map-scene-types.js';
+export type {
   LyraMapBounds,
   LyraMapProjection,
   LyraMapTerrain,

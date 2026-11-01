@@ -1931,7 +1931,7 @@ export const GlobeAndTerrain: Story = {
           <lr-button class="projection-choice" data-projection="mercator" .pressed=${false} @click=${(event: Event) => toggleProjection('mercator', event)}>${messages.flat}</lr-button>
           <lr-button class="projection-choice" data-projection="globe" .pressed=${true} @click=${(event: Event) => toggleProjection('globe', event)}>${messages.globe}</lr-button>
         </div>
-        <lr-switch class="terrain-choice" label=${messages.terrain} @lr-change=${(event: Event) => { enabled = Boolean(Reflect.get(event.currentTarget as object, 'checked')); apply(); }}></lr-switch>
+        <lr-switch class="terrain-choice" @lr-change=${(event: Event) => { enabled = Boolean(Reflect.get(event.currentTarget as object, 'checked')); apply(); }}>${messages.terrain}</lr-switch>
         <lr-slider label=${messages.scale} min="0" max="4" step="0.25" .value=${1}
           @lr-change=${(event: Event) => { scale = Number(Reflect.get(event.currentTarget as object, 'value')); apply(); }}></lr-slider>
         <div style="display:flex;flex-wrap:wrap;gap:var(--lr-space-s)">

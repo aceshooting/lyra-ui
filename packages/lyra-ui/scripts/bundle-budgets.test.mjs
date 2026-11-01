@@ -810,7 +810,7 @@ test('lr-map keeps every on-demand feature runtime out of its static module grap
   );
   assert.deepEqual(runtimes.sort(), [
     'map-anchor-controller.ts', 'map-controls-lifecycle.ts', 'map-drawing-controller.ts', 'map-feature-state-routes.ts', 'map-hash-owner.ts',
-    'map-image-export-controller.ts', 'map-images.ts', 'map-owned-features.ts', 'map-style-overrides.ts',
+    'map-image-export-controller.ts', 'map-images.ts', 'map-owned-features.ts', 'map-scene-render-controller.ts', 'map-style-overrides.ts',
   ], 'the shared loaders must import each optional runtime through a literal specifier bundlers can split');
   // Implementation modules only those runtimes need; the class may still import their types.
   const onDemand = [

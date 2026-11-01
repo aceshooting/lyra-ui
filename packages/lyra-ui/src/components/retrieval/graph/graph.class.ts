@@ -1485,7 +1485,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     },
     engineMessage: (key) => this.localize(key),
     nodeRenderError: (detail) => { this.emit('lr-node-render-error', detail); this.announcements.announceAssertive(this.localize('graphCustomNodesError')); },
-    effectNotice: (key) => this.announcements.announceAssertive(this.localize(key)),
+    effectNotice: (key) => this.announcements.announceAssertive(this.localize(key === 'graphGlowUnavailable' ? 'graphGlowUnavailable' : 'graphCustomNodesUnavailable')),
     categoryColors: () => this.withCanvasColorResolver((resolve) => Array.from({ length: 8 }, (_, index) => resolve(categoricalPaletteColor(index)))),
     locale: () => this.effectiveLocale,
     direction: () => this.effectiveDirection,

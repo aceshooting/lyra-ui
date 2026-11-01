@@ -70,7 +70,7 @@
       "module": "src/ai/adapters/a2ui.ts",
       "exportName": "adaptA2UiSurface",
       "kind": "function",
-      "fingerprint": "5b4b49f069b97d5586b6",
+      "fingerprint": "b9120a246ddb1f55e09d",
       "routes": [
         "src/ai/index.ts"
       ],
@@ -4618,10 +4618,10 @@
       }
     },
     {
-      "module": "src/components/conversation/widget-renderer/registry.ts",
+      "module": "src/internal/widget-type-registry.ts",
       "exportName": "createWidgetTypeRegistry",
       "kind": "function",
-      "fingerprint": "0c906d61f3bd60f4f6cf",
+      "fingerprint": "9e9dda0f8bea14d8699d",
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
@@ -4640,10 +4640,10 @@
       }
     },
     {
-      "module": "src/components/conversation/widget-renderer/registry.ts",
+      "module": "src/internal/widget-type-registry.ts",
       "exportName": "isWidgetTypeRegistry",
       "kind": "function",
-      "fingerprint": "81be9f516739a63caa42",
+      "fingerprint": "a0c2f0ce818a486c2cc5",
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
@@ -4662,10 +4662,10 @@
       }
     },
     {
-      "module": "src/components/conversation/widget-renderer/registry.ts",
+      "module": "src/internal/widget-type-registry.ts",
       "exportName": "LyraWidgetTypeDefinition",
       "kind": "interface",
-      "fingerprint": "84c092b5b4584dca8040",
+      "fingerprint": "e345f0ad4119a8d7267f",
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
@@ -4684,10 +4684,10 @@
       }
     },
     {
-      "module": "src/components/conversation/widget-renderer/registry.ts",
+      "module": "src/internal/widget-type-registry.ts",
       "exportName": "LyraWidgetTypeRegistry",
       "kind": "interface",
-      "fingerprint": "66b5e4ff8bd67631c481",
+      "fingerprint": "c23add91f3e243e7462f",
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
@@ -4706,10 +4706,10 @@
       }
     },
     {
-      "module": "src/components/conversation/widget-renderer/resolve.ts",
+      "module": "src/internal/widget-document.ts",
       "exportName": "createWidgetDocument",
       "kind": "function",
-      "fingerprint": "b2692fb787e94f7cfe10",
+      "fingerprint": "59b1bd18cd525e660d34",
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
@@ -4728,7 +4728,7 @@
       }
     },
     {
-      "module": "src/components/conversation/widget-renderer/resolve.ts",
+      "module": "src/internal/widget-document.ts",
       "exportName": "LyraWidgetBinding",
       "kind": "interface",
       "fingerprint": "743a60b4cdda88beaa3c",
@@ -4750,10 +4750,10 @@
       }
     },
     {
-      "module": "src/components/conversation/widget-renderer/resolve.ts",
+      "module": "src/internal/widget-document.ts",
       "exportName": "LyraWidgetDocument",
       "kind": "interface",
-      "fingerprint": "30501051c4ffcb6c8e47",
+      "fingerprint": "5cd18d0166729fb1c3cc",
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
@@ -4772,10 +4772,10 @@
       }
     },
     {
-      "module": "src/components/conversation/widget-renderer/resolve.ts",
+      "module": "src/internal/widget-document.ts",
       "exportName": "LyraWidgetNode",
       "kind": "interface",
-      "fingerprint": "670de2c86b4e88e544fb",
+      "fingerprint": "bb3e8eaefc06ae1dfa0a",
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
@@ -4794,10 +4794,10 @@
       }
     },
     {
-      "module": "src/components/conversation/widget-renderer/resolve.ts",
+      "module": "src/internal/widget-document.ts",
       "exportName": "ResolveContext",
       "kind": "interface",
-      "fingerprint": "9e4f6b94751f12bbf2b4",
+      "fingerprint": "a19cd2d61b188cd3c79b",
       "routes": [
         "src/components/conversation/widget-renderer/resolve.ts"
       ],
@@ -4810,10 +4810,10 @@
       }
     },
     {
-      "module": "src/components/conversation/widget-renderer/resolve.ts",
+      "module": "src/internal/widget-document.ts",
       "exportName": "ResolvedElement",
       "kind": "interface",
-      "fingerprint": "b28efd7f76ced38dac19",
+      "fingerprint": "6ec454fd42319d26816f",
       "routes": [
         "src/components/conversation/widget-renderer/resolve.ts"
       ],
@@ -4826,7 +4826,7 @@
       }
     },
     {
-      "module": "src/components/conversation/widget-renderer/resolve.ts",
+      "module": "src/internal/widget-document.ts",
       "exportName": "ResolvedText",
       "kind": "interface",
       "fingerprint": "75cf5e0a55fcb896b46a",
@@ -4842,10 +4842,10 @@
       }
     },
     {
-      "module": "src/components/conversation/widget-renderer/resolve.ts",
+      "module": "src/internal/widget-document.ts",
       "exportName": "resolveTree",
       "kind": "function",
-      "fingerprint": "d26d65f28b6793d26d88",
+      "fingerprint": "58ff42402646c1af7f1e",
       "routes": [
         "src/components/conversation/widget-renderer/resolve.ts"
       ],
@@ -7689,7 +7689,7 @@
       "module": "src/components/layout/dashboard-grid/dashboard-grid.class.ts",
       "exportName": "LyraDashboardLayoutChangeDetail",
       "kind": "interface",
-      "fingerprint": "e64337895cd14a026726",
+      "fingerprint": "d16a803ae8c4a9ab1938",
       "routes": [
         "src/all.ts",
         "src/components/layout/dashboard-grid/dashboard-grid-register.ts",
@@ -7712,7 +7712,7 @@
       "module": "src/components/layout/dashboard-grid/layout-types.ts",
       "exportName": "LyraDashboardCell",
       "kind": "interface",
-      "fingerprint": "c6399f30685bea3c0c3d",
+      "fingerprint": "44536cbc9b4a569399ae",
       "routes": [
         "src/all.ts",
         "src/components/layout/dashboard-grid/dashboard-grid-register.ts",
@@ -7734,7 +7734,7 @@
       "module": "src/components/layout/dashboard-grid/layout-types.ts",
       "exportName": "LyraDashboardPlacementResult",
       "kind": "interface",
-      "fingerprint": "5a72116f106bf31106c0",
+      "fingerprint": "9386bc534ad02079e3b7",
       "routes": [
         "src/all.ts",
         "src/components/layout/dashboard-grid/dashboard-grid-register.ts",
@@ -7756,7 +7756,7 @@
       "module": "src/components/layout/dashboard-grid/layout.ts",
       "exportName": "resolveLyraDashboardPlacement",
       "kind": "function",
-      "fingerprint": "8dab8310c77c8f46ecce",
+      "fingerprint": "c59f8636037b5086725e",
       "routes": [
         "src/all.ts",
         "src/components/layout/dashboard-grid/dashboard-grid-register.ts",
@@ -10144,7 +10144,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "loadMaplibre",
       "kind": "function",
-      "fingerprint": "28ecbbe962e744b0351d",
+      "fingerprint": "9a198ea5b77da0901379",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -10192,7 +10192,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MapLibreMapCapability",
       "kind": "interface",
-      "fingerprint": "27c7dca21d02e7924a63",
+      "fingerprint": "1929ff2d256122162e2d",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -10208,7 +10208,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MapLibreMarkerCapability",
       "kind": "interface",
-      "fingerprint": "600a4521363dc2854196",
+      "fingerprint": "879ccfd337c07d39a935",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -10224,7 +10224,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "MaplibreModule",
       "kind": "interface",
-      "fingerprint": "5969b7773b7bd97e72bc",
+      "fingerprint": "d7acc01c15ed59c58f1f",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -14695,7 +14695,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "a79de93cc8f884050f3f",
+      "fingerprint": "d58f9a4cb9d31fdb50aa",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -16320,7 +16320,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "2c93173766138730af0e",
+      "fingerprint": "8af134a1fac1ebd33d1f",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16336,7 +16336,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "5056e6dc1a5ddaa7cd0d",
+      "fingerprint": "4d21ea2599274780e4fc",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16352,7 +16352,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "57966ba33052909e312a",
+      "fingerprint": "33905bf7aee1086f504f",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16896,7 +16896,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "1eed448c3f0e21446e17",
+      "fingerprint": "305be327e4b77db4c992",
       "routes": [
         "src/vue.ts"
       ],
@@ -17305,7 +17305,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "9e53f916c67d458b29f3",
+      "fingerprint": "54385a23df74a2d79fce",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -18742,7 +18742,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "loadModularMap",
       "kind": "function",
-      "fingerprint": "fdf9f52bcfb4a9828da9",
+      "fingerprint": "c8432f5069fc10c42e41",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -18781,7 +18781,7 @@
       "module": "src/components/media/map/map-loader.ts",
       "exportName": "ModularMapModule",
       "kind": "interface",
-      "fingerprint": "b19881672feb53471ffa",
+      "fingerprint": "eeaa066124bdb836519c",
       "routes": [
         "src/components/media/map/map-loader.ts"
       ],
@@ -21192,7 +21192,7 @@
       }
     },
     {
-      "module": "src/components/media/image-viewer/image-viewer-panorama.ts",
+      "module": "src/internal/media-panorama.ts",
       "exportName": "LyraPanoramaCamera",
       "kind": "interface",
       "fingerprint": "da1c40782257f05351a8",
@@ -21217,7 +21217,7 @@
       }
     },
     {
-      "module": "src/components/media/image-viewer/image-viewer-panorama.ts",
+      "module": "src/internal/media-panorama.ts",
       "exportName": "LyraPanoramaHotspot",
       "kind": "interface",
       "fingerprint": "587caf187899b577cff3",
@@ -21242,10 +21242,10 @@
       }
     },
     {
-      "module": "src/components/media/image-viewer/image-viewer-panorama.ts",
+      "module": "src/internal/media-panorama.ts",
       "exportName": "LyraPanoramaHotspotSelectDetail",
       "kind": "interface",
-      "fingerprint": "5a159a0e1eaf0a84c572",
+      "fingerprint": "25f00427aa604066c574",
       "routes": [
         "src/all.ts",
         "src/components/lr-image-viewer.ts",
@@ -21718,7 +21718,7 @@
       "module": "src/ai/adapters/a2ui.ts",
       "exportName": "A2UiAdapterResult",
       "kind": "interface",
-      "fingerprint": "0aae664a2ea5400833d9",
+      "fingerprint": "bce542e50f470dc53128",
       "routes": [
         "src/ai/index.ts"
       ],
@@ -22257,10 +22257,13 @@
       "kind": "interface",
       "fingerprint": "2c47ae451e50445bb0d6",
       "routes": [
+        "src/all.ts",
         "src/components/lr-map.ts",
         "src/components/media/index.ts",
         "src/components/media/map/map.class.ts",
-        "src/components/media/map/map.ts"
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
       ],
       "document": "llms/media.md",
       "family": "media",
@@ -22276,10 +22279,13 @@
       "kind": "interface",
       "fingerprint": "2f0af36de4a1debd8377",
       "routes": [
+        "src/all.ts",
         "src/components/lr-map.ts",
         "src/components/media/index.ts",
         "src/components/media/map/map.class.ts",
-        "src/components/media/map/map.ts"
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
       ],
       "document": "llms/media.md",
       "family": "media",
@@ -22295,10 +22301,13 @@
       "kind": "interface",
       "fingerprint": "e921e103c1973ac40f19",
       "routes": [
+        "src/all.ts",
         "src/components/lr-map.ts",
         "src/components/media/index.ts",
         "src/components/media/map/map.class.ts",
-        "src/components/media/map/map.ts"
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
       ],
       "document": "llms/media.md",
       "family": "media",
@@ -22314,10 +22323,13 @@
       "kind": "interface",
       "fingerprint": "429aa4fe087ee298c080",
       "routes": [
+        "src/all.ts",
         "src/components/lr-map.ts",
         "src/components/media/index.ts",
         "src/components/media/map/map.class.ts",
-        "src/components/media/map/map.ts"
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
       ],
       "document": "llms/media.md",
       "family": "media",
@@ -22333,10 +22345,13 @@
       "kind": "interface",
       "fingerprint": "eb65275967c9c7065a16",
       "routes": [
+        "src/all.ts",
         "src/components/lr-map.ts",
         "src/components/media/index.ts",
         "src/components/media/map/map.class.ts",
-        "src/components/media/map/map.ts"
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
       ],
       "document": "llms/media.md",
       "family": "media",
@@ -22352,10 +22367,13 @@
       "kind": "interface",
       "fingerprint": "e6f9caefaa8824bf2d61",
       "routes": [
+        "src/all.ts",
         "src/components/lr-map.ts",
         "src/components/media/index.ts",
         "src/components/media/map/map.class.ts",
-        "src/components/media/map/map.ts"
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
       ],
       "document": "llms/media.md",
       "family": "media",
@@ -22371,10 +22389,13 @@
       "kind": "interface",
       "fingerprint": "4d0fe168b276b1db587a",
       "routes": [
+        "src/all.ts",
         "src/components/lr-map.ts",
         "src/components/media/index.ts",
         "src/components/media/map/map.class.ts",
-        "src/components/media/map/map.ts"
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
       ],
       "document": "llms/media.md",
       "family": "media",
@@ -22390,10 +22411,13 @@
       "kind": "interface",
       "fingerprint": "bd745aaafc4da3d55141",
       "routes": [
+        "src/all.ts",
         "src/components/lr-map.ts",
         "src/components/media/index.ts",
         "src/components/media/map/map.class.ts",
-        "src/components/media/map/map.ts"
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
       ],
       "document": "llms/media.md",
       "family": "media",
@@ -22409,10 +22433,13 @@
       "kind": "interface",
       "fingerprint": "ca12060cab03669611ce",
       "routes": [
+        "src/all.ts",
         "src/components/lr-map.ts",
         "src/components/media/index.ts",
         "src/components/media/map/map.class.ts",
-        "src/components/media/map/map.ts"
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
       ],
       "document": "llms/media.md",
       "family": "media",

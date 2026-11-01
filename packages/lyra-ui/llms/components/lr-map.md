@@ -1436,6 +1436,14 @@ expose no coordinates or native messages; `lr-map-export-error` (frozen
 Attribution: `lr-map-attribution-toggle` (`LyraMapAttributionToggleDetail { expanded }`) after the owned
 attribution control's credits are shown or hidden. None of these events is cancelable; all bubble and
 are composed.
+Scene: `lr-map-projection-change` (frozen `LyraMapProjectionChangeDetail { projection, source:
+'control' }`) and `lr-map-terrain-change` (frozen `LyraMapTerrainChangeDetail { terrain, source:
+'control' }`) follow a component-owned globe or terrain control after the property is assigned;
+programmatic assignments do not emit them, and `whenIdle()` resolves once the change applies.
+`lr-map-scene-state` (frozen `LyraMapSceneStateDetail { revision, state, code? }`) reports accepted
+scene status, with rejected updates keeping the previous accepted revision, and
+`lr-map-scene-activate` (frozen `LyraMapSceneActivateDetail { id, kind, source, position? }`)
+reports activation of an interactive scene object without moving the camera.
 
 The outer marker-activation detail is frozen, while an opaque marker `unsafeHtml` value remains the
 original supplied value at the MapLibre popup and marker-activation boundary. Treat it as trusted

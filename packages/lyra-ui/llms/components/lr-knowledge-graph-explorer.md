@@ -244,6 +244,8 @@ filtered-out id). None change `selectedNodeId` or filters.
   `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, from `lr-path-strip`).
 - `lr-engine-fallback` (`detail: { from, to, reason }`) — forwarded from the graph when `engine="webgl"`
   steps down the fallback chain.
+- `lr-node-render-error` (`detail: LyraGraphNodeRenderErrorDetail { reason, nodeId? }`) — forwarded from the graph when a
+  custom `nodeRenderer` mesh batch is refused; the sanitized reason is `'callback'`, `'invalid'` or `'budget'`.
 
 **Slots:** `details` — overrides the details popover's default content (an `lr-entity-card` with a
 nested `lr-neighbor-list` and a pin toggle) entirely, including the two additive slots below.

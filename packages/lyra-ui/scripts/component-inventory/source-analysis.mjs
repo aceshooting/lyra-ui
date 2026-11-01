@@ -64,7 +64,7 @@ const CAPABILITY_GATES = [
     attributes: ['src', 'library'],
   },
   {
-    modules: ['src/components/media/image-viewer/image-viewer-panorama.ts'],
+    modules: ['src/internal/media-panorama.ts'],
     tags: ['image-viewer', 'video'],
     attributes: ['projection'],
   },

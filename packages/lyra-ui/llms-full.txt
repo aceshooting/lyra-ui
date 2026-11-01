@@ -35081,6 +35081,14 @@ expose no coordinates or native messages; `lr-map-export-error` (frozen
 Attribution: `lr-map-attribution-toggle` (`LyraMapAttributionToggleDetail { expanded }`) after the owned
 attribution control's credits are shown or hidden. None of these events is cancelable; all bubble and
 are composed.
+Scene: `lr-map-projection-change` (frozen `LyraMapProjectionChangeDetail { projection, source:
+'control' }`) and `lr-map-terrain-change` (frozen `LyraMapTerrainChangeDetail { terrain, source:
+'control' }`) follow a component-owned globe or terrain control after the property is assigned;
+programmatic assignments do not emit them, and `whenIdle()` resolves once the change applies.
+`lr-map-scene-state` (frozen `LyraMapSceneStateDetail { revision, state, code? }`) reports accepted
+scene status, with rejected updates keeping the previous accepted revision, and
+`lr-map-scene-activate` (frozen `LyraMapSceneActivateDetail { id, kind, source, position? }`)
+reports activation of an interactive scene object without moving the camera.
 
 The outer marker-activation detail is frozen, while an opaque marker `unsafeHtml` value remains the
 original supplied value at the MapLibre popup and marker-activation boundary. Treat it as trusted
@@ -38714,6 +38722,9 @@ These named interfaces and helper signatures are available to typed integrations
   `MapLibreMapCapability {
     prepareFeatures?(requirements: LyraMapFeatureRequirements, options?: { signal?: AbortSignal }): Promise<void>;
     getCanvas(): HTMLCanvasElement;
+    getContainer?(): HTMLElement;
+    getPixelRatio?(): number;
+    getPadding?(): { top: number; right: number; bottom: number; left: number };
     getCenter(): { lng: number; lat: number };
     getZoom(): number;
     getBearing?(): number;
@@ -56398,6 +56409,8 @@ coalesced to one event per frame), and `lr-view-change` (`detail: { view: LyraGr
 Direct camera and view property assignments are silent.
 With `engine="webgl"`, `lr-engine-fallback` (`detail: { from, to, reason }`, frozen; `reason` is
 `'unavailable'`, `'unsupported'`, `'context-lost'` or `'error'`) reports each step down the fallback chain.
+Also `lr-node-render-error` (`detail: LyraGraphNodeRenderErrorDetail { reason, nodeId? }`) when a custom
+`nodeRenderer` mesh batch is refused; the reason is sanitized and the node keeps its default body.
 
 **Slots:** none.
 
@@ -58709,6 +58722,8 @@ filtered-out id). None change `selectedNodeId` or filters.
   `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, from `lr-path-strip`).
 - `lr-engine-fallback` (`detail: { from, to, reason }`) — forwarded from the graph when `engine="webgl"`
   steps down the fallback chain.
+- `lr-node-render-error` (`detail: LyraGraphNodeRenderErrorDetail { reason, nodeId? }`) — forwarded from the graph when a
+  custom `nodeRenderer` mesh batch is refused; the sanitized reason is `'callback'`, `'invalid'` or `'budget'`.
 
 **Slots:** `details` — overrides the details popover's default content (an `lr-entity-card` with a
 nested `lr-neighbor-list` and a pin toggle) entirely, including the two additive slots below.
