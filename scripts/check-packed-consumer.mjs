@@ -324,9 +324,9 @@ const bundleEntries = {
   },
   graph: {
     fixture: 'optional',
-    // The optional WebGL engine adapter, typed columns and builtin 3D renderer measure 429.0 KiB
-    // raw (at most 439,347 bytes); the next 64-byte boundary.
-    maxRawBytes: 439_360,
+    // The optional WebGL engine adapter, typed columns, builtin 3D renderer, curved relationships,
+    // custom node bodies and glow measure 443.3 KiB raw (453,917 bytes); the next 64-byte boundary.
+    maxRawBytes: 453_952,
   },
 };
 
