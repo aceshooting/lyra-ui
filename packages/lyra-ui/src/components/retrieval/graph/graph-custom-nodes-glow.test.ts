@@ -23,7 +23,7 @@ function setup(capabilities = true, admitMeshes?: (rows: readonly (LyraGraphNode
 }
 async function mount(value: ReturnType<typeof setup>) { value.graph.engine = 'webgl'; value.graph.view = '3d'; await fixture(value.graph); await waitUntil(() => value.data() > 0); await nextFrame(); }
 describe('graph custom node and glow opt-ins', () => {
-  it('does not request optional capabilities by default', async () => { const value = setup(false); await mount(value); expect(value.graph.nodeRenderer).to.equal(undefined); expect(value.graph.glow).to.equal(false); expect(value.graph.shadowRoot!.querySelector('[part="engine-notice"]')).to.equal(null); });
+  it('does not request optional capabilities by default', async () => { const value = setup(false); await mount(value); expect(value.graph.nodeRenderer).to.equal(undefined); expect(value.graph.glow).to.equal(false); expect(value.graph.shadowRoot!.querySelector('[part="engine-notice"]') === null).to.equal(true); });
   it('owns meshes and retains them across appearance and selection updates without callbacks', async () => {
     const value = setup(), original = mesh(); let calls = 0;
     value.graph.nodeRenderer = context => { calls++; expect(Object.isFrozen(context)).to.equal(true); expect(context.id).to.equal(context.index === 0 ? 'a' : 'b'); return original; };
@@ -79,7 +79,7 @@ describe('graph custom node and glow opt-ins', () => {
     const value = setup(); value.graph.strings = { graphCustomNodesError: 'Geometry refused' };
     value.graph.nodeRenderer = () => ({ positions: new Float32Array([NaN,0,0, .5,0,0, 0,.5,0]), normals: new Float32Array([0,0,1]) });
     await mount(value); await waitUntil(() => value.graph.shadowRoot!.textContent!.includes('Geometry refused'));
-    expect(value.graph.shadowRoot!.querySelector('[role="alert"], [role="status"]')).to.equal(null);
+    expect(value.graph.shadowRoot!.querySelector('[role="alert"], [role="status"]') === null).to.equal(true);
   });
 
   it('reports a real companion expanded primitive refusal as budget and retains the ordinary scene', async () => {

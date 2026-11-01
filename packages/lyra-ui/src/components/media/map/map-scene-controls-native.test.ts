@@ -101,7 +101,7 @@ describe('lr-map component-owned scene controls with native engines', function (
       await element.updateComplete; await element.whenControlsReady();
       button(element, 'terrain').click(); await idle(element);
       expect(element.terrain).to.deep.equal({ source: 'elevation', exaggeration: 0 });
-      expect(element.shadowRoot!.querySelector('[part="configuration-error"]')).to.equal(null);
+      expect(element.shadowRoot!.querySelector('[part="configuration-error"]') === null).to.equal(true);
     });
   }
 });

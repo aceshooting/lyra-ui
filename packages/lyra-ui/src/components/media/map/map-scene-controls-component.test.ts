@@ -151,7 +151,7 @@ describe('lr-map component-owned scene controls', () => {
     Reflect.set(peer, 'setProjection', undefined); configure(element); await element.updateComplete;
     let failed = false; try { await element.whenControlsReady(); } catch { failed = true; }
     expect(failed).to.equal(true); expect(peer.removed).to.equal(false); expect(peer.writes).to.deep.equal([]);
-    expect(element.shadowRoot!.querySelector('[part~="globe-button"]')).to.equal(null);
+    expect(element.shadowRoot!.querySelector('[part~="globe-button"]') === null).to.equal(true);
   });
   it('recovers a directly addressed source beyond the public catalog cap without mutating the scene', async () => {
     const { element, peer } = await mount(configure); await ready(element);
