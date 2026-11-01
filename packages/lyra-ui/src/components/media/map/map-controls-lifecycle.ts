@@ -1,8 +1,11 @@
+import type { MapSceneControlActivation, MapSceneControlContext } from './map-scene-controls.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { mapGeolocationErrorCode, type LyraMapGeolocationErrorCode, type MapOwnedControlKind, type LyraMapControlPosition,
   type NormalizedMapControlOptions } from './map-control-options.js';
 
 export interface MapManagedControl {
+  setSceneContext?(context: MapSceneControlContext): void;
+  refreshSceneControl?(): void;
   onAdd?(...args: unknown[]): HTMLElement;
   on?(type: string, callback: (event: unknown) => void): unknown;
   off?(type: string, callback: (event: unknown) => void): unknown;
@@ -15,10 +18,12 @@ export interface MapControlLifecyclePeer {
   controlContainer?(position: LyraMapControlPosition): HTMLElement | undefined;
 }
 export type MapControlLifecycleEvent =
+  { readonly kind: 'scene-action'; readonly action: MapSceneControlActivation } |
   { readonly kind: 'geolocate-error'; readonly code: LyraMapGeolocationErrorCode } |
   { readonly kind: 'geolocate-out-of-bounds'; readonly code: 'out-of-bounds' } |
   { readonly kind: 'geolocate-success'; readonly lngLat?: readonly [number, number]; readonly accuracy?: number };
 export interface MapControlLifecycleContext {
+  readonly scene?: MapSceneControlContext;
   /** Captures the component's current connection, map and control configuration. */
   readonly isCurrent: () => boolean;
   readonly onEvent: (event: MapControlLifecycleEvent) => void;
@@ -77,6 +82,7 @@ export class MapControlsLifecycle {
         (entry.root && map.controlContainer && next.initialExpanded === entry.options.initialExpanded &&
           JSON.stringify(next.options) === JSON.stringify(entry.options.options)))) {
         entry.context = context; entry.options = next;
+        if (context.scene) entry.control?.setSceneContext?.(context.scene);
       }
       else { this.entries.delete(kind); retired.push(entry); }
     }
@@ -96,7 +102,7 @@ export class MapControlsLifecycle {
     }));
     if (generation !== this.generation || !this.validContext(context)) return;
     const constructors = new Map(pending.map((entry, index) => [entry, loaded[index]]));
-    const priority: readonly MapOwnedControlKind[] = ['navigation', 'scale', 'geolocate', 'attribution'];
+    const priority: readonly MapOwnedControlKind[] = ['navigation', 'scale', 'geolocate', 'globe', 'terrain', 'attribution'];
     for (const corner of ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const) {
       const ordered = priority.map(kind => this.entries.get(kind)).filter((entry): entry is Entry =>
         entry !== undefined && entry.options.position === corner).sort((a, b) => a.options.order - b.options.order);
@@ -159,6 +165,10 @@ export class MapControlsLifecycle {
     return entry?.installed && !entry.retired ? entry.root : undefined;
   }
 
+  refreshSceneControls(): void {
+    for (const entry of this.entries.values()) if (this.current(entry)) entry.control?.refreshSceneControl?.();
+  }
+
   /** Retire subscriptions before the caller removes the native map. Reusable after reconnect. */
   dispose(): void {
     this.generation += 1;
@@ -183,6 +193,12 @@ export class MapControlsLifecycle {
       if (control === null || (typeof control !== 'object' && typeof control !== 'function')) throw new Error('Map control is unavailable.');
       entry.control = control as MapManagedControl;
       if (!this.current(entry)) { this.release(entry); return; }
+      if (entry.options.kind === 'globe' || entry.options.kind === 'terrain') {
+        if (!entry.context.scene || typeof entry.control.setSceneContext !== 'function' || typeof entry.control.on !== 'function' || typeof entry.control.off !== 'function') throw new Error('Scene control is unavailable');
+        entry.control.setSceneContext(entry.context.scene);
+        this.subscribe(entry, 'activate', action => { if (this.current(entry)) entry.context.onEvent({ kind: 'scene-action', action: action as MapSceneControlActivation }); });
+        if (!this.current(entry)) { this.release(entry); return; }
+      }
       if (entry.options.kind === 'geolocate') {
         if (typeof entry.control.on !== 'function' || typeof entry.control.off !== 'function') throw new Error('Map control events are unavailable.');
         this.subscribe(entry, 'error', event => {

@@ -89,3 +89,17 @@ it('keeps the builtin default and forwards normalized explicit engine preference
   el.engine = 'webgl'; await el.updateComplete; await graph.updateComplete; expect(graph.engine).to.equal('webgl');
   el.setAttribute('engine', 'invalid'); await el.updateComplete; await graph.updateComplete; expect(el.engine).to.equal('builtin'); expect(graph.engine).to.equal('builtin');
 });
+
+
+it('retains curved local edges through wrapper normalization and owned child snapshots', async () => {
+  const links = [{ id: 'curve', source: 'a', target: 'b', curvature: -0.5 }];
+  const el = await fixture<LyraKnowledgeGraphExplorer>(html`<lr-knowledge-graph-explorer view="3d" .nodes=${nodes} .edges=${links}></lr-knowledge-graph-explorer>`);
+  const graph = el.shadowRoot!.querySelector<LyraGraph>('[part="graph"]')!; await graph.updateComplete;
+  expect((graph.edges[0] as unknown as { curvature: number }).curvature).to.equal(-0.5);
+  links[0]!.curvature = 0.75;
+  expect((graph.edges[0] as unknown as { curvature: number }).curvature).to.equal(-0.5);
+  let reads = 0;
+  const hostile = { id: 'hostile', source: 'a', target: 'b', get curvature(): number { reads++; throw Error(); } };
+  el.edges = [hostile]; await el.updateComplete; await graph.updateComplete;
+  expect(reads).to.equal(0); expect((graph.edges[0] as unknown as { curvature?: number }).curvature).to.equal(undefined);
+});

@@ -261,3 +261,30 @@ test('the redirect hooks send imports of the shipped build to the instrumented b
   assert.equal(resolveHook('./helper.mjs', {}, next).url, './helper.mjs', 'a relative specifier without a parent cannot be placed');
   assert.deepEqual(forwarded.length, 6);
 });
+
+test('the redirect hooks resolve package self-references and subpath imports through the instrumented scope', () => {
+  initialize({ from: 'file:///package/dist/', to: 'file:///package/coverage/build/dist/', scope: 'file:///package/', name: '@scope/pkg' });
+  const parents = [];
+  const next = (specifier, context) => { parents.push(context.parentURL); return { url: specifier }; };
+  const instrumentedScope = 'file:///package/coverage/build/package.json';
+  for (const specifier of ['@scope/pkg', '@scope/pkg/xr', '#brand']) {
+    resolveHook(specifier, { parentURL: 'file:///package/test/example.test.mjs' }, next);
+    assert.equal(parents.pop(), instrumentedScope, `${specifier} from a test resolves in the instrumented scope`);
+  }
+  resolveHook('#brand', { parentURL: 'file:///package/[eval1]' }, next);
+  assert.equal(parents.pop(), instrumentedScope, 'an evaluated child script inside the package is redirected');
+  const untouched = [
+    ['#brand', 'file:///package/coverage/build/dist/graph-layout/async.js', 'the instrumented build already sits in its scope'],
+    ['#brand', 'file:///package/node_modules/dep/index.js', 'a dependency keeps its own subpath imports'],
+    ['#brand', 'file:///elsewhere/index.js', 'a module outside the package keeps its own scope'],
+    ['@scope/pkg-other', 'file:///package/test/example.test.mjs', 'a name sharing the prefix is another package'],
+    ['three', 'file:///package/test/example.test.mjs', 'dependencies resolve normally'],
+  ];
+  for (const [specifier, parentURL, reason] of untouched) {
+    resolveHook(specifier, { parentURL }, next);
+    assert.equal(parents.pop(), parentURL, reason);
+  }
+  initialize({ from: 'file:///package/dist/', to: 'file:///package/coverage/build/dist/' });
+  resolveHook('#brand', { parentURL: 'file:///package/test/example.test.mjs' }, next);
+  assert.equal(parents.pop(), 'file:///package/test/example.test.mjs', 'without a package scope nothing is rerouted');
+});

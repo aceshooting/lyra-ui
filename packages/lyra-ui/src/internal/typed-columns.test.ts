@@ -218,3 +218,18 @@ describe('typed-columns malformed and hostile input', () => {
     expect({ ...largeDataPage(450, 1, 100) }).to.deep.equal({ page: 1, pageCount: 5, start: 100, end: 200 });
   });
 });
+
+
+it('admits signed finite edge curvature by exact Float32 edge rows and rejects malformed values', () => {
+  const edgeCurvature = new Float32Array([-4, 0, 4]);
+  const result = validateGraphColumns(graph({ edgeCurvature }));
+  expect(result.ok).to.equal(true);
+  expect(result.ok && (result.columns as unknown as { edgeCurvature?: Float32Array }).edgeCurvature === edgeCurvature).to.equal(true);
+  expect([...edgeCurvature]).to.deep.equal([-4, 0, 4]);
+  for (const value of [new Float64Array(3), [0, 0, 0]]) expect(issueOf(validateGraphColumns(graph({ edgeCurvature: value })))).to.deep.equal({ code: 'wrong-type', column: 'edgeCurvature' });
+  expect(issueOf(validateGraphColumns(graph({ edgeCurvature: new Float32Array(2) })))).to.deep.equal({ code: 'length-mismatch', column: 'edgeCurvature' });
+  for (const value of [NaN, Infinity, -Infinity]) expect(issueOf(validateGraphColumns(graph({ edgeCurvature: new Float32Array([0, value, 0]) })))).to.deep.equal({ code: 'not-finite', column: 'edgeCurvature', index: 1 });
+  let reads = 0; const hostile = graph();
+  Object.defineProperty(hostile, 'edgeCurvature', { get() { reads++; throw Error(); } });
+  expect(validateGraphColumns(hostile).ok).to.equal(true); expect(reads).to.equal(0);
+});

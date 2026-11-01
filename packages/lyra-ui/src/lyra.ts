@@ -683,7 +683,25 @@ export type {
 export type { LyraNodeTypeStyle } from './internal/node-type-style.js';
 export type { LyraMapCameraOptions } from './components/media/map/map-camera.js';
 export type {
+  LyraMapModelFormat,
+  LyraMapModelSource,
+  LyraMapPosition,
+  LyraMapQuaternion,
+  LyraMapScene,
+  LyraMapSceneActivateDetail,
+  LyraMapSceneArc,
+  LyraMapSceneErrorCode,
+  LyraMapSceneMarker,
+  LyraMapSceneModel,
+  LyraMapSceneObject,
+  LyraMapSceneObjectBase,
+  LyraMapScenePath,
+  LyraMapSceneStateDetail,
+} from './components/media/map/map-scene-types.js';
+export type {
   LyraMapBounds,
+  LyraMapProjection,
+  LyraMapTerrain,
   LyraMapFitBoundsOptions,
   LyraMapMoveDetail,
   LyraMapPadding,
@@ -700,7 +718,7 @@ export type {
   LyraMapChoroplethLayer,
   LyraMapChoroplethNoData,
   LyraMapControlPosition,
-  LyraMapControls,
+  LyraMapControls, LyraMapGlobeControlOptions, LyraMapTerrainControlOptions, LyraMapProjectionChangeDetail, LyraMapTerrainChangeDetail,
   LyraMapLegendGradientTick,
   LyraMapNavigationControlOptions,
   LyraMapScaleControlOptions,
@@ -2014,6 +2032,12 @@ export type {
 export type { LyraExportButtonEventMap } from './components/utility/export-button/export-button.class.js';
 export type { LyraFileInputEventMap } from './components/media/file-input/file-input.class.js';
 export type { LyraGraphEventMap } from './components/retrieval/graph/graph.class.js';
+export type {
+  LyraGraphNodeRenderContext,
+  LyraGraphNodeMesh,
+  LyraGraphNodeRenderer,
+  LyraGraphNodeRenderErrorDetail,
+} from './components/retrieval/graph/graph-node-renderer.js';
 export type { LyraHeatmapEventMap } from './components/data/heatmap/heatmap.class.js';
 export type { LyraInputEventMap } from './components/forms/input/input.class.js';
 export type { LyraNumberInputEventMap } from './components/forms/input/number-input.class.js';
@@ -2267,3 +2291,13 @@ export type {
   LyraPanoramaHotspot,
   LyraPanoramaHotspotSelectDetail,
 } from './components/media/image-viewer/image-viewer-panorama.js';
+
+export { createSimulationClock, SimulationClockError } from './simulation-clock.js';
+export type {
+  SimulationClock, SimulationClockOptions, SimulationClockCapabilities, ClockScheduler, ClockSnapshot,
+  SimulationClockMode, SimulationClockReason, SimulationClockErrorCode,
+} from './simulation-clock.js';
+export { createTimeIndex, TimeIndexError } from './time-index.js';
+export type { TimeIndex, TimeLocation, TimeIndexErrorCode } from './time-index.js';
+export { bindSequencePlayback, SequenceTimeBindingError } from './sequence-time-binding.js';
+export type { SequenceTimeBindingOptions, SequenceTimeBindingErrorCode } from './sequence-time-binding.js';

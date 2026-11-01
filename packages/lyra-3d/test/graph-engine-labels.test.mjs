@@ -11,6 +11,25 @@ const inertTask = () => ({ mode: 'main-thread', stop() {}, update() {} });
 const host = () => ({ hover() {}, pick() {}, camera() {}, lost() {} });
 const texts = (canvas) => canvas.drawing.calls.filter(([name]) => name === 'fillText').map(([, text, x, y]) => ({ text, x, y }));
 
+test('spatial labels and parameter-speed particles share the curved world path', (t) => {
+  const browser = installFakeBrowser({ context2d: true }); t.after(() => browser.restore());
+  const viewport = {
+    canvas: browser.canvases[0], world: new Group(), pickWorld: new Group(), scene: new Scene(), width: 640, height: 480,
+    orbit: { ...DEFAULT_ORBIT_CAMERA, yaw: 0.6, pitch: 0.3 }, style: resolveLyra3dStyle(),
+    project(point) { return projectOrbitPoint(point, this.orbit, this); },
+  };
+  const canvas = globalThis.document.createElement('canvas');
+  const data = { nodeCount: 2, source: new Uint32Array([0]), target: new Uint32Array([1]), spatialAppearance: { edgeCurvatures: new Float32Array([0.5]) }, edgeLabels: ['curve'], withEdgeLabels: true, edgeLabelMinZoom: 0.001, particlesPerEdge: 2, particleSpeed: 0 };
+  const decorations = createGraphDecorations(viewport, data, () => canvas);
+  decorations.update({ positionOf: row => ({ x: row * 100, y: 0, z: 0 }), state: { selected: new Set(), dimmed: new Set(), hover: -1, focus: -1 }, fittedDistance: 500, revision: 0, time: 0 });
+  const label = texts(canvas).find(value => value.text === 'curve');
+  const expected = viewport.project({ x: 50, y: 0, z: 50 });
+  assert.ok(label); assert.ok(Math.abs(label.x - expected.x) < 1e-6); assert.ok(Math.abs(label.y - (expected.y - viewport.style.fontSize)) < 1e-6);
+  const particles = viewport.world.children.find(mesh => mesh.count === 2);
+  assert.ok(particles); assert.equal(particles.instanceMatrix.array[16 + 12], 50); assert.equal(particles.instanceMatrix.array[16 + 14], 50);
+  decorations.dispose();
+});
+
 test('graph labels are drawn on an overlay canvas made by the viewport\'s own document', async (t) => {
   const browser = installFakeBrowser({ context2d: true });
   t.after(() => browser.restore());

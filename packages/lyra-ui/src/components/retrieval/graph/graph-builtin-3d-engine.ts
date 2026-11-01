@@ -144,7 +144,8 @@ export class GraphBuiltin3dEngine {
         }
       } else {
         const entry = primitive.value;
-        const padding = Math.max(6, finiteRange(entry.edge.width ?? 1.5, 1.5, 0, 1000) * 3, this.projectedById.get(entry.edge.target)?.screenRadius ?? 0);
+        const padding = Math.max(6, (finiteRange(entry.edge.width ?? 1.5, 1.5, 0, 1000) + 2) * 3, this.projectedById.get(entry.edge.target)?.screenRadius ?? 0) +
+          (entry.last && entry.edge.directed ? this.projectedById.get(entry.edge.target)?.screenRadius ?? 0 : 0);
         const labelPoint = entry.labelPoint ?? entry.a;
         const labelWidth = entry.middle && frame.withEdgeLabels && entry.edge.label ? this.textWidth(ctx, entry.edge.label) : 0;
         if (outside(Math.min(entry.a.x, entry.b.x, labelWidth ? labelPoint.x : entry.a.x) - padding,
@@ -215,8 +216,8 @@ export class GraphBuiltin3dEngine {
     ctx.setLineDash(this.dashPattern(edge, segment.dangling).values);
     ctx.lineDashOffset = -segment.offset;
     ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-    if (segment.last && edge.directed) {
-      const angle = Math.atan2(b.y - a.y, b.x - a.x);
+    if (segment.last && edge.directed && (!segment.curved || segment.arrowDirection)) {
+      const angle = segment.arrowDirection ? Math.atan2(segment.arrowDirection.y, segment.arrowDirection.x) : Math.atan2(b.y - a.y, b.x - a.x);
       const inset = targetRadius;
       const x = b.x - Math.cos(angle) * inset, y = b.y - Math.sin(angle) * inset;
       const size = Math.max(6, ctx.lineWidth * 3);

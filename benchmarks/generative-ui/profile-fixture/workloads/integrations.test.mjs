@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { test } from 'node:test';
@@ -9,6 +10,7 @@ import { adaptAiSdkMessage } from '../../../../packages/lyra-ui/dist/ai/index.js
 import { fixtureDefinitions as a2uiDefinitions, reportIdentity, reportData, reportMessages, reportUpdate, createReportCatalog } from './a2ui.js';
 import { fixtureDefinitions as sdkDefinitions, sdkIdentity, sdkPayloads, sdkProseChunks, sdkToolChunks, assertSdkProse } from './ai-sdk.js';
 import { createViewCatalog, createViewDefinition } from './views.js';
+const pinnedAiVersion = JSON.parse(readFileSync(new URL('../../../../packages/lyra-gen/package.json', import.meta.url), 'utf8')).devDependencies.ai;
 
 const sdkRequire = createRequire(new URL('../../../../packages/lyra-gen/package.json', import.meta.url));
 const { readUIMessageStream } = await import(pathToFileURL(sdkRequire.resolve('ai')).href);
@@ -67,7 +69,8 @@ test('owned A2UI report preserves exact counts, catalog identity, all updates an
 });
 
 test('SDK payloads retain two independent V-sized surfaces and exact prose/tool chunk boundaries', () => {
-  assert.equal(sdkRequire('ai/package.json').version, '7.0.155');
+  // The workload pins the exact peer lyra-gen develops against, not a second copy of its version.
+  assert.equal(sdkRequire('ai/package.json').version, pinnedAiVersion);
   const { data, tool, prose } = sdkPayloads();
   assert.equal(data.surfaceId, 'profile-K-data'); assert.equal(tool.surfaceId, 'profile-K-tool');
   assert.equal(prose.length, 3200); assert.equal(new TextEncoder().encode(prose).length, 3200);

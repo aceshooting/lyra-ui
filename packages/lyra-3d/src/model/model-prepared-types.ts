@@ -3,6 +3,9 @@ import type { ModelEmbeddedResource, ModelFormat } from './types.js';
 import type { ModelIncrementalWork } from './model-work.js';
 
 export interface OwnedModelInput { readonly format: ModelFormat; readonly bytes: Uint8Array<ArrayBuffer> }
+export type ModelAllocationPurpose = 'encoded' | 'embedded' | 'attribute' | 'index' | 'color-conversion' | 'scratch';
+/** Scoped reservation callback, invoked before an owned backing allocation. */
+export interface ModelAllocationHooks { reserve(purpose: ModelAllocationPurpose, byteLength: number): void }
 interface ModelAdmissionCounts {
   readonly encodedBytes: number; readonly decodedBytes: number; readonly vertices: number;
   readonly indices: number; readonly imagePixels: number; readonly resources: number;

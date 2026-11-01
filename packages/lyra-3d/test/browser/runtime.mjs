@@ -204,7 +204,10 @@ const inventory = [...caseNames, ...pointerCaseNames, ...performanceCaseNames];
 const results = (selected ?? []).filter((name) => !inventory.includes(name)).map((name) => ({
   name, passed: false, error: 'Unknown selected browser case', errors: [],
 }));
-for (const name of gpu ? performanceCaseNames : [...caseNames, ...pointerCaseNames]) {
+// An explicit selection can qualify functional pixels/picks on hardware too; an ordinary GPU
+// run retains its performance-only inventory.
+const runnable = gpu ? selected ? inventory : performanceCaseNames : [...caseNames, ...pointerCaseNames];
+for (const name of runnable) {
   if (selected && !selected.includes(name)) continue;
   let result;
   try {

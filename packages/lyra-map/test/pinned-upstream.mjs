@@ -7,8 +7,8 @@ const require = createRequire(import.meta.url);
 /** Root of the pinned MapLibre package that the build transforms. */
 export const upstreamRoot = dirname(require.resolve('maplibre-gl/package.json'));
 
-/** The upstream modules the build rewrites, as `dist/provenance.json` lists them. */
-export const CHANGED_SOURCE_FILES = [
+/** The upstream modules rewritten by the complete transform alone. */
+export const COMPLETE_TRANSFORM_SOURCE_FILES = [
   'data/bucket/symbol_bucket.ts',
   'geo/projection/projection_factory.ts',
   'render/image_atlas.ts',
@@ -30,10 +30,17 @@ export const CHANGED_SOURCE_FILES = [
   'util/actor_messages.ts',
   'util/config.ts',
   'util/web_worker_transfer.ts',
+  'webgl/draw/draw_terrain.ts',
   'webgl/draw/index.ts',
   'webgl/program/program_uniforms.ts',
   'webgl/render_to_texture.ts',
 ];
+
+/** The upstream modules the build rewrites, as `dist/provenance.json` lists them. */
+export const CHANGED_SOURCE_FILES = [
+  ...COMPLETE_TRANSFORM_SOURCE_FILES,
+  'webgl/draw/draw_custom.ts',
+].sort();
 
 /** Every TypeScript module of the pinned upstream source tree, as source-relative paths. */
 export async function upstreamModules() {

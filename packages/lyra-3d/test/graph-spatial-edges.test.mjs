@@ -85,3 +85,10 @@ test('a camera change only moves uniforms: no stroke attribute is rewritten', ()
   assert.deepEqual(batch.mesh.material.uniforms.viewWindow.value.toArray(), [0, 0, 320, 200]);
   batch.dispose();
 });
+
+test('a failure at any construction allocation propagates and releases every acquired edge resource', async () => {
+  const { sweepConstructionFailures } = await import('./graph-construction-failures.mjs');
+  const data = () => ({ nodeCount: 2, source: new Uint32Array([0, 1]), target: new Uint32Array([1, 1]), directed: new Uint8Array([1, 0]),
+    spatialAppearance: { edgeDashes: [[4, 2], null] } });
+  assert.ok(sweepConstructionFailures(() => createGraphSpatialEdges(data()), edges => edges.dispose()) > 1);
+});

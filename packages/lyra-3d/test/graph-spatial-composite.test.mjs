@@ -140,3 +140,11 @@ test('translucent CSS loop segments follow their rendered depth after tilt, zoom
     view.height = 1600; check(false);
   } finally { composite.dispose(); nodes.dispose(); edges.dispose(); }
 });
+
+test('a failure at any construction allocation propagates and releases every acquired composite resource', async () => {
+  const { sweepConstructionFailures } = await import('./graph-construction-failures.mjs');
+  const f = fixture(); f.composite.dispose();
+  try {
+    assert.ok(sweepConstructionFailures(() => createGraphSpatialComposite(f.nodes, f.edges), composite => composite.dispose()) > 1);
+  } finally { f.nodes.dispose(); f.edges.dispose(); }
+});

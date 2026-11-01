@@ -2,7 +2,7 @@ import { ModelAdmissionError } from './admission.js';
 import { createModelAdmissionWork } from './model-admission-kernel.js';
 import { createModelDecoderServices } from './model-decoder-services.js';
 import { aborted } from './model-parser-common.js';
-import type { AdmittedModelInput, ModelDescriptor, ModelPreparedDecoder, OwnedModelInput } from './model-prepared-types.js';
+import type { AdmittedModelInput, ModelAllocationHooks, ModelDescriptor, ModelPreparedDecoder, OwnedModelInput } from './model-prepared-types.js';
 import { runModelWork } from './model-work-runner.js';
 
 async function decoder(format: OwnedModelInput['format']): Promise<ModelPreparedDecoder> {
@@ -16,9 +16,9 @@ async function decoder(format: OwnedModelInput['format']): Promise<ModelPrepared
     default: throw new ModelAdmissionError('unsupported');
   }
 }
-export async function decodePreparedModel(admitted: AdmittedModelInput, signal?: AbortSignal): Promise<ModelDescriptor> {
+export async function decodePreparedModel(admitted: AdmittedModelInput, signal?: AbortSignal, allocations?: ModelAllocationHooks): Promise<ModelDescriptor> {
   aborted(signal); const create = await decoder(admitted.input.format); aborted(signal);
-  return runModelWork(create(admitted, createModelDecoderServices(admitted).services), signal);
+  return runModelWork(create(admitted, createModelDecoderServices(admitted, allocations).services), signal);
 }
 export async function decodeOwnedModel(input: OwnedModelInput, signal?: AbortSignal): Promise<ModelDescriptor> {
   const admitted = await runModelWork(createModelAdmissionWork(input), signal); aborted(signal);

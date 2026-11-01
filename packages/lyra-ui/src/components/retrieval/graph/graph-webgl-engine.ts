@@ -1,5 +1,6 @@
 import { finiteRange } from '../../../internal/numbers.js';
 import { getOwnDataDescriptor } from '../../../internal/data-descriptors.js';
+import { normalizeGraphCurvature } from './graph-curvature.js';
 import { graphLinkIdentity, type LyraGraphCamera, type LyraGraphEdge } from './graph-model.js';
 import type { SpatialWorldNode } from './graph-spatial.js';
 import type { GraphBuiltin3dPaint } from './graph-builtin-3d-engine.js';
@@ -26,11 +27,16 @@ export function graphWebglData(world: readonly SpatialWorldNode[], edges: readon
   world.forEach((entry, row) => { rows.set(entry.node.id, row); positions.set([entry.position.x, entry.position.y, entry.position.z], row * 3); sizes[row] = entry.radius * 2;
     shapes[row] = entry.shape === 'square' ? 1 : entry.shape === 'diamond' ? 2 : 0; expandable[row] = entry.node.expandable ? 1 : 0; colors.set(rgba(paint.nodes.get(entry.node.id) ?? paint.text), row * 4); });
   const source = new Uint32Array(edges.length), target = new Uint32Array(edges.length), directed = new Uint8Array(edges.length), dangling = new Uint8Array(edges.length);
+  let edgeCurvatures: Float32Array | undefined;
   const edgeColors = new Float32Array(edges.length * 4), widths = new Float32Array(edges.length), dashes: number[][] = [];
-  edges.forEach((edge, row) => { source[row] = rows.get(edge.source)!; target[row] = rows.get(edge.target) ?? source[row]!; dangling[row] = rows.has(edge.target) ? 0 : 1; directed[row] = edge.directed ? 1 : 0;
+  edges.forEach((edge, row) => {
+    const curvature = normalizeGraphCurvature(edge.curvature);
+    if (curvature !== 0) edgeCurvatures ??= new Float32Array(edges.length);
+    if (edgeCurvatures) edgeCurvatures[row] = curvature;
+    source[row] = rows.get(edge.source)!; target[row] = rows.get(edge.target) ?? source[row]!; dangling[row] = rows.has(edge.target) ? 0 : 1; directed[row] = edge.directed ? 1 : 0;
     const id = graphLinkIdentity(edge); widths[row] = paint.visibleEdges.has(id) ? finiteRange(edge.width ?? 1.5, 1.5, 0, 1000) : 0;
     edgeColors.set(rgba(paint.edges.get(id) ?? paint.text), row * 4);
     dashes.push(Array.isArray(edge.dash) && edge.dash.length <= 32 && edge.dash.every((v) => Number.isFinite(v) && v >= 0 && v <= 1e7) ? [...edge.dash] : []); });
   return { nodeCount: count, positions, sizes, source, target, directed, nodeLabels: 'none' as const, withEdgeLabels: false,
-    spatialAppearance: { sizeUnits: 'world' as const, nodeShapes: shapes, expandable, nodeColors: colors, edgeColors, edgeWidths: widths, edgeDashes: dashes, dangling, dimmedOpacity: paint.dimmedOpacity } };
+    spatialAppearance: { sizeUnits: 'world' as const, nodeShapes: shapes, expandable, nodeColors: colors, edgeColors, edgeWidths: widths, edgeDashes: dashes, ...(edgeCurvatures === undefined ? {} : { edgeCurvatures }), dangling, dimmedOpacity: paint.dimmedOpacity } };
 }

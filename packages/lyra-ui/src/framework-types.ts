@@ -1009,6 +1009,7 @@ export interface LyraComponentTypeMap {
       | 'copyText'
       | 'downloadName'
       | 'downloadSrc'
+      | 'hideRestore'
       | 'kind'
       | 'label'
       | 'locale'
@@ -1033,6 +1034,7 @@ export interface LyraComponentTypeMap {
       'copy-text'?: LyraArtifactPanel['copyText'];
       'download-name'?: LyraArtifactPanel['downloadName'];
       'download-src'?: LyraArtifactPanel['downloadSrc'];
+      'hide-restore'?: LyraArtifactPanel['hideRestore'];
     };
   };
   'lr-attachment-chip': {
@@ -5881,6 +5883,7 @@ export interface LyraComponentTypeMap {
       | 'engine'
       | 'fitTo'
       | 'focusNodeId'
+      | 'glow'
       | 'graphColumns'
       | 'graphSource'
       | 'height'
@@ -5891,6 +5894,7 @@ export interface LyraComponentTypeMap {
       | 'maxZoom'
       | 'minZoom'
       | 'nodeLabels'
+      | 'nodeRenderer'
       | 'nodes'
       | 'nodeTypes'
       | 'renderer'
@@ -5917,6 +5921,7 @@ export interface LyraComponentTypeMap {
       | 'lr-node-enter'
       | 'lr-node-expand'
       | 'lr-node-leave'
+      | 'lr-node-render-error'
       | 'lr-selection-change'
       | 'lr-view-change'
       | 'lr-viewport-change';
@@ -6921,6 +6926,7 @@ export interface LyraComponentTypeMap {
       | 'engine'
       | 'entityDetails'
       | 'fitTo'
+      | 'glow'
       | 'graphSource'
       | 'height'
       | 'hiddenTypes'
@@ -6928,6 +6934,7 @@ export interface LyraComponentTypeMap {
       | 'label'
       | 'locale'
       | 'nodeLabels'
+      | 'nodeRenderer'
       | 'nodes'
       | 'nodeTypes'
       | 'path'
@@ -6950,6 +6957,7 @@ export interface LyraComponentTypeMap {
       | 'lr-hidden-types-change'
       | 'lr-node-activate'
       | 'lr-node-expand'
+      | 'lr-node-render-error'
       | 'lr-path-request'
       | 'lr-pin-change'
       | 'lr-relation-activate'
@@ -7448,9 +7456,12 @@ export interface LyraComponentTypeMap {
       | 'minZoom'
       | 'overlays'
       | 'pickMode'
+      | 'projection'
       | 'renderWorldCopies'
+      | 'scene'
       | 'strings'
       | 'styleOverrides'
+      | 'terrain'
       | 'zoom',
       {}
     >;
@@ -7479,7 +7490,11 @@ export interface LyraComponentTypeMap {
       | 'lr-map-pick'
       | 'lr-map-pointer-leave'
       | 'lr-map-pointer-move'
+      | 'lr-map-projection-change'
+      | 'lr-map-scene-activate'
+      | 'lr-map-scene-state'
       | 'lr-map-style-load'
+      | 'lr-map-terrain-change'
       | 'lr-map-view-change';
     cssNames:       | '--lr-map-choropleth-fill-opacity'
       | '--lr-map-drawing-color'

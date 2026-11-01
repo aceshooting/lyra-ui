@@ -13,6 +13,8 @@ import type {
   LyraMapMarkerActivationDetail,
   LyraMapOverlays,
   LyraMapPointIcon,
+  LyraMapScene,
+  LyraMapSceneActivateDetail,
   LyraMapViewChangeDetail,
 } from './map.js';
 import { LYRA_MAP_EMPTY_STYLE } from './map.js';
@@ -47,7 +49,7 @@ const RASTER_STYLE = {
 const OFFLINE_RASTER_TILE =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAA/0lEQVR4AeXBsY1YMQxEwXeL3wJBqP+aHDm5jCBYhK0aqHBnfv78/f2HsY/rZLBVPZwMtqqHk8FW9XAy2BLmhDlhTpgT5oQ5YU6YE+aEOWFOmBPmhLmPq3p4UT28qB5eVA9bH9fJYKt6OBlsVQ8ng63q4WSwJcwJc8KcMCfMCXPCnDAnzAlzwpwwJ8wJcx9X9fCienhRPbyoHrY+rpPBVvVwMtiqHk4GW9XDyWBLmBPmhDlhTpgT5oQ5YU6YE+aEOWFOmBPmPq7q4UX18KJ6eFE9bH1cJ4Ot6uFksFU9nAy2qoeTwZYwJ8wJc8KcMCfMCXPCnDAnzAlzwpwwJ8z9B2UdSfWg4cuTAAAAAElFTkSuQmCC';
 const OFFLINE_RASTER_STYLE = {
-  version: 8,
+  version: 8 as const,
   sources: {
     demo: {
       type: 'raster',
@@ -158,6 +160,33 @@ export const Default: Story = {
       .mapStyle=${OFFLINE_RASTER_STYLE}
     ></lr-map>
   `,
+};
+
+/** Geographic intent remains readable and actionable while scene rendering is unavailable. */
+export const SceneTextFallback: Story = {
+  parameters: { docs: { description: { story: 'Assign a real scene through the property binding. Expand its text panel and activate Central station with pointer, Enter or Space. Scene rendering currently reports unavailable with code engine; these objects are not drawn and activation does not pan the map.' } } },
+  render: () => {
+    const scene: LyraMapScene = { objects: [
+      { kind: 'marker', id: 'station', label: 'Central station', interactive: true,
+        position: { lngLat: [6.134, 49.6] } },
+      { kind: 'path', id: 'walk', label: 'Walk to the park', interactive: false, positions: [
+        { lngLat: [6.134, 49.6] }, { lngLat: [6.128, 49.605] },
+      ] },
+      { kind: 'arc', id: 'connection', label: 'Station to park connection', interactive: false, height: 80,
+        start: { lngLat: [6.134, 49.6] }, end: { lngLat: [6.128, 49.605] } },
+    ] };
+    let status: HTMLElement | undefined;
+    return html`
+      <p>Scene objects are available in the text panel. Geographic scene rendering is unavailable.</p>
+      <lr-map label="Station and park scene" .mapStyle=${LYRA_MAP_EMPTY_STYLE}
+        .center=${[6.131, 49.6025]} .zoom=${13} .scene=${scene}
+        @lr-map-scene-activate=${(event: CustomEvent<LyraMapSceneActivateDetail>) => {
+          if (status) status.textContent = `Activated ${event.detail.id} using ${event.detail.source}.`;
+        }}
+        style="block-size: var(--lr-size-24rem)"></lr-map>
+      <p role="status" ${ref(node => { status = node as HTMLElement | undefined; })}>No scene object activated.</p>
+    `;
+  },
 };
 
 /** The legend owns a frozen 100-row projection, keeps a required non-color pattern for every
@@ -1837,5 +1866,90 @@ export const BasemapPlacement: Story = {
         ] }}
       ></lr-map>
     `;
+  },
+};
+
+/** A caller-owned, synthetic elevation tile; no provider or external request is required. */
+function sceneElevationTile(): string {
+  const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128;
+  const context = canvas.getContext('2d');
+  if (!context) return OFFLINE_RASTER_TILE;
+  const image = context.createImageData(128, 128);
+  for (let y = 0; y < 128; y++) for (let x = 0; x < 128; x++) {
+    const distance = ((x - 64) ** 2 + (y - 64) ** 2) / 700;
+    const encoded = Math.round((10_000 + 1800 * Math.exp(-distance)) * 10);
+    const offset = (y * 128 + x) * 4;
+    image.data[offset] = encoded >> 16 & 255; image.data[offset + 1] = encoded >> 8 & 255;
+    image.data[offset + 2] = encoded & 255; image.data[offset + 3] = 255;
+  }
+  context.putImageData(image, 0, 0); return canvas.toDataURL('image/png');
+}
+
+export const GlobeAndTerrain: Story = {
+  args: { lang: 'en' },
+  argTypes: { lang: { control: 'select', options: ['en', 'fr', 'ar'] } },
+  parameters: { docs: { description: { story: 'Typed projection and terrain settings with caller-owned controls and synthetic offline elevation. The scale slider is an example choice, not a limit of the terrain API. Missing elevation demonstrates the localized fallback; Retry restores the valid style. Component-owned globe and terrain toggles share the same properties with the surrounding controls.' } } },
+  render: args => {
+    const language = args['lang'] === 'fr' ? 'fr' : args['lang'] === 'ar' ? 'ar' : 'en';
+    const messages = {
+      en: { title: 'Globe and terrain', flat: 'Flat map', globe: 'Globe', terrain: 'Terrain', scale: 'Terrain exaggeration', fit: 'Overview', move: 'Explore the hill', reset: 'Use style defaults', missing: 'Try missing elevation', retry: 'Retry', loading: 'Applying map settings…', ready: 'Map ready', failure: 'Map unavailable. Retry with the valid elevation source.', description: 'Synthetic elevation for demonstration. Exaggeration changes appearance, not physical measurements.' },
+      fr: { title: 'Globe et relief', flat: 'Carte plane', globe: 'Globe', terrain: 'Relief', scale: 'Exagération du relief', fit: 'Vue générale', move: 'Explorer la colline', reset: 'Réglages du style', missing: 'Tester une source absente', retry: 'Réessayer', loading: 'Application des réglages…', ready: 'Carte prête', failure: 'Carte indisponible. Réessayez avec la source valide.', description: 'Relief synthétique de démonstration. L’exagération modifie l’apparence, pas les mesures physiques.' },
+      ar: { title: 'الكرة الأرضية والتضاريس', flat: 'خريطة مسطحة', globe: 'الكرة الأرضية', terrain: 'التضاريس', scale: 'تضخيم التضاريس', fit: 'نظرة عامة', move: 'استكشاف التل', reset: 'إعدادات النمط', missing: 'تجربة مصدر مفقود', retry: 'إعادة المحاولة', loading: 'جارٍ تطبيق الإعدادات…', ready: 'الخريطة جاهزة', failure: 'الخريطة غير متاحة. أعد المحاولة بالمصدر الصحيح.', description: 'تضاريس اصطناعية للعرض. يغيّر التضخيم المظهر وليس القياسات الفيزيائية.' },
+    }[language];
+    let map: LyraMap | undefined, status: HTMLElement | undefined;
+    let projection: 'mercator' | 'globe' | undefined = 'globe';
+    let enabled = false, scale = 1, request = 0;
+    const sourceStyle = { ...OFFLINE_RASTER_STYLE, version: 8 as const, sources: {
+      ...OFFLINE_RASTER_STYLE.sources,
+      elevation: { type: 'raster-dem', tiles: [sceneElevationTile()], tileSize: 128, maxzoom: 0, encoding: 'mapbox' },
+    } };
+    const report = async () => {
+      const owner = map, revision = ++request;
+      if (!owner) return;
+      if (status) status.textContent = messages.loading;
+      try { await owner.updateComplete; await owner.whenIdle(); if (status && map === owner && request === revision) status.textContent = messages.ready; }
+      catch { if (status && map === owner && request === revision) status.textContent = messages.failure; }
+    };
+    const apply = () => { if (map) { map.controls = { navigation: true, scale: true, globe: true, terrain: { source: 'elevation', exaggeration: scale }, attribution: false }; map.projection = projection; map.terrain = enabled ? { source: 'elevation', exaggeration: scale } : null; } void report(); };
+    const controlRequest = () => {
+      if (!map) return;
+      projection = map.projection; enabled = map.terrain != null;
+      const section = map.closest('section');
+      section?.querySelectorAll('.projection-choice').forEach(button => { Reflect.set(button, 'pressed', button.getAttribute('data-projection') === projection); });
+      const control = section?.querySelector('.terrain-choice'); if (control) Reflect.set(control, 'checked', enabled);
+      void report();
+    };
+    const toggleProjection = (value: 'mercator' | 'globe', event: Event) => {
+      projection = value; apply();
+      const row = (event.currentTarget as HTMLElement).parentElement;
+      row?.querySelectorAll('.projection-choice').forEach(button => { Reflect.set(button, 'pressed', button.getAttribute('data-projection') === value); });
+    };
+    return html`
+      <section lang=${language} dir=${language === 'ar' ? 'rtl' : 'ltr'} style="display:grid;gap:var(--lr-space-m);min-inline-size:0">
+        <h3>${messages.title}</h3><p>${messages.description}</p>
+        <div style="display:flex;flex-wrap:wrap;gap:var(--lr-space-s)">
+          <lr-button class="projection-choice" data-projection="mercator" .pressed=${false} @click=${(event: Event) => toggleProjection('mercator', event)}>${messages.flat}</lr-button>
+          <lr-button class="projection-choice" data-projection="globe" .pressed=${true} @click=${(event: Event) => toggleProjection('globe', event)}>${messages.globe}</lr-button>
+        </div>
+        <lr-switch class="terrain-choice" @lr-change=${(event: Event) => { enabled = Boolean(Reflect.get(event.currentTarget as object, 'checked')); apply(); }}>${messages.terrain}</lr-switch>
+        <lr-slider label=${messages.scale} min="0" max="4" step="0.25" .value=${1}
+          @lr-change=${(event: Event) => { scale = Number(Reflect.get(event.currentTarget as object, 'value')); apply(); }}></lr-slider>
+        <div style="display:flex;flex-wrap:wrap;gap:var(--lr-space-s)">
+          <lr-button @click=${() => { map?.jumpTo({ center: [0, 0], zoom: 1 }); }}>${messages.fit}</lr-button>
+          <lr-button @click=${() => { map?.flyTo({ center: [0, 0], zoom: 5 }); }}>${messages.move}</lr-button>
+          <lr-button @click=${(event: Event) => { projection = undefined; enabled = false; if (map) { map.projection = undefined; map.terrain = undefined; } const section = (event.currentTarget as HTMLElement).closest('section'); section?.querySelectorAll('.projection-choice').forEach(button => { Reflect.set(button, 'pressed', false); }); const control = section?.querySelector('.terrain-choice'); if (control) Reflect.set(control, 'checked', false); void report(); }}>${messages.reset}</lr-button>
+          <lr-button @click=${() => { if (map) map.terrain = { source: 'missing-elevation' }; void report(); }}>${messages.missing}</lr-button>
+          <lr-button @click=${() => { if (map) { map.projection = projection; map.terrain = enabled ? { source: 'elevation', exaggeration: scale } : null; map.mapStyle = { ...sourceStyle }; } void report(); }}>${messages.retry}</lr-button>
+        </div>
+        <lr-map label=${messages.title} ${ref(element => { map = element as LyraMap | undefined; queueMicrotask(() => { if (map?.isConnected) void report(); }); })}
+          style="block-size:24rem;inline-size:100%;min-inline-size:0" .mapStyle=${sourceStyle}
+          .projection=${'globe'} .terrain=${null} .center=${[0, 0]} .zoom=${1}
+          .markers=${[{ id: 'hill', lngLat: [0, 0], label: messages.move }]}
+          .controls=${{ navigation: true, scale: true, globe: true, terrain: { source: 'elevation', exaggeration: scale }, attribution: false }}
+          .strings=${{ mapGlobe: messages.globe, mapTerrain: messages.terrain }}
+          @lr-map-projection-change=${controlRequest} @lr-map-terrain-change=${controlRequest}
+          @lr-map-style-load=${() => { void report(); }}></lr-map>
+        <output ${ref(element => { status = element as HTMLElement | undefined; })} aria-live="polite">${messages.loading}</output>
+      </section>`;
   },
 };

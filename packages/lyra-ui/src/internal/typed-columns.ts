@@ -21,6 +21,8 @@ export interface LyraGraphColumns {
   readonly source: Uint32Array;
   readonly target: Uint32Array;
   readonly edgeCategory?: Uint16Array;
+  /** Finite signed 3D curvature per edge; render projections clamp to [-1, 1] without changing this borrowed array. */
+  readonly edgeCurvature?: Float32Array;
 }
 
 /** Point columns: row `i` of every column describes point `i`. */
@@ -167,7 +169,7 @@ function validate<Columns>(build: () => { columns: Columns; count: number }): Ty
   }
 }
 
-const GRAPH_KEYS = ['ids', 'x', 'y', 'z', 'size', 'category', 'categories', 'labels', 'source', 'target', 'edgeCategory'];
+const GRAPH_KEYS = ['ids', 'x', 'y', 'z', 'size', 'category', 'categories', 'labels', 'source', 'target', 'edgeCategory', 'edgeCurvature'];
 const POINT_KEYS = ['ids', 'x', 'y', 'z', 'cluster', 'clusters', 'labels'];
 
 /**
@@ -192,6 +194,8 @@ export function validateGraphColumns(value: unknown, limits: GraphColumnLimits =
     if (source.length > limits.edges) fail({ code: 'too-many', column: 'source', limit: limits.edges });
     const target = typedColumn<Uint32Array>(columns, 'target', 'Uint32Array', true, source.length) as Uint32Array;
     const edgeCategory = typedColumn<Uint16Array>(columns, 'edgeCategory', 'Uint16Array', false, source.length);
+    const edgeCurvature = typedColumn<Float32Array>(columns, 'edgeCurvature', 'Float32Array', false, source.length);
+    finiteColumn(edgeCurvature, 'edgeCurvature');
     for (const [name, values] of [['x', x], ['y', y], ['z', z]] as const) finiteColumn(values, name);
     finiteColumn(size, 'size', 0);
     indexColumn(source, 'source', nodes);
@@ -199,7 +203,7 @@ export function validateGraphColumns(value: unknown, limits: GraphColumnLimits =
     indexColumn(category, 'category', categories?.length);
     indexColumn(edgeCategory, 'edgeCategory', categories?.length);
     const admitted: Record<string, unknown> = { ids, source, target };
-    for (const [key, entry] of Object.entries({ x, y, z, size, category, categories, labels, edgeCategory })) {
+    for (const [key, entry] of Object.entries({ x, y, z, size, category, categories, labels, edgeCategory, edgeCurvature })) {
       if (entry !== undefined) admitted[key] = entry;
     }
     return { columns: Object.freeze(admitted) as unknown as LyraGraphColumns, count: nodes };

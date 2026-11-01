@@ -14,7 +14,7 @@ const children = [
   ['../../forms/button/button.js', 'lr-button', 'LyraButton'],
   ['../../layout/details/details.js', 'lr-details', 'LyraDetails'],
   ['../../forms/icon-button/icon-button.js', 'lr-icon-button', 'LyraIconButton'],
-  ['../../overlays/overlay/tooltip.js', 'lr-tooltip', 'LyraTooltip'],
+  ['../../overlays/overlay/tooltip.class.js', 'lr-tooltip', 'LyraTooltip'],
 ];
 
 test('message-parts preserves child tag declarations without emitting child registration imports', () => {

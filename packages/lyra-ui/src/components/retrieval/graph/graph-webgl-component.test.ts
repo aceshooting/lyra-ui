@@ -10,7 +10,7 @@ import type { LyraGraphCamera, LyraGraphEdge, LyraGraphNode } from './graph-mode
 void LyraGraph;
 
 const camera = (): LyraGraphCamera => ({ yaw: 0, pitch: 0, distance: 500, target: { x: 0, y: 0, z: 0 } });
-interface Data { readonly spatialAppearance?: { readonly dimmedOpacity?: number }; readonly nodeCount: number; readonly labels?: readonly string[]; readonly positions?: Float32Array; readonly source: Uint32Array; readonly target: Uint32Array }
+interface Data { readonly spatialAppearance?: { readonly dimmedOpacity?: number; readonly edgeCurvatures?: Float32Array }; readonly nodeCount: number; readonly labels?: readonly string[]; readonly positions?: Float32Array; readonly source: Uint32Array; readonly target: Uint32Array }
 function deferred() { let resolve!: () => void; const promise = new Promise<void>((done) => { resolve = done; }); return { promise, resolve }; }
 function fakeEngine(gate?: Promise<void>) {
   let host: Engine3dHost | undefined, canvas: HTMLCanvasElement | undefined, disposals = 0;
@@ -60,6 +60,28 @@ function source(): LyraGraphSource<LyraGraphNode, LyraGraphEdge & { readonly id:
 }
 
 describe('graph optional engine component integration', () => {
+  it('keeps filtered curvature through typed appearance refresh and list fallback', async () => {
+    const value = setup(); value.graph.engine = 'webgl'; value.graph.view = '3d';
+    const edgeCurvature = new Float32Array([0.25, -2]);
+    value.graph.graphColumns = { ids: ['hidden', 'a', 'b'], category: new Uint16Array([0, 1, 1]), categories: ['hide', 'keep'],
+      source: new Uint32Array([0, 1]), target: new Uint32Array([1, 2]), edgeCurvature };
+    value.graph.hiddenTypes = ['hide'];
+    await fixture(value.graph); const engine = await mounted(value);
+    expect(Array.from(engine.data.at(-1)!.spatialAppearance?.edgeCurvatures ?? [])).to.deep.equal([-1]);
+    const dataCount = engine.data.length;
+    value.graph.nodeLabels = 'always'; await settle(value.graph);
+    const appearance = engine.appearances.at(-1) as Pick<Data, 'spatialAppearance'> | undefined;
+    expect(Array.from(appearance?.spatialAppearance?.edgeCurvatures ?? [])).to.deep.equal([-1]);
+    expect(engine.data.length).to.equal(dataCount);
+    expect(Array.from(edgeCurvature)).to.deep.equal([0.25, -2]);
+    engine.callbacks().lost('context-lost'); await settle(value.graph);
+    expect(listRows(value.graph).length).to.equal(3);
+    const activated: (string | undefined)[] = [];
+    value.graph.addEventListener('lr-edge-activate', event => activated.push(event.detail.edgeId));
+    listRows(value.graph)[2]!.click();
+    expect(activated).to.deep.equal(['column-edge-1']);
+  });
+
   it('resolves the shared dimmed opacity token for typed column rendering', async () => {
     const value = setup(); value.graph.engine = 'webgl'; value.graph.view = '3d';
     value.graph.style.setProperty('--lr-graph-dimmed-opacity', '0.17');
@@ -348,6 +370,27 @@ it('places WebGL edge labels from live endpoints and stops drawing labels when d
     expect(moved!.alpha).to.be.lessThan(1); expect(ctx.globalAlpha).to.equal(1);
     labels.length = 0; value.graph.withEdgeLabels = false; await settle(value.graph);
     expect(labels.length).to.equal(0); expect(engine.disposals()).to.equal(0);
+  } finally { ctx.fillText = original; }
+});
+
+it('places curved WebGL labels at the world curve midpoint after live endpoint movement', async () => {
+  const value = setup(); value.graph.engine = 'webgl'; value.graph.view = '3d';
+  const view = { ...camera(), yaw: 0.6 }; value.graph.camera = view;
+  value.graph.nodeLabels = 'none'; value.graph.withEdgeLabels = true; value.graph.edgeLabelMinZoom = 0.001;
+  value.graph.edges = [{ id: 'curve', source: 'local-a', target: 'local-b', curvature: 0.5, label: 'Curve' }];
+  await fixture(value.graph); const engine = await mounted(value);
+  const canvas = value.graph.shadowRoot!.querySelector<HTMLCanvasElement>('[data-graph-labels]')!;
+  const ctx = canvas.getContext('2d')!, original = ctx.fillText;
+  const labels: { x: number; y: number }[] = [];
+  ctx.fillText = function(text, x, y) { if (text === 'Curve') labels.push({ x, y }); original.call(this, text, x, y); };
+  try {
+    engine.positions.set(0, { x: 0, y: 0, z: 0 }); engine.positions.set(1, { x: 100, y: 0, z: 0 });
+    value.graph.camera = { ...view }; await settle(value.graph);
+    const surface = value.graph.shadowRoot!.querySelector<HTMLElement>('[data-webgl-host]')!;
+    const expected = projectSpatialPoint({ x: 50, y: 0, z: 50 }, view, { width: surface.clientWidth, height: surface.clientHeight })!;
+    expect(labels.length).to.be.greaterThan(0);
+    expect(labels.at(-1)!.x).to.be.closeTo(expected.x, 1e-6);
+    expect(engine.disposals()).to.equal(0);
   } finally { ctx.fillText = original; }
 });
 

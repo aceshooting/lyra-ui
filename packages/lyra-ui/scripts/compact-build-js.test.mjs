@@ -171,7 +171,7 @@ const collectionFixture = await mkdtemp(path.join(tmpdir(), 'lyra-compact-collec
 try {
   const internal = path.join(collectionFixture, 'internal');
   await mkdir(internal);
-  for (const name of ['collection-snapshot', 'data-descriptors']) {
+  for (const name of ['collection-snapshot', 'collection-policy', 'data-descriptors']) {
     const source = await readFile(new URL(`../src/internal/${name}.ts`, import.meta.url), 'utf8');
     const emitted = await esbuild.transform(source, { loader: 'ts', format: 'esm', target: 'es2022' });
     await writeFile(path.join(internal, `${name}.js`), emitted.code);

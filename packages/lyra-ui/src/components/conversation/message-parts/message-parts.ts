@@ -10,7 +10,7 @@ export * from './message-parts.class.js';
 export type {} from '../../forms/button/button.js';
 export type {} from '../../layout/details/details.js';
 export type {} from '../../forms/icon-button/icon-button.js';
-export type {} from '../../overlays/overlay/tooltip.js';
+export type {} from '../../overlays/overlay/tooltip.class.js';
 import '../markdown/markdown.js';
 import { defineElement } from '../../../internal/prefix.js';
 import { LyraMessageParts } from './message-parts.class.js';

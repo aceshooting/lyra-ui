@@ -30,7 +30,7 @@
   "engines": {
     "node": ">=22"
   },
-  "packageManager": "pnpm@12.15.0",
+  "packageManager": "pnpm@12.16.1",
   "sideEffects": [
     "./dist/modules/**/*.mjs",
     "./dist/worker.mjs",
@@ -41,6 +41,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs"
+    },
+    "./scene": {
+      "types": "./dist/scene.d.ts",
+      "import": "./dist/scene.mjs"
     },
     "./vite": {
       "types": "./dist/vite.d.ts",
@@ -93,7 +97,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "prepack": "pnpm build",
-    "lint": "node scripts/check-package.mjs && tsc --noEmit -p tsconfig.test.json",
+    "lint": "node scripts/check-package.mjs && tsc --noEmit -p tsconfig.test.json && tsc --noEmit -p tsconfig.scene-native-peer.test.json",
     "test": "node --test test/*.test.mjs",
     "test:browser": "node scripts/browser-test.mjs",
     "test:coverage": "node scripts/coverage.mjs",
@@ -102,7 +106,7 @@
   "dependencies": {
     "@mapbox/point-geometry": "1.1.0",
     "@mapbox/tiny-sdf": "2.3.0",
-    "@maplibre/maplibre-gl-style-spec": "26.4.4",
+    "@maplibre/maplibre-gl-style-spec": "26.5.0",
     "@types/geojson": "^7946.0.16",
     "gl-matrix": "3.4.4",
     "kdbush": "4.1.0"

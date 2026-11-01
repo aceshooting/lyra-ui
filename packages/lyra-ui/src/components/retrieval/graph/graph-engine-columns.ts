@@ -1,3 +1,4 @@
+import { normalizeGraphCurvature } from './graph-curvature.js';
 import { largeDataPage, validateGraphColumns, type LyraGraphColumns, type TypedColumnIssue } from '../../../internal/typed-columns.js';
 
 /** Structural engine data: optional companion declarations never enter the UI type graph. */
@@ -9,6 +10,7 @@ interface GraphEngineColumnData {
   readonly sizes?: Float32Array;
   readonly categories?: Uint16Array;
   readonly labels?: readonly string[];
+  readonly edgeCurvature?: Float32Array;
 }
 type GraphEngineColumnItem =
   | { readonly kind: 'node'; readonly row: number; readonly id: string; readonly label: string }
@@ -42,7 +44,7 @@ export function admitGraphEngineColumns(input: unknown): { readonly ok: true; re
     return { kind: 'edge', row, source: columns.ids[columns.source[row]!]!, target: columns.ids[columns.target[row]!]! };
   };
   return { ok: true, value: {
-    columns, data: { nodeCount: count, positions, source: columns.source, target: columns.target, sizes: columns.size, categories: columns.category, labels: columns.labels },
+    columns, data: { nodeCount: count, positions, source: columns.source, target: columns.target, sizes: columns.size, categories: columns.category, labels: columns.labels, edgeCurvature: columns.edgeCurvature },
     row: (id) => indices.get(id), item,
     page(requested) { const page = largeDataPage(count + columns.source.length, requested); const rows: GraphEngineColumnItem[] = [];
       for (let index = page.start; index < page.end; index++) rows.push(item(index)!);
@@ -83,12 +85,14 @@ export function graphEngineColumnScene(admitted: GraphEngineColumns, hiddenTypes
   for (let row = 0; row < columns.source.length; row++) if (remap[columns.source[row]!]! >= 0 && remap[columns.target[row]!]! >= 0) edges++;
   const edgeRows = new Uint32Array(edges), source = new Uint32Array(edges), target = new Uint32Array(edges);
   const edgeCategories = columns.edgeCategory === undefined ? undefined : new Uint16Array(edges);
+  const edgeCurvature = columns.edgeCurvature === undefined ? undefined : new Float32Array(edges);
   let next = 0;
   for (let row = 0; row < columns.source.length; row++) {
     const a = remap[columns.source[row]!]!, b = remap[columns.target[row]!]!;
     if (a < 0 || b < 0) continue;
     edgeRows[next] = row; source[next] = a; target[next] = b;
     if (edgeCategories) edgeCategories[next] = columns.edgeCategory![row]!;
+    if (edgeCurvature) edgeCurvature[next] = normalizeGraphCurvature(columns.edgeCurvature![row]);
     next++;
   }
   const originalPositions = admitted.data.positions;
@@ -118,7 +122,7 @@ export function graphEngineColumnScene(admitted: GraphEngineColumns, hiddenTypes
     return { kind: 'edge', row, source: columns.ids[columns.source[row]!]!, target: columns.ids[columns.target[row]!]! };
   };
   return {
-    data: { nodeCount: nodes, positions, source, target, sizes, categories, labels, edgeCategories,
+    data: { nodeCount: nodes, positions, source, target, sizes, categories, labels, edgeCategories, edgeCurvature,
       spatialAppearance: { sizeUnits: 'world', nodeShapes: new Uint8Array(nodes) } },
     nodeRows, edgeRows, categoryNames: columns.categories, itemCount,
     nodeIndex(id) { const original = admitted.row(id); if (original === undefined) return undefined; const row = remap[original]!; return row < 0 ? undefined : row; },

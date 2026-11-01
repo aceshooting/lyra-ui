@@ -4,10 +4,10 @@ import { decodeModelText, ModelLineCursor } from './model-text-work.js';
 import { MODEL_LIMITS as LIMIT } from './limits.js';
 import { chargeModelGeometry, createModelResourceBudget, modelAdmissionCheck, modelAdmissionInteger, modelAdmissionNumeric } from './model-admission-policy.js';
 import type { ModelIncrementalWork } from './model-work.js';
-import type { AdmittedModelInput, OwnedModelInput } from './model-prepared-types.js';
+import type { AdmittedModelInput, ModelAllocationHooks, OwnedModelInput } from './model-prepared-types.js';
 
 /** Complete fatal UTF-8 validation before line admission, retaining the synchronous refusal order. */
-function createXyzAdmissionWork(input: OwnedModelInput): ModelIncrementalWork<AdmittedModelInput> {
+function createXyzAdmissionWork(input: OwnedModelInput, allocations?: ModelAllocationHooks): ModelIncrementalWork<AdmittedModelInput> {
   modelAdmissionCheck(input.format === 'xyz', 'unsupported');
   return createModelGeneratorWork(function* () {
     let rows = 0;
@@ -19,15 +19,15 @@ function createXyzAdmissionWork(input: OwnedModelInput): ModelIncrementalWork<Ad
       if (row.length === 6) row.slice(3).forEach(value => modelAdmissionInteger(Number(value), 255));
       modelAdmissionCheck(++rows <= LIMIT.vertices, 'limit');
     });
-    const budget = createModelResourceBudget(); chargeModelGeometry(budget, rows, 0);
+    const budget = createModelResourceBudget(allocations); chargeModelGeometry(budget, rows, 0);
     return { input, counts: Object.freeze({ encodedBytes: input.bytes.length, decodedBytes: budget.decoded, vertices: rows, indices: 0, imagePixels: 0, resources: 0 }), resources: [], plan: { format: 'xyz', rows } };
   });
 }
 
-export function createModelAdmissionWork(input: OwnedModelInput): ModelIncrementalWork<AdmittedModelInput> {
-  if (input.format === 'xyz') return createXyzAdmissionWork(input);
+export function createModelAdmissionWork(input: OwnedModelInput, allocations?: ModelAllocationHooks): ModelIncrementalWork<AdmittedModelInput> {
+  if (input.format === 'xyz') return createXyzAdmissionWork(input, allocations);
   return createModelGeneratorWork(function* () {
-    const budget = createModelResourceBudget();
+    const budget = createModelResourceBudget(allocations);
     const plan = yield* readModelFormatPolicy(input, budget);
     return { input, counts: { encodedBytes: input.bytes.length, decodedBytes: budget.decoded, vertices: budget.vertices, indices: budget.indices, imagePixels: budget.pixels, resources: budget.resources.length }, resources: budget.resources, plan };
   });

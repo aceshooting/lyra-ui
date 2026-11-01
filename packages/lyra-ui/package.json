@@ -1864,6 +1864,18 @@
       "types": "./dist/internal/docx-zip-admission.d.ts",
       "default": "./dist/internal/docx-zip-admission.js"
     },
+    "./simulation-clock.js": {
+      "types": "./dist/simulation-clock.d.ts",
+      "default": "./dist/simulation-clock.js"
+    },
+    "./time-index.js": {
+      "types": "./dist/time-index.d.ts",
+      "default": "./dist/time-index.js"
+    },
+    "./sequence-time-binding.js": {
+      "types": "./dist/sequence-time-binding.d.ts",
+      "default": "./dist/sequence-time-binding.js"
+    },
     "./theme/presets.js": null,
     "./theme/presets/shadcn.js": null
   },
@@ -3023,5 +3035,5 @@
     "xlsx": "file:../../vendor/xlsx-0.20.3.tgz",
     "zod": "4.6.7"
   },
-  "packageManager": "pnpm@12.15.0"
+  "packageManager": "pnpm@12.16.1"
 }

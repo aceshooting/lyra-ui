@@ -91,6 +91,10 @@ export interface LyraGraphEdge {
   readonly target: string;
   /** Stroke/picking width. Negative values clamp to 0; non-finite or unset values use 1.5. */
   readonly width?: number;
+  /** Signed 3D midpoint deflection relative to endpoint distance, clamped to [-1, 1].
+   * Unset or non-finite local values are straight. Ignored in 2D and for loops/dangling stubs.
+   * Positive orientation uses a deterministic world-space normal; reversing endpoints reverses it. */
+  readonly curvature?: number;
   /** Optional spoken-name and SVG-tooltip fallback used before the generated source/target text;
    * drawn as a visible edge label only with `withEdgeLabels`. */
   readonly label?: string;

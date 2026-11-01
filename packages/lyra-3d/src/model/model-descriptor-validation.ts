@@ -27,7 +27,9 @@ function component(attribute: ModelAttributeDescriptor, row: number, axis: numbe
   return value;
 }
 
-function* validateModelDescriptor(value: unknown, admitted: AdmittedModelInput): ModelWorkGenerator<ModelDescriptor> {
+export interface ModelValidationScratch { reserve(byteLength: number): { release(): void } }
+
+function* validateModelDescriptor(value: unknown, admitted: AdmittedModelInput, scratch?: ModelValidationScratch): ModelWorkGenerator<ModelDescriptor> {
   yield 'records';
   const data = fields(value, ['protocol', 'roots', 'selectedRoot', 'nodes', 'geometries', 'materials', 'textures']); check(data['protocol'] === 1);
   const nodes = list(data['nodes'], LIMIT.entries * 3); const geometries = list(data['geometries'], LIMIT.entries);
@@ -144,6 +146,8 @@ function* validateModelDescriptor(value: unknown, admitted: AdmittedModelInput):
       const maps = fields(material['maps'], ['baseColor', 'normal', 'metalness', 'roughness', 'emissive', 'ao']); for (const key of ['baseColor', 'normal', 'metalness', 'roughness', 'emissive', 'ao']) textureReference(maps[key]);
     }
   }
+  const parentStorage = scratch?.reserve(nodes.length * Int32Array.BYTES_PER_ELEMENT);
+  try {
   const parents = new Int32Array(nodes.length); parents.fill(-1); let vertices = 0; let indices = 0; let drawables = 0;
   for (let index = 0; index < nodes.length; index++) {
     yield 'records'; const node = fields(nodes[index], ['kind', 'name', 'matrix', 'children', 'geometry', 'materials']); name(node['name']); tuple(node['matrix'], 16);
@@ -179,5 +183,6 @@ function* validateModelDescriptor(value: unknown, admitted: AdmittedModelInput):
   };
   for (let index = 0; index < nodes.length; index++) yield* visit(index, 0);
   return value as ModelDescriptor;
+  } finally { parentStorage?.release(); }
 }
-export const createModelDescriptorValidation = (value: unknown, admitted: AdmittedModelInput) => createModelGeneratorWork(() => validateModelDescriptor(value, admitted));
+export const createModelDescriptorValidation = (value: unknown, admitted: AdmittedModelInput, scratch?: ModelValidationScratch) => createModelGeneratorWork(() => validateModelDescriptor(value, admitted, scratch));

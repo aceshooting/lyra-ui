@@ -83,3 +83,27 @@ export const RetintedViewToggle: Story = {
     },
   },
 };
+
+export const WithoutRestore: Story = {
+  render: () => html`
+    <lr-artifact-panel
+      style="max-width:36rem;height:16rem"
+      label="report.md"
+      kind="document"
+      hide-restore
+      active-version-id="v1"
+      .versions=${versions}
+    >
+      <div style="padding:1rem">Browse earlier versions without a built-in Restore action.</div>
+      <pre slot="code">${REPORT_MARKDOWN}</pre>
+    </lr-artifact-panel>
+  `,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`hide-restore` omits the built-in Restore action while keeping version navigation available. Applications remain responsible for authorizing restoration.',
+      },
+    },
+  },
+};

@@ -1864,9 +1864,32 @@ export type LyraMapPointerLeaveEvent = LyraMapEventMap['lr-map-pointer-leave'];
 export type LyraMapPointerMoveEvent = LyraMapEventMap['lr-map-pointer-move'];
 
 /**
+ * `lr-map-projection-change` — dispatched by `<lr-map>`; detail
+ * `LyraMapEventMap['lr-map-projection-change']`.
+ */
+export type LyraMapProjectionChangeEvent = LyraMapEventMap['lr-map-projection-change'];
+
+/**
+ * `lr-map-scene-activate` — dispatched by `<lr-map>`; detail
+ * `LyraMapEventMap['lr-map-scene-activate']`.
+ */
+export type LyraMapSceneActivateEvent = LyraMapEventMap['lr-map-scene-activate'];
+
+/**
+ * `lr-map-scene-state` — dispatched by `<lr-map>`; detail `LyraMapEventMap['lr-map-scene-state']`.
+ */
+export type LyraMapSceneStateEvent = LyraMapEventMap['lr-map-scene-state'];
+
+/**
  * `lr-map-style-load` — dispatched by `<lr-map>`; detail `LyraMapEventMap['lr-map-style-load']`.
  */
 export type LyraMapStyleLoadEvent = LyraMapEventMap['lr-map-style-load'];
+
+/**
+ * `lr-map-terrain-change` — dispatched by `<lr-map>`; detail
+ * `LyraMapEventMap['lr-map-terrain-change']`.
+ */
+export type LyraMapTerrainChangeEvent = LyraMapEventMap['lr-map-terrain-change'];
 
 /**
  * `lr-map-view-change` — dispatched by `<lr-map>`; detail `LyraMapEventMap['lr-map-view-change']`.
@@ -2100,6 +2123,15 @@ export type LyraNodeLeaveEvent = LyraGraphEventMap['lr-node-leave'];
  * `LyraFlowCanvasEventMap['lr-node-move']`.
  */
 export type LyraNodeMoveEvent = LyraFlowCanvasEventMap['lr-node-move'];
+
+/**
+ * `lr-node-render-error` — dispatched by 2 components: `<lr-graph>`,
+ * `<lr-knowledge-graph-explorer>`; detail union of 2, e.g.
+ * `LyraGraphEventMap['lr-node-render-error']`.
+ */
+export type LyraNodeRenderErrorEvent =
+  | LyraGraphEventMap['lr-node-render-error']
+  | LyraKnowledgeGraphExplorerEventMap['lr-node-render-error'];
 
 /**
  * `lr-node-select` — dispatched by 2 components: `<lr-tree-item>`, `<lr-tree>`; detail union of 2,
@@ -3756,7 +3788,11 @@ export interface LyraGlobalEventMap {
   'lr-map-pick': LyraMapPickEvent;
   'lr-map-pointer-leave': LyraMapPointerLeaveEvent;
   'lr-map-pointer-move': LyraMapPointerMoveEvent;
+  'lr-map-projection-change': LyraMapProjectionChangeEvent;
+  'lr-map-scene-activate': LyraMapSceneActivateEvent;
+  'lr-map-scene-state': LyraMapSceneStateEvent;
   'lr-map-style-load': LyraMapStyleLoadEvent;
+  'lr-map-terrain-change': LyraMapTerrainChangeEvent;
   'lr-map-view-change': LyraMapViewChangeEvent;
   'lr-matrix-geometry-change': LyraMatrixGeometryChangeEvent;
   'lr-matrix-range-select': LyraMatrixRangeSelectEvent;
@@ -3794,6 +3830,7 @@ export interface LyraGlobalEventMap {
   'lr-node-expand': LyraNodeExpandEvent;
   'lr-node-leave': LyraNodeLeaveEvent;
   'lr-node-move': LyraNodeMoveEvent;
+  'lr-node-render-error': LyraNodeRenderErrorEvent;
   'lr-node-select': LyraNodeSelectEvent;
   'lr-node-toggle': LyraNodeToggleEvent;
   'lr-open': LyraOpenEvent;

@@ -164,7 +164,11 @@ export function validateSchema(input: unknown, schema: LyraGenSchema, overrides?
   const admitted = snapshotJson(input, limits);
   if (!admitted.ok) return admitted;
   const schemaResult = snapshotJson(schema, limits);
-  if (!schemaResult.ok) return { ok: false, diagnostics: [diagnostic('schema.invalid', '', 'Schema must be bounded plain JSON.')] };
+  if (!schemaResult.ok) {
+    return schemaResult.diagnostics.every(item => item.code.startsWith('limit.'))
+      ? schemaResult
+      : { ok: false, diagnostics: [diagnostic('schema.invalid', '', 'Schema must be bounded plain JSON.')] };
+  }
   const diagnostics: LyraGenDiagnostic[] = [];
   const report = (code: string, path: string, message: string) => {
     if (diagnostics.length < limits.maxDiagnostics) diagnostics.push(diagnostic(code, path, message));

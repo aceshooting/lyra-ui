@@ -18,7 +18,10 @@
 
 `engine: Engine3dPreference = 'builtin'` forwards the renderer preference to the composed graph.
 `engine="webgl"` requests its companion for the 3D view. `lr-engine-fallback` bubbles unchanged
-with `{ from, to, reason }`.
+with `{ from, to, reason }`. `nodeRenderer: LyraGraphNodeRenderer | null | undefined = undefined`
+and `glow: boolean = false` forward the same custom-body and static-halo preferences to the graph;
+`nodeRenderer` is property-only and `glow` reflects its boolean attribute. The graph
+`lr-node-render-error` event bubbles through with its sanitized reason and optional nodeId.
 
 Orchestration-level knowledge-graph surface: the `lr-graph` canvas plus entity search, type filters,
 neighborhood expansion, pinned nodes, path finding between pins, node selection, and a details
@@ -241,6 +244,8 @@ filtered-out id). None change `selectedNodeId` or filters.
   `lr-relation-activate` (`detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`, from `lr-path-strip`).
 - `lr-engine-fallback` (`detail: { from, to, reason }`) — forwarded from the graph when `engine="webgl"`
   steps down the fallback chain.
+- `lr-node-render-error` (`detail: LyraGraphNodeRenderErrorDetail { reason, nodeId? }`) — forwarded from the graph when a
+  custom `nodeRenderer` mesh batch is refused; the sanitized reason is `'callback'`, `'invalid'` or `'budget'`.
 
 **Slots:** `details` — overrides the details popover's default content (an `lr-entity-card` with a
 nested `lr-neighbor-list` and a pin toggle) entirely, including the two additive slots below.

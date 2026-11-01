@@ -123,3 +123,61 @@ describe('map control option projection', () => {
     expect(normalizeMapControlOptions({ attribution: { compact: false } }).controls.get('attribution')!.options).to.deep.equal({ compact: false });
   });
 });
+
+describe('scene control option projection', () => {
+  const entry = (input: unknown, kind: string) => [...normalizeMapControlOptions(input).controls.values()].find(value => String(value.kind) === kind);
+
+  it('admits opt-in globe and explicit terrain targets without scene state options', () => {
+    const input = { globe: true, terrain: { source: 'dem', projection: 'globe', enabled: true } };
+    expect(entry(input, 'globe')).to.include({ kind: 'globe', position: 'top-right', order: 0, unit: undefined });
+    expect(entry(input, 'globe')?.options).to.deep.equal({});
+    expect(entry(input, 'terrain')).to.include({ kind: 'terrain', position: 'top-right', order: 0, unit: undefined });
+    expect(entry(input, 'terrain')?.options).to.deep.equal({ source: 'dem', exaggeration: 1 });
+    expect(normalizeMapControlOptions({ globe: false, terrain: false }).controls.size).to.equal(0);
+    expect(normalizeMapControlOptions({ globe: undefined, terrain: undefined }).diagnostics).to.deep.equal([]);
+  });
+
+  it('requires an explicit terrain source and rejects runtime true without disturbing other controls', () => {
+    for (const terrain of [true, null, {}, { source: '' }, { source: ' ' }, { source: 1 }, { source: 'x'.repeat(4097) },
+      { source: 'dem', exaggeration: -1 }, { source: 'dem', exaggeration: NaN }, { source: 'dem', exaggeration: Infinity },
+      { source: 'dem', exaggeration: '1' }, { source: 'dem', position: 'middle' }, { source: 'dem', order: Infinity }]) {
+      const result = normalizeMapControlOptions({ navigation: true, terrain });
+      expect(entry({ terrain }, 'terrain')).to.equal(undefined);
+      expect(result.controls.has('navigation')).to.equal(true);
+      expect(result.diagnostics).to.deep.equal([{ kind: 'terrain', code: 'invalid-options' }]);
+    }
+  });
+
+  it('snapshots terrain without an invented scale maximum and keeps position/order out of adapter options', () => {
+    for (const exaggeration of [0, 11, Number.MAX_VALUE]) {
+      const terrain = { source: 'dem', exaggeration, position: 'bottom-left', order: -2 };
+      const result = entry({ terrain }, 'terrain');
+      terrain.source = 'changed'; terrain.exaggeration = -1;
+      expect(result?.options).to.deep.equal({ source: 'dem', exaggeration });
+      expect(result?.position).to.equal('bottom-left'); expect(result?.order).to.equal(-2);
+      expect(Object.isFrozen(result) && Object.isFrozen(result?.options)).to.equal(true);
+    }
+  });
+
+  it('rejects hostile scene-control descriptors without invoking accessors', () => {
+    let reads = 0;
+    const getter = (key: string) => Object.defineProperty(key === 'source' ? {} : { source: 'dem' }, key, { get() { reads++; return 'dem'; } });
+    for (const terrain of [getter('source'), getter('exaggeration'), getter('position'), getter('order'), Object.create({ source: 'dem' })]) {
+      expect(normalizeMapControlOptions({ terrain }).diagnostics).to.deep.equal([{ kind: 'terrain', code: 'invalid-options' }]);
+    }
+    const globe = Object.defineProperty({}, 'position', { get() { reads++; return 'top-left'; } });
+    expect(normalizeMapControlOptions({ globe }).diagnostics).to.deep.equal([{ kind: 'globe', code: 'invalid-options' }]);
+    const input = Object.defineProperty({}, 'terrain', { get() { reads++; return { source: 'dem' }; } });
+    expect(normalizeMapControlOptions(input).diagnostics).to.deep.equal([{ kind: 'terrain', code: 'invalid-options' }]);
+    expect(reads).to.equal(0);
+  });
+
+  it('normalizes scene control identity and enrolls stable tie priority', () => {
+    const a = entry({ terrain: { source: 'dem', exaggeration: 2, position: 'bottom-left', order: 3 } }, 'terrain');
+    const b = entry({ terrain: { order: 3, position: 'bottom-left', exaggeration: 2, source: 'dem' } }, 'terrain');
+    const c = entry({ terrain: { source: 'other', exaggeration: 2, position: 'bottom-left', order: 3 } }, 'terrain');
+    expect(a?.key).to.equal(b?.key); expect(a?.key).not.to.equal(c?.key);
+    const controls = normalizeMapControlOptions({ attribution: true, terrain: { source: 'dem' }, globe: true, geolocate: true, scale: true, navigation: true }).controls;
+    expect([...controls.keys()]).to.deep.equal(['navigation', 'scale', 'geolocate', 'globe', 'terrain', 'attribution']);
+  });
+});

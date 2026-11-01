@@ -1,9 +1,10 @@
+import type { LyraGraphNodeMesh } from './graph-node-renderer.js';
 import { createEngine3dLoader, type Engine3dHost, type Engine3dInstance } from '../../../internal/engine-3d-loader.js';
 import { engine3dFailureReason, webgl2Available, type Engine3dFallbackReason } from '../../../internal/engine-3d.js';
 import { tag } from '../../../internal/prefix.js';
 
 const loader = createEngine3dLoader({ entry: 'graph', tag: tag('graph'), load: () => import('@aceshooting/lyra-3d/graph') });
-export interface GraphComponentEngine extends Engine3dInstance { setAppearance(appearance: unknown): void; }
+export interface GraphComponentEngine extends Engine3dInstance { setAppearance(appearance: unknown): void; setNodeMeshes?(meshes: readonly (LyraGraphNodeMesh | null)[] | undefined): void; setGlow?(enabled: boolean): Promise<void>; }
 export interface GraphEngineRequest {
   readonly preference: unknown;
   /** True only for an eligible local-data 3D view. Source authority remains with the component. */

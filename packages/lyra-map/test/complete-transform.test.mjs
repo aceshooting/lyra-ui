@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { basePlugin } from '../scripts/base-transform.mjs';
 import { changed, completePlugin, src, virtual } from '../scripts/complete-transform.mjs';
-import { CHANGED_SOURCE_FILES, upstreamModules } from './pinned-upstream.mjs';
+import { COMPLETE_TRANSFORM_SOURCE_FILES, upstreamModules } from './pinned-upstream.mjs';
 
 const read = (relative) => readFile(join(src, relative), 'utf8');
 const strip = (code) => stripTypeScriptTypes(code, { mode: 'transform' });
@@ -34,8 +34,8 @@ function drive() {
 
 test('rewrites exactly the reviewed set of upstream modules and leaves the rest untouched', async () => {
   const rewritten = await drive();
-  assert.deepEqual([...rewritten.keys()].sort(), CHANGED_SOURCE_FILES);
-  assert.deepEqual([...changed.keys()].sort(), CHANGED_SOURCE_FILES);
+  assert.deepEqual([...rewritten.keys()].sort(), COMPLETE_TRANSFORM_SOURCE_FILES);
+  assert.deepEqual([...changed.keys()].sort(), COMPLETE_TRANSFORM_SOURCE_FILES);
   for (const [relative, { original, code }] of rewritten) {
     assert.deepEqual(changed.get(relative), { original: Buffer.byteLength(original), transformed: Buffer.byteLength(code) });
   }

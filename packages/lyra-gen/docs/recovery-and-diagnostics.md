@@ -48,6 +48,21 @@ their boundary. The helper never renames identities, selects a nearby enum, fini
 closes markup tags, or broadens repair authority. Content repair remains separately scoped through
 `createRepairRequest()` and `LyraGenRepairSession`.
 
+## Resource-limit diagnostics
+
+`validateSchema(input, schema, limits?)` applies JSON admission limits independently to the input
+and the schema. A resource-limit failure in either snapshot preserves its `limit.*` code, JSON
+Pointer, message and error severity. For example, a schema with more JSON values than `maxNodes`
+returns `limit.nodes`; its path identifies the value in the schema that exceeded the limit.
+Unsafe or non-JSON schemas and unsupported or malformed schema contracts return `schema.invalid`.
+
+`maxNodes` includes containers and primitive values in JSON snapshots, and separately bounds
+schema validation work. It is not the number of rendered components. See the
+[limit defaults and counting rules](compatibility.md#defaults-and-ownership) before choosing a
+host override. Exhausting validation work reports `limit.validation`. All these budget failures
+reject the whole view, including with `recovery: 'isolate'`; they do not authorize repair or
+weaken the hard ceilings.
+
 ## Local failure categories
 
 Set the renderer's optional `.failureCategories` callback to observe coarse local failure categories:

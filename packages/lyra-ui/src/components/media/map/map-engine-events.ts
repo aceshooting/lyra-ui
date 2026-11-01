@@ -6,6 +6,10 @@ export interface MapEngineEventMap {
   readonly dataloading: unknown;
   readonly error: { readonly error?: unknown } | undefined;
   readonly movestart: Readonly<Record<string, unknown>> | undefined;
+  readonly dragstart: Readonly<Record<string, unknown>> | undefined;
+  readonly zoomstart: Readonly<Record<string, unknown>> | undefined;
+  readonly rotatestart: Readonly<Record<string, unknown>> | undefined;
+  readonly pitchstart: Readonly<Record<string, unknown>> | undefined;
   readonly move: unknown;
   readonly moveend: Readonly<Record<string, unknown>> | undefined;
   readonly boxzoomstart: Readonly<Record<string, unknown>> | undefined;

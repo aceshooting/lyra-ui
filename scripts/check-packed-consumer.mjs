@@ -162,10 +162,10 @@ const rootHelperRegisteredTags = [];
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/7859878f724ef4237ee93a5414fa6b54f204313a/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'The shared visually hidden form-control label option and the native map control content floor bring the full non-optional graph to 5,649,199 raw bytes across 64 files. Only its ceiling advances to the next 64-byte boundary, with 17 bytes of headroom. The explicit Oniguruma canary retains its separate exact binary requirement.',
-  reviewedCoreMeasurementBytes: 5_649_199,
+  $comment: 'Map scene ownership, camera sessions, accessible scene controls and custom graph node bodies bring the full non-optional graph to 5,651,504 raw bytes across 64 files. Only its ceiling advances to the next 64-byte boundary, with 16 bytes of headroom. The explicit Oniguruma canary retains its separate exact binary requirement.',
+  reviewedCoreMeasurementBytes: 5_651_504,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 17,
+  selectedRegressionHeadroomBytes: 16,
 };
 
 /**
@@ -324,9 +324,9 @@ const bundleEntries = {
   },
   graph: {
     fixture: 'optional',
-    // The optional WebGL engine adapter, typed columns and builtin 3D renderer measure 429.0 KiB
-    // raw (at most 439,347 bytes); the next 64-byte boundary.
-    maxRawBytes: 439_360,
+    // The optional WebGL engine adapter, typed columns, builtin 3D renderer, curved relationships,
+    // custom node bodies and glow measure 443.3 KiB raw (453,917 bytes); the next 64-byte boundary.
+    maxRawBytes: 453_952,
   },
 };
 
