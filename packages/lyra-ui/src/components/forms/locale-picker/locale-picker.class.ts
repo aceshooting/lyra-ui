@@ -64,7 +64,8 @@ import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_retry, L
 installFormControlLabelSupport();
 
 /** One offered locale row. `label` overrides the derived `localeNativeName(tag)` endonym when
- *  given -- e.g. offering a locale before its strings are registered ("Français (bientôt)").
+ *  given -- e.g. offering a locale before its strings are registered ("Français (bientôt)"), or
+ *  supplying names the host already has so the row never resolves one through `Intl`.
  *  `country` overrides the row's derived flag country when given -- e.g. showing Lebanon's flag
  *  for an `'ar'` row instead of the library's default Saudi Arabia mapping. */
 export interface LyraLocaleEntry {
@@ -186,6 +187,13 @@ export interface LyraLocalePickerEventMap {
  * translation pack) appears without a manual refresh. Passing an explicit `locales` array
  * overrides the auto-discovered list entirely: a curated subset, a custom order, custom labels,
  * or a locale the host wants to offer before its strings are registered.
+ *
+ * Derived endonyms resolve on demand, never all at once while closed: the closed trigger resolves
+ * only the locale it shows, and every other row resolves when the listbox opens, when closed
+ * typeahead or the search filter needs it, then stays cached until `locales` or the registry
+ * changes. A row with a non-blank `label` never resolves an endonym for display, so a catalog of
+ * labelled `{ tag, label }` rows renders its closed trigger without constructing any
+ * `Intl.DisplayNames`. Row order is always the catalog's own order; names never sort it.
  *
  * `value` is the *committed* selection (form-submitted, drives `lr-change`) and starts `''`.
  * While unset, the trigger displays `effectiveLocale` (the same ancestor-`lang`/registry
