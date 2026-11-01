@@ -2833,7 +2833,7 @@
     "@lit-labs/ssr-client": "^1.1.8",
     "@types/geojson": "^7946.0.16",
     "lit": "^3.3.3",
-    "tslib": "^2.8.1"
+    "tslib": "^2.9.1"
   },
   "peerDependencies": {
     "@aceshooting/lyra-3d": "workspace:^1.0.0",
@@ -3021,11 +3021,11 @@
     "marked": "^18.1.2",
     "oxc-parser": "^0.156.0",
     "papaparse": "^5.7.0",
-    "pdfjs-dist": "^6.4.299",
+    "pdfjs-dist": "^6.5.438",
     "pixelmatch": "^8.0.0",
     "playwright": "^1.64.1",
     "pngjs": "^7.0.0",
-    "postal-mime": "^4.1.4",
+    "postal-mime": "^4.2.0",
     "qrcode": "^1.5.4",
     "react": "^19.3.1",
     "shiki": "^4.5.0",

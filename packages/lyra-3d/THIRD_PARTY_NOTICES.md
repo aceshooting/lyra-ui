@@ -5,7 +5,7 @@ this package declares as a regular dependency and imports at runtime; a package 
 it beside this package with its own license file. Lyra 3D's published modules contain no three.js
 source. The three.js license is reproduced here for applications that bundle both.
 
-## three ^0.186.1
+## three ^0.187.0
 
 License: MIT
 
