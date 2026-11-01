@@ -458,8 +458,9 @@ function resume(cell: JobCell): void {
         if (!checkWork(cell, work)) return;
         owner.beginGroups('paint'); continue;
       }
-      if (phase === 'painted') { complete(cell, work); return; }
-      throw new RangeError('Invalid label preparation phase.');
+      // finished and cancelled are set only on paths that leave this loop, so painted is the one phase left.
+      if (phase !== 'painted') throw new RangeError('Invalid label preparation phase.');
+      complete(cell, work); return;
     }
     if (cell.work === work && checkWork(cell, work)) queue(cell);
   } catch (error) {

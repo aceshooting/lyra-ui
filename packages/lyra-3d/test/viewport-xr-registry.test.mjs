@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { PerspectiveCamera, Scene } from 'three';
-import { captureViewportXrPreparation, consumeViewportXrPreparation, invalidateViewportXr,
+import { captureViewportXrPreparation, consumeViewportXrPreparation, getViewportXrLifetimeStamp, invalidateViewportXr,
   isViewportXrPreparationCurrent, registerViewportXr, releaseViewportXrPreparation,
   unregisterViewportXr } from '../dist/core/viewport-xr.js';
 import { createViewportResources } from '../dist/core/viewport-resources.js';
@@ -150,4 +150,41 @@ test('independent viewport identities preserve their own original epochs and res
   const fresh = captureViewportXrPreparation(a.viewport, false);
   assert.equal(consumeViewportXrPreparation(fresh, false), a.resources);
   assert.deepEqual(a.effects, []); assert.deepEqual(b.effects, []);
+});
+
+/** Registers through the real entry while observing the private registration record it stores. */
+function exposedRegistration(f) {
+  const set = WeakMap.prototype.set;
+  let record;
+  WeakMap.prototype.set = function (key, value) {
+    if (key === f.viewport && value?.resources === f.resources) record = value;
+    return set.call(this, key, value);
+  };
+  try { registerViewportXr(f.viewport, f.resources, f.scope); } finally { WeakMap.prototype.set = set; }
+  assert.ok(record, 'registration record observed');
+  return record;
+}
+
+test('an exhausted lifetime epoch closes the viewport instead of reusing a stale epoch', () => {
+  const f = fixture(false), registration = exposedRegistration(f);
+  const prepared = captureViewportXrPreparation(f.viewport, false);
+  registration.epoch = Number.MAX_SAFE_INTEGER;
+  invalidateViewportXr(f.viewport);
+  assert.deepEqual(getViewportXrLifetimeStamp(f.viewport), { epoch: Number.MAX_SAFE_INTEGER, phase: 'closed' });
+  assert.equal(isViewportXrPreparationCurrent(prepared), false);
+  assert.throws(() => captureViewportXrPreparation(f.viewport, false), { code: 'aborted' });
+  assert.equal(f.resources.transferred, false); assert.deepEqual(f.effects, []);
+});
+
+test('consuming a preparation at an exhausted epoch aborts without transferring resources', () => {
+  const f = fixture(false), registration = exposedRegistration(f);
+  const prepared = captureViewportXrPreparation(f.viewport, false);
+  registration.epoch = Number.MAX_SAFE_INTEGER;
+  // The stale preparation is refused by its epoch; a fresh one meets the exhausted counter itself.
+  assert.throws(() => consumeViewportXrPreparation(prepared, false), { code: 'aborted' });
+  const fresh = captureViewportXrPreparation(f.viewport, false);
+  assert.throws(() => consumeViewportXrPreparation(fresh, false), { code: 'aborted' });
+  assert.equal(f.resources.transferred, false);
+  assert.equal(getViewportXrLifetimeStamp(f.viewport).phase, 'closed');
+  assert.deepEqual(f.effects, []);
 });

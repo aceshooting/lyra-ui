@@ -134,3 +134,8 @@ test('spatial node and edge picks use matching quantized depth at shared endpoin
   assert.ok(edges.pick.material.fragmentShader.includes('depthEnds.x+(depthEnds.y-depthEnds.x)*'));
   nodes.dispose(); edges.dispose();
 });
+
+test('a failure at any construction allocation propagates and releases every acquired node resource', async () => {
+  const { sweepConstructionFailures } = await import('./graph-construction-failures.mjs');
+  assert.ok(sweepConstructionFailures(() => make({ sizes: new Float32Array([2, 4, 6]) }), nodes => nodes.dispose()) > 1);
+});

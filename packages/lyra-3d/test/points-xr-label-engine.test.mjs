@@ -388,3 +388,129 @@ test('recovery waits for a successful nonzero default-target draw and disposal p
   assert.equal(r.container.children.length, 0); assert.equal(r.engine.positionOf(0), null); assertAtlasRetired(f);
   assert.deepEqual(f.queues(), { inline: 0, native: 0 });
 });
+
+/** Starts the private label job directly on the fixture document with timer scheduling and recorded reports. */
+// Axis-only data: point-label quads would also need the inline point batch, which the engine owns.
+const axisLabels = (count = 1) => admitPointsData({ positions: new Float32Array(), axes: [{ axis: 'x', min: 0, max: 1, label: 'axis',
+  ticks: Array.from({ length: count }, (_, index) => ({ value: index / count, label: `tick-${String(index).padStart(3, '0')}` })) }] });
+async function directJob(f, overrides = {}) {
+  const { preparePointsXrLabels } = await import('../dist/points/xr-labels.js');
+  const { createPointsXrAllocationAccount } = await import('../dist/points/xr-label-layout.js');
+  const r = f.record, reports = [], account = overrides.account ?? createPointsXrAllocationAccount();
+  const job = preparePointsXrLabels({ identity: Object.freeze({}), data: axisLabels(), style: r.viewport.style, state: state(),
+    pointResources: undefined, ownerDocument: f.ownerDocument, container: r.container, maxTextureSize: 4096, account,
+    validate: () => null, schedule(task) { const timer = setTimeout(task, 0); return () => { clearTimeout(timer); }; },
+    report(error) { reports.push(error); }, ...overrides });
+  void job.done.catch(() => {});
+  return { job, reports, account };
+}
+const zeroInk = () => ({ width: 0, actualBoundingBoxLeft: 0, actualBoundingBoxRight: 0, actualBoundingBoxAscent: 0, actualBoundingBoxDescent: 0 });
+
+test('zero-ink labels reset the scratch atlas and move no retained quad or atlas resources', { timeout: 15_000 }, async t => {
+  const f = await createLabelFixture(t); f.text.metrics = zeroInk;
+  const { job, reports, account } = await directJob(f), prepared = await job.done;
+  assert.equal(prepared.layout.inkRows, 0); assert.equal(f.text.draws.length, 0);
+  assert.equal(prepared.resources.geometries, undefined); assert.equal(prepared.resources.texture, undefined);
+  assert.equal(prepared.resources.canvas, undefined); assert.ok(prepared.profile);
+  assertAtlasRetired(f); assert.ok(account.usedBytes > 0, 'the numeric layout stays charged until moved');
+  assert.equal(prepared.validate(), null);
+  prepared.move();
+  assert.equal(account.usedBytes, 0, 'no unretained label buffer is transferred'); assert.equal(account.transferredBytes, 0);
+  assert.equal(prepared.resources, undefined); assert.throws(() => prepared.move(), { name: 'InvalidStateError' });
+  assert.deepEqual(reports, []); await f.cleanup();
+});
+
+test('a failing zero-ink atlas reset fails the job with the first native failure and still retires the job', { timeout: 15_000 }, async t => {
+  for (const failing of [['width'], ['height'], ['width', 'height']]) {
+    const f = await createLabelFixture(t); f.text.metrics = zeroInk;
+    const failures = Object.fromEntries(failing.map(name => [name, new Error(`Controlled ${name} reset failure`)]));
+    f.text.onMeasure = ({ canvas }) => {
+      for (const name of failing) {
+        const { get, set } = Object.getOwnPropertyDescriptor(canvas, name);
+        Object.defineProperty(canvas, name, { configurable: true, get, set(value) { if (value === 1) throw failures[name]; set(value); } });
+      }
+      f.text.onMeasure = undefined;
+    };
+    const { job, reports, account } = await directJob(f);
+    await assert.rejects(job.done, { code: 'failed' });
+    assert.equal(reports[0], failures[failing[0]], 'the first reset failure is reported');
+    assert.equal(account.usedBytes, 0); await f.cleanup();
+  }
+});
+
+test('a throwing validator after typography capture reports its own error and fails before readiness', { timeout: 15_000 }, async t => {
+  const f = await createLabelFixture(t), failure = new Error('Controlled late validation failure');
+  let calls = 0;
+  const { job, reports, account } = await directJob(f, { validate() { if (++calls === 2) throw failure; return null; } });
+  await assert.rejects(job.done, { code: 'failed' });
+  assert.equal(calls, 2); assert.deepEqual(reports, [failure], 'the validation wrapper is never reported');
+  assert.equal(account.usedBytes, 0); assertAtlasRetired(f); await f.cleanup();
+});
+
+test('ready label validation, retirement and finished-work cancellation retire every buffer once', { timeout: 15_000 }, async t => {
+  const f = await createLabelFixture(t), failure = new Error('Controlled ready validation failure');
+  let throwing = false;
+  const ready = await directJob(f, { validate() { if (throwing) throw failure; return null; } });
+  const prepared = await ready.job.done;
+  throwing = true;
+  assert.equal(prepared.validate(), 'failed'); assert.deepEqual(ready.reports, [failure]);
+  assert.equal(prepared.resources, undefined); assert.equal(prepared.validate(), 'aborted'); assert.equal(ready.account.usedBytes, 0);
+
+  const disposal = new Error('Controlled label geometry disposal failure');
+  const retiring = await directJob(f), owned = await retiring.job.done;
+  owned.resources.geometries[0].addEventListener('dispose', () => { throw disposal; });
+  assert.throws(() => owned.dispose(), error => error === disposal);
+  assert.equal(retiring.account.usedBytes, 0, 'buffer release continues after a disposal failure');
+  assert.equal(owned.resources, undefined); owned.dispose();
+
+  // Count the validations of a complete job, then refuse only the last one, which follows the atlas handoff.
+  let total = 0;
+  const counted = await directJob(f, { validate() { total++; return null; } });
+  (await counted.job.done).dispose();
+  let seen = 0;
+  const late = await directJob(f, { validate() { return ++seen === total ? 'aborted' : null; } });
+  await assert.rejects(late.job.done, { code: 'aborted' });
+  assert.equal(seen, total); assert.equal(late.account.usedBytes, 0); assert.deepEqual(late.reports, []);
+  await f.cleanup();
+});
+
+test('a rejected targeted font load refuses the scene and later loads cannot resume the job', { timeout: 15_000 }, async t => {
+  const f = await createLabelFixture(t, { fonts: 'pending' });
+  const { job, account } = await directJob(f), failure = assert.rejects(job.done, { code: 'unsupported-scene' });
+  await f.until(() => f.fonts.pending.length > 0);
+  f.fonts.rejectAll(); await failure; await f.settle();
+  assert.equal(f.text.measures.length, 0); assert.equal(account.usedBytes, 0); await f.cleanup();
+});
+
+test('many distinct runs yield after the native-call allowance and finish across scheduled tasks', { timeout: 15_000 }, async t => {
+  const f = await createLabelFixture(t), data = axisLabels(39);
+  let tasks = 0;
+  const { job, reports } = await directJob(f, { data, schedule(task) { tasks++; const timer = setTimeout(task, 0); return () => { clearTimeout(timer); }; } });
+  const prepared = await job.done;
+  assert.equal(f.text.measures.length, 40); assert.equal(f.text.draws.length, 40);
+  assert.ok(tasks >= 1 + Math.ceil(80 / 16), `bounded slices need several tasks, saw ${tasks}`);
+  assert.deepEqual(reports, []); prepared.dispose(); await f.cleanup();
+});
+
+test('a non-object preparation identity fails at start with a reported programming error', { timeout: 15_000 }, async t => {
+  const f = await createLabelFixture(t);
+  const { job, reports, account } = await directJob(f, { identity: null });
+  await assert.rejects(job.done, { code: 'failed' });
+  assert.equal(reports.length, 1); assert.ok(reports[0] instanceof RangeError);
+  assert.equal(account.usedBytes, 0); assert.equal(f.fonts.calls.length, 0); assertAtlasRetired(f); await f.cleanup();
+});
+
+test('a semantic change queued before label completion discards the finished labels instead of presenting them', { timeout: 15_000 }, async t => {
+  const f = await createLabelFixture(t), r = f.record, observations = f.observeDisposals();
+  // The last paint draw runs in the task that resolves the job; the queued change runs before its continuation.
+  f.text.onDraw = () => {
+    f.text.onDraw = undefined;
+    queueMicrotask(() => { r.engine.setData({ positions: new Float32Array([4, 5, 6]), labels: ['newest'] }, 1); });
+  };
+  const operation = preparation(r), failure = rejected(operation.promise, 'unsupported-scene');
+  await failure;
+  assert.equal(f.attempts.length, 0); assert.equal(r.viewport.disposed, false);
+  assert.deepEqual(r.engine.positionOf(0), { x: 4, y: 5, z: 6 });
+  for (const [texture, count] of observations.texture) assert.equal(count, 1, `atlas texture ${texture.uuid} retired once`);
+  assertAtlasRetired(f); await f.cleanup();
+});

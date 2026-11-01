@@ -437,29 +437,28 @@ export function createOwnedGlEpoch(input: {
       if (currentProgram !== location.program || !current.linked || current.generation !== location.generation) return refuse();
       return call(method, upload);
     }
-    if (method === 'drawElements') {
-      const entry = output();
-      if (args.length !== 4 || !enumIs(args[0], ['TRIANGLES']) || !currentProgram || !vertexArray) return refuse();
-      const program = owned(currentProgram.native, 'program'), state = owned(vertexArray.native, 'vao').vao!;
-      if (!program.program!.linked || !state.confirmed || !state.element) return refuse();
-      const data = confirmedBuffer(owned(state.element.native, 'buffer'));
-      const count = integer(args[1]), offset = integer(args[3]);
-      const size = enumIs(args[2], ['UNSIGNED_INT']) ? 4 : enumIs(args[2], ['UNSIGNED_SHORT']) ? 2 : enumIs(args[2], ['UNSIGNED_BYTE']) ? 1 : refuse();
-      if (offset % size || offset > data.size || count > Math.floor((data.size - offset) / size)) return refuse();
-      for (const info of reflect(program, false)) {
-        const attribute = state.attributes.get(info.location!);
-        if (!attribute?.enabled || !attribute.buffer || attribute.size === undefined || attribute.offset === undefined) return refuse();
-        const storage = confirmedBuffer(owned(attribute.buffer.native, 'buffer'));
-        if (attribute.offset > storage.size || attribute.size * 4 > storage.size - attribute.offset) return refuse();
-      }
-      const matches = (actual: readonly number[], expected: readonly number[]) => actual.length === expected.length && actual.every((value, index) => value === expected[index]);
-      if (drawBinding !== entry.target.draw || readBinding !== entry.target.read || !matches(viewport, entry.target.viewport) ||
-          !matches(scissor, entry.target.scissor) || scissorTest !== entry.target.scissorTest ||
-          !matches(depthRange, entry.target.depthRange) || depthFunction !== entry.target.depthFunc ||
-          !matches(drawSelections, entry.target.drawBuffers) || readSelection !== entry.target.readBuffer) return refuse();
-      return call(method, args);
+    // Every other drawMethods member returns from a branch above; refuse any future addition without one.
+    if (method !== 'drawElements') return refuse();
+    const entry = output();
+    if (args.length !== 4 || !enumIs(args[0], ['TRIANGLES']) || !currentProgram || !vertexArray) return refuse();
+    const program = owned(currentProgram.native, 'program'), state = owned(vertexArray.native, 'vao').vao!;
+    if (!program.program!.linked || !state.confirmed || !state.element) return refuse();
+    const data = confirmedBuffer(owned(state.element.native, 'buffer'));
+    const count = integer(args[1]), offset = integer(args[3]);
+    const size = enumIs(args[2], ['UNSIGNED_INT']) ? 4 : enumIs(args[2], ['UNSIGNED_SHORT']) ? 2 : enumIs(args[2], ['UNSIGNED_BYTE']) ? 1 : refuse();
+    if (offset % size || offset > data.size || count > Math.floor((data.size - offset) / size)) return refuse();
+    for (const info of reflect(program, false)) {
+      const attribute = state.attributes.get(info.location!);
+      if (!attribute?.enabled || !attribute.buffer || attribute.size === undefined || attribute.offset === undefined) return refuse();
+      const storage = confirmedBuffer(owned(attribute.buffer.native, 'buffer'));
+      if (attribute.offset > storage.size || attribute.size * 4 > storage.size - attribute.offset) return refuse();
     }
-    return refuse();
+    const matches = (actual: readonly number[], expected: readonly number[]) => actual.length === expected.length && actual.every((value, index) => value === expected[index]);
+    if (drawBinding !== entry.target.draw || readBinding !== entry.target.read || !matches(viewport, entry.target.viewport) ||
+        !matches(scissor, entry.target.scissor) || scissorTest !== entry.target.scissorTest ||
+        !matches(depthRange, entry.target.depthRange) || depthFunction !== entry.target.depthFunc ||
+        !matches(drawSelections, entry.target.drawBuffers) || readSelection !== entry.target.readBuffer) return refuse();
+    return call(method, args);
   };
   const invoke = (method: string, args: unknown[]): unknown => {
     if (callbackDepth) return refuse();

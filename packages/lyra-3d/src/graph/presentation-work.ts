@@ -767,7 +767,7 @@ interface PresentationPreparation {
   pending: PresentationChildValue | undefined;
   owners: GraphPresentationOwner[];
   groups: Group[];
-  generator: Generator<PresentationCost | typeof PRESENTATION_TRANSFER, void> | undefined;
+  generator: Generator<PresentationCost, typeof PRESENTATION_TRANSFER> | undefined;
   candidate: GraphPresentationCandidate | undefined;
   consumeNodes: (() => unknown) | undefined;
   consumeEdges: (() => unknown) | undefined;
@@ -846,7 +846,7 @@ export function createGraphPresentationWork(input: GraphPresentationWorkInput, c
     yield PRESENTATION_FIXED;
     return value;
   }
-  function* prepare(): Generator<PresentationCost | typeof PRESENTATION_TRANSFER, void> {
+  function* prepare(): Generator<PresentationCost, typeof PRESENTATION_TRANSFER> {
     const source = state.input!;
     const prepared = boundary(() => source.prepared), presentation = boundary(() => source.presentation);
     const width = boundary(() => source.width), height = boundary(() => source.height), rawOrbit = boundary(() => source.orbit);
@@ -1101,7 +1101,8 @@ export function createGraphPresentationWork(input: GraphPresentationWorkInput, c
     state.candidate = registerGraphPresentationCandidate(record);
     if (shared) { state.consumeNodes = shared.nodes.batch.takeChanges.bind(shared.nodes.batch); state.consumeEdges = shared.edges.batch.takeChanges.bind(shared.edges.batch); }
     yield PRESENTATION_FIXED;
-    yield PRESENTATION_TRANSFER;
+    // Completion is the transfer: step() drops the generator, so nothing resumes it afterwards.
+    return PRESENTATION_TRANSFER;
   }
   return {
     step(maxOperations) {
@@ -1122,8 +1123,7 @@ export function createGraphPresentationWork(input: GraphPresentationWorkInput, c
             checkpoint(); continue;
           }
           const next = state.generator.next();
-          if (next.done) throw new DOMException('Graph presentation preparation ended unexpectedly', 'InvalidStateError');
-          if (next.value === PRESENTATION_TRANSFER) {
+          if (next.done) {
             const candidate = state.candidate!;
             // Drop the generator and all borrowed admission inputs before the final fence.
             state.generator = undefined; state.input = undefined; state.createCanvas = undefined;

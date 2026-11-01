@@ -5,6 +5,8 @@ import { build } from 'vite';
 import { layoutGraphDagAsync } from '../dist/graph-layout/index.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
+// Resolved through the module hooks, so a coverage run bundles the instrumented build it measures.
+const entry = fileURLToPath(import.meta.resolve('../dist/graph-layout/index.js'));
 
 test('Node signal adapter rejects transparent proxies while accepting native signals', async () => {
   const input = { nodeCount: 0, source: new Uint32Array(), target: new Uint32Array() };
@@ -13,6 +15,18 @@ test('Node signal adapter rejects transparent proxies while accepting native sig
   assert.equal(result.layerCount, 0);
   await assert.rejects(layoutGraphDagAsync(input, undefined, { signal: new Proxy(controller.signal, {}) }),
     error => error.code === 'invalid-options');
+});
+
+test('browser signal adapter defers proxy rejection to the platform getter brand check', async () => {
+  const { isSignalProxy } = await import('../dist/graph-layout/signal-brand-browser.js');
+  const { isSignalProxy: isNodeSignalProxy } = await import('../dist/graph-layout/signal-brand-node.js');
+  const signal = new AbortController().signal;
+  const proxy = new Proxy(signal, {});
+  assert.equal(isNodeSignalProxy(proxy), true);
+  assert.equal(isNodeSignalProxy(signal), false);
+  // Browser AbortSignal getters throw on a proxy receiver, so the adapter never reports one itself.
+  assert.equal(isSignalProxy(proxy), false);
+  assert.equal(isSignalProxy(signal), false);
 });
 
 test('browser bundle selects the browser signal adapter without Node builtins', async () => {
@@ -28,7 +42,7 @@ test('browser bundle selects the browser signal adapter without Node builtins', 
     build: {
       write: false,
       minify: false,
-      lib: { entry: fileURLToPath(new URL('../dist/graph-layout/index.js', import.meta.url)), formats: ['es'] },
+      lib: { entry, formats: ['es'] },
       rolldownOptions: { onwarn(warning) { throw new Error(`Unexpected bundle warning: ${warning.message}`); } },
     },
   });

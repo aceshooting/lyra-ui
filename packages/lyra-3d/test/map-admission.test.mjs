@@ -54,3 +54,15 @@ test('descriptor accessors are rejected without evaluating getters', () => {
   assert.throws(() => snapshotSceneModels([nestedBytes]));
   assert.equal(reads, 0);
 });
+
+test('interaction and label flags default, keep explicit booleans and reject non-boolean values', () => {
+  const [defaults] = snapshotSceneModels([model()]);
+  assert.equal(defaults.interactive, true);
+  assert.equal(defaults.showLabel, false);
+  const [explicit] = snapshotSceneModels([{ ...model(), interactive: false, showLabel: true }]);
+  assert.equal(explicit.interactive, false);
+  assert.equal(explicit.showLabel, true);
+  for (const change of [{ interactive: 'false' }, { showLabel: 1 }, { interactive: null }]) {
+    assert.throws(() => snapshotSceneModels([{ ...model(), ...change }]));
+  }
+});

@@ -521,6 +521,47 @@ test('palette descriptor and content traps fence cancellation before another inp
   }
 });
 
+test('an object palette length converts once through ToPrimitive(number) with explicit hint and fallback order', () => {
+  const colors = ['#010203', '#040506', '#070809'];
+  const run = length => {
+    const palette = new Proxy([...colors], { get(target, key, receiver) { return key === 'length' ? length : Reflect.get(target, key, receiver); } });
+    const work = createGraphPresentationSnapshotWork(input({ style: { palette } }));
+    try { const result = finish(work, 1); return { visited: result.totals.visitedPaletteEntries, palette: result.value.style.palette.length }; }
+    finally { work.dispose(); }
+  };
+  const calls = [];
+  assert.deepEqual(run({ [Symbol.toPrimitive](hint) { calls.push(['toPrimitive', hint, this === undefined]); return '2'; },
+    valueOf() { calls.push(['valueOf']); return 3; } }), { visited: 2, palette: 2 });
+  assert.deepEqual(calls, [['toPrimitive', 'number', false]]); calls.length = 0;
+  // A null exotic falls back to ordinary conversion: valueOf first, then toString when valueOf yields an object.
+  assert.deepEqual(run({ [Symbol.toPrimitive]: null, valueOf() { calls.push('valueOf'); return {}; }, toString() { calls.push('toString'); return '1.9'; } }),
+    { visited: 1, palette: 1 });
+  assert.deepEqual(calls, ['valueOf', 'toString']); calls.length = 0;
+  assert.deepEqual(run({ valueOf: 7, toString() { calls.push('toString'); return 3; } }), { visited: 3, palette: 3 });
+  assert.deepEqual(calls, ['toString']);
+  // A nonpositive converted length visits no entries; the empty palette then resolves to the defaults.
+  assert.equal(run({ valueOf() { return -4; } }).visited, 0);
+  for (const length of [{ [Symbol.toPrimitive]: 5 }, { [Symbol.toPrimitive]() { return {}; } }, { valueOf() { return {}; }, toString() { return {}; } },
+    Object.create(null), { valueOf() { return Symbol('length'); } }]) {
+    const palette = new Proxy([...colors], { get(target, key, receiver) { return key === 'length' ? length : Reflect.get(target, key, receiver); } });
+    const work = createGraphPresentationSnapshotWork(input({ style: { palette } }));
+    try { assert.throws(() => finish(work, 1), { name: 'TypeError' }); assert.throws(() => work.step(1), invalidState); }
+    finally { work.dispose(); }
+  }
+});
+
+test('a palette length conversion hook observes cancellation fences before and after it runs', () => {
+  for (const hook of ['toPrimitive', 'valueOf']) for (const mode of ['dispose', 'stale']) {
+    let current = true, work, ran = 0;
+    const effect = () => { ran++; if (mode === 'dispose') work.dispose(); else current = false; return 2; };
+    const length = hook === 'toPrimitive' ? { [Symbol.toPrimitive]: effect } : { valueOf: effect };
+    const palette = new Proxy(['#010203', '#040506'], { get(target, key, receiver) { return key === 'length' ? length : Reflect.get(target, key, receiver); } });
+    work = createGraphPresentationSnapshotWork(input({ style: { palette } }), () => current);
+    try { assert.throws(() => finish(work, 1), mode === 'stale' ? { name: 'AbortError' } : aborted); assert.equal(ran, 1); }
+    finally { work.dispose(); }
+  }
+});
+
 const number = fc.oneof(fc.integer({ min: -100, max: 500 }), fc.constantFrom(-0, NaN, Infinity, -Infinity));
 const rgba = fc.tuple(fc.integer({ min: 0, max: 255 }), fc.integer({ min: 0, max: 255 }), fc.integer({ min: 0, max: 255 }), fc.integer({ min: 0, max: 255 }));
 const cssHex = channels => `#${channels.map(channel => channel.toString(16).padStart(2, '0')).join('')}`;
@@ -1525,4 +1566,76 @@ test('synthetic current-plus-candidate accounting enforces 96 MiB and rejects un
   const sumOverflow = reservationFixture({ nodes: 2, customRows: 1, faces: 1 });
   sumOverflow.previousStorage = reservationSyntheticPrevious(Number.MAX_SAFE_INTEGER);
   reservationBeforeSceneAllocation(sumOverflow, reservationBudgetError);
+});
+
+test('malformed previous storage amounts reject before any native construction', () => {
+  const paths = [['cpuBytes'], ['gpuAttributeBytes'], ['gpuTextureBytes'], ['canvasBackingEstimateBytes'], ['customActual', 'cpuBytes'],
+    ['customActual', 'gpuBytes'], ['customActual', 'accountedBytes'], ['hostReservationBytes']];
+  for (const path of paths) for (const value of [-1, 0.5, NaN, Number.MAX_SAFE_INTEGER + 2, '1']) {
+    const fixture = tinyPresentationFixture(), previous = emptyPresentationStorage();
+    if (path.length === 1) previous[path[0]] = value; else previous[path[0]][path[1]] = value;
+    fixture.input.previousStorage = previous;
+    observePresentationNatives(observed => {
+      const work = createGraphPresentationWork(fixture.input);
+      try {
+        assert.throws(() => finishPresentation(work, 1), { name: 'RangeError', message: 'Invalid previous graph presentation storage' });
+        assert.equal(observed.acquired.size, 0); assert.throws(() => work.step(1), invalidState);
+      } finally { work.dispose(); }
+    });
+  }
+});
+
+for (const spatial of [false, true]) test(`a ${spatial ? 'spatial' : 'ordinary'} slot constructor failure detaches the wrappers it already linked`, () => {
+  for (const failAt of [1, 2, 3]) {
+    const fixture = tinyPresentationFixture(spatial), original = new Error(`slot link ${failAt} failed`), linked = [];
+    let calls = 0;
+    observePresentationNatives(observed => presentationMethod(Object3D.prototype, 'add', add => function (...objects) {
+      if (new Error().stack.includes('createGraphPresentationSlots')) {
+        if (++calls === failAt) throw original;
+        linked.push(...objects);
+      }
+      return Reflect.apply(add, this, objects);
+    }, () => {
+      const work = createGraphPresentationWork(fixture.input);
+      try {
+        assert.throws(() => finishPresentation(work, 1), error => error === original);
+        assert.equal(calls, failAt); assert.equal(linked.length, failAt - 1);
+        for (const wrapper of linked) { assert.ok(wrapper instanceof Group); assert.equal(wrapper.parent, null); }
+        observed.assertReleased(); assert.throws(() => work.step(1), invalidState);
+      } finally { work.dispose(); }
+    }));
+  }
+});
+
+test('a view that lost its body owner is refused before retirement touches any native owner', () => {
+  const fixture = tinyPresentationFixture(), work = createGraphPresentationWork(fixture.input); let result;
+  try {
+    result = finishPresentation(work); const { record } = result, primary = record.primary;
+    observePresentationNatives(observed => {
+      record.primary = { ...primary, ordinary: undefined, composite: undefined }; record.selectedView = record.primary;
+      try { assert.throws(() => prepareGraphPresentationRetirement(result.candidate), invalidState); }
+      finally { record.primary = primary; record.selectedView = primary; }
+      assert.equal(observed.released.size, 0);
+    });
+    assert.equal(readGraphPresentationCandidate(result.candidate), record);
+  } finally { if (result) retirePresentation(result.candidate); work.dispose(); }
+});
+
+test('malformed presentation scalars and dependencies reject before any native construction', () => {
+  const cases = [['width', -1], ['width', NaN], ['height', -0.5], ['height', Infinity], ['fittedDistance', 0], ['fittedDistance', NaN],
+    ['revision', -1], ['revision', 0.5], ['revision', Number.MAX_SAFE_INTEGER + 1], ['firstOwner', 1], ['dependencies', null], ['dependencies', 'scope']];
+  for (const [key, value] of cases) {
+    const fixture = tinyPresentationFixture(); fixture.input[key] = value;
+    observePresentationNatives(observed => {
+      const work = createGraphPresentationWork(fixture.input);
+      try {
+        assert.throws(() => finishPresentation(work, 1), { name: 'RangeError', message: 'Invalid graph presentation inputs' }, `${key}: ${String(value)}`);
+        assert.equal(observed.acquired.size, 0); assert.throws(() => work.step(1), invalidState);
+      } finally { work.dispose(); }
+    });
+  }
+  const control = tinyPresentationFixture(); Object.assign(control.input, { width: 0, height: 0, revision: 0, firstOwner: false });
+  const work = createGraphPresentationWork(control.input); let result;
+  try { result = finishPresentation(work); assert.equal(result.record.fitted, undefined); }
+  finally { if (result) retirePresentation(result.candidate); work.dispose(); }
 });

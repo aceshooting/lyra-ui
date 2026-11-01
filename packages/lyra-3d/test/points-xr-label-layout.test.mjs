@@ -499,3 +499,26 @@ test('point label work yields bounded slices and cancellation revokes each prepa
     } finally { cleanup(context); }
   }
 });
+
+test('point label finish keeps the first release failure, still releases the output buffers and cannot finish twice', () => {
+  const tracker = trackedAccount(), release = tracker.account.release, failure = new Error('Controlled scratch release failure');
+  let failing = false;
+  tracker.account.release = buffer => {
+    if (failing) { failing = false; throw failure; }
+    release(buffer);
+  };
+  const context = work({ positions: new Float32Array(6), labels: ['a', 'b'] }, {}, state(), tracker);
+  numeric(context);
+  groups(context, 'paint', group => context.owner.paintRun(group));
+  const outputs = [...context.live];
+  failing = true;
+  assert.throws(() => finishPointsXrLabelLayout(context.owner, context.identity), error => error === failure);
+  assert.equal(context.owner.snapshot().phase, 'cancelled');
+  assert.equal(context.owner.snapshot().sourceRetained, false);
+  assert.equal(context.live.size, 1, 'only the buffer whose release failed stays charged');
+  assert.ok(outputs.length > context.live.size, 'the later scratch and output releases still ran');
+  assert.throws(() => finishPointsXrLabelLayout(context.owner, context.identity), RangeError);
+  cancelPointsXrLabelLayout(context.owner);
+  for (const buffer of [...context.live]) release(buffer);
+  assert.equal(tracker.account.usedBytes, 0);
+});

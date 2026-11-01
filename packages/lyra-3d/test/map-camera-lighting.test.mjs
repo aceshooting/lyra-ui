@@ -62,3 +62,25 @@ test('unusable inverse and unsupported native provenance reject without classify
   Object.defineProperty(input, 'fallbackMatrix', { get() { reads++; return []; } });
   assert.throws(() => deriveModelLighting(input)); assert.equal(reads, 0);
 });
+
+test('typed matrices are read through their own view window and exotic vectors are rejected', () => {
+  const elements = perspective([4096, 4096, 1100]).fallbackMatrix;
+  const backing = new Float64Array(20).fill(NaN); backing.set(elements, 2);
+  const windowed = backing.subarray(2, 18);
+  near(deriveModelLighting(perspective([4096, 4096, 1100], { fallbackMatrix: windowed })).eyeEnu, [0, 0, 100]);
+  const single = deriveModelLighting(perspective([4096, 4096, 1100], { fallbackMatrix: new Float32Array(elements) }));
+  near(single.eyeEnu, [0, 0, 100], 5);
+  assert.equal(single.convention, 'mercator-eye');
+  const lying = new Float64Array(elements);
+  Object.defineProperty(lying, 'length', { value: 16 });
+  near(deriveModelLighting(perspective([4096, 4096, 1100], { fallbackMatrix: lying })).eyeEnu, [0, 0, 100]);
+  const rejected = [new Int32Array(16), new Float64Array(15), new Float64Array(elements).subarray(1),
+    { length: 16, ...elements }, new Proxy(new Float64Array(elements), {}), [...elements].slice(0, 15)];
+  if (typeof ArrayBuffer.prototype.resize === 'function') {
+    const growable = new Float64Array(new ArrayBuffer(128, { maxByteLength: 256 })); growable.set(elements);
+    rejected.push(growable);
+  }
+  for (const fallbackMatrix of rejected) {
+    assert.throws(() => deriveModelLighting(perspective([4096, 4096, 1100], { fallbackMatrix })), TypeError);
+  }
+});

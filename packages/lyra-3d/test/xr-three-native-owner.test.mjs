@@ -269,3 +269,25 @@ test('resource retirement rejection still attempts independent renderer and cont
   assert.deepEqual(f.queues(), { inline: 0, native: 0 }); assert.equal(f.controller.exit(), exiting);
   f.controller.dispose();
 });
+
+test('the granted session binds at most once and never after its presentation started binding', async t => {
+  let owned;
+  const capture = deps => {
+    const owner = createThreeXrNativeOwner(deps);
+    return { ...owner, request() {
+      const result = owner.request();
+      void result.then(value => { owned = value; }, () => {});
+      return result;
+    } };
+  };
+  const f = nativeFixture(t, capture), entered = f.controller.enter();
+  await f.bind(); f.session.deliver(f.frame()); await entered;
+  assert.ok(owned, 'the controller received the owned session');
+  const draws = f.counts.draws, framebuffers = f.counts.framebuffer;
+  assert.throws(() => f.owner.bind(owned, () => { assert.fail('second submission'); }), { name: 'InvalidStateError' });
+  assert.equal(f.manager.getSession(), f.session); assert.equal(f.counts.draws, draws);
+  assert.equal(f.counts.framebuffer, framebuffers);
+  const exiting = f.controller.exit();
+  assert.throws(() => f.owner.bind(owned, () => {}), { name: 'InvalidStateError' });
+  await endAndRetire(f, exiting);
+});

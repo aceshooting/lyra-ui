@@ -80,3 +80,25 @@ test('synchronous native request exceptions reject the method promise without es
   const exiting = f.controller.exit(); await f.flush(); f.retirement.resolve(); await exiting;
   assert.equal(f.documentBusy(), false);
 });
+
+test('presentation options accept only an own data callback and never evaluate accessors', async () => {
+  const { createXrPresentationController } = await import('../dist/xr/controller.js');
+  const { acquireXrPreparation, releaseXrPreparation } = await import('../dist/xr/coordinator.js');
+  const services = lease => ({ preparationLease: lease, documentKey: {}, validatePrepared: () => null,
+    nativeOwner: { request() { throw new Error('unused'); }, bind() {}, observeFailure() { return () => {}; }, detach() {}, retire() { return Promise.resolve(); } },
+    enqueueFinalizer() {}, reportApplicationError() {} });
+  let reads = 0;
+  const accessor = { get onStateChange() { reads++; return () => {}; } };
+  for (const options of [{ onStateChange: 'callback' }, { onStateChange: null }, accessor, null, [], 'options']) {
+    const lease = acquireXrPreparation({});
+    assert.throws(() => createXrPresentationController(services(lease), options), TypeError);
+    releaseXrPreparation(lease);
+  }
+  assert.equal(reads, 0);
+  for (const options of [undefined, {}, { onStateChange: undefined }, Object.create(null)]) {
+    const lease = acquireXrPreparation({});
+    const controller = createXrPresentationController(services(lease), options);
+    assert.equal(controller.state, 'ready');
+    controller.dispose(); await lease.released;
+  }
+});

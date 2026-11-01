@@ -732,3 +732,22 @@ test('deferred effect/camera callback reentry cannot resume overwritten work or 
     } finally { await f.close(); }
   }
 });
+
+test('an exhausted viewport counter withdraws transaction authority instead of wrapping', t => {
+  // Observe the private cell the real viewport registers, then exhaust one counter in place.
+  const set = WeakMap.prototype.set;
+  let cell, f;
+  WeakMap.prototype.set = function (key, value) {
+    if (value?.cell === key && value.access !== undefined) cell = key;
+    return set.call(this, key, value);
+  };
+  try { f = setupViewport(t); } finally { WeakMap.prototype.set = set; }
+  assert.ok(cell, 'viewport cell observed');
+  const access = getViewportTransactionAccess(f.viewport);
+  assert.equal(captureViewportTransaction(access).sizeEpoch, cell.sizeEpoch);
+  cell.sizeEpoch = Number.MAX_SAFE_INTEGER;
+  f.viewport.resize(321, 181);
+  assert.equal(cell.sizeEpoch, Number.MAX_SAFE_INTEGER);
+  assert.equal(cell.active, false);
+  assert.throws(() => captureViewportTransaction(access), invalidState);
+});

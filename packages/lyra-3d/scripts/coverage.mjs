@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdir, readdir, rm } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assertCoverageTarget, reportCoverage } from './report-coverage.mjs';
@@ -32,6 +32,14 @@ await mkdir(resolve(coverage, 'tmp'), { recursive: true });
 const compileStatus = run('pnpm', ['exec', 'tsc', '-p', 'tsconfig.json', '--outDir', 'coverage/build/dist',
   '--sourceMap', '--inlineSources', '--declaration', 'false']);
 if (compileStatus !== 0) process.exit(compileStatus);
+// The instrumented build gets its own package scope: the shipped manifest's name, exports and
+// subpath imports, whose ./dist targets now resolve inside coverage/build. A `#` import made by an
+// instrumented module, and a self-reference the redirect preload routes here, then load the
+// instrumented copy rather than the shipped dist/, which a coverage run need not have built.
+const manifest = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
+await writeFile(resolve(coverage, 'build/package.json'), `${JSON.stringify({
+  name: manifest.name, private: true, type: manifest.type, exports: manifest.exports, imports: manifest.imports,
+}, null, 2)}\n`);
 
 const tests = (await readdir(resolve(root, 'test'))).filter((name) => name.endsWith('.test.mjs'))
   .sort().map((name) => `test/${name}`);

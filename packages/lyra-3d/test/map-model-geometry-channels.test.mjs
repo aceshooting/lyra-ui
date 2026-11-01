@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { Sprite } from 'three';
 import { prepareModelAsset } from '../dist/model/model-asset.js';
 import { triangleJson, utf8 } from './model-fixtures.mjs';
 import { appendAttribute, encodeGltf, interleavedFixture, primitiveFixture, richFixture, stridedIndexFixture } from './fixtures/model-prepared-gltf.mjs';
@@ -202,6 +203,16 @@ test('nonflat tangent without normal and singular required normal transform refu
       assert.equal(disposed(), 1); assert.ok(source.budget.live.size > 0, 'asset remains caller-owned');
     } finally { cleanup(source); }
   }
+});
+
+test('a geometry-bearing node that is not a mesh, points or line primitive refuses the whole model', async () => {
+  const api = await channelApi(); const source = await prepareSource(gltf(triangleJson()));
+  const sprite = new Sprite();
+  try {
+    source.instance.object.add(sprite); source.instance.object.updateMatrixWorld(true);
+    assert.throws(() => drainWork(api.createMapModelChannelWork(workInput(source))));
+    assert.ok(source.budget.live.size > 0, 'asset remains caller-owned');
+  } finally { sprite.removeFromParent(); sprite.geometry.dispose(); sprite.material.dispose(); cleanup(source); }
 });
 
 test('combined model footprint and every source vertex radial reach are enforced before publication', async () => {

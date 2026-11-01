@@ -298,6 +298,35 @@ test('admitted scalar vector array and matrix uniform families follow reflected 
   retireFixture(f);
 });
 
+test('plain-array vector uniforms upload an independent snapshot of exactly their own data elements', () => {
+  const f = createDrawFixture({ uniforms: [
+    { name: 'color', type: DRAW_ENUMS.FLOAT_VEC4, size: 1 }, { name: 'indices[0]', type: DRAW_ENUMS.INT, size: 2 },
+    { name: 'matrix', type: DRAW_ENUMS.FLOAT_MAT4, size: 1 },
+  ] });
+  f.owner.run(f.entry, gl => {
+    const { program } = createProgram(gl);
+    const color = gl.getUniformLocation(program, 'color'), indices = gl.getUniformLocation(program, 'indices[0]');
+    const matrix = gl.getUniformLocation(program, 'matrix');
+    const values = [1, 0.5, 0, 1];
+    gl.uniform4fv(color, values);
+    const [upload] = f.callsOf('uniform4fv');
+    assert.ok(upload.args[1] instanceof Float32Array && upload.args[1] !== values);
+    assert.deepEqual([...upload.args[1]], values);
+    gl.uniform1iv(indices, [2, 3]);
+    assert.ok(f.callsOf('uniform1iv')[0].args[1] instanceof Int32Array);
+    gl.uniformMatrix4fv(matrix, false, [...identity]);
+    assert.deepEqual([...f.callsOf('uniformMatrix4fv')[0].args[2]], [...identity]);
+    let reads = 0;
+    const accessor = [1, 0.5, 0, 1]; Object.defineProperty(accessor, 1, { get() { reads++; return 0.5; } });
+    for (const bad of [[1, 0.5, 0], [1, 0.5, 0, 1, 0], [1, , 0, 1], accessor, [1, NaN, 0, 1], [1, '0.5', 0, 1]]) {
+      noForward(f, 'uniform4fv', () => gl.uniform4fv(color, bad));
+    }
+    assert.equal(reads, 0, 'array accessors are never evaluated');
+    noForward(f, 'uniform1iv', () => gl.uniform1iv(indices, [2, 3.5]));
+  });
+  retireFixture(f);
+});
+
 test('indexed triangles draw only after owned state is complete', () => {
   const f = createDrawFixture();
   f.owner.run(f.entry, gl => {

@@ -262,3 +262,17 @@ test('throwing application state callbacks do not turn into renderer failure acr
   assert.ok(f.errors.length >= 30); assert.equal(f.errors.every(error => error === failure), true);
   r.engine.dispose(); assert.equal(r.disposals, 11); assert.deepEqual(f.queues(), { inline: 0, native: 0 });
 });
+
+test('a failed inline reconstruction after native release reports the failure and leaves the host lost without a viewport', async t => {
+  const f = await createFixture(t), active = await present(f), r = active.record, old = r.viewport;
+  const failure = new Error('Controlled inline reconstruction failure'), owner = document, createElement = owner.createElement;
+  const exit = active.presentation.exit();
+  active.attempt.ending.resolve(); active.attempt.endEvent(); await f.until(() => old.renderer.getContext().state.releaseRequests === 1);
+  owner.createElement = function (name) { if (name === 'canvas') throw failure; return createElement.call(this, name); };
+  try { f.lose(r); await exit; await f.settle(); } finally { owner.createElement = createElement; }
+  assert.equal(r.viewports.length, 1, 'no replacement viewport was constructed');
+  assert.ok(f.errors.includes(failure), 'the reconstruction failure reaches the application reporter');
+  assert.deepEqual(r.callbacks.filter(value => value[0] === 'lost').at(-1), ['lost', 'error']);
+  assert.equal(count(r, 'restored'), 0); assert.equal(r.container.children.length, 0, 'no partial inline canvas remains');
+  r.engine.dispose(); assert.deepEqual(f.queues(), { inline: 0, native: 0 });
+});

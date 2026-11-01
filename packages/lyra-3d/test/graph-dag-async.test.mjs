@@ -279,3 +279,18 @@ test('options are captured once before the first scheduled task', async () => {
     assert.deepEqual(actual.positions, expected.positions);
   });
 });
+
+test('invalid options reject through the promise before scheduling or listening for abort', async () => {
+  await withTasks(async ({ tasks }) => {
+    const controller = new AbortController();
+    let progress = 0;
+    for (const options of [null, { direction: 'w' }, { layerGap: 0 }, { nodeGap: Infinity }]) {
+      let pending;
+      assert.doesNotThrow(() => { pending = layoutGraphDagAsync(graph(3), options, { signal: controller.signal, onProgress() { progress++; } }); });
+      await assert.rejects(pending, code('invalid-options'));
+      assert.equal(tasks.size, 0);
+      assert.equal(getEventListeners(controller.signal, 'abort').length, 0);
+    }
+    assert.equal(progress, 0);
+  });
+});

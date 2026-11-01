@@ -105,3 +105,23 @@ test('valid custom geometry refused by expanded scene capacity reports a budget 
     assert.doesNotThrow(() => engine.setData(data(), 2));
   } finally { engine.dispose(); }
 });
+
+test('custom replacement storage estimates label canvas backings for the current and candidate scenes', async t => {
+  const browser = installFakeBrowser({ context2d: true }), snapshots = [], canvases = [];
+  const engine = createGraphEngine({ storage: value => snapshots.push(value),
+    labelCanvas() { const canvas = document.createElement('canvas'); canvases.push(canvas); return canvas; } });
+  t.after(() => { try { engine.dispose(); } finally { browser.restore(); } });
+  const labelled = labels => ({ ...data(), labels, spatialAppearance: { nodeMeshes: [triangleMesh(), null] } });
+  engine.setData(labelled(['Alpha', 'Beta']), 1); await engine.mount(browser.container, host());
+  assert.equal(canvases.length, 1);
+  const backing = canvas => canvas.width * canvas.height * 4, first = backing(canvases[0]);
+  assert.ok(first > 0);
+  assert.equal(snapshots.at(-1).canvasBackingEstimateBytes, first);
+  engine.setData(labelled(['Gamma', 'Delta']), 2);
+  assert.equal(canvases.length, 2);
+  const replacement = snapshots.at(-1);
+  assert.equal(replacement.canvasBackingEstimateBytes, first + backing(canvases[1]));
+  // A canvas texture is counted toward both the GPU texture peak and the canvas backing estimate.
+  assert.ok(replacement.candidateGpuTextureBytes >= backing(canvases[1]));
+  assert.ok(replacement.previousGpuTextureBytes >= first);
+});

@@ -89,3 +89,13 @@ test('otherwise valid pinned sources cannot override native clip or validated no
   ];
   for (const variant of variants) assert.throws(() => patchModelMaterialShader(variant, frame(), profile));
 });
+
+test('only a normalized typed index reaches the material stage; a raw index attribute is refused either way', () => {
+  const nonIndexed = fixture(); nonIndexed.geometry.index = null;
+  assert.equal(validateModelMaterialChannels(nonIndexed).kind, 'mesh-standard');
+  const indexAttribute = attribute([0, 1, 2], 1);
+  const unnormalized = fixture(); unnormalized.geometry.index = null; unnormalized.geometry.indexAttribute = indexAttribute;
+  assert.throws(() => validateModelMaterialChannels(unnormalized), TypeError);
+  const both = fixture(); both.geometry.indexAttribute = indexAttribute;
+  assert.throws(() => validateModelMaterialChannels(both), TypeError);
+});
