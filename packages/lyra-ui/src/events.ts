@@ -1742,6 +1742,12 @@ export type LyraMapAnchorCloseEvent = LyraMapEventMap['lr-map-anchor-close'];
 export type LyraMapAttributionToggleEvent = LyraMapEventMap['lr-map-attribution-toggle'];
 
 /**
+ * `lr-map-camera-interrupt` — dispatched by `<lr-map>`; detail
+ * `LyraMapEventMap['lr-map-camera-interrupt']`.
+ */
+export type LyraMapCameraInterruptEvent = LyraMapEventMap['lr-map-camera-interrupt'];
+
+/**
  * `lr-map-click` — dispatched by `<lr-map>`; detail `LyraMapEventMap['lr-map-click']`.
  */
 export type LyraMapClickEvent = LyraMapEventMap['lr-map-click'];
@@ -3766,6 +3772,7 @@ export interface LyraGlobalEventMap {
   'lr-location-change': LyraLocationChangeEvent;
   'lr-map-anchor-close': LyraMapAnchorCloseEvent;
   'lr-map-attribution-toggle': LyraMapAttributionToggleEvent;
+  'lr-map-camera-interrupt': LyraMapCameraInterruptEvent;
   'lr-map-click': LyraMapClickEvent;
   'lr-map-contextmenu': LyraMapContextmenuEvent;
   'lr-map-draw-cancel': LyraMapDrawCancelEvent;
