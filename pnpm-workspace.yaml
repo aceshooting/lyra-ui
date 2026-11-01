@@ -74,6 +74,11 @@ overrides:
   # typed-rest-client (Stryker) asks for a qs that has three published advisories.
   'qs@<6.16.0': 6.16.1
   'source-map-js@<1.2.2': 1.2.2
+  # Stryker 10.1.1 pins minimatch ~10.2.4 and glob ~13.0.0, covered by GHSA-g3hv-75wg-m249 and
+  # GHSA-3g3m-2fjr-6pw4. Its core and tap runner use only the named minimatch/Minimatch and glob
+  # exports, which the fixed majors keep. Drop these when Stryker adopts the fixed releases.
+  '@stryker-mutator/core@10.1.1>minimatch': 11.0.3
+  '@stryker-mutator/tap-runner@10.1.1>glob': 14.0.3
 minimumReleaseAgeExclude:
   - '@aceshooting/lyra-flags@0.1.0'
   - '@secretlint/config-creator@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0'
