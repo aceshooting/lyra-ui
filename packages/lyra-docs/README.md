@@ -737,8 +737,8 @@ revision. A refusal is `{ ok: false, code, step }`, where `step` is the zero-bas
 the failing step, or `null` when the batch as a whole was refused. If the engine refuses a
 step after earlier steps wrote, those writes are undone and the package is compared with a
 structural digest taken before the batch; the document, revision, dirty state and save
-receipt are then unchanged, while earlier ids, search results and the caret position are
-invalidated. If the revert cannot be verified, the session fails closed with
+receipt are then unchanged, while earlier ids and search results are invalidated and the
+selection version advances. If the revert cannot be verified, the session fails closed with
 `engine-failed` instead of exposing a partially edited document. The digest visits at most
 300,000 XML nodes (`DOCX_BATCH_LIMITS.fingerprintNodes`); a larger package refuses the batch
 with `resource-limit` before writing. Because the revision is required, a retried batch

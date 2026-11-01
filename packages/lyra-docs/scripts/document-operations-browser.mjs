@@ -100,10 +100,10 @@ export async function runDocumentOperations(page, check, { createEditor, saveEdi
         const unsafe = make('operations-url-unsafe');
         const refused = await unsafe.openUrl('javascript:alert(1)');
         await unsafe.updateComplete;
+        // Mid-request cancellation is covered by unit tests; an aborted request is a browser request failure here.
         const cancelled = make('operations-url-cancelled'), controller = new AbortController();
-        const pending = cancelled.openUrl(url, { signal: controller.signal });
         controller.abort();
-        const aborted = await pending;
+        const aborted = await cancelled.openUrl(url, { signal: controller.signal });
         await cancelled.updateComplete;
         const errorText = element => element.shadowRoot.querySelector('[part="error"]')?.textContent?.trim() ?? '';
         return {
