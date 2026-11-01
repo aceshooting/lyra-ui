@@ -13,6 +13,9 @@ updates:
       # The renderer input advances with its reviewed source hashes and transformations;
       # scripts/upgrade.sh updates native development consumers separately.
       - dependency-name: "maplibre-gl"
+      # The DOCX engine is built from a reviewed source lock; its version advances only together
+      # with that lock, its transformations and provenance (scripts/upgrade.sh rejects it too).
+      - dependency-name: "@docx-editor.dev/core"
       # Node type definitions follow the oldest supported Node major (package engines and .nvmrc);
       # scripts/upgrade.sh takes their latest minor and patch releases.
       - dependency-name: "@types/node"
