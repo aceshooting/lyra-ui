@@ -157,7 +157,7 @@ class DagExampleDirective extends AsyncDirective {
   }
 }
 const dagExample = directive(DagExampleDirective);
-const meta: Meta = { title: 'Graph', component: 'lr-graph' };
+const meta: Meta = { title: 'Graph/DAG layout' };
 export default meta;
 
 export const DirectedAcyclicLayout: StoryObj = {

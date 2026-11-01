@@ -24,7 +24,10 @@
     "outDir": "dist",
     "declaration": true,
     "sourceMap": false,
-    "declarationMap": false
+    "declarationMap": false,
+    "paths": {
+      "#graph-layout-signal-brand": ["./src/graph-layout/signal-brand-browser.ts"]
+    }
   },
   "include": ["src/**/*.ts"]
 }
