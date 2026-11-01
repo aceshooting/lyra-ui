@@ -1,6 +1,7 @@
 import '@aceshooting/lyra-ui/theme.css';
 import '@aceshooting/lyra-ui/components/lr-graph.js';
 import '@aceshooting/lyra-ui/components/lr-embedding-explorer.js';
+import { ball, graphFixture, seededRandom } from '../graph-fixture.mjs';
 
 const stage = document.querySelector('#stage');
 
@@ -13,28 +14,7 @@ for (const name of ['drawArrays', 'drawElements', 'drawArraysInstanced', 'drawEl
 }
 const WIDTH = 1280, HEIGHT = 800;
 
-// Deterministic data, so every run and machine renders the same scene.
-function random(seed) {
-  let state = seed >>> 0;
-  return () => {
-    state = (state + 0x6d2b79f5) >>> 0;
-    let value = Math.imul(state ^ (state >>> 15), state | 1);
-    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
-    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function ball(count, radius, next) {
-  const x = new Float32Array(count), y = new Float32Array(count), z = new Float32Array(count);
-  for (let index = 0; index < count; index += 1) {
-    const u = next() * 2 - 1, theta = next() * Math.PI * 2, distance = radius * Math.cbrt(next()), ring = Math.sqrt(1 - u * u);
-    x[index] = distance * ring * Math.cos(theta);
-    y[index] = distance * ring * Math.sin(theta);
-    z[index] = distance * u;
-  }
-  return { x, y, z };
-}
-
+// Deterministic data (shared with the Node tests), so every run and machine renders the same scene.
 const ids = (prefix, count) => Object.freeze(Array.from({ length: count }, (_, index) => `${prefix}${index}`));
 const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
 
@@ -74,13 +54,7 @@ function mount(element) {
 
 /** Pinned positions keep the force layout out of the measurement: this is rendering throughput. */
 async function graph({ nodes, edges, unpinned = false }) {
-  const next = random(7);
-  const { x, y, z } = ball(nodes, 600, next);
-  const source = new Uint32Array(edges), target = new Uint32Array(edges);
-  for (let index = 0; index < edges; index += 1) {
-    source[index] = index % nodes;
-    target[index] = (source[index] + 1 + Math.floor(next() * (nodes - 1))) % nodes;
-  }
+  const { x, y, z, source, target } = graphFixture({ nodes, edges });
   const element = document.createElement('lr-graph');
   element.style.cssText = `inline-size:${WIDTH}px;block-size:${HEIGHT}px`;
   element.width = WIDTH; element.height = HEIGHT; element.view = '3d'; element.engine = 'webgl';
@@ -99,7 +73,7 @@ async function graph({ nodes, edges, unpinned = false }) {
 }
 
 async function points({ count }) {
-  const { x, y, z } = ball(count, 1, random(11));
+  const { x, y, z } = ball(count, 1, seededRandom(11));
   const element = document.createElement('lr-embedding-explorer');
   element.style.cssText = `inline-size:${WIDTH}px`;
   element.engine = 'webgl';
