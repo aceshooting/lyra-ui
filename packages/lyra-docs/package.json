@@ -80,7 +80,7 @@
   },
   "devDependencies": {
     "@aceshooting/lyra-ui": "workspace:*",
-    "@docx-editor.dev/core": "2.32.0",
+    "@docx-editor.dev/core": "2.33.0",
     "@types/node": "^22.20.5",
     "axe-core": "^4.14.0",
     "istanbul-lib-coverage": "^3.2.2",
