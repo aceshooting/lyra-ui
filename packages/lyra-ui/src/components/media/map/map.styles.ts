@@ -14,7 +14,7 @@ export const styles = css`
     position: absolute;
     inset-inline: var(--lr-space-s);
     inset-block-end: var(--lr-space-s);
-    z-index: 1;
+    z-index: var(--lr-layer-content);
     max-block-size: 60%;
     min-inline-size: 0;
     overflow: auto;

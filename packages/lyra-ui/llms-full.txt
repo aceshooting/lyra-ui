@@ -56152,7 +56152,7 @@ acyclic graph's positions before assigning them. The helper is independent of th
 new layout selector. Keep original node-row order when mapping xyz results back to ids:
 
 ```ts
-import type { LyraGraph, LyraGraphNode } from '@aceshooting/lyra-ui/components/retrieval/graph/graph.js';
+import type { LyraGraph, LyraGraphNode } from '@aceshooting/lyra-ui/components/retrieval/graph/graph.class.js';
 
 function createDagUpdates(graph: LyraGraph) {
   let pending: AbortController | undefined;

@@ -1864,8 +1864,6 @@
       "types": "./dist/internal/docx-zip-admission.d.ts",
       "default": "./dist/internal/docx-zip-admission.js"
     },
-    "./theme/presets.js": null,
-    "./theme/presets/shadcn.js": null,
     "./simulation-clock.js": {
       "types": "./dist/simulation-clock.d.ts",
       "default": "./dist/simulation-clock.js"
@@ -1877,7 +1875,9 @@
     "./sequence-time-binding.js": {
       "types": "./dist/sequence-time-binding.d.ts",
       "default": "./dist/sequence-time-binding.js"
-    }
+    },
+    "./theme/presets.js": null,
+    "./theme/presets/shadcn.js": null
   },
   "sideEffects": [
     "./dist/accents.css",
