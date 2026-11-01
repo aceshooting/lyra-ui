@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { DocxEditorInstance, EditorCommand } from '@docx-editor.dev/core';
-import { packageFingerprint, runEigenpalBatch, type DocxBatchPlanStep } from './eigenpal-batch.js';
+import { runEigenpalBatch, type DocxBatchPlanStep } from './eigenpal-batch.js';
+import { DOCX_BATCH_LIMITS } from './document-operations.js';
 import { WORD_NS as W } from './ooxml.js';
 import type { DocxResult } from './types.js';
 
@@ -20,7 +21,18 @@ function build(paragraphs: readonly { id: string; style: string; text: string }[
     relationships: new Map([['/word/document.xml', [{ id: 'rId1', type: 'image', target: 'media/a.png' }]]]) };
 }
 type Package = ReturnType<typeof build>;
-const fingerprint = (pkg: unknown, budget?: number) => packageFingerprint(pkg as never, budget);
+/**
+ * Whether the batch runner's package digest treats two packages as equal: a first step that is refused
+ * before writing compares the package read before the batch with the one read after it.
+ */
+function digestEqual(before: unknown, after: unknown): boolean | 'refused' {
+  const packages = [before, after];
+  const refusing = { beginHistoryGroup: () => ({ end() {} }), can: () => ({ ok: false }), exec: () => ({ ok: true, changed: false }) } as unknown as DocxEditorInstance;
+  const run = runEigenpalBatch(refusing, [{ command: { type: 'undo' } as EditorCommand, paragraphId: null }], () => ({ ok: true, value: undefined }),
+    () => packages.shift() as never, null);
+  if (!run.result.ok && run.result.code === 'resource-limit') return 'refused';
+  return !run.fault;
+}
 
 /** A fake engine with grouped undo units over immutable package snapshots. */
 function engine() {
@@ -75,25 +87,27 @@ const style = (styleId: string, paragraphId: string | null = null): DocxBatchPla
 const okGuard = (): DocxResult<void> => ({ ok: true, value: undefined });
 const original = { anchor: { paragraphId: 'p1', offset: 0 }, head: { paragraphId: 'p1', offset: 0 } };
 
-test('the fingerprint ignores engine node ids but sees structure, text, parts, relationships and entry sizes', () => {
+test('the package digest ignores engine node ids but sees structure, text, parts, relationships and entry sizes', () => {
   const state = [{ id: 'a', style: 'Normal', text: 'x' }];
-  const base = fingerprint(build(state));
-  assert.equal(typeof base, 'string');
-  assert.equal(fingerprint(build(state)), base, 'fresh node ids do not change the digest');
-  assert.notEqual(fingerprint(build([{ id: 'a', style: 'Title', text: 'x' }])), base);
-  assert.notEqual(fingerprint(build([{ id: 'a', style: 'Normal', text: 'y' }])), base);
-  assert.notEqual(fingerprint(build([...state, { id: 'b', style: 'Normal', text: '' }])), base);
+  assert.equal(digestEqual(build(state), build(state)), true, 'fresh node ids do not change the digest');
+  assert.equal(digestEqual(build(state), build([{ id: 'a', style: 'Title', text: 'x' }])), false);
+  assert.equal(digestEqual(build(state), build([{ id: 'a', style: 'Normal', text: 'y' }])), false);
+  assert.equal(digestEqual(build(state), build([...state, { id: 'b', style: 'Normal', text: '' }])), false);
   const relationship = build(state); relationship.relationships.set('/word/document.xml', [{ id: 'rId1', type: 'image', target: 'media/b.png' }]);
-  assert.notEqual(fingerprint(relationship), base);
+  assert.equal(digestEqual(build(state), relationship), false);
   const media = build(state); media.partBytes.set('/word/media/a.png', new Uint8Array(6));
-  assert.notEqual(fingerprint(media), base);
+  assert.equal(digestEqual(build(state), media), false);
   const xmlBytes = build(state); xmlBytes.partBytes.set('/word/document.xml', new Uint8Array(99));
-  assert.equal(fingerprint(xmlBytes), base, 'stale serialized bytes of a modeled XML part are not compared');
+  assert.equal(digestEqual(build(state), xmlBytes), true, 'stale serialized bytes of a modeled XML part are not compared');
   const part = build(state); part.parts.set('/word/extra.xml', { name: '/word/extra.xml', contentType: 'x', root: node('extra') } as never);
-  assert.notEqual(fingerprint(part), base);
-  assert.equal(fingerprint(build(state), 3), null, 'the node budget bounds the digest');
-  assert.equal(fingerprint({ parts: [] }), null);
-  assert.equal(fingerprint({ parts: new Map([['x', { root: { localName: 1 } }]]), partBytes: new Map(), relationships: new Map() }), null);
+  assert.equal(digestEqual(build(state), part), false);
+  assert.equal(digestEqual(build(state), null), false, 'an unreadable package after a refusal is a fault');
+  const large = build(state);
+  const children = large.parts.get('/word/document.xml')!.root.children as unknown[];
+  for (let i = 0; i < DOCX_BATCH_LIMITS.fingerprintNodes; i++) children.push(node('p'));
+  assert.equal(digestEqual(large, large), 'refused', 'the node budget bounds the digest');
+  assert.equal(digestEqual({ parts: [] }, build(state)), 'refused');
+  assert.equal(digestEqual({ parts: new Map([['x', { root: { localName: 1 } }]]), partBytes: new Map(), relationships: new Map() }, build(state)), 'refused');
 });
 
 test('a batch commits every step in one undo unit and restores a moved caret', () => {
@@ -111,11 +125,11 @@ test('a refused step mid-batch reverts the earlier steps and reports its index',
     if (failure === 'can') h.f.refuseCan = 2;
     else if (failure === 'exec') h.f.refuseExec = 2;
     else h.f.throwAt = 2;
-    const before = fingerprint(h.current());
+    const before = JSON.stringify(h.f.state);
     const run = runEigenpalBatch(h.editor, [style('Title', 'p2'), style('Quote', 'p3'), style('Strong', 'p1'), style('Never')], okGuard, h.current, original);
     assert.deepEqual(run, { result: { ok: false, code: 'unsupported', step: 2, rolledBack: true }, fault: false }, failure);
     assert.deepEqual(h.f.state.map(p => p.style), ['Normal', 'Normal', 'Normal'], failure);
-    assert.equal(fingerprint(h.current()), before, failure);
+    assert.equal(JSON.stringify(h.f.state), before, failure);
     assert.equal(h.f.caret, 'p1', `${failure}: the caret returns`);
     assert.equal(h.f.commands.filter(type => type === 'undo').length, 1, failure);
   }

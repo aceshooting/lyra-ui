@@ -24,7 +24,7 @@ const paragraphEdits: ReadonlySet<string> = new Set(['paragraph-style', 'alignme
 const runEdits: ReadonlySet<string> = new Set(['font-family', 'font-size', 'text-color', 'highlight', 'clear-formatting']);
 const toggles: ReadonlySet<string> = new Set(['bold', 'italic', 'underline', 'strikethrough', 'superscript', 'subscript']);
 
-export function isDocxParagraphEdit(edit: DocxBatchEdit): edit is DocxParagraphEdit {
+function isDocxParagraphEdit(edit: DocxBatchEdit): edit is DocxParagraphEdit {
   return typeof edit !== 'string' && paragraphEdits.has(edit.type);
 }
 

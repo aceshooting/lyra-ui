@@ -3,7 +3,9 @@ import { test } from 'node:test';
 import { deferred, fixture, opened, refusal, value } from '../../test/session-fixture.js';
 import { DOCX_FRAGMENT_LIMITS } from './document-operations.js';
 import type { DocxEngineBatchResult, DocxEnginePort } from './engine-port.js';
-import type { DocxEngineFragmentBlock, DocxEngineFragmentRequest } from './eigenpal-document-inspection.js';
+import type { DocxEngineFragmentReport, DocxEngineFragmentRequest } from './eigenpal-document-inspection.js';
+
+type DocxEngineFragmentBlock = DocxEngineFragmentReport['blocks'][number];
 import type { DocxBatchEdit, DocxResult } from './types.js';
 
 const block = (index: number, token: object | null = {}): DocxEngineFragmentBlock => ({

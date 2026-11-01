@@ -15,7 +15,7 @@ export interface DocxEngineInspectionReport {
   readonly capabilities: readonly DocxDocumentCapability[];
   readonly truncated: boolean;
 }
-export interface DocxEngineFragmentBlock {
+interface DocxEngineFragmentBlock {
   readonly token: object | null; readonly index: number; readonly kind: DocxFragmentBlockKind; readonly styleId: string | null;
   readonly headingLevel: number | null; readonly text: string; readonly textTruncated: boolean;
 }

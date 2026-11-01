@@ -27,7 +27,7 @@ const sorted = (values: Iterable<string>) => [...values].sort(ordinal);
  * Engine node identities are excluded, so a revert that rebuilds equal trees still matches. Null when
  * the package exceeds the node budget or has an unexpected shape.
  */
-export function packageFingerprint(pkg: Package, maxNodes: number = DOCX_BATCH_LIMITS.fingerprintNodes): string | null {
+function packageFingerprint(pkg: Package, maxNodes: number = DOCX_BATCH_LIMITS.fingerprintNodes): string | null {
   let a = 0x811c9dc5, b = 0x9747b28c, nodes = 0;
   const mix = (text: string) => {
     for (let i = 0; i < text.length; i++) {
