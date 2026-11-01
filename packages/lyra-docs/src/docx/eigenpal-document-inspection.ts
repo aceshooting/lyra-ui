@@ -1,6 +1,7 @@
 import type { DocxEditorInstance, EditorCommand } from '@docx-editor.dev/core';
 import type { OoxmlElement, OoxmlNode } from '@docx-editor.dev/core/store';
-import type { DocxDocumentCapability, DocxDocumentCapabilityCode, DocxDocumentDiagnosticRule } from './document-inspection-types.js';
+import type { DocxDocumentCapability, DocxDocumentCapabilityCode, DocxDocumentDiagnosticRule, DocxFragmentBlockKind } from './document-inspection-types.js';
+import { DOCX_FRAGMENT_LIMITS } from './document-operations.js';
 import type { DocxResult } from './types.js';
 import { OOXML_TREE_LIMITS, WORD_NS as W, WORD_DRAWING_NS as WP, DRAWING_MAIN_NS as A, DRAWING_PICTURE_NS as PIC } from './ooxml.js';
 
@@ -14,8 +15,20 @@ export interface DocxEngineInspectionReport {
   readonly capabilities: readonly DocxDocumentCapability[];
   readonly truncated: boolean;
 }
+export interface DocxEngineFragmentBlock {
+  readonly token: object | null; readonly index: number; readonly kind: DocxFragmentBlockKind; readonly styleId: string | null;
+  readonly headingLevel: number | null; readonly text: string; readonly textTruncated: boolean;
+}
+export interface DocxEngineFragmentReport {
+  readonly start: number; readonly blockCount: number; readonly next: number | null; readonly truncated: boolean;
+  readonly blocks: readonly DocxEngineFragmentBlock[];
+}
+/** Start at an index, or at the paragraph a current inspection token addresses. */
+export interface DocxEngineFragmentRequest {
+  readonly start?: number; readonly token?: object; readonly maxBlocks: number; readonly maxText: number;
+}
 const LIMITS: Readonly<{ parts: number; nodes: number; depth: number; attributes: number; text: number; items: number; diagnostics: number; label: number; cells: number }> = Object.freeze({ ...OOXML_TREE_LIMITS, text: 1_000_000, items: 512, diagnostics: 256, label: 256, cells: 4_000 });
-const refusal = (code: 'unsupported' | 'resource-limit' | 'stale-selection'): DocxResult<never> => ({ ok: false, code });
+const refusal = (code: 'unsupported' | 'resource-limit' | 'stale-selection' | 'invalid-option'): DocxResult<never> => ({ ok: false, code });
 class InspectionFailure extends Error {
   constructor(readonly code: 'unsupported' | 'resource-limit') { super(code); }
 }
@@ -84,6 +97,63 @@ function clipped(text: string, maximum: number): { text: string; textTruncated: 
 const families: readonly DocxDocumentCapabilityCode[] = ['body-headings', 'inline-image-descriptions', 'simple-table-headers'];
 const hiddenNames = new Set(['vanish', 'webHidden', 'specVanish']);
 const complexNames = new Set(['ins', 'del', 'moveFrom', 'moveTo', 'sdt', 'fldSimple', 'fldChar', 'instrText', 'pPrChange', 'rPrChange']);
+
+const fragmentLimits = DOCX_FRAGMENT_LIMITS;
+const elementName = (node: unknown): string | null => data(node, 'kind') === 'textValue' ? null :
+  `${String(data(node, 'namespaceUri'))}|${String(data(node, 'localName'))}`;
+const wordName = (name: string) => `${W}|${name}`;
+function wordChild(node: unknown, name: string): unknown {
+  return array(data(node, 'children'), LIMITS.nodes).find(value => elementName(value) === wordName(name)) ?? null;
+}
+function wordValue(node: unknown): string | null {
+  for (const a of array(data(node, 'attributes'), LIMITS.attributes)) {
+    if (data(a, 'namespaceUri') === W && data(a, 'localName') === 'val') {
+      const value = data(a, 'value');
+      return typeof value === 'string' ? value : null;
+    }
+  }
+  return null;
+}
+const outlineLevel = (value: string | null): number | null => value && /^[0-8]$/.test(value) ? Number(value) + 1 : null;
+interface FragmentBudget { nodes: number; text: number }
+type TextFrame = { node: unknown; inText: boolean; inCell: boolean } | { exit: 'p' | 'tc' | 'tr'; inCell: boolean };
+/** Plain text of one block, visiting only its own subtree within the shared node budget. */
+function blockText(block: unknown, budget: FragmentBudget): { text: string; textTruncated: boolean; exhausted: boolean } {
+  const cap = Math.min(fragmentLimits.blockText, budget.text);
+  const stack: TextFrame[] = [{ node: block, inText: false, inCell: false }];
+  let text = '', pending = '', trailing = 0, truncated = false, exhausted = false;
+  const append = (value: string) => { if (!value) return; if (text) text += pending; pending = ''; trailing = 0; text += value; };
+  while (stack.length) {
+    if (text.length > cap) { truncated = true; break; }
+    const frame = stack.pop()!;
+    if ('exit' in frame) {
+      if (frame.exit === 'p') { if (text) pending = frame.inCell ? ' ' : '\n'; }
+      else if (frame.exit === 'tc') { pending = ''; text += '\t'; trailing = 1; }
+      else { pending = ''; if (trailing) text = `${text.slice(0, -1)}\n`; else { text += '\n'; trailing = 1; } }
+      continue;
+    }
+    if (--budget.nodes < 0) { budget.nodes = 0; truncated = exhausted = true; break; }
+    const name = elementName(frame.node);
+    if (name === null) {
+      const value = data(frame.node, 'value');
+      if (frame.inText && typeof value === 'string') append(value);
+      continue;
+    }
+    if (name === wordName('tab')) append('\t');
+    else if (name === wordName('br') || name === wordName('cr')) append('\n');
+    const inCell = frame.inCell || name === wordName('tc');
+    if (name === wordName('p') || name === wordName('tc') || name === wordName('tr')) {
+      stack.push({ exit: name === wordName('p') ? 'p' : name === wordName('tc') ? 'tc' : 'tr', inCell: frame.inCell });
+    }
+    const children = array(data(frame.node, 'children'), LIMITS.nodes);
+    for (let i = children.length - 1; i >= 0; i--) stack.push({ node: children[i], inText: name === wordName('t'), inCell });
+  }
+  if (trailing) text = text.slice(0, -trailing);
+  const copy = clipped(text, cap);
+  // A block clipped by the fragment's remaining budget, rather than the per-block cap, ends the slice.
+  budget.text = truncated && cap < fragmentLimits.blockText ? 0 : budget.text - copy.text.length;
+  return { text: copy.text, textTruncated: truncated || copy.textTruncated, exhausted };
+}
 
 /** Original bounded canonical metadata queries. No save, fetch, layout getter or native-input settlement. */
 export function createDocumentInspection(current: () => DocxEditorInstance,
@@ -199,7 +269,101 @@ export function createDocumentInspection(current: () => DocxEditorInstance,
       preserved: 'unverified' as const, renderable: 'unverified' as const, editable: 'unverified' as const, refused: refused.has(code) }))) };
   }
   function failure(error: unknown) { return refusal(error instanceof InspectionFailure ? error.code : 'unsupported'); }
+  /** Lazily reads paragraph style definitions once per fragment; ambiguity yields no level rather than a guess. */
+  function styleLevels(pkg: ReturnType<NonNullable<DocxEditorInstance['surface']>['session']['currentPackage']>) {
+    let definitions: { styles: Map<string, NodeCopy>; nodes: Map<string, NodeCopy> } | null | undefined;
+    const load = () => {
+      if (definitions !== undefined) return definitions;
+      try {
+        const nodes = new Map<string, NodeCopy>(), styles = new Map<string, NodeCopy>(), budget = { nodes: 0, text: 0 };
+        for (const candidate of pkg.parts.values()) {
+          if (candidate.name !== '/word/styles.xml' && !candidate.contentType?.endsWith('.styles+xml')) continue;
+          if (styles.size) reject();
+          const frames = readTree(candidate.root, limits, budget, nodes);
+          if (!is(frames[0]!.node, 'styles')) reject();
+          for (const frame of frames) if (is(frame.node, 'style') && attr(frame.node, 'type') === 'paragraph') {
+            const id = attr(frame.node, 'styleId'); if (!id || styles.has(id)) reject(); styles.set(id, frame.node);
+          }
+        }
+        definitions = { styles, nodes };
+      } catch { definitions = null; }
+      return definitions;
+    };
+    return (first: string): number | null => {
+      try {
+        const loaded = load(); if (!loaded) return null;
+        const seen = new Set<string>();
+        for (let id: string | undefined = first; id;) {
+          if (seen.has(id) || seen.size >= limits.depth) return null;
+          seen.add(id);
+          const definition = loaded.styles.get(id); if (!definition) return null;
+          const properties = child(definition, 'pPr', loaded.nodes), level = properties && child(properties, 'outlineLvl', loaded.nodes);
+          if (level) return outlineLevel(attr(level, 'val') ?? null);
+          const name = child(definition, 'name', loaded.nodes), match = name && /^heading\s+([1-9])$/i.exec(attr(name, 'val') ?? '');
+          if (match) return Number(match[1]);
+          const base = child(definition, 'basedOn', loaded.nodes); id = base ? attr(base, 'val') : undefined;
+        }
+        return null;
+      } catch { return null; }
+    };
+  }
   return {
+    /** Copies a bounded run of top-level body blocks; other blocks' subtrees are never visited. */
+    fragment(request: DocxEngineFragmentRequest): DocxResult<DocxEngineFragmentReport> {
+      try {
+        if (disposed) reject();
+        const editor = current(), surface = editor.surface;
+        if (!surface) reject();
+        const session = surface.session, generation = editor.mountGeneration, revision = session.packageRevision();
+        const valid = () => !disposed && current() === editor && editor.surface === surface && editor.mountGeneration === generation &&
+          surface.session === session && session.packageRevision() === revision;
+        const pkg = session.currentPackage(), part = session.part();
+        if (!valid() || pkg.parts.get(pkg.mainDocumentPart) !== part) reject();
+        if (elementName(part.root) !== wordName('document')) reject();
+        const bodies = array(data(part.root, 'children'), limits.nodes).filter(value => elementName(value) === wordName('body'));
+        if (bodies.length !== 1) reject();
+        const blocks = array(data(bodies[0], 'children'), fragmentLimits.bodyBlocks).filter(value => elementName(value) !== null);
+        let start = request.start ?? 0;
+        if (request.token !== undefined) {
+          const target = tokens.get(request.token);
+          if (!target || !target.valid()) return refusal('stale-selection');
+          start = blocks.findIndex(block => data(block, 'id') === target.paragraphId);
+          if (start < 0) return refusal('stale-selection');
+        }
+        if (start > blocks.length) return refusal('invalid-option');
+        const level = styleLevels(pkg), budget: FragmentBudget = { nodes: fragmentLimits.nodes, text: request.maxText };
+        const read: (Omit<DocxEngineFragmentBlock, 'token'> & { id: string | null })[] = [];
+        let index = start, truncated = false;
+        while (index < blocks.length && read.length < request.maxBlocks && budget.text > 0 && budget.nodes > 0) {
+          const block = blocks[index]!, name = elementName(block);
+          const kind: DocxFragmentBlockKind = name === wordName('p') ? 'paragraph' : name === wordName('tbl') ? 'table' : 'other';
+          let styleId: string | null = null, headingLevel: number | null = null;
+          if (kind === 'paragraph') {
+            const properties = wordChild(block, 'pPr');
+            const style = properties && wordChild(properties, 'pStyle'), direct = properties && wordChild(properties, 'outlineLvl');
+            const id = style ? wordValue(style) : null;
+            styleId = id && id.length <= 128 ? id : null;
+            headingLevel = direct ? outlineLevel(wordValue(direct)) : styleId ? level(styleId) : null;
+          }
+          const content = blockText(block, budget);
+          truncated ||= content.textTruncated;
+          const id = data(block, 'id');
+          read.push({ id: kind === 'paragraph' && typeof id === 'string' && id ? id : null, index, kind, styleId, headingLevel,
+            text: content.text, textTruncated: content.textTruncated });
+          index++;
+          if (content.exhausted) break;
+        }
+        if (!valid()) throw new InspectionFailure('unsupported');
+        const token = (paragraphId: string) => { const value = Object.freeze({}); tokens.set(value, { paragraphId, valid }); return value; };
+        return { ok: true, value: Object.freeze({ start, blockCount: blocks.length, next: index < blocks.length ? index : null, truncated,
+          blocks: Object.freeze(read.map(({ id, ...value }) => Object.freeze({ ...value, token: id ? token(id) : null }))) }) };
+      } catch (error) { return failure(error); }
+    },
+    /** The paragraph a current token addresses, or null once any edit or navigation target change invalidated it. */
+    resolve(token: object): string | null {
+      const target = tokens.get(token);
+      return target && target.valid() ? target.paragraphId : null;
+    },
     outline(): DocxResult<DocxEngineOutlineReport> {
       try { const report = query(); return { ok: true, value: Object.freeze({ items: Object.freeze(report.headings.slice(0, limits.items).map(({ paragraph, ...value }) =>
         Object.freeze({ ...value, token: report.token(paragraph) }))), truncated: report.headings.length > limits.items }) }; }

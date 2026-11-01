@@ -16,7 +16,7 @@ import type { DocxChartModel } from './chart-model.js';
 import { DOCX_LIMITS } from './commands.js';
 import { DOCX_COMMAND_CATALOG, buildDocxCommandAction, type DocxCommandDescriptor } from './command-catalog.js';
 import type { LyraCommand } from '@aceshooting/lyra-ui/components/layout/command-palette/command-palette.class.js';
-import type { DocxOutline, DocxDocumentInspection, DocxDocumentDiagnostic, DocxDocumentCapability } from './document-inspection-types.js';
+import type { DocxOutline, DocxDocumentInspection, DocxDocumentDiagnostic, DocxDocumentCapability, DocxFragment, DocxFragmentRequest } from './document-inspection-types.js';
 import { DOCX_REVIEW_LIMITS, type DocxReviewReport, type DocxReviewDecision } from './review-types.js';
 import { captureTableToolIntent, tableInsertDraft } from './table-tools.js';
 import {
@@ -32,7 +32,7 @@ import type {
   DocxAction, DocxCommand, DocxEdit, DocxRefusalCode, DocxResult, DocxRevision, DocxSaveReceipt,
   DocxSelectionLease, DocxSession, DocxSnapshot, DocxSource, DocxSearchResults, DocxTableAction,
   DocxImageAction, DocxImageDescription, DocxImageDirection, DocxImageSource, DocxInsertImageOptions, DocxCommandAvailability,
-  DocxHighlight,
+  DocxHighlight, DocxBatchStep, DocxBatchOptions, DocxBatchResult,
 } from './types.js';
 import { DOCX_EDITOR_STRINGS } from './strings.js';
 import { styles } from './docx-editor.styles.js';
@@ -2933,6 +2933,30 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   selectOutlineItem(id: string, options: { expectedRevision?: DocxRevision } = {}): DocxResult<void> {
     const result = this.session?.selectOutlineItem(id, options) ?? refused<void>('not-ready');
     this.syncSession(); return result;
+  }
+
+  /** Read a bounded slice of top-level body blocks with revision-scoped paragraph ids. */
+  readFragment(request: DocxFragmentRequest = {}) { return this.session?.readFragment(request) ?? refused<DocxFragment>('not-ready'); }
+
+  /** Move the caret to the start of a current fragment paragraph without editing. */
+  selectFragmentBlock(id: string, options: { expectedRevision?: DocxRevision } = {}): DocxResult<void> {
+    const result = this.session?.selectFragmentBlock(id, options) ?? refused<void>('not-ready');
+    this.syncSession(); return result;
+  }
+
+  /**
+   * Apply an ordered batch of formatting steps at an expected revision, all or nothing, as one revision.
+   * A refusal names the failing step; the document is then unchanged. Await the result before inspecting state.
+   */
+  async applyEdits(steps: readonly DocxBatchStep[], options: DocxBatchOptions): Promise<DocxBatchResult> {
+    const owner = this.session;
+    if (!owner) return { ok: false, code: 'not-ready', step: null };
+    const sequence = this.sourceReadSequence;
+    let result: DocxBatchResult;
+    try { result = await owner.applyEdits(steps, options); }
+    catch { result = { ok: false, code: 'engine-failed', step: null }; }
+    if (this.commandOwnerCurrent(owner, sequence)) this.syncSession();
+    return result;
   }
 
   /** Inspect bounded body metadata; this is not an accessibility certification. */
