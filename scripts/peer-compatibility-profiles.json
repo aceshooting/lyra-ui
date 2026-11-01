@@ -24,7 +24,7 @@
     "katex": "0.19.1",
     "mammoth": "1.13.0",
     "marked": "18.1.2",
-    "pdfjs-dist": "6.4.299"
+    "pdfjs-dist": "6.5.438"
   },
   "toolchain": {
     "playwright": "1.64.1",

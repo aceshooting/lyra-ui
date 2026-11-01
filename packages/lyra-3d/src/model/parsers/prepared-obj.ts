@@ -94,13 +94,22 @@ export const createPreparedObj: ModelPreparedDecoder = (input, services) => {
         }
       } else if (directive === 'p') {
         current.kind = 'points';
-        for (const reference of line.slice(1).trim().split(' ')) { const index = indexOf(reference, vertexCount); yield* addPosition(index); yield* addColor(index); }
+        for (const reference of line.slice(1).trim().split(/\s+/)) { const index = indexOf(reference, vertexCount); yield* addPosition(index); yield* addColor(index); }
       } else if (directive === 'l') {
+        // A line statement is a polyline; like the native loader, expand it into segment vertex pairs.
         current.kind = 'line-segments';
-        const values = line.slice(1).trim().split(' '); const hasUV = line.includes('/');
-        for (const reference of values) yield* addPosition(indexOf(reference.split('/')[0], vertexCount));
-        if (hasUV) for (const reference of values) {
-          const part = reference.split('/')[1];
+        const values = line.slice(1).trim().split(/\s+/); const hasUV = line.includes('/');
+        const lineVertices: string[] = []; const lineUvs: (string | undefined)[] = [];
+        for (const reference of values) {
+          if (!hasUV) { lineVertices.push(reference); continue; }
+          const parts = reference.split('/');
+          if (parts[0] !== '') lineVertices.push(parts[0]!);
+          if (parts[1] !== '') lineUvs.push(parts[1]);
+        }
+        for (let index = 0; index < lineVertices.length - 1; index++) {
+          yield* addPosition(indexOf(lineVertices[index], vertexCount)); yield* addPosition(indexOf(lineVertices[index + 1], vertexCount));
+        }
+        for (let index = 0; index < lineUvs.length - 1; index++) for (const part of [lineUvs[index], lineUvs[index + 1]]) {
           for (let axis = 0; axis < 2; axis++) { yield 'scalars'; uvs[uvOffset++] = sourceUvs[indexOf(part, uvCount) * 2 + axis]!; current.uvs++; }
         }
       }

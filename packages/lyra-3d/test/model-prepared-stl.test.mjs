@@ -5,7 +5,7 @@ import { parseModel } from '../dist/model/model-parsers.js';
 import { createPreparedStl } from '../dist/model/parsers/prepared-stl.js';
 import { assertParity, asciiStlWithBinaryProbe, binaryStl, drain, encode, isolatedInput, services } from './fixtures/model-prepared-text.mjs';
 const solid = name => `solid ${name}\nfacet normal 0 0 1\nouter loop\nvertex 0 0 0\nvertex 1 0 0\nvertex 0 1 0\nendloop\nendfacet\nendsolid ${name}\n`;
-for (const [name, bytes] of [['ascii', encode(solid('first') + solid('second'))], ['binary', binaryStl()], ['magics', binaryStl({ color: true })], ['unnamed', encode(solid(''))], ['empty-padded', encode(`solid ${'name'.repeat(20)}\nendsolid ${'name'.repeat(20)}\n`)]]) {
+for (const [name, bytes] of [['ascii', encode(solid('first') + solid('second'))], ['binary', binaryStl()], ['magics', binaryStl({ color: true })], ['magics-header-end', binaryStl({ color: true, colorOffset: 70 })], ['unnamed', encode(solid(''))], ['empty-padded', encode(`solid ${'name'.repeat(20)}\nendsolid ${'name'.repeat(20)}\n`)]]) {
   test(`sliced STL ${name} retains native geometry and material`, async () => {
     for (const quota of [1, 2, 7, 65536]) await assertParity(bytes, 'stl', createPreparedStl, quota);
   });

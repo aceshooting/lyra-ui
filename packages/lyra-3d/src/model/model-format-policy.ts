@@ -28,7 +28,7 @@ function* obj(bytes: Uint8Array, budget: Budget): ModelWorkGenerator<AdmittedFor
       else uvs++;
       check(vertices <= LIMIT.vertices && normals <= LIMIT.vertices && uvs <= LIMIT.vertices, 'limit');
     } else if (directive === 'f' || directive === 'l' || directive === 'p') {
-      // The point and line loader splits references on literal spaces.
+      // Point and line references are admitted only in canonical single-space form.
       if (directive !== 'f') check(tokens(line).join(' ') === line, 'unsupported');
       const minimum = directive === 'f' ? 3 : directive === 'l' ? 2 : 1;
       integer(values.length, LIMIT.polygonVertices, minimum);
