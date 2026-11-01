@@ -118,7 +118,7 @@ export async function renderEnvironment() {
   let imports = 0, automaticVisibility = true, hidden = false;
   let onFactory: ((record: BridgeRecord) => void) | undefined;
   let importer: () => Promise<unknown> = async () => module();
-  const setImporter = Reflect.get(loaders, '__setMapSceneBridgeImporterForTesting') as ((value?: () => Promise<unknown>) => void) | undefined;
+  const setImporter: ((value?: () => Promise<unknown>) => void) | undefined = loaders.__setMapSceneBridgeImporterForTesting;
   function patch(target: object, key: string, descriptor: PropertyDescriptor): void {
     const previous = Object.getOwnPropertyDescriptor(target, key);
     Object.defineProperty(target, key, { configurable: true, ...descriptor });

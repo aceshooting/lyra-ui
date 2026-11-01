@@ -18,8 +18,6 @@ import type {
   SceneSourceValue,
 } from './map-scene-source-snapshot.js';
 
-export type { CanonicalScenePosition } from '../../../internal/map-scene-contract.js';
-
 interface AdmittedSceneObjectBase {
   readonly id: string;
   readonly label: string;
@@ -29,20 +27,20 @@ interface AdmittedSceneObjectBase {
   readonly showLabel: boolean;
 }
 
-export interface AdmittedSceneMarker extends AdmittedSceneObjectBase {
+interface AdmittedSceneMarker extends AdmittedSceneObjectBase {
   readonly kind: 'marker';
   readonly position: CanonicalScenePosition;
   readonly radius: number;
 }
 
-export interface AdmittedScenePath extends AdmittedSceneObjectBase {
+interface AdmittedScenePath extends AdmittedSceneObjectBase {
   readonly kind: 'path';
   readonly positions: readonly CanonicalScenePosition[];
   readonly interpolation: 'linear' | 'great-circle';
   readonly width: number;
 }
 
-export interface AdmittedSceneArc extends AdmittedSceneObjectBase {
+interface AdmittedSceneArc extends AdmittedSceneObjectBase {
   readonly kind: 'arc';
   readonly start: CanonicalScenePosition;
   readonly end: CanonicalScenePosition;
@@ -50,7 +48,7 @@ export interface AdmittedSceneArc extends AdmittedSceneObjectBase {
   readonly width: number;
 }
 
-export interface AdmittedSceneModel extends AdmittedSceneObjectBase {
+interface AdmittedSceneModel extends AdmittedSceneObjectBase {
   readonly kind: 'model';
   readonly position: CanonicalScenePosition;
   readonly source: SceneSourceReceipt;

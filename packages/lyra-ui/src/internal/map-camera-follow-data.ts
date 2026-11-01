@@ -1,6 +1,6 @@
 import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR, UNSAFE_OWN_DATA_DESCRIPTOR } from './data-descriptors.js';
 
-export type MapCameraFollowMode = 'ground' | 'geographic-visual';
+type MapCameraFollowMode = 'ground' | 'geographic-visual';
 export interface MapCameraFollowOptions {
   readonly objectId: string;
   readonly mode: MapCameraFollowMode;
@@ -11,7 +11,7 @@ export interface MapCameraFollowOptions {
 export type MapCameraFollowProfile =
   | { readonly status: 'admitted'; readonly helper: 'mercator' | 'globe' }
   | { readonly status: 'unavailable'; readonly reason: 'camera-constraints' | 'camera-capability' | 'camera-domain' | 'terrain' };
-export type MapCameraFollowAttemptStatus = 'centering' | 'centered' | 'limited';
+type MapCameraFollowAttemptStatus = 'centering' | 'centered' | 'limited';
 declare const attemptBrand: unique symbol;
 export interface MapCameraFollowAttempt {
   readonly [attemptBrand]: true;

@@ -8,8 +8,8 @@ import { prepareMapCameraFollow, startMapCameraFollow, type MapCameraFollowPlan,
 import { createMapCameraFollowScene } from './map-camera-follow-scene.js';
 import { mapSceneSessionAttachment } from './map-scene-session.js';
 
-export type MapCameraSessionErrorCode = 'invalid-options' | 'invalid-viewpoint' | 'invalid-tour' | 'invalid-follow' | 'invalid-clock' | 'unsupported-map' | 'inactive-map' | 'already-bound' | 'unavailable' | 'disposed';
-export class MapCameraSessionError extends Error {
+type MapCameraSessionErrorCode = 'invalid-options' | 'invalid-viewpoint' | 'invalid-tour' | 'invalid-follow' | 'invalid-clock' | 'unsupported-map' | 'inactive-map' | 'already-bound' | 'unavailable' | 'disposed';
+class MapCameraSessionError extends Error {
   constructor(readonly code: MapCameraSessionErrorCode) { super(code); this.name = 'MapCameraSessionError'; }
 }
 type Reason = 'initial' | 'start' | 'complete' | 'stop' | 'user' | 'external' | 'style' | 'disconnect' | 'engine' | 'motion' | 'disposed';

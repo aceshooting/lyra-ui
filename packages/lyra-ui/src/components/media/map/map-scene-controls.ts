@@ -1,6 +1,6 @@
 import { admitMapTerrain, mapScenePreparation, type LyraMapTerrain } from './map-scene-configuration.js';
 
-export type MapSceneControlKind = 'globe' | 'terrain';
+type MapSceneControlKind = 'globe' | 'terrain';
 export interface MapSceneControlContext {
   readonly isCurrent: () => boolean;
   readonly state: (kind: MapSceneControlKind) => { readonly ready: boolean; readonly busy: boolean; readonly label: string };

@@ -80,7 +80,7 @@ export default {
     },
     'packages/lyra-map': {
       // Build inputs produce the public worker/plugin entries and declarations in dist/.
-      entry: ['src/vite.mjs!', 'src/vite.d.ts!', 'types/features.d.ts!', 'test/*.test.mjs'],
+      entry: ['src/vite.mjs!', 'src/vite.d.ts!', 'types/features.d.ts!', 'src/scene/index.mjs!', 'types/scene-entry.d.ts!', 'test/*.test.mjs'],
       project: ['src/**/*.{mjs,ts}!', 'types/**/*.ts!', 'scripts/**/*.mjs', 'test/**/*.{mjs,ts}'],
       // Linux browser qualification uses the system font resolver and an isolated display server.
       ignoreBinaries: ['fc-match', 'Xvfb'],
@@ -109,5 +109,22 @@ export default {
   ignoreIssues: {
     'packages/lyra-gen/src/catalogs/blocks.ts': ['exports'],
     'packages/lyra-gen/src/isolation.ts': ['exports'],
+    // lyra-3d's bounded graph presentation pipeline and its viewport transactions are qualified by
+    // their own tests before the engine adopts them; until then production entries do not reach them.
+    'packages/lyra-3d/src/graph/presentation-{roots,work}.ts': ['files', 'types'],
+    'packages/lyra-3d/src/graph/{data-appearance-work,data-columns-work,data-preparation,decorations,engine,node-mesh,ordinary-batches,scene-facts-work,spatial-appearance,spatial-appearance-admission,spatial-composite,spatial-edges,spatial-node-meshes,spatial-nodes}.ts': ['exports', 'types'],
+    'packages/lyra-3d/src/core/viewport-{resources,transaction,xr}.ts': ['exports', 'types'],
+    'packages/lyra-3d/src/points/xr-label-layout.ts': ['types'],
+    'packages/lyra-3d/src/model/model-prepared-types.ts': ['types'],
+    // Georeferenced model placement for map scenes has no public lyra-3d entry yet; its tests own it.
+    'packages/lyra-3d/src/map/*.ts': ['files', 'types'],
+    'packages/lyra-3d/src/model/model-asset.ts': ['files', 'types'],
+    // The browser harness copies these suites beside the fixture before serving it.
+    'packages/lyra-3d/test/browser/fixture.mjs': ['unresolved'],
+    // The scene entry's native frame and terrain authorities are reached through the renderer source
+    // registry the build patches into MapLibre, and its declaration file documents the full contract.
+    'packages/lyra-map/src/scene/{completion-observation,geographic,native-frame-authority,native-terrain-authority,projection,resource-ledger}.mjs': ['exports'],
+    'packages/lyra-map/src/scene/geometry-chart.mjs': ['files'],
+    'packages/lyra-map/types/scene.d.ts': ['exports', 'types'],
   },
 };

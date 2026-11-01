@@ -10,12 +10,6 @@ import type { AdmittedSceneObject, SceneAdmissionCandidate } from './map-scene-a
 import { isStaleMapSceneSourceError } from './map-scene-source-snapshot.js';
 import type { SceneRequest, SceneSourceLease, SceneSourceOwner } from './map-scene-source-snapshot.js';
 
-export type {
-  SceneTargetFact as ScenePositionFact,
-  SceneTargetLookup as ScenePositionLookup,
-  SceneRegistryNotice,
-} from '../../../internal/map-scene-contract.js';
-
 export interface ScenePositionRegistry {
   readonly acceptedSceneRevision: number;
   target(id: string): ScenePositionLookup;

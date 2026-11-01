@@ -55,7 +55,7 @@ export interface SceneCompletionTarget {
   readonly acceptedPositionRevision: number;
   readonly position: CanonicalScenePosition;
 }
-export interface SceneCompletionMember {
+interface SceneCompletionMember {
   readonly id: string;
   readonly kind: 'marker' | 'path' | 'arc' | 'model';
   readonly rowToken: object;

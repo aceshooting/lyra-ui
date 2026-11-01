@@ -35,15 +35,15 @@ export interface Engine3dHost {
 }
 
 /** Platform-independent states of an optional immersive presentation. */
-export type Engine3dXrState = 'ready' | 'requesting' | 'presenting' | 'ending' | 'disposed';
+type Engine3dXrState = 'ready' | 'requesting' | 'presenting' | 'ending' | 'disposed';
 
 /** Structural options owned here without importing the optional companion's declarations. */
-export interface Engine3dXrOptions {
+interface Engine3dXrOptions {
   readonly onStateChange?: (state: Engine3dXrState) => void;
 }
 
 /** A prepared presentation owns its native lifetime independently of the loader. */
-export interface Engine3dXrPresentation {
+interface Engine3dXrPresentation {
   readonly state: Engine3dXrState;
   enter(): Promise<void>;
   exit(): Promise<void>;

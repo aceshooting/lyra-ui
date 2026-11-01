@@ -7,7 +7,7 @@ export interface MapViewpoint {
   readonly bearing: number;
   readonly pitch: number;
 }
-export interface MapCameraKeyframe {
+interface MapCameraKeyframe {
   readonly instant: number;
   readonly view: MapViewpoint;
   readonly interpolation: 'linear' | 'hold';

@@ -1,7 +1,7 @@
 import type { MapViewpoint } from './map-camera-session-data.js';
 
 export type CameraOwnerReason = 'user' | 'external' | 'style' | 'engine' | 'disconnect';
-export type CameraActionToken = object;
+type CameraActionToken = object;
 export interface MapCameraSessionCallbacks {
   complete(action: CameraActionToken): void;
   interrupt(reason: CameraOwnerReason): void;

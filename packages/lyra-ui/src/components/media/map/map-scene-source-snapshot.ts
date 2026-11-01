@@ -8,15 +8,15 @@ import {
 import { createMapSceneAdmissionError, mapSceneAdmissionErrorCode } from './map-scene-errors.js';
 
 export type SceneRequest = Readonly<{ connection: object; revision: number }>;
-export type SceneSourceRole = 'candidate' | 'accepted' | 'installed';
-export type SceneSourceFormat = 'gltf' | 'glb' | 'stl' | 'obj' | 'ply' | 'xyz' | 'pcd';
+type SceneSourceRole = 'candidate' | 'accepted' | 'installed';
+type SceneSourceFormat = 'gltf' | 'glb' | 'stl' | 'obj' | 'ply' | 'xyz' | 'pcd';
 export type SceneSourceValue =
   | Readonly<{ format: SceneSourceFormat; bytes: ArrayBuffer | Uint8Array }>
   | Readonly<{ format: SceneSourceFormat; src: string }>;
 
-export interface SceneByteReservation { release(): void }
+interface SceneByteReservation { release(): void }
 /** A request already validated by the owning realm's URL adapter. */
-export interface SceneResolvedRequest {
+interface SceneResolvedRequest {
   readonly url: string;
   readonly owner: object;
 }
@@ -32,7 +32,7 @@ export interface SceneSourceStage {
   readonly receipts: readonly SceneSourceReceipt[];
   dispose(): void;
 }
-export type SceneSourceSnapshot =
+type SceneSourceSnapshot =
   | Readonly<{ kind: 'bytes'; format: SceneSourceFormat; bytes: Uint8Array }>
   | Readonly<{ kind: 'url'; format: SceneSourceFormat; request: SceneResolvedRequest }>;
 export interface SceneSourceOwner {
