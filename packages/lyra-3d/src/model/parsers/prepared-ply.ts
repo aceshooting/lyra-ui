@@ -163,7 +163,7 @@ export const createPreparedPly: ModelPreparedDecoder = (input: AdmittedModelInpu
             face++; faceRead = 0; faceLength = -1; faceValues = []; phase = 'faces'; continue;
           }
           if (!meter.take('scalars')) break;
-          const index = faceLength === 3 ? faceWrite : [0, 1, 3, 1, 2, 3][faceWrite]!;
+          const index = faceLength === 3 ? faceWrite : [0, 1, 2, 0, 2, 3][faceWrite]!;
           const value = faceValues[index]!;
           indices![indexOffset++] = value; maximumIndex = Math.max(maximumIndex, value); faceWrite++;
         } else if (phase === 'narrow') {

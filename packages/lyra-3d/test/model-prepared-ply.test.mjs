@@ -17,7 +17,7 @@ for (const variant of ['ascii', 'binary-le', 'binary-be']) {
         const { services, requests } = allocationServices(); const work = createPreparedPly(fixture.input, services);
         assert.equal(requests.length, 0, 'factory does not allocate final storage');
         const { value, steps } = drainBounded(work, quota); assertReferenceDescriptor(value, parsed.object);
-        if (quota <= 7) assert.ok(steps > 1); assert.deepEqual([...value.geometries[0].index], [0, 1, 2, 0, 1, 2, 1, 3, 2]);
+        if (quota <= 7) assert.ok(steps > 1); assert.deepEqual([...value.geometries[0].index], [0, 1, 2, 0, 1, 3, 0, 3, 2]);
         assert.equal(value.geometries[0].attributes.position.array.constructor, Float64Array);
         assert.deepEqual(value.geometries[0].attributes.color.colorConversion, { space: 'srgb', scale: 255, output: 'u8-normalized' });
         assert.ok(requests.length >= 5); assert.throws(() => work.step({ bytes: 1, scalars: 1, records: 1 }), /no longer active/);

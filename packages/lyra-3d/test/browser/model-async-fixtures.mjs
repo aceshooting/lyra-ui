@@ -28,7 +28,7 @@ function makePlyGpuInput({ name, variant = 'ascii', mesh = false, position = 'fl
   }
   return {
     name: `${name}-${variant}`, data: { format: 'ply', bytes },
-    expectedParsed: { primitive: mesh ? 'mesh' : 'points', vertices: 4, indices: mesh ? [0, 1, 3, 1, 2, 3] : null,
+    expectedParsed: { primitive: mesh ? 'mesh' : 'points', vertices: 4, indices: mesh ? [0, 1, 2, 0, 2, 3] : null,
       positionArray: position === 'double' ? 'Float64Array' : 'Float32Array', normalArray: normal === 'double' ? 'Float64Array' : 'Float32Array', uvArray: uv === 'double' ? 'Float64Array' : 'Float32Array', colorArray: 'Uint8Array', normalizedColor: true },
   };
 }

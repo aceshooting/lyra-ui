@@ -107,9 +107,9 @@ export async function assertParity(bytes, format, factory, quota) {
     return candidate;
   } finally { reference.dispose(); }
 }
-export function binaryStl({ color = false, facets = 2 } = {}) {
+export function binaryStl({ color = false, colorOffset = 5, facets = 2 } = {}) {
   const result = new Uint8Array(84 + facets * 50); const view = new DataView(result.buffer);
-  if (color) result.set([...encode('COLOR='), 128, 64, 255, 100], 5);
+  if (color) result.set([...encode('COLOR='), 128, 64, 255, 100], colorOffset);
   view.setUint32(80, facets, true);
   for (let face = 0; face < facets; face++) {
     const offset = 84 + face * 50;

@@ -36,7 +36,7 @@ export const createPreparedStl: ModelPreparedDecoder = (input, services) => {
     const groupNames: string[] = [];
     if (variant === 'binary') {
       let defaultColor: [number, number, number] | undefined;
-      for (let index = 0; index < 70; index++) {
+      for (let index = 0; index <= 70; index++) {
         yield 'bytes';
         if (view.getUint32(index, false) === 0x434f4c4f && view.getUint8(index + 4) === 0x52 && view.getUint8(index + 5) === 0x3d) {
           defaultColor = [view.getUint8(index + 6) / 255, view.getUint8(index + 7) / 255, view.getUint8(index + 8) / 255];
