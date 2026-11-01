@@ -144,7 +144,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-gauge"></a>`lr-gauge` | data | `import '@aceshooting/lyra-ui/components/lr-gauge.js';` | none | none | none | 25.9 KiB |
 | <a id="lr-generation-metrics"></a>`lr-generation-metrics` | conversation | `import '@aceshooting/lyra-ui/components/lr-generation-metrics.js';` | none | none | none | 24.9 KiB |
 | <a id="lr-geojson-viewer"></a>`lr-geojson-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-geojson-viewer.js';` | `@aceshooting/lyra-map`, `dompurify`, `maplibre-gl` | `lr-json-viewer`, `lr-map`, `lr-skeleton` | `lr-virtual-list` | 246.4 KiB |
-| <a id="lr-graph"></a>`lr-graph` | retrieval | `import '@aceshooting/lyra-ui/components/lr-graph.js';` | `@aceshooting/lyra-3d`, `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` | `lr-pagination`, `lr-skeleton` | none | 105.1 KiB |
+| <a id="lr-graph"></a>`lr-graph` | retrieval | `import '@aceshooting/lyra-ui/components/lr-graph.js';` | `@aceshooting/lyra-3d`, `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` | `lr-pagination`, `lr-skeleton` | none | 105.2 KiB |
 | <a id="lr-graph-legend"></a>`lr-graph-legend` | retrieval | `import '@aceshooting/lyra-ui/components/lr-graph-legend.js';` | none | none | none | 32.6 KiB |
 | <a id="lr-graph-query-builder"></a>`lr-graph-query-builder` | data | `import '@aceshooting/lyra-ui/components/lr-graph-query-builder.js';` | none | `lr-chip`, `lr-chip-group`, `lr-input`, `lr-option`, `lr-select` | none | 104.1 KiB |
 | <a id="lr-grounding-summary"></a>`lr-grounding-summary` | retrieval | `import '@aceshooting/lyra-ui/components/lr-grounding-summary.js';` | none | `lr-citation-badge`, `lr-claim-evidence`, `lr-empty`, `lr-stat` | `lr-badge` | 68.7 KiB |
