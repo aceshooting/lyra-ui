@@ -171,11 +171,17 @@ times during layout, the time from layout start to the first delivered positions
 delivered outputs, the iteration reached, and whether the layout cooled, stabilized, exhausted its
 iteration budget or was still progressing. Layout completion is reported, never required. Every
 scenario also records the main-thread JavaScript heap before and after mounting, after forced garbage
-collection; it excludes worker heaps, GPU and native memory. Mounting 100k nodes under SwiftShader
-takes much longer than on a GPU, so use short durations for a local check:
+collection; it excludes worker heaps, GPU and native memory.
+
+Under SwiftShader a single 100k-node frame can take minutes, and every streamed layout output asks
+for another one, so the page's animation frames (which drive its own waits) can starve. Each page
+observation is therefore bounded in Node time by `--observation-timeout-ms` (default 600000); a page
+that does not finish records the status `timeout`, which fails the measurement like any other
+unqualified sample. Use short durations for a local check, and expect a software run to take many
+minutes:
 
 ```sh
-pnpm benchmark:gpu --modes software --profile scale --duration-ms 1000 --warmup-ms 0
+pnpm benchmark:gpu --modes software --profile scale --duration-ms 1000 --warmup-ms 0 --observation-timeout-ms 300000
 LYRA_GPU_SMOKE=1 node --test benchmarks/gpu/run.test.mjs   # the same smoke as a test, opt-in
 ```
 
@@ -189,7 +195,7 @@ points, each 60 fps), and every scenario in a result gets a `gate` verdict:
   at 60 Hz. A pass qualifies only the recorded renderer and environment.
 - `advisory`: the scenario measured, but SwiftShader, llvmpipe or another software renderer (or no
   identified WebGL 2 renderer) drew it. The numbers are kept and never pass or fail.
-- `unmeasured`: the sample did not qualify (fallback, failure or no drawn WebGL frames).
+- `unmeasured`: the sample did not qualify (fallback, failure, timeout or no drawn WebGL frames).
 - `untargeted`: no documented target; reported only.
 
 The run's `gate` is `pass` only when every targeted scenario passed in at least one hardware-GPU

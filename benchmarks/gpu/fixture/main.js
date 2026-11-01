@@ -53,7 +53,7 @@ function mount(element) {
 }
 
 /** Pinned positions keep the force layout out of the measurement: this is rendering throughput. */
-async function graph({ nodes, edges, unpinned = false }) {
+async function graph({ nodes, edges, unpinned = false, readyTimeoutMs = 60000 }) {
   const { x, y, z, source, target } = graphFixture({ nodes, edges });
   const element = document.createElement('lr-graph');
   element.style.cssText = `inline-size:${WIDTH}px;block-size:${HEIGHT}px`;
@@ -67,7 +67,7 @@ async function graph({ nodes, edges, unpinned = false }) {
     const host = element.shadowRoot?.querySelector('[data-webgl-host]');
     const canvas = host?.querySelector('canvas:not([data-graph-labels])');
     return !!host && !host.hidden && !!canvas && canvas.width > 0;
-  }, 60000, 'GRAPH_NOT_READY');
+  }, readyTimeoutMs, 'GRAPH_NOT_READY');
   await frame(); await frame();
   return { mountMs: performance.now() - started, fallbacks: [...fallbacks] };
 }

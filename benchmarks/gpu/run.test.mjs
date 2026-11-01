@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { hottest, layoutStatus, measurementStatus, parse, summarize } from './run.mjs';
+import { hottest, layoutStatus, measurementStatus, parse, summarize, withDeadline } from './run.mjs';
 import { measurementFailed } from './acceptance.mjs';
 
 test('frame intervals summarize to a rate, nearest-rank percentiles and long frames', () => {
@@ -23,11 +23,13 @@ test('a sampling profile ranks functions by self time with their share', () => {
 });
 
 test('options reject unknown modes, profiles, flags and unbounded durations', () => {
-  assert.deepEqual(parse([]), { modes: ['gpu', 'software'], profile: 'quick', durationMs: 5000, warmupMs: 1000, output: null, cpuProfile: false, acceptanceObservations: false, gate: false });
+  assert.deepEqual(parse([]), { modes: ['gpu', 'software'], profile: 'quick', durationMs: 5000, warmupMs: 1000, output: null, cpuProfile: false, acceptanceObservations: false, gate: false, observationTimeoutMs: 600000 });
   assert.equal(parse(['--modes', 'gpu', '--cpu-profile']).cpuProfile, true);
   assert.equal(parse(['--acceptance-observations']).acceptanceObservations, true);
   assert.equal(parse(['--gate']).gate, true);
   assert.equal(parse(['--profile', 'scale']).profile, 'scale');
+  assert.equal(parse(['--observation-timeout-ms', '90000']).observationTimeoutMs, 90_000);
+  for (const value of ['999', '3600001', '1.5', 'soon']) assert.throws(() => parse(['--observation-timeout-ms', value]), /observationTimeoutMs/);
   assert.throws(() => parse(['--modes', 'metal']), /--modes/);
   assert.throws(() => parse(['--profile', 'huge']), /--profile/);
   assert.throws(() => parse(['--duration-ms', '600000']), /durationMs/);
@@ -64,6 +66,16 @@ test('an unqualified progressive layout observation fails the run like any other
   assert.equal(measurementFailed(run({ status: 'failed' })), true);
 });
 
+test('a page observation is bounded in Node time, independent of the page animation clock', async () => {
+  assert.equal(await withDeadline(Promise.resolve('done'), 1000), 'done');
+  await assert.rejects(withDeadline(Promise.reject(new Error('GRAPH_NOT_READY')), 1000), /GRAPH_NOT_READY/);
+  let late;
+  const starved = new Promise((_, reject) => { late = reject; });
+  await assert.rejects(withDeadline(starved, 10), /OBSERVATION_TIMEOUT/);
+  late(new Error('closed page'));  // A rejection after the deadline stays handled.
+  await new Promise((resolve) => setImmediate(resolve));
+});
+
 // Opt-in: builds the fixture and drives Chromium (SwiftShader), so it needs `pnpm build` and takes
 // tens of seconds for 100k nodes. Run with LYRA_GPU_SMOKE=1 pnpm test:benchmarks.
 test('smoke: the 100k profile measures in software Chromium and stays advisory', { skip: process.env.LYRA_GPU_SMOKE !== '1' }, async () => {
@@ -73,14 +85,15 @@ test('smoke: the 100k profile measures in software Chromium and stays advisory',
   const { run } = await import('./run.mjs');
   const directory = await mkdtemp(join(tmpdir(), 'lyra-gpu-smoke-'));
   try {
-    const { result } = await run({ ...parse(['--modes', 'software', '--profile', 'scale', '--duration-ms', '500', '--warmup-ms', '0']), output: join(directory, 'result.json') });
+    const { result } = await run({ ...parse(['--modes', 'software', '--profile', 'scale', '--duration-ms', '500', '--warmup-ms', '0', '--observation-timeout-ms', '300000']), output: join(directory, 'result.json') });
     const [report] = result.modes;
     assert.equal(report.hardware, 'software');
     const [scenario] = report.scenarios;
     assert.equal(scenario.status, 'measured', scenario.error);
     assert.equal(scenario.gate.verdict, 'advisory');
     assert.ok(scenario.heap.mountedDeltaBytes > 0);
-    assert.equal(scenario.layout.status, 'measured', scenario.layout.error);
+    // A saturated software renderer may starve the unpinned page; that is recorded, never a pass.
+    assert.ok(['measured', 'timeout'].includes(scenario.layout.status), scenario.layout.error);
     assert.equal(result.gate, 'advisory');
   } finally { await rm(directory, { recursive: true, force: true }); }
 });

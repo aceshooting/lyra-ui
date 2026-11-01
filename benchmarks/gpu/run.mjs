@@ -9,6 +9,7 @@
 //                               [--cpu-profile]  (unminified build; top main-thread functions per scenario)
 //                               [--acceptance-observations] (three extra repetitions, heap/input/captures)
 //                               [--gate]  (exit 1 when a targeted scenario fails, 2 when nothing qualified)
+//                               [--observation-timeout-ms 600000] (per page; a starved page records `timeout`)
 import { existsSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
@@ -33,7 +34,8 @@ export const PROFILES = {
     { id: 'points-1m', kind: 'points', count: 1_000_000 },
   ],
   scale: [
-    { id: 'graph-100k-nodes-300k-edges', kind: 'graph', nodes: 100_000, edges: 300_000, targetFps: 60, layout: true },
+    // A software renderer can stall minutes on a 100k frame; a slow mount is recorded, not failed.
+    { id: 'graph-100k-nodes-300k-edges', kind: 'graph', nodes: 100_000, edges: 300_000, targetFps: 60, layout: true, readyTimeoutMs: 600_000 },
   ],
 };
 const PROFILE_NAMES = [...Object.keys(PROFILES), 'all'];
@@ -47,7 +49,7 @@ const MODES = {
 };
 
 export function parse(argv) {
-  const options = { modes: ['gpu', 'software'], profile: 'quick', durationMs: 5000, warmupMs: 1000, output: null, cpuProfile: false, acceptanceObservations: false, gate: false };
+  const options = { modes: ['gpu', 'software'], profile: 'quick', durationMs: 5000, warmupMs: 1000, output: null, cpuProfile: false, acceptanceObservations: false, gate: false, observationTimeoutMs: 600_000 };
   for (let index = 0; index < argv.length; index += 1) {
     const flag = argv[index], value = argv[index + 1];
     if (flag === '--modes') { options.modes = value.split(','); index += 1; }
@@ -58,6 +60,7 @@ export function parse(argv) {
     else if (flag === '--cpu-profile') options.cpuProfile = true;
     else if (flag === '--acceptance-observations') options.acceptanceObservations = true;
     else if (flag === '--gate') options.gate = true;
+    else if (flag === '--observation-timeout-ms') { options.observationTimeoutMs = Number(value); index += 1; }
     else throw new Error(`Unknown option ${flag}`);
   }
   if (!options.modes.length || options.modes.some((mode) => !MODES[mode])) throw new Error('--modes takes gpu and/or software');
@@ -65,6 +68,7 @@ export function parse(argv) {
   for (const key of ['durationMs', 'warmupMs']) {
     if (!Number.isInteger(options[key]) || options[key] < 0 || options[key] > 60_000) throw new Error(`invalid ${key}`);
   }
+  if (!Number.isInteger(options.observationTimeoutMs) || options.observationTimeoutMs < 1000 || options.observationTimeoutMs > 3_600_000) throw new Error('invalid observationTimeoutMs');
   return options;
 }
 
@@ -85,6 +89,9 @@ async function serve(directory) {
 }
 
 const round = (value) => Math.round(value * 100) / 100;
+const started = performance.now();
+/** Progress on stderr, so a long software run shows where it spends its time. */
+const progress = (message) => process.stderr.write(`[${Math.round((performance.now() - started) / 1000)}s] ${message}\n`);
 export function summarize(intervals) {
   const sorted = [...intervals].sort((a, b) => a - b);
   const quantile = (q) => sorted[Math.min(sorted.length - 1, Math.max(0, Math.ceil(q * sorted.length) - 1))] ?? 0;
@@ -136,6 +143,22 @@ async function heapUsed(session) {
   return (await session.send('Runtime.getHeapUsage')).usedSize;
 }
 
+const OBSERVATION_TIMEOUT = 'OBSERVATION_TIMEOUT';
+
+/**
+ * Settles with `work`, or rejects with OBSERVATION_TIMEOUT after `timeoutMs` of Node time. Page-side
+ * waits run on animation frames, which a saturated software renderer can starve for minutes.
+ */
+export async function withDeadline(work, timeoutMs) {
+  let timer;
+  work.catch(() => {});
+  const deadline = new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(OBSERVATION_TIMEOUT)), timeoutMs); });
+  try { return await Promise.race([work, deadline]); } finally { clearTimeout(timer); }
+}
+/** A starved renderer can delay closing; the browser close that follows ends it regardless. */
+const closePage = (page) => withDeadline(page.close(), 30_000).catch(() => {});
+const failureStatus = (error) => (error?.message === OBSERVATION_TIMEOUT ? 'timeout' : 'failed');
+
 const call = (page, name, argument) => page.evaluate(([method, value]) => window.__gpuBenchmark[method](value), [name, argument]);
 
 /** A layout observation qualifies when the frames drew and the worker delivered positions. */
@@ -152,13 +175,14 @@ export function layoutStatus(observed) {
  */
 async function measureLayout(browser, origin, scenario, options, viewport) {
   const page = await browser.newPage({ viewport });
-  try {
+  const observe = async () => {
     await page.addInitScript(observeGraphWorkers);
     await page.goto(origin, { waitUntil: 'load' });
     await page.waitForFunction(() => !!window.__gpuBenchmark);
     await page.evaluate(() => window.__layoutObservation.reset());
-    process.stderr.write(`${scenario.id}: mounting without positions for the progressive layout\n`);
+    progress(`${scenario.id}: mounting without positions for the progressive layout`);
     const mounted = await call(page, 'graph', { ...scenario, unpinned: true });
+    progress(`${scenario.id}: unpinned mount in ${round(mounted.mountMs)} ms; recording frames during layout`);
     const measured = await call(page, 'frames', { durationMs: options.durationMs, orbit: true });
     // A short smoke window may end before the first iteration; the first output is still recorded.
     await page.waitForFunction(() => (window.__layoutObservation.read()?.samples.length ?? 0) > 0, null, { timeout: 120_000 }).catch(() => {});
@@ -175,10 +199,13 @@ async function measureLayout(browser, origin, scenario, options, viewport) {
       fallbacks: await page.evaluate(() => window.__gpuBenchmark.readFallbacks()),
     };
     return { status: layoutStatus(observed), ...observed };
+  };
+  try {
+    return await withDeadline(observe(), options.observationTimeoutMs);
   } catch (error) {
-    return { status: 'failed', error: String(error?.message ?? error).slice(0, 200) };
+    return { status: failureStatus(error), error: String(error?.message ?? error).slice(0, 200) };
   } finally {
-    await page.close();
+    await closePage(page);
   }
 }
 
@@ -186,7 +213,7 @@ async function measure(page, scenario, options) {
   const session = await page.context().newCDPSession(page);
   const beforeMountBytes = await heapUsed(session);
   const mounted = await call(page, scenario.kind, scenario);
-  process.stderr.write(`${scenario.id}: mounted in ${round(mounted.mountMs)} ms\n`);
+  progress(`${scenario.id}: mounted in ${round(mounted.mountMs)} ms`);
   const mountedBytes = await heapUsed(session);
   await session.detach();
   let measured;
@@ -231,7 +258,7 @@ export async function run(options) {
       cpuModel: cpus()[0]?.model?.trim().replace(/\s+/g, ' ') ?? 'unknown', logicalCpus: cpus().length, memoryBytes: totalmem(),
       viewport: { width: 1400, height: 900 }, headless: true,
     },
-    configuration: { profile: options.profile, durationMs: options.durationMs, warmupMs: options.warmupMs, fixtures },
+    configuration: { profile: options.profile, durationMs: options.durationMs, warmupMs: options.warmupMs, observationTimeoutMs: options.observationTimeoutMs, fixtures },
     modes: [],
   };
   const output = options.output ?? join(here, 'results', `${result.recordedAt.replaceAll(':', '-').replaceAll('.', '-')}.json`);
@@ -255,14 +282,14 @@ export async function run(options) {
           await page.goto(hosted.origin, { waitUntil: 'load' });
           await page.waitForFunction(() => !!window.__gpuBenchmark);
           report.renderer ??= await page.evaluate(() => window.__gpuBenchmark.renderer());
-          process.stderr.write(`${mode} ${scenario.id}: measuring\n`);
-          const measured = await measure(page, scenario, options);
+          progress(`${mode} ${scenario.id}: measuring`);
+          const measured = await withDeadline(measure(page, scenario, options), options.observationTimeoutMs);
           report.scenarios.push({ ...scenario, status: measurementStatus(measured), ...measured });
           if (scenario.layout) report.scenarios.at(-1).layout = await measureLayout(browser, hosted.origin, scenario, options, result.environment.viewport);
         } catch (error) {
-          report.scenarios.push({ ...scenario, status: 'failed', error: String(error?.message ?? error).slice(0, 200) });
+          report.scenarios.push({ ...scenario, status: failureStatus(error), error: String(error?.message ?? error).slice(0, 200) });
         } finally {
-          await page.close();
+          await closePage(page);
         }
       }
       if (options.acceptanceObservations) {
@@ -271,6 +298,7 @@ export async function run(options) {
       }
       report.hardware = /swiftshader|llvmpipe|software/i.test(report.renderer?.renderer ?? '') ? 'software' : report.renderer?.webgl2 ? 'gpu' : 'none';
       for (const scenario of report.scenarios) scenario.gate = gateScenario(scenario, report.hardware);
+      progress(`${mode}: closing the browser`);
       await browser.close(); browser = undefined;
     }
   } finally {
@@ -302,6 +330,7 @@ function table({ modes, gate }) {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const options = parse(process.argv.slice(2));
   const { result, output } = await run(options);
+  progress('run complete');
   process.stdout.write(`${table(result)}\n\nResults: ${output}\n`);
   for (const report of result.modes) for (const scenario of report.scenarios) {
     if (scenario.hottest) process.stdout.write(`\nHottest main-thread functions, ${report.mode} ${scenario.id}:\n${scenario.hottest.map((entry) => `  ${entry.selfMs} ms (${Math.round(entry.share * 100)}%) ${entry.name}`).join('\n')}\n`);
