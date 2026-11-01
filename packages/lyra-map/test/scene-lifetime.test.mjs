@@ -568,3 +568,36 @@ test('same-entry callback reentry during participant creation cannot overwrite a
   assert.deepEqual(retired, created); assert.deepEqual(rendered, created);
   assert.equal(item.calls.open.length, 1); assert.equal(item.calls.close.length, 1);
 });
+
+test('a current preparation failure reports an engine error and never installs', async () => {
+  let creates = 0;
+  const item = fixture({ prepare: () => Promise.reject(new Error('native preparation failed')) });
+  await item.mount(item.request(() => { creates++; return { render() {}, dispose() {} }; }));
+  assert.deepEqual(item.events.filter(event => event.error), [{ id: 'scene', error: 'engine' }]);
+  assert.equal(item.calls.add.length, 0); assert.equal(creates, 0); assert.equal(item.ready(), 0);
+  assert.equal(item.calls.prepare[0].signal.aborted, true, 'the failed preparation is retired');
+  item.lifetime.dispose();
+});
+
+test('a preparation failure after replacement stays silent for the superseded request', async () => {
+  let fail;
+  const item = fixture({ prepare: () => new Promise((_resolve, reject) => { fail = reject; }) });
+  const old = item.mount(item.request(() => ({ render() {}, dispose() {} })));
+  item.lifetime.dispose();
+  fail(new Error('late failure')); await old;
+  assert.equal(item.events.filter(event => event.error).length, 0);
+  assert.equal(item.calls.add.length, 0);
+});
+
+test('an added layer whose native onAdd never confirms its handle is refused without removal', async () => {
+  let creates = 0;
+  const item = fixture();
+  // A native map that registers the layer without the synchronous onAdd confirmation.
+  item.map.addLayer = (layer, before) => { item.calls.add.push({ layer, before }); item.layers.set(layer.id, layer); };
+  await item.mount(item.request(() => { creates++; return { render() {}, dispose() {} }; }));
+  assert.equal(item.calls.add.length, 1);
+  assert.deepEqual(item.events.filter(event => event.error), [{ id: 'scene', error: 'engine' }]);
+  assert.equal(item.calls.remove.length, 0, 'an unconfirmed layer identity is never removed');
+  await item.callback(); assert.equal(creates, 0); assert.equal(item.ready(), 0);
+  item.lifetime.dispose();
+});

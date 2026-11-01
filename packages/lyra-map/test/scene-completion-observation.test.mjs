@@ -344,3 +344,57 @@ test('terrain custom debug transition and unknown native phases refuse positive 
   item.begin({ orderedLayers: [{ id: 'foreign', type: 'custom' }, { id: 'scene', type: 'custom' }] }); refuse(item); item.finish();
   assert.equal(item.observation.issue({ plan: item.plan, authority: undefined }), undefined); item.stop();
 });
+
+test('a shader uniform outside the mat4 vec4 float vocabulary refuses paint and observation draws', () => {
+  const extraUniforms = [{ name: 'u_projection_fallback_matrix', type: 'vec3', value: [0, 0, 0] }];
+  const painted = createObservationFixture({ extraUniforms });
+  painted.open(); const before = painted.gpu.snapshot();
+  assert.throws(() => painted.renderer.render(painted.frame, [painted.marker], painted.authority),
+    { name: 'TypeError', message: 'Scene glyph rendering is unavailable.' });
+  assert.equal(painted.gpu.draws.length, 0); assert.deepEqual(painted.gpu.snapshot(), before);
+  painted.finish(false); painted.stop();
+  // A transparent marker is drawn only by the opted-in observation, so its packet reaches that draw path.
+  const observed = createObservationFixture({ alpha: 0, extraUniforms }); observed.begin();
+  const after = observed.gpu.snapshot();
+  assert.doesNotThrow(() => assert.equal(observed.issue(), undefined));
+  assert.equal(observed.gpu.draws.length, 0); assert.equal(observed.completed.length, 0);
+  assert.equal(observed.unavailable.length, 1); assert.equal(observed.gpu.queries.size, 0);
+  assert.deepEqual(observed.gpu.snapshot(), after);
+  observed.finish(); observed.stop();
+});
+
+test('a query that fails to begin is closed without ending any query and its handle is deleted', () => {
+  const item = createObservationFixture(); item.begin(); const before = item.gpu.snapshot(); let fired = false;
+  item.gpu.beforeCall = name => { if (!fired && name === 'beginQuery') { fired = true; throw new Error('begin refused'); } };
+  assert.doesNotThrow(() => assert.equal(item.issue(), undefined)); item.gpu.beforeCall = undefined;
+  assert.equal(fired, true); assert.equal(calls(item, 'endQuery').length, 0);
+  assert.equal(live(item, 'Query').length, 0); assert.equal(item.gpu.queries.size, 0);
+  assert.deepEqual(item.gpu.snapshot(), before);
+  assert.equal(item.unavailable.length, 1); assert.equal(item.completed.length, 0);
+  item.finish(); item.stop();
+});
+
+test('animation-frame scheduling survives re-entrant hiding, throwing and synchronous callbacks', () => {
+  for (const behavior of ['hide', 'hide-cancel-throws', 'throw', 'synchronous']) {
+    const item = createObservationFixture(); item.begin();
+    const request = item.raf.request.bind(item.raf), cancel = item.raf.cancel.bind(item.raf);
+    let requested;
+    item.raf.request = callback => {
+      if (behavior === 'throw') throw new Error('frame scheduling refused');
+      requested = request(callback);
+      if (behavior.startsWith('hide')) item.observation.setVisible(false);
+      if (behavior === 'synchronous') callback(0);
+      return requested;
+    };
+    if (behavior === 'hide-cancel-throws') item.raf.cancel = id => { cancel(id); throw new Error('cancel refused'); };
+    assert.doesNotThrow(() => assert.equal(item.issue(), undefined), behavior);
+    item.raf.request = request; item.raf.cancel = cancel;
+    if (requested !== undefined) assert.ok(item.raf.cancels.includes(requested), `${behavior} cancels its frame`);
+    assert.equal(item.raf.pending, 0, behavior);
+    assert.equal(item.completed.length, 0, behavior);
+    // Hidden work is withdrawn silently; a refused schedule reports the issue unavailable.
+    assert.equal(item.unavailable.length, behavior.startsWith('hide') ? 0 : 1, behavior);
+    item.finish(); item.settle(); assert.equal(item.completed.length, 0, behavior);
+    item.stop(); assert.equal(item.observation.retired(), true, behavior);
+  }
+});

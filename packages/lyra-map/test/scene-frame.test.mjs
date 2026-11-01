@@ -97,6 +97,38 @@ test('shader snapshots copy native arrays, cache each origin and declare horizon
   lease.close();
 });
 
+test('shader snapshots accept native typed vectors through owned views and reject unsafe ones', () => {
+  for (const Type of [Float32Array, Float64Array]) {
+    const f = fixture();
+    // Native projection data arrives as typed views, here deliberately offset into a larger buffer.
+    const view = (values) => {
+      const typed = new Type(new ArrayBuffer((values.length + 2) * Type.BYTES_PER_ELEMENT), Type.BYTES_PER_ELEMENT, values.length);
+      typed.set(values); return typed;
+    };
+    const plain = createGeographicFrameLease(f.input);
+    const expected = plain.frame.geographic.shader(f.services.frameFor(at())).uniforms;
+    plain.close();
+    const typed = fixture();
+    for (const key of ['mainMatrix', 'fallbackMatrix', 'tileMercatorCoords', 'clippingPlane']) typed.source[key] = view(typed.source[key]);
+    const lease = createGeographicFrameLease(typed.input);
+    const uniforms = lease.frame.geographic.shader(typed.services.frameFor(at())).uniforms;
+    typed.source.tileMercatorCoords.fill(9); typed.source.mainMatrix.fill(9);
+    assert.deepEqual(uniforms, expected);
+    assert.ok(uniforms.every(uniform => !ArrayBuffer.isView(uniform.value)));
+    lease.close();
+  }
+  const refusals = [new Int32Array(4), new Float32Array(3), { length: 4, 0: 0, 1: 0, 2: 1, 3: 1 },
+    new Float32Array([0, 0, Infinity, 1])];
+  if (typeof ArrayBuffer.prototype.resize === 'function') refusals.push(new Float32Array(new ArrayBuffer(16, { maxByteLength: 32 })));
+  for (const value of refusals) {
+    const f = fixture();
+    f.source.tileMercatorCoords = value;
+    const lease = createGeographicFrameLease(f.input);
+    assert.throws(() => lease.frame.geographic.shader(f.services.frameFor(at())));
+    lease.close();
+  }
+});
+
 test('nonzero transition declares the sphere horizon convention', () => {
   const f = fixture();
   f.source.projectionTransition = 0.5;

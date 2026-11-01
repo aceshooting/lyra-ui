@@ -372,3 +372,24 @@ test('independent contexts, authoritative loss and late old-frame closure preser
   abortNativeFrame(replacementFrame);
   abortNativeFrame(firstFrame); abortNativeFrame(restoredFrame); abortNativeFrame(secondFrame);
 });
+
+test('a frame whose demand is released while its facts are copied never admits that paint', () => {
+  const item = identities();
+  let released = false;
+  // Fact copying inspects descriptors only; a proxy is the one way a copy can observe re-entrant native work.
+  const facts = new Proxy(frameFacts(), {
+    getOwnPropertyDescriptor(target, key) {
+      if (!released) { released = true; item.releaseDemand(); }
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    }
+  });
+  const frame = begin(item, facts);
+  assert.equal(released, true);
+  opaque(frame);
+  item.releaseDemand = registerNativeFrameDemand(item.gl, item.implementation, item.originalRender);
+  assert.equal(enter(item, frame), undefined);
+  noCapture(item);
+  assert.equal(sealNativeFrame(frame), false);
+  item.releaseDemand();
+  assert.equal(hasNativeFrameDemand(item.gl), false);
+});

@@ -105,3 +105,32 @@ test('read only polling completes without repaint or replaying probes into anoth
   await h.settle(); assert.equal(h.frames.length, 1); assert.equal(h.frames[0].stamp.paintFrameSerial, 2); assert.equal(h.calls.repaint, repaint);
   assert.equal(h.gpu.draws.length, draws); assert.equal(queries(h), count); assert.equal(h.raf.pending, 0); h.close();
 });
+
+test('document visibility withdraws completion demand while hidden and restores it when shown', async () => {
+  const h = completionBridgeFixture(); await h.start(); assert.equal(hasNativeFrameDemand(h.gl), true);
+  h.gl.canvas.ownerDocument.hidden = true; h.documentEvents.emit('visibilitychange');
+  assert.equal(hasNativeFrameDemand(h.gl), false);
+  await h.render(); await h.settle(); assert.equal(queries(h), 0); assert.equal(h.frames.length, 0);
+  h.gl.canvas.ownerDocument.hidden = false; h.documentEvents.emit('visibilitychange');
+  assert.equal(hasNativeFrameDemand(h.gl), true);
+  await h.render(); await h.settle(); assert.ok(queries(h) > 0); assert.equal(h.frames.length, 1);
+  h.close(); h.documentEvents.emit('visibilitychange'); assert.equal(hasNativeFrameDemand(h.gl), false);
+});
+
+test('a demanded render outside any native frame scope draws markers but never issues observation', async () => {
+  const h = completionBridgeFixture(); await h.start(); assert.equal(hasNativeFrameDemand(h.gl), true);
+  for (const { layer } of [...h.layers.values()]) { layer.prerender?.call(layer, h.gl, h.args); layer.render.call(layer, h.gl, h.args); }
+  await flushCompletion(); await h.settle();
+  assert.ok(h.gpu.draws.length > 0); assert.equal(queries(h), 0); assert.equal(h.frames.length, 0);
+  assert.deepEqual(h.errors, []); h.close();
+});
+
+test('a query that fails to begin withdraws the issue and a later native paint can still complete', async () => {
+  const h = completionBridgeFixture(); await h.start(); let fired = false;
+  h.gpu.beforeCall = name => { if (!fired && name === 'beginQuery') { fired = true; throw new Error('begin refused'); } };
+  await h.render(); h.gpu.beforeCall = undefined; assert.equal(fired, true);
+  assert.ok(h.gpu.draws.length > 0, 'ordinary marker paint is unaffected');
+  await h.settle(); assert.equal(h.frames.length, 0); assert.deepEqual(h.errors, []);
+  assert.equal(h.gpu.calls.filter(call => call[0] === 'endQuery').length, 0);
+  await h.render(); await h.settle(); assert.equal(h.frames.length, 1); h.close();
+});

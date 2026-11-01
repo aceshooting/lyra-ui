@@ -24,7 +24,8 @@ export function createObservationFixture(options = {}) {
       project: () => ({ status: 'visibility-pending', visible: false, clip: [...position, 1],
         point: [(position[0] + 1) * (options.width ?? 640) / 2, (1 - position[1]) * (options.height ?? 480) / 2] }),
       shader: () => Object.freeze({ key: 'mercator', defines: '', horizonMode: options.horizonMode ?? 'none',
-        uniforms: options.uploadedTransition === 'missing' ? [] : [{ name: 'u_projection_transition', type: 'float', value: options.uploadedTransition ?? 0 }],
+        uniforms: [...options.uploadedTransition === 'missing' ? [] : [{ name: 'u_projection_transition', type: 'float', value: options.uploadedTransition ?? 0 }],
+          ...options.extraUniforms ?? []],
         vertexPrelude: 'vec4 lrProjectPosition(vec3 p) { return vec4(p, 1.0); }\nvec3 lrHorizonPosition(vec3 p) { return p; }',
         fragmentPrelude: 'bool lrHorizonOccluded(vec3 p) { return false; }' })
     }) });

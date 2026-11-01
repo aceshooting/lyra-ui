@@ -54,7 +54,7 @@ export function completionBridgeFixture(options = {}) {
         clippingPlane: [0, 0, 1, -1 / 3], projectionTransition: 0 }; },
     renderTerrainHeightMap: target => gpu.renderTerrainHeightMap(target)
   };
-  const item = { gpu, gl, raf, map, host, completion, layers, frames, states, errors, hooks, calls, args, controller, nativeEvents,
+  const item = { gpu, gl, raf, map, host, completion, layers, frames, states, errors, hooks, calls, args, controller, nativeEvents, documentEvents,
     get input() { return input; }, get bridge() { return bridge; },
     async start(watch = 'anchor') { bridge = createSceneBridge(map, host);
       if (bridge.completion) { bridge.completion.subscribeCompletedFrames(frame => frames.push(frame)); if (watch) bridge.completion.watchTarget(watch); }

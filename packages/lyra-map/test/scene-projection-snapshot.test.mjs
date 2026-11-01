@@ -89,6 +89,30 @@ test('contract, dimensions, revisions, native tiles and Float32 uniforms are val
   }
 });
 
+test('native typed matrices are read through owned views and copied into frozen plain arrays', () => {
+  const expected = compileProjectionSnapshot(snapshot()).snapshot;
+  for (const Type of [Float32Array, Float64Array]) {
+    const typed = values => {
+      const view = new Type(new ArrayBuffer((values.length + 1) * Type.BYTES_PER_ELEMENT), Type.BYTES_PER_ELEMENT, values.length);
+      view.set(values); return view;
+    };
+    const source = snapshot();
+    for (const key of ['mainMatrix', 'fallbackMatrix', 'clippingPlane', 'tileMercatorCoords']) source[key] = typed(source[key]);
+    // A caller-defined own length cannot stand in for the native one the owned view reads.
+    Object.defineProperty(source.mainMatrix, 'length', { value: 16 });
+    const compiled = compileProjectionSnapshot(source);
+    source.mainMatrix.fill(0); source.tileMercatorCoords.fill(0);
+    assert.deepEqual(compiled.snapshot, expected);
+    for (const key of ['mainMatrix', 'fallbackMatrix', 'clippingPlane', 'tileMercatorCoords']) {
+      assert.equal(Array.isArray(compiled.snapshot[key]), true); assert.equal(Object.isFrozen(compiled.snapshot[key]), true);
+    }
+    assert.deepEqual(evaluateSceneProjection(position(0, 0, 12), compiled).clip, [4096, 4096, 12, 1]);
+  }
+  for (const value of [new Float32Array(15), new Int32Array(16), new Float64Array([NaN, ...identity().slice(1)])]) {
+    assert.throws(() => compileProjectionSnapshot({ ...snapshot(), mainMatrix: value }), TypeError);
+  }
+});
+
 test('tile coefficients match the canonical tile exactly and exclude wrap at every supported scale', () => {
   for (const z of [0, 20, 30]) for (const wrap of [-2, 0, 2]) {
     const source = snapshot({ z, x: z === 0 ? 0 : 17, y: z === 0 ? 0 : 31, wrap });

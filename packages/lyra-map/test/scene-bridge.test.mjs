@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createSceneBridge } from '../src/scene/bridge.mjs';
+import * as sceneEntry from '../src/scene/index.mjs';
+import { withNativeTerrainHookScope } from '../src/scene/native-terrain-authority.mjs';
 import { createSceneBridgeGl } from './fixtures/scene-bridge-gl.mjs';
 
 const flush = async () => { for (let index = 0; index < 16; index++) await Promise.resolve(); };
@@ -726,4 +728,80 @@ test('last status capture cannot publish or count an installation after native o
     }
     item.stop();
   }
+});
+
+test('the scene entry exposes only the bridge factory', () => {
+  assert.deepEqual(Object.keys(sceneEntry), ['createSceneBridge']);
+  assert.equal(sceneEntry.createSceneBridge, createSceneBridge);
+});
+
+test('a native callback racing a queued input replacement defers to reconciliation instead of drawing stale input', async () => {
+  const item = fixture({ input: packet({ markers: [absolute()] }) }); item.start(); await item.ready(); await item.frames(1);
+  const layer = item.calls.add[0].layer, draws = item.gpu.draws.length, repaint = item.calls.repaint;
+  item.replace(packet({ presentationRevision: 2, markers: [absolute('anchor', { rgba: [0.8, 0.3, 0.1, 0.25] })] }));
+  // The synchronous native redraw arrives before the queued reconciliation microtask.
+  for (const method of ['prerender', 'render']) assert.doesNotThrow(() => layer[method](item.gl, item.args));
+  assert.equal(item.gpu.draws.length, draws, 'stale input is not drawn');
+  await item.ready(); assert.equal(latest(item).presentationRevision, 2); assert.ok(item.calls.repaint > repaint);
+  item.gpu.draws.length = 0; await item.frames(1);
+  assert.ok(item.gpu.draws.length > 0); assert.ok(item.gpu.draws.every(draw => hasUniform(draw, [0.8, 0.3, 0.1, 0.25])));
+  assert.equal(item.calls.add.length, 1); item.stop();
+});
+
+test('terrain sampling inside an exact native hook scope keeps its admitted authority', async () => {
+  const item = fixture(); item.gpu.setCoverage(125, 1); item.start(); await item.ready();
+  const scoped = async () => {
+    for (const method of ['prerender', 'render']) {
+      for (const { layer } of [...item.layers.values()]) {
+        withNativeTerrainHookScope(item.gl, item.args.renderTerrainHeightMap, () => layer[method](item.gl, item.args));
+      }
+      await item.ready();
+    }
+  };
+  for (let index = 0; index < 4; index++) await scoped();
+  assert.equal(sampleCalls(item), 1); assert.ok(item.gpu.draws.some(draw => hasUniform(draw, [4096, 4096, 132])));
+  sanitized(item); item.stop();
+});
+
+test('a nested native scope revoking the terrain hook authority refuses that sample without drawing', async () => {
+  const item = fixture(); item.gpu.setCoverage(125, 1); item.start(); await item.ready();
+  const hook = item.args.renderTerrainHeightMap;
+  // A re-entrant native paint opens its own scope, revoking the outer callback's terrain authority.
+  item.args.renderTerrainHeightMap = function (target) {
+    withNativeTerrainHookScope(item.gl, undefined, () => undefined);
+    return hook.call(this, target);
+  };
+  const scoped = async () => {
+    for (const method of ['prerender', 'render']) {
+      for (const { layer } of [...item.layers.values()]) {
+        withNativeTerrainHookScope(item.gl, item.args.renderTerrainHeightMap, () => layer[method](item.gl, item.args));
+      }
+      await item.ready();
+    }
+  };
+  for (let index = 0; index < 3; index++) await scoped();
+  assert.equal(item.gpu.draws.length, 0); sanitized(item); item.stop();
+});
+
+test('native loss observed at terrain batch admission cancels the batch and waits for restoration', async () => {
+  const item = fixture(); item.gpu.setCoverage(125, 1); item.start(); await item.ready();
+  const isContextLost = item.gl.isContextLost;
+  // Loss visible through the native context before its event arrives refuses the batch admission.
+  item.gl.isContextLost = () => true;
+  await item.callback('prerender');
+  item.gl.isContextLost = isContextLost;
+  await item.frames();
+  assert.equal(sampleCalls(item), 0); assert.equal(item.gpu.draws.length, 0); assert.deepEqual(item.errors, []);
+  // The native loss event follows; restoration installs a fresh context that samples again.
+  item.loss(); await item.ready(); item.restore(); await item.ready(); await item.frames();
+  assert.equal(sampleCalls(item), 1); assert.ok(item.gpu.draws.some(draw => hasUniform(draw, [4096, 4096, 132])));
+  sanitized(item); item.stop();
+});
+
+test('missing float color buffer support marks terrain unavailable and cancels the batch without drawing', async () => {
+  const item = fixture(); const getExtension = item.gl.getExtension;
+  item.gl.getExtension = function (name) { return name === 'EXT_color_buffer_float' ? null : getExtension.call(this, name); };
+  item.start(); await item.ready(); await item.frames(4);
+  assert.equal(sampleCalls(item), 0); assert.equal(item.gpu.draws.length, 0);
+  assert.equal(ownedLive(item, 'Framebuffer').length, 0); sanitized(item); item.stop();
 });
