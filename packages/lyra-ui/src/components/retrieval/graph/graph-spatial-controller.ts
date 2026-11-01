@@ -157,6 +157,8 @@ export class GraphSpatialController {
   private intersection?: IntersectionObserver;
   private eligibility?: MutationObserver;
   private visible = true;
+  /** False between observing a surface and its first intersection report. */
+  private visibilityReported = true;
   private frame?: number;
   private frameWindow?: Window;
   private notifyCamera = false;
@@ -268,7 +270,10 @@ export class GraphSpatialController {
     if (!this.spatialEligible()) {
       if (this.meshPending) { this.meshAbort?.abort(); this.meshAbort = undefined; this.meshNext = undefined; this.meshEpoch++; this.meshPending = false; this.meshKey = undefined; }
       try {
-        if (this.engineSizeKey !== '0|0') { engine.resize(0, 0); this.engineSizeKey = '0|0'; }
+        // A lost context already released its allocations, and a re-observed surface has not reported
+        // visibility yet; keep the last real size in both cases so a restored frame is presented at
+        // the surface's allocation rather than a hidden 1x1 buffer.
+        if (this.engineSizeKey !== '0|0' && this.selection.renderer === 'webgl' && this.visibilityReported) { engine.resize(0, 0); this.engineSizeKey = '0|0'; }
         this.syncGlow(engine);
       } catch { this.closeEngine(); this.failEngine('error'); }
       return;
@@ -584,7 +589,7 @@ export class GraphSpatialController {
         const Resize = view.ResizeObserver;
         if (Resize) { this.resize = new Resize(() => { this.fitInitialCanvas(); this.builtin?.invalidate(); this.syncVisibility(); this.schedule(); }); this.resize.observe(surface); }
         const Intersection = view.IntersectionObserver;
-        if (Intersection) { this.intersection = new Intersection((entries) => { this.visible = entries[0]?.isIntersecting ?? false; this.syncVisibility(); if (this.visible) { this.ensureEngine(); this.schedule(); } }); this.intersection.observe(surface); }
+        if (Intersection) { this.visibilityReported = false; this.intersection = new Intersection((entries) => { this.visible = entries[0]?.isIntersecting ?? false; this.visibilityReported = true; this.syncVisibility(); if (this.visible) { this.ensureEngine(); this.schedule(); } }); this.intersection.observe(surface); }
         else this.visible = surface.clientWidth > 0 && surface.clientHeight > 0;
       }
     }
@@ -611,6 +616,7 @@ export class GraphSpatialController {
     this.context = undefined;
     this.hover = undefined;
     this.visible = true;
+    this.visibilityReported = true;
     this.contextFailed = false;
   }
 
