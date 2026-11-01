@@ -19,6 +19,13 @@ import type {
 } from './map.js';
 import { LYRA_MAP_EMPTY_STYLE } from './map.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
+import { createSimulationClock, type ClockSnapshot, type SimulationClock } from '../../../simulation-clock.js';
+import { createTimeIndex } from '../../../time-index.js';
+import { bindSequencePlayback } from '../../../sequence-time-binding.js';
+import { createMapCameraSession, type MapCameraSession, type MapCameraTour, type MapViewpoint } from '../../../map-camera-session.js';
+import type { LyraSequencePlayback } from '../sequence-playback/sequence-playback.class.js';
+import { createNetworkMonitoringFixture, deriveNetworkFrame, type SyntheticNetworkFrame,
+  type SyntheticNodeStatus } from '../../../../test/network-monitoring-fixture.js';
 
 const legend = (): LyraMapLegendEntry[] => [
   { color: storyColor('brand'), label: 'Low', pattern: 'solid' },
@@ -1951,5 +1958,291 @@ export const GlobeAndTerrain: Story = {
           @lr-map-style-load=${() => { void report(); }}></lr-map>
         <output ${ref(element => { status = element as HTMLElement | undefined; })} aria-live="polite">${messages.loading}</output>
       </section>`;
+  },
+};
+
+type NetworkShowcaseState = 'ready' | 'loading' | 'empty' | 'failure';
+type NetworkShowcaseLanguage = 'en' | 'fr' | 'ar';
+const NETWORK_SHOWCASE_COPY = {
+  en: {
+    title: 'Synthetic network monitoring', map: 'Synthetic stations, relays and links', language: 'Language',
+    dataState: 'Data state', ready: 'Ready', loading: 'Loading', empty: 'Empty', failure: 'Failure',
+    loadingMessage: 'Loading synthetic observations…', emptyMessage: 'No observations in the selected range.',
+    failureMessage: 'Observations could not be loaded.', retry: 'Retry', camera: 'Camera', save: 'Save view',
+    restore: 'Restore view', tour: 'Play camera tour', follow: 'Follow', stop: 'Release camera', node: 'Node',
+    status: 'Status', position: 'Position', source: 'Position source', history: 'Availability history', time: 'Time',
+    free: 'Camera is free.', touring: 'Camera tour follows the playback clock.', following: 'Following {id}.',
+    restoring: 'Restoring the saved view.', interrupted: 'Camera action ended: {reason}.', unavailable: 'Camera control is unavailable.',
+    statuses: { available: 'Available', degraded: 'Degraded', unavailable: 'Unavailable', missing: 'No position' },
+  },
+  fr: {
+    title: 'Supervision de réseau synthétique', map: 'Stations, relais et liaisons synthétiques', language: 'Langue',
+    dataState: 'État des données', ready: 'Prêt', loading: 'Chargement', empty: 'Vide', failure: 'Échec',
+    loadingMessage: 'Chargement des observations synthétiques…', emptyMessage: 'Aucune observation dans la plage choisie.',
+    failureMessage: 'Les observations n’ont pas pu être chargées.', retry: 'Réessayer', camera: 'Caméra', save: 'Enregistrer la vue',
+    restore: 'Restaurer la vue', tour: 'Lancer la visite', follow: 'Suivre', stop: 'Libérer la caméra', node: 'Nœud',
+    status: 'État', position: 'Position', source: 'Origine de la position', history: 'Historique de disponibilité', time: 'Heure',
+    free: 'La caméra est libre.', touring: 'La visite suit l’horloge de lecture.', following: 'Suivi de {id}.',
+    restoring: 'Restauration de la vue enregistrée.', interrupted: 'Action de caméra terminée : {reason}.', unavailable: 'Le contrôle de la caméra est indisponible.',
+    statuses: { available: 'Disponible', degraded: 'Dégradé', unavailable: 'Indisponible', missing: 'Sans position' },
+  },
+  ar: {
+    title: 'مراقبة شبكة تجريبية', map: 'محطات ومرحلات وروابط تجريبية', language: 'اللغة',
+    dataState: 'حالة البيانات', ready: 'جاهز', loading: 'جارٍ التحميل', empty: 'فارغ', failure: 'فشل',
+    loadingMessage: 'جارٍ تحميل الملاحظات التجريبية…', emptyMessage: 'لا توجد ملاحظات في النطاق المحدد.',
+    failureMessage: 'تعذر تحميل الملاحظات.', retry: 'إعادة المحاولة', camera: 'الكاميرا', save: 'حفظ العرض',
+    restore: 'استعادة العرض', tour: 'تشغيل جولة الكاميرا', follow: 'تتبع', stop: 'تحرير الكاميرا', node: 'العقدة',
+    status: 'الحالة', position: 'الموقع', source: 'مصدر الموقع', history: 'سجل التوفر', time: 'الوقت',
+    free: 'الكاميرا حرة.', touring: 'جولة الكاميرا تتبع ساعة التشغيل.', following: 'تتبع {id}.',
+    restoring: 'استعادة العرض المحفوظ.', interrupted: 'انتهى إجراء الكاميرا: {reason}.', unavailable: 'التحكم في الكاميرا غير متاح.',
+    statuses: { available: 'متاح', degraded: 'متدهور', unavailable: 'غير متاح', missing: 'بلا موقع' },
+  },
+} as const;
+
+/**
+ * A reusable monitoring layout over synthetic data: one shared simulation clock drives sequence
+ * playback, the map, a camera tour and the detail panel. Frame derivation lives with the example
+ * data, outside the component library; the map only receives presentation inputs.
+ */
+export const NetworkMonitoringShowcase: Story = {
+  name: 'Network monitoring showcase',
+  parameters: { docs: { description: { story: 'Synthetic stations, two moving relays, scheduled links, advisory regions and availability history share one playback clock. Save and restore a viewpoint, play a camera tour bound to the same clock, or follow a relay; a drag, wheel or keyboard gesture ends the camera action and reports `lr-map-camera-interrupt`. Every control is a native button or select. Switch the data state to preview loading, empty and failure handling. Reduced motion holds relays at observed samples and turns camera transitions into jumps. No physical reachability or orbital calculation is implied.' } } },
+  render: () => {
+    let cleanup: (() => void) | undefined;
+    let generation = 0;
+    const attach = (element?: Element): void => {
+      cleanup?.(); cleanup = undefined;
+      const current = ++generation;
+      if (!element) return;
+      queueMicrotask(() => {
+        if (current !== generation || !element.isConnected) return;
+        const root = element as HTMLElement;
+        const select = <T extends Element>(selector: string): T => root.querySelector<T>(selector)!;
+        const map = select<LyraMap>('lr-map');
+        const playback = select<LyraSequencePlayback>('lr-sequence-playback');
+        const nodeSelect = select<HTMLSelectElement>('[data-node]');
+        const languageSelect = select<HTMLSelectElement>('[data-language]');
+        const abort = new AbortController();
+        const fixture = createNetworkMonitoringFixture();
+        const index = createTimeIndex(fixture.observations.map(observation => observation.instant));
+        const first = index.instantAt(0), last = index.instantAt(index.length - 1);
+        const reducedMotion = root.ownerDocument.defaultView?.matchMedia('(prefers-reduced-motion: reduce)');
+        let state: NetworkShowcaseState = 'ready';
+        let language: NetworkShowcaseLanguage = 'en';
+        let selected = 'relay-1';
+        let frame: SyntheticNetworkFrame | undefined;
+        let camera: MapCameraSession | undefined;
+        let saved: MapViewpoint | undefined;
+        let cameraMessage = '';
+        let data: { release(): void } | undefined;
+        let pendingLoad: ReturnType<typeof setTimeout> | undefined;
+        const copy = () => NETWORK_SHOWCASE_COPY[language];
+        const format = (instant: number): string => new Intl.DateTimeFormat(language, { timeZone: 'UTC', timeStyle: 'medium' }).format(instant);
+        const statusColor = (status: SyntheticNodeStatus): string => status === 'available' ? storyColor('success')
+          : status === 'degraded' ? storyColor('warning') : status === 'unavailable' ? storyColor('danger') : storyColor('noData');
+        const setText = (selector: string, text: string): void => { select<HTMLElement>(selector).textContent = text; };
+        const describeCamera = (): void => {
+          const text = copy(), snapshot = camera?.snapshot;
+          const summary = !camera ? text.unavailable : snapshot?.mode === 'tour' && snapshot.active ? text.touring
+            : snapshot?.mode === 'follow' ? text.following.replace('{id}', snapshot.objectId)
+              : snapshot?.mode === 'viewpoint' && snapshot.active ? text.restoring : text.free;
+          setText('[data-camera-status]', cameraMessage ? `${summary} ${cameraMessage}` : summary);
+          for (const button of root.querySelectorAll<HTMLButtonElement>('[data-camera]')) {
+            button.disabled = !camera || state !== 'ready' || (button.dataset['camera'] === 'restore' && !saved);
+          }
+        };
+        const present = (): void => {
+          const text = copy();
+          root.lang = language; root.dir = language === 'ar' ? 'rtl' : 'ltr';
+          for (const node of root.querySelectorAll<HTMLElement>('[data-copy]')) {
+            node.textContent = text[node.dataset['copy'] as Exclude<keyof typeof text, 'statuses'>];
+          }
+          for (const button of root.querySelectorAll<HTMLButtonElement>('[data-state]')) {
+            button.setAttribute('aria-pressed', String(button.dataset['state'] === state));
+          }
+          map.label = text.map;
+          const layout = select<HTMLElement>('[data-layout]');
+          layout.hidden = state !== 'ready';
+          layout.setAttribute('aria-busy', String(state === 'loading'));
+          const message = select<HTMLElement>('[data-state-message]');
+          message.hidden = state === 'ready';
+          setText('[data-state-text]', state === 'loading' ? text.loadingMessage : state === 'empty' ? text.emptyMessage : state === 'failure' ? text.failureMessage : '');
+          select<HTMLButtonElement>('[data-retry]').hidden = state !== 'failure';
+          describeCamera();
+          if (!frame || state !== 'ready') return;
+          setText('[data-time]', `${text.time}: ${format(frame.instant)} · ${frame.location.lowerIndex + 1}/${index.length}`);
+          const node = frame.nodes.find(candidate => candidate.id === selected) ?? frame.nodes[0]!;
+          setText('[data-detail-status]', text.statuses[node.status]);
+          setText('[data-detail-position]', node.position
+            ? `${node.position.lngLat[1].toFixed(2)}°, ${node.position.lngLat[0].toFixed(2)}° · ${Math.round(node.position.altitude)} m` : text.statuses.missing);
+          setText('[data-detail-source]', node.positionSource.kind);
+          const history = frame.history.find(row => row.id === node.id)!;
+          select<HTMLElement>('[data-history]').replaceChildren(...history.instants.map((instant, position) => {
+            const row = root.ownerDocument.createElement('li');
+            row.textContent = `${format(instant)} · ${text.statuses[history.statuses[position]!]}`;
+            if (position === frame!.location.lowerIndex) row.setAttribute('aria-current', 'time');
+            return row;
+          }));
+        };
+        const render = (snapshot: ClockSnapshot): void => {
+          frame = deriveNetworkFrame(fixture, snapshot.instant, { reducedMotion: reducedMotion?.matches === true });
+          const text = copy();
+          map.markers = frame.nodes.flatMap(node => node.position ? [{ id: node.id, lngLat: node.position.lngLat,
+            color: statusColor(node.status), label: `${node.label} · ${text.statuses[node.status]}` }] : []);
+          map.scene = { objects: frame.nodes.flatMap(node => node.position ? [{ kind: 'marker' as const, id: node.id,
+            label: `${node.label} · ${text.statuses[node.status]}`, position: { lngLat: node.position.lngLat } }] : []) };
+          const line = (link: SyntheticNetworkFrame['links'][number]) => ({ type: 'Feature' as const, properties: { id: link.id },
+            geometry: { type: 'LineString' as const, coordinates: link.positions!.map(position => [...position.lngLat]) } });
+          const area = (region: SyntheticNetworkFrame['environment'][number]) => ({ type: 'Feature' as const, properties: { id: region.id },
+            geometry: { type: 'Polygon' as const, coordinates: [region.ring.map(point => [...point])] } });
+          map.dataLayers = [
+            { sourceId: 'regions-clear', tone: 'neutral', geojson: { type: 'FeatureCollection', features: frame.environment.filter(region => region.category === 'clear').map(area) } },
+            { sourceId: 'regions-advisory', tone: 'warning', geojson: { type: 'FeatureCollection', features: frame.environment.filter(region => region.category === 'advisory').map(area) } },
+            { sourceId: 'links-available', tone: 'success', geojson: { type: 'FeatureCollection', features: frame.links.filter(link => link.visible && link.status === 'available').map(line) } },
+            { sourceId: 'links-unavailable', tone: 'danger', geojson: { type: 'FeatureCollection', features: frame.links.filter(link => link.visible && link.status === 'unavailable').map(line) } },
+          ];
+          present();
+        };
+        const tour: MapCameraTour = { keyframes: [
+          { instant: first, view: { center: [-0.5, 49.2], zoom: 5.5, bearing: 0, pitch: 0 } },
+          { instant: index.instantAt(2), view: { center: [-3.5, 48.4], zoom: 7, bearing: -20, pitch: 30 } },
+          { instant: index.instantAt(5), view: { center: [-0.8, 49.3], zoom: 6.5, bearing: 0, pitch: 20 }, interpolation: 'hold' },
+          { instant: index.instantAt(6), view: { center: [2.6, 48.6], zoom: 7, bearing: 25, pitch: 30 } },
+          { instant: last, view: { center: [-0.5, 49.2], zoom: 5.5, bearing: 0, pitch: 0 } },
+        ] };
+        let clock: SimulationClock | undefined;
+        const unload = (): void => {
+          if (pendingLoad !== undefined) clearTimeout(pendingLoad);
+          pendingLoad = undefined; camera?.stop(); data?.release(); data = undefined; clock = undefined; frame = undefined;
+          map.markers = []; map.scene = undefined; map.dataLayers = [];
+        };
+        const load = (next: NetworkShowcaseState): void => {
+          unload(); state = next; cameraMessage = '';
+          if (next !== 'ready') { present(); return; }
+          state = 'loading'; present();
+          // Stands in for an application fetch; the library never loads monitoring data itself.
+          pendingLoad = setTimeout(() => {
+            pendingLoad = undefined;
+            if (abort.signal.aborted) return;
+            state = 'ready';
+            const shared = createSimulationClock({ range: [first, last], instant: first, rate: 30 });
+            const unbind = bindSequencePlayback(playback, shared, index, { signal: abort.signal });
+            const unsubscribe = shared.subscribe(render, { signal: abort.signal });
+            clock = shared;
+            data = { release() { unsubscribe(); unbind(); shared.dispose(); } };
+          }, 400);
+        };
+        const acquireCamera = async (): Promise<void> => {
+          try { await map.whenStyleReady(); } catch { describeCamera(); return; }
+          if (abort.signal.aborted || camera) return;
+          try {
+            camera = createMapCameraSession(map, { signal: abort.signal });
+            camera.subscribe(() => describeCamera(), { signal: abort.signal });
+          } catch { camera = undefined; }
+          describeCamera();
+        };
+        const run = (operation: (session: MapCameraSession) => void): void => {
+          if (!camera) return;
+          cameraMessage = '';
+          try { operation(camera); } catch { cameraMessage = copy().unavailable; }
+          describeCamera();
+        };
+        root.addEventListener('click', event => {
+          const button = (event.target as Element).closest<HTMLButtonElement>('button');
+          if (!button || !root.contains(button)) return;
+          const stateChoice = button.dataset['state'] as NetworkShowcaseState | undefined;
+          if (stateChoice) { load(stateChoice); return; }
+          if (button.hasAttribute('data-retry')) { load('ready'); return; }
+          switch (button.dataset['camera']) {
+            case 'save': run(session => { saved = session.capture(); }); break;
+            case 'restore': run(session => { if (saved) session.restore(saved, { kind: 'fly', duration: 1200 }); }); break;
+            case 'tour': run(session => { if (clock) { session.tour(clock, tour); clock.play(); } }); break;
+            case 'follow': run(session => { session.follow({ objectId: selected, mode: 'ground', zoom: 7 }); }); break;
+            case 'stop': run(session => { session.stop(); }); break;
+            default: break;
+          }
+        }, { signal: abort.signal });
+        map.addEventListener('lr-map-camera-interrupt', event => {
+          cameraMessage = copy().interrupted.replace('{reason}', event.detail.reason); describeCamera();
+        }, { signal: abort.signal });
+        map.addEventListener('lr-map-marker-activate', event => {
+          if (event.detail.id) { selected = event.detail.id; nodeSelect.value = selected; present(); }
+        }, { signal: abort.signal });
+        nodeSelect.addEventListener('change', () => { selected = nodeSelect.value; present(); }, { signal: abort.signal });
+        languageSelect.addEventListener('change', () => {
+          language = languageSelect.value as NetworkShowcaseLanguage;
+          if (clock) render(clock.snapshot); else present();
+        }, { signal: abort.signal });
+        reducedMotion?.addEventListener('change', () => { if (clock) render(clock.snapshot); }, { signal: abort.signal });
+        nodeSelect.replaceChildren(...fixture.nodes.map(node => new Option(node.label, node.id, false, node.id === selected)));
+        load('ready');
+        void acquireCamera();
+        cleanup = () => { abort.abort(); unload(); camera?.dispose(); camera = undefined; };
+      });
+    };
+    return html`
+      <style>
+        .lr-story-network { container-type: inline-size; display: grid; gap: var(--lr-space-m); min-inline-size: 0; }
+        .lr-story-network [data-layout] { display: grid; gap: var(--lr-space-m); grid-template-columns: minmax(0, 1fr); }
+        .lr-story-network [data-layout][hidden] { display: none; }
+        .lr-story-network .toolbar { display: flex; flex-wrap: wrap; gap: var(--lr-space-s); align-items: center; }
+        .lr-story-network aside { display: grid; gap: var(--lr-space-s); align-content: start; padding: var(--lr-space-m);
+          border: 1px solid var(--lr-color-border); border-radius: var(--lr-radius); background: var(--lr-color-surface-raised); }
+        .lr-story-network dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--lr-space-2xs) var(--lr-space-s); margin: 0; }
+        .lr-story-network dd { margin: 0; overflow-wrap: anywhere; }
+        .lr-story-network ol { margin: 0; padding-inline-start: var(--lr-space-l); max-block-size: var(--lr-size-12rem); overflow: auto; }
+        .lr-story-network li[aria-current] { font-weight: var(--lr-font-weight-semibold); }
+        @container (min-width: 48rem) {
+          .lr-story-network [data-layout] { grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr); }
+        }
+      </style>
+      <section class="lr-story-network" aria-labelledby="network-showcase-title" ${ref(attach)}>
+        <h3 id="network-showcase-title" data-copy="title">Synthetic network monitoring</h3>
+        <div class="toolbar">
+          <label><span data-copy="language">Language</span> <select data-language>
+            <option value="en">English</option><option value="fr">Français</option><option value="ar">العربية</option>
+          </select></label>
+          <div class="toolbar" role="group" aria-labelledby="network-showcase-state">
+            <span id="network-showcase-state" data-copy="dataState">Data state</span>
+            <button type="button" data-state="ready" data-copy="ready" aria-pressed="true">Ready</button>
+            <button type="button" data-state="loading" data-copy="loading" aria-pressed="false">Loading</button>
+            <button type="button" data-state="empty" data-copy="empty" aria-pressed="false">Empty</button>
+            <button type="button" data-state="failure" data-copy="failure" aria-pressed="false">Failure</button>
+          </div>
+        </div>
+        <div data-state-message role="status" hidden>
+          <span data-state-text></span>
+          <button type="button" data-retry data-copy="retry" hidden>Retry</button>
+        </div>
+        <div data-layout hidden>
+          <div style="display: grid; gap: var(--lr-space-s); min-inline-size: 0">
+            <lr-sequence-playback></lr-sequence-playback>
+            <p data-time style="margin: 0"></p>
+            <div class="toolbar" role="toolbar" aria-labelledby="network-showcase-camera">
+              <span id="network-showcase-camera" data-copy="camera">Camera</span>
+              <button type="button" data-camera="save" data-copy="save" disabled>Save view</button>
+              <button type="button" data-camera="restore" data-copy="restore" disabled>Restore view</button>
+              <button type="button" data-camera="tour" data-copy="tour" disabled>Play camera tour</button>
+              <button type="button" data-camera="follow" data-copy="follow" disabled>Follow</button>
+              <button type="button" data-camera="stop" data-copy="stop" disabled>Release camera</button>
+            </div>
+            <lr-map label="Synthetic stations, relays and links" style="block-size: var(--lr-size-24rem); min-inline-size: 0"
+              .mapStyle=${LYRA_MAP_EMPTY_STYLE} .center=${[-0.5, 49.2]} .zoom=${5.5}
+              .controls=${{ navigation: true, attribution: false }}></lr-map>
+            <p data-camera-status role="status" style="margin: 0"></p>
+          </div>
+          <aside aria-labelledby="network-showcase-node-label">
+            <label id="network-showcase-node-label"><span data-copy="node">Node</span> <select data-node></select></label>
+            <dl>
+              <dt data-copy="status">Status</dt><dd data-detail-status></dd>
+              <dt data-copy="position">Position</dt><dd data-detail-position></dd>
+              <dt data-copy="source">Position source</dt><dd data-detail-source></dd>
+            </dl>
+            <h4 data-copy="history" style="margin: 0">Availability history</h4>
+            <ol data-history></ol>
+          </aside>
+        </div>
+      </section>
+    `;
   },
 };
