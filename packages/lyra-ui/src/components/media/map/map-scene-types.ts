@@ -30,18 +30,28 @@ export interface LyraMapSceneMarker extends LyraMapSceneObjectBase {
   /** Requested positive marker radius. Defaults to 6. */
   readonly radius?: number;
 }
+/** Drawn as a native line; altitude is carried in the data and reported as `partial`/`altitude` when not representable. */
 export interface LyraMapScenePath extends LyraMapSceneObjectBase {
   readonly kind: 'path';
   readonly positions: readonly LyraMapPosition[];
-  /** Requested path interpolation. Defaults to 'great-circle'. */
+  /**
+   * Path interpolation. Defaults to 'great-circle', the shortest route on the globe; 'linear'
+   * joins vertices straight in longitude/latitude. Both cross the antimeridian the shorter way.
+   */
   readonly interpolation?: 'linear' | 'great-circle';
   /** Requested positive path width. Defaults to 2. */
   readonly width?: number;
 }
+/**
+ * A great-circle ground track whose altitude interpolates linearly between the endpoints plus a
+ * parabolic rise of `height` meters at the midpoint. A nonzero altitude or height is drawn as the
+ * ground track and reported as `partial` with code `altitude`.
+ */
 export interface LyraMapSceneArc extends LyraMapSceneObjectBase {
   readonly kind: 'arc';
   readonly start: LyraMapPosition;
   readonly end: LyraMapPosition;
+  /** Nonnegative midpoint rise in meters above the chord between endpoint altitudes. */
   readonly height: number;
   /** Requested positive arc width. Defaults to 2. */
   readonly width?: number;
@@ -58,7 +68,18 @@ export interface LyraMapSceneModel extends LyraMapSceneObjectBase {
 export type LyraMapSceneObject = LyraMapSceneMarker | LyraMapScenePath | LyraMapSceneArc | LyraMapSceneModel;
 /** New assignments are admitted atomically; undefined clears accepted scene ownership. */
 export interface LyraMapScene { readonly objects: readonly LyraMapSceneObject[]; }
-export type LyraMapSceneErrorCode = 'invalid' | 'limit' | 'model' | 'resource' | 'engine' | 'projection' | 'terrain' | 'context-lost';
+/**
+ * `altitude`: a path or arc is drawn as its ground track because the flat map cannot show its
+ * authored altitude or arc height. `model`: model objects are not drawn.
+ */
+export type LyraMapSceneErrorCode = 'invalid' | 'limit' | 'model' | 'resource' | 'engine' | 'projection' | 'terrain' |
+  'context-lost' | 'altitude';
+/**
+ * `loading` until every renderer settles; `ready` when every accepted object is installed on the
+ * map exactly; `partial` with a code when some objects are missing or drawn without altitude;
+ * `unavailable` with a code when nothing could be drawn. Installation does not assert that pixels
+ * are visible: terrain, occlusion and viewport still apply.
+ */
 export interface LyraMapSceneStateDetail {
   readonly revision: number;
   readonly state: 'loading' | 'ready' | 'partial' | 'empty' | 'unavailable' | 'error';
