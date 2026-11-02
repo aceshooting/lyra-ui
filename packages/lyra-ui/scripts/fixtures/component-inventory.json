@@ -91520,6 +91520,16 @@
             "default": "container"
           },
           {
+            "name": "collapsedPanels",
+            "attribute": null,
+            "type": "readonly string[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
+          {
             "name": "collapseState",
             "attribute": "collapse-state",
             "type": "LyraMultiSplitCollapseState",
@@ -91741,6 +91751,12 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-multi-split-panel-collapse-change",
+            "type": "CustomEvent<LyraEventDetailSnapshot<LyraMultiSplitPanelCollapseChangeDetail>>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-resize",
             "type": "CustomEvent<LyraEventDetailSnapshot<LyraMultiSplitResizeDetail>>",
             "cancelable": "never",
@@ -91788,6 +91804,12 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-multi-split-collapsed-panel-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-2-5rem)"
+          },
           {
             "name": "--lr-multi-split-divider-active-color",
             "deprecated": null,
@@ -91848,6 +91870,22 @@
             ]
           },
           {
+            "name": "collapsePanel",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "panel",
+                    "type": "string | HTMLElement",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
             "name": "expandPane",
             "overloads": [
               {
@@ -91857,11 +91895,43 @@
             ]
           },
           {
+            "name": "expandPanel",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "panel",
+                    "type": "string | HTMLElement",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
             "name": "togglePane",
             "overloads": [
               {
                 "parameters": [],
                 "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "togglePanel",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "panel",
+                    "type": "string | HTMLElement",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "boolean"
               }
             ]
           }

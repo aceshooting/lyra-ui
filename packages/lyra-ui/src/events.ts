@@ -2059,6 +2059,12 @@ export type LyraMultiSplitConstraintsInvalidEvent = LyraMultiSplitEventMap['lr-m
 export type LyraMultiSplitOrientationChangeEvent = LyraMultiSplitEventMap['lr-multi-split-orientation-change'];
 
 /**
+ * `lr-multi-split-panel-collapse-change` — dispatched by `<lr-multi-split>`; detail
+ * `LyraMultiSplitEventMap['lr-multi-split-panel-collapse-change']`.
+ */
+export type LyraMultiSplitPanelCollapseChangeEvent = LyraMultiSplitEventMap['lr-multi-split-panel-collapse-change'];
+
+/**
  * `lr-mutation` — dispatched by `<lr-mutation-observer>`; detail
  * `LyraMutationObserverEventMap['lr-mutation']`.
  */
@@ -3820,6 +3826,7 @@ export interface LyraGlobalEventMap {
   'lr-multi-split-collapse-change': LyraMultiSplitCollapseChangeEvent;
   'lr-multi-split-constraints-invalid': LyraMultiSplitConstraintsInvalidEvent;
   'lr-multi-split-orientation-change': LyraMultiSplitOrientationChangeEvent;
+  'lr-multi-split-panel-collapse-change': LyraMultiSplitPanelCollapseChangeEvent;
   'lr-mutation': LyraMutationEvent;
   'lr-mute-change': LyraMuteChangeEvent;
   'lr-nav-open-change': LyraNavOpenChangeEvent;
