@@ -1983,7 +1983,7 @@ const NETWORK_SHOWCASE_COPY = {
     restore: 'Restaurer la vue', tour: 'Lancer la visite', follow: 'Suivre', stop: 'Libérer la caméra', node: 'Nœud',
     status: 'État', position: 'Position', source: 'Origine de la position', history: 'Historique de disponibilité', time: 'Heure',
     free: 'La caméra est libre.', touring: 'La visite suit l’horloge de lecture.', following: 'Suivi de {id}.',
-    restoring: 'Restauration de la vue enregistrée.', interrupted: 'Action de caméra terminée : {reason}.', unavailable: 'Le contrôle de la caméra est indisponible.',
+    restoring: 'Rétablissement de la vue enregistrée.', interrupted: 'Action de caméra terminée : {reason}.', unavailable: 'Le contrôle de la caméra est indisponible.',
     statuses: { available: 'Disponible', degraded: 'Dégradé', unavailable: 'Indisponible', missing: 'Sans position' },
   },
   ar: {
