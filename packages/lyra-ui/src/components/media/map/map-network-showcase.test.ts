@@ -10,7 +10,8 @@ import './map.js';
 import '../sequence-playback/sequence-playback.js';
 
 // The story localizes its own copy only; composed controls keep their English defaults in Arabic.
-expectLocaleFallback('ar', ['mapScene', 'mapSceneShow', 'mapSceneHide', 'mapSceneUnavailable', 'mapSceneMarker', 'zoomIn',
+expectLocaleFallback('ar', ['mapScene', 'mapSceneShow', 'mapSceneHide', 'mapSceneUnavailable', 'mapScenePartial', 'loading',
+  'mapSceneMarker', 'mapScenePath', 'zoomIn',
   'zoomOut', 'mapResetNorth', 'play', 'pause', 'playbackPosition', 'playbackStepPosition']);
 const text = (root: HTMLElement, selector: string): string => root.querySelector(selector)?.textContent?.trim() ?? '';
 const button = (root: HTMLElement, selector: string): HTMLButtonElement => {
@@ -27,7 +28,8 @@ describe('network monitoring showcase story', function () {
   afterEach(() => { fixtureCleanup(); setWorkerUrl(workerUrl); });
 
   async function mount() {
-    const wrapper = await fixture<HTMLElement>(html`<div>${NetworkMonitoringShowcase.render!({}, null as never)}</div>`);
+    // Storybook's theme defines these tokens; the bare test page supplies the two link colors.
+    const wrapper = await fixture<HTMLElement>(html`<div data-lr-theme-scope style="--lr-theme-color-success-fill-loud: rgb(20, 120, 60); --lr-theme-color-danger-fill-loud: rgb(180, 30, 30)">${NetworkMonitoringShowcase.render!({}, null as never)}</div>`);
     const root = wrapper.querySelector<HTMLElement>('section')!;
     const map = root.querySelector<LyraMap>('lr-map')!;
     const playback = root.querySelector<LyraSequencePlayback>('lr-sequence-playback')!;
@@ -45,7 +47,15 @@ describe('network monitoring showcase story', function () {
     expect(root.querySelectorAll('[data-history] li')).to.have.length(9);
     expect(root.querySelectorAll('[data-history] li')[3]!.getAttribute('aria-current')).to.equal('time');
     expect(map.scene?.objects.map(object => object.id)).to.include('relay-1');
-    expect(map.dataLayers.map(layer => layer.sourceId)).to.deep.equal(['regions-clear', 'regions-advisory', 'links-available', 'links-unavailable']);
+    const links = map.scene?.objects.filter(object => object.kind === 'path') ?? [];
+    expect(links.length).to.be.greaterThan(0);
+    expect(links.some(link => link.kind === 'path' && link.positions.some(position => (position.altitude ?? 0) > 0))).to.equal(true);
+    expect(map.dataLayers.map(layer => layer.sourceId)).to.deep.equal(['regions-clear', 'regions-advisory']);
+    // Elevated links are drawn as ground tracks, which the scene reports truthfully.
+    await waitUntil(() => map.shadowRoot?.querySelector('[part="scene-status"]')?.textContent?.includes('Some scene objects'),
+      'partial scene status', { timeout: 10000 });
+    const native = map.map as unknown as { getStyle(): { layers?: readonly { readonly id: string }[] } };
+    expect(native.getStyle().layers?.some(layer => layer.id.startsWith('lr-scene-lines-'))).to.equal(true);
     await expect(root).to.be.accessible();
   });
 

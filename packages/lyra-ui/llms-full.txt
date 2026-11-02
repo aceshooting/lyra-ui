@@ -35678,9 +35678,9 @@ Optional descriptor fields use these admission defaults:
 | Model `metersPerUnit` / `orientation` | `1` / identity `[0, 0, 0, 1]` |
 
 Opacity must be between 0 and 1; radius, width and model scale must be positive. Model orientation
-is a scalar-last quaternion normalized during admission. Style, interpolation and model fields
-describe requested rendering, which is currently unavailable. `interactive` controls text-row
-activation; `showLabel` does not hide the required label from the text fallback.
+is a scalar-last quaternion normalized during admission. Model fields describe requested rendering,
+which is not yet drawn. `interactive` controls text-row activation; `showLabel` does not hide the
+required label from the text fallback, and rendered labels are not drawn.
 
 ```ts
 import '@aceshooting/lyra-ui/components/lr-map.js';
@@ -35694,11 +35694,26 @@ const map = document.querySelector('lr-map')!;
 map.scene = scene;
 ```
 
-Current scene support accepts geographic intent and provides an accessible text fallback.
-Nonempty accepted input reports `unavailable` with code `engine`: scene objects are not drawn,
-models are not fetched or parsed, and no scene depth, terrain resolution or completed-frame
-projection is supplied. Existing `markers`, `dataLayers`, projection and terrain configuration
-remain separate APIs.
+Accepted scenes are drawn on the map and keep the accessible text fallback. Markers render as
+geographic circles through the optional `@aceshooting/lyra-map/scene` bridge. Paths and arcs render
+as one scene-owned GeoJSON source and line layer, with each object's resolved `color` (default: the
+accent token), `width` in CSS pixels and `opacity`. Markers draw above lines. Models are not fetched,
+parsed or drawn. Existing `markers`, `dataLayers`, projection and terrain configuration remain
+separate APIs.
+
+Path `interpolation: 'great-circle'` follows the shortest route on the globe, sampled at most one
+degree apart; `'linear'` joins vertices straight in longitude/latitude. Both cross the antimeridian
+the shorter way. An arc follows the great circle from `start` to `end`; its altitude interpolates
+linearly between the endpoint altitudes and adds a parabolic rise of `height` meters,
+`height * 4t(1 - t)`, peaking at the midpoint. Generated vertices carry that altitude as the third
+GeoJSON coordinate.
+
+The map draws lines flat on its displayed surface, so altitude is drawn exactly only when it is
+zero against that surface: `sea-level` without terrain, or `terrain`. A path or arc with any other
+altitude, a nonzero arc `height`, or `sea-level` geometry while terrain is displayed is drawn as its
+ground track, and the scene reports `partial` with code `altitude`. Changing terrain re-evaluates
+this. A style replacement reinstalls scene lines after the new style loads; clearing the scene,
+removing every path and arc, or disconnecting the map removes them.
 
 A connected assignment snapshots and admits input synchronously before returning. A detached
 assignment is accepted on connection in that document's realm. Assign a new scene object to
@@ -35719,6 +35734,7 @@ Admission rejects the complete update rather than truncating it:
 | --- | --- |
 | Objects / model objects per scene | 2,000 / 32 |
 | Authored positions per scene / positions per path | 65,536 / 4,096 |
+| Generated path and arc vertices per scene | 262,144; great-circle sampling coarsens to fit, and code `limit` is reported otherwise |
 | ID / required label / optional color | 1–1,024 / 16,384 / 1,024 UTF-16 units |
 | Model `src` / resolved absolute source URL | 1,048,576 UTF-16 units each |
 | Aggregate authored IDs, labels, colors and model `src` occurrences | 4,194,304 UTF-16 units per request |
@@ -35738,9 +35754,19 @@ rows remain text. Caller labels render as text. Style the surface with `scene-pa
 `scene-toggle`, `scene-list`, `scene-item`, `scene-pagination` and `scene-status` parts.
 
 `lr-map-scene-state` emits immutable `{ revision, state, code? }` detail against the accepted
-revision: accepted empty input and clear report `empty`, nonempty input reports `unavailable`
-with `engine`, and rejected input reports `error` with `invalid` or `limit` while retaining the
-previous accepted revision. `lr-map-scene-activate` emits immutable `{ id, kind, source,
+revision. Accepted empty input and clear report `empty`. Nonempty input reports `loading`, then
+one settled state: `ready` when every object is installed on the map exactly; `partial` with a code
+when some objects are missing or approximated; or `unavailable` with a code when nothing could be
+drawn. Codes are `altitude` (drawn as a ground track), `model` (models are not drawn), `engine` (the
+map, its optional scene renderer or a native layer failed), `limit` (generated geometry exceeds the
+vertex limit) and `context-lost` (the WebGL context is lost; drawing resumes on restore). When
+several apply, the most significant is reported in that reverse order, `context-lost` first. A
+settled state can change again on a style replacement, terrain change or context loss. `ready`
+means installed, not visible: the viewport, terrain and occlusion still apply. Rejected input
+reports `error` with `invalid` or `limit` while retaining the previous accepted revision, and
+renderer progress does not replace that report until a new scene is accepted. `loading` and
+`ready` are not announced; `partial` is announced politely and `unavailable`, `empty` and `error`
+assertively. The `scene-status` part shows the current text except when `ready`. `lr-map-scene-activate` emits immutable `{ id, kind, source,
 position? }` detail, with `source: 'pointer' | 'keyboard'`; positional marker/model actions include
 the accepted geographic position. Both events bubble, are composed and are noncancelable.
 
@@ -39701,11 +39727,13 @@ particular country. Representative language mappings also include `lb` (Luxembou
   `LyraMapModelFormat = 'gltf' | 'glb' | 'stl' | 'obj' | 'ply' | 'xyz' | 'pcd'`,
   `LyraMapModelSource = { readonly format: LyraMapModelFormat; readonly bytes: ArrayBuffer | Uint8Array } | { readonly format: LyraMapModelFormat; readonly src: string }`,
   `LyraMapSceneObject = LyraMapSceneMarker | LyraMapScenePath | LyraMapSceneArc | LyraMapSceneModel`,
-  and `LyraMapSceneErrorCode = 'invalid' | 'limit' | 'model' | 'resource' | 'engine' | 'projection' | 'terrain' | 'context-lost'`.
-  The state and activation types include renderer-facing alternatives; current accepted-scene
-  support emits `empty`, `unavailable` or `error`, and text activation uses the four declared
-  object kinds without `layerId`. It does not draw scene objects or supply completed-frame
-  visibility. See Geographic scene input and text fallback above for defaults, limits and ownership.
+  and `LyraMapSceneErrorCode = 'invalid' | 'limit' | 'model' | 'resource' | 'engine' | 'projection' | 'terrain' |
+  'context-lost' | 'altitude'`.
+  The state and activation types include renderer-facing alternatives; scene status emits
+  `loading`, `ready`, `partial`, `empty`, `unavailable` or `error`, and codes other than
+  `resource`, `projection` and `terrain`. Text activation uses the four declared object kinds without
+  `layerId`. Status does not supply completed-frame visibility. See Geographic scene input and text
+  fallback above for drawing semantics, defaults, limits and ownership.
 
 - **`components-media-image-viewer-panorama-contracts`** — Shared panorama camera, hotspot and selection data for image and video viewers.
   Import types from `@aceshooting/lyra-ui/components/lr-image-viewer.js` or
