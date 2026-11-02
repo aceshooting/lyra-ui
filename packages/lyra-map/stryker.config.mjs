@@ -16,7 +16,9 @@ export default {
   tap: {
     // The package verifier rebuilds and imports generated code in a subprocess without TAP hooks.
     // It observes no mutation targets here and runs in the complete ordinary-suite preflight instead.
-    testFiles: ['packages/lyra-map/test/!(check-package).test.mjs'],
+    // The scene export probe likewise imports the built package in a child process, where instrumented
+    // preparation code serialized into the build cannot resolve; it too runs only in the ordinary suite.
+    testFiles: ['packages/lyra-map/test/!(check-package|scene-package-exports).test.mjs'],
     nodeArgs: ['--test-reporter=tap'],
     forceBail: true,
   },
