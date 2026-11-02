@@ -719,6 +719,7 @@ export type {
   LyraMapChoroplethNoData,
   LyraMapControlPosition,
   LyraMapControls, LyraMapGlobeControlOptions, LyraMapTerrainControlOptions, LyraMapProjectionChangeDetail, LyraMapTerrainChangeDetail,
+  LyraMapCameraInterruptDetail, LyraMapCameraInterruptReason,
   LyraMapLegendGradientTick,
   LyraMapNavigationControlOptions,
   LyraMapScaleControlOptions,
@@ -2301,3 +2302,9 @@ export { createTimeIndex, TimeIndexError } from './time-index.js';
 export type { TimeIndex, TimeLocation, TimeIndexErrorCode } from './time-index.js';
 export { bindSequencePlayback, SequenceTimeBindingError } from './sequence-time-binding.js';
 export type { SequenceTimeBindingOptions, SequenceTimeBindingErrorCode } from './sequence-time-binding.js';
+export { createMapCameraSession, MapCameraSessionError } from './map-camera-session.js';
+export type {
+  MapViewpoint, MapCameraTransition, MapCameraKeyframe, MapCameraTour, MapCameraFollowOptions,
+  MapCameraSession, MapCameraSessionOptions, MapCameraSessionSnapshot, MapCameraSessionMode,
+  MapCameraSessionReason, MapCameraSessionErrorCode, MapCameraTrackingStatus, MapCameraTrackingIssue,
+} from './map-camera-session.js';

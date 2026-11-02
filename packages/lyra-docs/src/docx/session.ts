@@ -1,13 +1,14 @@
 import type { DocxReviewAction, DocxReviewReport } from './review-types.js';
 import { isDocxReviewAction } from './review-types.js';
-import type { DocxOutline, DocxDocumentInspection } from './document-inspection-types.js';
+import type { DocxOutline, DocxDocumentInspection, DocxFragment, DocxFragmentRequest } from './document-inspection-types.js';
+import { DOCX_FRAGMENT_LIMITS, batchRefusal, normalizeDocxBatch, normalizeDocxRevision, normalizeFragmentRequest } from './document-operations.js';
 import type { DocxChartPlacement } from './eigenpal-charts.js';
-import type { DocxEngineEvent, DocxEnginePort, DocxEngineImageOperation, DocxMountOwnership, DocxSessionPort, DocxTableLabels } from './engine-port.js';
+import type { DocxEngineBatchResult, DocxEngineEvent, DocxEnginePort, DocxEngineImageOperation, DocxMountOwnership, DocxSessionPort, DocxTableLabels } from './engine-port.js';
 import { normalizeImageInsertion, normalizeImageReplacement, imageInsertionAborted, listenImageInsertionAbort } from './image-insertion-input.js';
 import { DOCX_LIMITS, isDocxImageAction, isDocxTableAction, normalizeDocxAction, normalizeDocxReplacement, normalizeDocxSearch } from './commands.js';
 import { ownDataRecord } from './own-data-record.js';
 import type {
-  DocxAction, DocxCommand, DocxCommandAvailability, DocxRefusalCode, DocxResult, DocxRevision,
+  DocxAction, DocxBatchOptions, DocxBatchResult, DocxBatchStep, DocxCommand, DocxCommandAvailability, DocxRefusalCode, DocxResult, DocxRevision,
   DocxSaveReceipt, DocxSelection, DocxSelectionLease, DocxSession,
   DocxSessionOptions, DocxSnapshot, DocxSource, DocxStatus, DocxFormatting,
   DocxParagraphStyles, DocxFontFamilies, DocxSearchResults, DocxTableAction, DocxTableContext, DocxImageAction, DocxImageContext, DocxImageDescription, DocxImageDirection,
@@ -38,11 +39,8 @@ function searchRevisionOptions(value: unknown, allowSelection = false): DocxResu
     if (options['selection'] !== undefined && (!options['selection'] || typeof options['selection'] !== 'object')) return refused('invalid-option');
     const selection = options['selection'] === undefined ? {} : { selection: options['selection'] as DocxSelectionLease };
     if (options['expectedRevision'] === undefined) return ok(selection);
-    const revision = ownDataRecord(options['expectedRevision']);
-    if (!revision || Object.keys(revision).some(key => key !== 'documentId' && key !== 'value') ||
-        typeof revision['documentId'] !== 'string' || !revision['documentId'].length || revision['documentId'].length > 128 ||
-        typeof revision['value'] !== 'number' || !Number.isSafeInteger(revision['value']) || revision['value'] < 0) return refused('invalid-option');
-    return ok({ expectedRevision: { documentId: revision['documentId'], value: revision['value'] }, ...selection });
+    const revision = normalizeDocxRevision(options['expectedRevision']);
+    return revision ? ok({ expectedRevision: revision, ...selection }) : refused('invalid-option');
   } catch { return refused('invalid-option'); }
 }
 interface Operation {
@@ -125,6 +123,9 @@ class InternalDocxSession implements DocxSession {
   private readonly outlineTargets = new Map<string, DocumentTarget>();
   private readonly diagnosticTargets = new Map<string, DocumentTarget>();
   private readonly reviewTargets = new Map<string, DocumentTarget>();
+  private readonly fragmentTargets = new Map<string, DocumentTarget>();
+  /** Committed engine changes observed while a batch owns the document; they become one revision. */
+  private batch: { armed: boolean; changes: number } | null = null;
   private imageReady = false;
   private publishedImageReady = false;
   private error: DocxRefusalCode | null = null;
@@ -384,7 +385,7 @@ class InternalDocxSession implements DocxSession {
   }
   private cleanupEngine() {
     this.clearSearch();
-    this.outlineTargets.clear(); this.diagnosticTargets.clear(); this.reviewTargets.clear();
+    this.clearTargets();
     this.formatting = emptyFormatting;
     this.table = null; this.image = null; this.imageReady = false;
     this.releaseLease();
@@ -466,6 +467,7 @@ class InternalDocxSession implements DocxSession {
   }
   private engineEvent(emitter: DocxEnginePort, event: DocxEngineEvent) {
     if (this.status !== 'ready' || this.engine !== emitter) return;
+    if (event === 'change' && this.batch?.armed) { this.batch.changes++; return; }
     // Record the committed change even when its subsequent inspection fails.
     if (event === 'change') {
       this.revision = Object.freeze({ documentId: this.revision!.documentId, value: this.revision!.value + 1 });
@@ -692,6 +694,9 @@ class InternalDocxSession implements DocxSession {
     this.formatting = Object.freeze({ ...value });
   }
   private clearSearch() { this.searchVersion++; this.matches.clear(); }
+  private clearTargets() {
+    this.outlineTargets.clear(); this.diagnosticTargets.clear(); this.reviewTargets.clear(); this.fragmentTargets.clear();
+  }
   private readFailure(engine: DocxEnginePort, revision: DocxRevision): DocxRefusalCode | null {
     const failure = this.completionFailure() ?? this.gate();
     if (failure) return failure;
@@ -742,9 +747,7 @@ class InternalDocxSession implements DocxSession {
     catch { result = refused(this.completionFailure() ?? 'unsupported'); }
     finally {
       if (this.commandOwner === owner) this.commandOwner = null;
-      if (this.status === 'destroyed' || this.status === 'error') {
-        this.outlineTargets.clear(); this.diagnosticTargets.clear(); this.reviewTargets.clear();
-      }
+      if (this.status === 'destroyed' || this.status === 'error') this.clearTargets();
       // A pure query does not publish or poll capabilities. Restore only a native
       // event's transient busy snapshot after releasing synchronous ownership.
       if (this.cached !== snapshot) this.publish();
@@ -841,6 +844,108 @@ class InternalDocxSession implements DocxSession {
   }
   selectOutlineItem(id: string, options: { expectedRevision?: DocxRevision } = {}): DocxResult<void> {
     return this.selectDocumentTarget(this.outlineTargets, id, options);
+  }
+  readFragment(request: DocxFragmentRequest = {}): DocxResult<DocxFragment> {
+    const normalized = normalizeFragmentRequest(request);
+    if (!normalized.ok) return normalized;
+    const { start, outlineItemId, maxBlocks, maxText, expectedRevision } = normalized.value;
+    const gate = this.gate(); if (gate) return refused(gate);
+    if (expectedRevision && !equalRevision(expectedRevision, this.revision)) return refused('stale-revision');
+    let token: object | undefined;
+    if (outlineItemId !== undefined) {
+      const target = this.documentTarget(this.outlineTargets, outlineItemId);
+      if (!target.ok) return target;
+      token = target.value.token;
+    }
+    return this.documentQuery((engine, revision) => {
+      const report = engine.fragment?.({ ...(token ? { token } : { start }), maxBlocks, maxText }) ?? refused('unsupported');
+      if (!report.ok) return report;
+      for (const [id, target] of this.fragmentTargets) if (!equalRevision(target.revision, revision)) this.fragmentTargets.delete(id);
+      if (this.fragmentTargets.size + report.value.blocks.length > DOCX_FRAGMENT_LIMITS.ids) this.fragmentTargets.clear();
+      const blocks = report.value.blocks.map(block => {
+        const id = block.token ? randomId() : null;
+        if (id) this.fragmentTargets.set(id, { token: block.token!, revision });
+        return Object.freeze({ id, index: block.index, kind: block.kind, styleId: block.styleId, headingLevel: block.headingLevel,
+          text: block.text, textTruncated: block.textTruncated });
+      });
+      return ok(Object.freeze({ revision, start: report.value.start, blockCount: report.value.blockCount, next: report.value.next,
+        truncated: report.value.truncated, blocks: Object.freeze(blocks) }));
+    });
+  }
+  selectFragmentBlock(id: string, options: { expectedRevision?: DocxRevision } = {}): DocxResult<void> {
+    return this.selectDocumentTarget(this.fragmentTargets, id, options);
+  }
+  async applyEdits(steps: readonly DocxBatchStep[], options: DocxBatchOptions): Promise<DocxBatchResult> {
+    if (this.operation?.kind === 'inserting-image' || this.operation?.kind === 'replacing-image') return batchRefusal('busy');
+    const normalized = normalizeDocxBatch(steps, options);
+    if (!normalized.ok) return normalized;
+    const gate = this.gate(); if (gate) return batchRefusal(gate);
+    if (this.composing) return batchRefusal('composing');
+    if (this.readOnly) return batchRefusal('read-only');
+    const { expectedRevision } = normalized.value;
+    if (!equalRevision(expectedRevision, this.revision)) return batchRefusal('stale-revision');
+    const plan: { edit: DocxBatchStep['edit']; target?: object }[] = [];
+    for (const [index, step] of normalized.value.steps.entries()) {
+      if (step.target === undefined) { plan.push({ edit: step.edit }); continue; }
+      const target = this.documentTarget(this.fragmentTargets, step.target, expectedRevision);
+      if (!target.ok) return batchRefusal(target.code, index);
+      plan.push({ edit: step.edit, target: target.value.token });
+    }
+    const engine = this.engine!;
+    if (!engine.executeBatch) return batchRefusal('unsupported');
+    // The batch moves the caret; a retained host selection no longer describes it.
+    this.releaseLease();
+    const before = this.completionFailure() ?? this.gate() ?? (this.composing ? 'composing' : null) ??
+      (!equalRevision(expectedRevision, this.revision) || this.engine !== engine ? 'stale-revision' : null);
+    if (before) return batchRefusal(before);
+    const owner = {}, revision = this.revision!, batch = { armed: false, changes: 0 };
+    this.commandOwner = owner;
+    this.batch = batch;
+    const validate = (): DocxResult<void> => {
+      if (!this.owned()) return refused('destroyed');
+      const failure = this.completionFailure(); if (failure) return refused(failure);
+      if (this.commandOwner !== owner || this.batch !== batch || this.engine !== engine || this.operation) return refused('busy');
+      if (!equalRevision(revision, this.revision)) return refused('stale-revision');
+      return this.composing ? refused('composing') : ok(undefined);
+    };
+    let result: DocxEngineBatchResult;
+    const arm = (): DocxResult<void> => {
+      const valid = validate();
+      if (valid.ok) batch.armed = true;
+      return valid;
+    };
+    try { result = await engine.executeBatch(plan, { validate, arm }); }
+    catch { result = { ok: false, code: 'engine-failed', step: null, rolledBack: false }; }
+    finally {
+      if (this.batch === batch) this.batch = null;
+      if (this.commandOwner === owner) this.commandOwner = null;
+    }
+    if (!this.owned()) return batchRefusal('destroyed');
+    // Changes without a commit or a verified revert leave the document state unknown.
+    if (!this.completionFailure() && ((!result.ok && result.code === 'engine-failed') || (!result.ok && !result.rolledBack && batch.changes > 0))) this.failEngine();
+    const failure = this.completionFailure();
+    if (failure) { this.publish(); return batchRefusal(failure, result.ok ? null : result.step); }
+    const committed = result.ok && batch.changes > 0;
+    if (committed) {
+      this.revision = Object.freeze({ documentId: revision.documentId, value: revision.value + 1 });
+      this.dirty = true;
+      this.receipt = null;
+    }
+    if (batch.changes > 0) {
+      // Writes and reverts both invalidate engine addresses; a revert keeps the revision because content is unchanged.
+      this.clearSearch(); this.clearTargets(); this.selectionVersion++;
+    }
+    try {
+      const state = engine.inspect();
+      this.selectionKind = state.selection; this.composing = state.composing;
+      this.updateFormatting(state.formatting);
+      this.updateTable(state.table ?? null);
+      this.updateImage(state.image ?? null, state.imageReady ?? false);
+    } catch { this.failEngine(); }
+    this.publish();
+    const settled = this.completionFailure();
+    if (settled) return batchRefusal(settled, result.ok ? null : result.step);
+    return result.ok ? Object.freeze({ ok: true, value: this.revision! }) : batchRefusal(result.code, result.step);
   }
   selectDiagnostic(id: string, options: { expectedRevision?: DocxRevision } = {}): DocxResult<void> {
     return this.selectDocumentTarget(this.diagnosticTargets, id, options);

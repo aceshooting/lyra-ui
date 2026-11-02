@@ -1,10 +1,15 @@
 import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR, UNSAFE_OWN_DATA_DESCRIPTOR } from './data-descriptors.js';
 import { finiteInterpolate } from './numbers.js';
 
+/** A complete saved camera. Admission rejects non-finite values and unknown or accessor fields. */
 export interface MapViewpoint {
+  /** `[longitude, latitude]`, within `[-180, 180]` and `[-90, 90]`. */
   readonly center: readonly [number, number];
+  /** Zoom level; the map's zoom limits clamp it when applied. */
   readonly zoom: number;
+  /** Degrees clockwise from north, normalized into `[-180, 180)`. */
   readonly bearing: number;
+  /** Degrees in `[0, 85]`. */
   readonly pitch: number;
 }
 interface MapCameraKeyframe {

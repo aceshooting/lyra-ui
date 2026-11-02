@@ -31,6 +31,9 @@ it('reaches million-result first middle final pages through the pager preserving
     const input = pager.shadowRoot!.querySelector<HTMLInputElement>('[part="page-input"]')!; input.value = String(page); input.dispatchEvent(new Event('change'));
     virtual = await list(el, `c${(page - 1) * 100}`); }
   virtual.scrollToIndex(99, { align: 'end', behavior: 'auto' }); await waitUntil(() => !!virtual.shadowRoot!.querySelector('[data-chunk-id="c999999"]'));
+  // Measure the settled window: rows mounted while the scroll is still being reconciled are transient.
+  let settled = -1;
+  await waitUntil(async () => { await virtual.updateComplete; await nextFrame(); const count = virtual.renderedRows.length; const stable = count === settled; settled = count; return stable; });
   expect(calls).to.deep.equal([0, 5000, 9999]); expect(el.chunks.length).to.equal(0); expect(virtual.renderedRows.length).to.be.lessThan(40);
   recordScaleMeasurement('lr-retrieval-results', 'n=1000000 source first middle final pages', {
     sourceTotal: el.sourceTotal!, retainedChunks: el.chunks.length, providerQueries: calls.length, mountedRows: virtual.renderedRows.length,

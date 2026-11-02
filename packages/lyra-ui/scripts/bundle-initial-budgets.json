@@ -1,5 +1,5 @@
 {
-  "$comment": "Hard marginal gzip KiB ceilings for splitting-aware production ESM. Each route adds one anchored component to the representative shell in $baseline. Initial bytes include only the entry and transitively static chunks; dynamic chunks remain covered by total-cost budgets. Preserve passing canaries, shell imports and optional-peer exclusions. Reviewed increases use exact measurements or the next 64-byte boundary, with at most 4% headroom. Shared modal ordering and reconnect handling measure 19,848 initial marginal gzip bytes for tour; only its exceeded ceiling advances to 19,904 bytes. The shared visually hidden form-control label option advances only the exceeded marginal ceilings to the next 64-byte boundary.",
+  "$comment": "Hard marginal gzip KiB ceilings for splitting-aware production ESM. Each route adds one anchored component to the representative shell in $baseline. Initial bytes include only the entry and transitively static chunks; dynamic chunks remain covered by total-cost budgets. Preserve passing canaries, shell imports and optional-peer exclusions. Reviewed increases use exact measurements or the next 64-byte boundary, with at most 4% headroom. Shared modal ordering and reconnect handling measure 19,848 initial marginal gzip bytes for tour; only its exceeded ceiling advances to 19,904 bytes. The shared visually hidden form-control label option advances only the exceeded marginal ceilings to the next 64-byte boundary. Script-aware locale lookup and the 80-locale loader table measure 1,005 initial route gzip bytes for locale-loader, and 29,323 and 9,928 marginal bytes for model-select and mention-popover; only those exceeded ceilings advance to the next 64-byte boundary.",
   "$baseline": [
     "dist/components/data/stat/stat.js",
     "dist/components/overlays/callout/callout.js",
@@ -10,12 +10,12 @@
   "$routeGzipKb": {
     "dist/autoloader-cdn.js": 13.08203125,
     "dist/autoloader.js": 12.90234375,
-    "dist/locale-loader.js": 0.9375,
+    "dist/locale-loader.js": 1.0,
     "dist/utilities/scoped-registry-loader.js": 11.1875
   },
   "$marginalGzipKb": {
     "dist/components/agent-tools/tool-call-chip/tool-call-chip.js": 7.875,
-    "dist/components/conversation/model-select/model-select.js": 28.625,
+    "dist/components/conversation/model-select/model-select.js": 28.6875,
     "dist/components/conversation/usage-badge/usage-badge.js": 4.4375,
     "dist/components/conversation/voice-picker/voice-picker.js": 30.1875,
     "dist/components/forms/color-picker/color-picker.js": 28.4462890625,
@@ -32,7 +32,7 @@
     "dist/components/retrieval/citation-badge/citation-badge.js": 6.9375,
     "dist/components/retrieval/entity-chip/entity-chip.js": 6.375,
     "dist/components/utility/export-button/export-button.js": 14.25,
-    "dist/components/utility/mention-popover/mention-popover.js": 9.6875,
+    "dist/components/utility/mention-popover/mention-popover.js": 9.75,
     "dist/components/utility/tour/tour.js": 19.4375
   }
 }

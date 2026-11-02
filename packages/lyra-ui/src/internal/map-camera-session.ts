@@ -4,7 +4,8 @@ export type CameraOwnerReason = 'user' | 'external' | 'style' | 'engine' | 'disc
 type CameraActionToken = object;
 export interface MapCameraSessionCallbacks {
   complete(action: CameraActionToken): void;
-  interrupt(reason: CameraOwnerReason): void;
+  /** Returns `true` only when a current session action was retired by this interruption. */
+  interrupt(reason: CameraOwnerReason): boolean | void;
   motion(reduced: boolean): void;
 }
 export interface MapCameraPreparedCommand {
