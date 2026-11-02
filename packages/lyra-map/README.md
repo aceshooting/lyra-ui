@@ -195,6 +195,53 @@ The current bridge uses the full terrain GL state profile. No reduced UBO profil
 Package build, export, graph, and declaration checks establish the optional entry boundary; they do
 not establish native terrain pixels, cross-browser rendering, or application-adapter behavior.
 
+## Custom 3D layers
+
+`createSceneLayer(map, layer, host)`, also from `@aceshooting/lyra-map/scene`, installs one trusted
+WebGL2 layer through the engine's native custom-layer support. It never creates a second renderer
+or context, and the default map entry does not load it.
+
+```ts
+import { createSceneLayer, type MapCustom3dLayer } from '@aceshooting/lyra-map/scene';
+
+const cone: MapCustom3dLayer = {
+  id: 'coverage', label: 'Coverage cone',
+  create(context) {
+    // Allocate programs and buffers on context.gl; return a fresh instance for this epoch.
+    return {
+      render(frame) {
+        const resolved = frame.geographic.resolve({ lngLat: [6.13, 49.61], altitude: 500 });
+        if (resolved.status !== 'resolved') return;
+        const origin = context.geographic.frameFor(resolved);
+        const shader = frame.geographic.shader(origin);   // prelude + projection uniforms
+        const vertex = frame.geographic.encode(resolved, origin); // tile-local xy, meter z
+        // Compile shader.vertexPrelude/fragmentPrelude with your body, upload shader.uniforms, draw.
+      },
+      dispose() { /* Delete owned GL objects unless context.gl.isContextLost(). */ },
+      pick: async ([x, y]) => null
+    };
+  }
+};
+const lifetime = new AbortController();
+const layer = createSceneLayer(map, cone, { signal: lifetime.signal, onState: state => console.log(state) });
+```
+
+The shader prelude defines `lrProjectPosition(vec3)` for tile-local xy and meter z, plus
+`lrHorizonPosition`/`lrHorizonOccluded` for globe horizon discards. It is valid in Mercator, globe
+and their transition. Positions are degrees with meter altitude: `sea-level` is absolute, and
+`terrain` adds the authored altitude to the displayed terrain height from the engine's elevation
+query (including exaggeration). A missing DEM tile resolves `terrain-pending`; without terrain the
+result is `terrain-unavailable`. Frame services expire when the callback returns.
+
+Each mount epoch (first install, style replacement, context restoration) calls `create()` again and
+disposes the previous instance. Call `invalidateStyle()` before `map.setStyle(...)`; the next
+`style.load` (or `styleReady()`) reinstalls. A lost WebGL context disposes the instance without GL
+work and reports `unavailable` with `context-lost`; restoration remounts. States are `loading`,
+`ready` after a completed frame, and `unavailable` with `invalid`, `engine`, `render`,
+`context-lost`, or a layer-reported `terrain`/`resource` code. `pick(point)` asks the current
+instance and resolves `null` for a stale view or epoch. `dispose()` is idempotent and removes the
+native layer. Native rendering resets cached GL state after each custom-layer callback.
+
 ## Right-to-left labels
 
 The pinned renderer includes Arabic shaping and bidirectional text layout. Mixed Arabic, Latin

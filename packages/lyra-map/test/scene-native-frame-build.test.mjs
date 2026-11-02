@@ -31,7 +31,7 @@ test('the real built native issuer and optional bridge share one private registr
       import(pathToFileURL(join(built.directory, 'dist/index.mjs')).href)
     ]);
     assert.equal(typeof Painter, 'function'); assert.equal(typeof drawCustom, 'function');
-    assert.deepEqual(Object.keys(scene), ['createSceneBridge']);
+    assert.deepEqual(Object.keys(scene), ['createSceneBridge', 'createSceneLayer']);
     for (const name of Object.keys(registry)) assert.equal(Object.hasOwn(mapExports, name), false, name);
     const manifest = JSON.parse(await readFile(join(built.directory, 'package.json'), 'utf8'));
     assert.ok(Object.keys(manifest.exports).every(key => !key.includes('native-frame') && !key.includes('native-terrain')));
