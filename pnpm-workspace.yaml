@@ -44,8 +44,8 @@ peerDependencyRules:
     - xlsx
 overrides:
   # Keep renderer-owned declaration sources aligned with the reviewed MapLibre source lock.
-  'maplibre-gl@6.15.0>@maplibre/geojson-vt': 6.3.0
-  'maplibre-gl@6.15.0>@maplibre/vt-pbf': 4.3.2
+  'maplibre-gl@6.16.0>@maplibre/geojson-vt': 6.3.0
+  'maplibre-gl@6.16.0>@maplibre/vt-pbf': 4.3.3
   # Codecov 2.0.1 uses Zod 3 schemas; its compatibility patch supports patched Zod 4.
   '@codecov/bundler-plugin-core@2.0.1>zod': 4.6.7
   # These AG-UI versions already import Zod v4; use its patched collection validators.

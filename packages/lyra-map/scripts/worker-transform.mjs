@@ -95,7 +95,7 @@ async function prepareDEMWorkerSource(): Promise<void> {
 `
   );
   // Capture registration sites before inserting the implementation that calls Actor itself.
-  replace('this.actor.registerMessageHandler(', 'this._registerFeatureHandler(', 19);
+  replace('this.actor.registerMessageHandler(', 'this._registerFeatureHandler(', 20);
   replace(
     '        this.self.makeRequest = makeRequest;',
     `        this.self.makeRequest = makeRequest;
@@ -112,8 +112,9 @@ async function prepareDEMWorkerSource(): Promise<void> {
   replace(
     '    private _getGlobalState(',
     `    private _registerFeatureHandler<T extends MessageType>(type: T, handler: MessageHandler<T>): void {
-        // Global script/referrer/plugin operations retain their upstream scheduling.
-        if (type === MessageType.importScript || type === MessageType.setReferrer || type === MessageType.syncRTLPluginState) {
+        // Global script/referrer/plugin/liveness operations retain their upstream scheduling.
+        if (type === MessageType.importScript || type === MessageType.setReferrer ||
+            type === MessageType.syncRTLPluginState || type === MessageType.ping) {
             this.actor.registerMessageHandler(type, handler);
             return;
         }

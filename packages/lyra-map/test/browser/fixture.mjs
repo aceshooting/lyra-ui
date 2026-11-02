@@ -435,6 +435,25 @@ window.fixture = {
       await until(() => restored && m.loaded(), 'context restore');
       assert(m.queryRenderedFeatures().length > 0, 'features after restoration');
       remove(m);
+    } else if (name === 'worker-restart') {
+      const m = await make(geoStyle());
+      m.addImage('restart-dot', { width: 1, height: 1, data: new Uint8Array([255, 0, 0, 255]) });
+      const before = m.style;
+      let lost = false,
+        restoredStyle;
+      m.on('webglcontextlost', () => (lost = true));
+      m.on('webglcontextrestored', () => (restoredStyle = m.style));
+      // Workers the browser terminated answer no ping; restart them as ensureWorkers() would.
+      const dispatcher = engine.getGlobalDispatcher();
+      dispatcher.ping = async () => false;
+      await dispatcher.ensureWorkers();
+      await until(() => lost && restoredStyle && m.loaded(), 'worker restart rebuild');
+      assert(restoredStyle !== before, 'replacement style exists when restoration is announced');
+      assert(restoredStyle === m.style, 'restored style is committed');
+      assert(m.hasImage('restart-dot'), 'runtime image survives the rebuild');
+      assert(m.queryRenderedFeatures().length > 0, 'features after worker restart');
+      delete dispatcher.ping;
+      remove(m);
     } else if (name === 'reconnect') {
       let m = await make(geoStyle());
       remove(m);
