@@ -2,27 +2,88 @@ import { simulationClockLifetime, type ClockSnapshot, type SimulationClock } fro
 import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR, UNSAFE_OWN_DATA_DESCRIPTOR } from './data-descriptors.js';
 import { admitMapCameraTour, admitMapViewpoint, sampleMapCameraTour, type AdmittedMapCameraTour, type MapViewpoint } from './map-camera-session-data.js';
 import { mapCameraSessionAttachment, type MapCameraPreparedCommand, type MapCameraSessionLease } from './map-camera-session.js';
-import { admitMapCameraFollowOptions, type MapCameraFollowOptions } from './map-camera-follow-data.js';
+import { admitMapCameraFollowOptions, type MapCameraFollowOptions as AdmittedFollowOptions } from './map-camera-follow-data.js';
 import { prepareMapCameraFollow, startMapCameraFollow, type MapCameraFollowPlan, type MapCameraFollowRunner,
   type MapCameraFollowScene, type MapCameraFollowSnapshot } from './map-camera-follow-controller.js';
 import { createMapCameraFollowScene } from './map-camera-follow-scene.js';
 import { mapSceneSessionAttachment } from './map-scene-session.js';
 
-type MapCameraSessionErrorCode = 'invalid-options' | 'invalid-viewpoint' | 'invalid-tour' | 'invalid-follow' | 'invalid-clock' | 'unsupported-map' | 'inactive-map' | 'already-bound' | 'unavailable' | 'disposed';
-class MapCameraSessionError extends Error {
+export type { MapViewpoint } from './map-camera-session-data.js';
+/** Why a camera-session call failed. Every failure leaves the previous action unchanged. */
+export type MapCameraSessionErrorCode = 'invalid-options' | 'invalid-viewpoint' | 'invalid-tour' | 'invalid-follow' | 'invalid-clock' | 'unsupported-map' | 'inactive-map' | 'already-bound' | 'unavailable' | 'disposed';
+/** Thrown synchronously by `createMapCameraSession()` and the session methods; read `code`. */
+export class MapCameraSessionError extends Error {
   constructor(readonly code: MapCameraSessionErrorCode) { super(code); this.name = 'MapCameraSessionError'; }
 }
-type Reason = 'initial' | 'start' | 'complete' | 'stop' | 'user' | 'external' | 'style' | 'disconnect' | 'engine' | 'motion' | 'disposed';
+/** Why the session snapshot last changed. */
+export type MapCameraSessionReason = 'initial' | 'start' | 'complete' | 'stop' | 'user' | 'external' | 'style' | 'disconnect' | 'engine' | 'disposed';
+type Reason = MapCameraSessionReason;
+/** The camera action a session currently owns, or `idle`. */
+export type MapCameraSessionMode = 'idle' | 'viewpoint' | 'tour' | 'follow';
+/** Tracking progress of a follow action. Ground following reports `pending`, `ground`, `missing` or `unavailable`. */
+export type MapCameraTrackingStatus = MapCameraFollowSnapshot['status'];
+/** Why tracking is unavailable: `kind` for an unfollowable path or arc, `engine` for a refused camera command. */
+export type MapCameraTrackingIssue = NonNullable<MapCameraFollowSnapshot['reason']>;
 interface SnapshotBase {
+  /** `true` while the session owns a running or tracking camera action. */
   readonly active: boolean;
-  readonly reason: Reason;
+  readonly reason: MapCameraSessionReason;
 }
+/** Immutable session state delivered to `subscribe()` listeners and read from `snapshot`. */
 export type MapCameraSessionSnapshot = SnapshotBase & (
   { readonly mode: 'idle' | 'viewpoint' | 'tour' } |
   { readonly mode: 'follow'; readonly objectId: string; readonly followMode: MapCameraFollowOptions['mode'];
-    readonly trackingStatus: MapCameraFollowSnapshot['status']; readonly corrections: number;
-    readonly unavailableReason?: MapCameraFollowSnapshot['reason'] }
+    readonly trackingStatus: MapCameraTrackingStatus; readonly corrections: number;
+    readonly unavailableReason?: MapCameraTrackingIssue }
 );
+/** How `restore()` moves the camera. Under reduced motion every transition is a jump. */
+export interface MapCameraTransition {
+  /** `'jump'` (default) moves at once; `'ease'` and `'fly'` animate. */
+  readonly kind?: 'jump' | 'ease' | 'fly';
+  /** Animation length in milliseconds; finite and at least 0. The engine default applies when omitted. */
+  readonly duration?: number;
+}
+/** One tour keyframe. The gap to the next keyframe's `instant` is that segment's duration. */
+export interface MapCameraKeyframe {
+  /** Clock instant in epoch milliseconds; keyframes must strictly increase. */
+  readonly instant: number;
+  readonly view: MapViewpoint;
+  /** `'linear'` (default) interpolates toward the next keyframe; `'hold'` keeps this view until it. */
+  readonly interpolation?: 'linear' | 'hold';
+}
+/** An ordered camera tour of 1 to 1,024 keyframes, sampled from a shared simulation clock. */
+export interface MapCameraTour { readonly keyframes: readonly MapCameraKeyframe[]; }
+/** Follows one accepted `lr-map` scene marker or model by its exact `id`. */
+export interface MapCameraFollowOptions {
+  readonly objectId: string;
+  /** Moves the map centre to the object's accepted geographic position. */
+  readonly mode: 'ground';
+  /** Fixed zoom while following; omitted axes keep the camera's value when following starts. */
+  readonly zoom?: number;
+  readonly bearing?: number;
+  /** Degrees in `[0, 85]`. */
+  readonly pitch?: number;
+}
+/** Options for `createMapCameraSession()`. Aborting the signal disposes the session. */
+export interface MapCameraSessionOptions { readonly signal?: AbortSignal; }
+/** One application's ownership of an `lr-map` camera. Methods throw `MapCameraSessionError`. */
+export interface MapCameraSession {
+  readonly snapshot: MapCameraSessionSnapshot;
+  /** Returns the current camera as a detached, frozen viewpoint. */
+  capture(): MapViewpoint;
+  /** Moves to a saved viewpoint, replacing any running tour or follow. */
+  restore(viewpoint: MapViewpoint, transition?: MapCameraTransition): void;
+  /** Drives the camera from `clock`'s delivered instants until stopped or interrupted. */
+  tour(clock: SimulationClock, tour: MapCameraTour): void;
+  /** Keeps the camera on a scene object as the application updates its position. */
+  follow(options: MapCameraFollowOptions): void;
+  /** Ends the current action; the camera stays where it is. */
+  stop(): void;
+  /** Calls `listener` now and on every snapshot change; returns its release function. */
+  subscribe(listener: (snapshot: MapCameraSessionSnapshot) => void, options?: MapCameraSessionOptions): () => void;
+  /** Releases the camera permanently. Idempotent. */
+  dispose(): void;
+}
 interface Transition { readonly kind: 'jump' | 'ease' | 'fly'; readonly duration?: number; }
 interface Subscription { active: boolean; readonly listener: (snapshot: MapCameraSessionSnapshot) => void; release(): void; }
 interface ActionBase {
@@ -35,7 +96,7 @@ interface ActionBase {
   applied?: MapViewpoint;
 }
 interface FollowState {
-  readonly options: MapCameraFollowOptions;
+  readonly options: AdmittedFollowOptions & MapCameraFollowOptions;
   runner?: MapCameraFollowRunner;
   restricted: boolean;
   snapshot: MapCameraFollowSnapshot;
@@ -80,7 +141,7 @@ function sameView(first: MapViewpoint | undefined, second: MapViewpoint): boolea
 }
 
 /** Internal saved-view and shared-clock owner. Native attachment and clock instances remain opaque. */
-export function createMapCameraSessionController(host: HTMLElement, options?: { readonly signal?: AbortSignal }) {
+export function createMapCameraSessionController(host: HTMLElement, options?: MapCameraSessionOptions) {
   const signal = signalOption(options);
   let disposed = false, generation = 0;
   let lease: MapCameraSessionLease | undefined;
@@ -197,7 +258,7 @@ export function createMapCameraSessionController(host: HTMLElement, options?: { 
   };
   const follow = (input: unknown): void => {
     active(); const intent = generation;
-    let accepted: MapCameraFollowOptions;
+    let accepted: AdmittedFollowOptions;
     try { accepted = admitMapCameraFollowOptions(input); } catch { return fail('invalid-follow'); }
     if (accepted.mode !== 'ground') return fail('unavailable');
     if (!scene) {
@@ -224,7 +285,7 @@ export function createMapCameraSessionController(host: HTMLElement, options?: { 
       bearing: accepted.bearing ?? captured.bearing, pitch: accepted.pitch ?? captured.pitch }, { kind: 'jump' });
     if (!preflightCurrent()) return;
     const next: Action = { token, mode: 'follow', cleanups: new Set(), animating: false,
-      follow: { options: accepted, restricted: false, snapshot: { status: 'pending', corrections: 0 } } };
+      follow: { options: { ...accepted, mode: 'ground' }, restricted: false, snapshot: { status: 'pending', corrections: 0 } } };
     if (!replace(next)) return;
     const commands = new WeakMap<object, MapCameraPreparedCommand>();
     try {
@@ -258,30 +319,43 @@ export function createMapCameraSessionController(host: HTMLElement, options?: { 
   if (signal?.aborted) { disposed = true; snapshot = Object.freeze({ mode: 'idle', active: false, reason: 'disposed' }); }
   else {
     const attachment = mapCameraSessionAttachment(host);
-    if (!attachment) return fail('unsupported-map');
-    lease = attachment.acquire({
-      complete(token) {
-        const completed = action;
-        if (!completed || completed.token !== token || !current(completed) || completed.mode !== 'viewpoint') return;
-        completed.animating = false;
-        publish({ mode: 'viewpoint', active: false, reason: 'complete' });
-      },
-      interrupt(reason) { if (disposed) return; if (reason === 'disconnect') dispose('disconnect'); else retire(reason, false); },
-      motion(reduced) {
-        const pending = startingFollow;
-        if (pending && pending.generation === generation && !disposed && pending.action.mode === 'follow') {
-          pending.action.follow.restricted ||= reduced; return;
-        }
-        const previous = action;
-        if (!previous || !current(previous)) return;
-        if (previous.mode === 'follow') {
-          previous.follow.restricted ||= reduced; previous.follow.runner?.refreshMotion(reduced);
-        } else if (previous.mode === 'tour') { if (previous.delivered) sample(previous, previous.delivered, true); }
-        else if (reduced && previous.animating && previous.view) {
-          try { restore(previous.view, { kind: 'jump' }); } catch { if (current(previous)) unavailable(previous); }
-        }
-      },
-    });
+    if (!attachment) return fail(host.isConnected ? 'unsupported-map' : 'inactive-map');
+    let acquired: MapCameraSessionLease;
+    try {
+      acquired = attachment.acquire({
+        complete(token) {
+          const completed = action;
+          if (!completed || completed.token !== token || !current(completed) || completed.mode !== 'viewpoint') return;
+          completed.animating = false;
+          publish({ mode: 'viewpoint', active: false, reason: 'complete' });
+        },
+        interrupt(reason) {
+          if (disposed) return false;
+          if (reason === 'disconnect') { dispose('disconnect'); return false; }
+          const retired = action !== undefined;
+          retire(reason, false);
+          return retired;
+        },
+        motion(reduced) {
+          const pending = startingFollow;
+          if (pending && pending.generation === generation && !disposed && pending.action.mode === 'follow') {
+            pending.action.follow.restricted ||= reduced; return;
+          }
+          const previous = action;
+          if (!previous || !current(previous)) return;
+          if (previous.mode === 'follow') {
+            previous.follow.restricted ||= reduced; previous.follow.runner?.refreshMotion(reduced);
+          } else if (previous.mode === 'tour') { if (previous.delivered) sample(previous, previous.delivered, true); }
+          else if (reduced && previous.animating && previous.view) {
+            try { restore(previous.view, { kind: 'jump' }); } catch { if (current(previous)) unavailable(previous); }
+          }
+        },
+      });
+    } catch (error) {
+      const code = (error as { readonly code?: unknown } | null)?.code;
+      return fail(code === 'already-bound' ? 'already-bound' : host.isConnected ? 'unavailable' : 'inactive-map');
+    }
+    lease = acquired;
     if (disposed) lease.release();
     else {
       try { signal?.addEventListener('abort', abort, { once: true }); } catch { lease.release(); return fail('invalid-options'); }

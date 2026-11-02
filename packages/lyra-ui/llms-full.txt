@@ -4132,6 +4132,9 @@ These granular modules are registration-free and require no map or 3D engine:
 - `@aceshooting/lyra-ui/sequence-time-binding.js`: `bindSequencePlayback(control, clock, index,
   options?)`, `SequenceTimeBindingError`; types `SequenceTimeBindingOptions`,
   `SequenceTimeBindingErrorCode`. Register the sequence control separately.
+- `@aceshooting/lyra-ui/map-camera-session.js`: `createMapCameraSession(map, options?)`,
+  `MapCameraSessionError`; saved viewpoints, tours sampled from a shared clock and scene-object
+  following for a ready `lr-map`. Register the map separately.
 
 #### Clock contract
 
@@ -4257,6 +4260,48 @@ signal performs no attachment. Releasing never pauses other consumers.
   Import: `@aceshooting/lyra-ui/sequence-time-binding.js`.
   `bindSequencePlayback(control: HTMLElement, clock: SimulationClock, index: TimeIndex, options?: SequenceTimeBindingOptions): () => void`
   `SequenceTimeBindingOptions { readonly signal?: AbortSignal; }`
+
+- **`map-camera-session-contracts`** — Saved viewpoints, clock-driven tours and object following
+  for a ready `lr-map`; see the `lr-map` camera sessions section of the media reference.
+  Import: `@aceshooting/lyra-ui/map-camera-session.js`.
+  `createMapCameraSession(map: HTMLElement, options?: MapCameraSessionOptions): MapCameraSession`
+  `MapCameraSessionOptions { readonly signal?: AbortSignal; }`
+  `MapViewpoint {
+    readonly center: readonly [number, number];
+    readonly zoom: number;
+    readonly bearing: number;
+    readonly pitch: number;
+  }`
+  `MapCameraTransition {
+    readonly kind?: 'jump' | 'ease' | 'fly';
+    readonly duration?: number;
+  }`
+  `MapCameraKeyframe {
+    readonly instant: number;
+    readonly view: MapViewpoint;
+    readonly interpolation?: 'linear' | 'hold';
+  }`
+  `MapCameraTour { readonly keyframes: readonly MapCameraKeyframe[]; }`
+  `MapCameraFollowOptions {
+    readonly objectId: string;
+    readonly mode: 'ground';
+    readonly zoom?: number;
+    readonly bearing?: number;
+    readonly pitch?: number;
+  }`
+  `MapCameraSession {
+    readonly snapshot: MapCameraSessionSnapshot;
+    capture(): MapViewpoint;
+    restore(viewpoint: MapViewpoint, transition?: MapCameraTransition): void;
+    tour(clock: SimulationClock, tour: MapCameraTour): void;
+    follow(options: MapCameraFollowOptions): void;
+    stop(): void;
+    subscribe(listener: (snapshot: MapCameraSessionSnapshot) => void, options?: MapCameraSessionOptions): () => void;
+    dispose(): void;
+  }`
+  `MapCameraSessionError(code)` exposes `code: MapCameraSessionErrorCode`. Snapshot, reason, mode
+  and tracking types are `MapCameraSessionSnapshot`, `MapCameraSessionReason`, `MapCameraSessionMode`,
+  `MapCameraTrackingStatus` and `MapCameraTrackingIssue`.
 
 ## Reference artifacts
 
@@ -35089,6 +35134,9 @@ programmatic assignments do not emit them, and `whenIdle()` resolves once the ch
 scene status, with rejected updates keeping the previous accepted revision, and
 `lr-map-scene-activate` (frozen `LyraMapSceneActivateDetail { id, kind, source, position? }`)
 reports activation of an interactive scene object without moving the camera.
+Camera: `lr-map-camera-interrupt` (frozen `LyraMapCameraInterruptDetail { reason }`, a
+`LyraMapCameraInterruptReason`) reports that something other than a `createMapCameraSession()`
+session ended its viewpoint transition, tour or follow; see the camera sessions section below.
 
 The outer marker-activation detail is frozen, while an opaque marker `unsafeHtml` value remains the
 original supplied value at the MapLibre popup and marker-activation boundary. Treat it as trusted
@@ -35758,6 +35806,97 @@ not terrain tiles or scene application. Showing a control never downloads or gue
 
 Use `globe-control`, `globe-button`, `globe-icon`, `terrain-control`, `terrain-button` and
 `terrain-icon` parts for the owned chrome. Labels use `mapGlobe` and `mapTerrain` localization keys.
+
+### Saved viewpoints, camera tours and following
+
+Import `createMapCameraSession` from `@aceshooting/lyra-ui/map-camera-session.js`. It registers no
+element and loads no engine; register `lr-map` separately. Create a session after
+`whenStyleReady()` resolves on a connected map. One session owns a map's camera at a time.
+
+```ts
+import '@aceshooting/lyra-ui/components/lr-map.js';
+import { createMapCameraSession, type MapViewpoint } from '@aceshooting/lyra-ui/map-camera-session.js';
+import { createSimulationClock } from '@aceshooting/lyra-ui/simulation-clock.js';
+
+const map = document.querySelector('lr-map')!;
+await map.whenStyleReady();
+const camera = createMapCameraSession(map);
+
+const saved: MapViewpoint = camera.capture();     // { center, zoom, bearing, pitch }, frozen
+camera.restore(saved, { kind: 'fly', duration: 1200 });
+
+const start = Date.UTC(2026, 0, 15, 12);
+const clock = createSimulationClock({ range: [start, start + 60_000], instant: start });
+camera.tour(clock, { keyframes: [
+  { instant: start, view: saved },
+  { instant: start + 20_000, view: { center: [2.35, 48.86], zoom: 9, bearing: 30, pitch: 45 } },
+  { instant: start + 60_000, view: saved, interpolation: 'hold' },
+] });
+clock.play();
+
+map.scene = { objects: [{ kind: 'marker', id: 'relay-1', label: 'Relay 1', position: { lngLat: [-3, 48.2] } }] };
+camera.follow({ objectId: 'relay-1', mode: 'ground', zoom: 7 });
+
+map.addEventListener('lr-map-camera-interrupt', event => showReason(event.detail.reason));
+camera.subscribe(snapshot => render(snapshot.mode, snapshot.active, snapshot.reason));
+// When the application scope ends:
+camera.dispose(); clock.dispose();
+```
+
+`capture()` returns the current camera as a detached frozen `MapViewpoint`. `restore(viewpoint,
+transition?)` validates the whole viewpoint (longitude in `[-180, 180]`, latitude in `[-90, 90]`,
+finite zoom and bearing, pitch in `[0, 85]`) and moves with `kind: 'jump'` (the default), `'ease'`
+or `'fly'`; `duration` is milliseconds, finite and at least 0. The map's zoom limits clamp zoom.
+
+`tour(clock, tour)` samples 1 to 1,024 keyframes whose `instant` values strictly increase, on the
+clock's delivered instants; the gap between instants is each segment's duration. Linear segments
+interpolate centre, zoom, bearing and pitch, with longitude and bearing taking the shorter way
+round; `interpolation: 'hold'` keeps a keyframe until the next one. Before the first keyframe the
+tour holds it, and after the last it holds the last. Seeking, pausing and the clock rate apply
+directly. The tour stays active at the range end until another action, `stop()` or an
+interruption; disposing the clock ends it with reason `engine`.
+
+`follow({ objectId, mode: 'ground', zoom?, bearing?, pitch? })` centres an accepted `scene`
+marker or model and moves again each time an assigned `scene` changes that object's accepted
+position. Following needs no scene rendering: it reads accepted geography. Omitted axes keep the
+camera's values from the start of following. A missing object keeps following armed with
+`trackingStatus: 'missing'`; a path or arc fails with `invalid-follow`. Drive a moving object from
+the shared clock by assigning a new `scene` from a clock subscription.
+
+Each new `restore()`, `tour()` or `follow()` replaces the previous action without an interrupt
+event; `stop()` ends it in place. A drag, wheel, touch, box-zoom or keyboard gesture ends the action
+and lets the gesture continue; `flyTo()`, `easeTo()`, `jumpTo()`, `fitBounds()`, `fitToData()` or a
+different `center`/`zoom` assignment ends it as `external`; a `mapStyle`, `projection` or `terrain`
+change ends it as `style` and stops its animation; a lost rendering context ends it as `engine`. In
+each case the session snapshot becomes `{ mode: 'idle', active: false, reason }` and the map emits
+`lr-map-camera-interrupt` once, after ownership settles, so a listener can start a newer action. A
+map without a session never emits it. Re-assigning an equal `center`/`zoom` mirror does not
+interrupt.
+
+Under `prefers-reduced-motion: reduce` or `data-lr-motion="reduce"`, `restore()` jumps instead of
+animating, a tour holds each keyframe instead of interpolating, and following centres the object
+once and then holds still. A motion preference change while an animated restore runs completes it
+as a jump.
+
+Disconnecting or adopting the map disposes the session permanently with reason `disconnect`; create
+a new session after the map reconnects and its style is ready. `dispose()`, or aborting
+`options.signal`, releases the camera; both are idempotent. Methods on a disposed session throw
+`disposed`.
+
+`snapshot` and `subscribe(listener, { signal? })` report frozen `MapCameraSessionSnapshot`
+records: `mode` (`'idle' | 'viewpoint' | 'tour' | 'follow'`), `active` and `reason`
+(`MapCameraSessionReason`: `'initial' | 'start' | 'complete' | 'stop' | 'user' | 'external' |
+'style' | 'disconnect' | 'engine' | 'disposed'`). Follow snapshots add `objectId`, `followMode`,
+`trackingStatus` (`'pending' | 'ground' | 'missing' | 'unavailable'` while ground following),
+`corrections` and an optional `unavailableReason`. A listener runs once on subscription.
+
+Failures throw `MapCameraSessionError` synchronously and leave the running action unchanged. Its
+`code` is `MapCameraSessionErrorCode`: `'unsupported-map'` (a connected element without camera
+support), `'inactive-map'` (disconnected), `'already-bound'` (another session owns the camera),
+`'unavailable'` (style not ready, pending camera work, or a refused engine command),
+`'invalid-viewpoint'`, `'invalid-tour'`, `'invalid-follow'`, `'invalid-clock'`,
+`'invalid-options'` or `'disposed'`. Input records must be plain own-data objects; accessors and
+unknown fields are rejected without being read.
 
 ## `lr-map-anchor`
 
@@ -38959,6 +39098,9 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraMapTerrainChangeDetail {
     readonly terrain: LyraMapTerrain | null;
     readonly source: 'control';
+  }`
+  `LyraMapCameraInterruptDetail {
+    readonly reason: LyraMapCameraInterruptReason;
   }`
   Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapNavigationControlOptions {
