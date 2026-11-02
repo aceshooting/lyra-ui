@@ -19,6 +19,7 @@ This package also ships prebuilt third-party assets that are not esbuild inputs,
 so they cannot appear below. Their licenses travel with the package in
 `licenses/`:
 
+- `licenses/ECMA-376.md`
 - `licenses/HarfBuzz-COPYING.txt`
 
 ## Bundled packages

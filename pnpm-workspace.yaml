@@ -60,8 +60,8 @@ overrides:
   '@rollup/plugin-node-resolve@15.3.1>deepmerge': 4.1.1
   '@web/dev-server@1.0.0>deepmerge': 4.1.1
   # Keep the reviewed DOCX engine dependency graph aligned with its source lock.
-  '@docx-editor.dev/core@2.32.0>@docx-editor.dev/i18n': 2.32.0
-  '@docx-editor.dev/core@2.32.0>prosemirror-view': 1.42.7
+  '@docx-editor.dev/core@2.33.0>@docx-editor.dev/i18n': 2.33.0
+  '@docx-editor.dev/core@2.33.0>prosemirror-view': 1.42.7
   'prosemirror-state@1.4.4>prosemirror-view': 1.42.7
   'prosemirror-commands@1.7.2>prosemirror-transform': 1.12.4
   'prosemirror-state@1.4.4>prosemirror-transform': 1.12.4

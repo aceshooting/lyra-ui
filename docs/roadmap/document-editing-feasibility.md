@@ -24,7 +24,7 @@ completes the [editor roadmap phases](document-editing.md#delivery-sequence).
 
 `@aceshooting/lyra-docs` contains the experimental `<lr-docx-editor>` component and a session API.
 The internal runtime engine derives from pinned Apache-2.0 source for
-`@docx-editor.dev/core@2.32.0`, with semantic features prepared on demand.
+`@docx-editor.dev/core@2.33.0`, with semantic features prepared on demand.
 The package ships the generated engine; consumers install no engine peer. Lyra owns the public Lit surface, native controls, admission checks,
 lifecycle, and host persistence contract. The engine's framework adapters and any Pro-only packages
 are not included. Existing viewers, including `<lr-docx-viewer>`, remain in `@aceshooting/lyra-ui`.

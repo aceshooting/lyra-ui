@@ -170,8 +170,8 @@ overrides:
   '@ag-ui/proto@1.0.3>zod': 4.6.7
   '@rollup/plugin-node-resolve@15.3.1>deepmerge': 4.1.1
   '@web/dev-server@1.0.0>deepmerge': 4.1.1
-  '@docx-editor.dev/core@2.32.0>@docx-editor.dev/i18n': 2.32.0
-  '@docx-editor.dev/core@2.32.0>prosemirror-view': 1.42.7
+  '@docx-editor.dev/core@2.33.0>@docx-editor.dev/i18n': 2.33.0
+  '@docx-editor.dev/core@2.33.0>prosemirror-view': 1.42.7
   prosemirror-state@1.4.4>prosemirror-view: 1.42.7
   prosemirror-commands@1.7.2>prosemirror-transform: 1.12.4
   prosemirror-state@1.4.4>prosemirror-transform: 1.12.4
@@ -370,8 +370,8 @@ importers:
         specifier: workspace:*
         version: link:../lyra-ui
       '@docx-editor.dev/core':
-        specifier: 2.32.0
-        version: 2.32.0
+        specifier: 2.33.0
+        version: 2.33.0
       '@types/node':
         specifier: ^22.20.5
         version: 22.20.5
@@ -1230,8 +1230,8 @@ packages:
   '@dimforge/rapier3d-compat@0.12.0':
     resolution: {integrity: sha512-uekIGetywIgopfD97oDL5PfeezkFpNhwlzlaEYNOA0N6ghdsOvh/HYjSMek5Q2O1PYvRSDFcqFVJl4r4ZBwOow==}
 
-  '@docx-editor.dev/core@2.32.0':
-    resolution: {integrity: sha512-zLRW0RfJdzVGJfuiiUvQd0Ed8we87gr0FP8EomSuV0xMDRYTo77AV5f9Sq90uaJJLCR1c3CYImERqJ73wBtw3A==}
+  '@docx-editor.dev/core@2.33.0':
+    resolution: {integrity: sha512-j0JxjG1rwFv0jyOQ8yy2UvYoLprlJHVUXygXe7U9v5ybZ34o4RcOnPNdOKjkUz5zBydyLnJs7oQBHqrcYAGu9Q==}
     engines: {node: ^20.16.0 || >=22.3.0}
     peerDependencies:
       pdf-lib: ^1.17.1
@@ -1242,8 +1242,8 @@ packages:
       yjs:
         optional: true
 
-  '@docx-editor.dev/i18n@2.32.0':
-    resolution: {integrity: sha512-owOiLPCrzcsVHXNwWvIwt9ZSyUu8GPUzgHsXWq3dLjc1XFH7qfccQoFFzMGBh5yqqQSmhIdzjtDtj1F285gogg==}
+  '@docx-editor.dev/i18n@2.33.0':
+    resolution: {integrity: sha512-RdzvS03tf4X9gErM4Y9sTTgpqkvAHSh7Nu6qS+9jSVi4eO7o07zJjIMWmYchZgjPI7RuQWUgthCrR9rK1G1aZQ==}
 
   '@emnapi/core@1.11.0':
     resolution: {integrity: sha512-l9Oo58x0HOP5znGzVhYW9U3e5wVuA4LAZU2AGezTmkhO1CgQRFDhDg4nneHsu/t3WniXg9QrG2nIXL/ZS8ln8Q==}
@@ -7847,9 +7847,9 @@ snapshots:
 
   '@dimforge/rapier3d-compat@0.12.0': {}
 
-  '@docx-editor.dev/core@2.32.0':
+  '@docx-editor.dev/core@2.33.0':
     dependencies:
-      '@docx-editor.dev/i18n': 2.32.0
+      '@docx-editor.dev/i18n': 2.33.0
       bidi-js: 1.1.0
       emf-converter: 2.0.2
       fast-xml-parser: 5.11.2
@@ -7862,7 +7862,7 @@ snapshots:
       prosemirror-view: 1.42.7
       utif2: 4.1.0
 
-  '@docx-editor.dev/i18n@2.32.0': {}
+  '@docx-editor.dev/i18n@2.33.0': {}
 
   '@emnapi/core@1.11.0':
     dependencies:
