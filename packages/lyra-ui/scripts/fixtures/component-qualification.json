@@ -31374,7 +31374,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.class.ts",
-              "line": 994,
+              "line": 1016,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -31412,6 +31412,7 @@
         "tests": [
           "src/components/forms/locale-picker/locale-picker-closed-layout.test.ts",
           "src/components/forms/locale-picker/locale-picker-empty-catalog-boundaries.test.ts",
+          "src/components/forms/locale-picker/locale-picker-lazy-names.test.ts",
           "src/components/forms/locale-picker/locale-picker-loader.test.ts",
           "src/components/forms/locale-picker/locale-picker-option-display.test.ts",
           "src/components/forms/locale-picker/locale-picker-remediation.test.ts",
