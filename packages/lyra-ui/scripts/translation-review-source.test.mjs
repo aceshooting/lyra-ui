@@ -47,7 +47,7 @@ test('locale-owned sources assemble byte-for-byte to the schema-2 aggregate', as
   const sources = await readTranslationReviewSources({ packageDir });
   const assembled = assembleTranslationReviews(sources);
 
-  assert.equal(fixture.catalogs.length, 70);
+  assert.equal(fixture.catalogs.length, 80);
   assert.deepEqual(assembled, fixture);
   assert.equal(renderTranslationReviews(assembled), legacyBytes);
   assert.deepEqual(assembled.catalogs.map(({ locale }) => locale), [...assembled.catalogs.map(({ locale }) => locale)].sort());
