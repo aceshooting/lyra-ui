@@ -79,10 +79,11 @@ export async function collectAcceptanceObservations(browser, origin, scenarios, 
     limits: 'Input receipt to CPU WebGL draw submission, not GPU presentation or OS input latency. CDP main-isolate used heap excludes worker heaps, GPU/driver/native allocations and OS memory. Captures require visual review. No numeric thresholds apply to these observations.' };
 }
 
-/** Observational completeness is required when requested; no new numeric performance limits. */
+/** Observational completeness is required when requested, including any progressive-layout
+ * observation; no numeric performance limits (the `--gate` frame-rate verdicts are separate). */
 export function measurementFailed(result, acceptanceRequested = false) {
   return !result.modes.length || result.modes.some(report =>
-    report.scenarios.some(scenario => scenario.status !== 'measured') ||
+    report.scenarios.some(scenario => scenario.status !== 'measured' || (scenario.layout !== undefined && scenario.layout.status !== 'measured')) ||
     (acceptanceRequested && (!report.acceptance || report.acceptance.summaries.length !== 2 ||
       report.acceptance.summaries.some(row => !row.complete))));
 }

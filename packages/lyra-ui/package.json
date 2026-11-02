@@ -1876,6 +1876,10 @@
       "types": "./dist/sequence-time-binding.d.ts",
       "default": "./dist/sequence-time-binding.js"
     },
+    "./map-camera-session.js": {
+      "types": "./dist/map-camera-session.d.ts",
+      "default": "./dist/map-camera-session.js"
+    },
     "./theme/presets.js": null,
     "./theme/presets/shadcn.js": null
   },

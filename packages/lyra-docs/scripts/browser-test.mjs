@@ -19,6 +19,7 @@ import { runTableEditing } from './tables-browser.mjs';
 import { runEditorContracts } from './editor-contracts-browser.mjs';
 import { runCommandsAndSearch } from './commands-search-browser.mjs';
 import { runDocumentInspection } from './document-inspection-browser.mjs';
+import { runDocumentOperations } from './document-operations-browser.mjs';
 import { runReview } from './review-browser.mjs';
 import { runTableFormatting } from './tables-formatting-browser.mjs';
 import { runImageExtensions } from './image-extensions-browser.mjs';
@@ -1368,7 +1369,10 @@ async function runDocumentTools(page, check) {
   const selected = process.env.DOCX_DOCUMENT_TOOLS_ONLY;
   assert.ok(!selected || ['1', 'inspection', 'review', 'tables', 'images', 'commands'].includes(selected));
   const includes = name => !selected || selected === '1' || selected === name;
-  if (includes('inspection')) await runDocumentInspection(page, check, { createEditor, saveEditor });
+  if (includes('inspection')) {
+    await runDocumentInspection(page, check, { createEditor, saveEditor });
+    await runDocumentOperations(page, check, { createEditor, saveEditor });
+  }
   if (includes('review')) await runReview(page, check, { createEditor, saveEditor });
   if (includes('tables')) await runTableFormatting(page, check, { createEditor, saveEditor, assertProtectedParts });
   if (includes('images')) await runImageExtensions(page, check, { createEditor, saveEditor });

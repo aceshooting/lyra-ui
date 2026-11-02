@@ -43,3 +43,46 @@ export interface DocxDocumentInspection {
   readonly capabilities: readonly DocxDocumentCapability[];
   readonly truncated: boolean;
 }
+
+export type DocxFragmentBlockKind = 'paragraph' | 'table' | 'other';
+/**
+ * One copied top-level body block. `id` is present for paragraphs only; it is revision scoped,
+ * selectable with `selectFragmentBlock()` and usable as an edit-batch target until the next
+ * content edit. Text is the plain run text: tabs and breaks as `\t`/`\n`; in tables, cells are
+ * separated by tabs, rows by line breaks and a cell's paragraphs by spaces. Deleted revision text
+ * and field instructions are omitted.
+ */
+export interface DocxFragmentBlock {
+  readonly id: string | null;
+  /** Zero-based position among the body's top-level blocks at this revision. */
+  readonly index: number;
+  readonly kind: DocxFragmentBlockKind;
+  /** The paragraph's direct style id, or null. */
+  readonly styleId: string | null;
+  /** 1–9 from a direct or style-inherited outline level or a "heading N" style; otherwise null. */
+  readonly headingLevel: number | null;
+  readonly text: string;
+  readonly textTruncated: boolean;
+}
+/** A bounded, contiguous slice of body blocks. Continue from `next` while it is not null. */
+export interface DocxFragment {
+  readonly revision: DocxRevision;
+  readonly start: number;
+  /** Count of top-level body blocks at this revision. */
+  readonly blockCount: number;
+  readonly next: number | null;
+  /** True when any returned block's text was clipped by a text or traversal budget. */
+  readonly truncated: boolean;
+  readonly blocks: readonly DocxFragmentBlock[];
+}
+/** Start at a block index (default 0) or at an outline item; never both. */
+export interface DocxFragmentRequest {
+  readonly start?: number;
+  /** An id from the latest `outline()` at the current revision. */
+  readonly outlineItemId?: string;
+  /** 1–64 blocks; defaults to 16. */
+  readonly maxBlocks?: number;
+  /** 1–32,768 UTF-16 code units across the fragment; defaults to 8,192. */
+  readonly maxText?: number;
+  readonly expectedRevision?: DocxRevision;
+}

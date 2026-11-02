@@ -4077,6 +4077,9 @@ These granular modules are registration-free and require no map or 3D engine:
 - `@aceshooting/lyra-ui/sequence-time-binding.js`: `bindSequencePlayback(control, clock, index,
   options?)`, `SequenceTimeBindingError`; types `SequenceTimeBindingOptions`,
   `SequenceTimeBindingErrorCode`. Register the sequence control separately.
+- `@aceshooting/lyra-ui/map-camera-session.js`: `createMapCameraSession(map, options?)`,
+  `MapCameraSessionError`; saved viewpoints, tours sampled from a shared clock and scene-object
+  following for a ready `lr-map`. Register the map separately.
 
 #### Clock contract
 
@@ -4202,6 +4205,48 @@ signal performs no attachment. Releasing never pauses other consumers.
   Import: `@aceshooting/lyra-ui/sequence-time-binding.js`.
   `bindSequencePlayback(control: HTMLElement, clock: SimulationClock, index: TimeIndex, options?: SequenceTimeBindingOptions): () => void`
   `SequenceTimeBindingOptions { readonly signal?: AbortSignal; }`
+
+- **`map-camera-session-contracts`** — Saved viewpoints, clock-driven tours and object following
+  for a ready `lr-map`; see the `lr-map` camera sessions section of the media reference.
+  Import: `@aceshooting/lyra-ui/map-camera-session.js`.
+  `createMapCameraSession(map: HTMLElement, options?: MapCameraSessionOptions): MapCameraSession`
+  `MapCameraSessionOptions { readonly signal?: AbortSignal; }`
+  `MapViewpoint {
+    readonly center: readonly [number, number];
+    readonly zoom: number;
+    readonly bearing: number;
+    readonly pitch: number;
+  }`
+  `MapCameraTransition {
+    readonly kind?: 'jump' | 'ease' | 'fly';
+    readonly duration?: number;
+  }`
+  `MapCameraKeyframe {
+    readonly instant: number;
+    readonly view: MapViewpoint;
+    readonly interpolation?: 'linear' | 'hold';
+  }`
+  `MapCameraTour { readonly keyframes: readonly MapCameraKeyframe[]; }`
+  `MapCameraFollowOptions {
+    readonly objectId: string;
+    readonly mode: 'ground';
+    readonly zoom?: number;
+    readonly bearing?: number;
+    readonly pitch?: number;
+  }`
+  `MapCameraSession {
+    readonly snapshot: MapCameraSessionSnapshot;
+    capture(): MapViewpoint;
+    restore(viewpoint: MapViewpoint, transition?: MapCameraTransition): void;
+    tour(clock: SimulationClock, tour: MapCameraTour): void;
+    follow(options: MapCameraFollowOptions): void;
+    stop(): void;
+    subscribe(listener: (snapshot: MapCameraSessionSnapshot) => void, options?: MapCameraSessionOptions): () => void;
+    dispose(): void;
+  }`
+  `MapCameraSessionError(code)` exposes `code: MapCameraSessionErrorCode`. Snapshot, reason, mode
+  and tracking types are `MapCameraSessionSnapshot`, `MapCameraSessionReason`, `MapCameraSessionMode`,
+  `MapCameraTrackingStatus` and `MapCameraTrackingIssue`.
 
 ## Reference artifacts
 

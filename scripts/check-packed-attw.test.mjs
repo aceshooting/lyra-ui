@@ -22,7 +22,7 @@ const manifest = JSON.parse(
 
 test('checks every live typed export while preserving blocked retired routes', () => {
   const entrypoints = attwEntrypoints(manifest);
-  assert.equal(entrypoints.length, 763, 'the reviewed package has 763 live typed exports (the locale catalogs publish from @aceshooting/lyra-translations)');
+  assert.equal(entrypoints.length, 764, 'the reviewed package has 764 live typed exports (the locale catalogs publish from @aceshooting/lyra-translations)');
   assert.ok(entrypoints.includes('.'));
   assert.ok(entrypoints.includes('./package.json'));
   assert.ok(entrypoints.includes('./theme/*'));
