@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 22 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 22 parts, 26 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -139,6 +139,14 @@ var(--lr-color-mix-partner) var(--lr-color-mix-active))`),
 `--lr-page-navigation-backdrop-bg` (default `var(--lr-color-overlay)`),
 `--lr-page-navigation-drawer-bg` (default `var(--lr-color-surface-overlay)`), and
 `--lr-page-navigation-drawer-shadow` (default `var(--lr-shadow-l)`).
+
+The sticky banner, header, and subheader each paint an opaque surface so main content scrolling
+underneath never shows through: `--lr-page-banner-bg`, `--lr-page-header-bg`, and
+`--lr-page-subheader-bg` (each default `var(--lr-color-surface)`, so they follow light and dark
+themes). They are inherited inline fallbacks like the paints above, so set one on the Page or any
+ancestor to retheme only that region; `::part(header)` and its siblings still win. A region named in
+`disable-sticky` drops back to a transparent background, and the non-sticky `footer` is never
+painted.
 
 `disable-sticky` is a whitespace-token attribute, not a comma-separated value. Accepted tokens are
 `banner`, `header`, `subheader`, `menu`, and `aside`; each only disables that region. Sticky offsets

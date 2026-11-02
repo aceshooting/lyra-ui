@@ -173,6 +173,13 @@ export interface LyraPageEventMap {
  *   mobile navigation drawer.
  * @cssprop [--lr-page-navigation-drawer-shadow=var(--lr-shadow-l)] - Shadow of the mobile
  *   navigation drawer.
+ * @cssprop [--lr-page-banner-bg=var(--lr-color-surface)] - Opaque background of the sticky banner,
+ *   so scrolled content never shows through; unpainted when `disable-sticky` names `banner`.
+ * @cssprop [--lr-page-header-bg=var(--lr-color-surface)] - Opaque background of the sticky header,
+ *   so scrolled content never shows through; unpainted when `disable-sticky` names `header`.
+ * @cssprop [--lr-page-subheader-bg=var(--lr-color-surface)] - Opaque background of the sticky
+ *   subheader, so scrolled content never shows through; unpainted when `disable-sticky` names
+ *   `subheader`.
  * @cssprop [--aside-width] - Web Awesome alias for `--lr-page-aside-width`.
  * @cssprop [--banner-height] - Web Awesome alias for `--lr-page-banner-height`.
  * @cssprop [--header-height] - Web Awesome alias for `--lr-page-header-height`.

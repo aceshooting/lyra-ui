@@ -99390,10 +99390,22 @@
             "default": "auto"
           },
           {
+            "name": "--lr-page-banner-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
             "name": "--lr-page-banner-height",
             "deprecated": null,
             "hasDefault": true,
             "default": "0px"
+          },
+          {
+            "name": "--lr-page-header-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
           },
           {
             "name": "--lr-page-header-height",
@@ -99478,6 +99490,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-page-subheader-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
           },
           {
             "name": "--lr-page-subheader-height",
