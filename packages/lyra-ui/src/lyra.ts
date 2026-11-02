@@ -481,6 +481,7 @@ export type {
   LyraMultiSplitConstraintIssueReason,
   LyraMultiSplitEventMap,
   LyraMultiSplitOrientationChangeDetail,
+  LyraMultiSplitPanelCollapseChangeDetail,
   LyraMultiSplitPanelConstraint,
   LyraMultiSplitResizeDetail,
   LyraMultiSplitToggleDetail,

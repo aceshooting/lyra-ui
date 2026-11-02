@@ -253,6 +253,26 @@ function regionalFallbacks(
     .map(([, key]) => key);
 }
 
+/**
+ * The `language-script` step a script-less request implies, when CLDR likely subtags give the
+ * request a different script than its bare language: `sr-ME` (`sr-Latn-ME`) implies `sr-latn`,
+ * because bare `sr` is Cyrillic. Inserted ahead of the bare language in the truncation walk, so a
+ * registered script catalog wins over the base catalog written in the other script. `undefined`
+ * when the request names its own script, when the scripts agree (`sr-RS`, `zh-SG`), or when the
+ * likely-subtags data is unavailable.
+ */
+function impliedScriptStep(requestedKey: string): string | undefined {
+  const separator = requestedKey.indexOf('-');
+  if (separator <= 0) return undefined;
+  const language = requestedKey.slice(0, separator);
+  const subtags = requestedKey.split('-');
+  // An explicit script subtag (four letters, directly after the language) is never second-guessed.
+  if (/^[a-z]{4}$/.test(subtags[1]!)) return undefined;
+  const [script] = likelySubtags(requestedKey);
+  const [languageScript] = likelySubtags(language);
+  return script && languageScript && script !== languageScript ? `${language}-${script}` : undefined;
+}
+
 /** Whether `key` is one of the truncation steps of `requestedKey`. */
 function isPrefixOf(key: string, requestedKey: string): boolean {
   return key === requestedKey || requestedKey.startsWith(`${key}-`);
@@ -265,7 +285,9 @@ function isPrefixOf(key: string, requestedKey: string): boolean {
  * The chain is the full BCP-47 truncation walk, most specific first —
  * `zh-Hans-CN` → `zh-Hans` → `zh` — followed by {@link regionalFallbacks}. Truncation comes first
  * so an exactly-matching catalog always wins over a sibling region: with both `zh` and `zh-CN`
- * registered, `zh-Hans-CN` resolves to `zh`.
+ * registered, `zh-Hans-CN` resolves to `zh`. A script-less tag whose likely script differs from its
+ * bare language's walks its implied script first ({@link impliedScriptStep}): `sr-ME` → `sr-Latn`
+ * → `sr`, so Montenegrin Serbian reaches the Latin catalog while `sr-RS` reaches Cyrillic `sr`.
  *
  * Both halves matter in practice, because the shipped catalogs are a mix: `fa` and `he` are base
  * tags reached from `fa-IR`/`he-IL` by truncation, while the Portuguese (`pt-BR`, `pt-PT`) and
@@ -292,6 +314,9 @@ function localeCandidates(locale: string): readonly string[] {
       if (normalized.charCodeAt(index) === 45 && index > 0)
         candidates.push(normalized.slice(0, index));
     }
+    const scriptStep = identity.wellFormed ? impliedScriptStep(normalized) : undefined;
+    // The bare language is always the last truncation step; its implied script goes just before it.
+    if (scriptStep) candidates.splice(candidates.length - 1, 0, scriptStep);
     const regionalBudget = Math.max(
       0,
       MAX_LOCALE_CANDIDATES - candidates.length - 1

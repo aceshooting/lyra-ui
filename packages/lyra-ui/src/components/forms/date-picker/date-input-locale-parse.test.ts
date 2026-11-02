@@ -7,12 +7,13 @@ import type { LyraDateInput } from './date-input.js';
 
 /** Every shipped catalog plus locales with spaced, suffixed or year-first numeric dates. */
 const LOCALES = [
-  'am', 'ar', 'bho', 'bn', 'cs', 'da', 'de', 'de-CH', 'el', 'en', 'en-GB', 'en-US', 'es', 'fa',
-  'fa-AF', 'fi', 'fr', 'gu', 'ha', 'he', 'hi', 'hr', 'hu', 'id', 'ig', 'it', 'ja', 'jv', 'kk',
-  'kn', 'ko', 'ln', 'ml', 'mr', 'ms', 'my', 'nb', 'ne', 'nl', 'nn', 'om', 'or', 'pa', 'pcm', 'pl',
-  'pnb', 'ps', 'pt-BR', 'pt-PT', 'ro', 'ru', 'sd', 'sl', 'su', 'sv', 'sw', 'ta', 'te', 'th', 'tl',
-  'tr', 'uk', 'ur', 'uz', 'vi', 'yo', 'zh-CN', 'zh-TW', 'zu',
-  'bg', 'bs', 'ky', 'lv', 'mk', 'sk', 'sr', 'sr-Latn',
+  'am', 'ar', 'bg', 'bho', 'bn', 'ca', 'cs', 'da', 'de', 'de-CH', 'el', 'en', 'en-GB', 'en-US',
+  'es', 'et', 'fa', 'fa-AF', 'fi', 'fr', 'ga', 'gu', 'ha', 'he', 'hi', 'hr', 'hu', 'id', 'ig',
+  'it', 'ja', 'jv', 'kk', 'kn', 'ko', 'ln', 'lt', 'lv', 'ml', 'mr', 'ms', 'mt', 'my', 'nb', 'ne',
+  'nl', 'nn', 'om', 'or', 'pa', 'pcm', 'pl', 'pnb', 'ps', 'pt-BR', 'pt-PT', 'ro', 'ru', 'sd',
+  'sk', 'sl', 'sr', 'sr-Latn', 'su', 'sv', 'sw', 'ta', 'te', 'th', 'tl', 'tr', 'uk', 'ur', 'uz',
+  'vi', 'yo', 'zh-CN', 'zh-TW', 'zu',
+  'bs', 'ky', 'mk',
 ];
 
 // English chrome is the intended fallback (`tl` and `pnb` canonicalize to `fil` and `lah`).
