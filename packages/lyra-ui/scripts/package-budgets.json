@@ -40,15 +40,15 @@
     },
     "@aceshooting/lyra-translations": {
       "maximum": {
-        "packedBytes": 1631232,
-        "unpackedBytes": 7174464,
+        "packedBytes": 1633856,
+        "unpackedBytes": 7184576,
         "fileCount": 1041
       }
     },
     "@aceshooting/lyra-ide": {
       "maximum": {
-        "packedBytes": 1724160,
-        "unpackedBytes": 10666688,
+        "packedBytes": 1727296,
+        "unpackedBytes": 10686400,
         "fileCount": 10
       }
     },
