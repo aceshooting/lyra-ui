@@ -193,7 +193,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-model-select"></a>`lr-model-select` | conversation | `import '@aceshooting/lyra-ui/components/lr-model-select.js';` | none | none | none | 71.3 KiB |
 | <a id="lr-model-settings-panel"></a>`lr-model-settings-panel` | conversation | `import '@aceshooting/lyra-ui/components/lr-model-settings-panel.js';` | none | `lr-model-select`, `lr-slider` | none | 84.4 KiB |
 | <a id="lr-model-viewer"></a>`lr-model-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-model-viewer.js';` | `@aceshooting/lyra-3d` | none | none | 35.5 KiB |
-| <a id="lr-multi-split"></a>`lr-multi-split` | layout | `import '@aceshooting/lyra-ui/components/lr-multi-split.js';` | none | none | none | 56.3 KiB |
+| <a id="lr-multi-split"></a>`lr-multi-split` | layout | `import '@aceshooting/lyra-ui/components/lr-multi-split.js';` | none | none | none | 58 KiB |
 | <a id="lr-mutation-observer"></a>`lr-mutation-observer` | utility | `import '@aceshooting/lyra-ui/components/lr-mutation-observer.js';` | none | none | none | 27.3 KiB |
 | <a id="lr-native-time-input"></a>`lr-native-time-input` | forms | `import '@aceshooting/lyra-ui/components/lr-native-time-input.js';` | none | none | none | 42 KiB |
 | <a id="lr-navigation-menu"></a>`lr-navigation-menu` | layout | `import '@aceshooting/lyra-ui/components/lr-navigation-menu.js';` | none | `lr-navigation-menu-item` | none | 60.2 KiB |

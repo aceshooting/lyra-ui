@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { LyraMultiSplitToggleDetail } from './multi-split.class.js';
+import { ref } from 'lit/directives/ref.js';
+import type { LyraMultiSplit, LyraMultiSplitToggleDetail } from './multi-split.class.js';
 import '../../forms/button/button.js';
 
 const meta: Meta = {
@@ -535,4 +536,79 @@ export const FromNativeModal: Story = {
     }}>Open tools</button></dialog>
     <lr-multi-split collapse="start" style="inline-size:400px;block-size:240px"><div aria-label="Tools"><button>Apply</button></div><div>Application content</div></lr-multi-split>
   </section>`,
+};
+
+const WORKBENCH_PANELS = [
+  { id: 'explorer', title: 'Explorer', body: 'Project files' },
+  { id: 'editor', title: 'Editor', body: 'The document being edited' },
+  { id: 'preview', title: 'Preview', body: 'Rendered output' },
+  { id: 'inspector', title: 'Inspector', body: 'Properties of the selection' },
+] as const;
+
+/** The host owns the strip: it mirrors each panel's fold onto its own chevron. */
+function syncWorkbenchControls(split: LyraMultiSplit): void {
+  for (const panel of split.querySelectorAll<HTMLElement>('[panel-id]')) {
+    const collapsed = panel.hasAttribute('data-panel-collapsed');
+    const toggle = panel.querySelector<HTMLButtonElement>('.workbench-toggle');
+    const title = panel.querySelector('.workbench-title')?.textContent ?? '';
+    if (!toggle) continue;
+    toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    toggle.setAttribute('aria-label', `${collapsed ? 'Expand' : 'Collapse'} ${title}`);
+  }
+}
+
+export const WorkbenchPanelCollapse: Story = {
+  name: 'Workbench with collapsible panels',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Any panel folds to a rail at any width: each header chevron calls `togglePanel()`, and the panel paints its own strip (a rotated title and the expand chevron) under `[data-panel-collapsed]`. The freed width goes to the open panels within their `panelConstraints` (the Inspector stops at 18rem), the dividers beside a folded panel keep resizing its open neighbours, and the folded set persists with the sizes under `storage-key`. `--lr-multi-split-collapsed-panel-size` sets the rail.',
+      },
+    },
+  },
+  render: () => html`
+    <style>
+      .workbench-panel { display: flex; flex-direction: column; gap: var(--lr-space-xs); padding: var(--lr-space-xs); }
+      .workbench-header { display: flex; align-items: center; gap: var(--lr-space-xs); }
+      .workbench-title { margin: 0; font-size: var(--lr-font-size-sm); white-space: nowrap; }
+      .workbench-toggle { min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); }
+      .workbench-panel[data-panel-collapsed] { padding-inline: 0; align-items: center; }
+      .workbench-panel[data-panel-collapsed] .workbench-header { flex-direction: column; }
+      .workbench-panel[data-panel-collapsed] .workbench-title { writing-mode: vertical-rl; }
+      .workbench-panel[data-panel-collapsed] .workbench-body { display: none; }
+      .workbench-panel[data-panel-collapsed] .workbench-chevron { display: inline-block; transform: scaleX(-1); }
+      :dir(rtl) .workbench-chevron { display: inline-block; transform: scaleX(-1); }
+      :dir(rtl) .workbench-panel[data-panel-collapsed] .workbench-chevron { transform: none; }
+    </style>
+    <lr-multi-split
+      storage-key="storybook-workbench"
+      style="block-size: 16rem; border: 1px solid var(--lr-color-border); --lr-multi-split-collapsed-panel-size: 2.75rem"
+      .panelConstraints=${[null, { minPx: 160 }, null, { maxPx: 288 }]}
+      ${ref((element) => {
+        if (element) void (element as LyraMultiSplit).updateComplete.then(() => syncWorkbenchControls(element as LyraMultiSplit));
+      })}
+      @lr-multi-split-panel-collapse-change=${(event: Event) => syncWorkbenchControls(event.currentTarget as LyraMultiSplit)}
+    >
+      ${WORKBENCH_PANELS.map(
+        (panel) => html`<section class="workbench-panel" panel-id=${panel.id} aria-labelledby=${`workbench-${panel.id}-title`}>
+          <header class="workbench-header">
+            <button
+              class="workbench-toggle"
+              type="button"
+              aria-expanded="true"
+              aria-controls=${`workbench-${panel.id}-body`}
+              aria-label=${`Collapse ${panel.title}`}
+              @click=${(event: Event) => {
+                const section = (event.currentTarget as HTMLElement).closest('section')!;
+                section.closest<LyraMultiSplit>('lr-multi-split')!.togglePanel(section);
+              }}
+            ><span class="workbench-chevron" aria-hidden="true">&lsaquo;</span></button>
+            <h3 class="workbench-title" id=${`workbench-${panel.id}-title`}>${panel.title}</h3>
+          </header>
+          <div class="workbench-body" id=${`workbench-${panel.id}-body`}>${panel.body}</div>
+        </section>`
+      )}
+    </lr-multi-split>
+  `,
 };

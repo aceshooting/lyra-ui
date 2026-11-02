@@ -14695,7 +14695,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "7b852069914059d2f8a7",
+      "fingerprint": "7a9b8f7e8e775a6171db",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -16320,7 +16320,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "37e5c0f11187d904bda6",
+      "fingerprint": "2019ef9cefb6422add11",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16336,7 +16336,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "13591084617205a2437c",
+      "fingerprint": "57f90d294957ef8cdf40",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16352,7 +16352,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "45bdfd847827f3a5fbd9",
+      "fingerprint": "b2b1e25e5117f3d8333d",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16896,7 +16896,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "8ce996cf16c476ed90e3",
+      "fingerprint": "490147645267fe6761ff",
       "routes": [
         "src/vue.ts"
       ],
@@ -17305,7 +17305,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "4dd9a1d393cef7e9a75a",
+      "fingerprint": "66a7d99d8de4552fe98e",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -22621,6 +22621,28 @@
         "kind": "utility",
         "name": "map-camera-session-contracts",
         "declaration": "createMapCameraSession"
+      }
+    },
+    {
+      "module": "src/components/layout/multi-split/multi-split.class.ts",
+      "exportName": "LyraMultiSplitPanelCollapseChangeDetail",
+      "kind": "interface",
+      "fingerprint": "f0be2a909200abbc8a91",
+      "routes": [
+        "src/all.ts",
+        "src/components/layout/index.ts",
+        "src/components/layout/multi-split/multi-split.class.ts",
+        "src/components/layout/multi-split/multi-split.ts",
+        "src/components/lr-multi-split.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/layout.md",
+      "family": "layout",
+      "locator": {
+        "kind": "utility",
+        "name": "components-layout-multi-split-multi-split-contracts",
+        "declaration": "LyraMultiSplitPanelCollapseChangeDetail"
       }
     }
   ],
