@@ -84005,6 +84005,16 @@
             "default": false
           },
           {
+            "name": "without-images",
+            "property": "withoutImages",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "without-syntax-highlighting",
             "property": "withoutSyntaxHighlighting",
             "type": "boolean",
@@ -84216,6 +84226,16 @@
           {
             "name": "withoutGfm",
             "attribute": "without-gfm",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "withoutImages",
+            "attribute": "without-images",
             "type": "boolean",
             "readonly": false,
             "reflects": false,
@@ -84761,6 +84781,16 @@
             "default": false
           },
           {
+            "name": "without-images",
+            "property": "withoutImages",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "without-syntax-highlighting",
             "property": "withoutSyntaxHighlighting",
             "type": "boolean",
@@ -84964,6 +84994,16 @@
           {
             "name": "withoutGfm",
             "attribute": "without-gfm",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "withoutImages",
+            "attribute": "without-images",
             "type": "boolean",
             "readonly": false,
             "reflects": false,
@@ -132262,6 +132302,16 @@
             "default": false
           },
           {
+            "name": "without-images",
+            "property": "withoutImages",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "without-syntax-highlighting",
             "property": "withoutSyntaxHighlighting",
             "type": "boolean",
@@ -132435,6 +132485,16 @@
           {
             "name": "withoutGfm",
             "attribute": "without-gfm",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "withoutImages",
+            "attribute": "without-images",
             "type": "boolean",
             "readonly": false,
             "reflects": false,
@@ -132815,6 +132875,16 @@
             "default": false
           },
           {
+            "name": "without-images",
+            "property": "withoutImages",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "without-syntax-highlighting",
             "property": "withoutSyntaxHighlighting",
             "type": "boolean",
@@ -132988,6 +133058,16 @@
           {
             "name": "withoutGfm",
             "attribute": "without-gfm",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "withoutImages",
+            "attribute": "without-images",
             "type": "boolean",
             "readonly": false,
             "reflects": false,

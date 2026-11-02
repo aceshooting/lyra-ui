@@ -305,12 +305,23 @@ export class LyraMarkdown extends MarkdownRuntimeBase {
    * override replaces the escaping and is the consumer's responsibility. Independently of this,
    * every markdown-native link/image `href`/`src` is always scheme-validated
    * (`http:`/`https:`/`blob:`/`mailto:`, plus `data:` for images) unless `htmlMode` is `trusted`
-   * -- a rejected scheme drops the anchor/image, rendering only its text/alt content. */
+   * -- a rejected scheme drops the anchor/image, rendering only its text/alt content. The scheme
+   * allowlist still admits any http(s), relative or `data:` image; set `withoutImages` for untrusted
+   * content that must not load images at all. */
   @property({ attribute: 'html-mode' }) override htmlMode: MarkdownHtmlMode =
     'sanitize';
 
   /** Disables GitHub-flavored Markdown (tables, strikethrough, autolinks, task lists). */
   @property({ type: Boolean, attribute: 'without-gfm' }) override withoutGfm = false;
+
+  /** Untrusted-content switch for every `htmlMode`: renders each image as its alt text, exactly as
+   *  a refused `src` is rendered, so displaying the document never loads an image element.
+   *  It covers Markdown images and, after sanitization, raw HTML: `<img>` and
+   *  `<input type="image">` become their alt text, `<picture>` sources and SVG `<image>`/`<feImage>`
+   *  are removed, and `<video>` loses its `poster`. In `sanitize` mode authored `<style>` elements
+   *  are removed too; `trusted` mode does not inspect authored CSS. Set it for language-model output
+   *  or other content that should not trigger requests to arbitrary URLs. */
+  @property({ type: Boolean, attribute: 'without-images' }) override withoutImages = false;
 
   /** `target` applied to every rendered `<a>`, with `rel="noopener
    *  noreferrer"` always added alongside it whenever a `target` is emitted.

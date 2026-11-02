@@ -95,6 +95,7 @@ describe('lr-streaming-text-core rendering', () => {
       tabSize: number;
       htmlMode: string;
       withoutGfm: boolean;
+      withoutImages: boolean;
       linkTarget: string | null;
       internalLinkPrefix: string;
       headingOffset: number;
@@ -106,6 +107,7 @@ describe('lr-streaming-text-core rendering', () => {
     expect(markdown.tabSize).to.equal(4);
     expect(markdown.htmlMode).to.equal('sanitize');
     expect(markdown.withoutGfm).to.equal(false);
+    expect(markdown.withoutImages).to.equal(false);
     expect(markdown.linkTarget).to.equal('_blank');
     expect(markdown.internalLinkPrefix).to.equal('');
     expect(markdown.headingOffset).to.equal(0);
@@ -144,6 +146,7 @@ describe('lr-streaming-text-core rendering', () => {
         link-target=""
         html-mode="escape"
         without-gfm
+        without-images
         internal-link-prefix="/docs/"
         heading-offset="2"
         tab-size="8"
@@ -157,6 +160,7 @@ describe('lr-streaming-text-core rendering', () => {
       tabSize: number;
       htmlMode: string;
       withoutGfm: boolean;
+      withoutImages: boolean;
       linkTarget: string | null;
       internalLinkPrefix: string;
       headingOffset: number;
@@ -168,6 +172,7 @@ describe('lr-streaming-text-core rendering', () => {
     expect(markdown.tabSize).to.equal(8);
     expect(markdown.htmlMode).to.equal('escape');
     expect(markdown.withoutGfm).to.equal(true);
+    expect(markdown.withoutImages).to.equal(true);
     expect(markdown.linkTarget).to.equal('');
     expect(markdown.internalLinkPrefix).to.equal('/docs/');
     expect(markdown.headingOffset).to.equal(2);

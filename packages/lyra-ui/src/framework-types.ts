@@ -7572,6 +7572,7 @@ export interface LyraComponentTypeMap {
       | 'strings'
       | 'tabSize'
       | 'withoutGfm'
+      | 'withoutImages'
       | 'withoutSyntaxHighlighting',
       {}
     >;
@@ -7615,6 +7616,7 @@ export interface LyraComponentTypeMap {
       'streaming-render'?: LyraMarkdown['streamingRender'];
       'tab-size'?: LyraMarkdown['tabSize'];
       'without-gfm'?: LyraMarkdown['withoutGfm'];
+      'without-images'?: LyraMarkdown['withoutImages'];
       'without-syntax-highlighting'?: LyraMarkdown['withoutSyntaxHighlighting'];
     };
   };
@@ -7641,6 +7643,7 @@ export interface LyraComponentTypeMap {
       | 'strings'
       | 'tabSize'
       | 'withoutGfm'
+      | 'withoutImages'
       | 'withoutSyntaxHighlighting',
       {}
     >;
@@ -7684,6 +7687,7 @@ export interface LyraComponentTypeMap {
       'streaming-render'?: LyraMarkdownCore['streamingRender'];
       'tab-size'?: LyraMarkdownCore['tabSize'];
       'without-gfm'?: LyraMarkdownCore['withoutGfm'];
+      'without-images'?: LyraMarkdownCore['withoutImages'];
       'without-syntax-highlighting'?: LyraMarkdownCore['withoutSyntaxHighlighting'];
     };
   };
@@ -11716,6 +11720,7 @@ export interface LyraComponentTypeMap {
       | 'strings'
       | 'tabSize'
       | 'withoutGfm'
+      | 'withoutImages'
       | 'withoutSyntaxHighlighting',
       {}
     >;
@@ -11739,6 +11744,7 @@ export interface LyraComponentTypeMap {
       'streaming-render'?: LyraStreamingText['streamingRender'];
       'tab-size'?: LyraStreamingText['tabSize'];
       'without-gfm'?: LyraStreamingText['withoutGfm'];
+      'without-images'?: LyraStreamingText['withoutImages'];
       'without-syntax-highlighting'?: LyraStreamingText['withoutSyntaxHighlighting'];
     };
   };
@@ -11765,6 +11771,7 @@ export interface LyraComponentTypeMap {
       | 'strings'
       | 'tabSize'
       | 'withoutGfm'
+      | 'withoutImages'
       | 'withoutSyntaxHighlighting',
       {}
     >;
@@ -11788,6 +11795,7 @@ export interface LyraComponentTypeMap {
       'streaming-render'?: LyraStreamingTextCore['streamingRender'];
       'tab-size'?: LyraStreamingTextCore['tabSize'];
       'without-gfm'?: LyraStreamingTextCore['withoutGfm'];
+      'without-images'?: LyraStreamingTextCore['withoutImages'];
       'without-syntax-highlighting'?: LyraStreamingTextCore['withoutSyntaxHighlighting'];
     };
   };

@@ -96,6 +96,12 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
    *  matches the composed element's own default. */
   @property({ type: Boolean, attribute: 'without-gfm' }) withoutGfm = false;
 
+  /** Forwarded verbatim to the composed Markdown element's own `withoutImages` -- renders every
+   *  image as its alt text so untrusted output (a streamed language-model answer, for example)
+   *  never makes the page load an image. Unset (the default) matches the composed element's own
+   *  default. */
+  @property({ type: Boolean, attribute: 'without-images' }) withoutImages = false;
+
   /** Forwarded verbatim to the composed Markdown element's own `linkTarget` -- the `target`
    *  applied to every rendered `<a>`, with `rel="noopener noreferrer"` always added by the
    *  composed element alongside it whenever a `target` is emitted. `'_blank'` (the default)
