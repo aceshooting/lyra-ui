@@ -7,9 +7,14 @@
 // working tree catches a hand edit that was already committed, and it cannot fail spuriously
 // because of unrelated uncommitted work in the same files. The originals are restored on failure,
 // so the check never mutates the tree it is auditing.
+// The generators rewrite the artifacts in place, so two concurrent rounds over the same tree (the
+// gate and its unit test run in different parallel lint shards) would read each other's partial
+// writes. Each round therefore holds an exclusive per-tree lock.
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isMainModule } from './is-main-module.mjs';
 import { readStyleModel } from './style-axes-model.mjs';
@@ -31,7 +36,56 @@ export const PALETTE_ARTIFACTS = Object.freeze([
   'src/theme/options/charts.ts',
 ]);
 
+const LOCK_TIMEOUT_MS = 300_000;
+const LOCK_POLL_MS = 50;
+
+function processAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error.code === 'EPERM';
+  }
+}
+
+function acquireTreeLock(dir) {
+  const key = createHash('sha256').update(resolve(dir)).digest('hex').slice(0, 16);
+  const lock = join(tmpdir(), `lyra-palette-freshness-${key}.lock`);
+  const deadline = Date.now() + LOCK_TIMEOUT_MS;
+  const sleeper = new Int32Array(new SharedArrayBuffer(4));
+  for (;;) {
+    try {
+      mkdirSync(lock);
+      writeFileSync(join(lock, 'pid'), String(process.pid));
+      return () => rmSync(lock, { recursive: true, force: true });
+    } catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+      let owner = Number.NaN;
+      try {
+        owner = Number(readFileSync(join(lock, 'pid'), 'utf8'));
+      } catch {
+        // The owner has created the directory but not yet recorded its pid.
+      }
+      if (Number.isInteger(owner) && owner > 0 && !processAlive(owner)) {
+        rmSync(lock, { recursive: true, force: true });
+        continue;
+      }
+      if (Date.now() > deadline) throw new Error(`timed out waiting for the palette freshness lock ${lock}`);
+      Atomics.wait(sleeper, 0, 0, LOCK_POLL_MS);
+    }
+  }
+}
+
 export function checkPaletteFreshness(dir = packageDir) {
+  const release = acquireTreeLock(dir);
+  try {
+    return checkPaletteFreshnessLocked(dir);
+  } finally {
+    release();
+  }
+}
+
+function checkPaletteFreshnessLocked(dir) {
   const before = PALETTE_ARTIFACTS.map((relativePath) => readFileSync(join(dir, relativePath)));
   try {
     for (const generator of PALETTE_GENERATORS) {
