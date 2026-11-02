@@ -916,6 +916,7 @@ export type LyraMessageKey =
   | 'mapSceneHide'
   | 'mapSceneEmpty'
   | 'mapSceneUnavailable'
+  | 'mapScenePartial'
   | 'mapSceneInvalid'
   | 'mapSceneLimit'
   | 'mapScenePrevious'

@@ -7,6 +7,8 @@ import { createMapScenePositionRegistry } from './map-scene-position-registry.js
 import { buildSceneRenderInput, emptySceneRenderInput, nextSceneRenderRevision,
   snapshotScenePresentation, snapshotSceneViewport } from './map-scene-render-input.js';
 import type { SceneAcceptedSnapshot, SceneRenderPublication, SceneResolvedPresentation, SceneViewportInput } from './map-scene-render-contract.js';
+import type { SceneRenderStatus } from './map-scene-status.js';
+import type { LyraMapSceneErrorCode } from './map-scene-types.js';
 import { createMapSceneSourceOwner, isStaleMapSceneSourceError } from './map-scene-source-snapshot.js';
 import type { SceneRequest } from './map-scene-source-snapshot.js';
 
@@ -14,13 +16,16 @@ export type { SceneAcceptedSnapshot } from './map-scene-render-contract.js';
 export interface SceneOwnerView {
   readonly active: boolean;
   readonly accepted: SceneAcceptedSnapshot;
-  readonly status: Readonly<{ revision: number; state: 'empty' | 'unavailable' | 'error';
-    code?: 'invalid' | 'limit' | 'engine' }> | undefined;
+  readonly status: Readonly<{ revision: number; state: 'empty' | 'error' | SceneRenderStatus['state'];
+    code?: LyraMapSceneErrorCode }> | undefined;
 }
 interface Observer<T> { readonly listener: () => void; baseline: T }
 
 const MAX_ENCODED_BYTES = 64 * 1024 * 1024;
 const MAX_NOTIFICATION_PASSES = 6144;
+const RENDER_STATES: ReadonlySet<unknown> = new Set(['loading', 'ready', 'partial', 'unavailable']);
+const RENDER_CODES: ReadonlySet<unknown> = new Set(['limit', 'model', 'resource', 'engine', 'projection', 'terrain',
+  'context-lost', 'altitude']);
 
 /** Advances the connection's issue serial without wrapping or coercing invalid counters. */
 export function nextPaintFrameSerial(previous: number): number | undefined {
@@ -46,6 +51,8 @@ export function createMapSceneOwner(options: {
   commitPresentation(expected: SceneRenderPublication, value: SceneResolvedPresentation): boolean;
   failPresentation(expected: SceneRenderPublication): boolean;
   setViewport(value: SceneViewportInput | undefined): boolean;
+  /** Renderer progress for the current accepted revision; a rejected update's report is retained. */
+  reportRenderStatus(revision: number, value: SceneRenderStatus): boolean;
   close(): void;
 } {
   const { element, connection } = options;
@@ -187,7 +194,7 @@ export function createMapSceneOwner(options: {
     resolvedPresentation = undefined;
     publish(active, objects.length === 0 ?
       Object.freeze({ revision: accepted.acceptedSceneRevision, state: 'empty' }) :
-      Object.freeze({ revision: accepted.acceptedSceneRevision, state: 'unavailable', code: 'engine' }));
+      Object.freeze({ revision: accepted.acceptedSceneRevision, state: 'loading' }));
   }
 
   function sameViewport(first: SceneViewportInput | undefined, second: SceneViewportInput | undefined): boolean {
@@ -256,6 +263,16 @@ export function createMapSceneOwner(options: {
       if (!input) return false;
       const next = Object.freeze({ ...expected, state: nextState, input });
       return commitRender(expected, next, resolvedPresentation, nextAllocation);
+    },
+    reportRenderStatus(revision: number, value: SceneRenderStatus): boolean {
+      if (closed || !view.active || accepted.objects.length === 0 || revision !== accepted.acceptedSceneRevision ||
+        value === null || typeof value !== 'object') return false;
+      const { state: next, code } = value;
+      if (!RENDER_STATES.has(next) || (code !== undefined && !RENDER_CODES.has(code))) return false;
+      const previous = view.status;
+      if (previous?.state === 'error' || (previous?.revision === revision && previous.state === next && previous.code === code)) return false;
+      publish(true, Object.freeze({ revision, state: next, ...(code === undefined ? {} : { code }) }));
+      return true;
     },
     assign(value: unknown): void {
       if (closed) return;

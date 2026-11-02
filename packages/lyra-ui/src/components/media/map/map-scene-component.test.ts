@@ -131,14 +131,16 @@ describe('lr-map accepted geographic scene', () => {
     const { element, failNative } = await mount(); const a = attachment(element);
     const states = stateEvents(element);
     element.scene = { objects: [sceneMarker('retained', 12)] }; await element.updateComplete;
-    expect(states).to.deep.equal([{ revision: 1, state: 'unavailable', code: 'engine' }]);
+    expect(states).to.deep.equal([{ revision: 1, state: 'loading' }]);
     failNative();
     await waitUntil(() => element.shadowRoot!.querySelector('[part="error"]') !== null);
+    await waitUntil(() => states.length === 2, 'engine failure status');
+    expect(states[1]).to.deep.equal({ revision: 1, state: 'unavailable', code: 'engine' });
     await element.updateComplete; await expand(element);
     expect(mapSceneSessionAttachment(element) === a).to.equal(true);
     expect(a.target('retained').status).to.equal('accepted');
     expect(part(element, 'scene-list').textContent).to.include('retained');
-    expect(states.every(state => state.state !== 'ready' && state.state !== 'loading')).to.equal(true);
+    expect(states.every(state => state.state !== 'ready' && state.state !== 'partial')).to.equal(true);
     expect(element.map === undefined).to.equal(true);
   });
 
@@ -185,7 +187,7 @@ describe('lr-map accepted geographic scene', () => {
     });
     element.scene = { objects: [sceneMarker('target', 2)] }; await element.updateComplete;
     const lookup = a.target('target'); expect(lookup.status === 'accepted' && lookup.target.position.lngLat[0]).to.equal(3);
-    expect(states.length).to.equal(1); expect(states[0]).to.deep.equal({ revision: 3, state: 'unavailable', code: 'engine' });
+    expect(states.length).to.equal(1); expect(states[0]).to.deep.equal({ revision: 3, state: 'loading' });
   });
 
   it('drops deferred scene events when a target listener disconnects the map', async () => {
@@ -255,9 +257,11 @@ describe('lr-map accepted geographic scene', () => {
   });
 
   it('supports localized scene feedback and announces it separately from the shadow status', async () => {
-    const { element } = await mount();
+    const { element, failNative } = await mount();
     element.strings = { mapSceneUnavailable: 'Rendering paused for this scene' };
     element.scene = { objects: [sceneMarker()] }; await element.updateComplete;
+    expect(part(element, 'scene-status').textContent).to.include('Loading');
+    failNative(); await waitUntil(() => part(element, 'scene-status').textContent?.includes('Rendering paused for this scene'));
     const status = part(element, 'scene-status'); expect(status.textContent).to.include('Rendering paused for this scene');
     expect(status.hasAttribute('role') || status.hasAttribute('aria-live')).to.equal(false);
     await waitUntil(() => [...document.querySelectorAll('[aria-live="assertive"]')].some(sink => sink.textContent?.includes('Rendering paused for this scene')));

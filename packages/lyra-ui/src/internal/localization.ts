@@ -944,6 +944,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   mapSceneHide: 'Hide scene objects',
   mapSceneEmpty: 'No scene objects',
   mapSceneUnavailable: 'Scene rendering is unavailable.',
+  mapScenePartial: 'Some scene objects are not drawn, or are drawn without their altitude.',
   mapSceneInvalid: 'The scene update is invalid. Previously accepted objects are unchanged.',
   mapSceneLimit: 'The scene update exceeds a limit. Previously accepted objects are unchanged.',
   mapScenePrevious: 'Previous scene page',
