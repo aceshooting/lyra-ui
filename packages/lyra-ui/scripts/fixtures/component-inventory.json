@@ -133709,6 +133709,12 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-suggestion-chips-chip-max-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-16rem)"
+          },
+          {
             "name": "--lr-suggestion-chips-disabled-opacity",
             "deprecated": null,
             "hasDefault": true,
@@ -133731,6 +133737,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "flex-start"
+          },
+          {
+            "name": "--lr-suggestion-chips-label-lines",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 1
           }
         ],
         "cssStates": [],

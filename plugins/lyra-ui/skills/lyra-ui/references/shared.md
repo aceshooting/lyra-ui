@@ -4248,6 +4248,83 @@ signal performs no attachment. Releasing never pauses other consumers.
   and tracking types are `MapCameraSessionSnapshot`, `MapCameraSessionReason`, `MapCameraSessionMode`,
   `MapCameraTrackingStatus` and `MapCameraTrackingIssue`.
 
+- **`map-custom-layers-contracts`** — Trusted custom WebGL2 layers (beams, coverage cones, clouds,
+  particles) on a connected `lr-map`, sharing its context, camera and depth; see the `lr-map` custom
+  3D layers section of the media reference. Import: `@aceshooting/lyra-ui/map-custom-layers.js`.
+  `addMapCustomLayer(map: HTMLElement, layer: LyraMapCustomLayer, options?: LyraMapCustomLayerOptions): LyraMapCustomLayerHandle`
+  `LyraMapCustomLayer {
+    readonly id: string;
+    readonly label: string;
+    readonly before?: string;
+    create(context: LyraMapCustomLayerContext): LyraMapCustomLayerInstance;
+  }`
+  `LyraMapCustomLayerContext {
+    readonly gl: WebGL2RenderingContext;
+    readonly signal: AbortSignal;
+    readonly geographic: LyraMapGeographicServices;
+    requestRender(): void;
+    reportState(state: 'ready' | 'loading' | 'unavailable', code?: 'terrain' | 'resource'): void;
+  }`
+  `LyraMapCustomLayerFrame {
+    readonly revision: number;
+    readonly time: number;
+    readonly width: number;
+    readonly height: number;
+    readonly pixelRatio: number;
+    readonly reducedMotion: boolean;
+    readonly geographic: LyraMapGeographicFrame;
+  }`
+  `LyraMapCustomLayerInstance {
+    prerender?(frame: LyraMapCustomLayerFrame): void;
+    render(frame: LyraMapCustomLayerFrame): void;
+    dispose(): void;
+    pick?(point: readonly [x: number, y: number], revision: number): Promise<LyraMapCustomLayerPick | null>;
+  }`
+  `LyraMapCustomLayerPick { readonly id: string; readonly position?: LyraMapPosition; }`
+  `LyraMapCustomLayerOptions { readonly onStateChange?: (status: LyraMapCustomLayerStatus) => void; }`
+  `LyraMapCustomLayerStatus { readonly state: LyraMapCustomLayerState; readonly code?: LyraMapCustomLayerCode; }`
+  `LyraMapCustomLayerHandle {
+    readonly id: string;
+    readonly status: LyraMapCustomLayerStatus;
+    requestRender(): void;
+    setVisible(visible: boolean): void;
+    pick(point: readonly [x: number, y: number]): Promise<LyraMapCustomLayerPick | null>;
+    remove(): void;
+  }`
+  `LyraMapGeographicServices {
+    readonly limits: Readonly<Record<string, number>>;
+    resolve(position: LyraMapPosition): LyraMapResolvedPosition;
+    frameFor(position: LyraMapPosition): LyraMapGeographicOrigin;
+    fromEnu(origin: Extract<LyraMapResolvedPosition, { status: 'resolved' }>, point: readonly [east: number, north: number, up: number]): LyraMapPosition;
+  }`
+  `LyraMapGeographicFrame {
+    resolve(position: LyraMapPosition): LyraMapResolvedPosition;
+    project(position: LyraMapPosition): LyraMapProjectedPosition;
+    encode(position: LyraMapResolvedPosition, origin: LyraMapGeographicOrigin): readonly [number, number, number];
+    shader(origin: LyraMapGeographicOrigin): LyraMapGeographicShader;
+  }`
+  `LyraMapGeographicOrigin { readonly tile: { readonly z: number; readonly x: number; readonly y: number; readonly wrap: number }; readonly key: string; }`
+  `LyraMapProjectedPosition {
+    readonly point?: readonly [number, number];
+    readonly visible: boolean;
+    readonly status: 'resolved' | 'terrain-pending' | 'terrain-unavailable' | 'visibility-pending' | 'clipped' | 'occluded';
+  }`
+  `LyraMapGeographicShader {
+    readonly key: string;
+    readonly vertexPrelude: string;
+    readonly fragmentPrelude: string;
+    readonly defines: string;
+    readonly positionEncoding: 'tile-xy-meters-z';
+    readonly projectFunction: 'lrProjectPosition';
+    readonly horizonPositionFunction: 'lrHorizonPosition';
+    readonly horizonOccludedFunction: 'lrHorizonOccluded';
+    readonly horizonMode: 'none' | 'sphere';
+    readonly uniforms: readonly LyraMapGeographicUniform[];
+  }`
+  `LyraMapGeographicUniform`, `LyraMapResolvedPosition`, `LyraMapCustomLayerState`
+  (`'loading' | 'ready' | 'unavailable' | 'removed'`) and `LyraMapCustomLayerCode`
+  (`'engine' | 'render' | 'invalid' | 'context-lost' | 'terrain' | 'resource'`) complete the types.
+
 ## Reference artifacts
 
 The package includes authored family and shared references plus derived index, component, token,

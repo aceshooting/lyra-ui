@@ -11844,10 +11844,12 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraSuggestionChipsEventMap;
     eventNames:       | 'lr-suggestion-select';
-    cssNames:       | '--lr-suggestion-chips-disabled-opacity'
+    cssNames:       | '--lr-suggestion-chips-chip-max-inline-size'
+      | '--lr-suggestion-chips-disabled-opacity'
       | '--lr-suggestion-chips-hover-bg'
       | '--lr-suggestion-chips-hover-border'
-      | '--lr-suggestion-chips-justify';
+      | '--lr-suggestion-chips-justify'
+      | '--lr-suggestion-chips-label-lines';
     attributeAliases: {};
   };
   'lr-svg-viewer': {
