@@ -533,6 +533,37 @@ function checkRegionalReachability(tags, localizationProgram, localizationSource
   ];
 }
 
+/**
+ * Fails a script catalog that a script-less tag could only reach through its implied script.
+ *
+ * Serbian ships both `sr` (Cyrillic, the CLDR default) and `sr-Latn`. `lang="sr-ME"` is Latin by
+ * CLDR likely subtags, yet its truncation walk is `sr-ME` -> `sr`, which lands on the Cyrillic
+ * catalog before the base-language widening ever runs. Only the implied-script step of
+ * `localeCandidates()` (`impliedScriptStep`) inserts `sr-Latn` ahead of `sr`; deleting it still
+ * type-checks and silently shows Montenegrin readers the other script.
+ *
+ * So: whenever a `language-Script` catalog ships beside its bare `language` catalog,
+ * `localeCandidates()` must still contain that step.
+ */
+function checkScriptReachability(tags, localizationProgram, localizationSource) {
+  const lowered = new Set(tags.map((tag) => tag.toLowerCase()));
+  const shadowed = tags.filter((tag) => {
+    const [language, script] = tag.split('-');
+    return /^[A-Za-z]{4}$/u.test(script ?? '') && lowered.has(language.toLowerCase());
+  });
+  if (shadowed.length === 0) return [];
+  const candidates = functionSource(localizationProgram, localizationSource, 'localeCandidates');
+  if (candidates === undefined) {
+    return ['src/internal/localization-runtime.ts no longer declares localeCandidates(); locale lookup cannot be verified'];
+  }
+  if (candidates.includes('impliedScriptStep(')) return [];
+  return [
+    'src/internal/localization-runtime.ts: localeCandidates() dropped the implied-script step ' +
+      '(impliedScriptStep), so script-less tags whose likely script differs from the bare language ' +
+      `stop at the base catalog written in the other script: ${shadowed.join(', ')}`,
+  ];
+}
+
 /** Validates the `registerLyraLocale()` metadata object (`dir`/`name`) a catalog or slice file
  *  declares, pushing onto `errors`. */
 function validateMeta(file, meta, errors) {
@@ -876,6 +907,11 @@ export async function runTranslationCatalogCheck() {
   }
 
   errors.push(...checkRegionalReachability(
+    registeredTags,
+    localizationRuntimeProgram,
+    localizationRuntimeSource,
+  ));
+  errors.push(...checkScriptReachability(
     registeredTags,
     localizationRuntimeProgram,
     localizationRuntimeSource,
