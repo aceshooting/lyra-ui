@@ -301,8 +301,11 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
    *  `[part="base"]` renders as a real `<a href=…>` instead of a `<span>`, and activation (click,
    *  or the parent's Enter/Space handling, which forwards through `click()` for a link item so the
    *  anchor's own native default action runs) navigates there in addition to firing the usual
-   *  `select()`/`lr-select` contract. An unsafe/unparseable `href` falls back to the plain `<span>`,
-   *  matching `lr-button`'s identical fallback. Mirrors `wa-dropdown-item`'s link-item support. */
+   *  `select()`/`lr-select` contract. The anchor carries the row's accessible name as its own
+   *  `aria-label` (a non-empty host `aria-label` wins, otherwise the visible label) and keeps it
+   *  live when either changes, because its visible label sits behind the decorative label wrapper.
+   *  An unsafe/unparseable `href` falls back to the plain `<span>`, matching `lr-button`'s
+   *  identical fallback. Mirrors `wa-dropdown-item`'s link-item support. */
   @property({ reflect: true }) href?: string;
 
   /** Native anchor `target`, used only while `href` resolves to a link. Setting this to `'_blank'`
@@ -384,6 +387,8 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   private readonly ownedName: OwnedAriaLabel = { owns: false, value: null };
   private writingComputedName = false;
   private panelName: OwnedAriaLabel = { owns: false, value: null };
+  /** The `aria-label` last rendered onto the link anchor, so label edits re-render only on change. */
+  private renderedLinkName: string | undefined;
 
   /** Whether a nested `<lr-menu>` or direct mapped items are assigned to this item's `submenu`
    * slot, making it a submenu parent. */
@@ -774,6 +779,17 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     if (next !== this.slottedLabel) this.slottedLabel = next;
     this.applyComputedName();
     this.applyPanelName();
+    // The label text is not reactive state, so a link item's rendered anchor name is refreshed here.
+    if (this.isLinkItem && this.linkName !== this.renderedLinkName) this.requestUpdate();
+  }
+
+  /** The rendered link anchor's own accessible name. The visible label sits behind the inert,
+   *  aria-hidden `[part="label"]` fence, so the anchor cannot derive a name from its subtree. It
+   *  mirrors the host's name: a non-empty host `aria-label` (authored or computed) wins, otherwise
+   *  the visible row label. `undefined` omits the attribute rather than rendering it empty. */
+  private get linkName(): string | undefined {
+    const hostLabel = this.getAttribute('aria-label')?.trim();
+    return hostLabel || this.slottedLabel || undefined;
   }
 
   private onLabelSlotChange = (event: Event): void => {
@@ -981,7 +997,10 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     // Enter/Space handling too) -- see the class doc and `resolvedHref`/`isLinkItem`. tabindex="-1"
     // keeps the anchor out of sequential focus navigation: the host remains the sole roving-
     // tabindex target, exactly as for the plain [part='base'] span.
+    // The anchor is named explicitly (see `linkName`): its label subtree is a presentation fence.
     const href = this.resolvedHref;
+    const linkName = href !== undefined ? this.linkName : undefined;
+    this.renderedLinkName = linkName;
     const base =
       href !== undefined
         ? html`<a
@@ -990,6 +1009,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
             target=${this.target || nothing}
             rel=${this.resolvedRel ?? nothing}
             download=${this.download !== undefined ? this.download ?? '' : nothing}
+            aria-label=${linkName ?? nothing}
             tabindex="-1"
             @click=${() => this.select()}
           >
