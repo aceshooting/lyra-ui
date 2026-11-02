@@ -30,7 +30,11 @@ export interface LyraMapSceneMarker extends LyraMapSceneObjectBase {
   /** Requested positive marker radius. Defaults to 6. */
   readonly radius?: number;
 }
-/** Drawn as a native line; altitude is carried in the data and reported as `partial`/`altitude` when not representable. */
+/**
+ * Drawn as a native line. A path at its draped surface uses a flat line layer; any other altitude is
+ * drawn in 3D through the optional `@aceshooting/lyra-map/scene` layer bridge, or as its ground
+ * track reported as `partial`/`altitude` when that bridge is unavailable.
+ */
 export interface LyraMapScenePath extends LyraMapSceneObjectBase {
   readonly kind: 'path';
   readonly positions: readonly LyraMapPosition[];
@@ -44,8 +48,9 @@ export interface LyraMapScenePath extends LyraMapSceneObjectBase {
 }
 /**
  * A great-circle ground track whose altitude interpolates linearly between the endpoints plus a
- * parabolic rise of `height` meters at the midpoint. A nonzero altitude or height is drawn as the
- * ground track and reported as `partial` with code `altitude`.
+ * parabolic rise of `height` meters at the midpoint. A nonzero altitude or height is drawn in 3D
+ * through the optional scene layer bridge, or as the ground track reported as `partial` with code
+ * `altitude` when that bridge is unavailable.
  */
 export interface LyraMapSceneArc extends LyraMapSceneObjectBase {
   readonly kind: 'arc';
@@ -69,8 +74,8 @@ export type LyraMapSceneObject = LyraMapSceneMarker | LyraMapScenePath | LyraMap
 /** New assignments are admitted atomically; undefined clears accepted scene ownership. */
 export interface LyraMapScene { readonly objects: readonly LyraMapSceneObject[]; }
 /**
- * `altitude`: a path or arc is drawn as its ground track because the flat map cannot show its
- * authored altitude or arc height. `model`: model objects are not drawn.
+ * `altitude`: a path or arc is drawn as its ground track because the optional 3D layer bridge is
+ * unavailable or failed. `model`: model objects are not drawn.
  */
 export type LyraMapSceneErrorCode = 'invalid' | 'limit' | 'model' | 'resource' | 'engine' | 'projection' | 'terrain' |
   'context-lost' | 'altitude';

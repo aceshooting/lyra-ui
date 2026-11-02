@@ -2,9 +2,12 @@ import { resolveCanvasColor } from '../../../internal/canvas-color.js';
 import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import type { MapLibreMapCapability } from './map-loader.js';
+import { isMapSceneLayerHandle, loadMapSceneLayerRuntime } from '../../../internal/map-scene-layer-runtime.js';
+import type { MapSceneLayerHandle, MapSceneLayerRuntime } from '../../../internal/map-scene-layer-runtime.js';
+import type { ElevatedSceneLine } from './map-scene-elevated-lines.js';
 import { createMapSceneLineLayer } from './map-scene-line-layer.js';
 import type { SceneLineRequest } from './map-scene-line-layer.js';
-import { buildSceneLineData } from './map-scene-lines.js';
+import { sceneLineDataFrom, sceneLineGrounded, traceSceneLines } from './map-scene-lines.js';
 import type { SceneLineObject } from './map-scene-lines.js';
 import type { createMapSceneOwner, SceneAcceptedSnapshot } from './map-scene-owner.js';
 import type { SceneRenderInput, SceneRenderPublication, SceneResolvedPresentation, SceneViewportInput } from './map-scene-render-contract.js';
@@ -41,9 +44,33 @@ export interface MapSceneRenderController {
   dispose(): void;
 }
 type BridgeReport = { readonly revision: number; readonly outcome: SceneDrawOutcome };
+interface ElevatedRuntime {
+  readonly layers: MapSceneLayerRuntime;
+  readonly lines: typeof import('./map-scene-elevated-lines.js');
+}
+interface ElevatedInstallation {
+  readonly revision: number;
+  readonly controller: AbortController;
+  handle: MapSceneLayerHandle | undefined;
+  outcome: SceneDrawOutcome;
+}
+/** Native layer identifier of the built-in elevated line renderer. */
+export const SCENE_ELEVATED_LINE_LAYER = 'lr-scene-elevated-lines';
 
 const isLine = (row: { readonly kind: string }): row is SceneLineObject => row.kind === 'path' || row.kind === 'arc';
 function channel(value: number): number { return Math.round(Math.min(1, Math.max(0, value)) * 255); }
+function terrainActive(map: MapLibreMapCapability): boolean {
+  try { const terrain = map.getTerrain?.(); return terrain !== null && terrain !== undefined; } catch { return false; }
+}
+/** Both line renderers settle before the combined outcome does; a drawn approximation stays approximate. */
+function combineLineOutcomes(flat: SceneDrawOutcome, elevated: SceneDrawOutcome): SceneDrawOutcome {
+  if (flat.state === 'none') return elevated;
+  if (elevated.state === 'none') return flat;
+  if (flat.state === 'pending' || elevated.state === 'pending') return { state: 'pending' };
+  if (flat.state === 'failed') return flat;
+  if (elevated.state === 'failed') return elevated;
+  return { state: 'drawn', approximate: Boolean(flat.approximate || elevated.approximate) };
+}
 
 /** Interprets a renderer-owned marker state report without trusting its shape. */
 function bridgeReport(value: unknown): BridgeReport | undefined {
@@ -102,6 +129,9 @@ export function createMapSceneRenderController(options: {
   let preparing = false;
   let bridgeFailure: number | undefined, report: BridgeReport | undefined, markerContextLost = false;
   let linesFor: SceneAcceptedSnapshot | undefined, lineColorsStale = true;
+  // Elevated paths and arcs: `undefined` runtime is not loaded yet, `null` is unavailable.
+  let elevatedRuntime: ElevatedRuntime | null | undefined, elevatedLoading = false, elevatedWanted = false;
+  let elevated: ElevatedInstallation | undefined, elevatedFailed: number | undefined, linesTerrain: boolean | undefined;
 
   function current(): boolean {
     return !closed && view !== null && element.isConnected && element.ownerDocument === document && options.isCurrent();
@@ -114,32 +144,109 @@ export function createMapSceneRenderController(options: {
   const lines = createMapSceneLineLayer({ map, isCurrent: () => current(),
     styleLoaded: () => { try { return options.styleLoaded?.() ?? map.isStyleLoaded?.() === true; } catch { return false; } },
     changed: statusChanged });
+  function retireElevated(): void {
+    const previous = elevated;
+    elevated = undefined;
+    if (!previous) return;
+    previous.controller.abort();
+    try { previous.handle?.dispose(); } catch { /* Optional cleanup cannot retire flat lines. */ }
+  }
+  function linesInvalidated(): void {
+    if (!current()) return;
+    lineColorsStale = true; sync(); statusChanged();
+  }
+  function startElevatedRuntime(): void {
+    if (elevatedLoading || elevatedRuntime !== undefined) return;
+    elevatedLoading = true;
+    void Promise.all([loadMapSceneLayerRuntime(), import('./map-scene-elevated-lines.js')]).then(
+      ([layers, lines]) => { elevatedRuntime = { layers, lines }; },
+      () => { elevatedRuntime = null; },
+    ).finally(() => { elevatedLoading = false; linesInvalidated(); });
+  }
+  function installElevated(runtime: ElevatedRuntime, revision: number, data: readonly ElevatedSceneLine[]): void {
+    retireElevated();
+    const installation: ElevatedInstallation = { revision, controller: new (view?.AbortController ?? AbortController)(),
+      handle: undefined, outcome: { state: 'pending' } };
+    elevated = installation;
+    const fail = (): void => {
+      if (elevated !== installation) return;
+      elevatedFailed = revision; retireElevated();
+      // Fall back to ground tracks outside the native callback that reported the failure.
+      queueMicrotask(linesInvalidated);
+    };
+    try {
+      const handle: unknown = runtime.layers.createSceneLayer(map,
+        runtime.lines.createElevatedSceneLineLayer(SCENE_ELEVATED_LINE_LAYER, data), {
+          signal: installation.controller.signal, reducedMotion: () => prefersReducedMotion(element),
+          onState: (state, code) => {
+            if (elevated !== installation || !current()) return;
+            if (state === 'ready') installation.outcome = { state: 'drawn' };
+            else if (state === 'loading') installation.outcome = { state: 'pending' };
+            else if (code === 'context-lost') installation.outcome = { state: 'failed', code: 'context-lost' };
+            else { fail(); return; }
+            statusChanged();
+          },
+        });
+      if (!isMapSceneLayerHandle(handle)) throw new TypeError('Map custom layers are unavailable');
+      if (elevated !== installation) { handle.dispose(); return; }
+      installation.handle = handle;
+    } catch { fail(); }
+  }
   function syncLines(): void {
     if (!current()) return;
     const accepted = owner.captureAccepted();
     if (accepted === linesFor && !lineColorsStale) return;
-    const objects = accepted.objects.filter(isLine);
-    if (objects.length === 0) { linesFor = accepted; lineColorsStale = false; lines.update(undefined); return; }
-    const colors = new Map<string, string>(), resolved = new Map<string, Rgba | undefined>();
-    let request: SceneLineRequest | undefined;
+    const objects = accepted.objects.filter(isLine), revision = accepted.acceptedSceneRevision;
+    if (objects.length === 0) {
+      linesFor = accepted; lineColorsStale = false; elevatedWanted = false; retireElevated(); lines.update(undefined); return;
+    }
+    const colors = new Map<string, string>(), rgbas = new Map<string, Rgba>(), resolved = new Map<string, Rgba | undefined>();
+    let request: SceneLineRequest | undefined, exact: ElevatedSceneLine[] = [];
+    const terrain = terrainActive(map);
     try {
       for (const row of objects) {
         const expression = row.color ?? `var(${options.accentToken})`;
         if (!resolved.has(expression)) resolved.set(expression, resolvedColor(element, expression));
         if (!current() || owner.captureAccepted() !== accepted) return;
         const rgba = resolved.get(expression);
-        if (!rgba) { request = { revision: accepted.acceptedSceneRevision, failure: 'engine' }; break; }
+        if (!rgba) { request = { revision, failure: 'engine' }; break; }
         colors.set(row.id, `rgba(${channel(rgba[0])}, ${channel(rgba[1])}, ${channel(rgba[2])}, ${rgba[3]})`);
+        rgbas.set(row.id, rgba);
       }
-      if (!request) {
-        const data = buildSceneLineData(objects, colors);
-        request = data ? { revision: accepted.acceptedSceneRevision, objects, data } :
-          { revision: accepted.acceptedSceneRevision, failure: 'limit' };
+      const geometry = request ? undefined : traceSceneLines(objects);
+      if (!request && !geometry) request = { revision, failure: 'limit' };
+      if (!request && geometry) {
+        // The flat layer drapes grounded lines exactly; everything else needs the custom 3D layer.
+        const raised = objects.map(row => !sceneLineGrounded(row, terrain));
+        elevatedWanted = raised.some(Boolean);
+        const runtime = elevatedWanted && elevatedFailed !== revision ? elevatedRuntime : undefined;
+        if (elevatedWanted && elevatedRuntime === undefined) startElevatedRuntime();
+        const flat: SceneLineObject[] = [], flatGeometry: typeof geometry[number][] = [];
+        objects.forEach((row, index) => {
+          if (runtime && raised[index]) {
+            const rgba = rgbas.get(row.id)!;
+            exact.push({ id: row.id, coordinates: geometry[index]!.coordinates, terrain: geometry[index]!.terrain,
+              rgba: [rgba[0], rgba[1], rgba[2], rgba[3] * row.opacity], width: row.width });
+          } else { flat.push(row); flatGeometry.push(geometry[index]!); }
+        });
+        if (flat.length) {
+          const data = sceneLineDataFrom(flat, flatGeometry, colors);
+          request = data ? { revision, objects: flat, data } : { revision, failure: 'engine' };
+        }
       }
-    } catch { request = { revision: accepted.acceptedSceneRevision, failure: 'engine' }; }
+    } catch { request = { revision, failure: 'engine' }; exact = []; }
     if (!current() || owner.captureAccepted() !== accepted) return;
-    linesFor = accepted; lineColorsStale = false;
+    linesFor = accepted; lineColorsStale = false; linesTerrain = terrain;
+    if (request && 'failure' in request) exact = [];
+    if (exact.length && elevatedRuntime) installElevated(elevatedRuntime, revision, exact);
+    else retireElevated();
     lines.update(request);
+  }
+  function elevatedOutcome(revision: number): SceneDrawOutcome {
+    if (!elevatedWanted) return { state: 'none' };
+    if (elevated) return elevated.revision === revision ? elevated.outcome : { state: 'pending' };
+    // Unloaded runtime keeps the scene loading; an unavailable or failed renderer leaves ground tracks.
+    return elevatedRuntime === undefined && elevatedFailed !== revision ? { state: 'pending' } : { state: 'none' };
   }
   function markerOutcome(revision: number): SceneDrawOutcome {
     if (!demand()) return { state: 'none' };
@@ -307,6 +414,7 @@ export function createMapSceneRenderController(options: {
     }
     abort.abort();
     try { previous?.dispose(); } catch { /* Optional cleanup cannot prevent native map removal. */ }
+    retireElevated();
     lines.dispose();
   }
 
@@ -336,18 +444,28 @@ export function createMapSceneRenderController(options: {
   } }
   catch { intersecting = false; }
   try { keep(observeReducedMotion(element, refreshPresentation)); } catch { /* Motion is also read on presentation refresh. */ }
+  const terrainChanged = (): void => { if (current() && linesTerrain !== undefined && terrainActive(map) !== linesTerrain) linesInvalidated(); };
+  try {
+    keep(() => { map.off?.('terrain' as never, terrainChanged); });
+    if (current()) Reflect.apply(map.on, map, ['terrain', terrainChanged]);
+  } catch { /* Terrain is also read on every line synchronization. */ }
   refreshAllocation(); sync();
   return { sync, refreshPresentation, refreshAllocation,
     invalidateStyle() {
       if (!current()) return;
       try { bridge?.invalidateStyle(); } catch { /* The native owner remains authoritative. */ }
+      try { elevated?.handle?.invalidateStyle(); } catch { /* The elevated renderer reinstalls on its own style load. */ }
       lines.invalidateStyle();
     },
-    styleReady() { if (current()) lines.styleReady(); },
+    styleReady() {
+      if (!current()) return;
+      try { elevated?.handle?.styleReady(); } catch { /* The elevated renderer reinstalls on its own style load. */ }
+      lines.styleReady();
+    },
     captureOutcomes() {
       const revision = owner.captureAccepted().acceptedSceneRevision, captured = lines.capture();
-      return { markers: markerOutcome(revision),
-        lines: captured.revision === revision || captured.outcome.state === 'none' ? captured.outcome : { state: 'pending' } };
+      const flat = captured.revision === revision || captured.outcome.state === 'none' ? captured.outcome : { state: 'pending' } as const;
+      return { markers: markerOutcome(revision), lines: combineLineOutcomes(flat, elevatedOutcome(revision)) };
     },
     dispose };
 }

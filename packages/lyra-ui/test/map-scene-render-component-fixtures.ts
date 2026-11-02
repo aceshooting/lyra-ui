@@ -3,6 +3,7 @@ import { LyraMap, LYRA_MAP_EMPTY_STYLE } from '../src/components/media/map/map.j
 import * as loaders from '../src/components/media/map/map-feature-loader.js';
 import type { SceneRenderInput } from '../src/components/media/map/map-scene-render-contract.js';
 import { ScriptedOverlayMap } from './map-scripted-engine.js';
+import { __setMapSceneLayerImporterForTesting } from '../src/internal/map-scene-layer-runtime.js';
 
 type Realm = Window & typeof globalThis;
 type Listener = (event: Record<string, unknown>) => void;
@@ -197,6 +198,8 @@ export async function renderEnvironment() {
   function module() { return { createSceneBridge: factory }; }
   function installImporter(): void { setImporter?.(async () => { imports++; return importer(); }); }
   installRealm(window as Realm); installImporter();
+  // Without an opted-in fake, the custom-layer bridge is unavailable and elevated lines keep ground tracks.
+  __setMapSceneLayerImporterForTesting(async () => ({}));
   return {
     records, peers, elements, observers, trace, module, installRealm,
     get imports() { return imports; },
@@ -204,6 +207,7 @@ export async function renderEnvironment() {
     set automaticVisibility(value: boolean) { automaticVisibility = value; },
     set onFactory(value: ((record: BridgeRecord) => void) | undefined) { onFactory = value; },
     setImporter(value: () => Promise<unknown>) { importer = value; installImporter(); },
+    setLayerImporter(value: () => Promise<unknown>) { __setMapSceneLayerImporterForTesting(value); },
     holdImport() { const gate = deferred<unknown>(); completions.push(() => gate.resolve(module())); importer = () => gate.promise; installImporter(); return gate; },
     visible(peer: RenderPeer, value: boolean) { for (const observer of observers) if (observer.kind === 'intersection') observer.emit(peer.container, value); },
     hidden(value: boolean, doc = document) {
@@ -232,7 +236,7 @@ export async function renderEnvironment() {
     async close() {
       for (const element of elements) element.remove();
       for (const finish of completions) finish();
-      await renderTurns(); setImporter?.();
+      await renderTurns(); setImporter?.(); __setMapSceneLayerImporterForTesting();
       for (const restore of restorers.reverse()) restore();
       ScriptedOverlayMap.instances = ScriptedOverlayMap.instances.filter(peer => !peers.includes(peer as RenderPeer));
     },
