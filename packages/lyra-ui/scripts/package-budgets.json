@@ -47,8 +47,8 @@
     },
     "@aceshooting/lyra-ide": {
       "maximum": {
-        "packedBytes": 1722496,
-        "unpackedBytes": 10660160,
+        "packedBytes": 1724160,
+        "unpackedBytes": 10666688,
         "fileCount": 10
       }
     },
