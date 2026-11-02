@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Bomba biloko ya elakiseli',
   mapSceneEmpty: 'Biloko ya elakiseli ezali te',
   mapSceneUnavailable: 'Elakiseli ekoki kolakisama te.',
+  mapScenePartial: 'Biloko mosusu ya elakiseli elakisami te, to elakisami kozanga bosanda na yango.',
   mapSceneInvalid: 'Bobongisi ya elakiseli ezali malamu te. Biloko oyo endimamaki liboso ebongwani te.',
   mapSceneLimit: 'Bobongisi ya elakiseli eleki ndelo. Biloko oyo endimamaki liboso ebongwani te.',
   mapScenePrevious: 'Lokasa ya elakiseli ya liboso',

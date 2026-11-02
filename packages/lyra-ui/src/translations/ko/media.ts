@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: '장면 객체 숨기기',
   mapSceneEmpty: '장면 객체가 없습니다',
   mapSceneUnavailable: '장면 렌더링을 사용할 수 없습니다.',
+  mapScenePartial: '일부 장면 객체가 렌더링되지 않았거나 고도 없이 렌더링되었습니다.',
   mapSceneInvalid: '장면 업데이트가 유효하지 않습니다. 이전에 승인된 객체는 변경되지 않습니다.',
   mapSceneLimit: '장면 업데이트가 한도를 초과합니다. 이전에 승인된 객체는 변경되지 않습니다.',
   mapScenePrevious: '이전 장면 페이지',

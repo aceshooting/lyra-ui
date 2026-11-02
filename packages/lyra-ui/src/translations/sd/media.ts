@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'منظر جون شيون لڪايو',
   mapSceneEmpty: 'منظر ۾ ڪا به شيءِ ناهي',
   mapSceneUnavailable: 'منظر جي رينڊرنگ دستياب ناهي.',
+  mapScenePartial: 'منظر جون ڪجهه شيون رينڊر نه ٿيون آهن، يا پنهنجي اوچائي کان سواءِ رينڊر ٿيون آهن.',
   mapSceneInvalid: 'منظر جي تبديلي غلط آهي. اڳ قبول ڪيل شيون اڻبدليل آهن.',
   mapSceneLimit: 'منظر جي تبديلي حد کان وڌي ٿي. اڳ قبول ڪيل شيون اڻبدليل آهن.',
   mapScenePrevious: 'منظر جو پويون صفحو',

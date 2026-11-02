@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: '隐藏场景对象',
   mapSceneEmpty: '没有场景对象',
   mapSceneUnavailable: '场景渲染不可用。',
+  mapScenePartial: '部分场景对象未渲染，或渲染时不含高度。',
   mapSceneInvalid: '场景更新无效。此前已接受的对象保持不变。',
   mapSceneLimit: '场景更新超出限制。此前已接受的对象保持不变。',
   mapScenePrevious: '上一页场景对象',

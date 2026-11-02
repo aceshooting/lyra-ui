@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Sahne nesnelerini gizle',
   mapSceneEmpty: 'Sahne nesnesi yok',
   mapSceneUnavailable: 'Sahne işleme kullanılamıyor.',
+  mapScenePartial: 'Bazı sahne nesneleri işlenmiyor veya yükseklikleri olmadan işleniyor.',
   mapSceneInvalid: 'Sahne güncellemesi geçersiz. Daha önce kabul edilen nesneler değişmeden kalır.',
   mapSceneLimit: 'Sahne güncellemesi bir sınırı aşıyor. Daha önce kabul edilen nesneler değişmeden kalır.',
   mapScenePrevious: 'Önceki sahne sayfası',

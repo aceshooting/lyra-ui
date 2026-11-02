@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'シーンオブジェクトを非表示',
   mapSceneEmpty: 'シーンオブジェクトはありません',
   mapSceneUnavailable: 'シーンの描画を利用できません。',
+  mapScenePartial: '一部のシーンオブジェクトは描画されていないか、高度なしで描画されています。',
   mapSceneInvalid: 'シーンの更新が無効です。以前に受け入れられたオブジェクトは変更されません。',
   mapSceneLimit: 'シーンの更新が制限を超えています。以前に受け入れられたオブジェクトは変更されません。',
   mapScenePrevious: '前のシーンページ',

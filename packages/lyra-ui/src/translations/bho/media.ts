@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'दृश्य के वस्तु छिपाईं',
   mapSceneEmpty: 'दृश्य में कवनो वस्तु नइखे',
   mapSceneUnavailable: 'दृश्य देखावल उपलब्ध नइखे।',
+  mapScenePartial: 'दृश्य के कुछ वस्तु देखावल नइखे गइल, भा बिना ऊँचाई के देखावल गइल बा।',
   mapSceneInvalid: 'दृश्य के बदलाव अमान्य बा। पहिले स्वीकार कइल वस्तु ओइसहीं बाड़ी स।',
   mapSceneLimit: 'दृश्य के बदलाव सीमा से बेसी बा। पहिले स्वीकार कइल वस्तु ओइसहीं बाड़ी स।',
   mapScenePrevious: 'दृश्य के पिछिला पन्ना',

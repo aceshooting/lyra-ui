@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'הסתרת עצמים בסצנה',
   mapSceneEmpty: 'אין עצמים בסצנה',
   mapSceneUnavailable: 'תצוגת הסצנה אינה זמינה.',
+  mapScenePartial: 'חלק מהעצמים בסצנה אינם מוצגים, או מוצגים ללא הגובה שלהם.',
   mapSceneInvalid: 'עדכון הסצנה אינו תקין. העצמים שהתקבלו קודם לא השתנו.',
   mapSceneLimit: 'עדכון הסצנה חורג ממגבלה. העצמים שהתקבלו קודם לא השתנו.',
   mapScenePrevious: 'עמוד הסצנה הקודם',

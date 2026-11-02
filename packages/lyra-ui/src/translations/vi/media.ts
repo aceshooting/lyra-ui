@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Ẩn đối tượng trong cảnh',
   mapSceneEmpty: 'Không có đối tượng trong cảnh',
   mapSceneUnavailable: 'Không thể kết xuất cảnh.',
+  mapScenePartial: 'Một số đối tượng trong cảnh không được kết xuất hoặc được kết xuất mà không có độ cao.',
   mapSceneInvalid: 'Bản cập nhật cảnh không hợp lệ. Các đối tượng đã được chấp nhận trước đó không thay đổi.',
   mapSceneLimit: 'Bản cập nhật cảnh vượt quá giới hạn. Các đối tượng đã được chấp nhận trước đó không thay đổi.',
   mapScenePrevious: 'Trang cảnh trước',

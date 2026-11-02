@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Sakrij objekte scene',
   mapSceneEmpty: 'Nema objekata scene',
   mapSceneUnavailable: 'Iscrtavanje scene nije dostupno.',
+  mapScenePartial: 'Neki objekti scene nisu iscrtani ili su iscrtani bez svoje visine.',
   mapSceneInvalid: 'Ažuriranje scene nije valjano. Prethodno prihvaćeni objekti ostaju nepromijenjeni.',
   mapSceneLimit: 'Ažuriranje scene premašuje ograničenje. Prethodno prihvaćeni objekti ostaju nepromijenjeni.',
   mapScenePrevious: 'Prethodna stranica scene',

@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Ascunde obiectele scenei',
   mapSceneEmpty: 'Niciun obiect în scenă',
   mapSceneUnavailable: 'Randarea scenei nu este disponibilă.',
+  mapScenePartial: 'Unele obiecte ale scenei nu sunt randate sau sunt randate fără altitudinea lor.',
   mapSceneInvalid: 'Actualizarea scenei nu este validă. Obiectele acceptate anterior rămân neschimbate.',
   mapSceneLimit: 'Actualizarea scenei depășește o limită. Obiectele acceptate anterior rămân neschimbate.',
   mapScenePrevious: 'Pagina anterioară a scenei',

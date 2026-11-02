@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'የትዕይንት ነገሮችን ደብቅ',
   mapSceneEmpty: 'የትዕይንት ነገሮች የሉም',
   mapSceneUnavailable: 'ትዕይንቱን ማሳየት አይቻልም።',
+  mapScenePartial: 'አንዳንድ የትዕይንት ነገሮች አልታዩም፣ ወይም ያለ ከፍታቸው ታይተዋል።',
   mapSceneInvalid: 'የትዕይንቱ ዝማኔ ልክ ያልሆነ ነው። ከዚህ በፊት የተቀበሉት ነገሮች አልተለወጡም።',
   mapSceneLimit: 'የትዕይንቱ ዝማኔ ገደብ አልፏል። ከዚህ በፊት የተቀበሉት ነገሮች አልተለወጡም።',
   mapScenePrevious: 'ያለፈው የትዕይንት ገጽ',

@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Ficha vitu vya mandhari',
   mapSceneEmpty: 'Hakuna vitu vya mandhari',
   mapSceneUnavailable: 'Mandhari hayawezi kuonyeshwa.',
+  mapScenePartial: 'Baadhi ya vitu vya mandhari havijaonyeshwa, au vimeonyeshwa bila mwinuko wake.',
   mapSceneInvalid: 'Usasishaji wa mandhari si halali. Vitu vilivyokubaliwa awali havijabadilika.',
   mapSceneLimit: 'Usasishaji wa mandhari umezidi kikomo. Vitu vilivyokubaliwa awali havijabadilika.',
   mapScenePrevious: 'Ukurasa wa mandhari uliotangulia',

@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: '隱藏場景物件',
   mapSceneEmpty: '沒有場景物件',
   mapSceneUnavailable: '無法使用場景繪製功能。',
+  mapScenePartial: '部分場景物件未繪製，或繪製時不含高度。',
   mapSceneInvalid: '場景更新無效。先前已接受的物件維持不變。',
   mapSceneLimit: '場景更新超出限制。先前已接受的物件維持不變。',
   mapScenePrevious: '上一頁場景物件',

@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Jelenetobjektumok elrejtése',
   mapSceneEmpty: 'Nincsenek jelenetobjektumok',
   mapSceneUnavailable: 'A jelenet megjelenítése nem érhető el.',
+  mapScenePartial: 'Egyes jelenetobjektumok nem jelennek meg, vagy a magasságuk nélkül jelennek meg.',
   mapSceneInvalid: 'A jelenet frissítése érvénytelen. A korábban elfogadott objektumok változatlanok maradnak.',
   mapSceneLimit: 'A jelenet frissítése túllép egy korlátot. A korábban elfogadott objektumok változatlanok maradnak.',
   mapScenePrevious: 'A jelenet előző oldala',

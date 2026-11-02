@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Skjul sceneobjekt',
   mapSceneEmpty: 'Ingen sceneobjekt',
   mapSceneUnavailable: 'Scenegjengjeving er ikkje tilgjengeleg.',
+  mapScenePartial: 'Nokre sceneobjekt blir ikkje gjengjevne, eller blir gjengjevne utan høgda si.',
   mapSceneInvalid: 'Sceneoppdateringa er ugyldig. Tidlegare godkjende objekt er uendra.',
   mapSceneLimit: 'Sceneoppdateringa overskrid ei grense. Tidlegare godkjende objekt er uendra.',
   mapScenePrevious: 'Førre sceneside',

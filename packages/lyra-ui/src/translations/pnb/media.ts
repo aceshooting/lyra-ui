@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'منظر دیاں شےواں لُکاؤ',
   mapSceneEmpty: 'منظر وچ کوئی شے نہیں',
   mapSceneUnavailable: 'منظر دی رینڈرنگ دستیاب نہیں۔',
+  mapScenePartial: 'منظر دیاں کجھ شےواں رینڈر نہیں ہوئیاں، یا اپنی اچائی توں بغیر رینڈر ہوئیاں نیں۔',
   mapSceneInvalid: 'منظر دی تبدیلی درست نہیں۔ پہلاں قبول کیتیاں شےواں اوہو جیہیاں نیں۔',
   mapSceneLimit: 'منظر دی تبدیلی حد توں ودھ اے۔ پہلاں قبول کیتیاں شےواں اوہو جیہیاں نیں۔',
   mapScenePrevious: 'منظر دا پچھلا صفحہ',

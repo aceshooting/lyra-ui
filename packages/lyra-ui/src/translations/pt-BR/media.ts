@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Ocultar objetos da cena',
   mapSceneEmpty: 'Nenhum objeto na cena',
   mapSceneUnavailable: 'A renderização da cena não está disponível.',
+  mapScenePartial: 'Alguns objetos da cena não são renderizados ou são renderizados sem a altitude.',
   mapSceneInvalid: 'A atualização da cena é inválida. Os objetos aceitos anteriormente permanecem inalterados.',
   mapSceneLimit: 'A atualização da cena excede um limite. Os objetos aceitos anteriormente permanecem inalterados.',
   mapScenePrevious: 'Página anterior da cena',
