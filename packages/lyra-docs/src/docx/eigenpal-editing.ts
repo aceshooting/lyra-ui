@@ -82,6 +82,8 @@ export function createEigenpalEditing(
       return previousFormatting;
     },
     paragraphStyles,
+    /** Whether the style id names a paragraph style of the current document. */
+    hasParagraphStyle(id: string): boolean { paragraphStyles(); return styleIds.has(id); },
     fontFamilies() {
       const choices = current().getAvailableFonts();
       const valid = choices.filter(family => normalizeDocxAction({ type: 'font-family', family }).ok);

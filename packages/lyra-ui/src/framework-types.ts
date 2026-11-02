@@ -7468,6 +7468,7 @@ export interface LyraComponentTypeMap {
     events: LyraMapEventMap;
     eventNames:       | 'lr-map-anchor-close'
       | 'lr-map-attribution-toggle'
+      | 'lr-map-camera-interrupt'
       | 'lr-map-click'
       | 'lr-map-contextmenu'
       | 'lr-map-draw-cancel'

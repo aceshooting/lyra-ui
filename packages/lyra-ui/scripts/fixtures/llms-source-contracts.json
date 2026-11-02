@@ -14695,7 +14695,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "ce01883b66fbe2b51ff4",
+      "fingerprint": "7a9b8f7e8e775a6171db",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -16320,7 +16320,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "cbceb4ab019cf672d3d5",
+      "fingerprint": "2019ef9cefb6422add11",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16336,7 +16336,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "24eaff7abde1c1d73b63",
+      "fingerprint": "57f90d294957ef8cdf40",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16352,7 +16352,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "63adcadd1ad867433605",
+      "fingerprint": "b2b1e25e5117f3d8333d",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16896,7 +16896,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "a7ce2c9c18ceebe6cf04",
+      "fingerprint": "490147645267fe6761ff",
       "routes": [
         "src/vue.ts"
       ],
@@ -17305,7 +17305,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "39e4e915a07e53db7855",
+      "fingerprint": "66a7d99d8de4552fe98e",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -22447,6 +22447,180 @@
         "kind": "utility",
         "name": "components-media-map-scene-types-contracts",
         "declaration": "LyraMapSceneStateDetail"
+      }
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapCameraInterruptDetail",
+      "kind": "interface",
+      "fingerprint": "50c0df269b9cf84d5d3b",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/components/media/map/map.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-map-contracts",
+        "declaration": "LyraMapCameraInterruptDetail"
+      }
+    },
+    {
+      "module": "src/internal/map-camera-session-controller.ts",
+      "exportName": "MapCameraFollowOptions",
+      "kind": "interface",
+      "fingerprint": "c8b41a4fcb33d3a4d2d4",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/map-camera-session.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/testing-and-utilities.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "map-camera-session-contracts",
+        "declaration": "MapCameraFollowOptions"
+      }
+    },
+    {
+      "module": "src/internal/map-camera-session-controller.ts",
+      "exportName": "MapCameraKeyframe",
+      "kind": "interface",
+      "fingerprint": "3aaa70f93037d57d9473",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/map-camera-session.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/testing-and-utilities.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "map-camera-session-contracts",
+        "declaration": "MapCameraKeyframe"
+      }
+    },
+    {
+      "module": "src/internal/map-camera-session-controller.ts",
+      "exportName": "MapCameraSession",
+      "kind": "interface",
+      "fingerprint": "496a6b6e25c906ce904f",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/map-camera-session.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/testing-and-utilities.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "map-camera-session-contracts",
+        "declaration": "MapCameraSession"
+      }
+    },
+    {
+      "module": "src/internal/map-camera-session-controller.ts",
+      "exportName": "MapCameraSessionOptions",
+      "kind": "interface",
+      "fingerprint": "31f61bf611d347f17e22",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/map-camera-session.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/testing-and-utilities.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "map-camera-session-contracts",
+        "declaration": "MapCameraSessionOptions"
+      }
+    },
+    {
+      "module": "src/internal/map-camera-session-controller.ts",
+      "exportName": "MapCameraTour",
+      "kind": "interface",
+      "fingerprint": "c67978b599e8390c03ca",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/map-camera-session.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/testing-and-utilities.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "map-camera-session-contracts",
+        "declaration": "MapCameraTour"
+      }
+    },
+    {
+      "module": "src/internal/map-camera-session-controller.ts",
+      "exportName": "MapCameraTransition",
+      "kind": "interface",
+      "fingerprint": "b0c7f15eac39c3245217",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/map-camera-session.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/testing-and-utilities.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "map-camera-session-contracts",
+        "declaration": "MapCameraTransition"
+      }
+    },
+    {
+      "module": "src/internal/map-camera-session-data.ts",
+      "exportName": "MapViewpoint",
+      "kind": "interface",
+      "fingerprint": "b0ebaf42978ac8e25472",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/map-camera-session.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/testing-and-utilities.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "map-camera-session-contracts",
+        "declaration": "MapViewpoint"
+      }
+    },
+    {
+      "module": "src/map-camera-session.ts",
+      "exportName": "createMapCameraSession",
+      "kind": "function",
+      "fingerprint": "6a59c9a09a958f913154",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/map-camera-session.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/testing-and-utilities.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "map-camera-session-contracts",
+        "declaration": "createMapCameraSession"
       }
     },
     {

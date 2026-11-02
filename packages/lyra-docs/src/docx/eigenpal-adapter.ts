@@ -10,12 +10,13 @@ import { tableAvailability, tableContext, qualifyTableCommand } from './eigenpal
 import { loadDocxEngine } from './engine-loader.js';
 import { createEigenpalEditing, eigenpalCommand } from './eigenpal-editing.js';
 import { createDocumentInspection } from './eigenpal-document-inspection.js';
+import { runEigenpalBatch, type DocxBatchPlanStep } from './eigenpal-batch.js';
 import { createEigenpalReview, createLyraReviewModule } from './eigenpal-review.js';
 import { isDocxReviewAction, normalizeDocxReviewAction } from './review-types.js';
 import { chartPlacements, type DocxChartPlacement } from './eigenpal-charts.js';
 import type { DocxEngineModule } from './engine-loader.js';
-import type { DocxEngineEvent, DocxEnginePort, DocxEngineImageInsertion, DocxEngineImageReplacement } from './engine-port.js';
-import type { DocxResult, DocxSelection, DocxSessionOptions, DocxSource } from './types.js';
+import type { DocxEngineBatchResult, DocxEngineEvent, DocxEnginePort, DocxEngineImageInsertion, DocxEngineImageReplacement } from './engine-port.js';
+import type { DocxRefusalCode, DocxResult, DocxSelection, DocxSessionOptions, DocxSource } from './types.js';
 
 /** Raster decode without `convertPreserved`, so Windows metafiles stay unparsed placeholders. */
 const rasterDecodePort = (view: Window | null): NonNullable<DocxEditorConfig['imageDecodePort']> => ({
@@ -560,6 +561,71 @@ export async function openEigenpalDocument(
         return ready.ok ? inspection.inspectDocument() : ready;
       },
       selectDocumentTarget: token => inspection.select(token),
+      fragment(request) {
+        const ready = documentReadiness();
+        return ready.ok ? inspection.fragment(request) : ready;
+      },
+      async executeBatch(steps, control) {
+        const refuse = (code: DocxRefusalCode, step: number | null = null): DocxEngineBatchResult =>
+          ({ ok: false, code, step, rolledBack: false });
+        if (destroyed || !owned()) return refuse('destroyed');
+        if (fault) return refuse('engine-failed');
+        if (saving || executingGuarded || nativeDispatching()) return refuse('busy');
+        if (composing) return refuse('composing');
+        if (operation.readOnly) return refuse('read-only');
+        const active = current(), surface = active.surface;
+        if (!surface) return refuse('unsupported');
+        const session = surface.session, generation = active.mountGeneration, revision = session.packageRevision();
+        const pkg = session.currentPackage();
+        const plan: DocxBatchPlanStep[] = [];
+        for (const [index, step] of steps.entries()) {
+          const paragraphId = step.target ? inspection.resolve(step.target) : null;
+          if (step.target && paragraphId === null) return refuse('stale-selection', index);
+          if (typeof step.edit !== 'string' && step.edit.type === 'paragraph-style' && !editing.hasParagraphStyle(step.edit.styleId))
+            return refuse('invalid-option', index);
+          plan.push({ command: eigenpalCommand(step.edit), paragraphId });
+        }
+        const facade = (): DocxResult<void> => {
+          if (destroyed || !owned()) return { ok: false, code: 'destroyed' };
+          if (fault) return { ok: false, code: 'engine-failed' };
+          if (composing) return { ok: false, code: 'composing' };
+          return editor === active ? control.validate() : { ok: false, code: 'stale-revision' };
+        };
+        const unchanged = (): DocxResult<void> => {
+          const valid = facade();
+          if (!valid.ok) return valid;
+          return active.surface !== surface || surface.session !== session || active.mountGeneration !== generation ||
+            session.packageRevision() !== revision || session.currentPackage() !== pkg ? { ok: false, code: 'stale-revision' } : valid;
+        };
+        executingGuarded = true;
+        suppressSelection++;
+        try {
+          surface.flushPendingInput();
+          clearNativeSettlement();
+          refreshState();
+          let ready = unchanged();
+          if (!ready.ok) return refuse(ready.code);
+          // Every await precedes the first write; the batch itself runs synchronously.
+          for (const step of plan) {
+            await module.prepareCommandFeatures(step.command);
+            ready = unchanged();
+            if (!ready.ok) return refuse(ready.code);
+          }
+          const state = surface.state();
+          const selection = plan.some(step => step.paragraphId !== null) && !state.cellSelection ?
+            { anchor: { ...state.selection.anchor }, head: { ...state.selection.head } } : null;
+          const armed = control.arm();
+          if (!armed.ok) return refuse(armed.code);
+          const run = runEigenpalBatch(active, plan, facade, () => surface.session.currentPackage(), selection);
+          if (run.fault) {
+            // The document may hold part of the batch; fail closed instead of offering further edits.
+            fault = true;
+            clearResourceRefresh();
+            emit('state');
+          } else if (!destroyed) refreshState();
+          return run.result;
+        } finally { suppressSelection--; executingGuarded = false; }
+      },
       review() {
         const ready = documentReadiness();
         return !ready.ok ? ready : review ? { ok: true, value: review.query() } : { ok: false, code: 'unsupported' };

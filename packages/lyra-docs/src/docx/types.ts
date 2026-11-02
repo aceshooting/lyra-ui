@@ -1,4 +1,4 @@
-import type { DocxOutline, DocxDocumentInspection } from './document-inspection-types.js';
+import type { DocxOutline, DocxDocumentInspection, DocxFragment, DocxFragmentRequest } from './document-inspection-types.js';
 import type { DocxReviewAction, DocxReviewReport } from './review-types.js';
 /** Lifecycle of one document session. Destruction is terminal. */
 export type DocxStatus = 'idle' | 'opening' | 'ready' | 'error' | 'destroyed';
@@ -85,6 +85,32 @@ export interface DocxInsertImageOptions {
   readonly signal?: AbortSignal;
 }
 export type DocxAction = DocxCommand | DocxEdit | DocxReviewAction;
+/** Edits that apply to a paragraph wherever the caret is inside it; a targeted batch step accepts only these. */
+export type DocxParagraphEdit = Extract<DocxEdit, { type: 'paragraph-style' | 'alignment' | 'line-spacing' }>;
+/**
+ * Formatting a batch can apply: paragraph edits, character formatting toggles and run formatting.
+ * Lists and indentation remain single `execute()` actions.
+ */
+export type DocxBatchEdit =
+  | DocxParagraphEdit
+  | Exclude<DocxCommand, 'undo' | 'redo'>
+  | Extract<DocxEdit, { type: 'font-family' | 'font-size' | 'text-color' | 'highlight' | 'clear-formatting' }>;
+/** One ordered batch step. Without a target it applies to the selection left by earlier steps. */
+export type DocxBatchStep =
+  | Readonly<{ edit: DocxBatchEdit; target?: undefined }>
+  /** A paragraph block id from `readFragment()` at the batch's expected revision; the caret moves to its start. */
+  | Readonly<{ edit: DocxParagraphEdit; target: string }>;
+export interface DocxBatchOptions {
+  /** Required: the batch applies only to this revision, so a retried batch is never applied twice. */
+  readonly expectedRevision: DocxRevision;
+}
+/**
+ * A committed batch identifies its one new revision. A refusal names the zero-based failing `step`, or
+ * null when the batch as a whole was refused; the document and revision are then unchanged.
+ */
+export type DocxBatchResult =
+  | Readonly<{ ok: true; value: DocxRevision }>
+  | Readonly<{ ok: false; code: DocxRefusalCode; step: number | null }>;
 /** Rendered selection context, advisory only; execution checks canonical topology. */
 export interface DocxTableContext {
   readonly rows: number;
@@ -99,7 +125,7 @@ export type DocxRefusalCode =
   | 'busy' | 'composing' | 'read-only' | 'unsupported' | 'no-selection'
   | 'stale-revision' | 'stale-selection' | 'stale-search' | 'stale-save'
   | 'aborted' | 'destroyed' | 'engine-unavailable' | 'invalid-document'
-  | 'resource-limit' | 'external-resource' | 'open-failed' | 'save-failed' | 'engine-failed';
+  | 'resource-limit' | 'external-resource' | 'open-failed' | 'save-failed' | 'engine-failed' | 'fetch-failed';
 export type DocxResult<T> = Readonly<{ ok: true; value: T }> | Readonly<{ ok: false; code: DocxRefusalCode }>;
 
 export interface DocxSessionOptions {
@@ -219,6 +245,19 @@ export interface DocxSession {
   /** Bounded body diagnostics, with opaque revision-scoped navigation identifiers. */
   inspectDocument(): DocxResult<DocxDocumentInspection>;
   selectOutlineItem(id: string, options?: { expectedRevision?: DocxRevision }): DocxResult<void>;
+  /**
+   * A bounded slice of top-level body blocks, read without copying the rest of the document.
+   * A paragraph id stays valid until the next content edit; at most 4,096 are retained per revision.
+   */
+  readFragment(request?: DocxFragmentRequest): DocxResult<DocxFragment>;
+  /** Move the caret to the start of a current fragment paragraph without editing. */
+  selectFragmentBlock(id: string, options?: { expectedRevision?: DocxRevision }): DocxResult<void>;
+  /**
+   * Apply 1–32 formatting steps in order as one change: all succeed with one new revision and, normally,
+   * one undo step, or none apply. Input is suspended while the batch runs; a step the engine refuses
+   * reverts the earlier steps and is reported by index.
+   */
+  applyEdits(steps: readonly DocxBatchStep[], options: DocxBatchOptions): Promise<DocxBatchResult>;
   selectDiagnostic(id: string, options?: { expectedRevision?: DocxRevision }): DocxResult<void>;
   /** Copied comments and tracked changes; reading never saves or settles pending input. */
   review(): DocxResult<DocxReviewReport>;

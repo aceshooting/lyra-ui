@@ -28,11 +28,20 @@
       "two",
       "zero"
     ],
+    "bg": [
+      "one",
+      "other"
+    ],
     "bho": [
       "one",
       "other"
     ],
     "bn": [
+      "one",
+      "other"
+    ],
+    "ca": [
+      "many",
       "one",
       "other"
     ],
@@ -80,6 +89,10 @@
       "one",
       "other"
     ],
+    "et": [
+      "one",
+      "other"
+    ],
     "fa": [
       "one",
       "other"
@@ -105,6 +118,13 @@
       "many",
       "one",
       "other"
+    ],
+    "ga": [
+      "few",
+      "many",
+      "one",
+      "other",
+      "two"
     ],
     "gu": [
       "one",
@@ -168,6 +188,17 @@
       "one",
       "other"
     ],
+    "lt": [
+      "few",
+      "many",
+      "one",
+      "other"
+    ],
+    "lv": [
+      "one",
+      "other",
+      "zero"
+    ],
     "ml": [
       "one",
       "other"
@@ -178,6 +209,13 @@
     ],
     "ms": [
       "other"
+    ],
+    "mt": [
+      "few",
+      "many",
+      "one",
+      "other",
+      "two"
     ],
     "my": [
       "other"
@@ -249,11 +287,27 @@
       "one",
       "other"
     ],
+    "sk": [
+      "few",
+      "many",
+      "one",
+      "other"
+    ],
     "sl": [
       "few",
       "one",
       "other",
       "two"
+    ],
+    "sr": [
+      "few",
+      "one",
+      "other"
+    ],
+    "sr-Latn": [
+      "few",
+      "one",
+      "other"
     ],
     "su": [
       "other"

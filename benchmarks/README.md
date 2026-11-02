@@ -136,6 +136,8 @@ separately on a machine with a GPU. Build first, then run:
 pnpm build
 pnpm benchmark:gpu                         # quick profile: graph 10k nodes / 30k edges, 100k points
 pnpm benchmark:gpu --profile stress        # graph 30k / 90k, 1M points
+pnpm benchmark:gpu --profile scale         # graph 100k / 300k, plus its progressive layout
+pnpm benchmark:gpu --modes gpu --gate      # judge the documented 60 fps targets (see below)
 pnpm benchmark:gpu --modes gpu --cpu-profile  # adds the hottest main-thread functions per scenario
 ```
 
@@ -152,6 +154,55 @@ heap before mounting and after disposal and garbage collection. The graph repeti
 an unpinned worker layout and distinguish convergence from exhaustion of its iteration budget.
 Results retain the raw samples and their spread; missing observations fail the command. These
 measurements exclude display latency, worker heaps and GPU memory. Screenshots require visual review.
+
+### Graph data and the 100k profile
+
+Graph scenarios render deterministic data from `benchmarks/gpu/graph-fixture.mjs`: node positions
+in a ball and three edges per node, generated from seed 7. Sources cycle through every node and
+targets are never the source. Each result records a fingerprint of the generated columns under
+`configuration.fixtures`; compare frame rates only between results with the same fingerprint.
+
+The `scale` profile (`--profile scale`, also part of `all`) mounts 100,000 nodes and 300,000 edges
+as typed columns, within the typed-column and worker-layout admission ceilings. It records the same
+pinned-rendering metrics as the 10k scenario (mount time, frame times, drawn frames, draw calls),
+then mounts the same graph again on a fresh page without positions and orbits the camera while the
+worker force layout streams positions in. That progressive-layout observation records the frame
+times during layout, the time from layout start to the first delivered positions, the number of
+delivered outputs, the iteration reached, and whether the layout cooled, stabilized, exhausted its
+iteration budget or was still progressing. Layout completion is reported, never required. Every
+scenario also records the main-thread JavaScript heap before and after mounting, after forced garbage
+collection; it excludes worker heaps, GPU and native memory.
+
+Under SwiftShader a single 100k-node frame can take minutes, and every streamed layout output asks
+for another one, so the page's animation frames (which drive its own waits) can starve. Each page
+observation is therefore bounded in Node time by `--observation-timeout-ms` (default 600000); a page
+that does not finish records the status `timeout`, which fails the measurement like any other
+unqualified sample. Use short durations for a local check, and expect a software run to take many
+minutes:
+
+```sh
+pnpm benchmark:gpu --modes software --profile scale --duration-ms 1000 --warmup-ms 0 --observation-timeout-ms 300000
+LYRA_GPU_SMOKE=1 node --test benchmarks/gpu/run.test.mjs   # the same smoke as a test, opt-in
+```
+
+### Frame-rate gate
+
+Scenarios with a documented target carry `targetFps` (the 10k-node graph, the 100k-node graph and 100k
+points, each 60 fps), and every scenario in a result gets a `gate` verdict:
+
+- `pass` or `fail`: the scenario measured and a hardware GPU drew it. Drawn frames per second (fps
+  times the drawn-frame ratio) must reach 98% of the target, which tolerates animation-clock jitter
+  at 60 Hz. A pass qualifies only the recorded renderer and environment.
+- `advisory`: the scenario measured, but SwiftShader, llvmpipe or another software renderer (or no
+  identified WebGL 2 renderer) drew it. The numbers are kept and never pass or fail.
+- `unmeasured`: the sample did not qualify (fallback, failure, timeout or no drawn WebGL frames).
+- `untargeted`: no documented target; reported only.
+
+The run's `gate` is `pass` only when every targeted scenario passed in at least one hardware-GPU
+mode, `fail` when any targeted scenario failed or did not measure, and `advisory` otherwise. With
+`--gate`, the command exits 1 on `fail` and 2 on `advisory`, so a software-only or CI run never
+reads as a pass. Without `--gate`, the exit status is unchanged. Headless CI does not run these
+benchmarks.
 
 ## Validate the tooling
 

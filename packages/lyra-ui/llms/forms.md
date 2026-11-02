@@ -6902,7 +6902,12 @@ readonly LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; cou
   custom labels, or a locale offered before its strings are registered. An entry's `label` overrides
   the derived `localeNativeName(tag)` endonym only when it is non-blank; an explicitly blank (or
   whitespace-only) `label` is treated the same as an omitted one and still falls back to
-  `localeNativeName(tag)`. Explicit catalogs are
+  `localeNativeName(tag)`. Derived endonyms resolve lazily: a closed picker resolves only the
+  locale its trigger shows (nothing when that row has a non-blank `label`), and the other rows
+  resolve when the listbox opens, or when closed typeahead or the search filter needs them, then
+  stay cached until `locales` or the registry changes. Supplying `{ tag, label }` rows therefore
+  keeps `Intl.DisplayNames` out of the closed first render entirely. Names never reorder rows; the
+  catalog order is the displayed order. Explicit catalogs are
   capped at the first 512 source entries, cloned and frozen at assignment; mutate a new array/entry
   and reassign it to update the list. The localized `limit` part reports omitted input through
   `localePickerInputLimit`. Closed listboxes contain no option rows after their exit transition;

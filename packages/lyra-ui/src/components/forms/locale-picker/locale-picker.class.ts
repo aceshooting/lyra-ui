@@ -64,7 +64,8 @@ import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_retry, L
 installFormControlLabelSupport();
 
 /** One offered locale row. `label` overrides the derived `localeNativeName(tag)` endonym when
- *  given -- e.g. offering a locale before its strings are registered ("Français (bientôt)").
+ *  given -- e.g. offering a locale before its strings are registered ("Français (bientôt)"), or
+ *  supplying names the host already has so the row never resolves one through `Intl`.
  *  `country` overrides the row's derived flag country when given -- e.g. showing Lebanon's flag
  *  for an `'ar'` row instead of the library's default Saudi Arabia mapping. */
 export interface LyraLocaleEntry {
@@ -130,9 +131,26 @@ function snapshotLocaleCatalog(source: unknown): LyraLocaleCatalog {
 }
 
 interface NormalizedLocaleEntry {
-  tag: string;
-  label: string;
-  country?: string;
+  readonly tag: string;
+  /** The caller's non-blank label, else the tag's endonym -- resolved on first read, then kept. */
+  readonly label: string;
+  readonly country?: string;
+}
+
+/** A row whose derived endonym is resolved only when something reads `label`. Constructing a
+ *  locale's `Intl.DisplayNames` is the expensive part of `localeNativeName()`, and a closed picker
+ *  needs at most the trigger's row, so the other rows wait for the open listbox, typeahead or the
+ *  search filter. A non-blank caller label never touches `Intl`. */
+function normalizeLocaleEntry(tag: string, label?: string, country?: string): NormalizedLocaleEntry {
+  if (label !== undefined && label.trim().length > 0) return country === undefined ? { tag, label } : { tag, label, country };
+  let resolved: string | undefined;
+  return {
+    tag,
+    get label(): string {
+      return resolved ??= localeNativeName(tag);
+    },
+    ...(country === undefined ? {} : { country }),
+  };
 }
 
 /** `lr-change`'s detail. `direction` is the picked locale's writing direction, resolved through
@@ -169,6 +187,13 @@ export interface LyraLocalePickerEventMap {
  * translation pack) appears without a manual refresh. Passing an explicit `locales` array
  * overrides the auto-discovered list entirely: a curated subset, a custom order, custom labels,
  * or a locale the host wants to offer before its strings are registered.
+ *
+ * Derived endonyms resolve on demand, never all at once while closed: the closed trigger resolves
+ * only the locale it shows, and every other row resolves when the listbox opens, when closed
+ * typeahead or the search filter needs it, then stays cached until `locales` or the registry
+ * changes. A row with a non-blank `label` never resolves an endonym for display, so a catalog of
+ * labelled `{ tag, label }` rows renders its closed trigger without constructing any
+ * `Intl.DisplayNames`. Row order is always the catalog's own order; names never sort it.
  *
  * `value` is the *committed* selection (form-submitted, drives `lr-change`) and starts `''`.
  * While unset, the trigger displays `effectiveLocale` (the same ancestor-`lang`/registry
@@ -916,7 +941,8 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
    *  `getRegisteredLyraLocales()` currently reports. An explicitly blank (or whitespace-only)
    *  per-entry `label` carries no useful information -- it falls back to the derived
    *  `localeNativeName(tag)` exactly like an omitted label, rather than rendering/announcing an
-   *  empty option row. */
+   *  empty option row. Derived labels resolve lazily per row (see `normalizeLocaleEntry()`), so
+   *  normalizing a catalog never constructs an `Intl.DisplayNames` by itself. */
   private get normalizedEntries(): NormalizedLocaleEntry[] {
     const raw = this.locales;
     const cached = this.entriesCache;
@@ -924,14 +950,10 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
     const rows = raw !== undefined
       ? raw.map((entry): NormalizedLocaleEntry =>
           typeof entry === 'string'
-            ? { tag: entry, label: localeNativeName(entry) }
-            : {
-                tag: entry.tag,
-                label: entry.label !== undefined && entry.label.trim().length > 0 ? entry.label : localeNativeName(entry.tag),
-                country: entry.country,
-              },
+            ? normalizeLocaleEntry(entry)
+            : normalizeLocaleEntry(entry.tag, entry.label, entry.country),
         )
-      : getRegisteredLyraLocales().map((tag) => ({ tag, label: localeNativeName(tag) }));
+      : getRegisteredLyraLocales().map((tag) => normalizeLocaleEntry(tag));
     this.entriesCache = { raw, tick: this.registryTick, rows };
     return rows;
   }

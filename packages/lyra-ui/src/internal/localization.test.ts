@@ -23,6 +23,11 @@ import '../translations/it.js';
 import '../translations/pt-BR.js';
 import '../translations/pt-PT.js';
 import '../translations/ro.js';
+import '../translations/ca/shared.js';
+import '../translations/ga/shared.js';
+import '../translations/mt/shared.js';
+import '../translations/sr/shared.js';
+import '../translations/sr-Latn/shared.js';
 import '../translations/zh-CN.js';
 import '../translations/zh-TW.js';
 import type { LyraSparkline } from '../components/data/sparkline/sparkline.js';
@@ -478,6 +483,55 @@ it('selects a pluralized message from the script-matched Chinese catalog', async
   expect(resolveLyraString(host, 'viewerSearchMatchCount', undefined, undefined, { count: 2 })).to.equal(
     '2個匹配項',
   );
+});
+
+it('routes every Latin-script Serbian tag to sr-Latn and every Cyrillic one to sr', async () => {
+  // CLDR likely subtags make bare `sr` Cyrillic (sr-Cyrl-RS) but Montenegrin `sr-ME` Latin
+  // (sr-Latn-ME), so a script-less Montenegrin tag must not stop at the Cyrillic base catalog.
+  for (const tag of ['sr-Latn', 'sr-Latn-RS', 'sr-Latn-ME', 'sr-Latn-BA', 'sr-Latn-XK', 'sr-ME', 'sr_Latn_RS']) {
+    expect(resolveLyraString(await localeHost(tag), 'close'), tag).to.equal('Zatvori');
+  }
+  for (const tag of ['sr', 'sr-Cyrl', 'sr-RS', 'sr-Cyrl-RS', 'sr-BA', 'sr-Cyrl-ME', 'sr-XK', 'sr-Cyrl-BA']) {
+    expect(resolveLyraString(await localeHost(tag), 'close'), tag).to.equal('Затвори');
+  }
+});
+
+it('selects Serbian plural forms from the script-matched catalog', async () => {
+  const latin = await localeHost('sr-ME');
+  const cyrillic = await localeHost('sr-RS');
+  for (const [count, latn, cyrl] of [
+    [1, '1 podudaranje', '1 подударање'],
+    [3, '3 podudaranja', '3 подударања'],
+    [5, '5 podudaranja', '5 подударања'],
+  ] as const) {
+    expect(resolveLyraString(latin, 'viewerSearchMatchCount', undefined, undefined, { count })).to.equal(latn);
+    expect(resolveLyraString(cyrillic, 'viewerSearchMatchCount', undefined, undefined, { count })).to.equal(cyrl);
+  }
+});
+
+it('keeps the bare-language fallback when the implied script has no registered catalog', async () => {
+  registerLyraLocale('qag', { 'x-implied-script-probe': 'BASE' });
+  // `qag` has no likely subtags at all, and `az-IR` implies Arabic script, for which no `az-Arab`
+  // catalog is registered: both still reach their bare language catalog.
+  expect(resolveLyraString(await localeHost('qag-ME'), 'x-implied-script-probe')).to.equal('BASE');
+  registerLyraLocale('az', { 'x-implied-script-probe': 'LATIN' });
+  expect(resolveLyraString(await localeHost('az-IR'), 'x-implied-script-probe')).to.equal('LATIN');
+  // Once the implied script catalog exists it wins over the bare language.
+  registerLyraLocale('az-Arab', { 'x-implied-script-probe': 'ARABIC' });
+  expect(resolveLyraString(await localeHost('az-IR'), 'x-implied-script-probe')).to.equal('ARABIC');
+  expect(resolveLyraString(await localeHost('az-AZ'), 'x-implied-script-probe')).to.equal('LATIN');
+});
+
+it('reaches the Catalan, Irish and Maltese base catalogs from regional and variant tags', async () => {
+  for (const [tag, close] of [
+    ['ca-ES', 'Tanca'],
+    ['ca-ES-valencia', 'Tanca'],
+    ['ca-AD', 'Tanca'],
+    ['ga-IE', 'Dún'],
+    ['mt-MT', 'Agħlaq'],
+  ] as const) {
+    expect(resolveLyraString(await localeHost(tag), 'close'), tag).to.equal(close);
+  }
 });
 
 it('ranks a script-matching regional sibling ahead of one sharing more subtags', async () => {

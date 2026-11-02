@@ -1987,6 +1987,12 @@ export interface LyraMapProjectionChangeDetail {
   readonly projection: LyraMapProjection;
   readonly source: 'control';
 }
+/** What ended a camera-session action: a user gesture, another camera write, a style change or the engine. */
+export type LyraMapCameraInterruptReason = 'user' | 'external' | 'style' | 'engine';
+/** A camera-session viewpoint transition, tour or follow ended without the session asking. */
+export interface LyraMapCameraInterruptDetail {
+  readonly reason: LyraMapCameraInterruptReason;
+}
 /** Desired terrain accepted from a component-owned terrain control, before asynchronous application. */
 export interface LyraMapTerrainChangeDetail {
   readonly terrain: LyraMapTerrain | null;
@@ -2674,6 +2680,7 @@ export interface LyraMapEventMap {
   'lr-map-scene-activate': CustomEvent<LyraMapSceneActivateDetail>;
   'lr-map-projection-change': CustomEvent<LyraMapProjectionChangeDetail>;
   'lr-map-terrain-change': CustomEvent<LyraMapTerrainChangeDetail>;
+  'lr-map-camera-interrupt': CustomEvent<LyraMapCameraInterruptDetail>;
   'lr-map-anchor-close': CustomEvent<LyraMapAnchorCloseDetail>;
   'lr-map-draw-start': CustomEvent<LyraMapDrawingSnapshot>;
   'lr-map-draw-change': CustomEvent<LyraMapDrawingSnapshot>;
@@ -2831,6 +2838,7 @@ export interface LyraMapEventMap {
  * @event lr-map-pointer-leave - The pointer left the map after an `lr-map-pointer-move`; `detail` is `null`.
  * @event lr-map-contextmenu - Frozen `detail: { lngLat, hit?, feature? }`; does not prevent the native context menu.
  * @event lr-map-projection-change - A component-owned globe control accepted a desired projection, `detail: { projection, source: 'control' }`. The property is assigned before this noncancelable event; await `whenIdle()` for application. Programmatic assignments do not emit it.
+ * @event lr-map-camera-interrupt - A `createMapCameraSession()` action (viewpoint transition, tour or follow) ended without the session asking, `detail: { reason }`: `'user'` for a drag, wheel, touch or keyboard gesture (which continues), `'external'` for another camera command or `center`/`zoom` assignment, `'style'` for a `mapStyle`, `projection` or `terrain` change, `'engine'` for a lost rendering context. Noncancelable; never emitted without a session or on disconnect.
  * @event lr-map-terrain-change - A component-owned terrain control accepted desired terrain, `detail: { terrain, source: 'control' }`. The property is assigned before this noncancelable event; await `whenIdle()` for application. Programmatic assignments do not emit it.
  * @csspart globe-control - Component-owned globe control group.
  * @csspart globe-button - Globe toggle button.
@@ -3116,7 +3124,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
-    'lr-map-scene-state', 'lr-map-scene-activate',
+    'lr-map-scene-state', 'lr-map-scene-activate', 'lr-map-camera-interrupt',
     'lr-map-click',
     'lr-map-feature-enter',
     'lr-map-feature-leave',
@@ -5028,13 +5036,18 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // Retire both owners before stop can synchronously deliver a reflected event. A callback
     // that starts a newer action wins and must not have its animation stopped by this one.
     owner.active = undefined;
-    owner.callbacks.interrupt(reason);
+    const retired = owner.callbacks.interrupt(reason) === true;
     if (this.cameraSession === owner && !owner.released && owner.revision === revision && !owner.active && owner.pendingAction === undefined &&
       stopAnimation && active?.animated && typeof owner.map.stop === 'function') {
       owner.stopping = active.marker;
       try { owner.map.stop(); } finally { if (owner.stopping === active.marker) owner.stopping = undefined; }
     }
-    return !this.cameraSession || (this.cameraSession === owner && owner.revision === revision && owner.pendingAction === undefined);
+    const proceed = !this.cameraSession || (this.cameraSession === owner && owner.revision === revision && owner.pendingAction === undefined);
+    // Report after ownership settles; a listener may start a newer session action.
+    if (retired && reason !== 'disconnect' && this.isConnected) {
+      this.emit('lr-map-camera-interrupt', Object.freeze({ reason }) satisfies LyraMapCameraInterruptDetail);
+    }
+    return proceed;
   }
 
   private cameraSessionMovement(event: Readonly<Record<string, unknown>> | undefined): void {
