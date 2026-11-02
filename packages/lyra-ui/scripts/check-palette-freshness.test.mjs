@@ -88,3 +88,16 @@ test('the palette gate runs when its entry module is reached through a symlink',
     rmSync(scratch, { recursive: true, force: true });
   }
 });
+
+test('concurrent palette gates over one tree serialize instead of reading partial writes', async () => {
+  const entry = fileURLToPath(new URL('./check-palette-freshness.mjs', import.meta.url));
+  const { spawn } = await import('node:child_process');
+  const run = () => new Promise((resolveRun) => {
+    const child = spawn(process.execPath, [entry], { stdio: ['ignore', 'pipe', 'pipe'] });
+    let stderr = '';
+    child.stderr.on('data', (chunk) => { stderr += chunk; });
+    child.on('close', (status) => resolveRun({ status, stderr }));
+  });
+  const results = await Promise.all([run(), run(), run(), run()]);
+  assert.deepEqual(results.map(({ status }) => status), [0, 0, 0, 0], results.map(({ stderr }) => stderr).join('\n'));
+});
