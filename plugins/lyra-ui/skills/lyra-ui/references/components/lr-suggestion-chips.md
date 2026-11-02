@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -53,7 +53,11 @@ start). `--lr-suggestion-chips-hover-bg` (default `var(--lr-color-brand-quiet)`)
 background on hover. `--lr-suggestion-chips-hover-border` (default `var(--lr-color-brand)`) — a
 `chip`'s border color on hover. All three are declared as `var()` fallbacks at the point of use, not
 on `:host`. `--lr-suggestion-chips-disabled-opacity` (default `var(--lr-opacity-disabled)`) — opacity of a chip whose
-suggestion sets `disabled`. Plus shared tokens `--lr-space-xs/-m/-2xs`,
+suggestion sets `disabled`. `--lr-suggestion-chips-label-lines` (default `1`; `3` when `wrap` is
+set) — how many lines a `chip-label` shows before it is clamped with an ellipsis, so full-question
+starter prompts stay readable in a narrow chat column. `--lr-suggestion-chips-chip-max-inline-size`
+(default `var(--lr-size-16rem)`) — each chip's maximum inline size; in a `wrap` row it is further
+clamped to the row's inline size, so a chip never overflows its container. Plus shared tokens `--lr-space-xs/-m/-2xs`,
 `--lr-color-border/-surface/-text/-text-quiet`, `--lr-radius-pill`, `--lr-font-size-xs`,
 `--lr-focus-ring-width/-color/-offset`.
 

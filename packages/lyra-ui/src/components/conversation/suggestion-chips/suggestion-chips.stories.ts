@@ -83,6 +83,39 @@ export const CenteredUnderEmptyState: Story = {
   `,
 };
 
+export const MultiLineStarterPrompts: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'With `wrap` set, each chip label shows up to three lines and no chip grows wider than the row, so full-question starter prompts stay readable in a narrow (24rem) chat column. `--lr-suggestion-chips-label-lines` sets the line count (the scrolling row defaults to 1) and `--lr-suggestion-chips-chip-max-inline-size` the chip cap (default 16rem).',
+      },
+    },
+  },
+  render: () => html`
+    <div style="max-width:24rem;border:1px dashed var(--lr-color-border);padding:8px;">
+      <lr-suggestion-chips
+        wrap
+        .suggestions=${[
+          { suggestionId: '1', label: 'How do I migrate the billing service to the new event bus without losing in-flight invoices?' },
+          { suggestionId: '2', label: 'What changed in the latest release, and which of those changes affect our deployment?' },
+          { suggestionId: '3', label: 'Draft a reply' },
+        ]}
+      ></lr-suggestion-chips>
+    </div>
+    <div style="max-width:24rem;border:1px dashed var(--lr-color-border);padding:8px;margin-block-start:1rem;">
+      <lr-suggestion-chips
+        wrap
+        style="--lr-suggestion-chips-label-lines: 4; --lr-suggestion-chips-chip-max-inline-size: 100%;"
+        .suggestions=${[
+          { suggestionId: '1', label: 'How do I migrate the billing service to the new event bus without losing in-flight invoices?' },
+          { suggestionId: '2', label: 'Summarize this document' },
+        ]}
+      ></lr-suggestion-chips>
+    </div>
+  `,
+};
+
 export const Empty: Story = {
   render: () => html`<p>Nothing renders below when suggestions is empty:</p>
     <lr-suggestion-chips .suggestions=${[]}></lr-suggestion-chips>`,
