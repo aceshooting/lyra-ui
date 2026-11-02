@@ -7,10 +7,11 @@ native Lyra DOCX editor. It ships an internal engine derived from the Apache-2.0
 source of `@docx-editor.dev/core@2.32.0`, with document features loaded on demand. Existing document viewers, including
 `<lr-docx-viewer>`, remain in `@aceshooting/lyra-ui`.
 
-The editor supports opening local DOCX files or caller-provided bytes, a blank
-document, paragraph and text formatting, command search, bounded find and replace-one,
-body outline and checks, selected image and table tools, comments and bounded tracked
-text review, and explicit save receipts. The supported inputs and actions are
+The editor supports opening local DOCX files, caller-provided bytes or an
+explicitly requested URL, a blank document, paragraph and text formatting, command search, bounded find and replace-one,
+body outline and checks, bounded fragment reads and atomic formatting batches for
+agents, selected image and table tools, comments and bounded tracked text review, and
+explicit save receipts. The supported inputs and actions are
 documented here; they do not establish general Word compatibility or a broader
 format support commitment.
 
@@ -36,7 +37,7 @@ The imports provide:
 | Entry point | Provides |
 | --- | --- |
 | `@aceshooting/lyra-docs` | Nothing; each format lives on its own subpath |
-| `@aceshooting/lyra-docs/docx` | `createDocxSession` and public session, snapshot, result, and editor types |
+| `@aceshooting/lyra-docs/docx` | `createDocxSession`, `fetchDocxBytes`, the command catalog, the fragment, batch and remote limits, and public session, snapshot, result, and editor types |
 | `@aceshooting/lyra-docs/docx/editor` | Registers `<lr-docx-editor>` |
 | `@aceshooting/lyra-docs/docx/editor.class` | Exports `LyraDocxEditor` without registering its tag |
 | `@aceshooting/lyra-docs/docx/editor.css` | Static stylesheet for the engine document surface |
@@ -299,13 +300,14 @@ document has unsaved content. A new blank document starts clean, and an edited d
 reduced to one empty page is replaced without asking. Programmatic `newDocument()` and `open()` do not show that
 confirmation; use the cancelable `lr-before-open` event to apply a host policy.
 
-The component exposes `snapshot()`, `open(input, options)`,
+The component exposes `snapshot()`, `open(input, options)`, `openUrl(url, options)`,
 `newDocument(options)`, `can(action)`, `execute(action, options)`,
 `paragraphStyles()`, `fontFamilies()`, `imageDescription()`, `selectImage(direction)`,
 `canInsertImage()`, `insertImage(source, options)`, `canReplaceImage()`,
 `replaceImage(bytes, options)`, `outline()`, `inspectDocument()`, `review()`,
 `selectOutlineItem(id, options)`, `selectDiagnostic(id, options)`,
-`selectReviewItem(id, options)`, `find(query, options)`,
+`selectReviewItem(id, options)`, `readFragment(request)`,
+`selectFragmentBlock(id, options)`, `applyEdits(steps, options)`, `find(query, options)`,
 `selectMatch(id, options)`, `replaceMatch(id, text, options)`, `save(options)`,
 `acknowledgeSaved(receipt)`, and `focusEditor()`. The editing and search
 methods use the same action, result, revision, and bounds contract described
@@ -313,6 +315,38 @@ in the session API below. `open()` accepts a `Uint8Array` or `File`;
 `newDocument()` opens a blank document. These methods return `DocxResult`
 values except `snapshot()`; `open()`, `newDocument()`, and `save()` return
 `Promise<DocxResult<...>>`; image insertion and replacement are also asynchronous.
+`applyEdits()` returns a `Promise<DocxBatchResult>`; see
+[Fragments and edit batches](#fragments-and-edit-batches).
+
+### Loading from a URL
+
+The element never fetches on its own. `openUrl(url, { signal, name })` is an explicit,
+opt-in download for hosts that hold a document URL:
+
+```js
+const opened = await editor.openUrl('/files/report.docx', { name: 'Report.docx' });
+if (!opened.ok) console.error(opened.code);
+```
+
+The URL may be relative (resolved against the document's base URL), `https:`, `http:`,
+`blob:` or `data:`; other schemes, such as `javascript:` or `file:`, are refused with
+`invalid-option` before any request. The request uses the owner window's `fetch()` with
+same-origin credentials. The response is read with the 16 MiB input ceiling, checked from
+`Content-Length` first and again while streaming, with at most 65,536 body chunks; a larger
+body is cancelled and refused with `resource-limit`. Network errors, non-OK statuses and
+malformed responses return `fetch-failed`. Downloaded bytes then pass the same admission
+checks as `open()`, including the dirty-document veto. A newer `open()`, `openUrl()`,
+`newDocument()` or a disconnect cancels a pending download, which then settles as
+`aborted` without an error; so does aborting `signal`. Failures show the editor's localized
+error state and `lr-error`; server responses and network messages are never displayed.
+Hosts that need other credentials, headers or caching fetch the bytes themselves and call
+`open()`.
+
+Session API users can call `fetchDocxBytes(url, { signal, baseUrl, fetch })` from
+`@aceshooting/lyra-docs/docx` for the same bounded download, then pass the bytes to
+`session.open({ kind: 'docx', bytes })`. `baseUrl` resolves a relative URL; `fetch` selects
+the requesting realm's implementation. `DOCX_REMOTE_LIMITS` reports the byte and chunk
+ceilings.
 
 ### Styling hooks
 
@@ -612,6 +646,106 @@ paragraph-mark revisions, nested/ambiguous revisions, and revisions in other sto
 remain `readOnly`; they are not silently accepted or discarded. Enabling tracking
 also requires the report's bounded simple-body profile. This contract does not
 qualify every native engine gesture or promise full Word review interoperability.
+
+### Fragments and edit batches
+
+These operations let an agent read and change a document in bounded pieces, without
+complete document XML or engine snapshots in its context.
+
+```ts
+let fragment = session.readFragment({ maxBlocks: 16 });
+while (fragment.ok) {
+  for (const block of fragment.value.blocks) console.log(block.index, block.kind, block.text);
+  if (fragment.value.next === null) break;
+  fragment = session.readFragment({ start: fragment.value.next, maxBlocks: 16 });
+}
+
+const slice = session.readFragment({ start: 0, maxBlocks: 4 });
+if (slice.ok) {
+  const [title, intro] = slice.value.blocks;
+  const result = await session.applyEdits([
+    { edit: { type: 'paragraph-style', styleId: 'Heading1' }, target: title.id! },
+    { edit: { type: 'alignment', value: 'justify' }, target: intro.id! },
+  ], { expectedRevision: slice.value.revision });
+  if (!result.ok) console.warn(`Step ${result.step ?? 'none'} refused: ${result.code}`);
+}
+```
+
+`readFragment(request)` returns `{ revision, start, blockCount, next, truncated, blocks }`
+for a contiguous slice of the body's top-level blocks. Start at a block index (`start`,
+default 0) or at an `outlineItemId` from the latest `outline()`, never both, and pass an
+optional `expectedRevision`. Only the requested blocks are visited; a start equal to
+`blockCount` returns an empty slice and a larger one is refused. Each block has `index`,
+`kind` (`paragraph`, `table` or `other`), the paragraph's direct `styleId`, a
+`headingLevel` (1–9 from a direct or inherited outline level or a `heading N` style;
+otherwise, or when the style chain is ambiguous, `null`), plain `text` and
+`textTruncated`. Text joins runs, renders tabs and breaks as `	` and `
+`, separates
+table cells with tabs, rows with line breaks and a cell's paragraphs with spaces, and
+omits deleted revision text and field instructions.
+
+| Fragment bound | Limit |
+| --- | ---: |
+| Blocks per request (`maxBlocks`) | 1–64, default 16 |
+| Text per request (`maxText`, UTF-16 code units) | 1–32,768, default 8,192 |
+| Text per block | 4,096 |
+| XML nodes visited per request | 20,000 |
+| Top-level body blocks | 20,000 (more refuses `resource-limit`) |
+| Block ids retained per revision | 4,096 |
+
+Clipping never divides a surrogate pair and sets `truncated`. When the request's text
+budget or node budget runs out, the slice ends at that block and `next` continues from the
+following one, so a very large block never blocks progress. `id` is present only for
+paragraphs; it is valid until the next content edit, can be passed to
+`selectFragmentBlock(id, options)` to move the caret to the paragraph start without
+editing, and can target a batch step. Reading more than 4,096 ids at one revision discards
+earlier ones. Reads are refused with `busy` or `composing` while native input cannot be
+inspected safely; read-only sessions may read and navigate.
+
+`applyEdits(steps, { expectedRevision })` applies 1–32 ordered formatting steps at the
+required revision as one change. A step is `{ edit }` or `{ edit, target }`:
+
+```ts
+type DocxParagraphEdit =
+  | { type: 'paragraph-style'; styleId: string }
+  | { type: 'alignment'; value: 'left' | 'center' | 'right' | 'justify' }
+  | { type: 'line-spacing'; multiple: number };
+type DocxBatchEdit =
+  | DocxParagraphEdit
+  | 'bold' | 'italic' | 'underline' | 'strikethrough' | 'superscript' | 'subscript'
+  | { type: 'font-family'; family: string }
+  | { type: 'font-size'; points: number }
+  | { type: 'text-color'; color: string }
+  | { type: 'highlight'; color: DocxHighlight }
+  | { type: 'clear-formatting' };
+```
+
+A targeted step moves the caret to the start of a paragraph block id read at the expected
+revision, so it accepts only paragraph edits. An untargeted step formats the selection as
+the previous steps left it, which is the host's selection when no step is targeted. Each
+edit has the same limits as `execute()`. Lists, indentation, links, page breaks, tables,
+images, review actions and history commands are not batch steps; they remain single
+`execute()` actions.
+
+The whole batch is validated before anything runs: shapes and limits, targets, and
+paragraph style membership. Native input is then settled and every engine feature is
+prepared; a change during that time refuses the batch with `stale-revision`. The writes
+then run synchronously inside one engine history group, so no input can interleave. On
+success the result is `{ ok: true, value: revision }` with exactly one new revision, and one
+undo normally reverts the whole batch; a batch that changes nothing returns the unchanged
+revision. A refusal is `{ ok: false, code, step }`, where `step` is the zero-based index of
+the failing step, or `null` when the batch as a whole was refused. If the engine refuses a
+step after earlier steps wrote, those writes are undone and the package is compared with a
+structural digest taken before the batch; the document, revision, dirty state and save
+receipt are then unchanged, while earlier ids and search results are invalidated and the
+selection version advances. If the revert cannot be verified, the session fails closed with
+`engine-failed` instead of exposing a partially edited document. The digest visits at most
+300,000 XML nodes (`DOCX_BATCH_LIMITS.fingerprintNodes`); a larger package refuses the batch
+with `resource-limit` before writing. Because the revision is required, a retried batch
+after a success is refused with `stale-revision` rather than applied twice. A targeted
+batch restores the caret it moved; a retained host selection is released. Batches are
+refused in read-only sessions. `DOCX_FRAGMENT_LIMITS` and `DOCX_BATCH_LIMITS` export these
+bounds.
 
 Use `retainSelection()` when host controls need to preserve an editor selection
 while focus moves outside the document surface. `focus()` returns focus to the

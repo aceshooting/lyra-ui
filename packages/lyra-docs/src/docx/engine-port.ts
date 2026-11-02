@@ -1,9 +1,9 @@
-import type { DocxEngineOutlineReport, DocxEngineInspectionReport } from './eigenpal-document-inspection.js';
+import type { DocxEngineOutlineReport, DocxEngineInspectionReport, DocxEngineFragmentReport, DocxEngineFragmentRequest } from './eigenpal-document-inspection.js';
 import type { EigenpalReviewReport } from './eigenpal-review.js';
 import type { DocxReviewAction } from './review-types.js';
 import type { DocxChartPlacement } from './eigenpal-charts.js';
 import type {
-  DocxAction, DocxCommandAvailability, DocxResult, DocxSelection,
+  DocxAction, DocxBatchEdit, DocxCommandAvailability, DocxRefusalCode, DocxResult, DocxSelection,
   DocxSource, DocxFormatting, DocxParagraphStyles, DocxFontFamilies, DocxTableContext, DocxImageContext, DocxImageDescription, DocxImageDirection
 } from './types.js';
 import type { OwnedDocxImageInput, OwnedDocxImageReplacement } from './image-insertion-input.js';
@@ -51,6 +51,10 @@ export interface DocxEngineSearchOptions {
   readonly wholeWord: boolean;
   readonly limit: number;
 }
+/** `rolledBack` reports that steps were written and then verifiably reverted. */
+export type DocxEngineBatchResult =
+  | Readonly<{ ok: true }>
+  | Readonly<{ ok: false; code: DocxRefusalCode; step: number | null; rolledBack: boolean }>;
 export type DocxTableLabels = Readonly<{ insertRowBelow: string; insertColumnRight: string }>;
 /** DOCX-specific engine seam. An implementation must qualify these guarantees. */
 export interface DocxEnginePort {
@@ -74,6 +78,16 @@ export interface DocxEnginePort {
   outline?(): DocxResult<DocxEngineOutlineReport>;
   inspectDocument?(): DocxResult<DocxEngineInspectionReport>;
   selectDocumentTarget?(token: object): DocxResult<void>;
+  /** Bounded body block slice; paragraph tokens share the outline/diagnostic navigation store. */
+  fragment?(request: DocxEngineFragmentRequest): DocxResult<DocxEngineFragmentReport>;
+  /**
+   * Apply validated steps in order. Every await happens before `arm()`, which must succeed immediately
+   * before the first write; the writes then run synchronously. Resolve only after all steps committed,
+   * or after every written step was reverted and the package verified unchanged. A revert that cannot
+   * be verified must fault the engine and resolve `engine-failed`.
+   */
+  executeBatch?(steps: readonly Readonly<{ edit: DocxBatchEdit; target?: object }>[],
+    control: { validate(): DocxResult<void>; arm(): DocxResult<void> }): Promise<DocxEngineBatchResult>;
   review?(): DocxResult<EigenpalReviewReport>;
   selectReviewItem?(token: object): DocxResult<void>;
   canReview?(action: DocxReviewAction, token?: object): DocxCommandAvailability;

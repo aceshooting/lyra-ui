@@ -146,6 +146,7 @@ export const DOCX_EDITOR_STRINGS = Object.freeze({
   docxEditorError: 'The document could not be opened or saved. Try again or choose another DOCX file.',
   docxEditorErrorTooLarge: 'This document is larger or more complex than the editor supports ({size} and {elements} elements).',
   docxEditorErrorExternal: 'This document refers to external content the editor will not load, such as a remote frame or an unsafe link.',
+  docxEditorErrorFetch: 'The document could not be downloaded.',
   docxEditorErrorInvalid: 'This file is damaged or uses content the editor does not support, such as active controls or an unsupported picture format.',
   docxEditorErrorMount: 'The editor cannot open documents inside another component\'s shadow root. Place it in the page\'s light DOM.',
   docxEditorErrorEngine: 'The document engine is not installed, so documents cannot be opened.',

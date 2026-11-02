@@ -1,6 +1,9 @@
 import { createDocxSession, type DocxSession, type DocxSnapshot, type DocxAction, type DocxEdit, type DocxCommand, type DocxFormatting, type DocxImageDirection, type DocxImageAction, type DocxImageContext, type DocxImageDescription, type DocxTableAction, type DocxTableContext, type DocxParagraphStyles, type DocxFontFamilies, type DocxSearchOptions, type DocxSearchResults, type DocxSearchMatch } from '@aceshooting/lyra-docs/docx';
 import type { LyraDocxEditor } from '@aceshooting/lyra-docs/docx/editor.class';
 import type { DocxImageSource, DocxInsertImageOptions, DocxRevision, DocxResult, DocxTableBorderStyle, DocxTableBorderTarget } from '@aceshooting/lyra-docs/docx';
+import { DOCX_REMOTE_LIMITS, fetchDocxBytes, type DocxFetchOptions } from '@aceshooting/lyra-docs/docx';
+import { DOCX_BATCH_LIMITS, DOCX_FRAGMENT_LIMITS, type DocxBatchEdit, type DocxBatchOptions, type DocxBatchResult, type DocxBatchStep,
+  type DocxFragment, type DocxFragmentBlock, type DocxFragmentBlockKind, type DocxFragmentRequest, type DocxParagraphEdit } from '@aceshooting/lyra-docs/docx';
 import { DOCX_COMMAND_CATALOG, buildDocxCommandAction, type DocxCommandDescriptor, type DocxOutline,
   type DocxDocumentInspection, type DocxReviewReport } from '@aceshooting/lyra-docs/docx';
 // @ts-expect-error DOCX-specific contracts belong to the format subpath.
@@ -118,3 +121,53 @@ function editingContracts(session: DocxSession): void {
   }
 }
 void editingContracts;
+
+async function remoteContracts(editor: LyraDocxEditor): Promise<void> {
+  const fetched: DocxResult<Uint8Array> = await fetchDocxBytes('/files/report.docx', { signal: new AbortController().signal, baseUrl: 'https://example.test/' });
+  const limits: { readonly bytes: number; readonly chunks: number } = DOCX_REMOTE_LIMITS;
+  const options: DocxFetchOptions = { fetch: globalThis.fetch };
+  void fetched; void limits; void options;
+  const opened: DocxResult<DocxRevision> = await editor.openUrl('report.docx', { name: 'Report.docx' });
+  void opened;
+  // @ts-expect-error Remote loading takes a URL string, not a Request.
+  await editor.openUrl(new Request('https://example.test/report.docx'));
+  // @ts-expect-error Credentials and request options stay with the host's own fetch.
+  await fetchDocxBytes('report.docx', { credentials: 'include' });
+}
+void remoteContracts;
+
+async function operationContracts(session: DocxSession, editor: LyraDocxEditor): Promise<void> {
+  const fragment: DocxResult<DocxFragment> = session.readFragment({ start: 0, maxBlocks: 8, maxText: 2048 });
+  editor.readFragment({ outlineItemId: 'opaque' });
+  if (fragment.ok) {
+    const block: DocxFragmentBlock | undefined = fragment.value.blocks[0];
+    const kind: DocxFragmentBlockKind | undefined = block?.kind;
+    void kind;
+    // @ts-expect-error Fragments are immutable.
+    fragment.value.blocks.push(block!);
+    // @ts-expect-error Engine node identities do not leak.
+    void block?.paragraphId;
+    if (block?.id) {
+      session.selectFragmentBlock(block.id, { expectedRevision: fragment.value.revision });
+      const steps: DocxBatchStep[] = [{ edit: { type: 'paragraph-style', styleId: 'Heading1' }, target: block.id }, { edit: 'bold' },
+        { edit: { type: 'font-size', points: 14 } }];
+      const result: DocxBatchResult = await session.applyEdits(steps, { expectedRevision: fragment.value.revision });
+      if (!result.ok) { const step: number | null = result.step; void step; }
+      await editor.applyEdits(steps, { expectedRevision: fragment.value.revision });
+      // @ts-expect-error A targeted step accepts only paragraph edits.
+      const targetedRun: DocxBatchStep = { edit: 'bold', target: block.id };
+      // @ts-expect-error History, structure and links are not batch edits.
+      const history: DocxBatchStep = { edit: 'undo' };
+      const paragraph: DocxParagraphEdit = { type: 'alignment', value: 'center' };
+      const edit: DocxBatchEdit = paragraph;
+      void targetedRun; void history; void edit;
+      // @ts-expect-error The revision guard is required.
+      await session.applyEdits(steps, {});
+    }
+  }
+  const limits: number[] = [DOCX_FRAGMENT_LIMITS.blocks, DOCX_FRAGMENT_LIMITS.text, DOCX_BATCH_LIMITS.steps];
+  const request: DocxFragmentRequest = { maxBlocks: 4 };
+  const options: DocxBatchOptions = { expectedRevision: { documentId: 'opaque', value: 0 } };
+  void limits; void request; void options;
+}
+void operationContracts;
