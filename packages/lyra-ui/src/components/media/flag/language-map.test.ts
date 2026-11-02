@@ -197,6 +197,29 @@ describe('localeNativeName', () => {
     expect(languageToCountry('fa-AF')).to.equal('af');
   });
 
+  it('maps the Slovak, Bulgarian, Baltic, Catalan, Irish, Maltese and Serbian catalogs to flag countries', () => {
+    const mappings: ReadonlyArray<readonly [string, string]> = [
+      ['sk', 'sk'],
+      ['bg', 'bg'],
+      ['lt', 'lt'],
+      ['lv', 'lv'],
+      ['et', 'ee'],
+      ['ca', 'es'],
+      ['ga', 'ie'],
+      ['mt', 'mt'],
+      // Both Serbian scripts share Serbia's flag; neither script implies another region.
+      ['sr', 'rs'],
+      ['sr-Cyrl', 'rs'],
+      ['sr-Latn', 'rs'],
+    ];
+    for (const [locale, country] of mappings) {
+      expect(languageToCountry(locale), locale).to.equal(country);
+    }
+    // An explicit region still wins: Andorran Catalan and Montenegrin Serbian take their own flags.
+    expect(languageToCountry('ca-AD')).to.equal('ad');
+    expect(languageToCountry('sr-Latn-ME')).to.equal('me');
+  });
+
   it('maps the bare region-less Norwegian Nynorsk and Kazakh locale tags to a flag country', () => {
     expect(languageToCountry('nn')).to.equal('no');
     expect(languageToCountry('kk')).to.equal('kz');

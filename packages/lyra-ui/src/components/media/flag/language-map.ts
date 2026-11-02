@@ -147,6 +147,8 @@ export const LANGUAGE_TO_COUNTRY: Record<string, string> = {
   yo: 'ng',
   zu: 'za',
   ca: 'es',
+  ga: 'ie',
+  mt: 'mt',
   lb: 'lu',
   fil: 'ph',
 };

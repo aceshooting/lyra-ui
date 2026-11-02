@@ -8,7 +8,7 @@
     "javascriptHeadroomPercent": 2,
     "cssHeadroomPercent": 4,
     "assetHeadroomPercent": 0,
-    "basis": "Initial companion ceilings use measured production bytes with floor(1.02 × JS) and floor(1.04 × CSS), following repository review limits; assets have no allowance. Gzip is summed per independently transferred file."
+    "basis": "Initial companion ceilings use measured production bytes with floor(1.02 \u00d7 JS) and floor(1.04 \u00d7 CSS), following repository review limits; assets have no allowance. Gzip is summed per independently transferred file."
   },
   "profiles": {
     "parser": {
@@ -114,7 +114,7 @@
     "chat-composition": {
       "measured": {
         "eagerJsBytes": 466169,
-        "eagerJsGzipBytes": 145809,
+        "eagerJsGzipBytes": 148757,
         "lazyJsBytes": 1011447,
         "lazyJsGzipBytes": 287594,
         "eagerCssBytes": 103994,
@@ -125,7 +125,7 @@
       },
       "ceilings": {
         "eagerJsBytes": 475492,
-        "eagerJsGzipBytes": 148725,
+        "eagerJsGzipBytes": 151732,
         "lazyJsBytes": 1031675,
         "lazyJsGzipBytes": 293345,
         "eagerCssBytes": 108153,
