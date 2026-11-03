@@ -320,7 +320,9 @@ const bundleEntries = {
   },
   map: {
     fixture: 'optional',
-    maxRawBytes: 2_500_000,
+    // Drawn scene paths and arcs bring the MapLibre v6 map consumer to 2,500,153 raw bytes; the
+    // next 64-byte boundary.
+    maxRawBytes: 2_500_160,
   },
   graph: {
     fixture: 'optional',
