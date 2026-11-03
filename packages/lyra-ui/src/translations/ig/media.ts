@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Zoo ihe ndị dị n\'ihe ngosi',
   mapSceneEmpty: 'Enweghị ihe dị n\'ihe ngosi',
   mapSceneUnavailable: 'Enweghị ike igosi ihe ngosi.',
+  mapScenePartial: 'Egosighị ụfọdụ ihe dị n\'ihe ngosi, ma ọ bụ e gosiri ha n\'enweghị ịdị elu ha.',
   mapSceneInvalid: 'Mmelite ihe ngosi adịghị irè. Ihe ndị a nabatara na mbụ agbanweghị.',
   mapSceneLimit: 'Mmelite ihe ngosi gafere oke. Ihe ndị a nabatara na mbụ agbanweghị.',
   mapScenePrevious: 'Ibe ihe ngosi gara aga',

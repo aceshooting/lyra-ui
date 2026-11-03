@@ -50,7 +50,7 @@ export {
  * component's own `languages` through verbatim; plain-text mode
  * renders into a `white-space: pre-wrap` span instead. The rest of
  * `<lr-markdown>`'s configuration surface is forwarded verbatim too --
- * `tabSize`, `htmlMode`, `withoutGfm`, `linkTarget`, `internalLinkPrefix`,
+ * `tabSize`, `htmlMode`, `withoutGfm`, `withoutImages`, `linkTarget`, `internalLinkPrefix`,
  * `headingOffset`, `withoutSyntaxHighlighting`, `headingAnchors`, `math`, and
  * `maxHeight` -- each defaulting to exactly `<lr-markdown>`'s own default, so
  * leaving all of them unset renders identically to before this wrapper
@@ -169,6 +169,7 @@ export class LyraStreamingText extends StreamingTextRuntimeBase {
       .tabSize=${this.tabSize}
       .htmlMode=${this.htmlMode}
       .withoutGfm=${this.withoutGfm}
+      .withoutImages=${this.withoutImages}
       .linkTarget=${this.linkTarget}
       .internalLinkPrefix=${this.internalLinkPrefix}
       .headingOffset=${this.headingOffset}

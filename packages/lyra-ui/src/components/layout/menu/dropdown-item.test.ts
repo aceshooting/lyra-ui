@@ -1,4 +1,5 @@
 import { expectLabelInName } from '../../../../test/reviewed-labels.js';
+import { accessibleName } from '../../../../test/accessible-name.js';
 import { sendKeys } from '@web/test-runner-commands';
 import type { LyraDropdown } from '../../overlays/overlay/dropdown.class.js';
 import { aTimeout, expect, fixture, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
@@ -656,3 +657,82 @@ for (const direction of ['ltr', 'rtl']) {
     }
   }
 }
+
+/**
+ * Regression: an href item rendered its internal `<a part="base">` with no accessible name. The
+ * visible label sits inside the inert, aria-hidden `[part="label"]` wrapper, so the anchor's
+ * subtree contributed nothing and axe reported `link-name`, although the host menuitem was named.
+ */
+describe('lr-dropdown-item link items name their internal anchor', () => {
+  function anchorOf(item: LyraDropdownItem): HTMLAnchorElement {
+    const anchor = item.shadowRoot!.querySelector<HTMLAnchorElement>('a[part~="base"]');
+    expect(anchor, 'href item renders an anchor').to.not.equal(null);
+    return anchor!;
+  }
+
+  async function recordActions(): Promise<{ menu: HTMLElement; open: LyraDropdownItem; edit: LyraDropdownItem }> {
+    const menu = (await fixture(html`
+      <lr-menu label="Record actions">
+        <lr-dropdown-item id="open" value="open" href="/records/7">Open</lr-dropdown-item>
+        <lr-dropdown-item id="edit" value="edit" href="/records/7/edit">Edit</lr-dropdown-item>
+        <lr-dropdown-item value="archive">Archive</lr-dropdown-item>
+      </lr-menu>
+    `)) as HTMLElement;
+    const open = menu.querySelector<LyraDropdownItem>('#open')!;
+    const edit = menu.querySelector<LyraDropdownItem>('#edit')!;
+    await open.updateComplete;
+    await edit.updateComplete;
+    await nextFrame();
+    return { menu, open, edit };
+  }
+
+  it('passes axe link-name with link items beside plain actions', async () => {
+    const { menu } = await recordActions();
+    await expect(menu).to.be.accessible();
+  });
+
+  it('gives the anchor the visible row label as its accessible name', async () => {
+    const { menu, open, edit } = await recordActions();
+    await expect(menu).to.be.accessible();
+    expect(accessibleName(anchorOf(open))).to.equal('Open');
+    expect(accessibleName(anchorOf(edit))).to.equal('Edit');
+    expect(anchorOf(open).getAttribute('href')).to.equal('/records/7');
+  });
+
+  it('keeps the anchor name live when the visible label changes', async () => {
+    const { menu, open } = await recordActions();
+    await expect(menu).to.be.accessible();
+    open.textContent = 'View';
+    await waitUntil(
+      () => anchorOf(open).getAttribute('aria-label') === 'View',
+      'anchor name did not follow the edited label',
+    );
+    expect(accessibleName(anchorOf(open))).to.equal('View');
+    expect(open.getAttribute('aria-label')).to.equal('View');
+  });
+
+  it('lets a host aria-label win, and restores the visible label once it is removed', async () => {
+    const { menu, open } = await recordActions();
+    open.setAttribute('aria-label', 'Open record 7');
+    await open.updateComplete;
+    await expect(menu).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+    expect(accessibleName(anchorOf(open))).to.equal('Open record 7');
+    expect(accessibleName(open)).to.equal('Open record 7');
+
+    open.removeAttribute('aria-label');
+    await open.updateComplete;
+    expect(accessibleName(anchorOf(open))).to.equal('Open');
+  });
+
+  it('names an anchor that appears when href is set after the first render', async () => {
+    const menu = (await fixture(html`
+      <lr-menu label="Record actions"><lr-dropdown-item value="open">Open</lr-dropdown-item></lr-menu>
+    `)) as HTMLElement;
+    const item = menu.querySelector<LyraDropdownItem>('lr-dropdown-item')!;
+    await item.updateComplete;
+    item.href = '/records/7';
+    await item.updateComplete;
+    await expect(menu).to.be.accessible();
+    expect(accessibleName(anchorOf(item))).to.equal('Open');
+  });
+});

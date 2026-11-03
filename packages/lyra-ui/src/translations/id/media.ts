@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Sembunyikan objek adegan',
   mapSceneEmpty: 'Tidak ada objek adegan',
   mapSceneUnavailable: 'Perenderan adegan tidak tersedia.',
+  mapScenePartial: 'Beberapa objek adegan tidak dirender, atau dirender tanpa ketinggiannya.',
   mapSceneInvalid: 'Pembaruan adegan tidak valid. Objek yang diterima sebelumnya tidak berubah.',
   mapSceneLimit: 'Pembaruan adegan melampaui batas. Objek yang diterima sebelumnya tidak berubah.',
   mapScenePrevious: 'Halaman adegan sebelumnya',

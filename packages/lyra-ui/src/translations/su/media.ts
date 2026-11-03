@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Sumputkeun objék adegan',
   mapSceneEmpty: 'Teu aya objék adegan',
   mapSceneUnavailable: 'Adegan teu bisa dipintonkeun.',
+  mapScenePartial: 'Sababaraha objék adegan teu dipintonkeun, atawa dipintonkeun tanpa jangkungna.',
   mapSceneInvalid: 'Pangropéa adegan teu sah. Objék anu geus ditarima saméméhna teu robah.',
   mapSceneLimit: 'Pangropéa adegan ngaleuwihan wates. Objék anu geus ditarima saméméhna teu robah.',
   mapScenePrevious: 'Kaca adegan saméméhna',

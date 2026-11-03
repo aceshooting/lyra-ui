@@ -15,6 +15,7 @@ import type {
   LyraMapPointIcon,
   LyraMapScene,
   LyraMapSceneActivateDetail,
+  LyraMapSceneStateDetail,
   LyraMapViewChangeDetail,
 } from './map.js';
 import { LYRA_MAP_EMPTY_STYLE } from './map.js';
@@ -169,9 +170,9 @@ export const Default: Story = {
   `,
 };
 
-/** Geographic intent remains readable and actionable while scene rendering is unavailable. */
+/** Scene markers, paths and arcs are drawn and stay readable and actionable from the text panel. */
 export const SceneTextFallback: Story = {
-  parameters: { docs: { description: { story: 'Assign a real scene through the property binding. Expand its text panel and activate Central station with pointer, Enter or Space. Scene rendering currently reports unavailable with code engine; these objects are not drawn and activation does not pan the map.' } } },
+  parameters: { docs: { description: { story: 'Assign a real scene through the property binding. The marker, the great-circle walk and the arc are drawn on the map. The arc rises 80 m, which a flat map cannot show, so it is drawn as its ground track and `lr-map-scene-state` reports `partial` with code `altitude`. Expand the text panel and activate Central station with pointer, Enter or Space; activation does not pan the map.' } } },
   render: () => {
     const scene: LyraMapScene = { objects: [
       { kind: 'marker', id: 'station', label: 'Central station', interactive: true,
@@ -182,16 +183,20 @@ export const SceneTextFallback: Story = {
       { kind: 'arc', id: 'connection', label: 'Station to park connection', interactive: false, height: 80,
         start: { lngLat: [6.134, 49.6] }, end: { lngLat: [6.128, 49.605] } },
     ] };
-    let status: HTMLElement | undefined;
+    let status: HTMLElement | undefined, sceneState: HTMLElement | undefined;
     return html`
-      <p>Scene objects are available in the text panel. Geographic scene rendering is unavailable.</p>
+      <p>Scene objects are drawn on the map and listed in the text panel.</p>
       <lr-map label="Station and park scene" .mapStyle=${LYRA_MAP_EMPTY_STYLE}
         .center=${[6.131, 49.6025]} .zoom=${13} .scene=${scene}
         @lr-map-scene-activate=${(event: CustomEvent<LyraMapSceneActivateDetail>) => {
           if (status) status.textContent = `Activated ${event.detail.id} using ${event.detail.source}.`;
         }}
+        @lr-map-scene-state=${(event: CustomEvent<LyraMapSceneStateDetail>) => {
+          if (sceneState) sceneState.textContent = `Scene ${event.detail.state}${event.detail.code ? ` (${event.detail.code})` : ''}.`;
+        }}
         style="block-size: var(--lr-size-24rem)"></lr-map>
       <p role="status" ${ref(node => { status = node as HTMLElement | undefined; })}>No scene object activated.</p>
+      <p ${ref(node => { sceneState = node as HTMLElement | undefined; })}>Scene loading.</p>
     `;
   },
 };
@@ -2089,17 +2094,22 @@ export const NetworkMonitoringShowcase: Story = {
           const text = copy();
           map.markers = frame.nodes.flatMap(node => node.position ? [{ id: node.id, lngLat: node.position.lngLat,
             color: statusColor(node.status), label: `${node.label} · ${text.statuses[node.status]}` }] : []);
-          map.scene = { objects: frame.nodes.flatMap(node => node.position ? [{ kind: 'marker' as const, id: node.id,
-            label: `${node.label} · ${text.statuses[node.status]}`, position: { lngLat: node.position.lngLat } }] : []) };
-          const line = (link: SyntheticNetworkFrame['links'][number]) => ({ type: 'Feature' as const, properties: { id: link.id },
-            geometry: { type: 'LineString' as const, coordinates: link.positions!.map(position => [...position.lngLat]) } });
+          // Links are scene paths between the endpoints' 3D positions. A flat map draws each one as
+          // its great-circle ground track, and the scene reports `partial` with code `altitude`.
+          map.scene = { objects: [
+            ...frame.nodes.flatMap(node => node.position ? [{ kind: 'marker' as const, id: node.id,
+              label: `${node.label} · ${text.statuses[node.status]}`, position: { lngLat: node.position.lngLat } }] : []),
+            ...frame.links.flatMap(link => link.visible && link.positions ? [{ kind: 'path' as const, id: link.id,
+              label: `${link.label} · ${text.statuses[link.status]}`, interactive: false, width: 3,
+              color: link.status === 'available' ? storyColor('success') : storyColor('danger'),
+              positions: link.positions.map(position => ({ lngLat: position.lngLat, altitude: position.altitude,
+                altitudeReference: position.altitudeReference })) }] : []),
+          ] };
           const area = (region: SyntheticNetworkFrame['environment'][number]) => ({ type: 'Feature' as const, properties: { id: region.id },
             geometry: { type: 'Polygon' as const, coordinates: [region.ring.map(point => [...point])] } });
           map.dataLayers = [
             { sourceId: 'regions-clear', tone: 'neutral', geojson: { type: 'FeatureCollection', features: frame.environment.filter(region => region.category === 'clear').map(area) } },
             { sourceId: 'regions-advisory', tone: 'warning', geojson: { type: 'FeatureCollection', features: frame.environment.filter(region => region.category === 'advisory').map(area) } },
-            { sourceId: 'links-available', tone: 'success', geojson: { type: 'FeatureCollection', features: frame.links.filter(link => link.visible && link.status === 'available').map(line) } },
-            { sourceId: 'links-unavailable', tone: 'danger', geojson: { type: 'FeatureCollection', features: frame.links.filter(link => link.visible && link.status === 'unavailable').map(line) } },
           ];
           present();
         };

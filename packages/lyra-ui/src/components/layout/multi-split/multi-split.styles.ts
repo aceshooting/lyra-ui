@@ -22,6 +22,12 @@ export const styles = css`
        solely by --lr-multi-split-divider-target-size, so retuning one can never shrink the
        other. */
     --_lr-multi-split-divider-thickness: var(--lr-size-3px);
+    /* The rail a per-panel collapsed panel (collapsedPanels) clamps to along the resize axis.
+       Resolved on the host so panels inherit it through the flat tree. */
+    --_lr-multi-split-collapsed-panel-size: var(
+      --lr-multi-split-collapsed-panel-size,
+      var(--lr-size-2-5rem)
+    );
     --_lr-multi-split-divider-color: var(--lr-color-border);
     --_lr-multi-split-divider-hover-color: var(--lr-color-brand);
     --_lr-multi-split-divider-active-color: color-mix(
@@ -328,7 +334,8 @@ export const styles = css`
   }
   /* Safety net: rail-clamped content can overflow the fixed rail width, so clip rather than blow
      out the layout; the panel's content should adapt itself, e.g. via a container query. */
-  ::slotted([data-collapse-state="rail"]) {
+  ::slotted([data-collapse-state="rail"]),
+  ::slotted([data-panel-collapsed]) {
     overflow: hidden;
   }
 `;

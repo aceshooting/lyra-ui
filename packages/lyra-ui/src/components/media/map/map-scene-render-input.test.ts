@@ -125,7 +125,7 @@ describe('map scene render input', () => {
         expect(packet?.markers).to.deep.equal([]);
         expect(packet?.reducedMotion).to.equal(true);
         expect(h.owner.captureAccepted().objects.length).to.equal(1);
-        expect(h.owner.captureView().status?.state).to.equal('unavailable');
+        expect(h.owner.captureView().status?.state).to.equal('loading');
       }
     } finally { h.owner.close(); }
   });

@@ -55,8 +55,35 @@ describe('map scene owner', () => {
       expect(lookup.target.position).to.deep.equal(object.position);
       expect(h.facade.attachment.target('route')).to.deep.equal({ status: 'unsupported-kind', kind: 'path' });
       expect(h.owner.state.capture().acceptedSceneRevision).to.equal(accepted.acceptedSceneRevision);
-      expect(h.owner.captureView().status).to.deep.equal({ revision: accepted.acceptedSceneRevision, state: 'unavailable', code: 'engine' });
+      expect(h.owner.captureView().status).to.deep.equal({ revision: accepted.acceptedSceneRevision, state: 'loading' });
       expect(h.owner.state.capture().viewport).to.equal(undefined);
+    } finally { h.close(); }
+  });
+
+  it('accepts renderer status only for the current nonempty accepted revision and keeps a rejected update visible', async () => {
+    const h = await harness();
+    try {
+      expect(h.owner.reportRenderStatus(0, { state: 'ready' })).to.equal(false);
+      h.owner.assign({ objects: [scenePath()] });
+      const revision = h.owner.captureAccepted().acceptedSceneRevision, before = h.changes;
+      expect(h.owner.reportRenderStatus(revision + 1, { state: 'ready' })).to.equal(false);
+      expect(h.owner.reportRenderStatus(revision, { state: 'partial', code: 'altitude' })).to.equal(true);
+      expect(h.owner.captureView().status).to.deep.equal({ revision, state: 'partial', code: 'altitude' });
+      const reported = h.owner.captureView();
+      expect(h.owner.reportRenderStatus(revision, { state: 'partial', code: 'altitude' })).to.equal(false);
+      expect(h.owner.captureView() === reported).to.equal(true);
+      expect(h.changes).to.equal(before + 1);
+      for (const invalid of [{ state: 'empty' }, { state: 'error', code: 'invalid' }, { state: 'ready', code: 'nope' }, null]) {
+        expect(h.owner.reportRenderStatus(revision, invalid as never)).to.equal(false);
+      }
+      expect(Object.isFrozen(h.owner.captureView().status)).to.equal(true);
+      h.owner.assign({ objects: [null] });
+      expect(h.owner.reportRenderStatus(revision, { state: 'ready' })).to.equal(false);
+      expect(h.owner.captureView().status).to.deep.equal({ revision, state: 'error', code: 'invalid' });
+      h.owner.assign({ objects: [] });
+      expect(h.owner.reportRenderStatus(h.owner.captureAccepted().acceptedSceneRevision, { state: 'ready' })).to.equal(false);
+      h.owner.close();
+      expect(h.owner.reportRenderStatus(h.owner.captureAccepted().acceptedSceneRevision, { state: 'ready' })).to.equal(false);
     } finally { h.close(); }
   });
 
@@ -127,7 +154,7 @@ describe('map scene owner', () => {
       structuredClone(bytes.buffer, { transfer: [bytes.buffer] });
       h.owner.assign({ objects: [sceneModel('model', source)] });
       expect(modelReceipt(h.owner) === receipt).to.equal(true);
-      expect(h.owner.captureView().status?.state).to.equal('unavailable');
+      expect(h.owner.captureView().status?.state).to.equal('loading');
       h.owner.assign(undefined);
       h.owner.assign({ objects: [sceneModel('model', source)] });
       expect(h.owner.captureAccepted().objects.length).to.equal(0);
@@ -144,7 +171,7 @@ describe('map scene owner', () => {
       const accepted = h.owner.captureAccepted(), receipt = modelReceipt(h.owner);
       const fact = h.facade.attachment.target('model');
       if (fact.status !== 'accepted') throw new Error('Expected target');
-      expect(h.owner.captureView().status?.state).to.equal('unavailable');
+      expect(h.owner.captureView().status?.state).to.equal('loading');
       h.owner.assign({ objects: [sceneModel('model', { format: 'glb', bytes: new Uint8Array([1]) })] });
       expect(h.owner.captureAccepted() === accepted).to.equal(true);
       expect(modelReceipt(h.owner) === receipt).to.equal(true);
@@ -154,10 +181,10 @@ describe('map scene owner', () => {
       expect(h.owner.captureView().status).to.deep.equal({ revision: accepted.acceptedSceneRevision, state: 'error', code: 'limit' });
       h.owner.assign(undefined);
       h.owner.assign({ objects: [sceneModel('model', { format: 'glb', bytes: new Uint8Array([1]) })] });
-      expect(h.owner.captureView().status?.state).to.equal('unavailable');
+      expect(h.owner.captureView().status?.state).to.equal('loading');
       h.owner.assign(undefined);
       h.owner.assign({ objects: [sceneModel('model', source)] });
-      expect(h.owner.captureView().status?.state).to.equal('unavailable');
+      expect(h.owner.captureView().status?.state).to.equal('loading');
       expect(modelReceipt(h.owner) === receipt).to.equal(false);
     } finally { h.close(); }
   });
@@ -211,7 +238,7 @@ describe('map scene owner', () => {
     window.fetch = (...args) => { fetches++; return original(...args); };
     try {
       h.owner.assign({ objects: [{ ...sceneModel(), source: { format: 'glb', src: './model.glb' } }] });
-      expect(h.owner.captureView().status?.state).to.equal('unavailable');
+      expect(h.owner.captureView().status?.state).to.equal('loading');
       const accepted = h.owner.captureAccepted();
       h.owner.assign({ objects: [{ ...sceneModel(), source: { format: 'glb', src: 'javascript:void(0)' } }] });
       expect(h.owner.captureAccepted() === accepted).to.equal(true);
@@ -237,7 +264,7 @@ describe('map scene owner', () => {
       base.href = 'https://example.invalid/second/';
       owner.assign({ objects: [{ ...sceneModel(), source }] });
       expect(modelReceipt(owner) === receipt).to.equal(true);
-      expect(owner.captureView().status?.state).to.equal('unavailable');
+      expect(owner.captureView().status?.state).to.equal('loading');
       const accepted = owner.captureAccepted(); current = false; element.remove();
       owner.assign({ objects: [{ ...sceneModel(), source: { format: 'glb', src: './new.glb' } }] });
       expect(owner.captureAccepted() === accepted).to.equal(true); expect(fetches).to.equal(0);
@@ -559,7 +586,7 @@ describe('map scene owner render publication', () => {
       expect(failed.phase).to.equal('unavailable'); expect(failed.input.markers).to.deep.equal([]);
       expect(failed.accepted === expected.accepted && failed.state === expected.state).to.equal(true);
       expect(modelReceipt(owner) === receipt).to.equal(true);
-      expect(owner.captureView().status?.state).to.equal('unavailable');
+      expect(owner.captureView().status?.state).to.equal('loading');
       expect(h.facade.attachment.target('target').status).to.equal('accepted');
       expect(owner.failPresentation(expected)).to.equal(false);
       expect(owner.captureRenderPublication() === failed).to.equal(true);

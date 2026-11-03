@@ -558,3 +558,68 @@ it("resolves a host aria-describedby onto its group owner", async () => {
   host.removeAttribute("aria-describedby");
   await waitUntil(() => !ids().includes("host-hint"), "removing it clears the owner");
 });
+
+describe('multi-line labels / --lr-suggestion-chips-label-lines / -chip-max-inline-size', () => {
+  const question =
+    'How do I migrate the billing service to the new event bus without losing in-flight invoices?';
+  const longSuggestions = [{ suggestionId: 'q', label: question }];
+  const labelOf = (el: LyraSuggestionChips) =>
+    el.shadowRoot!.querySelector<HTMLElement>('[part="chip-label"]')!;
+  const chipOf = (el: LyraSuggestionChips) =>
+    el.shadowRoot!.querySelector<HTMLElement>('[part~="chip"]')!;
+  const renderedLines = (label: HTMLElement) => {
+    const style = getComputedStyle(label);
+    return Math.round(label.getBoundingClientRect().height / Number.parseFloat(style.lineHeight));
+  };
+  const mount = async (wrap: boolean, style = '') => {
+    const host = await fixture<HTMLDivElement>(html`
+      <div style="inline-size: 24rem; line-height: 1.5;">
+        <lr-suggestion-chips ?wrap=${wrap} style=${style} .suggestions=${longSuggestions}></lr-suggestion-chips>
+      </div>
+    `);
+    const el = host.querySelector<LyraSuggestionChips>('lr-suggestion-chips')!;
+    await el.updateComplete;
+    return { host, el };
+  };
+
+  it('wraps a long label onto several lines inside a 24rem column when wrap is set', async () => {
+    const { host, el } = await mount(true);
+    const label = labelOf(el);
+    expect(getComputedStyle(label).webkitLineClamp).to.equal('3');
+    expect(renderedLines(label)).to.be.greaterThan(1);
+    expect(renderedLines(label)).to.be.at.most(3);
+    const chipBox = chipOf(el).getBoundingClientRect();
+    const hostBox = host.getBoundingClientRect();
+    expect(chipBox.right).to.be.at.most(hostBox.right + 0.5);
+    expect(chipBox.left).to.be.at.least(hostBox.left - 0.5);
+  });
+
+  it('keeps the scrolling row one line and capped at 16rem when wrap is unset (unset regression)', async () => {
+    const { el } = await mount(false);
+    const label = labelOf(el);
+    expect(getComputedStyle(label).webkitLineClamp).to.equal('1');
+    expect(renderedLines(label)).to.equal(1);
+    const rootFontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+    expect(chipOf(el).getBoundingClientRect().width).to.be.closeTo(16 * rootFontSize, 1);
+  });
+
+  it('honors --lr-suggestion-chips-label-lines in both layouts', async () => {
+    for (const wrap of [false, true]) {
+      const { el } = await mount(wrap, '--lr-suggestion-chips-label-lines: 2;');
+      const label = labelOf(el);
+      expect(getComputedStyle(label).webkitLineClamp, `wrap=${wrap}`).to.equal('2');
+      expect(renderedLines(label), `wrap=${wrap}`).to.equal(2);
+    }
+  });
+
+  it('honors --lr-suggestion-chips-chip-max-inline-size and still never overflows a wrapping container', async () => {
+    const rootFontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const narrow = await mount(true, '--lr-suggestion-chips-chip-max-inline-size: 10rem;');
+    expect(chipOf(narrow.el).getBoundingClientRect().width).to.be.closeTo(10 * rootFontSize, 1);
+
+    const wide = await mount(true, '--lr-suggestion-chips-chip-max-inline-size: 40rem;');
+    const chipBox = chipOf(wide.el).getBoundingClientRect();
+    expect(chipBox.width).to.be.closeTo(wide.host.getBoundingClientRect().width, 1);
+    expect(renderedLines(labelOf(wide.el))).to.be.greaterThan(1);
+  });
+});

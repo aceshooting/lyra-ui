@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'દૃશ્યની વસ્તુઓ છુપાવો',
   mapSceneEmpty: 'દૃશ્યમાં કોઈ વસ્તુ નથી',
   mapSceneUnavailable: 'દૃશ્યનું રેન્ડરિંગ ઉપલબ્ધ નથી.',
+  mapScenePartial: 'દૃશ્યની કેટલીક વસ્તુઓ રેન્ડર થઈ નથી, અથવા તેમની ઊંચાઈ વિના રેન્ડર થઈ છે.',
   mapSceneInvalid: 'દૃશ્યનો ફેરફાર અમાન્ય છે. અગાઉ સ્વીકારેલી વસ્તુઓ યથાવત્ છે.',
   mapSceneLimit: 'દૃશ્યનો ફેરફાર મર્યાદા વટાવે છે. અગાઉ સ્વીકારેલી વસ્તુઓ યથાવત્ છે.',
   mapScenePrevious: 'દૃશ્યનું પાછલું પાનું',

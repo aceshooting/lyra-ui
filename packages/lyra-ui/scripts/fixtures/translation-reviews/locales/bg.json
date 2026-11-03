@@ -1,0 +1,303 @@
+{
+  "locale": "bg",
+  "direction": "ltr",
+  "source": {
+    "keyCount": 1632,
+    "sha256": "sha256:176f8b74a682d2cbd3a94235f186114fa081fcd1fc663972e9235e051159b3ed"
+  },
+  "catalog": {
+    "keyCount": 1632,
+    "sha256": "sha256:85de36f5608c5736199078ad59ba1da77ef3d61f9bb9a5de0179c84b3393c951"
+  },
+  "translator": {
+    "status": "complete-original",
+    "role": "project localization contributor",
+    "completedAt": "2026-11-02",
+    "evidence": "Original Bulgarian catalog drafted with AI assistance from DEFAULT_STRINGS in source order across all 1,631 messages, keeping exact placeholders, ICU syntax and the pinned CLDR cardinal categories (one, other). No upstream translated text was copied. This is AI-assisted project localization; no human or native-speaker translator claim is made.\n\n2026-11-02 incremental mapScenePartial addition: added one original status message, shown when only part of a map scene can be drawn, reusing this catalog's existing scene, object and rendering terminology from the neighbouring mapScene messages. The message has no placeholders or plural branches. AI-assisted; no human or native-speaker authorship is claimed."
+  },
+  "reviewer": {
+    "status": "approved",
+    "role": "independent localization reviewer",
+    "reviewedAt": "2026-11-02",
+    "evidence": "AI-assisted machine review limited to structural verification: complete key coverage in DEFAULT_STRINGS order, exact placeholders, ICU syntax and the pinned CLDR cardinal categories (one, other) were checked, and each of the 69 English-identical messages was inspected and given an entry-specific rationale. A script audit confirmed every message is written in Cyrillic apart from placeholders, key names, file formats, library names and other technical identifiers. No linguistic, human or native-speaker review is claimed; the catalog awaits native-speaker review.\n\n2026-11-02 incremental review: an AI-assisted check of the mapScenePartial addition covered key order, terminology consistency with the existing mapScene messages, placeholder shape and escaping, with limited semantic review. Excluding this addition reproduces the prior catalog snapshot, so earlier content is unchanged. This increment does not claim a full-catalog re-review or human/native-speaker qualification."
+  },
+  "englishIdenticalAllowlist": [
+    {
+      "messagePath": "accessibleLabelSeparator",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' — ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "avPlayerRateOption",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('×') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "boxPlotQ1",
+      "rationale": "'Q1' is the box-plot statistics notation for the first quartile, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "boxPlotQ3",
+      "rationale": "'Q3' is the box-plot statistics notation for the third quartile, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "calloutAnnouncementWithContext",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "carouselSlideAnnouncement",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "carouselSlideAnnouncementSeparator",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('. ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "chart3dXAxis",
+      "rationale": "Coordinate axis letter kept as the conventional Latin mathematical symbol for a three-dimensional chart axis."
+    },
+    {
+      "messagePath": "chart3dYAxis",
+      "rationale": "Coordinate axis letter kept as the conventional Latin mathematical symbol for a three-dimensional chart axis."
+    },
+    {
+      "messagePath": "chart3dZAxis",
+      "rationale": "Coordinate axis letter kept as the conventional Latin mathematical symbol for a three-dimensional chart axis."
+    },
+    {
+      "messagePath": "chartLabeledPoint",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "chartPointCoordinates",
+      "rationale": "Uses the single-letter coordinate-geometry axis variables ('x'/'y'), which are mathematical symbols rather than English words, plus formatting punctuation; both are locale-invariant."
+    },
+    {
+      "messagePath": "chartSummarySeparator",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('. ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "chartValueLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "chartValuePercentageLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (':  ()') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "contactViewerAddressFormat",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('\n\n\n  \n') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "contactViewerTypedValue",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' ()') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "contextMeterSegmentLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "emailViewerGroupAddress",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "entityChipWithType",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (', ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "fileTreeDiffSummary",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('+ -') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "fileTypePdf",
+      "rationale": "'PDF' is the file-format acronym Portable Document Format, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "fileTypeWithSize",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' ()') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "flowRunStatusCount",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "flowRunStepStatus",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "flowStatusWithDetail",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' — ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "flowStatusWithDuration",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' ()') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "funnelComparisonShare",
+      "rationale": "Formatting template only: {label} and {value} supply localized caller text; the colon is punctuation, not untranslated English prose."
+    },
+    {
+      "messagePath": "gaugeValueLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "graphTypedNode",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' ()') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "heatmapCalendarCellLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "ingestionItemProgressLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' — ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "kbdAltWord",
+      "rationale": "Conventional printed/spoken keyboard-key name or abbreviation; keeping the platform key name identical helps users match the label to the physical key."
+    },
+    {
+      "messagePath": "kbdBackspaceWord",
+      "rationale": "Conventional printed/spoken keyboard-key name or abbreviation; keeping the platform key name identical helps users match the label to the physical key."
+    },
+    {
+      "messagePath": "kbdCommandWord",
+      "rationale": "Conventional printed/spoken keyboard-key name or abbreviation; keeping the platform key name identical helps users match the label to the physical key."
+    },
+    {
+      "messagePath": "kbdControlVisual",
+      "rationale": "Standard keyboard legend or key name; preserving the platform key label is conventional."
+    },
+    {
+      "messagePath": "kbdControlWord",
+      "rationale": "Conventional printed/spoken keyboard-key name or abbreviation; keeping the platform key name identical helps users match the label to the physical key."
+    },
+    {
+      "messagePath": "kbdDeleteVisual",
+      "rationale": "Standard keyboard legend or key name; preserving the platform key label is conventional."
+    },
+    {
+      "messagePath": "kbdDeleteWord",
+      "rationale": "This is a physical keyboard key name or its platform legend; retaining the conventional key label preserves recognizability and matches the displayed keycap. The retained value for kbdDeleteWord is \"Delete\"."
+    },
+    {
+      "messagePath": "kbdEndWord",
+      "rationale": "Conventional printed/spoken keyboard-key name or abbreviation; keeping the platform key name identical helps users match the label to the physical key."
+    },
+    {
+      "messagePath": "kbdEnterWord",
+      "rationale": "Conventional printed/spoken keyboard-key name or abbreviation; keeping the platform key name identical helps users match the label to the physical key."
+    },
+    {
+      "messagePath": "kbdEscapeVisual",
+      "rationale": "Standard keyboard legend or key name; preserving the platform key label is conventional."
+    },
+    {
+      "messagePath": "kbdEscapeWord",
+      "rationale": "Conventional printed/spoken keyboard-key name or abbreviation; keeping the platform key name identical helps users match the label to the physical key."
+    },
+    {
+      "messagePath": "kbdHomeWord",
+      "rationale": "Conventional printed/spoken keyboard-key name or abbreviation; keeping the platform key name identical helps users match the label to the physical key."
+    },
+    {
+      "messagePath": "kbdOptionWord",
+      "rationale": "Conventional printed/spoken keyboard-key name or abbreviation; keeping the platform key name identical helps users match the label to the physical key."
+    },
+    {
+      "messagePath": "kbdPageDownVisual",
+      "rationale": "Standard keyboard legend or key name; preserving the platform key label is conventional."
+    },
+    {
+      "messagePath": "kbdPageDownWord",
+      "rationale": "Conventional printed/spoken keyboard-key name or abbreviation; keeping the platform key name identical helps users match the label to the physical key."
+    },
+    {
+      "messagePath": "kbdPageUpVisual",
+      "rationale": "Standard keyboard legend or key name; preserving the platform key label is conventional."
+    },
+    {
+      "messagePath": "kbdPageUpWord",
+      "rationale": "Conventional printed/spoken keyboard-key name or abbreviation; keeping the platform key name identical helps users match the label to the physical key."
+    },
+    {
+      "messagePath": "kbdShiftWord",
+      "rationale": "Conventional printed/spoken keyboard-key name or abbreviation; keeping the platform key name identical helps users match the label to the physical key."
+    },
+    {
+      "messagePath": "kbdTabWord",
+      "rationale": "Conventional printed/spoken keyboard-key name or abbreviation; keeping the platform key name identical helps users match the label to the physical key."
+    },
+    {
+      "messagePath": "liteChartBarLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (', : ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "neighborGroupHeader",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' ()') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "neighborRowLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (', , ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "notebookViewerInPrompt",
+      "rationale": "'In [{count}]' reproduces Jupyter Notebook's own In[{count}] execution-count prompt convention verbatim; the notebook UI shows this exact ASCII marker regardless of locale, so translating it would mismatch the tool it represents."
+    },
+    {
+      "messagePath": "notebookViewerInPromptEmpty",
+      "rationale": "'In [ ]' reproduces Jupyter Notebook's own empty In[] execution-count prompt marker verbatim; the notebook UI shows this exact ASCII marker regardless of locale, so translating it would mismatch the tool it represents."
+    },
+    {
+      "messagePath": "paginationEmptySummary",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "pdfViewerCurrentZoom",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('%') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "resultFieldLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (':') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "retrievalFilterChipLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "sequenceStripCategoryCount",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "showMoreCollapsed",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators ('+') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "spanKindLlm",
+      "rationale": "'LLM' is the AI/ML span-kind acronym for a large language model call, an internationally standardized abbreviation used unmodified across languages rather than translated prose."
+    },
+    {
+      "messagePath": "statTrendAnnouncement",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (', ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "taskListStepIncompleteAnnounce",
+      "rationale": "Formatting template only: {label} and {status} are supplied values, with a punctuation separator and no natural-language words; the identical text preserves the status announcement format."
+    },
+    {
+      "messagePath": "traceTreeMetricLabel",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (': ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "traceTreeSpanStatus",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (' — ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    },
+    {
+      "messagePath": "valueTruncated",
+      "rationale": "The ellipsis is an invariant punctuation sentinel for a truncated value; it contains no untranslated English words."
+    },
+    {
+      "messagePath": "wordCloudWordAnnouncement",
+      "rationale": "Formatting template only: interpolates {placeholder} token(s) around punctuation/separators (', ') with no natural-language words, so it is identical in every locale that renders the same punctuation here."
+    }
+  ],
+  "reviewTier": "ai-assisted"
+}

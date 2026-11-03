@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'د صحنې توکي پټ کړئ',
   mapSceneEmpty: 'د صحنې توکي نشته',
   mapSceneUnavailable: 'د صحنې ښودل شتون نه لري.',
+  mapScenePartial: 'د صحنې ځینې توکي نه دي ښودل شوي، یا د خپل لوړوالي پرته ښودل شوي دي.',
   mapSceneInvalid: 'د صحنې اوسمهالول ناسم دي. مخکې منل شوي توکي نه دي بدل شوي.',
   mapSceneLimit: 'د صحنې اوسمهالول له یوه حد څخه اوړي. مخکې منل شوي توکي نه دي بدل شوي.',
   mapScenePrevious: 'د صحنې مخکینۍ پاڼه',

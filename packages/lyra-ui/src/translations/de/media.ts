@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Szenenobjekte ausblenden',
   mapSceneEmpty: 'Keine Szenenobjekte',
   mapSceneUnavailable: 'Die Szenendarstellung ist nicht verfügbar.',
+  mapScenePartial: 'Einige Szenenobjekte werden nicht oder ohne ihre Höhe dargestellt.',
   mapSceneInvalid: 'Die Szenenaktualisierung ist ungültig. Zuvor akzeptierte Objekte bleiben unverändert.',
   mapSceneLimit: 'Die Szenenaktualisierung überschreitet einen Grenzwert. Zuvor akzeptierte Objekte bleiben unverändert.',
   mapScenePrevious: 'Vorherige Szenenseite',

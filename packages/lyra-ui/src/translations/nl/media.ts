@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Scèneobjecten verbergen',
   mapSceneEmpty: 'Geen scèneobjecten',
   mapSceneUnavailable: 'Scèneweergave is niet beschikbaar.',
+  mapScenePartial: 'Sommige scèneobjecten worden niet weergegeven, of worden zonder hun hoogte weergegeven.',
   mapSceneInvalid: 'De scène-update is ongeldig. Eerder geaccepteerde objecten blijven ongewijzigd.',
   mapSceneLimit: 'De scène-update overschrijdt een limiet. Eerder geaccepteerde objecten blijven ongewijzigd.',
   mapScenePrevious: 'Vorige scènepagina',

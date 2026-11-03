@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Itago ang mga bagay sa eksena',
   mapSceneEmpty: 'Walang bagay sa eksena',
   mapSceneUnavailable: 'Hindi magagamit ang pag-render ng eksena.',
+  mapScenePartial: 'Hindi na-render ang ilang bagay sa eksena, o na-render ang mga ito nang walang taas.',
   mapSceneInvalid: 'Hindi wasto ang pagbabago sa eksena. Hindi nabago ang mga dating tinanggap na bagay.',
   mapSceneLimit: 'Lumampas sa limitasyon ang pagbabago sa eksena. Hindi nabago ang mga dating tinanggap na bagay.',
   mapScenePrevious: 'Nakaraang pahina ng eksena',

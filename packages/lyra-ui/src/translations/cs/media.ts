@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Skrýt objekty scény',
   mapSceneEmpty: 'Žádné objekty scény',
   mapSceneUnavailable: 'Vykreslování scény není k dispozici.',
+  mapScenePartial: 'Některé objekty scény nejsou vykresleny nebo jsou vykresleny bez své výšky.',
   mapSceneInvalid: 'Aktualizace scény je neplatná. Dříve přijaté objekty zůstávají beze změny.',
   mapSceneLimit: 'Aktualizace scény překračuje limit. Dříve přijaté objekty zůstávají beze změny.',
   mapScenePrevious: 'Předchozí stránka scény',

@@ -46,7 +46,7 @@ describe('lr-map geographic scene lifecycle and interaction', () => {
     element.remove();
     wrapper.append(element);
     await element.updateComplete;
-    expect(states).to.deep.equal([{ revision: 1, state: 'unavailable', code: 'engine' }]);
+    expect(states).to.deep.equal([{ revision: 1, state: 'loading' }]);
     expect(part(element, 'scene-list').textContent).to.include('latest');
   });
 

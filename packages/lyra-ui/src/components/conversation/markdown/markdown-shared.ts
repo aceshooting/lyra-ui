@@ -391,6 +391,9 @@ export interface ParseMarkdownOptions {
    *  parser applies, `link()`/`image()`'s scheme allowlist included. `sanitize` and `escape` both
    *  validate; only `trusted` bypasses, matching `renderMarkdownDocument()`'s own DOMPurify skip. */
   trustedHtmlOption: boolean;
+  /** `withoutImages` -- every markdown-native image renders its alt text, exactly as a refused
+   *  `src` does, so the parser never emits an `<img>`. */
+  withoutImagesOption?: boolean;
   /** Already combines `!withoutSyntaxHighlighting && !streaming` -- computed by the caller since that
    *  combination differs by call site only in name, never in meaning. */
   highlightCodeOption: boolean;
@@ -511,6 +514,7 @@ export function createMarkdownRenderContext(options: ParseMarkdownOptions): Mark
     linkTarget,
     escapeHtmlOption,
     trustedHtmlOption,
+    withoutImagesOption = false,
     highlightCodeOption,
     getCachedHighlight: getCached,
     failedHighlightKeys,
@@ -702,6 +706,8 @@ export function createMarkdownRenderContext(options: ParseMarkdownOptions): Mark
         // through the same cleanHref() the link() override above uses)
         // with a part='img' added.
         const altText = this.parser.parseInline(token.tokens, this.parser.textRenderer);
+        // `withoutImages` renders the alt text exactly as a refused `src` does below.
+        if (withoutImagesOption) return escapeHtml(altText);
         const href = cleanHref(token.href);
         if (href === null) return escapeHtml(altText);
         // Same scheme allowlist rationale as link() above, using the media-src allowlist (which
@@ -971,6 +977,37 @@ function restoreMarkdownHighlightStyles(markup: string): string {
   });
 }
 
+const MARKDOWN_IMAGE_MARKUP = /<(?:img|image|feimage|input|source|video)\b/i;
+
+/**
+ * `withoutImages` enforcement over the finished markup, whatever produced it (raw HTML in any mode,
+ * or a consumer parser extension). Runs inside an inert `<template>`, so no image ever loads:
+ * `<img>` and `<input type="image">` become their alt text (as a refused Markdown image does),
+ * `<picture>` sources and SVG `<image>`/`<feImage>` are removed, and `<video poster>` is dropped.
+ */
+function stripMarkdownImages(markup: string): string {
+  if (!MARKDOWN_IMAGE_MARKUP.test(markup)) return markup;
+  const template = document.createElement('template');
+  template.innerHTML = markup;
+  const root = template.content;
+  const doc = root.ownerDocument;
+  let changed = false;
+  for (const element of root.querySelectorAll('img, input')) {
+    if (element.localName === 'input' && element.getAttribute('type')?.trim().toLowerCase() !== 'image') continue;
+    element.replaceWith(doc.createTextNode(element.getAttribute('alt') ?? ''));
+    changed = true;
+  }
+  for (const element of root.querySelectorAll('picture source, image, feImage')) {
+    element.remove();
+    changed = true;
+  }
+  for (const element of root.querySelectorAll('video[poster]')) {
+    element.removeAttribute('poster');
+    changed = true;
+  }
+  return changed ? template.innerHTML : markup;
+}
+
 /** Raw `<a>`/`<area>` skip the `link()` renderer: every parsed one with a `target` gets the `resolveGuardedRel()` rel. */
 function enforceMarkdownAnchorRelGuard(markup: string): string {
   if (!/target/i.test(markup)) return markup;
@@ -1052,6 +1089,7 @@ export function markdownNeedsReparse(changed: Map<PropertyKey, unknown>): boolea
     changed.has('tabSize') ||
     changed.has('htmlMode') ||
     changed.has('withoutGfm') ||
+    changed.has('withoutImages') ||
     changed.has('linkTarget') ||
     changed.has('headingOffset') ||
     changed.has('streaming') ||
@@ -1112,6 +1150,8 @@ export interface RenderMarkdownOptions {
   htmlMode: MarkdownHtmlMode;
   math: boolean;
   codeBlockHeader?: boolean;
+  /** Renders every image as its alt text, after sanitization as well as in the parser. */
+  withoutImages?: boolean;
   /** The instance's own `parseMarkdown()` -- see `ParseMarkdownOptions` for what it resolves. */
   parse: (
     marked: MarkedModule,
@@ -1133,12 +1173,15 @@ export interface RenderMarkdownOptions {
  * missing/throwing `dompurify` in `sanitize` mode both fall back to plain text plus
  * `lr-render-error`.
  */
-export function markdownSanitizerPolicy(options: { htmlMode: MarkdownHtmlMode; math: boolean; codeBlockHeader: boolean }): Record<string, unknown> | null {
+export function markdownSanitizerPolicy(options: {
+  htmlMode: MarkdownHtmlMode; math: boolean; codeBlockHeader: boolean; withoutImages?: boolean;
+}): Record<string, unknown> | null {
   if (options.htmlMode !== 'sanitize') return null;
   return {
     ADD_ATTR: ['target'],
     FORBID_ATTR: ['style', 'data-lr-code-chrome'],
-    ...(options.codeBlockHeader ? { FORBID_TAGS: ['style'] } : {}),
+    // Authored style elements can fetch images through CSS, so `withoutImages` forbids them too.
+    ...(options.codeBlockHeader || options.withoutImages ? { FORBID_TAGS: ['style'] } : {}),
     ...(options.math ? { ADD_TAGS: ['semantics', 'annotation'] } : {}),
   };
 }
@@ -1171,6 +1214,7 @@ export function renderMarkdownDocument(options: RenderMarkdownOptions): Markdown
   const mathFailed = hadMathFallback && options.isKatexConfirmedMissing();
 
   const policy = markdownSanitizerPolicy({ ...options, codeBlockHeader: options.codeBlockHeader ?? false });
+  const withoutImages = options.withoutImages ?? false;
   if (policy === null) {
     // Shiki palette data is trusted output from Lyra's highlighter, not authored HTML. Restore its
     // strict color-only declarations in both escape and trusted modes as well as after DOMPurify.
@@ -1178,7 +1222,7 @@ export function renderMarkdownDocument(options: RenderMarkdownOptions): Markdown
     // pass a raw-HTML anchor authored under the `trusted` bypass ever reaches.
     return {
       status: 'rendered',
-      html: finishMarkdownHtml(deps, null, rawHtml, hasRawHtml),
+      html: finishMarkdownHtml(deps, null, rawHtml, hasRawHtml, withoutImages),
       headingTree,
       mathFailed,
       pendingKeys,
@@ -1197,7 +1241,7 @@ export function renderMarkdownDocument(options: RenderMarkdownOptions): Markdown
 
   let sanitized: string;
   try {
-    sanitized = finishMarkdownHtml(deps, policy, rawHtml, hasRawHtml);
+    sanitized = finishMarkdownHtml(deps, policy, rawHtml, hasRawHtml, withoutImages);
   } catch (error) {
     warnMarkdownSanitizerUnavailable();
     return { status: 'fallback', error, headingTree };
@@ -1213,7 +1257,9 @@ export function renderMarkdownDocument(options: RenderMarkdownOptions): Markdown
 
 /** The `lr-render-error` payload for a permanently-missing `katex` peer while `math` is set. */
 /** Applies the same sanitizer, Shiki palette restoration, and link guard to every render path. */
-export function finishMarkdownHtml(deps: MarkdownDeps, policy: Record<string, unknown> | null, rawHtml: string, hasRawHtml = true): string {
+export function finishMarkdownHtml(
+  deps: MarkdownDeps, policy: Record<string, unknown> | null, rawHtml: string, hasRawHtml = true, withoutImages = false,
+): string {
   if (typeof rawHtml !== 'string') throw new TypeError('The Markdown parser returned non-string markup.');
   let result = rawHtml;
   if (policy !== null) {
@@ -1223,7 +1269,8 @@ export function finishMarkdownHtml(deps: MarkdownDeps, policy: Record<string, un
     result = sanitized;
   }
   const styled = restoreMarkdownHighlightStyles(result);
-  return hasRawHtml ? enforceMarkdownAnchorRelGuard(styled) : styled;
+  const guarded = hasRawHtml ? enforceMarkdownAnchorRelGuard(styled) : styled;
+  return withoutImages ? stripMarkdownImages(guarded) : guarded;
 }
 
 export function markdownMathPeerError(tag: 'lr-markdown' | 'lr-markdown-core'): Error {

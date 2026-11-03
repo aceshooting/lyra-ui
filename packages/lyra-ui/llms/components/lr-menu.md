@@ -145,8 +145,11 @@ A focusable action row owned by `<lr-menu>`. The host itself carries `role="menu
   `[part="base"]` renders as a real `<a href=…>` instead of a `<span>`, and activation (click, or
   the owning menu's Enter/Space handling, which forwards through `click()` for a link item so the
   anchor's own native default action runs) navigates there in addition to firing the usual
-  `select()`/`lr-select` contract. An unsafe/unparseable value falls back to the plain `<span>`,
-  matching `lr-button`'s identical fallback
+  `select()`/`lr-select` contract. The anchor carries the row's accessible name as its own
+  `aria-label` (a non-empty host `aria-label` wins, otherwise the visible label) and keeps it live
+  when either changes, because its visible label sits behind the decorative label wrapper. An
+  unsafe/unparseable value falls back to the plain `<span>`, matching `lr-button`'s identical
+  fallback
 - `target?: string` — native anchor `target`, used only while `href` resolves to a link. Setting it
   (e.g. `'_blank'`) always force-adds `noopener noreferrer` to the rendered anchor's `rel`,
   matching `lr-button`'s identical pattern

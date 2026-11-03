@@ -44,21 +44,37 @@ const KEYBOARD_STEP = 2;
 
 interface PersistedPanelSize {
   readonly panelId: string;
+  /** The live share: `0` for a collapsed panel (version 2 only). */
   readonly size: number;
+  /** Version 2 only: the panel is folded to its rail. */
+  readonly collapsed?: boolean;
+  /** Version 2 only: the share a collapsed panel returns to when expanded. */
+  readonly expandedSize?: number;
 }
 
+/** Version 1 is written whenever no panel is collapsed, so a layout without folded panels stays
+ *  readable by every release; version 2 adds the per-panel collapsed fields. Both are read. */
 interface PersistedPanelLayout {
-  readonly version: 1;
+  readonly version: 1 | 2;
   readonly panels: readonly PersistedPanelSize[];
 }
 
 function isPersistedPanelLayout(value: unknown): value is PersistedPanelLayout {
   if (typeof value !== 'object' || value === null) return false;
   const candidate = value as Partial<PersistedPanelLayout>;
-  if (candidate.version !== 1 || !Array.isArray(candidate.panels)) return false;
+  if ((candidate.version !== 1 && candidate.version !== 2) || !Array.isArray(candidate.panels)) return false;
+  const version = candidate.version;
   return candidate.panels.every((panel) => {
     if (typeof panel !== 'object' || panel === null) return false;
     const record = panel as Partial<PersistedPanelSize>;
+    if (
+      version === 2 &&
+      ((record.collapsed !== undefined && typeof record.collapsed !== 'boolean') ||
+        (record.expandedSize !== undefined &&
+          !(typeof record.expandedSize === 'number' && Number.isFinite(record.expandedSize) && record.expandedSize > 0)))
+    ) {
+      return false;
+    }
     return (
       typeof record.panelId === 'string' &&
       record.panelId !== '' &&
@@ -69,6 +85,8 @@ function isPersistedPanelLayout(value: unknown): value is PersistedPanelLayout {
     );
   });
 }
+
+const NO_COLLAPSED_PANELS: ReadonlySet<number> = new Set();
 
 // Sentinel fallbacks so a one-sided constraint (only `minPx` or only
 // `maxPx`) can still be expressed as a 3-argument CSS `clamp()` in the
@@ -128,6 +146,10 @@ interface ConstraintResolution {
 // live, per-render-computed properties stay here: `inline-size` mirrors the panel's own live,
 // draggable `sizes[i]` percent (by design, so there's no visual jump un-floating -- see updated()).
 const OWNED_PANEL_STYLE_PROPERTIES = ['flex', 'order', 'inline-size', '--_lr-multi-split-panel-min'] as const;
+/** Marker attributes projected onto panels: the responsive pane's state and the per-panel fold. */
+const OWNED_PANEL_ATTRIBUTES = ['data-collapse-state', 'data-panel-collapsed'] as const;
+
+type OwnedPanelAttribute = (typeof OWNED_PANEL_ATTRIBUTES)[number];
 
 type OwnedPanelStyleProperty = (typeof OWNED_PANEL_STYLE_PROPERTIES)[number];
 
@@ -141,8 +163,8 @@ interface PanelOwnershipSnapshot {
   readonly appliedStyles: Map<OwnedPanelStyleProperty, PanelStyleValue>;
   hidden: HTMLElement['hidden'];
   appliedHidden?: HTMLElement['hidden'];
-  collapseState: string | null;
-  appliedCollapseState?: string | null;
+  readonly attributes: Map<OwnedPanelAttribute, string | null>;
+  readonly appliedAttributes: Map<OwnedPanelAttribute, string | null>;
 }
 
 /** Which pane (if any) participates in responsive collapse (see `collapse`). */
@@ -164,6 +186,17 @@ export interface LyraMultiSplitCollapseChangeDetail {
   readonly state: LyraMultiSplitCollapseState;
 }
 
+export interface LyraMultiSplitPanelCollapseChangeDetail {
+  /** The `panel-id` of the panel that was folded or unfolded. */
+  readonly panelId: string;
+  /** Whether that panel is now collapsed to its rail. */
+  readonly collapsed: boolean;
+  /** Every currently collapsed panel's `panel-id`, in DOM order. */
+  readonly collapsedPanels: readonly string[];
+  /** The settled `sizes` after the freed or reclaimed share was redistributed. */
+  readonly sizes: readonly number[];
+}
+
 export interface LyraMultiSplitToggleDetail {
   /** Whether the floating drawer is (or, on a cancelable proposal, would be) open. */
   readonly expanded: boolean;
@@ -182,6 +215,7 @@ export interface LyraMultiSplitEventMap {
   'lr-resize': CustomEvent<LyraEventDetailSnapshot<LyraMultiSplitResizeDetail>>;
   'lr-resize-change': CustomEvent<LyraEventDetailSnapshot<LyraMultiSplitResizeDetail>>;
   'lr-multi-split-collapse-change': CustomEvent<LyraMultiSplitCollapseChangeDetail>;
+  'lr-multi-split-panel-collapse-change': CustomEvent<LyraEventDetailSnapshot<LyraMultiSplitPanelCollapseChangeDetail>>;
   'lr-toggle-request': CustomEvent<LyraMultiSplitToggleDetail>;
   'lr-toggle': CustomEvent<LyraMultiSplitToggleDetail>;
   'lr-multi-split-constraints-invalid': CustomEvent<LyraMultiSplitConstraintIssueDetail>;
@@ -255,6 +289,15 @@ export interface LyraMultiSplitEventMap {
  * open or closed, the divider beside the floating pane releases its gutter
  * and hairline, so the other pane(s) take the full track.
  *
+ * Separately, any panel -- not only an edge pane, and at any container width -- can be folded
+ * to a narrow rail strip by a host control through `collapsedPanels` or
+ * `collapsePanel()`/`expandPanel()`/`togglePanel()`, keyed by `panel-id`. The folded panel keeps
+ * rendering (the host draws its strip content: a rotated label, an expand button) while its share
+ * moves to the open panels within their `panelConstraints`, the dividers beside it keep resizing
+ * its open neighbours, and the collapsed set persists with the sizes under `storageKey`. The
+ * responsive pane above is independent of it: while that pane is `'rail'`/`'floating'` its own
+ * state governs it, and a per-panel fold of the same panel resumes once it is `'wide'` again.
+ *
  * Public collection properties take bounded, clone-owned readonly snapshots. Create a new
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
@@ -282,6 +325,11 @@ export interface LyraMultiSplitEventMap {
  *   Forced writes while no eligible collapsing pane exists are inert and do
  *   not fire. Not fired for a redundant reassignment to the state already in
  *   effect.
+ * @event lr-multi-split-panel-collapse-change - `detail: { panelId, collapsed, collapsedPanels,
+ *   sizes }` (`LyraMultiSplitPanelCollapseChangeDetail`), fired when `collapsePanel()`,
+ *   `expandPanel()` or `togglePanel()` folds or unfolds a panel, after the redistributed `sizes`
+ *   are applied and persisted and the panel's `data-panel-collapsed` marker is set. Not fired when
+ *   a consumer assigns `collapsedPanels` (or `sizes`) directly, nor when a stored layout restores.
  * @event lr-toggle-request - Cancelable proposal before an interactive overlay state change.
  *   Detail carries the proposed `expanded` state. Direct property writes and
  *   forced responsive closes do not propose an interactive change.
@@ -302,7 +350,10 @@ export interface LyraMultiSplitEventMap {
  *   `aria-disabled="true"` and is drag/keyboard-inert
  *   while its adjacent panel is collapsed (`'rail'`/`'floating'`). While that panel is `'floating'`
  *   the divider also takes no track and paints no line, but stays focusable as the collapse-focus
- *   fallback; beside a `'rail'` panel it keeps both.
+ *   fallback; beside a `'rail'` panel it keeps both. Beside a per-panel collapsed panel (see
+ *   `collapsedPanels`) a divider instead resizes the nearest open panel on each side, and
+ *   `aria-valuenow` reports that leading open panel; it is disabled only when one side has no
+ *   open panel left.
  * @csspart backdrop - The `'floating'` drawer's scrim. Only rendered while `collapseState === 'floating'` and `open`.
  * @cssprop [--lr-multi-split-overlay-color=var(--lr-color-overlay)] - The `'floating'` drawer scrim's color, applied to `[part="backdrop"]`.
  * @cssprop [--lr-multi-split-divider-target-size=max(var(--lr-icon-button-size),var(--lr-size-3px))] -
@@ -320,6 +371,9 @@ export interface LyraMultiSplitEventMap {
  * @cssprop [--lr-multi-split-divider-active-color=color-mix(in oklab,var(--lr-color-brand),var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
  *   The divider hairline's color while a resize gesture is pressed (pointer capture holds this
  *   through the whole drag).
+ * @cssprop [--lr-multi-split-collapsed-panel-size=var(--lr-size-2-5rem)] - The rail a per-panel
+ *   collapsed panel (`collapsedPanels`) clamps to along the resize axis: its inline size in a
+ *   horizontal split, its block size in a vertical one. Set it on the split or an ancestor.
  * @cssprop [--lr-multi-split-floating-panel-inset=0] - The `'floating'` drawer's distance from
  *   `[part="base"]`'s edges, applied to both block insets and to whichever logical inline edge
  *   `collapse` anchors the drawer to. Unset, the drawer stays flush with the container exactly as
@@ -344,7 +398,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
 
-  protected static override readonly ownedCollectionProperties = Object.freeze(['sizes', 'defaultSizes', 'panelConstraints']);
+  protected static override readonly ownedCollectionProperties = Object.freeze(['sizes', 'defaultSizes', 'panelConstraints', 'collapsedPanels']);
 
   static override styles = [LyraElement.styles, nativeModalCarrierStyles, styles];
   // A proposal listener can restore a value before it returns. Count writes rather than comparing
@@ -356,6 +410,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     'lr-resize-request',
     'lr-resize',
     'lr-resize-change',
+    'lr-multi-split-panel-collapse-change',
   ]);
 
   // `collapseState` needs a custom accessor (force/auto semantics -- see the
@@ -553,11 +608,37 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     panelCount: number
   ) => string;
 
+  /** The `panel-id`s of the panels folded to a narrow rail strip, independent of container width
+   *  and of the responsive `collapse` pane. Empty by default: no panel folds and the split behaves
+   *  exactly as before this property existed.
+   *
+   *  A collapsed panel stays rendered and in the accessibility tree; it is clamped along the
+   *  resize axis to `--lr-multi-split-collapsed-panel-size` and marked `data-panel-collapsed`, so
+   *  the panel's own content can switch to its strip presentation (a rotated label, an expand
+   *  control) and should take its full content out of the tab order itself, for example with
+   *  `inert` on the hidden region. Its share of the track is redistributed to the open panels in
+   *  proportion to their sizes, never past a panel's `panelConstraints` maximum; its `sizes`
+   *  entry reads `0` while folded, and expanding restores the share it had when it folded,
+   *  reclaimed from the open panels' room above their minimums. A divider beside a collapsed panel
+   *  resizes the nearest open panel on each side, and is disabled only when one side has none.
+   *
+   *  Requires every panel to carry a unique, nonempty, whitespace-stable `panel-id` (the same
+   *  identity `storageKey` uses); otherwise the set is ignored. Unknown ids are ignored, and at least
+   *  one panel always stays open: a set naming every panel leaves the last one open. Assigning this
+   *  property is silent, like assigning `sizes`; `collapsePanel()`/`expandPanel()`/`togglePanel()`
+   *  apply a change immediately, persist it under `storageKey`, and announce it. A valid stored
+   *  layout restores the collapsed set too, unless this property already names panels. */
+  @property({ attribute: false }) collapsedPanels: readonly string[] = [];
+
   /** Internal hydration seed reflected into declarative output so a property-driven server render
    * and the browser's first reuse pass agree before assigned children can be observed. */
   @property({ type: Number, attribute: 'data-lr-panel-count', reflect: true })
   private panelCount = 0;
   private sizesReconciledForMembership = false;
+  /** The `panel-id`s whose fold is currently baked into `sizes` (each such entry is `0`). */
+  private appliedCollapsed: readonly string[] = [];
+  /** The share each collapsed panel returns to when expanded, keyed by `panel-id`. */
+  private readonly expandedSizes = new Map<string, number>();
   private _collapseState: LyraMultiSplitCollapseState = 'wide';
   // Whether ResizeObserver-driven measurement is currently ignored because a
   // consumer forced a specific collapseState -- see the accessor doc.
@@ -822,7 +903,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       const previous = changed.get('sizes');
       if (this.sizesReconciledForMembership) {
         this.sizesReconciledForMembership = false;
-      } else if (!this.validLiveSizes(this.sizes)) {
+      } else if (!this.validLiveSizes(this.sizes) && !this.acceptFoldedSizes(previous)) {
         if (Array.isArray(previous) && this.validLiveSizes(previous)) {
           this.sizes = [...previous];
         } else {
@@ -833,6 +914,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     } else if (this.sizes.length === 0) {
       this.ensureSizes();
     }
+    this.syncCollapsedLayout();
     if (
       changed.has('orientationBreakpoint') ||
       changed.has('orientationBreakpointBasis')
@@ -990,6 +1072,234 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
    */
   togglePane(): void {
     this.applyPaneIntent(!this.paneExpanded);
+  }
+
+  /**
+   * Folds one panel to its rail strip at any container width (see `collapsedPanels`). `panel` is
+   * the panel's `panel-id` or the panel element itself. Applies synchronously: the freed share is
+   * redistributed, the layout persists under `storageKey`, the panel is decorated, and then
+   * `lr-multi-split-panel-collapse-change` fires. Returns whether anything changed: `false` for an
+   * unknown panel, one already collapsed, the last open panel, or a split whose panels lack valid
+   * `panel-id`s. Called before the first update, it only records the request, silently.
+   *
+   * Named `collapsePanel()` (with `expandPanel()`/`togglePanel()`) to stay distinct from
+   * `collapsePane()`, which drives the single responsive `collapse` pane.
+   */
+  collapsePanel(panel: string | HTMLElement): boolean {
+    return this.setPanelCollapsed(panel, true);
+  }
+
+  /** Unfolds a collapsed panel back to the share it had when it folded, taken from the open
+   *  panels' room above their minimums. Same identity, persistence and event rules as
+   *  `collapsePanel()`. */
+  expandPanel(panel: string | HTMLElement): boolean {
+    return this.setPanelCollapsed(panel, false);
+  }
+
+  /** Collapses an open panel or expands a collapsed one; see `collapsePanel()`. */
+  togglePanel(panel: string | HTMLElement): boolean {
+    const panelId = this.panelIdOf(panel);
+    if (panelId === null) return false;
+    this.syncCollapsedLayout();
+    return this.setPanelCollapsed(panelId, !this.appliedCollapsed.includes(panelId));
+  }
+
+  private panelIdOf(panel: string | HTMLElement): string | null {
+    if (typeof panel === 'string') return panel;
+    return this.ownedPanels.includes(panel) ? panel.getAttribute('panel-id') : null;
+  }
+
+  private setPanelCollapsed(panel: string | HTMLElement, collapsed: boolean): boolean {
+    const panelId = this.panelIdOf(panel);
+    const ids = this.panelIdsFor(this.ownedPanels);
+    if (panelId === null || !ids || ids.length < 2 || !ids.includes(panelId)) return false;
+    const requested = this.collapsedPanels.filter((id) => typeof id === 'string');
+    const next = collapsed
+      ? [...requested.filter((id) => id !== panelId), panelId]
+      : requested.filter((id) => id !== panelId);
+    if (!this.initializedSizes) {
+      if (requested.includes(panelId) === collapsed) return false;
+      this.collapsedPanels = next;
+      return true;
+    }
+    this.syncCollapsedLayout();
+    if (this.appliedCollapsed.includes(panelId) === collapsed) return false;
+    if (collapsed && !this.targetCollapsedIds(ids, next).includes(panelId)) return false;
+    this.collapsedPanels = next;
+    this.syncCollapsedLayout();
+    this.persist();
+    this.decorateOwnedPanels();
+    this.emit('lr-multi-split-panel-collapse-change', {
+      panelId,
+      collapsed,
+      collapsedPanels: [...this.appliedCollapsed],
+      sizes: [...this.sizes],
+    });
+    return true;
+  }
+
+  /** The panel ids `requested` actually folds, in DOM order: unknown ids dropped, and the last
+   *  panel kept open when every panel is named. Empty without a valid identity model. */
+  private targetCollapsedIds(
+    ids: readonly string[] | null,
+    requested: readonly string[] = this.collapsedPanels
+  ): string[] {
+    if (requested.length === 0 || !ids || ids.length < 2) return [];
+    const names = new Set(requested);
+    const target = ids.filter((id) => names.has(id));
+    if (target.length === ids.length) target.pop();
+    return target;
+  }
+
+  private indexesOf(ids: readonly string[], collapsed: readonly string[]): ReadonlySet<number> {
+    if (collapsed.length === 0) return NO_COLLAPSED_PANELS;
+    const names = new Set(collapsed);
+    const indexes = new Set<number>();
+    ids.forEach((id, index) => {
+      if (names.has(id)) indexes.add(index);
+    });
+    return indexes;
+  }
+
+  /** Indexes of the panels whose fold is baked into the live `sizes`. */
+  private collapsedIndexes(): ReadonlySet<number> {
+    if (this.appliedCollapsed.length === 0) return NO_COLLAPSED_PANELS;
+    return this.indexesOf(
+      this.ownedPanels.map((panel) => panel.getAttribute('panel-id') ?? ''),
+      this.appliedCollapsed
+    );
+  }
+
+  /** Brings `sizes` in line with the requested collapsed set: folds newly collapsed panels (their
+   *  share moves to the open panels), unfolds released ones (their remembered share comes back),
+   *  and drops panels that left the split. A no-op, with no identity read, while nothing is
+   *  requested or applied, so a split that never uses the feature is untouched. */
+  private syncCollapsedLayout(): void {
+    if (this.collapsedPanels.length === 0 && this.appliedCollapsed.length === 0) return;
+    const ids = this.panelIdsFor(this.ownedPanels);
+    if (!ids) {
+      // The identity model broke while panels were folded: the zero entries can no longer be
+      // attributed, so restart from an equal layout rather than keep an unreadable one.
+      if (this.appliedCollapsed.length > 0) {
+        this.appliedCollapsed = [];
+        this.expandedSizes.clear();
+        this.endDragGestures();
+        this.sizes = [];
+        this.ensureSizes();
+      }
+      return;
+    }
+    const present = new Set(ids);
+    const applied = this.appliedCollapsed.filter((id) => present.has(id));
+    for (const id of [...this.expandedSizes.keys()]) {
+      if (!present.has(id)) this.expandedSizes.delete(id);
+    }
+    const target = this.targetCollapsedIds(ids);
+    const unchanged =
+      applied.length === target.length && applied.every((id, index) => id === target[index]);
+    if (unchanged && this.validLiveSizes(this.sizes, this.indexesOf(ids, applied))) {
+      this.appliedCollapsed = applied;
+      return;
+    }
+    this.endDragGestures();
+    this.sizes = this.foldSizes(ids, applied, target);
+    this.appliedCollapsed = target;
+  }
+
+  /** Moves shares between panels for a change of the collapsed set from `from` to `to`. */
+  private foldSizes(
+    ids: readonly string[],
+    from: readonly string[],
+    to: readonly string[]
+  ): number[] {
+    const next = ids.map((_, index) => this.sizes[index] ?? 0);
+    const closed = new Set(this.indexesOf(ids, from));
+    const toIndexes = this.indexesOf(ids, to);
+    const bounds = this.resolveConstraintBounds(this.getContainerSize(), toIndexes).bounds;
+    const floor = this.normalizedDefaultMin();
+    const openIndexes = (): number[] => ids.map((_, index) => index).filter((index) => !closed.has(index));
+    for (const index of toIndexes) {
+      if (closed.has(index)) continue;
+      const freed = next[index]!;
+      this.expandedSizes.set(ids[index]!, freed);
+      next[index] = 0;
+      closed.add(index);
+      this.distributeShare(next, freed, openIndexes(), bounds);
+    }
+    for (const index of [...closed]) {
+      if (toIndexes.has(index)) continue;
+      closed.delete(index);
+      const id = ids[index]!;
+      const bound = bounds[index] ?? { min: floor, max: Infinity };
+      const remembered = this.expandedSizes.get(id) ?? 100 / ids.length;
+      this.expandedSizes.delete(id);
+      const wanted = Math.min(Math.max(remembered, bound.min, floor), bound.max);
+      const donors = openIndexes().filter((open) => open !== index);
+      const slack = donors.map((donor) =>
+        Math.max(0, next[donor]! - Math.max(bounds[donor]?.min ?? floor, floor))
+      );
+      const slackTotal = slack.reduce((total, value) => total + value, 0);
+      const taken = Math.min(wanted, slackTotal);
+      donors.forEach((donor, position) => {
+        next[donor] = next[donor]! - (slackTotal > 0 ? (taken * slack[position]!) / slackTotal : 0);
+      });
+      next[index] = next[index]! + taken;
+    }
+    if (this.validLiveSizes(next, toIndexes)) return next;
+    // An infeasible redistribution (no room left above the open panels' minimums) falls back to
+    // an equal share for every open panel rather than an invalid layout.
+    const openCount = ids.length - toIndexes.size;
+    return ids.map((_, index) => (toIndexes.has(index) ? 0 : 100 / openCount));
+  }
+
+  /** Water-fills `amount` into `indexes` in proportion to their current share, never past a
+   *  panel's maximum; whatever every capped panel refuses is spread proportionally anyway so the
+   *  layout still sums to 100 (the rendered clamp then honors the maximum). */
+  private distributeShare(
+    sizes: number[],
+    amount: number,
+    indexes: readonly number[],
+    bounds: ConstraintResolution['bounds']
+  ): void {
+    const epsilon = 1e-9;
+    let remaining = amount;
+    let pool = indexes.filter((index) => sizes[index]! < (bounds[index]?.max ?? Infinity) - epsilon);
+    while (remaining > epsilon && pool.length > 0) {
+      const weightTotal = pool.reduce((total, index) => total + sizes[index]!, 0);
+      const capped = new Set<number>();
+      let given = 0;
+      for (const index of pool) {
+        const share = weightTotal > 0 ? (remaining * sizes[index]!) / weightTotal : remaining / pool.length;
+        const room = (bounds[index]?.max ?? Infinity) - sizes[index]!;
+        const portion = Math.min(share, room);
+        sizes[index] = sizes[index]! + portion;
+        given += portion;
+        if (portion >= room - epsilon) capped.add(index);
+      }
+      remaining -= given;
+      pool = pool.filter((index) => !capped.has(index));
+    }
+    if (remaining <= epsilon || indexes.length === 0) return;
+    const total = indexes.reduce((sum, index) => sum + sizes[index]!, 0);
+    for (const index of indexes) {
+      sizes[index] = sizes[index]! + (total > 0 ? (remaining * sizes[index]!) / total : remaining / indexes.length);
+    }
+  }
+
+  /** The two panels divider `index` resizes: the nearest open panel at or before it and the
+   *  nearest open panel after it, skipping per-panel collapsed panels and an active responsive
+   *  pane. `null` when one side has no open panel. Without folded panels this is always the
+   *  adjacent pair, exactly as before. */
+  private dividerPair(index: number): [number, number] | null {
+    const collapsed = this.collapsedIndexes();
+    if (collapsed.size === 0) return [index, index + 1];
+    const held = this.collapseActive ? this.collapsingIndex : -1;
+    const closed = (panel: number): boolean => collapsed.has(panel) || panel === held;
+    let leading = index;
+    while (leading >= 0 && closed(leading)) leading--;
+    let trailing = index + 1;
+    while (trailing < this.panelCount && closed(trailing)) trailing++;
+    return leading >= 0 && trailing < this.panelCount ? [leading, trailing] : null;
   }
 
   /** Whether the collapsing pane currently presents its content. */
@@ -1355,9 +1665,18 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     return this.reconcileIdentitySizes(previousIds, this.sizes, nextIds);
   }
 
-  private validInitialSizes(value: readonly number[]): boolean {
+  /** `collapsed` indexes must read exactly `0` (a folded panel's share lives with the open
+   *  panels); every other entry must clear the floor. */
+  private validInitialSizes(
+    value: readonly number[],
+    collapsed: ReadonlySet<number> = this.collapsedIndexes()
+  ): boolean {
     if (!Array.isArray(value) || value.length !== this.panelCount) return false;
-    if (!value.every((size) => Number.isFinite(size) && size >= this.safeMin))
+    if (
+      !value.every((size, index) =>
+        collapsed.has(index) ? size === 0 : Number.isFinite(size) && size >= this.safeMin
+      )
+    )
       return false;
     return Math.abs(value.reduce((sum, size) => sum + size, 0) - 100) < 0.01;
   }
@@ -1365,10 +1684,17 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   /** Post-mount assignments use the feasible shared floor. A configured `min` can exceed the
    * aggregate available space, in which case interaction deliberately falls back to
    * `normalizedDefaultMin()` rather than freezing every divider. */
-  private validLiveSizes(value: readonly number[]): boolean {
+  private validLiveSizes(
+    value: readonly number[],
+    collapsed: ReadonlySet<number> = this.collapsedIndexes()
+  ): boolean {
     if (!Array.isArray(value) || value.length !== this.panelCount) return false;
     const floor = this.normalizedDefaultMin();
-    if (!value.every((size) => Number.isFinite(size) && size >= floor))
+    if (
+      !value.every((size, index) =>
+        collapsed.has(index) ? size === 0 : Number.isFinite(size) && size >= floor
+      )
+    )
       return false;
     return Math.abs(value.reduce((sum, size) => sum + size, 0) - 100) < 0.01;
   }
@@ -1416,11 +1742,39 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     return this.validInitialSizes(normalized) ? normalized : null;
   }
 
+  /** A `sizes` assignment made together with a `collapsedPanels` change can already describe the
+   *  new fold (zero entries for the newly collapsed panels). Accept it as-is, remembering each newly
+   *  folded panel's previous share for its later expansion. */
+  private acceptFoldedSizes(previous: unknown): boolean {
+    const ids = this.panelIdsFor(this.ownedPanels);
+    const target = this.targetCollapsedIds(ids);
+    if (!ids || target.length === 0 || !this.validLiveSizes(this.sizes, this.indexesOf(ids, target)))
+      return false;
+    ids.forEach((panelId, index) => {
+      if (!target.includes(panelId) || this.appliedCollapsed.includes(panelId)) return;
+      const share = Array.isArray(previous) ? (previous as readonly unknown[])[index] : undefined;
+      if (typeof share === 'number' && share > 0) this.expandedSizes.set(panelId, share);
+    });
+    this.appliedCollapsed = target;
+    return true;
+  }
+
   private initializeSizes(): void {
     // An already explicit, valid `sizes` binding is the strongest authored signal and wins over
     // whatever stale layout `storage-key` happens to find -- checked first. See `storageKey`'s own
     // doc comment for the full initialization-time precedence order.
     if (this.validInitialSizes(this.sizes)) return;
+    // An authored layout that already folds the authored collapsed set (zero entries) wins too.
+    const panelIds = this.panelIdsFor(this.ownedPanels);
+    const target = this.targetCollapsedIds(panelIds);
+    if (
+      panelIds &&
+      target.length > 0 &&
+      this.validInitialSizes(this.sizes, this.indexesOf(panelIds, target))
+    ) {
+      this.appliedCollapsed = target;
+      return;
+    }
     if (this.loadPersisted()) return;
     const resolved = this.resolveDefaultSizes();
     if (resolved) {
@@ -1441,12 +1795,16 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     if (!parsed || parsed.panels.length === 0) return false;
     const persistedIds: string[] = [];
     const persistedSizes: number[] = [];
+    const persistedCollapsed = new Map<string, number | undefined>();
     const seen = new Set<string>();
     for (const panel of parsed.panels) {
       if (seen.has(panel.panelId)) return false;
       seen.add(panel.panelId);
       persistedIds.push(panel.panelId);
       persistedSizes.push(panel.size);
+      if (parsed.version === 2 && panel.collapsed === true) {
+        persistedCollapsed.set(panel.panelId, panel.expandedSize);
+      }
     }
     if (
       Math.abs(persistedSizes.reduce((sum, size) => sum + size, 0) - 100) >=
@@ -1459,22 +1817,35 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       panelIds
     );
     if (!normalized) return false;
-    if (this.validInitialSizes(normalized)) {
-      this.sizes = normalized;
-      return true;
+    const restoredCollapsed = panelIds.filter((panelId) => persistedCollapsed.has(panelId));
+    if (!this.validInitialSizes(normalized, this.indexesOf(panelIds, restoredCollapsed))) return false;
+    this.sizes = normalized;
+    this.appliedCollapsed = restoredCollapsed;
+    for (const panelId of restoredCollapsed) {
+      const expandedSize = persistedCollapsed.get(panelId);
+      if (expandedSize !== undefined) this.expandedSizes.set(panelId, expandedSize);
     }
-    return false;
+    // An authored set wins over the stored one; `syncCollapsedLayout()` then refolds toward it.
+    if (restoredCollapsed.length > 0 && this.collapsedPanels.length === 0) {
+      this.collapsedPanels = restoredCollapsed;
+    }
+    return true;
   }
 
   private persist(): void {
     const panelIds = this.panelIdsFor(this.ownedPanels);
     if (!panelIds || panelIds.length !== this.sizes.length) return;
+    const collapsed = new Set(this.appliedCollapsed);
     const layout: PersistedPanelLayout = {
-      version: 1,
-      panels: panelIds.map((panelId, index) => ({
-        panelId,
-        size: this.sizes[index]!,
-      })),
+      version: collapsed.size > 0 ? 2 : 1,
+      panels: panelIds.map((panelId, index) => {
+        const size = this.sizes[index]!;
+        if (!collapsed.has(panelId)) return { panelId, size };
+        const expandedSize = this.expandedSizes.get(panelId);
+        return expandedSize === undefined
+          ? { panelId, size, collapsed: true }
+          : { panelId, size, collapsed: true, expandedSize };
+      }),
     };
     writePersistedState(this.storageFullKey, layout);
   }
@@ -1533,11 +1904,14 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     for (const property of OWNED_PANEL_STYLE_PROPERTIES) {
       styles.set(property, this.readPanelStyle(panel, property));
     }
+    const attributes = new Map<OwnedPanelAttribute, string | null>();
+    for (const name of OWNED_PANEL_ATTRIBUTES) attributes.set(name, panel.getAttribute(name));
     return {
       styles,
       appliedStyles: new Map(),
       hidden: panel.hidden,
-      collapseState: panel.getAttribute('data-collapse-state'),
+      attributes,
+      appliedAttributes: new Map(),
     };
   }
 
@@ -1566,14 +1940,12 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     ) {
       snapshot.hidden = panel.hidden;
     }
-    const collapseState = panel.getAttribute('data-collapse-state');
-    if (
-      (snapshot.appliedCollapseState !== undefined &&
-        collapseState !== snapshot.appliedCollapseState) ||
-      (snapshot.appliedCollapseState === undefined &&
-        collapseState !== snapshot.collapseState)
-    ) {
-      snapshot.collapseState = collapseState;
+    for (const name of OWNED_PANEL_ATTRIBUTES) {
+      const current = panel.getAttribute(name);
+      const expected = snapshot.appliedAttributes.has(name)
+        ? snapshot.appliedAttributes.get(name)
+        : snapshot.attributes.get(name);
+      if (current !== expected) snapshot.attributes.set(name, current);
     }
   }
 
@@ -1609,14 +1981,15 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     snapshot.appliedHidden = panel.hidden;
   }
 
-  private applyOwnedPanelCollapseState(
+  private applyOwnedPanelAttribute(
     panel: HTMLElement,
     snapshot: PanelOwnershipSnapshot,
-    state: string | null
+    name: OwnedPanelAttribute,
+    value: string | null
   ): void {
-    if (state === null) panel.removeAttribute('data-collapse-state');
-    else panel.setAttribute('data-collapse-state', state);
-    snapshot.appliedCollapseState = panel.getAttribute('data-collapse-state');
+    if (value === null) panel.removeAttribute(name);
+    else panel.setAttribute(name, value);
+    snapshot.appliedAttributes.set(name, panel.getAttribute(name));
   }
 
   private restorePanelOwnership(
@@ -1630,10 +2003,10 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       else panel.style.setProperty(property, value.value, value.priority);
     }
     panel.hidden = snapshot.hidden;
-    if (snapshot.collapseState === null) {
-      panel.removeAttribute('data-collapse-state');
-    } else {
-      panel.setAttribute('data-collapse-state', snapshot.collapseState);
+    for (const name of OWNED_PANEL_ATTRIBUTES) {
+      const value = snapshot.attributes.get(name) ?? null;
+      if (value === null) panel.removeAttribute(name);
+      else panel.setAttribute(name, value);
     }
   }
 
@@ -1649,11 +2022,12 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     }
     if (panel.hidden !== (snapshot.appliedHidden ?? snapshot.hidden))
       return true;
-    const expectedCollapseState =
-      snapshot.appliedCollapseState !== undefined
-        ? snapshot.appliedCollapseState
-        : snapshot.collapseState;
-    return panel.getAttribute('data-collapse-state') !== expectedCollapseState;
+    return OWNED_PANEL_ATTRIBUTES.some((name) => {
+      const expected = snapshot.appliedAttributes.has(name)
+        ? snapshot.appliedAttributes.get(name)
+        : snapshot.attributes.get(name);
+      return panel.getAttribute(name) !== expected;
+    });
   }
 
   private resetPanelOwnershipObserver(): void {
@@ -1687,7 +2061,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     for (const panel of this.ownedPanels) {
       observer.observe(panel, {
         attributes: true,
-        attributeFilter: ['style', 'hidden', 'data-collapse-state'],
+        attributeFilter: ['style', 'hidden', ...OWNED_PANEL_ATTRIBUTES],
       });
     }
   }
@@ -1885,9 +2259,11 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
    *  adjacent to the currently-collapsed pane (its other side has nothing
    *  meaningful to resize against while the pane is rail/floating-width). */
   private isDividerDisabled(index: number): boolean {
-    if (!this.collapseActive) return false;
-    const adjacent = this.collapsingIndex === 0 ? 0 : this.panelCount - 2;
-    return index === adjacent;
+    if (this.collapseActive) {
+      const adjacent = this.collapsingIndex === 0 ? 0 : this.panelCount - 2;
+      if (index === adjacent) return true;
+    }
+    return this.dividerPair(index) === null;
   }
 
   /** Classifies the current width into the collapsing pane's responsive state and, only on an
@@ -2007,12 +2383,15 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
    *  before an individual divider is asked to clamp a pair. An invalid set is
    *  rejected as a whole: interaction uses the safe shared minimum instead of
    *  exposing a divider whose minimum is greater than its maximum. */
-  private resolveConstraintBounds(containerSize: number): ConstraintResolution {
+  private resolveConstraintBounds(
+    containerSize: number,
+    collapsed: ReadonlySet<number> = this.collapsedIndexes()
+  ): ConstraintResolution {
     const fallbackMin = this.normalizedDefaultMin();
-    const fallback = Array.from({ length: this.panelCount }, () => ({
-      min: fallbackMin,
-      max: Infinity,
-    }));
+    // A collapsed panel's share is pinned at 0; it takes no part in the feasibility totals.
+    const fallback = Array.from({ length: this.panelCount }, (_, index) =>
+      collapsed.has(index) ? { min: 0, max: 0 } : { min: fallbackMin, max: Infinity }
+    );
     if (this.panelCount <= 0) return { bounds: [], usePanelConstraints: true };
 
     const bounds: Array<{ min: number; max: number }> = [];
@@ -2022,6 +2401,10 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     let issueReason: LyraMultiSplitConstraintIssueReason | undefined;
 
     for (let index = 0; index < this.panelCount; index++) {
+      if (collapsed.has(index)) {
+        bounds.push({ min: 0, max: 0 });
+        continue;
+      }
       const constraint = this.panelConstraints[index];
       let min = this.safeMin;
       let max = Infinity;
@@ -2187,17 +2570,18 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   private clampPair(
     sizes: readonly number[],
     i: number,
+    j: number,
     delta: number,
     containerSize = 0
   ): number[] {
     const next = [...sizes];
     const currentA = next[i];
-    const currentB = next[i + 1];
+    const currentB = next[j];
     if (currentA === undefined || currentB === undefined) return next;
     const pairTotal = currentA + currentB;
     const bounds = this.resolveConstraintBounds(containerSize).bounds;
     const a = bounds[i] ?? { min: 0, max: Infinity };
-    const b = bounds[i + 1] ?? { min: 0, max: Infinity };
+    const b = bounds[j] ?? { min: 0, max: Infinity };
     // Panel i's own bounds, further narrowed by panel i+1's bounds (its
     // partner's min/max caps how much i can grow/shrink within the pair).
     const loRaw = Math.max(a.min, pairTotal - b.max);
@@ -2211,7 +2595,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     const hi = Math.max(hiRaw, lo);
     const clampedA = Math.min(Math.max(currentA + delta, lo), hi);
     next[i] = clampedA;
-    next[i + 1] = pairTotal - clampedA;
+    next[j] = pairTotal - clampedA;
     return next;
   }
 
@@ -2244,9 +2628,12 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   }
 
   private applyDelta(index: number, delta: number, commit: boolean): boolean {
+    const pair = this.dividerPair(index);
+    if (!pair) return false;
     const next = this.clampPair(
       this.sizes,
-      index,
+      pair[0],
+      pair[1],
       delta,
       this.getContainerSize()
     );
@@ -2282,7 +2669,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     // sibling panes inert (see the class doc) -- but its target is the consumer's own slotted
     // light-DOM panel (see `floatingPanelEl`'s doc comment), so nothing here renders a `role` for
     // it on its behalf the way `<lr-app-rail>`'s shadow-DOM `[part="panel"]` can. Apply/restore it
-    // directly on that element instead, mirroring `applyOwnedPanelCollapseState`'s existing
+    // directly on that element instead, mirroring `applyOwnedPanelAttribute`'s existing
     // apply-then-restore shape for other panel attributes this component owns transiently.
     const panel = this.floatingPanelEl;
     if (panel) {
@@ -2414,11 +2801,14 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     // move may be applied here (not the cumulative-since-drag-start delta a
     // snapshot-based clamp would use).
     const incremental = cumulativeDelta - drag.appliedDelta;
-    const priorValue = this.sizes[drag.index];
+    const pair = this.dividerPair(drag.index);
+    if (!pair) return;
+    const [leading, trailing] = pair;
+    const priorValue = this.sizes[leading];
     if (priorValue === undefined) return;
-    const paired = this.clampPair(this.sizes, drag.index, incremental, total);
-    const pairedA = paired[drag.index];
-    const pairedB = paired[drag.index + 1];
+    const paired = this.clampPair(this.sizes, leading, trailing, incremental, total);
+    const pairedA = paired[leading];
+    const pairedB = paired[trailing];
     if (pairedA === undefined || pairedB === undefined) return;
     // Accumulate this move's own *realized* increment (post-clamp) onto the
     // running total, rather than recomputing an absolute "total since
@@ -2436,8 +2826,8 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     // Merge only this drag's pair into the live sizes so a concurrent drag
     // on another divider (different pointerId) isn't clobbered.
     const next = [...this.sizes];
-    next[drag.index] = pairedA;
-    next[drag.index + 1] = pairedB;
+    next[leading] = pairedA;
+    next[trailing] = pairedB;
     if (!this.requestResize(next, false)) return;
     drag.appliedDelta += pairedA - priorValue;
     drag.acceptedResize = true;
@@ -2466,7 +2856,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     );
     if (e.key === 'Home' || e.key === 'End') {
       const { min, max } = this.dividerValueRange(index);
-      const current = this.sizes[index];
+      const current = this.sizes[this.dividerPair(index)?.[0] ?? index];
       if (current !== undefined) {
         const target = e.key === 'Home' ? min : max;
         if (this.applyDelta(index, target - current, true)) e.preventDefault();
@@ -2485,12 +2875,13 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     } catch {
       // A throwing callback falls back to the localized default below.
     }
-    return typeof label === 'string' && label.trim()
-      ? label
-      : this.localize('resizeDivider', undefined, {
-          a: getNumberFormat(this.effectiveLocale).format(index + 1),
-          b: getNumberFormat(this.effectiveLocale).format(index + 2),
-        });
+    if (typeof label === 'string' && label.trim()) return label;
+    // Beside a folded panel the divider resizes the nearest open panels, so it names those.
+    const [leading, trailing] = this.dividerPair(index) ?? [index, index + 1];
+    return this.localize('resizeDivider', undefined, {
+      a: getNumberFormat(this.effectiveLocale).format(leading + 1),
+      b: getNumberFormat(this.effectiveLocale).format(trailing + 1),
+    });
   }
 
   private dividerValueRange(
@@ -2499,9 +2890,10 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       this.getContainerSize()
     ).bounds
   ): { min: number; max: number } {
-    const pairTotal = (this.sizes[index] ?? 0) + (this.sizes[index + 1] ?? 0);
-    const leading = bounds[index]!;
-    const trailing = bounds[index + 1]!;
+    const [leadingIndex, trailingIndex] = this.dividerPair(index) ?? [index, index + 1];
+    const pairTotal = (this.sizes[leadingIndex] ?? 0) + (this.sizes[trailingIndex] ?? 0);
+    const leading = bounds[leadingIndex]!;
+    const trailing = bounds[trailingIndex]!;
     const min = Math.max(leading.min, pairTotal - trailing.max);
     return {
       min,
@@ -2635,8 +3027,10 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       if (snapshot) this.adoptPanelOwnership(panel, snapshot);
     }
     const collapsingIndex = this.collapseActive ? this.collapsingIndex : -1;
+    const collapsed = this.collapsedIndexes();
     const pixelMinimumTotal = constraintResolution.usePanelConstraints
-      ? this.panelConstraints.slice(0, this.panelCount).reduce((total, constraint) => total + finiteRange(constraint?.minPx ?? 0, 0, 0), 0)
+      ? this.panelConstraints.slice(0, this.panelCount).reduce((total, constraint, index) =>
+        collapsed.has(index) ? total : total + finiteRange(constraint?.minPx ?? 0, 0, 0), 0)
       : 0;
     // Percent-space bounds are already known before layout: resolveConstraintBounds()
     // above converted each panel's minPx/maxPx into a percent range using this same
@@ -2656,6 +3050,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       const growableIndexes: number[] = [];
       let growableTotal = 0;
       for (let i = 0; i < panels.length; i++) {
+        if (collapsed.has(i)) continue;
         const percent = this.sizes[i] ?? 0;
         const constraint = constraintResolution.usePanelConstraints
           ? this.panelConstraints[i]
@@ -2686,7 +3081,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
         ? this.panelConstraints[i]
         : undefined;
       const pixelMinimum = finiteRange(constraint?.minPx ?? 0, 0, 0);
-      if (collapsingIndex === -1 && pixelMinimum > 0 && pixelMinimumTotal > 0) {
+      if (collapsingIndex === -1 && !collapsed.has(i) && pixelMinimum > 0 && pixelMinimumTotal > 0) {
         // Flex shrink must stop at a feasible pixel floor. If the allocation becomes too small,
         // share the space left after the real target gutters proportionally instead of overflowing.
         // The measured gutter budget stays independent of each panel's own font size.
@@ -2758,7 +3153,18 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
           panel,
           snapshot,
           'inline-size',
-          `var(--lr-multi-split-floating-panel-inline-size, ${percent}%)`
+          `var(--lr-multi-split-floating-panel-inline-size, ${
+            collapsed.has(i) ? this.expandedSizes.get(panel.getAttribute('panel-id') ?? '') ?? percent : percent
+          }%)`
+        );
+      } else if (collapsed.has(i)) {
+        // A per-panel fold: a fixed rail along the resize axis whatever the container width. Its
+        // share already moved to the open panels in sizes (see syncCollapsedLayout()).
+        this.applyOwnedPanelStyleValue(
+          panel,
+          snapshot,
+          'flex',
+          '0 0 var(--_lr-multi-split-collapsed-panel-size)'
         );
       } else if (collapsingIndex !== -1 && i !== collapsingIndex) {
         // The pane(s) sharing the split with a currently rail/floating
@@ -2807,11 +3213,18 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       }
       this.applyOwnedPanelStyleValue(panel, snapshot, 'order', String(i * 2));
 
-      if (collapsingIndex === i) {
-        this.applyOwnedPanelCollapseState(panel, snapshot, this.collapseState);
-      } else {
-        this.applyOwnedPanelCollapseState(panel, snapshot, null);
-      }
+      this.applyOwnedPanelAttribute(
+        panel,
+        snapshot,
+        'data-collapse-state',
+        collapsingIndex === i ? this.collapseState : null
+      );
+      this.applyOwnedPanelAttribute(
+        panel,
+        snapshot,
+        'data-panel-collapsed',
+        collapsed.has(i) ? '' : null
+      );
     });
 
     // Host-level marker (mirrors the per-panel `dataset.collapseState`
@@ -2839,6 +3252,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
         bounds
       );
       const disabled = this.isDividerDisabled(i);
+      const leading = this.dividerPair(i)?.[0] ?? i;
       dividers.push(html`<div
         part="divider"
         role="separator"
@@ -2846,10 +3260,10 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
         aria-orientation=${this.effectiveOrientation === 'vertical'
           ? 'horizontal'
           : 'vertical'}
-        aria-valuenow=${Math.round(this.sizes[i] ?? 0)}
+        aria-valuenow=${Math.round(this.sizes[leading] ?? 0)}
         aria-valuetext=${this.localize('resizeValuePercent', undefined, {
           value: getNumberFormat(this.effectiveLocale).format(
-            Math.round(this.sizes[i] ?? 0),
+            Math.round(this.sizes[leading] ?? 0),
           ),
         })}
         aria-valuemin=${Math.round(valueMin)}

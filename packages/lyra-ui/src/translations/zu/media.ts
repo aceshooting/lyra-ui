@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Fihla izinto zesigcawu',
   mapSceneEmpty: 'Azikho izinto zesigcawu',
   mapSceneUnavailable: 'Isigcawu asikwazi ukuboniswa.',
+  mapScenePartial: 'Ezinye izinto zesigcawu aziboniswa, noma ziboniswa ngaphandle kokuphakama kwazo.',
   mapSceneInvalid: 'Isibuyekezo sesigcawu asivumelekile. Izinto ezamukelwe ngaphambilini azishintshile.',
   mapSceneLimit: 'Isibuyekezo sesigcawu sidlula umkhawulo. Izinto ezamukelwe ngaphambilini azishintshile.',
   mapScenePrevious: 'Ikhasi lesigcawu elidlule',

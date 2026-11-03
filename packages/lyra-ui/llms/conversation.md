@@ -83,6 +83,16 @@ uses for its own `[part="body"]`.
   Markdown still renders; `trusted` renders raw HTML without sanitization and is only for trusted
   content. In escape mode, a consumer `renderer.text` or `renderer.html` override replaces the
   escaping and is the consumer's responsibility.
+- `withoutImages: boolean = false` (attribute `without-images`) — the untrusted-content switch for
+  images, in every `htmlMode`. The scheme allowlist alone still admits any `http(s)`, relative or
+  `data:` image, so untrusted Markdown (a streamed language-model answer, for example) can make the
+  page request an arbitrary URL as soon as it renders. With `without-images`, every Markdown image
+  renders as its alt text, exactly like a refused URL, and the finished HTML is enforced too:
+  raw-HTML `<img>` and `<input type="image">` become their alt text, `<picture>` sources and SVG
+  `<image>`/`<feImage>` are removed, and `<video>` loses its `poster`. In `sanitize` mode authored
+  `<style>` elements are also removed; `trusted` mode does not inspect authored CSS. Changing it
+  re-renders. Pair it with the default `sanitize` mode for language-model output:
+  `<lr-markdown without-images></lr-markdown>`.
 - `withoutGfm: boolean = false` (attribute `without-gfm`) — disables GitHub-flavored Markdown
   (tables, strikethrough, autolinks, task lists), which is on by default.
   GFM task-list checkboxes stay disabled. Unordered tasks replace their bullets and align their
@@ -374,7 +384,8 @@ can cover the other. Both surfaces use `white-space: pre` and scroll horizontall
   relative URLs — plus `data:` for images only), independently of `htmlMode` — `sanitize` and
   `escape` both reject a disallowed scheme (e.g. `javascript:`) by dropping the anchor/image and
   rendering only its text/alt content, exactly like the malformed-`href` case above; only
-  `html-mode="trusted"` skips this check, consistent with its documented full bypass.
+  `html-mode="trusted"` skips this check, consistent with its documented full bypass. The allowlist
+  does not stop an allowed image URL from being fetched; set `without-images` for that.
 - `target` is not in DOMPurify's default attribute allowlist (unlike `part`/`rel`/`class`, which
   already are), so sanitization is called with `ADD_ATTR: ['target']` — without that, every rendered
   link's `target` would be silently stripped by sanitization even though the anchor itself survives.
@@ -442,7 +453,8 @@ clamped to `[1, 32]` (`0` becomes `1`, `33` becomes `32`), and only non-finite v
 `Infinity`) fall back to `4`, independently of rendered code's
 `--lr-code-block-tab-size`; `marked: LyraMarkedParser | undefined` (readonly, no attribute) — this
 instance's isolated peer-neutral configurable parser; `htmlMode: 'sanitize' | 'escape' | 'trusted' =
-'sanitize'` (attribute `html-mode`), `withoutGfm: boolean = false` (attribute `without-gfm`), `linkTarget: string | null = '_blank'` (attribute
+'sanitize'` (attribute `html-mode`), `withoutGfm: boolean = false` (attribute `without-gfm`),
+`withoutImages: boolean = false` (attribute `without-images`), `linkTarget: string | null = '_blank'` (attribute
 `link-target`), `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`),
 `headingOffset: number = 0` (attribute `heading-offset`), `streaming: boolean = false` (reflected),
 `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected),
@@ -1708,6 +1720,9 @@ properties existed:
   the composed `<lr-markdown>`'s own `htmlMode`.
 - `withoutGfm: boolean = false` (attribute `without-gfm`) — forwarded to the composed
   `<lr-markdown>`'s own `withoutGfm`.
+- `withoutImages: boolean = false` (attribute `without-images`) — forwarded to the composed
+  `<lr-markdown>`'s own `withoutImages`; set it when streaming untrusted language-model output so
+  an answer's images render as alt text instead of loading.
 - `linkTarget: string | null = '_blank'` (attribute `link-target`) — forwarded to the composed
   `<lr-markdown>`'s own `linkTarget`; the composed element always applies its own
   `rel="noopener noreferrer"` guard whenever a `target` is emitted, including a forwarded
@@ -1817,7 +1832,7 @@ showing the previous stream's stale final content for the length of the window.
 Rendering itself is never reimplemented here: Markdown mode composes `<lr-markdown>` directly,
 forwarding this component's own `streaming` through as that component's `streaming` hint prop,
   `streamingRender`, `codeBlockHeader`, `languages` verbatim, and the rest of `<lr-markdown>`'s
-  configuration surface verbatim too (`tabSize`, `htmlMode`, `withoutGfm`, `linkTarget`,
+  configuration surface verbatim too (`tabSize`, `htmlMode`, `withoutGfm`, `withoutImages`, `linkTarget`,
   `internalLinkPrefix`, `headingOffset`, `withoutSyntaxHighlighting`, `headingAnchors`, `math`, `maxHeight` —
   see **Properties** above); plain-text mode
 renders into a `white-space: pre-wrap` span instead. The
@@ -1856,7 +1871,7 @@ A build-lean `<lr-streaming-text>` variant for a consumer whose fenced-code `lan
 covers every language it will ever stream, or who never renders fenced code at all. Every
 capability — token coalescing, `contentMode` auto-detection, the blinking cursor, the
 `lr-content-settled` event, the `languages` property, and the full forwarded Markdown configuration
-surface (`tabSize`, `htmlMode`, `withoutGfm`, `linkTarget`, `internalLinkPrefix`, `headingOffset`,
+surface (`tabSize`, `htmlMode`, `withoutGfm`, `withoutImages`, `linkTarget`, `internalLinkPrefix`, `headingOffset`,
 `withoutSyntaxHighlighting`, `headingAnchors`, `math`, `maxHeight`) — is identical to `<lr-streaming-text>`;
 only which Markdown element Markdown mode composes differs: this variant renders
 `<lr-markdown-core>` (`../markdown/markdown-core.js`) instead of `<lr-markdown>`, so importing this
@@ -1881,7 +1896,8 @@ concrete-grammar priority and combined-map reuse as `<lr-streaming-text>`. The r
 `<lr-markdown-core>`'s configuration surface forwards verbatim too, sharing the same properties,
 attribute names, and defaults described under `<lr-streaming-text>`'s own **Properties** above:
 `tabSize: number = 4` (attribute `tab-size`); `htmlMode: 'sanitize' | 'escape' | 'trusted' =
-'sanitize'` (attribute `html-mode`); `withoutGfm: boolean = false` (attribute `without-gfm`); `linkTarget: string | null = '_blank'`
+'sanitize'` (attribute `html-mode`); `withoutGfm: boolean = false` (attribute `without-gfm`);
+`withoutImages: boolean = false` (attribute `without-images`); `linkTarget: string | null = '_blank'`
 (attribute `link-target`, still guarded by the composed element's own
 `rel="noopener noreferrer"` whenever a `target` is emitted); `internalLinkPrefix: string = ''`
 (attribute `internal-link-prefix`); `headingOffset: number = 0` (attribute `heading-offset`);
@@ -3098,7 +3114,11 @@ start). `--lr-suggestion-chips-hover-bg` (default `var(--lr-color-brand-quiet)`)
 background on hover. `--lr-suggestion-chips-hover-border` (default `var(--lr-color-brand)`) — a
 `chip`'s border color on hover. All three are declared as `var()` fallbacks at the point of use, not
 on `:host`. `--lr-suggestion-chips-disabled-opacity` (default `var(--lr-opacity-disabled)`) — opacity of a chip whose
-suggestion sets `disabled`. Plus shared tokens `--lr-space-xs/-m/-2xs`,
+suggestion sets `disabled`. `--lr-suggestion-chips-label-lines` (default `1`; `3` when `wrap` is
+set) — how many lines a `chip-label` shows before it is clamped with an ellipsis, so full-question
+starter prompts stay readable in a narrow chat column. `--lr-suggestion-chips-chip-max-inline-size`
+(default `var(--lr-size-16rem)`) — each chip's maximum inline size; in a `wrap` row it is further
+clamped to the row's inline size, so a chip never overflows its container. Plus shared tokens `--lr-space-xs/-m/-2xs`,
 `--lr-color-border/-surface/-text/-text-quiet`, `--lr-radius-pill`, `--lr-font-size-xs`,
 `--lr-focus-ring-width/-color/-offset`.
 

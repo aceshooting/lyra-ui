@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Dölj scenobjekt',
   mapSceneEmpty: 'Inga scenobjekt',
   mapSceneUnavailable: 'Scenen kan inte renderas.',
+  mapScenePartial: 'Vissa scenobjekt renderas inte, eller renderas utan sin höjd.',
   mapSceneInvalid: 'Scenuppdateringen är ogiltig. Tidigare godkända objekt är oförändrade.',
   mapSceneLimit: 'Scenuppdateringen överskrider en gräns. Tidigare godkända objekt är oförändrade.',
   mapScenePrevious: 'Föregående scensida',

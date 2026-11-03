@@ -1,6 +1,6 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
 import { mapSceneSessionAttachment } from '../../../internal/map-scene-session.js';
-import { sceneMarker, scenePath } from '../../../../test/map-scene-admission-fixtures.js';
+import { sceneMarker, sceneModel } from '../../../../test/map-scene-admission-fixtures.js';
 import { renderEnvironment, renderTurns } from '../../../../test/map-scene-render-component-fixtures.js';
 import { LYRA_MAP_EMPTY_STYLE } from './map.js';
 
@@ -29,10 +29,10 @@ describe('lr-map scene renderer lifetime', () => {
     env.hidden(false); await renderTurns(); expect(bridge.visibility.at(-1)).to.equal(true);
   });
 
-  it('retires marker work and demand observers for nonmarker intent then recreates from the cached import', async () => {
+  it('retires marker work and demand observers for unrendered intent then recreates from the cached import', async () => {
     const { element, peer } = await env.mount(element => { element.scene = { objects: [sceneMarker()] }; });
     const first = await env.bridge(peer);
-    element.scene = { objects: [scenePath()] }; await element.updateComplete; await renderTurns();
+    element.scene = { objects: [sceneModel()] }; await element.updateComplete; await renderTurns();
     expect(first.disposed).to.equal(true); expect(peer.removed).to.equal(false);
     expect(env.observers.filter(observer => observer.kind === 'intersection' && observer.targets.has(peer.container) && !observer.stopped).length).to.equal(0);
     element.scene = { objects: [sceneMarker('again')] };

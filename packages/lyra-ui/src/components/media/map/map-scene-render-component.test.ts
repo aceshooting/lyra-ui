@@ -9,7 +9,7 @@ describe('lr-map scene renderer connection', () => {
   beforeEach(async () => { env = await renderEnvironment(); });
   afterEach(async () => { await env.close(); fixtureCleanup(); });
 
-  it('keeps default empty and unsupported-only intent free of bridge imports and scene allocation reads', async () => {
+  it('keeps default empty, line and model intent free of bridge imports and scene allocation reads', async () => {
     const { element, peer } = await env.mount();
     for (const scene of [undefined, { objects: [] }, { objects: [scenePath(), sceneModel()] }]) {
       element.scene = scene; await element.updateComplete; await renderTurns();
@@ -101,7 +101,7 @@ describe('lr-map scene renderer connection', () => {
     expect(explicit.radiusCss).to.equal(6);
   });
 
-  it('refreshes scene-only theme presentation without changing target identity or public renderer status', async () => {
+  it('refreshes scene-only theme presentation and reports ready only from a current-revision marker installation', async () => {
     const states: string[] = [];
     const { element, peer } = await env.mount(element => {
       element.style.setProperty('--scene-only-color', 'rgb(10, 20, 30)');
@@ -116,10 +116,17 @@ describe('lr-map scene renderer connection', () => {
     expect(after.presentationRevision).to.be.greaterThan(before.presentationRevision);
     const next = mapSceneSessionAttachment(element)!.target('target');
     expect(target.status === 'accepted' && next.status === 'accepted' && target.target === next.target).to.equal(true);
+    bridge.host.onState({ state: 'installed', acceptedSceneRevision: after.acceptedSceneRevision + 1, presentationRevision: after.presentationRevision,
+      allocationRevision: after.allocation?.revision, markerInstallationRevision: 1 });
+    bridge.host.onState({ state: 'installed', acceptedSceneRevision: 'x' } as never);
+    await element.updateComplete; await renderTurns();
+    expect(states.some(state => state === 'ready' || state === 'partial' || state === 'empty')).to.equal(false);
     bridge.host.onState({ state: 'installed', acceptedSceneRevision: after.acceptedSceneRevision, presentationRevision: after.presentationRevision,
       allocationRevision: after.allocation?.revision, markerInstallationRevision: 1 });
-    await element.updateComplete;
-    expect(states.some(state => state === 'ready' || state === 'partial' || state === 'empty')).to.equal(false);
+    await waitUntil(() => states.at(-1) === 'ready', 'current installation establishes ready', { timeout: 1000 });
+    expect(element.shadowRoot!.querySelector('[part="scene-status"]') === null).to.equal(true);
+    bridge.host.onError('context-lost'); await renderTurns();
+    await waitUntil(() => states.at(-1) === 'unavailable', 'context loss reported', { timeout: 1000 });
   });
 
   it('discards color resolution that reenters with a newer accepted scene', async () => {
