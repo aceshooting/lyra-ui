@@ -10,7 +10,7 @@ export interface MapSceneLayerHandle {
   pick(point: readonly [number, number]): Promise<LyraMapCustomLayerPick | null>;
   dispose(): void;
 }
-export interface MapSceneLayerHost {
+interface MapSceneLayerHost {
   readonly signal: AbortSignal;
   readonly onState?: (state: 'loading' | 'ready' | 'unavailable', code?: LyraMapCustomLayerCode) => void;
   readonly reducedMotion?: () => boolean;
@@ -21,7 +21,7 @@ export interface MapSceneLayerRuntime {
 
 const handleMethods = ['invalidateStyle', 'styleReady', 'requestFrame', 'setVisible', 'pick', 'dispose'] as const;
 
-export function isMapSceneLayerRuntime(value: unknown): value is MapSceneLayerRuntime {
+function isMapSceneLayerRuntime(value: unknown): value is MapSceneLayerRuntime {
   return typeof value === 'object' && value !== null && 'createSceneLayer' in value && typeof value.createSceneLayer === 'function';
 }
 /** Rejects a factory result that lacks any lifecycle method the owner calls. */
