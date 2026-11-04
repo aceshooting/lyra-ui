@@ -57,6 +57,9 @@ properties existed:
   the composed `<lr-markdown>`'s own `htmlMode`.
 - `withoutGfm: boolean = false` (attribute `without-gfm`) — forwarded to the composed
   `<lr-markdown>`'s own `withoutGfm`.
+- `withoutImages: boolean = false` (attribute `without-images`) — forwarded to the composed
+  `<lr-markdown>`'s own `withoutImages`; set it when streaming untrusted language-model output so
+  an answer's images render as alt text instead of loading.
 - `linkTarget: string | null = '_blank'` (attribute `link-target`) — forwarded to the composed
   `<lr-markdown>`'s own `linkTarget`; the composed element always applies its own
   `rel="noopener noreferrer"` guard whenever a `target` is emitted, including a forwarded
@@ -166,7 +169,7 @@ showing the previous stream's stale final content for the length of the window.
 Rendering itself is never reimplemented here: Markdown mode composes `<lr-markdown>` directly,
 forwarding this component's own `streaming` through as that component's `streaming` hint prop,
   `streamingRender`, `codeBlockHeader`, `languages` verbatim, and the rest of `<lr-markdown>`'s
-  configuration surface verbatim too (`tabSize`, `htmlMode`, `withoutGfm`, `linkTarget`,
+  configuration surface verbatim too (`tabSize`, `htmlMode`, `withoutGfm`, `withoutImages`, `linkTarget`,
   `internalLinkPrefix`, `headingOffset`, `withoutSyntaxHighlighting`, `headingAnchors`, `math`, `maxHeight` —
   see **Properties** above); plain-text mode
 renders into a `white-space: pre-wrap` span instead. The

@@ -494,6 +494,7 @@ describe("Markdown auto-detection and rendering mode", () => {
       tabSize: number;
       htmlMode: string;
       withoutGfm: boolean;
+      withoutImages: boolean;
       linkTarget: string | null;
       internalLinkPrefix: string;
       headingOffset: number;
@@ -505,6 +506,7 @@ describe("Markdown auto-detection and rendering mode", () => {
     expect(markdown.tabSize).to.equal(4);
     expect(markdown.htmlMode).to.equal("sanitize");
     expect(markdown.withoutGfm).to.equal(false);
+    expect(markdown.withoutImages).to.equal(false);
     expect(markdown.linkTarget).to.equal("_blank");
     expect(markdown.internalLinkPrefix).to.equal("");
     expect(markdown.headingOffset).to.equal(0);
@@ -549,6 +551,7 @@ describe("Markdown auto-detection and rendering mode", () => {
         link-target=""
         html-mode="escape"
         without-gfm
+        without-images
         internal-link-prefix="/docs/"
         heading-offset="2"
         tab-size="8"
@@ -562,6 +565,7 @@ describe("Markdown auto-detection and rendering mode", () => {
       tabSize: number;
       htmlMode: string;
       withoutGfm: boolean;
+      withoutImages: boolean;
       linkTarget: string | null;
       internalLinkPrefix: string;
       headingOffset: number;
@@ -573,6 +577,7 @@ describe("Markdown auto-detection and rendering mode", () => {
     expect(markdown.tabSize).to.equal(8);
     expect(markdown.htmlMode).to.equal("escape");
     expect(markdown.withoutGfm).to.equal(true);
+    expect(markdown.withoutImages).to.equal(true);
     expect(markdown.linkTarget).to.equal("");
     expect(markdown.internalLinkPrefix).to.equal("/docs/");
     expect(markdown.headingOffset).to.equal(2);
@@ -580,6 +585,21 @@ describe("Markdown auto-detection and rendering mode", () => {
     expect(markdown.headingAnchors).to.equal(true);
     expect(markdown.math).to.equal(true);
     expect(markdown.maxHeight).to.equal("10rem");
+  });
+
+  it("a forwarded without-images renders streamed image Markdown as alt text in the composed lr-markdown", async () => {
+    const el = (await fixture(
+      html`<lr-streaming-text
+        content-mode="markdown"
+        without-images
+        .content=${'![beacon alt](https://example.invalid/streaming-text-beacon.png) and <img src="https://example.invalid/raw.png" alt="raw alt"> end'}
+      ></lr-streaming-text>`
+    )) as LyraStreamingText;
+    const markdown = el.shadowRoot!.querySelector("lr-markdown")!;
+    await waitUntil(() => markdown.shadowRoot!.querySelector('[part="content"] p') !== null);
+    const content = markdown.shadowRoot!.querySelector('[part="content"]')!;
+    expect(content.querySelectorAll("img").length).to.equal(0);
+    expect(content.textContent).to.include("beacon alt and raw alt end");
   });
 
   it('a forwarded non-default linkTarget still gets the composed lr-markdown\'s rel="noopener noreferrer" guard, and never a bare "opener"', async () => {

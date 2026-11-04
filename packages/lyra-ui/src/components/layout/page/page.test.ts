@@ -1446,6 +1446,113 @@ it('supports whitespace-token disable-sticky without disabling unrelated regions
   expect(getComputedStyle(byPart(page, 'banner')).position).to.equal('sticky');
 });
 
+describe('sticky region surfaces', () => {
+  const stickyRegions = ['banner', 'header', 'subheader'] as const;
+  const alphaOf = (color: string): number => {
+    const match = /^rgba?\(([^)]+)\)$/.exec(color);
+    if (!match?.[1]) return Number.NaN;
+    const channels = match[1].split(',');
+    return channels.length === 4 ? Number(channels[3]) : 1;
+  };
+
+  it('paints each sticky region with the opaque surface token by default', async () => {
+    const page = (await fixture(html`
+      <lr-page>
+        <span slot="banner">Banner</span>
+        <span slot="header">Header</span>
+        <span slot="subheader">Subheader</span>
+        <p>Content</p>
+      </lr-page>
+    `)) as LyraPage;
+    const surface = resolvedInShadow(
+      page,
+      'background-color: var(--lr-color-surface)',
+      'background-color'
+    );
+    expect(alphaOf(surface)).to.equal(1);
+    for (const region of stickyRegions) {
+      const background = getComputedStyle(byPart(page, region)).backgroundColor;
+      expect(background, region).to.equal(surface);
+      expect(alphaOf(background), region).to.equal(1);
+    }
+  });
+
+  it('follows the surface token when an ancestor rethemes it, as dark mode does', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div data-lr-theme-scope style="--lr-color-surface: rgb(18, 18, 20);">
+        <lr-page><span slot="header">Header</span></lr-page>
+      </div>
+    `);
+    const page = wrapper.querySelector('lr-page') as LyraPage;
+    await page.updateComplete;
+    for (const region of stickyRegions) {
+      expect(getComputedStyle(byPart(page, region)).backgroundColor, region).to.equal(
+        'rgb(18, 18, 20)'
+      );
+    }
+  });
+
+  it('lets each region background be overridden on the Page or an ancestor', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="--lr-page-banner-bg: rgb(1, 2, 3);">
+        <lr-page
+          style="--lr-page-header-bg: rgb(4, 5, 6); --lr-page-subheader-bg: rgb(7, 8, 9);"
+        ></lr-page>
+      </div>
+    `);
+    const page = wrapper.querySelector('lr-page') as LyraPage;
+    await page.updateComplete;
+    expect(getComputedStyle(byPart(page, 'banner')).backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(byPart(page, 'header')).backgroundColor).to.equal('rgb(4, 5, 6)');
+    expect(getComputedStyle(byPart(page, 'subheader')).backgroundColor).to.equal('rgb(7, 8, 9)');
+  });
+
+  it('keeps scrolled main content from showing through the stuck header', async () => {
+    const page = (await fixture(html`
+      <lr-page style="--lr-page-header-height: 40px;">
+        <span slot="header">Header</span>
+        <div id="tall" style="block-size: 300vh;">Tall content</div>
+      </lr-page>
+    `)) as LyraPage;
+    const header = byPart(page, 'header');
+    const tall = page.querySelector('#tall') as HTMLElement;
+    const previousScroll = window.scrollY;
+    try {
+      window.scrollTo(0, 400);
+      await nextFrame();
+      const headerBox = header.getBoundingClientRect();
+      const contentBox = tall.getBoundingClientRect();
+      // The header is stuck at the top while the content has scrolled underneath it.
+      expect(Math.round(headerBox.top)).to.equal(0);
+      expect(contentBox.top).to.be.lessThan(headerBox.bottom);
+      const x = Math.round(headerBox.left + headerBox.width - 2);
+      const y = Math.round(headerBox.top + headerBox.height / 2);
+      const hit = page.shadowRoot!.elementFromPoint(x, y);
+      expect(hit === header || header.contains(hit)).to.equal(true);
+      expect(alphaOf(getComputedStyle(header).backgroundColor)).to.equal(1);
+    } finally {
+      window.scrollTo(0, previousScroll);
+    }
+  });
+
+  it('leaves a region transparent when its sticky positioning is disabled', async () => {
+    const page = (await fixture(html`
+      <lr-page disable-sticky="header"></lr-page>
+    `)) as LyraPage;
+    expect(getComputedStyle(byPart(page, 'header')).backgroundColor).to.equal(
+      'rgba(0, 0, 0, 0)'
+    );
+    expect(alphaOf(getComputedStyle(byPart(page, 'banner')).backgroundColor)).to.equal(1);
+  });
+
+  it('does not paint the non-sticky footer', async () => {
+    const page = (await fixture(html`<lr-page></lr-page>`)) as LyraPage;
+    expect(getComputedStyle(byPart(page, 'footer')).backgroundColor).to.equal(
+      'rgba(0, 0, 0, 0)'
+    );
+  });
+});
+
 it('keeps default and partially configured sticky offsets as valid lengths', async () => {
   const page = (await fixture(html`
     <lr-page>

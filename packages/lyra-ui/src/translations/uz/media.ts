@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Sahna obyektlarini yashirish',
   mapSceneEmpty: 'Sahna obyektlari yoʻq',
   mapSceneUnavailable: 'Sahnani tasvirlash imkoni yoʻq.',
+  mapScenePartial: 'Ayrim sahna obyektlari tasvirlanmagan yoki balandligisiz tasvirlangan.',
   mapSceneInvalid: 'Sahna yangilanishi yaroqsiz. Avval qabul qilingan obyektlar oʻzgarishsiz qoladi.',
   mapSceneLimit: 'Sahna yangilanishi chegaradan oshib ketdi. Avval qabul qilingan obyektlar oʻzgarishsiz qoladi.',
   mapScenePrevious: 'Oldingi sahna sahifasi',

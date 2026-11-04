@@ -3510,8 +3510,11 @@ A focusable action row owned by `<lr-menu>`. The host itself carries `role="menu
   `[part="base"]` renders as a real `<a href=…>` instead of a `<span>`, and activation (click, or
   the owning menu's Enter/Space handling, which forwards through `click()` for a link item so the
   anchor's own native default action runs) navigates there in addition to firing the usual
-  `select()`/`lr-select` contract. An unsafe/unparseable value falls back to the plain `<span>`,
-  matching `lr-button`'s identical fallback
+  `select()`/`lr-select` contract. The anchor carries the row's accessible name as its own
+  `aria-label` (a non-empty host `aria-label` wins, otherwise the visible label) and keeps it live
+  when either changes, because its visible label sits behind the decorative label wrapper. An
+  unsafe/unparseable value falls back to the plain `<span>`, matching `lr-button`'s identical
+  fallback
 - `target?: string` — native anchor `target`, used only while `href` resolves to a link. Setting it
   (e.g. `'_blank'`) always force-adds `noopener noreferrer` to the rendered anchor's `rel`,
   matching `lr-button`'s identical pattern
@@ -5549,6 +5552,14 @@ var(--lr-color-mix-partner) var(--lr-color-mix-active))`),
 `--lr-page-navigation-backdrop-bg` (default `var(--lr-color-overlay)`),
 `--lr-page-navigation-drawer-bg` (default `var(--lr-color-surface-overlay)`), and
 `--lr-page-navigation-drawer-shadow` (default `var(--lr-shadow-l)`).
+
+The sticky banner, header, and subheader each paint an opaque surface so main content scrolling
+underneath never shows through: `--lr-page-banner-bg`, `--lr-page-header-bg`, and
+`--lr-page-subheader-bg` (each default `var(--lr-color-surface)`, so they follow light and dark
+themes). They are inherited inline fallbacks like the paints above, so set one on the Page or any
+ancestor to retheme only that region; `::part(header)` and its siblings still win. A region named in
+`disable-sticky` drops back to a transparent background, and the non-sticky `footer` is never
+painted.
 
 `disable-sticky` is a whitespace-token attribute, not a comma-separated value. Accepted tokens are
 `banner`, `header`, `subheader`, `menu`, and `aside`; each only disables that region. Sticky offsets

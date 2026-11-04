@@ -7572,6 +7572,7 @@ export interface LyraComponentTypeMap {
       | 'strings'
       | 'tabSize'
       | 'withoutGfm'
+      | 'withoutImages'
       | 'withoutSyntaxHighlighting',
       {}
     >;
@@ -7615,6 +7616,7 @@ export interface LyraComponentTypeMap {
       'streaming-render'?: LyraMarkdown['streamingRender'];
       'tab-size'?: LyraMarkdown['tabSize'];
       'without-gfm'?: LyraMarkdown['withoutGfm'];
+      'without-images'?: LyraMarkdown['withoutImages'];
       'without-syntax-highlighting'?: LyraMarkdown['withoutSyntaxHighlighting'];
     };
   };
@@ -7641,6 +7643,7 @@ export interface LyraComponentTypeMap {
       | 'strings'
       | 'tabSize'
       | 'withoutGfm'
+      | 'withoutImages'
       | 'withoutSyntaxHighlighting',
       {}
     >;
@@ -7684,6 +7687,7 @@ export interface LyraComponentTypeMap {
       'streaming-render'?: LyraMarkdownCore['streamingRender'];
       'tab-size'?: LyraMarkdownCore['tabSize'];
       'without-gfm'?: LyraMarkdownCore['withoutGfm'];
+      'without-images'?: LyraMarkdownCore['withoutImages'];
       'without-syntax-highlighting'?: LyraMarkdownCore['withoutSyntaxHighlighting'];
     };
   };
@@ -8834,7 +8838,9 @@ export interface LyraComponentTypeMap {
       | '--banner-height'
       | '--header-height'
       | '--lr-page-aside-width'
+      | '--lr-page-banner-bg'
       | '--lr-page-banner-height'
+      | '--lr-page-header-bg'
       | '--lr-page-header-height'
       | '--lr-page-main-width'
       | '--lr-page-menu-width'
@@ -8849,6 +8855,7 @@ export interface LyraComponentTypeMap {
       | '--lr-page-skip-to-content-active-color'
       | '--lr-page-skip-to-content-hover-bg'
       | '--lr-page-skip-to-content-hover-color'
+      | '--lr-page-subheader-bg'
       | '--lr-page-subheader-height'
       | '--main-width'
       | '--menu-width'
@@ -11716,6 +11723,7 @@ export interface LyraComponentTypeMap {
       | 'strings'
       | 'tabSize'
       | 'withoutGfm'
+      | 'withoutImages'
       | 'withoutSyntaxHighlighting',
       {}
     >;
@@ -11739,6 +11747,7 @@ export interface LyraComponentTypeMap {
       'streaming-render'?: LyraStreamingText['streamingRender'];
       'tab-size'?: LyraStreamingText['tabSize'];
       'without-gfm'?: LyraStreamingText['withoutGfm'];
+      'without-images'?: LyraStreamingText['withoutImages'];
       'without-syntax-highlighting'?: LyraStreamingText['withoutSyntaxHighlighting'];
     };
   };
@@ -11765,6 +11774,7 @@ export interface LyraComponentTypeMap {
       | 'strings'
       | 'tabSize'
       | 'withoutGfm'
+      | 'withoutImages'
       | 'withoutSyntaxHighlighting',
       {}
     >;
@@ -11788,6 +11798,7 @@ export interface LyraComponentTypeMap {
       'streaming-render'?: LyraStreamingTextCore['streamingRender'];
       'tab-size'?: LyraStreamingTextCore['tabSize'];
       'without-gfm'?: LyraStreamingTextCore['withoutGfm'];
+      'without-images'?: LyraStreamingTextCore['withoutImages'];
       'without-syntax-highlighting'?: LyraStreamingTextCore['withoutSyntaxHighlighting'];
     };
   };
@@ -11836,10 +11847,12 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraSuggestionChipsEventMap;
     eventNames:       | 'lr-suggestion-select';
-    cssNames:       | '--lr-suggestion-chips-disabled-opacity'
+    cssNames:       | '--lr-suggestion-chips-chip-max-inline-size'
+      | '--lr-suggestion-chips-disabled-opacity'
       | '--lr-suggestion-chips-hover-bg'
       | '--lr-suggestion-chips-hover-border'
-      | '--lr-suggestion-chips-justify';
+      | '--lr-suggestion-chips-justify'
+      | '--lr-suggestion-chips-label-lines';
     attributeAliases: {};
   };
   'lr-svg-viewer': {

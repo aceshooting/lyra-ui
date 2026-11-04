@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Peida stseeni objektid',
   mapSceneEmpty: 'Stseeni objekte pole',
   mapSceneUnavailable: 'Stseeni joonistamine pole saadaval.',
+  mapScenePartial: 'Mõnda stseeniobjekti ei joonistata või joonistatakse need ilma kõrguseta.',
   mapSceneInvalid: 'Stseeni uuendus on kehtetu. Varem aktsepteeritud objektid on muutmata.',
   mapSceneLimit: 'Stseeni uuendus ületab piirangu. Varem aktsepteeritud objektid on muutmata.',
   mapScenePrevious: 'Eelmine stseeni lehekülg',

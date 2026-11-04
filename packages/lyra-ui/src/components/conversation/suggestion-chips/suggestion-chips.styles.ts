@@ -25,7 +25,7 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-xs);
     flex: 0 0 auto;
-    max-inline-size: var(--lr-size-16rem);
+    max-inline-size: var(--lr-suggestion-chips-chip-max-inline-size, var(--lr-size-16rem));
     padding-inline: var(--lr-space-m);
     padding-block: var(--lr-space-xs);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -48,6 +48,12 @@ export const styles = css`
   [part='chip-icon'] {
     flex: none;
     line-height: var(--lr-line-height-compact);
+  }
+  /* A wrapping row has a definite inline size to wrap within, so a chip never grows past it
+     whatever the consumer cap: a full-question starter prompt wraps inside a narrow chat column
+     instead of overflowing it. The scrolling row keeps the plain cap -- it scrolls instead. */
+  :host([wrap]) [part~='chip'] {
+    max-inline-size: min(var(--lr-suggestion-chips-chip-max-inline-size, var(--lr-size-16rem)), 100%);
   }
   [part~='chip']:where(:not(:disabled)):hover {
     background: var(--lr-suggestion-chips-hover-bg, var(--lr-color-brand-quiet));
@@ -76,10 +82,14 @@ export const styles = css`
   }
   [part='chip-label'] {
     display: -webkit-box;
-    -webkit-line-clamp: 1;
+    -webkit-line-clamp: var(--lr-suggestion-chips-label-lines, 1);
     -webkit-box-orient: vertical;
     overflow: hidden;
     inline-size: 100%;
+  }
+  /* Starter prompts are often full questions; a wrapping row has room to show several lines. */
+  :host([wrap]) [part='chip-label'] {
+    -webkit-line-clamp: var(--lr-suggestion-chips-label-lines, 3);
   }
   [part='chip-detail'] {
     display: -webkit-box;

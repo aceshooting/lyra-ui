@@ -79,6 +79,16 @@ uses for its own `[part="body"]`.
   Markdown still renders; `trusted` renders raw HTML without sanitization and is only for trusted
   content. In escape mode, a consumer `renderer.text` or `renderer.html` override replaces the
   escaping and is the consumer's responsibility.
+- `withoutImages: boolean = false` (attribute `without-images`) — the untrusted-content switch for
+  images, in every `htmlMode`. The scheme allowlist alone still admits any `http(s)`, relative or
+  `data:` image, so untrusted Markdown (a streamed language-model answer, for example) can make the
+  page request an arbitrary URL as soon as it renders. With `without-images`, every Markdown image
+  renders as its alt text, exactly like a refused URL, and the finished HTML is enforced too:
+  raw-HTML `<img>` and `<input type="image">` become their alt text, `<picture>` sources and SVG
+  `<image>`/`<feImage>` are removed, and `<video>` loses its `poster`. In `sanitize` mode authored
+  `<style>` elements are also removed; `trusted` mode does not inspect authored CSS. Changing it
+  re-renders. Pair it with the default `sanitize` mode for language-model output:
+  `<lr-markdown without-images></lr-markdown>`.
 - `withoutGfm: boolean = false` (attribute `without-gfm`) — disables GitHub-flavored Markdown
   (tables, strikethrough, autolinks, task lists), which is on by default.
   GFM task-list checkboxes stay disabled. Unordered tasks replace their bullets and align their
@@ -370,7 +380,8 @@ can cover the other. Both surfaces use `white-space: pre` and scroll horizontall
   relative URLs — plus `data:` for images only), independently of `htmlMode` — `sanitize` and
   `escape` both reject a disallowed scheme (e.g. `javascript:`) by dropping the anchor/image and
   rendering only its text/alt content, exactly like the malformed-`href` case above; only
-  `html-mode="trusted"` skips this check, consistent with its documented full bypass.
+  `html-mode="trusted"` skips this check, consistent with its documented full bypass. The allowlist
+  does not stop an allowed image URL from being fetched; set `without-images` for that.
 - `target` is not in DOMPurify's default attribute allowlist (unlike `part`/`rel`/`class`, which
   already are), so sanitization is called with `ADD_ATTR: ['target']` — without that, every rendered
   link's `target` would be silently stripped by sanitization even though the anchor itself survives.

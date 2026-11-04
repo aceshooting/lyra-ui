@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Wantoota mul\'ataa dhoksi',
   mapSceneEmpty: 'Wantoonni mul\'ataa hin jiran',
   mapSceneUnavailable: 'Mul\'ata agarsiisuun hin danda\'amu.',
+  mapScenePartial: 'Wantoonni mul\'ataa tokko tokko hin agarsiifamne, ykn ol-dheerina isaanii malee agarsiifamaniiru.',
   mapSceneInvalid: 'Haaromsi mul\'ataa sirrii miti. Wantoonni duraan fudhataman hin jijjiiramne.',
   mapSceneLimit: 'Haaromsi mul\'ataa daangaa darbeera. Wantoonni duraan fudhataman hin jijjiiramne.',
   mapScenePrevious: 'Fuula mul\'ataa darbe',

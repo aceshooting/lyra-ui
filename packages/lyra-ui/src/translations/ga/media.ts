@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Folaigh réada an radhairc',
   mapSceneEmpty: 'Gan réada radhairc',
   mapSceneUnavailable: 'Níl rindreáil an radhairc ar fáil.',
+  mapScenePartial: 'Ní tharraingítear roinnt réad radhairc, nó tarraingítear iad gan a n-airde.',
   mapSceneInvalid: 'Tá nuashonrú an radhairc neamhbhailí. Níor athraíodh na réada a glacadh roimhe seo.',
   mapSceneLimit: 'Sáraíonn nuashonrú an radhairc teorainn. Níor athraíodh na réada a glacadh roimhe seo.',
   mapScenePrevious: 'An leathanach radhairc roimhe seo',

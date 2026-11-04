@@ -208,6 +208,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   abstract tabSize: number;
   abstract htmlMode: MarkdownHtmlMode;
   abstract withoutGfm: boolean;
+  abstract withoutImages: boolean;
   abstract linkTarget: string | null;
   abstract internalLinkPrefix: string;
   abstract headingOffset: number;
@@ -566,7 +567,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     this.codeBlocks = [];
     const outcome = renderMarkdownDocument({
       tag: this.markdownVariant.tag, deps, htmlMode: normalizeMarkdownHtmlMode(this.htmlMode), math: this.math,
-      codeBlockHeader: this.codeBlockHeader,
+      codeBlockHeader: this.codeBlockHeader, withoutImages: this.withoutImages,
       parse: (marked, pendingKeys, headingTreeOut) => this.parseMarkdown(marked, pendingKeys, headingTreeOut),
       onParsed: () => this.maybeLoadKatex(),
       isKatexConfirmedMissing: () => this.markdownVariant.katexState.isConfirmedMissing(),
@@ -611,7 +612,8 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       devWarnOnce('lyra-markdown-progressive-unavailable', '<lr-markdown>: this parser configuration uses plain streaming.');
       return undefined;
     }
-    const policy = markdownSanitizerPolicy({ htmlMode: mode, math: this.math, codeBlockHeader: this.codeBlockHeader });
+    const withoutImages = this.withoutImages;
+    const policy = markdownSanitizerPolicy({ htmlMode: mode, math: this.math, codeBlockHeader: this.codeBlockHeader, withoutImages });
     const activeHighlightKeys = new Set<string>();
     const session = new MarkdownProgressiveSession({
       parser: context.instance, gfm: !this.withoutGfm, tabSize: finiteInteger(this.tabSize, 4, 1, 32),
@@ -624,7 +626,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
         options.highlightCodeOption = !this.withoutSyntaxHighlighting;
         const result = createMarkdownRenderContext(options).render(source, { links, state });
         this.maybeLoadKatex();
-        return { ...result, rawHtml: result.html, html: finishMarkdownHtml(deps, policy, result.html, result.hasRawHtml), headings, codeBlocks: records, pendingKeys };
+        return { ...result, rawHtml: result.html, html: finishMarkdownHtml(deps, policy, result.html, result.hasRawHtml, withoutImages), headings, codeBlocks: records, pendingKeys };
       },
     }, previous?.blocks);
     session.update(this.content ?? '');
@@ -787,6 +789,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       gfm: !this.withoutGfm, linkTarget: this.linkTarget, headingOffset: finiteInteger(this.headingOffset, 0, 0, 6),
       escapeHtmlOption: normalizeMarkdownHtmlMode(this.htmlMode) === 'escape',
       trustedHtmlOption: normalizeMarkdownHtmlMode(this.htmlMode) === 'trusted',
+      withoutImagesOption: this.withoutImages,
       codeBlockHeaderOption: this.codeBlockHeader,
       codeFrameNonce: this.codeBlockHeader ? this.codeHeader.nonce : undefined, tabSize: finiteInteger(this.tabSize, 4, 1, 32),
       highlightCodeOption: !this.withoutSyntaxHighlighting && !this.streaming,

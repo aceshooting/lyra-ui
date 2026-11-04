@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Paslēpt ainas objektus',
   mapSceneEmpty: 'Nav ainas objektu',
   mapSceneUnavailable: 'Ainas atveidošana nav pieejama.',
+  mapScenePartial: 'Daži ainas objekti netiek zīmēti vai tiek zīmēti bez to augstuma.',
   mapSceneInvalid: 'Ainas atjauninājums nav derīgs. Iepriekš pieņemtie objekti nav mainīti.',
   mapSceneLimit: 'Ainas atjauninājums pārsniedz ierobežojumu. Iepriekš pieņemtie objekti nav mainīti.',
   mapScenePrevious: 'Iepriekšējā ainas lapa',

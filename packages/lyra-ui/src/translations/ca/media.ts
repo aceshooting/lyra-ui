@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Amaga els objectes de l’escena',
   mapSceneEmpty: 'No hi ha objectes a l’escena',
   mapSceneUnavailable: 'La representació de l’escena no està disponible.',
+  mapScenePartial: 'Alguns objectes de l’escena no es dibuixen, o es dibuixen sense la seva altitud.',
   mapSceneInvalid: 'L’actualització de l’escena no és vàlida. Els objectes acceptats anteriorment no han canviat.',
   mapSceneLimit: 'L’actualització de l’escena supera un límit. Els objectes acceptats anteriorment no han canviat.',
   mapScenePrevious: 'Pàgina anterior de l’escena',

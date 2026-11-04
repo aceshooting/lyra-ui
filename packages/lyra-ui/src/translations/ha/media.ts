@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Ɓoye abubuwan yanayi',
   mapSceneEmpty: 'Babu abubuwan yanayi',
   mapSceneUnavailable: 'Ba a iya nuna yanayin ba.',
+  mapScenePartial: 'Ba a nuna wasu abubuwan yanayi ba, ko kuma an nuna su ba tare da tsayinsu ba.',
   mapSceneInvalid: 'Sabuntawar yanayin ba ta inganta ba. Abubuwan da aka amince da su a baya ba su canza ba.',
   mapSceneLimit: 'Sabuntawar yanayin ta wuce iyaka. Abubuwan da aka amince da su a baya ba su canza ba.',
   mapScenePrevious: 'Shafin yanayi na baya',

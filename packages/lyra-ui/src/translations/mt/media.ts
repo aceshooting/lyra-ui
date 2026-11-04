@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Aħbi l-oġġetti tax-xena',
   mapSceneEmpty: 'L-ebda oġġett tax-xena',
   mapSceneUnavailable: 'Ir-rendering tax-xena mhuwiex disponibbli.',
+  mapScenePartial: 'Xi oġġetti tax-xena mhumiex miġbuda, jew huma miġbuda mingħajr l-altitudni tagħhom.',
   mapSceneInvalid: 'L-aġġornament tax-xena mhuwiex validu. L-oġġetti aċċettati qabel ma nbidlux.',
   mapSceneLimit: 'L-aġġornament tax-xena jaqbeż limitu. L-oġġetti aċċettati qabel ma nbidlux.',
   mapScenePrevious: 'Paġna tax-xena ta’ qabel',

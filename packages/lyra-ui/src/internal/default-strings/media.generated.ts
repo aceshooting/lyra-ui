@@ -124,6 +124,7 @@ export const LYRA_DEFAULT_mapSceneMarker: LyraMessage = 'Marker';
 export const LYRA_DEFAULT_mapSceneModel: LyraMessage = 'Model';
 export const LYRA_DEFAULT_mapSceneNext: LyraMessage = 'Next scene page';
 export const LYRA_DEFAULT_mapScenePage: LyraMessage = 'Page {page} of {pages}';
+export const LYRA_DEFAULT_mapScenePartial: LyraMessage = 'Some scene objects are not drawn, or are drawn without their altitude.';
 export const LYRA_DEFAULT_mapScenePath: LyraMessage = 'Path';
 export const LYRA_DEFAULT_mapScenePrevious: LyraMessage = 'Previous scene page';
 export const LYRA_DEFAULT_mapSceneShow: LyraMessage = 'Show scene objects';

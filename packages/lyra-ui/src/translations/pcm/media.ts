@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Hide things for di scene',
   mapSceneEmpty: 'No things dey for di scene',
   mapSceneUnavailable: 'Di scene no fit show.',
+  mapScenePartial: 'Some things for di scene no show, or dem show without dia height.',
   mapSceneInvalid: 'Di scene update no correct. Things wey dem don accept before no change.',
   mapSceneLimit: 'Di scene update pass limit. Things wey dem don accept before no change.',
   mapScenePrevious: 'Scene page wey come before',

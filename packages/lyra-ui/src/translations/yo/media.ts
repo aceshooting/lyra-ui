@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Fi àwọn ohun inú ìran pamọ́',
   mapSceneEmpty: 'Kò sí ohun inú ìran',
   mapSceneUnavailable: 'Kò ṣeé fi ìran hàn.',
+  mapScenePartial: 'A kò fi àwọn ohun inú ìran kan hàn, tàbí a fi wọ́n hàn láìsí gíga wọn.',
   mapSceneInvalid: 'Àtúnṣe ìran kò tọ́. Àwọn ohun tí a ti gbà tẹ́lẹ̀ kò yí padà.',
   mapSceneLimit: 'Àtúnṣe ìran kọjá ààlà. Àwọn ohun tí a ti gbà tẹ́lẹ̀ kò yí padà.',
   mapScenePrevious: 'Ojú ìwé ìran tó ṣáájú',

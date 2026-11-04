@@ -24774,8 +24774,11 @@ A focusable action row owned by `<lr-menu>`. The host itself carries `role="menu
   `[part="base"]` renders as a real `<a href=…>` instead of a `<span>`, and activation (click, or
   the owning menu's Enter/Space handling, which forwards through `click()` for a link item so the
   anchor's own native default action runs) navigates there in addition to firing the usual
-  `select()`/`lr-select` contract. An unsafe/unparseable value falls back to the plain `<span>`,
-  matching `lr-button`'s identical fallback
+  `select()`/`lr-select` contract. The anchor carries the row's accessible name as its own
+  `aria-label` (a non-empty host `aria-label` wins, otherwise the visible label) and keeps it live
+  when either changes, because its visible label sits behind the decorative label wrapper. An
+  unsafe/unparseable value falls back to the plain `<span>`, matching `lr-button`'s identical
+  fallback
 - `target?: string` — native anchor `target`, used only while `href` resolves to a link. Setting it
   (e.g. `'_blank'`) always force-adds `noopener noreferrer` to the rendered anchor's `rel`,
   matching `lr-button`'s identical pattern
@@ -26813,6 +26816,14 @@ var(--lr-color-mix-partner) var(--lr-color-mix-active))`),
 `--lr-page-navigation-backdrop-bg` (default `var(--lr-color-overlay)`),
 `--lr-page-navigation-drawer-bg` (default `var(--lr-color-surface-overlay)`), and
 `--lr-page-navigation-drawer-shadow` (default `var(--lr-shadow-l)`).
+
+The sticky banner, header, and subheader each paint an opaque surface so main content scrolling
+underneath never shows through: `--lr-page-banner-bg`, `--lr-page-header-bg`, and
+`--lr-page-subheader-bg` (each default `var(--lr-color-surface)`, so they follow light and dark
+themes). They are inherited inline fallbacks like the paints above, so set one on the Page or any
+ancestor to retheme only that region; `::part(header)` and its siblings still win. A region named in
+`disable-sticky` drops back to a transparent background, and the non-sticky `footer` is never
+painted.
 
 `disable-sticky` is a whitespace-token attribute, not a comma-separated value. Accepted tokens are
 `banner`, `header`, `subheader`, `menu`, and `aside`; each only disables that region. Sticky offsets
@@ -35737,9 +35748,9 @@ Optional descriptor fields use these admission defaults:
 | Model `metersPerUnit` / `orientation` | `1` / identity `[0, 0, 0, 1]` |
 
 Opacity must be between 0 and 1; radius, width and model scale must be positive. Model orientation
-is a scalar-last quaternion normalized during admission. Style, interpolation and model fields
-describe requested rendering, which is currently unavailable. `interactive` controls text-row
-activation; `showLabel` does not hide the required label from the text fallback.
+is a scalar-last quaternion normalized during admission. Model fields describe requested rendering,
+which is not yet drawn. `interactive` controls text-row activation; `showLabel` does not hide the
+required label from the text fallback, and rendered labels are not drawn.
 
 ```ts
 import '@aceshooting/lyra-ui/components/lr-map.js';
@@ -35753,11 +35764,26 @@ const map = document.querySelector('lr-map')!;
 map.scene = scene;
 ```
 
-Current scene support accepts geographic intent and provides an accessible text fallback.
-Nonempty accepted input reports `unavailable` with code `engine`: scene objects are not drawn,
-models are not fetched or parsed, and no scene depth, terrain resolution or completed-frame
-projection is supplied. Existing `markers`, `dataLayers`, projection and terrain configuration
-remain separate APIs.
+Accepted scenes are drawn on the map and keep the accessible text fallback. Markers render as
+geographic circles through the optional `@aceshooting/lyra-map/scene` bridge. Paths and arcs render
+as one scene-owned GeoJSON source and line layer, with each object's resolved `color` (default: the
+accent token), `width` in CSS pixels and `opacity`. Markers draw above lines. Models are not fetched,
+parsed or drawn. Existing `markers`, `dataLayers`, projection and terrain configuration remain
+separate APIs.
+
+Path `interpolation: 'great-circle'` follows the shortest route on the globe, sampled at most one
+degree apart; `'linear'` joins vertices straight in longitude/latitude. Both cross the antimeridian
+the shorter way. An arc follows the great circle from `start` to `end`; its altitude interpolates
+linearly between the endpoint altitudes and adds a parabolic rise of `height` meters,
+`height * 4t(1 - t)`, peaking at the midpoint. Generated vertices carry that altitude as the third
+GeoJSON coordinate.
+
+The map draws lines flat on its displayed surface, so altitude is drawn exactly only when it is
+zero against that surface: `sea-level` without terrain, or `terrain`. A path or arc with any other
+altitude, a nonzero arc `height`, or `sea-level` geometry while terrain is displayed is drawn as its
+ground track, and the scene reports `partial` with code `altitude`. Changing terrain re-evaluates
+this. A style replacement reinstalls scene lines after the new style loads; clearing the scene,
+removing every path and arc, or disconnecting the map removes them.
 
 A connected assignment snapshots and admits input synchronously before returning. A detached
 assignment is accepted on connection in that document's realm. Assign a new scene object to
@@ -35778,6 +35804,7 @@ Admission rejects the complete update rather than truncating it:
 | --- | --- |
 | Objects / model objects per scene | 2,000 / 32 |
 | Authored positions per scene / positions per path | 65,536 / 4,096 |
+| Generated path and arc vertices per scene | 262,144; great-circle sampling coarsens to fit, and code `limit` is reported otherwise |
 | ID / required label / optional color | 1–1,024 / 16,384 / 1,024 UTF-16 units |
 | Model `src` / resolved absolute source URL | 1,048,576 UTF-16 units each |
 | Aggregate authored IDs, labels, colors and model `src` occurrences | 4,194,304 UTF-16 units per request |
@@ -35797,9 +35824,19 @@ rows remain text. Caller labels render as text. Style the surface with `scene-pa
 `scene-toggle`, `scene-list`, `scene-item`, `scene-pagination` and `scene-status` parts.
 
 `lr-map-scene-state` emits immutable `{ revision, state, code? }` detail against the accepted
-revision: accepted empty input and clear report `empty`, nonempty input reports `unavailable`
-with `engine`, and rejected input reports `error` with `invalid` or `limit` while retaining the
-previous accepted revision. `lr-map-scene-activate` emits immutable `{ id, kind, source,
+revision. Accepted empty input and clear report `empty`. Nonempty input reports `loading`, then
+one settled state: `ready` when every object is installed on the map exactly; `partial` with a code
+when some objects are missing or approximated; or `unavailable` with a code when nothing could be
+drawn. Codes are `altitude` (drawn as a ground track), `model` (models are not drawn), `engine` (the
+map, its optional scene renderer or a native layer failed), `limit` (generated geometry exceeds the
+vertex limit) and `context-lost` (the WebGL context is lost; drawing resumes on restore). When
+several apply, the most significant is reported in that reverse order, `context-lost` first. A
+settled state can change again on a style replacement, terrain change or context loss. `ready`
+means installed, not visible: the viewport, terrain and occlusion still apply. Rejected input
+reports `error` with `invalid` or `limit` while retaining the previous accepted revision, and
+renderer progress does not replace that report until a new scene is accepted. `loading` and
+`ready` are not announced; `partial` is announced politely and `unavailable`, `empty` and `error`
+assertively. The `scene-status` part shows the current text except when `ready`. `lr-map-scene-activate` emits immutable `{ id, kind, source,
 position? }` detail, with `source: 'pointer' | 'keyboard'`; positional marker/model actions include
 the accepted geographic position. Both events bubble, are composed and are noncancelable.
 
@@ -39760,11 +39797,13 @@ particular country. Representative language mappings also include `lb` (Luxembou
   `LyraMapModelFormat = 'gltf' | 'glb' | 'stl' | 'obj' | 'ply' | 'xyz' | 'pcd'`,
   `LyraMapModelSource = { readonly format: LyraMapModelFormat; readonly bytes: ArrayBuffer | Uint8Array } | { readonly format: LyraMapModelFormat; readonly src: string }`,
   `LyraMapSceneObject = LyraMapSceneMarker | LyraMapScenePath | LyraMapSceneArc | LyraMapSceneModel`,
-  and `LyraMapSceneErrorCode = 'invalid' | 'limit' | 'model' | 'resource' | 'engine' | 'projection' | 'terrain' | 'context-lost'`.
-  The state and activation types include renderer-facing alternatives; current accepted-scene
-  support emits `empty`, `unavailable` or `error`, and text activation uses the four declared
-  object kinds without `layerId`. It does not draw scene objects or supply completed-frame
-  visibility. See Geographic scene input and text fallback above for defaults, limits and ownership.
+  and `LyraMapSceneErrorCode = 'invalid' | 'limit' | 'model' | 'resource' | 'engine' | 'projection' | 'terrain' |
+  'context-lost' | 'altitude'`.
+  The state and activation types include renderer-facing alternatives; scene status emits
+  `loading`, `ready`, `partial`, `empty`, `unavailable` or `error`, and codes other than
+  `resource`, `projection` and `terrain`. Text activation uses the four declared object kinds without
+  `layerId`. Status does not supply completed-frame visibility. See Geographic scene input and text
+  fallback above for drawing semantics, defaults, limits and ownership.
 
 - **`components-media-image-viewer-panorama-contracts`** — Shared panorama camera, hotspot and selection data for image and video viewers.
   Import types from `@aceshooting/lyra-ui/components/lr-image-viewer.js` or
@@ -45886,6 +45925,16 @@ uses for its own `[part="body"]`.
   Markdown still renders; `trusted` renders raw HTML without sanitization and is only for trusted
   content. In escape mode, a consumer `renderer.text` or `renderer.html` override replaces the
   escaping and is the consumer's responsibility.
+- `withoutImages: boolean = false` (attribute `without-images`) — the untrusted-content switch for
+  images, in every `htmlMode`. The scheme allowlist alone still admits any `http(s)`, relative or
+  `data:` image, so untrusted Markdown (a streamed language-model answer, for example) can make the
+  page request an arbitrary URL as soon as it renders. With `without-images`, every Markdown image
+  renders as its alt text, exactly like a refused URL, and the finished HTML is enforced too:
+  raw-HTML `<img>` and `<input type="image">` become their alt text, `<picture>` sources and SVG
+  `<image>`/`<feImage>` are removed, and `<video>` loses its `poster`. In `sanitize` mode authored
+  `<style>` elements are also removed; `trusted` mode does not inspect authored CSS. Changing it
+  re-renders. Pair it with the default `sanitize` mode for language-model output:
+  `<lr-markdown without-images></lr-markdown>`.
 - `withoutGfm: boolean = false` (attribute `without-gfm`) — disables GitHub-flavored Markdown
   (tables, strikethrough, autolinks, task lists), which is on by default.
   GFM task-list checkboxes stay disabled. Unordered tasks replace their bullets and align their
@@ -46177,7 +46226,8 @@ can cover the other. Both surfaces use `white-space: pre` and scroll horizontall
   relative URLs — plus `data:` for images only), independently of `htmlMode` — `sanitize` and
   `escape` both reject a disallowed scheme (e.g. `javascript:`) by dropping the anchor/image and
   rendering only its text/alt content, exactly like the malformed-`href` case above; only
-  `html-mode="trusted"` skips this check, consistent with its documented full bypass.
+  `html-mode="trusted"` skips this check, consistent with its documented full bypass. The allowlist
+  does not stop an allowed image URL from being fetched; set `without-images` for that.
 - `target` is not in DOMPurify's default attribute allowlist (unlike `part`/`rel`/`class`, which
   already are), so sanitization is called with `ADD_ATTR: ['target']` — without that, every rendered
   link's `target` would be silently stripped by sanitization even though the anchor itself survives.
@@ -46245,7 +46295,8 @@ clamped to `[1, 32]` (`0` becomes `1`, `33` becomes `32`), and only non-finite v
 `Infinity`) fall back to `4`, independently of rendered code's
 `--lr-code-block-tab-size`; `marked: LyraMarkedParser | undefined` (readonly, no attribute) — this
 instance's isolated peer-neutral configurable parser; `htmlMode: 'sanitize' | 'escape' | 'trusted' =
-'sanitize'` (attribute `html-mode`), `withoutGfm: boolean = false` (attribute `without-gfm`), `linkTarget: string | null = '_blank'` (attribute
+'sanitize'` (attribute `html-mode`), `withoutGfm: boolean = false` (attribute `without-gfm`),
+`withoutImages: boolean = false` (attribute `without-images`), `linkTarget: string | null = '_blank'` (attribute
 `link-target`), `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`),
 `headingOffset: number = 0` (attribute `heading-offset`), `streaming: boolean = false` (reflected),
 `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected),
@@ -47511,6 +47562,9 @@ properties existed:
   the composed `<lr-markdown>`'s own `htmlMode`.
 - `withoutGfm: boolean = false` (attribute `without-gfm`) — forwarded to the composed
   `<lr-markdown>`'s own `withoutGfm`.
+- `withoutImages: boolean = false` (attribute `without-images`) — forwarded to the composed
+  `<lr-markdown>`'s own `withoutImages`; set it when streaming untrusted language-model output so
+  an answer's images render as alt text instead of loading.
 - `linkTarget: string | null = '_blank'` (attribute `link-target`) — forwarded to the composed
   `<lr-markdown>`'s own `linkTarget`; the composed element always applies its own
   `rel="noopener noreferrer"` guard whenever a `target` is emitted, including a forwarded
@@ -47620,7 +47674,7 @@ showing the previous stream's stale final content for the length of the window.
 Rendering itself is never reimplemented here: Markdown mode composes `<lr-markdown>` directly,
 forwarding this component's own `streaming` through as that component's `streaming` hint prop,
   `streamingRender`, `codeBlockHeader`, `languages` verbatim, and the rest of `<lr-markdown>`'s
-  configuration surface verbatim too (`tabSize`, `htmlMode`, `withoutGfm`, `linkTarget`,
+  configuration surface verbatim too (`tabSize`, `htmlMode`, `withoutGfm`, `withoutImages`, `linkTarget`,
   `internalLinkPrefix`, `headingOffset`, `withoutSyntaxHighlighting`, `headingAnchors`, `math`, `maxHeight` —
   see **Properties** above); plain-text mode
 renders into a `white-space: pre-wrap` span instead. The
@@ -47659,7 +47713,7 @@ A build-lean `<lr-streaming-text>` variant for a consumer whose fenced-code `lan
 covers every language it will ever stream, or who never renders fenced code at all. Every
 capability — token coalescing, `contentMode` auto-detection, the blinking cursor, the
 `lr-content-settled` event, the `languages` property, and the full forwarded Markdown configuration
-surface (`tabSize`, `htmlMode`, `withoutGfm`, `linkTarget`, `internalLinkPrefix`, `headingOffset`,
+surface (`tabSize`, `htmlMode`, `withoutGfm`, `withoutImages`, `linkTarget`, `internalLinkPrefix`, `headingOffset`,
 `withoutSyntaxHighlighting`, `headingAnchors`, `math`, `maxHeight`) — is identical to `<lr-streaming-text>`;
 only which Markdown element Markdown mode composes differs: this variant renders
 `<lr-markdown-core>` (`../markdown/markdown-core.js`) instead of `<lr-markdown>`, so importing this
@@ -47684,7 +47738,8 @@ concrete-grammar priority and combined-map reuse as `<lr-streaming-text>`. The r
 `<lr-markdown-core>`'s configuration surface forwards verbatim too, sharing the same properties,
 attribute names, and defaults described under `<lr-streaming-text>`'s own **Properties** above:
 `tabSize: number = 4` (attribute `tab-size`); `htmlMode: 'sanitize' | 'escape' | 'trusted' =
-'sanitize'` (attribute `html-mode`); `withoutGfm: boolean = false` (attribute `without-gfm`); `linkTarget: string | null = '_blank'`
+'sanitize'` (attribute `html-mode`); `withoutGfm: boolean = false` (attribute `without-gfm`);
+`withoutImages: boolean = false` (attribute `without-images`); `linkTarget: string | null = '_blank'`
 (attribute `link-target`, still guarded by the composed element's own
 `rel="noopener noreferrer"` whenever a `target` is emitted); `internalLinkPrefix: string = ''`
 (attribute `internal-link-prefix`); `headingOffset: number = 0` (attribute `heading-offset`);
@@ -48901,7 +48956,11 @@ start). `--lr-suggestion-chips-hover-bg` (default `var(--lr-color-brand-quiet)`)
 background on hover. `--lr-suggestion-chips-hover-border` (default `var(--lr-color-brand)`) — a
 `chip`'s border color on hover. All three are declared as `var()` fallbacks at the point of use, not
 on `:host`. `--lr-suggestion-chips-disabled-opacity` (default `var(--lr-opacity-disabled)`) — opacity of a chip whose
-suggestion sets `disabled`. Plus shared tokens `--lr-space-xs/-m/-2xs`,
+suggestion sets `disabled`. `--lr-suggestion-chips-label-lines` (default `1`; `3` when `wrap` is
+set) — how many lines a `chip-label` shows before it is clamped with an ellipsis, so full-question
+starter prompts stay readable in a narrow chat column. `--lr-suggestion-chips-chip-max-inline-size`
+(default `var(--lr-size-16rem)`) — each chip's maximum inline size; in a `wrap` row it is further
+clamped to the row's inline size, so a chip never overflows its container. Plus shared tokens `--lr-space-xs/-m/-2xs`,
 `--lr-color-border/-surface/-text/-text-quiet`, `--lr-radius-pill`, `--lr-font-size-xs`,
 `--lr-focus-ring-width/-color/-offset`.
 

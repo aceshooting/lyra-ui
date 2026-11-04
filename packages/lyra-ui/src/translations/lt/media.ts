@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Slėpti scenos objektus',
   mapSceneEmpty: 'Scenos objektų nėra',
   mapSceneUnavailable: 'Scenos atvaizdavimas nepasiekiamas.',
+  mapScenePartial: 'Kai kurie scenos objektai nepiešiami arba piešiami be jų aukščio.',
   mapSceneInvalid: 'Scenos atnaujinimas netinkamas. Anksčiau priimti objektai nepakeisti.',
   mapSceneLimit: 'Scenos atnaujinimas viršija ribą. Anksčiau priimti objektai nepakeisti.',
   mapScenePrevious: 'Ankstesnis scenos puslapis',

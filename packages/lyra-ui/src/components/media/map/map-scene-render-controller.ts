@@ -2,8 +2,13 @@ import { resolveCanvasColor } from '../../../internal/canvas-color.js';
 import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import type { MapLibreMapCapability } from './map-loader.js';
-import type { createMapSceneOwner } from './map-scene-owner.js';
+import { createMapSceneLineLayer } from './map-scene-line-layer.js';
+import type { SceneLineRequest } from './map-scene-line-layer.js';
+import { buildSceneLineData } from './map-scene-lines.js';
+import type { SceneLineObject } from './map-scene-lines.js';
+import type { createMapSceneOwner, SceneAcceptedSnapshot } from './map-scene-owner.js';
 import type { SceneRenderInput, SceneRenderPublication, SceneResolvedPresentation, SceneViewportInput } from './map-scene-render-contract.js';
+import type { SceneDrawOutcome } from './map-scene-status.js';
 
 type SceneOwner = ReturnType<typeof createMapSceneOwner>;
 type Rgba = readonly [number, number, number, number];
@@ -29,7 +34,30 @@ export interface MapSceneRenderController {
   refreshPresentation(): void;
   refreshAllocation(): void;
   invalidateStyle(): void;
+  /** The current native style finished loading, including after a replacement. */
+  styleReady(): void;
+  /** What each renderer established for the current accepted revision. */
+  captureOutcomes(): { readonly markers: SceneDrawOutcome; readonly lines: SceneDrawOutcome };
   dispose(): void;
+}
+type BridgeReport = { readonly revision: number; readonly outcome: SceneDrawOutcome };
+
+const isLine = (row: { readonly kind: string }): row is SceneLineObject => row.kind === 'path' || row.kind === 'arc';
+function channel(value: number): number { return Math.round(Math.min(1, Math.max(0, value)) * 255); }
+
+/** Interprets a renderer-owned marker state report without trusting its shape. */
+function bridgeReport(value: unknown): BridgeReport | undefined {
+  try {
+    if (value === null || typeof value !== 'object') return undefined;
+    const state: unknown = Reflect.get(value, 'state'), revision: unknown = Reflect.get(value, 'acceptedSceneRevision');
+    const code: unknown = Reflect.get(value, 'code');
+    if (typeof revision !== 'number' || !Number.isSafeInteger(revision) || revision < 0) return undefined;
+    if (state === 'installed') return { revision, outcome: { state: 'drawn' } };
+    if (state === 'pending') return { revision, outcome: { state: 'pending' } };
+    if (state === 'unavailable') return { revision, outcome: { state: 'failed',
+      code: code === 'limit' ? 'limit' : code === 'context-lost' ? 'context-lost' : 'engine' } };
+  } catch { /* A hostile report establishes nothing. */ }
+  return undefined;
 }
 
 function resolvedColor(element: Element, expression: string): Rgba | undefined {
@@ -59,6 +87,10 @@ export function createMapSceneRenderController(options: {
   readonly accentToken: string;
   readonly loadBridge: () => Promise<MapSceneBridgeRuntime>;
   readonly isCurrent: () => boolean;
+  /** Whether the native style currently accepts source and layer mutations. */
+  readonly styleLoaded?: () => boolean;
+  /** Called after an outcome from `captureOutcomes()` may have changed. */
+  readonly onStatusChange?: () => void;
 }): MapSceneRenderController {
   const { element, map, container, owner } = options;
   const document = element.ownerDocument, view = document.defaultView;
@@ -68,11 +100,53 @@ export function createMapSceneRenderController(options: {
   let bridge: MapSceneRenderBridge | undefined, visible: boolean | undefined;
   let loading = false, attemptedRevision: number | undefined;
   let preparing = false;
+  let bridgeFailure: number | undefined, report: BridgeReport | undefined, markerContextLost = false;
+  let linesFor: SceneAcceptedSnapshot | undefined, lineColorsStale = true;
 
   function current(): boolean {
     return !closed && view !== null && element.isConnected && element.ownerDocument === document && options.isCurrent();
   }
   function demand(): boolean { return owner.captureAccepted().objects.some(row => row.kind === 'marker'); }
+  function statusChanged(): void {
+    if (!current()) return;
+    try { options.onStatusChange?.(); } catch { /* Status observers cannot retire native rendering. */ }
+  }
+  const lines = createMapSceneLineLayer({ map, isCurrent: () => current(),
+    styleLoaded: () => { try { return options.styleLoaded?.() ?? map.isStyleLoaded?.() === true; } catch { return false; } },
+    changed: statusChanged });
+  function syncLines(): void {
+    if (!current()) return;
+    const accepted = owner.captureAccepted();
+    if (accepted === linesFor && !lineColorsStale) return;
+    const objects = accepted.objects.filter(isLine);
+    if (objects.length === 0) { linesFor = accepted; lineColorsStale = false; lines.update(undefined); return; }
+    const colors = new Map<string, string>(), resolved = new Map<string, Rgba | undefined>();
+    let request: SceneLineRequest | undefined;
+    try {
+      for (const row of objects) {
+        const expression = row.color ?? `var(${options.accentToken})`;
+        if (!resolved.has(expression)) resolved.set(expression, resolvedColor(element, expression));
+        if (!current() || owner.captureAccepted() !== accepted) return;
+        const rgba = resolved.get(expression);
+        if (!rgba) { request = { revision: accepted.acceptedSceneRevision, failure: 'engine' }; break; }
+        colors.set(row.id, `rgba(${channel(rgba[0])}, ${channel(rgba[1])}, ${channel(rgba[2])}, ${rgba[3]})`);
+      }
+      if (!request) {
+        const data = buildSceneLineData(objects, colors);
+        request = data ? { revision: accepted.acceptedSceneRevision, objects, data } :
+          { revision: accepted.acceptedSceneRevision, failure: 'limit' };
+      }
+    } catch { request = { revision: accepted.acceptedSceneRevision, failure: 'engine' }; }
+    if (!current() || owner.captureAccepted() !== accepted) return;
+    linesFor = accepted; lineColorsStale = false;
+    lines.update(request);
+  }
+  function markerOutcome(revision: number): SceneDrawOutcome {
+    if (!demand()) return { state: 'none' };
+    if (bridgeFailure === revision) return { state: 'failed', code: 'engine' };
+    if (markerContextLost) return { state: 'failed', code: 'context-lost' };
+    return report?.revision === revision ? report.outcome : { state: 'pending' };
+  }
   function keep(release: () => void): void {
     if (!current()) { try { release(); } catch { /* Retire an observer acquired during reentry. */ } }
     else releases.push(release);
@@ -180,8 +254,18 @@ export function createMapSceneRenderController(options: {
           signal: abort.signal, isCurrent: current,
           captureRenderInput: () => owner.captureRenderPublication().input,
           subscribeRenderInput: listener => owner.subscribeRenderPublication(listener),
-          // Native installation and unrevisioned diagnostics cannot establish scene completion.
-          onState: () => {}, onError: () => {},
+          // Revisioned installation reports establish installed markers, never visible pixels.
+          onState: value => {
+            const next = current() && bridge === created ? bridgeReport(value) : undefined;
+            if (!next) return;
+            report = next;
+            if (next.outcome.state === 'drawn') markerContextLost = false;
+            statusChanged();
+          },
+          onError: code => {
+            if (!current() || bridge !== created || code !== 'context-lost') return;
+            markerContextLost = true; statusChanged();
+          },
         });
         candidate = created;
         if (!created || !['dispose', 'invalidateStyle', 'setVisible', 'requestFrame'].every(name =>
@@ -190,19 +274,29 @@ export function createMapSceneRenderController(options: {
         bridge = created; visible = undefined; syncVisibility();
       } catch {
         try { candidate?.dispose(); } catch { /* Best-effort cleanup of a failed optional factory. */ }
+        if (current()) { bridgeFailure = revision; statusChanged(); }
       }
-    }, () => undefined).finally(() => {
+    }, () => { if (current()) { bridgeFailure = revision; statusChanged(); } }).finally(() => {
       loading = false;
       if (current() && owner.captureAccepted().acceptedSceneRevision !== attemptedRevision) startBridge();
     });
   }
+  /** Line-only intent keeps this installation but retires marker rendering. */
+  function retireBridge(): void {
+    const previous = bridge;
+    if (!previous || demand()) return;
+    bridge = undefined; visible = undefined; report = undefined; markerContextLost = false; attemptedRevision = undefined;
+    try { previous.dispose(); } catch { /* Optional cleanup cannot retire line rendering. */ }
+  }
   function sync(): void {
     if (!current()) return;
-    prepare(); syncVisibility(); startBridge();
+    retireBridge(); prepare(); syncVisibility(); startBridge(); syncLines();
   }
   function refreshPresentation(): void {
-    if (!current() || !demand()) return;
-    owner.invalidatePresentation(); sync();
+    if (!current()) return;
+    lineColorsStale = true;
+    if (demand()) owner.invalidatePresentation();
+    sync();
   }
   function dispose(): void {
     if (closed) return;
@@ -213,6 +307,7 @@ export function createMapSceneRenderController(options: {
     }
     abort.abort();
     try { previous?.dispose(); } catch { /* Optional cleanup cannot prevent native map removal. */ }
+    lines.dispose();
   }
 
   keep(owner.subscribeRenderPublication(sync));
@@ -243,6 +338,16 @@ export function createMapSceneRenderController(options: {
   try { keep(observeReducedMotion(element, refreshPresentation)); } catch { /* Motion is also read on presentation refresh. */ }
   refreshAllocation(); sync();
   return { sync, refreshPresentation, refreshAllocation,
-    invalidateStyle() { if (current()) { try { bridge?.invalidateStyle(); } catch { /* The native owner remains authoritative. */ } } },
+    invalidateStyle() {
+      if (!current()) return;
+      try { bridge?.invalidateStyle(); } catch { /* The native owner remains authoritative. */ }
+      lines.invalidateStyle();
+    },
+    styleReady() { if (current()) lines.styleReady(); },
+    captureOutcomes() {
+      const revision = owner.captureAccepted().acceptedSceneRevision, captured = lines.capture();
+      return { markers: markerOutcome(revision),
+        lines: captured.revision === revision || captured.outcome.state === 'none' ? captured.outcome : { state: 'pending' } };
+    },
     dispose };
 }

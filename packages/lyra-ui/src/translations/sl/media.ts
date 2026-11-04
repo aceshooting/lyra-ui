@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Skrij objekte prizora',
   mapSceneEmpty: 'Ni objektov prizora',
   mapSceneUnavailable: 'Izris prizora ni na voljo.',
+  mapScenePartial: 'Nekateri objekti prizora niso izrisani ali pa so izrisani brez svoje višine.',
   mapSceneInvalid: 'Posodobitev prizora ni veljavna. Prej sprejeti objekti ostanejo nespremenjeni.',
   mapSceneLimit: 'Posodobitev prizora presega omejitev. Prej sprejeti objekti ostanejo nespremenjeni.',
   mapScenePrevious: 'Prejšnja stran prizora',

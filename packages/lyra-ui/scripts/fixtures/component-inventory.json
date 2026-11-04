@@ -84005,6 +84005,16 @@
             "default": false
           },
           {
+            "name": "without-images",
+            "property": "withoutImages",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "without-syntax-highlighting",
             "property": "withoutSyntaxHighlighting",
             "type": "boolean",
@@ -84216,6 +84226,16 @@
           {
             "name": "withoutGfm",
             "attribute": "without-gfm",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "withoutImages",
+            "attribute": "without-images",
             "type": "boolean",
             "readonly": false,
             "reflects": false,
@@ -84761,6 +84781,16 @@
             "default": false
           },
           {
+            "name": "without-images",
+            "property": "withoutImages",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "without-syntax-highlighting",
             "property": "withoutSyntaxHighlighting",
             "type": "boolean",
@@ -84964,6 +84994,16 @@
           {
             "name": "withoutGfm",
             "attribute": "without-gfm",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "withoutImages",
+            "attribute": "without-images",
             "type": "boolean",
             "readonly": false,
             "reflects": false,
@@ -99460,10 +99500,22 @@
             "default": "auto"
           },
           {
+            "name": "--lr-page-banner-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
             "name": "--lr-page-banner-height",
             "deprecated": null,
             "hasDefault": true,
             "default": "0px"
+          },
+          {
+            "name": "--lr-page-header-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
           },
           {
             "name": "--lr-page-header-height",
@@ -99548,6 +99600,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-page-subheader-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
           },
           {
             "name": "--lr-page-subheader-height",
@@ -132314,6 +132372,16 @@
             "default": false
           },
           {
+            "name": "without-images",
+            "property": "withoutImages",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "without-syntax-highlighting",
             "property": "withoutSyntaxHighlighting",
             "type": "boolean",
@@ -132487,6 +132555,16 @@
           {
             "name": "withoutGfm",
             "attribute": "without-gfm",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "withoutImages",
+            "attribute": "without-images",
             "type": "boolean",
             "readonly": false,
             "reflects": false,
@@ -132867,6 +132945,16 @@
             "default": false
           },
           {
+            "name": "without-images",
+            "property": "withoutImages",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "without-syntax-highlighting",
             "property": "withoutSyntaxHighlighting",
             "type": "boolean",
@@ -133040,6 +133128,16 @@
           {
             "name": "withoutGfm",
             "attribute": "without-gfm",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "withoutImages",
+            "attribute": "without-images",
             "type": "boolean",
             "readonly": false,
             "reflects": false,
@@ -133681,6 +133779,12 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-suggestion-chips-chip-max-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-16rem)"
+          },
+          {
             "name": "--lr-suggestion-chips-disabled-opacity",
             "deprecated": null,
             "hasDefault": true,
@@ -133703,6 +133807,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "flex-start"
+          },
+          {
+            "name": "--lr-suggestion-chips-label-lines",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 1
           }
         ],
         "cssStates": [],

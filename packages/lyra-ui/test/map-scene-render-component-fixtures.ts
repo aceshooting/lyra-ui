@@ -84,6 +84,8 @@ export class RenderPeer extends ScriptedOverlayMap {
   }
   override setStyle(value?: Record<string, unknown>): this {
     this.trace.push('native:style'); if (value) this.style = value;
+    // A full replacement discards every runtime source and layer, as the real engine does.
+    this.sources.clear(); this.layers.clear();
     this.ready = true; this.fire('style.load'); return this;
   }
   syncBacking(): void {

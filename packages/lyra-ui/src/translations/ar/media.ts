@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'إخفاء عناصر المشهد',
   mapSceneEmpty: 'لا توجد عناصر في المشهد',
   mapSceneUnavailable: 'عرض المشهد غير متاح.',
+  mapScenePartial: 'بعض عناصر المشهد غير معروضة، أو معروضة دون ارتفاعها.',
   mapSceneInvalid: 'تحديث المشهد غير صالح. لم تتغير العناصر المقبولة سابقًا.',
   mapSceneLimit: 'يتجاوز تحديث المشهد أحد الحدود. لم تتغير العناصر المقبولة سابقًا.',
   mapScenePrevious: 'صفحة المشهد السابقة',

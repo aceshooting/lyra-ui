@@ -2,24 +2,24 @@
   "locale": "sr-Latn",
   "direction": "ltr",
   "source": {
-    "keyCount": 1631,
-    "sha256": "sha256:fcb5cbed3dad15e323cbf8293f412ccbcc0c3e7dfa8e15b3090c8ffe4b7409ed"
+    "keyCount": 1632,
+    "sha256": "sha256:176f8b74a682d2cbd3a94235f186114fa081fcd1fc663972e9235e051159b3ed"
   },
   "catalog": {
-    "keyCount": 1631,
-    "sha256": "sha256:c451efbbeaca45cebe4fbc5044d735bc1942debb278b7830d54f66cd7d695e95"
+    "keyCount": 1632,
+    "sha256": "sha256:88e43157b3e5eb9c8912aba162307609543563221b2737655b7b8d17b80a4ec1"
   },
   "translator": {
     "status": "complete-original",
     "role": "project localization contributor",
-    "completedAt": "2026-11-01",
-    "evidence": "Original Serbian (Latin script) catalog drafted with AI assistance from DEFAULT_STRINGS in source order across all 1,631 messages, keeping exact placeholders, ICU syntax and the pinned CLDR cardinal categories (few, one, other). No upstream translated text was copied. This is AI-assisted project localization; no human or native-speaker translator claim is made."
+    "completedAt": "2026-11-02",
+    "evidence": "Original Serbian (Latin script) catalog drafted with AI assistance from DEFAULT_STRINGS in source order across all 1,631 messages, keeping exact placeholders, ICU syntax and the pinned CLDR cardinal categories (few, one, other). No upstream translated text was copied. This is AI-assisted project localization; no human or native-speaker translator claim is made.\n\n2026-11-02 incremental mapScenePartial addition: added one original status message, shown when only part of a map scene can be drawn, reusing this catalog's existing scene, object and rendering terminology from the neighbouring mapScene messages. The message has no placeholders or plural branches. AI-assisted; no human or native-speaker authorship is claimed."
   },
   "reviewer": {
     "status": "approved",
     "role": "independent localization reviewer",
-    "reviewedAt": "2026-11-01",
-    "evidence": "AI-assisted machine review limited to structural verification: complete key coverage in DEFAULT_STRINGS order, exact placeholders, ICU syntax and the pinned CLDR cardinal categories (few, one, other) were checked, and each of the 96 English-identical messages was inspected and given an entry-specific rationale. A script audit confirmed that no message contains Cyrillic text. No linguistic, human or native-speaker review is claimed; the catalog awaits native-speaker review."
+    "reviewedAt": "2026-11-02",
+    "evidence": "AI-assisted machine review limited to structural verification: complete key coverage in DEFAULT_STRINGS order, exact placeholders, ICU syntax and the pinned CLDR cardinal categories (few, one, other) were checked, and each of the 96 English-identical messages was inspected and given an entry-specific rationale. A script audit confirmed that no message contains Cyrillic text. No linguistic, human or native-speaker review is claimed; the catalog awaits native-speaker review.\n\n2026-11-02 incremental review: an AI-assisted check of the mapScenePartial addition covered key order, terminology consistency with the existing mapScene messages, placeholder shape and escaping, with limited semantic review. Excluding this addition reproduces the prior catalog snapshot, so earlier content is unchanged. This increment does not claim a full-catalog re-review or human/native-speaker qualification."
   },
   "englishIdenticalAllowlist": [
     {

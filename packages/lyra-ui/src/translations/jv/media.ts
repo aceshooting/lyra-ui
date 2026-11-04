@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Delikake obyek adegan',
   mapSceneEmpty: 'Ora ana obyek adegan',
   mapSceneUnavailable: 'Adegan ora bisa digambar.',
+  mapScenePartial: 'Sawetara obyek adegan ora digambar, utawa digambar tanpa dhuwuré.',
   mapSceneInvalid: 'Panganyaran adegan ora sah. Obyek sing wis ditampa sadurunge ora owah.',
   mapSceneLimit: 'Panganyaran adegan ngluwihi wates. Obyek sing wis ditampa sadurunge ora owah.',
   mapScenePrevious: 'Kaca adegan sadurunge',

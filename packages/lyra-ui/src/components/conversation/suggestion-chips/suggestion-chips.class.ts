@@ -79,6 +79,12 @@ interface PendingSuggestionFocus {
  * @cssprop [--lr-suggestion-chips-hover-bg=var(--lr-color-brand-quiet)] - Background of a hovered chip.
  * @cssprop [--lr-suggestion-chips-hover-border=var(--lr-color-brand)] - Border color of a hovered chip.
  * @cssprop [--lr-suggestion-chips-disabled-opacity=var(--lr-opacity-disabled)] - Opacity of a chip whose suggestion sets `disabled`.
+ * @cssprop [--lr-suggestion-chips-label-lines=1] - Maximum lines of each `chip-label` before it is
+ *   clamped with an ellipsis. Unset, the scrolling row shows one line and a `wrap` row shows up to
+ *   3, so full-question starter prompts stay readable in a narrow chat column.
+ * @cssprop [--lr-suggestion-chips-chip-max-inline-size=var(--lr-size-16rem)] - Maximum inline size of
+ *   each chip. In a `wrap` row it is further clamped to the row's inline size, so a chip never
+ *   overflows its container.
  * @status stable
  * @since 4.0.0
  */

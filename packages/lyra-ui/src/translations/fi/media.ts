@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'Piilota näkymän objektit',
   mapSceneEmpty: 'Ei näkymän objekteja',
   mapSceneUnavailable: 'Näkymän piirtäminen ei ole käytettävissä.',
+  mapScenePartial: 'Joitakin näkymän objekteja ei piirretä, tai ne piirretään ilman korkeuttaan.',
   mapSceneInvalid: 'Näkymän päivitys on virheellinen. Aiemmin hyväksytyt objektit säilyvät ennallaan.',
   mapSceneLimit: 'Näkymän päivitys ylittää rajan. Aiemmin hyväksytyt objektit säilyvät ennallaan.',
   mapScenePrevious: 'Edellinen näkymän sivu',

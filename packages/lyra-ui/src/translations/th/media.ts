@@ -94,6 +94,7 @@ const strings: LyraLocaleStrings = {
   mapSceneHide: 'ซ่อนวัตถุในฉาก',
   mapSceneEmpty: 'ไม่มีวัตถุในฉาก',
   mapSceneUnavailable: 'ไม่สามารถเรนเดอร์ฉากได้',
+  mapScenePartial: 'วัตถุบางรายการในฉากไม่ได้เรนเดอร์ หรือเรนเดอร์โดยไม่มีความสูง',
   mapSceneInvalid: 'การอัปเดตฉากไม่ถูกต้อง วัตถุที่ยอมรับก่อนหน้านี้จะไม่เปลี่ยนแปลง',
   mapSceneLimit: 'การอัปเดตฉากเกินขีดจำกัด วัตถุที่ยอมรับก่อนหน้านี้จะไม่เปลี่ยนแปลง',
   mapScenePrevious: 'หน้าฉากก่อนหน้า',

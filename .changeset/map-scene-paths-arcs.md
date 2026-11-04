@@ -1,0 +1,7 @@
+---
+"@aceshooting/lyra-ui": minor
+---
+
+`lr-map` now draws scene paths and arcs. They render as one scene-owned GeoJSON source and data-driven line layer, using each object's resolved color, width and opacity, beneath scene markers. Great-circle paths are sampled at most one degree apart, linear paths join vertices straight in longitude/latitude, and both cross the antimeridian the shorter way. An arc follows the great circle between its endpoints with a parabolic `height` rise, carried as the third coordinate. Scene lines are reinstalled after a style replacement, updated in place for a newer accepted scene, guarded against late native preparation, and removed when cleared or disconnected.
+
+`lr-map-scene-state` now reports what was drawn. Nonempty scenes report `loading`, then `ready` when every object is installed exactly (markers once the marker renderer reports their installation), `partial` with a code when some objects are missing or approximated, or `unavailable` with a code when nothing could be drawn. A new `altitude` code in `LyraMapSceneErrorCode` marks a path or arc that the flat map draws as its ground track. Models report `model`; renderer, layer and color failures report `engine`; generated geometry over 262,144 vertices reports `limit`; and a lost WebGL context reports `context-lost` until it is restored. Previously, every nonempty scene reported `unavailable` with code `engine`. The scene status text is hidden when `ready`, and a `partial` status is announced politely using the new localized `mapScenePartial` message.

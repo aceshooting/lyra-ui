@@ -198,6 +198,26 @@ export const TrustedHtml: Story = {
   `,
 };
 
+const imageAnswer = `The chart below summarizes the quarter.
+
+![Quarterly revenue chart](data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iIzRmNDZlNSIvPjwvc3ZnPg==)
+
+Raw HTML too: <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iIzRmNDZlNSIvPjwvc3ZnPg==" alt="inline logo"> done.`;
+
+/** Untrusted content such as a streamed language-model answer: `without-images` renders every
+ * image as its alt text, so rendering never makes the page fetch an arbitrary image URL. */
+export const WithoutImages: Story = {
+  parameters: {
+    docs: { description: { story: 'Left: the default renders allowed image URLs. Right: `without-images` renders each Markdown and raw-HTML image as its alt text, in every `html-mode`, with no request. Use it for language-model output.' } },
+  },
+  render: () => html`
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(14rem, 1fr)); gap:1rem;">
+      <lr-markdown .content=${imageAnswer}></lr-markdown>
+      <lr-markdown without-images .content=${imageAnswer}></lr-markdown>
+    </div>
+  `,
+};
+
 /** Content removal clears the document without changing the native attribute readback. */
 export const ClearContent: Story = {
   render: () => html`

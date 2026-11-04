@@ -111,11 +111,13 @@ export const styles = css`
 
   :host(:not([disable-sticky~="banner"])) [part~="banner"] {
     position: sticky;
+    background: var(--lr-page-banner-bg, var(--lr-color-surface));
     inset-block-start: 0;
     z-index: var(--lr-layer-content);
   }
   :host(:not([disable-sticky~="header"])) [part~="header"] {
     position: sticky;
+    background: var(--lr-page-header-bg, var(--lr-color-surface));
     inset-block-start: var(
       --lr-page-banner-height,
       var(--_lr-page-banner-height)
@@ -124,6 +126,7 @@ export const styles = css`
   }
   :host(:not([disable-sticky~="subheader"])) [part~="subheader"] {
     position: sticky;
+    background: var(--lr-page-subheader-bg, var(--lr-color-surface));
     inset-block-start: calc(
       var(--lr-page-banner-height, var(--_lr-page-banner-height)) +
         var(--lr-page-header-height, var(--_lr-page-header-height))
