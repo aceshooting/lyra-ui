@@ -118,12 +118,23 @@ for (const engine of ['modular', 'maplibre'] as const) describe(`addMapCustomLay
     const lose = gl.getExtension('WEBGL_lose_context');
     expect(lose === null).to.equal(false, 'the browser can simulate context loss');
     if (lose) {
-      lose.loseContext();
-      await waitUntil(() => handle.status.state === 'unavailable', 'context loss reported', { timeout: 20000 });
-      expect(handle.status.code).to.equal('context-lost');
-      expect(probe.disposals.at(-1)).to.equal(true, 'disposal after loss performs no GL work');
-      lose.restoreContext();
-      await waitUntil(() => probe.contexts.length === 3 && handle.status.state === 'ready', 'remounted after restoration', { timeout: 20000 });
+      // MapLibre warns that custom layers need re-adding after a restore; the bridge does exactly
+      // that, so the engine's notice is expected here and every other warning still surfaces.
+      const originalWarn = console.warn, unexpected: unknown[][] = [];
+      console.warn = (...args: unknown[]) => {
+        if (!/^Custom layer with id '[^']+' cannot be restored after WebGL context loss/u.test(String(args[0]))) unexpected.push(args);
+      };
+      try {
+        lose.loseContext();
+        await waitUntil(() => handle.status.state === 'unavailable', 'context loss reported', { timeout: 20000 });
+        expect(handle.status.code).to.equal('context-lost');
+        expect(probe.disposals.at(-1)).to.equal(true, 'disposal after loss performs no GL work');
+        lose.restoreContext();
+        await waitUntil(() => probe.contexts.length === 3 && handle.status.state === 'ready', 'remounted after restoration', { timeout: 20000 });
+      } finally {
+        console.warn = originalWarn;
+      }
+      expect(unexpected.map(args => String(args[0]))).to.deep.equal([]);
     }
     const disposals = probe.disposals.length;
     element.remove();

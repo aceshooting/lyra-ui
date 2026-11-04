@@ -214,7 +214,7 @@ out vec4 color;
 void main() { if (lrHorizonOccluded(v_sphere)) discard; color = vec4(u_color.rgb * u_color.a, u_color.a); }`;
 
 /** Resolves a CSS color to straight RGBA in [0, 1] through a 1x1 canvas. */
-function storyRgba(color: string, alpha: number): [number, number, number, number] {
+function storyColorChannels(color: string, alpha: number): [number, number, number, number] {
   const canvas = document.createElement('canvas'); canvas.width = 1; canvas.height = 1;
   const context = canvas.getContext('2d', { willReadFrequently: true })!;
   context.fillStyle = color; context.fillRect(0, 0, 1, 1);
@@ -297,10 +297,14 @@ export const CustomCoverageCone: Story = {
       handle?.remove(); handle = undefined;
       if (!node) return;
       const map = node as LyraMap;
-      await map.whenStyleReady();
+      // A map removed before its style loads cancels readiness; there is nothing to attach then.
+      try { await map.whenStyleReady(); } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        throw error;
+      }
       if (!map.isConnected) return;
       map.jumpTo({ pitch: 55 });
-      handle = addMapCustomLayer(map, coverageCone([6.13, 49.61], 3000, 6000, storyRgba(storyColor('brand'), 0.35)), {
+      handle = addMapCustomLayer(map, coverageCone([6.13, 49.61], 3000, 6000, storyColorChannels(storyColor('brand'), 0.35)), {
         onStateChange: ({ state, code }) => { if (status) status.textContent = `Coverage layer ${state}${code ? ` (${code})` : ''}.`; },
       });
     };
