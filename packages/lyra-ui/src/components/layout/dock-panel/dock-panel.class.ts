@@ -137,7 +137,7 @@ interface DragState {
  *   (drag affordance vs. button feedback).
  * @cssprop [--lr-dock-panel-handle-active-color=color-mix(in oklab, var(--lr-dock-panel-handle-hover-color, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
  *   Background of `handle` while actively dragged/pressed.
- * @cssprop [--lr-dock-panel-handle-hit-area=var(--lr-space-s)] - Resize target width along the
+ * @cssprop [--lr-dock-panel-handle-hit-area=var(--lr-space-m)] - Resize target width along the
  *   panel's inner edge, inside its clipped box and over its content. Precise pointers get exactly
  *   this width, so content beside the edge stays clickable (set it to the visible line, e.g. `3px`,
  *   to give the content every pixel); coarse or hover-less pointers get at least

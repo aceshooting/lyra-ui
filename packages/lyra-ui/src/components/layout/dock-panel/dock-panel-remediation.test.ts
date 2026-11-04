@@ -129,7 +129,7 @@ describe('dock-panel handle hit area', () => {
         expect(shrunk).to.be.at.least(44);
       } else {
         const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
-        expect(fallback).to.equal(0.5 * remPx);
+        expect(fallback).to.equal(0.75 * remPx);
         expect(shrunk).to.equal(3);
       }
       expect(enlarged).to.equal(60);

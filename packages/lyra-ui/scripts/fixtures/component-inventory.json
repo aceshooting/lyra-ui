@@ -46877,7 +46877,7 @@
             "name": "--lr-dock-panel-handle-hit-area",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-space-s)"
+            "default": "var(--lr-space-m)"
           },
           {
             "name": "--lr-dock-panel-handle-hover-color",

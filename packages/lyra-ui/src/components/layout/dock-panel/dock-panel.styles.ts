@@ -107,7 +107,7 @@ export const styles = css`
   [part="handle"]::before {
     content: "";
     position: absolute;
-    --_lr-dock-panel-hit-area: var(--lr-dock-panel-handle-hit-area, var(--lr-space-s));
+    --_lr-dock-panel-hit-area: var(--lr-dock-panel-handle-hit-area, var(--lr-space-m));
     inline-size: var(--_lr-dock-panel-hit-area);
     block-size: 100%;
     inset-block-start: 0;
@@ -132,7 +132,7 @@ export const styles = css`
     [part="handle"]::before {
       --_lr-dock-panel-hit-area: max(
         var(--lr-icon-button-size),
-        var(--lr-dock-panel-handle-hit-area, var(--lr-space-s))
+        var(--lr-dock-panel-handle-hit-area, var(--lr-space-m))
       );
     }
   }

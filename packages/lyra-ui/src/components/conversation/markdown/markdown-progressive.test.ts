@@ -41,6 +41,8 @@ const corpus = [
   '| left | right |\n| :--- | ---: |\n| one | two |\n\nDone.\n',
   '- [x] completed\n- [ ] waiting\n\nDone.\n\n1. [x] ordered\n2. ordinary\n',
   '```js\nconst x = 1;\n\n```~\n\nEnd.\n\n~~~\nbody\n~~~\n',
+  // A closing fence repeats only its own character: neither line below closes its fence.
+  '~~~\nbody\n~~~`\nmore\n\n~~~~ \n\n```\ncode\n```~~\nstill code\n```\n\nDone.\n',
   'See [label][ref].\n\n# Same\n\n[ref]: /guide "Title"\n\n# Same\n\nDone.\n',
   '[ref]: /guide "A\n\nlong title"\n\nSee [ref].\n\nDone.\n',
   '[ref]: /guide\n\'A\n  \nlong title\'\n\nSee [ref].\n\nDone.\n',

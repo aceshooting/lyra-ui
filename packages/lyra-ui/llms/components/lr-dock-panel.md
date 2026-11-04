@@ -106,7 +106,7 @@ exact same colors as before: `--lr-dock-panel-collapse-toggle-hover-bg` (default
 `var(--lr-color-brand)`) themes the handle's hover/keyboard-focus state, and
 `--lr-dock-panel-handle-active-color` (default a `color-mix()` of the hover color) themes it while
 being dragged. `--lr-dock-panel-handle-hit-area` sets the resize target width along the inner edge (default
-`var(--lr-space-s)`). The target sits inside the panel's clipped edge, over its content, so precise
+`var(--lr-space-m)`). The target sits inside the panel's clipped edge, over its content, so precise
 pointers get exactly that width and content beside the edge stays clickable; set it to the visible
 line (for example `3px`) to give the content every pixel. Coarse or hover-less pointers get at
 least `--lr-icon-button-size`. Plus shared tokens `--lr-color-surface`, `--lr-color-border`,
