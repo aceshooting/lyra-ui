@@ -137,8 +137,11 @@ interface DragState {
  *   (drag affordance vs. button feedback).
  * @cssprop [--lr-dock-panel-handle-active-color=color-mix(in oklab, var(--lr-dock-panel-handle-hover-color, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
  *   Background of `handle` while actively dragged/pressed.
- * @cssprop [--lr-dock-panel-handle-hit-area=var(--lr-space-m)] - Requested resize target width;
- *   the target is at least `--lr-icon-button-size` and stays inside the panel's clipped edge.
+ * @cssprop [--lr-dock-panel-handle-hit-area=var(--lr-space-m)] - Resize target width along the
+ *   panel's inner edge, inside its clipped box and over its content. Precise pointers get exactly
+ *   this width, so content beside the edge stays clickable (set it to the visible line, e.g. `3px`,
+ *   to give the content every pixel); coarse or hover-less pointers get at least
+ *   `--lr-icon-button-size`.
  * @status stable
  * @since 4.0.0
  */
@@ -673,7 +676,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     // mouse-drag/arrow-key resize), not a tap-to-activate icon button: the
     // visible bar stays a slim 3px while [part='handle']::before (see
     // dock-panel.styles.ts) widens the real pointer-capture hit-slop, which
-    // the base's overflow clip limits to the panel's own edge.
+    // the base's overflow clip limits to the panel's own edge (coarse-floored).
     return html`<div
       part="handle"
       role="separator"

@@ -1,6 +1,6 @@
 {
   "name": "@aceshooting/lyra-map",
-  "version": "1.3.1",
+  "version": "1.4.0",
   "description": "Modular MapLibre renderer with asynchronous feature preparation and a shared module worker",
   "keywords": [
     "map",
@@ -124,7 +124,7 @@
     "@stryker-mutator/tap-runner": "10.1.1",
     "@types/node": "^22.20.5",
     "fast-check": "^4.10.2",
-    "maplibre-gl": "6.15.0",
+    "maplibre-gl": "6.16.0",
     "playwright": "^1.64.1",
     "rolldown": "1.2.16",
     "typescript": "^7.0.2",

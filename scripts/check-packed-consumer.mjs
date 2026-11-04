@@ -162,10 +162,10 @@ const rootHelperRegisteredTags = [];
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/7859878f724ef4237ee93a5414fa6b54f204313a/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'Map scene ownership, camera sessions, accessible scene controls, custom graph node bodies and lazy locale-picker names bring the full non-optional graph to 5,651,605 raw bytes across 64 files. Only its ceiling advances to the next 64-byte boundary, with 43 bytes of headroom. The explicit Oniguruma canary retains its separate exact binary requirement.',
-  reviewedCoreMeasurementBytes: 5_651_605,
+  $comment: 'Map scene ownership, camera sessions, accessible scene controls, custom graph node bodies, lazy locale-picker names, the ten additional locale catalogs, multi-split panel collapse, named menu anchors, markdown without-images, drawn scene lines and the dependency upgrade bring the full non-optional graph to 5,660,028 raw bytes across 64 files. Only its ceiling advances to the next 64-byte boundary, with 4 bytes of headroom. The explicit Oniguruma canary retains its separate exact binary requirement.',
+  reviewedCoreMeasurementBytes: 5_660_028,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 43,
+  selectedRegressionHeadroomBytes: 4,
 };
 
 /**
@@ -320,13 +320,16 @@ const bundleEntries = {
   },
   map: {
     fixture: 'optional',
-    maxRawBytes: 2_500_000,
+    // Drawn scene paths and arcs and the dependency upgrade bring the MapLibre v6 map consumer to
+    // 2,500,162 raw bytes; the next 64-byte boundary.
+    maxRawBytes: 2_500_224,
   },
   graph: {
     fixture: 'optional',
     // The optional WebGL engine adapter, typed columns, builtin 3D renderer, curved relationships,
-    // custom node bodies and glow measure 443.3 KiB raw (453,917 bytes); the next 64-byte boundary.
-    maxRawBytes: 453_952,
+    // custom node bodies, glow, the ten additional locale catalogs, three 0.187 and the 30.7.0
+    // version stamps measure 448.1 KiB raw (458,888 bytes, 458,517 in CI); the next 64-byte boundary.
+    maxRawBytes: 458_944,
   },
 };
 

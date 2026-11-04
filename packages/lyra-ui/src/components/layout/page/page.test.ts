@@ -1450,7 +1450,7 @@ describe('sticky region surfaces', () => {
   const stickyRegions = ['banner', 'header', 'subheader'] as const;
   const alphaOf = (color: string): number => {
     const match = /^rgba?\(([^)]+)\)$/.exec(color);
-    if (!match) return Number.NaN;
+    if (!match?.[1]) return Number.NaN;
     const channels = match[1].split(',');
     return channels.length === 4 ? Number(channels[3]) : 1;
   };

@@ -1,5 +1,65 @@
 # Changelog
 
+## 30.7.0
+
+### Minor Changes
+
+- 630bae1: Add ten complete locale catalogs: Slovak (`sk`), Bulgarian (`bg`), Lithuanian (`lt`), Latvian (`lv`), Estonian (`et`), Catalan (`ca`), Irish (`ga`), Maltese (`mt`), and Serbian in Cyrillic (`sr`) and Latin (`sr-Latn`) script, bringing the built-in catalogs to 80. They ship in `@aceshooting/lyra-translations` as `<locale>.js` aggregates and per-family slices, and appear in `locales.json` and the optional locale loader. These are AI-assisted translations with structural verification only (complete keys, placeholders, ICU syntax and CLDR plural categories); they await native-speaker review, and no human or native-speaker review is claimed.
+
+  Serbian resolution is script-aware: a tag without a script subtag whose CLDR likely script differs from its bare language now tries that script before the bare language, so `sr-ME` (Latin by CLDR) reaches `sr-Latn` while `sr`, `sr-RS`, `sr-BA` and `sr-Cyrl-*` reach Cyrillic `sr`. `languageToCountry()` now maps `ga` to Ireland and `mt` to Malta.
+- 9a6b7bb: Add `hideRestore` (`hide-restore`) to `lr-artifact-panel` so applications can omit the built-in Restore action while preserving version browsing, labels, and announcements. The default keeps the existing Restore behavior.
+- ee377e2: Add signed curvature for 3D graph edges, including typed columns, provider scenes, built-in rendering and the optional WebGL companion. Curved paths retain edge identities and support continuous dashes, tangent arrows, midpoint labels and curve-aware fitting. Existing straight edges and 2D behavior remain unchanged.
+
+  The curved-edge renderer and guides measure 147,026 packed and 601,579 unpacked companion bytes. The affected archive limits advance only to the next 64-byte boundary.
+- a1cde90: Add `createMapCameraSession()` at `@aceshooting/lyra-ui/map-camera-session.js` and the root barrel. A session owns a ready `lr-map` camera to capture and restore saved viewpoints, run keyframe camera tours sampled from a shared simulation clock, and follow an accepted scene marker or model as the application moves it. Reduced motion turns transitions into jumps, holds tour keyframes and keeps following still after its first centring. Failures throw `MapCameraSessionError` with a typed code and leave the running action unchanged.
+
+  `lr-map` emits the noncancelable `lr-map-camera-interrupt` event, with `detail: { reason }`, when a user gesture, another camera command or `center`/`zoom` assignment, a style change or context loss ends a session action. Maps without a session never emit it.
+- ee377e2: Add typed `lr-map` projection and terrain overrides. `projection` selects mercator or globe; `terrain` uses a caller-owned raster elevation source with finite nonnegative exaggeration. Clearing an override restores the current style's captured configuration, including projection expressions. Overrides follow style replacement and participate in map readiness; unsupported or invalid configurations use the localized map fallback. Ordinary maps retain their existing style-driven behavior.
+
+  The typed scene controller adds 1,887 gzip bytes to the media barrel and 1,891 bytes to the viewers barrel. Their delivery limits advance only to the next 64-byte boundary; passing bundle limits and optional engine isolation remain unchanged.
+- df2c163: Add opt-in component-owned globe and terrain toggles to `lr-map.controls`. The controls update typed scene properties before emitting request-change events, preserve controlled application assignments, and expose localized pressed, busy and unavailable states. Terrain enablement requires an explicit existing elevation source.
+
+  Map scene ownership, controls and camera session support add 4,984 gzip bytes to the media barrel and 5,276 to viewers. Optional engines remain dynamically loaded.
+- 6113927: `lr-map` now draws scene paths and arcs. They render as one scene-owned GeoJSON source and data-driven line layer, using each object's resolved color, width and opacity, beneath scene markers. Great-circle paths are sampled at most one degree apart, linear paths join vertices straight in longitude/latitude, and both cross the antimeridian the shorter way. An arc follows the great circle between its endpoints with a parabolic `height` rise, carried as the third coordinate. Scene lines are reinstalled after a style replacement, updated in place for a newer accepted scene, guarded against late native preparation, and removed when cleared or disconnected.
+
+  `lr-map-scene-state` now reports what was drawn. Nonempty scenes report `loading`, then `ready` when every object is installed exactly (markers once the marker renderer reports their installation), `partial` with a code when some objects are missing or approximated, or `unavailable` with a code when nothing could be drawn. A new `altitude` code in `LyraMapSceneErrorCode` marks a path or arc that the flat map draws as its ground track. Models report `model`; renderer, layer and color failures report `engine`; generated geometry over 262,144 vertices reports `limit`; and a lost WebGL context reports `context-lost` until it is restored. Previously, every nonempty scene reported `unavailable` with code `engine`. The scene status text is hidden when `ready`, and a `partial` status is announced politely using the new localized `mapScenePartial` message.
+- 4c6b8d9: Add property-only `lr-map.scene` input with atomic synchronous admission, owned source snapshots, a localized accessible object list with pagination, and immutable scene status and activation events. Invalid updates preserve previously accepted objects, and text-row activation does not move the camera.
+
+  Nonempty accepted scenes currently report `unavailable` with code `engine`. Scene objects are not drawn, model sources are not fetched or decoded, and scene depth, terrain resolution and completed-frame projection are not provided.
+
+  Update eight exceeded bundle ceilings to the next 64-byte boundary above reviewed measurements for scene ownership, accessible feedback and shared localization. Optional 3D engines remain separately loaded.
+- 5979980: `lr-markdown` and `lr-markdown-core` gain a `without-images` attribute (`withoutImages` property) for untrusted content such as streamed language-model answers. In every `html-mode`, each Markdown image renders as its alt text, as a refused URL does, and the finished HTML is enforced too: raw-HTML `<img>` and `<input type="image">` become their alt text, `<picture>` sources and SVG `<image>`/`<feImage>` are removed, and `<video>` loses its `poster`, so rendering never loads an image element. In `sanitize` mode it also removes authored `<style>` elements. `lr-streaming-text` and `lr-streaming-text-core` forward it. The default is unchanged.
+- c77649c: `lr-multi-split` can fold any panel, not only the responsive edge pane, to a narrow rail at any container width. Assign `collapsedPanels` (panel ids) or call `collapsePanel()`, `expandPanel()` or `togglePanel()` from a host control. A folded panel clamps to `--lr-multi-split-collapsed-panel-size` and carries a `data-panel-collapsed` marker, so its own content can render the strip. Its share goes to the open panels within their `panelConstraints`, and dividers beside it keep resizing the nearest open panels. The methods announce `lr-multi-split-panel-collapse-change` and persist the folded set with the sizes under `storage-key`. Existing stored layouts still restore, and a split with nothing folded keeps writing the same stored format.
+- f0277da: Add a shared epoch-time simulation clock, immutable irregular sample mapping and an opt-in sequence playback binding. Maps, charts and detail panels can consume one selected instant while existing standalone index playback stays unchanged. Bindings release without pausing other consumers, and live/replay presentation remains separate from time-zone formatting.
+
+  The shared time helpers add 6,058 gzip bytes to the root entry. Granular entry points remain available, and the helpers do not load sequence components or optional engines.
+- cfc6524: Add bounded custom XYZ triangle bodies and optional static glow to WebGL graph views. Graph and knowledge-graph components accept a synchronous `nodeRenderer`, retain semantic list/keyboard alternatives, and report sanitized custom-mesh refusals. The companion owns admitted geometry, exact triangle picks, mixed depth composition and bounded image-space halo resources; both features remain disabled by default.
+- 6488a11: Let `lr-suggestion-chips` show multi-line prompts. With `wrap` set, each chip label now shows up to three lines and no chip grows wider than the row, so full-question starter prompts stay readable in a narrow chat column. Two new custom properties tune this: `--lr-suggestion-chips-label-lines` sets how many lines a label shows (default 1 in the scrolling row, 3 with `wrap`), and `--lr-suggestion-chips-chip-max-inline-size` sets each chip's maximum inline size (default `var(--lr-size-16rem)`). The scrolling row is unchanged when neither property is set.
+
+### Patch Changes
+
+- 5afdde7: Add the granular graph-layout entry point with deterministic directed acyclic graph layouts, six axis directions, strict cycle errors and owned position buffers. The asynchronous helper supports cancellation and bounded main-thread work for larger inputs.
+
+  Document standalone engine and lr-graph compositions that preserve supplied positions, cancel superseded requests and retain accessible list views.
+- 4bcb093: `lr-dock-panel`: the resize handle's hit area no longer swallows clicks on content beside the panel's inner edge. Precise pointers now get exactly `--lr-dock-panel-handle-hit-area` (default `var(--lr-space-m)`, shrinkable to the visible line); coarse or hover-less pointers keep the `--lr-icon-button-size` floor.
+- 80e85b6: `lr-locale-picker` no longer resolves every offered locale's native name during its first render. A closed picker resolves only the locale its trigger shows, or none when that row supplies a non-blank `label`; the other rows resolve when the listbox opens or when typeahead or search needs them, then stay cached. Supplying `{ tag, label }` rows keeps `Intl.DisplayNames` out of the closed render entirely. Option labels, ordering, typeahead, search and events are unchanged.
+- 8d430ea: `lr-markdown` / `lr-streaming-text`: progressive rendering now closes a fenced code block only on a line that repeats the opening fence character, matching CommonMark and the complete parse. A line such as ` ```~ ` no longer ends a backtick fence early while streaming.
+- 7f8a11f: An `lr-menu-item` or `lr-dropdown-item` with a safe `href` now names its internal `<a part="base">` link. The anchor previously had no accessible name, because its visible label sits inside the decorative label wrapper, so axe reported `link-name`. The anchor now carries the row's name as its `aria-label`: a non-empty host `aria-label` wins, otherwise the visible label, and the name follows label edits. Native `href`, `target`, `rel`, `download` and modifier-click behavior are unchanged.
+- 36f1381: `lr-page` now paints its sticky `banner`, `header`, and `subheader` regions with an opaque `var(--lr-color-surface)` background, so main content scrolling underneath no longer shows through them. Retheme each region with the new `--lr-page-banner-bg`, `--lr-page-header-bg`, and `--lr-page-subheader-bg` custom properties on the Page or any ancestor. A region named in `disable-sticky` and the non-sticky `footer` stay transparent.
+- 5481ded: Correct the documented download event for `lr-artifact-panel`.
+- Updated dependencies [630bae1]
+- Updated dependencies [ee377e2]
+- Updated dependencies [5afdde7]
+- Updated dependencies [ee377e2]
+- Updated dependencies [1186a68]
+- Updated dependencies [42909df]
+- Updated dependencies [302a6a0]
+- Updated dependencies [cfc6524]
+- Updated dependencies [62602a0]
+  - @aceshooting/lyra-translations@30.7.0
+  - @aceshooting/lyra-3d@1.2.0
+  - @aceshooting/lyra-map@1.4.0
+
 ## 30.6.0
 
 ### Minor Changes

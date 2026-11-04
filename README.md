@@ -87,7 +87,7 @@ available to or used by the maintainers.
 | [`packages/lyra-map`](./packages/lyra-map) | Optional modular renderer and shared module worker for `<lr-map>`. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-map)](https://www.npmjs.com/package/@aceshooting/lyra-map) | See the [package README](./packages/lyra-map/README.md) |
 | [`packages/lyra-3d`](./packages/lyra-3d) | Optional WebGL engines (three.js) for opted-in 3D views, loaded on demand; not yet released. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-3d)](https://www.npmjs.com/package/@aceshooting/lyra-3d) | See the [package README](./packages/lyra-3d/README.md) |
 | [`packages/lyra-ide`](./packages/lyra-ide) | Editor data (Custom Elements Manifest, JetBrains web-types, VS Code HTML/CSS custom data), versioned with `lyra-ui`. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-ide)](https://www.npmjs.com/package/@aceshooting/lyra-ide) | *n/a — JSON data* |
-| [`packages/lyra-translations`](./packages/lyra-translations) | The 70 built-in locale catalogs, versioned with `lyra-ui`. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-translations)](https://www.npmjs.com/package/@aceshooting/lyra-translations) | *n/a — opt-in locale modules* |
+| [`packages/lyra-translations`](./packages/lyra-translations) | The 80 built-in locale catalogs, versioned with `lyra-ui`. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-translations)](https://www.npmjs.com/package/@aceshooting/lyra-translations) | *n/a — opt-in locale modules* |
 
 See each package's own README for full install/usage details. For generated interfaces, start with the
 [Lyra Gen quickstart](./packages/lyra-gen/README.md#render-a-validated-view),
@@ -151,7 +151,7 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
   expandable tool-call blocks.
 - **Navigation and overlays:** context menus, menubars, navigation menus, toggles, app-rail and multi-split, with
   opt-in browser top-layer popups.
-- **Localization:** 70 optional translation catalogs plus built-in English.
+- **Localization:** 80 optional translation catalogs plus built-in English.
 
 The [feature guide](./packages/lyra-ui/README.md#highlights) has APIs and examples; the [roadmap](./docs/roadmap.md)
 records shipped releases and open work, including [native document editing](./docs/roadmap/document-editing.md).
@@ -297,7 +297,7 @@ main `$lyra-ui` skill remains the exact API reference.
 
 ## Status
 
-`@aceshooting/lyra-ui` source is versioned at `30.6.0`; `@aceshooting/lyra-flags` source at `2.3.1`
+`@aceshooting/lyra-ui` source is versioned at `30.7.0`; `@aceshooting/lyra-flags` source at `2.3.1`
 — see each package's own `CHANGELOG.md` for release history. Published npm versions can lag these
 source versions while a release is being qualified. `lyra-ide` and `lyra-translations` version in
 lockstep with `lyra-ui`; `lyra-flags`, `lyra-docs`, `lyra-gen`, `lyra-map` and `lyra-3d` version independently

@@ -6,7 +6,7 @@ export type SceneLineObject = Extract<AdmittedSceneObject, { readonly kind: 'pat
 /** `[longitude, latitude, altitude]`; longitudes are unwrapped so consecutive vertices differ by at most 180 degrees. */
 export type SceneLineCoordinate = readonly [longitude: number, latitude: number, altitude: number];
 
-export interface SceneLineFeature {
+interface SceneLineFeature {
   readonly type: 'Feature';
   readonly properties: {
     readonly id: string;
@@ -23,7 +23,7 @@ export interface SceneLineData {
 }
 
 /** Generated vertices shared by every path and arc of one scene. */
-export const SCENE_LINE_VERTEX_LIMIT = 262_144;
+const SCENE_LINE_VERTEX_LIMIT = 262_144;
 /** Arcs always sample their height profile, even across short ground distances. */
 export const SCENE_ARC_MIN_SEGMENTS = 32;
 const radians = Math.PI / 180;

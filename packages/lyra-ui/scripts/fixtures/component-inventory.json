@@ -2,7 +2,7 @@
   "$comment": "Authoritative component, public-surface, and upstream mapping inventory. Refresh with generate-component-inventory.mjs using the pinned published manifests and artifact-bound black-box evidence; do not infer upstream behavior from implementation source.",
   "schemaVersion": 1,
   "pins": {
-    "lyraVersion": "30.6.0",
+    "lyraVersion": "30.7.0",
     "webawesome": {
       "version": "3.11.0",
       "commit": "1d05f1a4468336de35d2c61282a953ef07da3bdf"
@@ -91566,6 +91566,16 @@
             "default": "container"
           },
           {
+            "name": "collapsedPanels",
+            "attribute": null,
+            "type": "readonly string[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
+          {
             "name": "collapseState",
             "attribute": "collapse-state",
             "type": "LyraMultiSplitCollapseState",
@@ -91787,6 +91797,12 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-multi-split-panel-collapse-change",
+            "type": "CustomEvent<LyraEventDetailSnapshot<LyraMultiSplitPanelCollapseChangeDetail>>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-resize",
             "type": "CustomEvent<LyraEventDetailSnapshot<LyraMultiSplitResizeDetail>>",
             "cancelable": "never",
@@ -91834,6 +91850,12 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-multi-split-collapsed-panel-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-2-5rem)"
+          },
           {
             "name": "--lr-multi-split-divider-active-color",
             "deprecated": null,
@@ -91894,6 +91916,22 @@
             ]
           },
           {
+            "name": "collapsePanel",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "panel",
+                    "type": "string | HTMLElement",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
             "name": "expandPane",
             "overloads": [
               {
@@ -91903,11 +91941,43 @@
             ]
           },
           {
+            "name": "expandPanel",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "panel",
+                    "type": "string | HTMLElement",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
             "name": "togglePane",
             "overloads": [
               {
                 "parameters": [],
                 "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "togglePanel",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "panel",
+                    "type": "string | HTMLElement",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "boolean"
               }
             ]
           }

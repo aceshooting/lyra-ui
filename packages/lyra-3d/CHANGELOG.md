@@ -1,5 +1,24 @@
 # @aceshooting/lyra-3d
 
+## 1.2.0
+
+### Minor Changes
+
+- ee377e2: Add signed curvature for 3D graph edges, including typed columns, provider scenes, built-in rendering and the optional WebGL companion. Curved paths retain edge identities and support continuous dashes, tangent arrows, midpoint labels and curve-aware fitting. Existing straight edges and 2D behavior remain unchanged.
+
+  The curved-edge renderer and guides measure 147,026 packed and 601,579 unpacked companion bytes. The affected archive limits advance only to the next 64-byte boundary.
+- 5afdde7: Add the granular graph-layout entry point with deterministic directed acyclic graph layouts, six axis directions, strict cycle errors and owned position buffers. The asynchronous helper supports cancellation and bounded main-thread work for larger inputs.
+
+  Document standalone engine and lr-graph compositions that preserve supplied positions, cancel superseded requests and retain accessible list views.
+- 1186a68: Add an explicit XR support query and optional prepared immersive presentation for eligible unlabeled 3D points scenes. Entry uses a user gesture, preserves current state for inline recovery, and reports fixed failure codes. Browser and headset availability remain runtime requirements.
+
+  Make ordinary point-label cleanup idempotent and complete every independent resource release even when an earlier cleanup step fails.
+- cfc6524: Add bounded custom XYZ triangle bodies and optional static glow to WebGL graph views. Graph and knowledge-graph components accept a synchronous `nodeRenderer`, retain semantic list/keyboard alternatives, and report sanitized custom-mesh refusals. The companion owns admitted geometry, exact triangle picks, mixed depth composition and bounded image-space halo resources; both features remain disabled by default.
+
+### Patch Changes
+
+- 62602a0: Depend on three.js ^0.187.0. Prepared OBJ and PLY models continue to match the native three.js loaders' geometry, including line elements and polygon triangulation.
+
 ## 1.1.0
 
 ### Minor Changes

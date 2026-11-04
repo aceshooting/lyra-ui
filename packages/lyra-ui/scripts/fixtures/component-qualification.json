@@ -57,6 +57,7 @@
     "The matrix is a risk-weighted sample and does not provide a baseline for every component or state.",
     "Human review on 2026-10-08 by aceshooting approved ONLY these fifteen exact Linux Playwright light/dark/RTL candidates. Changes cover OTP shared form chrome, dark raised overlay fills, and restored histogram dimensions, compact numeric ticks and native legend paint. Approved SHA-256: charts-histogram--default/dark.png 64a4df8f77ef5acbcfaf72a3909e98b8087a18755b331583fde005550453e67e; charts-histogram--default/light.png 5865513568c6808f20366c7a9a75c54224afbf928107854546ea18c62d98740c; charts-histogram--default/rtl.png dbc21c2e87ed5e845e92620de76a74d279507d857b2821c7c03842ba2b6be971; form-color-picker--inline-compatibility/dark.png ce3ee91032b3f8e867b15fbb2a7522c738f04d1d97de7c0473011cea756a56bf; form-color-picker--inline-compatibility/light.png d3eb7f117d2e805801c7242e6b8a0fcc99b204d2133fdfdb43431964e72ac01f; form-color-picker--inline-compatibility/rtl.png 99845352b454f1a5cf414d240ba9a6bdafdda2360c070dde531a76f3e649b486; form-color-picker--open/dark.png 747d6429dedefda5eb6eac1f185e47179122354dd64997fa4780806a86ebcfe4; form-color-picker--open/light.png 8acd84b900c8e4899197eab9d04053ae06cfd7ed089fed83ccb693289c26bef4; form-color-picker--open/rtl.png 31349f06cc868bcba6b811e3eb879766746b17c0e16d720574eea9d484d7f5ab; forms-otp-input--appearances-and-sizes/dark.png 910ccdcefb63f5d3a6f3b7eb1c34d14641440aee759e6cb8ec771850554669ae; forms-otp-input--appearances-and-sizes/light.png 5634c12a71eb6364fa1d58faac88b3437ea01dee03f44124ec10d67aef2976ec; forms-otp-input--appearances-and-sizes/rtl.png 174657dce111ac2e41896dbf25208856517d69fd96911ef82bfbdb7611ab9863; overlay-popover--default/dark.png 3b50db2491901685b8a5f5dc9727b19f774268c0d451250e6a88188de6b9f3f6; overlay-popover--default/light.png 6bbcdc833a9961a0707a0d549fe2dda91911b04c37e8ccc360bd2ccbaf6d0cc9; overlay-popover--default/rtl.png 500270e0bd81e302297d5b37823145e6c1c045a04ed57161e4209797aaddd03a. No other retained baseline or evidence-only axis was approved. All other outstanding review remains pending.",
     "Promotion on 2026-10-10 by maintainer authorization covered ONLY the three forms-otp-input--appearances-and-sizes light/dark/RTL baselines. The document token layer now resolves the story's var(--lr-space-m) row gap, adding an intended 12px between rows; the CI diff and candidate images of all three axes were inspected and showed no other change. The promoted files are the unmodified CI candidates (Linux Playwright) bound to the CI report hashes: light 13f80894b9a572bdf2ecc6d299e974649937bf0f2fa534eadb8690ba0355622c; dark 132742d9c88d708b6afc577998f9ceb11d20de522feedd3f0784099ee923b8dd; RTL f6cb2838ed8e133f820740aa1eee44c179c843097474abf19fac13d87c8a0890. Supersedes the 2026-10-08 hashes for this story only. No other baseline or evidence capture was approved.",
+    "Human review on 2026-11-02 by aceshooting (explicit approval: \"Approve these three\") covered ONLY the three layout-page--desktop light/dark/RTL baselines. The sticky banner, header and subheader now paint the opaque surface token, so their text is rasterized over that surface instead of the transparent page backdrop; the candidate and diff images of all three axes were inspected and showed only text antialiasing changes on the header and subheader (0.058-0.079% of pixels), with identical layout, colors and spacing. The promoted files are the unmodified candidates from the pinned Linux Playwright image. Approved SHA-256: light 1f767c8ef5442060b2fa957debe6c438ac4276bd5d5338541554d7fede5fafc7; dark 176d8bb2a90bca5b97ff71a604d0c8f57c51f3fb900e6e5dc3b558c445c9a3e3; RTL 05ea50d3d45258efaf941f932b1f8adae7db2199eee0d045bae68a425615658c.",
     "No assistive technology pairing has been manually verified.",
     "Firefox and WebKit run a per-commit contract subset; their complete suites are weekly/manual.",
     "Source-signal dimensions identify evidence locations but do not turn regex presence into a behavioral pass."
@@ -19709,6 +19710,30 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/dropdown-item.test.ts",
+              "test": "gives the anchor the visible row label as its accessible name",
+              "target": "menu",
+              "state": "open"
+            },
+            {
+              "file": "src/components/layout/menu/dropdown-item.test.ts",
+              "test": "keeps the anchor name live when the visible label changes",
+              "target": "menu",
+              "state": "open"
+            },
+            {
+              "file": "src/components/layout/menu/dropdown-item.test.ts",
+              "test": "lets a host aria-label win, and restores the visible label once it is removed",
+              "target": "menu",
+              "state": "open"
+            },
+            {
+              "file": "src/components/layout/menu/dropdown-item.test.ts",
+              "test": "passes axe link-name with link items beside plain actions",
+              "target": "menu",
+              "state": "open"
+            },
+            {
+              "file": "src/components/layout/menu/dropdown-item.test.ts",
               "test": "inherits decorative display-slot isolation without losing its host label or action",
               "target": "wrapper",
               "state": "populated"
@@ -19716,6 +19741,12 @@
             {
               "file": "src/components/layout/menu/dropdown-item.test.ts",
               "test": "is accessible",
+              "target": "menu",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/menu/dropdown-item.test.ts",
+              "test": "names an anchor that appears when href is set after the first render",
               "target": "menu",
               "state": "populated"
             }
@@ -31857,6 +31888,9 @@
           "src/components/media/map/map-scene-input-reentry.test.ts",
           "src/components/media/map/map-scene-interaction-state-reentry.test.ts",
           "src/components/media/map/map-scene-interaction-state.test.ts",
+          "src/components/media/map/map-scene-lines-component.test.ts",
+          "src/components/media/map/map-scene-lines.property.test.ts",
+          "src/components/media/map/map-scene-lines.test.ts",
           "src/components/media/map/map-scene-owner.property.test.ts",
           "src/components/media/map/map-scene-owner.test.ts",
           "src/components/media/map/map-scene-position-registry-capture.test.ts",
@@ -31870,6 +31904,7 @@
           "src/components/media/map/map-scene-render-revision.test.ts",
           "src/components/media/map/map-scene-source-snapshot.property.test.ts",
           "src/components/media/map/map-scene-source-snapshot.test.ts",
+          "src/components/media/map/map-scene-status.test.ts",
           "src/components/media/map/map-source-updates.test.ts",
           "src/components/media/map/map-style-failure-supersession.test.ts",
           "src/components/media/map/map-style-input.property.test.ts",
@@ -32184,6 +32219,9 @@
           "src/components/media/map/map-scene-input-reentry.test.ts",
           "src/components/media/map/map-scene-interaction-state-reentry.test.ts",
           "src/components/media/map/map-scene-interaction-state.test.ts",
+          "src/components/media/map/map-scene-lines-component.test.ts",
+          "src/components/media/map/map-scene-lines.property.test.ts",
+          "src/components/media/map/map-scene-lines.test.ts",
           "src/components/media/map/map-scene-owner.property.test.ts",
           "src/components/media/map/map-scene-owner.test.ts",
           "src/components/media/map/map-scene-position-registry-capture.test.ts",
@@ -32197,6 +32235,7 @@
           "src/components/media/map/map-scene-render-revision.test.ts",
           "src/components/media/map/map-scene-source-snapshot.property.test.ts",
           "src/components/media/map/map-scene-source-snapshot.test.ts",
+          "src/components/media/map/map-scene-status.test.ts",
           "src/components/media/map/map-source-updates.test.ts",
           "src/components/media/map/map-style-failure-supersession.test.ts",
           "src/components/media/map/map-style-input.property.test.ts",
@@ -32452,6 +32491,7 @@
           "src/components/conversation/markdown/markdown-streaming.test.ts",
           "src/components/conversation/markdown/markdown-tables.test.ts",
           "src/components/conversation/markdown/markdown-task-items.test.ts",
+          "src/components/conversation/markdown/markdown-without-images.test.ts",
           "src/components/conversation/markdown/markdown.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -32682,6 +32722,7 @@
           "src/components/conversation/markdown/markdown-streaming.test.ts",
           "src/components/conversation/markdown/markdown-tables.test.ts",
           "src/components/conversation/markdown/markdown-task-items.test.ts",
+          "src/components/conversation/markdown/markdown-without-images.test.ts",
           "src/components/conversation/markdown/markdown.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -33497,6 +33538,30 @@
           "evidence": [
             {
               "file": "src/components/layout/menu/dropdown-item.test.ts",
+              "test": "gives the anchor the visible row label as its accessible name",
+              "target": "menu",
+              "state": "open"
+            },
+            {
+              "file": "src/components/layout/menu/dropdown-item.test.ts",
+              "test": "keeps the anchor name live when the visible label changes",
+              "target": "menu",
+              "state": "open"
+            },
+            {
+              "file": "src/components/layout/menu/dropdown-item.test.ts",
+              "test": "lets a host aria-label win, and restores the visible label once it is removed",
+              "target": "menu",
+              "state": "open"
+            },
+            {
+              "file": "src/components/layout/menu/dropdown-item.test.ts",
+              "test": "passes axe link-name with link items beside plain actions",
+              "target": "menu",
+              "state": "open"
+            },
+            {
+              "file": "src/components/layout/menu/dropdown-item.test.ts",
               "test": "inherits decorative display-slot isolation without losing its host label or action",
               "target": "wrapper",
               "state": "populated"
@@ -33504,6 +33569,12 @@
             {
               "file": "src/components/layout/menu/dropdown-item.test.ts",
               "test": "is accessible",
+              "target": "menu",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/menu/dropdown-item.test.ts",
+              "test": "names an anchor that appears when href is set after the first render",
               "target": "menu",
               "state": "populated"
             },
@@ -36105,6 +36176,12 @@
               "state": "populated"
             },
             {
+              "file": "src/components/layout/multi-split/multi-split-panel-collapse.test.ts",
+              "test": "is accessible with a collapsed panel",
+              "target": "split",
+              "state": "populated"
+            },
+            {
               "file": "src/components/layout/multi-split/multi-split.test.ts",
               "test": "is accessible in the rail state under viewport basis",
               "target": "el",
@@ -36124,8 +36201,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/multi-split/multi-split-remediation.test.ts",
-              "test": "leaves modified arrows to the browser",
+              "file": "src/components/layout/multi-split/multi-split-panel-collapse.test.ts",
+              "test": "leaves the split unchanged while collapsedPanels is unset",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -36261,6 +36338,7 @@
           "src/components/layout/multi-split/multi-split-coverage.test.ts",
           "src/components/layout/multi-split/multi-split-modal-layering.test.ts",
           "src/components/layout/multi-split/multi-split-native-close.test.ts",
+          "src/components/layout/multi-split/multi-split-panel-collapse.test.ts",
           "src/components/layout/multi-split/multi-split-remediation.test.ts",
           "src/components/layout/multi-split/multi-split-trigger.test.ts",
           "src/components/layout/multi-split/multi-split.test.ts"
@@ -52250,7 +52328,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/suggestion-chips/suggestion-chips.class.ts",
-              "line": 199,
+              "line": 205,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

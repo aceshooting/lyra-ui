@@ -87,7 +87,10 @@ needs a different scrolling surface.
   doesn't resolve to a length. Also reflected as `data-effective-orientation` (only present while
   `orientationBreakpoint` resolves to a usable length).
 - `storageKey?: string` (attribute `storage-key`) — persists a versioned list of `{ panelId, size }`
-  records to `localStorage` under `` `lr-multi-split:${key}:panels` ``. Every direct panel must have
+  records to `localStorage` under `` `lr-multi-split:${key}:panels` ``. While a panel is folded
+  (`collapsedPanels`) the record is version 2 and a folded panel's entry adds `collapsed: true` and
+  the `expandedSize` it returns to; with nothing folded the original version-1 shape is written, and
+  both versions restore. Every direct panel must have
   a unique, nonempty, whitespace-stable `panel-id`; a missing, surrounding-whitespace, or duplicate identity fails persistence closed without
   disabling the live split. Restores and same-instance membership reconciliation follow `panelId`,
   so a reorder/replacement never transfers a saved size to a different business panel.
@@ -189,6 +192,24 @@ number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-align
   releases a pin, so ordinary resizing inside one band leaves it alone. Left unset (the default), a
   pin survives every band and orientation change until a consumer writes `'auto'` — the pre-existing
   behavior.
+- `collapsedPanels: string[] = []` (attribute: false) — the `panel-id`s of panels folded to a narrow
+  rail strip by a host control, at any container width and for any panel (not only an edge one).
+  Empty (the default) leaves the split exactly as before. A collapsed panel clamps along the resize
+  axis to `--lr-multi-split-collapsed-panel-size` (default `var(--lr-size-2-5rem)`), carries a
+  `data-panel-collapsed` marker, clips its overflow, and stays rendered: the panel's own content
+  paints the strip (a rotated title, an expand control) under `[data-panel-collapsed]` and takes its
+  full content out of the tab order itself (for example `display: none` or `inert` on the hidden
+  region). Its share moves to the open panels in proportion to their sizes, never past a panel's
+  `panelConstraints` maximum (a capped panel's surplus goes to the others); its `sizes` entry reads
+  `0` while folded, and expanding restores the share it had when it folded, reclaimed from the open
+  panels' room above their minimums. Requires the full `panel-id` identity model (otherwise the set
+  is ignored); unknown ids are ignored, and at least one panel stays open (a set naming every panel
+  leaves the last one open). Assigning it is silent, like `sizes`; a `sizes` assignment made
+  together with it may already describe the fold (zero entries for the folded panels), otherwise a
+  `sizes` value with a non-zero entry for a folded panel is rejected like any invalid layout. A
+  valid `storageKey` layout restores the set, unless this property already names panels. The
+  responsive `collapse` pane is independent: while it is `'rail'`/`'floating'` its own state governs
+  that panel, and a per-panel fold of the same panel shows again once it is `'wide'`.
 
 **Methods:** `expandPane()`, `collapsePane()` and `togglePane()` drive the collapse feature
 semantically, each picking the mechanism the pane's *current band* provides rather than its pinned
@@ -203,6 +224,24 @@ tracking as it found it. They emit no `lr-toggle`, matching the existing rule th
 write does not. They are named `…Pane()` rather than `expand()`/`collapse()`/`toggle()` because
 `collapse` is already the pane-selection property, following `<lr-page>`'s `showNavigation()` trio.
 The component still renders no trigger of its own — wire these to your own control.
+
+`collapsePanel(panel)`, `expandPanel(panel)` and `togglePanel(panel)` fold and unfold one panel of
+`collapsedPanels`; `panel` is its `panel-id` or the panel element. Each applies synchronously:
+`sizes` is redistributed, the layout persists under `storageKey` (with the collapsed set), the panel
+is decorated, and `lr-multi-split-panel-collapse-change` fires. Each returns whether anything
+changed: `false` for an unknown panel, one already in the requested state, the last open panel, or a
+split without valid `panel-id`s. Called before the first update, they only record the request,
+silently. Wire them to a chevron in each panel's header and mirror the fold onto that control's
+`aria-expanded` from the event or the `data-panel-collapsed` marker:
+
+```js
+split.addEventListener('lr-multi-split-panel-collapse-change', (event) => {
+  const { panelId, collapsed } = event.detail;
+  const toggle = split.querySelector(`[panel-id="${panelId}"] .toggle`);
+  toggle.setAttribute('aria-expanded', String(!collapsed));
+});
+toggleButton.addEventListener('click', () => split.togglePanel(toggleButton.closest('[panel-id]')));
+```
 
 `collapse`'s three resulting states — `'wide'` (default, today's plain layout) / `'rail'` / `'floating'`
 — are exposed as: a `data-collapse-state` attribute on both the host and the collapsing panel element
@@ -249,7 +288,12 @@ Forced closes emit no request. Direct `open` writes and no-op dismissals emit ne
 `lr-multi-split-constraints-invalid` (`detail: LyraMultiSplitConstraintIssueDetail`, fired once per configuration when the
 configured panel minimums/maximums cannot fit the track; resizing the container does not repeat it; the infeasible set is rejected for interaction and a
 normalized percent minimum is used instead), `lr-multi-split-orientation-change` (`detail: { orientation }`,
-fired only when an enabled `orientationBreakpoint` actually changes `effectiveOrientation`)
+fired only when an enabled `orientationBreakpoint` actually changes `effectiveOrientation`),
+`lr-multi-split-panel-collapse-change` (`detail: LyraMultiSplitPanelCollapseChangeDetail = { panelId,
+collapsed, collapsedPanels, sizes }`, an immutable snapshot fired when `collapsePanel()`,
+`expandPanel()` or `togglePanel()` folds or unfolds a panel, after the redistributed `sizes` are
+applied and persisted and the `data-panel-collapsed` marker is set; never for a direct
+`collapsedPanels`/`sizes` assignment or a stored-layout restore)
 
 **Slots:** default (each direct child element is one panel; set a unique `panel-id` on every child
 when `storage-key` is used).
@@ -257,7 +301,9 @@ when `storage-key` is used).
 **CSS parts:** `base` (`position: relative`, so the `'floating'` state can anchor to it), `divider`
 (carries `aria-disabled="true"` and is drag/keyboard-inert while its adjacent panel is collapsed;
 while that panel is `'floating'` it takes no track and paints no line, but stays focusable as the
-collapse-focus fallback; beside a `'rail'` panel it keeps both),
+collapse-focus fallback; beside a `'rail'` panel it keeps both; beside a `collapsedPanels` panel it
+instead resizes the nearest open panel on each side, reports that leading panel as `aria-valuenow`
+and names those two panels in its label, and is disabled only when one side has no open panel),
 `backdrop` (the `'floating'` drawer's scrim — only rendered while `collapseState === 'floating'` and
 `open`)
 
@@ -288,6 +334,9 @@ needed against the inline style the component rewrites on every render.
 `collapse` anchors the drawer to, so one declaration insets all three anchored edges; the free inline
 edge stays governed by the panel's own width. Unset, the drawer is flush with its container exactly
 as before.
+`--lr-multi-split-collapsed-panel-size` (default `var(--lr-size-2-5rem)`) sets the rail a
+`collapsedPanels` panel clamps to: its inline size in a horizontal split, its block size in a
+vertical one. Set it on the split or an ancestor.
 Otherwise shared tokens only.
 
 **Optional peer deps:** none.
@@ -3867,8 +3916,11 @@ exact same colors as before: `--lr-dock-panel-collapse-toggle-hover-bg` (default
 `color-mix()` (background) for its pressed state; `--lr-dock-panel-handle-hover-color` (default
 `var(--lr-color-brand)`) themes the handle's hover/keyboard-focus state, and
 `--lr-dock-panel-handle-active-color` (default a `color-mix()` of the hover color) themes it while
-being dragged. `--lr-dock-panel-handle-hit-area` requests a resize target width (default
-`var(--lr-space-m)`, floored at `--lr-icon-button-size`) inside the panel's clipped edge. Plus shared tokens `--lr-color-surface`, `--lr-color-border`,
+being dragged. `--lr-dock-panel-handle-hit-area` sets the resize target width along the inner edge (default
+`var(--lr-space-m)`). The target sits inside the panel's clipped edge, over its content, so precise
+pointers get exactly that width and content beside the edge stays clickable; set it to the visible
+line (for example `3px`) to give the content every pixel. Coarse or hover-less pointers get at
+least `--lr-icon-button-size`. Plus shared tokens `--lr-color-surface`, `--lr-color-border`,
 `--lr-color-border-subtle`, `--lr-color-brand`, `--lr-color-brand-quiet`, `--lr-color-text`,
 `--lr-radius`, `--lr-space-xs`, `--lr-focus-ring-width/-color/-offset`, `--lr-transition-fast`,
 `--lr-icon-button-size`.
@@ -6008,6 +6060,13 @@ These named interfaces and helper signatures are available to typed integrations
   Import: `@aceshooting/lyra-ui/components/layout/multi-split/multi-split.class.js`.
   `LyraMultiSplitOrientationChangeDetail {
     readonly orientation: LyraOrientation;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/multi-split/multi-split.class.js`.
+  `LyraMultiSplitPanelCollapseChangeDetail {
+    readonly panelId: string;
+    readonly collapsed: boolean;
+    readonly collapsedPanels: readonly string[];
+    readonly sizes: readonly number[];
   }`
   Import: `@aceshooting/lyra-ui/components/layout/multi-split/multi-split.class.js`.
   `LyraMultiSplitPanelConstraint {

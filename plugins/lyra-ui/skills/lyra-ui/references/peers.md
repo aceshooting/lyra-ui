@@ -37,20 +37,20 @@ for the page.
 
 | Peer | Range | Needed by |
 |---|---|---|
-| `@aceshooting/lyra-3d` | `^1.0.0` | `lr-chart-3d`, `lr-embedding-explorer`, `lr-graph`, `lr-image-viewer`, `lr-knowledge-graph-explorer`, `lr-model-viewer`, `lr-video` |
+| `@aceshooting/lyra-3d` | `^1.2.0` | `lr-chart-3d`, `lr-embedding-explorer`, `lr-graph`, `lr-image-viewer`, `lr-knowledge-graph-explorer`, `lr-model-viewer`, `lr-video` |
 | `@aceshooting/lyra-flags` | `^2.3.1` | _(loaded by a shared internal module)_ |
-| `@aceshooting/lyra-map` | `^1.3.0` | `lr-geojson-viewer`, `lr-map` |
-| `@aceshooting/lyra-translations` | `^30.6.0` | _(not referenced by any component)_ |
+| `@aceshooting/lyra-map` | `^1.4.0` | `lr-geojson-viewer`, `lr-map` |
+| `@aceshooting/lyra-translations` | `^30.7.0` | _(not referenced by any component)_ |
 | `@aiden0z/pptx-renderer` | `^1.4.0` | `lr-pptx-viewer` |
 | `@sgratzl/chartjs-chart-boxplot` | `^4.0.0` | `lr-box-plot` |
 | `chart.js` | `^4.0.1` | `lr-bar-chart`, `lr-box-plot`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
 | `chartjs-plugin-annotation` | `^3.0.0` | `lr-bar-chart`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
 | `chartjs-plugin-datalabels` | `^2.2.0` | `lr-bar-chart`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
 | `chartjs-plugin-zoom` | `^2.0.0` | `lr-bar-chart`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
-| `d3-drag` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |
-| `d3-force` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |
-| `d3-selection` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |
-| `d3-zoom` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |
+| `d3-drag` | `^3.0.1` | `lr-graph`, `lr-knowledge-graph-explorer` |
+| `d3-force` | `^3.0.1` | `lr-graph`, `lr-knowledge-graph-explorer` |
+| `d3-selection` | `^3.0.1` | `lr-graph`, `lr-knowledge-graph-explorer` |
+| `d3-zoom` | `^3.0.1` | `lr-graph`, `lr-knowledge-graph-explorer` |
 | `dompurify` | `^3.4.14` | `lr-agent-workspace`, `lr-dashboard-grid`, `lr-docx-viewer`, `lr-email-viewer`, `lr-eval-run`, `lr-geojson-viewer`, `lr-html-viewer`, `lr-icon`, `lr-icon-button`, `lr-include`, `lr-map`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-streaming-text-core`, `lr-svg-viewer`, `lr-video`, `lr-video-playlist`, `lr-widget-renderer` |
 | `emoji-picker-element-data` | `^1.8.0` | `lr-emoji-picker` |
 | `epubjs` | `^0.3.93` | `lr-ebook-viewer` |

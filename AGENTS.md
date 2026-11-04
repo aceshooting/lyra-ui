@@ -56,7 +56,7 @@ packages/lyra-gen/                experimental catalog, generated-view and saved
 packages/lyra-map/                optional modular map renderer and shared module worker; generated from pinned source
 packages/lyra-3d/                 optional WebGL engines (three.js) behind opted-in 3D views; loaded lazily
 packages/lyra-ide/                editor data (custom-elements/web-types/vscode-*-data json), copied from lyra-ui at prepack
-packages/lyra-translations/       the 70 locale catalogs, assembled from lyra-ui's dist/translations (pseudo stay in lyra-ui)
+packages/lyra-translations/       the 80 locale catalogs, assembled from lyra-ui's dist/translations (pseudo stay in lyra-ui)
 docs/agents/                      detail behind this file's digests
 .storybook/ | .agents/            Storybook docs site | Codex skill links + marketplace metadata
 plugins/lyra-ui/                  AUTHORED skills + commands (single source); shared Codex/Claude

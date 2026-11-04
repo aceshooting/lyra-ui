@@ -201,7 +201,7 @@ export const completePlugin = {
         `addPreparedFeatures(descriptors,options={}) {return addPreparedFeatures(this,descriptors,options);}
     prepareFeatures(requirements,options={}) {return prepareMapFeatures(this,requirements,options);}
     _updateStyle(style: StyleSpecification | string | null, options?: StyleSwapOptions & StyleOptions): this {
-        if(!style||!this.style?._loaded)return this._commitStyle(style,options);
+        if(!style||!this.style?._loaded||options?.modularRestore)return this._commitStyle(style,options);
         this._diffStyleRequest?.abort();this._diffStyleRequest=null;
         const target=this.style;const controller=beginPreparation(target);this._modularReplacement=controller;
         void (async()=>{try{
@@ -214,7 +214,15 @@ export const completePlugin = {
     }
     _commitStyle(style: StyleSpecification | string | null, options?: StyleSwapOptions & StyleOptions): this {`
       );
-      code = replace(code, 'remove(): void {', 'remove(): void {\n        {const mutation=this._modularMutation;this._modularMutation=undefined;mutation?.abort();}this._modularReplacement?.abort();');
+      // A snapshot rebuild (context restoration, worker restart) reinstalls images and fires the
+      // restored event right after setStyle, so the replacement style must exist synchronously.
+      // Its features are already prepared; Style._load still admits them before committing.
+      code = replace(
+        code,
+        '        this.setStyle(style, {diff: false});\n\n        if (!this.style) return;\n        this.style.imageManager.images = images;',
+        '        this.setStyle(style, {diff: false, modularRestore: true});\n\n        if (!this.style) return;\n        this.style.imageManager.images = images;'
+      );
+      code = replace(code, 'remove(): void {','remove(): void {\n        {const mutation=this._modularMutation;this._modularMutation=undefined;mutation?.abort();}this._modularReplacement?.abort();');
 
       code = replace(
         code,

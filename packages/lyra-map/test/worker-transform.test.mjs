@@ -34,6 +34,7 @@ function workerHarness(prepareStyleLayers) {
     'importScript',
     'setReferrer',
     'syncRTLPluginState',
+    'ping',
     'setLayers',
     'updateLayers',
     'removeMap',
@@ -80,7 +81,7 @@ function workerHarness(prepareStyleLayers) {
 
 test('transforms and parses all four files from the pinned source', async () => {
   const manifest = JSON.parse(await readFile(join(upstream, 'package.json'), 'utf8'));
-  assert.equal(manifest.version, '6.15.0');
+  assert.equal(manifest.version, '6.16.0');
   for (const path of paths) {
     assert.notEqual(transformed.get(path), sources.get(path), path);
     assert.doesNotThrow(() => javascript(transformed.get(path)), path);
@@ -180,4 +181,26 @@ test('canceled preparation does not mutate layers or poison later admission', as
   await assert.rejects(pending, { name: 'AbortError' });
   assert.equal(await worker.send('loadTile', { type: 'external' }), 'tile');
   assert.equal(mutations, 0);
+});
+
+test('answers global and liveness messages while a map admission is pending', async () => {
+  const preparation = deferred();
+  const worker = workerHarness(() => preparation.promise);
+  const calls = [];
+  worker.register('setLayers', async () => {
+    calls.push('layers');
+  });
+  for (const type of ['importScript', 'setReferrer', 'syncRTLPluginState', 'ping']) {
+    worker.register(type, async () => {
+      calls.push(type);
+      return type;
+    });
+  }
+  const layers = worker.send('setLayers', []);
+  for (const type of ['importScript', 'setReferrer', 'syncRTLPluginState', 'ping'])
+    assert.equal(await worker.send(type, undefined), type);
+  assert.deepEqual(calls, ['importScript', 'setReferrer', 'syncRTLPluginState', 'ping']);
+  preparation.resolve();
+  await layers;
+  assert.deepEqual(calls.at(-1), 'layers');
 });

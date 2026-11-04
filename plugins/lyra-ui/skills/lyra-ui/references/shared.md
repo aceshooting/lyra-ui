@@ -183,7 +183,7 @@ The entry points, then:
   `@aceshooting/lyra-ui/localization.js` (side-effect-free locale runtime),
   `@aceshooting/lyra-ui/autoloader.js` (side-effect-free on-demand tag loading),
   `@aceshooting/lyra-ui/autoloader-cdn.js` (browser-guarded auto-start side effect),
-  `@aceshooting/lyra-translations/<locale>.js` (the seventy message catalogs, in the companion package),
+  `@aceshooting/lyra-translations/<locale>.js` (the eighty message catalogs, in the companion package),
   `@aceshooting/lyra-ui/events` (the global typed-event map — types only, no runtime),
   `@aceshooting/lyra-ui/ai` (provider-neutral data types), `@aceshooting/lyra-ui/testing`
   (happy-dom shims, `createLyraEvent()` for building a validated test event, a small set of
@@ -2537,6 +2537,9 @@ transport. The helper neither reloads the page nor changes module URLs to bypass
 category selection walks the same chain, so the two can never disagree:
 
 1. **The BCP-47 truncation walk, most specific first**, with any explicitly registered delta parent chain inserted immediately after its child — `zh-Hans-CN` → `zh-Hans` → `zh`.
+   A tag without a script subtag whose CLDR likely script differs from its bare language's walks
+   that implied script just before the bare language: `sr-ME` (likely `sr-Latn-ME`) →
+   `sr-Latn` → `sr`, while `sr-RS` (likely Cyrillic, like bare `sr`) goes straight to `sr`.
    Casing and `_` separators are normalized, so `pt_BR` and `pt-br` are the same key. Lookup chains
    are memoized and capped at 64 candidates. A structurally valid tag beyond the normal complexity
    ceiling retains its exact tag, base language and English fallback without constructing an
@@ -2628,7 +2631,7 @@ silently defeats a registered catalog — omit it, or pass `undefined`.
 
 ### Ready-made catalogs: `@aceshooting/lyra-translations/<locale>.js`
 
-Seventy catalogs ship in the companion package `@aceshooting/lyra-translations` (`pnpm add @aceshooting/lyra-translations`, same version as `@aceshooting/lyra-ui`), each covering every key in `LYRA_DEFAULT_STRINGS`.
+Eighty catalogs ship in the companion package `@aceshooting/lyra-translations` (`pnpm add @aceshooting/lyra-translations`, same version as `@aceshooting/lyra-ui`), each covering every key in `LYRA_DEFAULT_STRINGS`.
 The public `@aceshooting/lyra-ui/locales.json` manifest lists their canonical identities, authored
 source spellings, import paths, and structural coverage. It also distinguishes translation
 coverage from linguistic review tier. The catalogs are **side-effect-only modules**: import one
@@ -2650,6 +2653,8 @@ import "@aceshooting/lyra-translations/ro.js"; // Romanian
 import "@aceshooting/lyra-translations/zh-CN.js"; // Simplified: serves zh, zh-Hans, zh-SG and zh-Hans-CN
 import "@aceshooting/lyra-translations/zh-TW.js"; // Traditional: serves zh-Hant and zh-MO
 import "@aceshooting/lyra-translations/zh-HK.js"; // Hong Kong: differences over zh-TW
+import "@aceshooting/lyra-translations/sr.js"; // Serbian Cyrillic: serves sr, sr-Cyrl, sr-RS, sr-BA
+import "@aceshooting/lyra-translations/sr-Latn.js"; // Serbian Latin: serves sr-Latn, sr-Latn-RS, sr-ME
 ```
 
 Persian and Hebrew use CLDR plural categories (`fa`: `one`/`other`; `he`:
@@ -2669,6 +2674,15 @@ their real tags in `getRegisteredLyraLocales()`. `de-CH`, `en-GB`, `es-419`, `fr
 they register only the messages that differ and resolve every other message through their parent
 (`de`, the built-in English, `es`, `fr`, `zh-TW`), and importing one also imports its parent catalog (`en-GB` has none: English is built in).
 The four regional additions are AI-assisted translations; no human or native-speaker review is claimed.
+
+Serbian ships in both scripts as two complete catalogs: `sr` (Cyrillic, the CLDR default for bare
+`sr`) and `sr-Latn` (Latin). Script decides, not region: `sr-Latn-*` tags and script-less tags whose
+likely script is Latin (`sr-ME`) reach `sr-Latn`; `sr-Cyrl-*`, `sr-RS`, `sr-BA` and `sr-XK` reach
+`sr`. The `sk`, `bg`, `lt`, `lv`, `et`, `ca`, `ga`, `mt`, `sr` and `sr-Latn` catalogs are
+AI-assisted translations with structural verification only (keys, placeholders, ICU syntax and CLDR
+plural categories); they await native-speaker review, and no human or native-speaker review is
+claimed. Regional tags such as `ca-ES-valencia`, `ga-IE` and `mt-MT` reach their base catalog by
+truncation.
 
 Import only the locales the application can actually offer — each is a separate module, so unimported
 ones cost nothing. A catalog registered this way is merged like any other, so a later

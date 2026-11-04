@@ -2,7 +2,7 @@
 
 The distributed renderer includes the following open-source implementations.
 
-## maplibre-gl 6.15.0
+## maplibre-gl 6.16.0
 
 License: BSD-3-Clause
 
@@ -270,7 +270,7 @@ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 
 
-## @maplibre/maplibre-gl-style-spec 26.4.4
+## @maplibre/maplibre-gl-style-spec 26.5.1
 
 License: ISC
 
@@ -629,7 +629,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 
-## @maplibre/vt-pbf 4.3.2
+## @maplibre/vt-pbf 4.3.3
 
 License: MIT
 

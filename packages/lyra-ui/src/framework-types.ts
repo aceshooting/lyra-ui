@@ -8210,6 +8210,7 @@ export interface LyraComponentTypeMap {
       LyraMultiSplit,
       | 'collapse'
       | 'collapseBreakpointBasis'
+      | 'collapsedPanels'
       | 'collapseState'
       | 'defaultSizes'
       | 'dividerLabel'
@@ -8236,12 +8237,14 @@ export interface LyraComponentTypeMap {
     eventNames:       | 'lr-multi-split-collapse-change'
       | 'lr-multi-split-constraints-invalid'
       | 'lr-multi-split-orientation-change'
+      | 'lr-multi-split-panel-collapse-change'
       | 'lr-resize'
       | 'lr-resize-change'
       | 'lr-resize-request'
       | 'lr-toggle'
       | 'lr-toggle-request';
-    cssNames:       | '--lr-multi-split-divider-active-color'
+    cssNames:       | '--lr-multi-split-collapsed-panel-size'
+      | '--lr-multi-split-divider-active-color'
       | '--lr-multi-split-divider-color'
       | '--lr-multi-split-divider-hover-color'
       | '--lr-multi-split-divider-target-size'

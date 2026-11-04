@@ -30,6 +30,28 @@ const sourceEntries = {
   '@lyra-docx-source/features/prepared-runtime': 'src/features/prepared-runtime.ts',
 };
 
+const layoutDirectory = `${path.sep}packages${path.sep}core${path.sep}src${path.sep}layout${path.sep}`;
+/** Whether every module a layout module statically reaches is itself a layout module. */
+function layoutLeaf(id, ctx, layoutLeaves) {
+  if (!id.includes(layoutDirectory)) return false;
+  if (layoutLeaves.has(id)) return layoutLeaves.get(id);
+  const seen = new Set([id]);
+  const pending = [id];
+  let leaf = true;
+  while (leaf && pending.length) {
+    const info = ctx.getModuleInfo(pending.pop());
+    if (!info) { leaf = false; break; }
+    for (const dependency of info.importedIds) {
+      if (seen.has(dependency) || layoutLeaves.get(dependency) === true) continue;
+      if (!dependency.includes(layoutDirectory) || layoutLeaves.get(dependency) === false) { leaf = false; break; }
+      seen.add(dependency);
+      pending.push(dependency);
+    }
+  }
+  layoutLeaves.set(id, leaf);
+  return leaf;
+}
+
 function packageManifest(name, resolver) {
   for (const directory of resolver.resolve.paths(name) ?? []) {
     const file = path.join(directory, name, 'package.json');
@@ -74,6 +96,7 @@ export async function buildEngine({ outputRoot = path.join(root, 'dist') } = {})
     assert.equal(sha256(bytes), asset.sha256, `Engine asset changed: ${asset.specifier}`);
     assets.set(asset.specifier, file);
   }
+  const layoutLeaves = new Map();
   const harfBuzz = await realpath(path.join(path.dirname(coreRequire.resolve('harfbuzzjs')), 'harfbuzz.js'));
   await withPreparedSource(lock, scripts, async directory => {
     const source = path.join(directory, 'packages/core');
@@ -152,6 +175,9 @@ export async function buildEngine({ outputRoot = path.join(root, 'dist') } = {})
               groups: [
                 { name: 'bidi', test: /[/\\]node_modules[/\\]bidi-js[/\\]/ },
                 { name: 'font-shaping', test: /[/\\]packages[/\\]core[/\\]src[/\\]layout[/\\](?:font-resource|shaped-run)\.ts$/ },
+                // Eager layout modules that import only other layout modules form a leaf chunk: it
+                // imports nothing, so module order is unchanged and lazy features stay lazy.
+                { name: (id, ctx) => (layoutLeaf(id, ctx, layoutLeaves) ? 'layout-text' : null), tags: ['$initial'] },
               ],
             },
             comments: { annotation: true },

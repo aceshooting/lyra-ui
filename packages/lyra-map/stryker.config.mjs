@@ -18,7 +18,9 @@ export default {
     // It observes no mutation targets here and runs in the complete ordinary-suite preflight instead.
     // The scene export probe likewise imports the built package in a child process, where instrumented
     // preparation code serialized into the build cannot resolve; it too runs only in the ordinary suite.
-    testFiles: ['packages/lyra-map/test/!(check-package|scene-package-exports).test.mjs'],
+    // The native-frame build probe imports the same built entries in-process, so it is excluded for the
+    // same reason.
+    testFiles: ['packages/lyra-map/test/!(check-package|scene-package-exports|scene-native-frame-build).test.mjs'],
     nodeArgs: ['--test-reporter=tap'],
     forceBail: true,
   },

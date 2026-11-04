@@ -7,7 +7,7 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const manifest = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
 const provenance = JSON.parse(await readFile(resolve(root, 'dist/provenance.json'), 'utf8'));
 assert.equal(manifest.name, '@aceshooting/lyra-map');
-assert.equal(provenance.version, '6.15.0');
+assert.equal(provenance.version, '6.16.0');
 assert.deepEqual(provenance.changedSourceFiles, [
   'data/bucket/symbol_bucket.ts',
   'geo/projection/projection_factory.ts',
