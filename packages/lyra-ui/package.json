@@ -1880,6 +1880,10 @@
       "types": "./dist/map-camera-session.d.ts",
       "default": "./dist/map-camera-session.js"
     },
+    "./map-custom-layers.js": {
+      "types": "./dist/map-custom-layers.d.ts",
+      "default": "./dist/map-custom-layers.js"
+    },
     "./theme/presets.js": null,
     "./theme/presets/shadcn.js": null
   },

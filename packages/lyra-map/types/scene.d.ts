@@ -128,7 +128,11 @@ export interface MapLayerPick {
 export interface MapLayerInstance {
   prerender?(frame: MapLayerFrame): void;
   render(frame: MapLayerFrame): void;
-  /** Synchronous and idempotent; releases only resources owned by this instance. */
+  /**
+   * Synchronous and idempotent; releases only resources owned by this instance. Runs on removal,
+   * style replacement and context loss; after a loss `context.gl.isContextLost()` is true and GL
+   * objects are already gone.
+   */
   dispose(): void;
   items?(): readonly MapLayerItem[];
   /** Completion waits for GPU work and must reject or cancel stale frame results. */

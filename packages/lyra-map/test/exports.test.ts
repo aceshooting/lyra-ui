@@ -2,7 +2,9 @@ import { Map, Style, prepareStyle, type MapFeatureRequirements } from '@aceshoot
 import { NavigationControl } from '@aceshooting/lyra-map/controls/navigation';
 import { lyraMapWorkerPlugin } from '@aceshooting/lyra-map/vite';
 import { createSceneBridge, type SceneBridge, type SceneBridgeHost, type SceneBridgeNativeMap,
-  type SceneRenderInput, type SceneMarker, type SceneBridgeStatus } from '@aceshooting/lyra-map/scene';
+  type SceneRenderInput, type SceneMarker, type SceneBridgeStatus, createSceneLayer, type SceneLayer, type SceneLayerHost,
+  type SceneLayerNativeMap, type SceneLayerState, type SceneLayerCode, type MapCustom3dLayer, type MapLayerContext,
+  type MapLayerFrame, type MapLayerInstance, type MapLayerItem, type MapLayerPick, type MapPosition } from '@aceshooting/lyra-map/scene';
 // @ts-expect-error The optional entry exports the bridge factory, not resource allocation helpers.
 import { planSceneAllocations } from '@aceshooting/lyra-map/scene';
 // @ts-expect-error Ledger construction remains an internal implementation detail.
@@ -67,3 +69,29 @@ const missingAllocation: SceneRenderInput = { acceptedSceneRevision: 1, presenta
 // @ts-expect-error Presentation resolves a complete RGBA tuple before publishing a marker.
 const missingAlpha: SceneMarker['rgba'] = [0.2, 0.4, 0.8];
 void [pendingInput, missingAllocation, missingAlpha];
+
+// The custom 3D layer bridge accepts the native map and a trusted factory.
+const customLayer: MapCustom3dLayer = {
+  id: 'cone', label: 'Coverage cone',
+  create(context: MapLayerContext): MapLayerInstance {
+    const origin = context.geographic.frameFor({ lngLat: [6, 49], altitude: 100 });
+    return {
+      render(frame: MapLayerFrame) { frame.geographic.shader(origin); },
+      dispose() { void context.gl.isContextLost(); },
+      pick: async (): Promise<MapLayerPick | null> => null
+    };
+  }
+};
+const sceneLayerHost: SceneLayerHost = { signal: new AbortController().signal,
+  onState(state: SceneLayerState, code?: SceneLayerCode) { void [state, code]; } };
+const sceneLayer: SceneLayer = createSceneLayer(map, customLayer, sceneLayerHost);
+const picked: Promise<MapLayerPick | null> = sceneLayer.pick([1, 2]);
+sceneLayer.invalidateStyle(); sceneLayer.styleReady(); sceneLayer.setVisible(true); sceneLayer.requestFrame();
+const layerItems: readonly MapLayerItem[] = sceneLayer.items();
+const position: MapPosition = { lngLat: [0, 0], altitudeReference: 'terrain' };
+declare const layerMap: SceneLayerNativeMap;
+createSceneLayer(layerMap, customLayer, { signal: new AbortController().signal });
+// @ts-expect-error A layer descriptor needs an accessible label.
+createSceneLayer(map, { id: 'x', create: customLayer.create }, sceneLayerHost);
+sceneLayer.dispose();
+void [picked, layerItems, position];

@@ -27,8 +27,9 @@ test('the optional scene package export resolves its runtime and neutral declara
 import assert from 'node:assert/strict';
 import * as scene from '@aceshooting/lyra-map/scene';
 import * as map from '@aceshooting/lyra-map';
-assert.deepEqual(Object.keys(scene), ['createSceneBridge']);
+assert.deepEqual(Object.keys(scene), ['createSceneBridge', 'createSceneLayer']);
 assert.equal(typeof scene.createSceneBridge, 'function');
+assert.equal(typeof scene.createSceneLayer, 'function');
 for (const name of ['createSceneBridge', 'withNativeTerrainHookScope', 'captureNativeTerrainAuthority', 'assertNativeTerrainAuthority',
   'registerNativeFrameDemand', 'beginNativeFrame', 'captureNativeFrameAuthority', 'readNativeFrameAuthority']) {
   assert.equal(Object.hasOwn(map, name), false, name + ' is not a default map export');

@@ -1,5 +1,5 @@
 import type { CustomLayerInterface, MapFeaturePreparationOptions, MapFeatureRequirements } from '@aceshooting/lyra-map';
-import type { MapPosition } from './scene.js';
+import type { MapCustom3dLayer, MapLayerItem, MapLayerPick, MapPosition } from './scene.js';
 
 type NativeSceneLayer = Pick<CustomLayerInterface, 'id' | 'type' | 'renderingMode' | 'render' | 'prerender'> & {
   onAdd?(map: SceneBridgeNativeMap, gl: WebGL2RenderingContext): void;
@@ -187,3 +187,42 @@ export interface SceneBridgeHostWithCompletion extends SceneBridgeHost {
 
 export declare function createSceneBridge(map: SceneBridgeNativeMap, host: SceneBridgeHostWithCompletion): SceneBridgeWithCompletion;
 export declare function createSceneBridge(map: SceneBridgeNativeMap, host: SceneBridgeHost): SceneBridge;
+
+/** `ready` follows the first completed frame of a mount epoch; it does not assert visible pixels. */
+export type SceneLayerState = 'loading' | 'ready' | 'unavailable';
+/** `invalid` descriptor, `engine` installation, `render` callback failure, lost WebGL context, or a layer report. */
+export type SceneLayerCode = 'invalid' | 'engine' | 'render' | 'context-lost' | 'terrain' | 'resource';
+export interface SceneLayerHost {
+  /** Aborting disposes the layer. */
+  readonly signal: AbortSignal;
+  readonly onState?: (state: SceneLayerState, code?: SceneLayerCode) => void;
+  /** Read once per frame; defaults to false. */
+  readonly reducedMotion?: () => boolean;
+}
+/** The native map operations borrowed by a custom scene layer. */
+export interface SceneLayerNativeMap extends Pick<SceneBridgeNativeMap, 'addLayer' | 'removeLayer' | 'getLayer' | 'getCanvas' |
+  'isStyleLoaded' | 'triggerRepaint' | 'getCenter' | 'getZoom' | 'on' | 'off' | 'prepareFeatures'> {
+  getTerrain?(): object | null;
+  /** Displayed terrain height in meters, including exaggeration, or null while unavailable. */
+  queryTerrainElevation?(lngLat: [number, number]): number | null;
+  getPixelRatio?(): number;
+}
+export interface SceneLayer {
+  /** Call before replacing the native map style; the next `style.load` or `styleReady()` remounts. */
+  invalidateStyle(): void;
+  /** The replacement style finished loading without a native `style.load` event. */
+  styleReady(): void;
+  requestFrame(): void;
+  setVisible(visible: boolean): void;
+  /** Asks the current instance; a newer view, epoch or removal resolves null. */
+  pick(point: readonly [x: number, y: number]): Promise<MapLayerPick | null>;
+  items(): readonly MapLayerItem[];
+  /** Idempotent; disposes the current instance and removes the native layer. */
+  dispose(): void;
+}
+/**
+ * Installs a trusted custom 3D layer through the native custom-layer support. Each mount epoch (first
+ * install, style replacement, context restoration) calls `layer.create()` for a fresh instance and
+ * disposes the previous one; after a lost context, `dispose()` runs without GL work.
+ */
+export declare function createSceneLayer(map: SceneLayerNativeMap, layer: MapCustom3dLayer, host: SceneLayerHost): SceneLayer;

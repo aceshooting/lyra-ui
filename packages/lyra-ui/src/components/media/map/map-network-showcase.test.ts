@@ -51,11 +51,8 @@ describe('network monitoring showcase story', function () {
     expect(links.length).to.be.greaterThan(0);
     expect(links.some(link => link.kind === 'path' && link.positions.some(position => (position.altitude ?? 0) > 0))).to.equal(true);
     expect(map.dataLayers.map(layer => layer.sourceId)).to.deep.equal(['regions-clear', 'regions-advisory']);
-    // Elevated links are drawn as ground tracks, which the scene reports truthfully.
-    await waitUntil(() => map.shadowRoot?.querySelector('[part="scene-status"]')?.textContent?.includes('Some scene objects'),
-      'partial scene status', { timeout: 10000 });
-    const native = map.map as unknown as { getStyle(): { layers?: readonly { readonly id: string }[] } };
-    expect(native.getStyle().layers?.some(layer => layer.id.startsWith('lr-scene-lines-'))).to.equal(true);
+    // Elevated links are drawn at their altitude through the custom 3D layer bridge; the scene is ready.
+    await waitUntil(() => map.shadowRoot?.querySelector('[part="scene-status"]') === null, 'ready scene status', { timeout: 10000 });
     await expect(root).to.be.accessible();
   });
 

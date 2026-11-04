@@ -24,6 +24,7 @@ import { createSimulationClock, type ClockSnapshot, type SimulationClock } from 
 import { createTimeIndex } from '../../../time-index.js';
 import { bindSequencePlayback } from '../../../sequence-time-binding.js';
 import { createMapCameraSession, type MapCameraSession, type MapCameraTour, type MapViewpoint } from '../../../map-camera-session.js';
+import { addMapCustomLayer, type LyraMapCustomLayer, type LyraMapCustomLayerHandle, type LyraMapGeographicShader } from '../../../map-custom-layers.js';
 import type { LyraSequencePlayback } from '../sequence-playback/sequence-playback.class.js';
 import { createNetworkMonitoringFixture, deriveNetworkFrame, type SyntheticNetworkFrame,
   type SyntheticNodeStatus } from '../../../../test/network-monitoring-fixture.js';
@@ -172,7 +173,7 @@ export const Default: Story = {
 
 /** Scene markers, paths and arcs are drawn and stay readable and actionable from the text panel. */
 export const SceneTextFallback: Story = {
-  parameters: { docs: { description: { story: 'Assign a real scene through the property binding. The marker, the great-circle walk and the arc are drawn on the map. The arc rises 80 m, which a flat map cannot show, so it is drawn as its ground track and `lr-map-scene-state` reports `partial` with code `altitude`. Expand the text panel and activate Central station with pointer, Enter or Space; activation does not pan the map.' } } },
+  parameters: { docs: { description: { story: 'Assign a real scene through the property binding. The marker, the great-circle walk and the arc are drawn on the map. The arc rises 80 m and is drawn in 3D through the optional `@aceshooting/lyra-map/scene` layer bridge, so `lr-map-scene-state` reports `ready`; without that bridge it is drawn as its ground track and reports `partial` with code `altitude`. Expand the text panel and activate Central station with pointer, Enter or Space; activation does not pan the map.' } } },
   render: () => {
     const scene: LyraMapScene = { objects: [
       { kind: 'marker', id: 'station', label: 'Central station', interactive: true,
@@ -197,6 +198,124 @@ export const SceneTextFallback: Story = {
         style="block-size: var(--lr-size-24rem)"></lr-map>
       <p role="status" ${ref(node => { status = node as HTMLElement | undefined; })}>No scene object activated.</p>
       <p ${ref(node => { sceneState = node as HTMLElement | undefined; })}>Scene loading.</p>
+    `;
+  },
+};
+
+const CONE_SEGMENTS = 32;
+const coneVertexBody = `
+in vec3 a_position;
+out vec3 v_sphere;
+void main() { gl_Position = lrProjectPosition(a_position); v_sphere = lrHorizonPosition(a_position); }`;
+const coneFragmentBody = `
+uniform vec4 u_color;
+in vec3 v_sphere;
+out vec4 color;
+void main() { if (lrHorizonOccluded(v_sphere)) discard; color = vec4(u_color.rgb * u_color.a, u_color.a); }`;
+
+/** Resolves a CSS color to straight RGBA in [0, 1] through a 1x1 canvas. */
+function storyColorChannels(color: string, alpha: number): [number, number, number, number] {
+  const canvas = document.createElement('canvas'); canvas.width = 1; canvas.height = 1;
+  const context = canvas.getContext('2d', { willReadFrequently: true })!;
+  context.fillStyle = color; context.fillRect(0, 0, 1, 1);
+  const [red, green, blue] = context.getImageData(0, 0, 1, 1).data;
+  return [red! / 255, green! / 255, blue! / 255, alpha];
+}
+
+/**
+ * One small example effect: a translucent coverage cone from a station mast. It is application code
+ * written against `addMapCustomLayer()`, not a library effect.
+ */
+function coverageCone(apex: readonly [number, number], height: number, radius: number,
+  rgba: readonly [number, number, number, number]): LyraMapCustomLayer {
+  return { id: 'coverage', label: 'Station coverage cone', create(context) {
+    const { gl } = context, vao = gl.createVertexArray(), buffer = gl.createBuffer();
+    let program: WebGLProgram | null = null, compiledFor = '', drawnAt: readonly [number, number] | undefined;
+    gl.bindVertexArray(vao); gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 12, 0);
+    gl.bindVertexArray(null);
+    function compile(shader: LyraMapGeographicShader): WebGLProgram {
+      const next = gl.createProgram()!;
+      for (const [type, prelude, body] of [[gl.VERTEX_SHADER, shader.vertexPrelude, coneVertexBody],
+        [gl.FRAGMENT_SHADER, shader.fragmentPrelude, coneFragmentBody]] as const) {
+        const part = gl.createShader(type)!;
+        gl.shaderSource(part, `#version 300 es\nprecision highp float;\n${shader.defines}\n${prelude}\n${body}`);
+        gl.compileShader(part); gl.attachShader(next, part);
+      }
+      gl.bindAttribLocation(next, 0, 'a_position'); gl.linkProgram(next);
+      return next;
+    }
+    return {
+      render(frame) {
+        const top = frame.geographic.resolve({ lngLat: apex, altitude: height });
+        if (top.status !== 'resolved') return;
+        const origin = context.geographic.frameFor(top), shader = frame.geographic.shader(origin);
+        const ground = (angle: number) => {
+          const rim = frame.geographic.resolve(context.geographic.fromEnu(top, [Math.cos(angle) * radius, Math.sin(angle) * radius, -height]));
+          return rim.status === 'resolved' ? frame.geographic.encode(rim, origin) : undefined;
+        };
+        const tip = frame.geographic.encode(top, origin), vertices: number[] = [];
+        for (let index = 0; index < CONE_SEGMENTS; index++) {
+          const a = ground(index / CONE_SEGMENTS * 2 * Math.PI), b = ground((index + 1) / CONE_SEGMENTS * 2 * Math.PI);
+          if (a && b) vertices.push(...tip, ...a, ...b);
+        }
+        drawnAt = frame.geographic.project({ lngLat: apex }).point;
+        const source = shader.defines + shader.vertexPrelude;
+        if (source !== compiledFor) { if (program) gl.deleteProgram(program); program = compile(shader); compiledFor = source; }
+        gl.useProgram(program);
+        for (const uniform of shader.uniforms) {
+          const location = gl.getUniformLocation(program!, uniform.name);
+          if (uniform.type === 'float') gl.uniform1f(location, uniform.value);
+          else if (uniform.type === 'vec4') gl.uniform4fv(location, uniform.value);
+          else gl.uniformMatrix4fv(location, false, uniform.value);
+        }
+        gl.uniform4f(gl.getUniformLocation(program!, 'u_color'), ...rgba);
+        gl.bindVertexArray(vao); gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);
+        // A translucent volume reads the map depth but does not occlude what lies behind it.
+        gl.depthMask(false); gl.disable(gl.CULL_FACE);
+        gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 3);
+        gl.bindVertexArray(null);
+      },
+      dispose() {
+        if (gl.isContextLost()) return;
+        if (program) gl.deleteProgram(program);
+        gl.deleteBuffer(buffer); gl.deleteVertexArray(vao);
+      },
+      // Frame services expire with the callback, so picking uses the point projected while drawing.
+      pick: async ([x, y]) => drawnAt && Math.hypot(drawnAt[0] - x, drawnAt[1] - y) < 24
+        ? { id: 'mast', position: { lngLat: apex, altitude: height } } : null,
+    };
+  } };
+}
+
+export const CustomCoverageCone: Story = {
+  parameters: { docs: { description: { story: 'An application-defined coverage cone added with `addMapCustomLayer()` from `@aceshooting/lyra-ui/map-custom-layers.js`. The layer shares the map camera and depth buffer, survives style replacement and WebGL context restoration, and clicking near the mast top emits `lr-map-scene-activate` with `kind: \'custom\'`. The cone is a drawing, not a coverage calculation. Its status and the activation are reported as text below the map.' } } },
+  render: () => {
+    let handle: LyraMapCustomLayerHandle | undefined, status: HTMLElement | undefined, activation: HTMLElement | undefined;
+    const attach = async (node: Element | undefined) => {
+      handle?.remove(); handle = undefined;
+      if (!node) return;
+      const map = node as LyraMap;
+      // A map removed before its style loads cancels readiness; there is nothing to attach then.
+      try { await map.whenStyleReady(); } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        throw error;
+      }
+      if (!map.isConnected) return;
+      map.jumpTo({ pitch: 55 });
+      handle = addMapCustomLayer(map, coverageCone([6.13, 49.61], 3000, 6000, storyColorChannels(storyColor('brand'), 0.35)), {
+        onStateChange: ({ state, code }) => { if (status) status.textContent = `Coverage layer ${state}${code ? ` (${code})` : ''}.`; },
+      });
+    };
+    return html`
+      <lr-map label="Station coverage" .mapStyle=${LYRA_MAP_EMPTY_STYLE} .center=${[6.13, 49.61]} .zoom=${10.5}
+        @lr-map-scene-activate=${(event: CustomEvent<LyraMapSceneActivateDetail>) => {
+          if (activation && event.detail.kind === 'custom') activation.textContent = `Activated ${event.detail.id} on ${event.detail.layerId}.`;
+        }}
+        style="block-size: var(--lr-size-24rem)" ${ref(node => { void attach(node); })}></lr-map>
+      <p ${ref(node => { status = node as HTMLElement | undefined; })}>Coverage layer loading.</p>
+      <p role="status" ${ref(node => { activation = node as HTMLElement | undefined; })}>Nothing activated.</p>
     `;
   },
 };
@@ -2094,8 +2213,8 @@ export const NetworkMonitoringShowcase: Story = {
           const text = copy();
           map.markers = frame.nodes.flatMap(node => node.position ? [{ id: node.id, lngLat: node.position.lngLat,
             color: statusColor(node.status), label: `${node.label} · ${text.statuses[node.status]}` }] : []);
-          // Links are scene paths between the endpoints' 3D positions. A flat map draws each one as
-          // its great-circle ground track, and the scene reports `partial` with code `altitude`.
+          // Links are scene paths between the endpoints' 3D positions, drawn at their altitude through
+          // the optional custom 3D layer bridge (ground tracks with `partial`/`altitude` without it).
           map.scene = { objects: [
             ...frame.nodes.flatMap(node => node.position ? [{ kind: 'marker' as const, id: node.id,
               label: `${node.label} · ${text.statuses[node.status]}`, position: { lngLat: node.position.lngLat } }] : []),

@@ -32,6 +32,8 @@ import { admitMapViewpoint, type MapViewpoint } from '../../../internal/map-came
 import { registerMapCameraSession, type CameraOwnerReason, type MapCameraPreparedCommand,
   type MapCameraSessionCallbacks, type MapCameraSessionLease } from '../../../internal/map-camera-session.js';
 import { createMapSceneSessionFacade, registerMapSceneSession } from '../../../internal/map-scene-session.js';
+import { registerMapCustomLayers, type MapCustomLayerActivation, type MapCustomLayerCallbacks,
+  type MapCustomLayerLease } from '../../../internal/map-custom-layer-attachment.js';
 import { createMapSceneOwner, type SceneOwnerView } from './map-scene-owner.js';
 import type { MapSceneRenderController } from './map-scene-render-controller.js';
 import { countSceneMembers, summarizeSceneRender, type SceneDrawOutcome } from './map-scene-status.js';
@@ -3020,7 +3022,7 @@ export interface LyraMapEventMap {
  * The legend material remains stationary while its public surface scrolls. Opaque accessibility
  * fallbacks preserve native peer controls and map data paint.
  * @event lr-map-scene-state - `detail: { revision, state, code? }`. Accepted scene status: `loading`, then `ready`, `partial` or `unavailable` with a code such as `altitude` or `model`; `empty` for an empty scene. Rejected updates report `error` and retain the preceding accepted revision.
- * @event lr-map-scene-activate - `detail: { id, kind, source, position? }`. A current interactive scene object was activated without moving the camera.
+ * @event lr-map-scene-activate - `detail: { id, kind, layerId?, source, position? }`. A current interactive scene object was activated without moving the camera, or a pointer click hit an `addMapCustomLayer()` layer (`kind: 'custom'` with its `layerId`).
  * @csspart scene-panel - Accessible accepted scene object panel.
  * @csspart scene-toggle - Expands or collapses the scene object list.
  * @csspart scene-list - The current page of accepted scene objects.
@@ -3298,6 +3300,30 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       this.geographicSceneRenderAttempt = undefined;
       this.syncGeographicSceneStatus();
     });
+  }
+
+  private notifyCustomLayers(notify: (callbacks: MapCustomLayerCallbacks) => void): void {
+    for (const callbacks of [...this.customLayerCallbacks]) {
+      try { notify(callbacks); } catch { /* One custom layer cannot block another or the map lifecycle. */ }
+    }
+  }
+
+  private acquireCustomLayer(callbacks: MapCustomLayerCallbacks): MapCustomLayerLease {
+    const connection = this._connectGeneration;
+    this.customLayerCallbacks.add(callbacks);
+    const current = (): boolean => this.isConnected && connection === this._connectGeneration && this.customLayerCallbacks.has(callbacks);
+    return {
+      nativeMap: () => current() && this._styleLoaded ? this._map : undefined,
+      reducedMotion: () => prefersReducedMotion(this),
+      activate: (detail: MapCustomLayerActivation, event: object) => {
+        if (!current() || this.mapInteractionBlocked() || this.customLayerActivations.has(event)) return;
+        this.customLayerActivations.add(event);
+        const activation: LyraMapSceneActivateDetail = Object.freeze({ id: detail.id, kind: 'custom', layerId: detail.layerId,
+          source: 'pointer', ...(detail.position ? { position: detail.position } : {}) });
+        this.emit('lr-map-scene-activate', activation);
+      },
+      release: () => { this.customLayerCallbacks.delete(callbacks); },
+    };
   }
 
   private sceneStatusMessage(status: NonNullable<SceneOwnerView['status']>): string {
@@ -4388,6 +4414,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private cameraSessionConfigurationApplying = 0;
   private cameraSession?: MapCameraSessionOwner;
   private unregisterCameraSession?: () => void;
+  private unregisterCustomLayers?: () => void;
+  /** Custom layers added through `addMapCustomLayer()`, in insertion order. */
+  private readonly customLayerCallbacks = new Set<MapCustomLayerCallbacks>();
+  private readonly customLayerActivations = new WeakSet<object>();
   private _maplibreModule?: MaplibreModule;
   /** True only after WebGL2 has been proved in the current owner-document realm. */
   private _webglReady = false;
@@ -5836,6 +5866,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.observeMapInteractionState();
     this.unregisterCameraSession?.();
     this.unregisterCameraSession = registerMapCameraSession(this, { acquire: callbacks => this.acquireCameraSession(callbacks) });
+    this.unregisterCustomLayers?.();
+    this.unregisterCustomLayers = registerMapCustomLayers(this, { acquire: callbacks => this.acquireCustomLayer(callbacks) });
     this.connectGeographicScene();
     this.readiness.reset();
     this.controlsReadiness.reset();
@@ -5924,6 +5956,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const session = this.cameraSession;
     if (session) { session.released = true; session.active = undefined; session.stopMotion(); session.stopContext(); this.cameraSession = undefined; }
     this.unregisterCameraSession?.(); this.unregisterCameraSession = undefined;
+    this.unregisterCustomLayers?.(); this.unregisterCustomLayers = undefined;
+    // Disconnection removes custom layers permanently, before the native map is disposed.
+    this.notifyCustomLayers(callbacks => callbacks.released());
+    this.customLayerCallbacks.clear();
     this.closeGeographicScene();
     this.hashOwner?.dispose();
     this.disposeMap();
@@ -5984,6 +6020,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   private disposeMap(cancelReadiness = true): void {
     this.stopGeographicSceneRender();
+    this.notifyCustomLayers(callbacks => callbacks.mapRemoved());
     this.interruptCameraSession('engine', false);
     const session = this.cameraSession;
     if (session) { session.released = true; session.stopMotion(); session.stopContext(); this.cameraSession = undefined; }
@@ -6289,6 +6326,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       this.captureStyleCatalog(map);
       this.geographicSceneRender?.styleReady();
       if (!current()) return;
+      this.notifyCustomLayers(callbacks => callbacks.styleReady(map));
+      if (!current()) return;
       this.syncSceneConfiguration();
       this.controlLifecycle?.refreshSceneControls();
       if (!current()) return;
@@ -6505,6 +6544,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         // Modular object diffs prepare asynchronously while the old style still reports ready.
         // Any superseding style replaces an unloaded basemap instead of attempting to diff it.
         this.geographicSceneRender?.invalidateStyle();
+        this.notifyCustomLayers(callbacks => callbacks.styleInvalidated());
         if (!this.isConnected || this._map !== map) return;
         map.setStyle(this.mapStyle as never, replaceStyle ? { diff: false } : undefined);
       }, replaceStyle);

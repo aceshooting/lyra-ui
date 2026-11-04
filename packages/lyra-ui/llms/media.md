@@ -2383,10 +2383,15 @@ linearly between the endpoint altitudes and adds a parabolic rise of `height` me
 `height * 4t(1 - t)`, peaking at the midpoint. Generated vertices carry that altitude as the third
 GeoJSON coordinate.
 
-The map draws lines flat on its displayed surface, so altitude is drawn exactly only when it is
-zero against that surface: `sea-level` without terrain, or `terrain`. A path or arc with any other
-altitude, a nonzero arc `height`, or `sea-level` geometry while terrain is displayed is drawn as its
-ground track, and the scene reports `partial` with code `altitude`. Changing terrain re-evaluates
+A path or arc at zero altitude against the displayed surface (`sea-level` without terrain, or
+`terrain`) drapes on the flat line layer. Any other altitude, a nonzero arc `height`, or `sea-level`
+geometry while terrain is displayed is drawn in 3D at its authored altitude through the custom
+layer bridge of `@aceshooting/lyra-map/scene` (see [Custom 3D layers](#custom-3d-layers)), which
+loads on first use. Its screen width stays `width` CSS pixels, depth tests against the map, and
+globe horizons hide the far side. `terrain` altitude adds displayed terrain height from the engine's
+elevation query; a segment between a `terrain` and a `sea-level` endpoint blends the two references
+linearly. When the bridge is not installed, fails to load or fails to render, those lines are drawn
+as ground tracks and the scene reports `partial` with code `altitude`. Changing terrain re-evaluates
 this. A style replacement reinstalls scene lines after the new style loads; clearing the scene,
 removing every path and arc, or disconnecting the map removes them.
 
@@ -2432,7 +2437,7 @@ rows remain text. Caller labels render as text. Style the surface with `scene-pa
 revision. Accepted empty input and clear report `empty`. Nonempty input reports `loading`, then
 one settled state: `ready` when every object is installed on the map exactly; `partial` with a code
 when some objects are missing or approximated; or `unavailable` with a code when nothing could be
-drawn. Codes are `altitude` (drawn as a ground track), `model` (models are not drawn), `engine` (the
+drawn. Codes are `altitude` (drawn as a ground track because the 3D bridge is unavailable), `model` (models are not drawn), `engine` (the
 map, its optional scene renderer or a native layer failed), `limit` (generated geometry exceeds the
 vertex limit) and `context-lost` (the WebGL context is lost; drawing resumes on restore). When
 several apply, the most significant is reported in that reverse order, `context-lost` first. A
@@ -2441,9 +2446,10 @@ means installed, not visible: the viewport, terrain and occlusion still apply. R
 reports `error` with `invalid` or `limit` while retaining the previous accepted revision, and
 renderer progress does not replace that report until a new scene is accepted. `loading` and
 `ready` are not announced; `partial` is announced politely and `unavailable`, `empty` and `error`
-assertively. The `scene-status` part shows the current text except when `ready`. `lr-map-scene-activate` emits immutable `{ id, kind, source,
+assertively. The `scene-status` part shows the current text except when `ready`. `lr-map-scene-activate` emits immutable `{ id, kind, layerId?, source,
 position? }` detail, with `source: 'pointer' | 'keyboard'`; positional marker/model actions include
-the accepted geographic position. Both events bubble, are composed and are noncancelable.
+the accepted geographic position. A pointer click that a custom 3D layer's `pick()` hits reports
+`kind: 'custom'`, the hit `id`, the layer's `layerId` and the hit's optional `position`. Both events bubble, are composed and are noncancelable.
 
 ### Declarative globe and terrain configuration
 
@@ -2614,6 +2620,86 @@ support), `'inactive-map'` (disconnected), `'already-bound'` (another session ow
 `'invalid-viewpoint'`, `'invalid-tour'`, `'invalid-follow'`, `'invalid-clock'`,
 `'invalid-options'` or `'disposed'`. Input records must be plain own-data objects; accessors and
 unknown fields are rejected without being read.
+
+### Custom 3D layers
+
+Import `addMapCustomLayer` from `@aceshooting/lyra-ui/map-custom-layers.js` to add a trusted WebGL2
+effect, such as a beam, coverage cone, cloud or particle system, to a connected `lr-map`. It
+registers no element; the bridge loads from the optional `@aceshooting/lyra-map/scene` entry on
+first use, so ordinary `lr-map` imports never load it. Rendering a beam or cone does not compute its
+physical validity; that stays application logic.
+
+```ts
+import '@aceshooting/lyra-ui/components/lr-map.js';
+import { addMapCustomLayer, type LyraMapCustomLayer } from '@aceshooting/lyra-ui/map-custom-layers.js';
+
+const beam: LyraMapCustomLayer = {
+  id: 'uplink-beam', label: 'Uplink beam',
+  create(context) {
+    const { gl } = context;          // the map's own WebGL2 context
+    const vao = gl.createVertexArray();
+    let program: WebGLProgram | undefined;
+    return {
+      render(frame) {
+        const top = frame.geographic.resolve({ lngLat: [6.13, 49.61], altitude: 20_000 });
+        if (top.status !== 'resolved') return;
+        const origin = context.geographic.frameFor(top);
+        const shader = frame.geographic.shader(origin);       // prelude, defines, uniforms
+        const xyz = frame.geographic.encode(top, origin);     // tile-local x, y and meters
+        program ??= compile(gl, shader);                      // your GLSL body calls lrProjectPosition()
+        upload(gl, program, shader.uniforms, xyz);
+        gl.bindVertexArray(vao); gl.drawArrays(gl.TRIANGLES, 0, 36);
+      },
+      dispose() { if (!gl.isContextLost()) gl.deleteVertexArray(vao); },
+      pick: async ([x, y], revision) => null,
+    };
+  },
+};
+const map = document.querySelector('lr-map')!;
+const layer = addMapCustomLayer(map, beam, { onStateChange: ({ state, code }) => console.log(state, code) });
+map.addEventListener('lr-map-scene-activate', event => {
+  if (event.detail.kind === 'custom') select(event.detail.layerId, event.detail.id);
+});
+layer.remove();
+```
+
+- **Geographic transforms.** Positions are `{ lngLat, altitude?, altitudeReference? }` in degrees
+  and meters. `resolve()` returns meters above sea level; `terrain` adds the displayed terrain
+  height (including exaggeration) from the engine's elevation query, reporting `terrain-pending`
+  until its DEM tile loads and `terrain-unavailable` without terrain. `frameFor()` picks a tile
+  origin in the world copy nearest the view, `encode()` returns tile-local `[x, y, meters]` for it,
+  `fromEnu()` offsets a resolved position by east/north/up meters, and `project()` returns CSS
+  pixel `point` and `visible`. Frame services expire when `render()` returns; keep what `pick()`
+  needs.
+- **Shared camera.** `shader(origin)` returns GLSL ES 3.00 `defines`, `vertexPrelude`,
+  `fragmentPrelude` and `uniforms` (projection matrices, tile Mercator coordinates, clipping plane,
+  globe transition). Prefix your shaders with them and call `lrProjectPosition(vec3)`. The same code
+  draws in Mercator, globe and the transition between them; on a globe forward
+  `lrHorizonPosition()` and discard where `lrHorizonOccluded()` returns true. The layer draws in
+  the map's 3D pass with its depth buffer and premultiplied alpha blending. `frame` also carries
+  CSS `width`/`height`, `pixelRatio`, `time`, `revision` and the map's `reducedMotion`; stop
+  animation when it is true.
+- **Lifecycle.** `create()` runs for each mount epoch: on first install, after a `mapStyle`
+  replacement and after WebGL context restoration. The previous instance is disposed first, so
+  allocate GL objects in `create()` or lazily in `render()`. A lost context disposes the instance
+  without GL work (`context.gl.isContextLost()` is true) and reports `unavailable` with
+  `context-lost`; restoration reinstalls it. `remove()` and disconnecting the map dispose it and
+  report the final `removed` state. Never resize the canvas or lose the context yourself.
+- **Status.** `handle.status` and `onStateChange` report `loading`, `ready` after a completed frame,
+  `unavailable` with `engine` (the optional bridge did not load or the map engine refused the
+  layer), `render` (a callback threw; the layer stays retired until the next style replacement),
+  `invalid`, `context-lost`, or a code the layer reports through `context.reportState()`, and
+  `removed`. `ready` does not assert visible pixels.
+- **Picking.** A pointer click calls `pick(point, revision)` with CSS pixels; a hit `{ id,
+  position? }` emits `lr-map-scene-activate` with `kind: 'custom'`. `handle.pick(point)` asks
+  directly. Results resolve `null` after the view, epoch or layer changed.
+
+Both the modular engine and `engine="maplibre"` support the bridge; it needs `@aceshooting/lyra-map`
+installed. `requestRender()` schedules a frame for animation and `setVisible(false)` skips drawing.
+The layer descriptor is snapshotted once; `id` and `label` are nonblank strings and `before` names
+an existing style layer to render beneath. A malformed descriptor or an element that is not a
+connected `lr-map` throws `TypeError`. Custom layers add no text alternative: describe what they show
+in the surrounding page or scene list.
 
 ## `lr-map-anchor`
 

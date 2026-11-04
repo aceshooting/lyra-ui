@@ -99,17 +99,23 @@ function emit(target: SceneLineCoordinate[], longitude: number, latitude: number
   target.push(Object.freeze([value === 0 ? 0 : value, latitude === 0 ? 0 : latitude, altitude === 0 ? 0 : altitude] as const));
 }
 
-function trace(object: SceneLineObject, rows: readonly Segment[], step: number): readonly SceneLineCoordinate[] {
-  const coordinates: SceneLineCoordinate[] = [];
+interface Traced { readonly coordinates: readonly SceneLineCoordinate[]; readonly terrain: readonly number[] }
+
+const terrainWeight = (position: CanonicalScenePosition): number => position.altitudeReference === 'terrain' ? 1 : 0;
+
+function trace(object: SceneLineObject, rows: readonly Segment[], step: number): Traced {
+  const coordinates: SceneLineCoordinate[] = [], terrain: number[] = [];
   const first = rows[0]!.start;
-  emit(coordinates, first.lngLat[0], first.lngLat[1], first.altitude);
+  emit(coordinates, first.lngLat[0], first.lngLat[1], first.altitude); terrain.push(terrainWeight(first));
   for (const segment of rows) {
     const count = steps(segment, step), { start, end } = segment;
     const a = unit(start), b = unit(end), sine = Math.sin(segment.angle);
+    const startWeight = terrainWeight(start), endWeight = terrainWeight(end);
     for (let index = 1; index < count; index++) {
       const t = index / count;
       const altitude = object.kind === 'arc' ? sceneArcAltitude(start.altitude, end.altitude, segment.height, t)
         : start.altitude + (end.altitude - start.altitude) * t;
+      terrain.push(startWeight + (endWeight - startWeight) * t);
       if (sine < 1e-12) {
         emit(coordinates, start.lngLat[0] + (unwrap(end.lngLat[0], start.lngLat[0]) - start.lngLat[0]) * t,
           start.lngLat[1] + (end.lngLat[1] - start.lngLat[1]) * t, altitude);
@@ -119,18 +125,28 @@ function trace(object: SceneLineObject, rows: readonly Segment[], step: number):
       const x = wa * a[0] + wb * b[0], y = wa * a[1] + wb * b[1], z = wa * a[2] + wb * b[2];
       emit(coordinates, Math.atan2(y, x) / radians, Math.atan2(z, Math.hypot(x, y)) / radians, altitude);
     }
-    emit(coordinates, end.lngLat[0], end.lngLat[1], end.altitude);
+    emit(coordinates, end.lngLat[0], end.lngLat[1], end.altitude); terrain.push(endWeight);
   }
-  return Object.freeze(coordinates);
+  return Object.freeze({ coordinates: Object.freeze(coordinates), terrain: Object.freeze(terrain) });
+}
+
+/** Owned line geometry with each vertex's terrain weight. */
+export interface SceneLineGeometry {
+  readonly coordinates: readonly SceneLineCoordinate[];
+  /**
+   * 1 where the vertex altitude is above displayed terrain, 0 where it is above sea level; generated
+   * vertices interpolate their segment's endpoint weights linearly.
+   */
+  readonly terrain: readonly number[];
 }
 
 /**
- * Generates owned line coordinates for admitted paths and arcs. Great-circle paths and arcs are
+ * Generates owned line geometry for admitted paths and arcs. Great-circle paths and arcs are
  * sampled at most one degree apart; when the whole scene would exceed `limit` vertices, the shared
  * angular step doubles until it fits. Returns undefined when even one step per segment does not fit.
  */
-export function tessellateSceneLines(objects: readonly SceneLineObject[],
-  limit = SCENE_LINE_VERTEX_LIMIT): readonly (readonly SceneLineCoordinate[])[] | undefined {
+export function traceSceneLines(objects: readonly SceneLineObject[],
+  limit = SCENE_LINE_VERTEX_LIMIT): readonly SceneLineGeometry[] | undefined {
   const rows = objects.map(segments);
   const count = (step: number): number => rows.reduce((total, row) =>
     total + 1 + row.reduce((sum, segment) => sum + steps(segment, step), 0), 0);
@@ -142,15 +158,29 @@ export function tessellateSceneLines(objects: readonly SceneLineObject[],
   return Object.freeze(objects.map((object, index) => trace(object, rows[index]!, step)));
 }
 
+/** Line coordinates only; see `traceSceneLines()`. */
+export function tessellateSceneLines(objects: readonly SceneLineObject[],
+  limit = SCENE_LINE_VERTEX_LIMIT): readonly (readonly SceneLineCoordinate[])[] | undefined {
+  const geometry = traceSceneLines(objects, limit);
+  return geometry && Object.freeze(geometry.map(row => row.coordinates));
+}
+
+/** One frozen GeoJSON feature per line from already traced geometry. */
+export function sceneLineDataFrom(objects: readonly SceneLineObject[], geometry: readonly SceneLineGeometry[],
+  colors: ReadonlyMap<string, string>): SceneLineData | undefined {
+  if (objects.length !== geometry.length || objects.some(object => !colors.has(object.id))) return undefined;
+  const features = objects.map((object, index): SceneLineFeature => Object.freeze({ type: 'Feature',
+    properties: Object.freeze({ id: object.id, kind: object.kind, color: colors.get(object.id)!, width: object.width,
+      opacity: object.opacity }),
+    geometry: Object.freeze({ type: 'LineString', coordinates: geometry[index]!.coordinates }) }));
+  return Object.freeze({ type: 'FeatureCollection', features: Object.freeze(features) });
+}
+
 /** One frozen GeoJSON feature per line; every object needs a resolved native color. */
 export function buildSceneLineData(objects: readonly SceneLineObject[], colors: ReadonlyMap<string, string>,
   limit = SCENE_LINE_VERTEX_LIMIT): SceneLineData | undefined {
   if (objects.some(object => !colors.has(object.id))) return undefined;
-  const geometry = tessellateSceneLines(objects, limit);
-  if (!geometry) return undefined;
-  const features = objects.map((object, index): SceneLineFeature => Object.freeze({ type: 'Feature',
-    properties: Object.freeze({ id: object.id, kind: object.kind, color: colors.get(object.id)!, width: object.width,
-      opacity: object.opacity }),
-    geometry: Object.freeze({ type: 'LineString', coordinates: geometry[index]! }) }));
-  return Object.freeze({ type: 'FeatureCollection', features: Object.freeze(features) });
+  const geometry = traceSceneLines(objects, limit);
+  return geometry && sceneLineDataFrom(objects, geometry, colors);
 }
+

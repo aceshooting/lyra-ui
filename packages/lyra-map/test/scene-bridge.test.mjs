@@ -730,8 +730,8 @@ test('last status capture cannot publish or count an installation after native o
   }
 });
 
-test('the scene entry exposes only the bridge factory', () => {
-  assert.deepEqual(Object.keys(sceneEntry), ['createSceneBridge']);
+test('the scene entry exposes only the bridge and custom layer factories', () => {
+  assert.deepEqual(Object.keys(sceneEntry), ['createSceneBridge', 'createSceneLayer']);
   assert.equal(sceneEntry.createSceneBridge, createSceneBridge);
 });
 

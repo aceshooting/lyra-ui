@@ -21,17 +21,19 @@ test('the scene facade loads its production bridge from the same generated graph
   const source = await readFile(join(built.directory, 'dist/scene.mjs'), 'utf8');
   assert.ok(source.includes(scene.file), 'the facade points into the observed production graph');
   const actual = await import(pathToFileURL(join(built.directory, 'dist/scene.mjs')).href);
-  assert.deepEqual(Object.keys(actual), ['createSceneBridge']);
+  assert.deepEqual(Object.keys(actual), ['createSceneBridge', 'createSceneLayer']);
+  assert.equal(built.reachable(scene, { dynamic: false }).has(oneOwner('src/scene/custom-layer.mjs').file), true);
 });
 
-test('the default map graph cannot load the optional bridge, glyph renderer or Three', () => {
+test('the default map graph cannot load the optional bridge, custom layer bridge, glyph renderer or Three', () => {
   oneOwner('src/scene/index.mjs');
   const roots = built.graph.filter(chunk => chunk.facade?.includes('lyra-map-entry'));
   assert.equal(roots.length, 1);
   const reachable = built.reachable(roots[0]);
   const forbidden = built.graph.filter(chunk => chunk.modules.some(id =>
-    /\/(?:bridge|bridge-glyph)\.mjs$/u.test(id) || /\/node_modules\/(?:\.pnpm\/three@[^/]+\/node_modules\/)?three\//u.test(id)));
+    /\/(?:bridge|bridge-glyph|custom-layer)\.mjs$/u.test(id) || /\/node_modules\/(?:\.pnpm\/three@[^/]+\/node_modules\/)?three\//u.test(id)));
   assert.ok(forbidden.some(chunk => chunk.modules.includes(join(built.directory, 'src/scene/bridge.mjs'))));
+  assert.ok(forbidden.some(chunk => chunk.modules.includes(join(built.directory, 'src/scene/custom-layer.mjs'))));
   for (const chunk of forbidden) assert.equal(reachable.has(chunk.file), false, `${chunk.file} stays outside the default map graph`);
 });
 

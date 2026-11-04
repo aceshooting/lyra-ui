@@ -138,7 +138,7 @@ const facade = (id) => {
 };
 await writeFile(resolve(outputRoot, 'index.mjs'), `export * from './${facade(entry)}';\n`);
 await writeFile(resolve(outputRoot, 'worker.mjs'), `import './${facade(workerEntry)}';\n`);
-await writeFile(resolve(outputRoot, 'scene.mjs'), `export {createSceneBridge} from './${facade(sceneEntry)}';\n`);
+await writeFile(resolve(outputRoot, 'scene.mjs'), `export {createSceneBridge, createSceneLayer} from './${facade(sceneEntry)}';\n`);
 for (const [name, exported] of Object.entries(controls)) {
   const target = facade(resolve(src, `ui/control/${name}_control.ts`));
   await writeFile(resolve(outputRoot, `controls/${name}.mjs`), `export {${exported}} from '../${target}';\n`);
@@ -158,8 +158,9 @@ await mkdir(resolve(outputRoot, 'types'), { recursive: true });
 for (const file of ['scene.d.ts', 'scene-entry.d.ts'])
   await copyFile(resolve(packageRoot, 'types', file), resolve(outputRoot, 'types', file));
 await writeFile(resolve(outputRoot, 'scene.d.ts'),
-  "export { createSceneBridge } from './types/scene-entry.js';\n" +
-  "export type { SceneBridge, SceneBridgeHost, SceneBridgeNativeMap, SceneRenderInput, SceneMarker, SceneBridgeStatus, SceneCompletionPhase, SceneCompletionToken, SceneCompletionTarget, SceneCompletionMember, SceneCompletionInput, SceneCompletionCameraFacts, SceneCompletionHost, SceneBridgeCameraProfile, SceneBridgeCompletedFrame, SceneBridgeTargetProjection, SceneCompletionPort, SceneBridgeWithCompletion, SceneBridgeHostWithCompletion } from './types/scene-entry.js';\n");
+  "export { createSceneBridge, createSceneLayer } from './types/scene-entry.js';\n" +
+  "export type { SceneBridge, SceneBridgeHost, SceneBridgeNativeMap, SceneRenderInput, SceneMarker, SceneBridgeStatus, SceneCompletionPhase, SceneCompletionToken, SceneCompletionTarget, SceneCompletionMember, SceneCompletionInput, SceneCompletionCameraFacts, SceneCompletionHost, SceneBridgeCameraProfile, SceneBridgeCompletedFrame, SceneBridgeTargetProjection, SceneCompletionPort, SceneBridgeWithCompletion, SceneBridgeHostWithCompletion, SceneLayer, SceneLayerHost, SceneLayerNativeMap, SceneLayerState, SceneLayerCode } from './types/scene-entry.js';\n" +
+  "export type { MapPosition, MapAltitudeReference, MapEnuPoint, MapResolvedPosition, MapProjectedPosition, MapGeographicOrigin, MapSceneLimits, MapGeographicServices, MapGeographicFrame, MapGeographicUniform, MapGeographicShader, MapCustom3dLayer, MapLayerContext, MapLayerFrame, MapLayerItem, MapLayerPick, MapLayerInstance, MapProjectionStamp, MapProjectionLayout, MapProjectionTile, MapProjectionSnapshot, MapProjectionMat4, MapProjectionVec4 } from './types/scene.js';\n");
 for (const source of expected.declarationSources) {
   const packageEntry = upstreamRequire.resolve(source.package);
   const packageRoot = resolve(dirname(packageEntry), '..');
