@@ -186,3 +186,51 @@ export const NotResizable: Story = {
     </div>
   `,
 };
+
+export const CollapsedRail: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'Rail items show only while collapsed, after the toggle, and each one calls `expand()`. The `collapse-icon` and `expand-icon` slots replace the chevron with panel glyphs; the toggle keeps its localized name.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="position:relative;block-size:20rem;display:flex">
+      <lr-dock-panel placement="start" extent="240px" collapsible collapsed>
+        <lr-icon slot="collapse-icon" name="close"></lr-icon>
+        <lr-icon slot="expand-icon" name="check"></lr-icon>
+        <lr-icon-button slot="rail" icon="search" label="Search"
+          @click=${(event: Event) => { (event.currentTarget as HTMLElement).closest('lr-dock-panel')?.expand(); }}></lr-icon-button>
+        <lr-icon-button slot="rail" icon="calendar" label="Calendar"
+          @click=${(event: Event) => { (event.currentTarget as HTMLElement).closest('lr-dock-panel')?.expand(); }}></lr-icon-button>
+        <div style="padding:1rem"><strong>Sections</strong><p>Search and calendar live here.</p></div>
+      </lr-dock-panel>
+      <main style="flex:1;min-inline-size:0;padding:1rem">Collapse the panel to see its rail.</main>
+    </div>
+  `,
+};
+
+export const ConsumerOwnedToggle: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'Without `collapsible` there is no built-in toggle: a button in the content header calls `collapse()` and a rail item calls `expand()`, both firing the cancelable `lr-toggle-request` and `lr-toggle`. Collapsing moves focus to that rail item.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="position:relative;block-size:16rem;display:flex">
+      <main style="flex:1;min-inline-size:0;padding:1rem">Main content</main>
+      <lr-dock-panel placement="end" extent="260px">
+        <lr-icon-button slot="rail" icon="search" label="Show details"
+          @click=${(event: Event) => { (event.currentTarget as HTMLElement).closest('lr-dock-panel')?.expand(); }}></lr-icon-button>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:var(--lr-space-xs) var(--lr-space-s)">
+          <strong>Details</strong>
+          <lr-icon-button icon="close" label="Collapse details"
+            @click=${(event: Event) => { (event.currentTarget as HTMLElement).closest('lr-dock-panel')?.collapse(); }}></lr-icon-button>
+        </div>
+      </lr-dock-panel>
+    </div>
+  `,
+};
