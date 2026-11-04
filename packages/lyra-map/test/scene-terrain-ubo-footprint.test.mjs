@@ -34,7 +34,7 @@ class ValueAdapter {
 }
 
 async function loadNative() {
-  assert.equal(JSON.parse(await readFile(join(src, '../package.json'), 'utf8')).version, '6.15.0');
+  assert.equal(JSON.parse(await readFile(join(src, '../package.json'), 'utf8')).version, '6.16.0');
   const ubo = await loadModule('webgl/uniform_buffer.ts', ['UniformBuffer', 'std140Layout', 'applyUBOBindings', 'UBO_BINDINGS']);
   const projection = await loadModule('webgl/projection_uniform_buffer.ts',
     ['createProjectionUniformBuffer', 'bindProjectionUniformBuffer', 'releaseProjectionUniformBuffers', 'destroyProjectionUniformBuffers'], ubo);

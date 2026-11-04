@@ -1,9 +1,9 @@
 Lyra Docs internal DOCX engine
 
 This package includes a modified derivative of the Apache-2.0 portions of
-@docx-editor.dev/core 2.32.0, copyright 2026 EigenPal Inc., from:
+@docx-editor.dev/core 2.33.0, copyright 2026 EigenPal Inc., from:
 https://github.com/eigenpal/docx-editor
-Commit: 5f2d96ca8b05389968906199e25b91e3538441ba
+Commit: 3cc7bf5d38510940d6e88ffcec4ecff82fd6333e
 
 Lyra modifications provide explicit module preparation for document features,
 DOM presentation, editing commands and native input; split shared pure helpers;
@@ -12,7 +12,8 @@ locale catalog to the exact TOC title values used by the engine. Each modified
 source file is identified in scripts/engine-source.lock.json and carries a
 modification notice in the distributed patch.
 
-The Apache-2.0 license, original upstream notices and HarfBuzz license are in
+The Apache-2.0 license, original upstream notices, HarfBuzz license and the
+Ecma notice for ECMA-376 derived preset shape geometry are in
 THIRD_PARTY_LICENSES. THIRD_PARTY_NOTICES.md also identifies bundled dependencies.
 Lyra's original component and adapter code remains under its MIT license.
 

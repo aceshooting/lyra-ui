@@ -4,7 +4,7 @@
 
 `@aceshooting/lyra-docs` is a public, experimental companion package for the
 native Lyra DOCX editor. It ships an internal engine derived from the Apache-2.0
-source of `@docx-editor.dev/core@2.32.0`, with document features loaded on demand. Existing document viewers, including
+source of `@docx-editor.dev/core@2.33.0`, with document features loaded on demand. Existing document viewers, including
 `<lr-docx-viewer>`, remain in `@aceshooting/lyra-ui`.
 
 The editor supports opening local DOCX files, caller-provided bytes or an

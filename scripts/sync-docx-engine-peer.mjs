@@ -57,6 +57,8 @@ for (const [shipped, upstream] of [
   copyFileSync(path.join(installed, upstream), path.join(licenses, `docx-editor-core-${version}-${shipped}`));
 }
 copyFileSync(path.join(installed, 'licenses/HarfBuzz-COPYING.txt'), path.join(licenses, 'HarfBuzz-COPYING.txt'));
+// The engine's preset shape geometry derives from ECMA-376; its notice must travel with it.
+copyFileSync(path.join(installed, 'licenses/ECMA-376.md'), path.join(licenses, 'ECMA-376.md'));
 for (const file of readdirSync(licenses)) {
   if (/^docx-editor-core-\d+\.\d+\.\d+-(?:Apache-2\.0\.txt|THIRD_PARTY_NOTICES\.md)$/u.test(file) &&
       !file.startsWith(`docx-editor-core-${version}-`)) rmSync(path.join(licenses, file));

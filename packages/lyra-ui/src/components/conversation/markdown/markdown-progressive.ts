@@ -130,10 +130,14 @@ function fence(source: string): { run: string; indent: number; end: number; back
   if (!match || (match[2]![0] === '`' && match[3]!.includes('`'))) return null;
   return { run: match[2]!, indent: match[1]!.length, end: match[0].length, backtick: match[2]![0] === '`' };
 }
+/** A closing fence repeats the opening character at least as often, followed only by spaces. */
+function fenceClosePattern(opening: { run: string }): RegExp {
+  return new RegExp(`^ {0,3}${opening.run}${opening.run[0]!}* *$`, 'm');
+}
 function hasFenceClose(source: string, completeEnd = source.length): boolean {
   const opening = fence(source);
   if (!opening) return false;
-  const pattern = new RegExp(`^ {0,3}${opening.run}[~\x60]* *$`, 'm');
+  const pattern = fenceClosePattern(opening);
   return pattern.test(source.slice(opening.end, completeEnd).replace(/[^\n]*$/, ''));
 }
 
@@ -391,7 +395,7 @@ export class MarkdownProgressiveSession {
     if (opening) {
       if (this.fenceScan?.start !== start) this.fenceScan = { start, end: start + opening.end, closed: false };
       const scan = this.fenceScan;
-      const pattern = new RegExp(`^ {0,3}${opening.run}[~\x60]* *$`, 'm');
+      const pattern = fenceClosePattern(opening);
       if (!scan.closed && completeEnd > scan.end) {
         scan.closed = pattern.test(source.slice(scan.end, completeEnd).replace(/[^\n]*$/, ''));
         justClosed = scan.closed;

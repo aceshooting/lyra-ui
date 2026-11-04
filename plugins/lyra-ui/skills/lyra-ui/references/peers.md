@@ -47,10 +47,10 @@ for the page.
 | `chartjs-plugin-annotation` | `^3.0.0` | `lr-bar-chart`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
 | `chartjs-plugin-datalabels` | `^2.2.0` | `lr-bar-chart`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
 | `chartjs-plugin-zoom` | `^2.0.0` | `lr-bar-chart`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
-| `d3-drag` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |
-| `d3-force` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |
-| `d3-selection` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |
-| `d3-zoom` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |
+| `d3-drag` | `^3.0.1` | `lr-graph`, `lr-knowledge-graph-explorer` |
+| `d3-force` | `^3.0.1` | `lr-graph`, `lr-knowledge-graph-explorer` |
+| `d3-selection` | `^3.0.1` | `lr-graph`, `lr-knowledge-graph-explorer` |
+| `d3-zoom` | `^3.0.1` | `lr-graph`, `lr-knowledge-graph-explorer` |
 | `dompurify` | `^3.4.14` | `lr-agent-workspace`, `lr-dashboard-grid`, `lr-docx-viewer`, `lr-email-viewer`, `lr-eval-run`, `lr-geojson-viewer`, `lr-html-viewer`, `lr-icon`, `lr-icon-button`, `lr-include`, `lr-map`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-streaming-text-core`, `lr-svg-viewer`, `lr-video`, `lr-video-playlist`, `lr-widget-renderer` |
 | `emoji-picker-element-data` | `^1.8.0` | `lr-emoji-picker` |
 | `epubjs` | `^0.3.93` | `lr-ebook-viewer` |

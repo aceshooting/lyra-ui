@@ -54,7 +54,7 @@ try {
   const { lyraMapWorkerPlugin, cssUrl } = await import(pathToFileURL(resolve(scratch, 'public-entries.mjs')).href);
   await writeFile(
     entry,
-    "export {Map,Marker,Popup,AttributionControl,NavigationControl,GeolocateControl,ScaleControl,setWorkerUrl,getVersion,prepareStyle} from '@aceshooting/lyra-map';"
+    "export {Map,Marker,Popup,AttributionControl,NavigationControl,GeolocateControl,ScaleControl,setWorkerUrl,getVersion,prepareStyle,getGlobalDispatcher} from '@aceshooting/lyra-map';"
   );
   const result = await build({
     configFile: false,

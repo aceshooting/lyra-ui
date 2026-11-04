@@ -80,16 +80,44 @@ it("floors the collapse toggle at the shared minimum hit target", async () => {
   expect(toggle.getBoundingClientRect().height).to.be.at.least(36);
 });
 
-it('keeps the resize handle hittable 20px inside the clipped panel', async () => {
+it('keeps the resize handle hittable inside the clipped panel without covering content beyond its slop', async () => {
   for (const edge of ['end', 'top'] as const) {
     const el = await dockedFixture('extent="180px"', edge);
     await elementUpdated(el);
     const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
     const rect = handle.getBoundingClientRect();
-    const x = edge === 'end' ? rect.left + 20 : rect.left + rect.width / 2;
-    const y = edge === 'top' ? rect.top - 20 : rect.top + rect.height / 2;
-    expect(el.shadowRoot!.elementFromPoint(x, y) === handle).to.equal(true);
+    const at = (inset: number) => [
+      edge === 'end' ? rect.left + inset : rect.left + rect.width / 2,
+      edge === 'top' ? rect.bottom - inset : rect.top + rect.height / 2,
+    ] as const;
+    expect(el.shadowRoot!.elementFromPoint(...at(6)) === handle).to.equal(true);
+    expect(el.shadowRoot!.elementFromPoint(...at(20)) === handle).to.equal(false);
   }
+});
+
+it('keeps a control flush against the inner edge clickable', async () => {
+  const el = await fixture<HTMLElement>(html`
+    <lr-dock-panel placement="start" extent="200px" style="block-size:120px">
+      <div style="display:flex;justify-content:flex-end">
+        <button id="edge" style="inline-size:36px;block-size:36px">x</button>
+      </div>
+    </lr-dock-panel>
+  `);
+  await elementUpdated(el);
+  const button = el.querySelector('#edge') as HTMLButtonElement;
+  const rect = button.getBoundingClientRect();
+  const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+  expect(hit === button).to.equal(true);
+});
+
+it('honours a hit area shrunk to the visible line on precise pointers', async () => {
+  const el = await dockedFixture('extent="180px" style="--lr-dock-panel-handle-hit-area: 3px"', 'end');
+  await elementUpdated(el);
+  const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+  const rect = handle.getBoundingClientRect();
+  const y = rect.top + rect.height / 2;
+  expect(el.shadowRoot!.elementFromPoint(rect.left + 1, y) === handle).to.equal(true);
+  expect(el.shadowRoot!.elementFromPoint(rect.left + 5, y) === handle).to.equal(false);
 });
 
 it("contains long RTL dock and main content through collapse/expand in an exact 320px allocation", async () => {

@@ -190,6 +190,7 @@ const cases = process.env.MAP_TEST_CASES?.split(',') ?? [
   'controls-exports',
   'url-transform',
   'context-restore',
+  'worker-restart',
   'reconnect',
   ...preparedAdversarialCases,
   ...adversarialCases
