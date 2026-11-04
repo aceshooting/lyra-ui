@@ -1,5 +1,20 @@
 # Changelog
 
+## 30.8.0
+
+### Minor Changes
+
+- fddd9e7: `lr-dock-panel` gains a `rail` slot shown only while `collapsed`: its items (typically one icon button per section) stack after the collapse toggle, in a column on `start`/`end` and a row on `top`/`bottom`, and the rail grows past `--lr-dock-panel-collapsed-size` to fit them. New `collapse-icon` and `expand-icon` slots replace the toggle's chevron with consumer glyphs while keeping its localized name. New `expand()`, `collapse()` and `toggle()` methods drive the fold through the same cancelable `lr-toggle-request`/`lr-toggle` pair as the built-in toggle, so a consumer-owned control can replace it; collapsing moves focus to the built-in toggle, else the first focusable rail item, else the host.
+- c8efd9b: Add `addMapCustomLayer(map, layer, options?)` from the new `@aceshooting/lyra-ui/map-custom-layers.js` entry for trusted custom WebGL2 layers on `lr-map`, such as beams, coverage cones, clouds or particles. A layer's `create(context)` receives the map's own WebGL2 context and geographic services; each frame provides the shared camera as a Mercator/globe shader prelude with projection uniforms, tile-local encoding, CSS projection and sea-level or terrain-relative altitude resolution. Layers are reinstalled with a fresh instance after a `mapStyle` replacement and after WebGL context restoration, disposed on `remove()` or map disconnection, and report `loading`, `ready`, `unavailable` and `removed` states. A pointer click that the layer's `pick()` hits emits `lr-map-scene-activate` with `kind: 'custom'` and `layerId`. The bridge loads from the optional `@aceshooting/lyra-map/scene` entry on first use; ordinary `lr-map` imports do not load it.
+
+  Scene paths and arcs with a nonzero altitude, a nonzero arc `height` or `sea-level` geometry over displayed terrain are now drawn in 3D at their authored altitude through that bridge, so the scene reports `ready` instead of `partial` with code `altitude`. Lines keep their CSS pixel width, depth-test against the map and hide behind the globe horizon; `terrain` altitude adds displayed terrain height, blending linearly along a segment between `terrain` and `sea-level` endpoints. When the bridge is unavailable or fails, those lines keep the ground-track fallback and the `partial`/`altitude` report.
+
+### Patch Changes
+
+- Updated dependencies [e93aebb]
+  - @aceshooting/lyra-map@1.5.0
+  - @aceshooting/lyra-translations@30.8.0
+
 ## 30.7.0
 
 ### Minor Changes
