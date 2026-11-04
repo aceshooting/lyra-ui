@@ -112,13 +112,27 @@ describe('dock-panel pointer capture', () => {
 
 describe('dock-panel handle hit area', () => {
   for (const [placement, property] of [['end', 'width'], ['start', 'width'], ['top', 'height'], ['bottom', 'height']] as const) {
-    it(`reaches the minimum hit size across the ${placement} handle`, async () => {
-      const wrapper = await fixture<HTMLDivElement>(`<div style="display: flex; flex-direction: ${placement === 'top' || placement === 'bottom' ? 'column' : 'row'}; block-size: 20rem; inline-size: 30rem; --lr-theme-icon-button-size: 44px">
-        <lr-dock-panel placement="${placement}" extent="200px"></lr-dock-panel></div>`);
-      const panel = wrapper.querySelector('lr-dock-panel') as LyraDockPanel;
-      await panel.updateComplete;
-      const size = parseFloat(getComputedStyle(handleOf(panel), '::before').getPropertyValue(property));
-      expect(size).to.be.at.least(44);
+    it(`sizes the ${placement} handle target for the active pointer`, async () => {
+      const coarse = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+      const measure = async (hitArea: string): Promise<number> => {
+        const wrapper = await fixture<HTMLDivElement>(`<div style="display: flex; flex-direction: ${placement === 'top' || placement === 'bottom' ? 'column' : 'row'}; block-size: 20rem; inline-size: 30rem; --lr-theme-icon-button-size: 44px${hitArea}">
+          <lr-dock-panel placement="${placement}" extent="200px"></lr-dock-panel></div>`);
+        const panel = wrapper.querySelector('lr-dock-panel') as LyraDockPanel;
+        await panel.updateComplete;
+        return parseFloat(getComputedStyle(handleOf(panel), '::before').getPropertyValue(property));
+      };
+      const fallback = await measure('');
+      const shrunk = await measure('; --lr-dock-panel-handle-hit-area: 3px');
+      const enlarged = await measure('; --lr-dock-panel-handle-hit-area: 60px');
+      if (coarse) {
+        expect(fallback).to.be.at.least(44);
+        expect(shrunk).to.be.at.least(44);
+      } else {
+        const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
+        expect(fallback).to.equal(0.5 * remPx);
+        expect(shrunk).to.equal(3);
+      }
+      expect(enlarged).to.equal(60);
     });
   }
 });

@@ -511,7 +511,7 @@ test('retains seven scaffold files above the reviewed required-artifact inventor
   );
   assert.deepEqual(
     [actualBudgets.maximum.packedBytes, actualBudgets.maximum.unpackedBytes],
-    [9_999_999, 22_369_664],
+    [9_999_999, 22_370_240],
     'the split package keeps the absolute download ceiling and a tight unpacked ceiling',
   );
 
@@ -553,7 +553,7 @@ test('keeps editor data and locale catalogs out of the lyra-ui tarball and gates
   assert.equal(findings.length, 1);
   assert.match(findings[0], /2 file\(s\) that ship in a companion package: custom-elements\.json, dist\/translations\/fr\.js/u);
 
-  assert.equal(actualBudgets.companions['@aceshooting/lyra-map'].maximum.unpackedBytes, 4_241_984);
+  assert.equal(actualBudgets.companions['@aceshooting/lyra-map'].maximum.unpackedBytes, 4_275_648);
   assert.equal(actualBudgets.companions['@aceshooting/lyra-translations'].maximum.unpackedBytes, 7_184_576);
   assert.deepEqual(
     [actualBudgets.companions['@aceshooting/lyra-ide'].maximum.packedBytes, actualBudgets.companions['@aceshooting/lyra-ide'].maximum.unpackedBytes],

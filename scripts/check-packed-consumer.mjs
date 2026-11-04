@@ -162,10 +162,10 @@ const rootHelperRegisteredTags = [];
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/7859878f724ef4237ee93a5414fa6b54f204313a/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'Map scene ownership, camera sessions, accessible scene controls, custom graph node bodies, lazy locale-picker names, the ten additional locale catalogs, multi-split panel collapse, named menu anchors, markdown without-images and drawn scene lines bring the full non-optional graph to 5,659,869 raw bytes across 64 files. Only its ceiling advances to the next 64-byte boundary, with 35 bytes of headroom. The explicit Oniguruma canary retains its separate exact binary requirement.',
-  reviewedCoreMeasurementBytes: 5_659_869,
+  $comment: 'Map scene ownership, camera sessions, accessible scene controls, custom graph node bodies, lazy locale-picker names, the ten additional locale catalogs, multi-split panel collapse, named menu anchors, markdown without-images, drawn scene lines and the dependency upgrade bring the full non-optional graph to 5,660,028 raw bytes across 64 files. Only its ceiling advances to the next 64-byte boundary, with 4 bytes of headroom. The explicit Oniguruma canary retains its separate exact binary requirement.',
+  reviewedCoreMeasurementBytes: 5_660_028,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 35,
+  selectedRegressionHeadroomBytes: 4,
 };
 
 /**
@@ -320,9 +320,9 @@ const bundleEntries = {
   },
   map: {
     fixture: 'optional',
-    // Drawn scene paths and arcs bring the MapLibre v6 map consumer to 2,500,153 raw bytes; the
-    // next 64-byte boundary.
-    maxRawBytes: 2_500_160,
+    // Drawn scene paths and arcs and the dependency upgrade bring the MapLibre v6 map consumer to
+    // 2,500,162 raw bytes; the next 64-byte boundary.
+    maxRawBytes: 2_500_224,
   },
   graph: {
     fixture: 'optional',

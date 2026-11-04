@@ -99,11 +99,16 @@ export const styles = css`
       )
     );
   }
-  /* Keep the target inside the clipped panel while leaving its visible line thin. */
+  /* Keep the target inside the clipped panel while leaving its visible line thin. The band lies
+     over the panel's own content along its inner edge, so a precise pointer gets exactly the
+     requested slop (small by default, shrinkable to the visible line) and content next to the
+     edge stays clickable; only coarse or hover-less pointers are floored at the shared icon-button
+     target below. */
   [part="handle"]::before {
     content: "";
     position: absolute;
-    inline-size: max(var(--lr-icon-button-size), var(--lr-dock-panel-handle-hit-area, var(--lr-space-m)));
+    --_lr-dock-panel-hit-area: var(--lr-dock-panel-handle-hit-area, var(--lr-space-s));
+    inline-size: var(--_lr-dock-panel-hit-area);
     block-size: 100%;
     inset-block-start: 0;
     inset-inline-start: 0;
@@ -115,13 +120,21 @@ export const styles = css`
   :host([placement="top"]) [part="handle"]::before,
   :host([placement="bottom"]) [part="handle"]::before {
     inline-size: 100%;
-    block-size: max(var(--lr-icon-button-size), var(--lr-dock-panel-handle-hit-area, var(--lr-space-m)));
+    block-size: var(--_lr-dock-panel-hit-area);
     inset-inline-start: 0;
     inset-block-start: 0;
   }
   :host([placement="top"]) [part="handle"]::before {
     inset-block-start: auto;
     inset-block-end: 0;
+  }
+  @media (hover: none), (pointer: coarse) {
+    [part="handle"]::before {
+      --_lr-dock-panel-hit-area: max(
+        var(--lr-icon-button-size),
+        var(--lr-dock-panel-handle-hit-area, var(--lr-space-s))
+      );
+    }
   }
 
   :host([placement="start"]) [part="handle"] {
