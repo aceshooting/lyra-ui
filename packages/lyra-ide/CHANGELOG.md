@@ -1,5 +1,31 @@
 # @aceshooting/lyra-ide
 
+## 30.7.0
+
+### Patch Changes
+
+- Updated dependencies [630bae1]
+- Updated dependencies [9a6b7bb]
+- Updated dependencies [ee377e2]
+- Updated dependencies [5afdde7]
+- Updated dependencies [4bcb093]
+- Updated dependencies [80e85b6]
+- Updated dependencies [a1cde90]
+- Updated dependencies [ee377e2]
+- Updated dependencies [df2c163]
+- Updated dependencies [6113927]
+- Updated dependencies [4c6b8d9]
+- Updated dependencies [8d430ea]
+- Updated dependencies [5979980]
+- Updated dependencies [7f8a11f]
+- Updated dependencies [c77649c]
+- Updated dependencies [36f1381]
+- Updated dependencies [f0277da]
+- Updated dependencies [cfc6524]
+- Updated dependencies [6488a11]
+- Updated dependencies [5481ded]
+  - @aceshooting/lyra-ui@30.7.0
+
 ## 30.6.0
 
 ### Patch Changes

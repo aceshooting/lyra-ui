@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.3.1
+
+### Patch Changes
+
+- 5481ded: Preserve resource-limit diagnostics when a schema exceeds JSON admission budgets, including the original error code and path. Unsafe or malformed schemas remain rejected as `schema.invalid`.
+
+  Clarify that `maxNodes` counts JSON values in input and schema snapshots and separately bounds schema validation work, rather than rendered components.
+- Updated dependencies [630bae1]
+- Updated dependencies [9a6b7bb]
+- Updated dependencies [ee377e2]
+- Updated dependencies [5afdde7]
+- Updated dependencies [4bcb093]
+- Updated dependencies [80e85b6]
+- Updated dependencies [a1cde90]
+- Updated dependencies [ee377e2]
+- Updated dependencies [df2c163]
+- Updated dependencies [6113927]
+- Updated dependencies [4c6b8d9]
+- Updated dependencies [8d430ea]
+- Updated dependencies [5979980]
+- Updated dependencies [7f8a11f]
+- Updated dependencies [c77649c]
+- Updated dependencies [36f1381]
+- Updated dependencies [f0277da]
+- Updated dependencies [cfc6524]
+- Updated dependencies [6488a11]
+- Updated dependencies [5481ded]
+  - @aceshooting/lyra-ui@30.7.0
+
 ## 1.3.0
 
 ### Minor Changes

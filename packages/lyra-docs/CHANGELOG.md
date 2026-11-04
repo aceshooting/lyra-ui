@@ -1,5 +1,38 @@
 # @aceshooting/lyra-docs
 
+## 0.7.0
+
+### Minor Changes
+
+- 2e61db6: Add opt-in bounded URL loading, fragment reads and atomic formatting batches. `<lr-docx-editor>.openUrl()` and `fetchDocxBytes()` download a document only when asked: relative, HTTP(S), `blob:` and `data:` URLs pass a scheme check before and after resolution, the response is read with the 16 MiB input ceiling and a chunk ceiling, and newer opens, disconnects and caller signals cancel the request. Failures report the new `fetch-failed` refusal or existing codes and show the localized error state without server messages.
+
+  `readFragment()` copies a bounded slice of top-level body blocks (at most 64 blocks and 32,768 text code units per request) with revision-scoped paragraph ids for `selectFragmentBlock()` and batch targets. `applyEdits()` applies 1–32 paragraph and character formatting steps at a required expected revision as one revision and, normally, one undo step; a step the engine refuses reverts the earlier steps, verified against a structural package digest, and is reported by index. Existing APIs are unchanged; `DocxRefusalCode` gains `fetch-failed`.
+
+### Patch Changes
+
+- 15bd422: Upgrade the bundled document engine to 2.33.0 while preserving lazy feature loading and asynchronous command readiness. Documents gain upstream rendering and layout fixes, including SmartArt, drawing groups, diagonal cell borders, East Asian spacing and right-to-left layout. Rich paste in suggesting mode is admitted with the same captured routing as edit mode. The Ecma notice for the preset shape geometry the engine now bundles ships in `THIRD_PARTY_LICENSES`, and self-contained layout helpers load from their own distribution module so every engine module stays below 500 kB.
+- Updated dependencies [630bae1]
+- Updated dependencies [9a6b7bb]
+- Updated dependencies [ee377e2]
+- Updated dependencies [5afdde7]
+- Updated dependencies [4bcb093]
+- Updated dependencies [80e85b6]
+- Updated dependencies [a1cde90]
+- Updated dependencies [ee377e2]
+- Updated dependencies [df2c163]
+- Updated dependencies [6113927]
+- Updated dependencies [4c6b8d9]
+- Updated dependencies [8d430ea]
+- Updated dependencies [5979980]
+- Updated dependencies [7f8a11f]
+- Updated dependencies [c77649c]
+- Updated dependencies [36f1381]
+- Updated dependencies [f0277da]
+- Updated dependencies [cfc6524]
+- Updated dependencies [6488a11]
+- Updated dependencies [5481ded]
+  - @aceshooting/lyra-ui@30.7.0
+
 ## 0.6.4
 
 ### Patch Changes

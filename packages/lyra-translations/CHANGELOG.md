@@ -1,5 +1,37 @@
 # @aceshooting/lyra-translations
 
+## 30.7.0
+
+### Minor Changes
+
+- 630bae1: Add ten complete locale catalogs: Slovak (`sk`), Bulgarian (`bg`), Lithuanian (`lt`), Latvian (`lv`), Estonian (`et`), Catalan (`ca`), Irish (`ga`), Maltese (`mt`), and Serbian in Cyrillic (`sr`) and Latin (`sr-Latn`) script, bringing the built-in catalogs to 80. They ship in `@aceshooting/lyra-translations` as `<locale>.js` aggregates and per-family slices, and appear in `locales.json` and the optional locale loader. These are AI-assisted translations with structural verification only (complete keys, placeholders, ICU syntax and CLDR plural categories); they await native-speaker review, and no human or native-speaker review is claimed.
+
+  Serbian resolution is script-aware: a tag without a script subtag whose CLDR likely script differs from its bare language now tries that script before the bare language, so `sr-ME` (Latin by CLDR) reaches `sr-Latn` while `sr`, `sr-RS`, `sr-BA` and `sr-Cyrl-*` reach Cyrillic `sr`. `languageToCountry()` now maps `ga` to Ireland and `mt` to Malta.
+
+### Patch Changes
+
+- Updated dependencies [630bae1]
+- Updated dependencies [9a6b7bb]
+- Updated dependencies [ee377e2]
+- Updated dependencies [5afdde7]
+- Updated dependencies [4bcb093]
+- Updated dependencies [80e85b6]
+- Updated dependencies [a1cde90]
+- Updated dependencies [ee377e2]
+- Updated dependencies [df2c163]
+- Updated dependencies [6113927]
+- Updated dependencies [4c6b8d9]
+- Updated dependencies [8d430ea]
+- Updated dependencies [5979980]
+- Updated dependencies [7f8a11f]
+- Updated dependencies [c77649c]
+- Updated dependencies [36f1381]
+- Updated dependencies [f0277da]
+- Updated dependencies [cfc6524]
+- Updated dependencies [6488a11]
+- Updated dependencies [5481ded]
+  - @aceshooting/lyra-ui@30.7.0
+
 ## 30.6.0
 
 ### Patch Changes
