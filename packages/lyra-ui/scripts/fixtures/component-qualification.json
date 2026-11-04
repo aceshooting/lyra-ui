@@ -17658,6 +17658,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/dock-panel/dock-panel-rail.test.ts",
           "src/components/layout/dock-panel/dock-panel-remediation.test.ts",
           "src/components/layout/dock-panel/dock-panel.test.ts"
         ],

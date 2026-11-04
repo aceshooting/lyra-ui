@@ -102,7 +102,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-dialog"></a>`lr-dialog` | overlays | `import '@aceshooting/lyra-ui/components/lr-dialog.js';` | none | `lr-icon-button` | none | 53.9 KiB |
 | <a id="lr-diff-view"></a>`lr-diff-view` | utility | `import '@aceshooting/lyra-ui/components/lr-diff-view.js';` | `shiki` | none | none | 45.9 KiB |
 | <a id="lr-divider"></a>`lr-divider` | utility | `import '@aceshooting/lyra-ui/components/lr-divider.js';` | none | none | none | 22.5 KiB |
-| <a id="lr-dock-panel"></a>`lr-dock-panel` | layout | `import '@aceshooting/lyra-ui/components/lr-dock-panel.js';` | none | none | none | 27.7 KiB |
+| <a id="lr-dock-panel"></a>`lr-dock-panel` | layout | `import '@aceshooting/lyra-ui/components/lr-dock-panel.js';` | none | none | none | 28.2 KiB |
 | <a id="lr-document-compare"></a>`lr-document-compare` | viewers | `import '@aceshooting/lyra-ui/components/lr-document-compare.js';` | `shiki` | `lr-diff-view`, `lr-document-preview` | `lr-pan-zoom` | 60.2 KiB |
 | <a id="lr-document-library"></a>`lr-document-library` | data | `import '@aceshooting/lyra-ui/components/lr-document-library.js';` | none | `lr-checkbox`, `lr-chip`, `lr-chip-group`, `lr-combobox`, `lr-file-icon`, `lr-input`, `lr-option`, `lr-table` | `lr-empty`, `lr-pagination`, `lr-skeleton`, `lr-spinner` | 152.3 KiB |
 | <a id="lr-document-preview"></a>`lr-document-preview` | viewers | `import '@aceshooting/lyra-ui/components/lr-document-preview.js';` | none | `lr-pan-zoom` | none | 38.7 KiB |

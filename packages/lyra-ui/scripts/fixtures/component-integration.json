@@ -2008,9 +2008,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 28382,
-        "kib": 27.7,
-        "bundleSha256": "c8b6cbd83e47ff767bd1e59deabbe26bcebb15b0a08b360b8b51ae8a7293897c",
+        "bytes": 28856,
+        "kib": 28.2,
+        "bundleSha256": "ec2662cb1a8a6cf3aae3142e51920a510b553332ee64649b5b64fba5f0e8554a",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },

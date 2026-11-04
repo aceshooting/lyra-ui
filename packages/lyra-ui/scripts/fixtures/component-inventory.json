@@ -46790,6 +46790,18 @@
           {
             "name": "",
             "deprecated": null
+          },
+          {
+            "name": "collapse-icon",
+            "deprecated": null
+          },
+          {
+            "name": "expand-icon",
+            "deprecated": null
+          },
+          {
+            "name": "rail",
+            "deprecated": null
           }
         ],
         "events": [
@@ -46846,6 +46858,10 @@
           {
             "name": "handle",
             "deprecated": null
+          },
+          {
+            "name": "rail",
+            "deprecated": null
           }
         ],
         "cssProperties": [
@@ -46887,7 +46903,35 @@
           }
         ],
         "cssStates": [],
-        "methods": [],
+        "methods": [
+          {
+            "name": "collapse",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "expand",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "toggle",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "boolean"
+              }
+            ]
+          }
+        ],
         "staticProperties": [],
         "staticMethods": [],
         "moduleExports": [],

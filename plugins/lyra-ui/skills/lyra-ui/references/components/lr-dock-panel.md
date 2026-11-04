@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -72,25 +72,39 @@ resolved in the host's owner realm.
   lost capture, disconnect/adoption, live policy/geometry mutation, no-op attempts, and a prevented
   `lr-resize-request` all emit nothing.
 - `lr-toggle-request` (cancelable) and `lr-toggle` (accepted) are the shared disclosure pair;
-  their fresh frozen details contain `{ expanded }`. The former can veto a built-in toggle
-  (`preventDefault()` leaves the host `collapsed` property unchanged). Neither is fired when a
-  consumer assigns `collapsed` directly. Both details are fresh readonly/frozen snapshots.
+  their fresh frozen details contain `{ expanded }`. The former can veto the built-in toggle or a
+  call to `expand()`, `collapse()` or `toggle()` (`preventDefault()` leaves the host `collapsed`
+  property unchanged). Neither is fired when a consumer assigns `collapsed` directly. Both details
+  are fresh readonly/frozen snapshots.
+
+**Methods:** `expand()`, `collapse()` and `toggle()` drive the fold through that same cancelable
+pair, exactly as the built-in toggle does, so a consumer-owned control (in the content's own header
+row, or a rail item) keeps the panel's disclosure semantics without `collapsible`. `expand()` and
+`toggle()` return whether the panel is expanded afterwards, `collapse()` whether it is collapsed; a
+call that would not change the state emits nothing.
 
 Events bubble and are composed, so a listener on an ancestor (for example an `lr-multi-split` that
 contains this panel and listens for its own `lr-resize-request`) should ignore events whose `target`
 is not the element it listens on. Keyboard: the arrow keys step by 16px and Home/End jump to the
 minimum/maximum extent, each through `lr-resize-request`; Alt, Ctrl and Meta chords are left to the
-browser. Collapsing while focus is in the content or on the handle moves focus to the collapse toggle.
+browser. Collapsing while focus is in the content or on the handle moves focus to the collapse toggle,
+else to the first focusable `rail` item, else to the host; expanding while focus is on a rail item
+moves it to the toggle or the host, since the rail hides.
 
 `lr-resize-input` remains available for live layout feedback; `lr-resize` now provides the shared
 resize event name. Use `lr-resize-change` for persistence. Type imports move from `DockPanel*` to
 `LyraDockPanel*`.
 
-**Slots:** default — the panel's own content.
+**Slots:** default — the panel's own content; `rail` — shown in the collapsed rail only while
+`collapsed`, after the toggle, typically one icon button per section (each with its own accessible
+name, usually calling `expand()`); `collapse-icon` and `expand-icon` — decorative glyphs replacing the
+toggle's chevron while expanded and collapsed respectively (for example panel-close and panel-open
+icons). The toggle keeps its localized accessible name, and a slotted glyph is not rotated.
 
 **CSS parts:** `base` (the panel root), `content` (wraps the default slot; hidden while `collapsed`),
 `handle` (the draggable resize edge; only rendered when not `without-resize` and not `collapsed`),
-`collapse-toggle` (only rendered when `collapsible`)
+`collapse-toggle` (only rendered when `collapsible`), `rail` (wraps the `rail` slot; hidden unless
+`collapsed`)
 
 **Themeable custom properties:** `--lr-dock-panel-collapsed-size` (default
 `var(--lr-icon-button-size)`) — the persistent "rail" width/height the panel holds at while
@@ -143,7 +157,8 @@ reconciliation emits neither resize event and preserves an in-range authored rel
 **Known gotchas:**
 
 - `collapsed` doesn't zero the panel's box — it shrinks to the persistent rail size
-  (`--lr-dock-panel-collapsed-size`). `extent` itself is left untouched while collapsed, so
+  (`--lr-dock-panel-collapsed-size`). With `rail` items it stacks the toggle and those items (a
+  column on `start`/`end`, a row on `top`/`bottom`) and grows past that size to fit them. `extent` itself is left untouched while collapsed, so
   re-expanding restores what it was unless the current bounds require a valid clamp.
 - Parent or flex allocation shrink, direct out-of-range property writes, and live min/max changes
   reconcile atomically. A later container grow does not silently restore an extent that was clamped

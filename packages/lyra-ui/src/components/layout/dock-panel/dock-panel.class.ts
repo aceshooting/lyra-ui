@@ -103,8 +103,22 @@ interface DragState {
  * collapsed, so re-expanding restores what it was unless the live container
  * bounds now require a smaller or larger valid extent.
  *
+ * Elements in the `rail` slot show in that rail only while collapsed -- typically one icon button
+ * per section the panel holds -- stacked after the toggle (in a column on `start`/`end`, in a row
+ * on `top`/`bottom`), and the rail grows past `--lr-dock-panel-collapsed-size` to fit them. A rail
+ * item usually calls `expand()`; `expand()`, `collapse()` and `toggle()` drive the fold from any
+ * consumer-owned control through the same cancelable `lr-toggle-request`/`lr-toggle` pair as the
+ * built-in toggle, so a panel without `collapsible` can place its own control in its content.
+ * Collapsing while focus is inside moves it to the built-in toggle, else to the first focusable rail
+ * item, else to the host; expanding while focus is on a rail item moves it to the toggle or the host.
+ *
  * @customElement lr-dock-panel
  * @slot - The panel's own content.
+ * @slot rail - Shown in the collapsed rail only while `collapsed`, after the collapse toggle.
+ * @slot collapse-icon - Decorative glyph for the expanded panel's collapse toggle, replacing the
+ *   chevron. The toggle keeps its localized accessible name and the glyph is not rotated.
+ * @slot expand-icon - Decorative glyph for the collapsed panel's expand toggle, replacing the
+ *   chevron. The toggle keeps its localized accessible name and the glyph is not rotated.
  * @event lr-resize-request - Cancelable proposed `detail: { extent }` before each pointer or
  *   keyboard resize step. Preventing it leaves the current extent unchanged.
  * @event lr-resize - Accepted pointer or keyboard step with frozen `detail: { extent }`.
@@ -114,16 +128,18 @@ interface DragState {
  *   least one accepted value transition, and after each accepted keyboard step. Pointer
  *   cancellation, lost capture, policy/geometry mutation, no-op attempts, and a prevented
  *   `lr-resize-request` all emit nothing.
- * @event lr-toggle-request - Cancelable proposed `detail: { expanded }` before the built-in toggle commits.
- *   Call `preventDefault()` to keep `collapsed` unchanged. Not fired when a consumer sets `collapsed` directly.
- * @event lr-toggle - Accepted built-in disclosure change with `detail: { expanded }`. Not fired when a
- *   consumer sets `collapsed` directly.
+ * @event lr-toggle-request - Cancelable proposed `detail: { expanded }` before the built-in toggle,
+ *   `expand()`, `collapse()` or `toggle()` commits. Call `preventDefault()` to keep `collapsed`
+ *   unchanged. Not fired when a consumer sets `collapsed` directly.
+ * @event lr-toggle - Accepted disclosure change from the built-in toggle or one of those methods, with
+ *   `detail: { expanded }`. Not fired when a consumer sets `collapsed` directly.
  * @csspart base - The panel root.
  * @csspart content - The wrapper around the default slot; hidden while `collapsed`.
  * @csspart handle - The draggable resize handle on the panel's inner edge. Its numeric ARIA range
  *   remains in CSS pixels while `aria-valuetext` reports the current extent through the effective
  *   locale. Only rendered when not `without-resize` and not `collapsed`.
  * @csspart collapse-toggle - The collapse/expand toggle button. Only rendered when `collapsible`.
+ * @csspart rail - The wrapper around the `rail` slot; hidden unless `collapsed`.
  * @cssprop [--lr-dock-panel-collapsed-size=var(--lr-icon-button-size)] - The extent the panel
  *   keeps along its resize axis while `collapsed` -- enough to still host the toggle button that
  *   re-expands it.
@@ -209,6 +225,10 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     (event) => event.type === 'pointerup' ? this.onPointerUp(event) : this.onPointerCancel(event),
   );
   private readonly contentId = nextId('dock-panel-content');
+  /** Whether the `rail` slot holds any element, so the collapsed rail lays out as a stack. */
+  private hasRail = false;
+  /** Set when a collapse moved focus out of the content and the rail may receive it once rendered. */
+  private pendingRailFocus = false;
   // Keeps aria-valuemax/aria-valuenow (and the %/max-extent fallback they're
   // derived from) live against a *passive* container resize -- window
   // resize, a sibling collapsing, a media query -- none of which touch any
@@ -266,13 +286,45 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     return parent;
   }
 
-  /** Focus lands on the collapse toggle, or on the host itself when the panel has no toggle. */
-  private relocateFocus(): void {
+  private railElements(): Element[] {
+    return this.renderRoot.querySelector<HTMLSlotElement>('slot[name="rail"]')?.assignedElements({ flatten: true }) ?? [];
+  }
+
+  private onRailSlotChange = (): void => {
+    const hasRail = this.railElements().length > 0;
+    if (hasRail === this.hasRail) return;
+    this.hasRail = hasRail;
+    this.applyHostSize();
+    this.requestUpdate();
+  };
+
+  /** Focuses the first rail item that accepts focus; returns whether one did. */
+  private focusRail(): boolean {
+    for (const item of this.railElements()) {
+      // Focusable rail items are HTML or SVG elements; both expose focus() (HTMLOrSVGElement).
+      if (!('focus' in item) || typeof item.focus !== 'function') continue;
+      (item as HTMLElement).focus();
+      if (item.matches(':focus-within')) return true;
+    }
+    return false;
+  }
+
+  /** Focus lands on the collapse toggle, else (once a collapse renders) on the first focusable rail
+   *  item, else on the host itself. */
+  private relocateFocus(collapsing = false): void {
     const toggle = this.renderRoot.querySelector<HTMLElement>('[part="collapse-toggle"]');
     if (toggle) {
       toggle.focus();
       return;
     }
+    if (collapsing && this.hasRail) {
+      this.pendingRailFocus = true;
+      return;
+    }
+    this.focusHost();
+  }
+
+  private focusHost(): void {
     if (!this.hasAttribute('tabindex')) {
       this.tabIndex = -1;
       this.addEventListener('blur', () => this.removeAttribute('tabindex'), { once: true });
@@ -291,6 +343,10 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
       this.hasUpdated &&
       ((changed.has('collapsed') && this.collapsed && this.matches(':focus-within')) ||
         (changed.has('withoutResize') && this.withoutResize && shadowFocusTarget(this)?.matches('[part="handle"]')))
+    ) this.relocateFocus(changed.has('collapsed') && this.collapsed);
+    else if (
+      this.hasUpdated && changed.has('collapsed') && !this.collapsed &&
+      this.railElements().some(item => item.matches(':focus-within'))
     ) this.relocateFocus();
     if (
       changed.has('extent') ||
@@ -308,6 +364,13 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     ) {
       this.endDrag();
     }
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (!this.pendingRailFocus) return;
+    this.pendingRailFocus = false;
+    if (this.collapsed && !this.focusRail()) this.focusHost();
   }
 
   /** `'inline'` for the `start`/`end` edges (resizing changes `inline-size`), `'block'` for
@@ -337,16 +400,21 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
       this.style.blockSize = '';
       this.style.minBlockSize = '';
       this.style.maxBlockSize = '';
-      this.style.minInlineSize = this.collapsed ? '' : `${bounds.minPx}px`;
+      this.style.minInlineSize = this.collapsed ? this.collapsedFloor() : `${bounds.minPx}px`;
       this.style.maxInlineSize = this.collapsed ? '' : `${bounds.maxPx}px`;
     } else {
       this.style.blockSize = value;
       this.style.inlineSize = '';
       this.style.minInlineSize = '';
       this.style.maxInlineSize = '';
-      this.style.minBlockSize = this.collapsed ? '' : `${bounds.minPx}px`;
+      this.style.minBlockSize = this.collapsed ? this.collapsedFloor() : `${bounds.minPx}px`;
       this.style.maxBlockSize = this.collapsed ? '' : `${bounds.maxPx}px`;
     }
+  }
+
+  /** A collapsed rail holding items grows to their stack; otherwise the stylesheet's rail floor applies. */
+  private collapsedFloor(): string {
+    return this.hasRail ? 'max-content' : '';
   }
 
   /** Live pixel size of the containing block along the resize axis, used both to resolve a `%`
@@ -630,6 +698,27 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     this.emitResize('lr-resize-change', extent);
   };
 
+  /** Expands the panel through the cancelable `lr-toggle-request`/`lr-toggle` pair, exactly as the
+   *  built-in toggle does. Returns whether the panel is expanded afterwards. */
+  expand(): boolean {
+    if (this.collapsed) this.toggleCollapsed();
+    return !this.collapsed;
+  }
+
+  /** Collapses the panel through the cancelable `lr-toggle-request`/`lr-toggle` pair, exactly as the
+   *  built-in toggle does. Returns whether the panel is collapsed afterwards. */
+  collapse(): boolean {
+    if (!this.collapsed) this.toggleCollapsed();
+    return this.collapsed;
+  }
+
+  /** Flips the fold through the cancelable `lr-toggle-request`/`lr-toggle` pair, exactly as the
+   *  built-in toggle does. Returns whether the panel is expanded afterwards. */
+  toggle(): boolean {
+    this.toggleCollapsed();
+    return !this.collapsed;
+  }
+
   private dispatchingToggle = false;
   private toggleCollapsed = (): void => {
     if (this.dispatchingToggle) return;
@@ -704,22 +793,25 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
         : this.localize('dockPanelCollapse')}
       @click=${this.toggleCollapsed}
     >
-      <span
-        style=${this.topBottomChevronDeg === undefined
-          ? 'display:inline-flex'
-          : `display:inline-flex;transform:rotate(${this.topBottomChevronDeg}deg)`}
-        >${chevronIcon()}</span
+      <slot name=${this.collapsed ? 'expand-icon' : 'collapse-icon'}
+        ><span
+          style=${this.topBottomChevronDeg === undefined
+            ? 'display:inline-flex'
+            : `display:inline-flex;transform:rotate(${this.topBottomChevronDeg}deg)`}
+          >${chevronIcon()}</span
+        ></slot
       >
     </button>`;
   }
 
   override render(): TemplateResult {
     return html`
-      <div part="base">
+      <div part="base" ?data-rail=${this.collapsed && this.hasRail}>
         <div part="content" id=${this.contentId} ?hidden=${this.collapsed}>
           <slot></slot>
         </div>
         ${this.handleTemplate()} ${this.collapseToggleTemplate()}
+        <div part="rail" ?hidden=${!this.collapsed}><slot name="rail" @slotchange=${this.onRailSlotChange}></slot></div>
       </div>
     `;
   }

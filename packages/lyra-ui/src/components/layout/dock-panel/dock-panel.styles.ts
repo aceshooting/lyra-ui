@@ -273,6 +273,41 @@ export const styles = css`
   :host(:dir(rtl)[placement="end"][collapsed]) [part="collapse-toggle"] span {
     transform: rotate(0deg);
   }
+  /* Slotted toggle glyphs replace the chevron and are never rotated. */
+  [part="collapse-toggle"] ::slotted(*) {
+    display: inline-flex;
+  }
+
+  /* The rail wrapper contributes no box: while collapsed with rail items, the base itself stacks
+     the toggle and those items, in a column on the start/end edges and a row on top/bottom, and
+     the host's max-content floor (set with the collapsed size) lets the rail grow to fit them. */
+  [part="rail"] {
+    display: contents;
+  }
+  [part="rail"][hidden] {
+    display: none;
+  }
+  [part="base"]:where([data-rail]) {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--lr-space-xs);
+    padding: var(--lr-space-xs);
+  }
+  :host([placement="top"]) [part="base"]:where([data-rail]),
+  :host([placement="bottom"]) [part="base"]:where([data-rail]) {
+    flex-direction: row;
+  }
+  /* Outranks the edge-centering rules above (and, by source order, their RTL twins): in a rail
+     stack the toggle is the first item rather than an overlay. */
+  :host([collapsed]) [part="base"]:where([data-rail]) [part="collapse-toggle"] {
+    position: static;
+    flex: none;
+    order: -1;
+    transform: none;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     [part="collapse-toggle"],
     [part="handle"] {

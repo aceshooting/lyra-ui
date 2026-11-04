@@ -162,10 +162,10 @@ const rootHelperRegisteredTags = [];
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/7859878f724ef4237ee93a5414fa6b54f204313a/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'Map scene ownership, camera sessions, accessible scene controls, custom graph node bodies, lazy locale-picker names, the ten additional locale catalogs, multi-split panel collapse, named menu anchors, markdown without-images, drawn scene lines and the dependency upgrade bring the full non-optional graph to 5,660,028 raw bytes across 64 files. Only its ceiling advances to the next 64-byte boundary, with 4 bytes of headroom. The explicit Oniguruma canary retains its separate exact binary requirement.',
-  reviewedCoreMeasurementBytes: 5_660_028,
+  $comment: 'Map scene ownership, camera sessions, accessible scene controls, custom graph node bodies, lazy locale-picker names, the ten additional locale catalogs, multi-split panel collapse, named menu anchors, markdown without-images, drawn scene lines, the dependency upgrade and the dock-panel rail and fold methods bring the full non-optional graph to 5,661,996 raw bytes across 64 files. Only its ceiling advances to the next 64-byte boundary, with 20 bytes of headroom. The explicit Oniguruma canary retains its separate exact binary requirement.',
+  reviewedCoreMeasurementBytes: 5_661_996,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 4,
+  selectedRegressionHeadroomBytes: 20,
 };
 
 /**
