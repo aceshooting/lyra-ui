@@ -3,6 +3,7 @@ import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './suggestion-chips.js';
 import type { LyraSuggestionChips } from './suggestion-chips.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { alignmentKeyword } from '../../../../test/computed-alignment.js';
 
 const suggestions = [
   { suggestionId: 'a', label: 'Summarize this' },
@@ -412,7 +413,7 @@ describe('part="row" / --lr-suggestion-chips-justify', () => {
       const el = (await fixture(
         html`<lr-suggestion-chips ?wrap=${wrap} .suggestions=${suggestions}></lr-suggestion-chips>`,
       )) as LyraSuggestionChips;
-      expect(getComputedStyle(row(el)!).justifyContent, `wrap=${wrap}`).to.equal('flex-start');
+      expect(alignmentKeyword(getComputedStyle(row(el)!).justifyContent), `wrap=${wrap}`).to.equal('flex-start');
     }
   });
 

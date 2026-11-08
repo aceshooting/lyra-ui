@@ -6,6 +6,7 @@ import { createWidgetDocument } from './resolve.js';
 import type { LyraWidgetRenderer } from './widget-renderer.class.js';
 import '../../forms/button/button.js';
 import './widget-renderer.js';
+import { alignmentKeyword } from '../../../../test/computed-alignment.js';
 
 function documentFor(phase: number) {
   return createWidgetDocument({ type: 'col', id: 'panel', props: { gap: 'm', align: 'stretch' }, children: [
@@ -40,7 +41,7 @@ for (const direction of ['ltr', 'rtl']) {
     expect(getComputedStyle(outer).alignItems).to.equal('stretch');
     expect(getComputedStyle(inner).flexDirection).to.equal('column');
     expect(getComputedStyle(inner).gap).to.equal('8px');
-    expect(getComputedStyle(inner).alignItems).to.equal('flex-start');
+    expect(alignmentKeyword(getComputedStyle(inner).alignItems)).to.equal('flex-start');
     expect(getComputedStyle(row).flexDirection).to.equal('row');
     expect(getComputedStyle(row).justifyContent).to.equal('space-between');
     const status = row.children[1]!.getBoundingClientRect(), details = inner.getBoundingClientRect();

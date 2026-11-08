@@ -3,6 +3,7 @@ import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import './empty.js';
 import type { LyraEmpty } from './empty.js';
+import { alignmentKeyword } from '../../../../test/computed-alignment.js';
 
 // A stand-in for a component that forwards its own light-DOM content into
 // `lr-empty`'s slots through nested `<slot>` elements (e.g. a card/widget
@@ -665,7 +666,7 @@ it('applies the compact density to [part="base"] and [part="heading"] at size="s
   const compactHeading = compact.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
   const compactBaseStyle = getComputedStyle(compactBase);
 
-  expect(compactBaseStyle.alignItems).to.equal('flex-start');
+  expect(alignmentKeyword(compactBaseStyle.alignItems)).to.equal('flex-start');
   expect(compactBaseStyle.textAlign).to.equal('start');
   expect(getComputedStyle(compactHeading).fontWeight).to.equal('400');
   // The compact `--lr-space-xs` padding renders strictly smaller than the
@@ -724,7 +725,7 @@ it('the compact density still defaults to flex-start/start when --lr-empty-compa
   const el = (await fixture(html`<lr-empty size="s" heading="Nothing here"></lr-empty>`)) as LyraEmpty;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const style = getComputedStyle(base);
-  expect(style.alignItems).to.equal('flex-start');
+  expect(alignmentKeyword(style.alignItems)).to.equal('flex-start');
   expect(style.textAlign).to.equal('start');
 });
 

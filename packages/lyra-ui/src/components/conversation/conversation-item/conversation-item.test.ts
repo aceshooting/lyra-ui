@@ -7,6 +7,7 @@ import type {
   LyraConversationItem,
   LyraConversationItemEventMap,
 } from "./conversation-item.js";
+import { alignmentKeyword } from "../../../../test/computed-alignment.js";
 
 type RenameEvent = LyraConversationItemEventMap["lr-rename"];
 const renameCorrelation = (event: RenameEvent): string =>
@@ -1624,8 +1625,8 @@ describe("align", () => {
         excerpt="Last message"
       ></lr-conversation-item>`
     );
-    expect(alignItemsOf(el, "base")).to.equal("flex-start");
-    expect(alignItemsOf(el, "select-button")).to.equal("flex-start");
+    expect(alignmentKeyword(alignItemsOf(el, "base"))).to.equal("flex-start");
+    expect(alignmentKeyword(alignItemsOf(el, "select-button"))).to.equal("flex-start");
   });
 
   it("lets a consumer opt into center alignment via --lr-conversation-item-align", async () => {
@@ -1648,7 +1649,7 @@ describe("align", () => {
     );
     el.style.removeProperty("--lr-conversation-item-align");
     await el.updateComplete;
-    expect(alignItemsOf(el, "base")).to.equal("flex-start");
+    expect(alignmentKeyword(alignItemsOf(el, "base"))).to.equal("flex-start");
   });
 });
 

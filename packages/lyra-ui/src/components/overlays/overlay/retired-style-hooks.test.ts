@@ -6,6 +6,7 @@ import '../../forms/icon-button/icon-button.js';
 import '../../forms/button/button.js';
 import './dropdown.js';
 import type { LyraDropdown } from './dropdown.class.js';
+import { alignmentKeyword } from '../../../../test/computed-alignment.js';
 
 // These fixtures deliberately verify that retired attributes remain inert.
 expectStaleAttribute('lr-empty', 'compact');
@@ -67,5 +68,5 @@ it('empty ignores compact-only markup while canonical small size changes rendere
   expect(oldOnly!.hasAttribute('size')).to.equal(false);
   expect(paint(oldOnly!)).to.deep.equal(paint(bare!));
   expect(paint(small!)).not.to.deep.equal(paint(bare!));
-  expect(paint(small!)[1]).to.equal('flex-start');
+  expect(alignmentKeyword(paint(small!)[1]!)).to.equal('flex-start');
 });

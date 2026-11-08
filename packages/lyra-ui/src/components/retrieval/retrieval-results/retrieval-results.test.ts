@@ -18,6 +18,7 @@ import {
   type DeprecatedUsage,
 } from '../../../../test/expected-deprecations.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+import { alignmentKeyword } from '../../../../test/computed-alignment.js';
 
 type SelectionDetail = { selectedChunkIds: string[]; chunks: RetrievalChunk[] };
 
@@ -1810,7 +1811,7 @@ describe('row styling across both rendering paths', () => {
     for (const row of [flatRow, virtualRow]) {
       const style = getComputedStyle(row);
       expect(style.display).to.equal('flex');
-      expect(style.alignItems).to.equal('flex-start');
+      expect(alignmentKeyword(style.alignItems)).to.equal('flex-start');
       expect(parseFloat(style.paddingLeft)).to.be.greaterThan(0);
     }
   });

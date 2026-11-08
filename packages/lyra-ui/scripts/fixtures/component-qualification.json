@@ -61978,7 +61978,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/widget-renderer/widget-renderer-nested-columns.test.ts",
-              "line": 23,
+              "line": 24,
               "kind": "rendered RTL test signal"
             }
           ]

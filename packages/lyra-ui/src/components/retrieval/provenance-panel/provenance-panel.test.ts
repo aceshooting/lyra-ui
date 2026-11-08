@@ -7,6 +7,7 @@ import type {
   LyraProvenance,
 } from './provenance-panel.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { alignmentKeyword } from '../../../../test/computed-alignment.js';
 
 const provenance: LyraProvenance = {
   entities: [{ id: 'e1', label: 'Marie Curie', type: 'person' }],
@@ -367,7 +368,7 @@ describe('part="entity-row" / --lr-provenance-panel-entity-justify', () => {
   });
 
   it('packs entity chips to the start when the property is unset (unset regression)', async () => {
-    expect(getComputedStyle((await entityRow())!).justifyContent).to.equal(
+    expect(alignmentKeyword(getComputedStyle((await entityRow())!).justifyContent)).to.equal(
       'flex-start'
     );
   });
