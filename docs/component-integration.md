@@ -114,7 +114,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-drop-zone"></a>`lr-drop-zone` | media | `import '@aceshooting/lyra-ui/components/lr-drop-zone.js';` | none | none | none | 32.7 KiB |
 | <a id="lr-dropdown"></a>`lr-dropdown` | overlays | `import '@aceshooting/lyra-ui/components/lr-dropdown.js';` | none | `lr-menu` | `lr-menu-item` | 79.9 KiB |
 | <a id="lr-dropdown-item"></a>`lr-dropdown-item` | layout | `import '@aceshooting/lyra-ui/components/lr-dropdown-item.js';` | none | `lr-menu` | `lr-menu-item` | 62.1 KiB |
-| <a id="lr-ebook-viewer"></a>`lr-ebook-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-ebook-viewer.js';` | `epubjs` | none | none | 54.5 KiB |
+| <a id="lr-ebook-viewer"></a>`lr-ebook-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-ebook-viewer.js';` | `epubjs` | none | none | 54.7 KiB |
 | <a id="lr-email-viewer"></a>`lr-email-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-email-viewer.js';` | `dompurify`, `postal-mime` | none | none | 54.1 KiB |
 | <a id="lr-embedding-explorer"></a>`lr-embedding-explorer` | retrieval | `import '@aceshooting/lyra-ui/components/lr-embedding-explorer.js';` | `@aceshooting/lyra-3d` | none | none | 47.2 KiB |
 | <a id="lr-emoji-picker"></a>`lr-emoji-picker` | forms | `import '@aceshooting/lyra-ui/components/lr-emoji-picker.js';` | `emoji-picker-element-data` | none | none | 47.7 KiB |

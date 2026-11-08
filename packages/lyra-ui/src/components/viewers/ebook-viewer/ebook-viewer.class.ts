@@ -36,6 +36,7 @@ import {
   type EpubBook,
 } from './ebook-loader.js';
 import { assertEpubArchiveWithinLimits } from './epub-resource-guard.js';
+import { guardEpubUnloadListener } from './epub-unload-guard.js';
 import { styles } from './ebook-viewer.styles.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
@@ -842,7 +843,9 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       if (!book) throw new Error('EPUB peer returned an unusable book.');
       candidateBook = book;
       registerNetworkSilentChapters(book);
-      const rendition = normalizeRendition(book.renderTo(mount, { width: '100%', height: '100%' }));
+      const rawRendition = book.renderTo(mount, { width: '100%', height: '100%' });
+      guardEpubUnloadListener({ settings: inheritedDataValue(rawRendition, 'settings'), requireManager: savedCallable(rawRendition, 'requireManager') });
+      const rendition = normalizeRendition(rawRendition);
       if (!rendition) throw new Error('EPUB peer returned an unusable rendition.');
       await book.ready;
       if (!this.isCurrentLoad(generation, fetchTarget.view)) {

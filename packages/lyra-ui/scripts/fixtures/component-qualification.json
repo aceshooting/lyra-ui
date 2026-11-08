@@ -20085,7 +20085,8 @@
           "src/components/viewers/ebook-viewer/ebook-viewer-register.test.ts",
           "src/components/viewers/ebook-viewer/ebook-viewer-remediation.test.ts",
           "src/components/viewers/ebook-viewer/ebook-viewer.test.ts",
-          "src/components/viewers/ebook-viewer/epub-resource-guard.test.ts"
+          "src/components/viewers/ebook-viewer/epub-resource-guard.test.ts",
+          "src/components/viewers/ebook-viewer/epub-unload-guard.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
         "ssr": "src/ssr.ts"
