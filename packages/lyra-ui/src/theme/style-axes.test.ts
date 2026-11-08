@@ -90,6 +90,100 @@ describe('independent style axes', () => {
     } finally { frame.remove(); }
   });
 
+  describe('theme-core.css', () => {
+    const fetchSheet = async (path: string): Promise<string> => {
+      const response = await fetch(new URL(`../${path}`, import.meta.url));
+      expect(response.ok, path).to.equal(true);
+      return response.text();
+    };
+    /** Every custom property either stylesheet set names, resolved on a probe element, profile sentinels included. */
+    const customProperties = async (files: readonly string[], attributes: Readonly<Record<string, string>>): Promise<Record<string, string>> => {
+      const frame = await isolatedFrame();
+      try {
+        const frameDocument = frame.contentDocument!;
+        for (const file of files) {
+          const style = frameDocument.createElement('style');
+          style.textContent = await fetchSheet(file);
+          frameDocument.head.append(style);
+        }
+        for (const [name, value] of Object.entries(attributes)) frameDocument.documentElement.setAttribute(name, value);
+        const probe = frameDocument.body.appendChild(frameDocument.createElement('div'));
+        const computed = frame.contentWindow!.getComputedStyle(probe);
+        const names = new Set((await fetchSheet('theme.css')).match(/--[_a-zA-Z0-9-]+(?=\s*:)/g));
+        return Object.fromEntries([...names].map(name => [name, computed.getPropertyValue(name).trim()]));
+      } finally { frame.remove(); }
+    };
+    const differences = (actual: Record<string, string>, expected: Record<string, string>): string[] =>
+      [...new Set([...Object.keys(actual), ...Object.keys(expected)])].filter(name => actual[name] !== expected[name]).sort();
+
+    for (const mode of ['light', 'dark'] as const) {
+      it(`resolves exactly as theme.css for Lyra, Solid and no accent in ${mode} mode`, async () => {
+        const attributes = { 'data-lr-look': 'lyra', 'data-lr-surface': 'solid', 'data-lr-accent': 'none', 'data-lr-mode': mode };
+        const full = await customProperties(['theme.css'], attributes);
+        expect(Object.values(full).filter(Boolean).length).to.be.greaterThan(100);
+        expect(differences(await customProperties(['theme-core.css'], attributes), full)).to.deep.equal([]);
+      });
+
+      it(`makes attribute-free Lyra, Solid and no accent the root default in ${mode} mode`, async () => {
+        const explicit = await customProperties(['theme-core.css'], { 'data-lr-look': 'lyra', 'data-lr-surface': 'solid', 'data-lr-accent': 'none', 'data-lr-mode': mode });
+        const implicit = await customProperties(['theme-core.css'], { 'data-lr-mode': mode });
+        expect(differences(implicit, explicit)).to.deep.equal([]);
+      });
+
+      it(`recomposes the built-in profile from the opt-in sheets in ${mode} mode`, async () => {
+        const attributes = { 'data-lr-look': 'shadcn', 'data-lr-surface': 'glass', 'data-lr-accent': 'emerald', 'data-lr-mode': mode };
+        const full = await customProperties(['theme.css'], attributes);
+        const composed = await customProperties(['theme-core.css', 'looks/shadcn.css', 'surfaces/glass.css', 'accents.css'], attributes);
+        expect(differences(composed, full)).to.deep.equal([]);
+      });
+    }
+
+    it('omits the built-in profile that theme.css carries', async () => {
+      const core = await fetchSheet('theme-core.css');
+      expect(core.length).to.be.lessThan((await fetchSheet('theme.css')).length * 0.85);
+      for (const absent of ["[data-lr-look='shadcn']", "[data-lr-accent='emerald']", "[data-lr-surface='glass']", '.lr-surface-chrome']) {
+        expect(core.includes(absent), absent).to.equal(false);
+      }
+    });
+
+    it('reports a default profile choice whose sheet theme-core.css leaves out, and stays quiet once it is selected away', async () => {
+      const frame = await isolatedFrame();
+      const root = frame.contentDocument!.documentElement;
+      try {
+        const style = frame.contentDocument!.createElement('style');
+        style.textContent = await fetchSheet('theme-core.css');
+        frame.contentDocument!.head.append(style);
+        const missing = captureStyleDiagnostics(() => applyLyraStyleScope(root, { look: 'shadcn', surface: 'glass', accent: 'emerald' }));
+        for (const expected of ["look 'shadcn'", 'surfaces/glass.css', 'accents.css']) {
+          expect(missing.some(message => message.includes(expected)), expected).to.equal(true);
+        }
+        expect(captureStyleDiagnostics(() => applyLyraStyleScope(root, { look: 'lyra', surface: 'solid', accent: null }))).to.deep.equal([]);
+      } finally {
+        applyLyraStyleScope(root, null);
+        frame.remove();
+      }
+    });
+
+    it('keeps the built-in profile quiet under theme.css and with no stylesheet at all', async () => {
+      const choices = { look: 'shadcn', surface: 'glass', accent: 'emerald' } as const;
+      for (const files of [['theme.css'], []]) {
+        const frame = await isolatedFrame();
+        const root = frame.contentDocument!.documentElement;
+        try {
+          for (const file of files) {
+            const style = frame.contentDocument!.createElement('style');
+            style.textContent = await fetchSheet(file);
+            frame.contentDocument!.head.append(style);
+          }
+          expect(captureStyleDiagnostics(() => applyLyraStyleScope(root, choices))).to.deep.equal([]);
+        } finally {
+          applyLyraStyleScope(root, null);
+          frame.remove();
+        }
+      }
+    });
+  });
+
   it('keeps application lr-theme overrides above implicit root defaults', async () => {
     const frame = await isolatedFrame();
     try {

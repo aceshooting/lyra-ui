@@ -105,6 +105,7 @@ export function stylesheetViolations(css, consumed, label = 'stylesheet') {
 
 const SHIPPED_STYLESHEETS = [
   'src/theme.css',
+  'src/theme-core.css',
   'src/density.css',
   'src/accents.css',
   'src/preferences.css',

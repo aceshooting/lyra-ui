@@ -139,6 +139,7 @@ test('CSS budget config covers every shipped look and surface stylesheet without
   const expected = Object.entries(packageJson.exports)
     .filter(([subpath]) =>
       subpath === './theme.css' ||
+      subpath === './theme-core.css' ||
       subpath === './native.css' ||
       subpath === './density.css' ||
       subpath === './accents.css' ||

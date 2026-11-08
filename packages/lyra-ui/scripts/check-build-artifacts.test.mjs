@@ -289,3 +289,14 @@ test('native ESM checks bound module count and reject retired catalog aggregates
   assert.ok(findings.some((finding) => finding.includes('maximum is 12')));
   assert.ok(findings.some((finding) => finding.includes('obsolete monolithic')));
 });
+
+test('reports an optional peer import a bundler would resolve unguarded', () => {
+  const contents = new Map([
+    ['/dist/bare.js', 'export const a=()=>import("dompurify");'],
+    ['/dist/guarded.js', 'export const a=()=>(async()=>{try{return await import("dompurify")}catch(e){throw e}})();'],
+  ]);
+  assert.deepEqual(
+    findBuildArtifactFindings([...contents.keys()], (file) => contents.get(file), { optionalPeers: ['dompurify'] }),
+    ['/dist/bare.js: imports optional peer dompurify outside a try block -- a bundler then requires the peer to be installed'],
+  );
+});

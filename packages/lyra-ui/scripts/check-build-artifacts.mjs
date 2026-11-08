@@ -25,6 +25,7 @@ import { fileURLToPath } from 'node:url';
 import { isMainModule } from './is-main-module.mjs';
 import { findDeclarationLinkFindings } from './check-declaration-links.mjs';
 import { findNativePayloadFindings } from './check-native-payloads.mjs';
+import { findUnguardedPeerImports, optionalPeerNames } from './guard-optional-peer-imports.mjs';
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -51,7 +52,7 @@ function walk(dir, files = []) {
  * @param {{ packageDirectory?: string, exports?: Record<string, unknown>, imports?: Record<string, unknown> }} [options]
  * @returns {string[]} findings, one per offending file
  */
-export function findBuildArtifactFindings(files, read, { packageDirectory, exports = {}, imports = {} } = {}) {
+export function findBuildArtifactFindings(files, read, { packageDirectory, exports = {}, imports = {}, optionalPeers = [] } = {}) {
   const findings = [];
   if (packageDirectory) {
     const emitted = new Set(files.map((file) => path.resolve(file)));
@@ -76,6 +77,11 @@ export function findBuildArtifactFindings(files, read, { packageDirectory, expor
       continue;
     }
     if (!TEXT_EXTENSIONS.includes(path.extname(file))) continue;
+    if (file.endsWith('.js')) {
+      for (const { specifier } of findUnguardedPeerImports(read(file), optionalPeers)) {
+        findings.push(`${file}: imports optional peer ${specifier} outside a try block -- a bundler then requires the peer to be installed`);
+      }
+    }
     if (file.endsWith('.js') && BARE_JSON_IMPORT.test(read(file))) {
       findings.push(`${file}: imports JSON without \`with { type: 'json' }\` -- native ESM loaders (Node, browsers) reject it`);
     }
@@ -103,7 +109,7 @@ function run() {
   const files = walk(distDir);
   const manifest = JSON.parse(readFileSync(path.join(packageDir, 'package.json'), 'utf8'));
   const findings = findBuildArtifactFindings(files, (file) => readFileSync(file, 'utf8'), {
-    packageDirectory: packageDir, exports: manifest.exports, imports: manifest.imports,
+    packageDirectory: packageDir, exports: manifest.exports, imports: manifest.imports, optionalPeers: optionalPeerNames(manifest),
   }).map((finding) =>
     finding.replace(`${packageDir}${path.sep}`, ''),
   );

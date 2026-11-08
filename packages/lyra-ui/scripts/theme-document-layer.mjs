@@ -18,12 +18,21 @@ function themeDocumentLayer(packageDir) {
   return `${THEME_LAYER_MARKER}\n${layer.slice(ORDER.length + 1)}`;
 }
 
-/** The complete generated theme.css. */
-export function renderThemeCss(model) {
-  const css = renderTheme(model);
-  if (!css.includes(`\n${ORDER}\n`) && !css.includes(`*/\n${ORDER}\n`)) throw new Error('theme.css no longer opens with the Lyra layer order statement');
+function renderWithDocumentLayer(model, file, options) {
+  const css = renderTheme(model, options);
+  if (!css.includes(`\n${ORDER}\n`) && !css.includes(`*/\n${ORDER}\n`)) throw new Error(`${file} no longer opens with the Lyra layer order statement`);
   const full = `${css}${themeDocumentLayer(model.packageDir)}`;
   const frozen = rootResolvedReferenceViolations(full);
-  if (frozen.length) throw new Error(`theme.css freezes a re-declared name at :root:\n- ${frozen.join('\n- ')}`);
+  if (frozen.length) throw new Error(`${file} freezes a re-declared name at :root:\n- ${frozen.join('\n- ')}`);
   return full;
+}
+
+/** The complete generated theme.css. */
+export function renderThemeCss(model) {
+  return renderWithDocumentLayer(model, 'theme.css');
+}
+
+/** The complete generated theme-core.css: theme.css without the built-in look, accent and Glass profile. */
+export function renderThemeCoreCss(model) {
+  return renderWithDocumentLayer(model, 'theme-core.css', { core: true });
 }

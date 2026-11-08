@@ -1944,12 +1944,18 @@ function diagnoseStyleSheets(element: Element, state: StyleState, fields?: Reado
   const scopedRuntime = Boolean(fields && (state.tokens || state.overrides || (state.accent && !state.accentName)));
   const alternateProfile = (selected('look') && !state.tokens && state.look !== DEFAULT_STYLE.look)
     || (selected('accent') && !state.accent);
-  if (!required.length && !scopedRuntime && !alternateProfile) return;
+  // theme.css carries the built-in profile and theme-core.css does not. Without either stylesheet the
+  // intrinsic component profile serves these choices, so they need a sheet only where a resolver runs.
+  const profile: [string, string, string][] = [];
+  if (selected('look') && !state.tokens && state.look === DEFAULT_STYLE.look) profile.push(['--_lr-look-installed', `${state.look}-1`, `the stylesheet for look '${state.look}'`]);
+  if (selected('surface') && state.surface === 'glass') profile.push(['--_lr-surface-installed', '1', 'surfaces/glass.css']);
+  if (selected('accent') && state.accentName === DEFAULT_STYLE.accentName) profile.push(['--_lr-accent-installed', `${state.accentName}-1`, 'accents.css']);
+  if (!required.length && !profile.length && !scopedRuntime && !alternateProfile) return;
   const computed = element.ownerDocument.defaultView?.getComputedStyle(element);
   if (!computed) return;
   if (computed.getPropertyValue('--_lr-style-resolver').trim() !== '1') {
-    devWarnOnce('lyra-style:resolver', 'Lyra style choices require theme.css in the scope that owns their attributes.');
-  }
+    if (required.length || scopedRuntime || alternateProfile) devWarnOnce('lyra-style:resolver', 'Lyra style choices require theme.css in the scope that owns their attributes.');
+  } else required.push(...profile);
   for (const [property, expected, stylesheet] of required) {
     if (computed.getPropertyValue(property).trim() !== expected) {
       devWarnOnce(`lyra-style:${property}:${expected}`, `Lyra could not find ${stylesheet} in this style scope; import or adopt the stylesheet before selecting it.`);

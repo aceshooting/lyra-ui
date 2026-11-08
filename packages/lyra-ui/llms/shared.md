@@ -172,6 +172,8 @@ The entry points, then:
   `import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';` once.
 - **Other subpaths.** `@aceshooting/lyra-ui/theme.css` (ready-made light/dark theme, including the
   document token layer),
+  `@aceshooting/lyra-ui/theme-core.css` (the same without the built-in Shadcn, Glass and Emerald
+  profile, for a single-look application),
   `@aceshooting/lyra-ui/looks/shadcn.css` (opt-in shadcn/ui look, imported after `theme.css` — see
   [The shadcn look](#the-shadcn-look--looksshadcncss)),
   `@aceshooting/lyra-ui/tokens-root.css` (the document token layer alone, for pages that do not
@@ -1046,7 +1048,8 @@ custom accents, runtime looks, overrides and historical records. Do not reconstr
 from the normalized `parseLyraStyleRecord()` snapshot: it is not a lossless persistence format.
 `getLyraStyle()` reads the same choices at runtime; user changes use `setLyraStyle()`. An application
 Reset can call `resetLyraStyle()` and restore any separate application preferences. Selectable
-alternate looks and an explicitly cleared accent require `theme.css`; the intrinsic component
+alternate looks and an explicitly cleared accent require `theme.css` or
+[`theme-core.css`](#a-lean-entry-for-a-single-look--theme-corecss); the intrinsic component
 profile does not replace that scope resolver.
 
 Keep spotlights in application CSS, independent of the chosen control look. The public root-token
@@ -1580,6 +1583,51 @@ alpha), which lets a theme tint every shadow in the library from one place:
 
 Reach for the tier that matches what the surface _is_, not the one that happens to look right on the
 page you are on — that is what keeps two overlapping surfaces reading in the correct order.
+
+### A lean entry for a single look — theme-core.css
+
+An application with one fixed style can import `theme-core.css` in place of `theme.css`. It has the
+same inputs, mode rules and document token layer, without the built-in Shadcn look, Glass surface and
+Emerald accent: about 83 KB against 104 KB raw, and 10.8 KB against 13.6 KB gzipped. Import one of the
+two, not both.
+
+With no attributes, `theme-core.css` resolves to the Lyra look, Solid surface, no accent and System
+mode, exactly as `theme.css` does for those explicit choices:
+
+```css
+@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;
+@layer lr-theme-preset.look, lr-theme-preset.density, lr-theme-preset.surface, lr-theme-preset.accent, lr-theme-preset.mode;
+@import "@aceshooting/lyra-ui/theme-core.css";
+```
+
+Add only the sheets for the choices you select, then select them with attributes or the style API.
+Each sheet is the one that style needs under `theme-core.css`:
+
+| Choice | Add |
+|---|---|
+| `look: 'shadcn'`, `'material'`, `'data'`, `'terminal'`, `'high-contrast'` | `looks/<look>.css` |
+| `surface: 'glass'`, or the `.lr-surface-chrome` class | `surfaces/glass.css` |
+| a named `accent` such as `'emerald'` | `accents.css` |
+| `density: 'compact'` or `'touch'` | `density.css` |
+
+An application that keeps the whole built-in profile should stay on `theme.css`, which is smaller
+than `theme-core.css` plus those three sheets.
+
+The style runtime's defaults remain Shadcn, Glass and Emerald, so name all three axes before relying
+on the runtime. `setLyraStyle({ look: 'lyra', surface: 'solid', accent: null })` does this once;
+development builds warn when a selected choice has no stylesheet. For first paint, declare the fixed
+axes on `<html>` and restore only the mode, as in
+[Fixed host axes with saved mode](#style-runtime--aceshootinglyra-uithemejs):
+
+```html
+<html data-lr-look="lyra" data-lr-surface="solid" data-lr-accent="none">
+  <head>
+    <meta charset="utf-8" />
+    <script src="/theme-bootstrap.js" data-lr-theme-restore="mode"></script>
+    <link rel="stylesheet" href="/theme-core.css" />
+  </head>
+</html>
+```
 
 ### Cascade layers
 
@@ -3032,6 +3080,40 @@ sanitizer is unavailable. Some components additionally issue a deduped warning. 
 component section instead of assuming every peer user renders an `<lr-skeleton>` or the same
 degraded state. `lr-phone-input` is the exception to dynamic peer import: it takes a consumer-built
 adapter (`loadLibphonenumberAdapter()`) rather than importing `libphonenumber-js` itself.
+
+### Bundling without an optional peer
+
+A peer you do not install needs no bundler configuration: published peer imports build without it.
+Using a component that needs a missing peer then shows that component's documented failure state at
+run time, so sanitized content stays unrendered rather than falling back to raw markup.
+
+| Toolchain | Missing peer at build time |
+|---|---|
+| esbuild, Angular `application` builder, Vite, Bun, Next.js | Builds. |
+| webpack, Rspack, Rollup | Builds, with an unresolved-module warning for each peer. |
+| Parcel | Fails. Alias the peer to nothing, as below. |
+
+For Parcel, list each peer it reports, and its subpaths, in the application's `package.json`:
+
+```json
+{
+  "alias": {
+    "dompurify": false,
+    "maplibre-gl": false,
+    "@aceshooting/lyra-map": false,
+    "@aceshooting/lyra-map/*": false
+  }
+}
+```
+
+To silence the webpack or Rspack warnings, ignore the peers:
+
+```js
+new webpack.IgnorePlugin({ resourceRegExp: /^(dompurify|maplibre-gl|@aceshooting\/lyra-map)(\/|$)/ });
+```
+
+A bundler that resolves a peer you did install still places it in its own lazy chunk, so installing
+one does not grow the initial bundle.
 
 ### Experimental DOCX editing companion
 

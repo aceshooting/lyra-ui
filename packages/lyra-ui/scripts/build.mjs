@@ -19,6 +19,7 @@ import { stripCssComments } from './strip-css-comments.mjs';
 import { generateThemeBootstrapAsset } from './generate-theme-bootstrap.mjs';
 import { retargetLocaleLoaders } from './translations-companion.mjs';
 import { generateShikiWasm } from './generate-shiki-wasm.mjs';
+import { guardBuildPeerImports, optionalPeerNames } from './guard-optional-peer-imports.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const tsc = join(
@@ -74,7 +75,7 @@ console.log(`Published declaration entries consolidated: ${consolidatedDeclarati
 const prunedDeclarations = pruneUnreachableBuildDeclarations(packageDir);
 console.log(`Published unreachable declaration modules removed: ${prunedDeclarations.removedPaths.length}.`);
 
-for (const asset of ['theme.css', 'density.css', 'accents.css', 'preferences.css', 'looks', 'surfaces']) {
+for (const asset of ['theme.css', 'theme-core.css', 'density.css', 'accents.css', 'preferences.css', 'looks', 'surfaces']) {
   await cp(join(packageDir, 'src', asset), join(packageDir, 'dist', asset), { recursive: true });
 }
 
@@ -155,3 +156,8 @@ const localeLoaders = retargetLocaleLoaders(await readFile(localeLoadersFile, 'u
 if (localeLoaders.includes('../translations/')) throw new Error('locale loaders still import catalogs relative to lyra-ui.');
 await writeFile(localeLoadersFile, localeLoaders);
 console.log('Locale loaders retargeted at @aceshooting/lyra-translations.');
+
+// Last of the JavaScript rewrites: compaction would fold the guard away, and the retargeted locale
+// loaders only become peer imports just above.
+const guardedPeers = await guardBuildPeerImports(join(packageDir, 'dist'), optionalPeerNames(JSON.parse(await readFile(join(packageDir, 'package.json'), 'utf8'))));
+console.log(`Optional peer imports guarded: ${guardedPeers.imports} across ${guardedPeers.files} modules.`);

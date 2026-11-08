@@ -216,6 +216,40 @@ component section instead of assuming every peer user renders an `<lr-skeleton>`
 degraded state. `lr-phone-input` is the exception to dynamic peer import: it takes a consumer-built
 adapter (`loadLibphonenumberAdapter()`) rather than importing `libphonenumber-js` itself.
 
+### Bundling without an optional peer
+
+A peer you do not install needs no bundler configuration: published peer imports build without it.
+Using a component that needs a missing peer then shows that component's documented failure state at
+run time, so sanitized content stays unrendered rather than falling back to raw markup.
+
+| Toolchain | Missing peer at build time |
+|---|---|
+| esbuild, Angular `application` builder, Vite, Bun, Next.js | Builds. |
+| webpack, Rspack, Rollup | Builds, with an unresolved-module warning for each peer. |
+| Parcel | Fails. Alias the peer to nothing, as below. |
+
+For Parcel, list each peer it reports, and its subpaths, in the application's `package.json`:
+
+```json
+{
+  "alias": {
+    "dompurify": false,
+    "maplibre-gl": false,
+    "@aceshooting/lyra-map": false,
+    "@aceshooting/lyra-map/*": false
+  }
+}
+```
+
+To silence the webpack or Rspack warnings, ignore the peers:
+
+```js
+new webpack.IgnorePlugin({ resourceRegExp: /^(dompurify|maplibre-gl|@aceshooting\/lyra-map)(\/|$)/ });
+```
+
+A bundler that resolves a peer you did install still places it in its own lazy chunk, so installing
+one does not grow the initial bundle.
+
 ### Experimental DOCX editing companion
 
 Use `@aceshooting/lyra-docs` for editing; `lr-docx-viewer` remains a viewer in Lyra UI.

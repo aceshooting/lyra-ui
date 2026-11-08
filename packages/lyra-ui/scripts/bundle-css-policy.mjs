@@ -26,6 +26,7 @@ function cssExportPaths(packageExports) {
   return Object.entries(packageExports)
     .filter(([subpath]) =>
       subpath === './theme.css' ||
+      subpath === './theme-core.css' ||
       subpath === './native.css' ||
       subpath === './density.css' ||
       subpath === './accents.css' ||

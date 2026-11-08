@@ -173,6 +173,8 @@ The entry points, then:
   `import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';` once.
 - **Other subpaths.** `@aceshooting/lyra-ui/theme.css` (ready-made light/dark theme, including the
   document token layer),
+  `@aceshooting/lyra-ui/theme-core.css` (the same without the built-in Shadcn, Glass and Emerald
+  profile, for a single-look application),
   `@aceshooting/lyra-ui/looks/shadcn.css` (opt-in shadcn/ui look, imported after `theme.css` — see
   [The shadcn look](./styles-and-tokens.md#the-shadcn-look--looksshadcncss)),
   `@aceshooting/lyra-ui/tokens-root.css` (the document token layer alone, for pages that do not
