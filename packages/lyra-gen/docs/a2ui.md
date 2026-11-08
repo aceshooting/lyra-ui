@@ -130,7 +130,7 @@ cohort does not qualify every role or the standard basic catalog.
 
 The pinned `client_capabilities.json` describes the capability object's shape and
 its A2A metadata placement. `test/a2ui-bindings.test.mjs` adds a bounded consumer
-cohort using exact published SDKs: `@ag-ui/client` and `@ag-ui/core` 1.0.3, and
+cohort using exact published SDKs: `@ag-ui/client` and `@ag-ui/core` 1.0.4, and
 `@a2a-js/sdk` 1.3.0. The fixture provenance records their package integrity values
 and the pinned A2UI sources. Tests use real loopback HTTP, SDK serialization and
 response consumption; accepted operations reach the report processor.
