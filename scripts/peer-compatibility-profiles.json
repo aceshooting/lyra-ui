@@ -27,13 +27,13 @@
     "pdfjs-dist": "6.5.438"
   },
   "toolchain": {
-    "playwright": "1.64.1",
+    "playwright": "1.65.0",
     "typescript": "7.0.2",
-    "vite": "8.3.5"
+    "vite": "8.3.6"
   },
   "packageManagers": {
     "npm": "10.9.8",
-    "pnpm": "12.16.1"
+    "pnpm": "12.18.0"
   },
   "profiles": [
     {

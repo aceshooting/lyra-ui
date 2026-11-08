@@ -164,10 +164,10 @@ minimumReleaseAgeExclude:
   - '@changesets/should-skip-package@1.0.0'
   - '@changesets/types@7.0.0'
   - '@changesets/write@1.0.0'
-  - knip@6.32.2 || 6.34.0 || 6.36.0 || 6.38.0 || 6.39.0 || 6.40.0 || 6.41.0 || 6.42.1 || 6.43.0
+  - knip@6.32.2 || 6.34.0 || 6.36.0 || 6.38.0 || 6.39.0 || 6.40.0 || 6.41.0 || 6.42.1 || 6.43.0 || 6.44.2
   - svelte@5.56.9 || 5.57.2 || 5.57.3
   - papaparse@5.6.0
-  - maplibre-gl@6.4.0 || 6.4.1 || 6.10.0 || 6.11.1 || 6.11.2 || 6.12.0 || 6.13.0 || 6.14.0 || 6.16.0
+  - maplibre-gl@6.4.0 || 6.4.1 || 6.10.0 || 6.11.1 || 6.11.2 || 6.12.0 || 6.13.0 || 6.14.0 || 6.16.0 || 6.17.0
   - '@rolldown/binding-darwin-x64@1.2.5'
   - '@rolldown/binding-linux-arm64-gnu@1.2.5'
   - '@types/react@19.3.0'
@@ -242,8 +242,8 @@ minimumReleaseAgeExclude:
   - '@stryker-mutator/tap-runner@10.1.1'
   - '@stryker-mutator/util@10.1.1'
   - '@maplibre/vt-pbf@4.3.3'
-  - '@ai-sdk/gateway@4.0.127 || 4.0.128 || 4.0.129 || 4.0.135'
-  - '@ai-sdk/provider-utils@5.0.69 || 5.0.70 || 5.0.74'
+  - '@ai-sdk/gateway@4.0.127 || 4.0.128 || 4.0.129 || 4.0.135 || 4.0.138'
+  - '@ai-sdk/provider-utils@5.0.69 || 5.0.70 || 5.0.74 || 5.0.76'
   - '@modelcontextprotocol/ext-apps@2.0.4'
   - '@oxlint/binding-android-arm-eabi@1.90.0 || 1.91.0'
   - '@oxlint/binding-android-arm64@1.90.0 || 1.91.0'
@@ -264,7 +264,7 @@ minimumReleaseAgeExclude:
   - '@oxlint/binding-win32-arm64-msvc@1.90.0 || 1.91.0'
   - '@oxlint/binding-win32-ia32-msvc@1.90.0 || 1.91.0'
   - '@oxlint/binding-win32-x64-msvc@1.90.0 || 1.91.0'
-  - ai@7.0.154 || 7.0.155 || 7.0.156 || 7.0.162
+  - ai@7.0.154 || 7.0.155 || 7.0.156 || 7.0.162 || 7.0.165
   - oxlint@1.90.0 || 1.91.0
   - dependency-cruiser@18.7.1 || 18.7.2
   - '@tailwindcss/node@4.3.4'
@@ -288,6 +288,7 @@ minimumReleaseAgeExclude:
   - d3-zoom@3.0.1
   - semver@7.8.6
   - tailwindcss@4.3.4
+  - '@ai-sdk/provider@4.0.37'
 allowBuilds:
   esbuild: true
   rs-module-lexer: true

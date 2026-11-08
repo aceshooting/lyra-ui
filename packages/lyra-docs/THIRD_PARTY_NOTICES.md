@@ -63,9 +63,9 @@ included with this distribution; fflate is listed above.
 - `anynum@1.0.1` — MIT; [license](THIRD_PARTY_LICENSES/anynum-1.0.1-MIT.txt).
 - `bidi-js@1.1.0` — MIT; [license](THIRD_PARTY_LICENSES/bidi-js-1.1.0-MIT.txt).
 - `emf-converter@2.0.2` — Apache-2.0; [license](THIRD_PARTY_LICENSES/emf-converter-2.0.2-Apache-2.0.txt).
-- `fast-xml-parser@5.11.2` — MIT; [license](THIRD_PARTY_LICENSES/fast-xml-parser-5.11.2-MIT.txt).
+- `fast-xml-parser@5.12.0` — MIT; [license](THIRD_PARTY_LICENSES/fast-xml-parser-5.12.0-MIT.txt).
 - `harfbuzzjs@1.6.1` — MIT; [license](THIRD_PARTY_LICENSES/harfbuzzjs-1.6.1-MIT.txt).
-- `is-unsafe@2.0.2` — MIT; [license](THIRD_PARTY_LICENSES/is-unsafe-2.0.2-MIT.txt).
+- `is-unsafe@2.0.3` — MIT; [license](THIRD_PARTY_LICENSES/is-unsafe-2.0.3-MIT.txt).
 - `orderedmap@2.1.1` — MIT; [license](THIRD_PARTY_LICENSES/orderedmap-2.1.1-MIT.txt).
 - `pako@1.0.11` — (MIT AND Zlib); [license](THIRD_PARTY_LICENSES/pako-1.0.11--MIT-AND-Zlib-.txt).
 - `path-expression-matcher@1.6.2` — MIT; [license](THIRD_PARTY_LICENSES/path-expression-matcher-1.6.2-MIT.txt).
