@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { paints, assertNoAxeViolations } from './lib/harness.mjs';
+import { paints, assertNoAxeViolations, openFileChooser } from './lib/harness.mjs';
 import { wordText } from '../test/xml.mjs';
 import { zipEntry } from '../test/zip.mjs';
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
@@ -395,8 +395,9 @@ export async function runCommandsAndSearch(page, check, { createEditor, saveEdit
       await host(id).locator('.docx-pages img').first().click();
       const before = await host(id).evaluate(element => ({ revision: element.snapshot().revision.value, image: element.snapshot().image, description: element.imageDescription() }));
       const bytes = [...await page.evaluate(() => window.__docxTest.imageBytes('jpeg'))];
-      const chosen = page.waitForEvent('filechooser'); await host(id).locator('[part="image-replace-trigger"]').getByRole('button').click();
-      await (await chosen).setFiles({ name: 'replacement.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(bytes) });
+      const chosen = await openFileChooser(page, host(id).locator('[part="image-replace-file"]'),
+        () => host(id).locator('[part="image-replace-trigger"]').getByRole('button').click());
+      await chosen.setFiles({ name: 'replacement.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(bytes) });
       await host(id).locator('[part="image-replace-status"]').filter({ hasText: 'Image replaced' }).waitFor();
       const after = await host(id).evaluate(element => ({ revision: element.snapshot().revision.value, image: element.snapshot().image, description: element.imageDescription() }));
       assert.equal(after.revision, before.revision + 1); assert.deepEqual(after.image, before.image); assert.deepEqual(after.description, before.description);
@@ -415,10 +416,8 @@ export async function runCommandsAndSearch(page, check, { createEditor, saveEdit
         docxEditorImageInsertUnsupported: 'Replacement cannot be read.' }; await element.updateComplete; });
       const before = await host(id).evaluate(element => ({ revision: element.snapshot().revision, image: element.snapshot().image,
         description: element.imageDescription() }));
-      const choose = async () => {
-        const pending = page.waitForEvent('filechooser');
-        await host(id).locator('[part="image-replace-trigger"]').getByRole('button').click(); return pending;
-      };
+      const choose = () => openFileChooser(page, host(id).locator('[part="image-replace-file"]'),
+        () => host(id).locator('[part="image-replace-trigger"]').getByRole('button').click());
       await choose();
       await host(id).locator('[part="image-replace-file"]').evaluate(input => input.dispatchEvent(new Event('cancel')));
       await host(id).locator('[part="image-replace-status"]').waitFor({ state: 'detached' });

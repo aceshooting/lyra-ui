@@ -11,12 +11,39 @@ const people = [
 ];
 const camera = { yaw: 0, pitch: 0, distance: 300, target: { x: 0, y: 0, z: 0 } };
 
+const forwardTo = (target: object, prop: string | symbol): unknown => {
+  const value: unknown = Reflect.get(target, prop, target);
+  return typeof value === 'function' ? (value as (...args: unknown[]) => unknown).bind(target) : value;
+};
+
+/** Shadows the element's `ownerDocument` so only its own owner-window frame requests can be
+ *  refused. Never replace `window.requestAnimationFrame` itself here: d3-timer binds that function
+ *  once when the lazily imported d3 peer evaluates, so a global stub installed at that moment is
+ *  kept by every later simulation and throws from the graph's own load continuation. */
+function stubRefusingOwnerWindow(el: HTMLElement, refuse: () => boolean): () => void {
+  const realDocument = el.ownerDocument;
+  const realWindow = realDocument.defaultView!;
+  const requestFrame = (callback: FrameRequestCallback): number => {
+    if (refuse()) throw new Error('animation frames unavailable');
+    return realWindow.requestAnimationFrame(callback);
+  };
+  const fakeWindow = new Proxy(realWindow, {
+    get: (target, prop) => (prop === 'requestAnimationFrame' ? requestFrame : forwardTo(target, prop)),
+  });
+  const fakeDocument = new Proxy(realDocument, {
+    get: (target, prop) => (prop === 'defaultView' ? fakeWindow : forwardTo(target, prop)),
+  });
+  Object.defineProperty(el, 'ownerDocument', { configurable: true, value: fakeDocument });
+  return () => {
+    Reflect.deleteProperty(el, 'ownerDocument');
+  };
+}
+
 // This file's page has not loaded the optional d3 peer yet, so the first test below meets the
 // graph's real loading skeleton. Keep it first: a later test would find the peer already cached.
 describe('knowledge graph explorer preset activation while the graph loads', () => {
   it('abandons a preset wait that cannot schedule frames and activates normally afterwards', async () => {
     const host = await fixture<HTMLElement>(html`<div></div>`);
-    const requestFrame = window.requestAnimationFrame;
     const graphOf = (explorer: LyraKnowledgeGraphExplorer) => explorer.shadowRoot?.querySelector<LyraGraph>('[part="graph"]');
     const skeletonShown = (explorer: LyraKnowledgeGraphExplorer): boolean =>
       !!graphOf(explorer)?.shadowRoot?.querySelector('lr-skeleton');
@@ -33,16 +60,12 @@ describe('knowledge graph explorer preset activation while the graph loads', () 
       restoreWindow();
       restoreWindow = undefined;
       // The second wait finds a window that refuses to schedule frames while the skeleton shows.
-      window.requestAnimationFrame = ((callback: FrameRequestCallback) => {
-        if (skeletonShown(el)) throw new Error('animation frames unavailable');
-        return requestFrame.call(window, callback);
-      }) as typeof window.requestAnimationFrame;
+      restoreWindow = stubRefusingOwnerWindow(el, () => skeletonShown(el));
       el.selectedNodeId = 'pierre';
       await el.updateComplete;
       await aTimeout(0);
     } finally {
       restoreWindow?.();
-      window.requestAnimationFrame = requestFrame;
     }
     await waitUntil(() => graphOf(el)?.shadowRoot?.querySelectorAll('[part="node"]').length === people.length, 'graph rendered', { timeout: 8000 });
     expect(el.selectedNodeId).to.equal('pierre');

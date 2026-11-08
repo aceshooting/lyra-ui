@@ -1587,21 +1587,40 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
         popover?.open && fields === popover.querySelector(`[part="image-${kind}-fields"]`);
     };
     if (!host || !native || !owned()) return;
+    const align = (): void => {
+      const content = popover?.shadowRoot?.querySelector<HTMLElement>('[part~="content"]');
+      if (!content?.offsetHeight || !content.clientHeight) return;
+      const clip = content.getBoundingClientRect();
+      const scale = clip.height / content.offsetHeight;
+      if (!Number.isFinite(scale) || scale <= 0) return;
+      const top = Math.max(0, clip.top + content.clientTop * scale);
+      const bottom = Math.min(this.ownerDocument.defaultView?.innerHeight ?? 0,
+        clip.top + (content.clientTop + content.clientHeight) * scale);
+      const box = host.getBoundingClientRect(), nativeBox = native.getBoundingClientRect();
+      const target = box.height <= bottom - top ? box : nativeBox.height <= bottom - top ? nativeBox : null;
+      // Oversized controls keep the browser's own caret scrolling.
+      if (!target || bottom <= top) return;
+      const delta = target.top < top ? target.top - top : target.bottom > bottom ? target.bottom - bottom : 0;
+      const next = Math.min(Math.max(0, content.scrollTop + delta / scale), Math.max(0, content.scrollHeight - content.clientHeight));
+      if (Number.isFinite(next) && next !== content.scrollTop && owned()) content.scrollTop = next;
+    };
+    align();
+    // Firefox can scroll the content again after focusin settles, toward the oversized field host, and
+    // push an already visible control out of the clip. Re-align once per frame on scrolls that land
+    // shortly after this focus, so a later user scroll inside the dialog is never pulled back.
     const content = popover?.shadowRoot?.querySelector<HTMLElement>('[part~="content"]');
-    if (!content?.offsetHeight || !content.clientHeight) return;
-    const clip = content.getBoundingClientRect();
-    const scale = clip.height / content.offsetHeight;
-    if (!Number.isFinite(scale) || scale <= 0) return;
-    const top = Math.max(0, clip.top + content.clientTop * scale);
-    const bottom = Math.min(this.ownerDocument.defaultView?.innerHeight ?? 0,
-      clip.top + (content.clientTop + content.clientHeight) * scale);
-    const box = host.getBoundingClientRect(), nativeBox = native.getBoundingClientRect();
-    const target = box.height <= bottom - top ? box : nativeBox.height <= bottom - top ? nativeBox : null;
-    // Oversized controls keep the browser's own caret scrolling.
-    if (!target || bottom <= top) return;
-    const delta = target.top < top ? target.top - top : target.bottom > bottom ? target.bottom - bottom : 0;
-    const next = Math.min(Math.max(0, content.scrollTop + delta / scale), Math.max(0, content.scrollHeight - content.clientHeight));
-    if (Number.isFinite(next) && next !== content.scrollTop && owned()) content.scrollTop = next;
+    const view = this.ownerDocument.defaultView;
+    if (!content || !view) return;
+    let frame = 0;
+    const onScroll = (): void => {
+      if (frame) return;
+      frame = view.requestAnimationFrame(() => { frame = 0; if (owned()) align(); });
+    };
+    content.addEventListener('scroll', onScroll, { passive: true });
+    view.setTimeout(() => {
+      content.removeEventListener('scroll', onScroll);
+      if (frame) view.cancelAnimationFrame(frame);
+    }, 500);
   }
 
   private onImageDialogHidden(kind: 'resize' | 'description'): void {

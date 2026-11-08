@@ -74,14 +74,33 @@ describe('optional scoped registries', () => {
   it('isolates global conflicts and refuses attaching to a foreign document', function () {
     if (!supportsScopedRegistries()) this.skip();
     class GlobalConflict extends HTMLElement {}
-    customElements.define('scope-conflict', GlobalConflict);
+    // A retried attempt reuses the first attempt's global definition.
+    if (!customElements.get('scope-conflict')) customElements.define('scope-conflict', GlobalConflict);
+    const Conflict = customElements.get('scope-conflict');
     const scope = createScopedRegistry({ 'scope-conflict': ScopedChild });
     expect(scope.createElement('scope-conflict') instanceof ScopedChild).to.equal(true);
-    expect(customElements.get('scope-conflict') === GlobalConflict).to.equal(true);
+    expect(customElements.get('scope-conflict') === Conflict).to.equal(true);
     const foreign = document.implementation.createHTMLDocument('');
     expect(() => scope.attachShadow(foreign.createElement('div'))).to.throw('target document');
     const foreignScope = createScopedRegistry({ 'scope-child': ScopedChild }, { document: foreign });
-    expect(foreignScope.createElement('scope-child').ownerDocument === foreign).to.equal(true);
+    const foreignChild = foreignScope.createElement('scope-child');
+    expect(foreignChild.ownerDocument === foreign).to.equal(true);
+    expect(foreignChild instanceof ScopedChild, 'constructed, not left as an unknown element').to.equal(true);
+  });
+
+  it('constructs scoped elements for a frame document whose own global registry defines the same tag', async function () {
+    if (!supportsScopedRegistries()) this.skip();
+    const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
+    const frameDocument = frame.contentDocument!;
+    const frameWindow = frameDocument.defaultView as Window & typeof globalThis;
+    frameWindow.customElements.define('scope-child', class extends frameWindow.HTMLElement {});
+    const scope = createScopedRegistry({ 'scope-parent': ScopedParent, 'scope-child': ScopedChild }, { document: frameDocument });
+    const parent = scope.createElement('scope-parent');
+    expect(parent instanceof ScopedParent).to.equal(true);
+    expect(parent.ownerDocument === frameDocument).to.equal(true);
+    scope.attachShadow(frameDocument.body.appendChild(frameDocument.createElement('div'))).append(parent);
+    await parent.updateComplete;
+    expect(parent.shadowRoot!.querySelector('scope-child') instanceof ScopedChild).to.equal(true);
   });
 
   it('rejects missing template dependencies instead of consulting global definitions', function () {

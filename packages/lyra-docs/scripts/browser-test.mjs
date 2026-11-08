@@ -24,6 +24,7 @@ import { runReview } from './review-browser.mjs';
 import { runTableFormatting } from './tables-formatting-browser.mjs';
 import { runImageExtensions } from './image-extensions-browser.mjs';
 import { filesUnder, serveStatic } from './lib/static-files.mjs';
+import { openFileChooser } from './lib/harness.mjs';
 import { assertExternalHyperlink, wordText } from '../test/xml.mjs';
 import { staticModuleSpecifiers } from '../../lyra-ui/scripts/module-specifiers.mjs';
 
@@ -674,9 +675,8 @@ async function runEditorWorkflows(page, check) {
     const editor = page.locator(`#${id}`);
     const choose = async (kind, name) => {
       const bytes = await page.evaluate(kind => window.__docxTest.fixture(kind), kind);
-      const pending = page.waitForEvent('filechooser');
-      await editor.locator('[part="open-button"]').click();
-      await (await pending).setFiles({ name, mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: Buffer.from(bytes) });
+      const pending = await openFileChooser(page, editor.locator('[part="file-input"]'), () => editor.locator('[part="open-button"]').click());
+      await pending.setFiles({ name, mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: Buffer.from(bytes) });
     };
     await choose('accepted', 'picked.docx');
     await page.waitForFunction(id => document.querySelector(`#${id}`)?.snapshot()?.status === 'ready', id);
@@ -744,9 +744,8 @@ async function runEditorWorkflows(page, check) {
     await editor.locator('[part="open-button"]').click();
     assert.equal(await editor.locator('[part="confirm"]').isVisible(), true);
     const bytes = await page.evaluate(() => window.__docxTest.fixture('accepted'));
-    const pending = page.waitForEvent('filechooser');
-    await editor.locator('[part="discard-button"]').click();
-    await (await pending).setFiles({ name: 'replacement.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: Buffer.from(bytes) });
+    const pending = await openFileChooser(page, editor.locator('[part="file-input"]'), () => editor.locator('[part="discard-button"]').click());
+    await pending.setFiles({ name: 'replacement.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: Buffer.from(bytes) });
     await page.waitForFunction(({ id, blank }) => {
       const state = document.querySelector(`#${id}`)?.snapshot();
       return state?.status === 'ready' && state.revision.documentId !== blank;
@@ -769,9 +768,8 @@ async function runEditorWorkflows(page, check) {
       };
     }, [...bytes]);
     try {
-      const chooser = page.waitForEvent('filechooser');
-      await editor.locator('[part="open-button"]').click();
-      await (await chooser).setFiles({ name: 'delayed.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: Buffer.from(bytes) });
+      const chooser = await openFileChooser(page, editor.locator('[part="file-input"]'), () => editor.locator('[part="open-button"]').click());
+      await chooser.setFiles({ name: 'delayed.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: Buffer.from(bytes) });
       await page.waitForFunction(() => typeof window.__releaseFileRead === 'function');
       const result = await editor.evaluate(async element => {
         const opened = await element.newDocument();

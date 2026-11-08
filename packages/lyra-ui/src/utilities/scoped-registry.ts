@@ -26,7 +26,6 @@ export interface LyraScopedRegistry<Definitions extends LyraScopedDefinitions = 
 }
 interface NativeScopedRegistry extends CustomElementRegistry { initialize(root: Node): void; }
 interface ScopedShadowOptions extends ShadowRootInit { customElementRegistry: CustomElementRegistry; }
-interface ScopedElementOptions extends ElementCreationOptions { customElementRegistry: CustomElementRegistry; }
 interface LitScopeHost { renderOptions: { creationScope?: LyraScopedCreationScope }; }
 
 function nativeRegistry(): NativeScopedRegistry {
@@ -69,6 +68,8 @@ export function createScopedRegistry<Definitions extends LyraScopedDefinitions>(
   const registry = nativeRegistry();
   const scopeDocument = owner.implementation.createHTMLDocument('');
   registry.initialize(scopeDocument);
+  // A registry-free document: its createElement() never runs a constructor synchronously.
+  let detachedDocument: Document | undefined;
   const sources = new Map<string, LyraScopedElementConstructor>();
 
   const creationScope: LyraScopedCreationScope = Object.freeze({
@@ -118,9 +119,18 @@ export function createScopedRegistry<Definitions extends LyraScopedDefinitions>(
     creationScope,
     define,
     createElement(name: string): LyraElement<any> {
-      if (!registry.get(name)) throw new Error(`Missing scoped definition for ${name}.`);
-      const scoped: ScopedElementOptions = { customElementRegistry: registry };
-      return owner.createElement(name, scoped) as LyraElement<any>;
+      const Definition = registry.get(name);
+      if (!Definition) throw new Error(`Missing scoped definition for ${name}.`);
+      // Upgrade rather than construct synchronously: a synchronous constructor creates its element
+      // in the constructor realm's document, so engines that follow that rule fail for any other
+      // owner document. The upgrade path keeps the owner document and this registry.
+      detachedDocument ??= owner.implementation.createHTMLDocument('');
+      const element = detachedDocument.createElement(name);
+      registry.initialize(element);
+      owner.adoptNode(element);
+      registry.upgrade(element);
+      if (!(element instanceof Definition)) throw new Error(`The scoped definition for ${name} failed to construct.`);
+      return element as unknown as LyraElement<any>;
     },
     attachShadow(host: HTMLElement, init: ShadowRootInit = { mode: 'open' }): ShadowRoot {
       if (host.ownerDocument !== owner) throw new Error('Create a scoped registry for the target document before attaching its shadow root.');

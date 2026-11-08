@@ -732,8 +732,11 @@ describe('size ladder', () => {
       expect(getComputedStyle(valueEl!).fontSize, `size=${tier.size} value caption`).to.equal(
         `${tier.fontSize}px`,
       );
-      expect(getComputedStyle(labelEl!).fontSize, `size=${tier.size} label caption`).to.equal(
-        `${tier.fontSize * 0.625}px`,
+      // Firefox quantizes computed font sizes to 1/60px, so a fractional caption is compared within
+      // one of those units instead of as an exact string.
+      expect(parseFloat(getComputedStyle(labelEl!).fontSize), `size=${tier.size} label caption`).to.be.closeTo(
+        tier.fontSize * 0.625,
+        1 / 60,
       );
     }
   });

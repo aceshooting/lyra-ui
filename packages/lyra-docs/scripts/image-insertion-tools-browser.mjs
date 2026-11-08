@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { assertNoAxeViolations, paints, screenshot, toolbarTo, zipParts as parts } from './lib/harness.mjs';
+import { assertNoAxeViolations, openFileChooser, paints, screenshot, toolbarTo, zipParts as parts } from './lib/harness.mjs';
 
 const host = (page, id) => page.locator(`#${id}`);
 const part = (page, id, name) => page.locator(`#${id} [part="image-insert-${name}"]`);
@@ -37,12 +37,13 @@ async function caret(page, id, text, uncovered = false) {
 }
 
 async function choose(page, id, bytes, keyboard = false, name = 'local-image.bin', mimeType = 'application/octet-stream') {
-  const chooser = page.waitForEvent('filechooser'); void chooser.catch(() => {});
-  if (keyboard) {
-    await toolbarTo(page, id, 'image-insert-trigger');
-    await page.keyboard.press('Enter');
-  } else await part(page, id, 'trigger').click();
-  await (await chooser).setFiles({ name, mimeType, buffer: bytes });
+  const chooser = await openFileChooser(page, part(page, id, 'file'), async () => {
+    if (keyboard) {
+      await toolbarTo(page, id, 'image-insert-trigger');
+      await page.keyboard.press('Enter');
+    } else await part(page, id, 'trigger').click();
+  });
+  await chooser.setFiles({ name, mimeType, buffer: bytes });
 }
 async function draft(page, id, bytes, keyboard = false) {
   const shown = part(page, id, 'dialog').evaluate(element => new Promise(resolve => {
@@ -193,7 +194,7 @@ export async function runImageInsertionTools(page, check, { createEditor, saveEd
       assert.equal(await part(page, id, 'file').inputValue(), '');
     }
     // Native input cancel dispatch is explicitly synthetic: browser chooser dismissal is not automated.
-    const chooser = page.waitForEvent('filechooser'); void chooser.catch(() => {}); await part(page, id, 'trigger').click(); await chooser;
+    await openFileChooser(page, part(page, id, 'file'), () => part(page, id, 'trigger').click());
     await part(page, id, 'file').evaluate(element => element.dispatchEvent(new Event('cancel')));
     assert.equal(await part(page, id, 'file').inputValue(), '');
     await page.waitForFunction(id => document.getElementById(id).shadowRoot.activeElement?.getAttribute('part') === 'image-insert-trigger', id);
