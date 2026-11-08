@@ -1,5 +1,18 @@
 # Changelog
 
+## 30.9.0
+
+### Minor Changes
+
+- b96b689: Optional peers no longer have to be installed for an application to bundle. Published peer imports now sit in a `try` block, which esbuild, the Angular `application` builder, Next.js, webpack and Rspack treat as non-fatal when the peer is absent; before this, they failed with "Could not resolve" or "Module not found" for peers the application never uses, including every `@aceshooting/lyra-translations` locale catalog. A missing peer still reaches the same loader at run time, so components keep failing closed with their documented state. Parcel still needs an `alias` entry; see "Bundling without an optional peer" in the AI types and optional peers guide.
+- b96b689: New `@aceshooting/lyra-ui/theme-core.css` lean theme entry for single-look applications: `theme.css` without the built-in Shadcn, Glass and Emerald profile, resolving to the Lyra look, Solid surface and no accent (about 83 KB against 104 KB raw). `looks/*.css`, `surfaces/glass.css`, `accents.css` and `density.css` add the choices an application selects, and the composition resolves identically to `theme.css`. Development builds now also warn when a selected default-profile look, surface or accent has no stylesheet under `theme-core.css`.
+
+### Patch Changes
+
+- 8e590fc: `<lr-ebook-viewer>` no longer lets epub.js register a window `unload` listener. epub.js adds one for every rendition and never removes it, so each closed book stayed reachable from the window, and browsers that disallow `unload` by default (Chromium 158 and later) logged a permissions-policy violation on every render. The viewer already releases its rendition and book when it disconnects; scroll, resize and page snapping are unchanged.
+- d90f34a: `createScopedRegistry(definitions, { document })` now constructs its elements in Firefox when `document` is an iframe or detached document. Firefox, which now ships native scoped custom element registries, left such elements unconstructed and logged a `NotSupportedError`; the registry now upgrades each element after adopting it into the owner document, and throws if a definition still fails to construct instead of returning an inert element.
+- @aceshooting/lyra-translations@30.9.0
+
 ## 30.8.0
 
 ### Minor Changes

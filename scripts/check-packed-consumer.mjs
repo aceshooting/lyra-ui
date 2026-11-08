@@ -162,10 +162,10 @@ const rootHelperRegisteredTags = [];
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/7859878f724ef4237ee93a5414fa6b54f204313a/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'Map scene ownership, camera sessions, accessible scene controls, custom graph node bodies, lazy locale-picker names, the ten additional locale catalogs, multi-split panel collapse, named menu anchors, markdown without-images, drawn scene lines, the dependency upgrade and the dock-panel rail and fold methods bring the full non-optional graph to 5,661,996 raw bytes across 64 files. Only its ceiling advances to the next 64-byte boundary, with 20 bytes of headroom. The explicit Oniguruma canary retains its separate exact binary requirement.',
-  reviewedCoreMeasurementBytes: 5_661_996,
+  $comment: 'Map scene ownership, camera sessions, accessible scene controls, custom graph node bodies, lazy locale-picker names, the ten additional locale catalogs, multi-split panel collapse, named menu anchors, markdown without-images, drawn scene lines, the dependency upgrades, the dock-panel rail and fold methods, build-time optional-peer import guards and the epub.js unload guard bring the full non-optional graph to 5,664,320 raw bytes across 64 files. That measurement already sits on a 64-byte boundary, so only its ceiling advances, to that boundary, with no further headroom. The explicit Oniguruma canary retains its separate exact binary requirement.',
+  reviewedCoreMeasurementBytes: 5_664_320,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 20,
+  selectedRegressionHeadroomBytes: 0,
 };
 
 /**
@@ -320,9 +320,9 @@ const bundleEntries = {
   },
   map: {
     fixture: 'optional',
-    // Drawn scene paths and arcs, the dependency upgrade and custom 3D layers bring the MapLibre v6
-    // map consumer to 2,514,564 raw bytes; the next 64-byte boundary.
-    maxRawBytes: 2_514_624,
+    // Drawn scene paths and arcs, custom 3D layers, MapLibre 6.17.0 and the build-time optional-peer
+    // import guards bring the MapLibre v6 map consumer to 2,522,603 raw bytes; the next 64-byte boundary.
+    maxRawBytes: 2_522_624,
   },
   graph: {
     fixture: 'optional',
