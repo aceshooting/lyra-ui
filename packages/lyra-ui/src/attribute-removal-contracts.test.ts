@@ -1,6 +1,5 @@
 import { expect, waitUntil } from '@open-wc/testing';
 import { nextFrame } from '../test/frames.js';
-import { defaultConverter } from 'lit';
 import './all.js';
 import './components/media/flag/flag-peer.js';
 import { LyraElement } from './internal/lyra-element.js';
@@ -16,8 +15,7 @@ describe('removing authored text attributes from connected components', () => {
     const defaults = document.createElement(name);
     for (const [property, declaration] of constructor.elementProperties) {
       if (typeof property !== 'string' || declaration.attribute === false || declaration.state ||
-        declaration.type && declaration.type !== String ||
-        declaration.converter && declaration.converter !== defaultConverter) continue;
+        declaration.type && declaration.type !== String) continue;
       if (typeof Reflect.get(defaults, property) !== 'string') continue;
       const attribute = typeof declaration.attribute === 'string' ? declaration.attribute : property.toLowerCase();
       it(`${name}.${attribute} can be removed and restored after rendering`, async () => {
