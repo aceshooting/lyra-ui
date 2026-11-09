@@ -121,3 +121,40 @@ for (const type of ['pie', 'doughnut'] as const) {
     expect(el.chart === (chart as unknown)).to.equal(true);
   });
 }
+
+for (const type of ['pie', 'doughnut'] as const) {
+  for (const [sampling, rows, seriesCount] of [['rows', 5, 1], ['series', 2, 3], ['rows and series', 3, 3]] as const) {
+    it(`retains source values and identities in every ${type} tooltip surface after sampling ${sampling}`, async () => {
+      const seen: LyraChartFormatterContext[] = [];
+      const format = (context: LyraChartFormatterContext): string => { seen.push(context); return 'Source value'; };
+      const group = (contexts: readonly LyraChartFormatterContext[]): string => { seen.push(...contexts); return 'Source group'; };
+      const datasets = Array.from({ length: seriesCount }, (_, series) => ({
+        label: `Series ${series}`,
+        data: Array.from({ length: rows }, (_, row) => Number.MAX_VALUE / (series + 1) / (row + 1)),
+      }));
+      const el = await fixture<LyraChart>(html`<lr-chart type=${type} without-animation .maxRecords=${4}
+        .labels=${Array.from({ length: rows }, (_, row) => `Row ${row}`)} .datasets=${datasets}
+        .formatter=${format} .tooltipTitleFormatter=${group} .tooltipFooterFormatter=${group}></lr-chart>`);
+      await waitUntil(() => el.chart !== undefined);
+      const chart = el.chart as unknown as Chart;
+      const datasetIndex = chart.data.datasets.length - 1;
+      const dataIndex = chart.data.datasets[datasetIndex]!.data.length - 1;
+      expect(chart.data.datasets.reduce((total, dataset) => total + dataset.data.length, 0)).to.be.at.most(4);
+      const raw = chart.data.datasets[datasetIndex]!.data[dataIndex];
+      expect(typeof raw).to.equal('number'); expect(raw as number).to.be.at.most(1);
+      const item = { datasetIndex, dataIndex, parsed: raw, raw, dataset: chart.data.datasets[datasetIndex] };
+      const callbacks = chart.options.plugins!.tooltip!.callbacks as unknown as {
+        label(item: unknown): string; title(items: unknown[]): string; footer(items: unknown[]): string;
+      };
+      seen.length = 0;
+      expect(callbacks.label(item)).to.include('Source value');
+      expect(callbacks.title([item])).to.equal('Source group');
+      expect(callbacks.footer([item])).to.equal('Source group');
+      expect(seen.map(context => ({ value: context.value, datasetIndex: context.datasetIndex, index: context.index,
+        label: context.label, seriesLabel: context.seriesLabel }))).to.deep.equal(Array.from({ length: 3 }, () => ({
+          value: datasets[seriesCount - 1]!.data[rows - 1], datasetIndex: seriesCount - 1, index: rows - 1,
+          label: `Row ${rows - 1}`, seriesLabel: `Series ${seriesCount - 1}`,
+        })));
+    });
+  }
+}

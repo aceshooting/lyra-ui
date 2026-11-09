@@ -43,6 +43,78 @@ const rootFontSize = (): number =>
 
 const fullKey = (storageKey: string): string => `lr-multi-split:${storageKey}:panels`;
 
+it('records collapse requests made after connection but before the first update without emitting a change', async () => {
+  const holder = await fixture<HTMLDivElement>(html`<div></div>`);
+  const split = document.createElement('lr-multi-split') as LyraMultiSplit;
+  split.style.cssText = SPLIT_STYLE;
+  split.defaultSizes = [20, 80];
+  for (const id of ['a', 'b']) {
+    const child = document.createElement('div'); child.setAttribute('panel-id', id); child.textContent = id;
+    split.append(child);
+  }
+  let changes = 0;
+  split.addEventListener('lr-multi-split-panel-collapse-change', () => { changes++; });
+  holder.append(split);
+  expect(split.hasUpdated).to.equal(false);
+  expect(split.collapsePanel('a')).to.equal(true);
+  expect(split.collapsePanel('a')).to.equal(false);
+  expect(split.expandPanel('a')).to.equal(true);
+  expect(split.expandPanel('a')).to.equal(false);
+  expect(split.collapsePanel('a')).to.equal(true);
+  expect(changes).to.equal(0);
+  await split.updateComplete;
+  expect(rounded(split.sizes)).to.deep.equal([0, 100]);
+  expect(panel(split, 'a').hasAttribute('data-panel-collapsed')).to.equal(true);
+  expect(split.expandPanel('a')).to.equal(true);
+  await split.updateComplete;
+  expect(rounded(split.sizes)).to.deep.equal([20, 80]); expect(changes).to.equal(1);
+});
+
+it('honors an explicitly folded initial layout over default sizes without changing its proportions', async () => {
+  const split = await fixture<LyraMultiSplit>(html`<lr-multi-split style=${SPLIT_STYLE}
+    .sizes=${[0, 40, 60]} .defaultSizes=${[20, 30, 50]} .collapsedPanels=${['a']}>
+    <div panel-id="a">A</div><div panel-id="b">B</div><div panel-id="c">C</div>
+  </lr-multi-split>`);
+  expect(rounded(split.sizes)).to.deep.equal([0, 40, 60]);
+  expect(panel(split, 'a').hasAttribute('data-panel-collapsed')).to.equal(true);
+  expect(panel(split, 'b').getBoundingClientRect().width / panel(split, 'c').getBoundingClientRect().width)
+    .to.be.closeTo(2 / 3, .02);
+});
+
+for (const invalidIdentity of ['missing', 'duplicate'] as const) {
+  it(`restores an unfolded layout when a collapsed panel identity becomes ${invalidIdentity}`, async () => {
+    const split = await fourPanels(), folded = panel(split, 'a');
+    split.collapsePanel('a'); await split.updateComplete;
+    expect(split.sizes[0]).to.equal(0);
+    if (invalidIdentity === 'missing') folded.removeAttribute('panel-id'); else folded.setAttribute('panel-id', 'b');
+    expect(split.togglePanel('a')).to.equal(false);
+    await split.updateComplete;
+    expect(rounded(split.sizes)).to.deep.equal([25, 25, 25, 25]);
+    expect(split.querySelectorAll('[data-panel-collapsed]').length).to.equal(0);
+    for (const child of split.children) expect(child.hasAttribute('inert')).to.equal(false);
+  });
+}
+
+it('reports infeasible open-panel maxima after folding and retains a usable percentage layout', async () => {
+  const split = await fourPanels();
+  const issues: string[] = [];
+  split.addEventListener('lr-multi-split-constraints-invalid', event => { issues.push(event.detail.reason); });
+  split.panelConstraints = [null, { maxPx: 100 }, { maxPx: 100 }, { maxPx: 100 }];
+  await split.updateComplete;
+  expect(split.collapsePanel('a')).to.equal(true);
+  await split.updateComplete;
+  expect(split.sizes[0]).to.equal(0);
+  expect(split.sizes.reduce((total, size) => total + size, 0)).to.be.closeTo(100, .001);
+  for (const size of split.sizes.slice(1)) expect(size).to.be.closeTo(100 / 3, .001);
+  expect(issues).to.deep.equal(['maximum-total']);
+  const widths = ['b', 'c', 'd'].map(id => panel(split, id).getBoundingClientRect().width);
+  expect(Math.min(...widths)).to.be.greaterThan(0);
+  expect(Math.max(...widths) - Math.min(...widths)).to.be.at.most(1);
+  expect(split.expandPanel('a')).to.equal(true);
+  await split.updateComplete;
+  expect(split.sizes.every(size => Number.isFinite(size) && size > 0)).to.equal(true);
+});
+
 describe('lr-multi-split per-panel collapse', () => {
   it('leaves the split unchanged while collapsedPanels is unset', async () => {
     const storageKey = `panel-collapse-unset-${Math.random()}`;

@@ -38,7 +38,7 @@ function setup() {
   graph.nodes = [{ id: 'a', label: 'Alpha', position: positions.get(0)! }, { id: 'b', label: 'Beta', position: positions.get(1)! }];
   graph.edges = [{ id: 'e', source: 'a', target: 'b' }];
   (graph as unknown as { loadSpatialController(): Promise<{ GraphSpatialController: typeof GraphSpatialController }> }).loadSpatialController = async () => ({ GraphSpatialController: InjectedSpatial });
-  return { graph, positions, screens, cameras, fits, states, callbacks: () => callbacks,
+  return { graph, engine, positions, screens, cameras, fits, states, callbacks: () => callbacks,
     loaded: () => loaded, disposed: () => disposed, fail: (value: Failure) => { failure = value; } };
 }
 async function settle(graph: LyraGraph): Promise<void> { await graph.updateComplete; await nextFrame(); await nextFrame(); }
@@ -49,6 +49,67 @@ async function mount(value: ReturnType<typeof setup>): Promise<void> {
 }
 
 describe('graph spatial engine boundaries', () => {
+  for (const capability of ['setGlow', 'setNodeMeshes'] as const) {
+    it(`keeps the ordinary scene usable when the optional ${capability} capability getter throws`, async () => {
+      const value = setup();
+      Object.defineProperty(value.engine, capability, { get(): never { throw new Error('Private capability failure'); } });
+      value.graph.strings = { graphGlowUnavailable: 'Glow is unavailable', graphCustomNodesUnavailable: 'Custom nodes are unavailable' };
+      if (capability === 'setGlow') value.graph.glow = true; else value.graph.nodeRenderer = () => null;
+      await mount(value);
+      const text = capability === 'setGlow' ? 'Glow is unavailable' : 'Custom nodes are unavailable';
+      await waitUntil(() => value.graph.shadowRoot!.textContent!.includes(text));
+      expect(value.disposed()).to.equal(0);
+      expect(await value.graph.focusNode('b')).to.equal(true);
+      expect(value.graph.shadowRoot!.textContent).not.to.include('Private capability failure');
+    });
+  }
+
+  for (const asynchronous of [false, true]) {
+    it(`retires a renderer whose glow update ${asynchronous ? 'rejects' : 'throws'} and retains accessible navigation`, async () => {
+      const value = setup();
+      Object.defineProperty(value.engine, 'setGlow', { value: () => {
+        if (asynchronous) return Promise.reject(new Error('Private glow failure'));
+        throw new Error('Private glow failure');
+      } });
+      const reasons: string[] = [];
+      value.graph.addEventListener('lr-engine-fallback', event => { reasons.push(event.detail.reason); });
+      await mount(value); value.graph.glow = true;
+      await waitUntil(() => value.disposed() === 1 && reasons.length === 1);
+      await settle(value.graph);
+      expect(reasons).to.deep.equal(['error']);
+      expect(await value.graph.focusNode('a')).to.equal(true);
+      expect(value.graph.shadowRoot!.textContent).not.to.include('Private glow failure');
+      expect(value.graph.shadowRoot!.querySelectorAll('canvas[part="spatial-canvas"]').length).to.equal(1);
+    });
+  }
+
+  for (const completion of ['resolve', 'reject'] as const) {
+    it(`ignores a pending glow ${completion} after the graph disconnects`, async () => {
+      const value = setup(); let finish!: () => void, started = false;
+      Object.defineProperty(value.engine, 'setGlow', { value: () => {
+        started = true;
+        return new Promise<void>((resolve, reject) => { finish = completion === 'resolve' ? resolve : () => reject(new Error('Obsolete glow failure')); });
+      } });
+      let fallbacks = 0; value.graph.addEventListener('lr-engine-fallback', () => { fallbacks++; });
+      await mount(value); value.graph.glow = true; await waitUntil(() => started);
+      value.graph.remove(); expect(value.disposed()).to.equal(1);
+      finish(); await nextFrame(); await nextFrame();
+      expect(fallbacks).to.equal(0); expect(value.disposed()).to.equal(1);
+    });
+  }
+
+  it('retires an engine when suspending its hidden surface fails and restores usable built-in rendering', async () => {
+    const value = setup(); await mount(value);
+    const reasons: string[] = [];
+    value.graph.addEventListener('lr-engine-fallback', event => { reasons.push(event.detail.reason); });
+    value.fail('resize'); value.graph.hidden = true;
+    await waitUntil(() => value.disposed() === 1);
+    value.graph.hidden = false; await settle(value.graph);
+    await waitUntil(() => reasons.length === 1);
+    expect(reasons).to.deep.equal(['error']);
+    expect(await value.graph.focusNode('a')).to.equal(true);
+  });
+
   for (const method of ['data', 'style', 'state', 'resize'] as const) it(`releases an engine whose ${method} update throws and exposes a usable fallback`, async () => {
     const value = setup(); value.fail(method);
     const fallbacks: { reason: string }[] = [];

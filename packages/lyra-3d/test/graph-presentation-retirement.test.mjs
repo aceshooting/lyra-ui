@@ -300,6 +300,64 @@ test('all falsy originating release failures survive later cleanup failures', ()
   }
 });
 
+for (const spatial of [false, true]) for (const method of ['step', 'dispose']) {
+  test(`${spatial ? 'spatial' : 'ordinary'} retirement ${method} releases all owners when multiple native disposals fail`, () => {
+    const value = fixture({ spatial }), record = value.record, list = owners(record), observed = observe(list);
+    const failures = [];
+    for (const object of observed.expected) object.addEventListener('dispose', () => {
+      const failure = new Error(`Native ${object.type} disposal failed`);
+      failures.push(failure); throw failure;
+    });
+    const lease = prepareGraphPresentationRetirement(value.handle);
+    try {
+      assert.throws(() => method === 'step' ? finishLease(lease, 1) : lease.dispose(), error => error === failures[0]);
+      assert.ok(failures.length > 1);
+      observed.assertAll(); assertDisposed(list); assertEmptyStorage(lease.storage);
+      assert.equal(lease.done, true);
+      for (const group of rootGroups(record)) assert.equal(group.parent, null);
+      lease.dispose(); observed.assertAll();
+    } finally { lease.dispose(); teardown(value); }
+  });
+}
+
+for (const scope of ['whole', 'fitted']) {
+  test(`${scope} retirement preserves a quiesce failure when native cleanup also fails`, () => {
+    const value = fixture({ spatial: true }), record = value.record;
+    const list = scope === 'whole' ? owners(record) : [record.fitted.composite, record.fitted.decorations];
+    const observed = observe(list), first = new Error('Quiesce failed');
+    const owner = list[0], original = owner.batch.quiesce;
+    owner.batch.quiesce = function () { original.call(this); throw first; };
+    for (const object of observed.expected) object.addEventListener('dispose', () => { throw new Error('Cleanup failed'); });
+    try {
+      assert.throws(() => scope === 'whole' ? prepareGraphPresentationRetirement(value.handle)
+        : prepareGraphPresentationViewRetirement(value.handle, 'fitted'), error => error === first);
+      observed.assertAll(); assertDisposed(list);
+      if (scope === 'fitted') {
+        assert.equal(readGraphPresentationCandidate(value.handle), record);
+        assert.equal(record.fitted, undefined);
+        assert.equal(record.pendingRetirements.length, 1);
+        assert.equal(record.pendingRetirements[0].done, true);
+        assertEmptyStorage(record.pendingRetirements[0].storage);
+        assert.equal(record.primary.composite.resources.disposed, false);
+      } else assert.throws(() => readGraphPresentationCandidate(value.handle), invalidState);
+    } finally { teardown(value); }
+  });
+}
+
+test('invalid view names do not consume a live presentation or start retirement', () => {
+  const value = fixture(), record = value.record, observed = observe(owners(record));
+  try {
+    for (const name of [undefined, null, '', 'secondary', 0, {}]) {
+      assert.throws(() => prepareGraphPresentationViewRetirement(value.handle, name), TypeError);
+      assert.equal(readGraphPresentationCandidate(value.handle), record);
+      assert.equal(record.pendingRetirements.length, 0);
+      assert.equal(observed.counts.size, 0);
+    }
+    prepareGraphPresentationViewRetirement(value.handle, 'fitted').dispose();
+    prepareGraphPresentationRetirement(value.handle).dispose(); observed.assertAll();
+  } finally { teardown(value); }
+});
+
 test('quiesce failure consumes semantic authority and still quiesces and releases all owners', () => {
   const value = fixture({ spatial: true }), record = value.record, list = owners(record), observed = observe(list);
   const groups = rootGroups(record);

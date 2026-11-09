@@ -147,4 +147,37 @@ describe('theme bootstrap script configuration and ownership', () => {
     expect(root.style.getPropertyValue('--lr-theme-font-sans')).to.equal('monospace');
     expect(root.style.getPropertyPriority('--lr-theme-font-sans')).to.equal('important');
   });
+
+  for (const [name, key] of [['current', OWNERSHIP], ['legacy', LEGACY_OWNERSHIP]] as const) {
+    it(`paints the stored theme even when ${name} ownership cannot be read`, () => {
+      const root = document.documentElement;
+      Object.defineProperty(root, key, { configurable: true, get() { throw new Error('Application ownership unavailable'); } });
+      store({ mode: 'dark', overrides: { '--lr-theme-font-sans': 'serif' } });
+      boot();
+      expect(root.getAttribute('data-lr-theme')).to.equal('dark');
+      expect(root.style.getPropertyValue('--lr-theme-font-sans')).to.equal('serif');
+      Reflect.deleteProperty(root, key);
+      store({ mode: 'light', overrides: { '--lr-theme-font-sans': 'monospace' } });
+      boot();
+      expect(root.getAttribute('data-lr-theme')).to.equal('light');
+      expect(root.style.getPropertyValue('--lr-theme-font-sans')).to.equal('monospace');
+    });
+  }
+
+  it('keeps parsing and can retry after the document rejects a style write', () => {
+    const root = document.documentElement;
+    const style = root.style;
+    const own = Object.getOwnPropertyDescriptor(style, 'setProperty');
+    Object.defineProperty(style, 'setProperty', { configurable: true, value() { throw new DOMException('Style unavailable', 'InvalidStateError'); } });
+    store({ mode: 'dark', overrides: { '--lr-theme-font-sans': 'serif' } });
+    try {
+      expect(() => boot()).to.not.throw();
+      expect(root.getAttribute('data-lr-theme')).to.equal('dark');
+    } finally {
+      if (own) Object.defineProperty(style, 'setProperty', own);
+      else Reflect.deleteProperty(style, 'setProperty');
+    }
+    boot();
+    expect(root.style.getPropertyValue('--lr-theme-font-sans')).to.equal('serif');
+  });
 });

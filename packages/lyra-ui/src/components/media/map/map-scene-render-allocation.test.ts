@@ -148,6 +148,48 @@ describe('lr-map scene allocation reentry boundaries', () => {
   beforeEach(async () => { env = await renderEnvironment(); });
   afterEach(async () => { await env.close(); fixtureCleanup(); });
 
+  for (const [field, readNumber] of [
+    ['container', 1], ['container', 2], ['canvas', 1], ['canvas', 2], ['ratio', 1],
+    ['clientWidth', 1], ['clientWidth', 2], ['clientHeight', 1], ['clientHeight', 2],
+    ['width', 1], ['width', 2], ['height', 1], ['height', 2],
+  ] as const) {
+    it(`keeps the newest viewport when native ${field} read ${readNumber} updates the allocation`, async () => {
+      const { element, peer } = await env.mount(element => { element.scene = { objects: [sceneMarker()] }; });
+      const bridge = await env.bridge(peer), observed: number[] = [];
+      const release = mapSceneSessionAttachment(element)!.subscribeViewport(value => { observed.push(value.width); });
+      let reads = 0, replaced = false;
+      const reenter = (): void => {
+        if (++reads !== readNumber) return;
+        replaced = true;
+        peer.width = 900; peer.height = 600; peer.syncBacking(); peer.fire('move');
+      };
+      const target = field === 'clientWidth' || field === 'clientHeight' ? peer.container : peer.renderCanvas;
+      const own = Object.getOwnPropertyDescriptor(target, field);
+      const descriptor = own ?? Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, field);
+      if (field === 'container' || field === 'canvas' || field === 'ratio') {
+        peer.onRead = name => { if (name === field) reenter(); };
+      } else {
+        Object.defineProperty(target, field, { configurable: true,
+          get() { const value = descriptor!.get!.call(target) as number; reenter(); return value; },
+          ...(descriptor?.set ? { set(value: number) { descriptor.set!.call(target, value); } } : {}),
+        });
+      }
+      try {
+        peer.width = 700; peer.height = 500; peer.syncBacking(); peer.fire('move');
+        await renderTurns();
+        expect(replaced).to.equal(true);
+        const allocation = bridge.host.captureRenderInput().allocation;
+        expect([allocation?.width, allocation?.height]).to.deep.equal([900, 600]);
+        expect(observed).to.deep.equal([900]);
+        expect(peer.removed).to.equal(false);
+      } finally {
+        peer.onRead = undefined;
+        if (own) Object.defineProperty(target, field, own); else Reflect.deleteProperty(target, field);
+        release();
+      }
+    });
+  }
+
   for (const name of ['getContainer', 'getCanvas', 'getPixelRatio', 'getPadding'] as const) {
     it(`preserves the nested allocation when reading the ${name} capability reenters`, async () => {
       const { element, peer } = await env.mount(element => { element.scene = { objects: [sceneMarker()] }; });

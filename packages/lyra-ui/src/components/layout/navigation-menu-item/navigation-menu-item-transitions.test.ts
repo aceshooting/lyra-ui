@@ -112,3 +112,55 @@ it('keeps a reopened disclosure visible when its cancelled exit animation settle
   expect(base(item).getAttribute('aria-expanded')).to.equal('true');
   expect(panel(item).style.inlineSize).to.equal('');
 });
+
+it('ignores descendant and unrelated transition endings while the shared panel is resizing', async () => {
+  await setReducedMotion('no-preference');
+  const menu = await fixture<HTMLElement>(html`<lr-navigation-menu style="--lr-navigation-menu-switch-duration:10s">
+    <lr-navigation-menu-item id="small">Small<div slot="panel" style="inline-size:10rem;block-size:4rem"><button>Small action</button></div></lr-navigation-menu-item>
+    <lr-navigation-menu-item id="large">Large<div slot="panel" style="inline-size:20rem;block-size:8rem"><button>Large action</button></div></lr-navigation-menu-item>
+  </lr-navigation-menu>`);
+  const first = menu.querySelector<LyraNavigationMenuItem>('#small')!;
+  const second = menu.querySelector<LyraNavigationMenuItem>('#large')!;
+  await click(base(first));
+  await placed(first);
+  await click(base(second));
+  await waitUntil(() => panel(second).hasAttribute('data-morphing'));
+  const surface = panel(second);
+  const content = surface.querySelector<HTMLElement>('.panel-content')!;
+  content.dispatchEvent(new TransitionEvent('transitionend', { bubbles: true, propertyName: 'width' }));
+  surface.dispatchEvent(new TransitionEvent('transitionend', { propertyName: 'opacity' }));
+  expect(surface.hasAttribute('data-morphing')).to.equal(true);
+  expect(surface.style.inlineSize).to.not.equal('');
+  surface.dispatchEvent(new TransitionEvent('transitionend', { propertyName: 'width' }));
+  expect(surface.hasAttribute('data-morphing')).to.equal(false);
+  expect(surface.style.inlineSize).to.equal('');
+  expect(surface.style.blockSize).to.equal('');
+  expect(content.style.inlineSize).to.equal('');
+  await nextFrame();
+  expect(second.open).to.equal(true);
+  expect(surface.getBoundingClientRect().width).to.be.greaterThan(250);
+});
+
+it('releases resizing constraints when a menu disconnects during a panel switch', async () => {
+  await setReducedMotion('no-preference');
+  const menu = await fixture<HTMLElement>(html`<lr-navigation-menu style="--lr-navigation-menu-switch-duration:10s">
+    <lr-navigation-menu-item id="small">Small<div slot="panel" style="inline-size:10rem;block-size:4rem">Small content</div></lr-navigation-menu-item>
+    <lr-navigation-menu-item id="large">Large<div slot="panel" style="inline-size:20rem;block-size:8rem">Large content</div></lr-navigation-menu-item>
+  </lr-navigation-menu>`);
+  const first = menu.querySelector<LyraNavigationMenuItem>('#small')!;
+  const second = menu.querySelector<LyraNavigationMenuItem>('#large')!;
+  await click(base(first));
+  await placed(first);
+  await click(base(second));
+  await waitUntil(() => panel(second).hasAttribute('data-morphing'));
+  menu.remove();
+  await nextFrame();
+  expect(panel(second).hasAttribute('data-morphing')).to.equal(false);
+  expect(panel(second).style.inlineSize).to.equal('');
+  expect(panel(second).style.blockSize).to.equal('');
+  expect(second.open).to.equal(true);
+  document.body.append(menu);
+  await placed(second);
+  expect(panel(second).style.inlineSize).to.equal('');
+  expect(panel(second).getBoundingClientRect().width).to.be.greaterThan(250);
+});
