@@ -187,6 +187,19 @@ test('companion coverage limits runner occupancy while retaining every complete 
   }
 });
 
+test('selectively skipped UI coverage retains its last complete report in Codecov', () => {
+  const workflow = read('.github/workflows/ci.yml');
+  for (const name of ['build_and_coverage_coverage_shard', 'build_and_coverage_coverage']) {
+    assert.match(job(workflow, name), /needs\.changes\.outputs\.runtime != 'false'/u);
+  }
+  const config = read('codecov.yml');
+  const uiFlag = config.match(/^ {2}lyra-ui:\n((?: {4}[^\n]*\n| {6}[^\n]*\n)+)/mu)?.[1];
+  assert.ok(uiFlag);
+  assert.match(uiFlag, /^ {4}carryforward: true$/mu, 'an unchanged UI must remain in partial commit reports');
+  assert.match(uiFlag, /^ {6}- packages\/lyra-ui\/src\/\*\*$/mu);
+  assert.match(config, /^ {2}show_carryforward_flags: true$/mu, 'PR reports disclose reused coverage');
+});
+
 test('each of the seven coverage flags owns one complete package report and a scoped README badge', () => {
   const packages = ['lyra-ui', 'lyra-3d', 'lyra-map', 'lyra-docs', 'lyra-flags', 'lyra-ide', 'lyra-translations'];
   const config = read('codecov.yml');

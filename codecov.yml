@@ -60,6 +60,8 @@ flags:
   lyra-ui:
     paths:
       - packages/lyra-ui/src/**
+    # CI skips this package's coverage when only companion sources or contributor text change.
+    carryforward: true
   lyra-3d:
     paths:
       - packages/lyra-3d/**
@@ -92,6 +94,7 @@ bundle_analysis:
 comment:
   layout: "header, diff, flags, components"
   behavior: default
+  show_carryforward_flags: true
 
 ignore:
   - "**/*.stories.ts"
