@@ -32920,6 +32920,7 @@
           "src/components/agent-tools/mcp-app/mcp-app-protocol.property.test.ts",
           "src/components/agent-tools/mcp-app/mcp-app-protocol.test.ts",
           "src/components/agent-tools/mcp-app/mcp-app-sdk.test.ts",
+          "src/components/agent-tools/mcp-app/mcp-app-session-recovery.test.ts",
           "src/components/agent-tools/mcp-app/mcp-app.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",

@@ -118,6 +118,63 @@ describe('lr-map resource transition ownership', () => {
     Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', contextDescriptor);
   });
 
+  for (const existing of [false, true]) for (const [family, options, expectedTypes] of [
+    ['geometry', { label: { field: 'name' }, point: { field: 'kind' } }, ['circle', 'fill', 'line', 'symbol']],
+    ['cluster', { cluster: {}, label: { field: 'name' } }, ['circle', 'circle', 'symbol', 'symbol']],
+    ['heatmap', { kind: 'heatmap' }, ['heatmap']],
+  ] as const) {
+    it(`stops ${existing ? 'updated' : 'initial'} ${family} resource work at native callback boundaries and reconnects with the full request`, async function () {
+      this.timeout(60_000);
+      const row = { sourceId: 'places', geojson: points, color: 'rgb(80, 90, 100)', minZoom: 2, maxZoom: 10, ...options };
+      const initial = existing ? [{ ...row, color: 'rgb(10, 20, 30)', minZoom: 0, maxZoom: 24,
+        ...('label' in options ? { label: { ...options.label, field: 'kind', size: 10 } } : {}),
+      }] : [];
+      const methods = ['getSource', 'getLayer', 'getStyle', 'addSource', 'addLayer', 'setPaintProperty', 'setLayoutProperty', 'setLayerZoomRange'] as const;
+      type Method = (typeof methods)[number];
+      const control = await mount(initial), counts = new Map<Method, number>();
+      for (const name of methods) {
+        const original = control.peer[name];
+        Object.defineProperty(control.peer, name, { configurable: true, value(...args: unknown[]) {
+          counts.set(name, (counts.get(name) ?? 0) + 1);
+          return Reflect.apply(original, control.peer, args);
+        } });
+      }
+      control.element.dataLayers = [row]; await settle(control.element, control.peer);
+      expect([...control.peer.layers.values()].map(value => (value as Layer).type).sort()).to.deep.equal([...expectedTypes].sort());
+      const boundaries = [...counts].flatMap(([name, count]) => Array.from({ length: count }, (_, index) => ({ name, call: index + 1 })));
+      expect(boundaries.length).to.be.greaterThan(5);
+      control.element.remove(); control.wrapper.remove();
+      for (const { name, call } of boundaries) {
+        const { element, peer, wrapper } = await mount(initial);
+        const lateWrites: string[] = [];
+        let count = 0, interrupted = false;
+        for (const method of methods) {
+          const original = peer[method];
+          Object.defineProperty(peer, method, { configurable: true, value(...args: unknown[]) {
+            if (peer.removed && !method.startsWith('get')) lateWrites.push(method);
+            const result: unknown = Reflect.apply(original, peer, args);
+            if (!interrupted && method === name && ++count === call) { interrupted = true; element.remove(); }
+            return result;
+          } });
+        }
+        const boundary = `${name} call ${call}`;
+        try {
+          element.dataLayers = [row]; await rejected(element); await nextFrame();
+          expect(interrupted, boundary).to.equal(true);
+          expect(peer.removed, boundary).to.equal(true);
+          expect(lateWrites, boundary).to.deep.equal([]);
+          expect(element.map === undefined, boundary).to.equal(true);
+          wrapper.append(element);
+          await waitUntil(() => element.map !== undefined, `${boundary} did not reconnect`);
+          const replacement = element.map as unknown as TransitionMap;
+          replacement.fire('load'); await element.whenStyleReady(); await settle(element, replacement);
+          expect([...replacement.layers.values()].map(value => (value as Layer).type).sort(), boundary).to.deep.equal([...expectedTypes].sort());
+          expect(element.shadowRoot!.querySelectorAll('[part="error"]').length, boundary).to.equal(0);
+        } finally { element.remove(); wrapper.remove(); }
+      }
+    });
+  }
+
   it('rejects newly requested row bounds before mutation when the native capability is absent and recovers in place', async () => {
     const row = { sourceId: 'places', geojson: points };
     const { element, peer } = await mount([row]);
