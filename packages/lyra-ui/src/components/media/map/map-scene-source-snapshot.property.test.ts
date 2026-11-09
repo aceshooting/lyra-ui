@@ -2,10 +2,40 @@ import { expect } from '@open-wc/testing';
 import * as fc from 'fast-check';
 import { propertyRuns } from '../../../../test/property-options.js';
 import { sceneSourceHarness } from '../../../../test/map-scene-admission-fixtures.js';
+import { mapSceneAdmissionErrorCode } from './map-scene-errors.js';
 
 const payload = fc.array(fc.integer({ min: 0, max: 255 }), { minLength: 1, maxLength: 32 });
 
 describe('map scene source ownership properties', () => {
+  it('rejects invalid request revisions without retiring or replacing accepted bytes', () => {
+    const invalidRevision = fc.oneof(
+      fc.integer({ max: 0 }),
+      fc.integer({ min: 0, max: 1000 }).map(value => value + 0.5),
+      fc.constantFrom(NaN, Infinity, -Infinity, Number.MAX_SAFE_INTEGER + 1),
+    );
+    fc.assert(fc.property(payload, invalidRevision, (values, revision) => {
+      const h = sceneSourceHarness(64);
+      const source = { format: 'glb' as const, bytes: new Uint8Array(values) };
+      const accepted = h.sources.publish(h.sources.stage([source], h.request()));
+      try {
+        let failure: unknown;
+        try { h.sources.stage([source], { connection: h.connection, revision }); } catch (error) { failure = error; }
+        expect(mapSceneAdmissionErrorCode(failure)).to.equal('invalid');
+        expect(h.liveBytes).to.equal(values.length);
+        expect(h.allocations).to.equal(1);
+        expect(h.releases).to.equal(0);
+        const next = h.sources.stage([source], h.next());
+        expect(next.receipts[0]!.sourceId).to.equal(accepted[0]!.receipt.sourceId);
+        next.dispose();
+      } finally {
+        accepted.forEach(lease => lease.release());
+        h.sources.dispose();
+      }
+      expect(h.liveBytes).to.equal(0);
+      expect(h.releases).to.equal(1);
+    }), propertyRuns());
+  });
+
   it('isolates each selected byte range from later caller mutation', () => {
     fc.assert(fc.property(payload, fc.integer({ min: 0, max: 8 }), (values, padding) => {
       const h = sceneSourceHarness(64);

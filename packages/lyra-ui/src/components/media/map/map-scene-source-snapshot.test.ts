@@ -1,7 +1,85 @@
 import { expect } from '@open-wc/testing';
 import { sceneSourceHarness } from '../../../../test/map-scene-admission-fixtures.js';
+import { mapSceneAdmissionErrorCode } from './map-scene-errors.js';
+import { readMapSceneSource, type SceneSourceValue } from './map-scene-source-snapshot.js';
 
 describe('map scene source snapshots', () => {
+  it('rejects malformed source metadata before allocating or resolving anything', () => {
+    const h = sceneSourceHarness();
+    const invalid: unknown[] = [null, undefined, [], {}, { format: 'obj', bytes: null },
+      { format: 'glb', src: 1 }, { format: 'obj', src: '   ' }, { format: 'obj', other: 'model.obj' },
+      { format: 'obj', src: 'model.obj', extra: true }, { format: 'unknown', src: 'model.obj' }];
+    try {
+      for (const source of invalid) {
+        let failure: unknown;
+        try { readMapSceneSource(source); } catch (error) { failure = error; }
+        expect(mapSceneAdmissionErrorCode(failure)).to.equal('invalid');
+        failure = undefined;
+        try { h.sources.stage([source as SceneSourceValue], h.request()); } catch (error) { failure = error; }
+        expect(mapSceneAdmissionErrorCode(failure)).to.equal('invalid');
+        expect(h.allocations).to.equal(0);
+        expect(h.resolutions).to.equal(0);
+      }
+      const source = { format: 'obj' as const, src: 'model.obj' };
+      expect(readMapSceneSource(source)).to.equal(source);
+      const stage = h.sources.stage([source], h.request());
+      expect(stage.receipts.length).to.equal(1);
+      expect(h.resolutions).to.equal(1);
+      stage.dispose();
+    } finally { h.sources.dispose(); }
+  });
+
+  it('rejects malformed source lists without disturbing accepted snapshots', () => {
+    const h = sceneSourceHarness();
+    const source = { format: 'glb' as const, bytes: new Uint8Array([1, 2]) };
+    const accepted = h.sources.publish(h.sources.stage([source], h.request()));
+    const sparse = new Array<SceneSourceValue>(1);
+    const extra = Object.assign([source], { extra: source });
+    const inaccessible = new Proxy([source], { getOwnPropertyDescriptor() { throw new Error('No descriptors'); } });
+    try {
+      for (const values of [null, {}, sparse, extra, inaccessible, Array.from({ length: 33 }, () => source)]) {
+        let failure: unknown;
+        try { h.sources.stage(values as readonly SceneSourceValue[], h.request()); } catch (error) { failure = error; }
+        expect(mapSceneAdmissionErrorCode(failure)).to.equal(Array.isArray(values) && values.length === 33 ? 'limit' : 'invalid');
+        expect(h.liveBytes).to.equal(2);
+        expect(h.allocations).to.equal(1);
+        expect(h.releases).to.equal(0);
+      }
+      const retry = h.sources.stage([source], h.request());
+      expect(retry.receipts[0]!.sourceId).to.equal(accepted[0]!.receipt.sourceId);
+      expect(h.allocations).to.equal(1);
+      retry.dispose();
+    } finally {
+      accepted.forEach(lease => lease.release());
+      h.sources.dispose();
+    }
+    expect(h.liveBytes).to.equal(0);
+    expect(h.releases).to.equal(1);
+  });
+
+  it('retires all unpublished stages on disposal while installed readers retain their bytes', () => {
+    const h = sceneSourceHarness();
+    const accepted = h.sources.publish(h.sources.stage([{ format: 'glb', bytes: new Uint8Array([1, 2]) }], h.request()));
+    const installed = h.sources.retain(accepted[0]!.receipt, 'installed');
+    accepted[0]!.release();
+    const pending = [3, 4].map(size => h.sources.stage([{ format: 'obj', bytes: new Uint8Array(size) }], h.request()));
+    expect(h.liveBytes).to.equal(9);
+    h.sources.dispose();
+    expect(h.liveBytes).to.equal(2);
+    expect(h.releases).to.equal(2);
+    for (const stage of pending) {
+      expect(() => h.sources.publish(stage)).to.throw();
+      expect(() => h.sources.snapshot(stage.receipts[0]!)).to.throw();
+      stage.dispose();
+    }
+    const retained = h.sources.snapshot(installed.receipt);
+    if (retained.kind !== 'bytes') throw new Error('Expected installed bytes');
+    expect([...retained.bytes]).to.deep.equal([1, 2]);
+    installed.release(); installed.release(); h.sources.dispose();
+    expect(h.liveBytes).to.equal(0);
+    expect(h.releases).to.equal(3);
+  });
+
   it('reserves before copying and owns only the selected byte view', () => {
     const h = sceneSourceHarness();
     const backing = new Uint8Array([9, 1, 2, 3, 9]);
