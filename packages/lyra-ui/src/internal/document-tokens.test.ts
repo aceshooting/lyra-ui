@@ -399,8 +399,8 @@ describe('document token layer: provider identity', () => {
     return style;
   }
 
-  for (const media of ['all', 'print']) {
-    it(`uses an imported token layer only when its ${media} media applies`, async () => {
+  for (const { prefix, media } of ['', '@layer application;'].flatMap(prefix => ['all', 'print'].map(media => ({ prefix, media })))) {
+    it(`uses an imported token layer only when its ${media} media applies${prefix ? ' after a layer-order statement' : ''}`, async () => {
       const { frame, doc } = await frameWith();
       try {
         const style = doc.createElement('style');
@@ -409,13 +409,13 @@ describe('document token layer: provider identity', () => {
           style.addEventListener('error', () => reject(new Error('token stylesheet did not load')), { once: true });
         });
         const url = new URL('../styles/tokens-root.css', import.meta.url).href;
-        style.textContent = `@import url("${url}") ${media}; .app { color: red; }`;
+        style.textContent = `${prefix} @import url("${url}") ${media}; .app { color: red; }`;
         doc.head.append(style);
         await loaded;
         const probe = await connectProbe(doc);
         expect(frame.contentWindow!.getComputedStyle(probe).getPropertyValue('--lr-space-m').trim()).to.equal('0.75rem');
         expect(constructedCopies(doc), 'only an active import can supply the tokens').to.equal(media === 'all' ? 0 : 1);
-        const imported = style.sheet!.cssRules[0] as CSSImportRule;
+        const imported = Array.from(style.sheet!.cssRules).find(rule => rule.type === 3) as CSSImportRule;
         imported.media.mediaText = media === 'all' ? 'print' : 'all';
         adoptLyraTokens(doc);
         expect(constructedCopies(doc), 'media changes invalidate the previous provider').to.equal(media === 'all' ? 1 : 0);
@@ -424,6 +424,11 @@ describe('document token layer: provider identity', () => {
         adoptLyraTokens(doc);
         expect(constructedCopies(doc), 'the restored media is evaluated again').to.equal(media === 'all' ? 0 : 1);
         style.remove();
+        const warnings = await captureDevWarnings(async () => {
+          const restored = await connectProbe(doc);
+          expect(frame.contentWindow!.getComputedStyle(restored).getPropertyValue('--lr-space-m').trim()).to.equal('0.75rem');
+        });
+        expect(warnings.some(message => message.includes('applied after Lyra registered'))).to.equal(true);
         adoptLyraTokens(doc);
         expect(constructedCopies(doc), 'removing the import restores the fallback').to.equal(1);
         expect(frame.contentWindow!.getComputedStyle(probe).getPropertyValue('--lr-space-m').trim()).to.equal('0.75rem');

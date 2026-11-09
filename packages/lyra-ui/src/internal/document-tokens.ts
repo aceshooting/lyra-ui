@@ -152,7 +152,8 @@ function layerProvider(sheet: CSSStyleSheet, view: Window, thorough: boolean, de
   let hasImports = false;
   for (let index = 0; !found && depth < 3 && index < rules.length; index++) {
     const rule = rules[index] as CSSImportRule;
-    if (rule.type !== 3) break; // @import rules come first
+    if (rule.type === 0 && 'nameList' in rule) continue; // layer-order statements may precede imports
+    if (rule.type !== 3) break;
     hasImports = true;
     if (rule.styleSheet && importApplies(rule, view)) {
       const imported = layerProvider(rule.styleSheet, view, thorough, depth + 1);
