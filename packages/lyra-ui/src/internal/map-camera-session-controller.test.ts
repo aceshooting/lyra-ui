@@ -36,6 +36,8 @@ function harness() {
   const state = {
     camera: admitMapViewpoint(view()), reduced: false, synchronous: true, accept: true, acceptStart: true, prepareFailure: false,
     acquireCount: 0, releaseCount: 0,
+    onPrepare: undefined as (() => void) | undefined,
+    onStart: undefined as (() => void) | undefined,
     onCommit: undefined as (() => void) | undefined,
     onRetire: undefined as (() => void) | undefined,
   };
@@ -43,9 +45,13 @@ function harness() {
     current: () => alive && acquired,
     capture: () => admitMapViewpoint(state.camera),
     reducedMotion: () => state.reduced,
-    start(token) { if (!alive || !acquired || !state.acceptStart) return false; action = token; return true; },
+    start(token) {
+      if (!alive || !acquired || !state.acceptStart) return false;
+      action = token; state.onStart?.(); return true;
+    },
     prepare(token, target, transition) {
       if (state.prepareFailure) throw Object.assign(new Error('unavailable'), { code: 'unavailable' });
+      state.onPrepare?.();
       const result = Object.freeze({ action: token, view: admitMapViewpoint(target), kind: state.reduced ? 'jump' as const : transition.kind,
         ...(transition.duration === undefined ? {} : { duration: transition.duration }) });
       prepared.add(result); return result;
@@ -116,11 +122,89 @@ describe('internal camera session saved views and tours', () => {
     controller.subscribe(snapshot => {
       if (!replaced && snapshot.reason === 'complete') { replaced = true; controller.restore(view(8), { kind: 'ease' }); }
     });
+    const delivered: string[] = [];
+    controller.subscribe(snapshot => { delivered.push(snapshot.reason); });
+    delivered.length = 0;
     const old = h.writes[0]!.action; h.complete(old);
     expect(h.writes.map(command => command.view.zoom)).to.deep.equal([4, 8]);
+    expect(delivered, 'later subscribers receive the replacement, not its retired predecessor').to.deep.equal(['start']);
     expect(controller.snapshot).to.include({ mode: 'viewpoint', active: true, reason: 'start' });
     h.complete(old); expect(controller.snapshot.active).to.equal(true);
     h.complete(); expect(controller.snapshot.active).to.equal(false);
+    expect(delivered).to.deep.equal(['start', 'complete']);
+  });
+
+  it('rejects malformed option records without reading accessors or disturbing an active camera', () => {
+    const h = harness(), controller = session(h); h.state.synchronous = false;
+    controller.restore(view(4), { kind: 'ease' });
+    const before = controller.snapshot, retired = h.retirements.length;
+    let reads = 0, deliveries = 0;
+    const invalid = [null, [], 4, { unknown: true }, { [Symbol('option')]: true },
+      Object.defineProperty({}, 'signal', { enumerable: true, get() { reads++; return undefined; } }),
+      new Proxy({}, { ownKeys() { throw new Error('unreadable keys'); } }),
+      new Proxy({}, { ownKeys() { return ['signal']; }, getOwnPropertyDescriptor() { return undefined; } }),
+    ];
+    for (const options of invalid) {
+      code(() => createMapCameraSessionController(h.host, options as never), 'invalid-options');
+      code(() => controller.subscribe(() => { deliveries++; }, options as never), 'invalid-options');
+    }
+    for (const options of [null, [], { unknown: true }, { [Symbol('transition')]: 'jump' },
+      Object.defineProperty({}, 'kind', { enumerable: true, get() { reads++; return 'jump'; } })]) {
+      code(() => controller.restore(view(8), options as never), 'invalid-options');
+    }
+    expect(reads).to.equal(0); expect(deliveries).to.equal(0);
+    expect(h.state.acquireCount).to.equal(1); expect(controller.snapshot).to.equal(before);
+    expect(h.writes.length).to.equal(1); expect(h.retirements.length).to.equal(retired);
+    controller.restore(view(6)); expect(h.writes.at(-1)!.view.zoom).to.equal(6);
+  });
+
+  it('keeps the newer restore when camera preparation synchronously replaces the intent', () => {
+    const h = harness(), controller = session(h); h.state.synchronous = false;
+    controller.restore(view(4), { kind: 'ease' });
+    const previous = h.writes[0]!.action;
+    h.state.onPrepare = () => { h.state.onPrepare = undefined; controller.restore(view(8)); };
+    controller.restore(view(6));
+    expect(h.writes.map(command => command.view.zoom)).to.deep.equal([4, 8]);
+    expect(h.retirements.map(entry => entry.action === previous)).to.deep.equal([true]);
+    expect(controller.capture().zoom).to.equal(8);
+    h.complete(previous); expect(controller.snapshot.active).to.equal(true);
+    h.complete(); expect(controller.snapshot.reason).to.equal('complete');
+  });
+
+  it('retires a newly armed action if its native start disconnects the session', () => {
+    const h = harness(), controller = session(h);
+    h.state.onStart = () => h.interrupt('disconnect');
+    controller.restore(view(6), { kind: 'fly' });
+    expect(h.writes.length).to.equal(0);
+    expect(h.retirements.map(entry => entry.stop)).to.deep.equal([false]);
+    expect(controller.snapshot).to.deep.equal({ mode: 'idle', active: false, reason: 'disconnect' });
+    expect(h.state.releaseCount).to.equal(1);
+    h.interrupt('engine'); controller.dispose();
+    expect(h.state.releaseCount).to.equal(1); code(() => controller.capture(), 'disposed');
+  });
+
+  it('isolates native commit, retirement and reporting failures and accepts a later restore', () => {
+    const h = harness(), controller = session(h); h.state.synchronous = false;
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'reportError');
+    const errors: unknown[] = [];
+    Object.defineProperty(globalThis, 'reportError', { configurable: true, value(error: unknown) {
+      errors.push(error); throw new Error('reporting failed');
+    } });
+    const retirementError = new Error('native stop failed');
+    try {
+      h.state.onCommit = () => { throw new Error('native camera failed'); };
+      h.state.onRetire = () => { throw retirementError; };
+      code(() => controller.restore(view(4), { kind: 'ease' }), 'unavailable');
+      expect(controller.snapshot).to.include({ mode: 'viewpoint', active: false, reason: 'engine' });
+      expect(h.retirements.map(entry => entry.stop)).to.deep.equal([true]);
+      expect(errors).to.deep.equal([retirementError]);
+      h.state.onCommit = undefined; h.state.onRetire = undefined;
+      controller.restore(view(8)); h.complete();
+      expect(controller.capture().zoom).to.equal(8); expect(controller.snapshot.reason).to.equal('complete');
+    } finally {
+      h.state.onCommit = undefined; h.state.onRetire = undefined;
+      if (descriptor) Object.defineProperty(globalThis, 'reportError', descriptor); else Reflect.deleteProperty(globalThis, 'reportError');
+    }
   });
 
   it('invalidates before stop callbacks and never revives a retired action', () => {
