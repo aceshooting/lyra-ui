@@ -126,7 +126,18 @@ function installStyle(viewport, raw, orbit) {
 }
 function eventCount(fixture, name) { return fixture.events.filter(event => event[0] === name).length; }
 function assertRenderer(viewport, expected) {
-  assert.deepEqual(rendererSnapshot(viewport), expected.renderer);
+  const actual = rendererSnapshot(viewport);
+  const { clear: actualClear, ...actualSettings } = actual;
+  const { clear: expectedClear, ...expectedSettings } = expected.renderer;
+  assert.deepEqual(actualSettings, expectedSettings);
+  // Color-space conversion can differ by a final floating-point bit from the captured fixture.
+  if (Array.isArray(actualClear?.color) && Array.isArray(expectedClear?.color)) {
+    assert.equal(actualClear.color.length, expectedClear.color.length);
+    actualClear.color.forEach((value, index) => {
+      assert.ok(Math.abs(value - expectedClear.color[index]) <= 4 * Number.EPSILON,
+        `clear color channel ${index}: ${value} differs from ${expectedClear.color[index]}`);
+    });
+  } else assert.deepEqual(actualClear, expectedClear);
   assert.deepEqual([viewport.canvas.width, viewport.canvas.height], expected.canvas);
 }
 function assertDrawAfterFrame(fixture) {
@@ -173,7 +184,7 @@ function registryFixture(t, options = {}) {
     writes.push([key, value]); return Reflect.set(target, key, value, target);
   } }) : raw;
   if (options.viewportGetters) for (const key of ['width', 'height', 'orbit', 'style', 'lost', 'disposed']) {
-    Object.defineProperty(viewport, key, { configurable: true, get() { assert.fail('Viewport getter must not run: ' + key); } });
+    Object.defineProperty(viewport, key, { configurable: true, get() { return assert.fail('Viewport getter must not run: ' + key); } });
   }
   if (options.xr !== false) registerViewportXr(viewport, resources, {});
   if (options.register !== false) registerViewportTransaction(viewport, cell);
@@ -402,7 +413,7 @@ test('changed/accessor fixed targets reject before writes without invoking acces
     const f = registryFixture(t, { observeWrites: true }), install = f.prepare(); let gets = 0, sets = 0;
     if (mode === 'changed') f.raw[field] = registryReplacement(f.cell, field);
     else if (mode === 'accessor') Object.defineProperty(f.raw, field, { configurable: true, enumerable: true,
-      get() { gets++; assert.fail('Fixed target getter ran'); }, set() { sets++; assert.fail('Fixed target setter ran'); } });
+      get() { gets++; return assert.fail('Fixed target getter ran'); }, set() { sets++; assert.fail('Fixed target setter ran'); } });
     else Object.defineProperty(f.raw, field, { ...Object.getOwnPropertyDescriptor(f.raw, field), writable: false });
     const descriptors = Object.getOwnPropertyDescriptors(f.raw); f.writes.length = 0;
     assert.throws(() => validateViewportTransactionInstall(install), registryInvalidState);
@@ -411,7 +422,7 @@ test('changed/accessor fixed targets reject before writes without invoking acces
     assert.deepEqual(Object.getOwnPropertyDescriptors(f.raw), descriptors); assert.deepEqual(f.effects, []);
   }
   const invalid = registryFixture(t, { register: false }); let gets = 0;
-  Object.defineProperty(invalid.cell, 'style', { configurable: true, enumerable: true, get() { gets++; assert.fail('Registration getter ran'); } });
+  Object.defineProperty(invalid.cell, 'style', { configurable: true, enumerable: true, get() { gets++; return assert.fail('Registration getter ran'); } });
   assert.throws(() => registerViewportTransaction(invalid.viewport, invalid.cell)); assert.equal(gets, 0);
 });
 
