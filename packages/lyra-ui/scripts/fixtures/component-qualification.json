@@ -58549,6 +58549,12 @@
             },
             {
               "file": "src/components/agent-tools/tool-select-dialog/tool-select-dialog.test.ts",
+              "test": "renders icon hints as decorative literal text while keeping the tool keyboard selectable",
+              "target": "el",
+              "state": "open"
+            },
+            {
+              "file": "src/components/agent-tools/tool-select-dialog/tool-select-dialog.test.ts",
               "test": "uses a direct accessibleLabel to name the dialog panel without reflecting a host aria-label",
               "target": "el",
               "state": "open"
@@ -58568,7 +58574,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/tool-select-dialog/tool-select-dialog.test.ts",
-              "test": "closes on Escape and emits lr-close with reason \"escape\"",
+              "test": "renders icon hints as decorative literal text while keeping the tool keyboard selectable",
               "kind": "component keyboard exercise signal"
             }
           ]

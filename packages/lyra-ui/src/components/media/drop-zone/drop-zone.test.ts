@@ -148,6 +148,58 @@ it('rejects a file beyond max-total-size', async () => {
   expect(detail.rejected.map((r) => r.reason)).to.deep.equal(['maxTotalSize']);
 });
 
+for (const scenario of [
+  { reason: 'size', key: 'fileInputRejectedSize', english: 'this file is too large.' },
+  { reason: 'read', key: 'fileInputRejectedRead', english: 'the file could not be read.' },
+  { reason: 'limit', key: 'fileInputRejectedLimit', english: 'the folder contains too many entries.' },
+] as const) {
+  it(`shows a localized ${scenario.reason} rejection and recovers on the next valid drop`, async () => {
+    const el = await fixture<LyraDropZone>(html`
+      <lr-drop-zone multiple max-file-size="10"><p>Drop documents</p></lr-drop-zone>
+    `);
+    const name = '<b>report</b>';
+    const result = oneEvent<LyraDropZoneFilesEvent>(el, 'lr-files');
+    if (scenario.reason === 'size') {
+      dropWith(base(el), [makeSizedFile(name, 11)]);
+    } else {
+      let readerCalls = 0;
+      const folder = {
+        isDirectory: true,
+        isFile: false,
+        name,
+        createReader: () => { readerCalls++; throw new Error('private filesystem details'); },
+      };
+      const item = { kind: 'file', webkitGetAsEntry: () => folder };
+      const transfer = { files: [], items: scenario.reason === 'limit' ? Array.from({ length: 10_001 }, () => item) : [item] };
+      const event = new DragEvent('drop', { bubbles: true, cancelable: true });
+      Object.defineProperty(event, 'dataTransfer', { value: transfer });
+      base(el).dispatchEvent(event);
+      await result;
+      expect(readerCalls).to.equal(scenario.reason === 'read' ? 1 : 0);
+    }
+    const { detail } = await result;
+    expect(detail.files.length).to.equal(0);
+    expect(detail.rejected.map(entry => [entry.file.name, entry.reason])).to.deep.equal([[name, scenario.reason]]);
+    await el.updateComplete;
+    const rejection = el.shadowRoot!.querySelector('[part="rejection"]')!;
+    expect(rejection.textContent).to.include(`${name}: ${scenario.english}`);
+    expect(rejection.textContent).not.to.include('private filesystem details');
+    expect(rejection.querySelectorAll('b').length).to.equal(0);
+
+    el.strings = { [scenario.key]: 'Cannot add {filename}' };
+    await el.updateComplete;
+    expect(rejection.textContent).to.include(`Cannot add ${name}`);
+    const accepted = oneEvent<LyraDropZoneFilesEvent>(el, 'lr-files');
+    dropWith(base(el), [makeFile('ok.txt')]);
+    const next = (await accepted).detail;
+    expect(next.files.map(file => file.name)).to.deep.equal(['ok.txt']);
+    expect(next.rejected.length).to.equal(0);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="rejection"]').length).to.equal(0);
+    expect(el.dragging).to.equal(false);
+  });
+}
+
 it('heldFileCount/heldTotalSize default to 0, leaving max-files rejection and remaining-allowance byte-identical to before they existed', async () => {
   const el = await fixture<LyraDropZone>(html`<lr-drop-zone multiple max-files="2"><div>region</div></lr-drop-zone>`);
   expect(el.heldFileCount).to.equal(0);

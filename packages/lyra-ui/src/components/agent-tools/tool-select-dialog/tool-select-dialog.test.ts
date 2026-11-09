@@ -7,6 +7,7 @@ import { fixture, expect, oneEvent, html, waitUntil } from '@open-wc/testing';
 import './tool-select-dialog.js';
 import '../../overlays/dialog/dialog.js';
 import { expectFocusReturnsToReshownOpener } from '../../../../test/hidden-opener.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type {
   LyraToolSelectDialog,
   ToolSelectDialogTool,
@@ -374,6 +375,29 @@ it('keeps an empty search placeholder visually empty while retaining a localized
 
   expect(search.placeholder).to.equal('');
   expect(search.getAttribute('aria-label')).to.equal('Filter available tools');
+  await expect(el).to.be.accessible();
+});
+
+it('renders icon hints as decorative literal text while keeping the tool keyboard selectable', async () => {
+  const icon = '<svg>tool</svg>';
+  const el = await fixture<LyraToolSelectDialog>(html`
+    <lr-tool-select-dialog open .tools=${[{ id: 'search', name: 'Search documents', icon }]}>
+      <div slot="footer"></div>
+    </lr-tool-select-dialog>
+  `);
+  const glyph = el.shadowRoot!.querySelector('[part="tool-icon"]')!;
+  expect(glyph.textContent).to.equal(icon);
+  expect(glyph.getAttribute('aria-hidden')).to.equal('true');
+  expect(glyph.querySelectorAll('svg').length).to.equal(0);
+  const checkbox = checkboxFor(el, 'search');
+  await checkbox.updateComplete;
+  await waitUntil(() => !el.shadowRoot!.querySelector<HTMLElement>('[part="footer"]')!.hidden);
+  await focusByKeyboard(checkbox, el.querySelector<HTMLElement>('[slot="footer"]')!);
+  const change = oneEvent<CustomEvent<ToolSelectionChangeDetail>>(el, 'lr-change');
+  await sendKeys({ press: 'Space' });
+  expect((await change).detail.selectedToolIds).to.deep.equal(['search']);
+  await el.updateComplete;
+  expect(checkbox.checked).to.equal(true);
   await expect(el).to.be.accessible();
 });
 
