@@ -142,3 +142,82 @@ describe('lr-map scene native allocation', () => {
     expect(current.host.captureRenderInput().allocation?.width).to.equal(640);
   });
 });
+
+describe('lr-map scene allocation reentry boundaries', () => {
+  let env: Awaited<ReturnType<typeof renderEnvironment>>;
+  beforeEach(async () => { env = await renderEnvironment(); });
+  afterEach(async () => { await env.close(); fixtureCleanup(); });
+
+  for (const name of ['getContainer', 'getCanvas', 'getPixelRatio', 'getPadding'] as const) {
+    it(`preserves the nested allocation when reading the ${name} capability reenters`, async () => {
+      const { element, peer } = await env.mount(element => { element.scene = { objects: [sceneMarker()] }; });
+      const bridge = await env.bridge(peer), observed: number[] = [];
+      const release = mapSceneSessionAttachment(element)!.subscribeViewport(value => { observed.push(value.width); });
+      const method = peer[name];
+      let armed = true;
+      Object.defineProperty(peer, name, { configurable: true, get() {
+        if (armed) {
+          armed = false;
+          peer.width = 900; peer.syncBacking(); peer.fire('resize');
+        }
+        return method;
+      } });
+      try {
+        peer.width = 700; peer.syncBacking(); peer.fire('resize');
+        await renderTurns();
+        expect(armed).to.equal(false);
+        expect(bridge.host.captureRenderInput().allocation?.width).to.equal(900);
+        expect(observed).to.deep.equal([900]);
+      } finally { Reflect.deleteProperty(peer, name); release(); }
+    });
+  }
+
+  for (const key of ['top', 'right', 'bottom', 'left'] as const) {
+    it(`does not publish a torn padding snapshot when ${key} reenters`, async () => {
+      const { element, peer } = await env.mount(element => { element.scene = { objects: [sceneMarker()] }; });
+      const bridge = await env.bridge(peer), observed: number[] = [];
+      const release = mapSceneSessionAttachment(element)!.subscribeViewport(value => { observed.push(value.width); });
+      let armed = true;
+      Object.defineProperty(peer, 'getPadding', { configurable: true, value() {
+        const padding = { ...peer.padding };
+        const previous = padding[key];
+        Object.defineProperty(padding, key, { get() {
+          if (armed) {
+            armed = false; peer.width = 950;
+            peer.padding = { top: 20, right: 30, bottom: 40, left: 50 };
+            peer.syncBacking(); peer.fire('resize');
+          }
+          return previous;
+        } });
+        return padding;
+      } });
+      try {
+        peer.width = 700; peer.syncBacking(); peer.fire('resize');
+        await renderTurns();
+        const allocation = bridge.host.captureRenderInput().allocation;
+        expect(armed).to.equal(false);
+        expect(allocation?.width).to.equal(950);
+        expect(allocation?.padding).to.deep.equal({ top: 20, right: 30, bottom: 40, left: 50 });
+        expect(observed).to.deep.equal([950]);
+      } finally { Reflect.deleteProperty(peer, 'getPadding'); release(); }
+    });
+  }
+
+  it('withdraws allocation for a backing canvas that changes during capture and recovers on a stable read', async () => {
+    const { peer } = await env.mount(element => { element.scene = { objects: [sceneMarker()] }; });
+    const bridge = await env.bridge(peer), original = peer.getCanvas.bind(peer);
+    const replacement = document.createElement('canvas');
+    replacement.width = peer.renderCanvas.width; replacement.height = peer.renderCanvas.height;
+    let reads = 0;
+    Object.defineProperty(peer, 'getCanvas', { configurable: true, value() { return ++reads === 1 ? original() : replacement; } });
+    try {
+      peer.fire('resize'); await renderTurns();
+      expect(reads).to.be.greaterThan(1);
+      expect(bridge.host.captureRenderInput().allocation).to.equal(undefined);
+      expect(bridge.visible).to.equal(false);
+    } finally { Reflect.deleteProperty(peer, 'getCanvas'); }
+    peer.fire('resize'); await renderTurns();
+    expect(bridge.host.captureRenderInput().allocation?.width).to.equal(640);
+    expect(bridge.visible).to.equal(true);
+  });
+});

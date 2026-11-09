@@ -364,7 +364,8 @@ export function createMapSceneRenderController(options: {
           // Revisioned installation reports establish installed markers, never visible pixels.
           onState: value => {
             const next = current() && bridge === created ? bridgeReport(value) : undefined;
-            if (!next) return;
+            if (!next || !current() || bridge !== created ||
+              next.revision !== owner.captureAccepted().acceptedSceneRevision) return;
             report = next;
             if (next.outcome.state === 'drawn') markerContextLost = false;
             statusChanged();

@@ -88,3 +88,36 @@ it('fails revoked series arrays and unavailable configuration prototypes closed 
   await waitUntil(() => el.shadowRoot!.querySelector('table')?.textContent?.includes('Recovered') === true);
   expect(el.shadowRoot!.querySelector('table')?.textContent).to.include('9');
 });
+
+for (const type of ['pie', 'doughnut'] as const) {
+  it(`preserves gaps and original tooltip values while scaling extreme ${type} slices and returning to ordinary values`, async () => {
+    const contexts: LyraChartFormatterContext[] = [];
+    const formatter = (context: LyraChartFormatterContext): string => {
+      contexts.push(context);
+      return `value=${context.value}`;
+    };
+    const el = await fixture<LyraChart>(html`<lr-chart type=${type} without-animation with-data-table
+      .labels=${['North', 'Missing', 'South']}
+      .datasets=${[{ label: 'Sales', data: [Number.MAX_VALUE, null, Number.MAX_VALUE / 2] }]}
+      .formatter=${formatter}></lr-chart>`);
+    await waitUntil(() => el.chart !== undefined, 'slice chart drawn');
+    const chart = el.chart as unknown as Chart;
+    expect(chart.data.datasets[0]!.data).to.deep.equal([1, null, 0.5]);
+    const label = () => chart.options.plugins!.tooltip!.callbacks!.label as unknown as (item: unknown) => string;
+    contexts.length = 0;
+    expect(label()({ datasetIndex: 0, dataIndex: 2, parsed: 0.5, raw: 0.5, dataset: chart.data.datasets[0] }))
+      .to.include(`value=${Number.MAX_VALUE / 2}`);
+    expect(contexts[0]?.value).to.equal(Number.MAX_VALUE / 2);
+    expect(contexts[0]?.label).to.equal('South');
+    expect(el.datasets[0]!.data).to.deep.equal([Number.MAX_VALUE, null, Number.MAX_VALUE / 2]);
+
+    el.datasets = [{ label: 'Sales', data: [8, null, 4] }];
+    await el.updateComplete;
+    await waitUntil(() => chart.data.datasets[0]!.data[0] === 8, 'ordinary values replace scaled geometry');
+    expect(chart.data.datasets[0]!.data).to.deep.equal([8, null, 4]);
+    contexts.length = 0;
+    expect(label()({ datasetIndex: 0, dataIndex: 2, parsed: 4, raw: 4, dataset: chart.data.datasets[0] })).to.include('value=4');
+    expect(contexts[0]?.value).to.equal(4);
+    expect(el.chart === (chart as unknown)).to.equal(true);
+  });
+}

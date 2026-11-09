@@ -1533,7 +1533,10 @@ it('parses explicit spellcheck strings with native true/false semantics', async 
     .false;
 });
 
-it('bounds the line-number projection and skips all line splitting while the gutter is disabled', async () => {
+it('bounds the line-number projection and skips all line splitting while the gutter is disabled', async function () {
+  // Native textarea layout for 100,000 lines is expensive under browser coverage instrumentation.
+  // The deterministic gutter-size and split-count assertions below remain the performance gates.
+  this.timeout(30000);
   const value = Array.from({ length: 100_000 }, (_, index) =>
     String(index),
   ).join('\n');
