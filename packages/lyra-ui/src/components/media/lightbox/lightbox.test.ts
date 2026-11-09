@@ -345,6 +345,54 @@ it('does not respond to Escape while closed', async () => {
   expect(fired).to.be.false;
 });
 
+for (const veto of [undefined, 'lr-hide', 'lr-close-request'] as const) {
+  it(`recovers from an externally closed native dialog ${veto ? `when ${veto} is vetoed` : 'through its public close lifecycle'}`, async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div>
+      <dialog><button>Background dialog</button></dialog>
+      <lr-lightbox style="--lr-transition-base: 0ms" .images=${[image]}></lr-lightbox>
+    </div>`);
+    const underlying = wrapper.querySelector<HTMLDialogElement>('dialog')!;
+    const el = wrapper.querySelector<LyraLightbox>('lr-lightbox')!;
+    const events: string[] = [];
+    const reasons: string[] = [];
+    for (const name of ['lr-hide', 'lr-close-request', 'lr-close']) {
+      el.addEventListener(name, () => { events.push(name); });
+    }
+    el.addEventListener('lr-close', event => { reasons.push(event.detail.reason); });
+    if (veto) el.addEventListener(veto, event => event.preventDefault(), { once: true });
+    try {
+      underlying.showModal();
+      await el.show();
+      const carrier = el.shadowRoot!.querySelector<HTMLDialogElement>('[data-native-modal-carrier]')!;
+      await waitUntil(() => carrier.matches(':modal'));
+      const closed = oneEvent(carrier, 'close');
+      carrier.close();
+      await closed;
+      if (veto) {
+        await waitUntil(() => carrier.matches(':modal'), 'a veto restores native modality');
+        expect(el.open).to.equal(true);
+        expect(events).to.deep.equal(veto === 'lr-hide' ? ['lr-hide'] : ['lr-hide', 'lr-close-request']);
+        expect(reasons).to.deep.equal([]);
+        events.length = 0;
+        const retried = oneEvent(carrier, 'close');
+        carrier.close();
+        await retried;
+      }
+      await waitUntil(() => !el.open && !carrier.matches(':modal'), 'an accepted native close retires the lightbox');
+      expect(events).to.deep.equal(['lr-hide', 'lr-close-request', 'lr-close']);
+      expect(reasons).to.deep.equal(['api']);
+      expect(underlying.open).to.equal(true);
+      await el.show();
+      await waitUntil(() => carrier.matches(':modal'), 'the lightbox can reopen after native closure');
+      expect(el.open).to.equal(true);
+    } finally {
+      el.open = false;
+      await el.updateComplete;
+      underlying.close();
+    }
+  });
+}
+
 it('closes on backdrop click and emits lr-close with the backdrop reason when light-dismiss is set', async () => {
   const el = (await fixture(
     html`<lr-lightbox .images=${[image]} open light-dismiss></lr-lightbox>`,

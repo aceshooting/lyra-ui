@@ -102,6 +102,20 @@ it('shares the text-field native passthrough shape: boolean autocorrect, inputMo
   expect(el.inputMode).to.equal('text');
   expect(native().getAttribute('enterkeyhint')).to.equal('go');
   expect(native().getAttribute('name')).to.equal('phone');
+  el.inputMode = 'decimal';
+  el.enterKeyHint = 'next';
+  await el.updateComplete;
+  expect(el.inputmode).to.equal('decimal');
+  expect(el.enterkeyhint).to.equal('next');
+  expect(native().inputMode).to.equal('decimal');
+  expect(native().getAttribute('enterkeyhint')).to.equal('next');
+  Reflect.set(el, 'inputmode', null);
+  Reflect.set(el, 'enterkeyhint', null);
+  await el.updateComplete;
+  expect(el.inputmode).to.equal('tel');
+  expect(el.enterkeyhint).to.equal('');
+  expect(native().inputMode).to.equal('tel');
+  expect(native().hasAttribute('enterkeyhint')).to.equal(false);
 });
 
 it('normalizes live user input to an E.164 form value through an injected adapter', async () => {
