@@ -10,6 +10,21 @@ const form = (el: LyraAgentQuestion): LyraToolParamForm => el.shadowRoot!.queryS
 const action = (el: LyraAgentQuestion, name: string): HTMLButtonElement => el.shadowRoot!.querySelector(`[data-action="${name}"]`)!;
 
 describe('lr-agent-question', () => {
+  it('renders requester and question text literally and removes cleared context', async () => {
+    const requester = '<img src="requester">Agent Ada';
+    const message = '<strong>Which project?</strong>';
+    const el = await fixture<LyraAgentQuestion>(html`<lr-agent-question request-id="context"
+      .requester=${requester} .message=${message} .schema=${schema}></lr-agent-question>`);
+    expect(el.shadowRoot!.querySelector('[part="requester"]')?.textContent).to.equal(requester);
+    expect(el.shadowRoot!.querySelector('[part="message"]')?.textContent).to.equal(message);
+    expect(el.shadowRoot!.querySelectorAll('img, strong').length).to.equal(0);
+    el.requester = ''; el.message = '';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="requester"], [part="message"]').length).to.equal(0);
+    expect(action(el, 'accept').disabled).to.equal(false);
+    expect(el.status).to.equal('pending');
+  });
+
   it('paints native decisions from the shared button theme without changing their public parts', async () => {
     const el = await fixture<LyraAgentQuestion>(html`
       <lr-agent-question

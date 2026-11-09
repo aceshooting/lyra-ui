@@ -39582,6 +39582,12 @@
               "test": "is accessible with long content at a narrow allocation",
               "target": "el",
               "state": "populated"
+            },
+            {
+              "file": "src/components/agent-tools/permission-grant/permission-grant.test.ts",
+              "test": "renders an authoritative denial, blocks a stale decision, and localizes the resolved status",
+              "target": "el",
+              "state": "populated"
             }
           ],
           "exemption": null

@@ -12,6 +12,27 @@ const request = {
 };
 
 describe('lr-permission-grant', () => {
+  it('renders an authoritative denial, blocks a stale decision, and localizes the resolved status', async () => {
+    const el = await fixture<LyraPermissionGrant>(html`<lr-permission-grant
+      .requestId=${request.requestId} .label=${request.label} .scope=${request.scope}></lr-permission-grant>`);
+    const decisions: unknown[] = [];
+    el.addEventListener('lr-permission-decision', event => decisions.push(event.detail));
+    const stale = el.shadowRoot!.querySelector<HTMLButtonElement>('[data-decision="allow-once"]')!;
+    el.status = 'denied'; stale.click();
+    await el.updateComplete;
+    expect(decisions).to.deep.equal([]);
+    expect(el.shadowRoot!.querySelector('[part="status"]')?.textContent).to.equal('Denied');
+    expect(el.shadowRoot!.querySelectorAll('[part="decision"]').length).to.equal(0);
+    el.strings = { confirmDenied: 'Blocked by the owner' };
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="status"]')?.textContent).to.equal('Blocked by the owner');
+    await expect(el).to.be.accessible();
+    el.requestId = 'next-request'; el.status = 'pending';
+    await el.updateComplete;
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[data-decision="allow-once"]')!.click();
+    expect(decisions).to.deep.equal([{ requestId: 'next-request', decision: 'allow-once' }]);
+  });
+
   it('shows the requested action, caller-supplied scope and pending status', async () => {
     const el = await fixture<LyraPermissionGrant>(html`<lr-permission-grant .requestId=${request.requestId} .label=${request.label} .description=${request.description} .scope=${request.scope} .status=${request.status}></lr-permission-grant>`);
     expect(el.shadowRoot!.querySelector('[part="legend"]')?.textContent).to.equal(request.label);
