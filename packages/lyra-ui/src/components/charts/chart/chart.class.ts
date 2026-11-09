@@ -4360,13 +4360,14 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     } catch {
       return;
     }
+    if (!this.isConnected || chart !== this.chart) return;
     const admission = admitChartArray(elements);
     if (!admission || !chartArrayIsStillAdmitted(admission)) return;
     const first = chartRecordValue(admission.source, '0');
     if (first === MISSING_OWN_DATA_DESCRIPTOR || first === UNSAFE_OWN_DATA_DESCRIPTOR) return;
     const effective = this.effectiveData();
     const hit = this.callbackIndexes(first.value, effective);
-    if (!hit) return;
+    if (!hit || !this.isConnected || chart !== this.chart) return;
     const datasetIndex = this.visualDatasetSourceIndexes?.[hit.datasetIndex] ?? hit.datasetIndex;
     const index = this.visualRowSourceIndexes?.[hit.index] ?? hit.index;
     const value = this.datasetValues(effective.datasets[datasetIndex]!)[index] ?? null;

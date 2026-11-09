@@ -72,6 +72,52 @@ it('contains a peer hit-testing failure without emitting an activation and recov
   } finally { chart.getElementsAtEventForMode = original; }
 });
 
+for (const reconnectDuringHit of [false, true]) for (const phase of ['hit testing', 'array admission', 'index admission'] as const) {
+  it(`ignores a hit from a peer retired ${reconnectDuringHit ? 'and synchronously reconnected' : 'by disconnection'} during ${phase}`, async () => {
+    const el = await fixture<LyraChart>(html`<lr-chart without-animation .labels=${['North']}
+      .datasets=${[{ label: 'Sales', data: [4] }]}></lr-chart>`);
+    await waitUntil(() => el.chart !== undefined);
+    const chart = el.chart as unknown as Chart;
+    const parent = el.parentNode!;
+    const activations: string[] = [];
+    el.addEventListener('lr-datum-activate', () => activations.push('datum'));
+    el.addEventListener('lr-point-activate', () => activations.push('point'));
+    const original = chart.getElementsAtEventForMode;
+    let retired = false;
+    const retire = (): void => {
+      if (retired) return;
+      retired = true;
+      el.remove();
+      if (reconnectDuringHit) parent.append(el);
+    };
+    const hit = { datasetIndex: 0, index: 0 };
+    const hits = [phase === 'index admission' ? new Proxy(hit, {
+      getOwnPropertyDescriptor(target, key) { if (key === 'datasetIndex') retire(); return Reflect.getOwnPropertyDescriptor(target, key); },
+    }) : hit];
+    chart.getElementsAtEventForMode = () => {
+      if (phase === 'hit testing') retire();
+      return (phase === 'array admission' ? new Proxy(hits, {
+        getOwnPropertyDescriptor(target, key) { if (key === 'length') retire(); return Reflect.getOwnPropertyDescriptor(target, key); },
+      }) : hits) as ReturnType<Chart['getElementsAtEventForMode']>;
+    };
+    try {
+      chart.options.onClick?.call(chart, { type: 'click', x: 50, y: 50, native: new MouseEvent('click') }, [], chart);
+      expect(retired).to.equal(true);
+      expect(activations).to.deep.equal([]);
+    } finally { chart.getElementsAtEventForMode = original; }
+
+    if (!reconnectDuringHit) parent.append(el);
+    await waitUntil(() => el.chart !== undefined && el.chart !== (chart as unknown));
+    const current = el.chart as unknown as Chart;
+    const hitTest = current.getElementsAtEventForMode;
+    current.getElementsAtEventForMode = () => [{ datasetIndex: 0, index: 0 }] as ReturnType<Chart['getElementsAtEventForMode']>;
+    try {
+      current.options.onClick?.call(current, { type: 'click', x: 50, y: 50, native: new MouseEvent('click') }, [], current);
+      expect(activations).to.deep.equal(['datum', 'point']);
+    } finally { current.getElementsAtEventForMode = hitTest; }
+  });
+}
+
 it('fails revoked series arrays and unavailable configuration prototypes closed and recovers through fresh data', async () => {
   const el = await fixture<LyraChart>(html`<lr-chart without-animation with-data-table .labels=${['North']} .datasets=${[{ label: 'Sales', data: [4] }]}></lr-chart>`);
   const revoked = Proxy.revocable([], {});

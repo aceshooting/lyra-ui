@@ -1260,20 +1260,24 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
    * lands off every box reports nothing rather than firing for whatever happens to be nearest.
    */
   private handlePointClick(event: unknown, chart: BoxPlotChartRuntime): void {
+    if (!this.isConnected || chart !== this.chart) return;
     // Chart.js hands its own `ChartEvent` wrapper to `onClick`, but `getElementsAtEventForMode()`
     // types its first parameter as a DOM `Event`; at runtime only `.x`/`.y` are read, which the
     // wrapper already has, so the cast is a type-only correction.
-    const hit = chart.getElementsAtEventForMode?.(
-      event as Event,
-      'nearest',
-      { intersect: true },
-      true,
-    )?.[0];
-    if (!hit) return;
+    let hit: { datasetIndex: number; index: number } | undefined;
+    try {
+      hit = chart.getElementsAtEventForMode?.(
+        event as Event,
+        'nearest',
+        { intersect: true },
+        true,
+      )?.[0];
+    } catch { return; }
+    if (!hit || !this.isConnected || chart !== this.chart) return;
     const sample = this.dataTableSample();
     const datasetIndex = sample.seriesIndexes[hit.datasetIndex];
     const index = sample.rowIndexes[hit.index];
-    if (datasetIndex === undefined || index === undefined) return;
+    if (datasetIndex === undefined || index === undefined || !this.isConnected || chart !== this.chart) return;
     const point = this.datasets[datasetIndex]?.data[index];
     this.activateBox({
       datasetIndex,

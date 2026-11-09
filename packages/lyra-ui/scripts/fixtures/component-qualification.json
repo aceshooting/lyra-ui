@@ -5178,6 +5178,7 @@
         "tests": [
           "src/components/charts/chart/box-plot-annotation-registration.test.ts",
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-peer-recovery.test.ts",
           "src/components/charts/chart/box-plot-public-theme-admission.test.ts",
           "src/components/charts/chart/box-plot-scale.test.ts",
           "src/components/charts/chart/box-plot-table-updates.test.ts",
@@ -5475,6 +5476,7 @@
         "tests": [
           "src/components/charts/chart/box-plot-annotation-registration.test.ts",
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-peer-recovery.test.ts",
           "src/components/charts/chart/box-plot-public-theme-admission.test.ts",
           "src/components/charts/chart/box-plot-scale.test.ts",
           "src/components/charts/chart/box-plot-table-updates.test.ts",
@@ -6505,6 +6507,7 @@
         "tests": [
           "src/components/charts/chart/box-plot-annotation-registration.test.ts",
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-peer-recovery.test.ts",
           "src/components/charts/chart/box-plot-public-theme-admission.test.ts",
           "src/components/charts/chart/box-plot-scale.test.ts",
           "src/components/charts/chart/box-plot-table-updates.test.ts",
@@ -8842,6 +8845,7 @@
         "tests": [
           "src/components/charts/chart/box-plot-annotation-registration.test.ts",
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-peer-recovery.test.ts",
           "src/components/charts/chart/box-plot-public-theme-admission.test.ts",
           "src/components/charts/chart/box-plot-scale.test.ts",
           "src/components/charts/chart/box-plot-table-updates.test.ts",
@@ -18804,6 +18808,7 @@
         "tests": [
           "src/components/charts/chart/box-plot-annotation-registration.test.ts",
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-peer-recovery.test.ts",
           "src/components/charts/chart/box-plot-public-theme-admission.test.ts",
           "src/components/charts/chart/box-plot-scale.test.ts",
           "src/components/charts/chart/box-plot-table-updates.test.ts",
@@ -27171,6 +27176,7 @@
         "tests": [
           "src/components/charts/chart/box-plot-annotation-registration.test.ts",
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-peer-recovery.test.ts",
           "src/components/charts/chart/box-plot-public-theme-admission.test.ts",
           "src/components/charts/chart/box-plot-scale.test.ts",
           "src/components/charts/chart/box-plot-table-updates.test.ts",
@@ -30635,6 +30641,7 @@
         "tests": [
           "src/components/charts/chart/box-plot-annotation-registration.test.ts",
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-peer-recovery.test.ts",
           "src/components/charts/chart/box-plot-public-theme-admission.test.ts",
           "src/components/charts/chart/box-plot-scale.test.ts",
           "src/components/charts/chart/box-plot-table-updates.test.ts",
@@ -30942,6 +30949,7 @@
         "tests": [
           "src/components/charts/chart/box-plot-annotation-registration.test.ts",
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-peer-recovery.test.ts",
           "src/components/charts/chart/box-plot-public-theme-admission.test.ts",
           "src/components/charts/chart/box-plot-scale.test.ts",
           "src/components/charts/chart/box-plot-table-updates.test.ts",
@@ -40245,6 +40253,7 @@
         "tests": [
           "src/components/charts/chart/box-plot-annotation-registration.test.ts",
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-peer-recovery.test.ts",
           "src/components/charts/chart/box-plot-public-theme-admission.test.ts",
           "src/components/charts/chart/box-plot-scale.test.ts",
           "src/components/charts/chart/box-plot-table-updates.test.ts",
@@ -40516,6 +40525,7 @@
         "tests": [
           "src/components/charts/chart/box-plot-annotation-registration.test.ts",
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-peer-recovery.test.ts",
           "src/components/charts/chart/box-plot-public-theme-admission.test.ts",
           "src/components/charts/chart/box-plot-scale.test.ts",
           "src/components/charts/chart/box-plot-table-updates.test.ts",
@@ -43240,6 +43250,7 @@
         "tests": [
           "src/components/charts/chart/box-plot-annotation-registration.test.ts",
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-peer-recovery.test.ts",
           "src/components/charts/chart/box-plot-public-theme-admission.test.ts",
           "src/components/charts/chart/box-plot-scale.test.ts",
           "src/components/charts/chart/box-plot-table-updates.test.ts",
@@ -47454,6 +47465,7 @@
         "tests": [
           "src/components/charts/chart/box-plot-annotation-registration.test.ts",
           "src/components/charts/chart/box-plot-forced-colors.test.ts",
+          "src/components/charts/chart/box-plot-peer-recovery.test.ts",
           "src/components/charts/chart/box-plot-public-theme-admission.test.ts",
           "src/components/charts/chart/box-plot-scale.test.ts",
           "src/components/charts/chart/box-plot-table-updates.test.ts",

@@ -2111,9 +2111,7 @@ describe('bounded box-plot fallback paths', () => {
     (invalid as unknown as {
       handlePointClick(event: unknown, chart: unknown): void;
     }).handlePointClick({}, hit([{ datasetIndex: 0, index: 0 }]));
-    expect(invalidEvents).to.deep.equal([
-      { datasetIndex: 0, index: 0, label: undefined, value: null },
-    ]);
+    expect(invalidEvents, 'a detached box plot cannot activate a datum').to.deep.equal([]);
   });
 
   it('handles missing Chart.js metadata and source-index fallbacks when applying visibility', () => {
