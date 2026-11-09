@@ -350,8 +350,8 @@ export function createSceneBridge(map, host) {
   function cleanupListeners() {
     if (!disposed || owners.size || [...retainedContexts].some(context => context.samplers.size)) return;
     if (operation || activeCallback) { queueMicrotask(cleanupListeners); return; }
-    canvas.removeEventListener('webglcontextlost', lost, true);
-    canvas.removeEventListener('webglcontextrestored', restored);
+    try { canvas.removeEventListener('webglcontextlost', lost, true); } catch { /* Continue releasing the remaining observers and resources. */ }
+    try { canvas.removeEventListener('webglcontextrestored', restored); } catch { /* Continue releasing the retained graphics contexts. */ }
     for (const context of retainedContexts) { context.pointEnvelope.dispose(); context.terrainEnvelope.dispose(); }
     retainedContexts.clear();
   }
@@ -712,58 +712,65 @@ export function createSceneBridge(map, host) {
     if (disposed) return;
     disposed = true; waitingStyleReady = false; reconcileRevision++; wakeup = false;
     completion?.dispose(); completionDiagnostics?.unavailable(undefined);
-    if (releaseCompletionVisibility) { const release = releaseCompletionVisibility; releaseCompletionVisibility = undefined; release(); }
+    if (releaseCompletionVisibility) {
+      const release = releaseCompletionVisibility; releaseCompletionVisibility = undefined;
+      try { release(); } catch { /* Visibility observation cannot retain the remaining resources. */ }
+    }
     signal.removeEventListener('abort', dispose);
     if (releaseInput) { const release = releaseInput; releaseInput = undefined; try { release(); } catch { /* Retain resource cleanup independently. */ } }
-    for (const [name, listener] of listeners) map.off(name, listener);
+    for (const [name, listener] of listeners) {
+      try { map.off(name, listener); } catch { /* One unavailable native observer cannot block later releases. */ }
+    }
     retire(active);
     for (const owner of [...owners]) { owner.retired = true; cleanupOwner(owner); }
     cleanupListeners();
   }
   const listen = (name, listener) => { listeners.push([name, listener]); map.on(name, listener); };
-  for (const name of ['move', 'resize', 'terrain', 'projectiontransition']) listen(name, () => { if (!disposed && !contextLost) invalidateTerrain(); });
-  listen('sourcedata', event => { if (!disposed && !contextLost && terrainSource && event?.sourceId === terrainSource) invalidateTerrain(); });
-  listen('style.load', () => { if (!disposed) { awaitingStyle = false; schedule(); } });
-  listen('render', () => {
-    if (!waitingStyleReady || pollingStyleReady || awaitingStyle || disposed || contextLost) return;
-    pollingStyleReady = true;
-    try {
-      if (!baseCurrent() || !waitingStyleReady || awaitingStyle || !map.isStyleLoaded()) return;
-      if (!waitingStyleReady || awaitingStyle || disposed || contextLost) return;
-      waitingStyleReady = false; schedule();
-    } catch { report('engine'); }
-    finally { pollingStyleReady = false; }
-  });
-  if (completionHost) {
-    completion = createSceneCompletionOwner({
-      captureInput() { const value = completionInput(); if (!value) fail(); return value; },
-      subscribeInput: changed => completionHost.subscribeInput(changed),
-      claimPaintSerial: expected => completionHost.claimPaintSerial(expected),
-      captureCameraFacts: expected => completionHost.captureCameraFacts(expected)
-    }, {
-      isCurrent: () => baseCurrent() && visible && !canvas.ownerDocument?.hidden,
-      isInstalled: installedCurrent,
-      isObservationCurrent: (observation, input) => observation.input === input && observationAuthorityCurrent(observationRecords.get(observation)),
-      isResultCurrent: (issue, result) => completionResults.get(result) === issue,
-      requestFrame,
-      setDemand(value) { completionDemand = Boolean(value); updateCompletionDemand(active); },
-      retireIssue() { for (const owner of owners) owner.observation?.invalidate(); }
+  try {
+    for (const name of ['move', 'resize', 'terrain', 'projectiontransition']) listen(name, () => { if (!disposed && !contextLost) invalidateTerrain(); });
+    listen('sourcedata', event => { if (!disposed && !contextLost && terrainSource && event?.sourceId === terrainSource) invalidateTerrain(); });
+    listen('style.load', () => { if (!disposed) { awaitingStyle = false; schedule(); } });
+    listen('render', () => {
+      if (!waitingStyleReady || pollingStyleReady || awaitingStyle || disposed || contextLost) return;
+      pollingStyleReady = true;
+      try {
+        if (!baseCurrent() || !waitingStyleReady || awaitingStyle || !map.isStyleLoaded()) return;
+        if (!waitingStyleReady || awaitingStyle || disposed || contextLost) return;
+        waitingStyleReady = false; schedule();
+      } catch { report('engine'); }
+      finally { pollingStyleReady = false; }
     });
-    const hidden = () => {
-      completion.setVisible(visible && !canvas.ownerDocument.hidden);
-      invalidateCompletion('visibility'); updateCompletionDemand(active);
-    };
-    canvas.ownerDocument?.addEventListener('visibilitychange', hidden);
-    releaseCompletionVisibility = () => canvas.ownerDocument?.removeEventListener('visibilitychange', hidden);
-    for (const name of ['data', 'dataloading', 'styledata', 'sourcedata']) listen(name, () => invalidateCompletion('content'));
-  }
-  canvas.addEventListener('webglcontextlost', lost, true);
-  canvas.addEventListener('webglcontextrestored', restored);
-  signal.addEventListener('abort', dispose, { once: true });
-  releaseInput = subscribe(inputChanged);
-  if (typeof releaseInput !== 'function') { dispose(); fail(); }
-  if (disposed) { const release = releaseInput; releaseInput = undefined; release(); }
-  else if (signal.aborted) dispose(); else schedule();
+    if (completionHost) {
+      completion = createSceneCompletionOwner({
+        captureInput() { const value = completionInput(); if (!value) fail(); return value; },
+        subscribeInput: changed => completionHost.subscribeInput(changed),
+        claimPaintSerial: expected => completionHost.claimPaintSerial(expected),
+        captureCameraFacts: expected => completionHost.captureCameraFacts(expected)
+      }, {
+        isCurrent: () => baseCurrent() && visible && !canvas.ownerDocument?.hidden,
+        isInstalled: installedCurrent,
+        isObservationCurrent: (observation, input) => observation.input === input && observationAuthorityCurrent(observationRecords.get(observation)),
+        isResultCurrent: (issue, result) => completionResults.get(result) === issue,
+        requestFrame,
+        setDemand(value) { completionDemand = Boolean(value); updateCompletionDemand(active); },
+        retireIssue() { for (const owner of owners) owner.observation?.invalidate(); }
+      });
+      const hidden = () => {
+        completion.setVisible(visible && !canvas.ownerDocument.hidden);
+        invalidateCompletion('visibility'); updateCompletionDemand(active);
+      };
+      releaseCompletionVisibility = () => canvas.ownerDocument?.removeEventListener('visibilitychange', hidden);
+      canvas.ownerDocument?.addEventListener('visibilitychange', hidden);
+      for (const name of ['data', 'dataloading', 'styledata', 'sourcedata']) listen(name, () => invalidateCompletion('content'));
+    }
+    canvas.addEventListener('webglcontextlost', lost, true);
+    canvas.addEventListener('webglcontextrestored', restored);
+    signal.addEventListener('abort', dispose, { once: true });
+    releaseInput = subscribe(inputChanged);
+    if (typeof releaseInput !== 'function') { dispose(); fail(); }
+    if (disposed) { const release = releaseInput; releaseInput = undefined; release(); }
+    else if (signal.aborted) dispose(); else schedule();
+  } catch (error) { dispose(); throw error; }
   return Object.freeze({ invalidateStyle, requestFrame, dispose, ...(completion ? { completion: completion.port } : {}),
     setVisible(value) {
       const previous = visible; visible = Boolean(value); active?.lifetime.setVisible(visible);

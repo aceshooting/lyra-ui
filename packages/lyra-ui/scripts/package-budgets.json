@@ -33,8 +33,8 @@
     },
     "@aceshooting/lyra-map": {
       "maximum": {
-        "packedBytes": 1051136,
-        "unpackedBytes": 4295616,
+        "packedBytes": 1051200,
+        "unpackedBytes": 4295872,
         "fileCount": 677
       }
     },
