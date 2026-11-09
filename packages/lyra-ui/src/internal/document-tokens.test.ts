@@ -438,6 +438,37 @@ describe('document token layer: provider identity', () => {
     });
   }
 
+  for (const { condition, applies } of [
+    { condition: 'display: grid', applies: true },
+    { condition: 'display: lyra-unsupported-display', applies: false },
+    { condition: '(display: grid) and (position: absolute)', applies: true },
+    { condition: 'not (display: grid)', applies: false },
+  ]) {
+    it(`uses a feature-conditional token import only when supports(${condition}) matches`, async () => {
+      const { frame, doc } = await frameWith();
+      try {
+        const style = doc.createElement('style');
+        const loaded = new Promise<void>((resolve, reject) => {
+          style.addEventListener('load', () => resolve(), { once: true });
+          style.addEventListener('error', () => reject(new Error('conditional token stylesheet did not load')), { once: true });
+        });
+        const url = new URL('../styles/tokens-root.css', import.meta.url).href;
+        style.textContent = `@import url("${url}") supports(${condition});`;
+        doc.head.append(style); await loaded;
+        const probe = await connectProbe(doc);
+        expect(frame.contentWindow!.getComputedStyle(probe).getPropertyValue('--lr-space-m').trim()).to.equal('0.75rem');
+        expect(constructedCopies(doc), 'only an applicable import replaces the fallback').to.equal(applies ? 0 : 1);
+        adoptLyraTokens(doc); adoptLyraTokens(doc);
+        expect(constructedCopies(doc), 'rechecking does not introduce duplicate layers').to.equal(applies ? 0 : 1);
+        style.remove(); adoptLyraTokens(doc);
+        expect(constructedCopies(doc), 'removing the conditional import restores exactly one fallback').to.equal(1);
+        expect(frame.contentWindow!.getComputedStyle(probe).getPropertyValue('--lr-space-m').trim()).to.equal('0.75rem');
+      } finally {
+        frame.remove();
+      }
+    });
+  }
+
   for (const provider of ['static', 'adopted'] as const) {
     for (const disabledInitially of [false, true]) {
       it(`repairs the ${provider} token provider disabled ${disabledInitially ? 'before' : 'after'} connecting`, async () => {
@@ -590,6 +621,39 @@ describe('document token layer: provider identity', () => {
       frame.remove();
     }
   });
+
+  for (const provider of ['static', 'adopted'] as const) for (const scope of ['document', 'shadow'] as const) {
+    it(`rechecks an in-place ${provider} stylesheet edit on explicit ${scope} token adoption`, async () => {
+      const { frame, doc } = await frameWith();
+      try {
+        const constructor = (doc.defaultView as unknown as { CSSStyleSheet: typeof CSSStyleSheet }).CSSStyleSheet;
+        const template = new constructor(); template.replaceSync(DOCUMENT_TOKEN_CSS);
+        const host = doc.createElement('div'); doc.body.append(host);
+        const root = scope === 'document' ? doc : host.attachShadow({ mode: 'open' });
+        const parent = doc.createElement('div'); parent.setAttribute('data-lr-theme-scope', '');
+        (root === doc ? doc.body : root).append(parent);
+        let sheet: CSSStyleSheet;
+        if (provider === 'static') {
+          const style = doc.createElement('style'); style.textContent = DOCUMENT_TOKEN_CSS;
+          (root === doc ? doc.head : root).append(style); sheet = style.sheet!;
+        } else { sheet = new constructor(); sheet.replaceSync(DOCUMENT_TOKEN_CSS); root.adoptedStyleSheets = [sheet]; }
+        const probe = await connectProbe(doc, parent);
+        const ownCopies = () => root.adoptedStyleSheets.filter(entry => entry !== sheet &&
+          Array.from(entry.cssRules).some(rule => rule.cssText.includes(DOCUMENT_TOKEN_SENTINEL))).length;
+        expect(ownCopies()).to.equal(0);
+        while (sheet.cssRules.length) sheet.deleteRule(0);
+        adoptLyraTokens(root);
+        expect(frame.contentWindow!.getComputedStyle(probe).getPropertyValue('--lr-space-m').trim()).to.equal('0.75rem');
+        expect(ownCopies(), 'editing an existing provider restores the fallback').to.equal(1);
+        for (const rule of Array.from(template.cssRules)) sheet.insertRule(rule.cssText, sheet.cssRules.length);
+        adoptLyraTokens(root);
+        expect(ownCopies(), 'editing the same sheet back withdraws the duplicate').to.equal(0);
+        expect(frame.contentWindow!.getComputedStyle(probe).getPropertyValue('--lr-space-m').trim()).to.equal('0.75rem');
+      } finally {
+        frame.remove();
+      }
+    });
+  }
 
   it('keeps trusting an unreadable provider when an application shadow root needs the constructed copy', async () => {
     // A provider known only through the resolved sentinel (theme.css served cross-origin without

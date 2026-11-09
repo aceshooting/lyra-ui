@@ -74,7 +74,7 @@ const rootStates = new WeakMap<ShadowRoot, ScopeState>();
 /** Tree scopes already verified since the last microtask checkpoint. */
 const verifiedSinceCheckpoint = new WeakSet<Document | ShadowRoot>();
 /**
- * Whether a sheet carries this layer; sheets are read once (a reloaded link is a new object).
+ * Whether a sheet carries this layer; explicit adoption refreshes in-place CSSOM edits.
  * `'tail'`: only the tail was read, and it does not carry the layer.
  */
 const carrierCache = new WeakMap<CSSStyleSheet, boolean | 'tail'>();
@@ -132,7 +132,8 @@ function containsLayerBlock(rules: CSSRuleList, depth: number): boolean {
  * is read first (`theme.css`, `tokens-root.css`); `thorough` also reads every other top-level rule,
  * for a stylesheet that inlined one of them mid-file (Vite, Sass, postcss-import).
  */
-function layerProvider(sheet: CSSStyleSheet, view: Window, thorough: boolean, depth = 0): CSSStyleSheet | undefined {
+function layerProvider(sheet: CSSStyleSheet, view: Window, thorough: boolean, depth = 0, refresh = false): CSSStyleSheet | undefined {
+  if (refresh) carrierCache.delete(sheet);
   if (sheet.disabled) return undefined;
   const known = carrierCache.get(sheet);
   if (known === true || known === false || (known === 'tail' && !thorough)) return known === true ? sheet : undefined;
@@ -156,7 +157,7 @@ function layerProvider(sheet: CSSStyleSheet, view: Window, thorough: boolean, de
     if (rule.type !== 3) break;
     hasImports = true;
     if (rule.styleSheet && importApplies(rule, view)) {
-      const imported = layerProvider(rule.styleSheet, view, thorough, depth + 1);
+      const imported = layerProvider(rule.styleSheet, view, thorough, depth + 1, refresh);
       if (imported) return imported;
     }
   }
@@ -216,13 +217,13 @@ function providerApplies(scope: Document | ShadowRoot, provider: CSSStyleSheet):
 }
 
 /** Finds a provider of this layer in a tree scope, other than `own`. Reads no computed style. */
-function findProvider(scope: Document | ShadowRoot, own: CSSStyleSheet | undefined, thorough: boolean): CSSStyleSheet | undefined {
+function findProvider(scope: Document | ShadowRoot, own: CSSStyleSheet | undefined, thorough: boolean, refresh = false): CSSStyleSheet | undefined {
   const view = documentOf(scope).defaultView!;
   const linked = scope.styleSheets;
   for (let index = linked.length - 1; index >= 0; index--) {
     const sheet = linked[index] as CSSStyleSheet;
     if (staticSheetApplies(sheet)) {
-      const provider = layerProvider(sheet, view, thorough);
+      const provider = layerProvider(sheet, view, thorough, 0, refresh);
       if (provider) return provider;
     }
   }
@@ -230,7 +231,7 @@ function findProvider(scope: Document | ShadowRoot, own: CSSStyleSheet | undefin
   for (let index = adopted.length - 1; index >= 0; index--) {
     const sheet = adopted[index]!;
     if (sheet !== own) {
-      const provider = layerProvider(sheet, view, thorough);
+      const provider = layerProvider(sheet, view, thorough, 0, refresh);
       if (provider) return provider;
     }
   }
@@ -415,8 +416,9 @@ function verifyDocument(doc: Document, state: DocumentLayerState, check: Documen
   // connect that finds the static provider reads the adopted list no further.
   const key = rootKeySheet(doc, state);
   const keyNow = key && state.rootKeyLive && check !== 'connect' ? [key] : [];
+  if (check === 'explicit') state.provider = undefined;
   if (state.provider && !providerApplies(doc, state.provider)) state.provider = undefined;
-  if (!state.provider && check !== 'connect') state.provider = findProvider(doc, state.sheet, true);
+  if (!state.provider && check !== 'connect') state.provider = findProvider(doc, state.sheet, true, check === 'explicit');
   if (state.provider) {
     state.unreadableProvider = false;
     // Only a static stylesheet that applied late is worth a warning; an application that adopts
@@ -439,13 +441,13 @@ function verifyDocument(doc: Document, state: DocumentLayerState, check: Documen
   adopt(doc, layerSheet(doc, state), ...(key ? [key] : []));
 }
 
-function verifyRoot(root: ShadowRoot, doc: Document, state: DocumentLayerState): void {
+function verifyRoot(root: ShadowRoot, doc: Document, state: DocumentLayerState, refresh = false): void {
   let local = rootStates.get(root);
   if (!local) rootStates.set(root, (local = {}));
-  if (local.provider && !providerApplies(root, local.provider)) local.provider = undefined;
+  if (refresh || local.provider && !providerApplies(root, local.provider)) local.provider = undefined;
   // A declarative root's own <link> may finish loading after the first connect, so look each time;
   // the carrier cache keeps that to reading list lengths.
-  if (!local.provider) local.provider = findProvider(root, state.rootSheet, true);
+  if (!local.provider) local.provider = findProvider(root, state.rootSheet, true, refresh);
   if (local.provider) withdraw(root, state.rootSheet);
   else adopt(root, rootLayerSheet(doc, state));
 }
@@ -595,7 +597,7 @@ export function adoptLyraTokens(root: Document | ShadowRoot): void {
   const state = layerState(doc);
   if (!state) return;
   if (root === doc) verifyDocument(doc, state, 'explicit');
-  else if (isShadowRoot(root)) verifyRoot(root, doc, state);
+  else if (isShadowRoot(root)) verifyRoot(root, doc, state, true);
 }
 
 /**

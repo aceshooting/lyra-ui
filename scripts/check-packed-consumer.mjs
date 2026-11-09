@@ -155,17 +155,17 @@ const optionalPeerFamilyTags = componentInventory.components
 const rootHelperRegisteredTags = [];
 
 // Packed core/all.js includes every non-optional registration and every emitted chunk.
-// Token-provider validation including preceding layer statements measures 5,664,922 raw bytes
-// across 64 files; the next 64-byte ceiling leaves 38 bytes of headroom.
+// Explicit token-provider cache refresh measures 5,665,023 raw bytes across 64 files;
+// the next 64-byte ceiling leaves 1 byte of headroom.
 // Optional-peer exclusions and the complete file sum stay fixed. Core has no WASM allowance;
 // the explicit Oniguruma canary retains its separate exact 466,610-byte binary requirement.
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/7859878f724ef4237ee93a5414fa6b54f204313a/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'Recognizing token imports after CSS layer-order statements increases the full non-optional graph from 5,664,887 to 5,664,922 raw bytes across the same 64 files. The ceiling advances only to the next 64-byte boundary, 5,664,960 bytes. The explicit Oniguruma canary retains its separate exact binary requirement.',
-  reviewedCoreMeasurementBytes: 5_664_922,
+  $comment: 'Refreshing token-provider caches on explicit adoption increases the full non-optional graph from 5,664,922 to 5,665,023 raw bytes across the same 64 files. The ceiling advances only to the next 64-byte boundary, 5,665,024 bytes. The explicit Oniguruma canary retains its separate exact binary requirement.',
+  reviewedCoreMeasurementBytes: 5_665_023,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 38,
+  selectedRegressionHeadroomBytes: 1,
 };
 
 /**
@@ -320,15 +320,15 @@ const bundleEntries = {
   },
   map: {
     fixture: 'optional',
-    // Active token-provider validation brings the MapLibre v6 consumer from 2,525,882 to
-    // 2,526,291 raw bytes across 52 files; the next 64-byte boundary leaves 45 bytes.
-    maxRawBytes: 2_526_336,
+    // Token-provider cache refresh and layer-order import recognition measure 2,526,428 raw
+    // bytes across 52 files, up from 2,526,291; the next 64-byte boundary leaves 36 bytes.
+    maxRawBytes: 2_526_464,
   },
   graph: {
     fixture: 'optional',
-    // Token imports after layer-order statements bring the optional graph consumer from 459,313
-    // to 459,348 raw bytes across 14 files; the next 64-byte boundary leaves 44 bytes.
-    maxRawBytes: 459_392,
+    // Explicit token-provider cache refresh brings the optional graph consumer from 459,348
+    // to 459,450 raw bytes across 14 files; the next 64-byte boundary leaves 6 bytes.
+    maxRawBytes: 459_456,
   },
 };
 
