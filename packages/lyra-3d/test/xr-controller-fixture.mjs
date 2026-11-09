@@ -27,14 +27,16 @@ export function fixture(options = {}) {
     detach() { trace.push('detach'); },
     retire() { trace.push('retire'); return retirement.promise; },
   };
-  const controller = createXrPresentationController({ preparationLease: lease, documentKey, nativeOwner: owner,
+  const services = { preparationLease: lease, documentKey, nativeOwner: owner,
     validatePrepared: () => options.invalid ?? null,
     enqueueFinalizer: callback => { finalizers.push(callback); },
-    reportApplicationError: error => { applicationErrors.push(error); } }, {
+    reportApplicationError: error => { applicationErrors.push(error); } };
+  options.configure?.({ owner, services, nativeSession, trace });
+  const controller = createXrPresentationController(services, {
     onStateChange(state) { trace.push(`state:${state}`); options.onStateChange?.(state, controller); },
   });
   return {
-    controller, request, binding, ending, retirement, nativeSession, trace, finalizers, applicationErrors, documentKey, engineKey, lease,
+    controller, services, request, binding, ending, retirement, nativeSession, trace, finalizers, applicationErrors, documentKey, engineKey, lease,
     end() { ended = true; for (const listener of [...endListeners]) listener(); },
     submit() { submitted?.(); }, fail(reason = 'failed') { failure?.(reason); }, lateFailure(reason = 'failed') { lastFailure?.(reason); },
     get failureUnsubscriptions() { return unsubscriptions; },
