@@ -35,7 +35,7 @@ it('pages typed columns through native controls, preserves row identity, and cla
 it('ignores retained pagination controls from replaced data and after disconnect', async () => {
   const el = await fixture<LyraEmbeddingExplorer>(html`<lr-embedding-explorer .pointColumns=${columns(405)}></lr-embedding-explorer>`);
   const obsolete = el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="page-button"]')[1]!;
-  el.pointColumns = undefined; await el.updateComplete;
+  el.pointColumns = null; await el.updateComplete;
   el.pointColumns = columns(205); await el.updateComplete;
   obsolete.click(); await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="point"]')!.getAttribute('data-id')).to.equal('point-0');

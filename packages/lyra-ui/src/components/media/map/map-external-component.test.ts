@@ -181,7 +181,7 @@ describe('lr-map external data layers and labels', () => {
       expect(pauses > 0).to.equal(successor === 'static' || successor === 'replacement');
       expect([...peer.sources.keys()].sort()).to.deep.equal(successor === 'removed' ? [] : [id, `${id}-hit-source`].sort());
       if (successor !== 'removed') {
-        expect(peer.sources.get(id) === source).to.equal(successor !== 'replacement');
+        expect(Object.is(peer.sources.get(id), source)).to.equal(successor !== 'replacement');
         const descriptor = peer.sourceDescriptors.get(id) as { animate: boolean; canvas: HTMLCanvasElement };
         expect(descriptor.animate).to.equal(successor === 'animated');
         expect(descriptor.canvas === row.canvas).to.equal(successor !== 'replacement');
