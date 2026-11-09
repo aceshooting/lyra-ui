@@ -320,9 +320,9 @@ const bundleEntries = {
   },
   map: {
     fixture: 'optional',
-    // Drawn scene paths and arcs, custom 3D layers, MapLibre 6.17.0 and the build-time optional-peer
-    // import guards bring the MapLibre v6 map consumer to 2,522,603 raw bytes; the next 64-byte boundary.
-    maxRawBytes: 2_522_624,
+    // Scene report validation, observer cleanup and native control guards bring the MapLibre v6
+    // consumer to 2,525,671 raw bytes across 52 files; the next 64-byte boundary leaves 25 bytes.
+    maxRawBytes: 2_525_696,
   },
   graph: {
     fixture: 'optional',
