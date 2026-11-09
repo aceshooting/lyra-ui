@@ -796,6 +796,36 @@ describe('attachment identity resolution', () => {
 });
 
 describe('label overrides (i18n)', () => {
+  for (const progress of [undefined, 30]) {
+    it(`restores localized uploading copy after attribute removal with ${progress ?? 'indeterminate'} progress`, async () => {
+      const el = await fixture<LyraAttachmentChip>(html`
+        <lr-attachment-chip name="report.pdf" status="uploading" .progress=${progress}
+          uploading-label="Sending {label}"></lr-attachment-chip>
+      `);
+      const status = (): string => el.shadowRoot!.querySelector('[part="status-text"]')!.textContent ?? '';
+      expect(status()).to.equal('Sending report.pdf');
+      el.removeAttribute('uploading-label');
+      await el.updateComplete;
+      expect(status()).to.equal(progress === undefined ? 'Uploading…' : 'Uploading 30%');
+      el.strings = {
+        attachmentUploadingProgress: 'Transferred {percent}%',
+        attachmentUploadingIndeterminate: 'Transferring',
+        attachmentUploadingWithContext: 'Transferring {label}',
+      };
+      await el.updateComplete;
+      expect(status()).to.equal(progress === undefined ? 'Transferring' : 'Transferred 30%');
+      if (progress !== undefined) {
+        expect(el.shadowRoot!.querySelector('[part="progress"]')!.getAttribute('aria-label')).to.equal('Transferring report.pdf');
+      }
+      el.setAttribute('uploading-label', '');
+      await el.updateComplete;
+      expect(status()).to.equal('');
+      el.setAttribute('uploading-label', 'Sending {label}');
+      await el.updateComplete;
+      expect(status()).to.equal('Sending report.pdf');
+    });
+  }
+
   it('never mistakes explicit old-English or empty labels for localization sentinels', async () => {
     const el = (await fixture(html`
       <lr-attachment-chip

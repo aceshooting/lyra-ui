@@ -216,7 +216,9 @@ it('treats Enter on a submenu parent as disclosure activation rather than select
     selections += 1;
   });
 
-  share.focus();
+  await waitUntil(() => share.hasSubmenu, 'the child menu must register before keyboard activation');
+  await focusByKeyboard(share);
+  expect(document.activeElement?.id).to.equal('share');
   const enter = press(share, 'Enter');
   await settle(menu, child);
   await waitUntil(() => document.activeElement?.id === 'email', 'submenu placement did not settle');
@@ -493,6 +495,27 @@ it('treats every supplied label literally, including the former English default 
   menu.label = undefined;
   await menu.updateComplete;
   expect(list(menu).getAttribute('aria-label')).to.equal('Aktionen');
+});
+
+it('restores localized and containing-dropdown names when the label attribute is removed', async () => {
+  const menu = await fixture<LyraMenu>(html`
+    <lr-menu label="Authored actions"><lr-menu-item>Save</lr-menu-item></lr-menu>
+  `);
+  menu.removeAttribute('label');
+  await menu.updateComplete;
+  expect(list(menu).getAttribute('aria-label')).to.equal('Menu');
+  menu.strings = { menuLabel: 'Aktionen' };
+  await menu.updateComplete;
+  expect(list(menu).getAttribute('aria-label')).to.equal('Aktionen');
+  menu.dropdownLabel = 'Context actions';
+  await menu.updateComplete;
+  expect(list(menu).getAttribute('aria-label')).to.equal('Context actions');
+  menu.setAttribute('label', '');
+  await menu.updateComplete;
+  expect(list(menu).getAttribute('aria-label')).to.equal('');
+  menu.removeAttribute('label');
+  await menu.updateComplete;
+  expect(list(menu).getAttribute('aria-label')).to.equal('Context actions');
 });
 
 it('retains header/list/footer composition without a popup wrapper', async () => {

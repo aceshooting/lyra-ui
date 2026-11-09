@@ -1321,7 +1321,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
    *  built-in default it instead routes through `this.localize()` so a locale/`.strings`
    *  override applies without requiring `emptyText` itself to be set. */
   private get effectiveEmptyText(): string {
-    return this.emptyText === undefined ? this.localize('noMatches') : this.emptyText;
+    return this.emptyText == null ? this.localize('noMatches') : this.emptyText;
   }
 
   /** Resolves `label`'s effective text: a host-level plain `aria-label` attribute on
@@ -1332,7 +1332,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
    *  `label` itself to be set. */
   private get effectiveLabel(): string {
     return (
-      hostAriaLabel(this) ?? (this.label === undefined ? this.localize('mentionSuggestions') : this.label)
+      hostAriaLabel(this) ?? (this.label == null ? this.localize('mentionSuggestions') : this.label)
     );
   }
 

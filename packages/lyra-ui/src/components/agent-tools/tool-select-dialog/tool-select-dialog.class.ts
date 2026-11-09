@@ -882,7 +882,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     const selectedToolIds = this.canonicalSelectedToolIds;
     const selectedIds = new Set(selectedToolIds);
     const hasTools = tools.length > 0;
-    const label = this.label === undefined ? this.localize('selectTools') : this.label;
+    const label = this.label == null ? this.localize('selectTools') : this.label;
     const searchPlaceholder = this.searchPlaceholder == null
       ? this.localize('searchToolsPlaceholder')
       : this.searchPlaceholder;

@@ -548,7 +548,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
       maximumFractionDigits: 0,
     }).format(Math.round(this.clampedProgress));
     const uploadingText =
-      this.uploadingLabel !== undefined
+      this.uploadingLabel != null
         ? fillMessage(this.uploadingLabel, { label: displayName, percent: progressPercent })
         : this.hasNumericProgress
         ? this.localize('attachmentUploadingProgress', undefined, {

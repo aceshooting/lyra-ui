@@ -3524,7 +3524,7 @@
           "evidence": [
             {
               "file": "src/components/media/attachment-chip/attachment-chip.test.ts",
-              "line": 1281,
+              "line": 1311,
               "kind": "rendered RTL test signal"
             }
           ]

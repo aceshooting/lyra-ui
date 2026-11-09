@@ -16,7 +16,10 @@ describe('removing authored text attributes from connected components', () => {
     for (const [property, declaration] of constructor.elementProperties) {
       if (typeof property !== 'string' || declaration.attribute === false || declaration.state ||
         declaration.type && declaration.type !== String) continue;
-      if (typeof Reflect.get(defaults, property) !== 'string') continue;
+      const defaultValue: unknown = Reflect.get(defaults, property);
+      const optionalCopy = defaultValue == null &&
+        /(?:^label$|Label$|^heading$|Heading$|^placeholder$|Placeholder$|^description$|Description$|^message$|Message$|^title$|Title$|^errorText$|^hint$)/.test(property);
+      if (typeof defaultValue !== 'string' && !optionalCopy) continue;
       const attribute = typeof declaration.attribute === 'string' ? declaration.attribute : property.toLowerCase();
       it(`${name}.${attribute} can be removed and restored after rendering`, async () => {
         const element = document.createElement(name) as LyraElement;
@@ -24,7 +27,7 @@ describe('removing authored text attributes from connected components', () => {
         if (name === 'lr-emoji-picker') Reflect.set(element, 'loadGroups', () => Promise.resolve(null));
         if (name === 'lr-locale-picker') Reflect.set(element, 'withoutFlags', true);
         // An explicit locale exercises override removal; an empty locale already means inherit.
-        const initial = property === 'locale' ? 'en' : Reflect.get(element, property) as string;
+        const initial = property === 'locale' ? 'en' : optionalCopy ? `Authored ${property}` : Reflect.get(element, property) as string;
         document.body.append(element);
         try {
           await element.updateComplete;
@@ -41,6 +44,7 @@ describe('removing authored text attributes from connected components', () => {
           await element.updateComplete;
           expect(element.isConnected).to.equal(true);
           expect(element.isUpdatePending).to.equal(false);
+          if (optionalCopy) expect(Reflect.get(element, property), 'removal clears the authored copy override').not.to.equal(initial);
           element.setAttribute(attribute, initial);
           await element.updateComplete;
           await waitUntil(() => !element.isUpdatePending, 'restoring the authored attribute must settle');

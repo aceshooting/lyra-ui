@@ -1275,7 +1275,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   private get effectiveLabel(): string {
     const hostLabel = this.getAttribute('aria-label');
     if (hostLabel !== null) return hostLabel;
-    if (this.label !== undefined) return this.label;
+    if (this.label != null) return this.label;
     if (this.dropdownLabel !== undefined) return this.dropdownLabel;
     return this.localize('menuLabel');
   }

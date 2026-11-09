@@ -378,6 +378,33 @@ it('keeps an empty search placeholder visually empty while retaining a localized
   await expect(el).to.be.accessible();
 });
 
+it('restores the localized dialog heading and accessible name when its label attribute is removed', async () => {
+  const el = await fixture<LyraToolSelectDialog>(html`
+    <lr-tool-select-dialog open label="Choose integrations"></lr-tool-select-dialog>
+  `);
+  const title = el.shadowRoot!.querySelector<HTMLElement>('[part="title"]')!;
+  const panel = el.shadowRoot!.querySelector('[part="panel"]')!;
+  expect(title.textContent).to.equal('Choose integrations');
+  el.removeAttribute('label');
+  await el.updateComplete;
+  expect(title.textContent).to.equal('Select tools');
+  expect(title.hidden).to.equal(false);
+  expect(panel.getAttribute('aria-labelledby')).to.equal(title.id);
+  el.strings = { selectTools: 'Werkzeuge auswählen' };
+  await el.updateComplete;
+  expect(title.textContent).to.equal('Werkzeuge auswählen');
+  el.setAttribute('label', '');
+  await el.updateComplete;
+  expect(title.hidden).to.equal(true);
+  expect(panel.getAttribute('aria-label')).to.equal('Werkzeuge auswählen');
+  el.setAttribute('label', 'Choose integrations');
+  await el.updateComplete;
+  expect(title.textContent).to.equal('Choose integrations');
+  expect(title.hidden).to.equal(false);
+  expect(panel.getAttribute('aria-labelledby')).to.equal(title.id);
+  expect(panel.hasAttribute('aria-label')).to.equal(false);
+});
+
 it('renders icon hints as decorative literal text while keeping the tool keyboard selectable', async () => {
   const icon = '<svg>tool</svg>';
   const el = await fixture<LyraToolSelectDialog>(html`

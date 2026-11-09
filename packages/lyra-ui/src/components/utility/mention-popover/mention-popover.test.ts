@@ -1632,6 +1632,36 @@ it('keeps a dynamically emptied host aria-label on the listbox owner and restore
   expect(owner.getAttribute('aria-label')).to.equal('Mention someone');
 });
 
+for (const attribute of ['label', 'empty-text']) {
+  it(`restores localized mention copy when the ${attribute} attribute is removed`, async () => {
+    const el = await openWithItems([]);
+    const anchor = el.anchor;
+    const read = (): string | null => attribute === 'label'
+      ? listbox(el).getAttribute('aria-label')
+      : el.shadowRoot!.querySelector('[part="empty"]')!.textContent;
+    try {
+      el.setAttribute(attribute, 'Authored copy');
+      await el.updateComplete;
+      expect(read()).to.equal('Authored copy');
+      el.removeAttribute(attribute);
+      await el.updateComplete;
+      expect(read()).to.equal(attribute === 'label' ? 'Suggestions' : 'No matches');
+      el.strings = { mentionSuggestions: 'Mention options', noMatches: 'No matching people' };
+      await el.updateComplete;
+      expect(read()).to.equal(attribute === 'label' ? 'Mention options' : 'No matching people');
+      el.setAttribute(attribute, '');
+      await el.updateComplete;
+      expect(read()).to.equal('');
+      el.setAttribute(attribute, 'Authored copy');
+      await el.updateComplete;
+      expect(read()).to.equal('Authored copy');
+    } finally {
+      el.remove();
+      if (anchor instanceof HTMLElement) anchor.remove();
+    }
+  });
+}
+
 it('honors a strings override for mentionSuggestions/noMatches while label/emptyText are left at their defaults', async () => {
   const el = await openWithItems([]);
   el.strings = {
