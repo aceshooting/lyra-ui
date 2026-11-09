@@ -128,18 +128,19 @@ function containsLayerBlock(rules: CSSRuleList, depth: number): boolean {
 }
 
 /**
- * True when `sheet` (or a sheet it imports) carries this layer. Unreadable sheets do not. The tail
+ * The sheet providing this layer, including active imports. Unreadable sheets do not. The tail
  * is read first (`theme.css`, `tokens-root.css`); `thorough` also reads every other top-level rule,
  * for a stylesheet that inlined one of them mid-file (Vite, Sass, postcss-import).
  */
-function carriesLayer(sheet: CSSStyleSheet, thorough: boolean, depth = 0): boolean {
+function layerProvider(sheet: CSSStyleSheet, view: Window, thorough: boolean, depth = 0): CSSStyleSheet | undefined {
+  if (sheet.disabled) return undefined;
   const known = carrierCache.get(sheet);
-  if (known === true || known === false || (known === 'tail' && !thorough)) return known === true;
+  if (known === true || known === false || (known === 'tail' && !thorough)) return known === true ? sheet : undefined;
   let rules: CSSRuleList;
   try {
     rules = sheet.cssRules;
   } catch {
-    return false; // cross-origin, or still loading: not cached, so a later look can succeed
+    return undefined; // cross-origin, or still loading: not cached, so a later look can succeed
   }
   let found = false;
   if (known !== 'tail') {
@@ -148,14 +149,20 @@ function carriesLayer(sheet: CSSStyleSheet, thorough: boolean, depth = 0): boole
       found = declaresSentinel(rules[index]!);
     }
   }
+  let hasImports = false;
   for (let index = 0; !found && depth < 3 && index < rules.length; index++) {
     const rule = rules[index] as CSSImportRule;
     if (rule.type !== 3) break; // @import rules come first
-    if (rule.styleSheet) found = carriesLayer(rule.styleSheet, thorough, depth + 1);
+    hasImports = true;
+    if (rule.styleSheet && importApplies(rule, view)) {
+      const imported = layerProvider(rule.styleSheet, view, thorough, depth + 1);
+      if (imported) return imported;
+    }
   }
   if (!found && thorough) found = containsLayerBlock(rules, 0);
-  carrierCache.set(sheet, found ? true : thorough ? false : 'tail');
-  return found;
+  // Import media can change without replacing either sheet, so never cache their applicability.
+  if (found || !hasImports) carrierCache.set(sheet, found ? true : thorough ? false : 'tail');
+  return found ? sheet : undefined;
 }
 
 /** The outermost sheet of an imported one: the one an owner node or an adopted list holds. */
@@ -172,6 +179,12 @@ function mediaMatches(view: Window, media: string): boolean {
   let list = lists.get(media);
   if (!list) lists.set(media, (list = view.matchMedia(media)));
   return list.matches;
+}
+
+function importApplies(rule: CSSImportRule, view: Window): boolean {
+  const media = rule.media.mediaText.trim();
+  return (media === '' || media === 'all' || mediaMatches(view, media)) &&
+    (!rule.supportsText || CSS.supports(`(${rule.supportsText})`));
 }
 
 /**
@@ -191,21 +204,34 @@ function staticSheetApplies(sheet: CSSStyleSheet): boolean {
 }
 
 function providerApplies(scope: Document | ShadowRoot, provider: CSSStyleSheet): boolean {
-  const top = topSheet(provider);
-  return top.ownerNode ? staticSheetApplies(top) : scope.adoptedStyleSheets.includes(top);
+  const view = documentOf(scope).defaultView!;
+  let current = provider;
+  while (current.parentStyleSheet) {
+    if (current.disabled || !importApplies(current.ownerRule as CSSImportRule, view)) return false;
+    current = current.parentStyleSheet;
+  }
+  const top = current;
+  return top.ownerNode ? staticSheetApplies(top) : !top.disabled && scope.adoptedStyleSheets.includes(top);
 }
 
 /** Finds a provider of this layer in a tree scope, other than `own`. Reads no computed style. */
 function findProvider(scope: Document | ShadowRoot, own: CSSStyleSheet | undefined, thorough: boolean): CSSStyleSheet | undefined {
+  const view = documentOf(scope).defaultView!;
   const linked = scope.styleSheets;
   for (let index = linked.length - 1; index >= 0; index--) {
     const sheet = linked[index] as CSSStyleSheet;
-    if (staticSheetApplies(sheet) && carriesLayer(sheet, thorough)) return sheet;
+    if (staticSheetApplies(sheet)) {
+      const provider = layerProvider(sheet, view, thorough);
+      if (provider) return provider;
+    }
   }
   const adopted = scope.adoptedStyleSheets;
   for (let index = adopted.length - 1; index >= 0; index--) {
     const sheet = adopted[index]!;
-    if (sheet !== own && carriesLayer(sheet, thorough)) return sheet;
+    if (sheet !== own) {
+      const provider = layerProvider(sheet, view, thorough);
+      if (provider) return provider;
+    }
   }
   return undefined;
 }

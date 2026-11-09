@@ -399,6 +399,73 @@ describe('document token layer: provider identity', () => {
     return style;
   }
 
+  for (const media of ['all', 'print']) {
+    it(`uses an imported token layer only when its ${media} media applies`, async () => {
+      const { frame, doc } = await frameWith();
+      try {
+        const style = doc.createElement('style');
+        const loaded = new Promise<void>((resolve, reject) => {
+          style.addEventListener('load', () => resolve(), { once: true });
+          style.addEventListener('error', () => reject(new Error('token stylesheet did not load')), { once: true });
+        });
+        const url = new URL('../styles/tokens-root.css', import.meta.url).href;
+        style.textContent = `@import url("${url}") ${media}; .app { color: red; }`;
+        doc.head.append(style);
+        await loaded;
+        const probe = await connectProbe(doc);
+        expect(frame.contentWindow!.getComputedStyle(probe).getPropertyValue('--lr-space-m').trim()).to.equal('0.75rem');
+        expect(constructedCopies(doc), 'only an active import can supply the tokens').to.equal(media === 'all' ? 0 : 1);
+        const imported = style.sheet!.cssRules[0] as CSSImportRule;
+        imported.media.mediaText = media === 'all' ? 'print' : 'all';
+        adoptLyraTokens(doc);
+        expect(constructedCopies(doc), 'media changes invalidate the previous provider').to.equal(media === 'all' ? 1 : 0);
+        expect(frame.contentWindow!.getComputedStyle(probe).getPropertyValue('--lr-space-m').trim()).to.equal('0.75rem');
+        imported.media.mediaText = media;
+        adoptLyraTokens(doc);
+        expect(constructedCopies(doc), 'the restored media is evaluated again').to.equal(media === 'all' ? 0 : 1);
+        style.remove();
+        adoptLyraTokens(doc);
+        expect(constructedCopies(doc), 'removing the import restores the fallback').to.equal(1);
+        expect(frame.contentWindow!.getComputedStyle(probe).getPropertyValue('--lr-space-m').trim()).to.equal('0.75rem');
+      } finally {
+        frame.remove();
+      }
+    });
+  }
+
+  for (const provider of ['static', 'adopted'] as const) {
+    for (const disabledInitially of [false, true]) {
+      it(`repairs the ${provider} token provider disabled ${disabledInitially ? 'before' : 'after'} connecting`, async () => {
+        const { frame, doc } = await frameWith();
+        try {
+          let sheet: CSSStyleSheet;
+          if (provider === 'static') sheet = styleWith(doc, DOCUMENT_TOKEN_CSS).sheet!;
+          else {
+            sheet = new (doc.defaultView as unknown as { CSSStyleSheet: typeof CSSStyleSheet }).CSSStyleSheet();
+            sheet.replaceSync(DOCUMENT_TOKEN_CSS);
+            doc.adoptedStyleSheets = [sheet];
+          }
+          sheet.disabled = disabledInitially;
+          const probe = await connectProbe(doc);
+          if (!disabledInitially) {
+            expect(frame.contentWindow!.getComputedStyle(probe).getPropertyValue('--lr-space-m').trim()).to.equal('0.75rem');
+            sheet.disabled = true;
+            adoptLyraTokens(doc);
+          }
+          expect(frame.contentWindow!.getComputedStyle(probe).getPropertyValue('--lr-space-m').trim()).to.equal('0.75rem');
+          expect(doc.adoptedStyleSheets.filter((entry) => entry !== sheet && !entry.disabled &&
+            Array.from(entry.cssRules).some((rule) => rule.cssText.includes(DOCUMENT_TOKEN_SENTINEL))).length).to.equal(1);
+          sheet.disabled = false;
+          adoptLyraTokens(doc);
+          expect(constructedCopies(doc), 'the restored provider takes over without duplication').to.equal(provider === 'static' ? 0 : 1);
+          expect(frame.contentWindow!.getComputedStyle(probe).getPropertyValue('--lr-space-m').trim()).to.equal('0.75rem');
+        } finally {
+          frame.remove();
+        }
+      });
+    }
+  }
+
   it('finds a static copy inlined mid-file when the stylesheet loads before Lyra registers', async () => {
     const { frame, doc } = await frameWith((d) => { styleWith(d, inlinedTheme()); });
     try {
