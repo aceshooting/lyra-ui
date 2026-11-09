@@ -155,17 +155,17 @@ const optionalPeerFamilyTags = componentInventory.components
 const rootHelperRegisteredTags = [];
 
 // Packed core/all.js includes every non-optional registration and every emitted chunk.
-// Shared modal ordering, allocation-preserving drawers and copy-button sizing measure
-// 5,647,739 raw bytes across 64 files; the next 64-byte ceiling leaves 5 bytes of headroom.
+// Detached-control focus and map-scene revision guards measure 5,664,357 raw bytes across
+// 64 files; the next 64-byte ceiling leaves 27 bytes of headroom.
 // Optional-peer exclusions and the complete file sum stay fixed. Core has no WASM allowance;
 // the explicit Oniguruma canary retains its separate exact 466,610-byte binary requirement.
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/7859878f724ef4237ee93a5414fa6b54f204313a/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'Map scene ownership, camera sessions, accessible scene controls, custom graph node bodies, lazy locale-picker names, the ten additional locale catalogs, multi-split panel collapse, named menu anchors, markdown without-images, drawn scene lines, the dependency upgrades, the dock-panel rail and fold methods, build-time optional-peer import guards and the epub.js unload guard bring the full non-optional graph to 5,664,320 raw bytes across 64 files. That measurement already sits on a 64-byte boundary, so only its ceiling advances, to that boundary, with no further headroom. The explicit Oniguruma canary retains its separate exact binary requirement.',
-  reviewedCoreMeasurementBytes: 5_664_320,
+  $comment: 'Detached-control focus and stale map-scene report guards increase the full non-optional graph from 5,664,320 to 5,664,357 raw bytes across the same 64 files. The ceiling advances only to the next 64-byte boundary, 5,664,384 bytes. The explicit Oniguruma canary retains its separate exact binary requirement.',
+  reviewedCoreMeasurementBytes: 5_664_357,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 0,
+  selectedRegressionHeadroomBytes: 27,
 };
 
 /**

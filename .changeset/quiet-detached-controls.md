@@ -7,3 +7,5 @@ Make focus and blur safe before the first render for accordion items, attachment
 The defensive focus guards increase the measured CDN and local autoloader bundles by 29 and 31 gzip bytes, to 1,705,414 and 1,705,218 bytes. Advance only their exceeded ceilings to the next 64-byte boundary; passing bundle limits and measurement inputs stay unchanged.
 
 Together with the stale map-scene report guard, the required runtime artifacts measure 22,534,149 unpacked bytes. Advance the exceeded unpacked package ceiling to 22,534,208 bytes, the next 64-byte boundary; the download and file-count limits stay unchanged.
+
+The packed core consumer measures 5,664,357 raw bytes across the same 64 files, a 37-byte increase. Advance that exceeded ceiling to the next 64-byte boundary, 5,664,384 bytes, with its exclusions and binary accounting unchanged.
