@@ -312,6 +312,7 @@ export class AgUiStreamAdapter {
       case 'REASONING_MESSAGE_START': {
         if (typeof source['messageId'] !== 'string' || !source['messageId']) return [];
         const reasoning = eventType === 'REASONING_MESSAGE_START';
+        const preserveCustomParts = this.messages.get(source['messageId']) === 'custom';
         const rejected = this.claimMessage(source['messageId'], reasoning ? 'reasoning' : 'text');
         if (rejected) return rejected;
         return [this.emit({
@@ -320,7 +321,7 @@ export class AgUiStreamAdapter {
             id: source['messageId'],
             role: reasoning ? 'assistant' : role(source['role']),
             status: 'streaming',
-            parts: [],
+            ...(preserveCustomParts ? {} : { parts: [] }),
           },
         }, eventId)];
       }

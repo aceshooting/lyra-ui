@@ -482,6 +482,32 @@ it('ignores custom events by default and rejects malformed or unsafe routing res
     .to.include({ type: 'error', code: 'invalid_provider_event' });
 });
 
+for (const kind of ['TEXT', 'REASONING'] as const) {
+  it(`retains custom data that arrives before the ${kind.toLowerCase()} message starts`, () => {
+    const adapter = new AgUiStreamAdapter({ maxBufferedMessages: 1 }, {
+      customEventTarget: () => ({ messageId: 'answer', partId: 'context' }),
+    });
+    const events = [
+      ...adapter.push({ type: 'CUSTOM', name: 'context', value: { source: 'catalog' } }),
+      ...adapter.push({ type: `${kind}_MESSAGE_START`, messageId: 'answer' }),
+      ...adapter.push({ type: `${kind}_MESSAGE_CONTENT`, messageId: 'answer', delta: 'Available results' }),
+      ...adapter.push({ type: `${kind}_MESSAGE_END`, messageId: 'answer' }),
+    ];
+    expect(events.some(event => event.type === 'error')).to.equal(false);
+    const state = reduceAgentStreamEvents(createAgentStreamState(), events);
+    expect(state.messages.map(message => message.id)).to.deep.equal(['answer']);
+    expect(state.messages[0]?.parts).to.have.lengthOf(2);
+    expect(state.messages[0]?.parts?.find(part => part.id === 'context')).to.deep.include({
+      type: 'data', name: 'context', data: { source: 'catalog' },
+    });
+    expect(state.messages[0]?.parts?.find(part => part.id === `answer:${kind.toLowerCase()}`)).to.deep.include({
+      type: kind.toLowerCase(), text: 'Available results',
+    });
+    expect(adapter.push({ type: 'ACTIVITY_SNAPSHOT', messageId: 'answer', activityType: 'PLAN', content: {} })).to.deep.equal([]);
+    expect(adapter.push({ type: 'CUSTOM', name: 'context', value: { source: 'updated' } })).to.have.lengthOf(1);
+  });
+}
+
 it('protects activity identities from text and reasoning collisions in either arrival order', () => {
   const adapter = new AgUiStreamAdapter();
   adapter.push({ type: 'ACTIVITY_SNAPSHOT', messageId: 'a1', activityType: 'PLAN', content: {} });
