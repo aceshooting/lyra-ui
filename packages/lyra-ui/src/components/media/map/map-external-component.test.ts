@@ -154,6 +154,41 @@ describe('lr-map external data layers and labels', () => {
     HTMLCanvasElement.prototype.getContext = originalContext;
   });
 
+  for (const successor of ['static', 'animated', 'removed', 'replacement'] as const) {
+    it(`finishes a canvas redraw superseded by a ${successor} source without pausing a newer animation`, async () => {
+      const row = { kind: 'canvas' as const, sourceId: 'canvas', canvas: document.createElement('canvas'),
+        coordinates: [[0, 1], [1, 1], [1, 0], [0, 0]] as const, animate: false, redrawRevision: 0 };
+      const { element, peer } = await mount(el => { el.dataLayers = [row]; });
+      await load(element, peer); await element.whenIdle();
+      const id = [...peer.sources.keys()][0]!;
+      const source = peer.sources.get(id)! as unknown as { play(): void; pause(): void };
+      const play = source.play.bind(source), pause = source.pause.bind(source);
+      let plays = 0, pauses = 0;
+      source.play = () => {
+        play(); plays++;
+        if (plays !== 1) return;
+        element.dataLayers = successor === 'removed' ? [] : [{ ...row, redrawRevision: 2,
+          animate: successor === 'animated',
+          canvas: successor === 'replacement' ? document.createElement('canvas') : row.canvas }];
+      };
+      source.pause = () => { pauses++; pause(); };
+      element.dataLayers = [{ ...row, redrawRevision: 1 }];
+      await element.updateComplete;
+      await waitUntil(() => plays > 0, 'the requested redraw must call native play');
+      await element.updateComplete; await element.whenIdle();
+      expect(peer.removed).to.equal(false);
+      expect(element.map !== undefined).to.equal(true);
+      expect(pauses > 0).to.equal(successor === 'static' || successor === 'replacement');
+      expect([...peer.sources.keys()].sort()).to.deep.equal(successor === 'removed' ? [] : [id, `${id}-hit-source`].sort());
+      if (successor !== 'removed') {
+        expect(peer.sources.get(id) === source).to.equal(successor !== 'replacement');
+        const descriptor = peer.sourceDescriptors.get(id) as { animate: boolean; canvas: HTMLCanvasElement };
+        expect(descriptor.animate).to.equal(successor === 'animated');
+        expect(descriptor.canvas === row.canvas).to.equal(successor !== 'replacement');
+      }
+    });
+  }
+
   it('updates every GeoJSON member range without replacing the source or layers', async () => {
     const row = { sourceId: 'bounded', geojson: POINTS, minZoom: 3, maxZoom: 9 };
     const { element, peer } = await mount(el => { el.dataLayers = [row]; });

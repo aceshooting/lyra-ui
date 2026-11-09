@@ -140,4 +140,29 @@ describe('lr-video panorama', () => {
       else Reflect.deleteProperty(video, 'readyState');
     }
   });
+
+  it('publishes normalized native camera changes and ignores callbacks from retired media', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video style="inline-size:480px;block-size:320px" engine="webgl" projection="equirectangular"></lr-video>`);
+    const video = await ready(el);
+    await waitUntil(() => media === video && el.shadowRoot!.querySelector('[part="panorama"]')?.hasAttribute('data-ready') === true);
+    const previous = host;
+    const cameras: unknown[] = [];
+    el.addEventListener('lr-panorama-camera-change', event => cameras.push(event.detail));
+    previous.camera!({ yaw: Math.PI * 3, pitch: 100, fieldOfView: 200 });
+    await el.updateComplete;
+    expect(el.panoramaCamera).to.deep.equal({ yaw: -Math.PI, pitch: Math.PI / 2 - 0.01, fieldOfView: 100 });
+    expect(cameras).to.deep.equal([{ camera: el.panoramaCamera }]);
+    const accepted = el.panoramaCamera;
+    el.projection = 'flat'; await el.updateComplete;
+    previous.camera!({ yaw: 0, pitch: 0, fieldOfView: 75 });
+    await el.updateComplete;
+    expect(el.panoramaCamera).to.deep.equal(accepted);
+    expect(cameras.length).to.equal(1);
+    expect(el.getVideoElement() === video).to.equal(true);
+    el.projection = 'equirectangular';
+    await waitUntil(() => host !== previous && el.shadowRoot!.querySelector('[part="panorama"]')?.hasAttribute('data-ready') === true);
+    host.camera!({ yaw: 0.5, pitch: -0.25, fieldOfView: 60 }); await el.updateComplete;
+    expect(el.panoramaCamera).to.deep.equal({ yaw: 0.5, pitch: -0.25, fieldOfView: 60 });
+    expect(cameras.length).to.equal(2);
+  });
 });

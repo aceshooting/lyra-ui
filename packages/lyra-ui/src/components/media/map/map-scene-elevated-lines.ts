@@ -88,24 +88,31 @@ export function createElevatedSceneLineLayer(id: string, lines: readonly Elevate
       const cached = programs.get(source);
       if (cached) return cached;
       const shaders: WebGLShader[] = [];
-      for (const [type, prelude, body] of [[gl.VERTEX_SHADER, shader.vertexPrelude, vertexBody],
-        [gl.FRAGMENT_SHADER, shader.fragmentPrelude, fragmentBody]] as const) {
-        const created = gl.createShader(type);
-        if (!created) throw new Error('Scene line shader unavailable');
-        shaders.push(created);
-        gl.shaderSource(created, `#version 300 es\nprecision highp float;\n${shader.defines}\n${prelude}\n${body}`);
-        gl.compileShader(created);
-        if (!gl.getShaderParameter(created, gl.COMPILE_STATUS)) throw new Error('Scene line shader failed to compile');
+      let program: WebGLProgram | null = null;
+      try {
+        for (const [type, prelude, body] of [[gl.VERTEX_SHADER, shader.vertexPrelude, vertexBody],
+          [gl.FRAGMENT_SHADER, shader.fragmentPrelude, fragmentBody]] as const) {
+          const created = gl.createShader(type);
+          if (!created) throw new Error('Scene line shader unavailable');
+          shaders.push(created);
+          gl.shaderSource(created, `#version 300 es\nprecision highp float;\n${shader.defines}\n${prelude}\n${body}`);
+          gl.compileShader(created);
+          if (!gl.getShaderParameter(created, gl.COMPILE_STATUS)) throw new Error('Scene line shader failed to compile');
+        }
+        program = gl.createProgram();
+        if (!program) throw new Error('Scene line program unavailable');
+        for (const created of shaders) gl.attachShader(program, created);
+        for (const [index, [name]] of attributes.entries()) gl.bindAttribLocation(program, index, name);
+        gl.linkProgram(program);
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error('Scene line program failed to link');
+        const value: Program = { program, shaders, locations: new Map() };
+        programs.set(source, value);
+        return value;
+      } catch (error) {
+        if (program) gl.deleteProgram(program);
+        for (const created of shaders) gl.deleteShader(created);
+        throw error;
       }
-      const program = gl.createProgram();
-      if (!program) throw new Error('Scene line program unavailable');
-      for (const created of shaders) gl.attachShader(program, created);
-      attributes.forEach(([name], index) => { gl.bindAttribLocation(program, index, name); });
-      gl.linkProgram(program);
-      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error('Scene line program failed to link');
-      const value: Program = { program, shaders, locations: new Map() };
-      programs.set(source, value);
-      return value;
     }
     function location(program: Program, name: string): WebGLUniformLocation | null {
       if (!program.locations.has(name)) program.locations.set(name, gl.getUniformLocation(program.program, name));
@@ -114,18 +121,27 @@ export function createElevatedSceneLineLayer(id: string, lines: readonly Elevate
     function bufferFor(line: ElevatedSceneLine): LineBuffer {
       let owned = buffers.get(line.id);
       if (owned) return owned;
-      const vao = gl.createVertexArray(), buffer = gl.createBuffer();
-      if (!vao || !buffer) throw new Error('Scene line buffer unavailable');
-      gl.bindVertexArray(vao);
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-      attributes.forEach(([, size, offset], index) => {
-        gl.enableVertexAttribArray(index);
-        gl.vertexAttribPointer(index, size, gl.FLOAT, false, FLOATS * 4, offset * 4);
-      });
-      gl.bindVertexArray(null);
-      owned = { vao, buffer, key: '', count: 0 };
-      buffers.set(line.id, owned);
-      return owned;
+      const vao = gl.createVertexArray();
+      if (!vao) throw new Error('Scene line buffer unavailable');
+      let buffer: WebGLBuffer | null = null;
+      try {
+        buffer = gl.createBuffer();
+        if (!buffer) throw new Error('Scene line buffer unavailable');
+        gl.bindVertexArray(vao);
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        attributes.forEach(([, size, offset], index) => {
+          gl.enableVertexAttribArray(index);
+          gl.vertexAttribPointer(index, size, gl.FLOAT, false, FLOATS * 4, offset * 4);
+        });
+        gl.bindVertexArray(null);
+        owned = { vao, buffer, key: '', count: 0 };
+        buffers.set(line.id, owned);
+        return owned;
+      } catch (error) {
+        gl.deleteVertexArray(vao);
+        if (buffer) gl.deleteBuffer(buffer);
+        throw error;
+      }
     }
     /** Absolute terrain heights per vertex, or undefined while any needed height is pending. */
     function heights(frame: LyraMapCustomLayerFrame, line: ElevatedSceneLine): readonly number[] | undefined {

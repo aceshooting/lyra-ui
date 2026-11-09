@@ -20494,6 +20494,7 @@
           "src/components/retrieval/embedding-explorer/embedding-explorer-focus-regression.test.ts",
           "src/components/retrieval/embedding-explorer/embedding-explorer-large-identity-scale.test.ts",
           "src/components/retrieval/embedding-explorer/embedding-explorer-native.test.ts",
+          "src/components/retrieval/embedding-explorer/embedding-explorer-pagination.test.ts",
           "src/components/retrieval/embedding-explorer/embedding-explorer-scale.test.ts",
           "src/components/retrieval/embedding-explorer/embedding-explorer-spatial-scale.test.ts",
           "src/components/retrieval/embedding-explorer/embedding-explorer.test.ts"
@@ -31896,6 +31897,7 @@
           "src/components/media/map/map-scene-controls-lifecycle.test.ts",
           "src/components/media/map/map-scene-controls-native.test.ts",
           "src/components/media/map/map-scene-elevated-lines-component.test.ts",
+          "src/components/media/map/map-scene-elevated-lines.test.ts",
           "src/components/media/map/map-scene-input-limits.property.test.ts",
           "src/components/media/map/map-scene-input-limits.test.ts",
           "src/components/media/map/map-scene-input-reentry.test.ts",
@@ -32232,6 +32234,7 @@
           "src/components/media/map/map-scene-controls-lifecycle.test.ts",
           "src/components/media/map/map-scene-controls-native.test.ts",
           "src/components/media/map/map-scene-elevated-lines-component.test.ts",
+          "src/components/media/map/map-scene-elevated-lines.test.ts",
           "src/components/media/map/map-scene-input-limits.property.test.ts",
           "src/components/media/map/map-scene-input-limits.test.ts",
           "src/components/media/map/map-scene-input-reentry.test.ts",

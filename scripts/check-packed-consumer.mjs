@@ -320,9 +320,9 @@ const bundleEntries = {
   },
   map: {
     fixture: 'optional',
-    // Scene report validation, observer cleanup and native control guards bring the MapLibre v6
-    // consumer to 2,525,671 raw bytes across 52 files; the next 64-byte boundary leaves 25 bytes.
-    maxRawBytes: 2_525_696,
+    // Partial elevated-path shader and vertex-buffer cleanup brings the MapLibre v6 consumer to
+    // 2,525,882 raw bytes across 52 files; the next 64-byte boundary leaves six bytes.
+    maxRawBytes: 2_525_888,
   },
   graph: {
     fixture: 'optional',

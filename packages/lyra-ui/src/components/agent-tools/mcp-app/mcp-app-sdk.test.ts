@@ -12,12 +12,14 @@ before(async () => {
 });
 
 it('interoperates with the official App SDK across tools, resources, context, display, cancellation and teardown', async () => {
-  const el = await fixture<LyraMcpApp>(html`<lr-mcp-app protocol="mcp-apps" .hostCapabilities=${{
+  const el = await fixture<LyraMcpApp>(html`<lr-mcp-app protocol="mcp-apps" max-height="500" .hostCapabilities=${{
     serverTools: {}, serverResources: {}, logging: {}, openLinks: {}, message: { text: {} },
     updateModelContext: { text: {}, structuredContent: {} },
   }}></lr-mcp-app>`);
   const reports: SdkReport[] = [];
   const requests: string[] = [];
+  const heights: number[] = [];
+  el.addEventListener('lr-mcp-resize', event => heights.push(event.detail.height));
   let pending: McpAppRequestDetail | undefined;
   let generation = -1;
   el.addEventListener('lr-mcp-log', event => reports.push(event.detail.value as SdkReport));
@@ -53,6 +55,9 @@ it('interoperates with the official App SDK across tools, resources, context, di
     throw new Error(JSON.stringify({ requests, reports }));
   });
   expect(reports.filter(report => report.stage === 'fixture-error')).to.deep.equal([]);
+  await el.updateComplete;
+  expect(heights).to.deep.equal([120, 420, 500]);
+  expect(el.shadowRoot!.querySelector<HTMLIFrameElement>('iframe')!.style.height).to.equal('500px');
   expect(requests).to.deep.equal(['tools/call', 'tools/list', 'resources/list', 'resources/templates/list', 'resources/read',
     'ui/update-model-context', 'ui/message', 'ui/open-link', 'tools/call', 'tools/call']);
   expect(reports.find(report => report.stage === 'display')?.value).to.deep.equal({ mode: 'inline' });

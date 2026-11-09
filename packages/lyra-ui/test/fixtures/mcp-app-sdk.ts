@@ -17,6 +17,8 @@ app.onteardown = () => ({ cleanedUp: true });
 async function run(): Promise<void> {
   await app.connect();
   await report('initialize', { capabilities: app.getHostCapabilities(), context: app.getHostContext() });
+  for (const height of [40, 420, 50_000]) await app.sendSizeChanged({ height, width: 640 });
+  await report('resized');
   await report('asset-style', getComputedStyle(document.documentElement).getPropertyValue('--mcp-sdk-fixture').trim());
   if (!app.getHostCapabilities()?.serverResources) {
     try {
