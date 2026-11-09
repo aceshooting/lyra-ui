@@ -26781,6 +26781,7 @@
           "src/components/data/heatmap/heatmap-matrix-source-public-contracts.test.ts",
           "src/components/data/heatmap/heatmap-matrix-source-scale.test.ts",
           "src/components/data/heatmap/heatmap-matrix-source-validation.test.ts",
+          "src/components/data/heatmap/heatmap-measurement-fallback.test.ts",
           "src/components/data/heatmap/heatmap-no-canvas-dev-gate.test.ts",
           "src/components/data/heatmap/heatmap-no-canvas.test.ts",
           "src/components/data/heatmap/heatmap-provider-presentation-boundaries.test.ts",

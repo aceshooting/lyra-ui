@@ -101,6 +101,21 @@ function label(peer: TransitionMap): Layer {
   return result;
 }
 
+function layerPresentation(peer: TransitionMap): Layer[] {
+  const sources = [...peer.sources.keys()];
+  return [...peer.layers.values()].map(value => {
+    const layer = structuredClone(value) as Layer;
+    const source = layer.source;
+    if (source !== undefined) {
+      const index = sources.indexOf(source);
+      if (index < 0 || !layer.id.startsWith(`${source}-`)) throw new Error('Layer has no owned source');
+      layer.source = `source-${index}`;
+      layer.id = `source-${index}${layer.id.slice(source.length)}`;
+    }
+    return layer;
+  });
+}
+
 describe('lr-map resource transition ownership', () => {
   before(() => loadMapOwnedFeatureRuntime());
   beforeEach(() => {
@@ -169,6 +184,64 @@ describe('lr-map resource transition ownership', () => {
           const replacement = element.map as unknown as TransitionMap;
           replacement.fire('load'); await element.whenStyleReady(); await settle(element, replacement);
           expect([...replacement.layers.values()].map(value => (value as Layer).type).sort(), boundary).to.deep.equal([...expectedTypes].sort());
+          expect(element.shadowRoot!.querySelectorAll('[part="error"]').length, boundary).to.equal(0);
+        } finally { element.remove(); wrapper.remove(); }
+      }
+    });
+  }
+
+  for (const existing of [false, true]) for (const [family, options] of [
+    ['geometry', { label: { field: 'name', size: 18, color: 'rgb(70, 80, 90)' } }],
+    ['cluster', { cluster: {}, label: { field: 'name', size: 18, color: 'rgb(70, 80, 90)' } }],
+    ['heatmap', { kind: 'heatmap' }],
+  ] as const) {
+    it(`recovers the complete ${existing ? 'updated' : 'initial'} ${family} request after each native write fails`, async function () {
+      this.timeout(60_000);
+      const row = { sourceId: 'places', geojson: points, color: 'rgb(80, 90, 100)', minZoom: 2, maxZoom: 10, ...options };
+      const initial = existing ? [{ ...row, color: 'rgb(10, 20, 30)', minZoom: 0, maxZoom: 24,
+        ...('label' in options ? { label: { field: 'kind', size: 10, color: 'rgb(10, 20, 30)' } } : {}),
+      }] : [];
+      const methods = ['addSource', 'addLayer', 'setPaintProperty', 'setLayoutProperty', 'setLayerZoomRange'] as const;
+      type Method = (typeof methods)[number];
+      const control = await mount(initial), counts = new Map<Method, number>();
+      for (const name of methods) {
+        const original = control.peer[name];
+        Object.defineProperty(control.peer, name, { configurable: true, value(...args: unknown[]) {
+          counts.set(name, (counts.get(name) ?? 0) + 1);
+          return Reflect.apply(original, control.peer, args);
+        } });
+      }
+      control.element.dataLayers = [row]; await settle(control.element, control.peer);
+      const boundaries = [...counts].flatMap(([name, count]) => Array.from({ length: count }, (_, index) => ({ name, call: index + 1 })));
+      expect(boundaries.length).to.be.greaterThan(0);
+      control.element.remove(); control.wrapper.remove();
+
+      const fresh = await mount([row]);
+      const expected = layerPresentation(fresh.peer);
+      fresh.element.remove(); fresh.wrapper.remove();
+
+      for (const { name, call } of boundaries) {
+        const { element, peer, wrapper } = await mount(initial);
+        const original = peer[name];
+        let calls = 0, failed = false;
+        Object.defineProperty(peer, name, { configurable: true, value(...args: unknown[]) {
+          const result: unknown = Reflect.apply(original, peer, args);
+          if (!failed && ++calls === call) { failed = true; throw new Error('Native write unavailable'); }
+          return result;
+        } });
+        const boundary = `${name} call ${call}`;
+        try {
+          element.dataLayers = [row]; await rejected(element);
+          expect(failed, boundary).to.equal(true);
+          await waitUntil(() => peer.removed, `${boundary} did not retire the failed map`);
+          expect(element.map === undefined, boundary).to.equal(true);
+          expect(element.shadowRoot!.textContent, boundary).not.to.include('Native write unavailable');
+          element.remove(); wrapper.append(element);
+          await waitUntil(() => element.map !== undefined, `${boundary} did not reconnect`);
+          const replacement = element.map as unknown as TransitionMap;
+          replacement.fire('load'); await element.whenStyleReady(); await settle(element, replacement);
+          expect(layerPresentation(replacement), boundary).to.deep.equal(expected);
+          expect(replacement.sources.size, boundary).to.equal(1);
           expect(element.shadowRoot!.querySelectorAll('[part="error"]').length, boundary).to.equal(0);
         } finally { element.remove(); wrapper.remove(); }
       }

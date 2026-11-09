@@ -2,6 +2,24 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './heatmap.js';
 import type { LyraHeatmap } from './heatmap.js';
 
+for (const dimension of ['width', 'height'] as const) {
+  it(`rejects an externally cleared canvas ${dimension} and repaints after a theme refresh`, async () => {
+    const element = await fixture<LyraHeatmap>(html`<lr-heatmap style="inline-size:400px" .data=${{
+      kind: 'matrix', rowLabels: ['Row'], colLabels: ['Column'], values: [[7]],
+    }}></lr-heatmap>`);
+    await waitUntil(() => element.exportData('png').startsWith('data:image/png'));
+    const csv = element.exportData('csv');
+    const canvas = element.shadowRoot!.querySelector<HTMLCanvasElement>('[part="canvas"]')!;
+    canvas[dimension] = 0;
+    expect(element.exportData('png')).to.equal('');
+    expect(element.exportData('csv')).to.equal(csv);
+    element.refreshTheme();
+    await waitUntil(() => element.exportData('png').startsWith('data:image/png'));
+    expect(canvas[dimension]).to.be.greaterThan(0);
+    expect(element.exportData('csv')).to.equal(csv);
+  });
+}
+
 it('contains a canvas encoding failure while preserving CSV and later PNG exports', async () => {
   const element = await fixture<LyraHeatmap>(html`<lr-heatmap style="width: 400px" .data=${{
     kind: 'matrix', rowLabels: ['Row'], colLabels: ['Column'], values: [[7]],
