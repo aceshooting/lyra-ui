@@ -39,6 +39,17 @@ function popup(el: LyraTooltip): HTMLElement {
   return el.shadowRoot!.querySelector('[part~="popup"]') as HTMLElement;
 }
 
+it('clears its accessible description after content removal and restores later help text', async () => {
+  const el = await fixture<LyraTooltip>(html`<lr-tooltip manual content="Initial help"><button slot="trigger">Help</button></lr-tooltip>`);
+  await waitUntil(() => descriptionProxy(el).textContent === 'Initial help');
+  el.removeAttribute('content'); await el.updateComplete;
+  await waitUntil(() => descriptionProxy(el).textContent === '');
+  expect(el.open).to.equal(false);
+  el.setAttribute('content', 'Restored help'); await el.updateComplete;
+  await waitUntil(() => descriptionProxy(el).textContent === 'Restored help');
+  expect(el.querySelector('button')!.textContent).to.equal('Help');
+});
+
 it('tracks flattened forwarded text and actionability through mutation, reassignment, and fallback', async () => {
   const wrapper = (await fixture(html`
     <test-tooltip-content-forwarder>

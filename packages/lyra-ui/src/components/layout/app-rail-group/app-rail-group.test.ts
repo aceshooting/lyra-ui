@@ -26,6 +26,21 @@ function populated(): ReturnType<typeof html> {
 }
 
 describe('<lr-app-rail-group>', () => {
+  it('uses localized toggle names after heading removal and restores the authored heading', async () => {
+    const el = await fixture<LyraAppRailGroup>(html`<lr-app-rail-group heading="Workspaces" collapsible
+      .strings=${{ expand: 'Show workspaces', collapse: 'Hide workspaces' }}></lr-app-rail-group>`);
+    el.removeAttribute('heading'); await el.updateComplete;
+    const toggle = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!;
+    expect(toggle.getAttribute('aria-label')).to.equal('Hide workspaces');
+    expect(el.shadowRoot!.querySelector('[part="heading-text"]')!.textContent?.trim()).to.equal('');
+    toggle.click(); await el.updateComplete;
+    expect(el.collapsed).to.equal(true);
+    expect(toggle.getAttribute('aria-label')).to.equal('Show workspaces');
+    el.setAttribute('heading', 'Restored workspaces'); await el.updateComplete;
+    expect(toggle.getAttribute('aria-label')).to.equal(null);
+    expect(el.shadowRoot!.querySelector('[part="heading-text"]')!.textContent?.trim()).to.equal('Restored workspaces');
+  });
+
   it('renders its heading as a heading landmark that names the group', async () => {
     const el = (await fixture<LyraAppRailGroup>(populated())) as LyraAppRailGroup;
     await el.updateComplete;

@@ -292,7 +292,7 @@ export class LyraAppRailGroup extends LyraElement<LyraAppRailGroupEventMap> {
   };
 
   override render(): TemplateResult {
-    const named = this.hasHeadingSlot || this.heading.trim() !== '';
+    const named = this.hasHeadingSlot || (this.heading?.trim() ?? '') !== '';
     const headingContent = html`<span part="heading-text"
       ><slot name="heading" @slotchange=${this.onHeadingSlotChange}
         >${this.hasHeadingSlot ? nothing : this.heading}</slot

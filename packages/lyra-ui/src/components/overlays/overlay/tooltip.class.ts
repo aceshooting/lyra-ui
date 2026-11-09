@@ -1458,7 +1458,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     const hasAssignment = assigned ?? snapshot?.assigned ?? false;
     const description = hostLabel !== null
       ? hostLabel.trim()
-      : (this.accessibleLabel || visibleContent || (hasAssignment ? '' : this.content)).trim();
+      : (this.accessibleLabel || visibleContent || (hasAssignment ? '' : this.content ?? '')).trim();
     if (this.descriptionProxy.textContent !== description) this.descriptionProxy.textContent = description;
   }
   override render(): TemplateResult {

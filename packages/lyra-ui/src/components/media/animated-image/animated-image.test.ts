@@ -29,6 +29,24 @@ async function loaded(el: LyraAnimatedImage, src = DATA_URI): Promise<void> {
   await el.updateComplete;
 }
 
+it('clears a loaded image when src is removed and decodes a later restored source', async () => {
+  const el = await fixture<LyraAnimatedImage>(html`<lr-animated-image alt="Preview"></lr-animated-image>`);
+  const first = oneEvent(el, 'lr-load');
+  el.setAttribute('src', DATA_URI); await first; await el.updateComplete;
+  expect(el.hasAttribute('data-loaded')).to.equal(true);
+  let errors = 0;
+  el.addEventListener('lr-error', () => { errors++; });
+  el.removeAttribute('src'); await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('img')!.getAttribute('src')).to.equal(null);
+  expect(el.hasAttribute('data-loaded')).to.equal(false);
+  expect(errors).to.equal(0);
+  const restored = oneEvent(el, 'lr-load');
+  el.setAttribute('src', DATA_URI); await restored; await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('img')!.naturalWidth).to.equal(1);
+  expect(el.hasAttribute('data-loaded')).to.equal(true);
+  expect(errors).to.equal(0);
+});
+
 /** Stubs `window.matchMedia('(prefers-reduced-motion: reduce)')` with a
  *  controllable fake `MediaQueryList` so reduced-motion arbitration is
  *  deterministic instead of depending on the ambient CI environment. Restore

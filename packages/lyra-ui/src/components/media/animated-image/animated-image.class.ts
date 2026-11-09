@@ -199,7 +199,7 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
     if (changed.has('src')) {
       this.hasLoaded = false;
       this.hasError = false;
-      const trimmed = this.src.trim();
+      const trimmed = this.src?.trim() ?? '';
       // An empty src never asked for anything to load -- not an error. A
       // non-empty src that fails the safe-URL check never reaches the real
       // <img src> sink, so its failure has to be reported here instead of
