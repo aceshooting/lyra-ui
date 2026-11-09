@@ -938,7 +938,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
   /** Blurs whichever internal field currently has focus, if any. */
   override blur(): void {
     (
-      this.renderRoot.querySelector('input:focus') as HTMLInputElement | null
+      this.renderRoot?.querySelector('input:focus') as HTMLInputElement | null
     )?.blur();
   }
 

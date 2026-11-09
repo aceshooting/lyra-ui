@@ -147,7 +147,7 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
   }
 
   private get viewportEl(): HTMLElement | null {
-    return this.renderRoot.querySelector<HTMLElement>('[part="viewport"]');
+    return this.renderRoot?.querySelector<HTMLElement>('[part="viewport"]') ?? null;
   }
 
   /** Focus the scrollable viewport — the element that owns this component's keyboard zoom. */

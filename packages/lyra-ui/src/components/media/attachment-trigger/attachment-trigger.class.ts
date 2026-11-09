@@ -472,7 +472,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   };
 
   private primaryControl(): HTMLButtonElement | undefined {
-    return this.renderRoot.querySelector<HTMLButtonElement>('[part="trigger"], [part="menu-trigger"]') ?? undefined;
+    return this.renderRoot?.querySelector<HTMLButtonElement>('[part="trigger"], [part="menu-trigger"]') ?? undefined;
   }
 
   override focus(options?: FocusOptions): void {

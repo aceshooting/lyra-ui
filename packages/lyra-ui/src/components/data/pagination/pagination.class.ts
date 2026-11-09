@@ -398,7 +398,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   private get primaryControl(): HTMLElement | undefined {
     return this.format === 'compact' || this.indeterminate
       ? this.pageInput
-      : this.renderRoot.querySelector<HTMLElement>('[part~="page-current"]') ?? undefined;
+      : this.renderRoot?.querySelector<HTMLElement>('[part~="page-current"]') ?? undefined;
   }
 
   /** Focus the current-page button/link, or the editable page-jump input in compact format. */

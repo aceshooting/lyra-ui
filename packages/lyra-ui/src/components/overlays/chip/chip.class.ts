@@ -470,9 +470,9 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   };
 
   private get primaryControl(): HTMLButtonElement | null {
-    return this.renderRoot.querySelector<HTMLButtonElement>(
+    return this.renderRoot?.querySelector<HTMLButtonElement>(
       this.removable ? '[part="remove-button"]' : '[part="toggle-button"]'
-    );
+    ) ?? null;
   }
 
   override focus(options?: FocusOptions): void {

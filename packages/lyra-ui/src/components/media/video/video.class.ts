@@ -468,9 +468,9 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
 
   /** The one currently-visible play action: poster button first, then the control-bar toggle. */
   private get playControl(): HTMLButtonElement | null {
-    return this.renderRoot.querySelector<HTMLButtonElement>(
+    return this.renderRoot?.querySelector<HTMLButtonElement>(
       '[part="poster-play-button"], [data-control="play"]',
-    );
+    ) ?? null;
   }
 
   /** Focus the play/pause control. A `controls="none"` player renders none, so this is a no-op

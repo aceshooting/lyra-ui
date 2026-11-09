@@ -253,7 +253,7 @@ export class LyraAccordionItem extends LyraElement {
   }
 
   private get button(): HTMLButtonElement | null {
-    return this.renderRoot.querySelector<HTMLButtonElement>('[part~="button"]');
+    return this.renderRoot?.querySelector<HTMLButtonElement>('[part~="button"]') ?? null;
   }
 
   private onTrigger = (): void => {

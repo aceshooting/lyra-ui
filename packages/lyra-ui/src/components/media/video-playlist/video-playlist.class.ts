@@ -713,7 +713,7 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
   /** The current row, falling back to the first enabled row, for host method forwarding. */
   private get navigationItem(): HTMLButtonElement | null {
     const rows = [
-      ...this.renderRoot.querySelectorAll<HTMLButtonElement>('[part~="playlist-item"]'),
+      ...this.renderRoot?.querySelectorAll<HTMLButtonElement>('[part~="playlist-item"]') ?? [],
     ];
     return rows.find((row) => !row.disabled && row.getAttribute('aria-current') === 'true')
       ?? rows.find((row) => !row.disabled)

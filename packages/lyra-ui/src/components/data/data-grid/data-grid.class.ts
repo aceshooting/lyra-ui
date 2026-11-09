@@ -2295,7 +2295,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       this.focusedRow < 0
         ? `[role="columnheader"][data-column-position="${this.focusedColumn}"]`
         : `[role="gridcell"][data-row-position="${this.focusedRow}"][data-column-position="${this.focusedColumn}"]`;
-    (this.renderRoot.querySelector(selector) as HTMLElement | null)?.focus(
+    this.renderRoot?.querySelector<HTMLElement>(selector)?.focus(
       options
     );
   }
