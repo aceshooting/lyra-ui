@@ -107,6 +107,48 @@ describe('lr-document-compare', () => {
     expect(diff.oldText).to.equal('before mutation');
   });
 
+  for (const side of ['oldVersion', 'newVersion'] as const) {
+    it(`clears an invalid ${side} without changing the other document and accepts a later replacement`, async () => {
+      let accessorReads = 0;
+      const revoked = Proxy.revocable({ id: 'revoked', name: 'Revoked' }, {});
+      revoked.revoke();
+      const invalid: unknown[] = [
+        null, [], 3, 'document', {},
+        { id: 'missing-name' }, { name: 'Missing id' },
+        { id: 1, name: 'Numeric id' }, { id: 'numeric-name', name: 2 },
+        Object.create({ id: 'inherited', name: 'Inherited' }),
+        Object.defineProperty({ name: 'Accessor' }, 'id', {
+          get: () => { accessorReads++; throw new Error('id must not be evaluated'); },
+        }),
+        new Proxy({}, { getOwnPropertyDescriptor: () => { throw new Error('unreadable document'); } }),
+        revoked.proxy,
+      ];
+      const el = await fixture<LyraDocumentCompare>(html`<lr-document-compare
+        .oldVersion=${{ id: 'old', name: 'Old', text: 'previous text' }}
+        .newVersion=${{ id: 'new', name: 'New', text: 'current text' }}
+      ></lr-document-compare>`);
+      const otherSide = side === 'oldVersion' ? 'newVersion' : 'oldVersion';
+      const otherVersion = el[otherSide];
+      const textKey = side === 'oldVersion' ? 'oldText' : 'newText';
+      const otherTextKey = side === 'oldVersion' ? 'newText' : 'oldText';
+      for (const candidate of invalid) {
+        el[side] = { id: 'valid', name: 'Valid', text: 'text to remove' };
+        await el.updateComplete;
+        Reflect.set(el, side, candidate);
+        await el.updateComplete;
+        const diff = el.shadowRoot!.querySelector<LyraDiffView>('lr-diff-view')!;
+        expect(el[side]).to.equal(undefined);
+        expect(diff[textKey]).to.equal('');
+        expect(el[otherSide] === otherVersion).to.equal(true);
+        expect(diff[otherTextKey]).to.equal(side === 'oldVersion' ? 'current text' : 'previous text');
+      }
+      expect(accessorReads).to.equal(0);
+      el[side] = { id: 'replacement', name: 'Replacement', text: 'replacement text' };
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector<LyraDiffView>('lr-diff-view')![textKey]).to.equal('replacement text');
+    });
+  }
+
   describe('view="diff" (default)', () => {
     it('renders an internal lr-diff-view forwarding oldVersion.text/newVersion.text', async () => {
       const el = (await fixture(html`
@@ -157,6 +199,8 @@ describe('lr-document-compare', () => {
       el.view = 'side-by-side';
       await el.updateComplete;
       expect(await el.search('gamma')).to.equal(0);
+      expect(await el.searchNext()).to.equal(false);
+      expect(await el.searchPrevious()).to.equal(false);
     });
 
     it('preserves an explicitly empty host aria-label on the comparison group', async () => {

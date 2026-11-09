@@ -634,6 +634,25 @@ describe('lr-highlight-layer', () => {
     expect(flashing?.dataset['id']).to.equal('b');
   });
 
+  it('retires a flash for an item with no visible rectangle before that item gains geometry', async () => {
+    const item: HighlightLayerItem = { id: 'pending', rects: [] };
+    const el = await fixture<LyraHighlightLayer>(html`
+      <lr-highlight-layer .items=${[item, ...ITEMS]}></lr-highlight-layer>
+    `);
+    el.flash('pending');
+    await el.updateComplete;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[data-flash]').length).to.equal(0);
+
+    el.items = [{ ...item, rects: [{ x: 10, y: 40, width: 20, height: 5 }] }, ...ITEMS];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="rect"]').length).to.equal(3);
+    expect(el.shadowRoot!.querySelectorAll('[data-flash]').length).to.equal(0);
+    el.flash('pending');
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector<HTMLElement>('[data-flash]')?.dataset['id']).to.equal('pending');
+  });
+
   it('ignores an obsolete flash timer after a newer highlight starts flashing', async () => {
     const el = await fixture<LyraHighlightLayer>(html`
       <lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>
