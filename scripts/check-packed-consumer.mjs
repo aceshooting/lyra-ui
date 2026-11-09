@@ -320,16 +320,15 @@ const bundleEntries = {
   },
   map: {
     fixture: 'optional',
-    // Partial elevated-path shader and vertex-buffer cleanup brings the MapLibre v6 consumer to
-    // 2,525,882 raw bytes across 52 files; the next 64-byte boundary leaves six bytes.
-    maxRawBytes: 2_525_888,
+    // Active token-provider validation brings the MapLibre v6 consumer from 2,525,882 to
+    // 2,526,291 raw bytes across 52 files; the next 64-byte boundary leaves 45 bytes.
+    maxRawBytes: 2_526_336,
   },
   graph: {
     fixture: 'optional',
-    // The optional WebGL engine adapter, typed columns, builtin 3D renderer, curved relationships,
-    // custom node bodies, glow, the ten additional locale catalogs, three 0.187 and the 30.7.0
-    // version stamps measure 448.1 KiB raw (458,888 bytes, 458,517 in CI); the next 64-byte boundary.
-    maxRawBytes: 458_944,
+    // Active token-provider validation brings the optional graph consumer from 458,888 to
+    // 459,313 raw bytes across 14 files; the next 64-byte boundary leaves 15 bytes.
+    maxRawBytes: 459_328,
   },
 };
 
