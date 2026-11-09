@@ -150,14 +150,18 @@ export async function fetchDocxBytes(url: string, options: DocxFetchOptions = {}
       request.then(late => { if (controller.signal.aborted && late && typeof late === 'object') cancelBody(late); }, () => {});
       candidate = await untilAborted(request, controller.signal);
     } catch { return refused(controller.signal.aborted ? 'aborted' : 'fetch-failed'); }
-    if (!candidate || typeof candidate !== 'object' || typeof (candidate as Response).arrayBuffer !== 'function') return refused('fetch-failed');
+    if (!candidate || typeof candidate !== 'object') return refused('fetch-failed');
     response = candidate as Response;
+    if (typeof response.arrayBuffer !== 'function') { cancelBody(response); return refused('fetch-failed'); }
     if (controller.signal.aborted) { cancelBody(response); return refused('aborted'); }
     // A redirect cannot leave the allowlist in a browser; check anyway so a foreign fetch cannot either.
     const final = typeof response.url === 'string' && response.url ? scheme(response.url) : null;
     if (!response.ok || (final !== null && !fetchSchemes.has(final))) { cancelBody(response); return refused('fetch-failed'); }
     try { return Object.freeze({ ok: true, value: await readBounded(response, controller.signal) }); }
     catch (error) { return refused(controller.signal.aborted ? 'aborted' : error instanceof ReadRefusal ? error.code : 'fetch-failed'); }
+  } catch {
+    if (response) cancelBody(response);
+    return refused(controller.signal.aborted ? 'aborted' : 'fetch-failed');
   } finally {
     signal?.removeEventListener('abort', abort);
     controller.abort();
