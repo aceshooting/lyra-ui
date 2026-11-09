@@ -36365,6 +36365,7 @@
         "tests": [
           "src/components/layout/multi-split/multi-split-collapse-api.test.ts",
           "src/components/layout/multi-split/multi-split-coverage.test.ts",
+          "src/components/layout/multi-split/multi-split-hydration-count.test.ts",
           "src/components/layout/multi-split/multi-split-modal-layering.test.ts",
           "src/components/layout/multi-split/multi-split-native-close.test.ts",
           "src/components/layout/multi-split/multi-split-panel-collapse.test.ts",

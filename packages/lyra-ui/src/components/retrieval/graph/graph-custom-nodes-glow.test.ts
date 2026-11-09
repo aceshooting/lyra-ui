@@ -148,4 +148,52 @@ describe('graph custom node and glow opt-ins', () => {
     } finally { value.graph.remove(); }
   });
 
+  it('yields during a large custom geometry batch and publishes owned meshes only after completion', async () => {
+    const value = setup(), original = mesh();
+    let calls = 0, yielded = false, lastObservedYield = false, errors = 0;
+    value.graph.nodes = Array.from({ length: 129 }, (_, index) => ({ id: String(index) }));
+    value.graph.nodeRenderer = context => {
+      calls++;
+      if (context.index === 127) queueMicrotask(() => { yielded = true; });
+      if (context.index === 128) lastObservedYield = yielded;
+      return original;
+    };
+    value.graph.addEventListener('lr-node-render-error', () => { errors++; });
+    await mount(value);
+    await waitUntil(() => value.meshes.some(rows => rows?.length === 129));
+    expect(calls).to.equal(129); expect(lastObservedYield).to.equal(true); expect(errors).to.equal(0);
+    expect(value.meshes.filter(rows => rows !== undefined).length).to.equal(1);
+    original.positions[0] = .4;
+    expect(value.meshes.at(-1)!.every(row => row?.positions[0] === 0)).to.equal(true);
+  });
+
+  for (const interruption of ['disconnect', 'list', 'hidden', 'renderer'] as const) {
+    it(`abandons a custom geometry batch interrupted by ${interruption} during its native yield and recovers`, async () => {
+      const value = setup(); let calls = 0, errors = 0;
+      value.graph.nodes = Array.from({ length: 129 }, (_, index) => ({ id: String(index) }));
+      value.graph.nodeRenderer = context => {
+        calls++;
+        if (context.index === 127) queueMicrotask(() => {
+          if (interruption === 'disconnect') value.graph.remove();
+          else if (interruption === 'list') value.graph.view = 'list';
+          else if (interruption === 'hidden') value.graph.hidden = true;
+          else value.graph.nodeRenderer = undefined;
+        });
+        return mesh();
+      };
+      value.graph.addEventListener('lr-node-render-error', () => { errors++; });
+      await mount(value); await value.graph.updateComplete;
+      expect(calls).to.equal(128);
+      expect(value.meshes.filter(rows => rows !== undefined).length).to.equal(0);
+      value.graph.nodes = [{ id: 'fresh-a' }, { id: 'fresh-b' }];
+      value.graph.nodeRenderer = () => mesh();
+      value.graph.view = '3d'; value.graph.hidden = false;
+      if (!value.graph.isConnected) await fixture(value.graph);
+      await value.graph.updateComplete;
+      await waitUntil(() => value.meshes.some(rows => rows?.length === 2));
+      expect(value.meshes.filter(rows => rows !== undefined).map(rows => rows!.length)).to.deep.equal([2]);
+      expect(calls).to.equal(128); expect(errors).to.equal(0);
+    });
+  }
+
 });

@@ -445,7 +445,7 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
     // into this one. Re-set to 'true' just below if this generation actually
     // reaches the fetch.
     this.setAttribute('aria-busy', 'false');
-    if (!this.src.trim()) return; // idle no-op: no fetch, no events, content untouched
+    if (!this.src?.trim()) return; // idle no-op: no fetch, no events, content untouched
     if (!this.isConnected) return;
 
     const source = this.resolveSource();

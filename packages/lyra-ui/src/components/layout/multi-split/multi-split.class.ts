@@ -889,6 +889,9 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
    *  `attachContainerListeners()`). */
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (!Number.isSafeInteger(this.panelCount) || this.panelCount < 0) {
+      this.panelCount = this.ownedPanels.length;
+    }
     if (!this.ownerDocument && this.panelCount === 0) {
       this.panelCount = Math.max(
         this.sizes.length,

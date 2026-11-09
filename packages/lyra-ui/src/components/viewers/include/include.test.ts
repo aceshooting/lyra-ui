@@ -77,6 +77,32 @@ describe('lr-include', () => {
     } finally { window.fetch = original; }
   });
 
+  it('retains included content when src is removed and loads a later replacement', async () => {
+    const original = window.fetch;
+    let requests = 0, loads = 0, errors = 0;
+    window.fetch = (() => Promise.resolve(response(`<p>Document ${++requests}</p>`))) as typeof window.fetch;
+    try {
+      const element = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
+      element.addEventListener('lr-load', () => { loads++; });
+      element.addEventListener('lr-error', () => { errors++; });
+      const first = oneEvent(element, 'lr-load');
+      element.setAttribute('src', '/attribute-first.html');
+      await first;
+      expect(element.textContent).to.equal('Document 1');
+      element.removeAttribute('src');
+      await element.updateComplete;
+      await twoFrames();
+      expect(element.textContent).to.equal('Document 1');
+      expect(element.getAttribute('aria-busy')).to.equal('false');
+      expect(requests).to.equal(1); expect(loads).to.equal(1); expect(errors).to.equal(0);
+      const replacement = oneEvent(element, 'lr-load');
+      element.setAttribute('src', '/attribute-second.html');
+      await replacement;
+      expect(element.textContent).to.equal('Document 2');
+      expect(requests).to.equal(2); expect(loads).to.equal(2); expect(errors).to.equal(0);
+    } finally { window.fetch = original; }
+  });
+
   it('shows author-supplied fallback content and sets aria-busy while a fetch is in flight', async () => {
     const original = window.fetch;
     let resolveFetch!: (value: Response) => void;

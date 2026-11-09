@@ -707,7 +707,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     // `ebookState` to idle and tore epub.js down, so re-arm the load here
     // whenever there's a `src` to load and this isn't the very first connect
     // (that case is already covered by updated()'s initial-render gate).
-    if (this.hasUpdated && this.src.trim()) this.scheduleAfterUpdate(() => { void this.load(); });
+    if (this.hasUpdated && this.src?.trim()) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
   override disconnectedCallback(): void {
@@ -797,7 +797,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     const generation = ++this.generation;
     const signal = this.beginAbortableLoad();
     this.teardown();
-    if (!this.src.trim()) {
+    if (!this.src?.trim()) {
       this.ebookState = { kind: 'idle' };
       return;
     }

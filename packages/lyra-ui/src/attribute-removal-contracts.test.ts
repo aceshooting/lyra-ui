@@ -1,4 +1,5 @@
 import { expect, waitUntil } from '@open-wc/testing';
+import { nextFrame } from '../test/frames.js';
 import { defaultConverter } from 'lit';
 import './all.js';
 import './components/media/flag/flag-peer.js';
@@ -37,6 +38,9 @@ describe('removing authored text attributes from connected components', () => {
           element.removeAttribute(attribute);
           await element.updateComplete;
           await waitUntil(() => !element.isUpdatePending, 'attribute removal must settle');
+          // Deferred loads must observe the removed attribute before it is restored.
+          await nextFrame();
+          await element.updateComplete;
           expect(element.isConnected).to.equal(true);
           expect(element.isUpdatePending).to.equal(false);
           element.setAttribute(attribute, initial);

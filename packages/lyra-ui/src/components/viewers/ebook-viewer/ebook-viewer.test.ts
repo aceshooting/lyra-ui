@@ -375,6 +375,34 @@ describe("lr-ebook-viewer", () => {
     }
   });
 
+  it('clears a removed source, reconnects idle, and loads a replacement book', async () => {
+    const first = fakeBook();
+    __setEpubJsForTesting(first.factory as never);
+    const restore = stubFetch();
+    try {
+      const element = await fixture<LyraEbookViewer>(html`<lr-ebook-viewer src="https://example.test/removed.epub"></lr-ebook-viewer>`);
+      const next = () => element.shadowRoot!.querySelector<HTMLButtonElement>('[part="next-button"]')!;
+      await waitUntil(() => !next().disabled);
+      const parent = element.parentElement!;
+      element.removeAttribute('src');
+      await element.updateComplete;
+      await twoFrames();
+      expect(first.calls.destroy).to.equal(1);
+      expect(next().disabled).to.equal(true);
+      expect(element.shadowRoot!.querySelector('[part="error"]') === null).to.equal(true);
+      element.remove(); parent.append(element); await element.updateComplete;
+      await twoFrames();
+      expect(next().disabled).to.equal(true);
+      const replacement = fakeBook();
+      __setEpubJsForTesting(replacement.factory as never);
+      element.setAttribute('src', 'https://example.test/replacement.epub');
+      await waitUntil(() => !next().disabled);
+      next().click();
+      expect(replacement.calls.next).to.equal(1);
+      expect(first.calls.next).to.equal(0);
+    } finally { restore(); }
+  });
+
   it('uses required book and rendition capabilities saved from data descriptors', async () => {
     const calls = { destroy: 0, next: 0, prev: 0, renderTo: 0 };
     const annotations = new Proxy({
