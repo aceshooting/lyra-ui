@@ -1,0 +1,85 @@
+{
+  "source": "class Example {\n  fallback = (value) => { return value ?? 'fallback'; };\n}\nglobalThis.example = new Example();\nif (globalThis.called) globalThis.result = example.fallback('authored');\n",
+  "sessions": [
+    [
+      {
+        "functionName": "",
+        "isBlockCoverage": true,
+        "ranges": [
+          {
+            "startOffset": 0,
+            "endOffset": 184,
+            "count": 1
+          }
+        ]
+      },
+      {
+        "functionName": "<instance_members_initializer>",
+        "isBlockCoverage": true,
+        "ranges": [
+          {
+            "startOffset": 18,
+            "endOffset": 71,
+            "count": 1
+          }
+        ]
+      },
+      {
+        "functionName": "fallback",
+        "isBlockCoverage": true,
+        "ranges": [
+          {
+            "startOffset": 29,
+            "endOffset": 71,
+            "count": 1
+          },
+          {
+            "startOffset": 55,
+            "endOffset": 68,
+            "count": 0
+          }
+        ]
+      }
+    ],
+    [
+      {
+        "functionName": "",
+        "isBlockCoverage": true,
+        "ranges": [
+          {
+            "startOffset": 0,
+            "endOffset": 184,
+            "count": 1
+          },
+          {
+            "startOffset": 134,
+            "endOffset": 183,
+            "count": 0
+          }
+        ]
+      },
+      {
+        "functionName": "<instance_members_initializer>",
+        "isBlockCoverage": true,
+        "ranges": [
+          {
+            "startOffset": 18,
+            "endOffset": 71,
+            "count": 1
+          }
+        ]
+      },
+      {
+        "functionName": "fallback",
+        "isBlockCoverage": false,
+        "ranges": [
+          {
+            "startOffset": 29,
+            "endOffset": 71,
+            "count": 0
+          }
+        ]
+      }
+    ]
+  ]
+}

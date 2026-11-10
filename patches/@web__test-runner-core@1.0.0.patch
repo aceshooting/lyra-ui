@@ -1,5 +1,5 @@
 diff --git a/dist/coverage/getTestCoverage.js b/dist/coverage/getTestCoverage.js
-index ac91e448145fa3afba6e783aea8ccc764b83ba52..584d20008e452265190b0c9d4be7fd7b9e161656 100644
+index ac91e448145fa3afba6e783aea8ccc764b83ba52..cecd57a1a5ee5aedd7fe0e8137de74abfc960f4d 100644
 --- a/dist/coverage/getTestCoverage.js
 +++ b/dist/coverage/getTestCoverage.js
 @@ -15,11 +15,9 @@ const rangeEquals = (a, b) => locEquals(a.start, b.start) && locEquals(a.end, b.
@@ -16,8 +16,38 @@ index ac91e448145fa3afba6e783aea8ccc764b83ba52..584d20008e452265190b0c9d4be7fd7b
      // Multiply each line by 100_000, as lines length are unknown but should never reach this size
      return (startDistanceLine * 100_000 +
          endDistanceLine * 100_000 +
+@@ -96,10 +94,28 @@ function addingMissingCoverageItems(coverages) {
+             collectCoverageItems(filePath, functionsPerFile, fileCoverage.fnMap);
+         }
+     }
++    // A callback can have only coarse function coverage, or not exist at all in a
++    // session. Its branches must not inherit execution from an outer initializer.
++    const branchOwners = new Map();
++    for (const [filePath, branches] of branchesPerFile) {
++        const functions = functionsPerFile.get(filePath);
++        for (const branch of Object.values(branches)) {
++            const owner = findEncompassingKey(functions, branch);
++            if (owner != null) {
++                branchOwners.set(branch, functions[owner].loc);
++            }
++        }
++    }
+     // patch coverage entries to add missing code branches
+     for (const coverage of coverages) {
+         for (const [filePath, fileCoverage] of Object.entries(coverage)) {
+-            const patchedBranches = patchCoverageItems(filePath, branchesPerFile, fileCoverage.branchMap, fileCoverage.b, findEncompassingKey, () => [0]);
++            const patchedBranches = patchCoverageItems(filePath, branchesPerFile, fileCoverage.branchMap, fileCoverage.b, (items, mapping) => {
++                const key = findEncompassingKey(items, mapping);
++                const owner = branchOwners.get(mapping);
++                return key != null && (!owner || rangeEncompass(owner, items[key].loc))
++                    ? key
++                    : undefined;
++            }, () => [0]);
+             fileCoverage.branchMap = patchedBranches.itemMap;
+             fileCoverage.b = patchedBranches.itemIndex;
+             const patchedFunctions = patchCoverageItems(filePath, functionsPerFile, fileCoverage.fnMap, fileCoverage.f, findKey, () => 0);
 diff --git a/src/coverage/getTestCoverage.ts b/src/coverage/getTestCoverage.ts
-index fdd7832f4094e616fd8862c70e9aa17209e64ba3..df22712c82fffdce8e1e09cdced0b71a5779767e 100644
+index fdd7832f4094e616fd8862c70e9aa17209e64ba3..db75ac204ca018b829eb83ccf20e9cf33a7c8aea 100644
 --- a/src/coverage/getTestCoverage.ts
 +++ b/src/coverage/getTestCoverage.ts
 @@ -33,12 +33,10 @@ const rangeEncompass = (a: Range, b: Range) =>
@@ -35,3 +65,47 @@ index fdd7832f4094e616fd8862c70e9aa17209e64ba3..df22712c82fffdce8e1e09cdced0b71a
  
    // Multiply each line by 100_000, as lines length are unknown but should never reach this size
    return (
+@@ -59,7 +57,7 @@ function findKey<T extends BranchMapping | FunctionMapping>(items: Record<string
+ 
+ function findEncompassingKey<T extends BranchMapping | FunctionMapping>(
+   items: Record<string, T>,
+-  item: T,
++  item: BranchMapping | FunctionMapping,
+ ) {
+   // Get all encompassing branches
+   const encompassingEntries = Object.entries(items).filter(([, m]) =>
+@@ -147,6 +145,19 @@ function addingMissingCoverageItems(coverages: CoverageMapData[]) {
+     }
+   }
+ 
++  // A callback can have only coarse function coverage, or not exist at all in a
++  // session. Its branches must not inherit execution from an outer initializer.
++  const branchOwners = new Map<BranchMapping, Range>();
++  for (const [filePath, branches] of branchesPerFile) {
++    const functions = functionsPerFile.get(filePath)!;
++    for (const branch of Object.values(branches)) {
++      const owner = findEncompassingKey(functions, branch);
++      if (owner != null) {
++        branchOwners.set(branch, functions[owner].loc);
++      }
++    }
++  }
++
+   // patch coverage entries to add missing code branches
+   for (const coverage of coverages) {
+     for (const [filePath, fileCoverage] of Object.entries(coverage)) {
+@@ -155,7 +166,13 @@ function addingMissingCoverageItems(coverages: CoverageMapData[]) {
+         branchesPerFile,
+         fileCoverage.branchMap,
+         fileCoverage.b,
+-        findEncompassingKey,
++        (items, mapping) => {
++          const key = findEncompassingKey(items, mapping);
++          const owner = branchOwners.get(mapping);
++          return key != null && (!owner || rangeEncompass(owner, items[key].loc))
++            ? key
++            : undefined;
++        },
+         () => [0],
+       );
+       fileCoverage.branchMap = patchedBranches.itemMap;

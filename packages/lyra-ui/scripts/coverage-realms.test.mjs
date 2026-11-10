@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { Session } from 'node:inspector/promises';
 import { createRequire } from 'node:module';
@@ -17,6 +17,7 @@ const require = createRequire(import.meta.url);
 const runnerRequire = createRequire(require.resolve('@web/test-runner-playwright'));
 const { v8ToIstanbul } = runnerRequire('@web/test-runner-coverage-v8');
 const { getTestCoverage } = runnerRequire(join(dirname(runnerRequire.resolve('@web/test-runner-core')), 'coverage/getTestCoverage.js'));
+const nativeConverter = createRequire(runnerRequire.resolve('@web/test-runner-coverage-v8'))('v8-to-istanbul');
 
 function branchSession(rows) {
   const path = '/fixture/branches.ts';
@@ -55,6 +56,68 @@ for (const bounds of [[20, 60], [0, 60]]) {
     assert.deepEqual(sessionBranchCounts([second, first]), expected, 'session order must not change the result');
   });
 }
+
+for (const callbackPresent of [false, true]) {
+  test(`missing branches cannot inherit across a ${callbackPresent ? 'coarse' : 'missing'} callback boundary`, () => {
+    const active = branchSession([[0, 100, 2], [20, 80, 1], [30, 50, 0], [60, 70, 1]]);
+    const idle = branchSession([[0, 100, 3]]);
+    for (const [session, present, calls] of [[active, true, 1], [idle, callbackPresent, 0]]) {
+      if (!present) continue;
+      const coverage = session.testCoverage['/fixture/branches.ts'];
+      const loc = { start: { line: 1, column: 20 }, end: { line: 1, column: 80 } };
+      coverage.fnMap[0] = { name: 'callback', line: 1, loc, decl: loc };
+      coverage.f[0] = calls;
+    }
+    const before = structuredClone([active, idle]);
+    const expected = { '0:100': 5, '20:80': 1, '30:50': 0, '60:70': 1 };
+    assert.deepEqual(sessionBranchCounts([active, idle]), expected);
+    assert.deepEqual(sessionBranchCounts([idle, active]), expected);
+    assert.deepEqual([active, idle], before);
+  });
+}
+
+test('Chromium coarse callback coverage preserves an unexecuted nullish arm', async () => {
+  // Captured with Playwright precise coverage: both pages construct the class, but only
+  // the first calls its callback. Chromium omits branches for the idle callback.
+  const fixture = JSON.parse(await readFile(new URL('./fixtures/coverage-callback.json', import.meta.url), 'utf8'));
+  const filename = '/fixture/callback.js';
+  const sessions = await Promise.all(fixture.sessions.map(async (functions) => {
+    const converter = nativeConverter(filename, 0, { source: fixture.source });
+    await converter.load();
+    converter.applyCoverage(functions);
+    return { testCoverage: converter.toIstanbul() };
+  }));
+  const idle = fixture.sessions[1].find((fn) => fn.functionName === 'fallback');
+  assert.equal(idle.isBlockCoverage, false);
+  assert.equal(idle.ranges[0].count, 0);
+  const before = structuredClone(sessions);
+  for (const ordered of [sessions, [...sessions].reverse()]) {
+    const coverage = getTestCoverage(ordered, {}).coverageMap.fileCoverageFor(filename);
+    const callback = Object.entries(coverage.fnMap).find(([, fn]) => fn.name === 'fallback');
+    assert.equal(coverage.f[callback[0]], 1, 'callback is invoked exactly once');
+    const branches = Object.entries(coverage.branchMap).filter(([, branch]) =>
+      branch.loc.start.line === 2 && branch.loc.start.column >= callback[1].loc.start.column);
+    assert.equal(branches.length, 2, 'callback and nullish arm are both retained');
+    assert.deepEqual(branches.map(([id]) => coverage.b[id][0]).sort((a, b) => a - b), [0, 1]);
+    assert.equal(Object.keys(coverage.branchMap).length, 5, 'all recorded branches survive');
+    assert.deepEqual(Object.keys(coverage.getLineCoverage()), ['1', '2', '3', '4', '5']);
+  }
+  assert.deepEqual(sessions, before);
+});
+
+test('missing callback branches still inherit execution within that callback', () => {
+  const first = branchSession([[0, 100, 1], [20, 80, 1], [30, 50, 0]]);
+  const second = branchSession([[0, 100, 4], [20, 80, 3]]);
+  for (const [session, calls] of [[first, 1], [second, 3]]) {
+    const coverage = session.testCoverage['/fixture/branches.ts'];
+    const loc = { start: { line: 1, column: 20 }, end: { line: 1, column: 80 } };
+    coverage.fnMap[0] = { name: 'callback', line: 1, loc, decl: loc };
+    coverage.f[0] = calls;
+  }
+  for (const sessions of [[first, second], [second, first]]) {
+    assert.deepEqual(sessionBranchCounts(sessions), { '0:100': 5, '20:80': 4, '30:50': 3 });
+  }
+});
 
 test('V8 coverage unions execution from independent realms sharing one source URL', async (t) => {
   const directory = await mkdtemp(join(tmpdir(), 'lyra-coverage-realms-'));
