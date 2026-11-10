@@ -1,10 +1,12 @@
 import { nextFrame } from '../test/frames.js';
 import { expect } from '@open-wc/testing';
 import './all.js';
+import './translations/ar.js';
 import { ROOT_BARREL_TAGS } from './internal/root-registration-allowlist.js';
 import { renderedTemplateWhitespace } from '../test/rendered-whitespace.js';
 import { trackInputModality } from './internal/focus-modality.js';
 import { expectDevWarning } from '../test/expected-dev-warnings.js';
+import { resolveLyraDirection, resolveLyraLocale } from './internal/localization.js';
 
 expectDevWarning('lyra-data-grid-missing-accessible-name');
 expectDevWarning('lyra-tree-missing-accessible-name');
@@ -19,7 +21,7 @@ before(() => trackInputModality(document));
  * compatibility entry registers (the optional-peer chart/map/graph families are excluded
  * because importing them requires peers this environment must not assume).
  *
- * Four contracts per tag use default behavior, with explicit names where required and
+ * Five contracts per tag use default behavior, with explicit names where required and
  * optional data loaders disabled by prepareDefaultElement(). No slotted content is supplied:
  *
  * 1. reconnect-smoke — an element survives disconnect + reconnect: no thrown
@@ -35,13 +37,17 @@ before(() => trackInputModality(document));
  * 4. template-whitespace-contract — no template-formatting whitespace renders
  *    inside a white-space-preserving context anywhere in the shadow tree
  *    (`renderedTemplateWhitespace()` from `test/rendered-whitespace.ts`).
+ * 5. adoption-contract — native adoption through an inert document and a live iframe
+ *    preserves the shadow root and rendering, refreshes inherited locale/direction,
+ *    and permits subsequent updates in both the destination and original documents.
  */
 
 type ContractName =
   | 'reconnect-smoke'
   | 'leak-contract'
   | 'focusable-name-contract'
-  | 'template-whitespace-contract';
+  | 'template-whitespace-contract'
+  | 'adoption-contract';
 
 /**
  * Per-tag, per-contract opt-outs. Every entry needs a specific technical
@@ -116,7 +122,7 @@ function prepareDefaultElement(tag: string, el: Element): void {
 }
 
 /**
- * Contracts 1, 3 and 4 read only each element's own state and install no global instrumentation, so
+ * Contracts 1, 3, 4 and 5 read only each element's own state and install no global instrumentation, so
  * the elements of many tags can share the animation-frame waits: every tag's scenario runs in a
  * batch of concurrent, mutually independent hosts and the per-tag `it` reports that tag's outcome
  * (the original error is rethrown unchanged). The leak contract tallies window/document listeners
@@ -258,6 +264,82 @@ async function reconnectScenario(tag: string, signal: AbortSignal): Promise<void
     host.remove();
   }
 }
+
+describe('lifecycle contract: adoption-contract', () => {
+  let outcomes: Map<string, Outcome<void>>;
+
+  before(async function () {
+    this.timeout(120_000);
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    try {
+      await new Promise<void>((resolve) => {
+        if (frame.contentDocument?.readyState === 'complete') resolve();
+        else frame.addEventListener('load', () => resolve(), { once: true });
+      });
+      const foreign = frame.contentDocument!;
+      foreign.documentElement.lang = 'ar';
+      foreign.documentElement.dir = 'rtl';
+      const inert = document.implementation.createHTMLDocument('Adoption staging');
+      expect(inert.defaultView === null).to.equal(true);
+      outcomes = await runInBatches(ROOT_BARREL_TAGS, async (tag, signal) => {
+        const host = mountPoint();
+        host.lang = 'en';
+        host.dir = 'ltr';
+        const el = document.createElement(tag);
+        const cleanup = () => { el.remove(); host.remove(); };
+        signal.addEventListener('abort', cleanup, { once: true });
+        try {
+          prepareDefaultElement(tag, el);
+          host.append(el);
+          await settle(el);
+          signal.throwIfAborted();
+          const root = el.shadowRoot;
+          const hadContent = (root?.childElementCount ?? 0) > 0;
+          expect(resolveLyraLocale(el)).to.equal('en');
+          expect(resolveLyraDirection(el)).to.equal('ltr');
+
+          inert.adoptNode(el);
+          await flushAsyncWork();
+          signal.throwIfAborted();
+          expect(el.ownerDocument === inert).to.equal(true);
+          expect(el.isConnected).to.equal(false);
+          expect(el.shadowRoot === root).to.equal(true);
+
+          for (const destination of [foreign.body, host]) {
+            destination.append(destination.ownerDocument.adoptNode(el));
+            const lit = el as MaybeLit;
+            lit.requestUpdate?.();
+            await settle(el);
+            await flushAsyncWork();
+            signal.throwIfAborted();
+            const inFrame = destination.ownerDocument === foreign;
+            expect(el.ownerDocument === destination.ownerDocument).to.equal(true);
+            expect(el.isConnected).to.equal(true);
+            expect(el.shadowRoot === root).to.equal(true);
+            if (hadContent) expect(el.shadowRoot!.childElementCount).to.be.greaterThan(0);
+            expect(lit.isUpdatePending).to.equal(false);
+            expect(resolveLyraLocale(el)).to.equal(inFrame ? 'ar' : 'en');
+            expect(resolveLyraDirection(el)).to.equal(inFrame ? 'rtl' : 'ltr');
+            expect(destination.ownerDocument.defaultView!.getComputedStyle(el).direction)
+              .to.equal(inFrame ? 'rtl' : 'ltr');
+          }
+        } finally {
+          signal.removeEventListener('abort', cleanup);
+          cleanup();
+        }
+      });
+    } finally {
+      frame.remove();
+    }
+  });
+
+  for (const tag of ROOT_BARREL_TAGS) {
+    it(`<${tag}> preserves rendering and inherited context across document adoption`, () => {
+      outcomeOf(outcomes, tag);
+    });
+  }
+});
 
 // ---------------------------------------------------------------------------
 // Contract 2 — leak-contract

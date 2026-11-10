@@ -19468,6 +19468,12 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/dropdown.test.ts",
+              "test": "defers detached slot changes and collects the latest consumer menu on reconnect",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/overlays/overlay/dropdown.test.ts",
               "test": "is accessible populated and open with mapped items",
               "target": "el",
               "state": "populated"

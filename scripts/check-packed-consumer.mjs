@@ -162,10 +162,10 @@ const rootHelperRegisteredTags = [];
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/7859878f724ef4237ee93a5414fa6b54f204313a/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'Refreshing token-provider caches on explicit adoption increases the full non-optional graph from 5,664,922 to 5,665,023 raw bytes across the same 64 files. The ceiling advances only to the next 64-byte boundary, 5,665,024 bytes. The explicit Oniguruma canary retains its separate exact binary requirement.',
-  reviewedCoreMeasurementBytes: 5_665_023,
+  $comment: 'Ignoring detached and stale dropdown slot notifications measures the full non-optional graph at 5,665,066 raw bytes across the same 64 files. The ceiling advances only to the next 64-byte boundary, 5,665,088 bytes. The explicit Oniguruma canary retains its separate exact binary requirement.',
+  reviewedCoreMeasurementBytes: 5_665_066,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 1,
+  selectedRegressionHeadroomBytes: 22,
 };
 
 /**

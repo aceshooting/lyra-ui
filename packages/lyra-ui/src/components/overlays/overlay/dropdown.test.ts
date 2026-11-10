@@ -1357,3 +1357,49 @@ it('does not reacquire consumer menu ownership after removal before its first up
   await waitUntil(() => menu.dropdownOwner === el && menu.dropdownContained);
   expect(el.getMenu() === menu).to.equal(true);
 });
+
+it('ignores a queued notification from a replaced content slot', async () => {
+  const el = await fixture<LyraDropdown>(html`<lr-dropdown aria-label="Actions"><button slot="trigger">Actions</button></lr-dropdown>`);
+  const previousSlot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot:not([name])')!;
+  const menu = document.createElement('lr-menu');
+  menu.innerHTML = '<lr-menu-item>Rename</lr-menu-item>';
+  el.append(menu);
+  await waitUntil(() => el.getMenu() === menu);
+  await el.updateComplete;
+  expect(previousSlot.isConnected).to.equal(false);
+  // A browser may deliver an already-queued event after Lit replaced this slot's branch.
+  previousSlot.dispatchEvent(new Event('slotchange'));
+  expect(el.getMenu() === menu).to.equal(true);
+  expect(menu.dropdownOwner === el).to.equal(true);
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('lr-menu').length).to.equal(0);
+});
+
+it('defers detached slot changes and collects the latest consumer menu on reconnect', async () => {
+  const parent = await fixture<HTMLDivElement>(html`<div><lr-dropdown aria-label="Actions"><button slot="trigger">Actions</button><lr-menu><lr-menu-item>Original</lr-menu-item></lr-menu></lr-dropdown></div>`);
+  const el = parent.querySelector<LyraDropdown>('lr-dropdown')!;
+  const original = el.querySelector('lr-menu')!;
+  await waitUntil(() => el.getMenu() === original);
+  await el.updateComplete;
+  const slot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot:not([name])')!;
+  el.remove();
+  const replacement = document.createElement('lr-menu');
+  replacement.innerHTML = '<lr-menu-item value="replacement">Replacement</lr-menu-item>';
+  original.replaceWith(replacement);
+  slot.dispatchEvent(new Event('slotchange'));
+  expect(el.getMenu() === original).to.equal(true);
+  expect(original.dropdownOwner === null).to.equal(true);
+  expect(original.dropdownContained).to.equal(false);
+  expect(replacement.dropdownOwner === null).to.equal(true);
+  await Promise.resolve();
+  parent.append(el);
+  await waitUntil(() => el.getMenu() === replacement && replacement.dropdownOwner === el);
+  expect(replacement.dropdownContained).to.equal(true);
+  await el.show();
+  expect(replacement.dropdownOpen).to.equal(true);
+  await expect(el).to.be.accessible();
+  const selected = oneEvent(el, 'lr-select');
+  replacement.querySelector<HTMLElement>('lr-menu-item')!.click();
+  expect((await selected as CustomEvent<{ item: HTMLElement }>).detail.item.getAttribute('value')).to.equal('replacement');
+  await el.hide();
+});

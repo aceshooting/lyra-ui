@@ -269,7 +269,7 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
     // its own `open` value across a drag/drop reparent, so rejoin the contained controller to that
     // state even when reconnecting did not schedule a Lit update of its own.
     void this.updateComplete.then(() => {
-      if (this.isConnected) this.configureMenu(this.menuEngine);
+      if (this.contentSlot) this.collectConsumerMenuFromSlot(this.contentSlot);
     });
   }
 
@@ -301,6 +301,9 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
    * harmless `configureMenu()` resync.
    */
   private collectConsumerMenuFromSlot(slot: HTMLSlotElement): void {
+    // Queued notifications can outlive a connection or a rendered slot branch. Reconnecting
+    // collects the current assignment; detached or obsolete slots must not replace its owner.
+    if (!this.isConnected || slot !== this.contentSlot) return;
     const next = slot
       .assignedElements({ flatten: true })
       .find((element) => element.localName === tag('menu')) as LyraMenu | undefined;
