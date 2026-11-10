@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { createSimulationClock, SimulationClockError, type ClockScheduler } from './simulation-clock.js';
+import { createSimulationClock, SimulationClockError, type ClockScheduler, type SimulationClockCapabilities, type SimulationClockOptions } from './simulation-clock.js';
 
 function scheduler() {
   let mono = 0, epoch = 1000, next = 0;
@@ -65,6 +65,180 @@ it('admits options without invoking accessor values', () => {
   expect(() => createSimulationClock(options)).to.throw(SimulationClockError);
   expect(reads).to.equal(0);
 });
+
+it('rejects malformed options and capabilities before reading time or scheduling work', () => {
+  const calls: string[] = [];
+  const api: ClockScheduler = {
+    monotonicNow: () => { calls.push('monotonic'); return 0; },
+    epochNow: () => { calls.push('epoch'); return 0; },
+    requestFrame: () => { calls.push('request'); return 1; },
+    cancelFrame: () => { calls.push('cancel'); },
+  };
+  const valid = { range: [0, 100] as const, instant: 0 };
+  for (const options of [null, [], 0, { ...valid, extra: true }, { ...valid, [Symbol('extra')]: true }]) {
+    expect(() => createSimulationClock(options as SimulationClockOptions, { scheduler: api }))
+      .to.throw(SimulationClockError, 'invalid-options');
+  }
+  for (const instant of [NaN, Infinity, -Infinity, 8.64e15 + 1, -8.64e15 - 1]) {
+    expect(() => createSimulationClock({ ...valid, instant }, { scheduler: api }))
+      .to.throw(SimulationClockError, 'invalid-instant');
+  }
+  const unreadableScheduler = Object.create(null) as ClockScheduler;
+  Object.defineProperty(unreadableScheduler, 'monotonicNow', { get() { throw new Error('Private scheduler failure'); } });
+  for (const capabilities of [
+    { scheduler: null }, { scheduler: { ...api, requestFrame: 1 } },
+    { scheduler: unreadableScheduler }, { scheduler: api, onSubscriberError: 'invalid' },
+  ]) {
+    expect(() => createSimulationClock(valid, capabilities as unknown as SimulationClockCapabilities))
+      .to.throw(SimulationClockError, 'invalid-capabilities');
+  }
+  expect(calls).to.deep.equal([]);
+});
+
+it('rejects invalid range updates without reading accessors or disturbing active playback', () => {
+  const time = scheduler();
+  const clock = createSimulationClock({ range: [0, 1000], instant: 0 }, { scheduler: time.api });
+  let reads = 0;
+  const accessor = [0, 100];
+  Object.defineProperty(accessor, '1', { get() { reads++; return 100; } });
+  const revoked = Proxy.revocable([0, 100], {}); revoked.revoke();
+  const invalid = [null, {}, [0], [0, 1, 2], [100, 0], [0, NaN], [0, Infinity],
+    [0, 8.64e15 + 1], [, 100], accessor, Object.assign([0, 100], { extra: true }), revoked.proxy];
+  const values: number[] = [];
+  clock.subscribe(value => values.push(value.instant));
+  clock.play();
+  try {
+    const before = clock.snapshot;
+    for (const range of invalid) {
+      expect(() => clock.setRange(range as unknown as readonly [number, number]))
+        .to.throw(SimulationClockError, 'invalid-range');
+      expect(clock.snapshot === before).to.equal(true);
+      expect(time.jobs.size).to.equal(1);
+    }
+    for (const instant of [NaN, Infinity, -Infinity, 8.64e15 + 1]) {
+      expect(() => clock.seek(instant)).to.throw(SimulationClockError, 'invalid-instant');
+      expect(() => clock.stepTo(instant)).to.throw(SimulationClockError, 'invalid-instant');
+    }
+    expect(reads).to.equal(0);
+    expect(values).to.deep.equal([0, 0]);
+    time.advance(100); time.frame();
+    expect(values.at(-1)).to.equal(100);
+    expect(clock.snapshot.playing).to.equal(true);
+  } finally { clock.dispose(); }
+  expect(time.jobs.size).to.equal(0);
+});
+
+it('resamples wall time when a live range expands beyond the previous clamp', () => {
+  const time = scheduler();
+  const clock = createSimulationClock({ range: [0, 100], instant: 0 }, { scheduler: time.api });
+  try {
+    clock.setMode('live');
+    expect(clock.snapshot.instant).to.equal(100);
+    time.wall(750);
+    clock.setRange([0, 1000]);
+    expect(clock.snapshot.instant).to.equal(750);
+    expect(clock.snapshot.reason).to.equal('range');
+    expect(clock.snapshot.mode).to.equal('live');
+    time.wall(300);
+    clock.setRange([400, 800]);
+    expect(clock.snapshot.instant).to.equal(400);
+    expect(clock.currentInstant()).to.equal(400);
+  } finally { clock.dispose(); }
+});
+
+it('stops a delivery immediately when its first subscriber disposes the clock', () => {
+  const time = scheduler();
+  const clock = createSimulationClock({ range: [0, 1000], instant: 0 }, { scheduler: time.api });
+  const first: number[] = [], second: number[] = [];
+  clock.subscribe(value => { first.push(value.instant); if (value.instant === 10) clock.dispose(); });
+  clock.subscribe(value => second.push(value.instant));
+  clock.play(); time.advance(10); time.frame();
+  expect(first).to.deep.equal([0, 0, 10]);
+  expect(second).to.deep.equal([0, 0]);
+  expect(clock.snapshot.instant).to.equal(10);
+  expect(clock.snapshot.playing).to.equal(false);
+  expect(time.jobs.size).to.equal(0);
+  clock.dispose();
+});
+
+it('rejects synchronous frame delivery without publishing playback and recovers with an asynchronous scheduler', () => {
+  const time = scheduler();
+  let synchronous = true;
+  const cancelled: unknown[] = [];
+  const clock = createSimulationClock({ range: [0, 1000], instant: 0 }, { scheduler: {
+    ...time.api,
+    requestFrame: callback => {
+      if (synchronous) { callback(); return 'early-frame'; }
+      return time.api.requestFrame(callback);
+    },
+    cancelFrame: handle => { cancelled.push(handle); time.api.cancelFrame(handle); },
+  } });
+  const values: number[] = [];
+  clock.subscribe(value => values.push(value.instant));
+  try {
+    const before = clock.snapshot;
+    expect(() => clock.play()).to.throw(SimulationClockError, 'invalid-capabilities');
+    expect(clock.snapshot === before).to.equal(true);
+    expect(values).to.deep.equal([0]);
+    expect(cancelled).to.deep.equal(['early-frame']);
+    synchronous = false;
+    clock.play(); time.advance(25); time.frame();
+    expect(values).to.deep.equal([0, 0, 25]);
+  } finally { clock.dispose(); }
+  expect(time.jobs.size).to.equal(0);
+});
+
+it('still cancels frames and freezes the last published instant when time sampling fails during disposal', () => {
+  const time = scheduler();
+  let failing = false;
+  const errors: unknown[] = [];
+  const clock = createSimulationClock({ range: [0, 1000], instant: 0 }, {
+    scheduler: { ...time.api, monotonicNow: () => { if (failing) throw new Error('Private clock failure'); return time.api.monotonicNow(); } },
+    onSubscriberError: error => errors.push(error),
+  });
+  clock.subscribe(() => undefined); clock.play(); time.advance(50); time.frame();
+  failing = true;
+  clock.dispose();
+  expect(errors.length).to.equal(1);
+  expect(errors[0]).to.be.instanceOf(SimulationClockError);
+  expect((errors[0] as SimulationClockError).code).to.equal('invalid-capabilities');
+  expect(clock.snapshot.instant).to.equal(50);
+  expect(clock.snapshot.playing).to.equal(false);
+  expect(time.jobs.size).to.equal(0);
+  expect(Object.isFrozen(clock.snapshot)).to.equal(true);
+  expect(() => clock.seek(0)).to.throw(SimulationClockError, 'disposed');
+});
+
+for (const reportingFails of [false, true]) {
+  it(`isolates a failing subscriber error handler when platform reporting ${reportingFails ? 'also fails' : 'succeeds'}`, () => {
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'reportError');
+    const reported: unknown[] = [];
+    const secondary = new Error('Error handler failed');
+    Object.defineProperty(globalThis, 'reportError', { configurable: true, value(error: unknown) {
+      reported.push(error);
+      if (reportingFails) throw new Error('Platform reporting failed');
+    } });
+    const time = scheduler();
+    const clock = createSimulationClock({ range: [0, 1000], instant: 0 }, {
+      scheduler: time.api, onSubscriberError: () => { throw secondary; },
+    });
+    try {
+      const values: number[] = [];
+      clock.subscribe(value => { if (value.instant === 10) throw new Error('Subscriber failed'); });
+      clock.subscribe(value => values.push(value.instant));
+      clock.seek(10);
+      expect(reported.length).to.equal(1);
+      expect(reported[0] === secondary).to.equal(true);
+      expect(values).to.deep.equal([0, 10]);
+      clock.seek(20);
+      expect(values).to.deep.equal([0, 10, 20]);
+    } finally {
+      clock.dispose();
+      if (descriptor) Object.defineProperty(globalThis, 'reportError', descriptor);
+      else Reflect.deleteProperty(globalThis, 'reportError');
+    }
+  });
+}
 
 it('keeps independent subscription tokens and cancels queued installation', () => {
   const time = scheduler(), clock = createSimulationClock({ range: [0, 1000], instant: 0 }, { scheduler: time.api });
