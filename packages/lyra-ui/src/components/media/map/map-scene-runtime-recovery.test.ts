@@ -119,4 +119,108 @@ describe('lr-map scene runtime startup recovery', () => {
     expect(disposals).to.equal(2);
     expect(bridge.disposed).to.equal(true);
   });
+
+  for (const event of ['move', 'resize', 'terrain'] as const) {
+    it(`retains allocation updates and releases other observations when ${event} subscription and cleanup throw`, async () => {
+      const { element, peer } = await env.mount();
+      const on = peer.on, off = peer.off;
+      const acquired: Parameters<typeof on>[1][] = [], released: string[] = [];
+      peer.on = function (type, listener) {
+        on.call(this, type, listener);
+        if (type === event) { acquired.push(listener); throw new Error('Native observation refused'); }
+        return this;
+      };
+      peer.off = function (type, listener) {
+        off.call(this, type, listener);
+        released.push(type);
+        if (type === event && acquired.includes(listener)) throw new Error('Native cleanup refused');
+        return this;
+      };
+      element.scene = { objects: [sceneMarker('observed')] };
+      const bridge = await env.bridge(peer);
+      // Marker allocation and line terrain status own independent subscriptions.
+      expect(acquired.length).to.equal(event === 'terrain' ? 2 : 1);
+      expect(bridge.host.captureRenderInput().allocation?.width).to.equal(640);
+      peer.width = 800; peer.syncBacking();
+      peer.fire(event === 'resize' ? 'move' : 'resize');
+      await waitUntil(() => bridge.host.captureRenderInput().allocation?.width === 800, 'surviving native signal refreshes allocation');
+      expect(mapSceneSessionAttachment(element)!.target('observed').status).to.equal('accepted');
+      element.scene = undefined;
+      await element.updateComplete; await renderTurns();
+      expect(bridge.disposed).to.equal(true);
+      expect(released).to.include.members(['move', 'resize', 'terrain']);
+      expect(acquired.every(listener => !peer.events.get(event)?.has(listener))).to.equal(true);
+      expect(env.observers.filter(observer => observer.kind === 'intersection' && observer.targets.has(peer.container) && !observer.stopped).length).to.equal(0);
+      expect(peer.removed).to.equal(false);
+      peer.on = on; peer.off = off;
+      element.scene = { objects: [sceneMarker('recovered')] };
+      const replacement = await env.bridge(peer);
+      expect(replacement === bridge).to.equal(false);
+      expect(replacement.host.captureRenderInput().markers.map(marker => marker.id)).to.deep.equal(['recovered']);
+    });
+  }
+
+  for (const event of ['move', 'resize'] as const) {
+    it(`retires observations acquired while a native ${event} subscription disconnects the map`, async () => {
+      const { element, peer, wrapper } = await env.mount();
+      const on = peer.on;
+      let disconnected = false;
+      peer.on = function (type, listener) {
+        on.call(this, type, listener);
+        if (type === event) { disconnected = true; element.remove(); }
+        return this;
+      };
+      element.scene = { objects: [sceneMarker('retained')] };
+      await waitUntil(() => disconnected, 'native subscription disconnects the element');
+      await renderTurns();
+      expect(peer.removed).to.equal(true);
+      expect([...peer.events.values()].reduce((total, listeners) => total + listeners.size, 0)).to.equal(0);
+      expect(env.observers.filter(observer => observer.targets.has(peer.container) && !observer.stopped).length).to.equal(0);
+      expect(env.records.length).to.equal(0);
+      wrapper.append(element);
+      await waitUntil(() => element.map !== undefined && element.map !== (peer as unknown), 'replacement native map');
+      const replacement = env.peers.at(-1)!; replacement.ready = true; replacement.fire('load');
+      const bridge = await env.bridge(replacement);
+      expect(bridge.host.isCurrent()).to.equal(true);
+      expect(bridge.host.captureRenderInput().markers.map(marker => marker.id)).to.deep.equal(['retained']);
+    });
+  }
+
+  for (const failure of ['construction', 'observation'] as const) {
+    it(`keeps marker rendering hidden after intersection ${failure} fails and recovers on new intent`, async () => {
+      const { element, peer } = await env.mount();
+      const Observer = window.IntersectionObserver;
+      let attempts = 0, releases = 0;
+      window.IntersectionObserver = class extends Observer {
+        constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+          super(callback, options);
+          if (failure === 'construction') { attempts++; throw new Error('Intersection observation unavailable'); }
+        }
+        override observe(target: Element): void {
+          if (target === peer.container) { attempts++; throw new Error('Intersection observation unavailable'); }
+          super.observe(target);
+        }
+        override disconnect(): void { releases++; super.disconnect(); }
+      };
+      try {
+        element.scene = { objects: [sceneMarker('hidden')] };
+        const bridge = await env.bridge(peer);
+        expect(attempts).to.equal(1);
+        expect(bridge.visibility).to.deep.equal([false]);
+        expect(bridge.host.captureRenderInput().markers.map(marker => marker.id)).to.deep.equal(['hidden']);
+        expect(mapSceneSessionAttachment(element)!.target('hidden').status).to.equal('accepted');
+        env.hidden(true); env.hidden(false); peer.fire('resize'); await renderTurns();
+        expect(bridge.visibility).to.deep.equal([false]);
+        expect(peer.removed).to.equal(false);
+        window.IntersectionObserver = Observer;
+        element.scene = undefined; await element.updateComplete; await renderTurns();
+        expect(bridge.disposed).to.equal(true);
+        expect(releases).to.equal(failure === 'observation' ? 1 : 0);
+        element.scene = { objects: [sceneMarker('visible')] };
+        const replacement = await env.bridge(peer);
+        await waitUntil(() => replacement.visibility.at(-1) === true, 'new intersection observation enables rendering');
+        expect(replacement.host.captureRenderInput().markers.map(marker => marker.id)).to.deep.equal(['visible']);
+      } finally { window.IntersectionObserver = Observer; }
+    });
+  }
 });
