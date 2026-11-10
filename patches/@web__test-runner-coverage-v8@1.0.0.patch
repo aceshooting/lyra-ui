@@ -1,4 +1,54 @@
+diff --git a/dist/index.js b/dist/index.js
+index d73040a4ca589e98dd896a3086625a287a92db89..e24163a7ab102527172b0dd1aed0c09f99b504f6 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
+ Object.defineProperty(exports, "__esModule", { value: true });
+ exports.v8ToIstanbul = v8ToIstanbul;
+ const test_runner_core_1 = require("@web/test-runner-core");
++const istanbul_lib_coverage_1 = require("istanbul-lib-coverage");
+ const lru_cache_1 = __importDefault(require("lru-cache"));
+ const promises_1 = require("node:fs/promises");
+ const path_1 = require("path");
+@@ -46,7 +47,7 @@ function getMatcher(patterns) {
+ async function v8ToIstanbul(config, testFiles, coverage, userAgent) {
+     const included = getMatcher(config?.coverageConfig?.include);
+     const excluded = getMatcher(config?.coverageConfig?.exclude);
+-    const istanbulCoverage = {};
++    const istanbulCoverage = (0, istanbul_lib_coverage_1.createCoverageMap)({});
+     for (const entry of coverage) {
+         const url = new URL(entry.url);
+         const path = url.pathname;
+@@ -83,8 +84,17 @@ async function v8ToIstanbul(config, testFiles, coverage, userAgent) {
+                     }
+                     const converter = (0, v8_to_istanbul_1.default)(filePath, 0, sources);
+                     await converter.load();
+-                    converter.applyCoverage(entry.functions);
+-                    Object.assign(istanbulCoverage, converter.toIstanbul());
++                    // Anonymous callbacks still own their branches. Preserve that boundary
++                    // when v8-to-istanbul builds its function map, excluding the script body.
++                    const functions = entry.functions.map(block => {
++                        const range = block.ranges[0];
++                        if (block.functionName || !range ||
++                            (range.startOffset === 0 && range.endOffset === sources.source.length))
++                            return block;
++                        return { ...block, functionName: '(anonymous)' };
++                    });
++                    converter.applyCoverage(functions);
++                    istanbulCoverage.merge(converter.toIstanbul());
+                 }
+             }
+             catch (error) {
+@@ -93,6 +103,6 @@ async function v8ToIstanbul(config, testFiles, coverage, userAgent) {
+             }
+         }
+     }
+-    return istanbulCoverage;
++    return istanbulCoverage.toJSON();
+ }
+ //# sourceMappingURL=index.js.map
 diff --git a/src/index.ts b/src/index.ts
+index e9fd024fe5b0f468b8f17cdadc5759eb10e70b67..c3426119535e3f25b01e9890c1564905749058c4 100644
 --- a/src/index.ts
 +++ b/src/index.ts
 @@ -1,6 +1,6 @@
@@ -9,7 +59,7 @@ diff --git a/src/index.ts b/src/index.ts
  import LruCache from 'lru-cache';
  import { readFile } from 'node:fs/promises';
  import { extname, isAbsolute, join, posix, sep } from 'path';
-@@ -63,7 +63,7 @@
+@@ -63,7 +63,7 @@ export async function v8ToIstanbul(
  ) {
    const included = getMatcher(config?.coverageConfig?.include);
    const excluded = getMatcher(config?.coverageConfig?.exclude);
@@ -18,16 +68,28 @@ diff --git a/src/index.ts b/src/index.ts
  
    for (const entry of coverage) {
      const url = new URL(entry.url);
-@@ -108,7 +108,7 @@
+@@ -107,8 +107,18 @@ export async function v8ToIstanbul(
+           const converter = v8toIstanbulLib(filePath, 0, sources);
            await converter.load();
  
-           converter.applyCoverage(entry.functions);
+-          converter.applyCoverage(entry.functions);
 -          Object.assign(istanbulCoverage, converter.toIstanbul());
++          // Anonymous callbacks still own their branches. Preserve that boundary
++          // when v8-to-istanbul builds its function map, excluding the script body.
++          const functions = entry.functions.map(block => {
++            const range = block.ranges[0];
++            if (
++              block.functionName || !range ||
++              (range.startOffset === 0 && range.endOffset === sources.source.length)
++            ) return block;
++            return { ...block, functionName: '(anonymous)' };
++          });
++          converter.applyCoverage(functions);
 +          istanbulCoverage.merge(converter.toIstanbul());
          }
        } catch (error) {
          console.error(`Error while generating code coverage for ${entry.url}.`);
-@@ -117,7 +117,7 @@
+@@ -117,7 +127,7 @@ export async function v8ToIstanbul(
      }
    }
  
@@ -36,40 +98,3 @@ diff --git a/src/index.ts b/src/index.ts
  }
  
  export { V8Coverage };
-diff --git a/dist/index.js b/dist/index.js
---- a/dist/index.js
-+++ b/dist/index.js
-@@ -5,6 +5,7 @@
- Object.defineProperty(exports, "__esModule", { value: true });
- exports.v8ToIstanbul = v8ToIstanbul;
- const test_runner_core_1 = require("@web/test-runner-core");
-+const istanbul_lib_coverage_1 = require("istanbul-lib-coverage");
- const lru_cache_1 = __importDefault(require("lru-cache"));
- const promises_1 = require("node:fs/promises");
- const path_1 = require("path");
-@@ -46,7 +47,7 @@
- async function v8ToIstanbul(config, testFiles, coverage, userAgent) {
-     const included = getMatcher(config?.coverageConfig?.include);
-     const excluded = getMatcher(config?.coverageConfig?.exclude);
--    const istanbulCoverage = {};
-+    const istanbulCoverage = (0, istanbul_lib_coverage_1.createCoverageMap)({});
-     for (const entry of coverage) {
-         const url = new URL(entry.url);
-         const path = url.pathname;
-@@ -84,7 +85,7 @@
-                     const converter = (0, v8_to_istanbul_1.default)(filePath, 0, sources);
-                     await converter.load();
-                     converter.applyCoverage(entry.functions);
--                    Object.assign(istanbulCoverage, converter.toIstanbul());
-+                    istanbulCoverage.merge(converter.toIstanbul());
-                 }
-             }
-             catch (error) {
-@@ -93,6 +94,6 @@
-             }
-         }
-     }
--    return istanbulCoverage;
-+    return istanbulCoverage.toJSON();
- }
- //# sourceMappingURL=index.js.map

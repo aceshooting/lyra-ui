@@ -119,6 +119,48 @@ test('missing callback branches still inherit execution within that callback', (
   }
 });
 
+test('anonymous Chromium callbacks retain ownership through browser coverage conversion', async (t) => {
+  const fixture = JSON.parse(await readFile(new URL('./fixtures/coverage-anonymous-callback.json', import.meta.url), 'utf8'));
+  const directory = await mkdtemp(join(tmpdir(), 'lyra-anonymous-coverage-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const filename = join(directory, 'coverage-anonymous-callback.js');
+  await writeFile(filename, fixture.source);
+  const server = createServer((_request, response) => {
+    response.setHeader('Content-Type', 'application/javascript');
+    response.end(fixture.source);
+  });
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  t.after(() => new Promise((resolve, reject) => {
+    server.close(error => error ? reject(error) : resolve());
+  }));
+  const port = server.address().port;
+  const entries = fixture.sessions.map(functions => ({
+    url: `http://127.0.0.1:${port}/coverage-anonymous-callback.js`, functions,
+  }));
+  const before = structuredClone(entries);
+  const config = {
+    rootDir: directory, protocol: 'http:', hostname: '127.0.0.1', port,
+    coverageConfig: { include: ['**/*.js'], exclude: ['**/ignored/**'] },
+  };
+  const sessions = await Promise.all(entries.map(async entry => ({
+    testCoverage: await v8ToIstanbul(config, [], [entry]),
+  })));
+  for (const ordered of [sessions, [...sessions].reverse()]) {
+    const coverage = getTestCoverage(ordered, {}).coverageMap.fileCoverageFor(filename);
+    const callbacks = Object.entries(coverage.branchMap).filter(([, branch]) => branch.loc.start.line === 2);
+    assert.deepEqual(callbacks.map(([id]) => coverage.b[id][0]).sort((a, b) => a - b), [0, 1],
+      'an idle anonymous callback cannot borrow its module execution count');
+    assert.equal(Object.keys(coverage.branchMap).length, 5, 'no native branch is discarded');
+    assert.deepEqual(Object.keys(coverage.getLineCoverage()), ['1', '2', '3']);
+    const functions = Object.entries(coverage.fnMap);
+    assert.equal(functions.length, 2, 'the module body is not reported as a function');
+    const callback = functions.find(([, fn]) => fn.loc.start.line === 2);
+    assert.equal(coverage.f[callback[0]], 1, 'the anonymous function is invoked exactly once');
+  }
+  assert.deepEqual(entries, before, 'normalization must not mutate native coverage');
+});
+
 test('V8 coverage unions execution from independent realms sharing one source URL', async (t) => {
   const directory = await mkdtemp(join(tmpdir(), 'lyra-coverage-realms-'));
   t.after(() => rm(directory, { recursive: true, force: true }));

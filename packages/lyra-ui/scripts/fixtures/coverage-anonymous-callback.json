@@ -1,0 +1,85 @@
+{
+  "source": "function register(callback) { globalThis.callback = callback; }\nregister((value) => { return value ?? 'fallback'; });\nif (globalThis.called) globalThis.result = callback('authored');\n",
+  "sessions": [
+    [
+      {
+        "functionName": "",
+        "isBlockCoverage": true,
+        "ranges": [
+          {
+            "startOffset": 0,
+            "endOffset": 183,
+            "count": 1
+          }
+        ]
+      },
+      {
+        "functionName": "register",
+        "isBlockCoverage": true,
+        "ranges": [
+          {
+            "startOffset": 0,
+            "endOffset": 63,
+            "count": 1
+          }
+        ]
+      },
+      {
+        "functionName": "",
+        "isBlockCoverage": true,
+        "ranges": [
+          {
+            "startOffset": 73,
+            "endOffset": 115,
+            "count": 1
+          },
+          {
+            "startOffset": 99,
+            "endOffset": 112,
+            "count": 0
+          }
+        ]
+      }
+    ],
+    [
+      {
+        "functionName": "",
+        "isBlockCoverage": true,
+        "ranges": [
+          {
+            "startOffset": 0,
+            "endOffset": 183,
+            "count": 1
+          },
+          {
+            "startOffset": 141,
+            "endOffset": 182,
+            "count": 0
+          }
+        ]
+      },
+      {
+        "functionName": "register",
+        "isBlockCoverage": true,
+        "ranges": [
+          {
+            "startOffset": 0,
+            "endOffset": 63,
+            "count": 1
+          }
+        ]
+      },
+      {
+        "functionName": "",
+        "isBlockCoverage": false,
+        "ranges": [
+          {
+            "startOffset": 73,
+            "endOffset": 115,
+            "count": 0
+          }
+        ]
+      }
+    ]
+  ]
+}
