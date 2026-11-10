@@ -361,3 +361,170 @@ it('does not configure a removed engine from a top-level disposal callback', asy
   expect(installations).to.equal(0); expect(map.resolver === null).to.equal(true);
   expect(provider.ids.size).to.equal(0);
 });
+
+for (const hook of [true, false]) {
+  it(`releases all pixels when the ${hook ? 'resolver' : 'event'} uninstall fails and revokes the old callback`, async () => {
+    const h = await harness(); const map = new ProviderMap(hook); const provider = new MapImageProvider();
+    let requests = 0;
+    provider.configure(asMap(map), (id: string) => { requests += 1; return descriptor(id); }, h.context);
+    const resolve = map.resolver;
+    const listener = [...map.listeners][0];
+    const request = async (id: string) => {
+      if (resolve) await resolve(id);
+      else { listener!({ id }); await new Promise(done => setTimeout(done, 0)); }
+    };
+    try {
+      await request('a'); await request('b');
+      expect(map.images.size).to.equal(2);
+      map.setMissingStyleImageResolver = () => { throw new Error('Engine removed'); };
+      map.off = () => { throw new Error('Engine removed'); };
+      expect(() => provider.reset()).not.to.throw();
+      expect(h.disposed).to.equal(2); expect(map.images.size).to.equal(0);
+      await request('obsolete');
+      expect(requests).to.equal(2); expect(provider.ids.size).to.equal(0);
+    } finally { provider.dispose(); }
+  });
+}
+
+for (const boundary of ['ownership', 'occupancy', 'removal', 'pixels'] as const) {
+  it(`finishes pixel disposal when the engine disappears during ${boundary} cleanup`, async () => {
+    const h = await harness(); const map = new ProviderMap(); const provider = new MapImageProvider();
+    const disposed: string[] = []; const removals: string[] = [];
+    let cleaning = false;
+    const once = () => { if (cleaning) { cleaning = false; provider.dispose(); } };
+    const prepare: typeof prepareMapImages = async value => {
+      const rows = value as readonly LyraMapImage[];
+      return { ok: true, images: rows.map(row => ({ id: row.id, width: 1, height: 1, pixelRatio: 1,
+        encodedBytes: 1, decodedPixels: 1, image: new ImageData(1, 1),
+        dispose() { disposed.push(row.id); if (boundary === 'pixels') once(); },
+      })), dispose() {} };
+    };
+    const context = { ...h.context, prepare, ownedIds: () => {
+      if (boundary === 'ownership') once();
+      return new Set<string>();
+    } };
+    const hasImage = map.hasImage.bind(map), removeImage = map.removeImage.bind(map);
+    map.hasImage = id => { if (boundary === 'occupancy') once(); return hasImage(id); };
+    map.removeImage = id => { removals.push(id); removeImage(id); if (boundary === 'removal') once(); };
+    provider.configure(asMap(map), (id: string) => descriptor(id), context);
+    try {
+      await map.resolver!('a'); await map.resolver!('b'); await map.resolver!('c');
+      cleaning = true;
+      expect(() => provider.reset()).not.to.throw();
+      expect(disposed.slice().sort()).to.deep.equal(['a', 'b', 'c']);
+      expect(removals).to.deep.equal(boundary === 'ownership' || boundary === 'occupancy' ? [] : ['a']);
+      expect(provider.ids.size).to.equal(0);
+      const successor = new ProviderMap();
+      provider.configure(asMap(successor), (id: string) => descriptor(id), h.context);
+      await successor.resolver!('fresh');
+      expect([...successor.images.keys()]).to.deep.equal(['fresh']);
+    } finally { provider.dispose(); }
+  });
+}
+
+it('restores a retained provider image when declarative handover fails after native removal', async () => {
+  const { context } = await harness(); const map = new ProviderMap(); const provider = new MapImageProvider();
+  provider.configure(asMap(map), (id: string) => descriptor(id), context);
+  const removeImage = map.removeImage.bind(map);
+  try {
+    await map.resolver!('pin'); const original = map.images.get('pin')!.image;
+    map.removeImage = id => { removeImage(id); throw new Error('Native removal failed after mutation'); };
+    expect(() => provider.release(['pin'])).to.throw('Native removal failed after mutation');
+    expect(map.images.get('pin')?.image === original).to.equal(true);
+    expect([...provider.ids]).to.deep.equal(['pin']);
+    map.removeImage = removeImage;
+    provider.release(['pin']);
+    expect(map.images.has('pin')).to.equal(false); expect(provider.ids.size).to.equal(0);
+    await map.resolver!('replacement');
+    expect(map.images.has('replacement')).to.equal(true);
+  } finally { map.removeImage = removeImage; provider.dispose(); }
+});
+
+it('contains a failed native occupancy query and retries when the engine recovers', async () => {
+  const { context } = await harness(); const map = new ProviderMap(); const provider = new MapImageProvider();
+  let calls = 0;
+  provider.configure(asMap(map), (id: string) => { calls += 1; return descriptor(id); }, context);
+  const hasImage = map.hasImage.bind(map);
+  try {
+    map.hasImage = () => { throw new Error('Atlas unavailable'); };
+    await map.resolver!('pin');
+    expect(calls).to.equal(0); expect(provider.ids.size).to.equal(0);
+    map.hasImage = hasImage;
+    await map.resolver!('pin');
+    expect(calls).to.equal(1); expect(map.images.has('pin')).to.equal(true);
+  } finally { map.hasImage = hasImage; provider.dispose(); }
+});
+
+it('rechecks measured bytes after concurrent preparation and disposes the over-budget result', async () => {
+  const { context } = await harness(); const map = new ProviderMap(); const provider = new MapImageProvider();
+  const releases = new Map<string, () => void>(); const disposed: string[] = [];
+  const prepare: typeof prepareMapImages = value => {
+    const id = (value as readonly LyraMapImage[])[0]!.id;
+    return new Promise(resolve => { releases.set(id, () => resolve({ ok: true,
+      images: [{ id, width: 1, height: 1, pixelRatio: 1, encodedBytes: Math.ceil(MAP_IMAGE_LIMITS.totalBytes * 0.75),
+        decodedPixels: 1, image: new ImageData(1, 1), dispose() { disposed.push(id); } }], dispose() {},
+    })); });
+  };
+  provider.configure(asMap(map), (id: string) => descriptor(id), { ...context, prepare });
+  try {
+    const a = map.resolver!('a'), b = map.resolver!('b');
+    await Promise.resolve();
+    expect(releases.size).to.equal(2);
+    releases.get('a')!(); await a;
+    const warnings = await captureDevWarnings(async () => { releases.get('b')!(); await b; });
+    expect(warnings.join(' ')).to.include('image budget');
+    expect([...provider.ids]).to.deep.equal(['a']); expect([...map.images.keys()]).to.deep.equal(['a']);
+    expect(disposed).to.deep.equal(['b']);
+    provider.reset();
+    expect(disposed).to.deep.equal(['b', 'a']);
+  } finally { provider.dispose(); }
+});
+
+for (const missing of ['encodedBytes', 'decodedPixels'] as const) {
+  it(`charges a retained image with missing ${missing} against the entire budget`, async () => {
+    const { context } = await harness(); const map = new ProviderMap(); const provider = new MapImageProvider();
+    const disposed: string[] = [];
+    const prepare: typeof prepareMapImages = async value => {
+      const id = (value as readonly LyraMapImage[])[0]!.id;
+      return { ok: true, images: [{ id, width: 1, height: 1, pixelRatio: 1,
+        ...(missing === 'encodedBytes' ? { decodedPixels: 1 } : { encodedBytes: 1 }),
+        image: new ImageData(1, 1), dispose() { disposed.push(id); } }], dispose() {} };
+    };
+    provider.configure(asMap(map), (id: string) => descriptor(id), { ...context, prepare });
+    try {
+      await map.resolver!('first');
+      const warnings = await captureDevWarnings(async () => { await map.resolver!('second'); });
+      expect(warnings.join(' ')).to.include('image budget');
+      expect([...provider.ids]).to.deep.equal(['first']); expect([...map.images.keys()]).to.deep.equal(['first']);
+      provider.reset();
+      expect(disposed).to.include('first');
+      expect(new Set(disposed).size).to.equal(disposed.length);
+    } finally { provider.dispose(); }
+  });
+}
+
+for (const pendingStage of ['provider', 'preparation'] as const) {
+  it(`silences an obsolete ${pendingStage} failure without declining the replacement's ID`, async () => {
+    const { context } = await harness(); const map = new ProviderMap(); const provider = new MapImageProvider();
+    let reject!: (reason: unknown) => void;
+    let finish!: () => void;
+    const prepare: typeof prepareMapImages = () => new Promise(resolve => {
+      finish = () => resolve({ ok: false, issue: { code: 'decode', id: 'pin' } });
+    });
+    const deferredProvider = () => new Promise<LyraMapImage>((_resolve, rejectPromise) => { reject = rejectPromise; });
+    provider.configure(asMap(map), pendingStage === 'provider' ? deferredProvider : (id: string) => descriptor(id),
+      pendingStage === 'preparation' ? { ...context, prepare } : context);
+    try {
+      const old = map.resolver!('pin'); await Promise.resolve();
+      provider.configure(asMap(map), (id: string) => descriptor(id), context);
+      const warnings = await captureDevWarnings(async () => {
+        if (pendingStage === 'provider') reject(new Error('Obsolete provider failed'));
+        else finish();
+        await old;
+      });
+      expect(warnings).to.deep.equal([]);
+      await map.resolver!('pin');
+      expect([...provider.ids]).to.deep.equal(['pin']); expect(map.images.has('pin')).to.equal(true);
+    } finally { provider.dispose(); }
+  });
+}
