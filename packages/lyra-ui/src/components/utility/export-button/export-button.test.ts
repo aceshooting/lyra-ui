@@ -1,6 +1,7 @@
 import { sinkTexts } from '../../../../test/announcements.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { render } from 'lit';
+import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './export-button.js';
 import type {
@@ -1163,6 +1164,77 @@ it('returns focus to the trigger when an open menu collapses to a single format'
   expect(el.open).to.be.false;
   expect((el.shadowRoot!.activeElement) === (el.shadowRoot!.querySelector('[part="trigger"]'))).to.equal(true);
 });
+
+it('keeps focus on the same export format after its menu position changes', async () => {
+  const el = await fixture<LyraExportButton>(html`<lr-export-button .formats=${['csv', 'json', { formatId: 'xml', label: 'XML' }]}></lr-export-button>`);
+  await focusByKeyboard(el.shadowRoot!.querySelector<HTMLButtonElement>('[part="trigger"]')!);
+  await sendKeys({ press: 'ArrowDown' });
+  await el.updateComplete; await waitForOpenMenu(el);
+  await sendKeys({ press: 'ArrowDown' });
+  expect(el.shadowRoot!.activeElement?.textContent?.trim()).to.equal('JSON');
+  el.formats = ['json', { formatId: 'xml', label: 'XML' }, 'csv'];
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.activeElement?.textContent?.trim() === 'JSON', 'format identity keeps keyboard focus');
+  const current = el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="menu-item"]');
+  expect(el.shadowRoot!.activeElement === current[0]).to.equal(true);
+  const requests: string[] = [];
+  el.addEventListener('lr-export-request', event => { requests.push(event.detail.format); event.preventDefault(); });
+  await sendKeys({ press: 'Enter' });
+  await el.updateComplete;
+  expect(requests).to.deep.equal(['json']);
+  expect(el.open).to.equal(false);
+});
+
+for (const adopted of [false, true]) {
+  it(`honors new detached open intent on reconnect in ${adopted ? 'an adopted' : 'the same'} document`, async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div><lr-export-button .formats=${['csv', 'json']}></lr-export-button></div>`);
+    const el = wrapper.querySelector<LyraExportButton>('lr-export-button')!;
+    el.open = true; await el.updateComplete; await waitForOpenMenu(el);
+    const previous = menuOverlay(el);
+    el.remove();
+    await waitUntil(() => !el.open && !previous?.isActive(), 'detached menu finishes closing');
+    let destination: HTMLElement = wrapper;
+    if (adopted) {
+      const frame = await fixture<HTMLIFrameElement>(html`<iframe title="Reconnected export menu"></iframe>`);
+      destination = frame.contentDocument!.body;
+      destination.ownerDocument.adoptNode(el);
+    }
+    el.open = true; await el.updateComplete;
+    expect(el.isConnected).to.equal(false);
+    destination.append(el);
+    await el.updateComplete; await waitForOpenMenu(el);
+    expect(el.open).to.equal(true);
+    expect(menuOverlay(el)?.isActive()).to.equal(true);
+    expect(menuOverlay(el) === previous).to.equal(false);
+    await waitUntil(() => el.shadowRoot!.activeElement?.textContent?.trim() === 'CSV', 'reconnected menu receives keyboard entry');
+    destination.ownerDocument.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.open).to.equal(false);
+    expect(menuOverlay(el)?.isActive() ?? false).to.equal(false);
+  });
+}
+
+for (const target of ['trigger', 'menu-item'] as const) {
+  it(`rejects a stale ${target} click as soon as loading starts, before the next render`, async () => {
+    const el = await fixture<LyraExportButton>(html`<lr-export-button .formats=${['csv', 'json']}></lr-export-button>`);
+    if (target === 'menu-item') { el.open = true; await el.updateComplete; await waitForOpenMenu(el); }
+    const control = el.shadowRoot!.querySelector<HTMLButtonElement>(`[part="${target}"]`)!;
+    const requests: string[] = [];
+    el.addEventListener('lr-export-request', event => { requests.push(event.detail.format); event.preventDefault(); });
+    expect(control.disabled).to.equal(false);
+    el.loading = true;
+    control.click();
+    expect(requests).to.deep.equal([]);
+    await el.updateComplete;
+    expect(el.open).to.equal(false);
+    expect(el.getAttribute('aria-busy')).to.equal('true');
+    el.loading = false; await el.updateComplete;
+    el.open = true; await el.updateComplete; await waitForOpenMenu(el);
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="menu-item"]')!.click();
+    await el.updateComplete;
+    expect(requests).to.deep.equal(['csv']);
+  });
+}
 
 it('resets a live menu on a same-document disconnect/reconnect and re-binds outside dismissal when reopened', async () => {
   const el = (await fixture(
