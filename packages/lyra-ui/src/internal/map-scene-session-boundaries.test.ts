@@ -1,6 +1,6 @@
 import { expect } from '@open-wc/testing';
 import { createMapSceneSessionFacade } from './map-scene-session.js';
-import type { MapSceneSessionState, SceneTargetEntry, SceneTargetFact } from './map-scene-contract.js';
+import type { MapSceneSessionState, SceneCompletedFrame, SceneTargetEntry, SceneTargetFact } from './map-scene-contract.js';
 import { sceneBackingHarness, sceneStateHarness, sceneTarget, sceneViewport } from '../../test/map-scene-session-fixtures.js';
 
 type InvalidTarget = readonly [string, (fact: SceneTargetFact) => unknown];
@@ -152,6 +152,124 @@ describe('map scene session malformed state recovery', () => {
       expect(facade.bindState(state.state)).to.equal(true);
       expect(facade.attachment.target('target').status).to.equal('accepted');
       expect(state.subscriptions).to.equal(1);
+    } finally { facade.close(); }
+    expect(state.releases).to.equal(1);
+  });
+});
+
+describe('map scene completion and subscription boundaries', () => {
+  for (const [name, change] of [
+    ['zero pixel ratio', { pixelRatio: 0 }],
+    ['non-Float32 transition', { projectionTransition: 0.1 }],
+    ['nonfinite transition', { projectionTransition: NaN }],
+  ] as const) {
+    it(`ignores a completed frame with ${name} without advancing its serial`, () => {
+      const state = sceneStateHarness(), fact = sceneTarget();
+      state.set([fact]);
+      const facade = createMapSceneSessionFacade({ connection: state.connection });
+      const backing = sceneBackingHarness(state), delivered: number[] = [];
+      try {
+        facade.bindState(state.state); facade.promote(backing.backing);
+        facade.attachment.subscribeCompletedFrames(frame => delivered.push(frame.stamp.paintFrameSerial));
+        const original = backing.frame(1); backing.emit(original);
+        const rejected = backing.frame(100, change); backing.emit(rejected);
+        expect(delivered).to.deep.equal([1]);
+        expect(facade.attachment.current(original, fact)).to.equal(true);
+        expect(facade.attachment.current(rejected, fact)).to.equal(false);
+        expect(facade.attachment.projectTarget(rejected, 'target')).to.equal(undefined);
+        const next = backing.frame(2); backing.emit(next);
+        expect(delivered).to.deep.equal([1, 2]);
+        expect(facade.attachment.current(next, fact)).to.equal(true);
+        expect(backing.subscriptions).to.equal(1);
+      } finally { facade.close(); }
+      expect(backing.releases).to.equal(1);
+    });
+  }
+
+  it('rejects a frame without an object owner token and retains valid completion authority', () => {
+    const state = sceneStateHarness(), fact = sceneTarget(); state.set([fact]);
+    const facade = createMapSceneSessionFacade({ connection: state.connection });
+    const backing = sceneBackingHarness(state);
+    try {
+      facade.bindState(state.state); facade.promote(backing.backing);
+      const original = backing.frame(1); backing.emit(original);
+      for (const ownerToken of [null, 3, 'owner']) {
+        const candidate = backing.frame(100);
+        const malformed = Object.freeze({ ...candidate, stamp: Object.freeze({ ...candidate.stamp, ownerToken }) });
+        backing.emit(malformed as unknown as SceneCompletedFrame);
+        expect(facade.attachment.current(malformed as unknown as SceneCompletedFrame, fact)).to.equal(false);
+        expect(facade.attachment.current(original, fact)).to.equal(true);
+      }
+      const next = backing.frame(2); backing.emit(next);
+      expect(facade.attachment.current(next, fact)).to.equal(true);
+    } finally { facade.close(); }
+  });
+
+  it('refuses copied target facts even when their immutable values match the retained authority', () => {
+    const state = sceneStateHarness(), fact = sceneTarget(); state.set([fact]);
+    const facade = createMapSceneSessionFacade({ connection: state.connection });
+    try {
+      facade.bindState(state.state);
+      const notices: string[][] = [];
+      facade.attachment.subscribeTargets(notice => notices.push([...notice.changedIds]));
+      state.set([sceneTarget()]);
+      expect(() => facade.attachment.target('target')).to.throw(TypeError);
+      expect(notices).to.deep.equal([]);
+      state.set([fact], { notify: false });
+      expect(facade.bindState(state.state)).to.equal(true);
+      const restored = facade.attachment.target('target');
+      expect(restored.status === 'accepted' && restored.target === fact).to.equal(true);
+      expect(notices).to.deep.equal([]);
+    } finally { facade.close(); }
+  });
+
+  for (const stop of ['unsubscribe', 'close'] as const) {
+    it(`stops later viewport observers when the first observer requests ${stop}`, () => {
+      const state = sceneStateHarness(); state.set([sceneTarget()]);
+      const facade = createMapSceneSessionFacade({ connection: state.connection });
+      const first: number[] = [], second: number[] = [];
+      let unsubscribe = () => {};
+      try {
+        facade.bindState(state.state);
+        facade.attachment.subscribeViewport(notice => {
+          first.push(notice.width);
+          if (stop === 'close') facade.close(); else unsubscribe();
+        });
+        unsubscribe = facade.attachment.subscribeViewport(notice => second.push(notice.width));
+        state.viewport(sceneViewport(2, 800));
+        expect(first).to.deep.equal([800]);
+        expect(second).to.deep.equal([]);
+        state.viewport(sceneViewport(3, 900));
+        expect(first).to.deep.equal(stop === 'close' ? [800] : [800, 900]);
+        expect(second).to.deep.equal([]);
+      } finally { facade.close(); }
+      expect(state.releases).to.equal(1);
+    });
+  }
+
+  it('retires a late state subscription handle when installation reenters close', () => {
+    const state = sceneStateHarness(); state.set([sceneTarget()]);
+    const facade = createMapSceneSessionFacade({ connection: state.connection });
+    state.hooks.subscribe = () => facade.close();
+    expect(facade.bindState(state.state)).to.equal(false);
+    expect(state.subscriptions).to.equal(1);
+    expect(state.releases).to.equal(1);
+    expect(state.captures).to.equal(0);
+    expect(facade.attachment.target('target').status).to.equal('absent');
+    state.emit(); facade.close();
+    expect(state.releases).to.equal(1);
+  });
+
+  it('rejects a subscription without a release function before capturing state and permits a later valid binding', () => {
+    const state = sceneStateHarness(); state.set([sceneTarget()]);
+    const facade = createMapSceneSessionFacade({ connection: state.connection });
+    try {
+      const malformed = Object.freeze({ ...state.state, subscribe: () => undefined });
+      expect(facade.bindState(malformed as unknown as MapSceneSessionState)).to.equal(false);
+      expect(state.captures).to.equal(0);
+      expect(facade.attachment.target('target').status).to.equal('absent');
+      expect(facade.bindState(state.state)).to.equal(true);
+      expect(facade.attachment.target('target').status).to.equal('accepted');
     } finally { facade.close(); }
     expect(state.releases).to.equal(1);
   });
