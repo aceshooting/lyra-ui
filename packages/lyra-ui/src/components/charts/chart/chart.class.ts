@@ -4621,14 +4621,40 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private onSyncPointerMove(event: PointerEvent): void {
-    if (!this.chartSync.enabled || !this.chart) return;
-    const hits = this.chart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
-    const hit = hits[0];
-    if (!hit) { this.chartSync.clear(); return; }
-    const datasetIndex = this.visualDatasetSourceIndexes?.[hit.datasetIndex] ?? hit.datasetIndex;
-    const index = this.visualRowSourceIndexes?.[hit.index] ?? hit.index;
-    const datum = this.indexedSyncDatums().byAddress.get(`${datasetIndex}:${index}`);
-    if (datum && this.syncDatumIsEligible(datum)) this.publishSyncDatum(datum);
+    const chart = this.chart;
+    if (!this.chartSync.enabled || !chart) return;
+    const group = this.syncGroup;
+    const effective = this.effectiveData();
+    const datasets = this.visualDatasetSourceIndexes;
+    const rows = this.visualRowSourceIndexes;
+    const current = () => this.isConnected && this.chart === chart && this.chartSync.enabled &&
+      this.syncGroup === group && this.effectiveData() === effective &&
+      this.visualDatasetSourceIndexes === datasets && this.visualRowSourceIndexes === rows;
+    const readDatum = (): ChartDatum | undefined => {
+      const elements: unknown = chart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
+      if (!current()) return;
+      const admission = admitChartArray(elements);
+      if (!admission || !current()) return;
+      const admitted = chartArrayIsStillAdmitted(admission);
+      if (!admitted || !current()) return;
+      const first = chartRecordValue(admission.source, '0');
+      if (first === MISSING_OWN_DATA_DESCRIPTOR || first === UNSAFE_OWN_DATA_DESCRIPTOR || !current()) return;
+      const hit = this.callbackIndexes(first.value, effective);
+      if (!hit || !current()) return;
+      const datasetIndex = datasets?.[hit.datasetIndex] ?? hit.datasetIndex;
+      const index = rows?.[hit.index] ?? hit.index;
+      const datum = this.indexedSyncDatums().byAddress.get(`${datasetIndex}:${index}`);
+      return datum && this.syncDatumIsEligible(datum) ? datum : undefined;
+    };
+    let datum: ChartDatum | undefined;
+    try {
+      datum = readDatum();
+    } catch {
+      // A native plugin can throw or replace the owner while resolving a pointer hit.
+    }
+    if (!current()) return;
+    if (datum) this.publishSyncDatum(datum);
+    else this.chartSync.clear();
   }
 
   private syncPresentation(label: string, sourceIndex?: number): ChartSyncPresentation | undefined {
