@@ -668,17 +668,21 @@ export class TableViewerSourceController implements ReactiveController {
   }
   private prepareColumns(columns: readonly number[]): void {
     if (this.windowColumns === columns || !this.sheet) return;
-    const epoch = this.epoch, sheet = this.sheet;
+    const epoch = this.epoch, sheet = this.sheet, intent = this.sheetIntent;
+    const current = () => this.current(epoch) && this.sheet === sheet && this.sheetIntent === intent;
     const labels: LyraTabularColumn[] = [];
     let units = 0;
     for (const index of columns) {
       const column = sheet.data.columnAt(index);
-      if (!this.current(epoch) || this.sheet !== sheet) return;
-      if (!column || typeof column.key !== 'string' || !column.key || typeof column.label !== 'string') throw new TypeError('Invalid source column');
-      if (column.key.length > 65536 || column.label.length > 65536) throw new LyraResourceLimitError();
-      units += column.key.length + column.label.length;
+      if (!current()) return;
+      if (!column) throw new TypeError('Invalid source column');
+      const key = column.key; if (!current()) return;
+      const label = column.label; if (!current()) return;
+      if (typeof key !== 'string' || !key || typeof label !== 'string') throw new TypeError('Invalid source column');
+      if (key.length > 65536 || label.length > 65536) throw new LyraResourceLimitError();
+      units += key.length + label.length;
       if (units > 2000000) throw new LyraResourceLimitError();
-      labels.push(Object.freeze({ key: column.key, label: column.label }));
+      labels.push(Object.freeze({ key, label }));
     }
     this.labels = labels; this.labelUnits = units; this.windowColumns = columns; this.columnStart = columns[0] ?? 0;
     this.paint++;
@@ -777,11 +781,12 @@ export class TableViewerSourceController implements ReactiveController {
   render(): TemplateResult {
     if (this.failure) return html`<div part="error">${this.hooks.localize(isResourceLimitError(this.failure) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad')}</div>`;
     if (!this.loaded || !this.sheet || !this.columns) return html`<p class="empty-note">${this.hooks.localize('noData')}</p>`;
+    const epoch = this.epoch, intent = this.sheetIntent;
+    const current = () => this.current(epoch) && this.sheetIntent === intent;
     try {
-      const epoch = this.epoch;
       const window = this.chrome.columnWindow(this, this.columns, 100);
       this.prepareColumns(window.columns);
-      if (!this.current(epoch)) return html``;
+      if (!current()) return html``;
       if (this.failure) return html`<div part="error">${this.hooks.localize('documentPreviewFailedToLoad')}</div>`;
       const view = this.host.ownerDocument.defaultView;
       const height = Math.max(1, resolveCssTokenLength(view?.getComputedStyle(this.host).getPropertyValue('--lr-size-3rem').trim() || '3rem', { host: this.host }) ?? 48);
@@ -809,7 +814,11 @@ export class TableViewerSourceController implements ReactiveController {
             @lr-visible-range-change=${this.onRange} @lr-virtual-scroll=${(event: Event) => event.stopPropagation()} @lr-load-more=${(event: Event) => event.stopPropagation()}
           ></lr-virtual-list>
         </div>`;
-    } catch (error) { this.fail(error); return html`<div part="error">${this.hooks.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad')}</div>`; }
+    } catch (error) {
+      if (!current()) return html``;
+      this.fail(error);
+      return html`<div part="error">${this.hooks.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad')}</div>`;
+    }
   }
 
   async revealAnchor(anchor: LyraAnchor): Promise<boolean> {

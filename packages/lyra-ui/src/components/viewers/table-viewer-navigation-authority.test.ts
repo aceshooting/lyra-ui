@@ -84,6 +84,46 @@ describe('table source navigation authority', () => {
     expect(bodyText(viewer)).to.include('replacement:2:1');
   });
 
+  for (const stage of ['columnAt', 'column key', 'column label'] as const) {
+    for (const throws of [false, true]) {
+      it(`discards obsolete ${stage} metadata when its callback switches sheets and ${throws ? 'throws' : 'returns'}`, async () => {
+        const obsolete = source('obsolete');
+        const errors: unknown[] = [];
+        const viewer = await fixture<LyraSpreadsheetViewer>(html`<lr-spreadsheet-viewer style="display:block;width:480px"
+          .dataSource=${{ revision: 1, sheets: [
+            { key: 'first', name: 'First', data: source('original') },
+            { key: 'obsolete', name: 'Obsolete', data: obsolete },
+            { key: 'latest', name: 'Latest', data: { ...source('latest'), rowCount: 5 } },
+          ] }} @lr-render-error=${(event: CustomEvent<{ error: unknown }>) => errors.push(event.detail.error)}
+        ></lr-spreadsheet-viewer>`);
+        await waitUntil(() => bodyText(viewer).includes('original:0:0'));
+        const tabs = viewer.shadowRoot!.querySelector('lr-tab-group')!;
+        await tabs.updateComplete;
+        let reads = 0;
+        const switchSheet = (): void => {
+          reads++; tabs.show('source-2');
+          if (throws) throw new Error('Obsolete column unavailable');
+        };
+        obsolete.columnAt = () => {
+          const column = { key: 'old', label: 'Old column' };
+          if (stage === 'columnAt') switchSheet();
+          else Object.defineProperty(column, stage === 'column key' ? 'key' : 'label', { get() {
+            switchSheet(); return stage === 'column key' ? 'old' : 'Old column';
+          } });
+          return column;
+        };
+        tabs.show('source-1');
+        await waitUntil(() => bodyText(viewer).includes('latest:0:0') || errors.length > 0, 'latest sheet or obsolete error rendered');
+        expect(reads).to.equal(1);
+        expect(errors.length).to.equal(0);
+        expect(viewer.shadowRoot!.querySelector('[role="table"]')?.getAttribute('aria-colcount')).to.equal('2');
+        expect([...viewer.shadowRoot!.querySelectorAll('[role="columnheader"]')].map(cell => cell.textContent?.trim())).to.deep.equal(['Column 0', 'Column 1']);
+        expect(await viewer.scrollToAnchor({ kind: 'cell-range', sheet: 'Latest', range: 'B6' })).to.equal(true);
+        expect(bodyText(viewer)).to.include('latest:4:1');
+      });
+    }
+  }
+
   it('cancels anchor navigation when selecting its sheet synchronously selects a newer one', async () => {
     const obsolete = source('obsolete');
     const viewer = await fixture<LyraSpreadsheetViewer>(html`<lr-spreadsheet-viewer style="display:block;width:480px"
