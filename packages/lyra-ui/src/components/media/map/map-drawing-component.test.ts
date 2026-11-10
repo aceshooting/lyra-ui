@@ -446,4 +446,77 @@ describe('lr-map drawing integration', () => {
     const cancels = capture(element, 'lr-map-draw-cancel'); peer.afterZoomEnable = () => { element.cancelDrawing(); };
     expect(element.completeDrawing()).to.equal(true); await settle(element, peer); expect(cancels.length).to.equal(0); expect(peer.zoomGesture).to.equal(true);
   });
+
+  it('rejects malformed completed geometry without allocating resources and accepts the next valid edit', async () => {
+    const { element, peer } = await mount();
+    const input = completed();
+    const invalid: unknown[] = [
+      { ...input, mode: 'point' }, { ...input, vertices: null }, { ...input, vertices: {} },
+      { ...input, vertices: [] }, { ...input, vertices: [[0, 0]] },
+      { ...input, vertices: [[0, 0], [Number.NaN, 0]] },
+      { ...input, vertices: [[0, 0], [1, 91]] },
+      { ...input, vertices: [[0, 0], [180, 0]] },
+      { ...input, mode: 'polygon', vertices: [[0, 0], [5, 0]] },
+      { ...input, mode: 'polygon', vertices: [[0, 0], [5, 0], [10, 0]] },
+    ];
+    const completions = capture(element, 'lr-map-draw-complete');
+    for (const candidate of invalid) {
+      expect(element.editDrawing(candidate as LyraMapDrawingSnapshot)).to.equal(false);
+      expect(element.drawMode).to.equal('none');
+      expect(peer.sources.size).to.equal(0); expect(peer.gestureCalls.length).to.equal(0);
+    }
+    expect(element.editDrawing(input)).to.equal(true); await settle(element, peer);
+    expect(element.completeDrawing()).to.equal(true); await settle(element, peer);
+    expect((completions[0] as LyraMapDrawingSnapshot).vertices).to.deep.equal(input.vertices);
+    expect(peer.zoomGesture).to.equal(true); expect(peer.sources.size).to.equal(0);
+  });
+
+  for (const stage of ['phase', 'mode', 'vertices', 'length', 'vertex', 'coordinate'] as const) {
+    for (const throws of [false, true]) {
+      it(`retires edit admission cancelled during ${stage} reflection${throws ? ' even when the descriptor trap throws' : ''}`, async () => {
+        const { element, peer } = await mount();
+        let cancellations = 0;
+        const intercept = <T extends object>(value: T, property: string): T => new Proxy(value, {
+          getOwnPropertyDescriptor(target, key) {
+            if (key === property) {
+              cancellations++; element.cancelDrawing();
+              if (throws) throw new Error('Caller snapshot unavailable');
+            }
+            return Reflect.getOwnPropertyDescriptor(target, key);
+          },
+        });
+        const coordinates = stage === 'coordinate' ? intercept([0, 0], '0') : [0, 0];
+        let vertices = [coordinates, [5, 0]];
+        if (stage === 'length' || stage === 'vertex') vertices = intercept(vertices, stage === 'length' ? 'length' : '0');
+        let candidate: object = { ...completed(), vertices };
+        if (stage === 'phase' || stage === 'mode' || stage === 'vertices') candidate = intercept(candidate, stage);
+        const starts = capture(element, 'lr-map-draw-start'), cancels = capture(element, 'lr-map-draw-cancel');
+        expect(element.editDrawing(candidate as LyraMapDrawingSnapshot)).to.equal(false);
+        expect(cancellations).to.equal(1);
+        expect(peer.gestureCalls.length).to.equal(0); expect(peer.sources.size).to.equal(0);
+        expect(starts.length).to.equal(0); expect(cancels.length).to.equal(0);
+        expect(element.editDrawing(completed())).to.equal(true); await settle(element, peer);
+        expect(element.cancelDrawing()).to.equal(true); await settle(element, peer);
+        expect(peer.zoomGesture).to.equal(true); expect(peer.sources.size).to.equal(0);
+        expect(cancels.length).to.equal(1);
+      });
+    }
+  }
+
+  it('rejects recursive edit admission from snapshot reflection while preserving the outer geometry', async () => {
+    const { element, peer } = await mount();
+    const input = completed(), recursive: boolean[] = [], completions = capture(element, 'lr-map-draw-complete');
+    const candidate = new Proxy(input, {
+      getOwnPropertyDescriptor(target, key) {
+        if (key === 'mode') recursive.push(element.editDrawing(completed('polygon')));
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    });
+    expect(element.editDrawing(candidate)).to.equal(true); await settle(element, peer);
+    expect(recursive).to.deep.equal([false]);
+    expect(element.completeDrawing()).to.equal(true); await settle(element, peer);
+    expect((completions[0] as LyraMapDrawingSnapshot).mode).to.equal('line');
+    expect((completions[0] as LyraMapDrawingSnapshot).vertices).to.deep.equal(input.vertices);
+    expect(peer.gestureCalls).to.deep.equal(['disable', 'enable']);
+  });
 });

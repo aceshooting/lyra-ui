@@ -189,3 +189,125 @@ it('publishes corrected source page after request beyond final page',async()=>{
  expect(el.shadowRoot!.querySelectorAll('[data-source-key]').length).to.equal(2);
  expect(el.sourcePage).to.equal(0);expect(el.shadowRoot!.querySelector<HTMLInputElement>('[data-source-page]')!.value).to.equal('1');
 });
+
+for (const invalid of ['groups', 'tags', 'kind', 'excess-total', 'missing-total', 'scene-nodes', 'scene-edges'] as const) {
+  it(`rejects ${invalid} in record pages and retries with consistent source metadata`, async () => {
+    const data = provider();
+    const el = await fixture<Canvas>(html`<lr-flow-canvas .graphSource=${data.source}
+      .strings=${{ graphSourceRecordsError: 'Records unavailable', retry: 'Try records again' }}></lr-flow-canvas>`);
+    await ready(el);
+    let snapshot: FlowStructureSnapshot | undefined;
+    el.registerCompanion(value => { snapshot = value; });
+    await waitUntil(() => Boolean(snapshot?.source?.overview));
+    const query = data.source.records.query;
+    data.source.records.query = async request => {
+      const result = await query(invalid === 'kind' ? { ...request, query: { ...request.query, kind: 'edges' } } : request);
+      if (invalid === 'groups' || invalid === 'tags') return { ...result, [invalid]: [] };
+      if (invalid === 'excess-total') return { ...result, total: result.total + 1 };
+      if (invalid === 'missing-total') return { ...result, total: result.total - 1 };
+      if (invalid === 'scene-nodes') return { ...result, total: result.total + 1, summary: { ...result.summary, nodes: result.summary.nodes + 1 } };
+      if (invalid === 'scene-edges') return { ...result, summary: { ...result.summary, edges: result.summary.edges + 1 } };
+      return result;
+    };
+    el.sourcePage = 1;
+    await waitUntil(() => el.shadowRoot!.textContent?.includes('Records unavailable') === true);
+    expect(el.sourceTotal).to.equal(null);
+    expect(el.shadowRoot!.querySelectorAll('[data-source-key]').length).to.equal(0);
+    expect(el.shadowRoot!.textContent).not.to.include('Invalid flow');
+    data.source.records.query = query;
+    const retry = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="source-status"] button')]
+      .find(button => button.textContent === 'Try records again')!;
+    retry.click(); await ready(el); await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[data-source-key]').length).to.equal(100);
+    expect(el.shadowRoot!.textContent).not.to.include('Records unavailable');
+    expect(el.sourcePage).to.equal(data.queries.at(-1)!.page);
+  });
+}
+
+it('rejects malformed reveal keys without querying and distinguishes an absent record from a source failure', async () => {
+  const data = provider();
+  const el = await fixture<Canvas>(html`<lr-flow-canvas .graphSource=${data.source}
+    .strings=${{ graphSourceRecordMissing: 'Record is missing', graphSourceRecordsError: 'Records unavailable' }}></lr-flow-canvas>`);
+  await ready(el); const queries = data.queries.length;
+  for (const key of ['', 'node:', 'edge:', 'node', 'unrelated:1', `node:${'x'.repeat(65536)}`]) {
+    expect(await el.revealSourceKey(key)).to.equal(false);
+  }
+  expect(data.queries.length).to.equal(queries);
+  data.source.records.locate = async () => null;
+  expect(await el.revealSourceKey('node:unknown')).to.equal(false); await el.updateComplete;
+  expect(el.shadowRoot!.textContent).to.include('Record is missing');
+  expect(el.shadowRoot!.textContent).not.to.include('Records unavailable');
+  expect(el.sourceTotal).to.equal(1_000_000);
+  data.source.records.locate = async () => 3;
+  expect(await el.revealSourceKey('node:3')).to.equal(true); await el.updateComplete;
+  expect(el.shadowRoot!.textContent).not.to.include('Record is missing');
+  expect(el.shadowRoot!.activeElement?.getAttribute('data-source-key')).to.equal('node:3');
+});
+
+it('routes record kind, search, page entry and pagination controls through the source query', async () => {
+  const data = provider();
+  const el = await fixture<Canvas>(html`<lr-flow-canvas .graphSource=${data.source}></lr-flow-canvas>`);
+  await ready(el); await el.updateComplete;
+  const kind = el.shadowRoot!.querySelector<HTMLSelectElement>('[data-source-kind]')!;
+  kind.value = 'edges'; kind.dispatchEvent(new Event('change')); await ready(el); await el.updateComplete;
+  expect(data.queries.at(-1)!.query.kind).to.equal('edges');
+  const search = el.shadowRoot!.querySelector<HTMLInputElement>('[data-source-search]')!;
+  search.value = 'needle'; search.dispatchEvent(new Event('input')); await ready(el); await el.updateComplete;
+  expect(data.queries.at(-1)!.query).to.include({ kind: 'edges', search: 'needle' });
+  const page = el.shadowRoot!.querySelector<HTMLInputElement>('[data-source-page]')!;
+  page.value = '3'; page.dispatchEvent(new Event('change')); await ready(el); await el.updateComplete;
+  expect(el.sourcePage).to.equal(2); expect(data.queries.at(-1)!.page).to.equal(2);
+  const pagination = () => [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="source-controls"]')][1]!
+    .querySelectorAll<HTMLButtonElement>('button');
+  pagination()[0]!.click(); await ready(el); await el.updateComplete;
+  expect(el.sourcePage).to.equal(1); expect(data.queries.at(-1)!.query.search).to.equal('needle');
+  pagination()[1]!.click(); await ready(el); await el.updateComplete;
+  expect(el.sourcePage).to.equal(2);
+  kind.value = 'nodes'; kind.dispatchEvent(new Event('change')); await ready(el); await el.updateComplete;
+  expect(data.queries.at(-1)!.query).to.include({ kind: 'nodes', search: '', centerKey: null });
+  expect(el.sourcePage).to.equal(0);
+});
+
+it('scopes incident edges, changes direction, clears scope and reveals an endpoint', async () => {
+  const data = provider();
+  const el = await fixture<Canvas>(html`<lr-flow-canvas .graphSource=${data.source}
+    .strings=${{ graphSourceAllRecords: 'Show every record' }}></lr-flow-canvas>`);
+  await ready(el); await el.updateComplete;
+  el.shadowRoot!.querySelector('[part="source-record"]')!.querySelectorAll<HTMLButtonElement>('button')[1]!.click();
+  await ready(el); await el.updateComplete;
+  expect(data.queries.at(-1)!.query).to.include({ kind: 'edges', centerKey: 'node:0', direction: 'both' });
+  for (const direction of ['in', 'out', 'both']) {
+    const control = el.shadowRoot!.querySelector<HTMLSelectElement>('[part="source-controls"] select:not([data-source-kind])')!;
+    control.value = direction; control.dispatchEvent(new Event('change')); await ready(el); await el.updateComplete;
+    expect(data.queries.at(-1)!.query).to.include({ centerKey: 'node:0', direction });
+  }
+  const clear = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="source-controls"] button')]
+    .find(button => button.textContent === 'Show every record')!;
+  clear.click(); await ready(el); await el.updateComplete;
+  expect(data.queries.at(-1)!.query).to.include({ kind: 'edges', centerKey: null, direction: 'both' });
+  const endpoints = el.shadowRoot!.querySelector('[part="source-record"]')!.querySelectorAll<HTMLButtonElement>('button');
+  endpoints[2]!.click();
+  await waitUntil(() => el.shadowRoot!.activeElement?.getAttribute('data-source-key') === 'node:1');
+  expect(data.queries.at(-1)!.query).to.include({ kind: 'nodes', centerKey: null });
+});
+
+it('revokes detached source controls immediately when a different provider is assigned', async () => {
+  const old = provider(), latest = provider();
+  const el = await fixture<Canvas>(html`<lr-flow-canvas .graphSource=${old.source}></lr-flow-canvas>`);
+  await ready(el); await el.updateComplete;
+  const kind = el.shadowRoot!.querySelector<HTMLSelectElement>('[data-source-kind]')!;
+  const search = el.shadowRoot!.querySelector<HTMLInputElement>('[data-source-search]')!;
+  const page = el.shadowRoot!.querySelector<HTMLInputElement>('[data-source-page]')!;
+  const incident = el.shadowRoot!.querySelector('[part="source-record"]')!.querySelectorAll<HTMLButtonElement>('button')[1]!;
+  const next = [...el.shadowRoot!.querySelectorAll('[part="source-controls"]')][1]!.querySelectorAll<HTMLButtonElement>('button')[1]!;
+  const calls = old.queries.length;
+  el.graphSource = latest.source;
+  kind.value = 'edges'; kind.dispatchEvent(new Event('change'));
+  search.value = 'obsolete'; search.dispatchEvent(new Event('input'));
+  page.value = '8'; page.dispatchEvent(new Event('change')); incident.click(); next.click();
+  await ready(el); await el.updateComplete;
+  expect(old.queries.length).to.equal(calls);
+  expect(latest.queries.length).to.equal(1);
+  expect(latest.queries[0]!.query).to.include({ kind: 'nodes', search: '', centerKey: null });
+  expect(latest.queries[0]!.page).to.equal(0); expect(el.sourcePage).to.equal(0);
+});
