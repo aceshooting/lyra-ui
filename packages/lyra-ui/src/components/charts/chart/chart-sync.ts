@@ -20,6 +20,7 @@ interface ChartSyncGroup {
   readonly members: Set<ChartSyncController>;
   active?: ActiveCategory;
   frame?: number;
+  retry?: boolean;
 }
 const documents = new WeakMap<Document, Map<string, ChartSyncGroup>>();
 
@@ -79,9 +80,9 @@ export class ChartSyncController {
 
   publish(label: string, index: number): void {
     if (!label || !this.group) { this.clear(); return; }
-    // Pointer moves within one category re-publish it; every member already shows it.
+    // Repeated moves within a rendered category need no work unless a receiver failed.
     const active = this.group.active;
-    if (this.shown && active?.owner === this && active.label === label && active.index === index) return;
+    if (this.shown && !this.group.retry && active?.owner === this && active.label === label && active.index === index) return;
     const group = this.group;
     group.active = { owner: this, label, index };
     if (group.frame !== undefined) return;
@@ -91,10 +92,11 @@ export class ChartSyncController {
       group.frame = undefined;
       const current = group.active;
       if (!current) return;
+      group.retry = false;
       const presentations = [...group.members].map(member => ({
         member,
         presentation: member.host.isConnected
-          ? member.project(current.label, member === current.owner ? current.index : undefined)
+          ? member.presentation(current.label, member === current.owner ? current.index : undefined)
           : undefined,
       }));
       if (!presentations.find(item => item.member === current.owner)?.presentation) {
@@ -172,18 +174,31 @@ export class ChartSyncController {
   };
 
   private hide(reset = true): void {
-    if (reset && this.shown) this.reset?.();
+    const wasShown = this.shown;
     this.shown = false;
     this.crosshair?.remove();
     this.tooltip?.remove();
     this.crosshair = undefined;
     this.tooltip = undefined;
+    if (reset && wasShown) this.resetRenderer();
+  }
+
+  private resetRenderer(): void {
+    try { this.reset?.(); } catch { /* A failed native renderer cannot retain group-owned cues. */ }
+  }
+
+  private presentation(label: string, sourceIndex?: number): ChartSyncPresentation | undefined {
+    try { return this.project(label, sourceIndex); }
+    catch {
+      if (this.group) this.group.retry = true;
+      return undefined;
+    }
   }
 
   private receive(): void {
     const active = this.group?.active;
     const presentation = active && this.host.isConnected
-      ? this.project(active.label, active.owner === this ? active.index : undefined)
+      ? this.presentation(active.label, active.owner === this ? active.index : undefined)
       : undefined;
     this.show(presentation)?.()?.();
   }
@@ -192,7 +207,7 @@ export class ChartSyncController {
     const wasShown = this.shown;
     this.hide(false);
     if (!presentation) {
-      if (wasShown) this.reset?.();
+      if (wasShown) this.resetRenderer();
       return;
     }
     // Projecting already highlighted the renderer, even if the overlay cannot be placed below.
