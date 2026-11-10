@@ -510,6 +510,7 @@ export class TableViewerSourceController implements ReactiveController {
   private limit = 0;
   private dirty = true;
   private bindingIntent = 0;
+  private sheetIntent = 0;
   private theme?: ThemeWatcher;
   private sheets: readonly SourceSheet[] = [];
   private sheetIndex = 0;
@@ -627,23 +628,36 @@ export class TableViewerSourceController implements ReactiveController {
     this.hooks.error(error);
     this.notify();
   }
-  private selectSheet(index: number): void {
-    this.authority.invalidate('cells0'); this.authority.invalidate('cells1'); this.authority.invalidate('reveal');
+  private selectSheet(index: number): boolean {
+    const intent = ++this.sheetIntent, epoch = this.epoch;
+    const current = () => intent === this.sheetIntent && this.current(epoch);
+    for (const channel of ['cells0', 'cells1', 'reveal'] as const) {
+      this.authority.invalidate(channel);
+      if (!current()) return false;
+    }
     for (const slot of this.slots) slot.settle(false);
     this.slots = []; this.windowColumns = []; this.labels = []; this.labelUnits = 0;
     this.firstRow = 0; this.visibleRows = 0; this.activeRow = ''; this.sheetIndex = index;
     this.sheet = this.sheets[index]; this.paint++;
-    if (!this.sheet) { this.rows = this.columns = 0; this.sourceRows = this.makeRows(); return; }
+    if (!this.sheet) { this.rows = this.columns = 0; this.sourceRows = this.makeRows(); return true; }
     const data = this.sheet.data;
-    const epoch = this.epoch;
-    const revision = sourceRevision(data.revision);
-    const rows = sourceCount(data.rowCount), columns = sourceCount(data.columnCount);
-    if (rows >= Number.MAX_SAFE_INTEGER || columns > this.limit) throw new LyraResourceLimitError();
-    if (typeof data.columnAt !== 'function' || (typeof data.cellAt === 'function') === (typeof data.readCells === 'function')) throw new TypeError('Invalid cell source');
-    if (!this.current(epoch)) return;
-    this.sheetRevision = revision; this.rows = rows; this.columns = columns;
-    this.sourceRows = this.makeRows(); this.loaded = true;
-    this.host.shadowRoot?.querySelector<LyraVirtualList>(tag('virtual-list'))?.scrollToIndex(0, { align: 'start', behavior: 'auto' });
+    try {
+      const revision = sourceRevision(data.revision); if (!current()) return false;
+      const rows = sourceCount(data.rowCount); if (!current()) return false;
+      const columns = sourceCount(data.columnCount); if (!current()) return false;
+      if (rows >= Number.MAX_SAFE_INTEGER || columns > this.limit) throw new LyraResourceLimitError();
+      const columnAt = data.columnAt; if (!current()) return false;
+      const cellAt = data.cellAt; if (!current()) return false;
+      const readCells = data.readCells; if (!current()) return false;
+      if (typeof columnAt !== 'function' || (typeof cellAt === 'function') === (typeof readCells === 'function')) throw new TypeError('Invalid cell source');
+      this.sheetRevision = revision; this.rows = rows; this.columns = columns;
+      this.sourceRows = this.makeRows(); this.loaded = true;
+      this.host.shadowRoot?.querySelector<LyraVirtualList>(tag('virtual-list'))?.scrollToIndex(0, { align: 'start', behavior: 'auto' });
+      return current();
+    } catch (error) {
+      if (current()) throw error;
+      return false;
+    }
   }
 
   private scalar(value: unknown): string {
@@ -777,7 +791,8 @@ export class TableViewerSourceController implements ReactiveController {
         ${this.hooks.workbook && this.sheets.length > 1 ? this.hooks.renderSheetTabs?.(
           this.sheets.map(sheet => sheet.name), this.sheetIndex, index => {
             if (Number.isInteger(index) && index >= 0 && index < this.sheets.length && index !== this.sheetIndex) {
-              try { this.selectSheet(index); this.notify(); } catch (error) { this.fail(error); }
+              this.hooks.cancelAnchor();
+              try { if (this.selectSheet(index)) this.notify(); } catch (error) { this.fail(error); }
             }
           },
         ) ?? nothing : nothing}
@@ -808,7 +823,7 @@ export class TableViewerSourceController implements ReactiveController {
   }
   private async reveal(sheetIndex: number, row: number, column: number): Promise<boolean> {
     if (this.failure || sheetIndex < 0 || sheetIndex >= this.sheets.length) return false;
-    if (sheetIndex !== this.sheetIndex) { try { this.selectSheet(sheetIndex); this.notify(); } catch (error) { this.fail(error); return false; } }
+    if (sheetIndex !== this.sheetIndex) { try { if (!this.selectSheet(sheetIndex)) return false; this.notify(); } catch (error) { this.fail(error); return false; } }
     if (!Number.isSafeInteger(row) || row < (this.hooks.header() ? -1 : 0) || row >= this.rows || !Number.isSafeInteger(column) || column < 0 || column >= this.columns) return false;
     const lease = this.authority.begin('reveal', this.locale);
     if (!lease) return false;
