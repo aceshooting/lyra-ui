@@ -12,6 +12,74 @@ import {
 } from './text-quote.js';
 
 describe('text quote public boundary contracts', () => {
+  it('matches copied quote text containing a soft hyphen inside a combining sequence', () => {
+    const root = document.createElement('div');
+    root.textContent = 'cafe\u00ad\u0301';
+    const scope = scopeFromElement(root);
+    expect(scope.text).to.equal('café');
+    expect(resolveTextQuote(scope, { quote: root.textContent })?.toString()).to.equal(root.textContent);
+    const selection = document.createRange();
+    selection.selectNodeContents(root);
+    expect(buildQuoteAnchor(selection, scope)).to.deep.include({ kind: 'text-quote', quote: 'café' });
+  });
+
+  it('preserves an emoji sequence split between UTF-16 surrogate halves', () => {
+    const raw = 'Start|👩‍💻|End';
+    const root = document.createElement('div');
+    for (const unit of raw.split('')) {
+      const span = document.createElement('span');
+      span.textContent = unit;
+      root.append(span, document.createComment('inline boundary'));
+    }
+    expect(root.textContent).to.equal(raw);
+    const scope = scopeFromElement(root);
+    expect([...scope.text].map(value => value.codePointAt(0))).to.deep.equal([...raw].map(value => value.codePointAt(0)));
+    expect(resolveTextQuote(scope, { quote: raw })?.toString()).to.equal(raw);
+  });
+
+  it('refreshes a cached emoji search as streaming text completes surrogate pairs', () => {
+    const root = document.createElement('div');
+    root.textContent = 'Start|';
+    const builder = new IncrementalTextQuoteScope(root);
+    const index = createTextQuoteIndex(builder.update());
+    try {
+      expect(index.search('👩‍💻').length).to.equal(0);
+      for (const unit of '👩‍💻'.split('')) {
+        root.append(document.createTextNode(unit));
+        const scope = builder.update();
+        expect(scope.text).to.equal(root.textContent);
+        index.rebindScope(scope);
+      }
+      const match = index.search('👩‍💻').at(0);
+      expect(match).to.deep.equal({ start: 6, end: 11 });
+      if (!match) throw new Error('Expected the completed emoji to be searchable');
+      expect(rangeFromTextQuoteMatch(builder.update(), match)?.toString()).to.equal('👩‍💻');
+    } finally { builder.disconnect(); }
+  });
+
+  for (const segmenter of ['native', 'fallback'] as const) {
+    it(`collapses whitespace before an expanding grapheme with the ${segmenter} segmenter`, () => {
+      const descriptor = Object.getOwnPropertyDescriptor(Intl, 'Segmenter')!;
+      if (segmenter === 'fallback') Object.defineProperty(Intl, 'Segmenter', { ...descriptor, value: undefined });
+      try {
+        const root = document.createElement('div');
+        const raw = 'Start|\u00a0 \u0344|End';
+        const normalized = 'Start| \u0308\u0301|End';
+        root.textContent = raw;
+        for (const limits of [undefined, { maxCorpusCodeUnits: normalized.length }]) {
+          const scope = scopeFromElement(root, limits);
+          expect(scope.text).to.equal(normalized);
+          expect(scope.truncated).to.equal(false);
+          const range = resolveTextQuote(scope, { quote: normalized });
+          expect(range?.toString()).to.equal(raw);
+          expect(range?.startOffset).to.equal(0);
+          expect(range?.endOffset).to.equal(raw.length);
+          expect(resolveTextQuote(scope, { quote: '\u0308\u0301' })?.toString()).to.equal(' \u0344');
+        }
+      } finally { Object.defineProperty(Intl, 'Segmenter', descriptor); }
+    });
+  }
+
   it('applies the query ceiling after NFC expands a combining character', () => {
     const root = document.createElement('div');
     root.textContent = '\u0344';

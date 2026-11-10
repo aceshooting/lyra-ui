@@ -919,14 +919,22 @@ describe('buildQuoteAnchor deep boundaries', () => {
 
   it('fails closed without overflowing the stack beyond the traversal ceiling', () => {
     const root = document.createElement('div');
-    let parent: Element = root;
-    for (let depth = 0; depth <= TEXT_QUOTE_LIMITS.maxTraversalNodes; depth++) {
-      const child = document.createElement('span');
-      parent.appendChild(child);
-      parent = child;
+    const template = document.createElement('div');
+    // Clone small chains so fixture construction does not walk every ancestor for every node.
+    template.innerHTML = '<span>'.repeat(128) + '</span>'.repeat(128);
+    let tail: Element = root;
+    let depth = 0;
+    while (depth <= TEXT_QUOTE_LIMITS.maxTraversalNodes) {
+      const count = Math.min(128, TEXT_QUOTE_LIMITS.maxTraversalNodes + 1 - depth);
+      const branch = template.firstElementChild!.cloneNode(true) as Element;
+      let end = branch;
+      for (let level = 1; level < count; level++) end = end.firstElementChild!;
+      end.replaceChildren();
+      tail.appendChild(branch);
+      tail = end;
+      depth += count;
     }
-    const node = document.createTextNode('needle');
-    parent.appendChild(node);
+    tail.appendChild(document.createTextNode('needle'));
     const range = document.createRange();
     range.selectNodeContents(root);
     const scope: TextQuoteScope = { text: '', segments: [], truncated: true };

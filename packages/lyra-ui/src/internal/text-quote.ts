@@ -90,7 +90,15 @@ function resolvedLimits(overrides?: Partial<TextQuoteLimits>): TextQuoteLimits {
  *  `prefix`/`suffix`, or a fully-selected Range's text. Building a scope's own per-node corpus uses
  *  a related, non-trimming variant internally (see `normalizeSegment`) so inter-node spacing survives. */
 export function normalizeQuoteText(s: string): string {
-  return collapseWhitespaceAndSoftHyphen(s.normalize('NFC')).trim();
+  return normalizeNfc(collapseWhitespaceAndSoftHyphen(s).trim());
+}
+
+function normalizeNfc(value: string): string {
+  // A text node can end halfway through a surrogate pair. Some engines replace that half
+  // during normalization, losing the code point before adjacent nodes can be joined.
+  return /[\ud800-\udfff]/u.test(value)
+    ? value.replace(/[^\ud800-\udfff]+/gu, text => text.normalize('NFC'))
+    : value.normalize('NFC');
 }
 
 function collapseWhitespaceAndSoftHyphen(s: string): string {
@@ -293,8 +301,8 @@ function continuesPreviousGrapheme(
 ): boolean {
   if (firstCharacter === undefined) return false;
   const composesAcrossBoundary = previousCharacter !== undefined
-    && `${previousCharacter}${firstCharacter}`.normalize('NFC')
-      !== `${previousCharacter.normalize('NFC')}${firstCharacter.normalize('NFC')}`;
+    && normalizeNfc(`${previousCharacter}${firstCharacter}`)
+      !== `${normalizeNfc(previousCharacter)}${normalizeNfc(firstCharacter)}`;
   return MARK_RE.test(firstCharacter)
     || firstCharacter === '\ufe0f'
     || firstCharacter === '\u200d'
@@ -336,13 +344,13 @@ function* normalizationClusters(value: string): Generator<NormalizationCluster> 
 }
 
 function normalizeScopeGlobally(scope: TextQuoteScope): TextQuoteScope {
-  const normalized = scope.text.normalize('NFC');
+  const normalized = normalizeNfc(scope.text);
   if (normalized === scope.text) return scope;
   const expansions: number[] = [];
   const chunks: string[] = [];
   let mappedStart = 0;
   for (const cluster of normalizationClusters(scope.text)) {
-    const mapped = cluster.text.normalize('NFC');
+    const mapped = normalizeNfc(cluster.text);
     const mappedEnd = mappedStart + mapped.length;
     if (mapped !== cluster.text) {
       expansions.push(cluster.rawStart, cluster.rawEnd, mappedStart, mappedEnd);
@@ -367,7 +375,7 @@ function normalizeSegment(
 ): NormalizedSegment {
   const inspectedLength = Math.min(raw.length, maxWorkCodeUnits);
   const inspected = raw.slice(0, inspectedLength);
-  const nfc = inspected.normalize('NFC');
+  const nfc = normalizeNfc(inspected);
   const chunks: string[] = [];
   let chunk = '';
   let normalizedLength = 0;
@@ -475,7 +483,7 @@ function normalizeSegment(
     if (!outputTruncated && !appendStretch(rawIndex, inspected.length)) outputTruncated = true;
   } else {
     for (const cluster of normalizationClusters(inspected)) {
-      const normalizedCluster = cluster.text.normalize('NFC');
+      const normalizedCluster = normalizeNfc(cluster.text);
       if (normalizedCluster === cluster.text) {
         for (let local = 0; local < cluster.text.length; local++) {
           if (!appendUnit(cluster.text[local]!, cluster.rawStart + local)) {
@@ -486,7 +494,8 @@ function normalizeSegment(
         if (outputTruncated) break;
         continue;
       }
-      const normalizedVisible = collapseWhitespaceAndSoftHyphen(normalizedCluster);
+      let normalizedVisible = collapseWhitespaceAndSoftHyphen(normalizedCluster);
+      if (lastWasSpace && normalizedVisible.startsWith(' ')) normalizedVisible = normalizedVisible.slice(1);
       if (!normalizedVisible) continue;
       if (normalizedLength + normalizedVisible.length > maxOutputCodeUnits) {
         outputTruncated = true;
@@ -653,12 +662,12 @@ function scanElementScope(
   let tail = '';
   let pending: NormalizationCluster | undefined;
   const appendCluster = (cluster: NormalizationCluster): void => {
-    const normalized = cluster.text.normalize('NFC');
+    const normalized = normalizeNfc(cluster.text);
     if (normalized !== cluster.text) expansions.push(sourceStart + cluster.rawStart, sourceStart + cluster.rawEnd,
       stableText.length, stableText.length + normalized.length);
     stableText += normalized;
   };
-  if (appended.normalize('NFC') === appended) {
+  if (normalizeNfc(appended) === appended) {
     let cut = appended.length;
     let following: string | undefined;
     while (cut > 0) {
@@ -677,8 +686,8 @@ function scanElementScope(
   if (pending) tail = pending.text;
   const expansionCount = expansions.length;
   const nextSourceStart = sourceStart + (pending?.rawStart ?? 0);
-  const finalText = stableText + tail.normalize('NFC');
-  if (pending && tail.normalize('NFC') !== tail) expansions.push(nextSourceStart, sourceStart + pending.rawEnd,
+  const finalText = stableText + normalizeNfc(tail);
+  if (pending && normalizeNfc(tail) !== tail) expansions.push(nextSourceStart, sourceStart + pending.rawEnd,
     stableText.length, finalText.length);
   const scope: TextQuoteScope = { text: finalText, segments, truncated };
   if (expansions.length) scope.globalNormalization = { text: finalText, expansions };

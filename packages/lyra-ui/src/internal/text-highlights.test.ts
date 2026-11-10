@@ -446,11 +446,18 @@ describe('acquireHighlightHandle (fallback path, forced via a hidden Highlight g
   it('bounds the common-ancestor walk for a fallback range', () => {
     const root = makeContent('');
     try {
+      const start = document.createTextNode('selected');
+      const end = document.createTextNode(' text');
       const fragment = document.createDocumentFragment();
-      for (let index = 0; index < 25_000; index++) fragment.append(document.createTextNode('x'));
-      root.append(fragment);
+      for (let group = 0; group < 100; group++) {
+        const paragraph = document.createElement('p');
+        for (let index = 0; index < 250; index++) paragraph.append(document.createTextNode('x'));
+        fragment.append(paragraph);
+      }
+      root.append(start, end, fragment);
       const firstRange = document.createRange();
-      firstRange.selectNodeContents(root);
+      firstRange.setStart(start, 0);
+      firstRange.setEnd(end, end.length);
       const secondRange = firstRange.cloneRange();
       const originalFirstIntersectsNode = firstRange.intersectsNode.bind(firstRange);
       const originalSecondIntersectsNode = secondRange.intersectsNode.bind(secondRange);
@@ -466,7 +473,9 @@ describe('acquireHighlightHandle (fallback path, forced via a hidden Highlight g
 
       const handle = acquireHighlightHandle({}, document);
       handle.setRanges('accent', [firstRange, secondRange]);
+      expect(intersectionChecks).to.be.greaterThan(19_000);
       expect(intersectionChecks).to.be.at.most(20_000);
+      expect(root.querySelectorAll('mark').length).to.equal(0);
       handle.release();
     } finally {
       root.remove();
