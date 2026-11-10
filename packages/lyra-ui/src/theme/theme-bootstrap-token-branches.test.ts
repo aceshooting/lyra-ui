@@ -1,5 +1,6 @@
 import { expect } from '@open-wc/testing';
 import { applyLyraThemeBootstrapForTesting, setLyraStyle } from './theme.js';
+import { contrastRatio, resolvedColorToken } from '../../test/color-contrast.js';
 
 const KEY = 'lyra-theme';
 const OWNERSHIP = Symbol.for('@aceshooting/lyra-ui.style-ownership.v1');
@@ -98,6 +99,51 @@ describe('theme pre-paint bootstrap token handling (module functions, called dir
       '--lr-theme-color-text-normal': '#777777',
     } });
     expect(style.getPropertyValue('--_lr-ld-color-text-normal')).to.equal('rgb(0 0 0)');
+  });
+
+  for (const mode of ['light', 'dark'] as const) {
+    it(`repairs low-contrast boundary and terminal tokens before the first ${mode} paint`, () => {
+      const background = mode === 'light' ? '#ffffff' : '#101010';
+      const raised = mode === 'light' ? '#eeeeee' : '#202020';
+      const text = mode === 'light' ? '#111111' : '#eeeeee';
+      const boundaryNames = ['color-brand-border-normal', 'color-success-border-loud',
+        'color-surface-border', 'color-border-strong', 'color-focus', 'color-chart-1'];
+      const overrides = {
+        '--lr-theme-color-surface-default': background,
+        '--lr-theme-color-surface-raised': raised,
+        '--lr-theme-color-text-normal': text,
+        '--lr-theme-terminal-color-red': raised,
+        '--lr-theme-terminal-bg-black': text,
+        '--lr-theme-color-brand-fill-quiet': 'rgb(128 128 128 / 0.25)',
+        ...Object.fromEntries(boundaryNames.map(name => [`--lr-theme-${name}`, background])),
+      };
+      bootWith({ mode, accent: null, overrides });
+      const color = (name: string) => resolvedColorToken(root(), `--lr-theme-${name}`);
+      for (const name of boundaryNames) {
+        expect(contrastRatio(color(name), color('color-surface-default')), name).to.be.at.least(3);
+      }
+      expect(contrastRatio(color('terminal-color-red'), color('color-surface-raised'))).to.be.at.least(4.5);
+      expect(contrastRatio(color('terminal-bg-black'), color('color-text-normal'))).to.be.at.least(4.5);
+      const branch = mode === 'light' ? 'll' : 'ld';
+      expect(root().style.getPropertyValue(`--_lr-${branch}-color-brand-fill-quiet`)).to.equal('rgb(128 128 128 / 0.25)');
+      expect(root().style.getPropertyValue(`--_lr-${branch}-color-brand-on-quiet`)).to.equal(mode === 'light' ? 'rgb(0 0 0)' : 'rgb(255 255 255)');
+    });
+  }
+
+  it('preserves system boundary and terminal colors for the active browser palette', () => {
+    const overrides = {
+      '--lr-theme-color-focus': 'CanvasText',
+      '--lr-theme-terminal-color-red': 'ButtonText',
+      '--lr-theme-terminal-bg-black': 'Canvas',
+    };
+    bootWith({ mode: 'light', accent: null, overrides });
+    for (const [name, value] of Object.entries(overrides)) {
+      expect(root().style.getPropertyValue(name.replace('--lr-theme-', '--_lr-ll-'))).to.equal(value);
+      const probe = document.createElement('span');
+      probe.style.color = value; root().append(probe);
+      try { expect(resolvedColorToken(root(), name), name).to.equal(getComputedStyle(probe).color); }
+      finally { probe.remove(); }
+    }
   });
 
   it('records which semantic roles follow the brand and routes density-scaled tokens through the resolver', () => {

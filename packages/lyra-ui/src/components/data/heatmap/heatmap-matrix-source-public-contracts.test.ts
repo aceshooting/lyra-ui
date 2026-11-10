@@ -1,4 +1,4 @@
-import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import './heatmap.js';
 import '../../../translations/fr/data.js';
@@ -199,3 +199,85 @@ it('revokes exact activation when a multiple-selection listener replaces the sou
   expect(replacement.queries.length).to.equal(1);
   expect(el.shadowRoot!.querySelector('[part="source-error"]') === null).to.equal(true);
 });
+
+it('clears aggregate hover outside the source viewport without selecting or reading an exact cell', async () => {
+  const { source, reads } = matrixSource(20, 20);
+  const el = await fixture<LyraHeatmap>(html`<lr-heatmap style="width:320px" .matrixSource=${source}></lr-heatmap>`);
+  await sourceReady(el);
+  const canvas = el.shadowRoot!.querySelector('canvas')!, bounds = canvas.getBoundingClientRect();
+  const selections: unknown[] = [];
+  el.addEventListener('lr-matrix-range-select', event => selections.push(event.detail));
+  canvas.dispatchEvent(new MouseEvent('mousemove', { clientX: bounds.left + 10, clientY: bounds.top + 10 }));
+  await el.updateComplete;
+  expect(Boolean(el.shadowRoot!.querySelector('[part="tooltip"]')?.textContent)).to.equal(true);
+  canvas.dispatchEvent(new MouseEvent('mousemove', { clientX: bounds.right + 1, clientY: bounds.bottom + 1 }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="tooltip"]') === null).to.equal(true);
+  expect(reads).to.deep.equal([]);
+  expect(selections).to.deep.equal([]);
+});
+
+it('ignores hover and clicks while source tiles are pending or failed, then accepts a working source', async () => {
+  const { source, reads } = matrixSource(1, 1);
+  let reject!: (error: Error) => void;
+  const tiles = new Promise<never>((_resolve, fail) => { reject = fail; });
+  const pending: LyraHeatmapMatrixSource = { ...source, query: () => tiles };
+  const el = await fixture<LyraHeatmap>(html`<lr-heatmap style="width:320px" .matrixSource=${pending}></lr-heatmap>`);
+  const activations: unknown[] = [], ranges: unknown[] = [];
+  el.addEventListener('lr-cell-activate', event => activations.push(event.detail));
+  el.addEventListener('lr-matrix-range-select', event => ranges.push(event.detail));
+  const interact = () => {
+    const canvas = el.shadowRoot!.querySelector('canvas')!, bounds = canvas.getBoundingClientRect();
+    const position = { clientX: bounds.left + bounds.width / 2, clientY: bounds.top + bounds.height / 2 };
+    canvas.dispatchEvent(new MouseEvent('mousemove', position));
+    canvas.dispatchEvent(new MouseEvent('click', position));
+  };
+  expect(el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-busy')).to.equal('true');
+  interact();
+  reject(new Error('Source tiles unavailable'));
+  await waitUntil(() => el.shadowRoot!.querySelector('[part="source-error"]') !== null, 'source failure rendered');
+  interact(); await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="tooltip"]') === null).to.equal(true);
+  expect(reads).to.deep.equal([]);
+  expect(activations).to.deep.equal([]);
+  expect(ranges).to.deep.equal([]);
+  el.matrixSource = source;
+  await sourceReady(el); interact();
+  await waitUntil(() => activations.length === 1, 'replacement source accepts activation');
+  expect(activations).to.deep.equal([{ row: 0, col: 0, value: 0 }]);
+  expect(reads).to.deep.equal([[0, 0]]);
+  expect(el.shadowRoot!.querySelector('[part="source-error"]') === null).to.equal(true);
+});
+
+for (const interruption of ['disconnect', 'replace'] as const) {
+  it(`drops pending exact activation after ${interruption} without publishing a stale selection`, async () => {
+    const first = matrixSource(1, 1), replacement = matrixSource(1, 1);
+    let resolve!: (value: { value: number; rowLabel: string; columnLabel: string }) => void;
+    let started = false;
+    const cell = new Promise<{ value: number; rowLabel: string; columnLabel: string }>(done => { resolve = done; });
+    const source: LyraHeatmapMatrixSource = { ...first.source, getCell() { started = true; return cell; } };
+    const wrapper = await fixture<HTMLDivElement>(html`<div><lr-heatmap multiple style="width:320px" .matrixSource=${source}></lr-heatmap></div>`);
+    const el = wrapper.querySelector<LyraHeatmap>('lr-heatmap')!;
+    await sourceReady(el);
+    const activations: unknown[] = [], selections: unknown[] = [];
+    el.addEventListener('lr-cell-activate', event => activations.push(event.detail));
+    el.addEventListener('lr-selection-change', event => selections.push(event.detail));
+    const canvas = el.shadowRoot!.querySelector('canvas')!, bounds = canvas.getBoundingClientRect();
+    canvas.dispatchEvent(new MouseEvent('click', { clientX: bounds.left + 10, clientY: bounds.top + 10 }));
+    await waitUntil(() => started, 'exact value requested');
+    if (interruption === 'disconnect') el.remove(); else el.matrixSource = replacement.source;
+    resolve({ value: 99, rowLabel: 'Old row', columnLabel: 'Old column' });
+    await nextFrame();
+    expect(activations).to.deep.equal([]);
+    expect(selections).to.deep.equal([]);
+    el.matrixSource = replacement.source;
+    if (interruption === 'disconnect') wrapper.append(el);
+    await sourceReady(el);
+    const current = el.shadowRoot!.querySelector('canvas')!, currentBounds = current.getBoundingClientRect();
+    current.dispatchEvent(new MouseEvent('click', { clientX: currentBounds.left + 10, clientY: currentBounds.top + 10 }));
+    await waitUntil(() => activations.length === 1, 'current exact value accepted');
+    expect(activations).to.deep.equal([{ row: 0, col: 0, value: 0 }]);
+    expect(selections).to.deep.equal([{ selectedCells: [{ row: 0, col: 0 }], source: 'pointer' }]);
+    expect(el.selectedCells).to.deep.equal([]);
+  });
+}
