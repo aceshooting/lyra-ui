@@ -5,7 +5,7 @@ import { createServer } from 'node:http';
 import { Session } from 'node:inspector/promises';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import test from 'node:test';
 import { runInNewContext } from 'node:vm';
 import istanbulCoverage from 'istanbul-lib-coverage';
@@ -16,6 +16,45 @@ const { createCoverageMap } = istanbulCoverage;
 const require = createRequire(import.meta.url);
 const runnerRequire = createRequire(require.resolve('@web/test-runner-playwright'));
 const { v8ToIstanbul } = runnerRequire('@web/test-runner-coverage-v8');
+const { getTestCoverage } = runnerRequire(join(dirname(runnerRequire.resolve('@web/test-runner-core')), 'coverage/getTestCoverage.js'));
+
+function branchSession(rows) {
+  const path = '/fixture/branches.ts';
+  const branchMap = {}, b = {};
+  for (const [id, [start, end, count]] of rows.entries()) {
+    const loc = { start: { line: 1, column: start }, end: { line: 1, column: end } };
+    branchMap[id] = { type: 'branch', line: 1, loc, locations: [loc] };
+    b[id] = [count];
+  }
+  return { testCoverage: { [path]: { path, statementMap: {}, s: {}, fnMap: {}, f: {}, branchMap, b } } };
+}
+
+function sessionBranchCounts(sessions) {
+  const { coverageMap } = getTestCoverage(new Set(sessions), {});
+  const coverage = coverageMap.fileCoverageFor('/fixture/branches.ts');
+  return Object.fromEntries(Object.entries(coverage.branchMap).map(([id, branch]) =>
+    [`${branch.loc.start.column}:${branch.loc.end.column}`, coverage.b[id][0]]));
+}
+
+for (const reverse of [false, true]) {
+  test(`session coverage preserves explicit same-line counters in ${reverse ? 'child' : 'parent'}-first order`, () => {
+    const rows = [[0, 80, 5], [20, 60, 2], [30, 50, 0]];
+    const session = branchSession(reverse ? rows.reverse() : rows);
+    const before = structuredClone(session);
+    assert.deepEqual(sessionBranchCounts([session]), { '0:80': 5, '20:60': 2, '30:50': 0 });
+    assert.deepEqual(session, before, 'coverage assembly must not mutate captured counters');
+  });
+}
+
+for (const bounds of [[20, 60], [0, 60]]) {
+  test(`missing session branches inherit the nearest enclosing range ${bounds.join(':')}`, () => {
+    const first = branchSession([[0, 80, 1], [30, 50, 1]]);
+    const second = branchSession([[0, 80, 3], [...bounds, 0]]);
+    const expected = { '0:80': 4, '30:50': 1, [bounds.join(':')]: 1 };
+    assert.deepEqual(sessionBranchCounts([first, second]), expected);
+    assert.deepEqual(sessionBranchCounts([second, first]), expected, 'session order must not change the result');
+  });
+}
 
 test('V8 coverage unions execution from independent realms sharing one source URL', async (t) => {
   const directory = await mkdtemp(join(tmpdir(), 'lyra-coverage-realms-'));
@@ -32,6 +71,8 @@ test('V8 coverage unions execution from independent realms sharing one source UR
     '  return "uncovered";',
     '}',
     'globalThis.result = choose(globalThis.parent);',
+    'globalThis.explicit = fallback("authored");',
+    'function fallback(value) { return value ?? "fallback"; }',
     '',
   ].join('\n');
   const filename = join(directory, 'realm.js');
@@ -63,6 +104,8 @@ test('V8 coverage unions execution from independent realms sharing one source UR
   await session.post('Profiler.stopPreciseCoverage');
   assert.equal(parent.result, 'parent');
   assert.equal(iframe.result, 'iframe');
+  assert.equal(parent.explicit, 'authored');
+  assert.equal(iframe.explicit, 'authored');
   const entries = [parentSnapshot, iframeSnapshot].flatMap(({ result }) =>
     result.filter((entry) => entry.url === url));
   assert.equal(entries.length, 2, 'both realm snapshots contain the shared source');
@@ -90,6 +133,11 @@ test('V8 coverage unions execution from independent realms sharing one source UR
       assert.deepEqual(Object.keys(lines), Object.keys(counts[0]), 'source denominator is unchanged');
       const choose = Object.entries(coverage.fnMap).find(([, fn]) => fn.name === 'choose')[0];
       assert.equal(coverage.f[choose], 2, 'shared function execution counts are added');
+      const assembled = getTestCoverage(new Set([{ testCoverage: map.toJSON() }]), {}).coverageMap.fileCoverageFor(filename);
+      const fallbackCounts = Object.entries(assembled.branchMap)
+        .filter(([, branch]) => branch.loc.start.line === 13)
+        .map(([id]) => assembled.b[id][0]).sort((a, b) => a - b);
+      assert.deepEqual(fallbackCounts, [0, 2], 'the unexecuted nullish arm stays uncovered after session assembly');
     });
   }
 });

@@ -1,0 +1,37 @@
+diff --git a/dist/coverage/getTestCoverage.js b/dist/coverage/getTestCoverage.js
+index ac91e448145fa3afba6e783aea8ccc764b83ba52..584d20008e452265190b0c9d4be7fd7b9e161656 100644
+--- a/dist/coverage/getTestCoverage.js
++++ b/dist/coverage/getTestCoverage.js
+@@ -15,11 +15,9 @@ const rangeEquals = (a, b) => locEquals(a.start, b.start) && locEquals(a.end, b.
+ const rangeEncompass = (a, b) => locBefore(a.start, b.start) && locBefore(b.end, a.end);
+ function getRangeDistance(encompassing, range) {
+     const startDistanceLine = range.start.line - encompassing.start.line;
+-    const startDistanceColumn = startDistanceLine
+-        ? range.start.column - encompassing.start.column
+-        : 0;
++    const startDistanceColumn = range.start.column - encompassing.start.column;
+     const endDistanceLine = encompassing.end.line - range.end.line;
+-    const endDistanceColumn = endDistanceLine ? encompassing.end.column - range.end.column : 0;
++    const endDistanceColumn = encompassing.end.column - range.end.column;
+     // Multiply each line by 100_000, as lines length are unknown but should never reach this size
+     return (startDistanceLine * 100_000 +
+         endDistanceLine * 100_000 +
+diff --git a/src/coverage/getTestCoverage.ts b/src/coverage/getTestCoverage.ts
+index fdd7832f4094e616fd8862c70e9aa17209e64ba3..df22712c82fffdce8e1e09cdced0b71a5779767e 100644
+--- a/src/coverage/getTestCoverage.ts
++++ b/src/coverage/getTestCoverage.ts
+@@ -33,12 +33,10 @@ const rangeEncompass = (a: Range, b: Range) =>
+ 
+ function getRangeDistance(encompassing: Range, range: Range) {
+   const startDistanceLine = range.start.line - encompassing.start.line;
+-  const startDistanceColumn = startDistanceLine
+-    ? range.start.column - encompassing.start.column
+-    : 0;
++  const startDistanceColumn = range.start.column - encompassing.start.column;
+ 
+   const endDistanceLine = encompassing.end.line - range.end.line;
+-  const endDistanceColumn = endDistanceLine ? encompassing.end.column - range.end.column : 0;
++  const endDistanceColumn = encompassing.end.column - range.end.column;
+ 
+   // Multiply each line by 100_000, as lines length are unknown but should never reach this size
+   return (
