@@ -25503,6 +25503,12 @@
               "state": "populated"
             },
             {
+              "file": "src/components/retrieval/graph/graph-custom-nodes-glow.test.ts",
+              "test": "announces a live unsupported ${option.property} opt-in and keeps the 2D graph usable",
+              "target": "graph",
+              "state": "populated"
+            },
+            {
               "file": "src/components/retrieval/graph/graph-layout.test.ts",
               "test": "is accessible in layered mode",
               "target": "el",

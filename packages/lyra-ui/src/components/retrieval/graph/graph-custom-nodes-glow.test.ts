@@ -4,6 +4,7 @@ import type { Engine3dInstance } from '../../../internal/engine-3d-loader.js';
 import { GraphSpatialController } from './graph-spatial-controller.js';
 import { LyraGraph } from './graph.js';
 import { admitGraphNodeRenderer, type LyraGraphNodeMesh } from './graph-node-renderer.js';
+import { sinkTexts } from '../../../../test/announcements.js';
 void LyraGraph;
 const mesh = (): LyraGraphNodeMesh => ({ positions: new Float32Array([0,0,0, .5,0,0, 0,.5,0]), normals: new Float32Array([0,0,1]) });
 function setup(capabilities = true, admitMeshes?: (rows: readonly (LyraGraphNodeMesh | null)[] | undefined) => void, admission?: typeof admitGraphNodeRenderer) {
@@ -23,6 +24,59 @@ function setup(capabilities = true, admitMeshes?: (rows: readonly (LyraGraphNode
 }
 async function mount(value: ReturnType<typeof setup>) { value.graph.engine = 'webgl'; value.graph.view = '3d'; await fixture(value.graph); await waitUntil(() => value.data() > 0); await nextFrame(); }
 describe('graph custom node and glow opt-ins', () => {
+  for (const option of [
+    { property: 'nodeRenderer', part: 'custom-node-notice', key: 'graphCustomNodesUnavailable', english: 'Custom 3D nodes require the WebGL view. Showing standard nodes.' },
+    { property: 'glow', part: 'glow-notice', key: 'graphGlowUnavailable', english: 'Glow requires the WebGL view.' },
+  ] as const) {
+    it(`announces a live unsupported ${option.property} opt-in and keeps the 2D graph usable`, async () => {
+      const { graph } = setup();
+      let callbacks = 0;
+      const enable = () => {
+        if (option.property === 'glow') graph.glow = true;
+        else graph.nodeRenderer = () => { callbacks++; return mesh(); };
+      };
+      const disable = () => {
+        if (option.property === 'glow') graph.glow = false;
+        else graph.nodeRenderer = undefined;
+      };
+      const notice = () => graph.shadowRoot!.querySelector(`[part="${option.part}"]`);
+      try {
+        await fixture(graph);
+        await waitUntil(() => graph.shadowRoot!.querySelectorAll('[part="node"]').length === 2, 'The standard SVG graph is populated', { timeout: 5000 });
+        expect(notice() === null).to.equal(true);
+        expect(sinkTexts('assertive')).not.to.include(option.english);
+        enable();
+        await graph.updateComplete;
+        await waitUntil(() => sinkTexts('assertive').includes(option.english));
+        expect(notice()?.textContent).to.equal(option.english);
+        expect(graph.shadowRoot!.querySelectorAll('[part="node"]').length).to.equal(2);
+        expect(callbacks).to.equal(0);
+        await expect(graph).to.be.accessible();
+        disable();
+        await graph.updateComplete;
+        expect(notice() === null).to.equal(true);
+        const localized = `Unavailable option: ${option.property}`;
+        graph.strings = { [option.key]: localized };
+        enable();
+        await graph.updateComplete;
+        await waitUntil(() => sinkTexts('assertive').includes(localized));
+        expect(notice()?.textContent).to.equal(localized);
+        expect(callbacks).to.equal(0);
+      } finally { graph.remove(); }
+    });
+
+    it(`shows an initially configured ${option.property} notice without a mount-time announcement`, async () => {
+      const { graph } = setup();
+      if (option.property === 'glow') graph.glow = true;
+      else graph.nodeRenderer = () => mesh();
+      try {
+        await fixture(graph);
+        await waitUntil(() => graph.shadowRoot!.querySelectorAll('[part="node"]').length === 2, 'The standard SVG graph is populated', { timeout: 5000 });
+        expect(graph.shadowRoot!.querySelector(`[part="${option.part}"]`)?.textContent).to.equal(option.english);
+        expect(sinkTexts('assertive')).not.to.include(option.english);
+      } finally { graph.remove(); }
+    });
+  }
   it('does not request optional capabilities by default', async () => { const value = setup(false); await mount(value); expect(value.graph.nodeRenderer).to.equal(undefined); expect(value.graph.glow).to.equal(false); expect(value.graph.shadowRoot!.querySelector('[part="engine-notice"]') === null).to.equal(true); });
   it('owns meshes and retains them across appearance and selection updates without callbacks', async () => {
     const value = setup(), original = mesh(); let calls = 0;
