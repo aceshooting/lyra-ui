@@ -65,6 +65,13 @@ describe('map scene configuration controller', () => {
     h.controller.sync({}, 1, () => true, undefined, undefined); await h.controller.work;
     expect(h.failed).to.equal(0); expect(h.controller.pending).to.equal(false);
   });
+  it('ignores a scene request whose native map is already obsolete', async () => {
+    const h = harness(); let reads = 0;
+    h.peer.getStyle = () => { reads++; throw new Error('Retired map accessed'); };
+    h.controller.sync(h.peer, 1, () => false, 'mercator', null); await h.controller.work;
+    expect(reads).to.equal(0); expect(h.failed).to.equal(0); expect(h.writes).to.deep.equal([]);
+    expect(h.preparations.length).to.equal(0); expect(h.controller.pending).to.equal(false);
+  });
   it('revalidates the exact source after preparation and before either setter', async () => {
     const h = harness(); let release!: () => void;
     h.peer.prepareFeatures = () => new Promise<void>(resolve => { release = resolve; });
@@ -126,4 +133,134 @@ describe('map scene configuration controller', () => {
     expect(Object.hasOwn(h.preparations[0] as object, 'projection')).to.equal(false);
   });
 
+  for (const invalidStyle of [null, undefined, []]) {
+    it(`rejects a ${invalidStyle === null ? 'null' : Array.isArray(invalidStyle) ? 'list' : 'missing'} native style before preparation`, async () => {
+      const h = harness(), getStyle = h.peer.getStyle;
+      Reflect.set(h.peer, 'getStyle', () => invalidStyle);
+      h.controller.sync(h.peer, 1, () => true, 'mercator', null); await h.controller.work;
+      expect(h.failed).to.equal(1); expect(h.writes).to.deep.equal([]); expect(h.preparations.length).to.equal(0);
+      h.peer.getStyle = getStyle;
+      h.controller.sync(h.peer, 2, () => true, 'mercator', null); await h.controller.work;
+      expect(h.writes).to.deep.equal(['projection', 'terrain']); expect(h.controller.pending).to.equal(false);
+    });
+  }
+
+  for (const field of ['projection', 'terrain'] as const) {
+    it(`rejects disagreement between the style and native ${field} reader, then accepts a consistent baseline`, async () => {
+      const h = harness(), getStyle = h.peer.getStyle;
+      Reflect.set(h.peer, 'getStyle', () => ({ ...getStyle(), [field]: field === 'projection' ? { type: 'mercator' } : null }));
+      h.controller.sync(h.peer, 1, () => true, 'mercator', null); await h.controller.work;
+      expect(h.failed).to.equal(1); expect(h.writes).to.deep.equal([]); expect(h.preparations.length).to.equal(0);
+      h.peer.getStyle = getStyle;
+      h.controller.sync(h.peer, 2, () => true, 'mercator', null); await h.controller.work;
+      expect(h.writes).to.deep.equal(['projection', 'terrain']); expect(h.failed).to.equal(1);
+    });
+
+    it(`rejects an accessor-bearing style ${field} without invoking it`, async () => {
+      const h = harness(), getStyle = h.peer.getStyle; let reads = 0;
+      h.peer.getStyle = () => Object.defineProperty(getStyle(), field, { get() { reads++; throw new Error('Unsafe style accessor'); } });
+      h.controller.sync(h.peer, 1, () => true, 'mercator', null); await h.controller.work;
+      expect(reads).to.equal(0); expect(h.failed).to.equal(1); expect(h.writes).to.deep.equal([]);
+      expect(h.preparations.length).to.equal(0); expect(h.errors.size).to.equal(0);
+    });
+  }
+
+  for (const method of ['on', 'off'] as const) {
+    it(`requires a callable native ${method} method before starting feature preparation`, async () => {
+      const h = harness(), original = h.peer[method];
+      Reflect.set(h.peer, method, undefined);
+      h.controller.sync(h.peer, 1, () => true, 'mercator', null); await h.controller.work;
+      expect(h.failed).to.equal(1); expect(h.writes).to.deep.equal([]); expect(h.preparations.length).to.equal(0);
+      h.peer[method] = original;
+      h.controller.sync(h.peer, 1, () => true, 'mercator', null); await h.controller.work;
+      expect(h.writes).to.deep.equal(['projection', 'terrain']); expect(h.errors.size).to.equal(0);
+    });
+  }
+
+  it('reports a synchronous terrain error and releases its native listener before recovery', async () => {
+    const h = harness(), setTerrain = h.peer.setTerrain;
+    h.peer.setTerrain = () => { for (const error of h.errors) error(); };
+    h.controller.sync(h.peer, 1, () => true, undefined, null); await h.controller.work;
+    expect(h.failed).to.equal(1); expect(h.errors.size).to.equal(0); expect(h.controller.pending).to.equal(false);
+    expect(h.terrain).to.deep.equal({ source: 'dem', exaggeration: 2 });
+    h.peer.setTerrain = setTerrain;
+    h.controller.sync(h.peer, 1, () => true, undefined, null); await h.controller.work;
+    expect(h.terrain).to.equal(null); expect(h.writes).to.deep.equal(['terrain']); expect(h.failed).to.equal(1);
+  });
+
+  for (const phase of ['baseline', 'prepared'] as const) {
+    for (const method of ['getStyle', 'getProjection', 'getTerrain'] as const) {
+      it(`cancels ${phase} work when the native ${method} callback retires the map`, async () => {
+        const h = harness(), original = h.peer[method]; let calls = 0;
+        Reflect.set(h.peer, method, () => {
+          calls++;
+          if (calls === (phase === 'baseline' ? 1 : 2)) h.controller.cancel();
+          return original();
+        });
+        h.controller.sync(h.peer, 1, () => true, 'mercator', null); await h.controller.work;
+        expect(calls).to.equal(phase === 'baseline' ? 1 : 2);
+        expect(h.writes).to.deep.equal([]); expect(h.failed).to.equal(0); expect(h.errors.size).to.equal(0);
+        expect(h.controller.pending).to.equal(false);
+        Reflect.set(h.peer, method, original);
+        h.controller.sync(h.peer, 2, () => true, 'mercator', null); await h.controller.work;
+        expect(h.writes).to.deep.equal(['projection', 'terrain']); expect(h.failed).to.equal(0);
+      });
+    }
+
+    it(`cancels ${phase} work during a native projection snapshot without publishing stale state`, async () => {
+      const h = harness(), getProjection = h.peer.getProjection; let calls = 0;
+      h.peer.getProjection = () => {
+        calls++;
+        if (calls !== (phase === 'baseline' ? 1 : 2)) return getProjection();
+        return new Proxy({ type: 'globe' }, { ownKeys(target) { h.controller.cancel(); return Reflect.ownKeys(target); } });
+      };
+      h.controller.sync(h.peer, 1, () => true, 'mercator', null); await h.controller.work;
+      expect(h.writes).to.deep.equal([]); expect(h.failed).to.equal(0); expect(h.controller.pending).to.equal(false);
+      h.peer.getProjection = getProjection;
+      h.controller.sync(h.peer, 2, () => true, 'mercator', null); await h.controller.work;
+      expect(h.writes).to.deep.equal(['projection', 'terrain']); expect(h.errors.size).to.equal(0);
+    });
+
+    it(`cancels ${phase} work while validating a caller-owned elevation source`, async () => {
+      const h = harness(), getStyle = h.peer.getStyle; let reads = 0;
+      h.peer.getStyle = () => new Proxy(getStyle(), { getOwnPropertyDescriptor(target, key) {
+        if (key === 'sources' && ++reads === (phase === 'baseline' ? 1 : 2)) h.controller.cancel();
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      } });
+      h.controller.sync(h.peer, 1, () => true, 'mercator', { source: 'dem', exaggeration: 3 }); await h.controller.work;
+      expect(reads).to.equal(phase === 'baseline' ? 1 : 2);
+      expect(h.writes).to.deep.equal([]); expect(h.failed).to.equal(0); expect(h.errors.size).to.equal(0);
+      expect(h.controller.pending).to.equal(false);
+      h.peer.getStyle = getStyle;
+      h.controller.sync(h.peer, 2, () => true, 'mercator', null); await h.controller.work;
+      expect(h.writes).to.deep.equal(['projection', 'terrain']);
+    });
+  }
+
+  for (const read of [1, 3]) {
+    it(`abandons baseline capture when style descriptor read ${read} cancels ownership`, async () => {
+      const h = harness(), getStyle = h.peer.getStyle; let reads = 0;
+      h.peer.getStyle = () => new Proxy(getStyle(), { getOwnPropertyDescriptor(target, key) {
+        if ((key === 'projection' || key === 'terrain') && ++reads === read) h.controller.cancel();
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      } });
+      h.controller.sync(h.peer, 1, () => true, 'mercator', null); await h.controller.work;
+      expect(reads).to.be.at.least(read); expect(h.writes).to.deep.equal([]); expect(h.preparations.length).to.equal(0);
+      expect(h.failed).to.equal(0); expect(h.controller.pending).to.equal(false);
+      h.peer.getStyle = getStyle;
+      h.controller.sync(h.peer, 2, () => true, 'mercator', null); await h.controller.work;
+      expect(h.writes).to.deep.equal(['projection', 'terrain']);
+    });
+  }
+
+  it('releases a native error subscription acquired during cancellation without writing the retired map', async () => {
+    const h = harness(), on = h.peer.on;
+    h.peer.on = (type, listener) => { on(type, listener); h.controller.cancel(); };
+    h.controller.sync(h.peer, 1, () => true, 'mercator', null); await h.controller.work;
+    expect(h.writes).to.deep.equal([]); expect(h.errors.size).to.equal(0); expect(h.failed).to.equal(0);
+    expect(h.controller.pending).to.equal(false);
+    h.peer.on = on;
+    h.controller.sync(h.peer, 2, () => true, 'mercator', null); await h.controller.work;
+    expect(h.writes).to.deep.equal(['projection', 'terrain']); expect(h.errors.size).to.equal(0);
+  });
 });
