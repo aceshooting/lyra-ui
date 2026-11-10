@@ -94,7 +94,7 @@ export function deferredPlace(...args: Parameters<typeof placeAnchoredSurface>):
   void loadAnchoredOverlayRuntime().then((runtime) => {
     if (!active) return;
     try {
-      cleanup = runtime.place(anchor, popup, {
+      const next = runtime.place(anchor, popup, {
         ...options,
         onPlaced: (result) => {
           if (!active) return;
@@ -105,6 +105,8 @@ export function deferredPlace(...args: Parameters<typeof placeAnchoredSurface>):
           options.onPlaced?.(result);
         },
       });
+      if (active) cleanup = next;
+      else next();
     } catch {
       // A deferred caller has no failure channel. Keep the surface concealed and let a later
       // generation retry, just as when the runtime chunk itself cannot load.
@@ -141,7 +143,7 @@ export function deferredPlaceReady(
     .then((runtime) => {
       if (!active) return;
       try {
-        cleanup = runtime.place(anchor, popup, {
+        const next = runtime.place(anchor, popup, {
           ...options,
           onPlaced: (result) => {
             if (!active) return;
@@ -153,6 +155,8 @@ export function deferredPlaceReady(
             options.onPlaced?.(result);
           },
         });
+        if (active) cleanup = next;
+        else next();
       } catch {
         settle?.(false);
       }
@@ -329,10 +333,14 @@ export function deferredTrackRect(...args: Parameters<typeof trackRect>): () => 
   let cleanup: (() => void) | undefined;
   void loadAnchoredOverlayRuntime()
     .then((runtime) => {
-      if (active) cleanup = runtime.trackRect(...args);
+      if (!active) return;
+      const next = runtime.trackRect(...args);
+      if (active) cleanup = next;
+      else next();
     })
     .catch(() => undefined);
   return () => {
+    if (!active) return;
     active = false;
     cleanup?.();
     cleanup = undefined;
