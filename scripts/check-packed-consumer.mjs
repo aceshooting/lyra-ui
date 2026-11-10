@@ -155,17 +155,17 @@ const optionalPeerFamilyTags = componentInventory.components
 const rootHelperRegisteredTags = [];
 
 // Packed core/all.js includes every non-optional registration and every emitted chunk.
-// Workbook column metadata ownership measures 5,665,516 raw bytes across 64 files;
-// the next 64-byte ceiling leaves 20 bytes of headroom.
+// Isolated synchronized-chart renderer recovery measures 5,665,714 raw bytes across 64 files;
+// the next 64-byte ceiling leaves 14 bytes of headroom.
 // Optional-peer exclusions and the complete file sum stay fixed. Core has no WASM allowance;
 // the explicit Oniguruma canary retains its separate exact 466,610-byte binary requirement.
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/7859878f724ef4237ee93a5414fa6b54f204313a/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'Discarding superseded column metadata and render errors measures the full non-optional graph at 5,665,516 raw bytes across the same 64 files. The ceiling advances only to the next 64-byte boundary, 5,665,536 bytes. The explicit Oniguruma canary retains its separate exact binary requirement.',
-  reviewedCoreMeasurementBytes: 5_665_516,
+  $comment: 'Containing synchronized-chart hit-query and renderer errors measures the full non-optional graph at 5,665,714 raw bytes across the same 64 files. The ceiling advances only to the next 64-byte boundary, 5,665,728 bytes. The explicit Oniguruma canary retains its separate exact binary requirement.',
+  reviewedCoreMeasurementBytes: 5_665_714,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 20,
+  selectedRegressionHeadroomBytes: 14,
 };
 
 /**
