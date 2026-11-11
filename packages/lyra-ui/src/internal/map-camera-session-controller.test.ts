@@ -35,14 +35,14 @@ function harness() {
   const writes: MapCameraPreparedCommand[] = [], retirements: { action: object; stop: boolean }[] = [];
   const state = {
     camera: admitMapViewpoint(view()), reduced: false, synchronous: true, accept: true, acceptStart: true, prepareFailure: false,
-    acquireCount: 0, releaseCount: 0,
+    acquireCount: 0, releaseCount: 0, available: true,
     onPrepare: undefined as (() => void) | undefined,
     onStart: undefined as (() => void) | undefined,
     onCommit: undefined as (() => void) | undefined,
     onRetire: undefined as (() => void) | undefined,
   };
   const lease: MapCameraSessionLease = {
-    current: () => alive && acquired,
+    current: () => alive && acquired && state.available,
     capture: () => admitMapViewpoint(state.camera),
     reducedMotion: () => state.reduced,
     start(token) {
@@ -264,6 +264,156 @@ describe('internal camera session saved views and tours', () => {
       releaseThrowing();
       if (descriptor) Object.defineProperty(globalThis, 'reportError', descriptor); else Reflect.deleteProperty(globalThis, 'reportError');
     }
+  });
+
+  it('rejects malformed signal capabilities without acquiring or registering a listener', () => {
+    const h = harness(), controller = session(h);
+    let deliveries = 0;
+    const signals = [null, false, {}, { aborted: false },
+      { aborted: false, addEventListener() {}, removeEventListener: 1 },
+      { get aborted() { throw new Error('Signal state unavailable'); } },
+      { aborted: false, get addEventListener() { throw new Error('Signal listener unavailable'); } },
+      { aborted: false, addEventListener() {}, get removeEventListener() { throw new Error('Signal release unavailable'); } },
+    ];
+    for (const signal of signals) {
+      code(() => createMapCameraSessionController(h.host, { signal } as never), 'invalid-options');
+      code(() => controller.subscribe(() => { deliveries++; }, { signal } as never), 'invalid-options');
+    }
+    for (const listener of [undefined, null, 0, 'listener', {}]) {
+      code(() => controller.subscribe(listener as never), 'invalid-options');
+    }
+    controller.restore(view(6));
+    expect(h.state.acquireCount).to.equal(1); expect(deliveries).to.equal(0);
+    expect(controller.capture().zoom).to.equal(6);
+  });
+
+  it('releases acquisition when abort-listener installation fails and permits a later owner', () => {
+    const h = harness(), abort = new AbortController();
+    Object.defineProperty(abort.signal, 'addEventListener', { value() { throw new Error('Listener unavailable'); } });
+    code(() => createMapCameraSessionController(h.host, { signal: abort.signal }), 'invalid-options');
+    expect(h.state.releaseCount).to.equal(1);
+    const controller = session(h); controller.restore(view(7));
+    expect(h.state.acquireCount).to.equal(2); expect(controller.capture().zoom).to.equal(7);
+  });
+
+  it('disposes a newly acquired session when its signal aborts while its listener is installed', () => {
+    const h = harness(), abort = new AbortController();
+    const add = abort.signal.addEventListener.bind(abort.signal);
+    Object.defineProperty(abort.signal, 'addEventListener', { value(...args: Parameters<AbortSignal['addEventListener']>) {
+      add(...args); abort.abort();
+    } });
+    const controller = session(h, { signal: abort.signal });
+    expect(controller.snapshot).to.deep.equal({ mode: 'idle', active: false, reason: 'disposed' });
+    expect(h.state.releaseCount).to.equal(1); expect(h.writes.length).to.equal(0);
+    code(() => controller.restore(view(8)), 'disposed');
+    controller.dispose(); expect(h.state.releaseCount).to.equal(1);
+    const replacement = session(h); replacement.restore(view(9));
+    expect(replacement.capture().zoom).to.equal(9);
+  });
+
+  it('does not retain a subscription whose signal refuses listener installation', () => {
+    const h = harness(), controller = session(h), abort = new AbortController();
+    let deliveries = 0;
+    Object.defineProperty(abort.signal, 'addEventListener', { value() { throw new Error('Listener unavailable'); } });
+    code(() => controller.subscribe(() => { deliveries++; }, { signal: abort.signal }), 'invalid-options');
+    controller.restore(view(6)); controller.stop();
+    expect(deliveries).to.equal(0); expect(controller.capture().zoom).to.equal(6);
+    expect(controller.snapshot.reason).to.equal('stop');
+  });
+
+  for (const cause of ['signal-abort', 'session-dispose'] as const) {
+    it(`withholds initial subscription delivery after ${cause} during listener installation`, () => {
+      const h = harness(), controller = session(h), abort = new AbortController();
+      const add = abort.signal.addEventListener.bind(abort.signal);
+      const remove = abort.signal.removeEventListener.bind(abort.signal);
+      let deliveries = 0, removals = 0;
+      Object.defineProperty(abort.signal, 'addEventListener', { value(...args: Parameters<AbortSignal['addEventListener']>) {
+        add(...args);
+        if (cause === 'signal-abort') abort.abort(); else controller.dispose();
+      } });
+      Object.defineProperty(abort.signal, 'removeEventListener', { value(...args: Parameters<AbortSignal['removeEventListener']>) {
+        removals++; remove(...args);
+      } });
+      const release = controller.subscribe(() => { deliveries++; }, { signal: abort.signal });
+      expect(deliveries).to.equal(0); expect(removals).to.equal(1);
+      release(); release(); expect(removals).to.equal(1);
+      if (cause === 'signal-abort') {
+        controller.restore(view(6)); expect(controller.capture().zoom).to.equal(6);
+        expect(deliveries).to.equal(0);
+      } else {
+        expect(h.state.releaseCount).to.equal(1); code(() => controller.capture(), 'disposed');
+      }
+    });
+  }
+
+  for (const connected of [false, true]) {
+    it(`classifies acquisition failure for a ${connected ? 'connected' : 'detached'} map`, () => {
+      const host = document.createElement('div');
+      if (connected) document.body.append(host);
+      cleanup.push(() => host.remove());
+      cleanup.push(registerMapCameraSession(host, { acquire() { throw new Error('Native acquisition failed'); } }));
+      code(() => createMapCameraSessionController(host), connected ? 'unavailable' : 'inactive-map');
+    });
+  }
+
+  it('rejects preparation after the native lease becomes unavailable without replacing the active snapshot', () => {
+    const h = harness(), controller = session(h), time = clock(); h.state.synchronous = false;
+    controller.restore(view(4), { kind: 'ease' }); const before = controller.snapshot;
+    h.state.available = false;
+    code(() => controller.restore(view(6)), 'unavailable');
+    code(() => controller.tour(time.value, tour), 'unavailable');
+    expect(controller.snapshot).to.equal(before); expect(h.writes.length).to.equal(1);
+    expect(h.retirements.length).to.equal(0);
+    h.state.available = true; controller.restore(view(8));
+    expect(controller.capture().zoom).to.equal(8);
+  });
+
+  it('retains an active restore when tour preflight disposes its clock', () => {
+    const h = harness(), controller = session(h), time = clock(); h.state.synchronous = false;
+    controller.restore(view(4), { kind: 'ease' }); const before = controller.snapshot;
+    h.state.onPrepare = () => { h.state.onPrepare = undefined; time.value.dispose(); };
+    code(() => controller.tour(time.value, tour), 'invalid-clock');
+    expect(controller.snapshot).to.equal(before); expect(h.retirements.length).to.equal(0);
+    expect(h.writes.map(command => command.view.zoom)).to.deep.equal([4]);
+    h.complete(); expect(controller.snapshot.reason).to.equal('complete');
+  });
+
+  it('does not attach a tour whose preflight starts a newer saved view', () => {
+    const h = harness(), controller = session(h), time = clock(); h.state.synchronous = false;
+    h.state.onPrepare = () => { h.state.onPrepare = undefined; controller.restore(view(8)); };
+    controller.tour(time.value, tour); time.value.seek(70);
+    expect(h.writes.map(command => command.view.zoom)).to.deep.equal([8]);
+    expect(controller.snapshot).to.include({ mode: 'viewpoint', active: true });
+    h.complete(); expect(controller.snapshot.reason).to.equal('complete');
+  });
+
+  it('does not subscribe a tour after native start disconnects its session', () => {
+    const h = harness(), controller = session(h), time = clock();
+    h.state.onStart = () => h.interrupt('disconnect');
+    controller.tour(time.value, tour); time.value.seek(70);
+    expect(h.writes.length).to.equal(0); expect(h.state.releaseCount).to.equal(1);
+    expect(controller.snapshot).to.deep.equal({ mode: 'idle', active: false, reason: 'disconnect' });
+  });
+
+  it('retires a tour whose clock is disposed by its native start callback', () => {
+    const h = harness(), controller = session(h), time = clock();
+    h.state.onStart = () => time.value.dispose();
+    controller.tour(time.value, tour);
+    expect(h.writes.length).to.equal(0);
+    expect(controller.snapshot).to.include({ active: false, reason: 'engine' });
+    expect(h.retirements.length).to.equal(1);
+    h.state.onStart = undefined; controller.restore(view(8));
+    expect(controller.capture().zoom).to.equal(8);
+  });
+
+  it('releases a tour subscription after its initial native command is rejected', () => {
+    const h = harness(), controller = session(h), time = clock(); h.state.accept = false;
+    code(() => controller.tour(time.value, tour), 'unavailable');
+    expect(controller.snapshot).to.include({ mode: 'tour', active: false, reason: 'engine' });
+    expect(h.retirements.length).to.equal(1);
+    h.state.accept = true; time.value.seek(70);
+    expect(h.writes.length).to.equal(0);
+    controller.restore(view(9)); expect(controller.capture().zoom).to.equal(9);
   });
 
   it('samples immediate, backward, rate and live deliveries without changing the shared clock', () => {
