@@ -134,7 +134,9 @@ export class SourceWindowController<T> implements ReactiveController {
         sourceRevision(candidate.revision);
         sourceCount(candidate.epoch);
         nextCount = sourceCount(candidate.view.count);
+        if (transaction !== this.bindingVersion) return;
         const indexed = isIndexed(candidate.view);
+        if (transaction !== this.bindingVersion) return;
         const ranged = typeof (candidate.view as LyraRangeSource<T>).read === 'function';
         if (indexed === ranged) throw new TypeError('Source must provide indexed or ranged access');
         if (previous && previous.owner === candidate.owner && previous.revision === candidate.revision &&
@@ -175,6 +177,7 @@ export class SourceWindowController<T> implements ReactiveController {
     if (this.requested?.start !== boundedStart || this.requested.end !== boundedEnd) this.demandVersion++;
     this.requested = { start: boundedStart, end: boundedEnd };
     if (isIndexed(this.binding.view)) return;
+    if (transaction !== this.windowVersion || !this.current(binding, generation, owner)) return;
     const first = this.pageStart(start);
     const end = Math.min(endExclusive, this.count);
     const size = Math.min(this.pageCapacity, Math.max(0, Math.ceil((end - first) / this.options.pageSize)));
@@ -200,11 +203,15 @@ export class SourceWindowController<T> implements ReactiveController {
   async ensure(index: number): Promise<boolean> {
     if (!this.usable() || !this.validIndex(index) || !this.binding) return false;
     this.rememberIndex(index);
-    if (isIndexed(this.binding.view)) {
+    const binding = this.binding;
+    const generation = this.generation;
+    const owner = this.host.ownerDocument;
+    const indexed = isIndexed(binding.view);
+    if (!this.current(binding, generation, owner)) return false;
+    if (indexed) {
       if (this.local.get(index)?.slot.state === 'error') this.removeLocal(index);
       return this.itemAt(index).state === 'ready';
     }
-    const generation = this.generation;
     const page = this.page(this.pageStart(index), true);
     if (!page) return false;
     const ready = await page.done;
@@ -286,23 +293,28 @@ export class SourceWindowController<T> implements ReactiveController {
     const binding = this.binding;
     if (!binding || !this.usable()) return { state: 'loading', index };
     this.rememberIndex(index);
+    const generation = this.generation;
+    const owner = this.host.ownerDocument;
+    const transaction = this.demandVersion;
+    const current = () => this.current(binding, generation, owner) &&
+      (this.options.maxWeight === undefined || transaction === this.demandVersion);
     if (isIndexed(binding.view)) {
+      if (!current()) return { state: 'loading', index };
       const cached = this.local.get(index);
       if (cached) { this.local.delete(index); this.local.set(index, cached); return cached.slot; }
-      const generation = this.generation;
-      const owner = this.host.ownerDocument;
-      const transaction = this.demandVersion;
-      const current = () => this.current(binding, generation, owner) &&
-        (this.options.maxWeight === undefined || transaction === this.demandVersion);
       let entry: CachedSlot<T>;
       try {
-        const raw = binding.view.itemAt(index);
+        const read = binding.view.itemAt;
+        if (!current()) return { state: 'loading', index };
+        const raw = Reflect.apply(read, binding.view, [index]);
         if (!current()) return { state: 'loading', index };
         const value = this.options.normalize(raw, index);
         if (!current()) return { state: 'loading', index };
         const key = this.validateKey(value, index);
         if (!current()) return { state: 'loading', index };
-        if (binding.view.keyAt && binding.view.keyAt(index) !== key) throw new TypeError('Source row key mismatch');
+        const keyAt = binding.view.keyAt;
+        if (!current()) return { state: 'loading', index };
+        if (keyAt && Reflect.apply(keyAt, binding.view, [index]) !== key) throw new TypeError('Source row key mismatch');
         if (!current()) return { state: 'loading', index };
         const weight = this.valueWeight(value, index);
         if (!current() || !this.admitWeight(weight, current)) return { state: 'loading', index };
@@ -324,6 +336,7 @@ export class SourceWindowController<T> implements ReactiveController {
       this.totalWeight += entry.weight ?? 0;
       return entry.slot;
     }
+    if (!current()) return { state: 'loading', index };
     const page = this.page(this.pageStart(index), false);
     if (page?.state === 'ready') return page.slots![index - page.start]!;
     if (page?.state === 'error') return { state: 'error', index, error: page.error };
@@ -333,14 +346,21 @@ export class SourceWindowController<T> implements ReactiveController {
   private keyAt(index: number): string | number {
     const binding = this.binding;
     if (!this.usable() || !this.validIndex(index)) return index;
-    if (binding && isIndexed(binding.view) && binding.view.keyAt) {
+    if (binding) {
       const generation = this.generation;
       const owner = this.host.ownerDocument;
       try {
-        const key = binding.view.keyAt(index);
-        if (this.current(binding, generation, owner) && validKey(key)) return key;
-      } catch { /* Invalid values are exposed as row errors when the row is read. */ }
-      return index;
+        const indexed = isIndexed(binding.view);
+        if (!this.current(binding, generation, owner)) return index;
+        if (indexed) {
+          const keyAt = binding.view.keyAt;
+          if (!this.current(binding, generation, owner)) return index;
+          if (keyAt) {
+            const key = Reflect.apply(keyAt, binding.view, [index]);
+            return this.current(binding, generation, owner) && validKey(key) ? key : index;
+          }
+        }
+      } catch { return index; }
     }
     const local = this.local.get(index);
     if (local?.key) return local.key;
@@ -354,12 +374,18 @@ export class SourceWindowController<T> implements ReactiveController {
     const generation = this.generation;
     const owner = this.host.ownerDocument;
     const view = binding.view;
-    if (isIndexed(view) && view.indexOfKey) {
-      try {
-        const index = view.indexOfKey(key);
-        return this.current(binding, generation, owner) && this.validIndex(index) ? index : -1;
-      } catch { return -1; }
-    }
+    try {
+      const indexed = isIndexed(view);
+      if (!this.current(binding, generation, owner)) return -1;
+      if (indexed) {
+        const resolve = view.indexOfKey;
+        if (!this.current(binding, generation, owner)) return -1;
+        if (resolve) {
+          const index = Reflect.apply(resolve, view, [key]);
+          return this.current(binding, generation, owner) && this.validIndex(index) ? index : -1;
+        }
+      }
+    } catch { return -1; }
     for (const [index, entry] of this.local) if (entry.key === key) return index;
     for (const page of this.pages.values()) {
       const offset = page.keys?.indexOf(key) ?? -1;
@@ -497,14 +523,16 @@ export class SourceWindowController<T> implements ReactiveController {
 
   private pump(): void {
     const binding = this.binding;
-    if (!binding || !this.usable() || isIndexed(binding.view)) return;
+    if (!binding || !this.usable()) return;
+    const generation = this.generation;
+    const owner = this.host.ownerDocument;
+    if (isIndexed(binding.view) || !this.current(binding, generation, owner)) return;
     for (let i = 0; i < this.options.maxConcurrent; i++) {
+      if (!this.current(binding, generation, owner)) return;
       const channel: RangeChannel = i === 0 ? 'range-0' : 'range-1';
       if (this.running.has(channel)) continue;
       const page = this.queue.shift();
       if (!page) break;
-      const generation = this.generation;
-      const owner = this.host.ownerDocument;
       const lease = this.authority.begin(channel, binding.locale);
       if (!lease || !this.current(binding, generation, owner)) { this.drop(page); continue; }
       const view = binding.view;
@@ -513,9 +541,12 @@ export class SourceWindowController<T> implements ReactiveController {
       const current = () => lease.isCurrent() && this.current(binding, generation, owner) && this.pages.get(page.start) === page;
       let acceptanceVersion: number | undefined;
       let restart = false;
-      void Promise.resolve().then(() => current()
-        ? view.read({ ...lease.context, offset: page.start, limit: page.length }) : undefined,
-      ).then(values => {
+      void Promise.resolve().then(() => {
+        if (!current()) return undefined;
+        const read = view.read;
+        if (!current()) return undefined;
+        return Reflect.apply(read, view, [{ ...lease.context, offset: page.start, limit: page.length }]);
+      }).then(values => {
         if (!current()) return;
         if (!Array.isArray(values) || values.length !== page.length) throw new RangeError('Invalid source range response');
         const transaction = this.demandVersion;

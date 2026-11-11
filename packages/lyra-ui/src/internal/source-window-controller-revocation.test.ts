@@ -321,3 +321,264 @@ describe('SourceWindowController lookup capability ownership', () => {
     }
   }
 });
+
+describe('SourceWindowController synchronous capability ownership', () => {
+  for (const operation of ['indexOfKey', 'keyAt', 'itemAt'] as const) {
+    for (const boundary of ['kind', 'callback'] as const) {
+      for (const retirement of ['replace', 'disconnect'] as const) {
+        it(`stops ${operation} when its ${boundary} getter causes ${retirement}`, () => {
+          const test = setup();
+          let armed = false, retired = false, lateCalls = 0, kindReads = 0;
+          const replacement: LyraIndexedView<Row> = {
+            count: 2, itemAt: index => ({ key: `new-${index}` }), keyAt: index => `new-${index}`, indexOfKey: () => 0,
+          };
+          const retire = () => {
+            if (!armed) return;
+            armed = false; retired = true;
+            if (retirement === 'replace') test.bind(replacement, 2);
+            else { test.host.remove(); test.control.hostDisconnected(); }
+          };
+          const view = {
+            count: 2,
+            itemAt: (index: number) => { if (retired) lateCalls++; return { key: `old-${index}` }; },
+            keyAt: (index: number) => { if (retired) lateCalls++; return `old-${index}`; },
+            indexOfKey: () => { if (retired) lateCalls++; return 1; },
+          };
+          const read = view.itemAt;
+          Object.defineProperty(view, 'itemAt', { get() {
+            if (armed && ++kindReads === (boundary === 'callback' && operation === 'itemAt' ? 2 : 1) &&
+                (boundary === 'kind' || operation === 'itemAt')) retire();
+            return read;
+          } });
+          if (operation !== 'itemAt') {
+            const callback = view[operation];
+            Object.defineProperty(view, operation, { get() {
+              if (boundary === 'callback') retire();
+              return callback;
+            } });
+          }
+          try {
+            test.bind(view);
+            armed = true;
+            const result = operation === 'indexOfKey' ? test.control.source.indexOfKey!('old-1')
+              : operation === 'keyAt' ? test.control.source.keyAt!(0) : test.control.source.itemAt(0).state;
+            expect(result).to.equal(operation === 'indexOfKey' ? -1 : operation === 'keyAt' ? 0 : 'loading');
+            expect(lateCalls, 'a capability read must not start retired provider work').to.equal(0);
+            if (retirement === 'disconnect') {
+              document.body.append(test.host); test.control.hostConnected(); test.bind(replacement, 2);
+            }
+            const slot = test.control.source.itemAt(0);
+            expect(slot.state === 'ready' ? slot.value.key : '').to.equal('new-0');
+            expect(test.control.source.keyAt!(0)).to.equal('new-0');
+            expect(test.control.source.indexOfKey!('new-0')).to.equal(0);
+          } finally { test.cleanup(); }
+        });
+      }
+    }
+  }
+
+  for (const operation of ['indexOfKey', 'keyAt'] as const) {
+    it(`contains a throwing ${operation} capability getter and recovers when it becomes available`, () => {
+      const test = setup(); let available = false;
+      const view = { count: 2, itemAt: (index: number) => ({ key: `row-${index}` }) };
+      Object.defineProperty(view, operation, { get() {
+        if (!available) throw new Error('Lookup capability unavailable');
+        return operation === 'indexOfKey' ? () => 1 : () => 'row-1';
+      } });
+      try {
+        test.bind(view);
+        const lookup = () => operation === 'indexOfKey' ? test.control.source.indexOfKey!('row-1') : test.control.source.keyAt!(1);
+        expect(lookup()).to.equal(operation === 'indexOfKey' ? -1 : 1);
+        available = true;
+        expect(lookup()).to.equal(operation === 'indexOfKey' ? 1 : 'row-1');
+      } finally { test.cleanup(); }
+    });
+  }
+
+  it('does not invoke a retired key verifier while admitting a synchronous row', () => {
+    const test = setup(); let lateKeys = 0;
+    const view = { count: 2, itemAt: (index: number) => ({ key: `old-${index}` }), get keyAt() {
+      test.bind({ count: 2, itemAt: index => ({ key: `new-${index}` }) }, 2);
+      return () => { lateKeys++; return 'old-0'; };
+    } };
+    try {
+      test.bind(view);
+      expect(test.control.source.itemAt(0).state).to.equal('loading');
+      expect(lateKeys).to.equal(0);
+      const slot = test.control.source.itemAt(0);
+      expect(slot.state === 'ready' ? slot.value.key : '').to.equal('new-0');
+    } finally { test.cleanup(); }
+  });
+
+  it('does not transfer an indexed ensure request to a replacement from the kind getter', async () => {
+    const test = setup(); let armed = false, newReads = 0;
+    const read = (index: number) => ({ key: `old-${index}` });
+    const view = { count: 2, get itemAt() {
+      if (armed) { armed = false; test.bind({ count: 2, itemAt: () => { newReads++; return { key: 'new' }; } }, 2); }
+      return read;
+    } };
+    try {
+      test.bind(view); armed = true;
+      expect(await test.control.ensure(0)).to.equal(false);
+      expect(newReads).to.equal(0);
+      expect(await test.control.ensure(0)).to.equal(true);
+      expect(newReads).to.equal(1);
+    } finally { test.cleanup(); }
+  });
+
+  for (const retirement of ['replace', 'disconnect'] as const) {
+    it(`does not start a range read after its getter causes ${retirement}`, async () => {
+      const test = setup(); let armed = false, lateReads = 0;
+      const replacement = { count: 2, read: async () => [{ key: 'new' }] };
+      const view = { count: 2, get read() {
+        if (armed) {
+          armed = false;
+          if (retirement === 'replace') test.bind(replacement, 2);
+          else { test.host.remove(); test.control.hostDisconnected(); }
+        }
+        return async () => { lateReads++; return [{ key: 'old' }]; };
+      } };
+      try {
+        test.bind(view); armed = true;
+        expect(await test.control.ensure(0)).to.equal(false);
+        expect(lateReads).to.equal(0);
+        if (retirement === 'disconnect') {
+          document.body.append(test.host); test.control.hostConnected(); test.bind(replacement, 2);
+        }
+        expect(await test.control.ensure(0)).to.equal(true);
+      } finally { test.cleanup(); }
+    });
+  }
+
+  it('does not consume a replacement page queued from the range-pump kind getter', async () => {
+    const test = setup(); let armed = false, reads = 0, kinds = 0;
+    let replacementPage: Promise<boolean> | undefined;
+    const view = { count: 2, read: async () => [{ key: 'old' }], get itemAt() {
+      if (armed && ++kinds === 2) {
+        armed = false;
+        test.bind({ count: 2, read: async () => { reads++; return [{ key: 'new' }]; } }, 2);
+        replacementPage = test.control.ensure(0);
+      }
+      return undefined;
+    } };
+    try {
+      test.bind(view); armed = true;
+      expect(await test.control.ensure(0)).to.equal(false);
+      expect(await replacementPage).to.equal(true);
+      expect(reads).to.equal(1);
+    } finally { test.cleanup(); }
+  });
+});
+
+describe('SourceWindowController provider call contracts', () => {
+  it('preserves indexed receivers and arguments for rows, keys and cached lookups', () => {
+    const test = setup(); const receivers: boolean[] = [], indices: number[] = [], keys: string[] = [];
+    const view = {
+      count: 2,
+      itemAt(index: number) { receivers.push(this === view); indices.push(index); return { key: `row-${index}` }; },
+      keyAt(index: number) { receivers.push(this === view); indices.push(index); return `row-${index}`; },
+      indexOfKey(key: string) { receivers.push(this === view); keys.push(key); return 1; },
+    };
+    try {
+      test.bind(view);
+      const slot = test.control.source.itemAt(1);
+      expect(slot.state === 'ready' ? slot.value.key : '').to.equal('row-1');
+      expect(test.control.source.keyAt!(1)).to.equal('row-1');
+      expect(test.control.source.indexOfKey!('row-1')).to.equal(1);
+      expect(receivers).to.deep.equal([true, true, true, true]);
+      expect(indices).to.deep.equal([1, 1, 1]);
+      expect(keys).to.deep.equal(['row-1']);
+    } finally { test.cleanup(); }
+  });
+
+  it('preserves the range receiver and request context', async () => {
+    const test = setup(); let receiver: unknown, request: (LyraSourceContext & { offset: number; limit: number }) | undefined;
+    const view = { count: 2, async read(context: LyraSourceContext & { offset: number; limit: number }) {
+      receiver = this; request = context;
+      return [{ key: 'row-1' }];
+    } };
+    try {
+      test.bind(view);
+      expect(await test.control.ensure(1)).to.equal(true);
+      expect(receiver === view).to.equal(true);
+      expect(request?.offset).to.equal(1);
+      expect(request?.limit).to.equal(1);
+      expect(request?.revision).to.equal(1);
+      expect(request?.locale).to.equal('en');
+      expect(request?.signal.aborted).to.equal(false);
+    } finally { test.cleanup(); }
+  });
+});
+
+describe('SourceWindowController replacement page ownership', () => {
+  it('does not drop a replacement page queued from a requestRange kind getter', async () => {
+    const test = setup(); let armed = false, reads = 0;
+    let replacementPage: Promise<boolean> | undefined;
+    const view = { count: 2, read: async () => [{ key: 'old' }], get itemAt() {
+      if (armed) {
+        armed = false;
+        test.bind({ count: 2, read: async () => { reads++; return [{ key: 'new' }]; } }, 2);
+        replacementPage = test.control.ensure(1);
+      }
+      return undefined;
+    } };
+    try {
+      test.bind(view); armed = true;
+      test.control.requestRange(0, 1);
+      expect(await replacementPage).to.equal(true);
+      expect(reads).to.equal(1);
+      const slot = test.control.source.itemAt(1);
+      expect(slot.state === 'ready' ? slot.value.key : '').to.equal('new');
+    } finally { test.cleanup(); }
+  });
+
+  it('keeps replacement pages when an earlier read aborts during concurrent channel acquisition', async () => {
+    const test = setup({ maxConcurrent: 2 }); let armed = false, reads = 0;
+    let replacementPage: Promise<boolean> | undefined;
+    const replacement = { count: 2, read: async () => { reads++; return [{ key: 'new' }]; } };
+    const view = { count: 2, async read(request: LyraSourceContext & { offset: number }) {
+      request.signal.addEventListener('abort', () => {
+        if (!armed) return;
+        armed = false;
+        test.bind(replacement, 2);
+        replacementPage = test.control.ensure(0);
+      }, { once: true });
+      return [{ key: `old-${request.offset}` }];
+    } };
+    try {
+      test.bind(view);
+      expect(await test.control.ensure(0)).to.equal(true);
+      await tick();
+      armed = true;
+      expect(await test.control.ensure(1)).to.equal(false);
+      expect(await replacementPage).to.equal(true);
+      expect(reads).to.equal(1);
+    } finally { test.cleanup(); }
+  });
+});
+
+for (const boundary of ['count', 'kind'] as const) {
+  it(`stops inspecting a binding after its ${boundary} getter replaces it`, () => {
+    const test = setup(); let retired = false, lateReads = 0;
+    const replace = () => {
+      retired = true;
+      test.bind({ count: 2, itemAt: index => ({ key: `new-${index}` }) }, 2);
+    };
+    const view = {
+      get count() { if (boundary === 'count') replace(); return 2; },
+      get itemAt() {
+        if (retired) lateReads++;
+        if (boundary === 'kind') replace();
+        return (index: number) => ({ key: `old-${index}` });
+      },
+      get read() { if (retired) lateReads++; return undefined; },
+    };
+    try {
+      test.bind(view);
+      expect(lateReads, 'retired bindings must not supply any more capabilities').to.equal(0);
+      expect(test.control.source.count).to.equal(2);
+      const slot = test.control.source.itemAt(0);
+      expect(slot.state === 'ready' ? slot.value.key : '').to.equal('new-0');
+    } finally { test.cleanup(); }
+  });
+}

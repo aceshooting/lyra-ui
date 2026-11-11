@@ -2,8 +2,8 @@
 '@aceshooting/lyra-ui': patch
 ---
 
-Prevent key lookups from invoking data providers retired while their capabilities are being read. Replacing the source or disconnecting its host stops obsolete lookup work before the provider callback runs, while subsequent requests can use the current source normally.
+Prevent indexed and ranged data operations from invoking providers retired while their capabilities are being read. Replacing the source or disconnecting its host stops obsolete row and key callbacks before they run. Superseded binding and range work also stops before inspecting more capabilities or consuming replacement pages, while subsequent requests can use the current source normally.
 
-The ownership checks add 136 unpacked UI bytes (22,537,981 total) and measure 1,481,547 gzip bytes for all, 1,706,122 for the autoloader, 508,100 for agent-tools, 1,727,580 for SSR all and 301,508 for the largest component. Only these exceeded byte ceilings advance to the next 64-byte boundary; measurement inputs and optional-peer exclusions remain fixed.
+The complete provider ownership checks measure 22,539,040 unpacked UI bytes; the exceeded package ceiling advances to 22,539,072 bytes. Eleven exceeded direct and aggregate gzip ceilings advance only to the next 64-byte boundary above the exact measurements recorded in the bundle budgets. The guards prevent obsolete callbacks and replacement-page loss; measurement inputs, optional-peer exclusions and passing limits remain fixed.
 
-The packed core consumer adds 84 raw bytes across the same 64 files (5,665,853 total); its exceeded ceiling advances to 5,665,856 bytes, the next 64-byte boundary. Passing consumer limits and the separate explicit WASM requirement remain unchanged.
+The packed core consumer measures 5,666,569 raw bytes across the same 64 files, an increase of 716 bytes from the initial lookup fix. Its exceeded ceiling advances to 5,666,624 bytes, the next 64-byte boundary. The explicit Oniguruma binary requirement remains unchanged.

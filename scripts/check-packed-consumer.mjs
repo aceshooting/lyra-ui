@@ -155,17 +155,17 @@ const optionalPeerFamilyTags = componentInventory.components
 const rootHelperRegisteredTags = [];
 
 // Packed core/all.js includes every non-optional registration and every emitted chunk.
-// Source lookup ownership after capability reads measures 5,665,853 raw bytes across 64 files;
-// the next 64-byte ceiling leaves 3 bytes of headroom.
+// Source ownership across capability reads and queue dispatch measures 5,666,569 raw bytes across 64 files;
+// the next 64-byte ceiling leaves 55 bytes of headroom.
 // Optional-peer exclusions and the complete file sum stay fixed. Core has no WASM allowance;
 // the explicit Oniguruma canary retains its separate exact 466,610-byte binary requirement.
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/7859878f724ef4237ee93a5414fa6b54f204313a/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'Checking source ownership after lookup capability getters adds 84 raw bytes to the full non-optional graph, measuring 5,665,853 bytes across the same 64 files. The ceiling advances only to the next 64-byte boundary, 5,665,856 bytes. The explicit Oniguruma canary retains its separate exact binary requirement.',
-  reviewedCoreMeasurementBytes: 5_665_853,
+  $comment: 'Extending source ownership checks to synchronous and ranged capability reads, binding and queue dispatch adds 716 raw bytes to the full non-optional graph, measuring 5,666,569 bytes across the same 64 files. The ceiling advances only to the next 64-byte boundary, 5,666,624 bytes. The explicit Oniguruma canary retains its separate exact binary requirement.',
+  reviewedCoreMeasurementBytes: 5_666_569,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 3,
+  selectedRegressionHeadroomBytes: 55,
 };
 
 /**
