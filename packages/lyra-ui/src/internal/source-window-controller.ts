@@ -252,7 +252,11 @@ export class SourceWindowController<T> implements ReactiveController {
     void Promise.resolve().then(() => {
       if (!current() || !lease.isCurrent()) return null;
       const view = lookup.binding.view;
-      return isIndexed(view) ? view.indexOfKey?.(lookup.key) : view.indexOfKey?.(lookup.key, lease.context);
+      const indexed = isIndexed(view);
+      if (!current() || !lease.isCurrent()) return null;
+      const resolve = view.indexOfKey;
+      if (!current() || !lease.isCurrent() || resolve == null) return null;
+      return Reflect.apply(resolve, view, indexed ? [lookup.key] : [lookup.key, lease.context]);
     }).then(index => {
       lookup.settle(current() && lease.isCurrent() && typeof index === 'number' && this.validIndex(index) ? index : null);
     }).catch(() => lookup.settle(null)).finally(() => {

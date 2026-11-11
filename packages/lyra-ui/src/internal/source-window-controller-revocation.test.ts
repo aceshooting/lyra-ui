@@ -1,6 +1,6 @@
 import { expect } from '@open-wc/testing';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
-import type { LyraIndexedView } from '../data-sources.js';
+import type { LyraIndexedView, LyraSourceContext } from '../data-sources.js';
 import { SourceWindowController, type SourceWindowOptions } from './source-window-controller.js';
 
 type Row = { key: string };
@@ -218,4 +218,106 @@ describe('SourceWindowController source replacement during page work', () => {
       expect(slot.state === 'ready' && slot.value.key, 'the late failure did not poison the replacement').to.equal('new');
     } finally { test.cleanup(); }
   });
+});
+
+describe('SourceWindowController lookup capability ownership', () => {
+  for (const kind of ['indexed', 'range'] as const) {
+    it(`preserves the ${kind} provider receiver and lookup arguments`, async () => {
+      const test = setup();
+      let receiver: unknown, args: unknown[] = [];
+      const view: LyraIndexedView<Row> = kind === 'indexed'
+        ? {
+          count: 2, itemAt: (index) => ({ key: `row-${index}` }),
+          indexOfKey(...values: unknown[]) { receiver = this; args = values; return 1; },
+        }
+        : {
+          count: 2, read: async () => [{ key: 'row-0' }],
+          async indexOfKey(...values: unknown[]) { receiver = this; args = values; return 1; },
+        };
+      try {
+        test.bind(view);
+        expect(await test.control.resolveKey('row-1')).to.equal(1);
+        expect(receiver === view).to.equal(true);
+        expect(args.length).to.equal(kind === 'indexed' ? 1 : 2);
+        expect(typeof args[0]).to.equal('string');
+        expect(args[0]).to.equal('row-1');
+        if (kind === 'range') {
+          const context = args[1] as LyraSourceContext;
+          expect(context.revision).to.equal(1);
+          expect(context.locale).to.equal('en');
+          expect(context.signal.aborted).to.equal(false);
+        }
+      } finally { test.cleanup(); }
+    });
+
+    for (const unavailable of ['absent', 'throws'] as const) {
+      it(`retries a ${kind} lookup whose capability was initially ${unavailable}`, async () => {
+        const test = setup();
+        let available = false, calls = 0;
+        const view: LyraIndexedView<Row> = kind === 'indexed'
+          ? { count: 2, itemAt: (index) => ({ key: `row-${index}` }) }
+          : { count: 2, read: async () => [{ key: 'row-0' }] };
+        const lookup = kind === 'indexed'
+          ? () => { calls++; return 1; }
+          : async () => { calls++; return 1; };
+        Object.defineProperty(view, 'indexOfKey', { get() {
+          if (available) return lookup;
+          if (unavailable === 'throws') throw new Error('Lookup capability unavailable');
+          return undefined;
+        } });
+        try {
+          test.bind(view);
+          expect(await test.control.resolveKey('row-1')).to.equal(null);
+          expect(calls).to.equal(0);
+          available = true;
+          expect(await test.control.resolveKey('row-1')).to.equal(1);
+          expect(calls).to.equal(1);
+        } finally { test.cleanup(); }
+      });
+    }
+
+    for (const boundary of ['kind', 'lookup'] as const) {
+      for (const retirement of ['replace', 'disconnect'] as const) {
+        it(`does not invoke a retired ${kind} lookup when its ${boundary} getter causes ${retirement}`, async () => {
+          const test = setup();
+          let armed = false, retiredCalls = 0;
+          const replacement: LyraIndexedView<Row> = {
+            count: 2, itemAt: (index) => ({ key: `new-${index}` }), indexOfKey: () => 0,
+          };
+          const retire = () => {
+            if (!armed) return;
+            armed = false;
+            if (retirement === 'replace') test.bind(replacement, 2);
+            else test.host.remove();
+          };
+          const view: LyraIndexedView<Row> = kind === 'indexed'
+            ? { count: 2, itemAt: (index) => ({ key: `old-${index}` }) }
+            : { count: 2, read: async () => [{ key: 'old-0' }] };
+          const itemAt: unknown = Reflect.get(view, 'itemAt');
+          Object.defineProperty(view, 'itemAt', {
+            configurable: true,
+            get() { if (boundary === 'kind') retire(); return itemAt; },
+          });
+          const lookup = kind === 'indexed'
+            ? () => { retiredCalls++; return 1; }
+            : async () => { retiredCalls++; return 1; };
+          Object.defineProperty(view, 'indexOfKey', {
+            configurable: true,
+            get() { if (boundary === 'lookup') retire(); return lookup; },
+          });
+          try {
+            test.bind(view);
+            armed = true;
+            expect(await test.control.resolveKey('old-1')).to.equal(null);
+            expect(retiredCalls, 'a revoked provider must never start lookup work').to.equal(0);
+            if (retirement === 'disconnect') {
+              document.body.append(test.host);
+              test.bind(replacement, 2);
+            }
+            expect(await test.control.resolveKey('new-0'), 'the replacement lookup is not stranded').to.equal(0);
+          } finally { test.cleanup(); }
+        });
+      }
+    }
+  }
 });
