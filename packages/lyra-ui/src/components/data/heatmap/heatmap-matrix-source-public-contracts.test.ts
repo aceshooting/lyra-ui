@@ -357,3 +357,75 @@ for (const callback of ['cellInteractive', 'cellText'] as const) {
     });
   }
 }
+
+for (const callback of ['cellInteractive', 'cellText', 'cellColor'] as const) {
+  for (const retirement of ['replace', 'disconnect'] as const) {
+    it(`does not render with ${callback} after its getter causes source ${retirement}`, async () => {
+      const first = matrixSource(2, 2), next = matrixSource(3, 3);
+      const el = await fixture<LyraHeatmap>(html`<lr-heatmap style="width:320px"
+        .matrixSource=${first.source}></lr-heatmap>`);
+      await sourceReady(el);
+      const parent = el.parentNode!;
+      let observed = false, calls = 0;
+      Object.defineProperty(el, callback, { configurable: true, get() {
+        observed = true;
+        Reflect.deleteProperty(el, callback);
+        if (retirement === 'replace') el.matrixSource = next.source;
+        else el.remove();
+        return () => { calls++; return callback === 'cellInteractive' ? true : 'Obsolete presentation'; };
+      } });
+      el.accessibleCells = true;
+      await waitUntil(() => observed, 'The exact pane did not read its presentation capability');
+      expect(calls, 'retired presentation must never be evaluated').to.equal(0);
+      if (retirement === 'disconnect') {
+        el.matrixSource = next.source;
+        parent.appendChild(el);
+      }
+      await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="cell"]').length === 9);
+      expect(el.shadowRoot!.textContent).not.to.contain('Obsolete presentation');
+      expect(next.reads.length).to.equal(9);
+      expect(await el.revealSourceCell(2, 2)).to.equal(true);
+      expect(el.shadowRoot?.activeElement?.getAttribute('data-source-row')).to.equal('2');
+      expect(el.shadowRoot?.activeElement?.getAttribute('data-source-col')).to.equal('2');
+    });
+  }
+}
+
+for (const [bound, value] of [
+  ['rowStart', 0], ['rowEnd', 4], ['columnStart', 0], ['columnEnd', 5],
+] as const) {
+  it(`refreshes source tiles when only viewport ${bound} changes`, async () => {
+    const { source, queries } = matrixSource(5, 5);
+    const viewport = { rowStart: 1, rowEnd: 3, columnStart: 1, columnEnd: 4 };
+    const el = await fixture<LyraHeatmap>(html`<lr-heatmap style="width:320px"
+      .matrixSource=${source} .matrixViewport=${viewport}></lr-heatmap>`);
+    await sourceReady(el);
+    const next = { ...viewport, [bound]: value };
+    el.matrixViewport = next;
+    await waitUntil(() => queries.length === 2);
+    await sourceReady(el);
+    expect(queries).to.deep.equal([viewport, next]);
+    expect(el.matrixViewport).to.deep.equal(next);
+    const csv = el.exportData('csv').split('\r\n')[1]!.split(',');
+    expect(csv.slice(0, 4).map(Number)).to.deep.equal([
+      next.rowStart, next.rowEnd, next.columnStart, next.columnEnd,
+    ]);
+  });
+}
+
+it('clears a rejected source-cell color and accepts a later valid override without reloading data', async () => {
+  const { source, queries, reads } = matrixSource(2, 2);
+  const el = await fixture<LyraHeatmap>(html`<lr-heatmap accessible-cells style="width:320px"
+    .matrixSource=${source} .cellColor=${() => 'rgb(12, 34, 56)'}></lr-heatmap>`);
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="cell"]').length === 4);
+  expect(getComputedStyle(exactButton(el, 0, 0)).backgroundColor).to.equal('rgb(12, 34, 56)');
+  el.cellColor = () => 'url(https://example.invalid/color.svg)';
+  await el.updateComplete;
+  expect(getComputedStyle(exactButton(el, 0, 0)).backgroundColor).not.to.equal('rgb(12, 34, 56)');
+  expect(exactButton(el, 0, 0).style.backgroundColor).to.equal('');
+  el.cellColor = () => 'rgb(65, 43, 21)';
+  await el.updateComplete;
+  expect(getComputedStyle(exactButton(el, 0, 0)).backgroundColor).to.equal('rgb(65, 43, 21)');
+  expect(queries.length).to.equal(1);
+  expect(reads.length).to.equal(4);
+});
