@@ -281,3 +281,79 @@ for (const interruption of ['disconnect', 'replace'] as const) {
     expect(el.selectedCells).to.deep.equal([]);
   });
 }
+
+for (const [edge, row, column] of [
+  ['above', 3, 7], ['below', 8, 7], ['left', 6, 4], ['right', 6, 10],
+] as const) {
+  it(`reveals a source cell ${edge} the viewport while preserving its dimensions`, async () => {
+    const { source, queries, reads } = matrixSource(20, 30);
+    const viewport = { rowStart: 4, rowEnd: 8, columnStart: 5, columnEnd: 10 };
+    const el = await fixture<LyraHeatmap>(html`<lr-heatmap style="width:320px"
+      .matrixSource=${source} .matrixViewport=${viewport}></lr-heatmap>`);
+    await sourceReady(el);
+    const activations: unknown[] = [];
+    el.addEventListener('lr-cell-activate', event => activations.push(event.detail));
+    expect(await el.revealSourceCell(row, column)).to.equal(true);
+    await sourceReady(el);
+    const shown = el.matrixViewport!;
+    expect(shown.rowEnd - shown.rowStart).to.equal(4);
+    expect(shown.columnEnd - shown.columnStart).to.equal(5);
+    expect(row >= shown.rowStart && row < shown.rowEnd).to.equal(true);
+    expect(column >= shown.columnStart && column < shown.columnEnd).to.equal(true);
+    expect(queries.length).to.equal(2);
+    expect(queries[1]).to.deep.equal(shown);
+    expect(reads).to.deep.equal([[row, column]]);
+    expect(el.shadowRoot?.activeElement?.getAttribute('part')).to.equal('canvas');
+    expect(activations.length).to.equal(0);
+    await sendKeys({ press: 'Enter' });
+    await waitUntil(() => activations.length === 1);
+    expect(activations).to.deep.equal([{ row, col: column, value: row * 30 + column }]);
+  });
+}
+
+for (const viewport of [null, { rowStart: 1, rowEnd: 3, columnStart: 1, columnEnd: 4 }]) {
+  it(`retains cached exact cells when an equivalent ${viewport ? 'explicit' : 'full'} viewport is assigned`, async () => {
+    const { source, queries, reads } = matrixSource(5, 5);
+    const el = await fixture<LyraHeatmap>(html`<lr-heatmap style="width:320px"
+      .matrixSource=${source} .matrixViewport=${viewport}></lr-heatmap>`);
+    await sourceReady(el);
+    expect(await el.revealSourceCell(1, 1)).to.equal(true);
+    for (const next of [el.matrixViewport, viewport && { ...viewport }]) {
+      el.matrixViewport = next;
+      await el.updateComplete;
+      expect(await el.revealSourceCell(1, 1)).to.equal(true);
+      expect(queries.length).to.equal(1);
+      expect(reads).to.deep.equal([[1, 1]]);
+    }
+  });
+}
+
+for (const callback of ['cellInteractive', 'cellText'] as const) {
+  for (const retirement of ['replace', 'disconnect'] as const) {
+    it(`does not invoke ${callback} after its getter causes source ${retirement} during reveal`, async () => {
+      const first = matrixSource(3, 3), next = matrixSource(4, 4);
+      const el = await fixture<LyraHeatmap>(html`<lr-heatmap style="width:320px"
+        .matrixSource=${first.source}></lr-heatmap>`);
+      await sourceReady(el);
+      const parent = el.parentNode!;
+      let calls = 0;
+      Object.defineProperty(el, callback, { configurable: true, get() {
+        if (retirement === 'replace') el.matrixSource = next.source;
+        else el.remove();
+        return () => { calls++; return callback === 'cellInteractive' ? true : 'Obsolete label'; };
+      } });
+      try {
+        expect(await el.revealSourceCell(1, 1)).to.equal(false);
+        expect(calls, 'a retired callback cannot publish cell presentation').to.equal(0);
+      } finally { Reflect.deleteProperty(el, callback); }
+      if (retirement === 'disconnect') {
+        el.matrixSource = next.source;
+        parent.appendChild(el);
+      }
+      await sourceReady(el);
+      expect(await el.revealSourceCell(2, 2)).to.equal(true);
+      expect(next.reads).to.deep.equal([[2, 2]]);
+      expect(el.shadowRoot?.textContent).not.to.contain('Obsolete label');
+    });
+  }
+}
