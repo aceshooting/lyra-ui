@@ -276,8 +276,12 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
       const ownerWindow = ownerDocument.defaultView;
       if (!ownerWindow || !this.isConnected) return;
       const fraction = from.scrollTop / fromMax;
+      const position = fraction * toMax;
+      // A rounded native scroll event can arrive after frame suppression ends. Avoid feeding
+      // its subpixel difference back into the other pane and drifting on every subsequent frame.
+      if (Math.abs(to.scrollTop - position) <= 1) return;
       this.suppressSync = true;
-      to.scrollTop = fraction * toMax;
+      to.scrollTop = position;
       const generation = this.ownerRealmGeneration;
       const handle = ownerWindow.requestAnimationFrame(() => {
         if (

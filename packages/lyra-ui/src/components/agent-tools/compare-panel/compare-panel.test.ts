@@ -1,5 +1,5 @@
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
-import { fixture, expect, html, oneEvent, aTimeout, waitUntil } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, aTimeout, waitUntil, nextFrame } from '@open-wc/testing';
 import './compare-panel.js';
 import type { LyraComparePanel } from './compare-panel.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -119,24 +119,34 @@ describe('lr-compare-panel', () => {
     expect(bothBadButton.getAttribute('aria-pressed')).to.equal('true');
   });
 
-  it('synchronizes the paired pane scroll position when sync-scroll is enabled and content overflows', async () => {
+  it('synchronizes proportional scroll in both directions after each frame releases suppression', async () => {
     const el = (await fixture(html`
       <lr-compare-panel sync-scroll style="--lr-compare-panel-max-height: 50px">
-        <div slot="a" style="block-size: 500px;">Tall A content</div>
-        <div slot="b" style="block-size: 500px;">Tall B content</div>
+        <div slot="a" style="min-block-size: 500px;">Tall A content</div>
+        <div slot="b" style="min-block-size: 800px;">Tall B content</div>
       </lr-compare-panel>
     `)) as LyraComparePanel;
     await el.updateComplete;
     expect(el.syncScroll).to.be.true;
+    await nextFrame(); await nextFrame();
     const paneA = el.shadowRoot!.querySelector('[part="pane-a"]') as HTMLElement;
     const paneB = el.shadowRoot!.querySelector('[part="pane-b"]') as HTMLElement;
     expect(paneA.scrollHeight).to.be.greaterThan(paneA.clientHeight);
-
-    paneA.scrollTop = paneA.scrollHeight - paneA.clientHeight; // scroll to the very bottom
-    paneA.dispatchEvent(new Event('scroll'));
-    await waitUntil(() => paneB.scrollTop > 0, 'scroll mirrored to pane B');
-
-    expect(paneB.scrollTop).to.be.greaterThan(0);
+    const maxA = paneA.scrollHeight - paneA.clientHeight;
+    const maxB = paneB.scrollHeight - paneB.clientHeight;
+    expect(maxB).to.be.greaterThan(maxA);
+    paneA.scrollTop = maxA / 2;
+    const firstA = paneA.scrollTop, firstB = firstA / maxA * maxB;
+    await waitUntil(() => Math.abs(paneB.scrollTop - firstB) <= 1, 'native scrolling mirrors the relative position to pane B');
+    for (let frame = 0; frame < 6; frame++) await nextFrame();
+    expect(paneA.scrollTop, 'rounded native events must not feed back into the source pane').to.be.closeTo(firstA, 1);
+    expect(paneB.scrollTop).to.be.closeTo(firstB, 1);
+    paneB.scrollTop = maxB / 4;
+    const secondB = paneB.scrollTop, secondA = secondB / maxB * maxA;
+    await waitUntil(() => Math.abs(paneA.scrollTop - secondA) <= 1, 'the next frame allows pane B to drive synchronization');
+    for (let frame = 0; frame < 6; frame++) await nextFrame();
+    expect(paneA.scrollTop).to.be.closeTo(secondA, 1);
+    expect(paneB.scrollTop, 'reverse synchronization must also settle').to.be.closeTo(secondB, 1);
   });
 
   it('owns scroll-sync frames in the adopted window and clears suppression on cleanup', async () => {

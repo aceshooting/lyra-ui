@@ -79,7 +79,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-command-palette"></a>`lr-command-palette` | layout | `import '@aceshooting/lyra-ui/components/lr-command-palette.js';` | none | none | none | 51.9 KiB |
 | <a id="lr-commit-card"></a>`lr-commit-card` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-commit-card.js';` | none | none | none | 61.8 KiB |
 | <a id="lr-community-card"></a>`lr-community-card` | retrieval | `import '@aceshooting/lyra-ui/components/lr-community-card.js';` | none | `lr-button`, `lr-chip`, `lr-empty` | none | 57.5 KiB |
-| <a id="lr-compare-panel"></a>`lr-compare-panel` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-compare-panel.js';` | none | `lr-live-region` | none | 33.2 KiB |
+| <a id="lr-compare-panel"></a>`lr-compare-panel` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-compare-panel.js';` | none | `lr-live-region` | none | 33.3 KiB |
 | <a id="lr-condition-builder"></a>`lr-condition-builder` | data | `import '@aceshooting/lyra-ui/components/lr-condition-builder.js';` | none | `lr-button`, `lr-combobox`, `lr-date-input`, `lr-icon-button`, `lr-input`, `lr-option`, `lr-select` | `lr-date-picker`, `lr-empty`, `lr-icon` | 152.8 KiB |
 | <a id="lr-confirm-bar"></a>`lr-confirm-bar` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-confirm-bar.js';` | none | `lr-button`, `lr-details`, `lr-json-viewer`, `lr-live-region` | `lr-virtual-list` | 84 KiB |
 | <a id="lr-connector-manager"></a>`lr-connector-manager` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-connector-manager.js';` | none | `lr-button` | none | 45.4 KiB |
