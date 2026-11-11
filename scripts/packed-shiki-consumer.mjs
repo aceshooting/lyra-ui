@@ -5,6 +5,15 @@ import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+export function packedShikiViteConfig(root, logger) {
+  return {
+    configFile: false, root, customLogger: logger,
+    // Timing depends on runner load; package and resolution warnings still fail qualification.
+    // The compatibility name also covers the Rolldown version in the oldest Vite fixture.
+    build: { rolldownOptions: { checks: { pluginTimings: false } } },
+  };
+}
+
 /** Exercise explicit engine ownership through the installed package and ordinary Vite resolution. */
 export async function verifyPackedShikiConsumer({ fixtureDir, withShiki, expectedShikiVersion }) {
   const require = createRequire(join(fixtureDir, 'package.json'));
@@ -47,7 +56,7 @@ window.renderCode = async highlight => {
       const logger = createLogger('silent');
       logger.warn = logger.warnOnce = message => warnings.push(message);
       // No resolver aliases, externalization, output cleanup or asset bridges.
-      const config = { configFile: false, root, customLogger: logger };
+      const config = packedShikiViteConfig(root, logger);
       const result = await build(config);
       assert.deepEqual(warnings, [], 'The packed Shiki consumer must build without warnings');
       assert(!Array.isArray(result) && result.output);
