@@ -41,6 +41,54 @@ function exactButton(el: LyraHeatmap, row: number, column: number): HTMLButtonEl
   return button;
 }
 
+for (const phase of ['initial update', 'viewport query'] as const) {
+  for (const retirement of ['replacement', 'disconnect', 'new reveal'] as const) {
+    it(`cancels an exact reveal after ${retirement} during its ${phase} and allows current navigation`, async () => {
+      const first = matrixSource(20, 30), next = matrixSource(20, 30);
+      const el = await fixture<LyraHeatmap>(html`<lr-heatmap style="width:320px"
+        .matrixSource=${first.source}
+        .matrixViewport=${{ rowStart: 0, rowEnd: 4, columnStart: 0, columnEnd: 5 }}></lr-heatmap>`);
+      await sourceReady(el);
+      const parent = el.parentNode!;
+      const activations: unknown[] = [];
+      el.addEventListener('lr-cell-activate', event => activations.push(event.detail));
+      let retired = false;
+      let latest: Promise<boolean> | undefined;
+      const retire = (): void => {
+        if (retired) return;
+        retired = true;
+        if (retirement === 'replacement') el.matrixSource = next.source;
+        else if (retirement === 'disconnect') el.remove();
+        else latest = el.revealSourceCell(0, 0);
+      };
+      const query = first.source.query;
+      first.source.query = function (request) {
+        if (phase === 'viewport query' && request.rowStart === 16) retire();
+        return query.call(this, request);
+      };
+      try {
+        const pending = el.revealSourceCell(19, 29);
+        if (phase === 'initial update') retire();
+        expect(await pending).to.equal(false);
+        expect(retired).to.equal(true);
+        expect(first.reads.some(([row, col]) => row === 19 && col === 29)).to.equal(false);
+        expect(activations).to.deep.equal([]);
+        if (latest) expect(await latest).to.equal(true);
+      } finally { first.source.query = query; }
+      if (retirement === 'disconnect') parent.appendChild(el);
+      await sourceReady(el);
+      expect(await el.revealSourceCell(1, 1)).to.equal(true);
+      const reads = retirement === 'replacement' ? next.reads : first.reads;
+      expect(reads).to.deep.include([1, 1]);
+      expect(el.shadowRoot?.activeElement?.getAttribute('part')).to.equal('canvas');
+      expect(activations).to.deep.equal([]);
+      await sendKeys({ press: 'Enter' });
+      await waitUntil(() => activations.length === 1, 'the current cell can be activated');
+      expect(activations).to.deep.equal([{ row: 1, col: 1, value: 31 }]);
+    });
+  }
+}
+
 it('pans an explicit source viewport to reveal an edge cell without selecting it', async () => {
   const { source, queries, reads } = matrixSource(20, 30);
   const viewport = { rowStart: 0, rowEnd: 4, columnStart: 0, columnEnd: 5 };
