@@ -1,8 +1,9 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { captureDevWarnings } from '../../../../test/expected-dev-warnings.js';
 import { MapFeatureStateRoutes } from './map-feature-state-routes.js';
 import type { MapFeatureStatePeer } from './map-feature-state.js';
 import { MAP_IMAGE_LIMITS } from './map-image-admission.js';
-import { MapOwnedFeatures } from './map-owned-features.js';
+import { MapOwnedFeatures, overlayPaintText } from './map-owned-features.js';
 import type { LyraMapImage, MapImagePreparationContext, MapImagePreparationResult, PreparedMapImage } from './map-images.js';
 import type { MapLibreMapCapability } from './map-loader.js';
 import type { MapOwnedSourceChange } from './map-owned-resources.js';
@@ -69,6 +70,110 @@ async function harness() {
 }
 
 describe('map owned feature integration controller', () => {
+  it('extracts theme paint without reading source payloads or accessor-backed layers', () => {
+    let reads = 0;
+    const unsafe = () => { reads++; throw new Error('Author data must not execute'); };
+    const input = Object.defineProperty({ layers: [
+      { layer: { id: 'dots', type: 'circle', paint: { 'circle-color': 'var(--lr-color-brand-500)' } } },
+      { layer: { id: 'labels', type: 'symbol' } },
+    ] }, 'sources', { get: unsafe });
+    expect(JSON.parse(overlayPaintText(input))).to.deep.equal([{ 'circle-color': 'var(--lr-color-brand-500)' }, null]);
+    for (const invalid of [null, [], 3, {}, { layers: undefined },
+      Object.defineProperty({}, 'layers', { get: unsafe }), { layers: [{ layer: { id: 'bad', type: 'circle', paint: { opacity: Infinity } } }] }]) {
+      expect(overlayPaintText(invalid)).to.equal('');
+    }
+    expect(reads).to.equal(0);
+  });
+
+  it('revalidates resolved theme paint before native writes and accepts a corrected theme', async () => {
+    const h = await harness();
+    const input = { overlays: { layers: [{ layer: { id: 'dots', type: 'background', paint: { 'background-color': 'var(--lr-color-brand-500)' } } }] }, images: [], styleOverrides: [] };
+    try {
+      h.context.resolve = () => Infinity;
+      let failure: unknown;
+      try { await h.run(input); } catch (error) { failure = error; }
+      expect((failure as Error | undefined)?.name).to.equal('MapResourceError');
+      expect(h.peer.calls).to.deep.equal([]); expect(h.peer.order).to.deep.equal(['labels']);
+      h.context.resolve = () => '#123456';
+      await h.run(input);
+      expect(h.peer.getLayer('dots')?.['paint']).to.deep.equal({ 'background-color': '#123456' });
+    } finally { h.features.dispose(); }
+  });
+
+  for (const capability of ['getStyle', 'moveLayer', 'hasImage', 'addImage', 'removeImage'] as const) {
+    it(`refuses image installation without ${capability}, releases prepared pixels, and recovers when restored`, async () => {
+      const h = await harness(), own = Object.getOwnPropertyDescriptor(h.peer, capability);
+      const input = { overlays, images: [descriptor()], styleOverrides: [] };
+      const restore = () => { if (own) Object.defineProperty(h.peer, capability, own); else Reflect.deleteProperty(h.peer, capability); };
+      Object.defineProperty(h.peer, capability, { configurable: true, value: undefined });
+      try {
+        let failure: unknown;
+        try { await h.run(input); } catch (error) { failure = error; }
+        expect((failure as Error | undefined)?.name).to.equal('MapResourceError');
+        expect(h.peer.calls).to.deep.equal([]); expect(h.peer.images.size).to.equal(0);
+        expect(h.prepare.disposals).to.equal(1);
+        restore(); await h.run(input);
+        expect(h.peer.images.has('pin')).to.equal(true); expect(h.features.ownsLayer('icons')).to.equal(true);
+        expect(h.prepare.disposals).to.equal(1);
+      } finally { restore(); h.features.dispose(); }
+      expect(h.prepare.disposals).to.equal(2);
+    });
+  }
+
+  for (const capability of ['getPaintProperty', 'getLayoutProperty', 'setLayoutProperty', 'triggerRepaint'] as const) {
+    it(`preserves basemap paint when override capability ${capability} is unavailable and recovers`, async () => {
+      const h = await harness(), own = Object.getOwnPropertyDescriptor(h.peer, capability);
+      const input = { overlays: {}, images: [], styleOverrides: [{ layerId: 'labels', paint: { 'background-color': '#123' } }] };
+      const restore = () => { if (own) Object.defineProperty(h.peer, capability, own); else Reflect.deleteProperty(h.peer, capability); };
+      Object.defineProperty(h.peer, capability, { configurable: true, value: undefined });
+      try {
+        let failure: unknown;
+        try { await h.run(input); } catch (error) { failure = error; }
+        expect((failure as Error | undefined)?.name).to.equal('MapResourceError');
+        expect(h.peer.paint.get('labels:background-color')).to.equal('#fff'); expect(h.peer.calls).to.deep.equal([]);
+        restore(); await h.run(input);
+        expect(h.peer.paint.get('labels:background-color')).to.equal('#123');
+        await h.run({ ...input, styleOverrides: [] });
+        expect(h.peer.paint.get('labels:background-color')).to.equal('#fff');
+      } finally { restore(); h.features.dispose(); }
+    });
+  }
+
+  for (const invalid of ['wrong identity', 'extra image'] as const) {
+    it(`rejects a prepared ${invalid} without leaking pixels and accepts the next valid result`, async () => {
+      const h = await harness(); let malformed = true;
+      const features = new MapOwnedFeatures((input, context) => h.prepare.prepare(malformed
+        ? invalid === 'wrong identity' ? [descriptor('other')] : [descriptor(), descriptor('extra')]
+        : input, context));
+      const run = () => features.reconcile(h.peer as unknown as MapLibreMapCapability, 1,
+        { overlays, images: [descriptor()], styleOverrides: [] }, h.context);
+      const allocated = invalid === 'wrong identity' ? 1 : 2;
+      try {
+        let failure: unknown;
+        try { await run(); } catch (error) { failure = error; }
+        expect((failure as Error | undefined)?.name).to.equal('MapResourceError');
+        expect(h.peer.calls).to.deep.equal([]); expect(h.prepare.disposals).to.equal(allocated);
+        malformed = false; await run();
+        expect([...h.peer.images.keys()]).to.deep.equal(['pin']); expect(features.ownsLayer('icons')).to.equal(true);
+      } finally { features.dispose(); h.features.dispose(); }
+      expect(h.prepare.disposals).to.equal(allocated + 1);
+    });
+  }
+
+  for (const state of ['aborted', 'unreadable'] as const) {
+    it(`does no preparation or native work for an ${state} owner context`, async () => {
+      const h = await harness();
+      if (state === 'aborted') h.signal.abort();
+      else h.context.isCurrent = () => { throw new Error('Owner retired'); };
+      try {
+        let failure: unknown;
+        try { await h.run({ overlays, images: [descriptor()], styleOverrides: [] }); } catch (error) { failure = error; }
+        expect((failure as Error | undefined)?.name).to.equal('AbortError');
+        expect(h.prepare.calls).to.equal(0); expect(h.peer.calls).to.deep.equal([]);
+      } finally { h.features.dispose(); }
+    });
+  }
+
   const retainedOverlay = (data: unknown): MapOwnedOverlaySnapshot => {
     const result = admitMapOverlays({
       sources: [{ id: 'points', source: { type: 'geojson', data } }],
@@ -426,6 +531,31 @@ describe('map owned feature integration controller', () => {
 
 
 describe('map shared declarative/provider image ownership', () => {
+  it('charges a legacy prepared image the full budget until its declarative owner releases it', async () => {
+    const h = await harness(); let resolver!: ((id: string) => void | Promise<void>) | null;
+    Object.assign(h.peer, { setMissingStyleImageResolver(value: typeof resolver) { resolver = value; } });
+    const features = new MapOwnedFeatures(async (input, context) => {
+      const result = await h.prepare.prepare(input, context);
+      if (!result.ok) return result;
+      return { ...result, images: result.images.map(image => ({ id: image.id, width: image.width,
+        height: image.height, pixelRatio: image.pixelRatio, image: image.image, dispose: () => image.dispose() })) };
+    });
+    const peer = h.peer as unknown as MapLibreMapCapability;
+    const run = (images: readonly LyraMapImage[]) => features.reconcile(peer, 1, { overlays: {}, images, styleOverrides: [] }, h.context);
+    try {
+      await run([descriptor('declared')]);
+      const retained = h.peer.images.get('declared');
+      features.configureImageProvider(peer, (id: string) => descriptor(id), h.owner);
+      const warnings = await captureDevWarnings(async () => { await resolver!('overflow'); });
+      expect(warnings).to.deep.equal(['<lr-map>: imageProvider did not supply image "overflow" (image budget); it stays missing.']);
+      expect([...h.peer.images.keys()]).to.deep.equal(['declared']);
+      expect(h.peer.images.get('declared') === retained).to.equal(true);
+      await run([]); expect(h.peer.images.size).to.equal(0);
+      await resolver!('available');
+      expect([...h.peer.images.keys()]).to.deep.equal(['available']);
+    } finally { features.dispose(); h.features.dispose(); }
+  });
+
   for (const dimension of ['count', 'bytes', 'pixels']) {
     it(`preserves the valid catalog when declarative growth exceeds the shared ${dimension} budget`, async () => {
       const h = await harness(); let resolver!: ((id: string) => void | Promise<void>) | null;

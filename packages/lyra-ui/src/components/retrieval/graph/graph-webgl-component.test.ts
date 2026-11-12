@@ -184,7 +184,7 @@ describe('graph optional engine component integration', () => {
     expect(value.graph.getNodeScreenPosition('local-a')).to.deep.equal({ x: bounds.left - host.left + 40, y: bounds.top - host.top + 60 });
   });
 
-  for (const failure of ['throw', 'nonfinite', 'accessor', 'missing x', 'missing y', 'string x', 'string y', 'null', 'missing method'] as const) {
+  for (const failure of ['throw', 'nonfinite x', 'nonfinite y', 'accessor', 'missing x', 'missing y', 'string x', 'string y', 'null', 'missing method'] as const) {
     it(`omits a ${failure} peer projection without exposing an invalid screen anchor and recovers on the next read`, async () => {
       const value = setup(); value.graph.engine = 'webgl'; value.graph.view = '3d';
       await fixture(value.graph); const engine = await mounted(value), original = engine.engine.project!;
@@ -197,7 +197,9 @@ describe('graph optional engine component integration', () => {
         if (failure === 'missing y') return { x: 40 } as { x: number; y: number };
         if (failure === 'string x') return { x: '40', y: 60 } as unknown as { x: number; y: number };
         if (failure === 'string y') return { x: 40, y: '60' } as unknown as { x: number; y: number };
-        return failure === 'nonfinite' ? { x: Number.NaN, y: Number.POSITIVE_INFINITY } : unavailable as { x: number; y: number };
+        if (failure === 'nonfinite x') return { x: Number.NaN, y: 60 };
+        if (failure === 'nonfinite y') return { x: 40, y: Number.POSITIVE_INFINITY };
+        return unavailable as { x: number; y: number };
       };
       if (failure === 'missing method') engine.engine.project = undefined;
       try {
@@ -271,13 +273,13 @@ describe('graph optional engine component integration', () => {
     expect(value.graph.getNodeScreenPosition('replacement') !== undefined).to.equal(true);
   });
 
-  for (const invalidBounds of ['surface', 'host'] as const) {
-    it(`omits an anchor with nonfinite ${invalidBounds} layout coordinates and recovers after layout`, async () => {
+  for (const [invalidBounds, axis] of [['surface', 'x'], ['surface', 'y'], ['host', 'x'], ['host', 'y']] as const) {
+    it(`omits an anchor with nonfinite ${invalidBounds} ${axis} layout coordinates and recovers after layout`, async () => {
       const value = setup(); value.graph.engine = 'webgl'; value.graph.view = '3d';
       await fixture(value.graph); await mounted(value);
       const target = invalidBounds === 'surface' ? value.graph.shadowRoot!.querySelector<HTMLElement>('[data-webgl-host]')! : value.graph;
       const bounds = target.getBoundingClientRect;
-      target.getBoundingClientRect = () => new DOMRect(Number.POSITIVE_INFINITY, 0, 360, 280);
+      target.getBoundingClientRect = () => new DOMRect(axis === 'x' ? Infinity : 0, axis === 'y' ? Infinity : 0, 360, 280);
       try { expect(value.graph.getNodeScreenPosition('local-a')).to.equal(undefined); }
       finally { target.getBoundingClientRect = bounds; }
       const point = value.graph.getNodeScreenPosition('local-a');
