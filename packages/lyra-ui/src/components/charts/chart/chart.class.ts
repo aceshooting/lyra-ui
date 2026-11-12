@@ -4343,6 +4343,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    */
   private handlePointClick(event: unknown, chart: RuntimeChart): void {
     if (!this.isConnected || chart !== this.chart) return;
+    const effective = this.effectiveData();
+    const type = this.effectiveType();
+    const datasets = this.visualDatasetSourceIndexes;
+    const rows = this.visualRowSourceIndexes;
+    const current = () => this.isConnected && chart === this.chart &&
+      this.effectiveData() === effective && this.effectiveType() === type &&
+      this.visualDatasetSourceIndexes === datasets && this.visualRowSourceIndexes === rows;
     // Chart.js's own `onClick` handler hands us its `ChartEvent` wrapper, but
     // `getElementsAtEventForMode()`'s .d.ts (inaccurately) types its first
     // param as a DOM `Event` — at runtime Chart.js only reads `.x`/`.y` off
@@ -4360,16 +4367,17 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     } catch {
       return;
     }
-    if (!this.isConnected || chart !== this.chart) return;
+    if (!current()) return;
     const admission = admitChartArray(elements);
-    if (!admission || !chartArrayIsStillAdmitted(admission)) return;
+    if (!admission || !current()) return;
+    const admitted = chartArrayIsStillAdmitted(admission);
+    if (!admitted || !current()) return;
     const first = chartRecordValue(admission.source, '0');
-    if (first === MISSING_OWN_DATA_DESCRIPTOR || first === UNSAFE_OWN_DATA_DESCRIPTOR) return;
-    const effective = this.effectiveData();
+    if (first === MISSING_OWN_DATA_DESCRIPTOR || first === UNSAFE_OWN_DATA_DESCRIPTOR || !current()) return;
     const hit = this.callbackIndexes(first.value, effective);
-    if (!hit || !this.isConnected || chart !== this.chart) return;
-    const datasetIndex = this.visualDatasetSourceIndexes?.[hit.datasetIndex] ?? hit.datasetIndex;
-    const index = this.visualRowSourceIndexes?.[hit.index] ?? hit.index;
+    if (!hit || !current()) return;
+    const datasetIndex = datasets?.[hit.datasetIndex] ?? hit.datasetIndex;
+    const index = rows?.[hit.index] ?? hit.index;
     const value = this.datasetValues(effective.datasets[datasetIndex]!)[index] ?? null;
     const label = normalizedChartPoint(value)?.label ??
       (labelText(effective.labels[index]) || undefined);
