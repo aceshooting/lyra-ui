@@ -7,6 +7,18 @@ const context = (index: number) => Object.freeze({ id: String(index), index });
 const admit = (value: unknown) => admitGraphNodeRenderer(() => value, 1, context, () => true, async () => {});
 
 describe('graph node renderer properties', () => {
+  it('copies every valid unpremultiplied RGBA color without retaining the caller array', async () => {
+    await fc.assert(fc.asyncProperty(fc.tuple(fc.integer({ min: 0, max: 255 }), fc.integer({ min: 0, max: 255 }),
+      fc.integer({ min: 0, max: 255 }), fc.integer({ min: 0, max: 255 })), async channels => {
+      const color = channels.map(channel => channel / 255), expected = [...color];
+      const result = await admit({ positions: new Float32Array([0, 0, 0, 0.5, 0, 0, 0, 0.5, 0]),
+        normals: new Float32Array([0, 0, 1]), color });
+      color.fill(-1);
+      expect(result![0]!.color).to.deep.equal(expected);
+      expect(Object.isFrozen(result![0]!.color)).to.equal(true);
+    }), propertyRuns());
+  });
+
   it('preserves bounded positive triangle scales and owns every numeric byte', async () => {
     await fc.assert(fc.asyncProperty(fc.integer({ min: 1, max: 64 }), fc.integer({ min: 10, max: 500 }), async (faces, scale) => {
       const radius = scale / 1000;

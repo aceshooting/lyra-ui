@@ -3,9 +3,23 @@ import fc from 'fast-check';
 import { sceneMarker } from '../../../../test/map-scene-admission-fixtures.js';
 import { propertyRuns } from '../../../../test/property-options.js';
 import { createMapSceneOwner } from './map-scene-owner.js';
-import { buildSceneRenderInput } from './map-scene-render-input.js';
+import { buildSceneRenderInput, snapshotSceneViewport } from './map-scene-render-input.js';
 
 describe('map scene render input properties', () => {
+  it('copies finite physical allocations and rejects any negative padding edge', () => {
+    fc.assert(fc.property(fc.record({ width: fc.integer({ min: 1, max: 8192 }), height: fc.integer({ min: 1, max: 8192 }),
+      ratio: fc.integer({ min: 1, max: 4 }), padding: fc.tuple(...Array.from({ length: 4 }, () => fc.integer({ min: 0, max: 1000 }))) }), input => {
+      const [top, right, bottom, left] = input.padding;
+      const viewport = { width: input.width, height: input.height, pixelRatio: input.ratio, padding: { top, right, bottom, left } };
+      const snapshot = snapshotSceneViewport(viewport);
+      expect(snapshot).to.deep.equal(viewport);
+      expect(Object.isFrozen(snapshot) && Object.isFrozen(snapshot?.padding)).to.equal(true);
+      for (const side of ['top', 'right', 'bottom', 'left'] as const) {
+        expect(snapshotSceneViewport({ ...viewport, padding: { ...viewport.padding, [side]: -1 } })).to.equal(undefined);
+      }
+    }), propertyRuns());
+  });
+
   it('keeps actual admitted marker projection immutable finite and joined to exact target revisions', async () => {
     const element = await fixture<HTMLElement>(html`<div></div>`);
     fc.assert(fc.property(fc.array(fc.record({ longitude: fc.integer({ min: -720, max: 720 }),

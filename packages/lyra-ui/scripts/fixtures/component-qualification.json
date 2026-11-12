@@ -507,7 +507,7 @@
           "scenarios": [
             "tail@10001"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -1254,7 +1254,7 @@
             "10000 spans active selection",
             "forwarded million spans final key"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -1449,7 +1449,7 @@
           "scenarios": [
             "n=12000 source offsets"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -2188,7 +2188,7 @@
             "1000 keyboard eligibility checks",
             "1000 keyboard platform checks"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -4055,7 +4055,7 @@
             "legacy-cue-index@10000",
             "prepared-waveform@1000000:full-duration"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -5006,7 +5006,7 @@
           "scenarios": [
             "render@10000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -5282,7 +5282,7 @@
             "forced-colors@100",
             "keyboard-reads@5000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -6339,7 +6339,7 @@
           "scenarios": [
             "render@10000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -7228,7 +7228,7 @@
             "dense-month-table@1000000",
             "month-queries@1000000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -8609,7 +8609,7 @@
             "summary-reuse@10000",
             "unrelated-updates@10000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -9565,7 +9565,7 @@
             "n=1000000 append1000",
             "observer-arm@1000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -11314,7 +11314,7 @@
             "n=1000 lines move gutter",
             "n=8193 highlight admission"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -11553,7 +11553,7 @@
             "n=1000 lines move gutter",
             "n=8193 highlight admission"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -12171,7 +12171,7 @@
             "n=1100 selected render cap",
             "remote-search@1000000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -12425,7 +12425,7 @@
             "hotkey@100",
             "register@1000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -15055,7 +15055,7 @@
             "closed@512",
             "n=1024 admitted snapshot reuse"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -15247,7 +15247,7 @@
             "source1000000 row=500000 column=2",
             "source1000000 row=999999 column=999"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -15435,7 +15435,7 @@
             "closed@176",
             "presentation@176"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -15813,7 +15813,7 @@
             "n=1000000 page=49999",
             "n=100001 bounded admission"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -16086,7 +16086,7 @@
             "source1000000 row=500000 column=2",
             "source1000000 row=999999 column=999"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -17167,7 +17167,7 @@
             "n=10002 lines render admission",
             "n=8193 highlight admission"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -17882,7 +17882,7 @@
             "n=10000 selection and loading",
             "n=1000000 source first middle final pages"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -18645,7 +18645,7 @@
           "scenarios": [
             "render@10000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -20322,7 +20322,7 @@
             "selection@1000",
             "spatial@1000000:select-reveal"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -20547,7 +20547,7 @@
           "scenarios": [
             "geometry@1000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -21613,7 +21613,7 @@
             "n=10000 selection and disabled",
             "n=1000000 source first middle final pages"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -21799,7 +21799,7 @@
           "scenarios": [
             "n=1000000 allocated runs first middle final pages"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -22718,7 +22718,7 @@
             "1000000 allocated records End source navigation",
             "1000000 ranged rows unaligned window and reveal"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -23108,7 +23108,7 @@
             "1000 flags shared pending resolver",
             "1000 native names second catalog pass"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -23288,7 +23288,7 @@
             "n=1000 unvisited pan after measurement",
             "n=1000 viewport pan"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -23671,7 +23671,7 @@
             "n=1000 viewport update",
             "n=1000000 source aggregate overview bins"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -24711,7 +24711,7 @@
             "aggregate-observations@1000000",
             "n=1000000 invalid prefix staged inspection"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -25276,7 +25276,7 @@
             "n=1000 oversized response preparse",
             "n=1000 reconnect"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -25486,7 +25486,7 @@
             "n=1000000 global nodes and edges first middle final",
             "n=1000000 repeated bounded neighborhoods"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -26542,7 +26542,7 @@
             "selection@6400",
             "theme-ramp@7"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -27030,7 +27030,7 @@
             "n=1000000 finite append tail",
             "summary-reads@10000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -28421,7 +28421,7 @@
             "n=10000 replacement",
             "n=1000000 source first middle final pages"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -29163,7 +29163,7 @@
             "source-deep@1000000",
             "source-wide@1000000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -29536,7 +29536,7 @@
           "scenarios": [
             "n=1000003 allocated sources first middle final pages"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -29733,7 +29733,7 @@
             "provider removal restores n=12000 legacy admission",
             "two lazy logical-million providers, active child only"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -29918,7 +29918,7 @@
             "dimming@1000",
             "n=1000000 source node and edge reveal"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -30311,7 +30311,7 @@
             "n=1000000 first middle final loop",
             "n=1000000 ranged first middle final"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -30498,7 +30498,7 @@
           "scenarios": [
             "render@10000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -30777,7 +30777,7 @@
             "prepared-series@1000000:mount-reveal",
             "two append hidden table updates"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -31247,7 +31247,7 @@
             "focus@512",
             "search@512"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -31534,7 +31534,7 @@
             "n=1000000 non-comparable source replacement",
             "tile-source@1000000:three-cameras-overlay-diff"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -32349,7 +32349,7 @@
             "n=10000 plain prefix append1000",
             "n=8193 code admission"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -32589,7 +32589,7 @@
           "scenarios": [
             "n=10000 plain prefix append1000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -33400,7 +33400,7 @@
             "closed@1000",
             "search@1000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -33594,7 +33594,7 @@
           "scenarios": [
             "1000 items second typeahead query"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -34361,7 +34361,7 @@
           "scenarios": [
             "1000 items second typeahead query"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -35375,7 +35375,7 @@
             "n=1000000 source reveal bounded diagram",
             "relayout@1000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -35564,7 +35564,7 @@
             "closed@1000",
             "focus@1000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -35802,7 +35802,7 @@
           "scenarios": [
             "n=1000 nested catalog admission and notice"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -37204,7 +37204,7 @@
             "n=1000000 source first middle final pages",
             "presentation@1000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -38007,7 +38007,7 @@
           "scenarios": [
             "n=1100 selected label observers"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -40129,7 +40129,7 @@
           "scenarios": [
             "render@10000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -40411,7 +40411,7 @@
           "scenarios": [
             "render@10000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -42055,7 +42055,7 @@
             "n=1000 modelCatalog nested admission and notice",
             "n=1000 voiceCatalog nested admission and notice"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -42239,7 +42239,7 @@
             "n=10000 last page edit",
             "n=1000000 logical attachment positions"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -43138,7 +43138,7 @@
           "scenarios": [
             "render@10000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -44183,7 +44183,7 @@
             "n=12000 selected facet",
             "n=600 presentation refresh"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -44733,7 +44733,7 @@
           "scenarios": [
             "n=12000 wrapper admission"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -45074,7 +45074,7 @@
           "scenarios": [
             "1000 label nodes boundary-only update"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -45300,7 +45300,7 @@
             "10000 items internal move",
             "2 items structural move reconciliation"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -46400,7 +46400,7 @@
             "n=1000 paged comparison",
             "n=2 presentation update"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -46577,7 +46577,7 @@
             "n=1000000 source first middle final pages",
             "n=10001 input and selection"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -47355,7 +47355,7 @@
           "scenarios": [
             "render@10000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -48000,7 +48000,7 @@
             "n=1000 open default cap",
             "n=1000 repeated type-ahead"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -48632,7 +48632,7 @@
             "lazy million logical positions",
             "one million allocated indexed positions"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -49994,7 +49994,7 @@
             "million generated ranged spans",
             "n=10001 active change"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -50195,7 +50195,7 @@
             "n=1000000 endpoint extrema projection",
             "prepared-series@1000000:mount-resize"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -50772,7 +50772,7 @@
             "source1000000 row=500000 column=2",
             "source1000000 row=999999 column=999"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -50961,7 +50961,7 @@
           "scenarios": [
             "n=10000 frames admission"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -51749,7 +51749,7 @@
             "n=10000 plain prefix append1000",
             "n=120000 incremental autodetection"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -51939,7 +51939,7 @@
             "n=10000 plain prefix append1000",
             "n=120000 incremental autodetection"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -53829,7 +53829,7 @@
             "n=1000000 page=25001",
             "n=1000000 page=50000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -54323,7 +54323,7 @@
             "million generated indexed tasks",
             "million generated ranged tasks"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -54518,7 +54518,7 @@
             "plain-line@20000",
             "retention@250000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -54730,7 +54730,7 @@
             "one million logical provider tests",
             "staged legacy 2501 tests"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -55285,7 +55285,7 @@
             "n=10000 structural groups render-only refresh",
             "n=1000000 source first middle final pages"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -55938,7 +55938,7 @@
           "scenarios": [
             "closed@1000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -56107,7 +56107,7 @@
             "10000 time items one invalidation",
             "2 time items resize extent"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -57281,7 +57281,7 @@
           "scenarios": [
             "n=1000 capped remove"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -58780,7 +58780,7 @@
             "n=1000 append one call",
             "n=10001 twenty approval checks"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -59386,7 +59386,7 @@
             "million generated indexed spans",
             "million generated ranged spans"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -59575,7 +59575,7 @@
           "scenarios": [
             "rotating-window@1000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -59756,7 +59756,7 @@
             "500 collapsed branches focus patch",
             "500 declarative items ArrowDown"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -60021,7 +60021,7 @@
           "scenarios": [
             "500 items selection update"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -60442,7 +60442,7 @@
             "admitted-resolution@1000",
             "closed@1000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -61005,7 +61005,7 @@
           "scenarios": [
             "n=12000 inactive seed render"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -61217,7 +61217,7 @@
             "n=5001 active key lookup",
             "source-auto-demand@1000000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -61599,7 +61599,7 @@
             "closed@1000",
             "focus@1000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -62214,7 +62214,7 @@
             "10000 words pointer move",
             "prepared million unique weighted words"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",
@@ -62443,7 +62443,7 @@
             "source-deep@1000000",
             "source-wide@1000000"
           ],
-          "measuredAt": "2026-10-18T09:18:08.025Z",
+          "measuredAt": "2026-11-12T03:40:52.988Z",
           "evidence": [
             {
               "file": "scripts/fixtures/scale-budgets.json",

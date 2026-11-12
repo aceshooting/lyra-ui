@@ -7,6 +7,57 @@ import { assertEpubArchiveWithinLimits } from './epub-resource-guard.js';
 
 
 describe('EPUB resource guard', () => {
+  for (const [packageName, href, contentName] of [
+    ['book.dat', '/Text/chapter.dat', 'Text/chapter.dat'],
+    ['OPS/book.dat', '../../Text/chapter.dat', 'Text/chapter.dat'],
+    ['OPS/book%ZZ.dat', 'Text/ch%ZZ.dat', 'OPS/Text/ch%ZZ.dat'],
+    ['OPS/book.dat', 'Text/caf%C3%A9.dat?edition=2#start', 'OPS/Text/café.dat'],
+  ]) {
+    it(`counts manifest content resolved from ${href}`, async () => {
+      const build = async (paragraphs: number) => {
+        const zip = new JSZip();
+        zip.file('META-INF/container.xml', `<container><rootfiles><rootfile full-path="${packageName}"/></rootfiles></container>`);
+        zip.file(packageName!, `<package><manifest><item href="${href}" media-type="application/xhtml+xml"/></manifest></package>`);
+        zip.file(contentName!, `<html><body>${'<p/>'.repeat(paragraphs)}</body></html>`);
+        return zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
+      };
+      await assertEpubArchiveWithinLimits(await build(5), 20, 100_000, { maxXmlNodes: 20 });
+      await expectResourceLimit(async () => assertEpubArchiveWithinLimits(await build(40), 20, 100_000, { maxXmlNodes: 20 }));
+    });
+  }
+
+  it('leaves malformed package metadata to the parser while still bounding known XML content', async () => {
+    for (const [container, packageXml] of [
+      ['<container>', '<package/>'],
+      ['<container><rootfile/></container>', '<package/>'],
+      ['<container><rootfile full-path="book.dat"/></container>', '<package>'],
+      ['<container><rootfile full-path="book.dat"/></container>', '<package><item/><item media-type="application/xhtml+xml"/></package>'],
+    ]) {
+      const zip = new JSZip();
+      zip.file('META-INF/container.xml', container!);
+      zip.file('book.dat', packageXml!);
+      zip.file('chapter.xhtml', '<html><body><p/></body></html>');
+      await assertEpubArchiveWithinLimits(await zip.generateAsync({ type: 'arraybuffer' }), 10, 10_000, { maxXmlNodes: 20 });
+      zip.file('chapter.xhtml', `<html><body>${'<p/>'.repeat(30)}</body></html>`);
+      await expectResourceLimit(async () => assertEpubArchiveWithinLimits(await zip.generateAsync({ type: 'arraybuffer' }),
+        10, 10_000, { maxXmlNodes: 20 }));
+    }
+  });
+
+  for (const entry of ['META-INF/container.xml', 'book.dat']) {
+    it(`enforces the metadata byte boundary for ${entry} independently of the archive expansion ceiling`, async () => {
+      const limit = 8 * 1024 * 1024;
+      const zip = new JSZip();
+      if (entry === 'book.dat') zip.file('META-INF/container.xml', '<container><rootfile full-path="book.dat"/></container>');
+      const wrapper = '<metadata></metadata>';
+      const metadata = `<metadata>${'x'.repeat(limit - wrapper.length)}</metadata>`;
+      zip.file(entry, metadata);
+      await assertEpubArchiveWithinLimits(await zip.generateAsync({ type: 'arraybuffer' }), 10, limit * 2);
+      zip.file(entry, metadata + ' ');
+      await expectResourceLimit(async () => assertEpubArchiveWithinLimits(await zip.generateAsync({ type: 'arraybuffer' }), 10, limit * 2));
+    });
+  }
+
   it('accepts an archive within both ceilings', async () => {
     await assertEpubArchiveWithinLimits(zipWithDeclaredSizes([10, 20]), 2, 30);
   });

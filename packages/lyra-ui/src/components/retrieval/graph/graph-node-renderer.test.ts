@@ -19,6 +19,93 @@ describe('graph node renderer admission', () => {
     }, 2);
     expect(result![0]!.positions[3]).to.equal(0.5);
   });
+  it('owns optional RGBA before another callback mutates the application color', async () => {
+    const color = [0, 0.25, 0.75, 1];
+    const result = await admit((row: { index: number }) => {
+      if (row.index) { color.fill(0.5); return null; }
+      return { ...mesh(), color };
+    }, 2);
+    expect(result![0]!.color).to.deep.equal([0, 0.25, 0.75, 1]);
+    expect(Object.isFrozen(result) && Object.isFrozen(result![0]) && Object.isFrozen(result![0]!.color)).to.equal(true);
+    expect(result![1]).to.equal(null);
+  });
+  it('rejects nonfinite and out-of-range RGBA channels with the failing node identity', async () => {
+    for (let channel = 0; channel < 4; channel++) {
+      for (const value of [NaN, Infinity, -0.001, 1.001, '1']) {
+        const color: unknown[] = [0, 0.25, 0.75, 1]; color[channel] = value;
+        try { await admit(() => ({ ...mesh(), color })); expect.fail('accepted invalid color'); }
+        catch (error) {
+          expect(error).to.be.instanceOf(GraphNodeRendererError);
+          expect((error as GraphNodeRendererError).reason).to.equal('invalid');
+          expect((error as GraphNodeRendererError).nodeId).to.equal('0');
+        }
+      }
+    }
+  });
+  it('contains exceptions from mesh reflection and still admits a subsequent valid batch', async () => {
+    for (const traps of [
+      { getPrototypeOf() { throw new Error('private metadata'); } },
+      { ownKeys() { throw new Error('private metadata'); } },
+      { getOwnPropertyDescriptor() { throw new Error('private metadata'); } },
+    ]) {
+      try { await admit(() => new Proxy(mesh(), traps)); expect.fail('accepted inaccessible mesh'); }
+      catch (error) {
+        expect(error).to.be.instanceOf(GraphNodeRendererError);
+        expect((error as GraphNodeRendererError).reason).to.equal('invalid');
+        expect((error as Error).message).not.to.include('private metadata');
+      }
+    }
+    expect((await admit(() => mesh()))?.length).to.equal(1);
+  });
+  it('refuses invalid row counts before consulting context or renderer callbacks', async () => {
+    let contexts = 0, renders = 0;
+    for (const count of [-1, 0.5, NaN, Infinity, 200_001]) {
+      try {
+        await admitGraphNodeRenderer(() => { renders++; return mesh(); }, count,
+          index => { contexts++; return context(index); }, () => true, async () => {});
+        expect.fail('accepted invalid row count');
+      } catch (error) { expect((error as GraphNodeRendererError).reason).to.equal('invalid'); }
+    }
+    expect([contexts, renders]).to.deep.equal([0, 0]);
+    expect(await admit(() => { renders++; return mesh(); }, 0)).to.equal(undefined);
+    expect(renders).to.equal(0);
+  });
+  it('rejects non-unit and nonfinite normals even when triangle winding is valid', async () => {
+    for (const normal of [[0, 0, 0], [0, 0, 2], [NaN, 0, 1], [0, Infinity, 1]]) {
+      try { await admit(() => ({ ...mesh(), normals: new Float32Array(normal) })); expect.fail('accepted invalid normal'); }
+      catch (error) { expect((error as GraphNodeRendererError).reason).to.equal('invalid'); }
+    }
+  });
+  it('refuses buffers detached during a scheduled copy without publishing partial rows', async () => {
+    const positions = new Float32Array(64 * 9), normals = new Float32Array(64 * 3);
+    for (let face = 0; face < 64; face++) {
+      positions.set(mesh().positions, face * 9); normals.set(mesh().normals, face * 3);
+    }
+    let calls = 0, yields = 0;
+    try {
+      await admitGraphNodeRenderer(() => { calls++; return { positions, normals }; }, 10, context, () => true, async () => {
+        yields++;
+        structuredClone(positions.buffer, { transfer: [positions.buffer] });
+      });
+      expect.fail('published a detached candidate');
+    } catch (error) {
+      expect(error).to.be.instanceOf(GraphNodeRendererError);
+      expect((error as GraphNodeRendererError).reason).to.equal('invalid');
+      expect((error as GraphNodeRendererError).nodeId).to.equal('5');
+    }
+    expect([calls, yields, positions.length]).to.deep.equal([6, 1, 0]);
+    expect((await admit(() => mesh()))?.length).to.equal(1);
+  });
+  it('stops immediately when the scheduler synchronously aborts its own slice', async () => {
+    const controller = new AbortController(); let calls = 0;
+    try {
+      await admitGraphNodeRenderer(() => { calls++; return null; }, 129, context, () => true, async () => {
+        controller.abort();
+      }, controller.signal);
+      expect.fail('admitted an aborted slice');
+    } catch (error) { expect((error as Error).name).to.equal('AbortError'); }
+    expect(calls).to.equal(128);
+  });
   it('rejects callback failures and malformed descriptors without exposing exceptions', async () => {
     for (const [renderer, reason] of [[() => { throw new Error('secret'); }, 'callback'], [() => Promise.resolve(mesh()), 'invalid'], [() => Object.defineProperty({}, 'positions', { get() { throw new Error('secret'); } }), 'invalid'], [42, 'invalid']] as const) {
       try { await admit(renderer); expect.fail('accepted invalid renderer'); } catch (error) {
