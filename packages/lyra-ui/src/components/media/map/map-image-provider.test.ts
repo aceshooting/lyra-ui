@@ -528,3 +528,78 @@ for (const pendingStage of ['provider', 'preparation'] as const) {
     } finally { provider.dispose(); }
   });
 }
+
+for (const retirement of ['reset', 'dispose'] as const) {
+  it(`releases prepared and late pixels when preparation abort reenters ${retirement}`, async () => {
+    const h = await harness();
+    const map = new ProviderMap();
+    const provider = new MapImageProvider();
+    let aborts = 0, requests = 0, disposals = 0;
+    let release!: () => void, entered!: () => void;
+    const preparing = new Promise<void>(resolve => { entered = resolve; });
+    const pending = new Promise<void>(resolve => { release = resolve; });
+    const prepare: typeof prepareMapImages = async (rows, options) => {
+      const id = (rows as readonly LyraMapImage[])[0]!.id;
+      if (id === 'pending') {
+        options.signal!.addEventListener('abort', () => {
+          aborts++;
+          if (retirement === 'reset') provider.reset();
+          else provider.dispose();
+        }, { once: true });
+        entered();
+        await pending;
+      }
+      return { ok: true, images: [{ id, width: 1, height: 1, pixelRatio: 1,
+        encodedBytes: 1, decodedPixels: 1, image: new ImageData(1, 1), dispose() { disposals++; },
+      }], dispose() {} };
+    };
+    provider.configure(asMap(map), (id: string) => { requests++; return descriptor(id); }, { ...h.context, prepare });
+    try {
+      const resolve = map.resolver!;
+      await resolve('ready');
+      const work = resolve('pending');
+      await preparing;
+      provider.reset();
+      expect(aborts).to.equal(1);
+      expect(disposals).to.equal(1);
+      expect(provider.ids.size).to.equal(0);
+      release();
+      await work;
+      expect(disposals).to.equal(2);
+      await resolve('obsolete');
+      expect(requests).to.equal(2);
+      expect(map.images.has('pending')).to.equal(false);
+      if (retirement === 'reset') {
+        expect(map.images.size).to.equal(0);
+        expect(map.resolver === null).to.equal(true);
+      }
+      const successor = new ProviderMap();
+      provider.configure(asMap(successor), (id: string) => descriptor(id), h.context);
+      await successor.resolver!('fresh');
+      expect([...successor.images.keys()]).to.deep.equal(['fresh']);
+    } finally { release(); provider.dispose(); }
+  });
+}
+
+it('disposes each prepared image once when pixel cleanup reenters provider disposal', async () => {
+  const h = await harness();
+  const map = new ProviderMap();
+  const provider = new MapImageProvider();
+  const released: string[] = [];
+  const prepare: typeof prepareMapImages = async rows => {
+    const id = (rows as readonly LyraMapImage[])[0]!.id;
+    return { ok: true, images: [{ id, width: 1, height: 1, pixelRatio: 1,
+      encodedBytes: 1, decodedPixels: 1, image: new ImageData(1, 1),
+      dispose() { released.push(id); provider.dispose(); },
+    }], dispose() {} };
+  };
+  provider.configure(asMap(map), (id: string) => descriptor(id), { ...h.context, prepare });
+  await map.resolver!('first');
+  await map.resolver!('second');
+  provider.dispose();
+  expect(released).to.deep.equal(['first', 'second']);
+  expect(provider.ids.size).to.equal(0);
+  expect(map.resolver === null).to.equal(true);
+  provider.dispose();
+  expect(released).to.deep.equal(['first', 'second']);
+});

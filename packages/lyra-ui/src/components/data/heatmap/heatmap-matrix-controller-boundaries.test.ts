@@ -166,3 +166,61 @@ it('releases a pending window when the source detaches', async () => {
     expect(test.control.cells.length).to.equal(0); expect(test.control.error).to.equal(false);
   } finally { test.dispose(); }
 });
+
+for (const channel of ['tiles', 'focus', 'cells'] as const) {
+  for (const retirement of ['replace', 'detach'] as const) {
+    it(`preserves ${retirement} from a ${channel} abort callback while another matrix source is being configured`, async () => {
+      const test = setup();
+      const previous = source(), attempted = source(4, 5), replacement = source(3, 4);
+      const query = previous.query;
+      const pendingCells: ((value: HeatmapSourceCell) => void)[] = [];
+      let aborts = 0, attemptedQueries = 0;
+      const retire = (): void => {
+        if (aborts++) return;
+        if (retirement === 'replace') test.control.configure(replacement, null, false, 10);
+        else test.control.detach();
+      };
+      previous.query = request => {
+        if (channel === 'tiles') request.signal.addEventListener('abort', retire, { once: true });
+        return query(request);
+      };
+      previous.getCell = (_row, _col, request) => {
+        if (channel !== 'tiles') request.signal.addEventListener('abort', retire, { once: true });
+        return new Promise(resolve => pendingCells.push(resolve));
+      };
+      attempted.query = () => { attemptedQueries++; return []; };
+      try {
+        test.control.configure(previous, null, false, 10);
+        await ready(test.control);
+        const focused = channel === 'focus' ? test.control.exact(0, 0) : undefined;
+        const window = channel === 'cells' ? test.control.ensureWindow(0, 0) : undefined;
+        test.control.configure(attempted, null, false, 10);
+        expect(aborts).to.be.greaterThan(0);
+        expect(attemptedQueries).to.equal(0);
+        if (focused) expect(await focused).to.equal(null);
+        if (window) expect(await window).to.equal(false);
+        pendingCells.forEach(resolve => resolve({ value: 1, rowLabel: 'Obsolete', columnLabel: 'Old' }));
+        await aTimeout(0);
+        expect(test.control.error).to.equal(false);
+        expect(test.control.cells.length).to.equal(0);
+        expect(test.control.cursor).to.equal(null);
+        if (retirement === 'replace') {
+          await ready(test.control);
+          expect(test.control.source === replacement).to.equal(true);
+          expect([test.control.rows, test.control.cols]).to.deep.equal([3, 4]);
+          expect(test.control.tiles[0]!.count).to.equal(12);
+        } else {
+          expect(test.control.source).to.equal(null);
+          expect(test.control.loading).to.equal(false);
+          expect(test.control.tiles.length).to.equal(0);
+          test.control.configure(replacement, null, false, 10);
+          await ready(test.control);
+          expect(test.control.source === replacement).to.equal(true);
+        }
+      } finally {
+        pendingCells.forEach(resolve => resolve({ value: 1, rowLabel: '', columnLabel: '' }));
+        test.dispose();
+      }
+    });
+  }
+}
