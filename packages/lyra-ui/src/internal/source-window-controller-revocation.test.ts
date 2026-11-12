@@ -557,7 +557,7 @@ describe('SourceWindowController replacement page ownership', () => {
   });
 });
 
-for (const boundary of ['count', 'kind'] as const) {
+for (const boundary of ['count', 'kind', 'read'] as const) {
   it(`stops inspecting a binding after its ${boundary} getter replaces it`, () => {
     const test = setup(); let retired = false, lateReads = 0;
     const replace = () => {
@@ -571,7 +571,11 @@ for (const boundary of ['count', 'kind'] as const) {
         if (boundary === 'kind') replace();
         return (index: number) => ({ key: `old-${index}` });
       },
-      get read() { if (retired) lateReads++; return undefined; },
+      get read() {
+        if (retired) lateReads++;
+        if (boundary === 'read') replace();
+        return undefined;
+      },
     };
     try {
       test.bind(view);
@@ -582,3 +586,46 @@ for (const boundary of ['count', 'kind'] as const) {
     } finally { test.cleanup(); }
   });
 }
+
+it('preserves a newer source bound by an aborted range provider', async () => {
+  const test = setup();
+  const reply = deferred<Row[]>();
+  let aborts = 0;
+  test.bind({ count: 1, read: request => {
+    request.signal.addEventListener('abort', () => {
+      aborts++;
+      test.bind({ count: 2, itemAt: index => ({ key: `latest-${index}` }) }, 3);
+    }, { once: true });
+    return reply.promise;
+  } });
+  try {
+    const pending = test.control.ensure(0);
+    await tick();
+    test.bind({ count: 1, itemAt: () => ({ key: 'superseded' }) }, 2);
+    expect(aborts).to.equal(1);
+    expect(await pending).to.equal(false);
+    expect(test.control.source.count).to.equal(2);
+    const slot = test.control.source.itemAt(1);
+    expect(slot.state === 'ready' ? slot.value.key : '').to.equal('latest-1');
+    reply.resolve([{ key: 'late-response' }]);
+    await tick();
+    expect(test.control.source.indexOfKey!('late-response')).to.equal(-1);
+    expect(test.control.source.indexOfKey!('superseded')).to.equal(-1);
+  } finally { reply.resolve([]); test.cleanup(); }
+});
+
+it('rejects duplicate indexed identities without replacing the first admitted row', async () => {
+  const test = setup();
+  let duplicate = true;
+  test.bind({ count: 2, itemAt: index => ({ key: index === 0 || duplicate ? 'first' : 'second' }) });
+  try {
+    expect(test.control.source.itemAt(0).state).to.equal('ready');
+    const collision = test.control.source.itemAt(1);
+    expect(collision.state).to.equal('error');
+    expect(test.control.source.indexOfKey!('first')).to.equal(0);
+    duplicate = false;
+    expect(await test.control.ensure(1)).to.equal(true);
+    expect(test.control.source.indexOfKey!('second')).to.equal(1);
+    expect(test.control.source.keyAt!(0)).to.equal('first');
+  } finally { test.cleanup(); }
+});
