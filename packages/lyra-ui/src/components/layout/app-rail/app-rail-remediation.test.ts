@@ -1,9 +1,45 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import './app-rail.js';
 import '../app-rail-group/app-rail-group.js';
 import type { LyraAppRail } from './app-rail.js';
+
+for (const continuation of ['mobile', 'full', 'disconnected'] as const) {
+  it(`restores a rail opened while detached and honors a ${continuation} continuation before the queued reveal`, async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div><lr-app-rail force-mode="full" style="--lr-transition-base:0ms">
+      <button id="destination">Destination</button>
+    </lr-app-rail></div>`);
+    const rail = wrapper.querySelector<LyraAppRail>('lr-app-rail')!;
+    const overflow = document.documentElement.style.overflow;
+    rail.remove(); rail.forceMode = 'auto'; rail.mobileBreakpoint = '99999px'; rail.open = true;
+    wrapper.append(rail);
+    if (continuation === 'full') rail.forceMode = 'full';
+    else if (continuation === 'disconnected') rail.remove();
+    await rail.updateComplete; await Promise.resolve();
+    if (continuation === 'mobile') {
+      expect(rail.mode).to.equal('mobile'); expect(rail.open).to.equal(true);
+      expect(document.documentElement.style.overflow).to.equal('hidden');
+      const panel = rail.shadowRoot!.querySelector<HTMLElement>('[part="panel"]')!;
+      expect(getComputedStyle(panel).visibility).to.equal('visible');
+      await focusByKeyboard(rail.querySelector<HTMLButtonElement>('#destination')!, rail);
+      await sendKeys({ press: 'Escape' });
+      await waitUntil(() => !rail.open, 'reconnected overlay closes on Escape');
+      expect(document.documentElement.style.overflow).to.equal(overflow);
+    } else {
+      expect(document.documentElement.style.overflow).to.equal(overflow);
+      if (continuation === 'full') {
+        expect(rail.mode).to.equal('full');
+        expect(rail.shadowRoot!.querySelectorAll('[part="panel"]').length).to.equal(0);
+      } else {
+        expect(rail.isConnected).to.equal(false);
+        rail.open = false; wrapper.append(rail); await rail.updateComplete;
+        expect(rail.open).to.equal(false); expect(document.documentElement.style.overflow).to.equal(overflow);
+      }
+    }
+  });
+}
 
 describe('resize request continuation', () => {
   for (const revoke of ['resizable', 'mode', 'disconnect'] as const) {

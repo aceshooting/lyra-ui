@@ -1,6 +1,7 @@
 import { expect, fixture, fixtureCleanup, html, waitUntil } from '@open-wc/testing';
 import './map.js';
 import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from './map.js';
+import { invalidateLyraTheme } from '../../../internal/theme-watcher.js';
 import { MapBasemapOrder, type MapBasemapOrderDraft } from './map-basemap-order.js';
 import type { MapLayerOrderGroup } from './map-layer-order.js';
 
@@ -586,4 +587,61 @@ describe('lr-map declarative owned resources', () => {
     await waitUntil(() => element.shadowRoot?.textContent?.includes('Unable to restore map resources') === true);
     expect(element.shadowRoot?.textContent?.includes('javascript:')).to.equal(false);
   });
+  it('resolves nested legacy color-function stops and refreshes them without mutating caller data', async () => {
+    const { element, peer, wrapper } = await mount();
+    peer.addLayer({ id: 'roads' }); peer.paint.set('roads:line-color', 'black');
+    wrapper.style.setProperty('--road-near', 'rgb(10, 20, 30)');
+    wrapper.style.setProperty('--road-far', 'rgb(40, 50, 60)');
+    await load(element, peer);
+    const value = { base: 1, stops: [[0, 'var(--road-near)'], [12, 'var(--road-far)']] };
+    element.styleOverrides = [{ layerId: 'roads', paint: { 'line-color': value } }];
+    await element.updateComplete; await element.whenStyleReady();
+    await waitUntil(() => typeof peer.paint.get('roads:line-color') === 'object', 'nested paint override is applied');
+    expect(peer.paint.get('roads:line-color')).to.deep.equal({ base: 1, stops: [[0, 'rgb(10, 20, 30)'], [12, 'rgb(40, 50, 60)']] });
+    expect(value.stops).to.deep.equal([[0, 'var(--road-near)'], [12, 'var(--road-far)']]);
+    wrapper.style.setProperty('--road-near', 'rgb(70, 80, 90)');
+    invalidateLyraTheme(element);
+    await waitUntil(() => JSON.stringify(peer.paint.get('roads:line-color')).includes('rgb(70, 80, 90)'), 'nested color token refreshes');
+    expect(peer.paint.get('roads:line-color')).to.deep.equal({ base: 1, stops: [[0, 'rgb(70, 80, 90)'], [12, 'rgb(40, 50, 60)']] });
+    element.styleOverrides = []; await element.updateComplete; await element.whenStyleReady();
+    await waitUntil(() => peer.paint.get('roads:line-color') === 'black', 'released paint restores the baseline');
+    expect(peer.paint.get('roads:line-color')).to.equal('black');
+    expect(peer.removed).to.equal(false);
+  });
+
+  it('keeps literal expression labels opaque while resolving the surrounding paint colors', async () => {
+    const { element, peer } = await mount();
+    peer.addLayer({ id: 'roads' });
+    element.style.setProperty('--road-accent', 'rgb(21, 43, 65)');
+    await load(element, peer);
+    const value = ['case', ['in', ['get', 'name'], ['literal', ['var(--label-text)']]], 'var(--road-accent)', 'blue'];
+    element.styleOverrides = [{ layerId: 'roads', paint: { 'line-color': value } }];
+    await element.updateComplete; await element.whenStyleReady();
+    await waitUntil(() => peer.paint.has('roads:line-color'), 'expression paint override is applied');
+    expect(peer.paint.get('roads:line-color')).to.deep.equal([
+      'case', ['in', ['get', 'name'], ['literal', ['var(--label-text)']]], 'rgb(21, 43, 65)', 'blue',
+    ]);
+    expect(value[2]).to.equal('var(--road-accent)');
+    expect(peer.removed).to.equal(false);
+  });
+
+  it('reports an unresolved nested paint token and rebuilds successfully after the style is corrected', async () => {
+    const { element, peer } = await mount();
+    peer.addLayer({ id: 'roads' }); peer.paint.set('roads:line-color', 'black');
+    await load(element, peer);
+    element.styleOverrides = [{ layerId: 'roads', paint: { 'line-color': { stops: [[0, 'var(--missing-road-color)']] } } }];
+    await element.updateComplete;
+    await waitUntil(() => peer.removed && element.shadowRoot!.querySelector('[part="error"]') !== null, 'invalid paint retires the native map and reports its failure');
+    expect(peer.paint.get('roads:line-color')).to.equal('black');
+    element.style.setProperty('--missing-road-color', 'rgb(12, 34, 56)');
+    element.mapStyle = { ...LYRA_MAP_EMPTY_STYLE, name: 'Corrected paint' };
+    await waitUntil(() => element.map !== undefined && element.map !== (peer as unknown), 'corrected style creates a replacement map');
+    const replacement = element.map as unknown as OwnedMap;
+    replacement.addLayer({ id: 'roads' });
+    await load(element, replacement);
+    expect(replacement.paint.get('roads:line-color')).to.deep.equal({ stops: [[0, 'rgb(12, 34, 56)']] });
+    await waitUntil(() => element.shadowRoot!.querySelector('[part="error"]') === null, 'corrected style clears the failure');
+    expect(replacement.removed).to.equal(false);
+  });
+
 });
