@@ -320,9 +320,9 @@ const bundleEntries = {
   },
   map: {
     fixture: 'optional',
-    // Token-provider cache refresh and layer-order import recognition measure 2,526,428 raw
-    // bytes across 52 files, up from 2,526,291; the next 64-byte boundary leaves 36 bytes.
-    maxRawBytes: 2_526_464,
+    // Retaining click routes during overlapping GeoJSON preparation measures 2,527,432 raw
+    // bytes across the same 52 files; the next 64-byte boundary leaves 56 bytes.
+    maxRawBytes: 2_527_488,
   },
   graph: {
     fixture: 'optional',
