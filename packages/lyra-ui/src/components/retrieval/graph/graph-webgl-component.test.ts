@@ -320,6 +320,131 @@ describe('graph optional engine component integration', () => {
     });
   }
 
+  for (const failure of ['throw', 'missing x', 'missing y', 'missing z', 'string y', 'nonfinite x', 'nonfinite y', 'nonfinite z', 'accessor'] as const) {
+    it(`omits a ${failure} peer world position and recovers without retiring the engine`, async () => {
+      const value = setup(); value.graph.engine = 'webgl'; value.graph.view = '3d';
+      await fixture(value.graph); const engine = await mounted(value), original = engine.engine.positionOf!;
+      let reads = 0;
+      engine.engine.positionOf = () => {
+        if (failure === 'throw') throw new Error('World position unavailable');
+        const point: Record<string, unknown> = { x: 10, y: 20, z: 30 };
+        if (failure.startsWith('missing ')) delete point[failure.slice(8)];
+        else if (failure === 'string y') point['y'] = '20';
+        else if (failure.startsWith('nonfinite ')) point[failure.slice(10)] = Infinity;
+        else Object.defineProperty(point, 'x', { get() { reads++; return 10; } });
+        return point as unknown as { x: number; y: number; z: number };
+      };
+      try {
+        expect(value.graph.getNodePosition3d('local-a')).to.equal(undefined);
+        expect(value.graph.getNodePosition('local-a')).to.equal(undefined);
+        expect(reads).to.equal(0);
+      } finally { engine.engine.positionOf = original; }
+      const point = value.graph.getNodePosition3d('local-a');
+      expect(point).to.deep.equal({ x: 10, y: 20, z: 30 }); expect(Object.isFrozen(point)).to.equal(true);
+      expect(engine.disposals()).to.equal(0);
+    });
+  }
+
+  it('copies only world coordinates without evaluating unrelated renderer metadata', async () => {
+    const value = setup(); value.graph.engine = 'webgl'; value.graph.view = '3d';
+    await fixture(value.graph); const engine = await mounted(value), original = engine.engine.positionOf!;
+    let reads = 0;
+    const point = Object.defineProperty({ x: 41, y: 42, z: 43 }, 'metadata', {
+      enumerable: true, get() { reads++; throw new Error('Private renderer metadata'); },
+    });
+    engine.engine.positionOf = () => point;
+    try {
+      const returned = value.graph.getNodePosition3d('local-a');
+      expect(returned).to.deep.equal({ x: 41, y: 42, z: 43 }); expect(reads).to.equal(0);
+      expect(returned === point).to.equal(false); expect(Object.isFrozen(returned)).to.equal(true);
+      point.x = 99; expect(returned?.x).to.equal(41);
+    } finally { engine.engine.positionOf = original; }
+  });
+
+  for (const replacement of ['2d view', 'local data', 'disconnect'] as const) {
+    it(`rejects a world position when its peer query replaces ${replacement}`, async () => {
+      const value = setup(); value.graph.engine = 'webgl'; value.graph.view = '3d';
+      await fixture(value.graph); const engine = await mounted(value), original = engine.engine.positionOf!;
+      engine.engine.positionOf = row => {
+        if (replacement === '2d view') value.graph.view = '2d';
+        else if (replacement === 'local data') value.graph.nodes = [{ id: 'replacement', position: { x: 3, y: 4, z: 5 } }];
+        else value.graph.remove();
+        return original.call(engine.engine, row);
+      };
+      try { expect(value.graph.getNodePosition3d('local-a')).to.equal(undefined); }
+      finally { engine.engine.positionOf = original; }
+      await settle(value.graph);
+      if (replacement !== 'disconnect') expect(value.graph.getNodePosition3d('local-a')).to.equal(undefined);
+    });
+  }
+
+  for (const data of ['local', 'columns'] as const) {
+    for (const response of ['null', 'missing method'] as const) {
+      it(`keeps the authored ${data} world position when the optional query has a ${response} response`, async () => {
+        const value = setup(); value.graph.engine = 'webgl'; value.graph.view = '3d';
+        if (data === 'columns') value.graph.graphColumns = { ids: ['local-a'], x: new Float32Array([10]),
+          y: new Float32Array([20]), z: new Float32Array([30]), source: new Uint32Array(), target: new Uint32Array() };
+        await fixture(value.graph); const engine = await mounted(value), original = engine.engine.positionOf!;
+        engine.engine.positionOf = response === 'null' ? () => null : undefined;
+        try {
+          const point = value.graph.getNodePosition3d('local-a');
+          expect(point).to.deep.equal({ x: 10, y: 20, z: 30 }); expect(Object.isFrozen(point)).to.equal(true);
+          expect(value.graph.getNodePosition3d('unknown')).to.equal(undefined);
+        } finally { engine.engine.positionOf = original; }
+      });
+    }
+  }
+
+  for (const axis of ['x', 'y', 'z'] as const) {
+    it(`drops a world position when its ${axis} descriptor changes the current node filter`, async () => {
+      const value = setup(); value.graph.engine = 'webgl'; value.graph.view = '3d';
+      value.graph.nodes = value.graph.nodes.map(node => ({ ...node, type: 'filtered' }));
+      await fixture(value.graph); const engine = await mounted(value), original = engine.engine.positionOf!;
+      const reads: PropertyKey[] = [];
+      engine.engine.positionOf = row => new Proxy(original.call(engine.engine, row)!, {
+        getOwnPropertyDescriptor(target, key) {
+          reads.push(key); if (key === axis) value.graph.hiddenTypes = ['filtered'];
+          return Reflect.getOwnPropertyDescriptor(target, key);
+        },
+      });
+      try {
+        expect(value.graph.getNodePosition3d('local-a')).to.equal(undefined);
+        expect(reads).to.deep.equal(['x', 'y', 'z'].slice(0, ['x', 'y', 'z'].indexOf(axis) + 1));
+      } finally { engine.engine.positionOf = original; }
+      await settle(value.graph); expect(value.graph.getNodePosition3d('local-a')).to.equal(undefined);
+    });
+  }
+
+  for (const failure of ['throw', 'nonfinite', 'removed node'] as const) {
+    it(`declines camera focus on a ${failure} world result without publishing a camera change`, async () => {
+      const value = setup(); value.graph.engine = 'webgl'; value.graph.view = '3d';
+      await fixture(value.graph); const engine = await mounted(value), original = engine.engine.positionOf!;
+      const cameraCount = engine.cameras.length; let changes = 0;
+      value.graph.addEventListener('lr-camera-change', () => changes++);
+      engine.engine.positionOf = () => {
+        if (failure === 'throw') throw new Error('Position unavailable during focus');
+        if (failure === 'nonfinite') return { x: 10, y: 20, z: NaN };
+        value.graph.nodes = []; return { x: 10, y: 20, z: 30 };
+      };
+      try {
+        expect(await value.graph.focusNode('local-a')).to.equal(false);
+        expect(changes).to.equal(0); expect(engine.cameras.length).to.equal(cameraCount);
+      } finally { engine.engine.positionOf = original; }
+    });
+  }
+
+  it('reads authored world positions immediately in list view without querying the retiring renderer', async () => {
+    const value = setup(); value.graph.engine = 'webgl'; value.graph.view = '3d';
+    await fixture(value.graph); const engine = await mounted(value), original = engine.engine.positionOf!;
+    let reads = 0; engine.engine.positionOf = () => { reads++; return { x: 90, y: 91, z: 92 }; };
+    value.graph.view = 'list';
+    try {
+      expect(value.graph.getNodePosition3d('local-a')).to.deep.equal({ x: 10, y: 20, z: 30 });
+      expect(reads).to.equal(0);
+    } finally { engine.engine.positionOf = original; }
+    await settle(value.graph); expect(listRows(value.graph).length).to.equal(3);
+  });
+
   it('keeps relative toolbar zoom and focused wheel zoom in the component control plane', async () => {
     const value = setup(); value.graph.engine = 'webgl'; value.graph.view = '3d'; await fixture(value.graph); const engine = await mounted(value);
     const changes: LyraGraphCamera[] = []; value.graph.addEventListener('lr-camera-change', (event) => changes.push(event.detail.camera));

@@ -326,9 +326,9 @@ const bundleEntries = {
   },
   graph: {
     fixture: 'optional',
-    // Guarding invalid and retired screen projections measures 460,203 raw bytes across the
-    // same 14 files; the next 64-byte boundary leaves 21 bytes.
-    maxRawBytes: 460_224,
+    // Guarding invalid and retired world coordinates brings the optional graph consumer from
+    // 460,203 to 460,563 raw bytes across the same 14 files; the next 64-byte boundary leaves 45 bytes.
+    maxRawBytes: 460_608,
   },
 };
 

@@ -636,10 +636,34 @@ export class GraphSpatialController {
     return { width: Math.max(1, surface?.clientWidth || this.options.viewport().width), height: Math.max(1, surface?.clientHeight || this.options.viewport().height) };
   }
 
+  private engineQueryCurrent(): () => boolean {
+    const engine = this.engine, surface = this.engineSurface, key = this.columnScene ?? this.world;
+    const columns = this.columns, source = this.source, hidden = this.hiddenTypes, ownerDocument = this.host.ownerDocument;
+    return () => this.host.isConnected && this.host.ownerDocument === ownerDocument && this.host.view === '3d' &&
+      this.host.engine === 'webgl' && this.selection.renderer === 'webgl' && this.engine === engine &&
+      this.engineSurface === surface && this.engineDataKey === key && this.host.hiddenTypes === hidden && !this.options.sourceMode?.() &&
+      (columns ? this.options.columns?.() === columns : !this.options.columns?.() && this.options.model() === source);
+  }
+
   position(id: string): LyraGraphPosition | undefined {
     this.prepare(); const row = this.columnScene?.nodeIndex(id) ?? this.nodeIndexById.get(id);
-    const point = row === undefined || this.engineDataKey !== (this.columnScene ?? this.world) || this.selection.renderer !== 'webgl' ? undefined : this.engine?.positionOf?.(row);
-    if (point) return Object.freeze({ ...point });
+    if (row !== undefined && this.host.view === '3d' && this.engineDataKey === (this.columnScene ?? this.world) && this.selection.renderer === 'webgl') {
+      const current = this.engineQueryCurrent();
+      if (!current()) return undefined;
+      try {
+        const point = this.engine?.positionOf?.(row);
+        if (!current()) return undefined;
+        if (point !== undefined && point !== null) {
+          const position = { x: 0, y: 0, z: 0 };
+          for (const axis of ['x', 'y', 'z'] as const) {
+            const coordinate = getOwnDataDescriptor(point, axis);
+            if (!current() || typeof coordinate !== 'object' || typeof coordinate.value !== 'number' || !Number.isFinite(coordinate.value)) return undefined;
+            position[axis] = coordinate.value;
+          }
+          return Object.freeze(position);
+        }
+      } catch { return undefined; }
+    }
     if (this.columnScene) { const data = this.columnScene.data; if (row === undefined) return undefined; return data.positions ? Object.freeze({ x: data.positions[row * 3]!, y: data.positions[row * 3 + 1]!, z: data.positions[row * 3 + 2]! }) : spatialNodePosition({ id }); }
     return this.worldById.get(id)?.position;
   }
@@ -647,12 +671,7 @@ export class GraphSpatialController {
   screenPosition(id: string): { x: number; y: number } | undefined {
     if (this.host.view !== '3d' || this.selection.renderer === 'list') return undefined;
     if (this.selection.renderer === 'webgl') {
-      const engine = this.engine, surface = this.engineSurface, key = this.columnScene ?? this.world;
-      const columns = this.columns, source = this.source, hidden = this.hiddenTypes, ownerDocument = this.host.ownerDocument;
-      const current = () => this.host.isConnected && this.host.ownerDocument === ownerDocument && this.host.view === '3d' &&
-        this.host.engine === 'webgl' && this.selection.renderer === 'webgl' && this.engine === engine &&
-        this.engineSurface === surface && this.engineDataKey === key && this.host.hiddenTypes === hidden && !this.options.sourceMode?.() &&
-        (columns ? this.options.columns?.() === columns : !this.options.columns?.() && this.options.model() === source);
+      const engine = this.engine, surface = this.engineSurface, current = this.engineQueryCurrent();
       if (!surface || !current()) return undefined;
       const row = this.columnScene?.nodeIndex(id) ?? this.nodeIndexById.get(id);
       if (row === undefined) return undefined;
