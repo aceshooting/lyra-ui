@@ -180,3 +180,29 @@ for (const retirement of ['replacement', 'disconnect', 'new reveal'] as const) {
     expect(selections).to.deep.equal([]);
   });
 }
+
+for (const retirement of ['replacement', 'disconnect'] as const) {
+  it(`does not finish obsolete hierarchy navigation after focus causes ${retirement}`, async () => {
+    const el = await fixture<LyraTree>(html`<lr-tree label="Focus ownership" .treeSource=${provider()}></lr-tree>`);
+    await ready(el);
+    await focusByKeyboard(el.shadowRoot!.querySelector<HTMLElement>('[role="tree"]')!);
+    const parent = el.parentNode!;
+    let retired = false;
+    const retire = (event: Event): void => {
+      if (retired || !event.composedPath().some(node => node instanceof HTMLElement && node.getAttribute('data-source-key') === 'n9')) return;
+      retired = true;
+      if (retirement === 'replacement') el.treeSource = provider();
+      else el.remove();
+    };
+    el.shadowRoot!.addEventListener('focusin', retire);
+    try {
+      const revealed = await el.revealSourceKey('n9');
+      expect(retired).to.equal(true);
+      expect(revealed).to.equal(false);
+    } finally { el.shadowRoot!.removeEventListener('focusin', retire); }
+    if (retirement === 'disconnect') parent.appendChild(el);
+    await ready(el);
+    expect(await el.revealSourceKey('n1')).to.equal(true);
+    expect(deepActiveElementIn(document)?.getAttribute('data-source-key')).to.equal('n1');
+  });
+}
