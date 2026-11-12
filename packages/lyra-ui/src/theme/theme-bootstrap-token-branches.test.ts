@@ -47,6 +47,40 @@ describe('theme pre-paint bootstrap token handling (module functions, called dir
 
   const root = () => document.documentElement;
 
+  for (const [name, value] of [
+    ['blank', '   '],
+    ['oversized', 'x'.repeat(257)],
+    ['CSS-wide', 'inherit'],
+    ['unbalanced parentheses', 'calc(1rem))'],
+    ['unsupported function', 'unknown(1rem)'],
+    ['declaration injection', '1rem;display:none'],
+    ['array', ['1rem']],
+    ['numeric', 12],
+  ] as const) {
+    it(`preserves the authored spacing when a stored ${name} override is invalid`, () => {
+      root().style.setProperty('--lr-theme-space-m', '1.5rem');
+      const style = bootWith({ mode: 'light', overrides: {
+        '--lr-theme-space-m': value,
+        '--lr-theme-font-sans': 'serif',
+      } });
+      expect(style.getPropertyValue('--lr-theme-space-m')).to.equal('1.5rem');
+      expect(style.getPropertyValue('--lr-theme-font-sans')).to.equal('serif');
+      expect(root().getAttribute('data-lr-mode')).to.equal('light');
+    });
+  }
+
+  for (const mode of ['light', 'dark'] as const) {
+    it(`paints the selected ${mode} branch before the style resolver is installed`, () => {
+      root().style.setProperty('--_lr-style-resolver', '0');
+      const style = bootWith({ mode, overrides: {
+        '--lr-theme-color-brand-fill-loud': { light: '#123456', dark: '#abcdef' },
+      } });
+      expect(style.getPropertyValue('--lr-theme-color-brand-fill-loud')).to.equal(mode === 'light' ? '#123456' : '#abcdef');
+      expect(style.getPropertyValue('--_lr-ll-color-brand-fill-loud')).to.equal('#123456');
+      expect(style.getPropertyValue('--_lr-ld-color-brand-fill-loud')).to.equal('#abcdef');
+    });
+  }
+
   it('keeps balanced quoted token values and drops malformed light/dark branches', () => {
     const style = bootWith({ mode: 'dark', overrides: {
       '--lr-theme-font-sans': '"Inter Tight", sans-serif',

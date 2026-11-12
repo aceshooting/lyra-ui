@@ -715,6 +715,80 @@ describe('isAccessibilityVisible', () => {
 });
 
 describe('adversarial accessibility visibility boundaries', () => {
+  async function imageMap(): Promise<{ root: HTMLElement; image: HTMLImageElement; area: HTMLAreaElement }> {
+    const root = await fixture<HTMLElement>(html`
+      <div>
+        <div data-image-parent>
+          <img alt="Mapped image" usemap="#visibility-budget-map"
+            src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" />
+        </div>
+        <map name="visibility-budget-map"><area href="#target" alt="Mapped action" /></map>
+      </div>
+    `);
+    return { root, image: root.querySelector('img')!, area: root.querySelector('area')! };
+  }
+
+  it('requires visibility on the associated image as well as the area', async () => {
+    const { image, area } = await imageMap();
+    expect(isAccessibilityVisible(area)).to.equal(true);
+    image.style.visibility = 'hidden';
+    expect(isAccessibilityVisible(area)).to.equal(false);
+    image.style.visibility = 'visible';
+    expect(isAccessibilityVisible(area)).to.equal(true);
+  });
+
+  for (const attribute of ['aria-hidden', 'inert'] as const) {
+    it(`honors ${attribute} on a separate image ancestor`, async () => {
+      const { image, area } = await imageMap();
+      image.parentElement!.setAttribute(attribute, 'true');
+      expect(isAccessibilityVisible(area)).to.equal(false);
+      image.parentElement!.removeAttribute(attribute);
+      expect(isAccessibilityVisible(area)).to.equal(true);
+    });
+  }
+
+  it('can ignore an image presentation fence without ignoring another authored fence', async () => {
+    const { root, image, area } = await imageMap();
+    const fence = image.parentElement!;
+    fence.setAttribute('aria-hidden', 'true');
+    const options = { ignorePresentation: (candidate: Element) => candidate === fence };
+    expect(isAccessibilityVisible(area)).to.equal(false);
+    expect(isAccessibilityVisible(area, options)).to.equal(true);
+    root.setAttribute('aria-hidden', 'true');
+    expect(isAccessibilityVisible(area, options)).to.equal(false);
+  });
+
+  it('rejects an image-map action while its associated image is inside closed details', async () => {
+    const { root, image, area } = await imageMap();
+    const details = document.createElement('details');
+    const summary = document.createElement('summary');
+    summary.textContent = 'Reveal image';
+    details.append(summary, image);
+    root.prepend(details);
+    expect(isAccessibilityVisible(area)).to.equal(false);
+    details.open = true;
+    expect(isAccessibilityVisible(area)).to.equal(true);
+  });
+
+  it('applies the depth budget independently to the associated image ancestry', async () => {
+    const { image, area } = await imageMap();
+    for (let depth = 0; depth < 12; depth += 1) {
+      const wrapper = document.createElement('div');
+      image.replaceWith(wrapper);
+      wrapper.append(image);
+    }
+    expect(isAccessibilityVisible(area, { maxDepth: 8 })).to.equal(false);
+    expect(isAccessibilityVisible(area, { maxDepth: 32 })).to.equal(true);
+  });
+
+  it('reserves work for the final rendered visibility probe', async () => {
+    const target = await fixture<HTMLElement>(html`<div>Visible</div>`);
+    let ancestors = 0;
+    for (let current: Element | null = target; current; current = current.parentElement) ancestors += 1;
+    expect(isAccessibilityVisible(target, { maxNodes: ancestors })).to.equal(false);
+    expect(isAccessibilityVisible(target, { maxNodes: ancestors + 1 })).to.equal(true);
+  });
+
   it('falls back to authored state when owner-realm computed style throws', () => {
     const el = document.createElement('div');
     const original = window.getComputedStyle;
