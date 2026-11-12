@@ -81,6 +81,7 @@ export class IconOnlyLabelObserver {
   ) {}
 
   arm(): void {
+    if (!this.host.isConnected) return;
     const label = this.label();
     if (!label || label === this.watched) return;
     const view = this.host.ownerDocument.defaultView;

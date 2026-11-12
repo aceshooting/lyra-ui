@@ -5,6 +5,7 @@ import './translations/ar.js';
 import { ROOT_BARREL_TAGS } from './internal/root-registration-allowlist.js';
 import { renderedTemplateWhitespace } from '../test/rendered-whitespace.js';
 import { trackInputModality } from './internal/focus-modality.js';
+import { getActiveNativeModal } from './internal/native-modal-context.js';
 import { expectDevWarning } from '../test/expected-dev-warnings.js';
 import { resolveLyraDirection, resolveLyraLocale } from './internal/localization.js';
 
@@ -14,14 +15,18 @@ expectDevWarning('lyra-tree-missing-accessible-name');
 // The input-modality recorder arms three passive listeners on each window once, for the window's
 // lifetime; it is not a per-element leak. Pre-arming keeps the window/document listener tally
 // below independent of which describe block connects the first Lyra element.
-before(() => trackInputModality(document));
+before(() => {
+  trackInputModality(document);
+  // Native-modal probes also keep document-lifetime focus listeners, independent of any element.
+  getActiveNativeModal(document);
+});
 
 /**
  * Universal lifecycle contracts, applied uniformly to every tag the all.js
  * compatibility entry registers (the optional-peer chart/map/graph families are excluded
  * because importing them requires peers this environment must not assume).
  *
- * Five contracts per tag use default behavior, with explicit names where required and
+ * Six contracts per tag use default behavior, with explicit names where required and
  * optional data loaders disabled by prepareDefaultElement(). No slotted content is supplied:
  *
  * 1. reconnect-smoke — an element survives disconnect + reconnect: no thrown
@@ -37,9 +42,11 @@ before(() => trackInputModality(document));
  * 4. template-whitespace-contract — no template-formatting whitespace renders
  *    inside a white-space-preserving context anywhere in the shadow tree
  *    (`renderedTemplateWhitespace()` from `test/rendered-whitespace.ts`).
- * 5. adoption-contract — native adoption through an inert document and a live iframe
+ * 5. adoption-contract — native adoption and connection inside an inert document and a live iframe
  *    preserves the shadow root and rendering, refreshes inherited locale/direction,
  *    and permits subsequent updates in both the destination and original documents.
+ * 6. interrupted-connection — removing a host before its first render or updating it while
+ *    detached retains no listeners or observers, and the same instance still reconnects.
  */
 
 type ContractName =
@@ -47,7 +54,8 @@ type ContractName =
   | 'leak-contract'
   | 'focusable-name-contract'
   | 'template-whitespace-contract'
-  | 'adoption-contract';
+  | 'adoption-contract'
+  | 'interrupted-connection';
 
 /**
  * Per-tag, per-contract opt-outs. Every entry needs a specific technical
@@ -281,6 +289,8 @@ describe('lifecycle contract: adoption-contract', () => {
       foreign.documentElement.lang = 'ar';
       foreign.documentElement.dir = 'rtl';
       const inert = document.implementation.createHTMLDocument('Adoption staging');
+      inert.documentElement.lang = 'ar';
+      inert.documentElement.dir = 'rtl';
       expect(inert.defaultView === null).to.equal(true);
       outcomes = await runInBatches(ROOT_BARREL_TAGS, async (tag, signal) => {
         const host = mountPoint();
@@ -306,23 +316,23 @@ describe('lifecycle contract: adoption-contract', () => {
           expect(el.isConnected).to.equal(false);
           expect(el.shadowRoot === root).to.equal(true);
 
-          for (const destination of [foreign.body, host]) {
+          for (const destination of [inert.body, foreign.body, host]) {
             destination.append(destination.ownerDocument.adoptNode(el));
             const lit = el as MaybeLit;
             lit.requestUpdate?.();
             await settle(el);
             await flushAsyncWork();
             signal.throwIfAborted();
-            const inFrame = destination.ownerDocument === foreign;
+            const adopted = destination.ownerDocument !== document;
             expect(el.ownerDocument === destination.ownerDocument).to.equal(true);
             expect(el.isConnected).to.equal(true);
             expect(el.shadowRoot === root).to.equal(true);
             if (hadContent) expect(el.shadowRoot!.childElementCount).to.be.greaterThan(0);
             expect(lit.isUpdatePending).to.equal(false);
-            expect(resolveLyraLocale(el)).to.equal(inFrame ? 'ar' : 'en');
-            expect(resolveLyraDirection(el)).to.equal(inFrame ? 'rtl' : 'ltr');
-            expect(destination.ownerDocument.defaultView!.getComputedStyle(el).direction)
-              .to.equal(inFrame ? 'rtl' : 'ltr');
+            expect(resolveLyraLocale(el)).to.equal(adopted ? 'ar' : 'en');
+            expect(resolveLyraDirection(el)).to.equal(adopted ? 'rtl' : 'ltr');
+            const view = destination.ownerDocument.defaultView;
+            if (view) expect(view.getComputedStyle(el).direction).to.equal(adopted ? 'rtl' : 'ltr');
           }
         } finally {
           signal.removeEventListener('abort', cleanup);
@@ -447,6 +457,7 @@ function instrumentGlobalListeners(): Instrumentation {
 interface ObserverRecord {
   kind: string;
   observed: Set<unknown>;
+  disconnect(): void;
 }
 
 /**
@@ -476,7 +487,7 @@ function instrumentObservers(): Instrumentation {
     const Wrapped = class extends Original {
       constructor(...args: unknown[]) {
         super(...args);
-        const record: ObserverRecord = { kind, observed: new Set() };
+        const record: ObserverRecord = { kind, observed: new Set(), disconnect: () => this.disconnect() };
         records.push(record);
         tracked.set(this, record);
       }
@@ -513,6 +524,8 @@ function instrumentObservers(): Instrumentation {
         .filter((record) => record.observed.size > 0)
         .map((record) => `${record.kind} still observing ${record.observed.size} target(s)`),
     restore: () => {
+      // A failed leak assertion must not leave native observers alive in later scenarios.
+      for (const record of records) record.disconnect();
       for (const restore of restores) restore();
     },
   };
@@ -743,6 +756,53 @@ describe('lifecycle contract: template-whitespace-contract', () => {
       const el = outcomeOf(await ensureDefaultStates(), tag);
       if (!el.shadowRoot) return;
       expect(renderedTemplateWhitespace(el.shadowRoot), `<${tag}>`).to.deep.equal([]);
+    });
+  }
+});
+
+describe('lifecycle contract: interrupted first connection', () => {
+  for (const tag of ROOT_BARREL_TAGS) {
+    it('<' + tag + '> releases an interrupted first connection and recovers on reconnect', async () => {
+      const host = mountPoint();
+      const listeners = instrumentGlobalListeners();
+      const observers = instrumentObservers();
+      const el = document.createElement(tag);
+      try {
+        prepareDefaultElement(tag, el);
+        host.appendChild(el);
+        // Disconnect in the same task, before Lit's initial render and deferred setup.
+        el.remove();
+        await flushAsyncWork();
+        await flushAsyncWork();
+        expect(listeners.leaks(), '<' + tag + '> retained listeners after an interrupted first connection').to.deep.equal([]);
+        expect(observers.leaks(), '<' + tag + '> retained observers after an interrupted first connection').to.deep.equal([]);
+
+        const firstRoot = el.shadowRoot;
+        const firstChildCount = firstRoot?.childElementCount ?? 0;
+        host.appendChild(el);
+        await settle(el);
+        (el as MaybeLit).requestUpdate?.();
+        await settle(el);
+        await flushAsyncWork();
+        expect(el.isConnected).to.equal(true);
+        expect(el.shadowRoot === firstRoot).to.equal(true);
+        if (firstChildCount) expect(el.shadowRoot!.childElementCount).to.be.greaterThan(0);
+        expect((el as MaybeLit).isUpdatePending).to.equal(false);
+
+        el.remove();
+        (el as MaybeLit).requestUpdate?.();
+        await settle(el);
+        await flushAsyncWork();
+        await flushAsyncWork();
+        expect(listeners.leaks(), '<' + tag + '> retained listeners after its recovered connection').to.deep.equal([]);
+        expect(observers.leaks(), '<' + tag + '> retained observers after its recovered connection').to.deep.equal([]);
+      } finally {
+        el.remove();
+        host.remove();
+        await flushAsyncWork();
+        listeners.restore();
+        observers.restore();
+      }
     });
   }
 });

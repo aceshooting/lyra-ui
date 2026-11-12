@@ -318,7 +318,11 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   override connectedCallback(): void {
     super.connectedCallback();
     this.markdownVariant.connectedInstances.add(this);
-    if (this.hasUpdated) this.refreshTheme();
+    if (this.hasUpdated) {
+      this.refreshTheme();
+      const contentRoot = this.contentRoot();
+      if (contentRoot) this.bindTextSelection(contentRoot);
+    }
     beginMarkdownDepsLoad(this, (resolved) => {
       this.deps = resolved;
       this.renderMarkdown();
@@ -355,7 +359,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   protected override firstUpdated(changed: PropertyValues): void {
     super.firstUpdated(changed);
     const contentRoot = this.renderRoot.querySelector('[part="content"]');
-    if (contentRoot) {
+    if (contentRoot && this.isConnected) {
       (
         this as unknown as { bindTextSelection(root: Element): void }
       ).bindTextSelection(contentRoot);
@@ -445,6 +449,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   private changedMarkdownRoots(): readonly ParentNode[] {
     const root = this.contentRoot();
     if (!root) return [];
+    if (!this.isConnected) return [root];
     let snapshot = this.domSnapshot;
     if (snapshot?.root !== root) {
       snapshot?.observer.disconnect();

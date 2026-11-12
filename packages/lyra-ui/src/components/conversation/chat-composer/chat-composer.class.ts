@@ -430,7 +430,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     super.firstUpdated(changed);
     this.resizeTextarea();
     this.armTextareaResizeObserver();
-    this.descriptionLease ??= acquireResolvedAriaRelationship(this, this.input, 'aria-describedby');
+    if (this.isConnected) this.descriptionLease ??= acquireResolvedAriaRelationship(this, this.input, 'aria-describedby');
   }
 
   override connectedCallback(): void {

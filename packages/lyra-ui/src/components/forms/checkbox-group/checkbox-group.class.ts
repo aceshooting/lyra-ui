@@ -782,7 +782,7 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
 
   /** Resolves host-owned descriptions ahead of the fieldset's own form-control descriptions. */
   private syncExternalDescription(): void {
-    const target = this.renderRoot.querySelector<HTMLElement>('fieldset');
+    const target = this.isConnected ? this.renderRoot.querySelector<HTMLElement>('fieldset') : null;
     if (!target) {
       this.releaseExternalDescription();
       return;
@@ -805,7 +805,7 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
 
   /** Owns only the aggregate requiredness text; hint and error remain Lit's baseline relationship. */
   private syncRequiredDescription(): void {
-    const target = this.renderRoot.querySelector<HTMLElement>('fieldset');
+    const target = this.isConnected ? this.renderRoot.querySelector<HTMLElement>('fieldset') : null;
     const description = this.renderRoot.querySelector<HTMLElement>(`#${this.requiredDescriptionId}`);
     if (!this.required || !target || !description) {
       this.releaseRequiredDescription();

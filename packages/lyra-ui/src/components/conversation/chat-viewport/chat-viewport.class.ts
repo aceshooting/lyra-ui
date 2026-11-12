@@ -802,6 +802,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   }
 
   private armObservers(): void {
+    if (!this.isConnected) return;
     const owner = this.ownerDocument.defaultView;
     const list = this.virtualListEl;
     const mode: 'virtual' | 'slotted' = list ? 'virtual' : 'slotted';

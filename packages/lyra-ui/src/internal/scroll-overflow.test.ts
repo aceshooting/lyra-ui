@@ -162,6 +162,38 @@ describe('ScrollOverflowController', () => {
     expect(track.hasAttribute(SCROLL_OVERFLOW_ATTRIBUTE)).to.be.false;
   });
 
+  it('ignores detached updates and resumes overflow observation after reconnect', async () => {
+    const track = await makeTrack('400px');
+    const parent = track.parentNode!;
+    const host = makeHost();
+    const resize = installResizeObserverStub(window);
+    try {
+      new ScrollOverflowController(host, () => track);
+      track.remove();
+      host.connect();
+      host.update();
+      expect(resize.records.length).to.equal(0);
+      expect(track.hasAttribute(SCROLL_OVERFLOW_ATTRIBUTE)).to.equal(false);
+
+      for (let connection = 1; connection <= 2; connection += 1) {
+        parent.appendChild(track);
+        host.connect();
+        expect(resize.records.length).to.equal(connection);
+        expect(track.hasAttribute(SCROLL_OVERFLOW_ATTRIBUTE)).to.equal(true);
+        track.remove();
+        host.disconnect();
+        track.removeAttribute(SCROLL_OVERFLOW_ATTRIBUTE);
+        host.update();
+        expect(resize.records.length).to.equal(connection);
+        expect(resize.records[connection - 1]!.disconnectCalls).to.equal(1);
+        expect(track.hasAttribute(SCROLL_OVERFLOW_ATTRIBUTE)).to.equal(false);
+      }
+    } finally {
+      host.disconnect();
+      resize.restore();
+    }
+  });
+
   it('uses the observed element owner constructor and replaces it across adoption with stale callbacks inert', async () => {
     const frame = (await fixture(html`<iframe></iframe>`)) as HTMLIFrameElement;
     const frameDocument = frame.contentDocument;

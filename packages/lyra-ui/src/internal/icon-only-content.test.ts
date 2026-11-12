@@ -23,6 +23,41 @@ it('IconOnlyLabelObserver follows a replaced label element', async () => {
   expect(changes).to.deep.equal([true, true]);
 });
 
+it('leaves a detached label unobserved and resumes after each connection', async () => {
+  const stage = await fixture<HTMLDivElement>(html`<div><div><i style="display: inline-block; inline-size: 10px; block-size: 10px"></i></div></div>`);
+  const host = stage.firstElementChild as HTMLElement;
+  const label = host.firstElementChild!;
+  const Original = window.ResizeObserver;
+  let observations = 0;
+  window.ResizeObserver = class extends Original {
+    override observe(target: Element, options?: ResizeObserverOptions): void {
+      observations += 1;
+      super.observe(target, options);
+    }
+  };
+  const changes: boolean[] = [];
+  const observer = new IconOnlyLabelObserver(host, () => label, () => false, next => changes.push(next));
+  try {
+    host.remove();
+    observer.arm();
+    expect(observations).to.equal(0);
+    for (let connection = 1; connection <= 2; connection += 1) {
+      stage.append(host);
+      observer.arm();
+      await waitUntil(() => changes.length === connection, 'the connected label is measured');
+      expect(observations).to.equal(connection);
+      observer.disarm();
+      host.remove();
+      observer.arm();
+      expect(observations).to.equal(connection);
+    }
+    expect(changes).to.deep.equal([true, true]);
+  } finally {
+    observer.disarm();
+    window.ResizeObserver = Original;
+  }
+});
+
 describe('hasIconOnlyDefaultContent', () => {
   const hostOf = async (markup: ReturnType<typeof html>): Promise<HTMLElement> => fixture<HTMLElement>(markup);
 

@@ -645,7 +645,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
 
   /** Projects both authored host IDREF relationships onto the current semantic list owner. */
   private syncListRelationships(): void {
-    const target = this.listSemanticOwner;
+    const target = this.isConnected ? this.listSemanticOwner : null;
     if (!target) {
       this.releaseListRelationships();
       return;

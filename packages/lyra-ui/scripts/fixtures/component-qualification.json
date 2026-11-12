@@ -9694,7 +9694,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-viewport/chat-viewport.class.ts",
-              "line": 837,
+              "line": 838,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

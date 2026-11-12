@@ -100,7 +100,8 @@ export class ScrollOverflowController implements ReactiveController {
   }
 
   private sync(): void {
-    const element = this.resolve();
+    const resolved = this.resolve();
+    const element = resolved?.isConnected ? resolved : undefined;
     const ownerWindow = element?.ownerDocument.defaultView ?? undefined;
     if (element !== this.#observed || ownerWindow !== this.#ownerWindow) {
       this.resetObservation();
