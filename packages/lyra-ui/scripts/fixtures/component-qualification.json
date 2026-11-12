@@ -12135,6 +12135,7 @@
           "src/components/forms/color-picker/color-core.property.test.ts",
           "src/components/forms/color-picker/color-core.test.ts",
           "src/components/forms/color-picker/color-picker-coverage.test.ts",
+          "src/components/forms/color-picker/color-picker-placement-recovery.test.ts",
           "src/components/forms/color-picker/color-picker-remediation.test.ts",
           "src/components/forms/color-picker/color-picker.test.ts"
         ],
@@ -23246,6 +23247,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/media/flag/flag-core-startup.test.ts",
           "src/components/media/flag/flag-scale.test.ts",
           "src/components/media/flag/flag.test.ts",
           "src/components/media/flag/language-map.test.ts"

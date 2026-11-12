@@ -283,6 +283,37 @@ it('keeps the lean handle concealed until its first real placement', async () =>
   cleanup();
 });
 
+it('keeps a lean popup concealed after setup fails and lets a replacement placement recover', async () => {
+  let attempts = 0, placed = 0, stopped = 0;
+  __setAnchoredOverlayRuntimeLoaderForTesting(async () => ({
+    ...runtime,
+    place: (_anchor, _popup, options = {}) => {
+      attempts++;
+      if (attempts === 1) throw new RangeError('Geometry unavailable');
+      options.onPlaced?.({ placement: 'top' });
+      return () => { stopped++; };
+    },
+  }));
+  const anchor = document.createElement('button'), popup = document.createElement('div');
+  popup.style.setProperty('visibility', 'visible', 'important');
+  const first = deferredPlace(anchor, popup, { onPlaced: () => { placed++; } });
+  let next: (() => void) | undefined;
+  try {
+    await waitUntil(() => attempts === 1, 'the positioning runtime rejects setup');
+    expect(popup.style.visibility).to.equal('hidden');
+    expect(popup.style.getPropertyPriority('visibility')).to.equal('important');
+    expect(placed).to.equal(0);
+    next = deferredPlace(anchor, popup, { onPlaced: () => { placed++; } });
+    await waitUntil(() => placed === 1, 'replacement geometry is published');
+    expect(popup.style.visibility).to.equal('visible');
+    expect(popup.style.getPropertyPriority('visibility')).to.equal('important');
+    first();
+    expect(stopped).to.equal(0);
+    next(); next();
+    expect(stopped).to.equal(1);
+  } finally { first(); next?.(); }
+});
+
 it('does not let an older placement generation reveal a replacement popup', async () => {
   const placements: (() => void)[] = [];
   let stopped = 0;
