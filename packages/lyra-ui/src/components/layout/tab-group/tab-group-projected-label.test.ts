@@ -11,6 +11,28 @@ function names(group: LyraTabGroup): string[] {
     .map(button => button.getAttribute('aria-label')!);
 }
 
+it('keeps authored panel names that collide with descriptor staging names reachable', async () => {
+  const group = await fixture<LyraTabGroup>(html`<lr-tab-group>
+    <lr-tab panel="tab-group-sources">First</lr-tab>
+    <lr-tab panel="tab-group-sources-sources">Second</lr-tab>
+    <lr-tab-panel name="tab-group-sources">First body</lr-tab-panel>
+    <lr-tab-panel name="tab-group-sources-sources">Second body</lr-tab-panel>
+  </lr-tab-group>`);
+  await group.updateComplete;
+  expect(names(group)).to.deep.equal(['First', 'Second']);
+  for (const name of ['tab-group-sources-sources', 'tab-group-sources']) {
+    group.show(name);
+    await group.updateComplete;
+    const panel = group.querySelector<HTMLElement>(`lr-tab-panel[name="${name}"]`)!;
+    expect(group.active).to.equal(name);
+    expect(panel.getBoundingClientRect().height).to.be.greaterThan(0);
+    expect(group.shadowRoot!.querySelector('[role="tab"][aria-selected="true"]')?.getAttribute('data-slot')).to.equal(name);
+    const slot = panel.assignedSlot;
+    expect(slot?.name).to.equal(name);
+    expect(slot?.closest('[hidden]') === null).to.equal(true);
+  }
+});
+
 for (const rich of [false, true]) {
   it(`makes ${rich ? 'rich' : 'plain'} first-mount tabs available to show() after one updateComplete`, async () => {
     const wrapper = await fixture<HTMLDivElement>(html`<div></div>`);

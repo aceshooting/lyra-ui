@@ -21951,6 +21951,7 @@
           "src/components/agent-tools/eval-result/eval-result-register.test.ts",
           "src/components/agent-tools/eval-result/eval-result-source-projection.test.ts",
           "src/components/agent-tools/eval-result/eval-result-source-scale.test.ts",
+          "src/components/agent-tools/eval-result/eval-result-source.property.test.ts",
           "src/components/agent-tools/eval-result/eval-result-source.test.ts",
           "src/components/agent-tools/eval-result/eval-result.test.ts"
         ],

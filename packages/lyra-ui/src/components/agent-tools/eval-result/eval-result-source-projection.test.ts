@@ -1,8 +1,44 @@
 import { expect } from '@open-wc/testing';
 import type { RubricKey, RubricValue } from '../../forms/rubric-form/rubric-form.class.js';
-import { projectEvalSourceReview } from './eval-result-source.js';
+import { projectEvalSourceReview, projectEvalSourceRun } from './eval-result-source.js';
 
 const keys: readonly RubricKey[] = [{ key: 'choices', type: 'category', multiple: true }, { key: 'notes', type: 'comment' }];
+
+it('projects an absent review as explicit undefined configured fields', () => {
+  const projected = projectEvalSourceReview(undefined, keys, () => true);
+  expect(Object.keys(projected)).to.deep.equal(['choices', 'notes']);
+  expect(projected['choices']).to.equal(undefined);
+  expect(projected['notes']).to.equal(undefined);
+  expect(Object.getPrototypeOf(projected) === null).to.equal(true);
+  expect(Object.isFrozen(projected)).to.equal(true);
+});
+
+it('bounds configured review fields before consulting an over-limit field', () => {
+  const configured: RubricKey[] = Array.from({ length: 10_000 }, (_, index) => ({ key: String(index), type: 'comment' }));
+  expect(Object.keys(projectEvalSourceReview({}, configured, () => true)).length).to.equal(10_000);
+  let probes = 0;
+  const review = new Proxy({}, { getOwnPropertyDescriptor(target, key) { probes++; return Reflect.getOwnPropertyDescriptor(target, key); } });
+  expect(() => projectEvalSourceReview(review, [...configured, { key: 'overflow', type: 'comment' }], () => true)).to.throw(RangeError);
+  expect(probes).to.equal(10_000);
+});
+
+it('refuses an already revoked source before inspecting its run or review', () => {
+  let probes = 0;
+  const value = new Proxy({ id: 'run', label: 'Run' }, {
+    getOwnPropertyDescriptor(target, key) { probes++; return Reflect.getOwnPropertyDescriptor(target, key); },
+  });
+  expect(() => projectEvalSourceRun({ key: 'run', order: 0, value }, () => false)).to.throw('Source record revoked');
+  expect(() => projectEvalSourceReview(value, keys, () => false)).to.throw('Source record revoked');
+  expect(probes).to.equal(0);
+});
+
+it('rejects primitive run values and retains a subsequent valid run', () => {
+  for (const value of [null, undefined, false, 1, 'run']) {
+    expect(() => projectEvalSourceRun({ key: 'run', order: 0, value }, () => true)).to.throw(TypeError);
+  }
+  expect(projectEvalSourceRun({ key: 'run', order: 0, value: { id: 'run', label: 'Run' } }, () => true))
+    .to.deep.equal({ id: 'run', label: 'Run', output: '' });
+});
 
 it('owns configured review arrays without reading unrelated provider fields', () => {
   const choices = ['a', 'b'];

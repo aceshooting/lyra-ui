@@ -74,3 +74,27 @@ it('lets the existing custom-part hook replace a widget without loading its buil
   expect(el.shadowRoot!.querySelector('strong')?.textContent).to.equal('Host-owned control');
   expect(el.shadowRoot!.querySelector('lr-widget-renderer') === null).to.equal(true);
 });
+
+for (const removal of ['removed', 'windowed'] as const) {
+  it(`creates a fresh widget document after its part is ${removal} and then restored`, async () => {
+    const part: MessagePart = { id: 'form', type: 'data', widget };
+    const el = await fixture<LyraMessageParts>(html`<lr-message-parts content-mode="plain"
+      .parts=${[part]} .widgetRegistry=${registry} .widgetBindingState=${{ name: 'Ada' }}
+    ></lr-message-parts>`);
+    const first = await renderedWidget(el);
+    const original = first.document;
+    const text: MessagePart = { id: 'answer', type: 'text', text: 'Next answer' };
+    if (removal === 'windowed') el.maxRenderedParts = 1;
+    el.parts = removal === 'windowed' ? [part, text] : [text];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('lr-widget-renderer') === null).to.equal(true);
+    expect(first.isConnected).to.equal(false);
+    el.widgetBindingState = { name: 'Grace' };
+    el.maxRenderedParts = 0;
+    el.parts = [part, text];
+    await el.updateComplete;
+    const restored = await renderedWidget(el);
+    expect(restored.document === original).to.equal(false);
+    expect(restored.shadowRoot!.querySelector<LyraInput>('lr-input')?.value).to.equal('Grace');
+  });
+}
