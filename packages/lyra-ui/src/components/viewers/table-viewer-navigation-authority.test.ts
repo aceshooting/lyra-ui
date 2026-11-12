@@ -310,4 +310,34 @@ describe('table source navigation authority', () => {
     expect(bodyText(viewer)).to.include('replacement:2:1');
     expect(errors.length).to.equal(1);
   });
+  for (const retirement of ['replacement', 'clear search', 'disconnect'] as const) {
+    it(`cancels a cell reveal when virtual scrolling triggers ${retirement} and allows the next reveal`, async () => {
+      const { viewer, errors } = await csv(source('original'));
+      const parent = viewer.parentNode!;
+      const list = viewer.shadowRoot!.querySelector('lr-virtual-list')!;
+      const scroll = list.scrollToIndex;
+      const rows: number[] = []; let retired = false;
+      list.scrollToIndex = function (...args: Parameters<typeof scroll>) {
+        rows.push(args[0]);
+        scroll.apply(this, args);
+        if (args[0] !== 2 || retired) return;
+        retired = true;
+        if (retirement === 'replacement') viewer.dataSource = source('replacement');
+        else if (retirement === 'clear search') viewer.clearSearch();
+        else viewer.remove();
+      };
+      try {
+        expect(await viewer.scrollToAnchor({ kind: 'cell-range', range: 'B4' })).to.equal(false);
+        expect(retired).to.equal(true);
+        expect(rows.filter(row => row === 2).length).to.equal(1); expect(errors.length).to.equal(0);
+      } finally { list.scrollToIndex = scroll; }
+      if (retirement === 'disconnect') parent.appendChild(viewer);
+      const label = retirement === 'replacement' ? 'replacement' : 'original';
+      await waitUntil(() => bodyText(viewer).includes(`${label}:0:0`), 'current data remains available');
+      expect(await viewer.scrollToAnchor({ kind: 'cell-range', range: 'A2' })).to.equal(true);
+      expect(bodyText(viewer)).to.include(`${label}:0:0`);
+      expect(errors.length).to.equal(0);
+    });
+  }
+
 });
