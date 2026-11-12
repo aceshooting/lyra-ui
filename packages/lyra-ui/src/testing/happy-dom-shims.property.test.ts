@@ -146,3 +146,44 @@ it('preserves escaped identifier tokens while removing real surrounding layers',
     expect(flattenCascadeLayers(`@layer theme{${rule}}`)).to.equal(rule);
   }), propertyRuns());
 });
+
+for (const keyword of ['@LAYER', '@LaYeR', String.raw`@\6c ayer`, String.raw`@la\79 er`, String.raw`@\layer`, '@\\00006c\r\nayer']) {
+  it(`unwraps the native-recognized cascade-layer keyword ${keyword}`, () => {
+    const rule = '.sample{color:red}';
+    const css = `${keyword} base, theme;${keyword} theme{${rule}}`;
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(css);
+    expect(sheet.cssRules.length).to.equal(2);
+    const nested = (sheet.cssRules[1] as CSSGroupingRule).cssRules[0] as CSSStyleRule;
+    expect(nested.selectorText).to.equal('.sample');
+    expect(flattenCascadeLayers(css)).to.equal(rule);
+  });
+}
+
+it('preserves an incomplete at-keyword escape without consuming preceding rules', () => {
+  const css = '.sample{color:red}@lay\\';
+  expect(flattenCascadeLayers(css)).to.equal(css);
+});
+
+for (const keyword of ['@layeré', String.raw`@layer\65 d`, '@layer文']) {
+  it(`preserves the unknown at-rule ${keyword} so its contents remain inactive`, () => {
+    const css = `${keyword}{.sample{color:red}}`;
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(css);
+    expect(sheet.cssRules.length).to.equal(0);
+    expect(flattenCascadeLayers(css)).to.equal(css);
+  });
+}
+
+it('recognizes cascade-layer keywords across CSS hexadecimal escapes and letter case', () => {
+  const letters = [...'layer'].map(letter => fc.constantFrom(letter, letter.toUpperCase(),
+    `\\${letter.charCodeAt(0).toString(16)} `, `\\${letter.toUpperCase().charCodeAt(0).toString(16).padStart(6, '0')}`));
+  fc.assert(fc.property(fc.tuple(...letters), parts => {
+    const rule = '.sample{color:red}';
+    const css = `@${parts.join('')}  theme{${rule}}`;
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(css);
+    expect(sheet.cssRules.length).to.equal(1);
+    expect(flattenCascadeLayers(css)).to.equal(rule);
+  }), propertyRuns());
+});

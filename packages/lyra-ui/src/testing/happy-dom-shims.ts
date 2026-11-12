@@ -247,6 +247,23 @@ function matchingBrace(css: string, open: number): number {
   return css.length;
 }
 
+/** End of a complete layer at-keyword, including CSS escapes, or undefined for another token. */
+function layerKeywordEnd(css: string, index: number): number | undefined {
+  if (css[index] !== '@') return undefined;
+  let cursor = index + 1;
+  for (const letter of 'layer') {
+    let code = css.charCodeAt(cursor++);
+    if (code === 92) {
+      const escape = /^(?:([\da-f]{1,6})(?:\r\n|[ \t\r\n\f])?|([^\r\n\f]))/i.exec(css.slice(cursor));
+      if (!escape) return undefined;
+      code = escape[1] ? Number.parseInt(escape[1], 16) : escape[2]!.charCodeAt(0);
+      cursor += escape[0].length;
+    }
+    if (code !== letter.charCodeAt(0) && code !== letter.toUpperCase().charCodeAt(0)) return undefined;
+  }
+  return /[\w\u0080-\uffff\\-]/.test(css[cursor] ?? '') ? undefined : cursor;
+}
+
 /**
  * Removes CSS cascade layers from `css` while keeping every rule in place: `@layer a, b;`
  * statements are dropped and each `@layer name { ... }` block (named, anonymous or nested, also
@@ -264,8 +281,9 @@ export function flattenCascadeLayers(css: string): string {
       index = skipped;
       continue;
     }
-    if (css.startsWith('@layer', index) && !/[\w-]/.test(css[index + 6] ?? '')) {
-      let cursor = index + 6;
+    const headerEnd = layerKeywordEnd(css, index);
+    if (headerEnd !== undefined) {
+      let cursor = headerEnd;
       while (cursor < css.length && css[cursor] !== ';' && css[cursor] !== '{') {
         const skipped = skipOpaqueToken(css, cursor);
         cursor = skipped === cursor ? cursor + 1 : skipped;
