@@ -96,6 +96,108 @@ function start(h: ReturnType<typeof fixture>) {
 }
 
 describe('injected visual camera follow runner', () => {
+  for (const installation of ['watch', 'frames'] as const) {
+    it(`releases every acquired subscription when ${installation} installation withdraws ownership`, () => {
+      const h = fixture(), scene = h.dependencies.scene!;
+      const watch = scene.watchTarget, subscribe = scene.subscribeFrames;
+      const late: ((frame: MapCameraFollowFrame) => void)[] = [];
+      if (installation === 'watch') scene.watchTarget = id => {
+        const release = watch(id); h.state.current = false; return release;
+      };
+      else scene.subscribeFrames = (id, listener) => {
+        const release = subscribe(id, listener); late.push(listener); h.state.current = false; return release;
+      };
+      const runner = start(h);
+      expect([h.targets.size, h.frames.size, h.state.requests]).to.deep.equal([0, 0, 0]);
+      expect([h.state.targetReleased, h.state.watchReleased, h.state.frameReleased])
+        .to.deep.equal([1, 1, installation === 'frames' ? 1 : 0]);
+      for (const listener of late) listener(h.frame(1));
+      runner.dispose();
+      expect(h.pans).to.deep.equal([]);
+      expect(h.published).to.deep.equal([]);
+    });
+  }
+
+  for (const failingRelease of ['targets', 'watch', 'frames'] as const) {
+    for (const ending of ['dispose', 'engine failure'] as const) {
+      it(`releases the remaining observers after ${failingRelease} cleanup throws during ${ending}`, () => {
+        const h = fixture(), scene = h.dependencies.scene!;
+        const throwing = (release: () => void) => () => { release(); throw new Error('Observer cleanup unavailable'); };
+        if (failingRelease === 'targets') {
+          const subscribe = scene.subscribeTargets;
+          scene.subscribeTargets = listener => throwing(subscribe(listener));
+        } else if (failingRelease === 'watch') {
+          const watch = scene.watchTarget;
+          scene.watchTarget = id => throwing(watch(id));
+        } else {
+          const subscribe = scene.subscribeFrames;
+          scene.subscribeFrames = (id, listener) => throwing(subscribe(id, listener));
+        }
+        const runner = start(h), late = [...h.frames];
+        if (ending === 'dispose') expect(() => runner.dispose()).not.to.throw();
+        else {
+          h.state.throwPan = true;
+          expect(() => h.emit(h.frame(1))).not.to.throw();
+          expect(runner.snapshot).to.include({ status: 'unavailable', reason: 'engine' });
+        }
+        expect([h.targets.size, h.frames.size]).to.deep.equal([0, 0]);
+        expect([h.state.targetReleased, h.state.watchReleased, h.state.frameReleased]).to.deep.equal([1, 1, 1]);
+        const publications = h.published.length;
+        for (const listener of late) listener(h.frame(2));
+        runner.dispose();
+        expect(h.published.length).to.equal(publications);
+        expect(h.pans).to.deep.equal([]);
+        expect([h.state.targetReleased, h.state.watchReleased, h.state.frameReleased]).to.deep.equal([1, 1, 1]);
+      });
+    }
+  }
+
+  it('abandons a target read that withdraws ownership before requesting another frame', () => {
+    const h = fixture(), runner = start(h), scene = h.dependencies.scene!;
+    const target = scene.target; let reads = 0;
+    scene.target = id => { reads++; h.state.current = false; return target(id); };
+    const requests = h.state.requests;
+    h.advanceTarget();
+    expect(reads).to.equal(1);
+    expect(h.state.requests).to.equal(requests);
+    expect([h.targets.size, h.frames.size]).to.deep.equal([0, 0]);
+    expect([h.state.targetReleased, h.state.watchReleased, h.state.frameReleased]).to.deep.equal([1, 1, 1]);
+    expect(h.published).to.deep.equal([]);
+    expect(h.pans).to.deep.equal([]);
+    runner.dispose();
+  });
+
+  it('does not publish an old engine failure when cleanup replaces its owner', () => {
+    const h = fixture(), scene = h.dependencies.scene!;
+    const subscribe = scene.subscribeTargets;
+    scene.subscribeTargets = listener => {
+      const release = subscribe(listener);
+      return () => { release(); h.state.current = false; };
+    };
+    h.state.throwFrameSubscribe = true;
+    const runner = start(h);
+    expect(h.published).to.deep.equal([]);
+    expect(h.pans).to.deep.equal([]);
+    expect([h.state.targetReleased, h.state.watchReleased, h.state.frameReleased]).to.deep.equal([1, 1, 0]);
+    expect([h.targets.size, h.frames.size]).to.deep.equal([0, 0]);
+    runner.dispose();
+  });
+
+  it('retires frame and target listeners when a status publication replaces the owner', () => {
+    const h = fixture();
+    h.owner.publish = snapshot => { h.published.push(snapshot); h.state.current = false; };
+    const runner = start(h), late = [...h.frames];
+    h.emit(h.frame(1, 20));
+    expect(h.pans).to.deep.equal([[20, 0]]);
+    expect(h.published.map(snapshot => snapshot.status)).to.deep.equal(['centering']);
+    expect([h.targets.size, h.frames.size]).to.deep.equal([0, 0]);
+    for (const listener of late) listener(h.frame(2, 30));
+    expect(h.pans.length).to.equal(1);
+    expect(h.published.length).to.equal(1);
+    runner.dispose();
+    expect([h.state.targetReleased, h.state.watchReleased, h.state.frameReleased]).to.deep.equal([1, 1, 1]);
+  });
+
   it('acquires target demand before completed-frame observation and never seeds or guesses a projection', () => {
     const h = fixture(), runner = start(h);
     expect(h.state.watchAcquired).to.equal(1);
