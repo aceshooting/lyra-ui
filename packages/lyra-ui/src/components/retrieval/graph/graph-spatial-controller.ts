@@ -7,6 +7,7 @@ import { graphEngineColumnScene, type GraphEngineColumns, type GraphEngineColumn
 import { graphWebglCamera, graphWebglData } from './graph-webgl-engine.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { finiteRange } from '../../../internal/numbers.js';
+import { getOwnDataDescriptor } from '../../../internal/data-descriptors.js';
 import { nextId } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { graphLinkIdentity, type LyraGraphCamera, type LyraGraphCommunity, type LyraGraphEdge, type LyraGraphNode, type LyraGraphPosition, type LyraGraphView, type NormalizedGraphModel } from './graph-model.js';
@@ -645,7 +646,28 @@ export class GraphSpatialController {
 
   screenPosition(id: string): { x: number; y: number } | undefined {
     if (this.host.view !== '3d' || this.selection.renderer === 'list') return undefined;
-    if (this.selection.renderer === 'webgl') { if (this.engineDataKey !== (this.columnScene ?? this.world)) return undefined; const row = this.columnScene?.nodeIndex(id) ?? this.nodeIndexById.get(id); const point = row === undefined ? null : this.engine?.project?.(row); if (!point || !this.engineSurface) return undefined; const bounds = this.engineSurface.getBoundingClientRect(), host = this.host.getBoundingClientRect(); return { x: bounds.left - host.left + point.x, y: bounds.top - host.top + point.y }; }
+    if (this.selection.renderer === 'webgl') {
+      const engine = this.engine, surface = this.engineSurface, key = this.columnScene ?? this.world;
+      const columns = this.columns, source = this.source, hidden = this.hiddenTypes, ownerDocument = this.host.ownerDocument;
+      const current = () => this.host.isConnected && this.host.ownerDocument === ownerDocument && this.host.view === '3d' &&
+        this.host.engine === 'webgl' && this.selection.renderer === 'webgl' && this.engine === engine &&
+        this.engineSurface === surface && this.engineDataKey === key && this.host.hiddenTypes === hidden && !this.options.sourceMode?.() &&
+        (columns ? this.options.columns?.() === columns : !this.options.columns?.() && this.options.model() === source);
+      if (!surface || !current()) return undefined;
+      const row = this.columnScene?.nodeIndex(id) ?? this.nodeIndexById.get(id);
+      if (row === undefined) return undefined;
+      try {
+        const point = engine?.project?.(row); if (!point || !current()) return undefined;
+        const x = getOwnDataDescriptor(point, 'x'); if (!current()) return undefined;
+        const y = getOwnDataDescriptor(point, 'y'); if (!current()) return undefined;
+        if (typeof x !== 'object' || typeof y !== 'object' || typeof x.value !== 'number' || typeof y.value !== 'number' ||
+          !Number.isFinite(x.value) || !Number.isFinite(y.value)) return undefined;
+        const bounds = surface.getBoundingClientRect(); if (!current()) return undefined;
+        const host = this.host.getBoundingClientRect(); if (!current()) return undefined;
+        const position = { x: bounds.left - host.left + x.value, y: bounds.top - host.top + y.value };
+        return current() && Number.isFinite(position.x) && Number.isFinite(position.y) ? position : undefined;
+      } catch { return undefined; }
+    }
     if (!this.canvas) return undefined;
     const node = this.worldById.get(id);
     const point = node && projectSpatialPoint(node.position, this.currentCamera, this.viewport());

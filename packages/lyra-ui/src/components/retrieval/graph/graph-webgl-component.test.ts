@@ -184,6 +184,140 @@ describe('graph optional engine component integration', () => {
     expect(value.graph.getNodeScreenPosition('local-a')).to.deep.equal({ x: bounds.left - host.left + 40, y: bounds.top - host.top + 60 });
   });
 
+  for (const failure of ['throw', 'nonfinite', 'accessor', 'missing x', 'missing y', 'string x', 'string y', 'null', 'missing method'] as const) {
+    it(`omits a ${failure} peer projection without exposing an invalid screen anchor and recovers on the next read`, async () => {
+      const value = setup(); value.graph.engine = 'webgl'; value.graph.view = '3d';
+      await fixture(value.graph); const engine = await mounted(value), original = engine.engine.project!;
+      let reads = 0;
+      const unavailable = Object.defineProperty({ y: 60 }, 'x', { get() { reads++; return 40; } });
+      engine.engine.project = () => {
+        if (failure === 'throw') throw new Error('Peer projection unavailable');
+        if (failure === 'null') return null;
+        if (failure === 'missing x') return { y: 60 } as { x: number; y: number };
+        if (failure === 'missing y') return { x: 40 } as { x: number; y: number };
+        if (failure === 'string x') return { x: '40', y: 60 } as unknown as { x: number; y: number };
+        if (failure === 'string y') return { x: 40, y: '60' } as unknown as { x: number; y: number };
+        return failure === 'nonfinite' ? { x: Number.NaN, y: Number.POSITIVE_INFINITY } : unavailable as { x: number; y: number };
+      };
+      if (failure === 'missing method') engine.engine.project = undefined;
+      try {
+        expect(value.graph.getNodeScreenPosition('local-a')).to.equal(undefined);
+        expect(reads).to.equal(0);
+      } finally { engine.engine.project = original; }
+      const surface = value.graph.shadowRoot!.querySelector<HTMLElement>('[data-webgl-host]')!;
+      const bounds = surface.getBoundingClientRect(), host = value.graph.getBoundingClientRect();
+      expect(value.graph.getNodeScreenPosition('local-a')).to.deep.equal({ x: bounds.left - host.left + 40, y: bounds.top - host.top + 60 });
+      expect(engine.disposals()).to.equal(0);
+    });
+  }
+
+  for (const stage of ['projection', 'x descriptor', 'y descriptor', 'surface bounds', 'host bounds'] as const) {
+    for (const replacement of ['list view', 'local data', 'disconnect'] as const) {
+      it(`drops a screen anchor when ${stage} replaces its ${replacement}`, async () => {
+        const value = setup(); value.graph.engine = 'webgl'; value.graph.view = '3d';
+        await fixture(value.graph); const engine = await mounted(value);
+        const surface = value.graph.shadowRoot!.querySelector<HTMLElement>('[data-webgl-host]')!;
+        const project = engine.engine.project!, surfaceRect = surface.getBoundingClientRect, hostRect = value.graph.getBoundingClientRect;
+        let retired = false;
+        const retire = () => {
+          if (retired) return;
+          retired = true;
+          if (replacement === 'list view') value.graph.view = 'list';
+          else if (replacement === 'local data') value.graph.nodes = [{ id: 'replacement', position: { x: 0, y: 0, z: 0 } }];
+          else value.graph.remove();
+        };
+        try {
+          if (stage === 'projection') engine.engine.project = row => { retire(); return project.call(engine.engine, row); };
+          else if (stage === 'x descriptor' || stage === 'y descriptor') engine.engine.project = row => new Proxy(project.call(engine.engine, row)!, {
+            getOwnPropertyDescriptor(target, key) {
+              if (key === (stage === 'x descriptor' ? 'x' : 'y')) retire();
+              return Reflect.getOwnPropertyDescriptor(target, key);
+            },
+          });
+          else if (stage === 'surface bounds') surface.getBoundingClientRect = () => { retire(); return surfaceRect.call(surface); };
+          else value.graph.getBoundingClientRect = () => { retire(); return hostRect.call(value.graph); };
+          expect(value.graph.getNodeScreenPosition('local-a')).to.equal(undefined);
+          expect(retired).to.equal(true);
+        } finally {
+          engine.engine.project = project; surface.getBoundingClientRect = surfaceRect; value.graph.getBoundingClientRect = hostRect;
+        }
+        await settle(value.graph);
+        expect(value.graph.getNodeScreenPosition('local-a')).to.equal(undefined);
+      });
+    }
+  }
+
+  it('projects filtered column rows by their current identity and rejects a column replacement during the query', async () => {
+    const value = setup(); value.graph.engine = 'webgl'; value.graph.view = '3d';
+    value.graph.graphColumns = { ids: ['hidden', 'visible'], category: new Uint16Array([0, 1]), categories: ['hide', 'keep'],
+      source: new Uint32Array(), target: new Uint32Array() };
+    value.graph.hiddenTypes = ['hide'];
+    await fixture(value.graph); const engine = await mounted(value), project = engine.engine.project!;
+    const rows: number[] = [];
+    engine.engine.project = row => { rows.push(row); return project.call(engine.engine, row); };
+    expect(value.graph.getNodeScreenPosition('hidden')).to.equal(undefined);
+    expect(value.graph.getNodeScreenPosition('missing')).to.equal(undefined);
+    const screen = value.graph.getNodeScreenPosition('visible');
+    expect(Number.isFinite(screen?.x) && Number.isFinite(screen?.y)).to.equal(true);
+    expect(rows).to.deep.equal([0]);
+    engine.engine.project = row => {
+      value.graph.graphColumns = { ids: ['replacement'], source: new Uint32Array(), target: new Uint32Array() };
+      return project.call(engine.engine, row);
+    };
+    try { expect(value.graph.getNodeScreenPosition('visible')).to.equal(undefined); }
+    finally { engine.engine.project = project; }
+    await settle(value.graph);
+    expect(value.graph.getNodeScreenPosition('visible')).to.equal(undefined);
+    expect(value.graph.getNodeScreenPosition('replacement') !== undefined).to.equal(true);
+  });
+
+  for (const invalidBounds of ['surface', 'host'] as const) {
+    it(`omits an anchor with nonfinite ${invalidBounds} layout coordinates and recovers after layout`, async () => {
+      const value = setup(); value.graph.engine = 'webgl'; value.graph.view = '3d';
+      await fixture(value.graph); await mounted(value);
+      const target = invalidBounds === 'surface' ? value.graph.shadowRoot!.querySelector<HTMLElement>('[data-webgl-host]')! : value.graph;
+      const bounds = target.getBoundingClientRect;
+      target.getBoundingClientRect = () => new DOMRect(Number.POSITIVE_INFINITY, 0, 360, 280);
+      try { expect(value.graph.getNodeScreenPosition('local-a')).to.equal(undefined); }
+      finally { target.getBoundingClientRect = bounds; }
+      const point = value.graph.getNodeScreenPosition('local-a');
+      expect(Number.isFinite(point?.x) && Number.isFinite(point?.y)).to.equal(true);
+    });
+  }
+
+  it('rechecks projection ownership after reading native rectangle coordinates', async () => {
+    const value = setup(); value.graph.engine = 'webgl'; value.graph.view = '3d';
+    await fixture(value.graph); await mounted(value);
+    const surface = value.graph.shadowRoot!.querySelector<HTMLElement>('[data-webgl-host]')!;
+    const bounds = surface.getBoundingClientRect, rectangle = bounds.call(surface);
+    let reads = 0;
+    Object.defineProperty(rectangle, 'left', { get() { reads++; value.graph.view = 'list'; return 0; } });
+    surface.getBoundingClientRect = () => rectangle;
+    try { expect(value.graph.getNodeScreenPosition('local-a')).to.equal(undefined); expect(reads).to.equal(1); }
+    finally { surface.getBoundingClientRect = bounds; }
+    await settle(value.graph);
+    expect(listRows(value.graph).length).to.equal(3);
+  });
+
+  for (const change of ['filter', 'engine', 'source'] as const) {
+    it(`rejects a peer screen anchor when projection changes the ${change} authority`, async () => {
+      const value = setup(); value.graph.engine = 'webgl'; value.graph.view = '3d';
+      value.graph.nodes = value.graph.nodes.map(node => ({ ...node, type: 'hide' }));
+      await fixture(value.graph); const engine = await mounted(value), project = engine.engine.project!;
+      engine.engine.project = row => {
+        if (change === 'filter') value.graph.hiddenTypes = ['hide'];
+        else if (change === 'engine') value.graph.engine = 'builtin';
+        else value.graph.graphSource = source();
+        return project.call(engine.engine, row);
+      };
+      try { expect(value.graph.getNodeScreenPosition('local-a')).to.equal(undefined); }
+      finally { engine.engine.project = project; }
+      await settle(value.graph);
+      if (change === 'engine') expect(value.graph.getNodeScreenPosition('local-a') !== undefined).to.equal(true);
+      else expect(value.graph.getNodeScreenPosition('local-a')).to.equal(undefined);
+    });
+  }
+
   it('keeps relative toolbar zoom and focused wheel zoom in the component control plane', async () => {
     const value = setup(); value.graph.engine = 'webgl'; value.graph.view = '3d'; await fixture(value.graph); const engine = await mounted(value);
     const changes: LyraGraphCamera[] = []; value.graph.addEventListener('lr-camera-change', (event) => changes.push(event.detail.camera));
