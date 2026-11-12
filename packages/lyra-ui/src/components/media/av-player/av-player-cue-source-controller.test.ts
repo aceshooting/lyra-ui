@@ -1,4 +1,4 @@
-import { expect } from '@open-wc/testing';
+import { expect, waitUntil } from '@open-wc/testing';
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { AvCueSourceController } from './av-player-cue-source-controller.js';
 import type { LyraAvCueSource } from './av-cue-source.js';
@@ -71,3 +71,41 @@ it('reports an unavailable match when the host refuses to reveal a supplied cue'
     expect(await test.control.navigate(1)).to.equal(false);
   } finally { test.dispose(); }
 });
+
+
+for (const withdrawal of ['clear', 'rebind', 'revoke'] as const) {
+  for (const outcome of ['unavailable', 'rejected'] as const) {
+    it(`ignores a late ${outcome} reveal after ${withdrawal} and lets a fresh search recover`, async () => {
+      let finish: (() => void) | undefined, authoritative: (() => boolean) | undefined;
+      let reveals = 0;
+      const test = setup(async (_index, current) => {
+        if (++reveals > 1) return true;
+        authoritative = current;
+        return new Promise<boolean>((resolve, reject) => {
+          finish = outcome === 'unavailable' ? () => resolve(false) : () => reject(new Error('Obsolete reveal failure'));
+        });
+      });
+      try {
+        test.control.bind(source(), () => true);
+        const pending = test.control.search('Matching', 'en');
+        await waitUntil(() => finish !== undefined, 'the first search must reach host reveal');
+        expect(authoritative?.()).to.equal(true);
+        if (withdrawal === 'clear') expect(await test.control.search('', 'en')).to.equal(0);
+        else if (withdrawal === 'rebind') test.control.bind(source({ revision: 2 }), () => true);
+        else test.control.revoke();
+        expect(await pending).to.equal(0);
+        expect(authoritative?.()).to.equal(false);
+        expect(test.control.searchLoading).to.equal(false);
+        expect(test.control.searchUnavailable).to.equal(false);
+        expect(test.control.selected).to.equal(undefined);
+        finish!();
+        if (withdrawal === 'revoke') test.control.bind(source({ revision: 2 }), () => true);
+        expect(await test.control.search('Matching', 'en')).to.equal(1);
+        expect(test.control.selected?.cue.cueId).to.equal('cue-0');
+        expect(test.control.searchUnavailable).to.equal(false);
+        expect(test.control.searchLoading).to.equal(false);
+        expect(reveals).to.equal(2);
+      } finally { finish?.(); test.dispose(); }
+    });
+  }
+}

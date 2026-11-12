@@ -28173,8 +28173,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/image-viewer/image-viewer.test.ts",
-              "test": "--lr-image-viewer-highlight-success-border retints one highlight tone without changing global tokens",
+              "file": "src/components/media/image-viewer/image-viewer-panorama.test.ts",
+              "test": "rejects invalid peer hotspot indices while retaining valid hotspot identity",
               "kind": "optional-peer failure-path test signal"
             }
           ],

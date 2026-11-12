@@ -83,6 +83,61 @@ describe('lr-image-viewer panorama', () => {
     expect((camera as { fieldOfView: number }).fieldOfView).to.be.lessThan(75);
   });
 
+  it('pans vertically, zooms out, and restores the default camera from keyboard focus', async () => {
+    const el = await fixture<LyraImageViewer>(html`<lr-image-viewer src=${PNG} engine="webgl" projection="equirectangular"
+      .panoramaCamera=${{ yaw: 1, pitch: 0.2, fieldOfView: 60 }}></lr-image-viewer>`);
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="panorama"]')?.hasAttribute('data-ready') === true);
+    const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part="panorama"]')!;
+    await focusByKeyboard(viewport);
+    const changes: unknown[] = [];
+    el.addEventListener('lr-panorama-camera-change', event => changes.push(event.detail.camera));
+    await sendKeys({ press: 'ArrowUp' });
+    expect((camera as { pitch: number }).pitch).to.be.closeTo(0.2 + Math.PI / 18, 1e-10);
+    await sendKeys({ press: 'ArrowDown' });
+    expect((camera as { pitch: number }).pitch).to.be.closeTo(0.2, 1e-10);
+    await sendKeys({ press: 'Minus' });
+    expect((camera as { fieldOfView: number }).fieldOfView).to.equal(65);
+    await sendKeys({ press: 'Shift+Minus' });
+    expect((camera as { fieldOfView: number }).fieldOfView).to.equal(70);
+    await sendKeys({ press: 'Home' });
+    expect(camera).to.deep.equal(PANORAMA_DEFAULT_CAMERA);
+    expect(changes).to.have.lengthOf(5);
+    expect(changes.at(-1)).to.deep.equal(PANORAMA_DEFAULT_CAMERA);
+    expect(el.shadowRoot!.activeElement === viewport).to.equal(true);
+  });
+
+  it('leaves keys from a focused peer control unconsumed and does not move the panorama', async () => {
+    const el = await fixture<LyraImageViewer>(html`<lr-image-viewer src=${PNG} engine="webgl" projection="equirectangular"></lr-image-viewer>`);
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="panorama"]')?.hasAttribute('data-ready') === true);
+    const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part="panorama"]')!;
+    const button = document.createElement('button'); button.textContent = 'Peer control';
+    viewport.querySelector('[part="panorama-engine"]')!.append(button);
+    await focusByKeyboard(button);
+    let changes = 0, prevented: boolean | undefined;
+    el.addEventListener('lr-panorama-camera-change', () => { changes++; });
+    viewport.addEventListener('keydown', event => { prevented = event.defaultPrevented; });
+    await sendKeys({ press: 'ArrowUp' });
+    expect(prevented).to.equal(false); expect(changes).to.equal(0);
+    expect(camera).to.deep.equal(PANORAMA_DEFAULT_CAMERA);
+    expect(el.shadowRoot!.activeElement === button).to.equal(true);
+  });
+
+  it('rejects invalid peer hotspot indices while retaining valid hotspot identity', async () => {
+    const hotspots = [{ id: 'first', yaw: 0, pitch: 0 }, { id: 'second', yaw: 1, pitch: 0.2, label: 'Second' }];
+    const el = await fixture<LyraImageViewer>(html`<lr-image-viewer src=${PNG} engine="webgl" projection="equirectangular" .hotspots=${hotspots}></lr-image-viewer>`);
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="panorama"]')?.hasAttribute('data-ready') === true);
+    const selections: unknown[] = [];
+    el.addEventListener('lr-panorama-hotspot-select', event => selections.push(event.detail));
+    for (const index of [null, -1, 0.5, NaN, Infinity, 2]) host.pick(index, { shift: false, ctrl: false, double: false });
+    expect(selections).to.deep.equal([]);
+    host.pick(1, { shift: false, ctrl: false, double: false });
+    await waitUntil(() => el.shadowRoot!.querySelector('[data-panorama-index="1"]')?.getAttribute('tabindex') === '0',
+      'the selected hotspot becomes the text alternative tab stop');
+    expect(selections).to.deep.equal([{ hotspot: hotspots[1], id: 'second', index: 1 }]);
+    expect(el.shadowRoot!.querySelector('[data-panorama-index="1"]')?.getAttribute('tabindex')).to.equal('0');
+    expect(disposed).to.equal(0);
+  });
+
   it('falls back visibly and ignores callbacks after a pending mount is superseded', async () => {
     pending = true;
     const el = await fixture<LyraImageViewer>(html`<lr-image-viewer src=${PNG} engine="webgl" projection="equirectangular"></lr-image-viewer>`);
