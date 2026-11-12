@@ -326,9 +326,9 @@ const bundleEntries = {
   },
   graph: {
     fixture: 'optional',
-    // Explicit token-provider cache refresh brings the optional graph consumer from 459,348
-    // to 459,450 raw bytes across 14 files; the next 64-byte boundary leaves 6 bytes.
-    maxRawBytes: 459_456,
+    // Guarding invalid and retired screen projections measures 460,203 raw bytes across the
+    // same 14 files; the next 64-byte boundary leaves 21 bytes.
+    maxRawBytes: 460_224,
   },
 };
 
