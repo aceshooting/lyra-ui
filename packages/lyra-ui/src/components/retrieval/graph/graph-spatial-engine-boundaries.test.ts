@@ -11,7 +11,7 @@ type Failure = 'data' | 'style' | 'state' | 'resize' | 'appearance' | undefined;
 function setup() {
   let callbacks!: Engine3dHost, canvas: HTMLCanvasElement | undefined;
   let failure: Failure, disposed = 0, loaded = false;
-  const cameras: LyraGraphCamera[] = [], fits: (number | undefined)[] = [];
+  const cameras: LyraGraphCamera[] = [], fits: (number | undefined)[] = [], sizes: [number, number][] = [];
   const positions = new Map<number, LyraGraphPosition>([[0, { x: -30, y: 0, z: 0 }], [1, { x: 30, y: 0, z: 0 }]]);
   const screens = new Map<number, { x: number; y: number }>([[0, { x: 60, y: 80 }], [1, { x: 180, y: 80 }]]);
   const states: { readonly focus: number; readonly hover: number }[] = [];
@@ -21,7 +21,7 @@ function setup() {
     async mount(container, host) { callbacks = host; canvas = container.ownerDocument.createElement('canvas'); container.append(canvas); },
     setData() { fail('data'); loaded = true; },
     setStyle() { fail('style'); }, setState(value) { fail('state'); states.push(value); },
-    setAppearance() { fail('appearance'); }, resize() { fail('resize'); },
+    setAppearance() { fail('appearance'); }, resize(width, height) { fail('resize'); sizes.push([width, height]); },
     setCamera(value) { cameras.push(value as LyraGraphCamera); },
     fit(padding) { fits.push(padding); return { ...camera(), distance: 900 }; },
     positionOf(row) { return positions.get(row) ?? null; }, project(row) { return screens.get(row) ?? null; },
@@ -38,7 +38,7 @@ function setup() {
   graph.nodes = [{ id: 'a', label: 'Alpha', position: positions.get(0)! }, { id: 'b', label: 'Beta', position: positions.get(1)! }];
   graph.edges = [{ id: 'e', source: 'a', target: 'b' }];
   (graph as unknown as { loadSpatialController(): Promise<{ GraphSpatialController: typeof GraphSpatialController }> }).loadSpatialController = async () => ({ GraphSpatialController: InjectedSpatial });
-  return { graph, engine, positions, screens, cameras, fits, states, callbacks: () => callbacks,
+  return { graph, engine, positions, screens, cameras, fits, states, sizes, callbacks: () => callbacks,
     loaded: () => loaded, disposed: () => disposed, fail: (value: Failure) => { failure = value; } };
 }
 async function settle(graph: LyraGraph): Promise<void> { await graph.updateComplete; await nextFrame(); await nextFrame(); }
@@ -211,6 +211,91 @@ describe('graph spatial engine boundaries', () => {
     expect(graph.getNodeScreenPosition('missing')).to.equal(undefined);
     expect(graph.getNodePosition3d('missing')).to.equal(undefined);
     expect(graph.shadowRoot!.querySelectorAll('[part="spatial-list-item"]').length).to.equal(0);
+  });
+
+  for (const shape of ['straight', 'curved', 'loop', 'dangling'] as const) {
+    it(`paints a ${shape} edge label with its dimming while preserving the node label opacity`, async () => {
+      const value = setup(); value.graph.nodeLabels = 'always'; value.graph.withEdgeLabels = true;
+      value.graph.edgeLabelMinZoom = 0.001;
+      value.graph.edges = [{ id: 'edge', source: 'a', target: shape === 'loop' ? 'a' : shape === 'dangling' ? 'missing' : 'b',
+        label: 'Connection', ...(shape === 'curved' ? { curvature: 0.5 } : {}) }];
+      value.graph.dimmedEdgeIds = ['edge']; value.graph.dimmedNodeIds = ['b'];
+      value.graph.style.setProperty('--lr-graph-dimmed-opacity', '0.25');
+      await mount(value);
+      const surface = value.graph.shadowRoot!.querySelector<HTMLElement>('[data-webgl-host]')!;
+      value.screens.set(0, { x: surface.clientWidth * 0.2, y: surface.clientHeight * 0.5 });
+      value.screens.set(1, { x: surface.clientWidth * 0.6, y: surface.clientHeight * 0.5 });
+      const context = value.graph.shadowRoot!.querySelector<HTMLCanvasElement>('[data-graph-labels]')!.getContext('2d')!;
+      const fill = context.fillText;
+      const labels: { text: string; x: number; y: number; alpha: number }[] = [];
+      context.fillText = function(text, x, y, maxWidth) {
+        labels.push({ text, x, y, alpha: this.globalAlpha });
+        if (maxWidth === undefined) fill.call(this, text, x, y); else fill.call(this, text, x, y, maxWidth);
+      };
+      try {
+        value.graph.camera = { ...camera(), distance: 510 };
+        await waitUntil(() => labels.some(label => label.text === 'Connection') && labels.some(label => label.text === 'Beta'));
+        const edge = labels.find(label => label.text === 'Connection')!;
+        expect(Number.isFinite(edge.x) && Number.isFinite(edge.y)).to.equal(true);
+        expect(edge.alpha).to.be.closeTo(0.25, 0.001);
+        expect(labels.find(label => label.text === 'Alpha')!.alpha).to.equal(1);
+        expect(labels.find(label => label.text === 'Beta')!.alpha).to.be.closeTo(0.25, 0.001);
+        expect(context.globalAlpha).to.equal(1);
+        expect(value.disposed()).to.equal(0);
+      } finally { context.fillText = fill; }
+    });
+  }
+
+  it('withholds edge labels for invisible edges and behind-camera endpoints while continuing to paint the scene', async () => {
+    const value = setup(); value.graph.nodeLabels = 'always'; value.graph.withEdgeLabels = true;
+    value.graph.edgeLabelMinZoom = 0.001;
+    value.graph.edges = [
+      { id: 'visible', source: 'a', target: 'b', label: 'Visible' },
+      { id: 'transparent', source: 'a', target: 'b', label: 'Transparent', color: '#0000' },
+      { id: 'unlabeled', source: 'a', target: 'b' },
+    ];
+    await mount(value);
+    const context = value.graph.shadowRoot!.querySelector<HTMLCanvasElement>('[data-graph-labels]')!.getContext('2d')!;
+    const fill = context.fillText, transform = context.setTransform;
+    const labels: string[] = []; let frames = 0;
+    context.fillText = function(text, x, y, maxWidth) {
+      labels.push(text); if (maxWidth === undefined) fill.call(this, text, x, y); else fill.call(this, text, x, y, maxWidth);
+    };
+    context.setTransform = function(...args: unknown[]) { frames++; Reflect.apply(transform, this, args); };
+    try {
+      value.graph.camera = { ...camera(), distance: 510 };
+      await waitUntil(() => labels.includes('Visible'));
+      expect(labels).not.to.include('Transparent');
+      labels.length = 0; const before = frames;
+      value.positions.set(0, { x: -30, y: 0, z: 10_000 });
+      value.positions.set(1, { x: 30, y: 0, z: 10_000 });
+      value.graph.camera = { ...camera(), distance: 520 };
+      await waitUntil(() => frames > before);
+      expect(labels).not.to.include('Visible'); expect(labels).not.to.include('Transparent');
+      expect(value.disposed()).to.equal(0);
+    } finally { context.fillText = fill; context.setTransform = transform; }
+  });
+
+  it('suspends and restores the native surface after visibility changes without IntersectionObserver', async () => {
+    const saved = Object.getOwnPropertyDescriptor(window, 'IntersectionObserver');
+    Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: undefined });
+    const value = setup();
+    try {
+      await mount(value);
+      const surface = value.graph.shadowRoot!.querySelector<HTMLElement>('[data-webgl-host]')!;
+      expect(value.sizes.at(-1)).to.deep.equal([surface.clientWidth, surface.clientHeight]);
+      value.graph.hidden = true;
+      await waitUntil(() => value.sizes.at(-1)?.[0] === 0 && value.sizes.at(-1)?.[1] === 0);
+      value.graph.hidden = false;
+      await waitUntil(() => (value.sizes.at(-1)?.[0] ?? 0) > 0);
+      expect(value.sizes.at(-1)).to.deep.equal([surface.clientWidth, surface.clientHeight]);
+      expect(await value.graph.focusNode('b')).to.equal(true);
+      expect(value.disposed()).to.equal(0);
+    } finally {
+      value.graph.remove();
+      if (saved) Object.defineProperty(window, 'IntersectionObserver', saved);
+      else Reflect.deleteProperty(window, 'IntersectionObserver');
+    }
   });
 
   it('ignores secondary pointers and sub-threshold movement without abandoning the active drag', async () => {
