@@ -97,7 +97,7 @@
     "fast-check": "^4.10.2",
     "playwright": "^1.65.0",
     "typescript": "^7.0.2",
-    "vite": "^8.3.6"
+    "vite": "^8.3.7"
   },
   "imports": {
     "#graph-layout-signal-brand": {
