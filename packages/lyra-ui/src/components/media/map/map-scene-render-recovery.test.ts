@@ -166,4 +166,117 @@ describe('lr-map scene renderer recovery', () => {
     });
   }
 
+  it('keeps marker drawing suspended when document visibility cannot be observed', async () => {
+    const { element, peer } = await env.mount();
+    const original = document.addEventListener;
+    let attempts = 0;
+    document.addEventListener = function (this: Document, ...args: Parameters<typeof original>) {
+      if (args[0] === 'visibilitychange') { attempts++; throw new Error('Visibility observation unavailable'); }
+      Reflect.apply(original, this, args);
+    } as typeof original;
+    try {
+      element.scene = { objects: [sceneMarker()] };
+      const bridge = await env.bridge(peer);
+      env.visible(peer, true); await renderTurns();
+      expect(attempts).to.be.greaterThan(0);
+      expect(bridge.host.captureRenderInput().markers.length).to.equal(1);
+      expect(bridge.visibility).to.deep.equal([false]);
+      expect(peer.removed).to.equal(false);
+      element.remove(); expect(peer.removed).to.equal(true); expect(bridge.disposed).to.equal(true);
+    } finally { document.addEventListener = original; }
+  });
+
+  it('keeps native map cleanup working when the active bridge refuses disposal', async () => {
+    let disposals = 0;
+    env.setImporter(async () => ({ createSceneBridge(...args: Parameters<ReturnType<typeof env.module>['createSceneBridge']>) {
+      const bridge = env.module().createSceneBridge(...args);
+      return { ...bridge, dispose() { disposals++; throw new Error('Bridge cleanup refused'); } };
+    } }));
+    const { element, peer } = await env.mount(element => { element.scene = { objects: [sceneMarker()] }; });
+    const bridge = await env.bridge(peer);
+    element.remove(); await renderTurns();
+    expect(disposals).to.equal(1); expect(peer.removed).to.equal(true);
+    expect(bridge.host.signal.aborted).to.equal(true); expect(bridge.host.isCurrent()).to.equal(false);
+    expect(env.observers.filter(observer => !observer.stopped && observer.targets.has(peer.container)).length).to.equal(0);
+  });
+
+  it('ignores a queued intersection notification after its native installation is retired', async () => {
+    const { element, peer } = await env.mount(element => { element.scene = { objects: [sceneMarker()] }; });
+    const bridge = await env.bridge(peer);
+    const observers = env.observers.filter(observer => observer.kind === 'intersection' && observer.targets.has(peer.container));
+    expect(observers.length).to.be.greaterThan(0);
+    element.remove(); const visibility = [...bridge.visibility];
+    for (const observer of observers) observer.emit(peer.container, true, true);
+    await renderTurns();
+    expect(bridge.visibility).to.deep.equal(visibility); expect(peer.removed).to.equal(true);
+    expect(bridge.host.isCurrent()).to.equal(false);
+  });
+
+  for (const failure of ['missing context', 'failed readback'] as const) {
+    it(`recovers line presentation after ${failure} without replacing the native map`, async () => {
+      const original = HTMLCanvasElement.prototype.getContext;
+      let probes = 0;
+      HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, ...args: Parameters<typeof original>) {
+        if (this.width === 1 && this.height === 1 && args[0] === '2d') {
+          probes++;
+          if (failure === 'missing context') return null;
+          const context = Reflect.apply(original, this, args);
+          if (!(context instanceof CanvasRenderingContext2D)) throw new Error('Expected 2D context');
+          context.getImageData = () => { throw new Error('Line color readback unavailable'); };
+          return context;
+        }
+        return Reflect.apply(original, this, args);
+      } as typeof original;
+      try {
+        const { element, peer } = await env.mount(element => {
+          element.scene = { objects: [{ ...scenePath(), color: 'color(srgb 0 1 0)' }] };
+        });
+        expect(probes).to.be.greaterThan(0);
+        expect([...peer.layers.keys()].filter(id => id.startsWith('lr-scene-lines-')).length).to.equal(0);
+        expect(peer.removed).to.equal(false);
+        const states = statusLog(element);
+        HTMLCanvasElement.prototype.getContext = original;
+        invalidateLyraTheme(element);
+        await waitUntil(() => [...peer.layers.keys()].some(id => id.startsWith('lr-scene-lines-')), 'line color presentation restored');
+        await waitUntil(() => states.at(-1)?.state === 'ready', 'line renderer ready after recovery');
+        expect(env.peers.length).to.equal(1); expect(env.records.length).to.equal(0);
+      } finally { HTMLCanvasElement.prototype.getContext = original; }
+    });
+  }
+
+  it('retains ground lines when the optional native terrain query throws', async () => {
+    let reads = 0;
+    const { element, peer } = await env.mount(element => { element.scene = { objects: [scenePath()] }; }, peer => {
+      peer.getTerrain = () => { reads++; throw new Error('Terrain query unavailable'); };
+    });
+    expect(reads).to.be.greaterThan(0);
+    expect([...peer.layers.keys()].some(id => id.startsWith('lr-scene-lines-'))).to.equal(true);
+    expect(peer.removed).to.equal(false);
+    element.remove(); expect(peer.removed).to.equal(true);
+  });
+
+  for (const kind of ['marker', 'path'] as const) {
+    it(`recovers a ${kind} after its application color token becomes available`, async () => {
+      const { element, peer } = await env.mount(element => {
+        const object = kind === 'marker' ? sceneMarker() : scenePath();
+        element.scene = { objects: [{ ...object, color: 'var(--scene-delayed-color)' }] };
+      });
+      const bridge = kind === 'marker' ? await env.bridge(peer) : undefined;
+      if (bridge) expect(bridge.host.captureRenderInput().markers.length).to.equal(0);
+      expect([...peer.layers.keys()].filter(id => id.startsWith('lr-scene-lines-')).length).to.equal(0);
+      const states = statusLog(element);
+      element.style.setProperty('--scene-delayed-color', 'rgb(10, 20, 30)');
+      invalidateLyraTheme(element);
+      if (bridge) {
+        await waitUntil(() => bridge.host.captureRenderInput().markers.length === 1, 'marker color becomes available');
+        expect(bridge.host.captureRenderInput().markers[0]!.rgba).to.deep.equal([10 / 255, 20 / 255, 30 / 255, 1]);
+        bridge.host.onState(report(bridge.host, 'installed'));
+      } else {
+        await waitUntil(() => [...peer.layers.keys()].some(id => id.startsWith('lr-scene-lines-')), 'line color becomes available');
+      }
+      await waitUntil(() => states.at(-1)?.state === 'ready', 'scene recovers its presentation');
+      expect(peer.removed).to.equal(false); expect(env.peers.length).to.equal(1);
+    });
+  }
+
 });

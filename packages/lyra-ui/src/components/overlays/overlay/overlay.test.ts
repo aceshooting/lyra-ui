@@ -3455,3 +3455,55 @@ describe('lr-tooltip background custom property', () => {
     });
   }
 });
+
+for (const guard of ['aria-disabled', 'inert action', 'inert ancestor'] as const) {
+  it(`keeps a declarative close action inactive while guarded by ${guard} and enables it again`, async () => {
+    const el = await fixture<LyraPopover>(html`<lr-popover style="--show-duration:0ms;--hide-duration:0ms">
+      <button slot="trigger">Open details</button><div id="actions"><button data-popover="close">Close details</button></div>
+    </lr-popover>`);
+    const action = el.querySelector<HTMLButtonElement>('[data-popover="close"]')!;
+    const owner = guard === 'inert ancestor' ? action.parentElement! : action;
+    const attribute = guard === 'aria-disabled' ? 'aria-disabled' : 'inert';
+    owner.setAttribute(attribute, guard === 'aria-disabled' ? ' TRUE ' : '');
+    await el.show(); let hides = 0;
+    el.addEventListener('lr-hide', () => hides++);
+    action.click(); await el.updateComplete;
+    expect(el.open).to.equal(true); expect(hides).to.equal(0);
+    owner.removeAttribute(attribute);
+    action.click(); await waitUntil(() => !el.open, 'enabled close action closes the popover');
+    expect(hides).to.equal(1);
+  });
+}
+
+it('honors an application-cancelled close activation and accepts the next uncancelled one', async () => {
+  const el = await fixture<LyraPopover>(html`<lr-popover style="--show-duration:0ms;--hide-duration:0ms">
+    <button slot="trigger">Open details</button><button data-popover="close">Close details</button>
+  </lr-popover>`);
+  const action = el.querySelector<HTMLButtonElement>('[data-popover="close"]')!;
+  await el.show(); let hides = 0;
+  el.addEventListener('lr-hide', () => hides++);
+  action.addEventListener('click', event => event.preventDefault(), { once: true });
+  action.click(); await el.updateComplete;
+  expect(el.open).to.equal(true); expect(hides).to.equal(0);
+  action.click(); await waitUntil(() => !el.open, 'uncancelled close succeeds');
+  expect(hides).to.equal(1);
+});
+
+it('contains a nested declarative close activation even when its own hide is vetoed', async () => {
+  const outer = await fixture<LyraPopover>(html`<lr-popover style="--show-duration:0ms;--hide-duration:0ms">
+    <button slot="trigger">Outer details</button>
+    <lr-popover style="--show-duration:0ms;--hide-duration:0ms">
+      <button slot="trigger">Inner details</button><button data-popover="close">Close inner</button>
+    </lr-popover>
+  </lr-popover>`);
+  const inner = outer.querySelector<LyraPopover>('lr-popover')!;
+  await outer.show(); await inner.show();
+  let outerHides = 0;
+  outer.addEventListener('lr-hide', event => { if (event.target === outer) outerHides++; });
+  inner.addEventListener('lr-hide', event => event.preventDefault(), { once: true });
+  const action = inner.querySelector<HTMLButtonElement>('[data-popover="close"]')!;
+  action.click(); await inner.updateComplete;
+  expect(inner.open).to.equal(true); expect(outer.open).to.equal(true); expect(outerHides).to.equal(0);
+  action.click(); await waitUntil(() => !inner.open, 'next inner close succeeds');
+  expect(outer.open).to.equal(true); expect(outerHides).to.equal(0);
+});
