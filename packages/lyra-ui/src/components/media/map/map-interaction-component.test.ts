@@ -220,6 +220,157 @@ describe('lr-map interaction and retained state integration', () => {
     peer.hits = [null]; fire(peer); fire(peer, 'contextmenu'); peer.hits = []; peer.queryError = true; fire(peer); fire(peer, 'contextmenu');
     expect(clicks.length).to.equal(0); expect(menus.length).to.equal(0); expect(peer.queryCount).to.equal(4);
   });
+  for (const target of ['generated', 'overlay', 'external']) {
+    it(`keeps ${target} clicks available while unchanged overlay layers await new GeoJSON`, async () => {
+      const overlays = (data: unknown) => ({ sources: [{ id: 'extra', source: { type: 'geojson', data } }],
+        layers: [{ layer: { id: 'extra-layer', type: 'circle', source: 'extra' }, priority: 10 }] });
+      const { element, peer } = await mount(el => {
+        el.dataLayers = target === 'external'
+          ? [{ kind: 'vector', sourceId: 'roads', source: { tiles: ['https://example.test/{z}/{x}/{y}.pbf'] }, sourceLayer: 'transport', render: 'line' }]
+          : [row()];
+        el.overlays = overlays(POINTS);
+      });
+      const layer = target === 'overlay' ? 'extra-layer' : target === 'external'
+        ? [...peer.layers.keys()].find(id => id !== 'extra-layer')! : circle(peer);
+      const raw = hit(peer, layer);
+      peer.hits = [raw];
+      const clicks = capture(element, 'lr-map-click');
+      let release!: () => void;
+      let preparations = 0;
+      const preparation = new Promise<void>(resolve => { release = resolve; });
+      ControlMap.prepare = () => { preparations++; return preparation; };
+      try {
+        element.overlays = overlays({ ...POINTS, features: [...POINTS.features] });
+        await element.updateComplete;
+        await waitUntil(() => preparations === 1);
+        fire(peer);
+        expect(clicks.length, 'a renderer click on a retained layer must reach the application during preparation').to.equal(1);
+        expect((clicks[0] as { feature: unknown }).feature === raw).to.equal(true);
+        expect((clicks[0] as { hit: { source: string } }).hit.source).to.equal(target === 'overlay' ? 'extra' : target === 'external' ? 'roads' : 'points');
+        expect(peer.layers.has(layer)).to.equal(true);
+        release();
+        await (element as unknown as { featureWork: Promise<void> }).featureWork;
+        await restore(element);
+        fire(peer);
+        expect(clicks.length).to.equal(2);
+      } finally { release?.(); }
+    });
+  }
+  for (const change of ['source-options', 'layer-paint', 'interaction', 'generated-data', 'missing-setter']) {
+    it(`keeps pending interaction blocked for ${change} changes`, async () => {
+      const overlays = (data: unknown) => ({ sources: [{ id: 'extra', source: { type: 'geojson', data } }],
+        layers: [{ layer: { id: 'extra-layer', type: 'circle', source: 'extra' } }] });
+      const { element, peer } = await mount(el => { el.dataLayers = [row()]; el.overlays = overlays(POINTS); });
+      peer.hits = [hit(peer, 'extra-layer')];
+      const clicks = capture(element, 'lr-map-click');
+      let release!: () => void;
+      let preparations = 0;
+      ControlMap.prepare = () => { preparations++; return new Promise<void>(resolve => { release = resolve; }); };
+      const next = overlays({ ...POINTS, features: [...POINTS.features] });
+      try {
+        if (change === 'missing-setter') Reflect.deleteProperty(peer.sources.get('extra')!, 'setData');
+        if (change === 'generated-data') element.dataLayers = [{ ...row(), geojson: { ...POINTS } }];
+        element.overlays = change === 'source-options'
+          ? { ...next, sources: [{ id: 'extra', source: { ...next.sources[0]!.source, tolerance: 0.5 } }] }
+          : change === 'layer-paint'
+            ? { ...next, layers: [{ layer: { ...next.layers[0]!.layer, paint: { 'circle-color': '#ff0000' } } }] }
+            : change === 'interaction'
+              ? { ...next, layers: [{ ...next.layers[0]!, interactive: false }] }
+              : next;
+        await element.updateComplete;
+        await waitUntil(() => preparations === 1);
+        fire(peer);
+        expect(clicks.length, 'changed resources must not publish a hit through old routes').to.equal(0);
+        release();
+        await (element as unknown as { featureWork: Promise<void> }).featureWork;
+        await restore(element);
+        fire(peer);
+        expect(clicks.length, 'interaction resumes after reconciliation').to.equal(1);
+        if (change === 'interaction') expect((clicks[0] as { hit?: unknown }).hit).to.equal(undefined);
+      } finally { release?.(); }
+    });
+  }
+  for (const guard of ['disabled', 'inert']) {
+    it(`respects ${guard} while retaining clicks during an overlay data refresh`, async () => {
+      const overlays = (data: unknown) => ({ sources: [{ id: 'extra', source: { type: 'geojson', data } }],
+        layers: [{ layer: { id: 'extra-layer', type: 'circle', source: 'extra' } }] });
+      const { element, peer, wrapper } = await mount(el => { el.overlays = overlays(POINTS); });
+      peer.hits = [hit(peer, 'extra-layer')];
+      const clicks = capture(element, 'lr-map-click');
+      let release!: () => void;
+      let preparations = 0;
+      ControlMap.prepare = () => { preparations++; return new Promise<void>(resolve => { release = resolve; }); };
+      try {
+        element.overlays = overlays({ ...POINTS, features: [...POINTS.features] });
+        await element.updateComplete;
+        await waitUntil(() => preparations === 1);
+        const owner = guard === 'disabled' ? element : wrapper;
+        owner.setAttribute(guard, '');
+        fire(peer);
+        expect(clicks.length).to.equal(0);
+        owner.removeAttribute(guard);
+        await element.updateComplete;
+        fire(peer);
+        expect(clicks.length).to.equal(1);
+        release();
+        await (element as unknown as { featureWork: Promise<void> }).featureWork;
+        await restore(element);
+      } finally { release?.(); }
+    });
+  }
+  it('retires retained click routes when a style replacement supersedes the data refresh', async () => {
+    const overlays = (data: unknown) => ({ sources: [{ id: 'extra', source: { type: 'geojson', data } }],
+      layers: [{ layer: { id: 'extra-layer', type: 'circle', source: 'extra' } }] });
+    const { element, peer } = await mount(el => { el.overlays = overlays(POINTS); });
+    peer.hits = [hit(peer, 'extra-layer')];
+    const clicks = capture(element, 'lr-map-click');
+    let release!: () => void;
+    let preparations = 0;
+    const preparation = new Promise<void>(resolve => { release = resolve; });
+    ControlMap.prepare = () => { preparations++; return preparation; };
+    try {
+      element.overlays = overlays({ ...POINTS, features: [...POINTS.features] });
+      await element.updateComplete;
+      await waitUntil(() => preparations === 1);
+      fire(peer);
+      expect(clicks.length).to.equal(1);
+      element.mapStyle = { ...LYRA_MAP_EMPTY_STYLE };
+      fire(peer);
+      await element.updateComplete;
+      fire(peer);
+      expect(clicks.length, 'neither the pending update nor the uncommitted style can reuse old click routes').to.equal(1);
+      release();
+      await (element as unknown as { featureWork: Promise<void> }).featureWork;
+      await restore(element);
+      fire(peer);
+      expect(clicks.length).to.equal(2);
+    } finally { release(); }
+  });
+  it('retains the committed click routes when a second GeoJSON refresh supersedes preparation', async () => {
+    const overlays = (data: unknown) => ({ sources: [{ id: 'extra', source: { type: 'geojson', data } }],
+      layers: [{ layer: { id: 'extra-layer', type: 'circle', source: 'extra' } }] });
+    const { element, peer } = await mount(el => { el.overlays = overlays(POINTS); });
+    peer.hits = [hit(peer, 'extra-layer')];
+    const clicks = capture(element, 'lr-map-click');
+    let release!: () => void;
+    let preparations = 0;
+    const preparation = new Promise<void>(resolve => { release = resolve; });
+    ControlMap.prepare = () => { preparations++; return preparation; };
+    try {
+      for (let update = 1; update <= 3; update++) {
+        element.overlays = overlays({ ...POINTS, features: [...POINTS.features] });
+        await element.updateComplete;
+        await waitUntil(() => preparations === update);
+        fire(peer);
+        expect(clicks.length, `refresh ${update} preserves clicks on the last committed feature`).to.equal(update);
+      }
+      release();
+      await (element as unknown as { featureWork: Promise<void> }).featureWork;
+      await restore(element);
+      fire(peer);
+      expect(clicks.length).to.equal(4);
+    } finally { release(); }
+  });
   it('does not publish a hit/background after a query synchronously disconnects its owner', async () => {
     const { element, peer } = await mount(el => { el.dataLayers = [row()]; }); const clicks = capture(element, 'lr-map-click');
     peer.hits = [hit(peer)]; peer.beforeQuery = () => element.remove(); fire(peer); expect(clicks.length).to.equal(0); expect(peer.removed).to.equal(true);

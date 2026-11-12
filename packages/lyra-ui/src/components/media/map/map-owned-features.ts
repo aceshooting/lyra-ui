@@ -109,6 +109,8 @@ export class MapOwnedFeatures {
   private hasResources = false;
   private committedResources?: { readonly map: MapLibreMapCapability; readonly style: unknown;
     readonly overlays: MapOwnedOverlaySnapshot; readonly images: readonly PreparedMapImage[]; readonly layerIds: readonly string[] };
+  private interactionResources?: { readonly map: MapLibreMapCapability; readonly style: unknown;
+    readonly overlays: MapOwnedOverlaySnapshot };
   private hasOverrides = false;
   private overriding = false;
   private disposing = false;
@@ -117,6 +119,22 @@ export class MapOwnedFeatures {
 
   ownsLayer(id: string): boolean { return this.resources.ownsLayer(id); }
   ownsGeoJsonSource(id: string): boolean { return this.resources.ownsGeoJsonSource(id); }
+
+  /** A GeoJSON data refresh can keep the committed hit routes while preparation waits. */
+  canRetainInteractions(map: MapLibreMapCapability, style: unknown, overlays: MapOwnedOverlaySnapshot): boolean {
+    const committed = this.interactionResources;
+    if (!committed || committed.map !== map || !Object.is(committed.style, style) ||
+      !sameSnapshot(committed.overlays.layers, overlays.layers) || committed.overlays.sources.length !== overlays.sources.length) return false;
+    try {
+      return overlays.sources.every((next, index) => {
+        const previous = committed.overlays.sources[index]!;
+        if (previous.id !== next.id) return false;
+        if (sameSnapshot(previous.source, next.source)) return true;
+        return previous.source['type'] === 'geojson' && next.source['type'] === 'geojson' &&
+          planMapSourceUpdate(map.getSource(next.id), previous.source, next.source) !== undefined;
+      });
+    } catch { return false; }
+  }
 
   /** Installs, replaces or removes the lazy `imageProvider` for one live engine. */
   configureImageProvider(map: MapLibreMapCapability | undefined, provider: unknown, owner: Element): void {
@@ -150,6 +168,7 @@ export class MapOwnedFeatures {
       this.provider.dispose(); this.cancel(); this.resources.dispose(); this.overrides?.reset(); this.cache.clear();
       this.peer = undefined; this.resourcePeer = undefined; this.overridePeer = undefined;
       this.hasResources = false; this.hasOverrides = false; this.committedResources = undefined;
+      this.interactionResources = undefined;
     } finally { this.disposing = false; }
   }
 
@@ -235,7 +254,11 @@ export class MapOwnedFeatures {
         transferred = true; this.hasResources = true; this.committedResources = undefined;
         const result = await this.resources.reconcile(this.resourcePeer!, style, overlaySnapshot, desiredImages, {
             isCurrent: current,
-            beforeMutation: () => { check(); imageUpdate!.beforeNativeMutation(); check(); },
+            beforeMutation: () => {
+              check();
+              this.interactionResources = undefined;
+              imageUpdate!.beforeNativeMutation(); check();
+            },
             // Release the native lease before callback-queued work runs, not after this await.
             afterMutation: safeToRestore => { imageUpdate!.settleNative(safeToRestore); },
             beforeSourceChange: context.beforeSourceChange,
@@ -249,6 +272,7 @@ export class MapOwnedFeatures {
         this.cache = desired; this.hasResources = hasResources;
         imageUpdate.commit(); check();
         this.committedResources = { map, style, overlays: overlaySnapshot, images: desiredImages, layerIds };
+        this.interactionResources = this.committedResources;
       }
       if (hasOverrides || this.hasOverrides) {
         if (typeof map.getPaintProperty !== 'function' || typeof map.getLayoutProperty !== 'function' ||

@@ -4537,6 +4537,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private featureGeneration = 0;
   private featureAbort?: AbortController;
   private preparingFeatures = false;
+  private retainedOverlayInteractions = false;
+  private committedInteractionInputs?: readonly unknown[];
   private preparedFeatureSignature?: string;
   private pendingMapLoad = false;
   private mapLoadEmitted = false;
@@ -6036,6 +6038,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (cancelReadiness) { this.readiness.cancel(); this.controlsReadiness.cancel(); }
     this.cancelFeaturePreparation();
     this.pointerCleanup?.(); this.pointerCleanup = undefined;
+    this.committedInteractionInputs = undefined;
     this.mapCursor.clear(); this.hovered = undefined; this.endPointerReports(false);
     this.featureStates?.dispose(); this.featureStates = undefined; this.stateRouter.configure([]);
     if (this.featureStateLoad === 'failed') this.featureStateLoad = undefined;
@@ -7013,7 +7016,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   private mapInteractionAllowed(): boolean {
-    if (!this.isConnected || !this._map || !this._styleLoaded || this.preparingFeatures || this.isUpdatePending) return false;
+    if (!this.isConnected || !this._map || !this._styleLoaded ||
+      (this.preparingFeatures && !this.retainedOverlayInteractions) || this.isUpdatePending) return false;
     return !this.mapInteractionBlocked();
   }
 
@@ -7347,6 +7351,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   private cancelFeaturePreparation(): void {
+    this.retainedOverlayInteractions = false;
     this.interactionGeneration++; this.featureStates?.cancel(); this.clearMapHover();
     this.ownedFeatures?.cancel();
     this.externalFeatures?.cancel();
@@ -7550,6 +7555,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const styleOverrides = this.styleOverrides;
     const hiddenCategories = this.hiddenCategories;
     const interactiveBasemapLayers = this.interactiveBasemapLayers;
+    const interactionInputs = [map, connection, styleGeneration, style, dataLayers, choropleth, images,
+      imageProvider, styleOverrides, interactiveBasemapLayers, hiddenCategories];
     let ownedInput!: MapOwnedFeatureInput;
     let externalInput!: ReturnType<typeof buildMapExternalLayers>;
     let orderGroups: readonly MapLayerOrderGroup[] | undefined;
@@ -7609,6 +7616,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         if (!current() || controller.signal.aborted) return;
         this.featureAbort = undefined;
         this.preparingFeatures = false;
+        this.retainedOverlayInteractions = false;
+        this.committedInteractionInputs = interactionInputs;
         this.syncDrawing(); this.syncMapCursor();
         if (this.pendingDrawingTheme && current()) {
           this.pendingDrawingTheme = false;
@@ -7668,6 +7677,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const fail = (): void => {
       if (!current()) return;
       this.preparingFeatures = false;
+      this.retainedOverlayInteractions = false;
       finish();
       if (!mutationStarted && this.mapLoadEmitted && !this.pendingMapLoad) {
         this._canonicalDataLayers = this.committedDataLayers;
@@ -7736,6 +7746,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         if (this.canonicalDataLayers.some(row => row.placementRequested) && typeof map.setLayerZoomRange !== 'function') {
           throw new Error('Map layer bounds are unavailable.');
         }
+        const retainInteractions = this.committedInteractionInputs?.every((input, index) => input === interactionInputs[index]) === true &&
+          this.ownedFeatures?.canRetainInteractions(map, styleGeneration, ownedInput.overlays as MapOwnedOverlaySnapshot) === true;
+        if (!current() || controller.signal.aborted) return;
+        this.retainedOverlayInteractions = retainInteractions;
       };
       const prepare = (): Promise<void> | undefined => {
         if (!current() || controller.signal.aborted || typeof map.prepareFeatures !== 'function') return;
