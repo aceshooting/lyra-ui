@@ -23,10 +23,8 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
-const SAMPLE_IMAGE = 'https://picsum.photos/seed/lr-media-card/640/400';
+const SAMPLE_IMAGE = '/fixtures/story-image.svg';
 const IMAGE_KIND: LyraMediaCardKind = 'image';
-// A local fixture (not an external URL like SAMPLE_IMAGE above) -- see .storybook/main.js's
-// staticDirs entry for why.
 const SAMPLE_VIDEO = '/fixtures/sample-video.mp4';
 const LONG_LTR_FILENAME = 'quarterly-rooftop-installation-verification-and-compliance-summary-final-revision.pdf';
 const LONG_RTL_FILENAME = 'ملخص-التحقق-والامتثال-لتركيب-الألواح-الشمسية-النهائي-للمراجعة.pdf';
@@ -36,8 +34,8 @@ export const Image: Story = {
     <lr-media-card
       src=${SAMPLE_IMAGE}
       .kind=${IMAGE_KIND}
-      filename="roof-photo.jpg"
-      alt="Aerial photo of a rooftop solar installation"
+      filename="landscape.svg"
+      alt="Abstract mountain landscape"
     ></lr-media-card>
   `,
 };
@@ -54,11 +52,11 @@ export const AccessibleActionLabel: Story = {
   },
   render: () => html`
     <lr-media-card
-      aria-label="Open rooftop photo in the project lightbox"
+      aria-label="Open landscape image in the preview"
       src=${SAMPLE_IMAGE}
       kind="image"
-      filename="roof-photo.jpg"
-      alt="Aerial photo of a rooftop solar installation"
+      filename="landscape.svg"
+      alt="Abstract mountain landscape"
     ></lr-media-card>
   `,
 };
@@ -119,8 +117,8 @@ export const ThemedPressedState: Story = {
       <lr-media-card
         src=${SAMPLE_IMAGE}
         kind="image"
-        filename="roof-photo.jpg"
-        alt="Aerial photo of a rooftop solar installation"
+        filename="landscape.svg"
+        alt="Abstract mountain landscape"
       ></lr-media-card>
       <lr-media-card
         src="https://example.com/reports/quarterly-summary.pdf"
@@ -137,13 +135,13 @@ export const AutoDetectFromMimeType: Story = {
     docs: {
       description: {
         story:
-          'Neither card below sets `kind` — the first auto-detects `image` from `mime-type="image/jpeg"`, the second falls through to the generic file chip because `mime-type="application/zip"` matches neither `image/*` nor `video/*`.',
+          'Neither card below sets `kind` — the first auto-detects `image` from `mime-type="image/svg+xml"`, the second falls through to the generic file chip because `mime-type="application/zip"` matches neither `image/*` nor `video/*`.',
       },
     },
   },
   render: () => html`
     <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-start;">
-      <lr-media-card src=${SAMPLE_IMAGE} mime-type="image/jpeg" filename="roof-photo.jpg"></lr-media-card>
+      <lr-media-card src=${SAMPLE_IMAGE} mime-type="image/svg+xml" filename="landscape.svg"></lr-media-card>
       <lr-media-card
         src="https://example.com/exports/dataset.zip"
         mime-type="application/zip"
@@ -274,7 +272,7 @@ export const OpenEvent: Story = {
       <lr-media-card
         src=${SAMPLE_IMAGE}
         kind="image"
-        filename="roof-photo.jpg"
+        filename="landscape.svg"
         @lr-media-open=${(e: CustomEvent<LyraMediaCardOpenDetail>) => {
           const out = document.getElementById('media-card-log');
           if (out) out.textContent = `lr-media-open: ${JSON.stringify(e.detail)}`;
