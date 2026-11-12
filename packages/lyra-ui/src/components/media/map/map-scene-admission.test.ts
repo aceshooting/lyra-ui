@@ -1,8 +1,44 @@
 import { expect } from '@open-wc/testing';
-import { stageMapSceneAdmission } from './map-scene-admission.js';
+import { snapshotMapSceneRequest, stageMapSceneAdmission } from './map-scene-admission.js';
 import { sceneArc, sceneMarker, sceneModel, scenePath, sceneSourceHarness } from '../../../../test/map-scene-admission-fixtures.js';
 
 describe('map scene descriptor admission', () => {
+  it('rejects inherited scene fields and non-array object collections before allocating sources', () => {
+    const h = sceneSourceHarness();
+    try {
+      const model = sceneModel();
+      for (const scene of [null, Object.create({ objects: [model] }), { objects: { 0: model, length: 1 } }]) {
+        expect(() => stageMapSceneAdmission(scene, { request: h.request(), sources: h.sources })).to.throw();
+      }
+      expect(h.allocations).to.equal(0);
+      expect(h.resolutions).to.equal(0);
+      expect(h.liveBytes).to.equal(0);
+    } finally { h.sources.dispose(); }
+  });
+
+  it('rejects accessor array entries without evaluating them or allocating a leading model', () => {
+    const h = sceneSourceHarness();
+    let reads = 0;
+    const objects = [sceneModel(), sceneMarker()];
+    Object.defineProperty(objects, '1', { get() { reads++; return sceneMarker(); } });
+    try {
+      expect(() => stageMapSceneAdmission({ objects }, { request: h.request(), sources: h.sources })).to.throw();
+      expect(reads).to.equal(0);
+      expect(h.allocations).to.equal(0);
+      expect(h.liveBytes).to.equal(0);
+    } finally { h.sources.dispose(); }
+  });
+
+  it('rejects non-object connection identities and request accessors without evaluating them', () => {
+    for (const connection of [null, undefined, 0, 'connection', () => undefined]) {
+      expect(() => snapshotMapSceneRequest({ connection: connection as object, revision: 1 })).to.throw();
+    }
+    let reads = 0;
+    const request = { connection: {}, get revision() { reads++; return 1; } };
+    expect(() => snapshotMapSceneRequest(request)).to.throw();
+    expect(reads).to.equal(0);
+  });
+
   it('admits a valid empty scene without creating source work', () => {
     const h = sceneSourceHarness();
     const candidate = stageMapSceneAdmission({ objects: [] }, { request: h.request(), sources: h.sources });
