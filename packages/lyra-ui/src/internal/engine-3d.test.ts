@@ -16,6 +16,25 @@ import { resolveLyraString } from './localization-runtime.js';
 import '../translations/fr/shared.js';
 
 describe('engine-3d', () => {
+  it('keeps unreadable failure metadata on the ordinary engine-error fallback', () => {
+    let reads = 0;
+    const failure = Object.defineProperty(new Error('Renderer stopped'), 'code', {
+      get() { reads++; throw new Error('Failure metadata unavailable'); },
+    });
+    expect(engine3dFailureReason(failure)).to.equal('error');
+    expect(reads).to.equal(1);
+    expect(engine3dFailureReason({ code: 'webgl-unavailable' })).to.equal('unsupported');
+  });
+
+  it('classifies revoked rejection objects and empty rejection values without throwing', () => {
+    const failure = Proxy.revocable({}, {});
+    failure.revoke();
+    expect(engine3dFailureReason(failure.proxy)).to.equal('error');
+    expect(engine3dFailureReason(null)).to.equal('error');
+    expect(engine3dFailureReason('webgl-unavailable')).to.equal('error');
+    expect(engine3dFailureReason({ code: 'different-code' })).to.equal('error');
+  });
+
   it('normalizes the engine preference from attributes, reflection and direct writes', () => {
     expect(ENGINE_3D_PREFERENCE.fromAttribute?.('webgl', String)).to.equal('webgl');
     expect(ENGINE_3D_PREFERENCE.fromAttribute?.('WebGL', String)).to.equal('builtin');

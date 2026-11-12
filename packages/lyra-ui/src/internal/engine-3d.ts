@@ -84,9 +84,13 @@ export function engine3dFallbackNotice(detail: Engine3dFallbackDetail): {
  * `code: 'webgl-unavailable'` when the browser has no WebGL2; anything else is an engine error.
  */
 export function engine3dFailureReason(error: unknown): Engine3dFallbackReason {
-  return typeof error === 'object' && error !== null && (error as { readonly code?: unknown }).code === 'webgl-unavailable'
-    ? 'unsupported'
-    : 'error';
+  try {
+    return typeof error === 'object' && error !== null && (error as { readonly code?: unknown }).code === 'webgl-unavailable'
+      ? 'unsupported'
+      : 'error';
+  } catch {
+    return 'error';
+  }
 }
 
 /**

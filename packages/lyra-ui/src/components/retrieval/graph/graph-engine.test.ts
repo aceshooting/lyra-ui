@@ -83,6 +83,32 @@ describe('filtered graph engine column scene', () => {
 });
 
 describe('graph engine lifecycle seam', () => {
+  for (const metadata of ['throwing-code', 'revoked-object'] as const) {
+    it(`falls back after a mount rejection with ${metadata} metadata and can mount a replacement`, async () => {
+      const broken = fake(), replacement = fake();
+      const rejected = Proxy.revocable({}, {});
+      rejected.revoke();
+      const failure: unknown = metadata === 'revoked-object' ? rejected.proxy
+        : Object.defineProperty(new Error('Renderer stopped'), 'code', {
+          get() { throw new Error('Failure metadata unavailable'); },
+        });
+      broken.engine.mount = () => Promise.reject(failure);
+      let loads = 0;
+      const reasons: string[] = [];
+      const adapter = new GraphEngineAdapter({ available: () => true,
+        create: async () => ++loads === 1 ? broken.engine : replacement.engine });
+      try {
+        expect(await adapter.open(request({ failure: (reason: string) => reasons.push(reason) }))).to.equal(null);
+        expect(reasons).to.deep.equal(['error']);
+        expect(broken.disposals()).to.equal(1);
+        expect(await adapter.open(request()) === replacement.engine).to.equal(true);
+        expect(replacement.disposals()).to.equal(0);
+      } finally { adapter.close(); }
+      expect(broken.disposals()).to.equal(1);
+      expect(replacement.disposals()).to.equal(1);
+    });
+  }
+
   it('does not probe or load for unset, hidden or ineligible requests', async () => {
     let loads = 0, probes = 0;
     const adapter = new GraphEngineAdapter({ create: async () => { loads++; return fake().engine; }, available: () => { probes++; return true; } });
