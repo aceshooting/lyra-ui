@@ -817,3 +817,77 @@ it('routes a document selection to its owning root and releases pending delivery
     expect(second).equal(2);
   } finally { restore(); }
 });
+
+for (const documentSelection of ['missing', 'empty', 'collapsed', 'outside'] as const) {
+  it(`routes legacy shadow selections when the document selection is ${documentSelection}`, async () => {
+    const wrapper = await fixture<HTMLElement>(litHtml`
+      <div><span>outside the viewers</span><lr-anchor-target-test-stub></lr-anchor-target-test-stub><lr-anchor-target-test-stub></lr-anchor-target-test-stub></div>
+    `);
+    const hosts = [...wrapper.querySelectorAll('lr-anchor-target-test-stub')];
+    await Promise.all(hosts.map(host => host.updateComplete));
+    const shadows = hosts.map(host => host.shadowRoot!);
+    const roots = shadows.map(shadow => shadow.querySelector('[part="content"]')!);
+    const ranges = roots.map(root => {
+      const range = document.createRange();
+      range.selectNodeContents(root.firstChild!);
+      return range;
+    });
+    const outside = document.createRange();
+    outside.selectNodeContents(wrapper.querySelector('span')!);
+    const viewDescriptor = Object.getOwnPropertyDescriptor(window, 'getSelection');
+    const shadowDescriptors = shadows.map(shadow => Object.getOwnPropertyDescriptor(shadow, 'getSelection'));
+    let active: number | undefined = 0;
+    const events: string[][] = [[], []];
+    const settleSelection = async (): Promise<void> => {
+      document.dispatchEvent(new Event('selectionchange'));
+      await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    };
+    try {
+      Object.defineProperty(window, 'getSelection', {
+        configurable: true,
+        value: () => documentSelection === 'missing' ? null : {
+          rangeCount: documentSelection === 'empty' ? 0 : 1,
+          isCollapsed: documentSelection !== 'outside',
+          getRangeAt: () => outside,
+        },
+      });
+      shadows.forEach((shadow, index) => Object.defineProperty(shadow, 'getSelection', {
+        configurable: true,
+        value: () => ({ rangeCount: active === index ? 1 : 0, isCollapsed: active !== index, getRangeAt: () => ranges[index]! }),
+      }));
+      hosts.forEach((host, index) => {
+        (host as unknown as { bindTextSelection(root: Element): void }).bindTextSelection(roots[index]!);
+        host.addEventListener('lr-text-select', event => events[index]!.push(event.detail.text));
+      });
+
+      await settleSelection();
+      await settleSelection();
+      expect(events.map(values => values.length), 'unchanged selections emit once in their owning viewer').to.deep.equal([1, 0]);
+      active = undefined;
+      await settleSelection();
+      active = 0;
+      await settleSelection();
+      expect(events.map(values => values.length), 'clearing a selection permits the same range to be selected again').to.deep.equal([2, 0]);
+      active = 1;
+      await settleSelection();
+      expect(events).to.deep.equal([
+        ['stub content for selection tests', 'stub content for selection tests'],
+        ['stub content for selection tests'],
+      ]);
+      ranges[1]!.setEnd(roots[1]!.firstChild!, 4);
+      document.dispatchEvent(new Event('selectionchange'));
+      hosts[1]!.remove();
+      await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+      expect(events[1]).to.deep.equal(['stub content for selection tests']);
+    } finally {
+      hosts.forEach(host => (host as unknown as { unbindTextSelection(): void }).unbindTextSelection());
+      if (viewDescriptor) Object.defineProperty(window, 'getSelection', viewDescriptor);
+      else delete (window as unknown as { getSelection?: unknown }).getSelection;
+      shadows.forEach((shadow, index) => {
+        const descriptor = shadowDescriptors[index];
+        if (descriptor) Object.defineProperty(shadow, 'getSelection', descriptor);
+        else delete (shadow as unknown as { getSelection?: unknown }).getSelection;
+      });
+    }
+  });
+}
