@@ -209,9 +209,10 @@ export function installHappyDomAriaControlsShim(proto: object | undefined = glob
 }
 
 /** Installs every Happy DOM shim: form-associated internals, shadow focus and ARIA reflection. */
-/** Index just past the comment, string or `url(...)` token that starts at `index`, or `index`. */
+/** Index just past the escape, comment, string or `url(...)` token at `index`, or `index`. */
 function skipOpaqueToken(css: string, index: number): number {
   const char = css[index];
+  if (char === '\\') return Math.min(index + 2, css.length);
   if (char === '/' && css[index + 1] === '*') {
     const end = css.indexOf('*/', index + 2);
     return end === -1 ? css.length : end + 2;
@@ -225,8 +226,8 @@ function skipOpaqueToken(css: string, index: number): number {
     let cursor = index + 4;
     while (cursor < css.length && /\s/.test(css[cursor]!)) cursor++;
     if (css[cursor] === '"' || css[cursor] === "'") return index; // a quoted url is a string token
-    const end = css.indexOf(')', cursor);
-    return end === -1 ? css.length : end + 1;
+    while (cursor < css.length && css[cursor] !== ')') cursor += css[cursor] === '\\' ? 2 : 1;
+    return Math.min(cursor + 1, css.length);
   }
   return index;
 }

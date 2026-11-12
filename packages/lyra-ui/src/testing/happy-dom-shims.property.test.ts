@@ -80,3 +80,69 @@ it('ignores comment punctuation while locating both kinds of layer-header bounda
     expect(flattenCascadeLayers(`@layer base, ${comment} theme ${comment};${rule}`)).to.equal(rule);
   }), propertyRuns());
 });
+
+it('preserves a valid unquoted URL with an escaped closing parenthesis followed by layer-like content', () => {
+  const value = String.raw`url(https://example.invalid/a\)@layer{asset})`;
+  expect(CSS.supports('background-image', value)).to.equal(true);
+  const rule = `.sample{background-image:${value}}`;
+  expect(flattenCascadeLayers(rule)).to.equal(rule);
+  expect(flattenCascadeLayers(`@layer theme{${rule}}`)).to.equal(rule);
+});
+
+it('recognizes the real URL boundary after an escaped backslash and still unwraps following layers', () => {
+  const value = String.raw`url(https://example.invalid/a\\)`;
+  expect(CSS.supports('background-image', value)).to.equal(true);
+  const rule = `.sample{background-image:${value}}`;
+  const next = '.next{color:red}';
+  expect(flattenCascadeLayers(`@layer theme{${rule}}@layer later{${next}}`)).to.equal(rule + next);
+});
+
+it('preserves an unfinished unquoted URL whose final character is an escape', () => {
+  const rule = '.sample{background:url(https://example.invalid/unfinished\\';
+  expect(flattenCascadeLayers(rule)).to.equal(rule);
+  expect(flattenCascadeLayers(`@layer theme{${rule}`)).to.equal(rule);
+});
+
+it('preserves escaped URL tokens independently of layer-like resource path segments', () => {
+  const segments = fc.array(fc.constantFrom('path', String.raw`\)`, String.raw`\(`, String.raw`\\`, '@layer{asset}', ';', '/'),
+    { minLength: 1, maxLength: 16 });
+  fc.assert(fc.property(segments, parts => {
+    const value = `url(https://example.invalid/${parts.join('')})`;
+    expect(CSS.supports('background-image', value)).to.equal(true);
+    const rule = `.sample{background-image:${value}}`;
+    expect(flattenCascadeLayers(`@layer theme{${rule}}`)).to.equal(rule);
+  }), propertyRuns());
+});
+
+for (const selector of [String.raw`.\@layer`, String.raw`.\{`, String.raw`.\}`]) {
+  it(`preserves escaped syntax in the native-supported selector ${selector}`, () => {
+    expect(CSS.supports(`selector(${selector})`)).to.equal(true);
+    const rule = `${selector}{color:red}`;
+    const after = '.after{color:blue}';
+    expect(flattenCascadeLayers(rule)).to.equal(rule);
+    expect(flattenCascadeLayers(`@layer theme{${rule}}${after}`)).to.equal(rule + after);
+  });
+}
+
+it('unwraps a layer whose identifier contains an escaped semicolon', () => {
+  const rule = '.sample{color:red}';
+  const css = String.raw`@layer theme\;custom{${rule}}`;
+  const sheet = new CSSStyleSheet();
+  sheet.replaceSync(css);
+  expect(sheet.cssRules.length).to.equal(1);
+  const nested = (sheet.cssRules[0] as CSSGroupingRule).cssRules[0] as CSSStyleRule;
+  expect(nested.selectorText).to.equal('.sample');
+  expect(nested.style.color).to.equal('red');
+  expect(flattenCascadeLayers(css)).to.equal(rule);
+});
+
+it('preserves escaped identifier tokens while removing real surrounding layers', () => {
+  const identifier = fc.array(fc.constantFrom('name', String.raw`\@layer`, String.raw`\{`, String.raw`\}`, String.raw`\;`, String.raw`\\`),
+    { minLength: 1, maxLength: 16 }).map(parts => `item${parts.join('')}`);
+  fc.assert(fc.property(identifier, name => {
+    const selector = `.${name}`;
+    expect(CSS.supports(`selector(${selector})`)).to.equal(true);
+    const rule = `${selector}{color:red}`;
+    expect(flattenCascadeLayers(`@layer theme{${rule}}`)).to.equal(rule);
+  }), propertyRuns());
+});
