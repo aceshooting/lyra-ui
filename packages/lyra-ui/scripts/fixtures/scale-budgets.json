@@ -1,7 +1,7 @@
 {
   "$comment": "Deterministic scale counter ceilings. Regenerate from a complete Chromium scale run; increases require --allow-higher and review.",
   "margin": 0.1,
-  "measuredAt": "2026-10-18T09:18:08.025Z",
+  "measuredAt": "2026-11-12T03:40:52.988Z",
   "budgets": {
     "lr-activity-feed": {
       "tail@10001": {
@@ -1632,7 +1632,7 @@
         "lookups": 0,
         "mounted": 11,
         "projects": 5,
-        "retained": 330,
+        "retained": 111,
         "values": 1100
       }
     }
