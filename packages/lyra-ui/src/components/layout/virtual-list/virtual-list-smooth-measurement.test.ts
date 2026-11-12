@@ -124,3 +124,57 @@ for (const replacement of ['new target', 'new rows', 'disconnect', 'keyboard int
     await waitUntil(() => list.renderedRows.some(row => row.dataset['rowIndex'] === '100'));
   });
 }
+
+for (const key of ['a', 'ArrowLeft']) {
+  it(`keeps a Window-owned scroll correction after an unrelated ${key} key from its own document`, async () => {
+    const { list, scroller, parent } = await mount('window');
+    list.scrollToIndex(9999, { align: 'end', behavior: 'smooth' });
+    await waitUntil(() => scroller.scrollTop > 100 && scroller.scrollTop < 300000);
+    const owner = parent.ownerDocument.defaultView!;
+    scroller.dispatchEvent(new owner.KeyboardEvent('keydown', { key, bubbles: true }));
+    await waitUntil(() => list.renderedRows.some(row => row.dataset['rowIndex'] === '9999'),
+      'unrelated owner-document keys must not retire navigation', { timeout: 5000 });
+    await waitUntil(() => Math.abs(scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight) <= 1);
+  });
+}
+
+it('retires a Window-owned correction on a vertical scrolling key from that document', async () => {
+  const { list, scroller, parent } = await mount('window');
+  list.scrollToIndex(9999, { align: 'end', behavior: 'smooth' });
+  await waitUntil(() => scroller.scrollTop > 100 && scroller.scrollTop < 300000);
+  const owner = parent.ownerDocument.defaultView!;
+  scroller.dispatchEvent(new owner.KeyboardEvent('keydown', { key: 'PageUp', bubbles: true }));
+  let previous = -1, stable = 0;
+  await waitUntil(() => {
+    stable = Math.abs(scroller.scrollTop - previous) < 1 ? stable + 1 : 0;
+    previous = scroller.scrollTop;
+    return stable >= 3;
+  }, 'the interrupted native motion settles', { timeout: 3000, interval: 50 });
+  const settled = scroller.scrollTop;
+  // wait-reason: outlast a late scroll-idle callback that could wrongly restore the retired target.
+  await aTimeout(350);
+  expect(scroller.scrollTop).to.be.closeTo(settled, 1);
+  expect(list.renderedRows.some(row => row.dataset['rowIndex'] === '9999')).to.equal(false);
+  list.scrollToIndex(9999, { align: 'end', behavior: 'auto' });
+  await waitUntil(() => list.renderedRows.some(row => row.dataset['rowIndex'] === '9999'));
+});
+
+for (const staged of [false, true]) {
+  it(`accepts public scroll calls ${staged ? 'in a document without a Window' : 'while disconnected'} and resumes after reconnect`, async () => {
+    const { list, parent } = await mount('internal');
+    list.remove();
+    if (staged) {
+      const owner = document.implementation.createHTMLDocument('Staged list');
+      owner.body.append(owner.adoptNode(list));
+      await list.updateComplete;
+      expect(list.ownerDocument.defaultView === null).to.equal(true);
+    }
+    list.scrollToIndex(9999, { align: 'end', behavior: 'smooth' });
+    list.scrollToIndex(0, { align: 'start', behavior: 'auto' });
+    parent.append(list);
+    await waitUntil(() => list.renderedRows.some(row => row.dataset['rowIndex'] === '0'));
+    list.scrollToIndex(100, { align: 'start', behavior: 'auto' });
+    await waitUntil(() => list.renderedRows.some(row => row.dataset['rowIndex'] === '100'));
+    expect(list.renderedRows.length).to.be.within(1, 30);
+  });
+}

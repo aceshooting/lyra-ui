@@ -2014,7 +2014,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   };
 
   private onUserScrollIntent = (event: Event): void => {
-    if (event instanceof KeyboardEvent && !SCROLL_KEYS.has(event.key)) return;
+    if (event.type === 'keydown' && !SCROLL_KEYS.has((event as KeyboardEvent).key)) return;
     this.waitForSmoothScroll();
     this.pendingScrollCorrection = undefined;
     this.compositionScrollTarget = undefined;

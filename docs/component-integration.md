@@ -198,7 +198,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-native-time-input"></a>`lr-native-time-input` | forms | `import '@aceshooting/lyra-ui/components/lr-native-time-input.js';` | none | none | none | 42.2 KiB |
 | <a id="lr-navigation-menu"></a>`lr-navigation-menu` | layout | `import '@aceshooting/lyra-ui/components/lr-navigation-menu.js';` | none | `lr-navigation-menu-item` | none | 60.4 KiB |
 | <a id="lr-navigation-menu-item"></a>`lr-navigation-menu-item` | layout | `import '@aceshooting/lyra-ui/components/lr-navigation-menu-item.js';` | none | none | none | 52.9 KiB |
-| <a id="lr-neighbor-list"></a>`lr-neighbor-list` | retrieval | `import '@aceshooting/lyra-ui/components/lr-neighbor-list.js';` | none | `lr-empty`, `lr-pagination`, `lr-virtual-list` | none | 65.9 KiB |
+| <a id="lr-neighbor-list"></a>`lr-neighbor-list` | retrieval | `import '@aceshooting/lyra-ui/components/lr-neighbor-list.js';` | none | `lr-empty`, `lr-pagination`, `lr-virtual-list` | none | 65.8 KiB |
 | <a id="lr-node-palette"></a>`lr-node-palette` | retrieval | `import '@aceshooting/lyra-ui/components/lr-node-palette.js';` | none | none | none | 35.2 KiB |
 | <a id="lr-notebook-viewer"></a>`lr-notebook-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-notebook-viewer.js';` | `dompurify`, `katex`, `marked`, `shiki` | `lr-code-block`, `lr-json-viewer`, `lr-markdown`, `lr-virtual-list` | `lr-icon-button`, `lr-skeleton` | 132 KiB |
 | <a id="lr-number-input"></a>`lr-number-input` | forms | `import '@aceshooting/lyra-ui/components/lr-number-input.js';` | none | none | none | 43 KiB |
