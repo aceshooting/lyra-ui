@@ -1,5 +1,5 @@
 diff --git a/dist/index.js b/dist/index.js
-index d73040a4ca589e98dd896a3086625a287a92db89..e24163a7ab102527172b0dd1aed0c09f99b504f6 100644
+index d73040a4c..3e9a7067b 100644
 --- a/dist/index.js
 +++ b/dist/index.js
 @@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
@@ -47,8 +47,9 @@ index d73040a4ca589e98dd896a3086625a287a92db89..e24163a7ab102527172b0dd1aed0c09f
 +    return istanbulCoverage.toJSON();
  }
  //# sourceMappingURL=index.js.map
+\ No newline at end of file
 diff --git a/src/index.ts b/src/index.ts
-index e9fd024fe5b0f468b8f17cdadc5759eb10e70b67..c3426119535e3f25b01e9890c1564905749058c4 100644
+index 4bacc56ac..6b2596634 100644
 --- a/src/index.ts
 +++ b/src/index.ts
 @@ -1,6 +1,6 @@
@@ -97,4 +98,4 @@ index e9fd024fe5b0f468b8f17cdadc5759eb10e70b67..c3426119535e3f25b01e9890c1564905
 +  return istanbulCoverage.toJSON();
  }
  
- export { V8Coverage };
+ export type { V8Coverage };

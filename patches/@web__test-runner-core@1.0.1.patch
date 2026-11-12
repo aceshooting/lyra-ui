@@ -1,5 +1,5 @@
 diff --git a/dist/coverage/getTestCoverage.js b/dist/coverage/getTestCoverage.js
-index ac91e448145fa3afba6e783aea8ccc764b83ba52..cecd57a1a5ee5aedd7fe0e8137de74abfc960f4d 100644
+index ac91e4481..8400b8d11 100644
 --- a/dist/coverage/getTestCoverage.js
 +++ b/dist/coverage/getTestCoverage.js
 @@ -15,11 +15,9 @@ const rangeEquals = (a, b) => locEquals(a.start, b.start) && locEquals(a.end, b.
@@ -47,7 +47,7 @@ index ac91e448145fa3afba6e783aea8ccc764b83ba52..cecd57a1a5ee5aedd7fe0e8137de74ab
              fileCoverage.b = patchedBranches.itemIndex;
              const patchedFunctions = patchCoverageItems(filePath, functionsPerFile, fileCoverage.fnMap, fileCoverage.f, findKey, () => 0);
 diff --git a/src/coverage/getTestCoverage.ts b/src/coverage/getTestCoverage.ts
-index fdd7832f4094e616fd8862c70e9aa17209e64ba3..db75ac204ca018b829eb83ccf20e9cf33a7c8aea 100644
+index fdd7832f4..db75ac204 100644
 --- a/src/coverage/getTestCoverage.ts
 +++ b/src/coverage/getTestCoverage.ts
 @@ -33,12 +33,10 @@ const rangeEncompass = (a: Range, b: Range) =>

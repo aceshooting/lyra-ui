@@ -69,7 +69,7 @@ included with this distribution; fflate is listed above.
 - `orderedmap@2.1.1` — MIT; [license](THIRD_PARTY_LICENSES/orderedmap-2.1.1-MIT.txt).
 - `pako@1.0.11` — (MIT AND Zlib); [license](THIRD_PARTY_LICENSES/pako-1.0.11--MIT-AND-Zlib-.txt).
 - `path-expression-matcher@1.6.2` — MIT; [license](THIRD_PARTY_LICENSES/path-expression-matcher-1.6.2-MIT.txt).
-- `prosemirror-model@1.25.12` — MIT; [license](THIRD_PARTY_LICENSES/prosemirror-model-1.25.12-MIT.txt).
+- `prosemirror-model@1.25.13` — MIT; [license](THIRD_PARTY_LICENSES/prosemirror-model-1.25.13-MIT.txt).
 - `strnum@2.5.1` — MIT; [license](THIRD_PARTY_LICENSES/strnum-2.5.1-MIT.txt).
 - `utif2@4.1.0` — MIT; [license](THIRD_PARTY_LICENSES/utif2-4.1.0-MIT.txt).
 - `xml-naming@0.3.0` — MIT; [license](THIRD_PARTY_LICENSES/xml-naming-0.3.0-MIT.txt).

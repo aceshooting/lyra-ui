@@ -13,7 +13,7 @@ const scripts = ['build', 'complete-transform', 'base-transform', 'worker-transf
 const sceneModules = ['index', 'bridge', 'bridge-glyph', 'completion-data', 'completion', 'completion-observation', 'custom-layer',
   'frame', 'geographic', 'geometry-chart', 'gl-state', 'lifetime', 'native-frame-authority',
   'native-terrain-authority', 'projection', 'resource-ledger', 'terrain-native', 'terrain-points'];
-const patches = ['@codecov__bundler-plugin-core@2.0.1.patch', '@web__test-runner-coverage-v8@1.0.0.patch',
+const patches = ['@codecov__bundler-plugin-core@2.0.1.patch', '@web__test-runner-core@1.0.1.patch', '@web__test-runner-coverage-v8@1.0.1.patch',
   'braces@3.0.3.patch', 'deepmerge@4.1.1.patch', 'sprintf-js@1.0.3.patch'];
 const exists = file => access(file).then(() => true, () => false);
 let collector;
