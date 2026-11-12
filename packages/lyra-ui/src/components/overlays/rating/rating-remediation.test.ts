@@ -76,3 +76,30 @@ for (const size of ['2xs', 'xs', 's']) {
     expect(second!.left + second!.width / 2 - (first!.left + first!.width / 2)).to.be.at.least(23.5);
   });
 }
+
+it('coerces numeric property bindings while keeping submitted values and rendered limits synchronized', async () => {
+  const form = await fixture<HTMLFormElement>(html`<form><lr-rating name="score" label="Score" value="4.5" precision="0.5"></lr-rating></form>`);
+  const el = form.querySelector<LyraRating>('lr-rating')!;
+  let changes = 0; el.addEventListener('lr-change', () => changes++);
+  for (const [bound, maximum, submitted] of [['3.9', 3, '3'], ['6', 6, '4.5'], ['invalid', 5, '4.5']] as const) {
+    Reflect.set(el, 'max', bound);
+    expect(new FormData(form).get('score')).to.equal(submitted);
+    await el.updateComplete;
+    expect(el.getAttribute('aria-valuemax')).to.equal(String(maximum));
+    expect(el.getAttribute('aria-valuenow')).to.equal(submitted);
+    expect(el.shadowRoot!.querySelectorAll('[part~="star"]').length).to.equal(maximum);
+    expect(el.value).to.equal(4.5);
+  }
+  expect(changes).to.equal(0);
+});
+
+it('clears a nullable custom-validity binding without changing the rating or its submitted value', async () => {
+  const form = await fixture<HTMLFormElement>(html`<form><lr-rating required label="Score" name="score" value="3"></lr-rating></form>`);
+  const el = form.querySelector<LyraRating>('lr-rating')!;
+  el.setCustomValidity('Choose a different score'); el.reportValidity(); await el.updateComplete;
+  expect(el.validity.customError).to.equal(true); expect(el.getAttribute('aria-invalid')).to.equal('true');
+  Reflect.apply(el.setCustomValidity, el, [null]); await el.updateComplete;
+  expect(el.validity.valid).to.equal(true); expect(el.validationMessage).to.equal('');
+  expect(el.getAttribute('aria-invalid')).to.equal('false');
+  expect(el.value).to.equal(3); expect(new FormData(form).get('score')).to.equal('3');
+});

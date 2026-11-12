@@ -2007,3 +2007,104 @@ it('removes a previous thumbnail placeholder only after a real replacement handl
     expect(target.children.length).to.equal(0);
   } finally { restore(); }
 });
+
+it('ignores invalid slide indices before and after loading without changing the presentation', async () => {
+  const fake = fakeModule(2), restore = stubFetch();
+  try {
+    const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+    await el.goToSlide(0); expect(fake.calls.goToSlide).to.equal(0);
+    el.loadRenderer = async () => fake.module;
+    await loadDeck(el, 'https://example.test/invalid-navigation.pptx', fake.calls);
+    let changes = 0; el.addEventListener('lr-slide-change', () => changes++);
+    for (const index of [-1, 0.5, NaN, Infinity, 2, Number.MAX_SAFE_INTEGER]) await el.goToSlide(index);
+    expect(fake.calls.goToSlide).to.equal(0); expect(changes).to.equal(0);
+    expect(el.pageViewerSnapshot).to.deep.include({ status: 'ready', page: 1, pageCount: 2 });
+    await el.goToSlide(1); expect(el.page).to.equal(2); expect(changes).to.equal(1);
+  } finally { restore(); }
+});
+
+for (const retirement of ['aborted', 'replaced', 'disconnected'] as const) {
+  it(`contains an ${retirement} navigation rejection without damaging the current presentation`, async () => {
+    const old = fakeModule(2), fresh = fakeModule(3), restore = stubFetch();
+    const gate = deferred<void>(); let entered = false;
+    const navigate = old.viewer.goToSlide;
+    old.viewer.goToSlide = () => { entered = true; return gate.promise; };
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => old.module;
+      await loadDeck(el, 'https://example.test/old-navigation.pptx', old.calls);
+      let errors = 0; el.addEventListener('lr-render-error', () => errors++);
+      const pending = el.goToSlide(1); expect(entered).to.equal(true);
+      if (retirement === 'replaced') {
+        el.loadRenderer = async () => fresh.module;
+        await loadDeck(el, 'https://example.test/fresh-navigation.pptx', fresh.calls);
+      } else if (retirement === 'disconnected') {
+        el.remove(); await waitUntil(() => old.calls.destroy === 1, 'removed presentation releases its renderer');
+      }
+      gate.reject(retirement === 'aborted' ? new DOMException('Cancelled slide', 'AbortError') : new Error('Retired slide failure'));
+      await pending; await el.updateComplete;
+      expect(errors).to.equal(0);
+      if (retirement === 'disconnected') {
+        expect(el.pageViewerSnapshot.status).to.equal('idle'); expect(old.calls.destroy).to.equal(1);
+      } else {
+        expect(el.pageViewerSnapshot).to.deep.include({ status: 'ready', page: 1, pageCount: retirement === 'replaced' ? 3 : 2 });
+        expect(fresh.calls.destroy).to.equal(0);
+        old.viewer.goToSlide = navigate;
+        await el.goToSlide(1); expect(el.page).to.equal(2);
+      }
+    } finally { gate.resolve(); old.viewer.goToSlide = navigate; restore(); }
+  });
+}
+
+it('ignores an invalid renderer slide index after navigation and accepts a corrected index', async () => {
+  const fake = fakeModule(2), restore = stubFetch();
+  try {
+    const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+    el.loadRenderer = async () => fake.module;
+    await loadDeck(el, 'https://example.test/invalid-current-slide.pptx', fake.calls);
+    const navigate = fake.viewer.goToSlide; let changes = 0;
+    el.addEventListener('lr-slide-change', () => changes++);
+    for (const index of [NaN, -1, 0.5, 2]) {
+      fake.viewer.goToSlide = async () => { fake.viewer.currentSlideIndex = index; };
+      await el.goToSlide(1);
+      expect(el.pageViewerSnapshot.page).to.equal(1); expect(changes).to.equal(0);
+    }
+    fake.viewer.goToSlide = navigate;
+    await el.goToSlide(1); expect(el.page).to.equal(2); expect(changes).to.equal(1);
+  } finally { restore(); }
+});
+
+it('stops scanning candidates after the model-work budget and reports a partial match count', async () => {
+  const match: PptxTextSearchResult = { slideIndex: 0, nodeId: 'n', matchStart: 0, matchEnd: 1,
+    text: 'x'.repeat(VIEWER_SEARCH_WORK_LIMIT - 2) };
+  let beyondLimitReads = 0;
+  const results: unknown[] = [match, null];
+  Object.defineProperty(results, '2', { get() { beyondLimitReads++; throw new Error('Search must stop at its budget'); } });
+  const fake = fakeModule(1, results as PptxTextSearchResult[]), restore = stubFetch();
+  try {
+    const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+    el.loadRenderer = async () => fake.module;
+    await loadDeck(el, 'https://example.test/search-budget.pptx', fake.calls);
+    const changed = oneEvent(el, 'lr-search-change');
+    expect(await el.search('x')).to.equal(1);
+    expect((await changed).detail).to.deep.equal({ query: 'x', matchCount: 1, matchCountExact: false, activeIndex: 0 });
+    expect(beyondLimitReads).to.equal(0); expect(fake.calls.highlightSearchResult).to.equal(1);
+    el.clearSearch(); expect(el.pageViewerSnapshot.status).to.equal('ready');
+  } finally { restore(); }
+});
+
+it('keeps a valid search usable when the renderer has no highlight handle', async () => {
+  const fake = fakeModule(2, [{ slideIndex: 1, nodeId: 'match', text: 'needle', matchStart: 0, matchEnd: 6 }]);
+  fake.viewer.highlightSearchResult = async () => null;
+  const restore = stubFetch();
+  try {
+    const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+    el.loadRenderer = async () => fake.module;
+    await loadDeck(el, 'https://example.test/no-highlight.pptx', fake.calls);
+    let diagnostics = 0; el.addEventListener('lr-viewer-diagnostic', () => diagnostics++);
+    expect(await el.search('needle')).to.equal(1); expect(el.page).to.equal(2);
+    el.clearSearch();
+    expect(await el.search('needle')).to.equal(1); expect(diagnostics).to.equal(0);
+    expect(el.pageViewerSnapshot.status).to.equal('ready');
+  } finally { restore(); }
+});
