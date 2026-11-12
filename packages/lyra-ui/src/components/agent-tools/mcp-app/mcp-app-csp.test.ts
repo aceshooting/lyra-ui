@@ -1,6 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './mcp-app.js';
-import type { LyraMcpApp } from './mcp-app.class.js';
+import type { LyraMcpApp, McpAppResource } from './mcp-app.class.js';
 
 function assetProbe(official: boolean): string {
   const origin = JSON.stringify(window.location.origin);
@@ -59,6 +59,43 @@ for (const scenario of [
 
 
 for (const redirect of [false, true]) {
+  it(`allows an official remote resource origin while ${redirect ? 'blocking a redirect to another origin' : 'loading its document'}`, async () => {
+    const token = crypto.randomUUID();
+    const target = new URL('/__lyra-mcp-navigation-target', window.location.origin);
+    target.searchParams.set('token', token);
+    if (redirect) target.hostname = window.location.hostname === '127.0.0.1' ? 'localhost' : '127.0.0.1';
+    const source = redirect ? new URL('/__lyra-mcp-navigation-redirect', window.location.origin) : target;
+    if (redirect) {
+      source.searchParams.set('token', token);
+      source.searchParams.set('target', target.href);
+    }
+    const el = await fixture<LyraMcpApp>(html`<lr-mcp-app protocol="mcp-apps"></lr-mcp-app>`);
+    const counts = async (): Promise<{ target: number; redirect: number }> => {
+      const response = await fetch(`/__lyra-mcp-navigation-count?token=${token}`);
+      return response.json() as Promise<{ target: number; redirect: number }>;
+    };
+    try {
+      // Untyped callers can attach inline-document permissions to a remote resource.
+      el.resource = { uri: 'ui://csp/remote-resource', src: source.href,
+        csp: { frameDomains: [redirect ? target.origin : 'https://unapproved.example'] },
+      } as unknown as McpAppResource;
+      await waitUntil(async () => (await counts())[redirect ? 'redirect' : 'target'] > 0,
+        'the proxy must request the approved remote document', { timeout: 5_000 });
+      const proxy = el.shadowRoot!.querySelector('iframe')!;
+      expect(proxy.hasAttribute('src')).to.equal(false);
+      expect(proxy.sandbox.contains('allow-same-origin')).to.equal(false);
+      if (redirect) {
+        // wait-reason: Keep the redirect response alive long enough for any prohibited follow-up
+        // request to reach the local server; its counter proves the ancestor policy blocks it.
+        await new Promise(resolve => setTimeout(resolve, 350));
+        expect((await counts()).target).to.equal(0);
+      }
+    } finally {
+      el.resource = null;
+      await el.updateComplete;
+    }
+  });
+
   it(`blocks ${redirect ? 'redirected' : 'direct'} self-navigation before a disallowed destination receives a request`, async () => {
     const token = crypto.randomUUID();
     const target = new URL('/__lyra-mcp-navigation-target', window.location.origin);

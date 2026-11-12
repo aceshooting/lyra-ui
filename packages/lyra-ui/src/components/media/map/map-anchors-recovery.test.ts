@@ -14,6 +14,70 @@ describe('map anchor placement failure and recovery', () => {
     __setAnchoredOverlayRuntimeLoaderForTesting(undefined);
   });
 
+  it('updates an anchor after a camera move when frame scheduling is unavailable', async () => {
+    const { map, engine } = await mountMap();
+    const anchor = addAnchor(map), events = captureCloses(anchor);
+    await placed(anchor);
+    const before = base(anchor).getBoundingClientRect().left;
+    const frame = Object.getOwnPropertyDescriptor(window, 'requestAnimationFrame');
+    try {
+      Object.defineProperty(window, 'requestAnimationFrame', { configurable: true, value: undefined });
+      engine.pan(1);
+    } finally {
+      if (frame) Object.defineProperty(window, 'requestAnimationFrame', frame);
+      else Reflect.deleteProperty(window, 'requestAnimationFrame');
+    }
+    await waitUntil(() => base(anchor).getBoundingClientRect().left < before - 5, 'anchor follows the camera without a scheduled frame');
+    await placed(anchor);
+    expect(base(anchor).getBoundingClientRect().left).to.be.closeTo(before - 10, 1);
+    expect(anchor.open).to.equal(true);
+    expect(events.order).to.deep.equal([]);
+  });
+
+  for (const phase of ['projection', 'boundary measurement'] as const) {
+    it(`discards geometry when the anchor is withdrawn during ${phase} and recovers on reopening`, async () => {
+      const { map, engine, wrapper } = await mountMap();
+      const bounds = map.getBoundingClientRect(), boundary = document.createElement('div');
+      boundary.style.cssText = `position:fixed;left:${bounds.left}px;top:${bounds.top}px;width:480px;height:320px;pointer-events:none`;
+      wrapper.append(boundary);
+      const anchor = addAnchor(map, { closable: true }), events = captureCloses(anchor);
+      anchor.boundary = boundary;
+      await placed(anchor);
+      const project = engine.project, measure = boundary.getBoundingClientRect;
+      let withdrawn = false;
+      const withdraw = (): void => {
+        if (withdrawn) return;
+        withdrawn = true;
+        anchor.open = false;
+      };
+      if (phase === 'projection') engine.project = coordinates => {
+        const point = project.call(engine, coordinates);
+        withdraw();
+        return point;
+      };
+      else boundary.getBoundingClientRect = () => {
+        const rect = measure.call(boundary);
+        withdraw();
+        return rect;
+      };
+      try {
+        engine.pan(1);
+        await waitUntil(() => withdrawn, 'geometry callback withdraws the request');
+        await hidden(anchor);
+        expect(anchor.open).to.equal(false);
+        expect(anchor.focusContent()).to.equal(false);
+        expect(events.order).to.deep.equal([]);
+
+        engine.project = project;
+        boundary.getBoundingClientRect = measure;
+        anchor.open = true;
+        await placed(anchor);
+        expect(anchor.focusContent()).to.equal(true);
+        expect(events.order).to.deep.equal([]);
+      } finally { engine.project = project; boundary.getBoundingClientRect = measure; }
+    });
+  }
+
   for (const failure of ['import', 'setup'] as const) {
     it(`recovers from an initial positioning ${failure} failure without closing the anchor`, async () => {
       const runtime = await import('../../../internal/positioner.js');

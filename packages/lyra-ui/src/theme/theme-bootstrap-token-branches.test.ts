@@ -72,12 +72,16 @@ describe('theme pre-paint bootstrap token handling (module functions, called dir
   for (const mode of ['light', 'dark'] as const) {
     it(`paints the selected ${mode} branch before the style resolver is installed`, () => {
       root().style.setProperty('--_lr-style-resolver', '0');
-      const style = bootWith({ mode, overrides: {
-        '--lr-theme-color-brand-fill-loud': { light: '#123456', dark: '#abcdef' },
-      } });
-      expect(style.getPropertyValue('--lr-theme-color-brand-fill-loud')).to.equal(mode === 'light' ? '#123456' : '#abcdef');
-      expect(style.getPropertyValue('--_lr-ll-color-brand-fill-loud')).to.equal('#123456');
-      expect(style.getPropertyValue('--_lr-ld-color-brand-fill-loud')).to.equal('#abcdef');
+      try {
+        const style = bootWith({ mode, overrides: {
+          '--lr-theme-color-brand-fill-loud': { light: '#123456', dark: '#abcdef' },
+        } });
+        expect(style.getPropertyValue('--lr-theme-color-brand-fill-loud')).to.equal(mode === 'light' ? '#123456' : '#abcdef');
+        expect(style.getPropertyValue('--_lr-ll-color-brand-fill-loud')).to.equal('#123456');
+        expect(style.getPropertyValue('--_lr-ld-color-brand-fill-loud')).to.equal('#abcdef');
+      } finally {
+        root().style.removeProperty('--_lr-style-resolver');
+      }
     });
   }
 
