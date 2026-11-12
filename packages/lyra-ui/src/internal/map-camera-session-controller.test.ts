@@ -40,6 +40,7 @@ function harness() {
     onStart: undefined as (() => void) | undefined,
     onCommit: undefined as (() => void) | undefined,
     onRetire: undefined as (() => void) | undefined,
+    onAcquire: undefined as ((callbacks: MapCameraSessionCallbacks) => void) | undefined,
   };
   const lease: MapCameraSessionLease = {
     current: () => alive && acquired && state.available,
@@ -73,7 +74,7 @@ function harness() {
   const unregister = registerMapCameraSession(host, {
     acquire(nextCallbacks) {
       if (acquired) throw Object.assign(new Error('already-bound'), { code: 'already-bound' });
-      callbacks = nextCallbacks; acquired = true; state.acquireCount++; return lease;
+      callbacks = nextCallbacks; acquired = true; state.acquireCount++; state.onAcquire?.(callbacks); return lease;
     },
   });
   cleanup.push(() => { alive = false; unregister(); });
@@ -360,12 +361,46 @@ describe('internal camera session saved views and tours', () => {
     const h = harness(), controller = session(h), time = clock(); h.state.synchronous = false;
     controller.restore(view(4), { kind: 'ease' }); const before = controller.snapshot;
     h.state.available = false;
+    code(() => controller.capture(), 'unavailable');
     code(() => controller.restore(view(6)), 'unavailable');
     code(() => controller.tour(time.value, tour), 'unavailable');
     expect(controller.snapshot).to.equal(before); expect(h.writes.length).to.equal(1);
     expect(h.retirements.length).to.equal(0);
     h.state.available = true; controller.restore(view(8));
     expect(controller.capture().zoom).to.equal(8);
+  });
+
+  it('reports invalid native capture as unavailable without changing the active camera action', () => {
+    const h = harness(), controller = session(h); h.state.synchronous = false;
+    controller.restore(view(4), { kind: 'ease' }); const before = controller.snapshot;
+    h.state.camera = view(Number.NaN);
+    code(() => controller.capture(), 'unavailable');
+    expect(controller.snapshot).to.equal(before); expect(h.writes.length).to.equal(1);
+    expect(h.retirements.length).to.equal(0);
+    h.state.camera = view(6); expect(controller.capture().zoom).to.equal(6);
+  });
+
+  it('releases a lease that disconnects synchronously during acquisition', () => {
+    const h = harness(); h.state.onAcquire = callbacks => { callbacks.interrupt('disconnect'); };
+    const controller = session(h);
+    expect(controller.snapshot).to.deep.equal({ mode: 'idle', active: false, reason: 'disconnect' });
+    expect(h.state.releaseCount).to.equal(1); expect(h.writes.length).to.equal(0);
+    code(() => controller.capture(), 'disposed'); controller.dispose();
+    expect(h.state.releaseCount).to.equal(1);
+    h.state.onAcquire = undefined;
+    const replacement = session(h); replacement.restore(view(8));
+    expect(replacement.capture().zoom).to.equal(8); expect(h.state.acquireCount).to.equal(2);
+  });
+
+  it('reports a throwing native start and permits a subsequent valid restore', () => {
+    const h = harness(), controller = session(h);
+    h.state.onStart = () => { throw new Error('Native camera could not start'); };
+    code(() => controller.restore(view(4)), 'unavailable');
+    expect(h.writes.length).to.equal(0);
+    expect(controller.snapshot).to.deep.equal({ mode: 'viewpoint', active: false, reason: 'engine' });
+    h.state.onStart = undefined; controller.restore(view(8));
+    expect(controller.capture().zoom).to.equal(8);
+    expect(controller.snapshot.reason).to.equal('complete');
   });
 
   it('retains an active restore when tour preflight disposes its clock', () => {

@@ -176,6 +176,20 @@ describe('camera session ground follow', () => {
     expect(h.writes.length).to.equal(2);
   });
 
+  it('reports an engine becoming unavailable after follow preflight and allows a later retry', () => {
+    const h = setup(); h.state.onPrepare = () => { h.state.nativeReady = false; };
+    code(() => h.controller.follow({ objectId: 'target', mode: 'ground' }), 'unavailable');
+    expect(h.writes.length).to.equal(0);
+    expect(h.controller.snapshot).to.deep.equal({ mode: 'follow', active: false, reason: 'engine',
+      objectId: 'target', followMode: 'ground', trackingStatus: 'unavailable', corrections: 0, unavailableReason: 'engine' });
+    h.scene.set([sceneTarget('target', 19, 2)]);
+    expect(h.writes.length).to.equal(0);
+    h.state.onPrepare = undefined; h.state.nativeReady = true;
+    h.controller.follow({ objectId: 'target', mode: 'ground' });
+    expect(h.writes.length).to.equal(1);
+    expect(h.controller.snapshot).to.include({ mode: 'follow', active: true, trackingStatus: 'ground' });
+  });
+
   it('refuses an absent scene registration before retiring the prior action', () => {
     const h = setup([], false); h.state.synchronous = false;
     h.controller.restore(view(5), { kind: 'ease' }); const before = h.controller.snapshot, retired = h.retirements.length;
