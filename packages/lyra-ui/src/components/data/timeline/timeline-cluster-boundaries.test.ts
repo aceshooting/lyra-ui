@@ -6,6 +6,36 @@ import type { LyraTimeline } from './timeline.js';
 import type { LyraTimelineItem } from './timeline-item.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
+for (const available of [false, true]) {
+  it(`repairs a dissolved cluster's focus to ${available ? 'the first available content action' : 'the timeline when its content cannot receive focus'}`, async () => {
+    const element = await fixture<LyraTimeline>(html`<lr-timeline scale="time" collision="cluster" .rangeStart=${0} .rangeEnd=${1000}>
+      <lr-timeline-item id="first" .timestamp=${0}>
+        <button disabled>Unavailable</button><span inert><button>Inert action</button></span>
+        ${available ? html`<button id="available">Available action</button>` : html`<span>Read-only event</span>`}
+      </lr-timeline-item>
+      <lr-timeline-item id="second" .timestamp=${0}>Second</lr-timeline-item>
+      <lr-timeline-item .timestamp=${1000}>Last</lr-timeline-item>
+    </lr-timeline>`);
+    const first = element.querySelector<LyraTimelineItem>('#first')!;
+    const second = element.querySelector<LyraTimelineItem>('#second')!;
+    await waitUntil(() => first.shadowRoot!.querySelector('[part="cluster"]') !== null);
+    await focusByKeyboard(first.shadowRoot!.querySelector<HTMLButtonElement>('[part="cluster"]')!);
+    second.timestamp = 500;
+    await waitUntil(() => first.shadowRoot!.querySelector('[part="cluster"]') === null);
+    const target = available ? first.querySelector<HTMLButtonElement>('#available')!
+      : element.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    await waitUntil(() => available ? document.activeElement === target : element.shadowRoot!.activeElement === target,
+      'focus repairs to an available target after the cluster dissolves');
+    expect(target.matches(':focus-visible')).to.equal(true);
+    expect(getComputedStyle(second).display).not.to.equal('none');
+    expect(element.querySelectorAll('[data-lr-timeline-cluster-hidden]').length).to.equal(0);
+    if (available) {
+      let clicks = 0; target.addEventListener('click', () => clicks++);
+      await sendKeys({ press: 'Enter' }); expect(clicks).to.equal(1);
+    } else expect(target.getAttribute('tabindex')).to.equal('-1');
+  });
+}
+
 it('keeps focus on a surviving cluster representative when new members join and restores its managed hidden marker', async () => {
   const element = await fixture<LyraTimeline>(html`<lr-timeline scale="time" collision="cluster" .rangeStart=${0} .rangeEnd=${1000}>
     <lr-timeline-item id="first" .timestamp=${0}>First</lr-timeline-item>

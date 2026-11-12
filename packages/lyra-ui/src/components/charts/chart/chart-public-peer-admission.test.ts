@@ -105,6 +105,38 @@ it('falls back to current dataset labels for a non-array peer legend reply', asy
   await usable(element);
 });
 
+it('formats only numeric peer legend entries and preserves gap and invalid-index labels', async () => {
+  const element = await mount();
+  element.labels = ['First', 'Gap', 'Last'];
+  element.datasets = [{ label: 'Retained', data: [3, null, 9] }];
+  await ready(element);
+  const entries = await generatedLabels(element, [
+    { text: 'First', datasetIndex: 0, index: 0 },
+    { text: 'Gap', datasetIndex: 0, index: 1 },
+    { text: 'Last', datasetIndex: 0, index: 2 },
+    { text: 'Outside', datasetIndex: 0, index: 3 },
+    { text: 'Fraction', datasetIndex: 0, index: 0.5 },
+    { text: 'Unknown series', datasetIndex: 1, index: 0 },
+  ]) as { text: string }[];
+  expect(entries.map(entry => entry.text.replace(/[\u2066-\u2069]/gu, '')))
+    .to.deep.equal(['First: 3', 'Gap', 'Last: 9', 'Outside', 'Fraction', 'Unknown series']);
+  expect(element.exportData('csv')).to.include('Last,9');
+  expect(element.chart?.isDatasetVisible(0)).to.equal(true);
+});
+
+it('leaves an all-gap peer legend unformatted and recomputes its total when numeric data arrives', async () => {
+  const element = await mount();
+  element.labels = ['First', 'Last']; element.datasets = [{ label: 'Retained', data: [null, null] }];
+  await ready(element);
+  const reply = [{ text: 'Retained', datasetIndex: 0 }];
+  expect(await generatedLabels(element, reply)).to.deep.equal(reply);
+  element.datasets = [{ label: 'Retained', data: [null, 7] }];
+  await ready(element);
+  const entries = await generatedLabels(element, reply) as { text: string }[];
+  expect(entries[0]!.text.replace(/[\u2066-\u2069]/gu, '')).to.equal('Retained: 7');
+  expect(element.exportData('csv')).to.include('Last,7');
+});
+
 it('revokes compatibility activation when a spatial selection listener replaces the source', async () => {
   const source = (revision: string): LyraSpatialChartSource => ({
     kind: 'spatial', revision, count: 1, bounds: { minX: 0, maxX: 10, minY: 0, maxY: 10 },

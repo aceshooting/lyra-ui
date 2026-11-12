@@ -56155,7 +56155,7 @@
           "evidence": [
             {
               "file": "src/components/data/timeline/timeline-cluster-boundaries.test.ts",
-              "test": "keeps focus on a surviving cluster representative when new members join and restores its managed hidden marker",
+              "test": "repairs a dissolved cluster's focus to ${available ? 'the first available content action' : 'the timeline when its content cannot receive focus'}",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -56361,7 +56361,7 @@
           "evidence": [
             {
               "file": "src/components/data/timeline/timeline-cluster-boundaries.test.ts",
-              "test": "keeps focus on a surviving cluster representative when new members join and restores its managed hidden marker",
+              "test": "repairs a dissolved cluster's focus to ${available ? 'the first available content action' : 'the timeline when its content cannot receive focus'}",
               "kind": "component keyboard exercise signal"
             }
           ]

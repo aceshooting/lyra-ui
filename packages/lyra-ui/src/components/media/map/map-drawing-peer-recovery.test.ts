@@ -164,4 +164,61 @@ describe('lr-map drawing native recovery', () => {
     expect(changes[0]!.vertices).to.deep.equal([[0.8, 0], [5, 0], [10, 0]]);
   });
 
+  for (const stage of ['canvas allocation', 'base allocation', 'measurement projection'] as const) {
+    for (const throws of [false, true]) {
+      it(`retires drawing visuals cancelled during ${stage}${throws ? ' even if the native callback then throws' : ''}`, async () => {
+        const { element, peer } = await mount(); element.drawingMeasurements = true;
+        expect(element.editDrawing(completed())).to.equal(true); await settle(element, peer);
+        await waitUntil(() => handles(element).length === 3 && labels(element).length === 3);
+        const base = element.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+        const canvasRect = peer.canvas.getBoundingClientRect, baseRect = base.getBoundingClientRect, project = peer.project;
+        const cancels = capture(element, 'lr-map-draw-cancel'), changes = capture(element, 'lr-map-draw-change');
+        let cancelled = false, projections = 0;
+        const cancel = () => {
+          if (cancelled) return;
+          cancelled = true; element.cancelDrawing();
+          if (throws) throw new Error('Retired drawing measurement unavailable');
+        };
+        try {
+          if (stage === 'canvas allocation') peer.canvas.getBoundingClientRect = () => { cancel(); return canvasRect.call(peer.canvas); };
+          else if (stage === 'base allocation') base.getBoundingClientRect = () => { cancel(); return baseRect.call(base); };
+          else peer.project = point => {
+            // The three edit handles are projected before any segment measurement.
+            if (++projections === 4) cancel();
+            return project.call(peer, point);
+          };
+          peer.fire('move');
+          await waitUntil(() => cancelled, 'native drawing layout callback ran');
+          await settle(element, peer);
+          expect(cancels.length).to.equal(1); expect(changes.length).to.equal(0);
+          expect([handles(element).length, labels(element).length, peer.sources.size]).to.deep.equal([0, 0, 0]);
+          expect(peer.zoomGesture).to.equal(true); expect(element.completeDrawing()).to.equal(false);
+          expect(element.shadowRoot!.textContent).not.to.include('Retired drawing measurement unavailable');
+        } finally {
+          peer.canvas.getBoundingClientRect = canvasRect; base.getBoundingClientRect = baseRect; peer.project = project;
+        }
+        expect(element.editDrawing(completed())).to.equal(true); await settle(element, peer);
+        await waitUntil(() => handles(element).length === 3 && labels(element).length === 3);
+        expect(element.completeDrawing()).to.equal(true); await settle(element, peer);
+        expect(cancels.length).to.equal(1); expect(peer.sources.size).to.equal(0);
+      });
+    }
+  }
+
+  it('discards a queued rubber-band preview when drawing is cancelled and keeps the next edit clean', async () => {
+    const { element, peer } = await mount(); await arm(element);
+    await vertex(element, peer, 0); await vertex(element, peer, 5);
+    const cancels = capture(element, 'lr-map-draw-cancel'), completions = capture(element, 'lr-map-draw-complete');
+    peer.fire('mousemove', { point: { x: 180, y: 100 }, lngLat: { lng: 8, lat: 0 } });
+    expect(element.cancelDrawing()).to.equal(true);
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    await settle(element, peer);
+    expect(cancels.length).to.equal(1); expect(peer.sources.size).to.equal(0);
+    expect(handles(element).length).to.equal(0); expect(peer.zoomGesture).to.equal(true);
+    expect(element.editDrawing(completed())).to.equal(true); await settle(element, peer);
+    expect(element.completeDrawing()).to.equal(true); await settle(element, peer);
+    expect(completions[0]?.vertices).to.deep.equal(completed().vertices);
+    expect(peer.sources.size).to.equal(0);
+  });
+
 });

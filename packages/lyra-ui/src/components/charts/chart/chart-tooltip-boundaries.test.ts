@@ -3,6 +3,33 @@ import type { Chart } from 'chart.js';
 import type { LyraChart, LyraChartFormatterContext } from './chart.class.js';
 import './chart.js';
 
+for (const horizontal of [false, true]) {
+  it(`preserves numeric tooltip groups without assigning a series to unresolved ${horizontal ? 'horizontal' : 'vertical'} peer hits`, async () => {
+    const seen: LyraChartFormatterContext[][] = [];
+    const group = (contexts: readonly LyraChartFormatterContext[]) => { seen.push([...contexts]); return 'Numeric tooltip group'; };
+    const el = await fixture<LyraChart>(html`<lr-chart type="bar" without-animation .indexAxis=${horizontal ? 'y' : 'x'}
+      .labels=${['North']} .datasets=${[{ label: 'Sales', data: [7] }]}
+      .tooltipTitleFormatter=${group} .tooltipFooterFormatter=${group}></lr-chart>`);
+    await waitUntil(() => el.chart !== undefined);
+    const chart = el.chart as unknown as Chart;
+    const callbacks = chart.options.plugins!.tooltip!.callbacks as unknown as {
+      title(items: unknown[]): string | undefined; footer(items: unknown[]): string | undefined;
+    };
+    const unknown = { datasetIndex: 4, dataIndex: 20, raw: 7, parsed: horizontal ? { x: 7, y: 0 } : { x: 0, y: 7 } };
+    const point = { datasetIndex: 4, dataIndex: 20, raw: { x: 2, y: 9 }, parsed: { x: 2, y: 9 } };
+    const gap = { datasetIndex: 0, dataIndex: 0, raw: null, parsed: null };
+    expect(callbacks.title([gap, unknown, point])).to.equal('Numeric tooltip group');
+    expect(callbacks.footer([gap, unknown, point])).to.equal('Numeric tooltip group');
+    expect(seen).to.deep.equal(Array.from({ length: 2 }, () => [
+      { value: 7, surface: 'tooltip' }, { value: 9, surface: 'tooltip' },
+    ]));
+    expect(callbacks.title([gap])).to.equal(undefined);
+    expect(callbacks.footer([{ raw: Number.NaN }, { raw: Number.POSITIVE_INFINITY }])).to.equal(undefined);
+    expect(seen.length).to.equal(2);
+    expect(el.exportData('csv')).to.include('North,7');
+  });
+}
+
 it('owns primitive and multiline raw dataset labels while retaining detached data-level extension fields', async () => {
   const extension = { retained: true };
   const multiline = ['Revenue', , 'North'];
