@@ -190,3 +190,40 @@ it('phone-input leaves validation text to error-text, keeps the resting border, 
   expect(el.shadowRoot!.querySelector('[part="error"]')!.hasAttribute('hidden'), 'no automatic message').to.equal(true);
   expect(getComputedStyle(wrapper).borderTopColor, 'no default danger edge').to.equal(resting);
 });
+
+for (const blocked of ['disabled', 'readonly'] as const) {
+  it(`suppresses a queued native change immediately after ${blocked} is set and resumes after it clears`, async () => {
+    const el = await mount();
+    const input = el.input!;
+    const value = el.value, country = el.country;
+    const events: string[] = [];
+    for (const name of ['change', 'lr-change']) el.addEventListener(name, () => events.push(name));
+    el[blocked] = true;
+    input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    await settle(el);
+    expect(events).to.deep.equal([]);
+    expect(el.value).to.equal(value);
+    expect(el.country).to.equal(country);
+
+    el[blocked] = false;
+    await settle(el);
+    input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    expect(events).to.deep.equal(['change', 'lr-change']);
+    expect(el.value).to.equal(value);
+  });
+}
+
+for (const boundary of ['selectionStart', 'selectionEnd'] as const) {
+  it(`forwards a null ${boundary} assignment as a native zero boundary without changing the value`, async () => {
+    const el = await mount();
+    const input = el.input!;
+    input.value = '123456';
+    input.setSelectionRange(2, 5);
+    const value = el.value;
+    el[boundary] = null;
+    expect([el.selectionStart, el.selectionEnd]).to.deep.equal(boundary === 'selectionStart' ? [0, 5] : [0, 0]);
+    expect([input.selectionStart, input.selectionEnd]).to.deep.equal([el.selectionStart, el.selectionEnd]);
+    expect(input.value).to.equal('123456');
+    expect(el.value).to.equal(value);
+  });
+}

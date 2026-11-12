@@ -9,6 +9,7 @@ import type {
   LyraExportFormatDescriptor,
 } from './export-button.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { __setAnchoredOverlayRuntimeLoaderForTesting } from '../../../internal/anchored-overlay-runtime.js';
 
 const rows = [{ id: 'a', name: 'Alpha' }];
 const columns = [
@@ -2059,3 +2060,53 @@ it('requests an export before collecting rows and retains the legacy veto event'
   expect(order).to.deep.equal(['request', 'legacy']);
   expect(collections).to.equal(0);
 });
+
+for (const failure of ['import', 'setup'] as const) {
+  it(`closes an unpositioned export menu after ${failure} failure and recovers on the next opening`, async () => {
+    const runtime = await import('../../../internal/positioner.js');
+    let failed = false;
+    __setAnchoredOverlayRuntimeLoaderForTesting(async () => {
+      if (failure === 'import' && !failed) {
+        failed = true;
+        throw new Error('Positioning chunk unavailable');
+      }
+      return {
+        place: (...args) => {
+          if (failure === 'setup' && !failed) {
+            failed = true;
+            throw new Error('Positioning setup unavailable');
+          }
+          return runtime.placeAnchoredSurface(...args);
+        },
+        trackRect: runtime.trackRect,
+      };
+    });
+    const el = await fixture<LyraExportButton>(html`<lr-export-button .formats=${['csv', 'json']}></lr-export-button>`);
+    const trigger = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="trigger"]')!;
+    const hides: boolean[] = [];
+    let exports = 0;
+    el.addEventListener('lr-hide', event => { hides.push(event.cancelable); event.preventDefault(); });
+    el.addEventListener('lr-export-request', () => { exports++; });
+    try {
+      await focusByKeyboard(trigger);
+      await sendKeys({ press: 'Enter' });
+      await waitUntil(() => failed && !el.open && el.shadowRoot!.querySelector<HTMLElement>('[part="menu"]')!.hidden,
+        'failed placement releases and hides the export menu');
+      expect(hides).to.deep.equal([]);
+      expect(exports).to.equal(0);
+      expect(trigger.getAttribute('aria-expanded')).to.equal('false');
+
+      await focusByKeyboard(trigger);
+      await sendKeys({ press: 'Enter' });
+      const menu = await waitForOpenMenu(el);
+      expect(el.open).to.equal(true);
+      expect(menu.hidden).to.equal(false);
+      expect(trigger.getAttribute('aria-expanded')).to.equal('true');
+      expect(el.shadowRoot!.activeElement === menu.querySelector('[part="menu-item"]')).to.equal(true);
+      expect(exports).to.equal(0);
+    } finally {
+      el.remove();
+      __setAnchoredOverlayRuntimeLoaderForTesting(undefined);
+    }
+  });
+}
