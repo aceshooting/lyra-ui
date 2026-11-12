@@ -634,13 +634,6 @@ async function writeFixture(
         type: 'module',
         dependencies,
         devDependencies,
-        // Rolldown's optional WASI binding currently permits @napi-rs/wasm-runtime ^1.1.6, but
-        // 1.2 switched its @emnapi peers to the incompatible 2.x alpha line while the binding
-        // still installs @emnapi 1.11.1. npm --strict-peer-deps rejects that optional fallback
-        // before reaching any Lyra assertion, even on platforms that use a native binding.
-        overrides: {
-          '@napi-rs/wasm-runtime': '1.1.6',
-        },
       },
       null,
       2,

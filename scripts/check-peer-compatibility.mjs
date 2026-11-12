@@ -2231,9 +2231,6 @@ function consumerPackageJson({ authority, packageManager, profile, tarballSpecif
       typescript: authority.toolchain.typescript,
       vite: authority.toolchain.vite,
     },
-    overrides: {
-      '@napi-rs/wasm-runtime': '1.1.6',
-    },
   };
 }
 
