@@ -401,4 +401,60 @@ describe('lr-map resource transition ownership', () => {
     expect(peer.sourceAdds).to.equal(sourceAdds); expect(peer.layerAdds).to.equal(layerAdds);
     expect(peer.removed).to.equal(false);
   });
+
+  it('retires a map when restoring changed zoom ranges also throws, then reconnects with the requested bounds', async () => {
+    const row = { sourceId: 'places', geojson: points, minZoom: 3, maxZoom: 9 };
+    const { element, peer, wrapper } = await mount([row]);
+    const writes: Mutation[] = [];
+    peer.afterMutation = mutation => {
+      if (mutation.kind !== 'range') return;
+      writes.push(mutation);
+      if (writes.length === 2 || writes.length === 3) throw new Error('Native bounds unavailable');
+    };
+    element.dataLayers = [{ ...row, minZoom: 5, maxZoom: 7 }];
+    await rejected(element);
+    await waitUntil(() => peer.removed, 'the failed rollback must retire its renderer');
+    expect(writes.map(write => write.value)).to.deep.equal([[5, 7], [5, 7], [3, 9]]);
+    expect(writes[2]!.id).to.equal(writes[1]!.id);
+    expect(element.map === undefined).to.equal(true);
+    await waitUntil(() => element.shadowRoot!.textContent?.includes('Map update unavailable') === true);
+    expect(element.shadowRoot!.textContent).not.to.include('Native bounds unavailable');
+    element.remove(); wrapper.append(element);
+    await waitUntil(() => element.map !== undefined);
+    const recovered = element.map as unknown as TransitionMap;
+    recovered.fire('load'); await element.whenStyleReady(); await settle(element, recovered);
+    expect(recovered === peer).to.equal(false);
+    expect(recovered.layers.size).to.equal(3);
+    for (const layer of recovered.layers.values()) expect(layer).to.include({ minzoom: 5, maxzoom: 7 });
+    expect(element.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
+  });
+
+  it('stops a label rollback after its restoring setter throws and rebuilds the requested label on reconnect', async () => {
+    const row = { sourceId: 'places', geojson: points,
+      label: { field: 'name', color: 'rgb(10, 20, 30)', haloWidth: 1 } };
+    const { element, peer, wrapper } = await mount([row]);
+    const labelId = label(peer).id;
+    const writes: Mutation[] = [];
+    peer.afterMutation = mutation => {
+      if (mutation.id !== labelId) return;
+      writes.push(mutation);
+      if (mutation.key === 'text-halo-width') throw new Error('Native label unavailable');
+    };
+    element.dataLayers = [{ ...row, label: { ...row.label, color: 'rgb(70, 80, 90)', haloWidth: 2 } }];
+    await rejected(element);
+    await waitUntil(() => peer.removed, 'the failed label rollback must retire its renderer');
+    expect(writes.map(write => [write.key, write.value])).to.deep.equal([
+      ['text-color', 'rgb(70, 80, 90)'], ['text-halo-width', 2], ['text-halo-width', 1],
+    ]);
+    expect(element.map === undefined).to.equal(true);
+    await waitUntil(() => element.shadowRoot!.textContent?.includes('Map update unavailable') === true);
+    expect(element.shadowRoot!.textContent).not.to.include('Native label unavailable');
+    element.remove(); wrapper.append(element);
+    await waitUntil(() => element.map !== undefined);
+    const recovered = element.map as unknown as TransitionMap;
+    recovered.fire('load'); await element.whenStyleReady(); await settle(element, recovered);
+    expect(recovered === peer).to.equal(false);
+    expect(label(recovered).paint).to.include({ 'text-color': 'rgb(70, 80, 90)', 'text-halo-width': 2 });
+    expect(element.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
+  });
 });

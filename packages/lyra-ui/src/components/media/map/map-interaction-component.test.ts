@@ -186,6 +186,36 @@ describe('lr-map interaction and retained state integration', () => {
     HTMLCanvasElement.prototype.getContext = originalContext;
   });
 
+  it('keeps a rendered feature selectable when native zoom lookup fails, then resumes normal zoom filtering', async () => {
+    const { element, peer } = await mount(el => { el.dataLayers = [row()]; });
+    const layerId = circle(peer);
+    Object.assign(peer.layers.get(layerId) as object, { minzoom: 10, maxzoom: 20 });
+    peer.hits = [hit(peer, layerId)];
+    const clicks = capture(element, 'lr-map-click');
+    peer.zoom = 2;
+    fire(peer);
+    expect(clicks.length).to.equal(1);
+    expect((clicks[0] as { hit?: unknown }).hit).to.equal(undefined);
+    const getZoom = peer.getZoom;
+    peer.getZoom = () => { throw new Error('Native zoom unavailable'); };
+    try {
+      fire(peer);
+      expect(clicks.length).to.equal(2);
+      expect((clicks[1] as { hit: { source: string; id: number } }).hit).to.include({ source: 'points', id: 0 });
+      expect(peer.removed).to.equal(false);
+      expect(element.shadowRoot!.textContent).not.to.include('Native zoom unavailable');
+    } finally { peer.getZoom = getZoom; }
+    peer.zoom = 21;
+    fire(peer);
+    expect(clicks.length).to.equal(3);
+    expect((clicks[2] as { hit?: unknown }).hit).to.equal(undefined);
+    peer.zoom = 15;
+    fire(peer);
+    expect(clicks.length).to.equal(4);
+    expect((clicks[3] as { hit: { source: string; id: number } }).hit).to.include({ source: 'points', id: 0 });
+    expect(peer.queryCount).to.equal(4);
+  });
+
   it('keeps unset picking/state opt-ins and preserves a background click without querying absent layers', async () => {
     const { element, peer } = await mount(); const clicks = capture(element, 'lr-map-click'), picks = capture(element, 'lr-map-pick'); fire(peer);
     expect(peer.queryCount).to.equal(0); expect(clicks.length).to.equal(1); expect(picks.length).to.equal(0);
