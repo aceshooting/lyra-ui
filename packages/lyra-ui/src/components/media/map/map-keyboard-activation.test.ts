@@ -102,6 +102,73 @@ describe('lr-map keyboard activation at the view centre', () => {
     expect(h.clicks.length).to.equal(1);
     expect(h.clicks[0]!['feature']).to.equal(undefined); expect(h.clicks[0]!['trigger']).to.equal('keyboard');
   });
+
+  for (const failure of ['center throws', 'invalid latitude', 'projection throws', 'missing projection', 'NaN x', 'infinite y'] as const) {
+    it(`withholds keyboard activation when the engine returns ${failure} and accepts the next valid result`, async () => {
+      const h = await mount(element => { element.keyboardActivation = true; });
+      const getCenter = h.peer.getCenter, project = h.peer.project;
+      await focusByKeyboard(h.peer.canvas);
+      try {
+        if (failure === 'center throws') h.peer.getCenter = () => { throw new Error('Private center failure'); };
+        else if (failure === 'invalid latitude') h.peer.getCenter = () => ({ lng: 0, lat: Number.NaN });
+        else if (failure === 'projection throws') h.peer.project = () => { throw new Error('Private projection failure'); };
+        else if (failure === 'missing projection') Object.defineProperty(h.peer, 'project', { configurable: true, writable: true, value: undefined });
+        else h.peer.project = () => failure === 'NaN x' ? { x: Number.NaN, y: 80 } : { x: 120, y: Number.POSITIVE_INFINITY };
+        await sendKeys({ press: 'Enter' });
+        expect(h.clicks.length).to.equal(0);
+        expect(h.peer.queryCount).to.equal(0);
+        expect(h.picks.length).to.equal(0);
+        expect(h.element.shadowRoot!.textContent).not.to.include('Private');
+
+        h.peer.getCenter = getCenter;
+        h.peer.project = project;
+        h.peer.projected = { x: 120, y: 80 };
+        await sendKeys({ press: 'Space' });
+        expect(h.clicks.length).to.equal(1);
+        expect(h.clicks[0]!['trigger']).to.equal('keyboard');
+        expect(h.peer.queryCount).to.equal(1);
+        expect(h.peer.queryPoint).to.deep.equal([120, 80]);
+        expect(h.prevented).to.deep.equal([true, true]);
+      } finally {
+        h.peer.getCenter = getCenter;
+        h.peer.project = project;
+      }
+    });
+  }
+
+  for (const phase of ['center', 'projection'] as const) {
+    it(`discards keyboard activation when the map disconnects during the ${phase} callback`, async () => {
+      const h = await mount(element => { element.keyboardActivation = true; });
+      const getCenter = h.peer.getCenter, project = h.peer.project;
+      let calls = 0;
+      await focusByKeyboard(h.peer.canvas);
+      try {
+        if (phase === 'center') h.peer.getCenter = () => {
+          const center = getCenter.call(h.peer);
+          calls++;
+          h.element.remove();
+          return center;
+        };
+        else h.peer.project = coordinate => {
+          const point = project.call(h.peer, coordinate);
+          calls++;
+          h.element.remove();
+          return point;
+        };
+        await sendKeys({ press: 'Enter' });
+        expect(calls).to.equal(1);
+        expect(h.element.isConnected).to.equal(false);
+        expect(h.element.map === undefined).to.equal(true);
+        expect(h.peer.queryCount).to.equal(0);
+        expect(h.clicks.length).to.equal(0);
+        expect(h.picks.length).to.equal(0);
+      } finally {
+        h.peer.getCenter = getCenter;
+        h.peer.project = project;
+      }
+    });
+  }
+
   it('does not activate while picking or drawing, and ignores modified or repeated keys', async () => {
     const h = await mount(element => { element.keyboardActivation = true; element.pickMode = true; });
     await focusByKeyboard(h.peer.canvas); await sendKeys({ press: 'Enter' });
