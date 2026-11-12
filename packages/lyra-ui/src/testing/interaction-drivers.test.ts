@@ -292,6 +292,20 @@ describe('toggleSwitch', () => {
 });
 
 describe('activateStep', () => {
+  it('reports an unrendered step before mount and activates it after the first render', async () => {
+    const el = document.createElement('lr-stepper') as LyraStepper;
+    el.steps = stepperSteps();
+    let selections = 0;
+    el.addEventListener('lr-step-select', () => { selections++; });
+    let error: unknown;
+    try { await activateStep(el, 'inputs'); } catch (caught) { error = caught; }
+    expect(String(error)).to.include('is not currently rendered');
+    expect(selections).to.equal(0);
+    await fixture(el);
+    await activateStep(el, 'inputs');
+    expect(selections).to.equal(1);
+  });
+
   it('clicks the real step button by index, firing lr-step-select with the correct detail', async () => {
     const el = (await fixture(html`<lr-stepper .steps=${stepperSteps()}></lr-stepper>`)) as LyraStepper;
     const selected = oneEvent(el, 'lr-step-select');
@@ -399,6 +413,25 @@ describe('chooseSwatch', () => {
 
 describe('chooseCurrency', () => {
   const currencies = [{ code: 'EUR' }, { code: 'USD' }, { code: 'GBP', disabled: true }];
+
+  for (const replacement of ['removed', 'disabled'] as const) {
+    it(`rejects a currency ${replacement} while the catalog opens and recovers after it is restored`, async () => {
+      const el = await fixture<LyraCurrencyPicker>(html`<lr-currency-picker label="Currency" value="EUR" .currencies=${currencies}></lr-currency-picker>`);
+      const seen = recordEvents(el, ['input', 'lr-input', 'change', 'lr-change']);
+      el.addEventListener('lr-show', () => {
+        el.currencies = replacement === 'removed' ? [{ code: 'EUR' }] : [{ code: 'EUR' }, { code: 'USD', disabled: true }];
+      }, { once: true });
+      let error: unknown;
+      try { await chooseCurrency(el, 'USD'); } catch (caught) { error = caught; }
+      expect(String(error)).to.include(replacement === 'removed' ? 'not in the picker' : 'is disabled');
+      expect(el.value).to.equal('EUR');
+      expect(seen).to.deep.equal([]);
+      el.currencies = currencies;
+      await chooseCurrency(el, 'USD');
+      expect(el.value).to.equal('USD');
+      expect(seen).to.deep.equal(['input', 'lr-input', 'change', 'lr-change']);
+    });
+  }
 
   it('commits through the composed select: input, lr-input, change and lr-change have fired once when it resolves', async () => {
     const el = await fixture<LyraCurrencyPicker>(html`<lr-currency-picker label="Currency" value="EUR" .currencies=${currencies}></lr-currency-picker>`);
@@ -529,6 +562,26 @@ describe('openPopover / closePopover', () => {
 
 
 describe('popover driver failure recovery', () => {
+  it('reports an unresolved for target and opens after that target is connected', async () => {
+    const host = await fixture<HTMLDivElement>(html`<div><lr-popover for="late-driver-owner" style="--show-duration: 0ms; --hide-duration: 0ms">Details</lr-popover></div>`);
+    const el = host.querySelector<LyraPopover>('lr-popover')!;
+    const seen = recordEvents(el, ['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']);
+    let error: unknown;
+    try { await openPopover(el); } catch (caught) { error = caught; }
+    expect(String(error)).to.include('no slotted trigger or for target');
+    expect(el.open).to.equal(false);
+    expect(seen).to.deep.equal([]);
+    const trigger = document.createElement('button');
+    trigger.id = 'late-driver-owner'; trigger.textContent = 'Open details';
+    host.prepend(trigger);
+    await waitUntil(() => trigger.getAttribute('aria-expanded') === 'false');
+    await openPopover(el);
+    expect(el.open).to.equal(true);
+    await closePopover(el, { via: 'trigger' });
+    expect(el.open).to.equal(false);
+    expect(seen).to.deep.equal(['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']);
+  });
+
   it('rejects a missing interaction target and succeeds after a trigger is supplied', async () => {
     const el = await fixture<LyraPopover>(html`<lr-popover style="--show-duration: 0ms; --hide-duration: 0ms"><p>Details</p></lr-popover>`);
     let error: unknown;
