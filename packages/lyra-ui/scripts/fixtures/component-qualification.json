@@ -23249,6 +23249,7 @@
         "tests": [
           "src/components/media/flag/flag-core-startup.test.ts",
           "src/components/media/flag/flag-scale.test.ts",
+          "src/components/media/flag/flag-url-resolver.test.ts",
           "src/components/media/flag/flag.test.ts",
           "src/components/media/flag/language-map.test.ts"
         ],

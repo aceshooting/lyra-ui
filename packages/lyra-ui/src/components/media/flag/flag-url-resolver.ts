@@ -77,15 +77,15 @@ export async function loadFlagUrl(
   return null;
 }
 
-function resolverFactoryFromModule(module: unknown): (() => LyraFlagUrlResolver) | null {
+function resolverFactoryFromModule(module: unknown): (() => unknown) | null {
   try {
     if ((typeof module === 'object' && module !== null) || typeof module === 'function') {
       const named = (module as { createFlagUrlResolver?: unknown }).createFlagUrlResolver;
-      if (typeof named === 'function') return named as () => LyraFlagUrlResolver;
+      if (typeof named === 'function') return named as () => unknown;
       const fallback = (module as { default?: unknown }).default ?? module;
       if (typeof fallback === 'object' && fallback !== null) {
         const defaultNamed = (fallback as { createFlagUrlResolver?: unknown }).createFlagUrlResolver;
-        if (typeof defaultNamed === 'function') return defaultNamed as () => LyraFlagUrlResolver;
+        if (typeof defaultNamed === 'function') return defaultNamed as () => unknown;
       }
     }
   } catch {
@@ -112,16 +112,14 @@ export async function loadBulkFlagUrl(
     return null;
   }
   const factory = resolverFactoryFromModule(peerModule);
-  if (!factory) {
-    warnFlagPeerIncapable('createFlagUrlResolver');
-    return null;
-  }
   try {
-    return factory();
+    const resolver = await factory?.();
+    if (typeof resolver === 'function') return resolver as LyraFlagUrlResolver;
   } catch {
-    warnFlagPeerIncapable('createFlagUrlResolver');
-    return null;
+    // Initialization failures share the same capability diagnostic as unusable results.
   }
+  warnFlagPeerIncapable('createFlagUrlResolver');
+  return null;
 }
 
 let flagUrlResolver: Promise<LyraFlagUrlResolver | null> | undefined;
