@@ -83,28 +83,40 @@ for (const direction of ['ltr', 'rtl']) {
 }
 
 it('backs up to a complete Unicode character when an axis title fits only half of the next pair', async () => {
-  const fullTitle = '😀'.repeat(100);
-  const prefix = '😀'.repeat(6);
-  const el = await mount(html`<lr-lite-chart x-label=${fullTitle} style="inline-size:320px"
-    .labels=${LABELS} .datasets=${DATASETS}></lr-lite-chart>`);
-  const title = el.shadowRoot!.querySelector<SVGTextElement>('[part="axis-title"]')!;
-  const measure = title.cloneNode(true) as SVGTextElement;
-  title.parentNode!.appendChild(measure);
-  let partialWidth: number, completeWidth: number;
+  const fullTitle = '𝐀'.repeat(100);
+  const prefix = '𝐀'.repeat(6);
+  // Original geometric glyphs give the replacement character 500 units and U+1D400 2000 units.
+  // System fallback fonts do not guarantee that a surrogate half is narrower.
+  const url = new URL('../../../../test/fixtures/unicode-title.ttf', import.meta.url);
+  const font = await new FontFace('Lyra Unicode Test', `url("${url.href}")`).load();
+  document.fonts.add(font);
+  let el: LyraLiteChart | undefined;
   try {
-    measure.textContent = `${prefix}\ud83d…`;
-    partialWidth = measure.getComputedTextLength();
-    measure.textContent = `${prefix}😀…`;
-    completeWidth = measure.getComputedTextLength();
-  } finally { measure.remove(); }
-  expect(partialWidth).to.be.lessThan(completeWidth);
-  const extent = (partialWidth + completeWidth) / 2;
-  const outsideTitle = el.getBoundingClientRect().width - Number(title.getAttribute('data-title-extent'));
-  el.style.inlineSize = `${outsideTitle + extent}px`;
-  await waitUntil(() => Math.abs(Number(title.getAttribute('data-title-extent')) - extent) < 0.5);
-  expect(title.textContent).to.equal(`${prefix}…`);
-  expect(title.getComputedTextLength()).to.be.at.most(extent + 0.5);
-  expect(title.getAttribute('aria-label')).to.equal(fullTitle);
+    el = await mount(html`<lr-lite-chart x-label=${fullTitle} style="inline-size:320px;--lr-font:'Lyra Unicode Test'"
+      .labels=${LABELS} .datasets=${DATASETS}></lr-lite-chart>`);
+    const title = el.shadowRoot!.querySelector<SVGTextElement>('[part="axis-title"]')!;
+    expect(getComputedStyle(title).fontFamily).to.include('Lyra Unicode Test');
+    const measure = title.cloneNode(true) as SVGTextElement;
+    title.parentNode!.appendChild(measure);
+    let partialWidth: number, completeWidth: number;
+    try {
+      measure.textContent = `${prefix}\ud835…`;
+      partialWidth = measure.getComputedTextLength();
+      measure.textContent = `${prefix}𝐀…`;
+      completeWidth = measure.getComputedTextLength();
+    } finally { measure.remove(); }
+    expect(partialWidth).to.be.lessThan(completeWidth);
+    const extent = (partialWidth + completeWidth) / 2;
+    const outsideTitle = el.getBoundingClientRect().width - Number(title.getAttribute('data-title-extent'));
+    el.style.inlineSize = `${outsideTitle + extent}px`;
+    await waitUntil(() => Math.abs(Number(title.getAttribute('data-title-extent')) - extent) < 0.5);
+    expect(title.textContent).to.equal(`${prefix}…`);
+    expect(title.getComputedTextLength()).to.be.at.most(extent + 0.5);
+    expect(title.getAttribute('aria-label')).to.equal(fullTitle);
+  } finally {
+    el?.remove();
+    document.fonts.delete(font);
+  }
 });
 
 describe('lr-lite-chart axisLabelText', () => {
