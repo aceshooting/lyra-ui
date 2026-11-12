@@ -19,7 +19,9 @@ async function ready(el: LyraVideo): Promise<HTMLVideoElement> {
   return video;
 }
 
-describe('lr-video panorama', () => {
+describe('lr-video panorama', function () {
+  // Native decoder startup has its own 15-second deadline in ready().
+  this.timeout(20000);
   const available = panoramaEnvironment.available;
   let creates: number, disposed: number;
   let media: HTMLVideoElement | undefined;
@@ -165,4 +167,30 @@ describe('lr-video panorama', () => {
     expect(el.panoramaCamera).to.deep.equal({ yaw: 0.5, pitch: -0.25, fieldOfView: 60 });
     expect(cameras.length).to.equal(2);
   });
+  it('restores the same native video and localized fallback when renderer cleanup throws', async () => {
+    panoramaLoader.override(async () => ({ createEngine: (): Engine3dInstance => ({
+      contract: 1, async mount(_target, callbacks) { host = callbacks; },
+      setStyle() {}, setData() {}, setCamera() {}, resize() {},
+      dispose() { disposed++; throw new Error('private cleanup detail'); },
+    }) }));
+    const el = await fixture<LyraVideo>(html`<lr-video engine="webgl" projection="equirectangular"
+      style="inline-size:480px;block-size:320px"
+      .strings=${{ engine3dError: 'Renderer unavailable', engine3dShowingBuiltin: 'Native video restored' }}></lr-video>`);
+    const video = await ready(el);
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="panorama"]')?.hasAttribute('data-ready') === true);
+    const reasons: string[] = [];
+    el.addEventListener('lr-engine-fallback', event => reasons.push(event.detail.reason));
+    host.lost('error');
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="panorama-notice"]')?.textContent?.includes('Renderer unavailable') === true, 'the scheduled fallback reaches the DOM');
+    expect(reasons).to.deep.equal(['error']);
+    expect(disposed).to.equal(1);
+    expect(el.getVideoElement() === video).to.equal(true);
+    expect(video.hasAttribute('data-panorama')).to.equal(false);
+    expect(video.hasAttribute('aria-hidden')).to.equal(false);
+    const notice = el.shadowRoot!.querySelector('[part="panorama-notice"]')!;
+    expect(notice.textContent).to.include('Renderer unavailable').and.to.include('Native video restored');
+    expect(notice.textContent).not.to.include('private cleanup detail');
+    el.remove(); expect(disposed).to.equal(1);
+  });
+
 });

@@ -522,14 +522,18 @@ describe('lr-video public contract', () => {
     });
   }
 
-  it('fires exactly one host timeupdate per programmatic seek() with a real loaded <video>, not a duplicate from the native relay', async () => {
+  it('fires exactly one host timeupdate per programmatic seek() with a real loaded <video>, not a duplicate from the native relay', async function () {
+    this.timeout(20000);
     // A property-mocked <video> (as used elsewhere in this file) never actually fires a native
     // 'timeupdate'/'seeked' pair on its own -- setting `.currentTime` is just a plain property
     // assignment there, so it cannot exercise the real double-relay this test guards against. This
     // loads the genuine, small (2s h264) fixture the repo already ships for media-card/Storybook
     // so the real HTML seeking algorithm (which queues BOTH a 'timeupdate' and a 'seeked' native
     // event once a seek completes) actually runs.
-    const fixtureUrl = new URL('../media-card/fixtures/sample.mp4', import.meta.url).href;
+    const response = await fetch(new URL('../media-card/fixtures/sample.mp4', import.meta.url));
+    expect(response.ok).to.equal(true);
+    // A complete blob remains seekable when the test server answers range requests with 200.
+    const fixtureUrl = URL.createObjectURL(new Blob([await response.arrayBuffer()], { type: 'video/mp4' }));
     let media: HTMLVideoElement | undefined;
     const received: Event[] = [];
     const events: string[] = [];
@@ -546,7 +550,7 @@ describe('lr-video public contract', () => {
     // Leave time for an actionable failure and cleanup before the runner's outer deadline.
     const deadline = window.setTimeout(() => {
       rejectFailure(new Error(`Real video phase deadline: ${diagnostic()}`));
-    }, 4500);
+    }, 15000);
     try {
       const el = await Promise.race([
         fixture<LyraVideo>(html`<lr-video src=${fixtureUrl}></lr-video>`), failure,
@@ -587,6 +591,8 @@ describe('lr-video public contract', () => {
     } finally {
       window.clearTimeout(deadline);
       for (const cleanup of cleanups) cleanup();
+      media?.pause();
+      URL.revokeObjectURL(fixtureUrl);
     }
   });
 

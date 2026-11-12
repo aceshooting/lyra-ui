@@ -267,7 +267,7 @@ describe('lr-image-viewer panorama', () => {
     });
   }
 
-  for (const phase of ['style', 'camera', 'resize', 'restored-style', 'restored-camera'] as const) {
+  for (const phase of ['style', 'data', 'camera', 'resize', 'restored-style', 'restored-camera', 'restored-state'] as const) {
     it(`stops peer work and resource setup after synchronous terminal loss during ${phase}`, async () => {
       const element = await fixture<HTMLDivElement>(html`<div style="width:320px;height:180px"></div>`);
       const image = document.createElement('img');
@@ -392,5 +392,154 @@ describe('lr-image-viewer panorama', () => {
       expect(controller.ready).to.equal(false);
     } finally { controller.disconnect(); element.remove(); }
   });
+
+  for (const phase of ['disconnect', 'replacement', 'render failure'] as const) {
+    it(`isolates a throwing panorama disposer during ${phase}`, async () => {
+      const element = await fixture<HTMLDivElement>(html`<div style="width:320px;height:180px"></div>`);
+      const image = document.createElement('img');
+      const container = element.appendChild(document.createElement('div'));
+      container.style.cssText = 'width:320px;height:180px';
+      let callbacks: Engine3dHost | undefined;
+      let retired = 0;
+      let failures = 0;
+      let creations = 0;
+      panoramaLoader.override(async () => ({ createEngine: (): Engine3dInstance => {
+        const serial = ++creations;
+        return {
+          contract: 1, async mount(_target, next) { callbacks = next; },
+          setStyle() {}, setData() {}, setCamera() {}, resize() {},
+          dispose() { retired++; if (serial === 1) throw new Error('private disposal failure'); },
+        };
+      } }));
+      const controller = new PanoramaController(element, {
+        changed: () => {}, updated: async () => {}, localize: key => key,
+        direction: () => 'ltr', camera: () => {}, pick: () => {}, fallback: () => { failures++; },
+      });
+      const hotspots: [] = [];
+      try {
+        controller.update(true, image, 1, hotspots, PANORAMA_DEFAULT_CAMERA, container);
+        await waitUntil(() => controller.ready);
+        if (phase === 'disconnect') controller.disconnect();
+        else if (phase === 'render failure') callbacks!.lost('error');
+        else controller.update(true, image, 2, hotspots, PANORAMA_DEFAULT_CAMERA, container);
+        expect(retired).to.equal(1);
+        expect(failures).to.equal(phase === 'render failure' ? 1 : 0);
+        if (phase === 'replacement') {
+          await waitUntil(() => controller.ready);
+          expect(creations).to.equal(2);
+        } else expect(controller.ready).to.equal(false);
+        controller.disconnect();
+        expect(retired).to.equal(phase === 'replacement' ? 2 : 1);
+      } finally { controller.disconnect(); element.remove(); }
+    });
+  }
+
+  it('reports repeated context loss only once while awaiting restoration', async () => {
+    const el = await fixture<LyraImageViewer>(html`<lr-image-viewer src=${PNG} engine="webgl" projection="equirectangular"></lr-image-viewer>`);
+    await waitUntil(() => source !== undefined);
+    const failures: string[] = [];
+    el.addEventListener('lr-engine-fallback', event => failures.push(event.detail.reason));
+    host.lost('context-lost'); host.lost('context-lost');
+    await el.updateComplete;
+    expect(failures).to.deep.equal(['context-lost']);
+    expect(disposed).to.equal(0);
+    host.restored!(); await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="panorama"]')?.hasAttribute('data-ready')).to.equal(true);
+  });
+
+  it('disposes a late renderer once when it finishes loading after disconnect', async () => {
+    const element = await fixture<HTMLDivElement>(html`<div style="width:320px;height:180px"></div>`);
+    const image = document.createElement('img');
+    const container = element.appendChild(document.createElement('div'));
+    container.style.cssText = 'width:320px;height:180px';
+    let complete!: (module: { createEngine(): Engine3dInstance }) => void;
+    let retired = 0;
+    let mounts = 0;
+    let failures = 0;
+    panoramaLoader.override(() => new Promise(resolve => { complete = resolve; }));
+    const controller = new PanoramaController(element, {
+      changed: () => {}, updated: async () => {}, localize: key => key,
+      direction: () => 'ltr', camera: () => {}, pick: () => {}, fallback: () => { failures++; },
+    });
+    try {
+      controller.update(true, image, 1, [], PANORAMA_DEFAULT_CAMERA, container);
+      await waitUntil(() => controller.loading && complete !== undefined);
+      controller.disconnect();
+      complete({ createEngine: () => ({
+        contract: 1, async mount() { mounts++; }, setStyle() {}, setData() {}, setCamera() {}, resize() {},
+        dispose() { retired++; throw new Error('late disposal failure'); },
+      }) });
+      await waitUntil(() => retired > 0);
+      expect(retired).to.equal(1);
+      expect(mounts).to.equal(0); expect(failures).to.equal(0);
+      expect(controller.ready).to.equal(false);
+      expect(controller.loading).to.equal(false);
+    } finally { controller.disconnect(); element.remove(); }
+  });
+
+  it('shows the localized native-image fallback when renderer cleanup throws', async () => {
+    panoramaLoader.override(async () => ({ createEngine: (): Engine3dInstance => ({
+      contract: 1, async mount(_target, callbacks) { host = callbacks; },
+      setStyle() {}, setData() {}, setCamera() {}, resize() {},
+      dispose() { disposed++; throw new Error('private cleanup detail'); },
+    }) }));
+    const el = await fixture<LyraImageViewer>(html`<lr-image-viewer src=${PNG} engine="webgl" projection="equirectangular"
+      .strings=${{ engine3dError: 'Renderer unavailable', engine3dShowingBuiltin: 'Native image restored' }}></lr-image-viewer>`);
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="panorama"]')?.hasAttribute('data-ready') === true);
+    const image = el.shadowRoot!.querySelector('[part="image"]');
+    const reasons: string[] = [];
+    el.addEventListener('lr-engine-fallback', event => reasons.push(event.detail.reason));
+    host.lost('error');
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="panorama-notice"]')?.textContent?.includes('Renderer unavailable') === true, 'the scheduled fallback reaches the DOM');
+    expect(reasons).to.deep.equal(['error']);
+    expect(disposed).to.equal(1);
+    expect(el.shadowRoot!.querySelector('[part="image"]') === image).to.equal(true);
+    expect(el.shadowRoot!.querySelector('[part="frame"]')?.hasAttribute('hidden')).to.equal(false);
+    const notice = el.shadowRoot!.querySelector('[part="panorama-notice"]')!;
+    expect(notice.textContent).to.include('Renderer unavailable').and.to.include('Native image restored');
+    expect(notice.textContent).not.to.include('private cleanup detail');
+    el.remove(); expect(disposed).to.equal(1);
+  });
+
+  it('keeps resolved theme colors when no auxiliary 2D canvas context is available', async () => {
+    const el = await fixture<LyraImageViewer>(html`<lr-image-viewer src=${PNG} data-lr-theme-scope style="--lr-color-brand:rgb(11, 22, 33)"></lr-image-viewer>`);
+    const original = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, 'getContext')!;
+    const getContext = HTMLCanvasElement.prototype.getContext;
+    Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+      ...original,
+      value(this: HTMLCanvasElement, contextId: string, ...options: unknown[]): unknown {
+        return contextId === '2d' ? null : Reflect.apply(getContext, this, [contextId, ...options]);
+      },
+    });
+    try {
+      el.engine = 'webgl'; el.projection = 'equirectangular';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="panorama"]')?.hasAttribute('data-ready') === true);
+      expect((style as { accent: string }).accent).to.equal('rgb(11, 22, 33)');
+      expect(el.shadowRoot!.querySelectorAll('[part="panorama-notice"]').length).to.equal(0);
+    } finally { el.remove(); Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', original); }
+  });
+
+  for (const placement of ['shadow', 'slotted'] as const) {
+    it(`observes author visibility and inherited theme through a ${placement} host`, async () => {
+      const wrapper = await fixture<HTMLDivElement>(html`<div aria-hidden="true"></div>`);
+      const shadow = wrapper.attachShadow({ mode: 'open' });
+      const el = document.createElement('lr-image-viewer') as LyraImageViewer;
+      el.src = PNG; el.engine = 'webgl'; el.projection = 'equirectangular';
+      if (placement === 'slotted') { shadow.appendChild(document.createElement('slot')); wrapper.appendChild(el); }
+      else shadow.appendChild(el);
+      try {
+        await el.updateComplete;
+        await waitUntil(() => el.shadowRoot!.querySelector<HTMLImageElement>('[part="image"]')?.complete === true);
+        expect(creates).to.equal(0);
+        wrapper.removeAttribute('aria-hidden');
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="panorama"]')?.hasAttribute('data-ready') === true);
+        expect(creates).to.equal(1);
+        wrapper.style.setProperty('--lr-color-brand', 'rgb(11, 22, 33)');
+        await waitUntil(() => (style as { accent: string })?.accent === 'rgba(11, 22, 33, 1)', 'the renderer receives inherited theme changes');
+        expect(disposed).to.equal(0);
+      } finally { el.remove(); }
+      expect(disposed).to.equal(1);
+    });
+  }
 
 });

@@ -45,6 +45,12 @@ export function snapshotPanoramaHotspots(value: unknown, owner: Window | null): 
 }
 
 type Media = HTMLImageElement | HTMLVideoElement;
+
+function disposePanoramaEngine(engine: Engine3dInstance | null | undefined): void {
+  try { engine?.dispose(); }
+  catch { /* Retired renderer failures must not block fallback or replacement. */ }
+}
+
 interface PanoramaOptions {
   readonly changed: () => void;
   readonly updated: () => Promise<unknown>;
@@ -96,7 +102,7 @@ export class PanoramaController {
     for (const cleanup of this.cleanups) cleanup(); this.cleanups = [];
     const engine = this.engine; this.engine = undefined;
     this.ready = this.loading = this.pending = false;
-    engine?.dispose();
+    disposePanoramaEngine(engine);
   }
 
   invalidate(): void {
@@ -178,7 +184,7 @@ export class PanoramaController {
     let owned = false;
     try {
       engine = await panoramaLoader.create();
-      if (!current()) { engine?.dispose(); return; }
+      if (!current()) { disposePanoramaEngine(engine); return; }
       if (!engine) { this.fail('unavailable'); return; }
       this.engine = engine; owned = true;
       await engine.mount(container, {
@@ -225,7 +231,7 @@ export class PanoramaController {
         if (mediaQuery) this.cleanups.push(() => mediaQuery.removeEventListener('change', restyle));
       }
       this.pending = this.loading = false; this.ready = this.selection.renderer === 'webgl'; this.options.changed();
-    } catch (error) { if (!current()) { if (!owned) engine?.dispose(); return; } this.fail(engine3dFailureReason(error)); }
+    } catch (error) { if (!current()) { if (!owned) disposePanoramaEngine(engine); return; } this.fail(engine3dFailureReason(error)); }
   }
 
   private style(): unknown {
