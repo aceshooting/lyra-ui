@@ -54,6 +54,37 @@ describe('theme validation and document ownership boundaries', () => {
     expect(lyraStyleAttributes({})).to.deep.equal({});
   });
 
+  for (const unavailable of ['document window', 'media query API'] as const) {
+    it(`applies and releases system-mode scopes with an unavailable ${unavailable}`, () => {
+      const owner = unavailable === 'document window' ? document.implementation.createHTMLDocument('Staged theme') : document;
+      const scope = owner.createElement('section');
+      scope.setAttribute('data-theme', 'application');
+      scope.style.setProperty('--lr-theme-font-sans', 'serif', 'important');
+      owner.body.append(scope);
+      const descriptor = Object.getOwnPropertyDescriptor(window, 'matchMedia');
+      try {
+        if (unavailable === 'media query API') Object.defineProperty(window, 'matchMedia', { configurable: true, value: undefined });
+        applyLyraStyleScope(scope, { mode: 'system', overrides: { '--lr-theme-font-sans': 'monospace' } });
+        expect(scope.getAttribute('data-lr-mode')).to.equal('system');
+        expect(scope.getAttribute('data-lr-theme')).to.equal('light');
+        expect(scope.style.getPropertyValue('--lr-theme-font-sans')).to.include('monospace');
+        applyLyraStyleScope(scope, { mode: 'dark' });
+        expect(scope.getAttribute('data-lr-theme')).to.equal('dark');
+        expect(scope.style.getPropertyValue('--lr-theme-font-sans')).to.equal('serif');
+        expect(scope.style.getPropertyPriority('--lr-theme-font-sans')).to.equal('important');
+        applyLyraStyleScope(scope, null);
+        expect(scope.getAttribute('data-theme')).to.equal('application');
+        expect(scope.hasAttribute('data-lr-mode')).to.equal(false);
+        expect(scope.hasAttribute('data-lr-theme')).to.equal(false);
+      } finally {
+        if (descriptor) Object.defineProperty(window, 'matchMedia', descriptor);
+        else Reflect.deleteProperty(window, 'matchMedia');
+        applyLyraStyleScope(scope, null);
+        scope.remove();
+      }
+    });
+  }
+
   for (const freezeBeforeFirstApply of [false, true]) {
     it(`restores author values on a scope frozen ${freezeBeforeFirstApply ? 'before' : 'after'} its first style application`, () => {
       const scope = document.createElement('section');

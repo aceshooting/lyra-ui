@@ -35357,6 +35357,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/conversation/message-parts/message-parts-lazy.test.ts",
+          "src/components/conversation/message-parts/message-parts-registration-failure.test.ts",
           "src/components/conversation/message-parts/message-parts-widget.test.ts",
           "src/components/conversation/message-parts/message-parts.test.ts"
         ],
