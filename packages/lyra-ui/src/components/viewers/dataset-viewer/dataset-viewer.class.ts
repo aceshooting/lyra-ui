@@ -667,7 +667,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
               .source=${this.tableController.indexedSource(rows)}
               .renderItem=${this.tableController.rowRenderer(rows, [fields, window.columns, this.activeHighlightId, this.strings], (row: unknown, index: number) =>
                 this.renderRow(row as Record<string, string>, index, fields))}
-              .keyFunction=${this.virtualListKeyFunction}
+              .keyFunction=${rows.length <= 10000 ? this.virtualListKeyFunction : undefined}
               .activeItemId=${this.tableController.activeRowKey}
               .scrollElement=${this.scrollMode === 'page' ? this.ownerDocument.defaultView ?? undefined : undefined}
               item-role="row"

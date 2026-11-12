@@ -633,7 +633,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
             .items=${body.length <= 10000 ? body : nothing}
             .source=${this.table.indexedSource(body)}
             .renderItem=${renderItem}
-            .keyFunction=${indexKeyFunction}
+            .keyFunction=${body.length <= 10000 ? indexKeyFunction : undefined}
             .activeItemId=${this.table.activeRowKey}
             item-role="row"
             row-index-offset=${hasHeaderRow ? '1' : '0'}

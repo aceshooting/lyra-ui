@@ -581,7 +581,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
             bodyIndex + 2,
             sheet.name
           ))}
-        .keyFunction=${this.virtualListKeyFunction}
+        .keyFunction=${sheet.body.length <= 10000 ? this.virtualListKeyFunction : undefined}
         .activeItemId=${index === this.activeRowSheet ? this.table.activeRowKey : ''}
         item-role="row"
         row-index-offset="1"
