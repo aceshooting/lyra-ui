@@ -1,10 +1,12 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { setColorScheme, setForcedColors, setReducedMotion } from '../../../../test/wtr-media.js';
 import './model-viewer.js';
 import { modelEngineEnvironment, modelEngineLoader } from './model-viewer-loader.js';
 import type { LyraModelViewer } from './model-viewer.class.js';
 import type { Engine3dHost } from '../../../internal/engine-3d-loader.js';
+import { DEFAULT_MODEL_CAMERA } from './model-viewer-source.js';
 
 const camera = () => ({ yaw: 0, pitch: 0, distance: 10, target: { x: 0, y: 0, z: 0 } });
 const source = 'data:text/plain,v%200%200%200%0Av%201%200%200%0Av%200%201%200%0Af%201%202%203';
@@ -411,6 +413,41 @@ describe('engine failures after the model is ready', () => {
     const { viewer, host, counts } = await readyWith({});
     host.lost('error', 'driver detail'); await viewer.updateComplete;
     expect(counts.errors).to.equal(1); expect(counts.disposed).to.equal(1); expect(viewer.shadowRoot!.textContent).not.to.contain('driver detail');
+  });
+  it('ignores invalid engine camera feedback without losing the last valid camera or future updates', async () => {
+    const { viewer, host, counts } = await readyWith({});
+    const accepted = viewer.camera;
+    const changes: unknown[] = [];
+    viewer.addEventListener('lr-camera-change', event => changes.push(event.detail.camera));
+    host.camera({ ...camera(), target: { x: 0, y: Number.NaN, z: 0 } });
+    await viewer.updateComplete;
+    expect(viewer.camera === accepted).to.equal(true);
+    expect(changes.length).to.equal(0);
+    expect(counts).to.deep.equal({ disposed: 0, errors: 0 });
+    expect(viewer.shadowRoot!.querySelector('[part="viewport"]')!.hasAttribute('data-ready')).to.equal(true);
+
+    const next = { ...camera(), yaw: 0.5 };
+    host.camera(next);
+    next.target.x = 99;
+    await viewer.updateComplete;
+    expect(viewer.camera).to.deep.equal({ ...camera(), yaw: 0.5 });
+    expect(changes).to.deep.equal([viewer.camera]);
+    expect(Object.isFrozen(viewer.camera)).to.equal(true);
+    expect(Object.isFrozen(viewer.camera!.target)).to.equal(true);
+  });
+  it('keeps keyboard orbit usable when the engine fit has no valid camera', async () => {
+    const { viewer, counts } = await readyWith({ fit: () => undefined });
+    expect(viewer.camera).to.equal(undefined);
+    const changes: unknown[] = [];
+    viewer.addEventListener('lr-camera-change', event => changes.push(event.detail.camera));
+    const viewport = viewer.shadowRoot!.querySelector<HTMLElement>('[part="viewport"]')!;
+    await focusByKeyboard(viewport);
+    await sendKeys({ press: 'ArrowRight' });
+    await viewer.updateComplete;
+    expect(viewer.camera).to.deep.equal({ ...DEFAULT_MODEL_CAMERA, yaw: DEFAULT_MODEL_CAMERA.yaw + 0.1 });
+    expect(changes).to.deep.equal([viewer.camera]);
+    expect(counts).to.deep.equal({ disposed: 0, errors: 0 });
+    expect(viewport.hasAttribute('data-ready')).to.equal(true);
   });
   it('discards an engine whose mount finishes after the source changed', async () => {
     let finishMount!: () => void; let loaded = 0;

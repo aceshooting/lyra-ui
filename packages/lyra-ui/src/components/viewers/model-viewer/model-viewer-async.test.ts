@@ -90,3 +90,29 @@ it('keeps async parse completion through context loss without duplicate load eve
   job.host.restored?.(); await ready(element); job.host.progress?.(1, 1); await element.updateComplete;
   expect(events).to.deep.equal({ load: 1, error: 0, fallback: 1 });
 });
+
+for (const retirement of ['replacement', 'disconnect'] as const) {
+  it(`ignores successful async preparation after ${retirement}`, async () => {
+    const { element, events } = await viewer();
+    const old = await entered();
+    if (retirement === 'replacement') element.src = `${source}%0A`;
+    else element.remove();
+    expect(old.signal.aborted).to.equal(true);
+    const next = retirement === 'replacement' ? await entered(2) : undefined;
+    old.resolve();
+    await new Promise<void>(resolve => setTimeout(resolve, 0));
+    old.host.progress?.(1, 1);
+    await element.updateComplete;
+    expect(events).to.deep.equal({ load: 0, error: 0, fallback: 0 });
+    expect(disposals).to.equal(1);
+    expect(announcements.filter(message => message === 'Model prepared').length).to.equal(0);
+    if (next) {
+      next.host.progress?.(1, 1);
+      next.resolve();
+      await ready(element);
+      expect(events).to.deep.equal({ load: 1, error: 0, fallback: 0 });
+      expect(disposals).to.equal(1);
+      expect(announcements.filter(message => message === 'Model prepared').length).to.equal(1);
+    }
+  });
+}
