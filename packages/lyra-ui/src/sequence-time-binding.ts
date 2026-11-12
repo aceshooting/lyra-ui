@@ -61,7 +61,10 @@ export function bindSequencePlayback(control: HTMLElement, clock: SimulationCloc
   try {
     signal?.addEventListener('abort', release, { once: true });
     unsubscribe = clock.subscribe(value => project(value, action?.forceStep ?? false));
-    if (!active || signal?.aborted) { release(); return release; }
+    if (!active || signal?.aborted) {
+      // Catch-up may abort before subscribe returns its cleanup.
+      unsubscribe(); release(); return release;
+    }
     if (lifetime.disposed()) throw new SimulationClockError('disposed');
     // Catch-up can synchronously invoke another owner or retire this host. Recheck at
     // the commit boundary; a failed outer transaction releases only its own subscription.
