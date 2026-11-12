@@ -165,3 +165,30 @@ it('still rejects a current visible interval beyond both rectangle budgets', asy
   await waitUntil(() => errors.length > 0, 'render error reported', { timeout: 20000 });
   expect(viewer.shadowRoot!.querySelector('[part="error"]') !== null).to.equal(true);
 });
+
+for (const token of ['invalid-length', 'initial'] as const) it(`bounds source-table work with ${token} geometry tokens and recovers when the theme is corrected`, async () => {
+  const errors: unknown[] = [];
+  const source: LyraTabularSource = {
+    revision: 1, rowCount: 8, columnCount: 200,
+    columnAt: index => ({ key: String(index), label: `Column ${index}` }),
+    cellAt: (row, column) => `Value ${row}:${column}`,
+  };
+  const viewer = await fixture<LyraCsvViewer>(html`<lr-csv-viewer style=${`display:block;width:320px;--lr-size-8rem:${token};--lr-size-3rem:${token}`}
+    .dataSource=${source} @lr-render-error=${(event: CustomEvent) => errors.push(event.detail)}></lr-csv-viewer>`);
+  await waitUntil(() => viewer.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.textContent?.includes('Value 0:0') === true);
+  const list = viewer.shadowRoot!.querySelector('lr-virtual-list')!;
+  expect(getComputedStyle(viewer).getPropertyValue('--lr-size-3rem').trim()).to.equal(token === 'initial' ? '' : token);
+  expect(list.rowHeight).to.equal(token === 'initial' ? 3 * Number.parseFloat(getComputedStyle(document.documentElement).fontSize) : 48);
+  const headers = viewer.shadowRoot!.querySelectorAll('[role="columnheader"]').length;
+  expect(headers).to.be.greaterThan(0); expect(headers).to.be.at.most(100);
+  expect(Number.isFinite(list.getBoundingClientRect().height)).to.equal(true);
+  expect(errors.length).to.equal(0);
+  viewer.style.setProperty('--lr-size-8rem', '80px');
+  viewer.style.setProperty('--lr-size-3rem', '32px');
+  await waitUntil(() => list.rowHeight === 32);
+  expect(viewer.shadowRoot!.querySelectorAll('[role="columnheader"]').length).to.be.at.most(100);
+  expect(await viewer.scrollToAnchor({ kind: 'cell-range', range: 'B2' })).to.equal(true);
+  expect(list.shadowRoot!.textContent).to.include('Value 0:1');
+  expect(getComputedStyle(list.shadowRoot!.querySelector('[part="data-row"]')!).height).to.equal('32px');
+  expect(errors.length).to.equal(0);
+});
