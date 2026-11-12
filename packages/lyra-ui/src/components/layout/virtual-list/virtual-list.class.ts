@@ -802,9 +802,10 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     const spacerTop = spacerRect.top;
     if (isWindowScroller(external)) {
       this.externalGeometry = { spacer, external, height: spacerRect.height, extent, spacerScale, scrollerScale: 1, borderTop: 0 };
-      // documentElement.clientHeight excludes a classic scrollbar's thickness; innerHeight does not.
+      // The scrolling root is body in quirks mode and documentElement in standards mode. Its
+      // clientHeight excludes a classic scrollbar's thickness; innerHeight does not.
       const documentHeight = finiteNumber(
-        external.document?.documentElement?.clientHeight ?? 0,
+        external.document?.scrollingElement?.clientHeight ?? 0,
         0
       );
       const rawScrollTop = finiteNumber(-spacerTop / spacerScale, 0);
@@ -1097,13 +1098,13 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     identity: string;
     index: number;
     align: 'start' | 'end' | 'auto';
-    behavior: 'auto' | 'smooth';
     source: LyraVirtualListSource;
     keyFunction?: (item: unknown, index: number) => string | number;
     activeItemId?: VirtualListKey;
     lastMeasurementGeneration: number;
   };
   private measurementGeneration = 0;
+  private smoothScrollWait?: { owner: Window; handle: number };
   private isFirstUpdate = true;
 
   /** The sticky overlay's measured block size, used both for the push-off overlap math and for the
@@ -1391,8 +1392,10 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       changed.has('groups') ||
       changed.has('activeItemId') ||
       changed.has('scrollElement')
-    ) this.pendingScrollCorrection = undefined;
-    else if (this.pendingScrollCorrection) this.pendingScrollCorrection.source = this.effectiveSource;
+    ) {
+      this.pendingScrollCorrection = undefined;
+      this.cancelSmoothScrollWait();
+    } else if (this.pendingScrollCorrection) this.pendingScrollCorrection.source = this.effectiveSource;
     this.appendIdentityStart = -1;
     const previous = changed.has('source') ? changed.get('source') : changed.get('items');
     const current = this.effectiveSource;
@@ -1666,7 +1669,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       // offset. Shift the scroll coordinate by the same delta so the first visible row remains
       // anchored; without this, a far scrollToIndex() jump can immediately reinterpret its target
       // as a different window when the old measurements are discarded.
-      if (removedDeltaBeforeWindow !== 0) {
+      if (removedDeltaBeforeWindow !== 0 && !this.smoothScrollWait) {
         // Anchoring is a *shift*, so it reads and writes the unclamped position: starting from the
         // clamped zero while an external scroller still sits above the list would turn the shift
         // into a jump down to the list's top. Only the windowing state keeps the clamped value.
@@ -1983,6 +1986,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   }
 
   private detachContainerListeners(): void {
+    this.cancelSmoothScrollWait();
     this.scrollRoundingAnchor = undefined;
     this.externalStyleObserver?.disconnect();
     this.externalStyleObserver = undefined;
@@ -2011,12 +2015,14 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
 
   private onUserScrollIntent = (event: Event): void => {
     if (event instanceof KeyboardEvent && !SCROLL_KEYS.has(event.key)) return;
+    this.waitForSmoothScroll();
     this.pendingScrollCorrection = undefined;
     this.compositionScrollTarget = undefined;
     this.scrollRoundingAnchor = undefined;
   };
 
   private onScroll = (e: Event): void => {
+    if (this.smoothScrollWait) this.waitForSmoothScroll();
     if (this.externalScroller) {
       // Deferred to the coalescing frame below: an external position is a rect delta, and taking
       // one per native `scroll` event would force a layout per event instead of per frame.
@@ -2142,7 +2148,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     }
     if (changed) {
       this.indexedMeasurementIndexDirty = true;
-      if (base && scrollAdjustment !== 0) {
+      if (base && scrollAdjustment !== 0 && !this.smoothScrollWait) {
         const nextScrollTop = oldScrollTop + scrollAdjustment;
         this.applyScrollPosition(nextScrollTop);
         this.containerScrollTop = Math.max(0, nextScrollTop);
@@ -2194,7 +2200,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       changed = true;
     }
     if (!changed) return;
-    if (base && scrollAdjustment !== 0) {
+    if (base && scrollAdjustment !== 0 && !this.smoothScrollWait) {
       const nextScrollTop = oldScrollTop + scrollAdjustment;
       this.applyScrollPosition(nextScrollTop);
       this.containerScrollTop = Math.max(0, nextScrollTop);
@@ -2366,7 +2372,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     if (index < 0) return;
     const behavior = prefersReducedMotion(this) ? 'auto' : 'smooth';
     if (!this.performScrollTo(index, 'auto', behavior)) return;
-    this.beginPendingScrollCorrection(index, 'auto', behavior, this.activeItemId);
+    this.beginPendingScrollCorrection(index, 'auto', this.activeItemId);
   }
 
   /**
@@ -2399,7 +2405,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       ? 'auto'
       : options?.behavior ?? 'smooth';
     if (this.performScrollTo(clamped, align, behavior))
-      this.beginPendingScrollCorrection(clamped, align, behavior);
+      this.beginPendingScrollCorrection(clamped, align);
     else this.pendingScrollCorrection = undefined;
   }
 
@@ -2415,7 +2421,6 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   private beginPendingScrollCorrection(
     index: number,
     align: 'start' | 'end' | 'auto',
-    behavior: 'auto' | 'smooth',
     activeItemId?: VirtualListKey
   ): void {
     if (this.fixedRowHeight != null && !this.hasUnmeasuredGroupThrough(index)) {
@@ -2426,7 +2431,6 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       identity: this.identityAt(index),
       index,
       align,
-      behavior,
       source: this.effectiveSource,
       keyFunction: this.keyFunction,
       activeItemId: activeItemId === '' ? undefined : activeItemId,
@@ -2463,13 +2467,36 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     // viewport but perfectly legal under an external scroller, where it simply means "park above
     // the list" -- which is exactly where `align: 'end'` on one of the first rows belongs. Both
     // branches of applyScrollPosition() already clamp to the scrolling element's own legal domain.
+    if (behavior === 'smooth') this.waitForSmoothScroll();
+    else this.cancelSmoothScrollWait();
     this.applyScrollPosition(target, behavior);
     return true;
   }
 
+  private cancelSmoothScrollWait(): void {
+    const waiting = this.smoothScrollWait;
+    this.smoothScrollWait = undefined;
+    if (waiting) waiting.owner.clearTimeout(waiting.handle);
+  }
+
+  /** Let native motion finish before applying fresh geometry: restarting on each observed row
+   * keeps a distant target perpetually at the start of its easing curve. A quiet scroll interval
+   * also works in owners without scrollend and when the requested position is already reached. */
+  private waitForSmoothScroll(): void {
+    this.cancelSmoothScrollWait();
+    const owner = this.ownerDocument.defaultView;
+    if (!owner || !this.isConnected) return;
+    const waiting = { owner, handle: owner.setTimeout(() => {
+      if (this.smoothScrollWait !== waiting) return;
+      this.smoothScrollWait = undefined;
+      this.maybeCorrectPendingScroll();
+    }, 150) };
+    this.smoothScrollWait = waiting;
+  }
+
   private maybeCorrectPendingScroll(): void {
     const pending = this.pendingScrollCorrection;
-    if (!pending || pending.lastMeasurementGeneration >= this.measurementGeneration) return;
+    if (!pending || this.smoothScrollWait || pending.lastMeasurementGeneration >= this.measurementGeneration) return;
     if (
       pending.source !== this.effectiveSource ||
       pending.keyFunction !== this.keyFunction ||
@@ -2492,7 +2519,9 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       this.pendingScrollCorrection = undefined;
       return;
     }
-    this.performScrollTo(index, pending.align, pending.behavior);
+    // Native motion has settled. Apply the newly measured destination without starting another
+    // animation through still-unmeasured rows; those would require more and more animations.
+    this.performScrollTo(index, pending.align, 'auto');
     pending.index = index;
     pending.lastMeasurementGeneration = this.measurementGeneration;
     if (
