@@ -407,3 +407,42 @@ it('does not invoke optional SDK property accessors or normalize non-plain recor
   expect(getterCalls).to.equal(0);
   expect(adaptAiSdkMessage(new class { id = 'class'; role = 'assistant'; metadata = undefined; parts = []; }())).to.equal(null);
 });
+
+
+for (const trap of ['ownKeys', 'getOwnPropertyDescriptor', 'getPrototypeOf'] as const) {
+  it(`rejects a provider snapshot whose ${trap} trap throws without affecting the next message`, () => {
+    const source = { id: 'proxy', role: 'assistant', parts: [{ type: 'text', text: 'Answer' }] };
+    const hostile = new Proxy(source, { [trap]: () => { throw new Error('Provider reflection unavailable'); } });
+    expect(adaptAiSdkMessage(hostile)).to.equal(null);
+    expect(adaptAiSdkMessage(source)?.parts).to.deep.equal([
+      { id: 'proxy:part:0', type: 'text', text: 'Answer', state: 'streaming' },
+    ]);
+    expect(source.parts).to.deep.equal([{ type: 'text', text: 'Answer' }]);
+  });
+}
+
+it('rejects normalization that exhausts its node budget before copying records or parts', () => {
+  const source = { id: 'budget', role: 'assistant', parts: [{ type: 'text', text: 'Answer' }] };
+  for (const maxNodes of [1, 3, 5]) expect(adaptAiSdkMessage(source, { maxNodes })).to.equal(null);
+  expect(adaptAiSdkMessage(source, { maxNodes: 100 })?.parts?.[0]).to.include({ type: 'text', text: 'Answer' });
+});
+
+it('rejects accessor-backed part slots without invoking them', () => {
+  let reads = 0;
+  const parts: unknown[] = [];
+  Object.defineProperty(parts, '0', { enumerable: true, configurable: true, get() { reads++; return { type: 'text', text: 'Unsafe' }; } });
+  expect(adaptAiSdkMessage({ id: 'parts', role: 'assistant', parts })).to.equal(null);
+  expect(reads).to.equal(0);
+});
+
+it('normalizes frozen SDK snapshots without changing their optional undefined fields', () => {
+  const part = Object.freeze({ type: 'text', text: 'Answer', providerMetadata: undefined });
+  const parts = Object.freeze([part]);
+  const source = Object.freeze({ id: 'frozen', role: 'assistant', metadata: undefined, parts });
+  expect(adaptAiSdkMessage(source)?.parts).to.deep.equal([
+    { id: 'frozen:part:0', type: 'text', text: 'Answer', state: 'streaming' },
+  ]);
+  expect(Object.hasOwn(source, 'metadata')).to.equal(true);
+  expect(Object.hasOwn(part, 'providerMetadata')).to.equal(true);
+  expect(Object.isFrozen(source.parts)).to.equal(true);
+});

@@ -65,6 +65,150 @@ describe('addMapCustomLayer()', () => {
     expect(await handle.pick([1, 2])).to.equal(null);
   });
 
+  it('keeps a layer hidden across pending bridge loading and preserves the admitted insertion target', async () => {
+    const runtime = fakeRuntime(); let finish: (() => void) | undefined;
+    env.setLayerImporter(async () => { await new Promise<void>(resolve => { finish = resolve; }); return runtime.module; });
+    const { element, peer } = await env.mount();
+    const descriptor = { ...layer({ before: 'labels' }) };
+    const handle = addMapCustomLayer(element, descriptor);
+    handle.setVisible(false);
+    descriptor.before = 'changed'; descriptor.label = 'Changed';
+    await waitUntil(() => finish !== undefined, 'bridge loading is pending');
+    expect(runtime.records).to.have.lengthOf(0);
+    finish!();
+    await waitUntil(() => runtime.live().length === 1, 'hidden layer receives its bridge');
+    const record = runtime.live()[0]!;
+    expect(record.layer.before).to.equal('labels'); expect(record.layer.label).to.equal('Coverage cone');
+    expect(record.calls).to.deep.equal(['visible:false']);
+    record.hit = { id: 'target' };
+    let activations = 0;
+    element.addEventListener('lr-map-scene-activate', () => { activations++; });
+    peer.fire('click', { point: { x: 1, y: 2 } }); await renderTurns();
+    expect(record.calls).to.deep.equal(['visible:false']); expect(activations).to.equal(0);
+    handle.setVisible(true);
+    const activated = oneEvent(element, 'lr-map-scene-activate');
+    peer.fire('click', { point: { x: 1, y: 2 } });
+    expect((await activated).detail.id).to.equal('target'); expect(activations).to.equal(1);
+  });
+
+  it('does not construct a removed layer after its bridge resolves and accepts a later layer', async () => {
+    const runtime = fakeRuntime(); let finish: (() => void) | undefined;
+    env.setLayerImporter(async () => { await new Promise<void>(resolve => { finish = resolve; }); return runtime.module; });
+    const { element } = await env.mount();
+    const retired = addMapCustomLayer(element, layer());
+    await waitUntil(() => finish !== undefined, 'bridge loading is pending');
+    retired.remove(); finish!(); await renderTurns();
+    expect(runtime.records).to.have.lengthOf(0); expect(retired.status.state).to.equal('removed');
+    const replacement = addMapCustomLayer(element, layer());
+    await waitUntil(() => runtime.live().length === 1, 'replacement layer installs from the loaded bridge');
+    const record = runtime.live()[0]!;
+    retired.remove(); retired.requestRender(); retired.setVisible(false);
+    expect(record.disposed).to.equal(false); expect(record.calls).to.deep.equal([]);
+    replacement.requestRender(); expect(record.calls).to.deep.equal(['frame']);
+    replacement.remove(); expect(record.disposed).to.equal(true);
+  });
+
+  for (const invalid of [undefined, {}]) {
+    it(`reports an unavailable bridge for a ${invalid === undefined ? 'missing' : 'malformed'} handle and allows a valid replacement`, async () => {
+      env.setLayerImporter(async () => ({ createSceneLayer: () => invalid }));
+      const { element } = await env.mount();
+      const failed = addMapCustomLayer(element, layer());
+      await waitUntil(() => failed.status.state === 'unavailable', 'invalid bridge handle is rejected');
+      expect(failed.status).to.deep.equal({ state: 'unavailable', code: 'engine' });
+      expect(await failed.pick([1, 2])).to.equal(null);
+      failed.remove();
+      const runtime = fakeRuntime(); env.setLayerImporter(async () => runtime.module);
+      const replacement = addMapCustomLayer(element, layer());
+      await waitUntil(() => runtime.live().length === 1, 'a valid bridge remains usable');
+      runtime.live()[0]!.host.onState?.('ready');
+      expect(replacement.status.state).to.equal('ready');
+    });
+  }
+
+  it('contains observer failures while updating status and disposing the layer', async () => {
+    const runtime = fakeRuntime(); env.setLayerImporter(async () => runtime.module);
+    const { element } = await env.mount();
+    const seen: string[] = [];
+    const handle = addMapCustomLayer(element, layer(), { onStateChange: status => {
+      seen.push(status.state); throw new Error('Observer unavailable');
+    } });
+    await waitUntil(() => runtime.live().length === 1, 'layer installs independently of its status observer');
+    const record = runtime.live()[0]!;
+    record.host.onState?.('ready'); expect(handle.status.state).to.equal('ready');
+    record.host.onState?.('unavailable', 'context-lost'); expect(handle.status.code).to.equal('context-lost');
+    handle.remove();
+    expect(handle.status.state).to.equal('removed'); expect(record.disposed).to.equal(true);
+    expect(record.host.signal.aborted).to.equal(true);
+    expect(seen).to.deep.equal(['ready', 'unavailable', 'removed']);
+    record.host.onState?.('ready'); expect(handle.status.state).to.equal('removed');
+    expect(seen).to.have.lengthOf(3);
+  });
+
+  it('disposes a bridge handle returned after its status observer removes the layer', async () => {
+    const runtime = fakeRuntime(), create = runtime.module.createSceneLayer;
+    runtime.module.createSceneLayer = (map, descriptor, host) => {
+      const created = create(map, descriptor, host);
+      host.onState?.('ready');
+      return created;
+    };
+    env.setLayerImporter(async () => runtime.module);
+    const { element } = await env.mount();
+    const statuses: string[] = [];
+    const handle = addMapCustomLayer(element, layer(), { onStateChange: status => {
+      statuses.push(status.state);
+      if (status.state === 'ready') handle.remove();
+    } });
+    await waitUntil(() => runtime.records.length === 1, 'bridge construction completes');
+    const record = runtime.records[0]!;
+    expect(record.disposed).to.equal(true); expect(record.host.signal.aborted).to.equal(true);
+    expect(handle.status.state).to.equal('removed'); expect(statuses).to.deep.equal(['ready', 'removed']);
+    handle.requestRender(); expect(record.calls).to.deep.equal([]);
+  });
+
+  it('discards a pending explicit pick after the layer is removed', async () => {
+    const runtime = fakeRuntime(), create = runtime.module.createSceneLayer;
+    let finish: ((hit: FakeHandleRecord['hit']) => void) | undefined;
+    runtime.module.createSceneLayer = (map, descriptor, host) => ({
+      ...create(map, descriptor, host),
+      pick: () => new Promise<FakeHandleRecord['hit']>(resolve => { finish = resolve; }),
+    });
+    env.setLayerImporter(async () => runtime.module);
+    const { element } = await env.mount();
+    const handle = addMapCustomLayer(element, layer());
+    await waitUntil(() => runtime.live().length === 1, 'bridge is available');
+    const pending = handle.pick([1, 2]);
+    await waitUntil(() => finish !== undefined, 'pick is pending in the bridge');
+    handle.remove(); finish!({ id: 'obsolete' });
+    expect(await pending).to.equal(null);
+    expect(runtime.records[0]!.disposed).to.equal(true); expect(handle.status.state).to.equal('removed');
+  });
+
+  it('finishes removal when bridge disposal and native listener cleanup throw after releasing resources', async () => {
+    const runtime = fakeRuntime(), create = runtime.module.createSceneLayer;
+    runtime.module.createSceneLayer = (map, descriptor, host) => {
+      const created = create(map, descriptor, host);
+      return { ...created, dispose() { created.dispose(); throw new Error('Bridge cleanup failed'); } };
+    };
+    env.setLayerImporter(async () => runtime.module);
+    const { element, peer } = await env.mount();
+    const listenersBefore = peer.events.get('click')?.size ?? 0;
+    const handle = addMapCustomLayer(element, layer());
+    await waitUntil(() => runtime.live().length === 1, 'bridge is available');
+    expect(peer.events.get('click')?.size).to.equal(listenersBefore + 1);
+    const descriptor = Object.getOwnPropertyDescriptor(peer, 'off'), original = peer.off.bind(peer);
+    Object.defineProperty(peer, 'off', { configurable: true, value: (name: string, listener: (event: Record<string, unknown>) => void) => {
+      original(name, listener); throw new Error('Native cleanup failed');
+    } });
+    try {
+      handle.remove(); handle.remove();
+      expect(handle.status.state).to.equal('removed'); expect(runtime.records[0]!.disposed).to.equal(true);
+      expect(runtime.records[0]!.host.signal.aborted).to.equal(true);
+      expect(peer.events.get('click')?.size).to.equal(listenersBefore);
+    } finally {
+      if (descriptor) Object.defineProperty(peer, 'off', descriptor); else Reflect.deleteProperty(peer, 'off');
+    }
+  });
+
   it('replays style replacement and disposes permanently on disconnect', async () => {
     const runtime = fakeRuntime(); env.setLayerImporter(async () => runtime.module);
     const { element } = await env.mount();
@@ -96,7 +240,9 @@ describe('addMapCustomLayer()', () => {
     const event = await activation;
     expect(event.detail).to.deep.equal({ id: 'beam-1', kind: 'custom', layerId: 'cone', source: 'pointer', position: { lngLat: [6, 49] } });
     expect([event.bubbles, event.composed, event.cancelable]).to.deep.equal([true, true, false]);
-    peer.fire('click', { point: 'nowhere' }); await renderTurns();
+    for (const event of [{ point: 'nowhere' }, { point: null },
+      { point: { x: NaN, y: 1 } }, { point: { x: 1, y: Infinity } }, { point: { x: '1', y: 2 } }]) peer.fire('click', event);
+    await renderTurns();
     expect(record!.calls.filter(call => call.startsWith('pick')).length).to.equal(2);
   });
 

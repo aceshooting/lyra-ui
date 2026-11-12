@@ -429,6 +429,8 @@ it('rejects malformed activity and reasoning events without consuming a cursor',
     { type: 'ACTIVITY_SNAPSHOT', messageId: 'a1', activityType: 'PLAN', content: [] },
     { type: 'ACTIVITY_SNAPSHOT', messageId: 'a1', activityType: 'PLAN', content: {}, replace: 'false' },
     { type: 'ACTIVITY_DELTA', messageId: 'a1', activityType: 'PLAN', patch: [] },
+    { type: 'ACTIVITY_DELTA', activityType: 'PLAN', patch: [] },
+    { type: 'ACTIVITY_DELTA', messageId: 'a1', patch: [] },
   ]) expect(adapter.push(event), JSON.stringify(event)).to.deep.equal([]);
   expect(adapter.push({ type: 'TEXT_MESSAGE_START', messageId: 'm1' })[0]).to.include({ sequence: 1 });
 });
@@ -587,4 +589,71 @@ it('explicitly ignores protocol events without a neutral rendering contract and 
   ];
   for (const event of ignored) expect(adapter.push(event), event.type).to.deep.equal([]);
   expect(adapter.push({ type: 'TEXT_MESSAGE_START', messageId: 'm1' })[0]).to.include({ sequence: 1 });
+});
+
+
+it('rejects an activity patch that exceeds the retained content budget without replacing its baseline', () => {
+  const adapter = new AgUiStreamAdapter({ maxBytes: 2000 });
+  const initial = { first: 'a'.repeat(1000) };
+  expect(adapter.push({ type: 'ACTIVITY_SNAPSHOT', messageId: 'a', activityType: 'PLAN', content: initial })[0]?.type)
+    .to.equal('message-part-upsert');
+  const rejected = adapter.push({ type: 'ACTIVITY_DELTA', messageId: 'a', activityType: 'PLAN',
+    patch: [{ op: 'add', path: '/second', value: 'b'.repeat(1000) }] });
+  expect(rejected).to.have.lengthOf(1);
+  expect(rejected[0]).to.include({ type: 'error', code: 'stream_limit_exceeded' });
+  const recovered = adapter.push({ type: 'ACTIVITY_DELTA', messageId: 'a', activityType: 'PLAN',
+    patch: [{ op: 'add', path: '/count', value: 2 }] });
+  expect(recovered[0]).to.deep.nested.include({ 'part.data': { ...initial, count: 2 } });
+  expect(initial).to.deep.equal({ first: 'a'.repeat(1000) });
+});
+
+it('rejects an oversized message snapshot without losing the existing activity baseline', () => {
+  const adapter = new AgUiStreamAdapter({ maxBufferedMessages: 1 });
+  adapter.push({ type: 'ACTIVITY_SNAPSHOT', messageId: 'a', activityType: 'PLAN', content: { count: 1 } });
+  const rejected = adapter.push({ type: 'MESSAGES_SNAPSHOT', messages: [
+    { id: 'one', role: 'user', content: 'One' }, { id: 'two', role: 'assistant', content: 'Two' },
+  ] });
+  expect(rejected).to.have.lengthOf(1);
+  expect(rejected[0]).to.include({ type: 'error', code: 'stream_limit_exceeded' });
+  expect(adapter.push({ type: 'ACTIVITY_DELTA', messageId: 'a', activityType: 'PLAN',
+    patch: [{ op: 'replace', path: '/count', value: 2 }] })[0]).to.deep.nested.include({ 'part.data.count': 2 });
+});
+
+it('enforces the message budget for custom routing without replacing an accepted activity', () => {
+  const adapter = new AgUiStreamAdapter({ maxBufferedMessages: 1 }, {
+    customEventTarget: () => ({ messageId: 'new', partId: 'data' }),
+  });
+  adapter.push({ type: 'ACTIVITY_SNAPSHOT', messageId: 'a', activityType: 'PLAN', content: { count: 1 } });
+  expect(adapter.push({ type: 'CUSTOM', name: 'table', value: {} })[0])
+    .to.include({ type: 'error', code: 'stream_limit_exceeded' });
+  expect(adapter.push({ type: 'ACTIVITY_DELTA', messageId: 'a', activityType: 'PLAN', patch: [] })[0])
+    .to.deep.nested.include({ 'part.data.count': 1 });
+});
+
+it('rejects routing payload growth above the byte budget and accepts the next valid custom event', () => {
+  let expand = true;
+  const adapter = new AgUiStreamAdapter({ maxBytes: 512 }, {
+    customEventTarget: event => {
+      if (expand) (event.value as Record<string, unknown>)['extra'] = 'x'.repeat(1024);
+      return { messageId: 'a', partId: 'table' };
+    },
+  });
+  const value = { count: 1 };
+  expect(adapter.push({ type: 'CUSTOM', name: 'table', value })[0])
+    .to.include({ type: 'error', code: 'stream_limit_exceeded' });
+  expect(value).to.deep.equal({ count: 1 });
+  expand = false;
+  expect(adapter.push({ type: 'CUSTOM', name: 'table', value })[0])
+    .to.deep.nested.include({ type: 'message-part-upsert', 'part.data': { count: 1 } });
+});
+
+it('ignores routing destinations over the byte limit without consuming a stream cursor', () => {
+  let oversized = true;
+  const adapter = new AgUiStreamAdapter({ maxBytes: 512 }, {
+    customEventTarget: () => ({ messageId: oversized ? 'x'.repeat(1024) : 'a', partId: 'data' }),
+  });
+  expect(adapter.push({ type: 'CUSTOM', name: 'table', value: {} })).to.deep.equal([]);
+  oversized = false;
+  expect(adapter.push({ type: 'CUSTOM', name: 'table', value: {} })[0])
+    .to.include({ type: 'message-part-upsert', sequence: 1, messageId: 'a' });
 });
