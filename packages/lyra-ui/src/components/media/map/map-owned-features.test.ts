@@ -6,6 +6,7 @@ import { MapOwnedFeatures } from './map-owned-features.js';
 import type { LyraMapImage, MapImagePreparationContext, MapImagePreparationResult, PreparedMapImage } from './map-images.js';
 import type { MapLibreMapCapability } from './map-loader.js';
 import type { MapOwnedSourceChange } from './map-owned-resources.js';
+import { admitMapOverlays, type MapOwnedOverlaySnapshot } from './map-overlay-admission.js';
 
 const descriptor = (id = 'pin', markup = '<svg/>'): LyraMapImage => ({
   id, source: { kind: 'svg', markup }, width: 1, height: 1, pixelRatio: 1,
@@ -68,6 +69,85 @@ async function harness() {
 }
 
 describe('map owned feature integration controller', () => {
+  const retainedOverlay = (data: unknown): MapOwnedOverlaySnapshot => {
+    const result = admitMapOverlays({
+      sources: [{ id: 'points', source: { type: 'geojson', data } }],
+      layers: [{ layer: { id: 'dots', type: 'circle', source: 'points' } }],
+    });
+    if (!result.ok) throw new Error('Expected an admitted overlay fixture');
+    return result.overlays;
+  };
+
+  it('checks retained interactions without applying a proposed GeoJSON update', async () => {
+    const h = await harness();
+    const peer = h.peer as unknown as MapLibreMapCapability;
+    const initial = retainedOverlay({ type: 'FeatureCollection', features: [] });
+    const next = retainedOverlay({ type: 'FeatureCollection', features: [] });
+    const writes: unknown[] = [];
+    try {
+      expect(h.features.canRetainInteractions(peer, 1, initial)).to.equal(false);
+      await h.run({ overlays: initial, images: [], styleOverrides: [] });
+      h.peer.sources.set('points', { setData(value: unknown) { writes.push(value); } });
+      expect(h.features.canRetainInteractions(peer, 1, next)).to.equal(true);
+      expect(writes.length).to.equal(0);
+      await h.run({ overlays: next, images: [], styleOverrides: [] });
+      expect(writes.length).to.equal(1);
+      expect(writes[0] === next.sources[0]!.source['data']).to.equal(true);
+    } finally { h.features.dispose(); }
+  });
+
+  it('rejects retained interaction snapshots from another map, style or disposed owner', async () => {
+    const h = await harness();
+    const peer = h.peer as unknown as MapLibreMapCapability;
+    const initial = retainedOverlay({ type: 'FeatureCollection', features: [] });
+    try {
+      await h.run({ overlays: initial, images: [], styleOverrides: [] });
+      expect(h.features.canRetainInteractions(peer, 1, initial)).to.equal(true);
+      expect(h.features.canRetainInteractions(new Peer() as unknown as MapLibreMapCapability, 1, initial)).to.equal(false);
+      expect(h.features.canRetainInteractions(peer, 2, initial)).to.equal(false);
+      h.features.dispose();
+      expect(h.features.canRetainInteractions(peer, 1, initial)).to.equal(false);
+    } finally { h.features.dispose(); }
+  });
+
+  for (const unavailable of ['missing source', 'throwing source lookup', 'missing updater'] as const) {
+    it(`rejects retaining changed GeoJSON interactions with a ${unavailable}`, async () => {
+      const h = await harness();
+      const peer = h.peer as unknown as MapLibreMapCapability;
+      const initial = retainedOverlay({ type: 'FeatureCollection', features: [] });
+      const lookup = h.peer.getSource;
+      try {
+        await h.run({ overlays: initial, images: [], styleOverrides: [] });
+        if (unavailable === 'missing source') h.peer.sources.delete('points');
+        else if (unavailable === 'throwing source lookup') h.peer.getSource = () => { throw new Error('Source unavailable'); };
+        else h.peer.sources.set('points', {});
+        const next = retainedOverlay({ type: 'FeatureCollection', features: [] });
+        expect(h.features.canRetainInteractions(peer, 1, next)).to.equal(false);
+      } finally { h.peer.getSource = lookup; h.features.dispose(); }
+    });
+  }
+
+  it('retires a retained interaction snapshot before a native data write fails', async () => {
+    const h = await harness();
+    const peer = h.peer as unknown as MapLibreMapCapability;
+    const initial = retainedOverlay({ type: 'FeatureCollection', features: [] });
+    const next = retainedOverlay({ type: 'FeatureCollection', features: [] });
+    let retainedDuringWrite: boolean | undefined;
+    try {
+      await h.run({ overlays: initial, images: [], styleOverrides: [] });
+      h.peer.sources.set('points', { setData() {
+        retainedDuringWrite = h.features.canRetainInteractions(peer, 1, initial);
+        throw new Error('Native data update failed');
+      } });
+      expect(h.features.canRetainInteractions(peer, 1, next)).to.equal(true);
+      let failure: unknown;
+      try { await h.run({ overlays: next, images: [], styleOverrides: [] }); } catch (error) { failure = error; }
+      expect((failure as Error | undefined)?.name).to.equal('MapResourceError');
+      expect(retainedDuringWrite).to.equal(false);
+      expect(h.features.canRetainInteractions(peer, 1, initial)).to.equal(false);
+    } finally { h.features.dispose(); }
+  });
+
   for (const opaque of [false, true]) {
     it(`replaces equal-content GeoJSON identities without traversing payloads (opaque=${opaque})`, async () => {
       const h = await harness(); const states = new MapFeatureStateRoutes();
