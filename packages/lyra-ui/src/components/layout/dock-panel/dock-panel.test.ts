@@ -1132,6 +1132,47 @@ it("aborts an active pointer resize when resizing is revoked mid-gesture", async
   expect(el.extent).to.equal("300px");
 });
 
+for (const binding of ['property', 'attribute']) {
+  it(`releases a resize gesture when the ${binding} disables its handle without another pointer event`, async () => {
+    const el = await dockedFixture('extent="300px" min-extent="100px" max-extent="500px"');
+    await el.updateComplete;
+    const captured: number[] = [];
+    const released: number[] = [];
+    const captureHandle = (): HTMLElement => {
+      const handle = el.shadowRoot!.querySelector<HTMLElement>('[part="handle"]')!;
+      handle.setPointerCapture = id => { captured.push(id); };
+      handle.hasPointerCapture = id => captured.includes(id) && !released.includes(id);
+      handle.releasePointerCapture = id => { released.push(id); };
+      return handle;
+    };
+    let changes = 0;
+    el.addEventListener('lr-resize-change', () => { changes++; });
+    captureHandle().dispatchEvent(new PointerEvent('pointerdown', primaryPointer(32, { clientX: 200 })));
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 32, clientX: 175 }));
+    await el.updateComplete;
+    expect(el.extent).to.equal('325px');
+    expect(captured).to.deep.equal([32]);
+    if (binding === 'property') el.withoutResize = true;
+    else el.setAttribute('without-resize', '');
+    await el.updateComplete;
+    expect(released, 'rendering away the handle releases its active capture immediately').to.deep.equal([32]);
+    expect(el.shadowRoot!.querySelector('[part="handle"]') === null).to.equal(true);
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 32, clientX: 100 }));
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 32 }));
+    expect(el.extent).to.equal('325px');
+    expect(changes, 'revocation is cancellation, not a completed resize').to.equal(0);
+
+    el.withoutResize = false;
+    await el.updateComplete;
+    captureHandle().dispatchEvent(new PointerEvent('pointerdown', primaryPointer(33, { clientX: 200 })));
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 33, clientX: 175 }));
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 33 }));
+    expect(el.extent).to.equal('350px');
+    expect(changes).to.equal(1);
+    expect(released).to.deep.equal([32, 33]);
+  });
+}
+
 it("does not throw on a stray pointermove/pointerup after disconnect mid-drag", async () => {
   const el = await dockedFixture('extent="300px"');
   await elementUpdated(el);
