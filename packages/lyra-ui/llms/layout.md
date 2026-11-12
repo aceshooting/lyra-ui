@@ -3395,7 +3395,7 @@ For a menu button or other anchored overlay, compose the semantic controller ins
 `<lr-dropdown>`:
 
 ```html
-<lr-dropdown label="Row actions">
+<lr-dropdown aria-label="Row actions">
   <button slot="trigger" aria-label="Row actions">⋮</button>
   <lr-menu>
     <lr-menu-item value="edit">Edit</lr-menu-item>
@@ -3408,6 +3408,8 @@ The dropdown shell owns trigger relationships, positioning, opening/closing, out
 focus return, and lifecycle events. The contained menu remains the sole semantic owner: its
 `header`/default/`footer` regions and named `role="menu"` list are preserved, while the outer popup
 is neutral. This is also the composition used for direct `<lr-dropdown-item>` children.
+The trigger's `aria-label` names its button. The dropdown's `aria-label` supplies the contained
+menu's fallback name; a `label` or `aria-label` on the menu itself takes precedence.
 
 ### `lr-menu`
 

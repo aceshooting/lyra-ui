@@ -830,6 +830,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
       changed.has('maxlength') ||
       changed.has('pattern') ||
       changed.has('match') ||
+      changed.has('required') ||
       changed.has('readonly')
     ) {
       this.updateValidity();
