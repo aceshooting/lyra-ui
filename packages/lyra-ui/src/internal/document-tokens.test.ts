@@ -502,6 +502,39 @@ describe('document token layer: provider identity', () => {
     }
   }
 
+  for (const disabledInitially of [false, true]) {
+    it(`keeps tokens available for an import disabled ${disabledInitially ? 'before' : 'after'} connection and reuses it after recovery`, async () => {
+      const { frame, doc } = await frameWith();
+      try {
+        const style = doc.createElement('style');
+        const loaded = new Promise<void>((resolve, reject) => {
+          style.addEventListener('load', () => resolve(), { once: true });
+          style.addEventListener('error', () => reject(new Error('token stylesheet did not load')), { once: true });
+        });
+        style.textContent = `@import url("${new URL('../styles/tokens-root.css', import.meta.url).href}");`;
+        doc.head.append(style); await loaded;
+        const imported = (style.sheet!.cssRules[0] as CSSImportRule).styleSheet!;
+        imported.disabled = disabledInitially;
+        // Some engines keep applying an imported sheet despite its disabled flag. Observe the
+        // native cascade before Lyra connects so a still-active provider needs no duplicate.
+        const nativeProvider = frame.contentWindow!.getComputedStyle(doc.documentElement)
+          .getPropertyValue(DOCUMENT_TOKEN_SENTINEL).trim() === DOCUMENT_TOKEN_LAYER_ID;
+        const probe = await connectProbe(doc);
+        if (!disabledInitially) {
+          expect(constructedCopies(doc)).to.equal(0);
+          imported.disabled = true;
+          expect(hasLyraTokens(doc)).to.equal(false);
+          adoptLyraTokens(doc);
+        }
+        expect(constructedCopies(doc)).to.equal(disabledInitially && nativeProvider ? 0 : 1);
+        expect(frame.contentWindow!.getComputedStyle(probe).getPropertyValue('--lr-space-m').trim()).to.equal('0.75rem');
+        imported.disabled = false; adoptLyraTokens(doc);
+        expect(constructedCopies(doc)).to.equal(0);
+        expect(frame.contentWindow!.getComputedStyle(probe).getPropertyValue('--lr-space-m').trim()).to.equal('0.75rem');
+      } finally { frame.remove(); }
+    });
+  }
+
   it('finds a static copy inlined mid-file when the stylesheet loads before Lyra registers', async () => {
     const { frame, doc } = await frameWith((d) => { styleWith(d, inlinedTheme()); });
     try {
@@ -1060,6 +1093,30 @@ describe('document token layer: root re-derivation key (Chromium)', () => {
   it('declares the key on the root in Chromium only', async () => {
     await fixture(html`<lr-layer-probe></lr-layer-probe>`);
     expect(read(document.documentElement, KEY) !== '').to.equal(chromium);
+  });
+
+  it('adopts the root key immediately beside a static provider when mutation observation is unavailable', function () {
+    if (!chromium) this.skip();
+    const frame = document.createElement('iframe'); document.body.append(frame);
+    const doc = frame.contentDocument!, view = frame.contentWindow!;
+    const observer = Object.getOwnPropertyDescriptor(view, 'MutationObserver');
+    try {
+      const style = doc.createElement('style'); style.textContent = DOCUMENT_TOKEN_CSS; doc.head.append(style);
+      Object.defineProperty(view, 'MutationObserver', { configurable: true, value: undefined });
+      adoptLyraTokens(doc);
+      expect(hasLyraTokens(doc)).to.equal(true);
+      expect(view.getComputedStyle(doc.documentElement).getPropertyValue(KEY).trim()).not.to.equal('');
+      const initial = view.getComputedStyle(doc.documentElement).getPropertyValue(KEY).trim();
+      doc.documentElement.style.setProperty('--lr-theme-space-m', '9px');
+      expect(view.getComputedStyle(doc.documentElement).getPropertyValue(KEY).trim()).not.to.equal(initial);
+      expect(view.getComputedStyle(doc.body).getPropertyValue('--lr-space-m').trim()).to.equal('9px');
+      expect(doc.adoptedStyleSheets.filter(sheet => Array.from(sheet.cssRules)
+        .some(rule => rule.cssText.includes(DOCUMENT_TOKEN_SENTINEL))).length).to.equal(0);
+    } finally {
+      if (observer) Object.defineProperty(view, 'MutationObserver', observer);
+      else Reflect.deleteProperty(view, 'MutationObserver');
+      frame.remove();
+    }
   });
 
   it('does not allocate a root-change observer when adopting the layer immediately', () => {

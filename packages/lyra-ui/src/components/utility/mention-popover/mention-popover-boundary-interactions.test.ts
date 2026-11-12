@@ -114,3 +114,28 @@ it('declines fallback focus while inert and succeeds when the suggestion surface
   expect(await el.focusActiveOption()).to.equal(true);
   expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id']).to.equal('first');
 });
+
+it('closes an unpositionable suggestion popup without taking focus and recovers from fresh geometry', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div><button>Suggestions</button><lr-mention-popover></lr-mention-popover></div>`);
+  const anchor = wrapper.querySelector('button')!, el = wrapper.querySelector<LyraMentionPopover>('lr-mention-popover')!;
+  await focusByKeyboard(anchor);
+  el.anchor = anchor; el.items = [{ suggestionId: 'first', label: 'First' }];
+  const bounds = anchor.getBoundingClientRect;
+  let reads = 0;
+  anchor.getBoundingClientRect = () => { reads++; throw new Error('Suggestion anchor unavailable'); };
+  try {
+    el.open = true;
+    expect(await el.focusActiveOption()).to.equal(false);
+    await waitUntil(() => !el.open, 'failed placement closes the suggestion popup');
+    expect(reads).to.be.greaterThan(0); expect(document.activeElement === anchor).to.equal(true);
+    expect(el.filteredItems.map(item => item.suggestionId)).to.deep.equal(['first']);
+  } finally { anchor.getBoundingClientRect = bounds; }
+  el.open = true; await el.updateComplete;
+  await waitUntil(() => getComputedStyle(listbox(el)).visibility === 'visible');
+  expect(await el.focusActiveOption()).to.equal(true);
+  expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id']).to.equal('first');
+  const selected = oneEvent(el, 'lr-mention-select');
+  await sendKeys({ press: 'Enter' });
+  expect((await selected as CustomEvent<LyraMentionSelectDetail>).detail.suggestionId).to.equal('first');
+  expect(el.open).to.equal(false);
+});

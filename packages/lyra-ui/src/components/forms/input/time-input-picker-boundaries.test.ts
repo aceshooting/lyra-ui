@@ -9,6 +9,31 @@ function values(el: LyraTimeInput, segment: string): string[] {
 }
 
 describe('time picker unrestricted and upper-bound choices', () => {
+  it('closes a picker whose anchor cannot be measured and opens normally after geometry recovers', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div><button>Continue</button>
+      <lr-time-input label="Start time" hour-format="24" value="13:25" style="--lr-duration-base:0ms"></lr-time-input></div>`);
+    const el = wrapper.querySelector<LyraTimeInput>('lr-time-input')!;
+    const outside = wrapper.querySelector('button')!;
+    await focusByKeyboard(outside);
+    const anchor = el.shadowRoot!.querySelector<HTMLElement>('[part~="time-input"]')!;
+    const bounds = anchor.getBoundingClientRect;
+    let reads = 0, shown = 0;
+    el.addEventListener('lr-after-show', () => shown++);
+    anchor.getBoundingClientRect = () => { reads++; throw new Error('Anchor measurement unavailable'); };
+    try {
+      await el.show(); await el.updateComplete;
+      expect(reads).to.be.greaterThan(0); expect(el.open).to.equal(false);
+      expect(shown).to.equal(0); expect(el.value).to.equal('13:25');
+      expect(document.activeElement === outside).to.equal(true);
+    } finally { anchor.getBoundingClientRect = bounds; }
+    try {
+      await el.show();
+      expect(el.open).to.equal(true); expect(shown).to.equal(1);
+      el.shadowRoot!.querySelector<HTMLButtonElement>('[data-column="minute"][data-value="59"]')!.click();
+      await el.updateComplete; expect(el.value).to.equal('13:59');
+    } finally { await el.hide(); }
+  });
+
   for (const format of ['12', '24'] as const) {
     it(`renders the complete ${format}-hour unrestricted grid and commits its last minute`, async () => {
       const el = await fixture<LyraTimeInput>(html`
