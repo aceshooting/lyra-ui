@@ -320,9 +320,9 @@ const bundleEntries = {
   },
   map: {
     fixture: 'optional',
-    // Retaining click routes during overlapping GeoJSON preparation measures 2,527,432 raw
-    // bytes across the same 52 files; the next 64-byte boundary leaves 56 bytes.
-    maxRawBytes: 2_527_488,
+    // Retrying incomplete point icon atlases and preparing recolors before publication measures
+    // 2,527,557 raw bytes across the same 52 files; the next 64-byte boundary leaves 59 bytes.
+    maxRawBytes: 2_527_616,
   },
   graph: {
     fixture: 'optional',

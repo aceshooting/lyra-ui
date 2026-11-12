@@ -8366,7 +8366,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const color = this.pointIconColor(layer);
     const icons: { id: string; icon: CanonicalPointIcon }[] = [];
     // Track ownership before allocating so teardown can also clean up a partially failed peer call.
-    this.appliedPointIcons.set(sourceId, { signature, color, icons });
+    // Only a complete atlas may reuse its signature on a later declarative update.
+    const applied = { signature: '', color, icons };
+    this.appliedPointIcons.set(sourceId, applied);
     for (const icon of point.icons) {
       const raster = rasterPointIcon(this, icon, color);
       if (!raster) continue;
@@ -8386,6 +8388,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         'icon-allow-overlap': true, 'icon-ignore-placement': true,
       },
     });
+    if (icons.length === point.icons.length) applied.signature = signature;
   }
 
   private paintPointIcons(sourceId: string, layer: CanonicalMapDataLayer): void {
@@ -8398,10 +8401,14 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (opacity !== undefined) this.setMapPaint(iconLayerId, 'icon-opacity', opacity);
     const color = this.pointIconColor(layer);
     if (color === applied.color) return;
+    // Keep the previous palette intact when even one raster cannot be allocated.
+    const updates: { id: string; raster: ImageData }[] = [];
     for (const { id, icon } of applied.icons) {
       const raster = rasterPointIcon(this, icon, color);
-      if (raster) this._map?.updateImage?.(id, raster);
+      if (!raster) return;
+      updates.push({ id, raster });
     }
+    for (const { id, raster } of updates) this._map?.updateImage?.(id, raster);
     applied.color = color;
   }
 
