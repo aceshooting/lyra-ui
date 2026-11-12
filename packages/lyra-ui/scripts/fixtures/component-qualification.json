@@ -2466,6 +2466,7 @@
           "src/components/layout/app-rail/app-rail-item.test.ts",
           "src/components/layout/app-rail/app-rail-mobile-shadow.test.ts",
           "src/components/layout/app-rail/app-rail-remediation.test.ts",
+          "src/components/layout/app-rail/app-rail-resize-keys.test.ts",
           "src/components/layout/app-rail/app-rail-resizer-position-reduced-motion.test.ts",
           "src/components/layout/app-rail/app-rail-resizer-position.test.ts",
           "src/components/layout/app-rail/app-rail-scale.test.ts",
@@ -2918,6 +2919,7 @@
           "src/components/layout/app-rail/app-rail-item.test.ts",
           "src/components/layout/app-rail/app-rail-mobile-shadow.test.ts",
           "src/components/layout/app-rail/app-rail-remediation.test.ts",
+          "src/components/layout/app-rail/app-rail-resize-keys.test.ts",
           "src/components/layout/app-rail/app-rail-resizer-position-reduced-motion.test.ts",
           "src/components/layout/app-rail/app-rail-resizer-position.test.ts",
           "src/components/layout/app-rail/app-rail-scale.test.ts",
@@ -37036,8 +37038,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/navigation-menu-item/navigation-menu-item-transitions.test.ts",
-              "test": "switches equal-sized disclosures in both directions without constraining their natural size",
+              "file": "src/components/layout/navigation-menu-item/navigation-menu-item-coverage.test.ts",
+              "test": "forwards keyboard and host link activation without opening slotted disclosure content",
               "kind": "component keyboard exercise signal"
             }
           ]

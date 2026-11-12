@@ -465,3 +465,18 @@ describe('resolveLyraString dev-mode locale-fallback warning', () => {
     expect(messages).to.have.length(0);
   });
 });
+
+
+it('preserves literal adjacent code units when selecting a rich-text separator from an exhausted alphabet', () => {
+  const literal = Array.from({ length: 65_536 }, (_, code) => String.fromCharCode(code).repeat(2)).join('');
+  const template = `${literal}{value}${literal}{value}`;
+  let calls = 0;
+  const parts = resolveLocalizedParts(template, marker => {
+    calls++;
+    expect(marker.length).to.equal(2);
+    expect(template.includes(marker)).to.equal(false);
+    return `${literal}${marker}${literal}${marker}`;
+  });
+  expect(calls).to.equal(1);
+  expect(parts).to.deep.equal([literal, literal, '']);
+});

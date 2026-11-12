@@ -1,3 +1,5 @@
+import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { aTimeout, expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { hoverUntilMatched, sendMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraNavigationMenuItem, LyraNavigationMenuToggleDetail } from './navigation-menu-item.class.js';
@@ -71,4 +73,28 @@ it('pins an owned hover-open panel after a real click and pointer departure', as
   } finally {
     await sendMouse({ type: 'move', position: [800, 600] });
   }
+});
+
+
+it('forwards keyboard and host link activation without opening slotted disclosure content', async () => {
+  const item = await fixture<LyraNavigationMenuItem>(html`<lr-navigation-menu-item href="#destination">Documentation
+    <div slot="panel"><button>Details</button></div>
+  </lr-navigation-menu-item>`);
+  const clicks: boolean[] = [];
+  const toggles: boolean[] = [];
+  item.addEventListener('click', event => {
+    event.preventDefault();
+    clicks.push(event.composedPath()[0] === base(item));
+  });
+  item.addEventListener('lr-toggle', event => toggles.push(event.detail.expanded));
+  await focusByKeyboard(base(item));
+  await sendKeys({ press: 'Enter' });
+  item.click();
+  await item.updateComplete;
+  expect(base(item).localName).to.equal('a');
+  expect(clicks).to.deep.equal([true, true]);
+  expect(toggles).to.deep.equal([]);
+  expect(item.open).to.equal(false);
+  expect(base(item).hasAttribute('aria-expanded')).to.equal(false);
+  expect(item.shadowRoot!.querySelector<HTMLElement>('[part~="panel"]')?.hidden ?? true).to.equal(true);
 });

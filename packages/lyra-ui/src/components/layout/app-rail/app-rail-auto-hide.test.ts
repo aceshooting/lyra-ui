@@ -549,3 +549,19 @@ describe('lr-app-rail auto-hide: pointer types', () => {
     await waitUntil(() => el.peeking, 'a pen hover peeks', { timeout: 2000 });
   });
 });
+
+
+it('keeps a mouse-owned peek open when an unrelated touch pointer leaves', async () => {
+  const { el } = await autoHideRail();
+  const seen = peekEvents(el);
+  hover(el);
+  await waitUntil(() => el.peeking);
+  pointer(el, 'pointerleave', { pointerType: 'touch', pointerId: 2 });
+  // wait-reason: negative assertion, a touch departure must not start the mouse peek close timer
+  await sleep(160);
+  expect(el.peeking).to.equal(true);
+  expect(seen).to.deep.equal([true]);
+  pointer(el, 'pointerleave');
+  await waitUntil(() => !el.peeking);
+  expect(seen).to.deep.equal([true, false]);
+});
