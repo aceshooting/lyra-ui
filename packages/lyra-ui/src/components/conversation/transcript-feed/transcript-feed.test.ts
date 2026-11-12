@@ -745,3 +745,28 @@ it('normalizes the entry list once per entries assignment, not once per read', a
   await el.updateComplete;
   expect(internals.normalizedEntries.map((entry) => entry.id)).to.deep.equal(['c']);
 });
+
+
+for (const connection of ['constructed', 'connected before rendering'] as const) {
+  it(`scrollToBottom re-engages follow on a ${connection} transcript-feed without an event echo`, async () => {
+    const stage = await fixture<HTMLDivElement>(html`<div></div>`);
+    const el = document.createElement('lr-transcript-feed') as LyraTranscriptFeed;
+    el.follow = false;
+    let transitions = 0;
+    el.addEventListener('lr-follow-change', () => transitions++);
+    if (connection === 'connected before rendering') stage.append(el);
+
+    el.scrollToBottom();
+    expect(el.follow).to.equal(true);
+    expect(transitions).to.equal(0);
+    stage.append(el);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="base"]').length).to.equal(1);
+    el.follow = false;
+    await el.updateComplete;
+    el.scrollToBottom();
+    await el.updateComplete;
+    expect(el.follow).to.equal(true);
+    expect(transitions).to.equal(0);
+  });
+}

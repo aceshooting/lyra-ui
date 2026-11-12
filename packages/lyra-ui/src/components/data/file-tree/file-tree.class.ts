@@ -737,7 +737,7 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
   expandAll(): Promise<void> | void {
     if (this.treeSource !== undefined) return;
     const expandTree = (): Promise<void> | undefined =>
-      (this.renderRoot.querySelector(tag('tree')) as LyraTree | null)?.expandAll();
+      this.renderRoot?.querySelector<LyraTree>(tag('tree'))?.expandAll();
     if (this.projectsAllNodes) return expandTree();
     // Over the row budget, project every loaded directory first; the inner tree then shows as
     // many rows as its budget allows and `dataTruncated` reports the rest.
@@ -750,7 +750,7 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
 
   collapseAll(): void {
     if (this.treeSource !== undefined) return;
-    void (this.renderRoot.querySelector(tag('tree')) as LyraTree | null)?.collapseAll();
+    void this.renderRoot?.querySelector<LyraTree>(tag('tree'))?.collapseAll();
   }
 
   override render(): TemplateResult {

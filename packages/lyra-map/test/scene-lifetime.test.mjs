@@ -601,3 +601,197 @@ test('an added layer whose native onAdd never confirms its handle is refused wit
   await item.callback(); assert.equal(creates, 0); assert.equal(item.ready(), 0);
   item.lifetime.dispose();
 });
+
+for (const request of [null, 7, {}, { descriptor: null }, { descriptor: {} }]) {
+  test(`malformed mount request ${JSON.stringify(request)} is rejected before acquiring resources`, async () => {
+    const item = fixture();
+    await assert.doesNotReject(() => item.mount(request));
+    assert.deepEqual(item.events, [{ id: '', error: 'invalid' }]);
+    assert.equal(item.calls.prepare.length, 0);
+    assert.equal(item.calls.add.length, 0);
+    item.lifetime.dispose();
+  });
+}
+
+for (const name of ['factory', 'create', 'prerender', 'render', 'dispose']) {
+  for (const missing of [false, true]) {
+    test(`participant admission rejects a ${missing ? 'missing' : 'non-callable'} ${name}`, () => {
+      const item = fixture();
+      const participant = { factory() {}, create() {}, prerender() {}, render() {}, dispose() {} };
+      if (missing) delete participant[name];
+      else participant[name] = 1;
+      assert.throws(() => createLayerLifetime(item.map, item.host, { ...item.services, participant }), TypeError);
+      assert.equal(item.calls.add.length, 0);
+      item.lifetime.dispose();
+    });
+  }
+}
+
+test('throwing state notifications cannot interrupt preparation, drawing or retirement', async () => {
+  const item = fixture({ onState() { throw new Error('host notification failed'); } });
+  let renders = 0, disposals = 0;
+  await item.mount(item.request(() => ({ render() { renders++; }, dispose() { disposals++; } })));
+  await item.callback();
+  assert.equal(renders, 1);
+  assert.deepEqual(item.events.map(event => event.state), ['loading', 'ready']);
+  item.lifetime.dispose();
+  assert.equal(disposals, 1);
+  assert.deepEqual(item.calls.remove, ['scene']);
+});
+
+test('throwing instance disposal still removes its owned native layer exactly once', async () => {
+  const item = fixture(); let disposals = 0;
+  await item.mount(item.request(() => ({ render() {}, dispose() { disposals++; throw new Error('dispose detail'); } })));
+  await item.callback();
+  item.lifetime.dispose(); item.lifetime.dispose();
+  assert.equal(disposals, 1);
+  assert.deepEqual(item.calls.remove, ['scene']);
+  assert.equal(item.layers.size, 0);
+  assert.equal(item.guarded(), false);
+  assert.deepEqual(item.events.filter(event => event.error), [{ id: 'scene', error: 'render' }]);
+});
+
+test('native removal failure is isolated after disposing and aborting the instance', async () => {
+  const item = fixture(); let disposals = 0, removals = 0, signal;
+  await item.mount(item.request(context => {
+    signal = context.signal;
+    return { render() {}, dispose() { disposals++; } };
+  }));
+  await item.callback();
+  item.map.removeLayer = () => { removals++; throw new Error('native removal detail'); };
+  assert.doesNotThrow(() => item.lifetime.dispose());
+  item.lifetime.dispose();
+  assert.equal(signal.aborted, true);
+  assert.equal(disposals, 1); assert.equal(removals, 1);
+  assert.deepEqual(item.events.filter(event => event.error), [{ id: 'scene', error: 'engine' }]);
+});
+
+for (const method of ['prerender', 'render']) {
+  test(`a failed ${method} frame close retires the instance and cannot publish readiness`, async () => {
+    const item = fixture(); let work = 0, closes = 0, disposals = 0;
+    item.services.openFrame = () => ({ frame: item.frame, close() { closes++; throw new Error('frame close detail'); } });
+    await item.mount(item.request(() => ({ prerender() { work++; }, render() { work++; }, dispose() { disposals++; } })));
+    await item.callback(method);
+    assert.equal(work, 1); assert.equal(closes, 1); assert.equal(disposals, 1);
+    assert.equal(item.ready(), 0); assert.deepEqual(item.calls.remove, ['scene']);
+    assert.deepEqual(item.events.filter(event => event.error), [{ id: 'scene', error: 'render' }]);
+    item.lifetime.dispose(); assert.equal(disposals, 1);
+  });
+}
+
+for (const phase of ['create', 'render']) {
+  test(`state-guard retirement before ${phase} prevents caller work and cleans up once`, async () => {
+    const item = fixture(); let creates = 0, renders = 0, disposals = 0;
+    await item.mount(item.request(() => { creates++; return { render() { renders++; }, dispose() { disposals++; } }; }));
+    if (phase === 'render') await item.callback();
+    const before = { creates, renders, ready: item.ready() };
+    const guarded = item.services.withState;
+    let retired = false;
+    item.services.withState = (gl, work) => guarded(gl, () => {
+      if (!retired) { retired = true; item.lifetime.dispose(); }
+      return work();
+    });
+    await item.callback();
+    assert.equal(retired, true);
+    assert.equal(creates, before.creates); assert.equal(renders, before.renders);
+    assert.equal(item.ready(), before.ready);
+    assert.equal(disposals, phase === 'render' ? 1 : 0);
+    assert.equal(item.calls.open.length, item.calls.close.length);
+    assert.deepEqual(item.calls.remove, ['scene']);
+    assert.equal(item.events.some(event => event.error), false);
+  });
+}
+
+for (const member of ['prerender', 'items', 'pick', 'setInteraction']) {
+  test(`a non-callable optional ${member} is rejected and the returned instance is disposed`, async () => {
+    const item = fixture(); let renders = 0, disposals = 0;
+    await item.mount(item.request(() => ({ render() { renders++; }, dispose() { disposals++; }, [member]: 1 })));
+    await item.callback();
+    assert.equal(renders, 0); assert.equal(disposals, 1); assert.equal(item.ready(), 0);
+    assert.equal(item.calls.open.length, 0);
+    assert.deepEqual(item.events.filter(event => event.error), [{ id: 'scene', error: 'render' }]);
+    item.lifetime.dispose(); assert.equal(disposals, 1);
+  });
+}
+
+for (const validDisposer of [false, true]) {
+  test(`an invalid late factory result ${validDisposer ? 'with' : 'without'} a disposer cannot leak a live layer`, async () => {
+    const item = fixture(), pending = deferred(); let disposals = 0;
+    await item.mount(item.request(() => pending.promise));
+    await item.callback();
+    pending.resolve(validDisposer ? { dispose() { disposals++; } } : null);
+    await flush();
+    assert.equal(disposals, Number(validDisposer));
+    assert.equal(item.ready(), 0); assert.equal(item.layers.size, 0);
+    assert.deepEqual(item.events.filter(event => event.error), [{ id: 'scene', error: 'render' }]);
+    item.lifetime.dispose(); assert.equal(disposals, Number(validDisposer));
+  });
+}
+
+for (const retiredBy of ['abort', 'dispose']) {
+  test(`mount after ${retiredBy} leaves the factory and native map untouched`, async () => {
+    const item = fixture(); let creates = 0;
+    if (retiredBy === 'abort') item.controller.abort();
+    else item.lifetime.dispose();
+    await item.mount(item.request(() => { creates++; return { render() {}, dispose() {} }; }));
+    assert.equal(creates, 0); assert.equal(item.calls.prepare.length, 0);
+    assert.equal(item.calls.add.length, 0); assert.deepEqual(item.events, []);
+    item.lifetime.dispose();
+  });
+}
+
+test('native installation failure aborts preparation without invoking the factory', async () => {
+  const item = fixture(); let creates = 0;
+  item.map.addLayer = () => { throw new Error('native installation detail'); };
+  await item.mount(item.request(() => { creates++; return { render() {}, dispose() {} }; }));
+  assert.equal(creates, 0); assert.equal(item.layers.size, 0);
+  assert.equal(item.calls.prepare[0].signal.aborted, true);
+  assert.deepEqual(item.events.filter(event => event.error), [{ id: 'scene', error: 'engine' }]);
+  item.lifetime.dispose();
+});
+
+test('a native onAdd lookup failure cannot authorize an unconfirmed layer', async () => {
+  const item = fixture(); let creates = 0, layer;
+  item.map.addLayer = value => {
+    layer = value;
+    const getLayer = item.map.getLayer;
+    item.map.getLayer = () => { throw new Error('native lookup detail'); };
+    try { value.onAdd(item.map, item.gl); }
+    finally { item.map.getLayer = getLayer; }
+  };
+  await item.mount(item.request(() => { creates++; return { render() {}, dispose() {} }; }));
+  await item.callback('render', layer);
+  layer.onAdd(item.map, item.gl);
+  assert.equal(creates, 0); assert.equal(item.ready(), 0);
+  assert.equal(item.calls.remove.length, 0);
+  assert.deepEqual(item.events.filter(event => event.error), [{ id: 'scene', error: 'engine' }]);
+  item.lifetime.dispose();
+});
+
+test('context loss during an unsupported asynchronous factory keeps late disposal outside GL state', async () => {
+  const item = fixture(), pending = deferred(); let disposals = 0;
+  await item.mount(item.request(() => {
+    item.lifetime.invalidate('context-lost');
+    return pending.promise;
+  }));
+  await item.callback();
+  const guards = item.calls.guards;
+  pending.resolve({ render() {}, dispose() { disposals++; } });
+  await flush();
+  assert.equal(disposals, 1); assert.equal(item.calls.guards, guards);
+  assert.equal(item.ready(), 0); assert.equal(item.layers.size, 0);
+  item.lifetime.dispose(); assert.equal(disposals, 1);
+});
+
+test('retry after host abort cannot revive the desired layer', async () => {
+  const item = fixture(); let creates = 0, disposals = 0;
+  await item.mount(item.request(() => { creates++; return { render() {}, dispose() { disposals++; } }; }));
+  await item.callback();
+  item.controller.abort();
+  await item.lifetime.retry();
+  assert.equal(creates, 1); assert.equal(disposals, 1);
+  assert.equal(item.calls.prepare.length, 1); assert.equal(item.calls.add.length, 1);
+  assert.equal(item.layers.size, 0);
+  assert.equal(item.events.some(event => event.error), false);
+  item.lifetime.dispose();
+});

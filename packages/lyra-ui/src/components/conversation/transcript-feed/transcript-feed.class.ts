@@ -241,7 +241,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
    *  split). */
   scrollToBottom(): void {
     this.follow = true;
-    const base = this.renderRoot.querySelector('[part="base"]') as HTMLElement | null;
+    const base = this.renderRoot?.querySelector<HTMLElement>('[part="base"]');
     if (!base) return;
     base.scrollTop = base.scrollHeight;
   }

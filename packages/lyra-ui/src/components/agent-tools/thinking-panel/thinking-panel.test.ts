@@ -1165,3 +1165,28 @@ describe('lr-thinking-panel deprecated --lr-thinking-panel-background alias', ()
     expect(fill(both)).to.equal('rgb(4, 5, 6)');
   });
 });
+
+
+for (const connection of ['constructed', 'connected before rendering'] as const) {
+  it(`scrollToBottom re-engages follow on a ${connection} thinking-panel without an event echo`, async () => {
+    const stage = await fixture<HTMLDivElement>(html`<div></div>`);
+    const el = document.createElement('lr-thinking-panel') as LyraThinkingPanel;
+    el.follow = false;
+    let transitions = 0;
+    el.addEventListener('lr-follow-change', () => transitions++);
+    if (connection === 'connected before rendering') stage.append(el);
+
+    el.scrollToBottom();
+    expect(el.follow).to.equal(true);
+    expect(transitions).to.equal(0);
+    stage.append(el);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="body"]').length).to.equal(1);
+    el.follow = false;
+    await el.updateComplete;
+    el.scrollToBottom();
+    await el.updateComplete;
+    expect(el.follow).to.equal(true);
+    expect(transitions).to.equal(0);
+  });
+}

@@ -30,6 +30,32 @@ function required<T>(value: T | undefined, context: string): T {
 expectLocaleFallback('ar', ['fileTreeDiffSummary', 'fileTreeLabel', 'fileTypeFile', 'noData']);
 
 describe('lr-file-tree', () => {
+  for (const connection of ['constructed', 'connected before rendering'] as const) {
+    for (const method of ['expandAll', 'collapseAll'] as const) {
+      it(`${method} tolerates a ${connection} tree and remains usable after rendering`, async () => {
+        const stage = await fixture<HTMLDivElement>(html`<div></div>`);
+        const el = document.createElement('lr-file-tree') as LyraFileTree;
+        el.nodes = nodes;
+        if (connection === 'connected before rendering') stage.append(el);
+
+        await el[method]();
+        stage.append(el);
+        await el.updateComplete;
+        const tree = el.shadowRoot!.querySelector<LyraTree>('lr-tree')!;
+        await tree.updateComplete;
+        await el.expandAll();
+        await tree.updateComplete;
+        const directory = tree.querySelector<LyraTreeItem>('lr-tree-item')!;
+        expect(directory.item?.id).to.equal('src');
+        expect(directory.expanded).to.equal(true);
+
+        el.collapseAll();
+        await tree.updateComplete;
+        expect(directory.expanded).to.equal(false);
+      });
+    }
+  }
+
   it('renders a row per file/directory, deepest-first order preserved', async () => {
     const el = (await fixture(html`<lr-file-tree></lr-file-tree>`)) as LyraFileTree;
     el.nodes = nodes;

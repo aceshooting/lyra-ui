@@ -334,7 +334,7 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
    *  from a host that wants to force a jump-to-latest action of its own. */
   scrollToBottom(): void {
     this.follow = true;
-    const body = this.renderRoot.querySelector('[part="body"]') as HTMLElement | null;
+    const body = this.renderRoot?.querySelector<HTMLElement>('[part="body"]');
     if (!body) return;
     body.scrollTop = body.scrollHeight;
   }
