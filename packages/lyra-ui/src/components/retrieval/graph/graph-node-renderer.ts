@@ -47,9 +47,9 @@ function abortableNodeRendererYield(task: Promise<void>, signal?: AbortSignal): 
   if (!signal) return task;
   return new Promise<void>((resolve, reject) => {
     const abort = () => { signal.removeEventListener('abort', abort); reject(new DOMException('Graph node admission was superseded.', 'AbortError')); };
+    void task.then(() => { signal.removeEventListener('abort', abort); resolve(); }, error => { signal.removeEventListener('abort', abort); reject(error); });
     if (signal.aborted) { abort(); return; }
     signal.addEventListener('abort', abort, { once: true });
-    void task.then(() => { signal.removeEventListener('abort', abort); resolve(); }, error => { signal.removeEventListener('abort', abort); reject(error); });
   });
 }
 

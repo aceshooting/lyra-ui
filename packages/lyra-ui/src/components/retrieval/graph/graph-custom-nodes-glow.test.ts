@@ -239,6 +239,13 @@ describe('graph custom node and glow opt-ins', () => {
       await mount(value); await value.graph.updateComplete;
       expect(calls).to.equal(128);
       expect(value.meshes.filter(rows => rows !== undefined).length).to.equal(0);
+      if (interruption === 'hidden') {
+        let hiddenObserved = false;
+        const observer = new IntersectionObserver(entries => { hiddenObserved = entries.some(entry => !entry.isIntersecting); });
+        observer.observe(value.graph);
+        try { await waitUntil(() => hiddenObserved, 'the hidden phase reaches native intersection observers before restoration'); }
+        finally { observer.disconnect(); }
+      }
       value.graph.nodes = [{ id: 'fresh-a' }, { id: 'fresh-b' }];
       value.graph.nodeRenderer = () => mesh();
       value.graph.view = '3d'; value.graph.hidden = false;

@@ -25772,6 +25772,7 @@
           "src/components/retrieval/graph/graph-loader.test.ts",
           "src/components/retrieval/graph/graph-model-boundaries.test.ts",
           "src/components/retrieval/graph/graph-native.test.ts",
+          "src/components/retrieval/graph/graph-node-renderer-abort.test.ts",
           "src/components/retrieval/graph/graph-node-renderer.property.test.ts",
           "src/components/retrieval/graph/graph-node-renderer.test.ts",
           "src/components/retrieval/graph/graph-rebinding.test.ts",
