@@ -281,3 +281,72 @@ describe('spatial keyboard traversal', () => {
     });
   }
 });
+
+
+for (const [name, min, max] of [
+  ['invalid lower bound', NaN, 0.5],
+  ['invalid upper bound', 0.5, NaN],
+  ['reversed bounds', 0.8, 0.2],
+  ['collapsed bounds', 0.5, 0.5],
+  ['outside the plot to the left', -2, -1],
+  ['outside the plot to the right', 2, 3],
+] as const) {
+  it(`ignores spatial zoom completion with ${name} without querying or emitting`, async () => {
+    let queries = 0;
+    const input: LyraSpatialChartSource = { ...source(), bounds: { minX: 0, maxX: 100, minY: 0, maxY: 100 },
+      query: request => { queries++; return { matchedCount: 100, bins: [{ bounds: request.bounds, count: 100 }], points: [] }; } };
+    const element = await mounted(input);
+    element.zoomable = true;
+    await element.updateComplete;
+    await waitUntil(() => !!(element.chart!.options['plugins'] as { zoom?: unknown }).zoom);
+    const zoom = (element.chart!.options['plugins'] as { zoom: { zoom: { onZoomComplete(value: unknown): void } } }).zoom.zoom;
+    const previousQueries = queries;
+    let zoomEvents = 0;
+    element.addEventListener('lr-zoom', () => zoomEvents++);
+    zoom.onZoomComplete({ chart: { scales: { x: { min, max } } } });
+    await element.updateComplete;
+    expect(element.viewport).to.equal(null);
+    expect(queries).to.equal(previousQueries);
+    expect(zoomEvents).to.equal(0);
+    zoom.onZoomComplete({ chart: { scales: { x: { min: 0.25, max: 0.75 } } } });
+    await element.updateComplete;
+    await waitUntil(() => element.getAttribute('aria-busy') === 'false');
+    expect(element.viewport).to.deep.equal({ minX: 25, maxX: 75, minY: 0, maxY: 100 });
+    expect(queries).to.equal(previousQueries + 1);
+    expect(zoomEvents).to.equal(1);
+  });
+}
+
+for (const transition of ['replace', 'clear', 'disconnect'] as const) {
+  it(`ignores a saved spatial zoom callback after source ${transition}`, async () => {
+    const element = await mounted();
+    element.zoomable = true;
+    await element.updateComplete;
+    await waitUntil(() => !!(element.chart!.options['plugins'] as { zoom?: unknown }).zoom);
+    const zoom = (element.chart!.options['plugins'] as { zoom: { zoom: { onZoomComplete(value: unknown): void } } }).zoom.zoom;
+    let events = 0;
+    element.addEventListener('lr-zoom', () => events++);
+    if (transition === 'replace') element.preparedData = { ...source(), revision: 'replacement' };
+    else if (transition === 'clear') element.preparedData = null;
+    else element.remove();
+    zoom.onZoomComplete({ chart: { scales: { x: { min: 0.25, max: 0.75 } } } });
+    expect(element.viewport).to.equal(null);
+    expect(events).to.equal(0);
+  });
+}
+
+it('ignores spatial x zoom when the authoritative x domain is a single coordinate', async () => {
+  const input: LyraSpatialChartSource = { ...source(), bounds: { minX: 5, maxX: 5, minY: 0, maxY: 100 },
+    query: request => ({ matchedCount: 100, bins: [{ bounds: request.bounds, count: 100 }], points: [] }) };
+  const element = await mounted(input);
+  element.zoomable = true;
+  await element.updateComplete;
+  await waitUntil(() => !!(element.chart!.options['plugins'] as { zoom?: unknown }).zoom);
+  let events = 0;
+  element.addEventListener('lr-zoom', () => events++);
+  const zoom = (element.chart!.options['plugins'] as { zoom: { zoom: { onZoomComplete(value: unknown): void } } }).zoom.zoom;
+  zoom.onZoomComplete({ chart: { scales: { x: { min: 0.25, max: 0.75 } } } });
+  expect(element.viewport).to.equal(null);
+  expect(events).to.equal(0);
+  expect(element.chart!.data.datasets.length).to.equal(2);
+});
