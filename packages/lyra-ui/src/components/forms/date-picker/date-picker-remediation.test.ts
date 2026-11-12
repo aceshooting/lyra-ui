@@ -558,3 +558,63 @@ it('reads and writes valueAsLocalDate (local midnight, like valueAsDate) and val
   el.valueAsUTCDate = null;
   expect(el.value).to.equal('');
 });
+
+it('disables presets for inverted date limits and restores them after the limits are repaired', async () => {
+  const presets = [{ label: 'Next window', start: '2026-07-22', end: '2026-07-23' }];
+  const el = await fixture<LyraDatePicker>(html`<lr-date-picker mode="range" min="2026-07-20" max="2026-07-10"
+    value="2026-07-21/2026-07-22" .presets=${presets}></lr-date-picker>`);
+  const events: string[] = [];
+  el.addEventListener('input', () => events.push('input'));
+  el.addEventListener('change', () => events.push('change'));
+  const preset = button(el, '[part="preset-button"]');
+  expect(preset.disabled).to.equal(true);
+  preset.click();
+  await settle(el);
+  expect(el.value).to.equal('2026-07-21/2026-07-22');
+  expect(el.appliedPreset).to.equal(undefined);
+  expect(events).to.deep.equal([]);
+  el.max = '2026-07-31';
+  await settle(el);
+  expect(preset.disabled).to.equal(false);
+  preset.click();
+  await settle(el);
+  expect(el.value).to.equal('2026-07-22/2026-07-23');
+  expect(el.appliedPreset === presets[0]).to.equal(true);
+  expect(events).to.deep.equal(['input', 'change']);
+});
+
+it('moves the roving date forward when its lower boundary and disabled date leave no earlier choice', async () => {
+  const el = await fixture<LyraDatePicker>(html`<lr-date-picker today="2026-07-16" min="2026-07-16" max="2026-07-31"
+    value="2026-07-16"></lr-date-picker>`);
+  el.disabledDates = ['2026-07-16'];
+  await settle(el);
+  const candidates = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="day"][tabindex="0"]')];
+  expect(candidates.map(candidate => candidate.dataset['date'])).to.deep.equal(['2026-07-17']);
+  expect(candidates[0]!.disabled).to.equal(false);
+  expect(el.value).to.equal('2026-07-16');
+  candidates[0]!.click();
+  await settle(el);
+  expect(el.value).to.equal('2026-07-17');
+});
+
+for (const direction of ['past', 'future'] as const) {
+  it(`keeps a conflicting ${direction} constraint empty until an enabled interval is restored`, async () => {
+    const el = await fixture<LyraDatePicker>(html`<lr-date-picker today="2026-07-16" value="2026-07-16"></lr-date-picker>`);
+    if (direction === 'past') { el.max = '2026-07-15'; el.disablePast = true; }
+    else { el.min = '2026-07-17'; el.disableFuture = true; }
+    await settle(el);
+    expect(el.shadowRoot!.querySelectorAll('[part~="day"][tabindex="0"]').length).to.equal(0);
+    expect(el.focusedDate).to.equal('');
+    expect(el.value).to.equal('2026-07-16');
+    if (direction === 'past') el.disablePast = false;
+    else el.disableFuture = false;
+    await settle(el);
+    const enabled = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="day"][tabindex="0"]')];
+    expect(enabled.length).to.equal(1);
+    expect(enabled[0]!.disabled).to.equal(false);
+    expect(enabled[0]!.dataset['date']).to.equal(direction === 'past' ? '2026-07-15' : '2026-07-17');
+    enabled[0]!.click();
+    await settle(el);
+    expect(el.value).to.equal(direction === 'past' ? '2026-07-15' : '2026-07-17');
+  });
+}
