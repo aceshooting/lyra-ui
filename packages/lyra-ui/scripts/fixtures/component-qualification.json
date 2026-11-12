@@ -37191,6 +37191,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/navigation-menu-item/navigation-menu-item-coverage.test.ts",
+          "src/components/layout/navigation-menu-item/navigation-menu-item-placement-recovery.test.ts",
           "src/components/layout/navigation-menu-item/navigation-menu-item-transitions.test.ts",
           "src/components/layout/navigation-menu-item/navigation-menu-item.test.ts"
         ],

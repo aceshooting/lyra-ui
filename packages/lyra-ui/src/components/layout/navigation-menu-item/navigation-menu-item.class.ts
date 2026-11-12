@@ -532,11 +532,15 @@ export class LyraNavigationMenuItem extends LyraElement<LyraNavigationMenuItemEv
     this.placementKey = key;
     const topLayer = context.topLayer();
     this.placedTopLayer = syncTopLayerRelease(panel, this.placedTopLayer, topLayer);
-    this.placement = deferredPlaceReady(anchor, panel, {
+    const handle = deferredPlaceReady(anchor, panel, {
       placement: rtlAwarePlacement('bottom-start', this),
       ...topLayerPlacement(topLayer, resolveEffectivePositioningStrategy(this, undefined, 'fixed')),
       offset: context.distance(),
       hoverBridge: bridge ?? undefined,
+    });
+    this.placement = handle;
+    void handle.ready.then(placed => {
+      if (!placed && this.placement === handle) this.closePanel('programmatic', { instant: true });
     });
   }
 

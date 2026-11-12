@@ -155,17 +155,17 @@ const optionalPeerFamilyTags = componentInventory.components
 const rootHelperRegisteredTags = [];
 
 // Packed core/all.js includes every non-optional registration and every emitted chunk.
-// Settled virtual-list scrolling and owner viewport measurement use 5,667,406 raw bytes across 64 files;
-// the next 64-byte ceiling leaves 50 bytes of headroom.
+// Navigation placement recovery uses 5,667,494 raw bytes across the same 64 files;
+// the next 64-byte ceiling leaves 26 bytes of headroom.
 // Optional-peer exclusions and the complete file sum stay fixed. Core has no WASM allowance;
 // the explicit Oniguruma canary retains its separate exact 466,610-byte binary requirement.
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/7859878f724ef4237ee93a5414fa6b54f204313a/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'Settled virtual-list scrolling and owner viewport measurement use 5,667,406 raw bytes across the same 64 files. The ceiling advances only to the next 64-byte boundary, 5,667,456 bytes. The explicit Oniguruma canary retains its separate exact binary requirement.',
-  reviewedCoreMeasurementBytes: 5_667_406,
+  $comment: 'Navigation placement recovery uses 5,667,494 raw bytes across the same 64 files. The ceiling advances only to the next 64-byte boundary, 5,667,520 bytes. The explicit Oniguruma canary retains its separate exact binary requirement.',
+  reviewedCoreMeasurementBytes: 5_667_494,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 50,
+  selectedRegressionHeadroomBytes: 26,
 };
 
 /**
