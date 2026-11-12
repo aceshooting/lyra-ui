@@ -979,6 +979,40 @@ describe('arrow placement', () => {
     );
   });
 
+  for (const direction of ['ltr', 'rtl']) {
+    for (const placement of ['right-start', 'left-end'] as const) {
+      it(`keeps block-edge arrow alignment stable for ${placement} in ${direction}`, async () => {
+        const wrapper = await fixture<HTMLDivElement>(html`<div style="position:fixed;left:300px;top:200px">
+          <lr-popup dir=${direction} active arrow placement=${placement} arrow-padding="18" .flip=${false} .shift=${false}>
+            <button slot="anchor" style="width:30px;height:30px">A</button>
+            <div style="width:120px;height:160px">Tall popup</div>
+          </lr-popup>
+        </div>`);
+        const el = wrapper.querySelector<LyraPopup>('lr-popup')!;
+        await settle(el);
+        for (const alignment of ['center', 'start', 'end'] as const) {
+          el.arrowPlacement = alignment;
+          await settle(el);
+          const popup = popupOf(el).getBoundingClientRect();
+          const arrow = arrowOf(el).getBoundingClientRect();
+          const center = arrow.top + arrow.height / 2;
+          const half = parseFloat(getComputedStyle(arrowOf(el)).height) / 2;
+          const expected = alignment === 'center' ? popup.top + popup.height / 2
+            : alignment === 'start' ? popup.top + 18 + half : popup.bottom - 18 - half;
+          expect(center).to.be.closeTo(expected, 1.5);
+        }
+        el.placement = 'bottom-start';
+        el.arrowPlacement = 'start';
+        await settle(el);
+        const popup = popupOf(el).getBoundingClientRect();
+        const arrow = arrowOf(el).getBoundingClientRect();
+        const center = arrow.left + arrow.width / 2;
+        const half = parseFloat(getComputedStyle(arrowOf(el)).width) / 2;
+        expect(direction === 'rtl' ? popup.right - center : center - popup.left).to.be.closeTo(18 + half, 1.5);
+      });
+    }
+  }
+
   it('tracks the anchor centre by default (regression)', async () => {
     const el = await fixture<LyraPopup>(html`
       <lr-popup active arrow placement="bottom-start">

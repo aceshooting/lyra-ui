@@ -3,13 +3,70 @@ import { html as litHtml } from 'lit';
 import { LyraElement } from '../internal/lyra-element.js';
 import { LyraChangeReview } from '../components/agent-tools/change-review/change-review.class.js';
 import { LyraDiffView } from '../components/utility/diff-view/diff-view.class.js';
-import { createScopedRegistry, supportsScopedRegistries } from './scoped-registry.js';
+import { createScopedRegistry, supportsScopedRegistries, type LyraScopedElementConstructor } from './scoped-registry.js';
 import { isRegisteredLyraElement } from '../internal/prefix.js';
 
 class ScopedChild extends LyraElement { override render() { return litHtml`<span>Scoped child</span>`; } }
 class ScopedParent extends LyraElement { override render() { return litHtml`<scope-child></scope-child>`; } }
 
 describe('optional scoped registries', () => {
+  for (const unavailable of ['missing', 'throwing'] as const) {
+    it(`refuses scoped construction when the native registry constructor is ${unavailable}`, () => {
+      const original = Object.getOwnPropertyDescriptor(window, 'CustomElementRegistry');
+      try {
+        Object.defineProperty(window, 'CustomElementRegistry', { configurable: true,
+          value: unavailable === 'missing' ? undefined : class { constructor() { throw new TypeError('Native scoped registries unavailable'); } },
+        });
+        expect(supportsScopedRegistries()).to.equal(false);
+        expect(() => createScopedRegistry({ 'scope-child': ScopedChild })).to.throw('not supported');
+        expect(customElements.get('scope-child') === undefined).to.equal(true);
+      } finally {
+        if (original) Object.defineProperty(window, 'CustomElementRegistry', original);
+        else Reflect.deleteProperty(window, 'CustomElementRegistry');
+      }
+    });
+  }
+
+  it('rejects non-element definitions before reserving their scoped name', function () {
+    if (!supportsScopedRegistries()) this.skip();
+    const scope = createScopedRegistry({});
+    for (const invalid of [{}, () => {}, class extends HTMLElement {}]) {
+      expect(() => scope.define('scope-valid-after-refusal', invalid as unknown as LyraScopedElementConstructor)).to.throw(TypeError);
+      expect(scope.registry.get('scope-valid-after-refusal') === undefined).to.equal(true);
+    }
+    scope.define('scope-valid-after-refusal', ScopedChild);
+    expect(scope.createElement('scope-valid-after-refusal') instanceof ScopedChild).to.equal(true);
+  });
+
+  it('checks element roots and only the descendants requested by a clone', function () {
+    if (!supportsScopedRegistries()) this.skip();
+    const scope = createScopedRegistry({ 'scope-child': ScopedChild });
+    const template = document.createElement('template');
+    template.innerHTML = '<scope-child><scope-missing></scope-missing></scope-child>';
+    const original = template.content.firstElementChild!;
+    const shallow = scope.creationScope.importNode(original);
+    expect(shallow.localName).to.equal('scope-child');
+    expect(shallow.children.length).to.equal(0);
+    expect(shallow instanceof ScopedChild).to.equal(true);
+    expect(() => scope.creationScope.importNode(original, true)).to.throw('scope-missing');
+    expect(() => scope.creationScope.importNode(original.firstElementChild!)).to.throw('scope-missing');
+    expect(original.children.length).to.equal(1);
+    expect(customElements.get('scope-missing') === undefined).to.equal(true);
+  });
+
+  it('rejects a foreign-document shadow root after adoption without changing either global registry', function () {
+    if (!supportsScopedRegistries()) this.skip();
+    const scope = createScopedRegistry({ 'scope-child': ScopedChild });
+    const child = scope.createElement('scope-child');
+    const foreign = document.implementation.createHTMLDocument('');
+    foreign.adoptNode(child);
+    expect(() => child.attachShadow({ mode: 'open' })).to.throw('target document');
+    expect(child.shadowRoot === null).to.equal(true);
+    expect(customElements.get('scope-child') === undefined).to.equal(true);
+    document.adoptNode(child);
+    expect(child.attachShadow({ mode: 'open' }).host === child).to.equal(true);
+  });
+
   it('reports unsupported native platforms and refuses implicit global fallback', () => {
     expect(typeof supportsScopedRegistries()).to.equal('boolean');
     if (!supportsScopedRegistries()) expect(() => createScopedRegistry({ 'scope-child': ScopedChild })).to.throw('Scoped custom element registries');
