@@ -7062,6 +7062,11 @@ cross-document adoption closes it. A required, uncommitted value recomputes its 
 message when `.strings` or the effective locale changes; an author custom-validity message retains
 priority until cleared.
 
+Failed positioning closes the list with a non-cancelable `lr-hide` notification, then
+`lr-after-hide` once it leaves layout. This includes replacement positioning after the list has
+opened. A fresh opening retries positioning; an obsolete failure preserves newer geometry.
+Ordinary connected closes remain cancelable.
+
 **Slots:** `label`, `hint`, `error`.
 
 **CSS parts:** `limit` (input-loss notice), `form-control`, `form-control-label`, `trigger`,

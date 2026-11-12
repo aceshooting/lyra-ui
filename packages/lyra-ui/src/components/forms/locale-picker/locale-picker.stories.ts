@@ -306,7 +306,7 @@ export const InputLimit: Story = {
 
 
 export const PopupLifecycle: Story = {
-  parameters: { docs: { description: { story: 'Open and close the language list with the pointer or keyboard. Lifecycle events report popup visibility even when the selected locale stays unchanged.' } } },
+  parameters: { docs: { description: { story: 'Open and close the language list with the pointer or keyboard. Lifecycle events report popup visibility even when the selected locale stays unchanged. Ordinary closes can be vetoed; disablement, disconnect, and positioning failure close with a non-cancelable notification. A fresh opening can retry positioning.' } } },
   render: () => {
     const report = (event: Event): void => {
       const output = (event.currentTarget as HTMLElement).querySelector('output');

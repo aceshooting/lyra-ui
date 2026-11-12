@@ -19703,6 +19703,7 @@
           "src/components/overlays/overlay/tooltip-description.test.ts",
           "src/components/overlays/overlay/tooltip-exit-position.test.ts",
           "src/components/overlays/overlay/tooltip-lifecycle.test.ts",
+          "src/components/overlays/overlay/tooltip-placement-recovery.test.ts",
           "src/components/overlays/overlay/tooltip-top-layer.test.ts",
           "src/components/overlays/overlay/tooltip-visibility.test.ts",
           "src/components/overlays/overlay/tooltip.test.ts"
@@ -31464,7 +31465,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.class.ts",
-              "line": 1016,
+              "line": 1017,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -31505,6 +31506,7 @@
           "src/components/forms/locale-picker/locale-picker-lazy-names.test.ts",
           "src/components/forms/locale-picker/locale-picker-loader.test.ts",
           "src/components/forms/locale-picker/locale-picker-option-display.test.ts",
+          "src/components/forms/locale-picker/locale-picker-placement-recovery.test.ts",
           "src/components/forms/locale-picker/locale-picker-remediation.test.ts",
           "src/components/forms/locale-picker/locale-picker-retry-layout.test.ts",
           "src/components/forms/locale-picker/locale-picker-row-comfort.test.ts",
@@ -41335,6 +41337,7 @@
           "src/components/overlays/overlay/tooltip-description.test.ts",
           "src/components/overlays/overlay/tooltip-exit-position.test.ts",
           "src/components/overlays/overlay/tooltip-lifecycle.test.ts",
+          "src/components/overlays/overlay/tooltip-placement-recovery.test.ts",
           "src/components/overlays/overlay/tooltip-top-layer.test.ts",
           "src/components/overlays/overlay/tooltip-visibility.test.ts",
           "src/components/overlays/overlay/tooltip.test.ts"
@@ -59181,6 +59184,7 @@
           "src/components/overlays/overlay/tooltip-description.test.ts",
           "src/components/overlays/overlay/tooltip-exit-position.test.ts",
           "src/components/overlays/overlay/tooltip-lifecycle.test.ts",
+          "src/components/overlays/overlay/tooltip-placement-recovery.test.ts",
           "src/components/overlays/overlay/tooltip-top-layer.test.ts",
           "src/components/overlays/overlay/tooltip-visibility.test.ts",
           "src/components/overlays/overlay/tooltip.test.ts"

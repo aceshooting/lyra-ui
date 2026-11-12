@@ -952,7 +952,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       const arrowPadding = Math.max(0, finiteNumber(this.arrowPadding, 0));
       this.placementPending = true;
       this.placedTopLayer = syncTopLayerRelease(popup, this.placedTopLayer, this.topLayer);
-      this.cleanup = place(anchor, popup, {
+      const operation = place(anchor, popup, {
         placement: rtlAwarePlacement(this.placement, this),
         ...topLayerPlacement(
           this.topLayer,
@@ -978,6 +978,10 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
           });
           if (side !== this.resolvedSide) this.resolvedSide = side;
         },
+      });
+      this.cleanup = operation;
+      void operation.ready.then(positioned => {
+        if (!positioned && this.cleanup === operation && this.open) void this.forceClose();
       });
     }
   }

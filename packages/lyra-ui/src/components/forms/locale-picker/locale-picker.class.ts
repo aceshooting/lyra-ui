@@ -235,8 +235,8 @@ export interface LyraLocalePickerEventMap {
  *
  * @customElement lr-locale-picker
  * @event lr-show - Cancelable before an ordinary popup opening. Preventing it retains the closed state.
- * @event lr-hide - Conditionally cancelable before closing. Disabled controls and disconnected
- *   elements force-close with a non-cancelable notification; ordinary closes can be vetoed.
+ * @event lr-hide - Conditionally cancelable before closing. Disablement, disconnect, and failed
+ *   positioning force-close with a non-cancelable notification; ordinary closes can be vetoed.
  * @event lr-after-show - The current opening finished positioning and its transition settled.
  * @event lr-after-hide - The current closing settled and left layout. Not emitted after disconnect.
  * @event lr-change-request - Cancelable before selection, popup, and global locale changes. Same detail as `lr-change`.
@@ -529,6 +529,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
   @state() private listboxHidden = true;
   private openGeneration = 0;
   private suppressedOpenGeneration?: number;
+  private forcedCloseGeneration?: number;
   private openVetoed = false;
   private openTransition?: boolean;
   private lifecycleMounted = false;
@@ -1124,7 +1125,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
     const listbox = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
     if (anchor && listbox) {
       this.placedTopLayer = syncTopLayerRelease(listbox, this.placedTopLayer, this.topLayer);
-      this.cleanup = place(
+      const operation = place(
         anchor,
         listbox,
         topLayerPlacement(
@@ -1132,6 +1133,13 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
           resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
         ),
       );
+      this.cleanup = operation;
+      void operation.ready.then(positioned => {
+        if (!positioned && this.cleanup === operation && this.open) {
+          this.open = false;
+          this.forcedCloseGeneration = this.openGeneration;
+        }
+      });
     }
   }
 
@@ -1144,7 +1152,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
     const generation = this.openGeneration;
     this.announcingHide = !opening;
     try {
-      if (!opening && this.liveDisabled) {
+      if (!opening && (this.liveDisabled || this.forcedCloseGeneration === generation)) {
         emitPopupEvent(this, 'lr-hide', false);
       } else {
         this.openVetoed = this.popupController.announce(opening, () => {
