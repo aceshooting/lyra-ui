@@ -769,6 +769,34 @@ describe('<lr-context-menu>', () => {
   });
 
   describe('long-press', () => {
+    it('retires a pending hold after a programmatic open without opening twice or changing the anchor', async () => {
+      const el = await basic();
+      const plain = byId(el, 'plain'), events = record(el);
+      const [x, y] = center(plain);
+      touch('pointerdown', plain, x, y);
+      const shown = oneEvent(el, 'lr-after-show');
+      el.showAt({ x: x + 30, y: y + 20, contextElement: plain });
+      await shown;
+      const bounds = popup(el).getBoundingClientRect();
+      // wait-reason: Keep the original press active past its timer to detect a duplicate open.
+      await aTimeout(HOLD_MS);
+      release(plain);
+      expect(events.log).to.deep.equal(['lr-show', 'lr-after-show']);
+      expect(events.shows[0]?.source).to.equal('programmatic');
+      expect(el.open).to.equal(true);
+      expect(popup(el).getBoundingClientRect().left).to.be.closeTo(bounds.left, 1);
+      expect(popup(el).getBoundingClientRect().top).to.be.closeTo(bounds.top, 1);
+
+      await el.hide();
+      const reopened = oneEvent(el, 'lr-after-show');
+      await hold(plain);
+      await reopened;
+      release(plain);
+      expect(events.count('lr-show')).to.equal(2);
+      expect(events.shows[1]?.source).to.equal('long-press');
+      expect(el.open).to.equal(true);
+    });
+
     it('honors the normal press duration before opening', async () => {
       const el = await basic();
       const menu = customElements.get('lr-context-menu') as typeof LyraContextMenu;

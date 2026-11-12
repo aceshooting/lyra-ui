@@ -188,6 +188,77 @@ describe('map scene accepted position registry', () => {
     expect(registry.acceptedSceneRevision).to.equal(1); close();
   });
 
+  it('releases a candidate after authority validation throws while preserving the accepted scene', () => {
+    const { registry, stage, h, close } = setup();
+    try {
+      registry.commit(stage([sceneModel('accepted')]));
+      const candidate = stage([sceneModel('replacement', { format: 'glb', bytes: new Uint8Array([4, 5]) })]);
+      expect(h.liveBytes).to.equal(5);
+      const snapshot = registry.capture();
+      let notices = 0;
+      registry.subscribe(() => { notices++; });
+      h.hooks.current = () => { throw new Error('Authority unavailable'); };
+      expect(() => registry.commit(candidate)).to.throw(TypeError, 'Invalid map scene commit');
+      expect(registry.capture() === snapshot).to.equal(true);
+      expect(registry.target('accepted').status).to.equal('accepted');
+      expect(registry.target('replacement').status).to.equal('absent');
+      expect(h.liveBytes).to.equal(3);
+      expect(notices).to.equal(0);
+      candidate.dispose();
+      expect(h.liveBytes).to.equal(3);
+
+      h.hooks.current = undefined;
+      expect(registry.commit(stage([sceneMarker('recovered')]))).to.equal(true);
+      expect(registry.target('recovered').status).to.equal('accepted');
+      expect(h.liveBytes).to.equal(0);
+      expect(notices).to.equal(1);
+    } finally { h.hooks.current = undefined; close(); }
+  });
+
+  it('treats a validation error after disposal as a retired commit and releases every source', () => {
+    const { registry, stage, h, close } = setup();
+    try {
+      registry.commit(stage([sceneModel('accepted')]));
+      const candidate = stage([sceneModel('replacement')]);
+      h.hooks.current = () => {
+        registry.dispose();
+        throw new Error('Disposed authority');
+      };
+      expect(registry.commit(candidate)).to.equal(false);
+      expect(registry.target('accepted').status).to.equal('absent');
+      expect(registry.target('replacement').status).to.equal('absent');
+      expect(h.liveBytes).to.equal(0);
+      expect(h.releases).to.equal(2);
+      candidate.dispose();
+      expect(h.releases).to.equal(2);
+    } finally { h.hooks.current = undefined; close(); }
+  });
+
+  it('rejects source ownership invalidated during publication without replacing the accepted facts', () => {
+    const { registry, stage, h, close } = setup();
+    try {
+      registry.commit(stage([sceneModel('accepted')]));
+      const candidate = stage([sceneModel('replacement')]);
+      const snapshot = registry.capture();
+      let checks = 0;
+      h.hooks.current = () => {
+        if (++checks === 2) h.sources.sealCurrent();
+      };
+      expect(registry.commit(candidate)).to.equal(false);
+      expect(checks).to.equal(2);
+      expect(registry.capture() === snapshot).to.equal(true);
+      expect(registry.target('accepted').status).to.equal('accepted');
+      expect(registry.target('replacement').status).to.equal('absent');
+      expect(h.liveBytes).to.equal(3);
+      expect(h.releases).to.equal(1);
+
+      h.hooks.current = undefined;
+      expect(registry.commit(stage([sceneMarker('recovered')]))).to.equal(true);
+      expect(registry.target('recovered').status).to.equal('accepted');
+      expect(h.liveBytes).to.equal(0);
+    } finally { h.hooks.current = undefined; close(); }
+  });
+
   it('makes cleanup and listener reentry unable to roll back the latest commit', () => {
     const { registry, stage, h, close } = setup();
     registry.commit(stage([sceneModel('target')]));
