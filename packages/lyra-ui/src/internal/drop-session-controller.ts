@@ -248,7 +248,7 @@ export class DropSessionController implements ReactiveController {
       try {
         reader = (entry as FileSystemDirectoryEntry).createReader();
       } catch {
-        return { status: 'error', name: entry.name };
+        return isCurrent() ? { status: 'error', name: entry.name } : { status: 'cancelled' };
       }
       while (true) {
         if (!isCurrent()) return { status: 'cancelled' };

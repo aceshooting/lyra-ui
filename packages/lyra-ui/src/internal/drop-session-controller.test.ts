@@ -1,4 +1,4 @@
-import { expect } from '@open-wc/testing';
+import { expect, waitUntil } from '@open-wc/testing';
 import type { ReactiveControllerHost } from 'lit';
 import { DropSessionController, isFileValue, readFileList, type DropSessionHost } from './drop-session-controller.js';
 
@@ -251,4 +251,116 @@ it('rejects a spoofed File tag while accepting genuine files from another realm'
   } finally {
     frame.remove();
   }
+});
+
+
+it('treats a reader creation failure after session withdrawal as cancellation', async () => {
+  const controller = new DropSessionController(controllerHost(), {
+    isDisabled: () => false, previewRejects: () => false, onStateChange: () => {},
+  });
+  const folder = { isDirectory: true, isFile: false, name: 'retired', createReader() {
+    controller.reset(); throw new Error('Retired directory unavailable');
+  } } as unknown as FileSystemEntry;
+  const begin = controller.beginDrop(fakeDragEvent().event)!;
+  expect(await controller.readFolders([folder], begin.token)).to.deep.equal({ status: 'cancelled' });
+  const replacement = controller.beginDrop(fakeDragEvent().event)!;
+  expect(await controller.readFolders([], replacement.token)).to.deep.equal({ status: 'complete', files: [] });
+});
+
+for (const operation of ['file', 'directory'] as const) {
+  for (const withdrawal of ['reset', 'disable', 'disconnect'] as const) {
+    it(`ignores a late ${operation} read error after ${withdrawal} and accepts a new drop`, async () => {
+      let disabled = false, fail: (() => void) | undefined;
+      const controller = new DropSessionController(controllerHost(), {
+        isDisabled: () => disabled, previewRejects: () => false, onStateChange: () => {},
+      });
+      const file = { isDirectory: false, isFile: true, name: 'pending.txt',
+        file(_success: (value: File) => void, error: () => void) { fail = error; } };
+      let batches = 0;
+      const folder = { isDirectory: true, isFile: false, name: 'pending', createReader: () => ({
+        readEntries(success: (entries: unknown[]) => void, error: () => void) {
+          if (operation === 'directory') fail = error;
+          else success(++batches === 1 ? [file] : []);
+        },
+      }) } as unknown as FileSystemEntry;
+      const begin = controller.beginDrop(fakeDragEvent().event)!;
+      const pending = controller.readFolders([folder], begin.token);
+      await waitUntil(() => fail !== undefined, 'the file-system read must be pending');
+      if (withdrawal === 'reset') controller.reset();
+      else if (withdrawal === 'disable') disabled = true;
+      else controller.hostDisconnected();
+      fail!();
+      expect(await pending).to.deep.equal({ status: 'cancelled' });
+      expect(controller.isCurrent(begin.token)).to.equal(false);
+      disabled = false;
+      const replacement = controller.beginDrop(fakeDragEvent().event)!;
+      expect(await controller.readFolders([], replacement.token)).to.deep.equal({ status: 'complete', files: [] });
+    });
+  }
+
+  for (const withdraw of [false, true]) {
+    it(`contains a synchronous ${operation} read exception ${withdraw ? 'after withdrawal' : 'in the active session'}`, async () => {
+      const controller = new DropSessionController(controllerHost(), {
+        isDisabled: () => false, previewRejects: () => false, onStateChange: () => {},
+      });
+      const reject = () => { if (withdraw) controller.reset(); throw new Error('Native read failed'); };
+      const file = { isDirectory: false, isFile: true, name: 'broken.txt', file: reject };
+      let batches = 0;
+      const folder = { isDirectory: true, isFile: false, name: 'broken', createReader: () => ({
+        readEntries(success: (entries: unknown[]) => void) {
+          if (operation === 'directory') reject();
+          else success(++batches === 1 ? [file] : []);
+        },
+      }) } as unknown as FileSystemEntry;
+      const begin = controller.beginDrop(fakeDragEvent().event)!;
+      expect(await controller.readFolders([folder], begin.token)).to.deep.equal(withdraw
+        ? { status: 'cancelled' } : { status: 'error', name: operation === 'file' ? 'broken.txt' : 'broken' });
+      const replacement = controller.beginDrop(fakeDragEvent().event)!;
+      expect(await controller.readFolders([], replacement.token)).to.deep.equal({ status: 'complete', files: [] });
+    });
+  }
+}
+
+it('rejects a root directory list above the traversal budget before opening any reader', async () => {
+  const controller = new DropSessionController(controllerHost(), {
+    isDisabled: () => false, previewRejects: () => false, onStateChange: () => {},
+  });
+  let reads = 0;
+  const folders = Array.from({ length: 10_001 }, (_, index) => ({
+    isDirectory: true, isFile: false, name: `folder-${index}`,
+    createReader() { reads++; return { readEntries: (success: (entries: unknown[]) => void) => success([]) }; },
+  })) as unknown as FileSystemEntry[];
+  const begin = controller.beginDrop(fakeDragEvent().event)!;
+  expect(await controller.readFolders(folders, begin.token)).to.deep.equal({ status: 'limit', name: 'folder-10000' });
+  expect(reads).to.equal(0);
+  expect(await controller.readFolders(folders.slice(0, 1), begin.token)).to.deep.equal({ status: 'complete', files: [] });
+  expect(reads).to.equal(1);
+});
+
+it('does not open any directory readers for an already retired session', async () => {
+  const controller = new DropSessionController(controllerHost(), {
+    isDisabled: () => false, previewRejects: () => false, onStateChange: () => {},
+  });
+  let reads = 0;
+  const folder = { isDirectory: true, isFile: false, name: 'stale', createReader() {
+    reads++; return { readEntries: (success: (entries: unknown[]) => void) => success([]) };
+  } } as unknown as FileSystemEntry;
+  const begin = controller.beginDrop(fakeDragEvent().event)!; controller.reset();
+  expect(await controller.readFolders([folder], begin.token)).to.deep.equal({ status: 'cancelled' });
+  expect(reads).to.equal(0);
+});
+
+
+it('stops before reading a directory whose creation withdraws the session', async () => {
+  const controller = new DropSessionController(controllerHost(), {
+    isDisabled: () => false, previewRejects: () => false, onStateChange: () => {},
+  });
+  let reads = 0;
+  const folder = { isDirectory: true, isFile: false, name: 'retired', createReader() {
+    controller.reset();
+    return { readEntries(success: (entries: unknown[]) => void) { reads++; success([]); } };
+  } } as unknown as FileSystemEntry;
+  const begin = controller.beginDrop(fakeDragEvent().event)!;
+  expect(await controller.readFolders([folder], begin.token)).to.deep.equal({ status: 'cancelled' });
+  expect(reads).to.equal(0);
 });
