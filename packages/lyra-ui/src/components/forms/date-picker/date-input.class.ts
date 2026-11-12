@@ -1419,14 +1419,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       offset: finiteNumber(this.distance, 0),
       strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
     });
-    {
-      const operation = this.cleanupFn;
-      void operation.ready.then((positioned) => {
-        if (positioned && this.cleanupFn === operation && this.open && this.isConnected) {
-          this.popupPositioned = true;
-        }
-      });
-    }
+    this.watchPopupPlacement(this.cleanupFn);
     this.overlayHandle?.deactivate({ restoreFocus: false });
     this.overlayHandle = activateNonmodalOverlay({
       host: this,
@@ -1438,17 +1431,24 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     });
   }
 
+  private watchPopupPlacement(operation: DeferredOperationHandle): void {
+    void operation.ready.then((positioned) => {
+      if (this.cleanupFn !== operation || !this.open || !this.isConnected) return;
+      this.popupPositioned = positioned;
+      if (!positioned) {
+        this.popupController.release('lr-after-show');
+        this.open = false;
+        this.popupHidden = true;
+      }
+    });
+  }
+
   private settleTransition(event: 'lr-after-show' | 'lr-after-hide'): Promise<void> {
     return this.popupController.settle(event, {
       waitForPosition: async (stale) => {
         const positioned = await waitForDeferredPlacement(() => this.cleanupFn);
         if (stale() || !this.open) return false;
-        if (!positioned) {
-          this.popupController.release('lr-after-show');
-          this.open = false;
-          return false;
-        }
-        return true;
+        return positioned;
       },
       conceal: () => { this.popupHidden = true; },
     });
@@ -1693,12 +1693,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
             offset: finiteNumber(this.distance, 0),
             strategy: resolveEffectivePositioningStrategy(this, undefined, 'fixed'),
           });
-          const operation = this.cleanupFn;
-          void operation.ready.then((positioned) => {
-            if (positioned && this.cleanupFn === operation && this.open && this.isConnected) {
-              this.popupPositioned = true;
-            }
-          });
+          this.watchPopupPlacement(this.cleanupFn);
         }
       }
     }
