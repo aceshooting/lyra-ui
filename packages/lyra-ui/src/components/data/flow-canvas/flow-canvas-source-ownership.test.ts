@@ -128,3 +128,50 @@ for (const inconsistent of ['world bounds', 'node total', 'edge total'] as const
     } finally { unregister(); }
   });
 }
+
+for (const channel of ['records', 'scene', 'overview'] as const) {
+  for (const retirement of ['replacement', 'unset', 'disconnect'] as const) {
+    it(`keeps the newest binding when a canceled ${channel} request causes ${retirement}`, async () => {
+      const source = provider(), replacement = provider(7);
+      const query = source.records.query, scene = source.scene;
+      let finish: (() => void) | undefined, retired = false;
+      let el: LyraFlowCanvas;
+      const holdFirst = <T>(request: { signal: AbortSignal }, value: T): Promise<T> => {
+        if (finish) return Promise.resolve(value);
+        return new Promise(resolve => {
+          finish = () => resolve(value);
+          request.signal.addEventListener('abort', () => {
+            retired = true;
+            if (retirement === 'replacement') el.graphSource = replacement;
+            else if (retirement === 'unset') el.graphSource = undefined;
+            else el.remove();
+          }, { once: true });
+        });
+      };
+      if (channel === 'records') source.records.query = async request => holdFirst(request, await query(request));
+      else if (channel === 'scene') source.scene = async request => holdFirst(request, await scene(request));
+      else source.overview = request => holdFirst(request, { bounds: { x: 0, y: 0, width: 200, height: 100 },
+        bins: [{ bounds: { x: 0, y: 0, width: 200, height: 100 }, count: 2 }] });
+      el = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas .graphSource=${source}
+        .strings=${{ graphSourceRecordsError: 'Records unavailable', graphSourceSceneError: 'Scene unavailable' }}></lr-flow-canvas>`);
+      await waitUntil(() => finish !== undefined);
+      const parent = el.parentNode!;
+      try {
+        Object.defineProperty(source, 'revision', { value: 2 });
+        Object.defineProperty(source.records, 'revision', { value: 2 });
+        el.sourcePageSize = 3;
+        expect(retired).to.equal(true);
+        finish!();
+        if (retirement !== 'replacement') el.graphSource = replacement;
+        if (retirement === 'disconnect') parent.appendChild(el);
+        await ready(el, 'node:7');
+        expect(el.shadowRoot!.querySelectorAll('[data-source-key="node:0"]').length).to.equal(0);
+        expect(el.shadowRoot!.textContent).not.to.include('Records unavailable');
+        expect(el.shadowRoot!.textContent).not.to.include('Scene unavailable');
+        expect(await el.revealSourceKey('node:8')).to.equal(true);
+        el.shadowRoot!.querySelector<HTMLButtonElement>('[data-source-key="node:8"]')!.click();
+        expect(el.selectedNodeIds).to.deep.equal(['8']);
+      } finally { finish?.(); }
+    });
+  }
+}
