@@ -297,3 +297,150 @@ it('rejects scheduling failure before publishing or retaining a new subscription
   failing = false; other.seek(10); expect(leaked).to.equal(0);
   other.dispose();
 });
+
+for (const mode of ['replay', 'live'] as const) {
+  it(`does not schedule or deliver an already-aborted ${mode} subscription`, () => {
+    const time = scheduler(), controller = new AbortController();
+    const clock = createSimulationClock({ range: [0, 10000], instant: 0 }, { scheduler: time.api });
+    try {
+      clock.setMode(mode);
+      if (mode === 'replay') clock.play();
+      controller.abort();
+      let deliveries = 0;
+      const release = clock.subscribe(() => deliveries++, { signal: controller.signal });
+      expect(deliveries).to.equal(0);
+      expect(time.jobs.size).to.equal(0);
+      release(); release();
+      time.advance(10);
+      time.frame();
+      expect(deliveries).to.equal(0);
+      const values: number[] = [];
+      clock.subscribe(value => values.push(value.instant));
+      expect(values.length).to.equal(1);
+      expect(time.jobs.size).to.equal(1);
+    } finally { clock.dispose(); }
+  });
+}
+
+it('aborts one subscriber without interrupting another and cancels scheduling after the last abort', () => {
+  const time = scheduler(), first = new AbortController(), second = new AbortController();
+  const clock = createSimulationClock({ range: [0, 1000], instant: 0 }, { scheduler: time.api });
+  const a: number[] = [], b: number[] = [];
+  try {
+    clock.subscribe(value => a.push(value.instant), { signal: first.signal });
+    clock.subscribe(value => b.push(value.instant), { signal: second.signal });
+    clock.play();
+    first.abort();
+    expect(time.jobs.size).to.equal(1);
+    time.advance(10); time.frame();
+    expect(a).to.deep.equal([0, 0]);
+    expect(b).to.deep.equal([0, 0, 10]);
+    second.abort();
+    expect(time.jobs.size).to.equal(0);
+    time.advance(10); time.frame();
+    expect(b).to.deep.equal([0, 0, 10]);
+  } finally { clock.dispose(); }
+});
+
+it('an abort from an earlier subscriber suppresses later delivery in the same revision', () => {
+  const time = scheduler(), controller = new AbortController();
+  const clock = createSimulationClock({ range: [0, 1000], instant: 0 }, { scheduler: time.api });
+  const values: number[] = [];
+  try {
+    clock.subscribe(value => { if (value.instant === 10) controller.abort(); });
+    clock.subscribe(value => values.push(value.instant), { signal: controller.signal });
+    clock.seek(10); clock.seek(20);
+    expect(values).to.deep.equal([0]);
+    expect(clock.snapshot.instant).to.equal(20);
+  } finally { clock.dispose(); }
+});
+
+it('aborting a reentrant subscription prevents its deferred initial delivery', () => {
+  const time = scheduler(), controller = new AbortController();
+  const clock = createSimulationClock({ range: [0, 1000], instant: 0 }, { scheduler: time.api });
+  let deliveries = 0;
+  try {
+    clock.subscribe(value => {
+      if (value.instant === 10) {
+        clock.subscribe(() => deliveries++, { signal: controller.signal });
+        controller.abort();
+      }
+    });
+    clock.seek(10);
+    expect(time.jobs.size).to.equal(0);
+    time.frame(); clock.seek(20);
+    expect(deliveries).to.equal(0);
+  } finally { clock.dispose(); }
+});
+
+it('reports a throwing initial subscriber and continues delivering to healthy subscribers', () => {
+  const time = scheduler(), errors: unknown[] = [], problem = new Error('Subscriber unavailable');
+  const clock = createSimulationClock({ range: [0, 1000], instant: 0 }, { scheduler: time.api, onSubscriberError: error => errors.push(error) });
+  const values: number[] = [];
+  try {
+    const release = clock.subscribe(() => { throw problem; });
+    expect(errors).to.deep.equal([problem]);
+    clock.subscribe(value => values.push(value.instant));
+    clock.seek(10);
+    expect(values).to.deep.equal([0, 10]);
+    expect(errors).to.deep.equal([problem, problem]);
+    release();
+    clock.seek(20);
+    expect(errors).to.have.length(2);
+    expect(values).to.deep.equal([0, 10, 20]);
+  } finally { clock.dispose(); }
+});
+
+it('ignores an uncancelled old frame after cancellation throws and permits fresh playback', () => {
+  const time = scheduler(), errors: unknown[] = [], problem = new Error('Frame cancellation unavailable');
+  let failing = true;
+  const clock = createSimulationClock({ range: [0, 1000], instant: 0 }, {
+    scheduler: { ...time.api, cancelFrame: handle => { if (failing) throw problem; time.api.cancelFrame(handle); } },
+    onSubscriberError: error => errors.push(error),
+  });
+  const values: number[] = [];
+  try {
+    clock.subscribe(value => values.push(value.instant));
+    clock.play(); clock.pause();
+    expect(errors).to.deep.equal([problem]);
+    const paused = clock.snapshot;
+    time.advance(10); time.frame();
+    expect(clock.snapshot).to.equal(paused);
+    expect(time.jobs.size).to.equal(0);
+    expect(values).to.deep.equal([0, 0, 0]);
+    failing = false;
+    clock.play(); time.advance(10); time.frame();
+    expect(values.at(-1)).to.equal(10);
+    expect(time.jobs.size).to.equal(1);
+  } finally { failing = false; clock.dispose(); }
+});
+
+for (const [name, signal] of [
+  ['null', null], ['false', false], ['zero', 0], ['empty string', ''], ['empty object', {}],
+] as const) {
+  it(`rejects the ${name} subscription signal with the public validation error and retains no listener`, () => {
+    const time = scheduler(), clock = createSimulationClock({ range: [0, 1000], instant: 0 }, { scheduler: time.api });
+    let deliveries = 0;
+    try {
+      const before = clock.snapshot;
+      expect(() => clock.subscribe(() => deliveries++, { signal: signal as unknown as AbortSignal }))
+        .to.throw(SimulationClockError, 'invalid-options');
+      expect(clock.snapshot).to.equal(before);
+      expect(time.jobs.size).to.equal(0);
+      clock.seek(10);
+      expect(deliveries).to.equal(0);
+      clock.subscribe(() => deliveries++);
+      expect(deliveries).to.equal(1);
+    } finally { clock.dispose(); }
+  });
+}
+
+it('accepts an explicitly absent subscription signal', () => {
+  const time = scheduler(), clock = createSimulationClock({ range: [0, 1000], instant: 0 }, { scheduler: time.api });
+  const values: number[] = [];
+  try {
+    clock.subscribe(value => values.push(value.instant), { signal: undefined });
+    clock.seek(10);
+    expect(values).to.deep.equal([0, 10]);
+  } finally { clock.dispose(); }
+});

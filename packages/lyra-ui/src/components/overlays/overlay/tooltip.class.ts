@@ -981,7 +981,10 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
       });
       this.cleanup = operation;
       void operation.ready.then(positioned => {
-        if (!positioned && this.cleanup === operation && this.open) void this.forceClose();
+        if (!positioned && this.cleanup === operation && this.open) {
+          this.restoreFocusOnClose = safelyComposedContains(this, deepActiveElementIn(this.ownerDocument));
+          void this.forceClose();
+        }
       });
     }
   }

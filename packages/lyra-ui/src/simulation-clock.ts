@@ -198,7 +198,7 @@ export function createSimulationClock(options: SimulationClockOptions, capabilit
       active(); if (typeof listener !== 'function') fail('invalid-listener');
       const record = own(subscription, ['signal'], 'invalid-options');
       const signal = record['signal'] as AbortSignal | undefined;
-      try { if (signal && (typeof signal.aborted !== 'boolean' || typeof signal.addEventListener !== 'function' || typeof signal.removeEventListener !== 'function')) fail('invalid-options'); } catch { fail('invalid-options'); }
+      try { if (signal !== undefined && (typeof signal.aborted !== 'boolean' || typeof signal.addEventListener !== 'function' || typeof signal.removeEventListener !== 'function')) fail('invalid-options'); } catch { fail('invalid-options'); }
       if (signal?.aborted) return () => undefined;
       const registration: Registration = { listener, active: true, installed: false, signal,
         release() { if (!registration.active) return; registration.active = false; listeners.delete(registration); waiting.delete(registration); signal?.removeEventListener('abort', registration.release); if (!needsDelivery()) cancel(); } };
