@@ -155,17 +155,17 @@ const optionalPeerFamilyTags = componentInventory.components
 const rootHelperRegisteredTags = [];
 
 // Packed core/all.js includes every non-optional registration and every emitted chunk.
-// Detached observer guards and markdown selection reconnection uses 5,668,068 raw bytes across the same 64 files;
-// the next 64-byte ceiling leaves 28 bytes of headroom.
+// Catalog identity preservation and safe data copying use 5,668,228 raw bytes across the same 64 files;
+// the next 64-byte ceiling leaves 60 bytes of headroom.
 // Optional-peer exclusions and the complete file sum stay fixed. Core has no WASM allowance;
 // the explicit Oniguruma canary retains its separate exact 466,610-byte binary requirement.
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/7859878f724ef4237ee93a5414fa6b54f204313a/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'Detached observer guards and markdown selection reconnection uses 5,668,068 raw bytes across the same 64 files. The ceiling advances only to the next 64-byte boundary, 5,668,096 bytes. The explicit Oniguruma canary retains its separate exact binary requirement.',
-  reviewedCoreMeasurementBytes: 5_668_068,
+  $comment: 'Catalog identity preservation and safe data copying use 5,668,228 raw bytes across the same 64 files. The ceiling advances only to the next 64-byte boundary, 5,668,288 bytes. The explicit Oniguruma canary retains its separate exact binary requirement.',
+  reviewedCoreMeasurementBytes: 5_668_228,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 28,
+  selectedRegressionHeadroomBytes: 60,
 };
 
 /**

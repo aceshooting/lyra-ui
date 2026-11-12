@@ -1808,3 +1808,34 @@ it('resolves the popup offset parent once per placement pass, not once per middl
   // popup's offset parent once, where every overflow-detecting middleware used to repeat it.
   expect(popupLookups, `${passes} placement pass(es)`).to.be.at.most(passes + 1);
 });
+
+for (const finish of ['commit', 'rollback'] as const) {
+  it(`keeps a placement style transaction closed after ${finish}`, async () => {
+    const popup = await fixture<HTMLElement>(html`<div style="width:12px!important"></div>`);
+    const transaction = createPlacementStyleTransaction();
+    transaction.set(popup, 'width', '30px');
+    transaction[finish]();
+    expect(popup.style.width).to.equal(finish === 'commit' ? '30px' : '12px');
+    expect(popup.style.getPropertyPriority('width')).to.equal(finish === 'commit' ? '' : 'important');
+    expect(transaction.ownedValue(popup, 'width')).to.equal(undefined);
+    transaction.set(popup, 'width', '99px'); transaction.commit(); transaction.rollback();
+    expect(popup.style.width).to.equal(finish === 'commit' ? '30px' : '12px');
+    popup.style.setProperty('width', '41px', 'important');
+    transaction.set(popup, 'width', '111px'); transaction.rollback(); transaction.commit();
+    expect(popup.style.width).to.equal('41px'); expect(popup.style.getPropertyPriority('width')).to.equal('important');
+  });
+}
+
+it('keeps newer synchronized dimensions when an obsolete placement releases its ownership', async () => {
+  const popup = await fixture<HTMLElement>(html`<div style="width:40px;height:25px!important"></div>`);
+  const ownership = createPlacementSyncOwnershipController();
+  const older = ownership.beginPlacement(popup), newer = ownership.beginPlacement(popup);
+  ownership.publish(popup, ownership.beginUpdate(newer), {
+    width: { value: '40px', priority: '' }, height: { value: '25px', priority: 'important' },
+  });
+  ownership.release(popup, older);
+  expect([popup.style.width, popup.style.height]).to.deep.equal(['40px', '25px']);
+  expect(popup.style.getPropertyPriority('height')).to.equal('important');
+  ownership.release(popup, newer);
+  expect([popup.style.width, popup.style.height]).to.deep.equal(['', '']);
+});

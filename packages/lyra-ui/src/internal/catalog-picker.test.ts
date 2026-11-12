@@ -424,3 +424,53 @@ for (const handler of ['handleInputFocus', 'handleControlFocus'] as const) {
     expect(relayed).to.equal(1);
   });
 }
+
+for (const representation of ['non-enumerable', 'unreadable-keys'] as const) {
+  function descriptorRow(): LyraCatalogEntry {
+    return representation === 'non-enumerable'
+      ? Object.defineProperties({}, { id: { value: 'model' }, label: { value: 'Model' } }) as LyraCatalogEntry
+      : new Proxy({ id: 'model', label: 'Model' }, { ownKeys() { throw new Error('Keys unavailable'); } });
+  }
+
+  it(`retains the admitted identity and label when catalog row fields are ${representation}`, () => {
+    const source = descriptorRow();
+    const rows = normalizeCatalog([source, { id: 'model', label: 'Duplicate' }]);
+    expect(rows.map(row => [row.id, row.label])).to.deep.equal([['model', 'Model']]);
+    expect(rows[0] === source).to.equal(false); expect(Object.isFrozen(rows[0])).to.equal(true);
+  });
+
+  it(`filters and resolves the label of a ${representation} catalog row`, () => {
+    const { controller } = pickerController([descriptorRow()]);
+    try {
+      controller.setQuery('mod');
+      expect(controller.filteredEntries.map(row => row.id)).to.deep.equal(['model']);
+      expect(controller.labelFor('model')).to.equal('Model');
+      expect(controller.entryFor('model')?.id).to.equal('model');
+    } finally { controller.disconnected(); }
+  });
+}
+
+it('rejects an unreadable catalog length without inspecting rows', () => {
+  let reads = 0;
+  const source = new Proxy(['model'], { getOwnPropertyDescriptor(target, key) {
+    if (key === 'length') throw new Error('Length unavailable');
+    if (key === '0') reads++;
+    return Reflect.getOwnPropertyDescriptor(target, key);
+  } });
+  expect(normalizeCatalog(source)).to.deep.equal([]); expect(reads).to.equal(0);
+});
+
+it('returns a fresh unchanged row list for an empty catalog search without reading fields', () => {
+  const entries = [{ id: 'model', label: 'Model' }]; let reads = 0;
+  const result = filterCatalogEntries(entries, ' \t', 'en', entry => { reads++; return [entry.id, entry.label]; });
+  expect(result).to.deep.equal(entries); expect(result === entries).to.equal(false); expect(reads).to.equal(0);
+});
+
+it('copies an own prototype-named catalog field without changing the normalized row prototype', () => {
+  const source: LyraCatalogEntry = JSON.parse('{"id":"model","label":"Model","__proto__":{"disabled":true}}');
+  const row = normalizeCatalog([source])[0]!;
+  expect(Object.getPrototypeOf(row) === Object.prototype).to.equal(true);
+  expect(Object.hasOwn(row, '__proto__')).to.equal(true);
+  expect(row.disabled).to.equal(undefined);
+  expect(Object.getOwnPropertyDescriptor(row, '__proto__')?.value).to.deep.equal({ disabled: true });
+});

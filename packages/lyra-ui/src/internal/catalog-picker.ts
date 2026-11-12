@@ -47,14 +47,17 @@ function ownDataValue(target: object, key: PropertyKey): unknown {
   return typeof descriptor === 'symbol' ? undefined : descriptor.value;
 }
 
-/** A frozen copy of a row's own enumerable data properties; accessors are skipped, never run. */
-function ownDataCopy(entry: object): object {
-  const copy: Record<string, unknown> = {};
+/** Retain admitted identity fields plus own enumerable data; accessors are skipped, never run. */
+function ownDataCopy(entry: object, id: string, label: string): object {
+  const copy: Record<string, unknown> = { id, label };
   let keys: string[] = [];
-  try { keys = Object.keys(entry); } catch { /* an exotic row keeps only the fields read below */ }
+  try { keys = Object.keys(entry); } catch { /* An exotic row retains its admitted identity fields. */ }
   for (const key of keys) {
+    if (key === 'id' || key === 'label') continue;
     const descriptor = getOwnDataDescriptor(entry, key);
-    if (typeof descriptor !== 'symbol') copy[key] = descriptor.value;
+    if (typeof descriptor !== 'symbol') Object.defineProperty(copy, key, {
+      value: descriptor.value, enumerable: true, configurable: true, writable: true,
+    });
   }
   return Object.freeze(copy);
 }
@@ -81,14 +84,11 @@ export function normalizeCatalog<T extends LyraCatalogEntry>(catalog: LyraCatalo
   const count = typeof length === 'number' ? Math.min(length, CATALOG_ROW_LIMIT) : 0;
   for (let index = 0; index < count; index += 1) {
     const entry = ownDataValue(catalog, String(index));
-    let record: T;
     let id: unknown;
     let label: unknown;
     if (typeof entry === 'string') {
-      record = { id: entry, label: entry } as T;
       id = label = entry;
     } else if (entry !== null && typeof entry === 'object') {
-      record = ownDataCopy(entry) as T;
       id = ownDataValue(entry, 'id');
       label = ownDataValue(entry, 'label');
     } else {
@@ -102,7 +102,7 @@ export function normalizeCatalog<T extends LyraCatalogEntry>(catalog: LyraCatalo
       seen.has(id)
     ) continue;
     seen.add(id);
-    normalized.push(record);
+    normalized.push((typeof entry === 'string' ? { id, label } : ownDataCopy(entry, id, label)) as T);
   }
   if (frozen) normalizedCatalogs.set(catalog, Object.freeze(normalized));
   return normalized;
