@@ -2,8 +2,8 @@ import { expect } from '@open-wc/testing';
 import { sceneArc, scenePath, sceneSourceHarness } from '../../../../test/map-scene-admission-fixtures.js';
 import { stageMapSceneAdmission } from './map-scene-admission.js';
 import type { AdmittedSceneObject } from './map-scene-admission.js';
-import { buildSceneLineData, sceneArcAltitude, sceneLineGrounded, SCENE_ARC_MIN_SEGMENTS,
-  tessellateSceneLines } from './map-scene-lines.js';
+import { buildSceneLineData, sceneArcAltitude, sceneLineDataFrom, sceneLineGrounded, SCENE_ARC_MIN_SEGMENTS,
+  tessellateSceneLines, traceSceneLines } from './map-scene-lines.js';
 import type { SceneLineObject } from './map-scene-lines.js';
 
 function admit(...objects: unknown[]): readonly AdmittedSceneObject[] {
@@ -72,6 +72,39 @@ describe('map scene line geometry', () => {
     expect(middle[2]).to.be.closeTo(1200, 1e-9);
     expect(sceneArcAltitude(100, 300, 1000, 0.25)).to.be.closeTo(150 + 750, 1e-9);
     expect([0, 1].map(t => sceneArcAltitude(100, 300, 1000, t))).to.deep.equal([100, 300]);
+  });
+
+  for (const crossing of [false, true]) {
+    it(`preserves an admitted near-coincident arc's height ${crossing ? 'across the antimeridian' : 'on a short ground track'}`, () => {
+      const start = crossing ? 180 - 1e-12 : 20, end = crossing ? -180 + 1e-12 : 20 + 1e-12;
+      const [arc] = lines({ ...sceneArc(), start: { lngLat: [start, 30], altitude: 100 },
+        end: { lngLat: [end, 30], altitude: 300 }, height: 1000 });
+      expect(arc?.kind).to.equal('arc');
+      const [coordinates] = tessellateSceneLines([arc!])!;
+      expect(coordinates!.length).to.equal(SCENE_ARC_MIN_SEGMENTS + 1);
+      expect(coordinates![0]).to.deep.equal([start, 30, 100]);
+      expect(coordinates!.at(-1)).to.deep.equal([crossing ? end + 360 : end, 30, 300]);
+      const midpoint = coordinates![SCENE_ARC_MIN_SEGMENTS / 2]!;
+      expect(midpoint[0]).to.be.closeTo((start + end + (crossing ? 360 : 0)) / 2, 1e-13);
+      expect(midpoint[1]).to.equal(30);
+      expect(midpoint[2]).to.equal(1200);
+      expect(coordinates!.every(vertex => vertex.every(Number.isFinite))).to.equal(true);
+      for (let index = 1; index < coordinates!.length; index++) {
+        expect(Math.abs(coordinates![index]![0] - coordinates![index - 1]![0])).to.be.below(1e-12);
+      }
+    });
+  }
+
+  it('refuses incomplete retained geometry and colors before assembling a line source', () => {
+    const objects = lines(scenePath('route'), sceneArc('link'));
+    const geometry = traceSceneLines(objects)!;
+    const colors = new Map([['route', 'red'], ['link', 'blue']]);
+    expect(sceneLineDataFrom(objects, geometry.slice(0, 1), colors)).to.equal(undefined);
+    expect(sceneLineDataFrom(objects, geometry, new Map([['route', 'red']]))).to.equal(undefined);
+    const data = sceneLineDataFrom(objects, geometry, colors)!;
+    expect(data.features.map(feature => feature.properties.id)).to.deep.equal(['route', 'link']);
+    expect(data.features.map(feature => feature.properties.color)).to.deep.equal(['red', 'blue']);
+    expect(data.features.map(feature => feature.geometry.coordinates)).to.deep.equal(geometry.map(row => row.coordinates));
   });
 
   it('reports only geometry a draped flat line reproduces as grounded', () => {

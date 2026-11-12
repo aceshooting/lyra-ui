@@ -1,7 +1,7 @@
 import { expect } from '@open-wc/testing';
 import fc from 'fast-check';
 import { propertyRuns } from '../../../../test/property-options.js';
-import { sceneArcAltitude, tessellateSceneLines } from './map-scene-lines.js';
+import { sceneArcAltitude, SCENE_ARC_MIN_SEGMENTS, tessellateSceneLines } from './map-scene-lines.js';
 import type { SceneLineObject } from './map-scene-lines.js';
 
 const radians = Math.PI / 180;
@@ -27,6 +27,26 @@ function path(points: readonly Point[], interpolation: 'linear' | 'great-circle'
 }
 
 describe('map scene line geometry properties', () => {
+  it('keeps nearly coincident arc geometry finite while retaining the height profile', () => {
+    fc.assert(fc.property(point, fc.integer({ min: 1, max: 10 }), fc.integer({ min: 0, max: 100000 }),
+      ([longitude, latitude], distance, height) => {
+        const end = longitude + distance * 1e-12;
+        const arc: SceneLineObject = { kind: 'arc', id: 'arc', label: 'Arc', opacity: 1, interactive: true,
+          showLabel: false, start: position([longitude, latitude], 100), end: position([end, latitude], 300),
+          height, width: 2 };
+        const [coordinates] = tessellateSceneLines([arc])!;
+        expect(coordinates!.length).to.equal(SCENE_ARC_MIN_SEGMENTS + 1);
+        expect(coordinates!.every(vertex => vertex.every(Number.isFinite))).to.equal(true);
+        expect(coordinates![0]![2]).to.equal(100);
+        expect(coordinates!.at(-1)![2]).to.equal(300);
+        expect(coordinates![SCENE_ARC_MIN_SEGMENTS / 2]![2]).to.equal(200 + height);
+        for (const vertex of coordinates!) {
+          expect(vertex[0]).to.be.within(longitude, end);
+          expect(vertex[1]).to.equal(latitude);
+        }
+      }), propertyRuns());
+  });
+
   it('keeps great-circle vertices finite, continuous and on the plane of their endpoints', () => {
     fc.assert(fc.property(pair, ([a, b]) => {
       const [coordinates] = tessellateSceneLines([path([a, b], 'great-circle')])!;
