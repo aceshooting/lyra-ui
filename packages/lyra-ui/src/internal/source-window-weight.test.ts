@@ -241,6 +241,44 @@ describe('SourceWindowController optional payload accounting', () => {
     expect(test.control.source.itemAt(1).state).to.equal('ready');
   });
 
+  for (const retirement of ['replacement', 'disconnect', 'new demand'] as const) {
+    it(`releases staged rows when reading a ranged entry causes ${retirement}`, async () => {
+      const test = setup({ maxWeight: 6, maxConcurrent: 1 });
+      const reads: number[] = [];
+      const replacement = ranged(reads);
+      let retired = false;
+      test.bind({ count: 10, read: async ({ offset, limit }) => {
+        const values = Array.from({ length: limit }, (_, index) => row(offset + index));
+        if (offset === 0 && !retired) Object.defineProperty(values, '1', { get() {
+          retired = true;
+          if (retirement === 'replacement') test.bind(replacement, 1);
+          else if (retirement === 'disconnect') test.disconnect();
+          else test.control.requestRange(4, 6);
+          return row(1);
+        } });
+        return values;
+      } });
+      try {
+        expect(await test.control.ensure(0)).to.equal(false);
+        expect(retired).to.equal(true);
+        expect(test.control.source.indexOfKey!('key-0')).to.equal(-1);
+        expect(test.control.source.indexOfKey!('key-1')).to.equal(-1);
+        if (retirement === 'disconnect') {
+          test.reconnect();
+          test.bind(replacement, 1);
+        }
+        expect(await test.control.ensure(4)).to.equal(true);
+        for (const index of [4, 5]) {
+          const slot = test.control.source.itemAt(index);
+          expect(slot.state).to.equal('ready');
+          expect(slot.state === 'ready' ? slot.value.key : '').to.equal(`key-${index}`);
+        }
+        expect(test.control.source.indexOfKey!('key-0')).to.equal(-1);
+        if (retirement !== 'new demand') expect(reads).to.deep.equal([4]);
+      } finally { test.disconnect(); }
+    });
+  }
+
   it('retains a bounded own error instead of a callback exception payload', async () => {
     const failure = { retainedPayload: 'provider-owned failure' };
     for (const indexed of [true, false]) {
