@@ -172,6 +172,23 @@ describe('parsing and tree rendering', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(1);
   });
 
+  for (const fragment of ['<!-- unfinished', '<![CDATA[unfinished', '<?target unfinished']) {
+    it(`reports an unterminated XML construct and recovers after replacement: ${fragment}`, async () => {
+      const el = await fixture<LyraXmlViewer>(html`<lr-xml-viewer
+        .strings=${{ xmlViewerParseError: 'Invalid XML input' }}></lr-xml-viewer>`);
+      const error = oneEvent(el, 'lr-render-error');
+      el.xml = `<root>${fragment}`;
+      await error;
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal('Invalid XML input');
+      expect(el.shadowRoot!.querySelectorAll('[part="node"]').length).to.equal(0);
+      el.xml = '<root><recovered /></root>';
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
+      expect(Array.from(el.shadowRoot!.querySelectorAll('[part="tag"]'), node => node.textContent)).to.include('recovered');
+    });
+  }
+
   it('renders the stable localized parse-error message, never the raw browser-engine parser diagnostic glued onto it', async () => {
     const el = (await fixture(html`<lr-xml-viewer></lr-xml-viewer>`)) as LyraXmlViewer;
     const eventPromise = oneEvent(el, 'lr-render-error');

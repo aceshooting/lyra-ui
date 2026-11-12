@@ -2056,7 +2056,8 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
         }
       }
       if (this.pendingScrollTop !== null) {
-        const scrollTop = this.pendingScrollTop;
+        // A programmatic jump can supersede the scroll event before its coalescing frame runs.
+        const scrollTop = this.readScrollMetrics()?.scrollTop ?? this.pendingScrollTop;
         this.pendingScrollTop = null;
         const moved = this.containerScrollTop !== scrollTop;
         this.containerScrollTop = scrollTop;

@@ -535,3 +535,57 @@ it('keeps source rows readable when the optional copy capability getter throws',
   expect(el.shadowRoot!.querySelector('[part~="source-row"]')!.textContent).to.contain('Value 0');
   expect(el.shadowRoot!.querySelectorAll('[part="copy-button"]').length).to.equal(0);
 });
+
+it('reserves a painted citation for an active source highlight beyond the candidate window', async () => {
+  const count = 1_101;
+  const keyAt = (index: number) => JSON.stringify([index]);
+  const provider: Source = { revision: 1, async project(request) {
+    const focus = request.action.type === 'reveal' ? Number(JSON.parse(String(request.action.key))[0]) : undefined;
+    return { state: 'citations', total: count, rows: { count, keyAt,
+      indexOfKey: (key: string | number) => Number(JSON.parse(String(key))[0]),
+      itemAt: index => ({ ...row(index), key: keyAt(index), setSize: count,
+        value: { name: `Node ${index}`, path: keyAt(index), kind: 'element' as const } }),
+    }, ...(focus === undefined ? {} : { focusIndex: focus }) };
+  } };
+  const highlights = Array.from({ length: count }, (_, index) => ({
+    id: `citation-${index}`, anchor: { kind: 'node-path' as const, path: [index] },
+  }));
+  const el = await fixture<LyraXmlViewer>(html`<lr-xml-viewer lang="en" max-height="160px"
+    .treeSource=${provider} .highlights=${highlights} active-highlight-id="citation-1100"
+    .strings=${{ highlightOfTotal: 'Citation {index} of {total}' }}></lr-xml-viewer>`);
+  await ready(el);
+  const action = (index: number) => Array.from(el.shadowRoot!.querySelectorAll('[part~="source-row"]'))
+    .find(node => node.getAttribute('data-source-key') === keyAt(index))?.querySelector('[part="highlight-action"]');
+  expect(action(0)?.getAttribute('aria-label')).to.equal('Citation 2 of 100');
+  expect(await el.revealSourceKey(keyAt(1_100))).to.equal(true);
+  expect(action(1_100)?.getAttribute('aria-label')).to.equal('Citation 1 of 100');
+  expect(await el.revealSourceKey(keyAt(99))).to.equal(true);
+  expect(action(99) === null).to.equal(true);
+  el.activeHighlightId = null;
+  await el.updateComplete;
+  expect(action(99)?.getAttribute('aria-label')).to.equal('Citation 100 of 100');
+  el.highlights = [];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="highlight-action"]').length).to.equal(0);
+});
+
+it('rejects oversized serialized source paths without asking the provider and keeps neighboring citations usable', async () => {
+  const { provider, reveals } = canonicalSource();
+  const path = [0, `@${'"'.repeat(32_768)}`] as const;
+  expect(path[1]!.length).to.be.lessThan(65_536);
+  expect(JSON.stringify(path).length).to.be.greaterThan(65_536);
+  const el = await fixture<LyraXmlViewer>(html`<lr-xml-viewer .treeSource=${provider} .highlights=${[
+    { id: 'oversized', anchor: { kind: 'node-path', path } },
+    { id: 'page', anchor: { kind: 'page', page: 1 } },
+    { id: 'root', anchor: { kind: 'node-path', path: [] }, label: 'Retained root' },
+  ]}></lr-xml-viewer>`);
+  await ready(el);
+  const seam = el as unknown as { anchorTimeoutMs: number; anchorRetryIntervalMs: number };
+  seam.anchorTimeoutMs = 30;
+  seam.anchorRetryIntervalMs = 10;
+  expect(await el.scrollToAnchor({ kind: 'node-path', path })).to.equal(false);
+  expect(reveals).to.deep.equal([]);
+  expect(el.shadowRoot!.querySelectorAll('[part="highlight-action"]').length).to.equal(1);
+  expect(await el.scrollToAnchor({ kind: 'node-path', path: [] })).to.equal(true);
+  expect(reveals).to.deep.equal(['[]']);
+});

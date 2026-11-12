@@ -61392,6 +61392,7 @@
           "src/components/layout/virtual-list/virtual-list-remediation.test.ts",
           "src/components/layout/virtual-list/virtual-list-scale.test.ts",
           "src/components/layout/virtual-list/virtual-list-scaled-scroll.test.ts",
+          "src/components/layout/virtual-list/virtual-list-scroll-supersession.test.ts",
           "src/components/layout/virtual-list/virtual-list-source-auto-demand-scale.test.ts",
           "src/components/layout/virtual-list/virtual-list-source-refresh-scale.test.ts",
           "src/components/layout/virtual-list/virtual-list-window-scroll.test.ts",
