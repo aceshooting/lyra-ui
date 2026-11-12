@@ -14,6 +14,7 @@ import {
   resolveLyraLocale,
   resolveLyraString,
   setLyraLocale,
+  trustedLyraDefaultStrings,
 } from './localization-runtime.js';
 
 // Most of localization-runtime.ts is already exercised indirectly, at high volume, through every
@@ -27,6 +28,38 @@ function localeHost(locale: string): HTMLElement {
   const host = document.createElement('div');
   host.setAttribute('locale', locale);
   return host;
+}
+
+it('resolves class defaults per key when their record cannot be enumerated', () => {
+  let enumerations = 0, getters = 0;
+  const values = { retained: 'Safe fallback', inaccessible: 'Hidden fallback' };
+  const defaults = new Proxy(values, {
+    ownKeys(): never { enumerations++; throw new Error('Enumeration unavailable'); },
+    getOwnPropertyDescriptor(target, key) {
+      if (key === 'inaccessible') throw new Error('Descriptor unavailable');
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+    get(): never { getters++; throw new Error('Property access unavailable'); },
+  });
+  const trusted = trustedLyraDefaultStrings(defaults);
+  const host = localeHost('en');
+  expect(resolveLyraString(host, 'retained', undefined, undefined, undefined, trusted)).to.equal('Safe fallback');
+  expect(resolveLyraString(host, 'inaccessible', undefined, undefined, undefined, trusted)).to.equal('inaccessible');
+  expect(trustedLyraDefaultStrings(defaults) === trusted).to.equal(true);
+  expect(enumerations).to.equal(1);
+  expect(getters).to.equal(0);
+});
+
+for (const meta of [null, [], new Map([['dir', 'rtl']])]) {
+  it(`ignores ${meta === null ? 'null' : Array.isArray(meta) ? 'array' : 'Map'} locale metadata while retaining its messages`, () => {
+    const locale = meta === null ? 'x-null-meta' : Array.isArray(meta) ? 'x-array-meta' : 'x-map-meta';
+    registerLyraLocale(locale, { metadataProbe: 'Available' }, meta as never);
+    expect(resolveLyraString(localeHost(locale), 'metadataProbe')).to.equal('Available');
+    expect(getLyraLocaleDirection(locale)).to.equal('ltr');
+    registerLyraLocale(locale, {}, { dir: 'rtl' });
+    expect(getLyraLocaleDirection(locale)).to.equal('rtl');
+    expect(resolveLyraString(localeHost(locale), 'metadataProbe')).to.equal('Available');
+  });
 }
 
 it('splits interpolated text around the caller-selected rich value', () => {
