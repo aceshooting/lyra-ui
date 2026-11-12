@@ -143,3 +143,40 @@ it('rejects a source row that names itself as its logical parent', async () => {
   await waitUntil(() => Boolean(el.shadowRoot!.querySelector('[part~="source-error"]')));
   expect(el.shadowRoot!.querySelectorAll('[part~="source-row"]').length).to.equal(0);
 });
+
+for (const retirement of ['replacement', 'disconnect', 'new reveal'] as const) {
+  it(`cancels hierarchy navigation after ${retirement} during virtual scrolling and accepts a fresh reveal`, async () => {
+    const el = await fixture<LyraTree>(html`<lr-tree label="Navigation" .treeSource=${provider()}></lr-tree>`);
+    await ready(el);
+    await focusByKeyboard(el.shadowRoot!.querySelector<HTMLElement>('[role="tree"]')!);
+    const parent = el.parentNode!;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    const scroll = list.scrollToIndex;
+    const rows: number[] = [];
+    const selections: unknown[] = [];
+    el.addEventListener('lr-source-selection-change', event => selections.push(event.detail));
+    let retired = false;
+    let latest: Promise<boolean> | undefined;
+    list.scrollToIndex = function (...args: Parameters<typeof scroll>) {
+      rows.push(args[0]);
+      scroll.apply(this, args);
+      if (args[0] !== 9 || retired) return;
+      retired = true;
+      if (retirement === 'replacement') el.treeSource = provider();
+      else if (retirement === 'disconnect') el.remove();
+      else latest = el.revealSourceKey('n0');
+    };
+    try {
+      expect(await el.revealSourceKey('n9')).to.equal(false);
+      expect(retired).to.equal(true);
+      expect(rows.filter(index => index === 9).length).to.equal(1);
+      expect(selections).to.deep.equal([]);
+      if (latest) expect(await latest).to.equal(true);
+    } finally { list.scrollToIndex = scroll; }
+    if (retirement === 'disconnect') parent.appendChild(el);
+    await ready(el);
+    expect(await el.revealSourceKey('n1')).to.equal(true);
+    expect(deepActiveElementIn(document)?.getAttribute('data-source-key')).to.equal('n1');
+    expect(selections).to.deep.equal([]);
+  });
+}
