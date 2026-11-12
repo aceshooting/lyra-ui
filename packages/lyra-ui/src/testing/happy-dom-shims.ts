@@ -265,7 +265,10 @@ export function flattenCascadeLayers(css: string): string {
     }
     if (css.startsWith('@layer', index) && !/[\w-]/.test(css[index + 6] ?? '')) {
       let cursor = index + 6;
-      while (cursor < css.length && css[cursor] !== ';' && css[cursor] !== '{') cursor++;
+      while (cursor < css.length && css[cursor] !== ';' && css[cursor] !== '{') {
+        const skipped = skipOpaqueToken(css, cursor);
+        cursor = skipped === cursor ? cursor + 1 : skipped;
+      }
       if (css[cursor] === '{') {
         const close = matchingBrace(css, cursor);
         output += flattenCascadeLayers(css.slice(cursor + 1, close));

@@ -50,3 +50,33 @@ it('distinguishes layer directives from longer at-rule names and unfinished dire
   expect(flattenCascadeLayers(otherRules)).to.equal(otherRules);
   expect(flattenCascadeLayers(`${otherRules}@layer`)).to.equal(otherRules);
 });
+
+for (const header of ['/* ; */ theme', 'theme /* { } ; */', '/* @layer ghost{ */']) {
+  it(`unwraps a layer whose header contains an opaque comment: ${header}`, () => {
+    const rule = '.sample{color:red}';
+    expect(flattenCascadeLayers(`@layer ${header}{${rule}}`)).to.equal(rule);
+  });
+}
+
+for (const header of ['base, /* ; */ theme', 'base /* { } */ , theme']) {
+  it(`drops the complete layer ordering statement with header ${header}`, () => {
+    const rule = '.sample{color:red}';
+    expect(flattenCascadeLayers(`@layer ${header};${rule}`)).to.equal(rule);
+  });
+}
+
+it('keeps preceding rules when an unfinished layer header ends inside a comment', () => {
+  const rule = '.sample{color:red}';
+  expect(flattenCascadeLayers(`${rule}@layer theme /* ; {`)).to.equal(rule);
+});
+
+it('ignores comment punctuation while locating both kinds of layer-header boundary', () => {
+  const headerText = fc.array(fc.constantFrom('word', ';', '{', '}', '@layer ghost', '/', '"', "'"),
+    { maxLength: 24 }).map(parts => parts.join(''));
+  fc.assert(fc.property(headerText, text => {
+    const comment = `/*${text}*/`;
+    const rule = '.sample{color:red}';
+    expect(flattenCascadeLayers(`@layer ${comment} theme ${comment}{${rule}}`)).to.equal(rule);
+    expect(flattenCascadeLayers(`@layer base, ${comment} theme ${comment};${rule}`)).to.equal(rule);
+  }), propertyRuns());
+});
