@@ -2,6 +2,7 @@ import { expect, fixture, html } from '@open-wc/testing';
 import { render } from 'lit';
 import { collectTableSearchMatches, TableViewerController, TableViewerScrollController, tableHighlightsForColumn, tableHighlightsForRow } from './table-viewer-shared.js';
 import type { LyraHighlight } from './document-viewer/anchors.js';
+import { VIEWER_SEARCH_QUERY_LIMIT, VIEWER_SEARCH_WORK_LIMIT } from './viewer-search-limits.js';
 
 describe('TableViewerScrollController', () => {
   it('uses raw one-based rows and optional sheet scoping for cell highlights', () => {
@@ -155,6 +156,44 @@ describe('collectTableSearchMatches', () => {
     expect(result.matches).to.have.lengthOf(1_000);
     expect(result.exact).to.equal(false);
   });
+
+  it('rejects an oversized query without consulting the table', () => {
+    let scans = 0;
+    const result = collectTableSearchMatches('x'.repeat(VIEWER_SEARCH_QUERY_LIMIT + 1), 'en', true, () => { scans++; });
+    expect(result).to.deep.equal({ matches: [], exact: false });
+    expect(scans).to.equal(0);
+  });
+
+  for (const text of ['x', '\u0130']) {
+    it(`keeps earlier matches and stops reading when a ${text === 'x' ? 'large ASCII' : 'locale-expanding'} cell exceeds the search budget`, () => {
+      const cells = ['hit', text.repeat(VIEWER_SEARCH_WORK_LIMIT), 'hit'];
+      const visited: number[] = [];
+      const result = collectTableSearchMatches('hit', 'en', true, visit => {
+        for (let index = 0; index < cells.length; index++) {
+          visited.push(index);
+          if (!visit(cells[index]!, index)) break;
+        }
+      });
+      expect(result).to.deep.equal({ matches: [0], exact: false });
+      expect(visited).to.deep.equal([0, 1]);
+      expect(collectTableSearchMatches('alpha', 'en', true, scan)).to.deep.equal({ matches: [0, 2], exact: true });
+    });
+  }
+
+  for (const hasTail of [false, true]) {
+    it(`reports ${hasTail ? 'a lower bound when another cell remains' : 'an exact result at the work boundary'}`, () => {
+      const cells = ['x'.repeat(VIEWER_SEARCH_WORK_LIMIT / 2), ...(hasTail ? ['x', 'x'] : [])];
+      const visited: number[] = [];
+      const result = collectTableSearchMatches('x', 'en', true, visit => {
+        for (let index = 0; index < cells.length; index++) {
+          visited.push(index);
+          if (!visit(cells[index]!, index)) break;
+        }
+      });
+      expect(result).to.deep.equal({ matches: [0], exact: !hasTail });
+      expect(visited).to.deep.equal(hasTail ? [0, 1] : [0]);
+    });
+  }
 });
 
 describe('TableViewerController', () => {

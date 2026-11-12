@@ -54,6 +54,59 @@ function tableRowHeaders(el: LyraLiteChart): (string | undefined)[] {
   );
 }
 
+for (const direction of ['ltr', 'rtl']) {
+  it(`keeps supplementary Unicode characters intact when fitting axis titles in ${direction}`, async () => {
+    const fullTitle = '😀𐐀'.repeat(100);
+    const el = await mount(html`<lr-lite-chart dir=${direction} height="16rem"
+      x-label=${fullTitle} y-label=${fullTitle} style="inline-size:192px"
+      .labels=${LABELS} .datasets=${DATASETS}></lr-lite-chart>`);
+    let previousExtent: string | null | undefined;
+    for (const width of [192, 240, 320]) {
+      el.style.inlineSize = `${width}px`;
+      const titles = () => [...el.shadowRoot!.querySelectorAll<SVGTextElement>('[part="axis-title"]')];
+      await waitUntil(() => titles().length === 2 && titles()[1]!.getAttribute('data-title-extent') !== previousExtent && titles().every(title =>
+        title.textContent!.endsWith('…') && title.getComputedTextLength() <= Number(title.getAttribute('data-title-extent')) + 0.5));
+      previousExtent = titles()[1]!.getAttribute('data-title-extent');
+      for (const title of titles()) {
+        const visible = title.textContent!.slice(0, -1);
+        expect(visible.length, 'a title retains complete code points before its ellipsis').to.be.greaterThan(0);
+        expect(visible.length % 2).to.equal(0);
+        expect(fullTitle.startsWith(visible)).to.equal(true);
+        expect(title.getAttribute('aria-label')).to.equal(fullTitle);
+      }
+    }
+    el.xLabel = '😀';
+    el.yLabel = '𐐀';
+    await el.updateComplete;
+    expect([...el.shadowRoot!.querySelectorAll('[part="axis-title"]')].map(title => title.textContent)).to.deep.equal(['𐐀', '😀']);
+  });
+}
+
+it('backs up to a complete Unicode character when an axis title fits only half of the next pair', async () => {
+  const fullTitle = '😀'.repeat(100);
+  const prefix = '😀'.repeat(6);
+  const el = await mount(html`<lr-lite-chart x-label=${fullTitle} style="inline-size:320px"
+    .labels=${LABELS} .datasets=${DATASETS}></lr-lite-chart>`);
+  const title = el.shadowRoot!.querySelector<SVGTextElement>('[part="axis-title"]')!;
+  const measure = title.cloneNode(true) as SVGTextElement;
+  title.parentNode!.appendChild(measure);
+  let partialWidth: number, completeWidth: number;
+  try {
+    measure.textContent = `${prefix}\ud83d…`;
+    partialWidth = measure.getComputedTextLength();
+    measure.textContent = `${prefix}😀…`;
+    completeWidth = measure.getComputedTextLength();
+  } finally { measure.remove(); }
+  expect(partialWidth).to.be.lessThan(completeWidth);
+  const extent = (partialWidth + completeWidth) / 2;
+  const outsideTitle = el.getBoundingClientRect().width - Number(title.getAttribute('data-title-extent'));
+  el.style.inlineSize = `${outsideTitle + extent}px`;
+  await waitUntil(() => Math.abs(Number(title.getAttribute('data-title-extent')) - extent) < 0.5);
+  expect(title.textContent).to.equal(`${prefix}…`);
+  expect(title.getComputedTextLength()).to.be.at.most(extent + 0.5);
+  expect(title.getAttribute('aria-label')).to.equal(fullTitle);
+});
+
 describe('lr-lite-chart axisLabelText', () => {
   it('renders every source label as its own tick when unset', async () => {
     const el = await mount(html`<lr-lite-chart
