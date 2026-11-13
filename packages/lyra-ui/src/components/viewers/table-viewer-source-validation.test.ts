@@ -3,6 +3,7 @@ import { shrinkAnchorRetry } from '../../../test/viewer-scroll-test-support.js';
 import type { LyraTabularSource, LyraWorkbookSource } from '../../data-sources.js';
 import type { LyraCsvViewer } from './csv-viewer/csv-viewer.js';
 import type { LyraSpreadsheetViewer } from './spreadsheet-viewer/spreadsheet-viewer.js';
+import type { LyraAnchor } from './document-viewer/anchors.js';
 import { tableHighlightsForColumn, tableHighlightsForRow } from './table-viewer-shared.js';
 import './csv-viewer/csv-viewer.js';
 import './spreadsheet-viewer/spreadsheet-viewer.js';
@@ -192,4 +193,81 @@ it('rejects cumulative retained cell text before reading an otherwise bounded so
   expect(viewer.shadowRoot!.querySelectorAll('[role="table"]').length).to.equal(0);
   expect(viewer.shadowRoot!.textContent).not.to.contain('Legacy content');
   expect(viewer.rows).to.deep.equal([['Legacy content']]);
+});
+
+for (const kind of ['csv', 'workbook'] as const) {
+  it(`rejects invalid ${kind} source anchors without losing current cells or subsequent navigation`, async () => {
+    const data = source();
+    let reads = 0;
+    data.cellAt = (row, column) => { reads++; return `Cell ${row}:${column}`; };
+    const { viewer, errors } = kind === 'csv' ? await csv(data) : await workbook({
+      revision: 1, sheets: [{ key: 'main', name: 'Main', data }],
+    });
+    const list = () => viewer.shadowRoot!.querySelector('lr-virtual-list')!;
+    await waitUntil(() => list()?.shadowRoot?.textContent?.includes('Cell 0:0') === true);
+    expect(await viewer.scrollToAnchor({ kind: 'cell-range', range: 'B3' })).to.equal(true);
+    expect(list().activeItemId).to.equal(1);
+    const initialReads = reads;
+    const invalid: LyraAnchor[] = [
+      { kind: 'page', page: 1 },
+      { kind: 'cell-range', range: '' },
+      { kind: 'cell-range', range: 'A0' },
+      { kind: 'cell-range', range: 'A1:B2:C3' },
+      { kind: 'cell-range', range: 'A5' },
+      { kind: 'cell-range', range: 'C2' },
+      { kind: 'cell-range', sheet: 'Missing', range: 'A2' },
+      { kind: 'cell-range', range: "'Missing sheet'!A2" },
+    ];
+    for (const anchor of invalid) {
+      expect(await viewer.scrollToAnchor(anchor), JSON.stringify(anchor)).to.equal(false);
+      expect(list().activeItemId).to.equal(1);
+      expect(viewer.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
+    }
+    expect(reads).to.equal(initialReads);
+    expect(errors.length).to.equal(0);
+    expect(list().shadowRoot!.textContent).to.include('Cell 1:1');
+    expect(await viewer.scrollToAnchor({ kind: 'cell-range', range: 'A4' })).to.equal(true);
+    expect(list().activeItemId).to.equal(2);
+    expect(await viewer.scrollToAnchor({ kind: 'cell-range', range: 'B1' })).to.equal(true);
+    expect(viewer.shadowRoot!.querySelector('[part="header-row"] [aria-colindex="2"]')!.textContent).to.include('Column 1');
+  });
+}
+
+it('preserves CSV source raw-grid coordinates when headers are hidden', async () => {
+  const data = source();
+  const { viewer, errors } = await csv(data);
+  await waitUntil(() => viewer.shadowRoot!.querySelectorAll('[part="header-row"]').length === 1);
+  expect(await viewer.scrollToAnchor({ kind: 'cell-range', range: 'B1' })).to.equal(true);
+  expect(viewer.shadowRoot!.querySelector('[part="header-row"] [aria-colindex="2"]')!.textContent).to.include('Column 1');
+  viewer.withoutHeaderRow = true;
+  await viewer.updateComplete;
+  expect(viewer.shadowRoot!.querySelectorAll('[part="header-row"]').length).to.equal(0);
+  expect(await viewer.scrollToAnchor({ kind: 'cell-range', range: 'B1' })).to.equal(true);
+  const list = viewer.shadowRoot!.querySelector('lr-virtual-list')!;
+  expect(list.activeItemId).to.equal(0);
+  expect(list.shadowRoot!.querySelector('[data-row-index="0"] [aria-colindex="2"]')!.textContent).to.include('Cell 0:1');
+  expect(await viewer.scrollToAnchor({ kind: 'cell-range', range: 'A4' })).to.equal(false);
+  expect(list.activeItemId).to.equal(0);
+  expect(errors.length).to.equal(0);
+});
+
+it('resolves source workbook names embedded in ranges and gives an explicit sheet precedence', async () => {
+  const first = source(), second = source();
+  first.cellAt = (row, column) => `First ${row}:${column}`;
+  second.cellAt = (row, column) => `Second ${row}:${column}`;
+  const { viewer, errors } = await workbook({ revision: 1, sheets: [
+    { key: 'first', name: 'First sheet', data: first },
+    { key: 'second', name: 'Second sheet', data: second },
+  ] });
+  const list = () => viewer.shadowRoot!.querySelector('lr-virtual-list')!;
+  await waitUntil(() => list()?.shadowRoot?.textContent?.includes('First 0:0') === true);
+  expect(await viewer.scrollToAnchor({ kind: 'cell-range', range: "'Second sheet'!B3" })).to.equal(true);
+  expect(viewer.shadowRoot!.querySelector('[role="table"]')!.getAttribute('aria-label')).to.equal('Second sheet');
+  expect(list().activeItemId).to.equal(1);
+  expect(list().shadowRoot!.textContent).to.include('Second 1:1');
+  expect(await viewer.scrollToAnchor({ kind: 'cell-range', sheet: 'First sheet', range: "'Second sheet'!A4" })).to.equal(true);
+  expect(viewer.shadowRoot!.querySelector('[role="table"]')!.getAttribute('aria-label')).to.equal('First sheet');
+  expect(list().activeItemId).to.equal(2);
+  expect(list().shadowRoot!.textContent).to.include('First 2:0');
+  expect(errors.length).to.equal(0);
 });
