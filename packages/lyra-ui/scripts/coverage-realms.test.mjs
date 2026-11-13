@@ -119,6 +119,70 @@ test('missing callback branches still inherit execution within that callback', (
   }
 });
 
+test('session assembly preserves exact V8 counters after a long source line', async (t) => {
+  const filename = '/fixture/long-source-line.js';
+  const url = 'https://coverage.test/long-source-line.js';
+  const source = ' '.repeat(200_000) + 'function choose(flag) {\nreturn flag ? "active" : "idle"; }\nresult = choose(true);';
+  const session = new Session();
+  session.connect();
+  t.after(() => session.disconnect());
+  await session.post('Profiler.enable');
+  await session.post('Profiler.startPreciseCoverage', { callCount: true, detailed: true });
+  const context = {};
+  runInNewContext(source, context, { filename: url });
+  const snapshot = await session.post('Profiler.takePreciseCoverage');
+  await session.post('Profiler.stopPreciseCoverage');
+  assert.equal(context.result, 'active');
+  const entry = snapshot.result.find(script => script.url === url);
+  assert.ok(entry, 'native V8 coverage contains the source');
+  const converter = nativeConverter(filename, 0, { source });
+  await converter.load();
+  converter.applyCoverage(entry.functions);
+  const report = converter.toIstanbul();
+  const counts = coverage => Object.fromEntries(Object.entries(coverage.branchMap).map(([id, branch]) =>
+    [JSON.stringify(branch.loc), coverage.b[id]]));
+  const original = counts(report[filename]);
+  assert.ok(Object.values(original).some(hits => hits[0] === 0), 'the untaken arm starts uncovered');
+  const assembled = getTestCoverage([{ testCoverage: report }], {}).coverageMap.fileCoverageFor(filename);
+  assert.deepEqual(counts(assembled), original, 'exact counters cannot inherit hits from an outer function');
+});
+
+test('missing V8 branches inherit the nearest nested range after a long source line', async (t) => {
+  const filename = '/fixture/long-nested-line.js';
+  const url = 'https://coverage.test/long-nested-line.js';
+  const body = 'return outer ? (inner ? "active" : "idle") : "outside"; }';
+  const source = ' '.repeat(200_000) + `function choose(outer, inner) {\n${body}\nresult = choose(outer, inner);`;
+  const session = new Session();
+  session.connect();
+  t.after(() => session.disconnect());
+  await session.post('Profiler.enable');
+  await session.post('Profiler.startPreciseCoverage', { callCount: true, detailed: true });
+  const reports = [];
+  for (const outer of [true, false]) {
+    const context = { outer, inner: true };
+    runInNewContext(source, context, { filename: url });
+    const snapshot = await session.post('Profiler.takePreciseCoverage');
+    assert.equal(context.result, outer ? 'active' : 'outside');
+    const entry = snapshot.result.find(script => script.url === url);
+    assert.ok(entry);
+    const converter = nativeConverter(filename, 0, { source });
+    await converter.load();
+    converter.applyCoverage(entry.functions);
+    reports.push({ testCoverage: converter.toIstanbul() });
+  }
+  await session.post('Profiler.stopPreciseCoverage');
+  const first = reports[0].testCoverage[filename];
+  const untaken = Object.entries(first.branchMap).find(([id, branch]) => first.b[id][0] === 0 &&
+    branch.loc.start.line === 2 && body.slice(branch.loc.start.column, branch.loc.end.column).includes('"idle"'));
+  assert.ok(untaken, 'native V8 records the unexecuted inner arm');
+  for (const ordered of [reports, [...reports].reverse()]) {
+    const assembled = getTestCoverage(ordered, {}).coverageMap.fileCoverageFor(filename);
+    const id = Object.keys(assembled.branchMap).find(key =>
+      JSON.stringify(assembled.branchMap[key].loc) === JSON.stringify(untaken[1].loc));
+    assert.deepEqual(assembled.b[id], [0], 'an uncalled parent arm cannot donate outer-function hits');
+  }
+});
+
 test('anonymous Chromium callbacks retain ownership through browser coverage conversion', async (t) => {
   const fixture = JSON.parse(await readFile(new URL('./fixtures/coverage-anonymous-callback.json', import.meta.url), 'utf8'));
   const directory = await mkdtemp(join(tmpdir(), 'lyra-anonymous-coverage-'));

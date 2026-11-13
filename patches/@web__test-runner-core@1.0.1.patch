@@ -1,22 +1,89 @@
 diff --git a/dist/coverage/getTestCoverage.js b/dist/coverage/getTestCoverage.js
-index ac91e4481..8400b8d11 100644
+index ac91e448145fa3afba6e783aea8ccc764b83ba52..4d3b4a259ea2c75e05ce4bebea54f9bf5b30b54d 100644
 --- a/dist/coverage/getTestCoverage.js
 +++ b/dist/coverage/getTestCoverage.js
-@@ -15,11 +15,9 @@ const rangeEquals = (a, b) => locEquals(a.start, b.start) && locEquals(a.end, b.
+@@ -9,37 +9,40 @@ exports.coverageTypes = [
+     'branches',
+     'functions',
+ ];
+-const locEquals = (a, b) => a.column === b.column && a.line === b.line;
+ const locBefore = (a, b) => a.line < b.line || (a.line === b.line && a.column <= b.column);
+-const rangeEquals = (a, b) => locEquals(a.start, b.start) && locEquals(a.end, b.end);
  const rangeEncompass = (a, b) => locBefore(a.start, b.start) && locBefore(b.end, a.end);
- function getRangeDistance(encompassing, range) {
-     const startDistanceLine = range.start.line - encompassing.start.line;
+-function getRangeDistance(encompassing, range) {
+-    const startDistanceLine = range.start.line - encompassing.start.line;
 -    const startDistanceColumn = startDistanceLine
 -        ? range.start.column - encompassing.start.column
 -        : 0;
-+    const startDistanceColumn = range.start.column - encompassing.start.column;
-     const endDistanceLine = encompassing.end.line - range.end.line;
+-    const endDistanceLine = encompassing.end.line - range.end.line;
 -    const endDistanceColumn = endDistanceLine ? encompassing.end.column - range.end.column : 0;
-+    const endDistanceColumn = encompassing.end.column - range.end.column;
-     // Multiply each line by 100_000, as lines length are unknown but should never reach this size
-     return (startDistanceLine * 100_000 +
-         endDistanceLine * 100_000 +
-@@ -96,10 +94,28 @@ function addingMissingCoverageItems(coverages) {
+-    // Multiply each line by 100_000, as lines length are unknown but should never reach this size
+-    return (startDistanceLine * 100_000 +
+-        endDistanceLine * 100_000 +
+-        startDistanceColumn +
+-        endDistanceColumn);
++// Compare line and column spans separately so long source lines cannot invert nesting.
++function compareRangeSpans(a, b) {
++    return (a.end.line - a.start.line) - (b.end.line - b.start.line) ||
++        (a.end.column - a.start.column) - (b.end.column - b.start.column);
+ }
+-function findKey(items, item) {
+-    for (const [key, m] of Object.entries(items)) {
+-        if (rangeEquals(m.loc, item.loc)) {
+-            return key;
++// Mapping tables are cloned for assembly; union collection keeps their indexes in sync.
++const coverageItemIndexes = new WeakMap();
++function rangeKey(range) {
++    return `${range.start.line}:${range.start.column}:${range.end.line}:${range.end.column}`;
++}
++function coverageItemIndex(items) {
++    let index = coverageItemIndexes.get(items);
++    if (!index) {
++        index = { byRange: new Map(), entries: Object.entries(items) };
++        for (const [key, item] of index.entries) {
++            const range = rangeKey(item.loc);
++            if (!index.byRange.has(range)) index.byRange.set(range, key);
+         }
++        coverageItemIndexes.set(items, index);
+     }
++    return index;
++}
++function findKey(items, item) {
++    return coverageItemIndex(items).byRange.get(rangeKey(item.loc));
+ }
+ function findEncompassingKey(items, item) {
+-    // Get all encompassing branches
+-    const encompassingEntries = Object.entries(items).filter(([, m]) => rangeEncompass(m.loc, item.loc));
++    const index = coverageItemIndex(items);
++    const exact = index.byRange.get(rangeKey(item.loc));
++    if (exact != null) return exact;
++    const encompassingEntries = index.entries.filter(([, m]) => rangeEncompass(m.loc, item.loc));
+     if (encompassingEntries.length) {
+-        // Sort the encompassing branches by distance to the searched branch
+-        encompassingEntries.sort((a, b) => getRangeDistance(a[1].loc, item.loc) - getRangeDistance(b[1].loc, item.loc));
+-        // Return the key of the narrowest encompassing branch
++        encompassingEntries.sort((a, b) => compareRangeSpans(a[1].loc, b[1].loc));
+         return encompassingEntries[0][0];
+     }
+ }
+@@ -49,10 +52,14 @@ function collectCoverageItems(filePath, itemsPerFile, itemMap) {
+         items = {};
+         itemsPerFile.set(filePath, items);
+     }
++    const index = coverageItemIndex(items);
+     for (const item of Object.values(itemMap)) {
+-        if (findKey(items, item) == null) {
+-            const key = Object.keys(items).length;
++        const range = rangeKey(item.loc);
++        if (!index.byRange.has(range)) {
++            const key = String(index.entries.length);
+             items[key] = item;
++            index.entries.push([key, item]);
++            index.byRange.set(range, key);
+         }
+     }
+ }
+@@ -96,10 +103,28 @@ function addingMissingCoverageItems(coverages) {
              collectCoverageItems(filePath, functionsPerFile, fileCoverage.fnMap);
          }
      }
@@ -47,34 +114,128 @@ index ac91e4481..8400b8d11 100644
              fileCoverage.b = patchedBranches.itemIndex;
              const patchedFunctions = patchCoverageItems(filePath, functionsPerFile, fileCoverage.fnMap, fileCoverage.f, findKey, () => 0);
 diff --git a/src/coverage/getTestCoverage.ts b/src/coverage/getTestCoverage.ts
-index fdd7832f4..db75ac204 100644
+index fdd7832f4094e616fd8862c70e9aa17209e64ba3..a081541e5b6630c31d48efc83d39282816a15175 100644
 --- a/src/coverage/getTestCoverage.ts
 +++ b/src/coverage/getTestCoverage.ts
-@@ -33,12 +33,10 @@ const rangeEncompass = (a: Range, b: Range) =>
+@@ -24,60 +24,64 @@ export interface TestCoverage {
+   summary: CoverageSummaryData;
+ }
  
- function getRangeDistance(encompassing: Range, range: Range) {
-   const startDistanceLine = range.start.line - encompassing.start.line;
+-const locEquals = (a: Location, b: Location) => a.column === b.column && a.line === b.line;
+ const locBefore = (a: Location, b: Location) =>
+   a.line < b.line || (a.line === b.line && a.column <= b.column);
+-const rangeEquals = (a: Range, b: Range) => locEquals(a.start, b.start) && locEquals(a.end, b.end);
+ const rangeEncompass = (a: Range, b: Range) =>
+   locBefore(a.start, b.start) && locBefore(b.end, a.end);
+ 
+-function getRangeDistance(encompassing: Range, range: Range) {
+-  const startDistanceLine = range.start.line - encompassing.start.line;
 -  const startDistanceColumn = startDistanceLine
 -    ? range.start.column - encompassing.start.column
 -    : 0;
-+  const startDistanceColumn = range.start.column - encompassing.start.column;
- 
-   const endDistanceLine = encompassing.end.line - range.end.line;
+-
+-  const endDistanceLine = encompassing.end.line - range.end.line;
 -  const endDistanceColumn = endDistanceLine ? encompassing.end.column - range.end.column : 0;
-+  const endDistanceColumn = encompassing.end.column - range.end.column;
+-
+-  // Multiply each line by 100_000, as lines length are unknown but should never reach this size
+-  return (
+-    startDistanceLine * 100_000 +
+-    endDistanceLine * 100_000 +
+-    startDistanceColumn +
+-    endDistanceColumn
+-  );
++// Compare line and column spans separately so long source lines cannot invert nesting.
++function compareRangeSpans(a: Range, b: Range) {
++  return (a.end.line - a.start.line) - (b.end.line - b.start.line) ||
++    (a.end.column - a.start.column) - (b.end.column - b.start.column);
++}
++
++type CoverageMapping = BranchMapping | FunctionMapping;
++interface CoverageItemIndex {
++  byRange: Map<string, string>;
++  entries: Array<[string, CoverageMapping]>;
++}
++
++// Mapping tables are cloned for assembly; union collection keeps their indexes in sync.
++const coverageItemIndexes = new WeakMap<object, CoverageItemIndex>();
++
++function rangeKey(range: Range): string {
++  return `${range.start.line}:${range.start.column}:${range.end.line}:${range.end.column}`;
+ }
  
-   // Multiply each line by 100_000, as lines length are unknown but should never reach this size
-   return (
-@@ -59,7 +57,7 @@ function findKey<T extends BranchMapping | FunctionMapping>(items: Record<string
+-function findKey<T extends BranchMapping | FunctionMapping>(items: Record<string, T>, item: T) {
+-  for (const [key, m] of Object.entries(items)) {
+-    if (rangeEquals(m.loc, item.loc)) {
+-      return key;
++function coverageItemIndex(items: Record<string, CoverageMapping>): CoverageItemIndex {
++  let index = coverageItemIndexes.get(items);
++  if (!index) {
++    index = { byRange: new Map(), entries: Object.entries(items) };
++    for (const [key, item] of index.entries) {
++      const range = rangeKey(item.loc);
++      if (!index.byRange.has(range)) index.byRange.set(range, key);
+     }
++    coverageItemIndexes.set(items, index);
+   }
++  return index;
++}
++
++function findKey<T extends CoverageMapping>(items: Record<string, T>, item: T) {
++  return coverageItemIndex(items).byRange.get(rangeKey(item.loc));
+ }
  
- function findEncompassingKey<T extends BranchMapping | FunctionMapping>(
+-function findEncompassingKey<T extends BranchMapping | FunctionMapping>(
++function findEncompassingKey<T extends CoverageMapping>(
    items: Record<string, T>,
 -  item: T,
-+  item: BranchMapping | FunctionMapping,
++  item: CoverageMapping,
  ) {
-   // Get all encompassing branches
-   const encompassingEntries = Object.entries(items).filter(([, m]) =>
-@@ -147,6 +145,19 @@ function addingMissingCoverageItems(coverages: CoverageMapData[]) {
+-  // Get all encompassing branches
+-  const encompassingEntries = Object.entries(items).filter(([, m]) =>
+-    rangeEncompass(m.loc, item.loc),
++  const index = coverageItemIndex(items);
++  const exact = index.byRange.get(rangeKey(item.loc));
++  if (exact != null) return exact;
++  const encompassingEntries = index.entries.filter(([, mapping]) =>
++    rangeEncompass(mapping.loc, item.loc),
+   );
+-
+   if (encompassingEntries.length) {
+-    // Sort the encompassing branches by distance to the searched branch
+-    encompassingEntries.sort(
+-      (a, b) => getRangeDistance(a[1].loc, item.loc) - getRangeDistance(b[1].loc, item.loc),
+-    );
+-
+-    // Return the key of the narrowest encompassing branch
++    encompassingEntries.sort((a, b) => compareRangeSpans(a[1].loc, b[1].loc));
+     return encompassingEntries[0][0];
+   }
+ }
+ 
+-function collectCoverageItems<T extends BranchMapping | FunctionMapping>(
++function collectCoverageItems<T extends CoverageMapping>(
+   filePath: string,
+   itemsPerFile: Map<string, Record<string, T>>,
+   itemMap: Record<string, T>,
+@@ -87,11 +91,14 @@ function collectCoverageItems<T extends BranchMapping | FunctionMapping>(
+     items = {};
+     itemsPerFile.set(filePath, items);
+   }
+-
++  const index = coverageItemIndex(items);
+   for (const item of Object.values(itemMap)) {
+-    if (findKey(items, item) == null) {
+-      const key = Object.keys(items).length;
++    const range = rangeKey(item.loc);
++    if (!index.byRange.has(range)) {
++      const key = String(index.entries.length);
+       items[key] = item;
++      index.entries.push([key, item]);
++      index.byRange.set(range, key);
+     }
+   }
+ }
+@@ -147,6 +154,19 @@ function addingMissingCoverageItems(coverages: CoverageMapData[]) {
      }
    }
  
@@ -94,7 +255,7 @@ index fdd7832f4..db75ac204 100644
    // patch coverage entries to add missing code branches
    for (const coverage of coverages) {
      for (const [filePath, fileCoverage] of Object.entries(coverage)) {
-@@ -155,7 +166,13 @@ function addingMissingCoverageItems(coverages: CoverageMapData[]) {
+@@ -155,7 +175,13 @@ function addingMissingCoverageItems(coverages: CoverageMapData[]) {
          branchesPerFile,
          fileCoverage.branchMap,
          fileCoverage.b,
