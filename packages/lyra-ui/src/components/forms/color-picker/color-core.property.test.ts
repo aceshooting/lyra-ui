@@ -26,6 +26,29 @@ function parsed(text: string): LyraColorHsva {
 const channelsOf = (rgbText: string): number[] => (rgbText.match(/\d+/g) ?? []).map(Number);
 
 describe('color-core properties', () => {
+  it('clamps finite out-of-range percentages without overflowing RGB channels', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 3, max: 308 }),
+        fc.integer({ min: 0, max: 2 }),
+        fc.boolean(),
+        byte,
+        byte,
+        byte,
+        (exponent, channel, negative, r, g, b) => {
+          const channels = [r, g, b];
+          const authored = channels.map(String);
+          authored[channel] = `${negative ? '-' : ''}1${'0'.repeat(exponent)}%`;
+          channels[channel] = negative ? 0 : 255;
+          expect(formatColor(parsed(`rgb(${authored.join(' ')} / 50%)`), 'rgba')).to.equal(
+            `rgba(${channels.join(', ')}, 0.50)`,
+          );
+        },
+      ),
+      propertyRuns(),
+    );
+  });
+
   it('round-trips every #rrggbb and #rrggbbaa colour exactly, in either letter case', () => {
     fc.assert(
       fc.property(byte, byte, byte, byte, (r, g, b, a) => {

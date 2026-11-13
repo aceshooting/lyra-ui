@@ -137,7 +137,8 @@ function parseNumber(text: string | undefined, percentBase: number): number | nu
   if (!match) return null;
   const raw = Number(match[1]);
   if (!Number.isFinite(raw)) return null;
-  return match[2] === '%' ? (raw / 100) * percentBase : raw;
+  // Clamp before scaling so a finite percentage cannot overflow the channel range.
+  return match[2] === '%' ? (clamp(raw, 0, 100) / 100) * percentBase : raw;
 }
 
 function parseAngle(text: string | undefined): number | null {

@@ -12173,6 +12173,7 @@
           "src/components/forms/color-picker/color-core.property.test.ts",
           "src/components/forms/color-picker/color-core.test.ts",
           "src/components/forms/color-picker/color-picker-coverage.test.ts",
+          "src/components/forms/color-picker/color-picker-percentage-boundaries.test.ts",
           "src/components/forms/color-picker/color-picker-placement-recovery.test.ts",
           "src/components/forms/color-picker/color-picker-remediation.test.ts",
           "src/components/forms/color-picker/color-picker.test.ts"
