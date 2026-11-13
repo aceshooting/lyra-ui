@@ -503,8 +503,6 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     this.mediaController.reconnect();
     const doc = (this.listenerDocument = this.ownerDocument);
     doc.addEventListener('fullscreenchange', this.onFullscreenChange);
-    doc.addEventListener('enterpictureinpicture', this.onPictureInPictureChange, true);
-    doc.addEventListener('leavepictureinpicture', this.onPictureInPictureChange, true);
     if (this.hasUpdated) {
       this.scheduleAfterUpdate(() => this.bindCaptionTracks(), 'video-caption-reconnect');
       this.scheduleAfterUpdate(() => this.configureVisibilityObserver(), 'video-visibility-reconnect');
@@ -538,8 +536,6 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     if (this.pictureInPicture) this.pictureInPicture = false;
     const doc = this.listenerDocument;
     doc?.removeEventListener('fullscreenchange', this.onFullscreenChange);
-    doc?.removeEventListener('enterpictureinpicture', this.onPictureInPictureChange, true);
-    doc?.removeEventListener('leavepictureinpicture', this.onPictureInPictureChange, true);
     super.disconnectedCallback();
   }
 
@@ -894,22 +890,24 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   };
 
   private onFullscreenChange = (): void => {
-    this.fullscreen = this.ownerDocument.fullscreenElement === this.wrapperEl;
+    this.fullscreen = !!this.wrapperEl && this.shadowRoot?.fullscreenElement === this.wrapperEl;
   };
 
+  private get isPictureInPicture(): boolean {
+    return !!this.videoEl && this.shadowRoot?.pictureInPictureElement === this.videoEl;
+  }
+
   private onPictureInPictureChange = (): void => {
-    const documentRef = this.ownerDocument as Document & { pictureInPictureElement?: Element | null };
-    this.pictureInPicture = documentRef.pictureInPictureElement === this.videoEl;
+    this.pictureInPicture = this.isConnected && this.isPictureInPicture;
   };
 
   private togglePictureInPicture = (): void => {
     const video = this.videoEl;
     const documentRef = this.ownerDocument as Document & {
-      pictureInPictureElement?: Element | null;
       exitPictureInPicture?: () => Promise<void>;
     };
     if (!video || !canRequestPictureInPicture(video)) return;
-    const promise = documentRef.pictureInPictureElement === video
+    const promise = this.isPictureInPicture
       ? documentRef.exitPictureInPicture?.()
       : video.requestPictureInPicture().then(() => undefined);
     void promise?.catch(() => undefined);
@@ -1296,6 +1294,8 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
           @loadeddata=${this.onPanoramaMediaReady}
           @emptied=${this.onPanoramaMediaReset}
           @error=${this.onPanoramaMediaReset}
+          @enterpictureinpicture=${this.onPictureInPictureChange}
+          @leavepictureinpicture=${this.onPictureInPictureChange}
           playsinline
           ?autoplay=${this.autoplay || this.autoplayMuted}
           ?loop=${this.loop}
