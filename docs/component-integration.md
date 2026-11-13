@@ -312,7 +312,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-tour"></a>`lr-tour` | utility | `import '@aceshooting/lyra-ui/components/lr-tour.js';` | none | none | none | 56.9 KiB |
 | <a id="lr-trace-tree"></a>`lr-trace-tree` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-trace-tree.js';` | none | `lr-empty`, `lr-live-region`, `lr-virtual-list` | none | 69.6 KiB |
 | <a id="lr-transcript-feed"></a>`lr-transcript-feed` | conversation | `import '@aceshooting/lyra-ui/components/lr-transcript-feed.js';` | none | none | none | 34.1 KiB |
-| <a id="lr-tree"></a>`lr-tree` | data | `import '@aceshooting/lyra-ui/components/lr-tree.js';` | none | `lr-empty`, `lr-live-region`, `lr-tree-item`, `lr-virtual-list` | none | 78.2 KiB |
+| <a id="lr-tree"></a>`lr-tree` | data | `import '@aceshooting/lyra-ui/components/lr-tree.js';` | none | `lr-empty`, `lr-live-region`, `lr-tree-item`, `lr-virtual-list` | none | 78.3 KiB |
 | <a id="lr-tree-item"></a>`lr-tree-item` | data | `import '@aceshooting/lyra-ui/components/lr-tree-item.js';` | none | none | none | 39.6 KiB |
 | <a id="lr-typing-indicator"></a>`lr-typing-indicator` | conversation | `import '@aceshooting/lyra-ui/components/lr-typing-indicator.js';` | none | none | none | 26.1 KiB |
 | <a id="lr-unit-picker"></a>`lr-unit-picker` | forms | `import '@aceshooting/lyra-ui/components/lr-unit-picker.js';` | none | `lr-option`, `lr-select` | `lr-combobox`, `lr-empty` | 113.2 KiB |

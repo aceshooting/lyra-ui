@@ -22800,6 +22800,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/data/file-tree/file-tree-source-values.test.ts",
+              "test": "names ${name === undefined ? 'an omitted' : 'an empty'} display name from the file path",
+              "target": "element",
+              "state": "populated"
+            },
+            {
               "file": "src/components/data/file-tree/file-tree.test.ts",
               "test": "is accessible with a nested, git-status-decorated tree",
               "target": "el",
@@ -22935,6 +22941,7 @@
           "src/components/data/file-tree/file-tree-remediation.test.ts",
           "src/components/data/file-tree/file-tree-scale.test.ts",
           "src/components/data/file-tree/file-tree-source-scale.test.ts",
+          "src/components/data/file-tree/file-tree-source-values.test.ts",
           "src/components/data/file-tree/file-tree-source.test.ts",
           "src/components/data/file-tree/file-tree.test.ts"
         ],
@@ -59992,6 +59999,12 @@
               "state": "populated"
             },
             {
+              "file": "src/components/data/tree/tree-source-values.test.ts",
+              "test": "uses the ${name} for the source row name",
+              "target": "element",
+              "state": "populated"
+            },
+            {
               "file": "src/components/data/tree/tree.test.ts",
               "test": "is accessible",
               "target": "el",
@@ -60160,6 +60173,7 @@
           "src/components/data/tree/tree-scale.test.ts",
           "src/components/data/tree/tree-selection-lazy.test.ts",
           "src/components/data/tree/tree-source-scale.test.ts",
+          "src/components/data/tree/tree-source-values.test.ts",
           "src/components/data/tree/tree-source.test.ts",
           "src/components/data/tree/tree.test.ts"
         ],
@@ -60400,6 +60414,7 @@
           "src/components/data/tree/tree-scale.test.ts",
           "src/components/data/tree/tree-selection-lazy.test.ts",
           "src/components/data/tree/tree-source-scale.test.ts",
+          "src/components/data/tree/tree-source-values.test.ts",
           "src/components/data/tree/tree-source.test.ts",
           "src/components/data/tree/tree.test.ts"
         ],

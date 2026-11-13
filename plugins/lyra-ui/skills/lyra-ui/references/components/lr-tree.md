@@ -70,6 +70,10 @@ data properties, at most 100 badges and 65,536 aggregate display-text units per 
 oversized rows fail visibly without compacting logical indices. The provider owns global key
 uniqueness and immutable snapshot consistency; validation covers the bounded admitted window.
 
+Source row names combine the visible label, description and badge names (a badge's `label` when
+usable, otherwise its `text`). An explicit `accessibleLabel` overrides that default. Rows with
+only blank display content use their stable `id`, while badge-only rows retain their badge name.
+
 The source view mounts at most 301 rows, retaining four 100-row pages plus at most one focused
 ready row (401 total). Range requests contain at most 100 rows, with at most two physically pending
 reads. One projection call runs at a time with only the latest replacement queued. Loading/error

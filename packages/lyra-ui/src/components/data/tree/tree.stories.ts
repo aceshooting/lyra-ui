@@ -469,7 +469,8 @@ export const IndexedSource: Story = {
       return { state: String(++revision), total: 1_000_000,
         rows: { count: 1_000_000, keyAt: index => `record-${index}`,
           indexOfKey: (key: string | number) => Number(String(key).slice(7)),
-          itemAt(index) { const key = `record-${index}`; return { key, value: { id: key, label: `Record ${index + 1}` }, parentKey: null,
+          itemAt(index) { const key = `record-${index}`; return { key, value: { id: key, label: `Record ${index + 1}`,
+            description: 'Indexed entry', badges: [{ text: 'Ready' }] }, parentKey: null,
             level: 1, position: index + 1, setSize: 1_000_000, childCount: 0, expanded: false, selected: key === snapshot }; },
         }, ...(request.action.type === 'reveal' ? { focusIndex: Number(request.action.key.slice(7)) } : {}),
       };

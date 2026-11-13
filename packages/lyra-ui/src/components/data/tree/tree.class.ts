@@ -486,6 +486,8 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
 
   /** Immutable provider preorder. Wins over legacy inputs while defined; unset restores them.
    * At most 301 rows mount, with four 100-row pages and one focused row retained.
+   * Row names include label, description and badge text unless accessibleLabel overrides them;
+   * otherwise unnamed rows use their stable id.
    * Reassign or call requestUpdate() after changing the provider revision.
    * @default undefined */
   @property({ attribute: false })
@@ -1969,7 +1971,10 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
       label: hostAriaLabel(this) ?? this.label, rtl: this.effectiveDirection === 'rtl', multiple: this.selection === 'multiple' || this.selection === 'leaf-multiple',
       loading: this.localize('loading'), error: this.localize('treeSourceError'), empty: this.localize('noData'),
       retry: this.localize('retry'), expand: this.localize('expand'), collapse: this.localize('collapse'), summary: this.sourceSummary(),
-      name: value => value.accessibleLabel || value.label || value.description || value.id, content: value => html`${value.icon ?? nothing}${value.label}${value.description ? html`<span>${value.description}</span>` : nothing}${value.badges?.map(badge => html`<span aria-label=${badge.label || nothing}>${badge.text}</span>`)}`,
+      name: value => value.accessibleLabel || [value.label, value.description,
+        ...(value.badges ?? []).map(badge => badge.label?.trim() ? badge.label : badge.text),
+      ].filter(text => text?.trim()).join(' ') || value.id,
+      content: value => html`${value.icon ?? nothing}${value.label}${value.description ? html` <span>${value.description}</span>` : nothing}${value.badges?.map(badge => html` <span role=${badge.label?.trim() ? 'img' : nothing} aria-label=${badge.label?.trim() ? badge.label : nothing}>${badge.text}</span>`)}`,
       select: (row: LyraHierarchyRow<LyraTreeNodeData>) => { if ((this.selection === 'leaf' || this.selection === 'leaf-multiple') && row.childCount > 0) return;
         const multiple = this.selection === 'multiple' || this.selection === 'leaf-multiple';
         void this.hierarchy.project({ type: 'select', key: row.key, selected: multiple ? !row.selected : true,
