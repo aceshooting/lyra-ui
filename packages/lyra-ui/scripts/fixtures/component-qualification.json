@@ -3279,6 +3279,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/viewers/archive-viewer/archive-viewer-load-lifecycle.test.ts",
           "src/components/viewers/archive-viewer/archive-viewer-register.test.ts",
           "src/components/viewers/archive-viewer/archive-viewer.test.ts",
           "src/components/viewers/archive-viewer/zip-resource-guard.test.ts"
@@ -7579,6 +7580,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/calendar-viewer/calendar-loader.test.ts",
+          "src/components/viewers/calendar-viewer/calendar-viewer-load-lifecycle.test.ts",
           "src/components/viewers/calendar-viewer/calendar-viewer-peer-data-boundaries.test.ts",
           "src/components/viewers/calendar-viewer/calendar-viewer-remediation.test.ts",
           "src/components/viewers/calendar-viewer/calendar-viewer.test.ts"
@@ -15425,6 +15427,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/csv-viewer/csv-viewer-input.test.ts",
+          "src/components/viewers/csv-viewer/csv-viewer-load-lifecycle.test.ts",
           "src/components/viewers/csv-viewer/csv-viewer-refresh.test.ts",
           "src/components/viewers/csv-viewer/csv-viewer-register.test.ts",
           "src/components/viewers/csv-viewer/csv-viewer-scale.test.ts",
@@ -16276,6 +16279,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/viewers/dataset-viewer/dataset-viewer-load-lifecycle.test.ts",
           "src/components/viewers/dataset-viewer/dataset-viewer-remediation.test.ts",
           "src/components/viewers/dataset-viewer/dataset-viewer-scale.test.ts",
           "src/components/viewers/dataset-viewer/dataset-viewer-yield.test.ts",
@@ -18651,6 +18655,7 @@
         "tests": [
           "src/components/viewers/docx-viewer/docx-loader.test.ts",
           "src/components/viewers/docx-viewer/docx-resource-guard.test.ts",
+          "src/components/viewers/docx-viewer/docx-viewer-load-lifecycle.test.ts",
           "src/components/viewers/docx-viewer/docx-viewer-register.test.ts",
           "src/components/viewers/docx-viewer/docx-viewer.test.ts"
         ],
@@ -27542,6 +27547,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/html-viewer/dompurify-loader.test.ts",
+          "src/components/viewers/html-viewer/html-viewer-load-lifecycle.test.ts",
           "src/components/viewers/html-viewer/html-viewer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -51068,6 +51074,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/spreadsheet-viewer/spreadsheet-loader.test.ts",
+          "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer-load-lifecycle.test.ts",
           "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer-register.test.ts",
           "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer-scale.test.ts",
           "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer-yield.test.ts",
@@ -52790,6 +52797,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/svg-viewer/dompurify-loader.test.ts",
+          "src/components/viewers/svg-viewer/svg-viewer-load-lifecycle.test.ts",
           "src/components/viewers/svg-viewer/svg-viewer-remediation.test.ts",
           "src/components/viewers/svg-viewer/svg-viewer.test.ts"
         ],
@@ -62783,6 +62791,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/xml-viewer/xml-viewer-limits.test.ts",
+          "src/components/viewers/xml-viewer/xml-viewer-load-lifecycle.test.ts",
           "src/components/viewers/xml-viewer/xml-viewer-public-boundaries.test.ts",
           "src/components/viewers/xml-viewer/xml-viewer-register.test.ts",
           "src/components/viewers/xml-viewer/xml-viewer-remediation.test.ts",

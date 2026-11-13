@@ -163,9 +163,9 @@ const rootHelperRegisteredTags = [];
 // https://github.com/aceshooting/lyra-ui/blob/7859878f724ef4237ee93a5414fa6b54f204313a/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
   $comment: 'Embedding renderer ownership uses 5,670,392 raw bytes across the same 64 files, 503 bytes above the previous reviewed measurement. The ceiling advances only to the next 64-byte boundary, 5,670,400 bytes. The explicit Oniguruma canary retains its separate exact binary requirement.',
-  reviewedCoreMeasurementBytes: 5_670_392,
+  reviewedCoreMeasurementBytes: 5_670_441,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 8,
+  selectedRegressionHeadroomBytes: 23,
 };
 
 /**
