@@ -326,9 +326,9 @@ const bundleEntries = {
   },
   graph: {
     fixture: 'optional',
-    // Collision-free layered-layout node and waypoint identities measure 460,621 raw bytes
-    // across the same 14 files; the next 64-byte boundary leaves 51 bytes.
-    maxRawBytes: 460_672,
+    // Retiring stale geometry observer deliveries measures 460,762 raw bytes across the same
+    // 14 files; the next 64-byte boundary leaves 38 bytes.
+    maxRawBytes: 460_800,
   },
 };
 

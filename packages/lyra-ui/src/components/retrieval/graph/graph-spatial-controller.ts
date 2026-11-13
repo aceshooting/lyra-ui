@@ -585,12 +585,27 @@ export class GraphSpatialController {
     const surface = this.selection.renderer === 'webgl' ? engineSurface : next;
     if (this.observedSurface !== surface) {
       this.resize?.disconnect(); this.intersection?.disconnect(); this.observedSurface = surface; this.visible = this.selection.renderer !== 'webgl';
-      const view = this.host.ownerDocument.defaultView;
+      const document = this.host.ownerDocument, view = document.defaultView;
       if (surface && view) {
+        const current = (): boolean => this.host.isConnected && this.host.ownerDocument === document && this.observedSurface === surface;
         const Resize = view.ResizeObserver;
-        if (Resize) { this.resize = new Resize(() => { this.fitInitialCanvas(); this.builtin?.invalidate(); this.syncVisibility(); this.schedule(); }); this.resize.observe(surface); }
+        if (Resize) {
+          const observer = new Resize(() => {
+            if (this.resize !== observer || !current()) return;
+            this.fitInitialCanvas(); this.builtin?.invalidate(); this.syncVisibility(); this.schedule();
+          });
+          this.resize = observer; observer.observe(surface);
+        }
         const Intersection = view.IntersectionObserver;
-        if (Intersection) { this.visibilityReported = false; this.intersection = new Intersection((entries) => { this.visible = entries[0]?.isIntersecting ?? false; this.visibilityReported = true; this.syncVisibility(); if (this.visible) { this.ensureEngine(); this.schedule(); } }); this.intersection.observe(surface); }
+        if (Intersection) {
+          this.visibilityReported = false;
+          const observer = new Intersection((entries) => {
+            if (this.intersection !== observer || !current()) return;
+            this.visible = entries[0]?.isIntersecting ?? false; this.visibilityReported = true; this.syncVisibility();
+            if (this.visible) { this.ensureEngine(); this.schedule(); }
+          });
+          this.intersection = observer; observer.observe(surface);
+        }
         else this.visible = surface.clientWidth > 0 && surface.clientHeight > 0;
       }
     }

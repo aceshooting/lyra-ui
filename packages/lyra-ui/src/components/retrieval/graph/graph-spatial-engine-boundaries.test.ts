@@ -328,3 +328,107 @@ describe('graph spatial engine boundaries', () => {
     expect(value.cameras.length).to.equal(before);
   });
 });
+
+for (const transition of ['reconnect', 'replace-surface'] as const) {
+  it(`ignores a retired intersection observer after ${transition} while honoring current visibility`, async () => {
+    const Original = window.IntersectionObserver;
+    const observers: { observer: IntersectionObserver; target: Element; deliver(visible: boolean): void }[] = [];
+    class RetainedIntersectionObserver extends Original {
+      private readonly callback: IntersectionObserverCallback;
+      constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+        super(callback, options); this.callback = callback;
+      }
+      override observe(target: Element): void {
+        super.observe(target);
+        observers.push({ observer: this, target, deliver: visible => {
+          const rect = target.getBoundingClientRect();
+          this.callback([{ target, time: performance.now(), rootBounds: null, boundingClientRect: rect,
+            intersectionRect: rect, intersectionRatio: visible ? 1 : 0, isIntersecting: visible }], this);
+        } });
+      }
+    }
+    window.IntersectionObserver = RetainedIntersectionObserver;
+    const value = setup();
+    try {
+      await mount(value);
+      const oldSurface = value.graph.shadowRoot!.querySelector<HTMLElement>('[data-webgl-host]')!;
+      const retired = observers.find(entry => entry.target === oldSurface)!;
+      expect(Boolean(retired)).to.equal(true);
+      const oldCallbacks = value.callbacks();
+      const priorSizes = value.sizes.length;
+      if (transition === 'reconnect') {
+        const parent = value.graph.parentNode!; value.graph.remove(); parent.appendChild(value.graph);
+      } else {
+        value.graph.view = 'list'; await settle(value.graph);
+        value.graph.view = '3d';
+      }
+      await waitUntil(() => value.callbacks() !== oldCallbacks && value.sizes.length > priorSizes);
+      await settle(value.graph);
+      const currentSurface = value.graph.shadowRoot!.querySelector<HTMLElement>('[data-webgl-host]')!;
+      const current = observers.filter(entry => entry.target === currentSurface).at(-1)!;
+      expect(current.observer === retired.observer).to.equal(false);
+      const before = value.sizes.length;
+      retired.deliver(false);
+      expect(value.sizes.length).to.equal(before);
+      expect(value.sizes.at(-1)!.every(size => size > 0)).to.equal(true);
+      current.deliver(false);
+      expect(value.sizes.at(-1)).to.deep.equal([0, 0]);
+      current.deliver(true);
+      await waitUntil(() => value.sizes.at(-1)!.every(size => size > 0));
+      expect(await value.graph.focusNode('a')).to.equal(true);
+      expect(value.disposed()).to.equal(1);
+    } finally {
+      try { value.graph.remove(); for (const entry of observers) entry.observer.disconnect(); }
+      finally { window.IntersectionObserver = Original; }
+    }
+  });
+}
+
+it('ignores queued resize work from a disconnected observer and retains the replacement observer', async () => {
+  const Original = window.ResizeObserver;
+  const observers: { target: Element; observer: ResizeObserver; replay(): void; count(): number }[] = [];
+  class RetainedResizeObserver extends Original {
+    private readonly replayRecords: () => void;
+    private readonly countRecords: () => number;
+    constructor(callback: ResizeObserverCallback) {
+      let latest: ResizeObserverEntry[] = [];
+      super((entries, observer) => { latest = entries; callback(entries, observer); });
+      this.replayRecords = () => callback(latest, this);
+      this.countRecords = () => latest.length;
+    }
+    override observe(target: Element, options?: ResizeObserverOptions): void {
+      super.observe(target, options);
+      observers.push({ target, observer: this, replay: this.replayRecords, count: this.countRecords });
+    }
+  }
+  window.ResizeObserver = RetainedResizeObserver;
+  const value = setup();
+  try {
+    await mount(value);
+    const surface = value.graph.shadowRoot!.querySelector<HTMLElement>('[data-webgl-host]')!;
+    const retired = observers.find(entry => entry.target === surface)!;
+    await waitUntil(() => retired.count() > 0);
+    const oldCallbacks = value.callbacks();
+    const parent = value.graph.parentNode!; value.graph.remove(); parent.appendChild(value.graph);
+    await waitUntil(() => value.callbacks() !== oldCallbacks);
+    await settle(value.graph);
+    const current = observers.filter(entry => entry.target === surface).at(-1)!;
+    expect(current.observer === retired.observer).to.equal(false);
+    await waitUntil(() => current.count() > 0);
+    const request = window.requestAnimationFrame;
+    let scheduled = 0;
+    window.requestAnimationFrame = callback => { scheduled++; return request.call(window, callback); };
+    try {
+      retired.replay();
+      expect(scheduled).to.equal(0);
+      current.replay();
+      expect(scheduled).to.equal(1);
+    } finally { window.requestAnimationFrame = request; }
+    await settle(value.graph);
+    expect(value.sizes.at(-1)!.every(size => size > 0)).to.equal(true);
+    expect(value.disposed()).to.equal(1);
+  } finally {
+    try { value.graph.remove(); for (const entry of observers) entry.observer.disconnect(); }
+    finally { window.ResizeObserver = Original; }
+  }
+});
