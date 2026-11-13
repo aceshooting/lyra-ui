@@ -112,6 +112,7 @@ class OwnedMap {
   moveLayer(id: string, before?: string): void { this.order = this.order.filter(value => value !== id); this.order.splice(before ? this.order.indexOf(before) : this.order.length, 0, id); }
   hasImage(id: string): boolean { return this.images.has(id); }
   addImage(id: string, pixels: ImageData): void { this.images.set(id, pixels); }
+  updateImage(id: string, pixels: ImageData): void { this.images.set(id, pixels); }
   removeImage(id: string): void { this.images.delete(id); }
   queryRenderedFeatures(): unknown[] { return this.hits; }
 }
@@ -351,6 +352,63 @@ describe('lr-map external data layers and labels', () => {
     expect(peer.sourceWrites).to.equal(writes); expect(peer.order).to.deep.equal(order);
     expect([...peer.sources.values()].every((value, index) => value === source[index])).to.equal(true);
     expect(peer.removed).to.equal(false);
+  });
+
+  for (const glyphs of [false, true]) {
+    it(`moves complete heatmap, cluster and icon groups ${glyphs ? 'with labels and cluster counts' : 'without glyphs'}`, async () => {
+      const clustered = { sourceId: 'clusters', geojson: POINTS, cluster: {}, before: 'places' };
+      const heat = { sourceId: 'heat', geojson: POINTS, kind: 'heatmap' as const, before: 'clusters' };
+      const places = { sourceId: 'places', geojson: POINTS,
+        point: { iconField: 'category', icons: [{ value: 'home', path: 'M0 0H24V24H0Z' }] },
+        ...(glyphs ? { label: { field: 'name' } } : {}) };
+      const { element, peer } = await mount(el => {
+        if (glyphs) el.mapStyle = { ...LYRA_MAP_EMPTY_STYLE, glyphs: 'https://example.test/{fontstack}/{range}.pbf' };
+        el.dataLayers = [clustered, places, heat];
+      });
+      await load(element, peer); await element.whenIdle();
+      const sourceFor = (type: string): string => {
+        const layer = [...peer.layers.values()].find(value => (value as Record<string, unknown>)['type'] === type);
+        return (layer as Record<string, unknown>)['source'] as string;
+      };
+      const heatId = sourceFor('heatmap'), placesId = sourceFor('fill');
+      const clusterId = [...peer.sourceDescriptors].find(([, source]) => (source as Record<string, unknown>)['cluster'] === true)![0];
+      const clusterGroup = [`${clusterId}-cluster`, ...(glyphs ? [`${clusterId}-cluster-count`] : []), `${clusterId}-circle`];
+      const placesGroup = [`${placesId}-fill`, `${placesId}-line`, `${placesId}-circle`, `${placesId}-point-icon`,
+        ...(glyphs ? [`${placesId}-label`] : [])];
+      expect(peer.order).to.deep.equal([`${heatId}-heatmap`, ...clusterGroup, ...placesGroup]);
+      const handles = [...peer.sources], writes = peer.sourceWrites;
+      element.dataLayers = [{ ...clustered, before: undefined }, { ...places, before: 'heat' }, heat];
+      await element.updateComplete; await element.whenIdle();
+      expect(peer.order).to.deep.equal([...placesGroup, `${heatId}-heatmap`, ...clusterGroup]);
+      expect(peer.sourceWrites).to.equal(writes);
+      expect(handles.every(([id, handle]) => peer.sources.get(id) === handle)).to.equal(true);
+      expect(element.shadowRoot!.querySelectorAll('[part="configuration-error"]').length).to.equal(0);
+    });
+  }
+
+  it('rejects exhausted external source identities without overwriting basemap sources and recovers when one is released', async () => {
+    const { element, peer } = await mount();
+    await load(element, peer);
+    for (let index = 0; index < 512; index++) peer.addSource(`lr-external-layer-${index}`, { type: 'geojson', data: POINTS });
+    await element.whenIdle();
+    const handles = [...peer.sources], writes = peer.sourceWrites;
+    const row = { kind: 'vector' as const, sourceId: 'roads', source: { url: 'https://example.test/vector.json' }, sourceLayer: 'roads', render: 'line' as const };
+    element.dataLayers = [row];
+    await element.updateComplete;
+    try { await element.whenIdle(); } catch { /* No safe source identity remains. */ }
+    await waitUntil(() => element.shadowRoot!.querySelector('[part="configuration-error"]') !== null);
+    expect(peer.sourceWrites).to.equal(writes);
+    expect(handles.every(([id, handle]) => peer.sources.get(id) === handle)).to.equal(true);
+    expect(peer.layers.size).to.equal(0);
+    expect(peer.removed).to.equal(false);
+    peer.removeSource('lr-external-layer-511');
+    element.dataLayers = [{ ...row }];
+    await element.updateComplete; await element.whenIdle();
+    expect(peer.sourceWrites).to.equal(writes + 1);
+    expect(peer.order).to.deep.equal(['lr-external-layer-511-render']);
+    expect(handles.slice(0, -1).every(([id, handle]) => peer.sources.get(id) === handle)).to.equal(true);
+    expect((peer.sourceDescriptors.get('lr-external-layer-511') as Record<string, unknown>)['type']).to.equal('vector');
+    expect(element.shadowRoot!.querySelectorAll('[part="configuration-error"]').length).to.equal(0);
   });
 
   it('orders mixed logical groups and rejects cycles before touching accepted resources', async () => {
@@ -617,6 +675,66 @@ describe('lr-map external data layers and labels', () => {
     expect(element.dataLayers === retainedRows).to.equal(true);
     expect(peer.removed).to.equal(false);
   });
+
+  it('restores owned groups after a failed move without moving unrelated basemap layers', async () => {
+    const first = { sourceId: 'first', geojson: POINTS, before: 'labels' };
+    const second = { sourceId: 'second', geojson: POINTS, before: 'labels' };
+    const { element, peer } = await mount(el => { el.dataLayers = [first, second]; });
+    peer.addLayer({ id: 'base' }); peer.addLayer({ id: 'labels' });
+    await load(element, peer); await element.whenIdle();
+    const original = [...peer.order], moved: string[] = [];
+    const move = peer.moveLayer.bind(peer), remove = peer.remove.bind(peer);
+    let retired: string[] = [];
+    peer.remove = () => { retired = [...peer.order]; remove(); };
+    peer.moveLayer = (id, before) => {
+      moved.push(id); move(id, before);
+      if (moved.length === 1) throw new Error('Renderer could not finish the move');
+    };
+    element.dataLayers = [second, first];
+    await element.updateComplete;
+    try { await element.whenIdle(); } catch { /* Failed renderer is retired after restoration. */ }
+    await waitUntil(() => peer.removed);
+    expect(retired).to.deep.equal(original);
+    expect(moved.length).to.be.greaterThan(1);
+    expect(moved.some(id => id === 'base' || id === 'labels')).to.equal(false);
+    expect(element.shadowRoot!.textContent).not.to.include('Renderer could not finish the move');
+  });
+
+  for (const failure of [false, true]) {
+    it(`stops the old group ${failure ? 'rollback' : 'move'} when a renderer callback replaces public rows`, async () => {
+      const first = { sourceId: 'first', geojson: POINTS, before: 'labels' };
+      const second = { sourceId: 'second', geojson: POINTS, before: 'labels' };
+      const { element, peer } = await mount(el => { el.dataLayers = [first, second]; });
+      peer.addLayer({ id: 'base' }); peer.addLayer({ id: 'labels' });
+      await load(element, peer); await element.whenIdle();
+      const retained = [...peer.sources][0]!, original = [...peer.order];
+      const move = peer.moveLayer.bind(peer);
+      let calls = 0, resume: (() => void) | undefined;
+      peer.moveLayer = (id, before) => {
+        calls++; move(id, before);
+        if (calls !== 1) return;
+        OwnedMap.prepare = () => new Promise<void>(resolve => { resume = resolve; });
+        element.dataLayers = [first];
+        if (failure) throw new Error('Superseded renderer move');
+      };
+      try {
+        await captureReentrantUpdateWarning(element.localName, async () => {
+          element.dataLayers = [second, first];
+          await element.updateComplete;
+          await waitUntil(() => resume !== undefined, 'the replacement reached feature preparation');
+          expect(calls, 'the obsolete move or rollback must stop before the replacement prepares').to.equal(1);
+          expect(peer.removed).to.equal(false);
+          OwnedMap.prepare = undefined;
+          resume!();
+          await element.whenIdle();
+        });
+        expect(peer.sources.size).to.equal(1);
+        expect(peer.sources.get(retained[0]) === retained[1]).to.equal(true);
+        expect(peer.order).to.deep.equal(original.filter(id => id === 'base' || id === 'labels' || id.startsWith(`${retained[0]}-`)));
+        expect(element.shadowRoot!.querySelectorAll('[part="error"], [part="configuration-error"]').length).to.equal(0);
+      } finally { OwnedMap.prepare = undefined; resume?.(); }
+    });
+  }
 
   it('routes a final mixed-order move failure through settled resource failure', async () => {
     const first = { sourceId: 'first', geojson: POINTS, minZoom: 1, before: 'owned-circle' };
