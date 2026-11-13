@@ -1,5 +1,6 @@
 import { expect } from '@open-wc/testing';
 import {
+  dateTimeFormat,
   monthMatrix,
   formatISO,
   parseISO,
@@ -176,4 +177,58 @@ it('preserves the closed weekday vocabulary and invalid-number fallback', () => 
   for (const value of [0, -1, 7, Number.NaN, Number.POSITIVE_INFINITY]) {
     expect(resolveFirstDayOfWeek(value as never)).to.equal(0);
   }
+});
+
+it('wraps finite weekday offsets and falls back to Sunday for non-finite offsets', () => {
+  expect(weekdayLabels(-1.9, 'long', 'en-US')[0]).to.equal('Saturday');
+  expect(weekdayLabels(8.9, 'long', 'en-US')[0]).to.equal('Monday');
+  for (const offset of [NaN, Infinity, -Infinity]) {
+    const labels = weekdayLabels(offset, 'long', 'en-US');
+    expect(labels.length).to.equal(7); expect(labels[0]).to.equal('Sunday');
+  }
+  expect(weekdayLabels()).to.deep.equal(weekdayLabels(0, 'short'));
+});
+
+it('falls back from malformed automatic locale metadata while retaining an explicit weekday', () => {
+  expect(resolveFirstDayOfWeek('auto', 'not_a_locale')).to.equal(0);
+  expect(resolveFirstDayOfWeek('mon', 'not_a_locale')).to.equal(1);
+});
+
+for (const support of ['method', 'absent', 'throwing'] as const) {
+  it(`supports ${support} runtime week information without changing explicit choices`, () => {
+    const prototype = Intl.Locale.prototype;
+    const previousInfo = Object.getOwnPropertyDescriptor(prototype, 'weekInfo');
+    const previousMethod = Object.getOwnPropertyDescriptor(prototype, 'getWeekInfo');
+    let calls = 0;
+    try {
+      Object.defineProperty(prototype, 'weekInfo', { configurable: true, get: () => undefined });
+      Object.defineProperty(prototype, 'getWeekInfo', { configurable: true, value: support === 'absent' ? undefined : () => {
+        calls++;
+        if (support === 'throwing') throw new Error('Locale metadata unavailable');
+        return { firstDay: 2 };
+      } });
+      expect(resolveFirstDayOfWeek('auto', 'fr-FR')).to.equal(support === 'method' ? 2 : 0);
+      expect(resolveFirstDayOfWeek('sat', 'fr-FR')).to.equal(6);
+      expect(calls).to.equal(support === 'absent' ? 0 : 1);
+    } finally {
+      if (previousInfo) Object.defineProperty(prototype, 'weekInfo', previousInfo); else Reflect.deleteProperty(prototype, 'weekInfo');
+      if (previousMethod) Object.defineProperty(prototype, 'getWeekInfo', previousMethod); else Reflect.deleteProperty(prototype, 'getWeekInfo');
+    }
+  });
+}
+
+it('uses a fallback formatter when the runtime rejects a valid locale', () => {
+  const original = Intl.DateTimeFormat;
+  const options: Intl.DateTimeFormatOptions = { year: '2-digit', month: 'long', day: 'numeric', weekday: 'narrow', timeZone: 'UTC' };
+  const date = new Date('2026-11-13T00:00:00Z');
+  const expected = new original('en', { calendar: 'gregory', ...options }).format(date);
+  let rejected = 0;
+  try {
+    Intl.DateTimeFormat = new Proxy(original, { construct(target, args, newTarget) {
+      if (args[0] === 'fr-CH') { rejected++; throw new RangeError('Locale temporarily unavailable'); }
+      return Reflect.construct(target, args, newTarget);
+    } });
+    expect(dateTimeFormat('fr-CH', options).format(date)).to.equal(expected);
+    expect(rejected).to.equal(1);
+  } finally { Intl.DateTimeFormat = original; }
 });
