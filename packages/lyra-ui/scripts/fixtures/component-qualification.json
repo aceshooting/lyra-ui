@@ -23560,6 +23560,7 @@
           "src/components/data/flow-canvas/flow-canvas-gesture-cache.test.ts",
           "src/components/data/flow-canvas/flow-canvas-remediation.test.ts",
           "src/components/data/flow-canvas/flow-canvas-scale.test.ts",
+          "src/components/data/flow-canvas/flow-canvas-selection-boundaries.test.ts",
           "src/components/data/flow-canvas/flow-canvas-source-ownership.test.ts",
           "src/components/data/flow-canvas/flow-canvas-source-scale.test.ts",
           "src/components/data/flow-canvas/flow-canvas-viewport-api.test.ts",
