@@ -16052,6 +16052,7 @@
           "src/components/data/data-grid/data-grid-interaction.test.ts",
           "src/components/data/data-grid/data-grid-keyboard.test.ts",
           "src/components/data/data-grid/data-grid-measured-shrink.test.ts",
+          "src/components/data/data-grid/data-grid-observer-ownership.test.ts",
           "src/components/data/data-grid/data-grid-ownership.test.ts",
           "src/components/data/data-grid/data-grid-pipeline.test.ts",
           "src/components/data/data-grid/data-grid-processing-cost.test.ts",
