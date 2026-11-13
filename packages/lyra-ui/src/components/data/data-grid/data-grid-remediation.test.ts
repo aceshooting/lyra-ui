@@ -107,6 +107,28 @@ describe('data-grid canonical output and interaction', () => {
     expect(element.selectionMode).to.equal('none');
   });
 
+  it('keeps the empty selectable property shorthand coherent with the alias and rendered selection', async () => {
+    const second: Row = { id: 'second', value: 'Two' };
+    const element = await fixture<LyraDataGrid<Row>>(html`<lr-data-grid
+      label="Values" .rowKey=${'id'} .columns=${[{ field: 'value', label: 'Value' }]}
+      .data=${[row, second]} .selectable=${''}
+    ></lr-data-grid>`);
+    expect(element.selectionMode).to.equal('multiple');
+    const select = (index: number) => element.shadowRoot!
+      .querySelectorAll<HTMLInputElement>('[part~="row"] input[type="checkbox"]')[index]!.click();
+    select(0);
+    await element.updateComplete;
+    select(1);
+    await element.updateComplete;
+    expect(element.selectedKeys).to.deep.equal(['first', 'second']);
+    expect(element.selectedRows.map(entry => entry.value)).to.deep.equal(['One', 'Two']);
+    element.selectionMode = 'none';
+    await element.updateComplete;
+    expect(element.selectable).to.equal('none');
+    expect(element.selectionMode).to.equal('none');
+    expect(element.shadowRoot!.querySelectorAll('[part~="row"] input[type="checkbox"]').length).to.equal(0);
+  });
+
   it('renders a per-cell title from column.cellTitle, mirroring lr-table', async () => {
     const columns: DataGridColumn<Row>[] = [{
       field: 'value', label: 'Value', cellTitle: (r) => `full: ${r.value}`,

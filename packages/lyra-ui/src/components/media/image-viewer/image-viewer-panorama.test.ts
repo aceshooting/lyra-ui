@@ -19,18 +19,21 @@ describe('lr-image-viewer panorama', () => {
   const available = panoramaEnvironment.available;
   let creates: number, disposed: number;
   let source: unknown, camera: unknown, style: unknown;
+  let focusedHotspots: (number | undefined)[];
   let host: Engine3dHost;
   let finish: (() => void) | undefined;
   let pending: boolean;
   let rejectData: boolean;
   beforeEach(() => {
     creates = disposed = 0; source = camera = style = undefined; pending = rejectData = false; finish = undefined;
+    focusedHotspots = [];
     panoramaEnvironment.available = () => true;
     panoramaLoader.override(async () => ({ createEngine: (): Engine3dInstance => {
       creates++;
       return { contract: 1, async mount(_container, callbacks) { host = callbacks; if (pending) await new Promise<void>(resolve => { finish = resolve; }); },
         setData(data) { if (rejectData) throw new Error('unusable texture'); source = (data as { source: { image: HTMLImageElement } }).source.image; },
-        setCamera(value) { camera = value; }, setStyle(value) { style = value; }, setState() {}, resize() {}, dispose() { disposed++; } };
+        setCamera(value) { camera = value; }, setStyle(value) { style = value; },
+        setState(value) { focusedHotspots.push((value as { focus?: number }).focus); }, resize() {}, dispose() { disposed++; } };
     } }));
   });
   afterEach(() => { panoramaEnvironment.available = available; panoramaLoader.override(undefined); });
@@ -170,6 +173,45 @@ describe('lr-image-viewer panorama', () => {
     expect(el.shadowRoot!.querySelector('[part="image"]') === image).to.equal(true);
     expect(el.shadowRoot!.querySelector('[part="frame"]')?.hasAttribute('hidden')).to.equal(false);
   });
+
+  for (const direction of ['ltr', 'rtl'] as const) {
+    for (const engine of ['builtin', 'webgl'] as const) {
+      it(`navigates and activates paged panorama hotspots in ${direction} with the ${engine} renderer`, async () => {
+        const hotspots = Array.from({ length: 205 }, (_, index) => ({ id: `spot-${index}`, yaw: index / 100, pitch: 0 }));
+        const el = await fixture<LyraImageViewer>(html`
+          <lr-image-viewer src=${PNG} .engine=${engine} projection="equirectangular" dir=${direction}
+            .hotspots=${hotspots}></lr-image-viewer>
+        `);
+        if (engine === 'webgl') await waitUntil(() => el.shadowRoot!.querySelector('[part="panorama"]')?.hasAttribute('data-ready') === true);
+        await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="panorama-hotspot"]').length === 200);
+        await focusByKeyboard(el.shadowRoot!.querySelector<HTMLElement>('[data-panorama-index="0"]')!);
+        const forward = direction === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
+        const backward = direction === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
+        for (const [key, index] of [
+          [backward, 0], ['ArrowUp', 0], [forward, 1], ['ArrowDown', 2], [backward, 1], ['ArrowUp', 0],
+          ['End', 204], [forward, 204], ['ArrowDown', 204], [backward, 203], ['Home', 0], ['End', 204],
+        ] as const) {
+          await sendKeys({ press: key });
+          await waitUntil(() => el.shadowRoot!.activeElement?.getAttribute('data-panorama-index') === String(index),
+            `${key} focuses hotspot ${index}`);
+          expect(el.shadowRoot!.querySelectorAll('[part="panorama-hotspot"][tabindex="0"]').length).to.equal(1);
+          expect(el.shadowRoot!.querySelector('[part="panorama-hotspot"][tabindex="0"]')?.getAttribute('data-panorama-index')).to.equal(String(index));
+          if (engine === 'webgl') expect(focusedHotspots.at(-1)).to.equal(index);
+        }
+        expect(el.shadowRoot!.querySelectorAll('[part="panorama-hotspot"]').length).to.equal(5);
+        let prevented: boolean | undefined;
+        el.addEventListener('keydown', event => { prevented = event.defaultPrevented; }, { once: true });
+        await sendKeys({ press: 'a' });
+        expect(prevented).to.equal(false);
+        expect(el.shadowRoot!.activeElement?.getAttribute('data-panorama-index')).to.equal('204');
+        const selected = oneEvent(el, 'lr-panorama-hotspot-select');
+        await sendKeys({ press: 'Space' });
+        expect((await selected).detail).to.deep.equal({ hotspot: el.hotspots[204], id: 'spot-204', index: 204 });
+        expect(creates).to.equal(engine === 'webgl' ? 1 : 0);
+        expect(el.panoramaCamera).to.deep.equal(PANORAMA_DEFAULT_CAMERA);
+      });
+    }
+  }
 
   it('keeps every admitted hotspot reachable through bounded text pages and omits invalid duplicate IDs', async () => {
     const hotspots = Array.from({ length: 205 }, (_, index) => ({ id: `spot-${index}`, yaw: index / 100, pitch: 0 }));

@@ -33,11 +33,13 @@ describe('file icon custom registry result recovery', () => {
   const invalid: readonly [string, () => unknown][] = [
     ['null', () => null],
     ['undefined', () => undefined],
+    ['a primitive record', () => 42],
     ['an empty record', () => ({})],
     ['an empty label', () => ({ ...metadata(), label: '' })],
     ['a whitespace-only label', () => ({ ...metadata(), label: ' \n\t' })],
     ['an oversized label', () => ({ ...metadata(), label: 'a'.repeat(513) })],
     ['a non-text label', () => ({ ...metadata(), label: {} })],
+    ['a non-text icon', () => ({ ...metadata(), icon: 42 })],
     ['an unknown builtin icon', () => ({ ...metadata(), provenance: 'builtin', icon: 'toString' })],
     ['an unknown provenance', () => ({ ...metadata(), provenance: 'application' })],
     ['a non-text description', () => ({ ...metadata(), description: {} })],
