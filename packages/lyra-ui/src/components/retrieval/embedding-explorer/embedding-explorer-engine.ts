@@ -29,6 +29,7 @@ export class EmbeddingEngineController {
   private engine?: Engine3dInstance;
   private generation = 0;
   private revision = 0;
+  private readonly disposed = new WeakSet<Engine3dInstance>();
   private rows: EmbeddingRows | null = null;
   private container: HTMLElement | null = null;
   private observer?: IntersectionObserver;
@@ -52,9 +53,15 @@ export class EmbeddingEngineController {
     private readonly pick: (index: number) => void,
   ) {}
 
-  /** Release ownership first, so queued observers and disposal callbacks cannot reenter. */
-  private releaseEngine(): void {
-    this.generation++;
+  private dispose(engine: Engine3dInstance | null | undefined): void {
+    if (!engine || this.disposed.has(engine)) return;
+    this.disposed.add(engine);
+    try { engine.dispose(); } catch { /* A failed disposer still retires ownership. */ }
+  }
+
+  /** Release ownership first; callers must preserve any newer cycle started by disposal. */
+  private releaseEngine(): number {
+    const generation = ++this.generation;
     this.observer?.disconnect(); this.observer = undefined;
     this.eligibility?.disconnect(); this.eligibility = undefined;
     this.intersecting = false;
@@ -65,22 +72,32 @@ export class EmbeddingEngineController {
     const engine = this.engine; this.engine = undefined;
     this.ready = this.loading = this.pending = false;
     this.software = false; this.hover = -1;
-    engine?.dispose();
+    this.dispose(engine);
+    return generation;
   }
 
   /** Invalidate immediately on changed public writes, before the next render can accept stale picks. */
-  invalidate(): void {
-    this.releaseEngine();
+  invalidate(): void { this.invalidateCycle(); }
+
+  private invalidateCycle(): number {
+    const generation = this.releaseEngine();
+    if (generation !== this.generation) return generation;
     this.attempted = false;
     this.selection.prefer(this.preference); this.notice = null;
+    return generation;
   }
 
-  disconnect(): void { this.invalidate(); this.container = null; this.rows = null; }
+  disconnect(): void {
+    const generation = this.invalidateCycle();
+    if (generation !== this.generation) return;
+    this.container = null; this.rows = null;
+  }
 
   update(preference: Engine3dPreference, rows: EmbeddingRows | null, sourceMode: boolean, container: HTMLElement | null, selected: number, focus: number): void {
     const changed = preference !== this.preference || rows !== this.rows || sourceMode !== this.sourceMode || container !== this.container;
     if (changed) {
-      this.invalidate();
+      const generation = this.invalidateCycle();
+      if (generation !== this.generation) return;
       this.preference = preference; this.rows = rows; this.sourceMode = sourceMode; this.container = container;
       this.selection.prefer(preference); this.notice = null;
     }
@@ -92,7 +109,11 @@ export class EmbeddingEngineController {
     }
     if (!rows?.count || !container) return;
     if (this.engine && this.ready) {
-      try { this.engine.setStyle(this.style()); this.syncState(); } catch { this.fail('error'); }
+      const generation = this.generation;
+      try {
+        this.engine.setStyle(this.style());
+        if (generation === this.generation) this.syncState();
+      } catch { if (generation === this.generation) this.fail('error'); }
       return;
     }
     if (this.pending || this.attempted || this.selection.renderer !== 'webgl') return;
@@ -134,7 +155,8 @@ export class EmbeddingEngineController {
     const detail = this.selection.renderer === 'webgl' ? this.selection.fail(reason) : null;
     this.loading = this.ready = false;
     if (reason !== 'context-lost') {
-      this.releaseEngine();
+      const generation = this.releaseEngine();
+      if (generation !== this.generation) return;
       this.attempted = true;
     }
     if (!detail) return;
@@ -158,14 +180,14 @@ export class EmbeddingEngineController {
     let engine: Engine3dInstance | null = null;
     try {
       engine = await embeddingPointsLoader.create();
-      if (!current()) { engine?.dispose(); return; }
+      if (!current()) { this.dispose(engine); return; }
       if (!engine) { this.pending = false; this.fail('unavailable'); return; }
       this.engine = engine;
       await engine.mount(container, {
         hover: index => {
           if (!current() || !this.ready) return;
           this.hover = index !== null && rows.point(index) ? index : -1;
-          try { this.syncState(); } catch { this.fail('error'); }
+          try { this.syncState(); } catch { if (current()) this.fail('error'); }
         },
         pick: index => { if (current() && this.ready && index !== null && rows.point(index)) this.pick(index); },
         camera: () => {},
@@ -173,30 +195,37 @@ export class EmbeddingEngineController {
         rendering: info => { if (current()) { this.software = info.software; this.changed(); } },
         restored: () => {
           if (!current() || !this.engine || !this.selection.restore()) return;
-          try { this.ready = true; this.notice = null; this.syncState(); this.changed(); } catch { this.fail('error'); }
+          try {
+            this.ready = true; this.notice = null; this.syncState();
+            if (current()) this.changed();
+          } catch { if (current()) this.fail('error'); }
         },
       });
-      if (!current()) { engine.dispose(); return; }
+      if (!current()) { this.dispose(engine); return; }
       engine.setStyle(this.style());
+      if (!current()) return;
       engine.setData(rows.data(), ++this.revision);
+      if (!current()) return;
       const resize = () => {
         if (!current()) return;
         const box = container.getBoundingClientRect();
         engine!.resize(Math.max(1, box.width), Math.max(1, box.height));
       };
       resize();
+      if (!current()) return;
       engine.fit?.();
+      if (!current()) return;
       const view = owner.defaultView;
       if (view?.ResizeObserver) {
         this.resizeObserver = new view.ResizeObserver(() => {
           if (!current() || !this.ready) return;
-          try { engine!.setStyle(this.style()); resize(); } catch { this.fail('error'); }
+          try { engine!.setStyle(this.style()); resize(); } catch { if (current()) this.fail('error'); }
         });
         this.resizeObserver.observe(container);
       }
       const refreshStyle = () => {
         if (!current() || !this.ready) return;
-        try { engine!.setStyle(this.style()); } catch { this.fail('error'); }
+        try { engine!.setStyle(this.style()); } catch { if (current()) this.fail('error'); }
       };
       if (view?.MutationObserver) {
         this.styleObserver = new view.MutationObserver(refreshStyle);
@@ -214,9 +243,10 @@ export class EmbeddingEngineController {
       }
       this.pending = this.loading = false;
       this.ready = this.selection.renderer === 'webgl';
-      this.syncState(); this.changed();
+      this.syncState();
+      if (current()) this.changed();
     } catch (error) {
-      if (!current()) { engine?.dispose(); return; }
+      if (!current()) { this.dispose(engine); return; }
       this.fail(engine3dFailureReason(error));
     }
   }

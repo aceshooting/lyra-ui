@@ -20500,8 +20500,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/retrieval/embedding-explorer/embedding-explorer-engine.test.ts",
-              "test": "reports missing peers and mount rejection through the fallback contract",
+              "file": "src/components/retrieval/embedding-explorer/embedding-explorer-engine-reentry.test.ts",
+              "test": "contains a throwing disposer and permits a replacement renderer",
               "kind": "optional-peer failure-path test signal"
             }
           ],
@@ -20513,7 +20513,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/embedding-explorer/embedding-explorer-engine.ts",
-              "line": 104,
+              "line": 84,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -20551,6 +20551,7 @@
         "tests": [
           "src/components/retrieval/embedding-explorer/embedding-explorer-data.test.ts",
           "src/components/retrieval/embedding-explorer/embedding-explorer-engine-lifecycle-boundaries.test.ts",
+          "src/components/retrieval/embedding-explorer/embedding-explorer-engine-reentry.test.ts",
           "src/components/retrieval/embedding-explorer/embedding-explorer-engine.test.ts",
           "src/components/retrieval/embedding-explorer/embedding-explorer-focus-regression.test.ts",
           "src/components/retrieval/embedding-explorer/embedding-explorer-large-identity-scale.test.ts",

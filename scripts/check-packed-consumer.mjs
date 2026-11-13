@@ -155,17 +155,17 @@ const optionalPeerFamilyTags = componentInventory.components
 const rootHelperRegisteredTags = [];
 
 // Packed core/all.js includes every non-optional registration and every emitted chunk.
-// Notebook HTML search tag/attribute-boundary handling uses 5,669,889 raw bytes across 64 files;
-// the next 64-byte ceiling leaves 63 bytes of headroom.
+// Embedding renderer ownership uses 5,670,392 raw bytes across 64 files;
+// the next 64-byte ceiling leaves 8 bytes of headroom.
 // Optional-peer exclusions and the complete file sum stay fixed. Core has no WASM allowance;
 // the explicit Oniguruma canary retains its separate exact 466,610-byte binary requirement.
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/7859878f724ef4237ee93a5414fa6b54f204313a/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'Notebook HTML search tag/attribute-boundary handling uses 5,669,889 raw bytes across the same 64 files, an increase of 415 bytes. The ceiling advances only to the next 64-byte boundary, 5,669,952 bytes. The explicit Oniguruma canary retains its separate exact binary requirement.',
-  reviewedCoreMeasurementBytes: 5_669_889,
+  $comment: 'Embedding renderer ownership uses 5,670,392 raw bytes across the same 64 files, 503 bytes above the previous reviewed measurement. The ceiling advances only to the next 64-byte boundary, 5,670,400 bytes. The explicit Oniguruma canary retains its separate exact binary requirement.',
+  reviewedCoreMeasurementBytes: 5_670_392,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 63,
+  selectedRegressionHeadroomBytes: 8,
 };
 
 /**
