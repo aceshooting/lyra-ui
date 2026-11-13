@@ -1966,27 +1966,103 @@ describe("anchor-target adoption", () => {
     }
   });
 
-  it("renderPageThumbnail cancels a prior in-flight render for the same canvas", async () => {
-    const el = (await fixture(
-      html`<lr-pdf-viewer></lr-pdf-viewer>`
-    )) as LyraPdfViewer;
-    installFakeLoader(el, fakeDocument(2));
+  it('cancels an already-started thumbnail render and leaves the newest page bitmap', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    const canvas = document.createElement('canvas');
+    const pending = deferred<void>();
+    let started = false, cancels = 0;
+    const doc = {
+      numPages: 2,
+      getPage: async (pageNumber: number) => ({
+        ...fakePage(pageNumber),
+        render: (options?: { canvasContext: CanvasRenderingContext2D }) => {
+          if (options?.canvasContext.canvas !== canvas) return fakePage(pageNumber).render();
+          const context = options.canvasContext;
+          context.fillStyle = pageNumber === 1 ? '#ff0000' : '#0000ff';
+          context.fillRect(0, 0, 200, 300);
+          if (pageNumber === 2) return { promise: Promise.resolve(), cancel() {} };
+          started = true;
+          return { promise: pending.promise, cancel() {
+            cancels++;
+            pending.reject(new DOMException('Replaced', 'AbortError'));
+          } };
+        },
+      }),
+    };
+    installFakeLoader(el, doc);
     const restore = stubFetch();
     try {
-      el.src = "https://example.test/report.pdf";
+      el.src = 'https://example.test/report.pdf';
       await waitFor(el, '[part="toolbar"]');
-      const canvas = document.createElement("canvas");
       const first = el.renderPageThumbnail(1, canvas);
+      await waitUntil(() => started, 'the first thumbnail has an active render task');
+      expect(cancels).to.equal(0);
       const second = el.renderPageThumbnail(2, canvas);
-      const [firstResult, secondResult] = await Promise.all([first, second]);
-      expect(secondResult).to.be.true;
-      // The first call's render task was cancelled by the second's same-canvas call; it must not
-      // report a stale success (the exact resolved value of a cancelled call is not asserted beyond
-      // "not a crash" -- what matters is the canvas ends up showing the second page).
-      void firstResult;
-    } finally {
-      restore();
-    }
+      expect(cancels).to.equal(1);
+      expect(await Promise.all([first, second])).to.deep.equal([false, true]);
+      expect([...canvas.getContext('2d')!.getImageData(0, 0, 1, 1).data]).to.deep.equal([0, 0, 255, 255]);
+      expect(canvas.style.width).to.equal('96px');
+    } finally { pending.resolve(); restore(); }
+  });
+
+  for (const width of [0, -1, Number.NaN, Infinity]) {
+    it(`rejects an invalid peer thumbnail viewport width ${width} without rendering and recovers`, async () => {
+      const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+      const doc = fakeDocument(1);
+      installFakeLoader(el, doc);
+      const restore = stubFetch();
+      try {
+        el.src = 'https://example.test/report.pdf';
+        await waitFor(el, '[part="toolbar"]');
+        await waitUntil(() => listShadowRoot(el).querySelector('[part="text-layer"]')?.textContent?.includes('Overall') === true, 'the initial document page has rendered');
+        const original = doc.getPage;
+        const canvas = document.createElement('canvas');
+        let renders = 0;
+        doc.getPage = async pageNumber => {
+          const page = await original(pageNumber);
+          return { ...page, getViewport: options => ({ ...page.getViewport(options), width }),
+            render: (options?: { canvasContext: CanvasRenderingContext2D }) => {
+              if (options?.canvasContext.canvas === canvas) renders++;
+              return page.render();
+            } };
+        };
+        canvas.width = 17; canvas.height = 19;
+        expect(await el.renderPageThumbnail(1, canvas)).to.equal(false);
+        expect(renders).to.equal(0);
+        expect([canvas.width, canvas.height]).to.deep.equal([17, 19]);
+        doc.getPage = original;
+        expect(await el.renderPageThumbnail(1, canvas)).to.equal(true);
+        expect(canvas.style.width).to.equal('96px');
+      } finally { restore(); }
+    });
+  }
+
+  it('does not start thumbnail rendering without a 2D context and allows later retry', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    const doc = fakeDocument(1);
+    installFakeLoader(el, doc);
+    const restore = stubFetch();
+    const canvas = document.createElement('canvas');
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      await waitUntil(() => listShadowRoot(el).querySelector('[part="text-layer"]')?.textContent?.includes('Overall') === true, 'the initial document page has rendered');
+      let renders = 0;
+      const original = doc.getPage;
+      doc.getPage = async pageNumber => {
+        const page = await original(pageNumber);
+        return { ...page, render: (options?: { canvasContext: CanvasRenderingContext2D }) => {
+              if (options?.canvasContext.canvas === canvas) renders++;
+              return page.render();
+            } };
+      };
+      Object.defineProperty(canvas, 'getContext', { configurable: true, value: () => null });
+      expect(await el.renderPageThumbnail(1, canvas)).to.equal(false);
+      expect(renders).to.equal(0);
+      Reflect.deleteProperty(canvas, 'getContext');
+      expect(await el.renderPageThumbnail(1, canvas)).to.equal(true);
+      expect(renders).to.equal(1);
+    } finally { Reflect.deleteProperty(canvas, 'getContext'); restore(); }
   });
 
   it("renderPageThumbnail resolves false when the render task aborts", async () => {
