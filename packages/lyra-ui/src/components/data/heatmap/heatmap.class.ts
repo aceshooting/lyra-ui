@@ -2214,6 +2214,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    this.selectionContext = this.captureSelectionContext();
     if (changed.has('matrixSource') && !this.matrixSource) changed.set('data', undefined);
     if (this.matrixSource) {
       if (changed.has('locale') || changed.has('strings')) { this.sourceRevealIntent++; this.sourceNavigationIntent++; this.sourceController.cancelExact(); }
@@ -4775,14 +4776,14 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     this.announcements.announcePolite(announcement);
   }
 
-  private emitCellClick(pos: CellPos, source: HeatmapSelectionSource = 'pointer', select = true): void {
+  private emitCellClick(pos: CellPos, source: HeatmapSelectionSource = 'pointer', select = true, current?: () => boolean): void {
     // Pointer clicks are filtered through `isCellInteractive()` at hit-test time (see
     // `hitTestMatrix()`/`hitTestCalendar()`), but the Enter/Space handlers in `onMatrixKeyDown()`/
     // `onCalendarKeyDown()` call here with the stored `focusedCell` directly, with no hit-test in
     // between -- re-checking here keeps keyboard activation from firing for a cell that's since
     // become non-interactive (e.g. a `values` refresh flips what `cellInteractive` returns for the
     // still-focused position) even if some future caller forgets to reset the cursor first.
-    if (!this.isCellInteractive(pos)) return;
+    if (!this.isCellInteractive(pos) || current && !current()) return;
     if (this.multiple && select) {
       this.selectionAnchor = pos;
       this.selectionRangeBase = undefined;
@@ -4804,7 +4805,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   private selectionAnchor: CellPos | null = null;
   private selectionRangeBase?: ReadonlyMap<string, CellPos>;
   private proposedSelectionKeys?: ReadonlySet<string>;
+  private selectionContext?: (allowSelectionChange?: boolean) => boolean;
   private selectionGesture?: {
+    current: (allowSelectionChange?: boolean) => boolean;
     pointerId: number;
     target: HTMLElement;
     start: CellPos;
@@ -4943,10 +4946,23 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     return this.hitTest(event.clientX - rect.left, event.clientY - rect.top);
   }
 
+  /** A rendered grid owns its gestures until its inputs or controlled selection are replaced. */
+  private captureSelectionContext(): (allowSelectionChange?: boolean) => boolean {
+    const data = this.data, maxCells = this.maxCells, interactive = this.cellInteractive;
+    const selected = this.selectedCells, accessible = this.accessibleCells;
+    const source = this.matrixSource, owner = this.ownerDocument;
+    return (allowSelectionChange = false) => this.isConnected && this.ownerDocument === owner &&
+      this.multiple && this.data === data && Object.is(this.maxCells, maxCells) &&
+      this.cellInteractive === interactive && this.accessibleCells === accessible &&
+      this.matrixSource === source && (allowSelectionChange || this.selectedCells === selected);
+  }
+
   private onSelectionPointerDown = (event: PointerEvent): void => {
     if (!this.multiple || event.button !== 0 || !event.isPrimary || this.selectionGesture) return;
+    const current = this.selectionContext;
+    if (!current?.()) return;
     const pos = this.selectionPointerPosition(event);
-    if (!pos) return;
+    if (!pos || !current()) return;
     event.preventDefault();
     this.suppressSelectionClick = false;
     this.selectionRangeBase = undefined;
@@ -4954,8 +4970,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     this.focusedCell = pos;
     if (this.accessibleCells) this.focusAccessibleCell(pos);
     else this.canvas?.focus();
+    if (!current()) { this.suppressSelectionClick = true; return; }
     const target = event.currentTarget as HTMLElement;
     this.selectionGesture = {
+      current,
       pointerId: event.pointerId, target, start: pos, previous: pos, moved: false,
       selecting: !this.selectedPositions.has(this.accessibleCellKey(pos)),
       cells: new Map(this.selectedPositions),
@@ -5002,19 +5020,25 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   private onSelectionPointerMove = (event: PointerEvent): void => {
-    if (this.selectionGesture?.pointerId !== event.pointerId) return;
+    const gesture = this.selectionGesture;
+    if (!gesture || gesture.pointerId !== event.pointerId) return;
+    if (!gesture.current()) { this.cancelSelectionGesture(); return; }
     const pos = this.selectionPointerPosition(event);
-    if (pos && !this.samePos(pos, this.selectionGesture.previous)) this.paintSelectionTo(pos);
+    if (!gesture.current()) { this.cancelSelectionGesture(); return; }
+    if (pos && !this.samePos(pos, gesture.previous)) this.paintSelectionTo(pos);
   };
 
   private onSelectionPointerUp = (event: PointerEvent): void => {
     const gesture = this.selectionGesture;
     if (!gesture || gesture.pointerId !== event.pointerId) return;
+    if (!gesture.current()) { this.cancelSelectionGesture(); return; }
     const pos = this.selectionPointerPosition(event);
+    if (!gesture.current()) { this.cancelSelectionGesture(); return; }
     if (pos) this.paintSelectionTo(pos);
     this.cancelSelectionGesture();
+    if (!gesture.current()) return;
     this.proposeSelection(gesture.cells, 'pointer');
-    if (!gesture.moved) this.emitCellClick(gesture.start, 'pointer', false);
+    if (!gesture.moved && gesture.current(true)) this.emitCellClick(gesture.start, 'pointer', false, () => gesture.current(true));
   };
 
   private onSelectionPointerCancel = (event: PointerEvent): void => {

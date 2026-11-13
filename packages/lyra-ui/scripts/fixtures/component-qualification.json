@@ -26768,7 +26768,7 @@
           "evidence": [
             {
               "file": "src/components/data/heatmap/heatmap.class.ts",
-              "line": 2819,
+              "line": 2820,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -26836,6 +26836,7 @@
           "src/components/data/heatmap/heatmap-rtl.test.ts",
           "src/components/data/heatmap/heatmap-scale.property.test.ts",
           "src/components/data/heatmap/heatmap-scale.test.ts",
+          "src/components/data/heatmap/heatmap-selection-ownership.test.ts",
           "src/components/data/heatmap/heatmap-selection.test.ts",
           "src/components/data/heatmap/heatmap.test.ts"
         ],
