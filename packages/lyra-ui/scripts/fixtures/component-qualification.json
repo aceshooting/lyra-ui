@@ -25633,6 +25633,12 @@
               "test": "names the ${renderer} role owner using label before the compatibility alias",
               "target": "graph",
               "state": "populated"
+            },
+            {
+              "file": "src/components/retrieval/graph/graph-windowless-document.test.ts",
+              "test": "retains ${view} graph data when ${initiallyWindowless ? 'first connected' : 'adopted'} into a windowless document",
+              "target": "graph",
+              "state": "populated"
             }
           ],
           "exemption": null
@@ -25844,6 +25850,7 @@
           "src/components/retrieval/graph/graph-virtual-cursor.test.ts",
           "src/components/retrieval/graph/graph-webgl-component.test.ts",
           "src/components/retrieval/graph/graph-webgl-engine.test.ts",
+          "src/components/retrieval/graph/graph-windowless-document.test.ts",
           "src/components/retrieval/graph/graph.test.ts",
           "src/components/retrieval/graph/retrieval-retirements.test.ts"
         ],
@@ -26638,6 +26645,12 @@
               "state": "populated"
             },
             {
+              "file": "src/components/data/heatmap/heatmap-windowless-document.test.ts",
+              "test": "retains heatmap data when ${initiallyWindowless ? 'first connected' : 'adopted'} into a windowless document and paints on return",
+              "target": "heatmap",
+              "state": "populated"
+            },
+            {
               "file": "src/components/data/heatmap/heatmap.test.ts",
               "test": "calendar mode: is accessible",
               "target": "el",
@@ -26872,6 +26885,7 @@
           "src/components/data/heatmap/heatmap-scale.test.ts",
           "src/components/data/heatmap/heatmap-selection-ownership.test.ts",
           "src/components/data/heatmap/heatmap-selection.test.ts",
+          "src/components/data/heatmap/heatmap-windowless-document.test.ts",
           "src/components/data/heatmap/heatmap.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
