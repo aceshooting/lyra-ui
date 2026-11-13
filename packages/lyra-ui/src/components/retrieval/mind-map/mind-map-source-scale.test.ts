@@ -152,3 +152,86 @@ it('treats a source whose revision getter throws mid-projection as stale and sur
  expect(el.shadowRoot!.querySelectorAll('[data-source-key]').length, 'no row from the stale projection is mounted').to.equal(0);
  expect(el.shadowRoot!.querySelectorAll('[part="node"]').length).to.equal(0);
 });
+
+it('ignores a disabled diagram leaf and accepts it after a fresh enabled projection', async () => {
+ const data = provider(10), project = data.source.project;
+ let disabled = true;
+ data.source.project = async request => {
+  const result = await project(request);
+  const rows = result.rows as { count: number; keyAt(i: number): string; indexOfKey(key: string | number): number; itemAt(i: number): LyraHierarchyRow<LyraTopic> };
+  const disabledAtProjection = disabled;
+  return { ...result, rows: { ...rows, itemAt: (i: number) => ({ ...rows.itemAt(i), disabled: i === 9 && disabledAtProjection }) } };
+ };
+ const el = await fixture<MapElement>(html`<lr-mind-map .treeSource=${data.source}></lr-mind-map>`);
+ await ready(el, 'n9');
+ await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"][data-id="n9"]').length === 1);
+ const events: string[] = [];
+ el.addEventListener('lr-topic-select', event => events.push(event.detail.topicId));
+ const diagram = () => el.shadowRoot!.querySelector('[part="node"][data-id="n9"]')!;
+ expect(el.shadowRoot!.querySelector('[data-source-key="n9"]')!.getAttribute('aria-disabled')).to.equal('true');
+ diagram().dispatchEvent(new MouseEvent('click', { bubbles: true }));
+ await el.updateComplete;
+ expect(data.actions.map(action => action.type)).to.deep.equal(['reset']);
+ expect(events).to.deep.equal([]);
+ disabled = false;
+ el.treeSource = data.source;
+ await waitUntil(() => el.shadowRoot!.querySelector('[data-source-key="n9"]')?.getAttribute('aria-disabled') === 'false');
+ await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"][data-id="n9"]').length === 1);
+ diagram().dispatchEvent(new MouseEvent('click', { bubbles: true }));
+ await waitUntil(() => events.length === 1);
+ expect(events).to.deep.equal(['n9']);
+ expect(data.actions.filter(action => action.type === 'select')).to.deep.equal([{ type: 'select', key: 'n9', selected: true, scope: 'item' }]);
+});
+
+for (const failure of ['mismatched id', 'null rows', 'primitive rows']) {
+ it(`rejects ${failure} from a source and recovers without exposing legacy topics`, async () => {
+  const bad = provider(10), project = bad.source.project;
+  bad.source.project = async request => {
+   const result = await project(request);
+   if (failure !== 'mismatched id') return { ...result, rows: (failure === 'null rows' ? null : 'rows') as unknown as typeof result.rows };
+   const rows = result.rows as { count: number; keyAt(i: number): string; indexOfKey(key: string | number): number; itemAt(i: number): LyraHierarchyRow<LyraTopic> };
+   return { ...result, rows: { ...rows, itemAt: (i: number) => ({ ...rows.itemAt(i), value: { id: `wrong-${i}`, label: 'Mismatched topic' } }) } };
+  };
+  const el = await fixture<MapElement>(html`<lr-mind-map .treeSource=${bad.source} .topics=${[{ id: 'legacy', label: 'Legacy topic' }]}></lr-mind-map>`);
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part~="source-error"]').length > 0);
+  expect(el.shadowRoot!.querySelectorAll('[data-source-key]').length).to.equal(0);
+  expect(el.shadowRoot!.querySelectorAll('[data-id="legacy"]').length).to.equal(0);
+  const good = provider(10);
+  el.treeSource = good.source;
+  await ready(el, 'n9');
+  expect(el.shadowRoot!.querySelectorAll('[part~="source-error"]').length).to.equal(0);
+  expect(el.shadowRoot!.querySelector('[data-source-key="n9"]')!.textContent).to.include('Topic 9');
+  expect(await el.revealSourceKey('n9')).to.equal(true);
+ });
+}
+
+it('rejects a diagram activation when provider key resolution replaces the source', async () => {
+ const old = provider(10), fresh = provider(10), project = old.source.project;
+ let el!: MapElement;
+ let armed = false;
+ old.source.project = async request => {
+  const result = await project(request);
+  const rows = result.rows as { count: number; keyAt(i: number): string; indexOfKey(key: string | number): number; itemAt(i: number): LyraHierarchyRow<LyraTopic> };
+  return { ...result, rows: { ...rows, indexOfKey: (key: string | number) => {
+   if (armed) { armed = false; el.treeSource = fresh.source; }
+   return rows.indexOfKey(key);
+  } } };
+ };
+ el = await fixture<MapElement>(html`<lr-mind-map .treeSource=${old.source}></lr-mind-map>`);
+ await ready(el, 'n9');
+ await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"][data-id="n9"]').length === 1);
+ const events: string[] = [];
+ el.addEventListener('lr-topic-select', event => events.push(event.detail.topicId));
+ armed = true;
+ el.shadowRoot!.querySelector('[part="node"][data-id="n9"]')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+ await waitUntil(() => fresh.actions.length === 1);
+ await ready(el, 'n9');
+ expect(armed).to.equal(false);
+ expect(old.actions.map(action => action.type)).to.deep.equal(['reset']);
+ expect(fresh.actions.map(action => action.type)).to.deep.equal(['reset']);
+ expect(events).to.deep.equal([]);
+ await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"][data-id="n9"]').length === 1);
+ el.shadowRoot!.querySelector('[part="node"][data-id="n9"]')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+ await waitUntil(() => events.length === 1);
+ expect(events).to.deep.equal(['n9']);
+});
