@@ -18296,6 +18296,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/viewers/document-preview/document-preview-anchor-identity.test.ts",
           "src/components/viewers/document-preview/document-preview-fetch-lifecycle.test.ts",
           "src/components/viewers/document-preview/document-preview-remediation.test.ts",
           "src/components/viewers/document-preview/document-preview.test.ts"
@@ -36559,6 +36560,7 @@
           "src/components/layout/multi-split/multi-split-collapse-api.test.ts",
           "src/components/layout/multi-split/multi-split-coverage.test.ts",
           "src/components/layout/multi-split/multi-split-hydration-count.test.ts",
+          "src/components/layout/multi-split/multi-split-initialization-boundaries.test.ts",
           "src/components/layout/multi-split/multi-split-modal-layering.test.ts",
           "src/components/layout/multi-split/multi-split-native-close.test.ts",
           "src/components/layout/multi-split/multi-split-panel-collapse.test.ts",
