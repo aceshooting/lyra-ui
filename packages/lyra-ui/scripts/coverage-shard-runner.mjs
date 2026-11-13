@@ -9,7 +9,8 @@ import { isMainModule } from './is-main-module.mjs';
 // The default command deliberately runs the shards one after another. `--shard N` exists for a
 // hosted CI matrix, where each shard owns an independent runner; it does not raise browser-page
 // concurrency inside a process. `--merge` consumes those jobs' raw reports and refuses partial,
-// overlapping, non-exhaustive, or differently-partitioned inputs.
+// overlapping, non-exhaustive, or differently-partitioned inputs. Complete aggregates also require
+// the source-mapped document-less SSR matrix and validate its source/input digests before merging.
 //
 // Why shard at all: the former single session was observed dying silently near the tail of the
 // full file list after cumulative pressure built up in one coverage-instrumented Chromium page.
@@ -30,6 +31,7 @@ import { fileURLToPath } from 'node:url';
 import libReport from 'istanbul-lib-report';
 import reports from 'istanbul-reports';
 import { mergeCoverageMaps } from './coverage-map.mjs';
+import { collectSsrCoverage, readSsrCoverage } from './ssr-coverage.mjs';
 import {
   discoverTestFiles,
   runNativeScrollbarVerification,
@@ -381,13 +383,14 @@ export function relocateCoverageSources(
   return mapped;
 }
 
-function mergeCoverageMap(coverageDirectory, indices, sourceOptions) {
+function mergeCoverageMap(coverageDirectory, indices, sourceOptions, ssrCoverage) {
   function* readReports() {
     for (const shardIndex of indices) {
       const coverage = loadShardCoverage(coverageDirectory, shardIndex);
       yield sourceOptions.sourceRepositoryRoot === undefined
         ? coverage : relocateCoverageSources(coverage, sourceOptions);
     }
+    yield ssrCoverage;
   }
   return mergeCoverageMaps(readReports());
 }
@@ -428,6 +431,7 @@ export function mergeCoverageReports(
     coverageDirectory = coverageDir,
     repositoryRoot = resolve(packageDir, '../..'),
     sourceRepositoryRoot = process.env.LYRA_COVERAGE_SOURCE_ROOT,
+    loadSsrCoverage = readSsrCoverage,
   } = {},
 ) {
   for (const shardIndex of shardIndices()) {
@@ -436,7 +440,9 @@ export function mergeCoverageReports(
     requiredShardFile(coverageDirectory, shardIndex, SHARD_MANIFEST);
   }
   const indices = validateCoverageShardManifests(testFiles, { coverageDirectory });
-  const map = mergeCoverageMap(coverageDirectory, indices, { repositoryRoot, sourceRepositoryRoot });
+  const ssrCoverage = loadSsrCoverage({ packageDirectory: resolve(repositoryRoot, 'packages/lyra-ui'),
+    coverageDirectory: resolve(coverageDirectory, 'ssr') });
+  const map = mergeCoverageMap(coverageDirectory, indices, { repositoryRoot, sourceRepositoryRoot }, ssrCoverage);
   writeMergedCoverageReport(coverageDirectory, map, repositoryRoot);
   mergeJunitReports(coverageDirectory, indices);
 }
@@ -452,6 +458,7 @@ export async function executeCoverageCommand(
     discover = discoverTestFiles,
     merge = mergeCoverageReports,
     runShard = runCoverageShard,
+    runSsr = collectSsrCoverage,
   } = {},
 ) {
   if (!['all', 'merge', 'shard'].includes(command?.mode)) {
@@ -471,6 +478,7 @@ export async function executeCoverageCommand(
 
   // Merge even when a shard reported failing tests. A single-session coverage run still writes
   // its report in that case, and retaining the complete numbers makes the failure diagnosable.
+  await runSsr();
   merge(testFiles);
   cleanup();
   return failed ? 1 : 0;

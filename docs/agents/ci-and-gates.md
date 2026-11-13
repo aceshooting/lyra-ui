@@ -309,6 +309,15 @@ endpoints. It preserves the native count and child ranges; it does not create mo
 from a snapshot. `scripts/coverage-realms.test.mjs` verifies these rules with precise V8 execution,
 real TypeScript transformation, both merge orders and unexecuted callback branches.
 
+The complete UI report combines all five browser shards with `test:coverage:ssr`. This additional
+capture runs the document-less SSR import/render matrix in default and development conditions,
+including its isolated child processes. A Node loader compiles the corresponding TypeScript with
+the browser runner's installed compiler and configuration; published-artifact SSR and hydration
+checks still run separately. Conversion verifies the exact compiled bytes, source maps and native
+ranges. The portable SSR artifact includes report, source and input digests; missing evidence or
+changed sources, tests, compiler configuration or dependencies fail the complete merge. The default
+local coverage command and `scripts/test.sh` collect the same evidence as CI.
+
 README badges never request Codecov's own badge image: GitHub serves README images through a proxy
 that gives up after about four seconds, and Codecov needs longer than that to render a flagged badge
 (it recomputes the flag on every request), so those images rendered broken. The `Deploy docs`

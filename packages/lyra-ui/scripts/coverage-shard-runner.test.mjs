@@ -149,13 +149,14 @@ test('keeps the default command sequential, exhaustive, merged, and cleaned', as
         actions.push(`run-${shardIndex}`);
         return shardIndex === 2 ? 1 : 0;
       },
+      runSsr: async () => actions.push('ssr'),
       merge: () => actions.push('merge'),
       cleanup: () => actions.push('cleanup'),
     },
   );
 
   assert.equal(result, 1);
-  assert.deepEqual(actions, ['run-1', 'run-2', 'run-3', 'run-4', 'run-5', 'merge', 'cleanup']);
+  assert.deepEqual(actions, ['run-1', 'run-2', 'run-3', 'run-4', 'run-5', 'ssr', 'merge', 'cleanup']);
 });
 
 test('the merge command performs no browser work and retains downloaded artifacts', async () => {
@@ -326,7 +327,9 @@ test('merges all raw coverage and junit reports into the established top-level o
   const fixture = await mkdtemp(join(tmpdir(), 'lyra-coverage-merge-'));
   try {
     await writeCompleteFixture(fixture);
-    mergeCoverageReports(inventory, { coverageDirectory: fixture });
+    assert.throws(() => mergeCoverageReports(inventory, { coverageDirectory: fixture }), /provenance|ENOENT/iu);
+    assert.equal(existsSync(join(fixture, 'lcov.info')), false, 'missing SSR evidence cannot publish a browser-only aggregate');
+    mergeCoverageReports(inventory, { coverageDirectory: fixture, loadSsrCoverage: () => ({}) });
 
     const summary = JSON.parse(await readFile(join(fixture, 'coverage-summary.json'), 'utf8'));
     assert.equal(summary.total.statements.total, COVERAGE_SHARD_TOTAL);
@@ -354,7 +357,7 @@ for (const invokedFirst of [true, false]) {
         await writeFile(filename, contents);
         inputs.push({ filename, contents });
       }
-      mergeCoverageReports(inventory, { coverageDirectory: fixture });
+      mergeCoverageReports(inventory, { coverageDirectory: fixture, loadSsrCoverage: () => ({}) });
       const summary = JSON.parse(await readFile(join(fixture, 'coverage-summary.json'), 'utf8'));
       assert.equal(summary.total.branches.total, 4, 'all observed branch ranges survive');
       assert.equal(summary.total.branches.covered, 3, 'a constructor hit cannot execute a method fallback');
@@ -379,7 +382,7 @@ test('shard merging retains implicit branch execution inside the same invoked me
     for (const [index, coverage] of [partial, complete].entries()) {
       await writeFile(join(coverageShardDirectory(fixture, index + 1), 'coverage-final.json'), JSON.stringify({ [source]: coverage }));
     }
-    mergeCoverageReports(inventory, { coverageDirectory: fixture });
+    mergeCoverageReports(inventory, { coverageDirectory: fixture, loadSsrCoverage: () => ({}) });
     const summary = JSON.parse(await readFile(join(fixture, 'coverage-summary.json'), 'utf8'));
     assert.equal(summary.total.branches.total, 4);
     assert.equal(summary.total.branches.covered, 4, 'a containing hit within the method still covers its implicit arms');
@@ -645,7 +648,7 @@ test('host merge rebases container sources before LCOV emission and sums shared-
         }),
       );
     }
-    mergeCoverageReports(inventory, { coverageDirectory, repositoryRoot, sourceRepositoryRoot });
+    mergeCoverageReports(inventory, { coverageDirectory, repositoryRoot, sourceRepositoryRoot, loadSsrCoverage: () => ({}) });
     const lcov = await readFile(join(coverageDirectory, 'lcov.info'), 'utf8');
     const upload = normalizeLcov(lcov, { packageName: 'lyra-ui', repositoryRoot });
     assert.equal((upload.match(/^SF:packages\/lyra-ui\/src\/source-\d+\.ts$/gmu) ?? []).length, COVERAGE_SHARD_TOTAL);

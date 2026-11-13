@@ -1354,6 +1354,7 @@ test('requires complete fail-closed coverage shards before the stable build gate
 
   assert.match(mergeJob, /if: \$\{\{ always\(\) && needs\.changes\.outputs\.runtime != 'false' \}\}/u);
   assert.match(mergeJob, /- build_and_coverage_coverage_shard\b/u);
+  assert.match(mergeJob, /- build_and_coverage_ssr_hydration\b/u);
   for (const shard of [1, 2, 3, 4, 5]) {
     assert.match(
       mergeJob,
@@ -1365,9 +1366,14 @@ test('requires complete fail-closed coverage shards before the stable build gate
   }
   assert.equal(
     [...mergeJob.matchAll(/uses: actions\/download-artifact@/gu)].length,
-    5,
-    'the merge job must download exactly five individually named shard artifacts'
+    6,
+    'the merge job must download five individually named browser artifacts and the SSR artifact'
   );
+  assert.match(mergeJob, /name: lyra-ui-coverage-ssr\s+path: packages\/lyra-ui\/coverage\/ssr\b/u);
+  const ssrJob = workflow.slice(workflow.indexOf('\n  build_and_coverage_ssr_hydration:'), shardStart);
+  assert.match(ssrJob, /run: pnpm --filter @aceshooting\/lyra-ui test:ssr\s/u);
+  assert.match(ssrJob, /run: pnpm --filter @aceshooting\/lyra-ui test:coverage:ssr\s/u);
+  assert.match(ssrJob, /name: lyra-ui-coverage-ssr[\s\S]*?coverage\/ssr\/coverage-final\.json[\s\S]*?coverage\/ssr\/provenance\.json[\s\S]*?if-no-files-found: error/u);
   assert.doesNotMatch(mergeJob, /pattern:|merge-multiple:/u);
   assert.match(mergeJob, /node scripts\/coverage-shard-runner\.mjs --merge/u);
   assert.match(

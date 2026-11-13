@@ -150,6 +150,7 @@ coverage_lane() {
     pids+=("$!")
   done
   for index in "${pids[@]}"; do wait "$index" || failed=1; done
+  pnpm --filter @aceshooting/lyra-ui test:coverage:ssr
   # Merge even after a failing shard so the complete numbers stay diagnosable.
   pnpm --filter @aceshooting/lyra-ui test:coverage --merge
   return "$failed"
