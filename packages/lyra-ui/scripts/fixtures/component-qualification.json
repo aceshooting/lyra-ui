@@ -27972,6 +27972,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/icon-button/icon-button-composition.test.ts",
+          "src/components/forms/icon-button/icon-button-geometry-ownership.test.ts",
           "src/components/forms/icon-button/icon-button-register.test.ts",
           "src/components/forms/icon-button/icon-button.test.ts"
         ],
