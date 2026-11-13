@@ -265,4 +265,34 @@ describe('lr-map elevated scene paths and arcs', () => {
     element.remove(); expect(peer.removed).to.equal(true); expect(disposals).to.equal(1);
   });
 
+  for (const failure of ['throw', 'null handle'] as const) {
+    it(`recovers from a ${failure} during elevated renderer creation after explicit new intent`, async () => {
+      const runtime = fakeRuntime();
+      let rejected = true, attempts = 0;
+      env.setLayerImporter(async () => ({ createSceneLayer(...args: Parameters<typeof runtime.module.createSceneLayer>) {
+        attempts++;
+        if (rejected) {
+          if (failure === 'throw') throw new Error('Renderer creation failed');
+          return null;
+        }
+        return runtime.module.createSceneLayer(...args);
+      } }));
+      let reported: StateDetail[] = [];
+      const { element, peer } = await env.mount(element => {
+        reported = states(element); element.scene = { objects: [sceneArc('raised')] };
+      }, recordSourceData);
+      await settled(reported, 'partial', 'altitude');
+      expect(attempts).to.equal(1); expect(runtime.layers.length).to.equal(0);
+      expect(flatIds(peer)).to.deep.equal(['raised']);
+      expect(peer.removed).to.equal(false);
+      rejected = false;
+      element.scene = { objects: [sceneArc('replacement')] };
+      await waitUntil(() => runtime.live().length === 1, 'replacement renderer installed');
+      runtime.live()[0]!.host.onState?.('ready');
+      await settled(reported, 'ready');
+      expect(attempts).to.equal(2); expect(flatIds(peer)).to.deep.equal([]);
+      expect(peer.removed).to.equal(false);
+    });
+  }
+
 });

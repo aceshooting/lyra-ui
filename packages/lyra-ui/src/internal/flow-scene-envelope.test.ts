@@ -228,3 +228,91 @@ it('accepts exact node, edge, reservation and handle collection ceilings', async
   expect(owner.state.scene!.nodes[0]!.value.inputs?.length).to.equal(10_000);
   expect(Object.isFrozen(owner.state.scene!.nodes[0]!.value.inputs)).to.equal(true);
 });
+
+it('rejects whitespace-only node, edge and handle identities and accepts a later valid scene', async () => {
+  const owner = control(), raw = scene(), node = raw.nodes[0]!, edge = raw.edges[0]!;
+  const invalid = [
+    { ...raw, nodes: [{ ...node, value: { ...node.value, id: ' \t\n' } }] },
+    { ...raw, nodes: [{ ...node, value: { ...node.value, inputs: [{ id: ' \t' }] } }] },
+    ...['id', 'source', 'target'].map(field => ({ ...raw, edges: [{ ...edge, value: { ...edge.value, [field]: ' \n' } }] })),
+  ];
+  for (const candidate of invalid) {
+    owner.bind({ source: source(async () => candidate), epoch: 0, locale: 'en' });
+    expect(await owner.request(intent())).to.equal(false);
+    expect(owner.state.scene === undefined).to.equal(true);
+  }
+  owner.bind({ source: source(async () => raw), epoch: 0, locale: 'en' });
+  expect(await owner.request(intent())).to.equal(true);
+  expect(owner.state.scene!.nodes[0]!.value.id).to.equal('a');
+});
+
+it('rejects symbol metadata keys before inspecting their values', async () => {
+  const owner = control(), raw = scene(), node = raw.nodes[0]!;
+  let reads = 0;
+  for (const metadata of [{ label: 'Node' }, [1, 2]]) {
+    Object.defineProperty(metadata, Symbol('hidden input'), { enumerable: true, get() { reads++; return 'unsafe'; } });
+    owner.bind({ source: source(async () => ({ ...raw, nodes: [{ ...node, value: { ...node.value, data: { metadata } } }] })),
+      epoch: 0, locale: 'en' });
+    expect(await owner.request(intent())).to.equal(false);
+    expect(owner.state.scene === undefined).to.equal(true);
+    expect(reads).to.equal(0);
+  }
+});
+
+it('rejects non-index array metadata and indexes outside an advertised length', async () => {
+  const owner = control(), raw = scene(), node = raw.nodes[0]!;
+  const shortened = new Proxy([1], { getOwnPropertyDescriptor(target, key) {
+    const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
+    return key === 'length' && descriptor ? { ...descriptor, value: 0 } : descriptor;
+  } });
+  const invalid = [...['extra', '01', '-1'].map(key => Object.assign([1], { [key]: 2 })), shortened];
+  for (const values of invalid) {
+    owner.bind({ source: source(async () => ({ ...raw, nodes: [{ ...node, value: { ...node.value, data: { values } } }] })),
+      epoch: 0, locale: 'en' });
+    expect(await owner.request(intent())).to.equal(false);
+    expect(owner.state.scene === undefined).to.equal(true);
+  }
+});
+
+it('omits non-enumerable metadata without traversing its value and preserves visible data', async () => {
+  const owner = control(), raw = scene(), node = raw.nodes[0]!;
+  let reads = 0;
+  const hidden = new Proxy({}, { getPrototypeOf() { reads++; throw new Error('Hidden metadata must not be read'); } });
+  const data = Object.defineProperty({ label: 'Visible', values: [1, 2] }, 'hidden', { value: hidden });
+  Object.defineProperty(data.values, '0', { enumerable: false });
+  owner.bind({ source: source(async () => ({ ...raw, nodes: [{ ...node, value: { ...node.value, data } }] })), epoch: 0, locale: 'en' });
+  expect(await owner.request(intent())).to.equal(true);
+  const retained = owner.state.scene!.nodes[0]!.value.data!;
+  expect(retained['label']).to.equal('Visible');
+  expect(Object.hasOwn(retained, 'hidden')).to.equal(false);
+  const values = retained['values'] as readonly unknown[];
+  expect(values.length).to.equal(2); expect(Object.hasOwn(values, '0')).to.equal(false); expect(values[1]).to.equal(2);
+  expect(Object.isFrozen(retained) && Object.isFrozen(values)).to.equal(true);
+  expect(reads).to.equal(0);
+});
+
+it('accepts matching authored positions and rejects a conflict only in the vertical coordinate', async () => {
+  const owner = control(), raw = scene(), node = raw.nodes[0]!;
+  for (const y of [node.position.y + 1, node.position.y]) {
+    const value = { ...node.value, position: { x: node.position.x, y } };
+    owner.bind({ source: source(async () => ({ ...raw, nodes: [{ ...node, value }] })), epoch: 0, locale: 'en' });
+    expect(await owner.request(intent())).to.equal(y === node.position.y);
+    if (y === node.position.y) expect(owner.state.scene!.nodes[0]!.value.position).to.deep.equal(node.position);
+    else expect(owner.state.scene === undefined).to.equal(true);
+  }
+});
+
+it('requires metadata roots to be plain records while accepting an empty null-prototype root', async () => {
+  const owner = control(), raw = scene(), node = raw.nodes[0]!;
+  for (const data of [null, 1, 'label', [], new Map(), new Date(0)]) {
+    owner.bind({ source: source(async () => ({ ...raw, nodes: [{ ...node, value: { ...node.value, data } }] })),
+      epoch: 0, locale: 'en' });
+    expect(await owner.request(intent())).to.equal(false);
+    expect(owner.state.scene === undefined).to.equal(true);
+  }
+  const data: unknown = Object.create(null);
+  owner.bind({ source: source(async () => ({ ...raw, nodes: [{ ...node, value: { ...node.value, data } }] })),
+    epoch: 0, locale: 'en' });
+  expect(await owner.request(intent())).to.equal(true);
+  expect(Object.keys(owner.state.scene!.nodes[0]!.value.data!)).to.deep.equal([]);
+});
