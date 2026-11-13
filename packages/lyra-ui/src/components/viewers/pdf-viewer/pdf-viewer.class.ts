@@ -771,7 +771,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
    *  `loadState` -- `PDFDocumentProxy` is not garbage-collected on its own; every `src` change and
    *  every disconnect must explicitly `destroy()` the previous document or it (and its worker) leaks. */
   private destroyLoadedDoc(): void {
-    if (this.loadState.kind === 'ready') void this.loadState.doc.destroy?.();
+    if (this.loadState.kind === 'ready') this.destroyDocumentResource(this.loadState.doc);
   }
 
   private retirePendingDocument(): void {
@@ -779,10 +779,14 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     this.pendingDocument = undefined;
     if (!pending || pending.retired) return;
     pending.retired = true;
+    this.destroyDocumentResource(pending.task);
+  }
+
+  private destroyDocumentResource(resource: PdfDocumentApi | PdfLoadingTaskApi): void {
     try {
-      void Promise.resolve(pending.task.destroy?.()).catch(() => {});
+      void Promise.resolve(resource.destroy?.()).catch(() => {});
     } catch {
-      // A broken peer teardown must not prevent a replacement document from loading.
+      // A broken peer teardown must not prevent replacement or detached-state cleanup.
     }
   }
 

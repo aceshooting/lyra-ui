@@ -3204,6 +3204,73 @@ describe("getOutline", () => {
   });
 });
 
+describe('outline peer boundaries', () => {
+  it('returns an empty outline when the loaded peer omits optional outline support', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/no-outline-support.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      expect(await el.getOutline()).to.deep.equal([]);
+      expect(el.pageViewerSnapshot.status).to.equal('ready');
+    } finally { restore(); }
+  });
+
+  it('keeps an untitled leaf when optional outline fields are absent', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    installFakeLoader(el, fakeDocumentWithText(['page'], [{ dest: [0] }]));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/untitled-outline.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      expect(await el.getOutline()).to.deep.equal([{ title: '', page: 1 }]);
+    } finally { restore(); }
+  });
+
+  for (const stage of ['outline', 'destination', 'page-index'] as const) {
+    for (const action of ['replace', 'clear'] as const) {
+      it(`discards an obsolete outline after ${action} during ${stage} resolution`, async () => {
+        const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+        const pending = deferred<void>();
+        const started = deferred<void>();
+        const pause = async (current: typeof stage): Promise<void> => {
+          if (current === stage) { started.resolve(); await pending.promise; }
+        };
+        installFakeLoader(el, {
+          ...fakeDocument(3),
+          getOutline: async () => {
+            await pause('outline');
+            return [{ title: 'Old chapter', dest: 'old-destination' }];
+          },
+          getDestination: async () => { await pause('destination'); return [{ num: 1, gen: 0 }]; },
+          getPageIndex: async () => { await pause('page-index'); return 0; },
+        } as ReturnType<typeof fakeDocument>);
+        const restore = stubFetch();
+        try {
+          el.src = 'https://example.test/old-outline.pdf';
+          await waitFor(el, '[part="toolbar"]');
+          const oldOutline = el.getOutline();
+          await started.promise;
+          if (action === 'replace') {
+            installFakeLoader(el, fakeDocumentWithText(['first', 'second'], [{ title: 'New chapter', dest: [1] }]));
+            const loaded = oneEvent(el, 'lr-load');
+            el.src = 'https://example.test/new-outline.pdf';
+            await loaded;
+          } else {
+            el.src = '';
+            await waitUntil(() => el.pageViewerSnapshot.status === 'idle');
+          }
+          pending.resolve();
+          expect(await oldOutline).to.deep.equal([]);
+          expect(await el.getOutline()).to.deep.equal(action === 'replace' ? [{ title: 'New chapter', page: 2 }] : []);
+          expect(el.pageViewerSnapshot.status).to.equal(action === 'replace' ? 'ready' : 'idle');
+        } finally { pending.resolve(); restore(); }
+      });
+    }
+  }
+});
+
 describe("search", () => {
   for (const operation of ['search', 'next', 'previous'] as const) {
     it(`stops ${operation} when a search-change listener clears the results`, async () => {
@@ -6083,6 +6150,90 @@ describe('PDF loading-task ownership', () => {
         await twoFrames();
         expect(destroys).to.equal(1);
       } finally { restore(); }
+    });
+  }
+});
+
+describe('PDF document cleanup failures', () => {
+  for (const failureMode of ['throw', 'reject'] as const) {
+    for (const action of ['replace', 'disconnect'] as const) {
+      it(`contains a loaded document destroy ${failureMode} during ${action}`, async () => {
+        const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+        const restore = stubFetch();
+        const failure = new Error('PDF document cleanup failed');
+        let oldDestroys = 0, newDestroys = 0;
+        const oldDocument = { ...fakeDocument(1), destroy: (): Promise<void> | void => {
+          if (++oldDestroys !== 1) return;
+          if (failureMode === 'throw') throw failure;
+          return Promise.reject(failure);
+        } };
+        const nextDocument = { ...fakeDocument(2), destroy: (): void => { newDestroys++; } };
+        installFakeLoader(el, oldDocument);
+        const escaped: unknown[] = [];
+        const onRejected = (event: PromiseRejectionEvent): void => {
+          if (event.reason === failure) { escaped.push(event.reason); event.preventDefault(); }
+        };
+        const onError = (event: ErrorEvent): void => {
+          if (event.error === failure) { escaped.push(event.error); event.preventDefault(); }
+        };
+        window.addEventListener('unhandledrejection', onRejected);
+        window.addEventListener('error', onError);
+        try {
+          el.src = 'https://example.test/old-document.pdf';
+          await waitFor(el, '[part="toolbar"]');
+          expect(el.pageViewerSnapshot.pageCount).to.equal(1);
+          if (action === 'replace') {
+            installFakeLoader(el, nextDocument);
+            el.src = 'https://example.test/new-document.pdf';
+            await waitUntil(() => escaped.length > 0 || el.pageViewerSnapshot.pageCount === 2);
+          } else el.remove();
+          await twoFrames();
+          expect(escaped.length, 'peer cleanup errors must not escape the viewer').to.equal(0);
+          expect(oldDestroys).to.equal(1);
+          expect(newDestroys).to.equal(0);
+          expect(el.pageViewerSnapshot.status).to.equal(action === 'replace' ? 'ready' : 'idle');
+          expect(el.pageViewerSnapshot.pageCount).to.equal(action === 'replace' ? 2 : 0);
+        } finally {
+          el.remove(); await twoFrames();
+          window.removeEventListener('unhandledrejection', onRejected);
+          window.removeEventListener('error', onError);
+          restore();
+        }
+        expect(oldDestroys).to.equal(1);
+        expect(newDestroys).to.equal(action === 'replace' ? 1 : 0);
+      });
+    }
+
+    it(`contains a pending loading-task destroy ${failureMode} while replacing the document`, async () => {
+      const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+      const restore = stubFetch();
+      const pending = deferred<ReturnType<typeof fakeDocument>>();
+      let started = false, destroys = 0;
+      (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = async () => ({
+        GlobalWorkerOptions: { workerSrc: '' },
+        getDocument: () => {
+          started = true;
+          return { promise: pending.promise, destroy: (): Promise<void> => {
+            destroys++;
+            if (failureMode === 'throw') throw new Error('Pending PDF cleanup failed');
+            return Promise.reject(new Error('Pending PDF cleanup failed'));
+          } };
+        },
+      });
+      try {
+        el.src = 'https://example.test/pending-cleanup.pdf';
+        await waitUntil(() => started);
+        installFakeLoader(el, fakeDocument(2));
+        const loaded = oneEvent(el, 'lr-load');
+        el.src = 'https://example.test/current-after-cleanup.pdf';
+        await loaded;
+        expect(el.pageViewerSnapshot.pageCount).to.equal(2);
+        expect(destroys).to.equal(1);
+        pending.reject(new Error('Canceled old PDF'));
+        await twoFrames();
+        expect(el.pageViewerSnapshot.status).to.equal('ready');
+        expect(destroys).to.equal(1);
+      } finally { pending.reject(new Error('Canceled old PDF')); restore(); }
     });
   }
 });
