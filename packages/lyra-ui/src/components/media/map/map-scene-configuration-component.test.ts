@@ -148,5 +148,68 @@ describe('lr-map typed scene configuration', () => {
     element.terrain = terrain; terrain.source = 'missing'; terrain.exaggeration = Number.NaN;
     await idle(element); expect(peer.terrain).to.deep.equal({ source: 'elevation', exaggeration: 3 });
   });
+  const invalidTerrains: readonly [string, () => unknown][] = [
+    ['a primitive', () => 'elevation'],
+    ['an array', () => [{ source: 'elevation' }]],
+    ['a missing source', () => ({ exaggeration: 1 })],
+    ['a blank source', () => ({ source: '  ' })],
+    ['an oversized source', () => ({ source: 'x'.repeat(4097) })],
+    ['a negative exaggeration', () => ({ source: 'elevation', exaggeration: -1 })],
+    ['an infinite exaggeration', () => ({ source: 'elevation', exaggeration: Infinity })],
+    ['a NaN exaggeration', () => ({ source: 'elevation', exaggeration: Number.NaN })],
+    ['a string exaggeration', () => ({ source: 'elevation', exaggeration: '2' })],
+    ['a revoked record', () => {
+      const record = Proxy.revocable({ source: 'elevation' }, {});
+      record.revoke();
+      return record.proxy;
+    }],
+  ];
+  for (const [description, invalid] of invalidTerrains) {
+    it(`contains terrain with ${description} and recovers after valid configuration`, async () => {
+      const { element, peer } = await mount();
+      element.strings = { mapInitializationFailed: 'Scene unavailable' };
+      expect(() => Reflect.set(element, 'terrain', invalid())).not.to.throw();
+      expect(element.terrain).to.equal(undefined);
+      let failure: unknown;
+      try { await idle(element); } catch (error) { failure = error; }
+      await element.updateComplete;
+      expect(failure instanceof Error && failure.name).to.equal('MapReadinessError');
+      expect(peer.writes).to.deep.equal([]);
+      expect(peer.removed).to.equal(true);
+      expect(element.map === undefined).to.equal(true);
+      expect(element.shadowRoot!.textContent).to.include('Scene unavailable');
+
+      element.terrain = { source: 'elevation', exaggeration: 0 };
+      element.mapStyle = baseline();
+      await waitUntil(() => element.map !== undefined);
+      const replacement = element.map as unknown as ScenePeer;
+      replacement.ready = true;
+      replacement.fire('load');
+      await idle(element);
+      expect(replacement === peer).to.equal(false);
+      expect(replacement.terrain).to.deep.equal({ source: 'elevation', exaggeration: 0 });
+      expect(replacement.writes).to.deep.equal(['terrain']);
+      expect(element.shadowRoot!.textContent).not.to.include('Scene unavailable');
+    });
+  }
+
+  for (const property of ['source', 'exaggeration'] as const) {
+    it(`rejects a terrain ${property} accessor without executing caller code`, async () => {
+      const { element, peer } = await mount();
+      let reads = 0;
+      const terrain = Object.defineProperty({ source: 'elevation', exaggeration: 1 }, property, {
+        get() { reads++; throw new Error('Caller detail'); },
+      });
+      expect(() => { element.terrain = terrain; }).not.to.throw();
+      let failure: unknown;
+      try { await idle(element); } catch (error) { failure = error; }
+      await element.updateComplete;
+      expect(failure instanceof Error && failure.name).to.equal('MapReadinessError');
+      expect(reads).to.equal(0);
+      expect(peer.writes).to.deep.equal([]);
+      expect(peer.removed).to.equal(true);
+      expect(element.shadowRoot!.textContent).not.to.include('Caller detail');
+    });
+  }
 
 });

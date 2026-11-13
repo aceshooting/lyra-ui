@@ -3836,6 +3836,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/media/attachment-trigger/attachment-trigger-composition.test.ts",
+          "src/components/media/attachment-trigger/attachment-trigger-immediate-disabled.test.ts",
           "src/components/media/attachment-trigger/attachment-trigger-partition-cost.test.ts",
           "src/components/media/attachment-trigger/attachment-trigger.test.ts"
         ],
@@ -28914,6 +28915,7 @@
           "src/components/forms/input/input-required.test.ts",
           "src/components/forms/input/input.test.ts",
           "src/components/forms/input/native-time-input.test.ts",
+          "src/components/forms/input/number-input-immediate-disabled.test.ts",
           "src/components/forms/input/number-time-input.test.ts",
           "src/components/forms/input/positioning-strategy.test.ts",
           "src/components/forms/input/time-input-closed-layout.test.ts",
@@ -36932,6 +36934,7 @@
           "src/components/forms/input/input-required.test.ts",
           "src/components/forms/input/input.test.ts",
           "src/components/forms/input/native-time-input.test.ts",
+          "src/components/forms/input/number-input-immediate-disabled.test.ts",
           "src/components/forms/input/number-time-input.test.ts",
           "src/components/forms/input/positioning-strategy.test.ts",
           "src/components/forms/input/time-input-closed-layout.test.ts",
@@ -38146,6 +38149,7 @@
           "src/components/forms/input/input-required.test.ts",
           "src/components/forms/input/input.test.ts",
           "src/components/forms/input/native-time-input.test.ts",
+          "src/components/forms/input/number-input-immediate-disabled.test.ts",
           "src/components/forms/input/number-time-input.test.ts",
           "src/components/forms/input/positioning-strategy.test.ts",
           "src/components/forms/input/time-input-closed-layout.test.ts",
@@ -55939,6 +55943,7 @@
           "src/components/forms/input/input-required.test.ts",
           "src/components/forms/input/input.test.ts",
           "src/components/forms/input/native-time-input.test.ts",
+          "src/components/forms/input/number-input-immediate-disabled.test.ts",
           "src/components/forms/input/number-time-input.test.ts",
           "src/components/forms/input/positioning-strategy.test.ts",
           "src/components/forms/input/time-input-closed-layout.test.ts",
@@ -57291,6 +57296,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/toggle/toggle-icon-only-halo.test.ts",
+          "src/components/forms/toggle/toggle-immediate-disabled.test.ts",
           "src/components/forms/toggle/toggle.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",

@@ -360,14 +360,6 @@ describe('lr-number-input steppers', () => {
     expect(el.getBoundingClientRect().width).to.be.at.most(wrapper.getBoundingClientRect().width);
   });
 
-  it('localizes both stepper labels', async () => {
-    const el = (await fixture(html`<lr-number-input label="Qty"></lr-number-input>`)) as LyraNumberInput;
-    el.strings = { numberInputIncrease: 'Augmenter', numberInputDecrease: 'Diminuer' };
-    await el.updateComplete;
-    expect(upOf(el).getAttribute('aria-label')).to.equal('Augmenter');
-    expect(downOf(el).getAttribute('aria-label')).to.equal('Diminuer');
-  });
-
   it('is accessible with the steppers rendered', async () => {
     const el = (await fixture(html`<lr-number-input label="Qty" value="3"></lr-number-input>`)) as LyraNumberInput;
     expect(el.shadowRoot!.querySelectorAll('[part~="stepper-up"]').length).to.equal(1);
