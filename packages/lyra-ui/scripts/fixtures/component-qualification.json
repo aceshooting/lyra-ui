@@ -22350,6 +22350,18 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/media/file-icon/file-icon-registry-recovery.test.ts",
+              "test": "keeps a named generic badge for ${name} and recovers on registry replacement",
+              "target": "element",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/media/file-icon/file-icon-registry-recovery.test.ts",
+              "test": "keeps a named generic badge for ${name} and recovers on registry replacement",
+              "target": "element",
+              "state": "populated"
+            },
+            {
               "file": "src/components/media/file-icon/file-icon.test.ts",
               "test": "hides the complete label badge subtree from accessibility APIs when decorative",
               "target": "el",
@@ -22501,6 +22513,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/media/file-icon/file-icon-registry-recovery.test.ts",
           "src/components/media/file-icon/file-icon.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",

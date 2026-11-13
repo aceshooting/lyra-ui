@@ -254,7 +254,7 @@ function normalizeColor(value: unknown, owner: Document = document): string | nu
   if (/\b(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\s*\(\s*from\b/i.test(candidate)) {
     return null;
   }
-  const probe = owner.createElement('span');
+  const probe = owner.createElementNS('http://www.w3.org/1999/xhtml', 'span');
   probe.style.color = candidate;
   return probe.style.color ? candidate : null;
 }
@@ -325,7 +325,7 @@ export function accentsEqual(left: LyraThemeAccent, right: LyraThemeAccent): boo
 function parseResolvedRgb(value: string, background: Rgb, owner: Document = document): Rgb | null {
   if (!normalizeColor(value, owner)) return null;
   try {
-    const canvas = owner.createElement('canvas');
+    const canvas = owner.createElementNS('http://www.w3.org/1999/xhtml', 'canvas') as HTMLCanvasElement;
     canvas.width = 1;
     canvas.height = 1;
     const context = canvas.getContext('2d', { willReadFrequently: true });
@@ -1787,6 +1787,8 @@ function styleReferences(state: StyleState, entries: ReadonlyMap<string, string>
 const stylePaintCache = new WeakMap<Element, Map<string, { key: string; supplied: readonly (string | undefined)[]; tokens: Map<string, string>; accent: Map<string, string>; applied: LyraThemeAccent }>>();
 function stylePaint(state: StyleState, element: Element, wholeDocument: boolean): Map<string, string> {
   const desired = new Map<string, string>();
+  // Generic XML elements accept scoped attributes but have no inline CSS declaration to paint.
+  if (!(element as HTMLElement | SVGElement).style) return desired;
   const mode = styleResolvedMode(state.mode, element.ownerDocument.defaultView);
   const tokens = { ...state.tokens, ...state.overrides };
   if (wholeDocument && mode === null) for (const [name, value] of tokenEntries(tokens, null)) desired.set(name, value);

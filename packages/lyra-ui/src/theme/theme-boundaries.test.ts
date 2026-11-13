@@ -2,6 +2,56 @@ import { expect } from '@open-wc/testing';
 import { applyLyraStyleScope, defineLyraLook, lyraStyleAttributes, setLyraStyle, type LyraLook, type LyraThemeTokenValue } from './theme.js';
 
 describe('theme validation and document ownership boundaries', () => {
+  for (const mode of ['light', 'dark'] as const) {
+    it(`paints ${mode} accents in a standalone SVG document using the same colors as an HTML document`, () => {
+      const owner = document.implementation.createDocument('http://www.w3.org/2000/svg', 'svg');
+      const scope = owner.documentElement as unknown as SVGSVGElement;
+      const reference = document.implementation.createHTMLDocument('Reference').createElement('section');
+      const choices = { mode, accent: '#123456', accentBackground: '#ffffff', overrides: {
+        '--lr-theme-color-surface-default': '#ffffff', '--lr-theme-font-sans': 'monospace',
+      } };
+      scope.style.setProperty('--lr-theme-font-sans', 'serif', 'important');
+      try {
+        applyLyraStyleScope(reference, choices);
+        applyLyraStyleScope(scope, choices);
+        expect(scope.getAttribute('data-lr-theme')).to.equal(mode);
+        const accent = '--_lr-al-color-brand-fill-loud';
+        expect(reference.style.getPropertyValue(accent).length).to.be.greaterThan(0);
+        expect(scope.style.getPropertyValue(accent)).to.equal(reference.style.getPropertyValue(accent));
+        expect(scope.style.getPropertyValue('--_lr-ll-color-surface-default')).to.equal('#ffffff');
+        expect(scope.style.getPropertyValue('--lr-theme-font-sans')).to.include('monospace');
+        applyLyraStyleScope(scope, null);
+        expect(scope.style.getPropertyValue('--lr-theme-font-sans')).to.equal('serif');
+        expect(scope.style.getPropertyPriority('--lr-theme-font-sans')).to.equal('important');
+        expect(scope.style.getPropertyValue(accent)).to.equal('');
+        expect(scope.hasAttribute('data-lr-theme')).to.equal(false);
+      } finally {
+        applyLyraStyleScope(scope, null);
+        applyLyraStyleScope(reference, null);
+      }
+    });
+
+    it(`applies and restores ${mode} scope attributes on an XML element without a CSS style declaration`, () => {
+      const owner = document.implementation.createDocument('urn:application:theme', 'panel');
+      const scope = owner.documentElement;
+      scope.setAttribute('data-theme', 'application');
+      scope.setAttribute('data-lr-density', 'touch');
+      try {
+        applyLyraStyleScope(scope, { mode, density: 'compact', overrides: { '--lr-theme-space-m': '1.25rem' } });
+        expect(scope.getAttribute('data-lr-theme')).to.equal(mode);
+        expect(scope.getAttribute('data-lr-density')).to.equal('compact');
+        expect(scope.hasAttribute('style')).to.equal(false);
+        applyLyraStyleScope(scope, { mode: mode === 'light' ? 'dark' : 'light' });
+        expect(scope.getAttribute('data-lr-density')).to.equal('touch');
+        applyLyraStyleScope(scope, null);
+        expect(scope.getAttribute('data-theme')).to.equal('application');
+        expect(scope.hasAttribute('data-lr-theme')).to.equal(false);
+        expect(scope.hasAttribute('data-lr-mode')).to.equal(false);
+        expect(scope.getAttribute('data-lr-density')).to.equal('touch');
+      } finally { applyLyraStyleScope(scope, null); }
+    });
+  }
+
   let originalSheets: CSSStyleSheet[];
   let themeSheet: CSSStyleSheet;
   before(async () => {

@@ -162,10 +162,10 @@ const rootHelperRegisteredTags = [];
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/7859878f724ef4237ee93a5414fa6b54f204313a/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'Heatmap gesture ownership checks use 5,669,098 raw bytes across the same 64 files. The ceiling advances only to the next 64-byte boundary, 5,669,120 bytes. The explicit Oniguruma canary retains its separate exact binary requirement.',
-  reviewedCoreMeasurementBytes: 5_669_098,
+  $comment: 'File-icon registry validation and XML/SVG theme scopes use 5,669,399 raw bytes across the same 64 files, an increase of 301 bytes. The ceiling advances only to the next 64-byte boundary, 5,669,440 bytes. The explicit Oniguruma canary retains its separate exact binary requirement.',
+  reviewedCoreMeasurementBytes: 5_669_399,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 22,
+  selectedRegressionHeadroomBytes: 41,
 };
 
 /**

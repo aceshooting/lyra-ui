@@ -1,4 +1,4 @@
-import { fixture, expect } from '@open-wc/testing';
+import { fixture, fixtureSync, expect } from '@open-wc/testing';
 import { html, LitElement, render } from 'lit';
 import { property } from 'lit/decorators.js';
 import { setReducedMotion } from '../../test/wtr-media.js';
@@ -86,7 +86,8 @@ describe('gemstoneSelectedGlyphStyles', () => {
     });
 
     async function selectedGlyphs() {
-      const scope = await fixture<HTMLElement>(html`
+      // Wait for the two components below, without an animation-frame wait on the plain wrapper.
+      const scope = fixtureSync<HTMLElement>(html`
         <section style="--lr-gemstone-selected-color: rgb(10, 20, 30); --lr-gemstone-selected-blur: 3px;">
           <lr-gemstone-glyph-probe selected></lr-gemstone-glyph-probe>
           <lr-swatch-picker mode="gemstone" aria-label="Accent color"

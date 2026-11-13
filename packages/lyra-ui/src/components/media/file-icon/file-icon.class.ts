@@ -174,22 +174,39 @@ export class LyraFileIcon extends LyraElement {
   /** Immutable metadata authority for this instance. */
   @property({ attribute: false }) registry: LyraFileTypeMetadataRegistry = defaultFileTypeMetadataRegistry;
 
-  private resolveMetadata(): LyraResolvedFileTypeMetadata {
+  private resolveMetadata(): { label: string; description?: string; token: string } {
     try {
-      if (this.registry && typeof this.registry.resolve === 'function') {
-        return this.registry.resolve(this.mimeType, this.name);
+      const registry = this.registry;
+      const resolve = registry?.resolve;
+      const metadata = typeof resolve === 'function' ? resolve.call(registry, this.mimeType, this.name) : undefined;
+      if (metadata && typeof metadata === 'object') {
+        const { provenance, label, icon, description } = metadata;
+        if ((provenance === 'builtin' || provenance === 'consumer') &&
+          typeof label === 'string' && label.trim().length > 0 && label.length <= 512 &&
+          typeof icon === 'string' && Object.hasOwn(ICON_LABELS, icon) &&
+          (description === undefined || (typeof description === 'string' && description.length <= 2048))) {
+          let token = '';
+          try {
+            token = badgeToken(metadata, this.mimeType, this.name);
+          } catch {
+            // Optional badge data can fail without discarding a usable accessible label.
+          }
+          return {
+            label: provenance === 'consumer' ? label : this.localize(ICON_LABELS[icon]),
+            ...(provenance === 'consumer' && description ? { description } : {}),
+            token,
+          };
+        }
       }
     } catch {
-      // Invalid injected registries fail closed to the complete built-in generic record.
+      // Invalid injected registries and unreadable records keep a localized, named badge.
     }
-    return defaultFileTypeMetadataRegistry.resolve('', '');
+    return { label: this.localize('fileTypeFile'), token: '' };
   }
 
   override render(): TemplateResult {
     const metadata = this.resolveMetadata();
-    const metadataLabel = metadata.provenance === 'consumer'
-      ? metadata.label
-      : this.localize(ICON_LABELS[metadata.icon]);
+    const metadataLabel = metadata.label;
     const renderedLabel = this.label ?? metadataLabel;
     // A NaN/negative `bytes` (e.g. an invalid `bytes` attribute) would otherwise make `bytes > 0`
     // false anyway (so no crash), but normalizing here keeps it explicit and consistent with
@@ -212,15 +229,10 @@ export class LyraFileIcon extends LyraElement {
       ? this.localize('fileTypeWithSize', undefined, { label: accessibleNameBase, size: sizeText })
       : accessibleNameBase;
     const accessibleLabel = hostAriaLabel(this) ?? fallbackLabel;
-    let token = '';
-    try {
-      token = badgeToken(metadata, this.mimeType, this.name);
-    } catch {
-      // A hostile directly implemented registry record degrades to the glyph.
-    }
+    const token = metadata.token;
     const tokenTier = token === '' ? 'none' : estimatedTokenEm(token) <= 2.4 ? 'short' : 'long';
     const descriptionId =
-      this.mode === 'label' && metadata.provenance === 'consumer' && metadata.description
+      this.mode === 'label' && metadata.description
         ? 'metadata-description'
         : undefined;
     return html`
