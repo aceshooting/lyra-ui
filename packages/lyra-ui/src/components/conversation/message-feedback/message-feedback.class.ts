@@ -559,8 +559,11 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     event.stopPropagation();
   };
 
-  private toggleReason(id: string): void {
-    if (this.disabled || this.pending) return;
+  private toggleReason(id: string, event: Event): void {
+    if (this.disabled || this.pending || event.defaultPrevented) {
+      event.preventDefault();
+      return;
+    }
     this.selectedReasonIds = this.selectedReasonIds.includes(id)
       ? this.selectedReasonIds.filter((r) => r !== id)
       : [...this.selectedReasonIds, id];
@@ -818,7 +821,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
                                 .disabled=${this.disabled || this.pending}
                                 @lr-chip-toggle-request=${(event: Event) => {
                                   event.stopPropagation();
-                                  this.toggleReason(reason.id);
+                                  this.toggleReason(reason.id, event);
                                 }}
                                 @lr-chip-select=${this.stopChipAliasEvent}
                                 >${reason.label}</lr-chip

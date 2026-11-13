@@ -155,17 +155,17 @@ const optionalPeerFamilyTags = componentInventory.components
 const rootHelperRegisteredTags = [];
 
 // Packed core/all.js includes every non-optional registration and every emitted chunk.
-// Respecting viewer search changes from event listeners uses 5,671,342 raw bytes across 64 files;
-// the next 64-byte ceiling leaves 18 bytes of headroom.
+// Honoring chip toggle cancellation uses 5,671,433 raw bytes across 64 files;
+// the next 64-byte ceiling leaves 55 bytes of headroom.
 // Optional-peer exclusions and the complete file sum stay fixed. Core has no WASM allowance;
 // the explicit Oniguruma canary retains its separate exact 466,610-byte binary requirement.
 // Prior reviewed baseline and allowance:
-// https://github.com/aceshooting/lyra-ui/blob/bac361a47dad0c88350da5027c0d2356eaf2d371/scripts/check-packed-consumer.mjs
+// https://github.com/aceshooting/lyra-ui/blob/ad043b8e3479fcd9990cd6ecc36e4638b48cfcc4/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'Respecting viewer search changes from event listeners uses 5,671,342 raw bytes across the same 64 files, 214 bytes above the previous reviewed measurement. The ceiling advances only to the next 64-byte boundary, 5,671,360 bytes. The explicit Oniguruma canary retains its separate exact binary requirement.',
-  reviewedCoreMeasurementBytes: 5_671_342,
+  $comment: 'Honoring chip toggle cancellation and immediate disablement uses 5,671,433 raw bytes across the same 64 files, 91 bytes above the previous reviewed measurement. The ceiling advances only to the next 64-byte boundary, 5,671,488 bytes. The explicit Oniguruma canary retains its separate exact binary requirement.',
+  reviewedCoreMeasurementBytes: 5_671_433,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 18,
+  selectedRegressionHeadroomBytes: 55,
 };
 
 /**

@@ -601,7 +601,10 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
 
   private onTagChipToggle(tag: string, e: CustomEvent<ChipSelectDetail>): void {
     e.stopPropagation();
-    if (this.disabled) return;
+    if (this.disabled || e.defaultPrevented) {
+      e.preventDefault();
+      return;
+    }
     const next = new Set(this.activeTags);
     if (e.detail.selected) next.add(tag);
     else next.delete(tag);

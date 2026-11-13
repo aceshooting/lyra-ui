@@ -21829,6 +21829,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/agent-tools/eval-dataset/eval-dataset-facet-recovery.test.ts",
+          "src/components/agent-tools/eval-dataset/eval-dataset-immediate-disabled.test.ts",
           "src/components/agent-tools/eval-dataset/eval-dataset-scale.test.ts",
           "src/components/agent-tools/eval-dataset/eval-dataset-search-sizing.test.ts",
           "src/components/agent-tools/eval-dataset/eval-dataset-source-admission.test.ts",
@@ -35297,6 +35298,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/conversation/message-feedback/message-feedback-boundaries.test.ts",
+          "src/components/conversation/message-feedback/message-feedback-chip-veto.test.ts",
           "src/components/conversation/message-feedback/message-feedback-reason-cost.test.ts",
           "src/components/conversation/message-feedback/message-feedback-remediation.test.ts",
           "src/components/conversation/message-feedback/message-feedback.test.ts"
