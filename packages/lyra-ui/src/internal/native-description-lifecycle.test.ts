@@ -48,6 +48,7 @@ it('recovers description observation after setup and teardown errors and ignores
     }
     takeRecords(): MutationRecord[] { return this.native.takeRecords(); }
     deliver(): void { this.callback([], this); }
+    dispose(): void { this.native.disconnect(); }
   }
   let reads = 0;
   Object.defineProperty(window, 'MutationObserver', { configurable: true, value: Observer });
@@ -70,9 +71,12 @@ it('recovers description observation after setup and teardown errors and ignores
     expect(target.getAttribute('aria-describedby')).to.equal('description-local');
     expect(target.ariaDescribedByElements?.map(node => node.id)).to.deep.equal(['description-local']);
   } finally {
-    lease?.release();
-    observers.forEach(observer => observer.disconnect());
-    if (original) Object.defineProperty(window, 'MutationObserver', original);
-    else Reflect.deleteProperty(window, 'MutationObserver');
+    try {
+      lease?.release();
+      observers.forEach(observer => observer.dispose());
+    } finally {
+      if (original) Object.defineProperty(window, 'MutationObserver', original);
+      else Reflect.deleteProperty(window, 'MutationObserver');
+    }
   }
 });
