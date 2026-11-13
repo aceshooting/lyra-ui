@@ -13,6 +13,7 @@ function source(overrides: Partial<LyraAvCueSource> = {}): LyraAvCueSource {
 }
 function setup(reveal: (index: number, current: () => boolean) => Promise<boolean>, callbacks: {
   changed?: () => void;
+  activeChanged?: (cueId: string | null, index: number) => void;
   searchChanged?: (detail: LyraSearchChangeDetail) => void;
 } = {}) {
   const controllers = new Set<ReactiveController>();
@@ -145,7 +146,7 @@ it('reports an unavailable match when the host refuses to reveal a supplied cue'
 
 
 for (const withdrawal of ['clear', 'rebind', 'revoke'] as const) {
-  for (const outcome of ['unavailable', 'rejected'] as const) {
+  for (const outcome of ['available', 'unavailable', 'rejected'] as const) {
     it(`ignores a late ${outcome} reveal after ${withdrawal} and lets a fresh search recover`, async () => {
       let finish: (() => void) | undefined, authoritative: (() => boolean) | undefined;
       let reveals = 0;
@@ -153,7 +154,7 @@ for (const withdrawal of ['clear', 'rebind', 'revoke'] as const) {
         if (++reveals > 1) return true;
         authoritative = current;
         return new Promise<boolean>((resolve, reject) => {
-          finish = outcome === 'unavailable' ? () => resolve(false) : () => reject(new Error('Obsolete reveal failure'));
+          finish = outcome === 'rejected' ? () => reject(new Error('Obsolete reveal failure')) : () => resolve(outcome === 'available');
         });
       });
       try {
@@ -179,4 +180,67 @@ for (const withdrawal of ['clear', 'rebind', 'revoke'] as const) {
       } finally { finish?.(); test.dispose(); }
     });
   }
+}
+
+for (const withdrawal of ['rebind', 'revoke'] as const) {
+  for (const outcome of ['available', 'unavailable', 'rejected'] as const) {
+    it(`ignores a late ${outcome} cue read after ${withdrawal} without revealing the retired search`, async () => {
+      let finish: (() => void) | undefined, signal: AbortSignal | undefined;
+      const reveals: number[] = [], changes: LyraSearchChangeDetail[] = [];
+      const test = setup(async index => { reveals.push(index); return true; }, {
+        searchChanged: detail => { changes.push(detail); },
+      });
+      try {
+        test.control.bind(source({ getCue: (_index, request) => {
+          signal = request.signal;
+          return new Promise((resolve, reject) => {
+            finish = outcome === 'rejected' ? () => reject(new Error('Retired cue read failed'))
+              : () => resolve(outcome === 'available' ? cue : null);
+          });
+        } }), () => true);
+        const pending = test.control.search('Matching', 'en');
+        await waitUntil(() => finish !== undefined, 'the first match must request its cue row');
+        if (withdrawal === 'revoke') test.control.revoke();
+        else test.control.bind(source({ revision: 2 }), () => true);
+        expect(await pending).to.equal(0);
+        expect(signal?.aborted).to.equal(true);
+        expect(reveals).to.deep.equal([]);
+        expect(changes.length).to.equal(0);
+        expect(test.control.selected).to.equal(undefined);
+        if (withdrawal === 'revoke') test.control.bind(source({ revision: 2 }), () => true);
+        const recovery = test.control.search('Matching', 'en');
+        finish!();
+        expect(await recovery).to.equal(1);
+        expect(test.control.selected?.cue.cueId).to.equal('cue-0');
+        expect(reveals).to.deep.equal([0]);
+        expect(changes.map(detail => detail.matchCount)).to.deep.equal([1]);
+        expect(test.control.unavailable).to.equal(false);
+        expect(test.control.searchUnavailable).to.equal(false);
+        expect(test.control.searchLoading).to.equal(false);
+      } finally { finish?.(); test.dispose(); }
+    });
+  }
+
+  it(`keeps a rejected active-cue lookup after ${withdrawal} from clearing the new source`, async () => {
+    let reject: ((reason: Error) => void) | undefined, signal: AbortSignal | undefined;
+    const changes: [string | null, number][] = [];
+    const test = setup(async () => true, { activeChanged: (id, index) => { changes.push([id, index]); } });
+    try {
+      test.control.bind(source({ activeAt: (_time, request) => {
+        signal = request.signal;
+        return new Promise((_resolve, fail) => { reject = fail; });
+      } }), () => true);
+      test.control.updateTime(0);
+      await waitUntil(() => reject !== undefined, 'the old source must receive the active-cue request');
+      if (withdrawal === 'revoke') test.control.revoke();
+      test.control.bind(source({ revision: 2 }), () => true);
+      expect(signal?.aborted).to.equal(true);
+      test.control.updateTime(0);
+      reject!(new Error('Retired active cue failed'));
+      await waitUntil(() => test.control.active?.cue.cueId === 'cue-0');
+      expect(changes).to.deep.equal([['cue-0', 0]]);
+      expect(test.control.unavailable).to.equal(false);
+      expect(test.control.count).to.equal(1);
+    } finally { reject?.(new Error('Dispose pending active cue')); test.dispose(); }
+  });
 }
