@@ -24405,6 +24405,8 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/utility/format/format-native-date.test.ts",
+          "src/components/utility/format/format-options.property.test.ts",
           "src/components/utility/format/format-remediation.test.ts",
           "src/components/utility/format/format.test.ts"
         ],
@@ -24573,6 +24575,8 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/utility/format/format-native-date.test.ts",
+          "src/components/utility/format/format-options.property.test.ts",
           "src/components/utility/format/format-remediation.test.ts",
           "src/components/utility/format/format.test.ts"
         ],
@@ -24735,6 +24739,8 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/utility/format/format-native-date.test.ts",
+          "src/components/utility/format/format-options.property.test.ts",
           "src/components/utility/format/format-remediation.test.ts",
           "src/components/utility/format/format.test.ts"
         ],
@@ -45152,6 +45158,8 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/utility/format/format-native-date.test.ts",
+          "src/components/utility/format/format-options.property.test.ts",
           "src/components/utility/format/format-remediation.test.ts",
           "src/components/utility/format/format.test.ts"
         ],

@@ -3,6 +3,19 @@ import { formatBytes, formatDate, formatNumber, formatRelativeTime } from './for
 import { getNumberFormat } from '../internal/intl-cache.js';
 import { getLyraLocale, setLyraLocale } from '../internal/localization.js';
 
+it('rejects invalid native Dates and reads Date subclasses without caller conversion hooks', () => {
+  let calls = 0;
+  class NativeDate extends Date {
+    override getTime(): number { calls++; throw new Error('getTime must not be invoked'); }
+    override [Symbol.toPrimitive](): never { calls++; throw new Error('conversion must not be invoked'); }
+  }
+  expect(formatDate(new NativeDate(NaN), 'en-US')).to.equal(undefined);
+  expect(formatRelativeTime(new NativeDate(NaN), 'en-US', { now: 0 })).to.equal(undefined);
+  expect(formatDate(new NativeDate(0), 'en-US', { timeZone: 'UTC' })).to.equal('1/1/1970');
+  expect(formatRelativeTime(new NativeDate(60_000), 'en-US', { now: 0, unit: 'minute', numeric: 'always' })).to.equal('in 1 minute');
+  expect(calls).to.equal(0);
+});
+
 /** Restores the module-global active locale after each case -- shared by the whole file. */
 function withActiveLocale(body: () => void): void {
   const previous = getLyraLocale();
