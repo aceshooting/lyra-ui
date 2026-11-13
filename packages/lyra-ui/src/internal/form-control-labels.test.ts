@@ -1289,7 +1289,7 @@ describe('external FACE label contract', () => {
       const probe = document.createElement(tag('empty-internals-probe')) as EmptyInternalsProbe;
       captureFormInternals(host, probe.internals);
 
-      expect(resolveExternalLabels(host as ExternalLabelHost)).to.deep.equal([]);
+      expect(resolveExternalLabels(host as ExternalLabelHost).length).to.equal(0);
     } finally {
       label.remove();
       host.remove();
