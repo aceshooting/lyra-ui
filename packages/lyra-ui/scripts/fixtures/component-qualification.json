@@ -18482,6 +18482,8 @@
           "src/components/viewers/document-viewer/document-viewer-kinds.test.ts",
           "src/components/viewers/document-viewer/document-viewer.test.ts",
           "src/components/viewers/document-viewer/msg-fallback.test.ts",
+          "src/components/viewers/document-viewer/ooxml-part-guard.property.test.ts",
+          "src/components/viewers/document-viewer/ooxml-part-guard.test.ts",
           "src/components/viewers/document-viewer/registry-adapters.test.ts",
           "src/components/viewers/document-viewer/registry-remediation.test.ts",
           "src/components/viewers/document-viewer/registry.test.ts",
