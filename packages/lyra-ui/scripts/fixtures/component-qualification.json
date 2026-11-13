@@ -4798,6 +4798,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/background-runs/background-runs-immediate-disabled.test.ts",
           "src/components/agent-tools/background-runs/background-runs.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -13168,6 +13169,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/compare-panel/compare-panel-immediate-disabled.test.ts",
           "src/components/agent-tools/compare-panel/compare-panel-remediation.test.ts",
           "src/components/agent-tools/compare-panel/compare-panel.test.ts"
         ],
@@ -33337,6 +33339,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/media/media-card/media-card-immediate-disabled.test.ts",
           "src/components/media/media-card/media-card-remediation.test.ts",
           "src/components/media/media-card/media-card.test.ts"
         ],
@@ -36104,6 +36107,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/model-settings-panel/model-settings-panel-immediate-disabled.test.ts",
           "src/components/conversation/model-settings-panel/model-settings-panel-input-limit-scale.test.ts",
           "src/components/conversation/model-settings-panel/model-settings-panel.test.ts"
         ],
@@ -42394,6 +42398,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/prompt-input/prompt-input-immediate-disabled.test.ts",
           "src/components/conversation/prompt-input/prompt-input-input-limit-scale.test.ts",
           "src/components/conversation/prompt-input/prompt-input-register.test.ts",
           "src/components/conversation/prompt-input/prompt-input.test.ts"
@@ -42570,6 +42575,7 @@
         "tests": [
           "src/components/conversation/prompt-queue/prompt-queue-attachment-admission.test.ts",
           "src/components/conversation/prompt-queue/prompt-queue-coverage.test.ts",
+          "src/components/conversation/prompt-queue/prompt-queue-immediate-disabled.test.ts",
           "src/components/conversation/prompt-queue/prompt-queue-scale.test.ts",
           "src/components/conversation/prompt-queue/prompt-queue.test.ts"
         ],
