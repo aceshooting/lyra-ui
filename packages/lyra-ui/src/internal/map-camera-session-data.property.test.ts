@@ -8,6 +8,17 @@ const position = fc.tuple(fc.double({ min: -180, max: 180, noNaN: true }), fc.do
 const viewpoint = fc.record({ center: position, zoom: finite, bearing: finite, pitch: fc.double({ min: 0, max: 85, noNaN: true }) });
 
 describe('camera session data properties', () => {
+  it('rejects non-boolean motion flags without changing the admitted tour', () => {
+    const invalidMotion = fc.oneof(fc.string(), fc.integer(), fc.constant(null), fc.array(fc.integer(), { maxLength: 4 }));
+    fc.assert(fc.property(viewpoint, viewpoint, invalidMotion, (first, last, reducedMotion) => {
+      const admitted = admitMapCameraTour({ keyframes: [{ instant: 0, view: first }, { instant: 1000, view: last }] });
+      const baseline = sampleMapCameraTour(admitted, 500);
+      expect(() => sampleMapCameraTour(admitted, 500, { reducedMotion } as never)).to.throw(TypeError, 'Invalid camera sampling options');
+      expect(sampleMapCameraTour(admitted, 500)).to.deep.equal(baseline);
+      expect(sampleMapCameraTour(admitted, 500, { reducedMotion: true })).to.deep.equal(admitted.keyframes[0]!.view);
+    }), propertyRuns());
+  });
+
   it('normalizes every finite bearing into the half-open range without changing admitted position or zoom', () => {
     fc.assert(fc.property(viewpoint, input => {
       const result = admitMapViewpoint(input);

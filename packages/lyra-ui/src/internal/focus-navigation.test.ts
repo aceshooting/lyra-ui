@@ -1,5 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../test/wtr-focus.js';
+import { cancelDeferredFocusReturn, scheduleDeferredFocusReturn } from './deferred-focus-return.js';
 import {
   applyComposedFocusRepair,
   captureComposedFocusRepair,
@@ -1306,6 +1307,50 @@ it('contains a throwing deferred return-focus resolver and keeps the parked focu
   await focusByKeyboard(next);
   expect(document.activeElement?.id).to.equal('throw-next');
   expect(calls).to.equal(1);
+});
+
+it('contains a deferred overlay candidate resolver failure and accepts a later focus return', async () => {
+  const root = await fixture<HTMLDivElement>(html`
+    <div><section><button id="deferred-held">Held</button></section><button id="deferred-next">Next</button></div>
+  `);
+  const host = Object.assign(root.querySelector('section')!, { updateComplete: Promise.resolve(true) });
+  const held = root.querySelector<HTMLButtonElement>('#deferred-held')!;
+  const next = root.querySelector<HTMLButtonElement>('#deferred-next')!;
+  await focusByKeyboard(held);
+  let calls = 0, fallbacks = 0;
+  try {
+    scheduleDeferredFocusReturn({ host, candidates: () => { calls++; throw new Error('Candidate unavailable'); }, fallback: () => { fallbacks++; } });
+    await waitUntil(() => calls === 1, 'the candidate resolver was called');
+    expect(document.activeElement?.id).to.equal('deferred-held');
+    expect(fallbacks).to.equal(0);
+    scheduleDeferredFocusReturn({ host, candidates: () => [next] });
+    await waitUntil(() => document.activeElement?.id === 'deferred-next', 'a later return still moves focus');
+    expect(calls).to.equal(1);
+  } finally { cancelDeferredFocusReturn(host); }
+});
+
+it('abandons a deferred overlay focus return when its additional validity check changes while settling', async () => {
+  const root = await fixture<HTMLDivElement>(html`
+    <div><section><button id="validity-held">Held</button></section><button id="validity-next">Next</button></div>
+  `);
+  const host = Object.assign(root.querySelector('section')!, { updateComplete: Promise.resolve(true) });
+  const held = root.querySelector<HTMLButtonElement>('#validity-held')!;
+  const next = root.querySelector<HTMLButtonElement>('#validity-next')!;
+  await focusByKeyboard(held);
+  let finish!: () => void;
+  const settled = new Promise<void>(resolve => { finish = resolve; });
+  let current = true, calls = 0;
+  try {
+    scheduleDeferredFocusReturn({ host, settled, isCurrent: () => current, candidates: () => { calls++; return [next]; } });
+    current = false;
+    finish();
+    await nextHostUpdateOpportunity();
+    expect(calls).to.equal(0);
+    expect(document.activeElement?.id).to.equal('validity-held');
+    current = true;
+    scheduleDeferredFocusReturn({ host, isCurrent: () => current, candidates: () => [next] });
+    await waitUntil(() => document.activeElement?.id === 'validity-next', 'a new valid return moves focus');
+  } finally { finish(); cancelDeferredFocusReturn(host); }
 });
 
 it('reports a closed details summary beyond the depth bound and includes it when admitted', async () => {

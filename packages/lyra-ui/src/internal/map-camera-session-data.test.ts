@@ -59,6 +59,24 @@ describe('camera session data', () => {
       tour(view(), view(), 'smooth')]) expect(() => admitMapCameraTour(input)).to.throw();
   });
 
+  it('rejects fractional keyframe lengths before reading a frame and still admits later valid tours', () => {
+    for (const length of [1.5, 2.5, 1023.5]) {
+      let frameReads = 0;
+      const keyframes = new Proxy(tour().keyframes, {
+        getOwnPropertyDescriptor(target, key) {
+          const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
+          if (key === 'length') return { ...descriptor!, value: length };
+          frameReads++;
+          return descriptor;
+        },
+      });
+      expect(() => admitMapCameraTour({ keyframes })).to.throw(TypeError, 'Invalid camera data array length');
+      expect(frameReads).to.equal(0);
+    }
+    const admitted = admitMapCameraTour(tour());
+    expect(sampleMapCameraTour(admitted, 50)).to.deep.equal(view([5, 10], 3, 20, 30));
+  });
+
   it('samples exact and outside instants as immutable detached endpoints', () => {
     const admitted = admitMapCameraTour(tour());
     for (const instant of [-100, 0]) expect(sampleMapCameraTour(admitted, instant)).to.deep.equal(view());
