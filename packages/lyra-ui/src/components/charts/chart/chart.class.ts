@@ -5252,8 +5252,23 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       onResize: (chart: RuntimeChart) => { if (current()) this.updateChartArea(chart); },
       onClick: (event: { native?: Event; x?: number; y?: number }, _hits: unknown, chart: RuntimeChart) => {
         if (!current() || !view) return;
-        const hits = chart.getElementsAtEventForMode(event.native ?? event as unknown as Event, 'nearest', { intersect: true }, true);
-        const hit = hits[0], point = hit && groups[hit.datasetIndex]?.[hit.index];
+        let hits: unknown;
+        try {
+          hits = chart.getElementsAtEventForMode(event.native ?? event as unknown as Event, 'nearest', { intersect: true }, true);
+        } catch { return; }
+        if (!current()) return;
+        const admission = admitChartArray(hits);
+        if (!admission || !current()) return;
+        const admitted = chartArrayIsStillAdmitted(admission);
+        if (!admitted || !current()) return;
+        let hit: ChartHit | undefined;
+        if (admission.length) {
+          const first = chartRecordValue(admission.source, '0');
+          if (first === MISSING_OWN_DATA_DESCRIPTOR || first === UNSAFE_OWN_DATA_DESCRIPTOR || !current()) return;
+          hit = chartCallbackIndexes(first.value);
+          if (!hit || !current()) return;
+        }
+        const point = hit && groups[hit.datasetIndex]?.[hit.index];
         if (point && !this.canonicalHiddenDatasets()?.includes(hit!.datasetIndex)) { this.activateSpatialPoint(point); return; }
         if (!chart.chartArea || typeof event.x !== 'number' || typeof event.y !== 'number') return;
         const bin = bins.find(bin => { const a = toPixel(chart, bin.bounds.minX, bin.bounds.maxY), b = toPixel(chart, bin.bounds.maxX, bin.bounds.minY);
