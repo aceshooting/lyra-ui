@@ -27,9 +27,9 @@ import {
 } from 'node:fs';
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import libCoverage from 'istanbul-lib-coverage';
 import libReport from 'istanbul-lib-report';
 import reports from 'istanbul-reports';
+import { mergeCoverageMaps } from './coverage-map.mjs';
 import {
   discoverTestFiles,
   runNativeScrollbarVerification,
@@ -205,16 +205,17 @@ export function runCoverageShard(
 
 /** Folds the raw reports of a shard's sessions into the shard directory, in the single-session shape. */
 function mergeSessionReports(directory, partDirectories, requireAll) {
-  const map = libCoverage.createCoverageMap({});
+  const coverages = [];
   const suites = [];
   for (const part of partDirectories) {
     const coverageFile = resolve(part, 'coverage-final.json');
     const junitFile = resolve(part, 'junit.xml');
-    if (existsSync(coverageFile)) map.merge(JSON.parse(readFileSync(coverageFile, 'utf8')));
+    if (existsSync(coverageFile)) coverages.push(JSON.parse(readFileSync(coverageFile, 'utf8')));
     else if (requireAll) throw new Error(`Coverage session ${part} wrote no coverage-final.json.`);
     if (existsSync(junitFile)) suites.push(extractTestsuites(readFileSync(junitFile, 'utf8'), 0));
     else if (requireAll) throw new Error(`Coverage session ${part} wrote no junit.xml.`);
   }
+  const map = mergeCoverageMaps(coverages);
   if (map.files().length > 0) writeFileSync(resolve(directory, 'coverage-final.json'), JSON.stringify(map.toJSON()));
   if (suites.length > 0) {
     writeFileSync(
@@ -381,13 +382,14 @@ export function relocateCoverageSources(
 }
 
 function mergeCoverageMap(coverageDirectory, indices, sourceOptions) {
-  const map = libCoverage.createCoverageMap({});
-  for (const shardIndex of indices) {
-    const coverage = loadShardCoverage(coverageDirectory, shardIndex);
-    map.merge(sourceOptions.sourceRepositoryRoot === undefined
-      ? coverage : relocateCoverageSources(coverage, sourceOptions));
+  function* readReports() {
+    for (const shardIndex of indices) {
+      const coverage = loadShardCoverage(coverageDirectory, shardIndex);
+      yield sourceOptions.sourceRepositoryRoot === undefined
+        ? coverage : relocateCoverageSources(coverage, sourceOptions);
+    }
   }
-  return map;
+  return mergeCoverageMaps(readReports());
 }
 
 function writeMergedCoverageReport(coverageDirectory, map, repositoryRoot) {

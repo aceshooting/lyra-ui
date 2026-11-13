@@ -40,6 +40,24 @@ function fileCoverage(sourcePath, hits = 1) {
   };
 }
 
+function constructorAndMethodCoverage(sourcePath, invoked) {
+  const coverage = fileCoverage(sourcePath);
+  const location = (start, end) => ({ start: { line: 1, column: start }, end: { line: 1, column: end } });
+  const constructor = location(0, 100), method = location(20, 80);
+  coverage.fnMap = {
+    0: { name: 'Example', line: 1, loc: constructor, decl: constructor },
+    1: { name: 'method', line: 1, loc: method, decl: method },
+  };
+  coverage.f = { 0: 1, 1: invoked ? 1 : 0 };
+  const ranges = invoked ? [[0, 100, 1], [20, 80, 1], [30, 50, 0], [60, 70, 1]] : [[0, 100, 1]];
+  for (const [id, [start, end, count]] of ranges.entries()) {
+    const loc = location(start, end);
+    coverage.branchMap[id] = { type: 'branch', line: 1, loc, locations: [loc] };
+    coverage.b[id] = [count];
+  }
+  return coverage;
+}
+
 async function writeShardFixture(coverageDirectory, shardIndex, testFiles = inventory) {
   const directory = coverageShardDirectory(coverageDirectory, shardIndex);
   const selectedFiles = shardTestFiles(testFiles, shardIndex, COVERAGE_SHARD_TOTAL);
@@ -323,6 +341,55 @@ test('merges all raw coverage and junit reports into the established top-level o
   }
 });
 
+for (const invokedFirst of [true, false]) {
+  test(`shard merging preserves an unexecuted method branch with the ${invokedFirst ? 'invoked' : 'idle'} method first`, async () => {
+    const fixture = await mkdtemp(join(tmpdir(), 'lyra-coverage-function-boundary-'));
+    try {
+      await writeCompleteFixture(fixture);
+      const source = '/workspace/src/shared-class.ts';
+      const inputs = [];
+      for (const [index, invoked] of [invokedFirst, !invokedFirst].entries()) {
+        const filename = join(coverageShardDirectory(fixture, index + 1), 'coverage-final.json');
+        const contents = JSON.stringify({ [source]: constructorAndMethodCoverage(source, invoked) });
+        await writeFile(filename, contents);
+        inputs.push({ filename, contents });
+      }
+      mergeCoverageReports(inventory, { coverageDirectory: fixture });
+      const summary = JSON.parse(await readFile(join(fixture, 'coverage-summary.json'), 'utf8'));
+      assert.equal(summary.total.branches.total, 4, 'all observed branch ranges survive');
+      assert.equal(summary.total.branches.covered, 3, 'a constructor hit cannot execute a method fallback');
+      const lcov = await readFile(join(fixture, 'lcov.info'), 'utf8');
+      assert.match(lcov, /BRDA:1,\d+,\d+,0\n/u, 'the unexecuted branch retains zero hits');
+      for (const input of inputs) assert.equal(await readFile(input.filename, 'utf8'), input.contents);
+    } finally {
+      await rm(fixture, { recursive: true, force: true });
+    }
+  });
+}
+
+test('shard merging retains implicit branch execution inside the same invoked method', async () => {
+  const fixture = await mkdtemp(join(tmpdir(), 'lyra-coverage-implicit-branch-'));
+  try {
+    await writeCompleteFixture(fixture);
+    const source = '/workspace/src/shared-class.ts';
+    const partial = constructorAndMethodCoverage(source, true);
+    const complete = constructorAndMethodCoverage(source, true);
+    delete complete.branchMap[2]; delete complete.b[2];
+    delete complete.branchMap[3]; delete complete.b[3];
+    for (const [index, coverage] of [partial, complete].entries()) {
+      await writeFile(join(coverageShardDirectory(fixture, index + 1), 'coverage-final.json'), JSON.stringify({ [source]: coverage }));
+    }
+    mergeCoverageReports(inventory, { coverageDirectory: fixture });
+    const summary = JSON.parse(await readFile(join(fixture, 'coverage-summary.json'), 'utf8'));
+    assert.equal(summary.total.branches.total, 4);
+    assert.equal(summary.total.branches.covered, 4, 'a containing hit within the method still covers its implicit arms');
+    const lcov = await readFile(join(fixture, 'lcov.info'), 'utf8');
+    assert.doesNotMatch(lcov, /BRDA:1,\d+,\d+,0\n/u);
+  } finally {
+    await rm(fixture, { recursive: true, force: true });
+  }
+});
+
 test('merge fails closed when any raw coverage, junit, or shard manifest is absent', async () => {
   const fixture = await mkdtemp(join(tmpdir(), 'lyra-coverage-missing-'));
   try {
@@ -419,6 +486,41 @@ test('splits an oversized shard into bounded sessions and merges their raw repor
     await rm(fixture, { recursive: true, force: true });
   }
 });
+
+for (const invokedFirst of [true, false]) {
+  test(`split-session merging preserves an unexecuted method branch with the ${invokedFirst ? 'invoked' : 'idle'} method first`, async () => {
+    const fixture = await mkdtemp(join(tmpdir(), 'lyra-coverage-session-boundary-'));
+    try {
+      const files = Array.from({ length: (MAX_FILES_PER_COVERAGE_SESSION + 1) * COVERAGE_SHARD_TOTAL }, (_, index) =>
+        `src/boundary-${String(index).padStart(4, '0')}.test.ts`);
+      const source = '/workspace/src/shared-class.ts';
+      let sessions = 0;
+      const status = runCoverageShard(1, files, {
+        coverageDirectory: fixture,
+        packageDirectory: fixture,
+        runNativeScrollbarVerification: () => 0,
+        spawn: (_executable, _files, options) => {
+          const directory = options.env.WTR_COVERAGE_REPORT_DIR;
+          const invoked = sessions++ === 0 ? invokedFirst : !invokedFirst;
+          writeFileSync(join(directory, 'coverage-final.json'), JSON.stringify({
+            [source]: constructorAndMethodCoverage(source, invoked),
+          }));
+          writeFileSync(join(directory, 'junit.xml'), '<testsuites><testsuite name="session"/></testsuites>');
+          return { status: 0 };
+        },
+      });
+      assert.equal(status, 0);
+      assert.equal(sessions, 2);
+      const coverage = JSON.parse(await readFile(join(coverageShardDirectory(fixture, 1), 'coverage-final.json'), 'utf8'))[source];
+      const fallback = Object.entries(coverage.branchMap).find(([, branch]) => branch.loc.start.column === 30);
+      assert.ok(fallback, 'the fallback branch must remain in the report');
+      assert.deepEqual(coverage.b[fallback[0]], [0], 'an idle method cannot borrow constructor hits');
+      assert.equal(Object.keys(coverage.branchMap).length, 4);
+    } finally {
+      await rm(fixture, { recursive: true, force: true });
+    }
+  });
+}
 
 function detailedCoverage(source, hits) {
   const location = { start: { line: 1, column: 0 }, end: { line: 1, column: 1 } };
