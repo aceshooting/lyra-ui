@@ -86,6 +86,28 @@ describe('snapshotLyraHighlights', () => {
     expect(idReads).to.equal(1);
   });
 
+  it('rejects missing and inherited ids without evaluating a prototype getter', () => {
+    let inheritedReads = 0;
+    const prototype = { get id() { inheritedReads++; return 'inherited'; } };
+    const anchor = { kind: 'page' as const, page: 2 };
+    const inherited = Object.assign(Object.create(prototype) as object, { anchor });
+    const snapshot = snapshotLyraHighlights([{ anchor }, inherited, { id: 'survivor', anchor }]);
+    expect(snapshot.map(highlight => highlight.id)).to.deep.equal(['survivor']);
+    expect(snapshot[0]!.anchor === anchor).to.equal(true);
+    expect(inheritedReads).to.equal(0);
+  });
+
+  it('rejects setter-only ids without writing to caller records or losing later highlights', () => {
+    let writes = 0;
+    const anchor = { kind: 'page' as const, page: 2 };
+    const setterOnly = Object.defineProperty({ anchor }, 'id', { set() { writes++; } });
+    const snapshot = snapshotLyraHighlights([setterOnly, { id: 'survivor', anchor }]);
+    expect(snapshot.map(highlight => highlight.id)).to.deep.equal(['survivor']);
+    expect(snapshot[0]!.anchor === anchor).to.equal(true);
+    expect(Object.isFrozen(snapshot[0])).to.equal(true);
+    expect(writes).to.equal(0);
+  });
+
   it('contains a throwing computed id and keeps a later valid sibling', () => {
     let idReads = 0;
     const hostile = {

@@ -230,4 +230,13 @@ describe('lr-map visible bounds', () => {
     const h = await mount();
     expect(h.element.getVisibleBounds()).to.deep.equal([[1, 2], [3, 4]]);
   });
+
+  it('keeps the padded default when reading the option throws and accepts later ordinary options', async () => {
+    const h = await mount(element => { element.cameraPadding = { top: 30, right: 40, bottom: 50, left: 60 }; });
+    let reads = 0;
+    const options = { get padded(): boolean { reads++; throw new Error('Caller option unavailable'); } };
+    expect(h.element.getVisibleBounds(options)).to.deep.equal([[-44, 15], [-14, 37]]);
+    expect(reads).to.equal(1);
+    expect(h.element.getVisibleBounds({ padded: false })).to.deep.equal([[1, 2], [3, 4]]);
+  });
 });

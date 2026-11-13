@@ -253,6 +253,29 @@ describe('lr-map on-demand runtimes', () => {
     peer.zoom = 5; peer.fire('moveend', { originalEvent: {} }); expect(location.hash).to.equal('#map=9/40/20');
   });
 
+  for (const fails of [false, true]) it(`leaves a disconnected map inert when its URL runtime ${fails ? 'rejects' : 'loads'} and retries on reconnect`, async () => {
+    const gate = hold(loadMapHashRuntime, hashRuntime);
+    history.replaceState({}, '', '#map=9/40/20');
+    const wrapper = await fixture<HTMLDivElement>(html`<div></div>`);
+    const element = create(el => { el.hash = true; }); wrapper.append(element);
+    await waitUntil(() => gate.imports === 1);
+    const loading = loadMapHashRuntime().then(() => 'loaded', () => 'failed');
+    element.remove();
+    if (fails) gate.fail(); else gate.release();
+    expect(await loading).to.equal(fails ? 'failed' : 'loaded');
+    await tick(); await element.updateComplete;
+    expect(element.map === undefined).to.equal(true);
+    expect(location.hash).to.equal('#map=9/40/20');
+    if (fails) __setMapFeatureImporterForTesting(loadMapHashRuntime, async () => hashRuntime);
+    history.replaceState({}, '', '#map=7/30/10');
+    wrapper.append(element);
+    await waitUntil(() => element.map !== undefined);
+    const peer = element.map as unknown as LazyMap;
+    expect(peer.zoom).to.equal(7);
+    expect(peer.center).to.deep.equal({ lng: 10, lat: 30 });
+    expect(location.hash).to.equal('#map=7/30/10');
+  });
+
   it('loads layer ordering before GeoJSON placement mutates native resources', async () => {
     const gate = hold(loadMapOwnedFeatureRuntime, ownedRuntime);
     const { element, peer } = await mountWithBasemap(el => {

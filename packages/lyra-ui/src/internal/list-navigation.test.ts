@@ -53,4 +53,16 @@ describe('list navigation', () => {
       wrapper.remove();
     }
   });
+
+  it('does not retain a newly disabled current item when a nonwrapping arrow reaches an edge', () => {
+    const unavailable = new Set([0, 2]);
+    const options = { count: 3, orientation: 'vertical' as const, wrap: false, clamp: true,
+      isAvailable: (index: number) => !unavailable.has(index) };
+    expect(resolveListMove('ArrowUp', { ...options, current: 0 })).to.equal(null);
+    expect(resolveListMove('ArrowDown', { ...options, current: 2 })).to.equal(null);
+    expect(resolveListMove('ArrowDown', { ...options, current: 0 })).to.equal(1);
+    unavailable.clear();
+    expect(resolveListMove('ArrowUp', { ...options, current: 0 })).to.equal(0);
+    expect(resolveListMove('ArrowDown', { ...options, current: 2 })).to.equal(2);
+  });
 });
