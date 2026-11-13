@@ -197,6 +197,34 @@ describe('lr-tour', () => {
     expect(tour.shadowRoot!.querySelectorAll('[part="popover"]').length).to.equal(0);
   });
 
+  it('keeps an empty tour silent during navigation and accepts steps supplied later', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div><lr-tour></lr-tour>${targetButtons(1)}</div>`);
+    const tour = wrapper.querySelector<LyraTour>('lr-tour')!;
+    const events: string[] = [];
+    for (const name of ['lr-tour-start', 'lr-tour-step-change-request', 'lr-tour-end-request', 'lr-tour-end']) {
+      tour.addEventListener(name, () => events.push(name));
+    }
+    tour.next();
+    tour.goToStep(2);
+    tour.back();
+    tour.skip();
+    await tour.updateComplete;
+    expect(tour.open).to.equal(false);
+    expect(tour.activeIndex).to.equal(0);
+    expect(events).to.deep.equal([]);
+    expect(tour.shadowRoot!.querySelectorAll('[part="popover"]').length).to.equal(0);
+    tour.steps = makeSteps(1);
+    tour.start();
+    await tour.updateComplete;
+    expect(tour.open).to.equal(true);
+    expect(tour.shadowRoot!.querySelector('[part="heading"]')!.textContent).to.equal('Heading 0');
+    expect(events).to.deep.equal(['lr-tour-start']);
+    tour.next();
+    await tour.updateComplete;
+    expect(tour.open).to.equal(false);
+    expect(events).to.deep.equal(['lr-tour-start', 'lr-tour-end-request', 'lr-tour-end']);
+  });
+
   it('uses step content when the default slot contains only indentation whitespace', async () => {
     const el = (await fixture(html`<div>${targetButtons(1)}</div>`)) as HTMLDivElement;
     const tour = document.createElement('lr-tour') as LyraTour;
@@ -745,6 +773,29 @@ describe('lr-tour', () => {
     tour.goToStep(-5);
     await tour.updateComplete;
     expect(tour.activeIndex).to.equal(0);
+  });
+
+  it('does not request a step transition or move focus when a jump resolves to the current step', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div><lr-tour .steps=${makeSteps(2)}></lr-tour>${targetButtons(2)}</div>`);
+    const tour = wrapper.querySelector<LyraTour>('lr-tour')!;
+    await focusByKeyboard(wrapper.querySelector<HTMLButtonElement>('#tour-target-0')!);
+    tour.start(1);
+    await tour.updateComplete;
+    await waitUntil(() => tour.shadowRoot!.activeElement !== null);
+    const focused = tour.shadowRoot!.activeElement;
+    const events: string[] = [];
+    tour.addEventListener('lr-tour-step-change-request', () => events.push('request'));
+    for (const index of [1, 99]) {
+      tour.goToStep(index);
+      await tour.updateComplete;
+      expect(tour.activeIndex).to.equal(1);
+      expect(tour.shadowRoot!.activeElement === focused).to.equal(true);
+      expect(events).to.deep.equal([]);
+    }
+    tour.goToStep(0);
+    await tour.updateComplete;
+    expect(tour.activeIndex).to.equal(0);
+    expect(events).to.deep.equal(['request']);
   });
 
   it('normalizes non-finite and fractional public indices before events or transitions', async () => {
