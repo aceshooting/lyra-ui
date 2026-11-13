@@ -55722,6 +55722,7 @@
           "src/components/conversation/thread-list/thread-list-remediation.test.ts",
           "src/components/conversation/thread-list/thread-list-scale.test.ts",
           "src/components/conversation/thread-list/thread-list-search-size.test.ts",
+          "src/components/conversation/thread-list/thread-list-source-admission.test.ts",
           "src/components/conversation/thread-list/thread-list-source-page-clamp.test.ts",
           "src/components/conversation/thread-list/thread-list-source-scale.test.ts",
           "src/components/conversation/thread-list/thread-list.test.ts"
