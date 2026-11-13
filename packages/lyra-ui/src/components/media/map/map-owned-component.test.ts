@@ -217,6 +217,34 @@ describe('lr-map declarative owned resources', () => {
     });
   }
 
+  for (const failure of ['throw', 'no-op', 'disconnect', 'external order'] as const) {
+    it(`stops restoring basemap order when the restoration encounters ${failure}`, async () => {
+      const { element, peer } = await mount();
+      for (const id of ['base', 'a', 'b', 'labels']) peer.addLayer({ id });
+      await load(element, peer);
+      const move = peer.moveLayer.bind(peer);
+      let calls = 0;
+      peer.moveLayer = (id, before) => {
+        calls++;
+        if (calls === 2) throw new Error('Move unavailable');
+        if (calls === 3) {
+          if (failure === 'throw') throw new Error('Restoration unavailable');
+          if (failure === 'no-op') return;
+          if (failure === 'disconnect') { element.remove(); return; }
+          peer.order = ['a', 'labels', 'base', 'b'];
+          return;
+        }
+        move(id, before);
+      };
+      element.styleOverrides = [{ layerId: 'a', before: null }, { layerId: 'b', before: null }];
+      await element.updateComplete;
+      await waitUntil(() => peer.removed, 'failed restoration retires the native map');
+      expect(calls, 'no further mutation after restoration loses authority').to.equal(3);
+      expect(peer.order).to.deep.equal(failure === 'external order'
+        ? ['a', 'labels', 'base', 'b'] : ['base', 'a', 'labels', 'b']);
+    });
+  }
+
   it('does not roll back a new external layer order written during a failed native move', async () => {
     const { element, peer } = await mount();
     for (const id of ['base', 'a', 'labels']) peer.addLayer({ id });

@@ -3,6 +3,7 @@ import './chart.js';
 import './box-plot.js';
 import type { LyraChart } from './chart.js';
 import type { LyraBoxPlot } from './box-plot.js';
+import { notifyAnnotationPluginRegistered, onAnnotationPluginRegistered } from '../../../internal/chart-annotation-registration.js';
 
 type ChartInstance = { update(): void };
 const instanceOf = (el: HTMLElement): ChartInstance | undefined =>
@@ -60,4 +61,30 @@ it('rebuilds Chart.js hosts that were built before the annotation plugin registe
   expect(() => instanceOf(plain)!.update()).not.to.throw();
   expect(() => instanceOf(box)!.update()).not.to.throw();
   expect(() => instanceOf(annotated)!.update()).not.to.throw();
+});
+
+it('rebuilds later subscribers after one host throws and releases unsubscribed hosts', () => {
+  const error = new Error('Chart rebuild failed');
+  let healthy = 0;
+  const warnings: unknown[][] = [];
+  const warn = console.warn;
+  const stopBroken = onAnnotationPluginRegistered(() => { throw error; });
+  const stopHealthy = onAnnotationPluginRegistered(() => { healthy++; });
+  console.warn = (...args: unknown[]) => { warnings.push(args); };
+  try {
+    expect(() => notifyAnnotationPluginRegistered()).not.to.throw();
+    expect(healthy).to.equal(1);
+    expect(warnings.length).to.equal(1);
+    expect(warnings[0]![0]).to.equal('<lr-chart> could not rebuild a chart after annotation registration:');
+    expect(warnings[0]![1] === error).to.equal(true);
+    stopBroken();
+    notifyAnnotationPluginRegistered();
+    expect(healthy).to.equal(2);
+    expect(warnings.length).to.equal(1);
+    stopHealthy();
+    notifyAnnotationPluginRegistered();
+    expect(healthy).to.equal(2);
+  } finally {
+    stopBroken(); stopHealthy(); console.warn = warn;
+  }
 });

@@ -84,9 +84,46 @@ class AliasFree extends LyraElement {
 const freeTag = tag('alias-free');
 customElements.define(freeTag, AliasFree);
 
+class MappedAliasDemo extends LyraElement {
+  static { installDeprecatedAliases(); }
+  protected static override deprecatedAliases: LyraDeprecatedAliases = {
+    shown: 'isVisible',
+    concealed: ['isVisible', invertAlias, invertAlias],
+  };
+  @property({ attribute: false }) isVisible = false;
+  @property({ type: Boolean }) shown = false;
+  @property({ type: Boolean }) concealed = true;
+}
+const mappedTag = tag('mapped-alias-demo');
+customElements.define(mappedTag, MappedAliasDemo);
+
 const mount = <T extends HTMLElement>(markup: string): Promise<T> => fixture<T>(markup);
 
 describe('deprecated alias sync', () => {
+  it('synchronizes differently mapped sibling aliases and names a property-only replacement', async () => {
+    const el = await mount<MappedAliasDemo>(`<${mappedTag}></${mappedTag}>`);
+    const warnings = await captureDeprecationWarnings([
+      { tag: mappedTag, kind: 'property', name: 'shown' },
+      { tag: mappedTag, kind: 'property', name: 'concealed' },
+    ], async () => {
+      el.shown = true;
+      await el.updateComplete;
+      expect([el.shown, el.isVisible, el.concealed]).to.deep.equal([true, true, false]);
+      el.concealed = true;
+      await el.updateComplete;
+      expect([el.shown, el.isVisible, el.concealed]).to.deep.equal([false, false, true]);
+    });
+    expect(warnings.length).to.equal(2);
+    expect(warnings.every(warning => warning.message.includes('isVisible'))).to.equal(true);
+    const canonicalWarnings = await captureDeprecationWarnings([], async () => {
+      el.isVisible = true;
+      await el.updateComplete;
+    });
+    expect(canonicalWarnings.length).to.equal(0);
+    expect([el.shown, el.isVisible, el.concealed]).to.deep.equal([true, true, false]);
+    expect(el.hasAttribute('isvisible')).to.equal(false);
+  });
+
   it('initializes both sides without warning', async () => {
     const warnings = await captureDeprecationWarnings([], () => mount(`<${aliasTag}></${aliasTag}>`));
     expect(warnings.length).to.equal(0);

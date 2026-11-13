@@ -22,6 +22,40 @@ const requestedLanguageLoaders = {
 let priorityGrammarCalls = 0;
 const priorityLanguageLoaders = { json: async () => { priorityGrammarCalls++; return jsonGrammar; } };
 
+for (const branch of ['concrete', 'loaders'] as const) {
+  it(`keeps usable grammars when the ${branch} map cannot enumerate its entries`, () => {
+    let calls = 0;
+    const loader = async () => { calls++; return jsonGrammar; };
+    const concrete = { json: jsonGrammar };
+    const loaders = { json: loader };
+    const inaccessible = { ownKeys(): never { throw new Error('Language catalog unavailable'); } };
+    const languages = branch === 'concrete' ? new Proxy(concrete, inaccessible) : concrete;
+    const lazy = branch === 'loaders' ? new Proxy(loaders, inaccessible) : loaders;
+    const combined = combineShikiLanguageSources(languages, lazy)!;
+    expect(Object.keys(combined)).to.deep.equal(['json']);
+    expect(combined['json'] === (branch === 'concrete' ? loader : jsonGrammar)).to.equal(true);
+    expect(calls, 'combining catalogs never invokes a loader').to.equal(0);
+    expect(Object.isFrozen(combined)).to.equal(true);
+    expect(combineShikiLanguageSources(languages, lazy) === combined).to.equal(true);
+  });
+}
+
+it('skips an unreadable grammar descriptor and retains the fallback loader and readable siblings', () => {
+  let calls = 0;
+  const loader = async () => { calls++; return jsonGrammar; };
+  const concrete = new Proxy({ json: jsonGrammar, jsonc: jsonGrammar }, {
+    getOwnPropertyDescriptor(target, key) {
+      if (key === 'json') throw new Error('Grammar unavailable');
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+  });
+  const combined = combineShikiLanguageSources(concrete, { json: loader, jsonc: loader })!;
+  expect(Object.keys(combined).sort()).to.deep.equal(['json', 'jsonc']);
+  expect(combined['json'] === loader).to.equal(true);
+  expect(combined['jsonc'] === jsonGrammar).to.equal(true);
+  expect(calls).to.equal(0);
+});
+
 before(async () => {
   // Core construction is cached by the resolved grammar map's identity. Resolve each tested
   // concrete/loader pair once; taking its concrete subset never invokes an authored loader.
