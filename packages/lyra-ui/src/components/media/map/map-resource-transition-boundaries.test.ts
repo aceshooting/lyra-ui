@@ -133,6 +133,53 @@ describe('lr-map resource transition ownership', () => {
     Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', contextDescriptor);
   });
 
+  it('omits sparse and malformed cluster stops without evaluating accessors or losing valid neighbors', async () => {
+    let reads = 0;
+    const stops: unknown[] = [[10, 20], , [], [0, 12], [10, 99], [5], ['2', 8], [Infinity, 10], [25, '40']];
+    Object.defineProperty(stops, '1', { configurable: true, get() { reads++; throw new Error('Private stop accessor'); } });
+    stops.length++;
+    const { element, peer } = await mount([{ sourceId: 'places', geojson: points,
+      cluster: { radiusSteps: stops, countHaloColor: '#ffffff', countHaloWidth: 'invalid' },
+    }] as unknown as LyraMap['dataLayers']);
+    expect(reads).to.equal(0);
+    const cluster = [...peer.layers.values()].find(value => (value as Layer).id.endsWith('-cluster')) as Layer;
+    const count = [...peer.layers.values()].find(value => (value as Layer).id.endsWith('-cluster-count')) as Layer;
+    expect(cluster.paint!['circle-radius']).to.deep.equal(['step', ['get', 'point_count'], 12, 0, 12, 10, 20]);
+    expect(count.paint!['text-halo-width']).to.equal(1);
+    const sourceId = cluster.source!;
+    const additions = [peer.sourceAdds, peer.layerAdds];
+    element.dataLayers = [{ sourceId: 'places', geojson: points, cluster: { radiusSteps: [[0, 8], [15, 24]] } }];
+    await settle(element, peer);
+    expect(peer.layer(cluster.id).paint!['circle-radius']).to.deep.equal(['step', ['get', 'point_count'], 8, 0, 8, 15, 24]);
+    expect(peer.layer(count.id).paint!['text-halo-width']).to.equal(undefined);
+    expect([...peer.sources.keys()]).to.deep.equal([sourceId]);
+    expect([peer.sourceAdds, peer.layerAdds]).to.deep.equal(additions);
+    expect(reads).to.equal(0);
+  });
+
+  it('restores native heatmap defaults on retained resources when all heatmap options are removed', async () => {
+    const row = { sourceId: 'density', geojson: points, kind: 'heatmap' as const };
+    const { element, peer } = await mount([{ ...row, heatmap: {
+      weightField: 'weight', weightRange: [2, 10], radius: 80, intensity: 4, opacity: 0.25,
+      stops: [[0.5, '#123456'], [1, '#abcdef']],
+    } }]);
+    const layer = [...peer.layers.values()][0] as Layer;
+    expect(layer.paint!['heatmap-radius']).to.equal(80);
+    expect(layer.paint!['heatmap-intensity']).to.equal(4);
+    expect(layer.paint!['heatmap-opacity']).to.equal(0.25);
+    const additions = [peer.sourceAdds, peer.layerAdds];
+    element.dataLayers = [row];
+    await settle(element, peer);
+    const paint = peer.layer(layer.id).paint!;
+    expect(paint['heatmap-radius']).to.equal(30);
+    expect(paint['heatmap-intensity']).to.equal(1);
+    expect(paint['heatmap-opacity']).to.equal(1);
+    expect(paint['heatmap-weight']).to.equal(1);
+    expect(peer.layer(layer.id).source).to.equal(layer.source);
+    expect([peer.sourceAdds, peer.layerAdds]).to.deep.equal(additions);
+    expect(element.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
+  });
+
   for (const existing of [false, true]) for (const [family, options, expectedTypes] of [
     ['geometry', { label: { field: 'name' }, point: { field: 'kind' } }, ['circle', 'fill', 'line', 'symbol']],
     ['cluster', { cluster: {}, label: { field: 'name' } }, ['circle', 'circle', 'symbol', 'symbol']],
