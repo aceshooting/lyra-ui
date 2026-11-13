@@ -1424,9 +1424,11 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     try {
       const explicitDest = typeof dest === 'string' ? await doc.getDestination(dest) : dest;
       const ref = Array.isArray(explicitDest) ? explicitDest[0] : undefined;
-      if (!ref) return undefined;
-      const pageIndex = await doc.getPageIndex(ref);
-      return typeof pageIndex === 'number' ? pageIndex + 1 : undefined;
+      if (ref == null) return undefined;
+      const pageIndex = typeof ref === 'number' ? ref : await doc.getPageIndex(ref);
+      return Number.isInteger(pageIndex) && pageIndex >= 0 && pageIndex < doc.numPages
+        ? pageIndex + 1
+        : undefined;
     } catch {
       return undefined;
     }

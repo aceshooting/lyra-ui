@@ -39706,6 +39706,7 @@
         "tests": [
           "src/components/viewers/pdf-viewer/pdf-loader.test.ts",
           "src/components/viewers/pdf-viewer/pdf-viewer-accessible-text.test.ts",
+          "src/components/viewers/pdf-viewer/pdf-viewer-outline.test.ts",
           "src/components/viewers/pdf-viewer/pdf-viewer-register.test.ts",
           "src/components/viewers/pdf-viewer/pdf-viewer.test.ts"
         ],
