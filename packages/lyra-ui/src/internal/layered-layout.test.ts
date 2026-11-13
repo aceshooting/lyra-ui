@@ -3,6 +3,39 @@ import { layeredLayout } from './layered-layout.js';
 
 const box = (id: string) => ({ id, width: 20, height: 20 });
 
+it('keeps distinct edges when node IDs contain null characters', () => {
+  const nodes = [box('a'), box('b\u0000c'), box('a\u0000b'), box('c')];
+  const edges = [
+    { source: 'a', target: 'b\u0000c' },
+    { source: 'a\u0000b', target: 'c' },
+  ];
+  const { positions } = layeredLayout({ nodes, edges });
+  for (const edge of edges) {
+    expect(positions.get(edge.target)!.y, 'each independent child follows its own parent')
+      .to.be.greaterThan(positions.get(edge.source)!.y);
+  }
+  expect(positions.size).to.equal(nodes.length);
+});
+
+it('keeps caller IDs independent from synthetic waypoint identities', () => {
+  const nodes = ['parent', 'middle', 'child', 'isolated', 'last'].map(box);
+  const edges = [
+    { source: 'parent', target: 'middle' },
+    { source: 'parent', target: 'child' },
+    { source: 'middle', target: 'child' },
+  ];
+  const ordinary = layeredLayout({ nodes, edges });
+  for (const id of ['__waypoint_0__', '__waypoint_1__']) {
+    const renamed = layeredLayout({
+      nodes: nodes.map(node => node.id === 'isolated' ? { ...node, id } : node), edges,
+    });
+    expect(renamed.virtualWaypointCount).to.equal(1);
+    expect(renamed.truncated).to.equal(false);
+    expect(nodes.map(node => renamed.positions.get(node.id === 'isolated' ? id : node.id)))
+      .to.deep.equal(nodes.map(node => ordinary.positions.get(node.id)));
+  }
+});
+
 it('layers a simple chain by longest path from a source (a -> b -> c)', () => {
   const { positions } = layeredLayout({
     nodes: [box('a'), box('b'), box('c')],

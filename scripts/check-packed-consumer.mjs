@@ -326,9 +326,9 @@ const bundleEntries = {
   },
   graph: {
     fixture: 'optional',
-    // Guarding invalid and retired world coordinates brings the optional graph consumer from
-    // 460,203 to 460,563 raw bytes across the same 14 files; the next 64-byte boundary leaves 45 bytes.
-    maxRawBytes: 460_608,
+    // Collision-free layered-layout node and waypoint identities measure 460,621 raw bytes
+    // across the same 14 files; the next 64-byte boundary leaves 51 bytes.
+    maxRawBytes: 460_672,
   },
 };
 

@@ -211,11 +211,11 @@ export function layeredLayout(input: {
   const DONE = 2;
   const state = new Map<string, number>(order.map((id) => [id, UNVISITED]));
   const dagEdges: LayeredLayoutEdge[] = [];
-  const dagKeys = new Set<string>();
+  const dagTargets = new Map<string, Set<string>>();
   const addDagEdge = (source: string, target: string): void => {
-    const key = `${source}\u0000${target}`;
-    if (dagKeys.has(key)) return;
-    dagKeys.add(key);
+    const targets = getOrInit(dagTargets, source, () => new Set<string>());
+    if (targets.has(target)) return;
+    targets.add(target);
     dagEdges.push({ source, target });
   };
 
@@ -275,12 +275,10 @@ export function layeredLayout(input: {
   //    more than one layer -- waypoints occupy intermediate layers for ordering purposes only.
   let maxLayer = 0;
   for (const id of order) maxLayer = Math.max(maxLayer, layer.get(id) ?? 0);
-  interface Slot {
-    id: string;
-    virtual: boolean;
+  type Slot = {
     width: number;
     height: number;
-  }
+  } & ({ id: string; virtual: false } | { id: symbol; virtual: true });
   const layers: Slot[][] = Array.from({ length: maxLayer + 1 }, () => []);
   for (const id of order) {
     const node = nodeById.get(id)!;
@@ -289,7 +287,7 @@ export function layeredLayout(input: {
 
   let waypointCounter = 0;
   let truncated = false;
-  const waypointChains = new Map<LayeredLayoutEdge, string[]>();
+  const waypointChains = new Map<LayeredLayoutEdge, symbol[]>();
   for (const e of dagEdges) {
     const sourceLayer = layer.get(e.source) ?? 0;
     const targetLayer = layer.get(e.target) ?? 0;
@@ -299,18 +297,18 @@ export function layeredLayout(input: {
       truncated = true;
       continue;
     }
-    const chain: string[] = [];
+    const chain: symbol[] = [];
     for (let l = sourceLayer + 1; l < targetLayer; l++) {
-      const waypointId = `__waypoint_${waypointCounter++}__`;
+      const waypointId = Symbol(`waypoint-${waypointCounter++}`);
       layers[l]!.push({ id: waypointId, virtual: true, width: 1, height: 1 });
       chain.push(waypointId);
     }
     waypointChains.set(e, chain);
   }
 
-  const orderingDown = new Map<string, string[]>();
-  const orderingUp = new Map<string, string[]>();
-  const addOrderingEdge = (a: string, b: string): void => {
+  const orderingDown = new Map<string | symbol, (string | symbol)[]>();
+  const orderingUp = new Map<string | symbol, (string | symbol)[]>();
+  const addOrderingEdge = (a: string | symbol, b: string | symbol): void => {
     getOrInit(orderingDown, a, () => []).push(b);
     getOrInit(orderingUp, b, () => []).push(a);
   };
@@ -327,7 +325,7 @@ export function layeredLayout(input: {
   // 4. Four barycenter sweeps (down, up, down, up): each reorders every layer by the mean
   //    position of its already-ordered neighbors in the just-swept adjacent layer. A slot with no
   //    positioned neighbor keeps its current index (stable).
-  const positionInLayer = new Map<string, number>();
+  const positionInLayer = new Map<string | symbol, number>();
   layers.forEach((slots) => slots.forEach((s, i) => positionInLayer.set(s.id, i)));
 
   function sweep(forward: boolean): void {
@@ -368,7 +366,7 @@ export function layeredLayout(input: {
         fixedLayerBottom = Math.max(
           fixedLayerBottom,
           checkedLayoutSum(
-            `fixed block extent for "${slot.id}"`,
+            `fixed block extent for "${String(slot.id)}"`,
             fixedPosition.y,
             slot.height / 2,
           ),
@@ -384,19 +382,21 @@ export function layeredLayout(input: {
     const layerBox = checkedBoxFromStart(layerTop, layerHeight, 'computed layer');
     let previousInlineRight = fixedInlineRight;
     for (const slot of slots) {
-      const fixedPos = slot.virtual ? undefined : fixed?.get(slot.id);
-      if (fixedPos) {
-        positions.set(
-          slot.id,
-          Object.freeze({ x: fixedPos.x, y: fixedPos.y }),
-        );
-        continue;
+      if (!slot.virtual) {
+        const fixedPos = fixed?.get(slot.id);
+        if (fixedPos) {
+          positions.set(
+            slot.id,
+            Object.freeze({ x: fixedPos.x, y: fixedPos.y }),
+          );
+          continue;
+        }
       }
       const slotStart =
         previousInlineRight === undefined
           ? 0
-          : checkedGapAfter(previousInlineRight, gapX, `inline gap before "${slot.id}"`);
-      const slotBox = checkedBoxFromStart(slotStart, slot.width, `inline box for "${slot.id}"`);
+          : checkedGapAfter(previousInlineRight, gapX, `inline gap before "${String(slot.id)}"`);
+      const slotBox = checkedBoxFromStart(slotStart, slot.width, `inline box for "${String(slot.id)}"`);
       if (!slot.virtual) {
         positions.set(slot.id, Object.freeze({ x: slotBox.center, y: layerBox.center }));
       }
