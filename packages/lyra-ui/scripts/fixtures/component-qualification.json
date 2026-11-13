@@ -36431,6 +36431,7 @@
           "src/components/layout/multi-split/multi-split-modal-layering.test.ts",
           "src/components/layout/multi-split/multi-split-native-close.test.ts",
           "src/components/layout/multi-split/multi-split-panel-collapse.test.ts",
+          "src/components/layout/multi-split/multi-split-pending-sizes.test.ts",
           "src/components/layout/multi-split/multi-split-remediation.test.ts",
           "src/components/layout/multi-split/multi-split-trigger.test.ts",
           "src/components/layout/multi-split/multi-split.test.ts"

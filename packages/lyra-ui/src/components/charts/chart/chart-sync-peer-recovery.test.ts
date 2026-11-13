@@ -162,3 +162,31 @@ describe('chart synchronized peer hit recovery', () => {
     }
   }
 });
+
+for (const invalidation of ['length', 'revoke', 'ownership'] as const) {
+  it(`discards a hit array whose ${invalidation} changes while its admission is revalidated`, async () => {
+    const pair = await synchronizedCharts();
+    let lengthReads = 0;
+    const result = Proxy.revocable([{ datasetIndex: 0, index: 1 }], {
+      getOwnPropertyDescriptor(target, key) {
+        if (key === 'length' && ++lengthReads === 2) {
+          if (invalidation === 'length') target.length = 0;
+          else if (invalidation === 'revoke') result.revoke();
+          else pair.chart.syncGroup = 'replacement';
+        }
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    });
+    try {
+      await pair.publish(0);
+      pair.queryPeer.getElementsAtEventForMode = () => result.proxy;
+      expect(pair.move).not.to.throw();
+      expect(lengthReads).to.be.at.least(2);
+      if (invalidation === 'ownership') await pair.chart.updateComplete;
+      expect(pair.shown()).to.equal(false);
+      pair.chart.syncGroup = 'query-recovery';
+      await pair.chart.updateComplete;
+      await pair.publish(1);
+    } finally { pair.restore(); }
+  });
+}
