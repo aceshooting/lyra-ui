@@ -266,4 +266,42 @@ describe('lr-map accepted geographic scene', () => {
     expect(status.hasAttribute('role') || status.hasAttribute('aria-live')).to.equal(false);
     await waitUntil(() => [...document.querySelectorAll('[aria-live="assertive"]')].some(sink => sink.textContent?.includes('Rendering paused for this scene')));
   });
+
+  for (const change of ['replacement', 'reconnection']) {
+    it(`suppresses an obsolete announcement when a scene-state listener triggers ${change}`, async () => {
+      const { element, wrapper, failNative } = await mount();
+      const obsolete = `Obsolete scene failure before ${change}`;
+      const current = `Current scene failure after ${change}`;
+      element.strings = { mapSceneUnavailable: obsolete };
+      element.scene = { objects: [sceneMarker('original')] };
+      await element.updateComplete;
+      let changed = false;
+      element.addEventListener('lr-map-scene-state', event => {
+        if (!(event instanceof CustomEvent) || (event.detail as StateDetail).state !== 'unavailable' || changed) return;
+        changed = true;
+        if (change === 'replacement') element.scene = { objects: [] };
+        else {
+          element.remove();
+          element.strings = { mapSceneUnavailable: current };
+          wrapper.append(element);
+        }
+      });
+      failNative();
+      await waitUntil(() => changed, 'scene state listener changed its owner');
+      await element.updateComplete;
+      const announcements = (): string[] => [...document.querySelectorAll('[data-lr-live-region="assertive"] > div')]
+        .map(node => node.textContent ?? '');
+      expect(announcements()).not.to.include(obsolete);
+      if (change === 'replacement') {
+        expect(attachment(element).target('original').status).to.equal('absent');
+        element.strings = { mapSceneUnavailable: current };
+        element.scene = { objects: [sceneMarker('current')] };
+      }
+      await waitUntil(() => announcements().includes(current), 'current scene can still announce its failure');
+      expect(announcements().filter(message => message === current)).to.have.length(1);
+      expect(announcements()).not.to.include(obsolete);
+      expect(part(element, 'scene-status').textContent).to.include(current);
+      expect(attachment(element).target(change === 'replacement' ? 'current' : 'original').status).to.equal('accepted');
+    });
+  }
 });

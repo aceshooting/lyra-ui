@@ -12,6 +12,34 @@ import {
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
 
+for (const failure of ['resolve method', 'resolve getter', 'revoked registry']) {
+  it(`uses a localized generic badge after a failing ${failure} and recovers with a new registry`, async () => {
+    const valid = createFileTypeMetadataRegistry([{
+      mimeTypes: ['application/x-recovered'],
+      metadata: { label: 'Recovered document', category: 'document', icon: 'file' },
+    }]);
+    const revoked = Proxy.revocable(valid, {}); revoked.revoke();
+    const throwingMethod: LyraFileTypeMetadataRegistry = { resolve() { throw new Error('Registry unavailable'); } };
+    const throwingGetter: LyraFileTypeMetadataRegistry = {
+      get resolve(): LyraFileTypeMetadataRegistry['resolve'] { throw new Error('Registry capability unavailable'); },
+    };
+    const registry = failure === 'resolve method' ? throwingMethod : failure === 'resolve getter' ? throwingGetter : revoked.proxy;
+    const element = await fixture<LyraFileIcon>(html`
+      <lr-file-icon mode="label" mime-type="application/x-recovered"
+        .strings=${{ fileTypeFile: 'Generic document' }}></lr-file-icon>
+    `);
+    element.registry = registry;
+    await element.updateComplete;
+    expect(element.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-label')).to.equal('Generic document');
+    expect(element.shadowRoot!.textContent).to.include('Generic document');
+    await expect(element).to.be.accessible();
+    element.registry = valid;
+    await element.updateComplete;
+    expect(element.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-label')).to.equal('Recovered document');
+    expect(element.shadowRoot!.textContent).to.include('Recovered document');
+  });
+}
+
 // Every rendering assertion below that is sensitive to font metrics or baseline synthesis
 // includes the engine name, so a failure is attributable without re-running every engine.
 function engineLabel(): string {

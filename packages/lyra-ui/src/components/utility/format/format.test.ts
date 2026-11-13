@@ -7,6 +7,7 @@ import type { LyraFormatBytes } from './format-bytes.class.js';
 import type { LyraFormatDate } from './format-date.class.js';
 import type { LyraFormatNumber } from './format-number.class.js';
 import type { LyraRelativeTime } from './relative-time.class.js';
+import { formatNumber } from '../../../utilities/format.js';
 
 // Note on the format-options.ts family's Lyra*-prefixed rename (FormatNumberType ->
 // LyraFormatNumberType, and 12 siblings): a wtr/esbuild-run `it()` block cannot verify a
@@ -868,5 +869,77 @@ describe('lr-format-date engine rejection fallbacks', () => {
     expect(time).to.not.equal(null);
     expect(time!.textContent!.trim()).to.not.equal('');
     expect(time!.textContent).to.contain('2024');
+  });
+});
+
+describe('numeric formatter engine rejection fallbacks', () => {
+  const RealNumberFormat = Intl.NumberFormat;
+  afterEach(() => { Intl.NumberFormat = RealNumberFormat; });
+
+  function rejectWhen(reject: (locale: unknown, options: Intl.NumberFormatOptions | undefined) => boolean): void {
+    Intl.NumberFormat = new Proxy(RealNumberFormat, {
+      construct(target, args: [string | string[] | undefined, Intl.NumberFormatOptions | undefined]) {
+        if (reject(args[0], args[1])) throw new RangeError('Number format is unavailable');
+        return Reflect.construct(target, args);
+      },
+    });
+  }
+
+  it('retains the requested locale when a currency option is rejected and recovers after it changes', async () => {
+    let rejected = 0;
+    rejectWhen((locale, options) => {
+      if (locale !== 'fr-CH' || options?.currency !== 'XTS') return false;
+      rejected++;
+      return true;
+    });
+    const element = await fixture<LyraFormatNumber>(html`
+      <lr-format-number locale="fr-CH" type="currency" currency="XTS" value="1234.5"></lr-format-number>
+    `);
+    expect(rejected).to.equal(1);
+    expect(element.shadowRoot!.textContent!.trim()).to.equal(new RealNumberFormat('fr-CH', { style: 'decimal' }).format(1234.5));
+    element.currency = 'CHF';
+    await element.updateComplete;
+    expect(element.shadowRoot!.textContent!.trim()).to.equal(new RealNumberFormat('fr-CH', { style: 'currency', currency: 'CHF' }).format(1234.5));
+    expect(rejected).to.equal(1);
+  });
+
+  it('uses the active fallback locale when both requested-locale number attempts are rejected', async () => {
+    const expected = formatNumber(1234.5, undefined, { style: 'decimal' });
+    const rejectedStyles: unknown[] = [];
+    rejectWhen((locale, options) => {
+      if (locale !== 'kok-IN') return false;
+      rejectedStyles.push(options?.style);
+      return true;
+    });
+    const element = await fixture<LyraFormatNumber>(html`
+      <lr-format-number locale="kok-IN" type="currency" currency="EUR" value="1234.5"></lr-format-number>
+    `);
+    expect(rejectedStyles).to.deep.equal(['currency', 'decimal']);
+    expect(element.shadowRoot!.textContent!.trim()).to.equal(expected);
+    element.locale = 'de-DE';
+    await element.updateComplete;
+    expect(element.shadowRoot!.textContent!.trim()).to.equal(new RealNumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(1234.5));
+    expect(rejectedStyles).to.have.length(2);
+  });
+
+  it('keeps byte units and precision when the requested locale is unavailable', async () => {
+    const options: Intl.NumberFormatOptions = { style: 'unit', unit: 'kilobyte', unitDisplay: 'long', maximumFractionDigits: 2 };
+    const expected = formatNumber(1.2345, undefined, options);
+    const rejectedOptions: (Intl.NumberFormatOptions | undefined)[] = [];
+    rejectWhen((locale, options) => {
+      if (locale !== 'kok-IN') return false;
+      rejectedOptions.push(options);
+      return true;
+    });
+    const element = await fixture<LyraFormatBytes>(html`
+      <lr-format-bytes locale="kok-IN" value="1234.5" display="long" decimals="2"></lr-format-bytes>
+    `);
+    expect(rejectedOptions).to.have.length(1);
+    expect(rejectedOptions[0]).to.include(options);
+    expect(element.shadowRoot!.textContent!.trim()).to.equal(expected);
+    element.locale = 'de-DE';
+    await element.updateComplete;
+    expect(element.shadowRoot!.textContent!.trim()).to.equal(new RealNumberFormat('de-DE', options).format(1.2345));
+    expect(rejectedOptions).to.have.length(1);
   });
 });

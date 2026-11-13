@@ -178,6 +178,28 @@ it('owns a bounded immutable image snapshot and skips malformed or hostile recor
   expect(el.images.length).to.equal(10_000);
 });
 
+for (const failure of ['revoked array', 'unreadable length']) {
+  it(`clears a ${failure} image collection and accepts a later valid gallery`, async () => {
+    const el = await fixture<LyraLightbox>(html`<lr-lightbox .images=${[image]}></lr-lightbox>`);
+    const revoked = Proxy.revocable([image], {}); revoked.revoke();
+    const unreadable = new Proxy([image], { get(target, key, receiver) {
+      if (key === 'length') throw new Error('Image collection unavailable');
+      return Reflect.get(target, key, receiver);
+    } });
+    expect(() => { el.images = failure === 'revoked array' ? revoked.proxy : unreadable; }).not.to.throw();
+    await el.updateComplete;
+    expect(el.images.length).to.equal(0);
+    expect(Object.isFrozen(el.images)).to.equal(true);
+    el.images = [{ ...image, caption: 'Recovered gallery' }];
+    await el.show();
+    expect(el.open).to.equal(true);
+    expect(el.shadowRoot!.querySelector('[part="caption"]')?.textContent).to.include('Recovered gallery');
+    expect(el.shadowRoot!.querySelector('lr-pan-zoom')?.src).to.equal(image.src);
+    await el.close();
+    expect(el.open).to.equal(false);
+  });
+}
+
 it('runs one promise-based show/hide lifecycle in order and keeps vetoed state reflected', async () => {
   const el = (await fixture(html`<lr-lightbox .images=${[image]}></lr-lightbox>`)) as LyraLightbox;
   const lifecycle: string[] = [];

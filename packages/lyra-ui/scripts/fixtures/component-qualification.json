@@ -22372,6 +22372,12 @@
               "test": "T5: degrades to the glyph without throwing when a directly implemented registry record throws from its abbreviation getter",
               "target": "el",
               "state": "populated"
+            },
+            {
+              "file": "src/components/media/file-icon/file-icon.test.ts",
+              "test": "uses a localized generic badge after a failing ${failure} and recovers with a new registry",
+              "target": "element",
+              "state": "populated"
             }
           ],
           "exemption": null
