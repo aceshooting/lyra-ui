@@ -37,7 +37,8 @@ describe('numbers properties', () => {
         if (Number.isFinite(value)) expect(result).to.equal(value);
         else expect(result).to.equal(Number.isFinite(fallback) ? fallback : 0);
       }),
-      propertyRuns(),
+      { ...propertyRuns(), examples: [NaN, Infinity, -Infinity].flatMap(value =>
+        [NaN, Infinity, -Infinity].map(fallback => [value, fallback] satisfies [number, number])) },
     );
   });
 

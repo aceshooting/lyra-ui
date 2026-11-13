@@ -364,3 +364,65 @@ it('stops before reading a directory whose creation withdraws the session', asyn
   expect(await controller.readFolders([folder], begin.token)).to.deep.equal({ status: 'cancelled' });
   expect(reads).to.equal(0);
 });
+
+function directory(name: string, children: FileSystemEntry[], onRead: () => void): FileSystemDirectoryEntry {
+  const root: FileSystemDirectoryEntry = {
+    name, fullPath: `/${name}`, isDirectory: true, isFile: false,
+    get filesystem(): FileSystem { return { name: 'Dropped files', root }; },
+    getParent(success) { success?.(root); },
+    getDirectory(_path, _options, success) { success?.(root); },
+    getFile(_path, _options, _success, error) { error?.(new DOMException('File unavailable', 'NotFoundError')); },
+    createReader() {
+      let delivered = false;
+      return { readEntries(success) {
+        onRead(); success(delivered ? [] : children); delivered = true;
+      } };
+    },
+  };
+  return root;
+}
+
+for (const boundary of ['root enumeration', 'file classification', 'directory batch enumeration'] as const) {
+  it(`cancels atomically when ${boundary} withdraws the session and accepts the next folder`, async () => {
+    const controller = new DropSessionController(controllerHost(), {
+      isDisabled: () => false, previewRejects: () => false, onStateChange: () => {},
+    });
+    let reads = 0, withdrawals = 0;
+    const withdraw = (): void => { withdrawals++; controller.reset(); };
+    const file = new File(['content'], 'note.txt', { type: 'text/plain' });
+    const children: FileSystemEntry[] = [];
+    const root = directory('folder', children, () => { reads++; });
+    const entry: FileSystemFileEntry = {
+      name: file.name, fullPath: `/folder/${file.name}`, isDirectory: false,
+      get isFile() { if (boundary === 'file classification') withdraw(); return true; },
+      filesystem: root.filesystem, getParent(success) { success?.(root); },
+      file(success) { reads++; success(file); },
+    };
+    children.push(entry);
+    const folders: FileSystemEntry[] = [root];
+    if (boundary === 'root enumeration') folders[Symbol.iterator] = function* (): Generator<FileSystemEntry, undefined, unknown> {
+      yield root; withdraw(); return undefined;
+    };
+    if (boundary === 'directory batch enumeration') children[Symbol.iterator] = function* (): Generator<FileSystemEntry, undefined, unknown> {
+      withdraw(); yield entry; return undefined;
+    };
+    const begin = controller.beginDrop(fakeDragEvent().event)!;
+    expect(await controller.readFolders(folders, begin.token)).to.deep.equal({ status: 'cancelled' });
+    expect(withdrawals).to.equal(1);
+    expect(reads).to.equal(boundary === 'root enumeration' ? 0 : boundary === 'file classification' ? 2 : 1);
+    expect(controller.isCurrent(begin.token)).to.equal(false);
+    const next = controller.beginDrop(fakeDragEvent().event)!;
+    let currentReads = 0;
+    const currentFile: FileSystemFileEntry = {
+      name: file.name, fullPath: `/current/${file.name}`, isFile: true, isDirectory: false,
+      filesystem: root.filesystem, getParent(success) { success?.(root); },
+      file(success) { currentReads++; success(file); },
+    };
+    const currentRoot = directory('current', [currentFile], () => { currentReads++; });
+    const result = await controller.readFolders([currentRoot], next.token);
+    expect(result.status).to.equal('complete');
+    expect(result.status === 'complete' ? result.files.map(value => value.name) : []).to.deep.equal(['note.txt']);
+    expect(currentReads).to.equal(3);
+    expect(controller.isCurrent(next.token)).to.equal(true);
+  });
+}
