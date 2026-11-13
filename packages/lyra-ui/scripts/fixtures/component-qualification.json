@@ -37940,6 +37940,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/notebook-viewer/dompurify-loader.test.ts",
+          "src/components/viewers/notebook-viewer/notebook-viewer-ansi-styles.test.ts",
           "src/components/viewers/notebook-viewer/notebook-viewer-markup.property.test.ts",
           "src/components/viewers/notebook-viewer/notebook-viewer-register.test.ts",
           "src/components/viewers/notebook-viewer/notebook-viewer-remediation.test.ts",
@@ -45462,6 +45463,7 @@
           "src/components/layout/reorder-list/reorder-item-composition.test.ts",
           "src/components/layout/reorder-list/reorder-item.test.ts",
           "src/components/layout/reorder-list/reorder-list-coverage.test.ts",
+          "src/components/layout/reorder-list/reorder-list-nested-controls.test.ts",
           "src/components/layout/reorder-list/reorder-list-remediation.test.ts",
           "src/components/layout/reorder-list/reorder-list-scale.test.ts",
           "src/components/layout/reorder-list/reorder-list.test.ts"
@@ -45658,6 +45660,7 @@
           "src/components/layout/reorder-list/reorder-item-composition.test.ts",
           "src/components/layout/reorder-list/reorder-item.test.ts",
           "src/components/layout/reorder-list/reorder-list-coverage.test.ts",
+          "src/components/layout/reorder-list/reorder-list-nested-controls.test.ts",
           "src/components/layout/reorder-list/reorder-list-remediation.test.ts",
           "src/components/layout/reorder-list/reorder-list-scale.test.ts",
           "src/components/layout/reorder-list/reorder-list.test.ts"
