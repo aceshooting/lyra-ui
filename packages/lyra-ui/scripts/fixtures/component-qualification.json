@@ -7045,6 +7045,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/button/button-barred-validity.test.ts",
           "src/components/forms/button/button-icon-only-live-resize.test.ts",
           "src/components/forms/button/button-label-layout.test.ts",
           "src/components/forms/button/button-loading.test.ts",
@@ -41516,6 +41517,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/overlays/popup/popup-virtual-anchor-boundaries.test.ts",
+              "test": "falls back to the live slot when the direct element belongs to a document without a window",
+              "target": "popup",
+              "state": "populated"
+            },
+            {
               "file": "src/components/overlays/popup/popup.test.ts",
               "test": "is accessible while active, with content rendered",
               "target": "el",
@@ -41665,6 +41672,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/overlays/popup/popup-closed-layout.test.ts",
+          "src/components/overlays/popup/popup-virtual-anchor-boundaries.test.ts",
           "src/components/overlays/popup/popup.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
