@@ -1,7 +1,7 @@
 import { expect } from '@open-wc/testing';
 import * as fc from 'fast-check';
 import { propertyRuns } from '../../test/property-options.js';
-import { admitMapCameraFollowProfile, createMapCameraFollowAttempt, observeMapCameraFollowAttempt } from './map-camera-follow-data.js';
+import { admitMapCameraFollowOptions, admitMapCameraFollowProfile, createMapCameraFollowAttempt, observeMapCameraFollowAttempt } from './map-camera-follow-data.js';
 
 function facts() {
   return {
@@ -17,6 +17,18 @@ const latitude = fc.double({ min: -80, max: 80, noNaN: true });
 const globeAdjustment = (value: number) => Math.log2(Math.cos(Math.min(Math.abs(value), 85.051129) * Math.PI / 180));
 
 describe('camera follow pure data properties', () => {
+  it('keeps equivalent whole-turn bearings identical in either follow mode', () => {
+    fc.assert(fc.property(fc.integer({ min: -179, max: 179 }), fc.integer({ min: -10000, max: 10000 }),
+      fc.constantFrom('ground', 'geographic-visual'), (bearing, turns, mode) => {
+        const input = { objectId: 'target', mode, bearing: bearing + turns * 360 };
+        const result = admitMapCameraFollowOptions(input);
+        expect(result.bearing).to.equal(bearing);
+        expect(Object.is(result.bearing, -0)).to.equal(false);
+        expect(result.mode).to.equal(mode);
+        expect(input.bearing).to.equal(bearing + turns * 360);
+      }), propertyRuns());
+  });
+
   it('admits inward normalized globe domains across latitude and positive transitions', () => {
     fc.assert(fc.property(latitude, fc.double({ min: 4.1, max: 19.9, noNaN: true }),
       fc.double({ min: 0.001, max: 1, noNaN: true }), (latitude, normalizedZoom, projectionTransition) => {

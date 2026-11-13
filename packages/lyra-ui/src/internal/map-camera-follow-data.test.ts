@@ -11,6 +11,38 @@ function observation(frame: number, residual: number) { return { frame, point: [
 const latitudeAdjustment = (latitude: number) => Math.log2(Math.cos(Math.min(Math.abs(latitude), 85.051129) * Math.PI / 180));
 
 describe('map camera follow profile and correction budget', () => {
+  it('normalizes wrapped bearings to the signed half-turn interval without negative zero', () => {
+    for (const [bearing, expected] of [[-0, 0], [-360, 0], [360, 0], [-270, 90], [270, -90],
+      [-540, -180], [540, -180], [-180, -180], [180, -180], [-721, -1], [721, 1]]) {
+      const result = admitMapCameraFollowOptions({ objectId: 'target', mode: 'ground', bearing });
+      expect(result.bearing).to.equal(expected);
+      expect(Object.is(result.bearing, -0)).to.equal(false);
+      expect(Object.isFrozen(result)).to.equal(true);
+    }
+  });
+
+  for (const shape of ['not an array', 'missing coordinate', 'extra coordinate', 'extra property', 'accessor coordinate'] as const) {
+    it(`rejects a projected point with ${shape} without consuming its correction frame`, () => {
+      let reads = 0;
+      const point: unknown = shape === 'not an array' ? { 0: 400, 1: 240, length: 2 }
+        : shape === 'missing coordinate' ? [400]
+        : shape === 'extra coordinate' ? [400, 240, 0]
+        : shape === 'extra property' ? Object.assign([400, 240], { hidden: true })
+        : Object.defineProperty([400, 240], '0', { get() { reads++; return 400; } });
+      const attempt = createMapCameraFollowAttempt();
+      expect(() => observeMapCameraFollowAttempt(attempt, {
+        ...observation(1, 80), point: point as readonly [number, number],
+      })).to.throw(TypeError);
+      expect(reads).to.equal(0);
+      expect(attempt.corrections).to.equal(0);
+      expect(attempt.lastFrame).to.equal(undefined);
+      const recovered = observeMapCameraFollowAttempt(attempt, observation(1, 80));
+      expect(recovered.correction).to.deep.equal([80, 0]);
+      expect(recovered.attempt.corrections).to.equal(1);
+      expect(recovered.attempt.lastFrame).to.equal(1);
+    });
+  }
+
   it('admits explicit modes with the agreed scene ID grammar without normalization', () => {
     for (const mode of ['ground', 'geographic-visual'] as const) {
       for (const objectId of ['a', '  Station α  ', 'A/B# [node]', 'x'.repeat(1024), '😀'.repeat(512)]) {
