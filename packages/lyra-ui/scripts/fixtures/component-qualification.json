@@ -9182,6 +9182,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/charts/chart-3d/chart-3d-data.test.ts",
+          "src/components/charts/chart-3d/chart-3d-engine-boundaries.test.ts",
           "src/components/charts/chart-3d/chart-3d-engine-reentry.test.ts",
           "src/components/charts/chart-3d/chart-3d-engine.test.ts",
           "src/components/charts/chart-3d/chart-3d-native.test.ts",
