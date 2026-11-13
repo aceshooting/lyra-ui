@@ -168,7 +168,14 @@ function fakeDocumentWithText(
 ) {
   return {
     numPages: pages.length,
-    getPage: (pageNumber: number) => Promise.resolve(fakePage(pageNumber)),
+    getPage: (pageNumber: number) => {
+      const items = (pages[pageNumber - 1] ?? '').split(' ').map(str => ({ str, hasEOL: false }));
+      return Promise.resolve({
+        ...fakePage(pageNumber),
+        streamTextContent: () => fakeTextContentStream(items),
+        getTextContent: () => Promise.resolve({ items }),
+      });
+    },
     getOutline: () => Promise.resolve(outline),
     getDestination: (name: string) =>
       Promise.resolve([{ num: Number(name.replace("dest", "")), gen: 0 }]),
@@ -1451,6 +1458,83 @@ describe("anchor-target adoption", () => {
     } finally {
       restore();
     }
+  });
+
+  for (const field of ['quote', 'prefix', 'suffix'] as const) {
+    it(`accepts the text-quote ${field} limit and rejects one extra code unit without moving page`, async () => {
+      const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+      const context = 'x'.repeat(TEXT_QUOTE_LIMITS.maxQueryCodeUnits);
+      const anchor = { kind: 'text-quote' as const, quote: 'needle', [field]: context };
+      const text = field === 'quote' ? context : field === 'prefix' ? `${context}needle` : `needle${context}`;
+      installFakeLoader(el, fakeDocumentWithText(['An unrelated first page.', text]));
+      const restore = stubFetch();
+      try {
+        el.src = 'https://example.test/quote-limits.pdf';
+        await waitFor(el, '[part="toolbar"]');
+        expect(await el.scrollToAnchor(anchor)).to.equal(true);
+        expect(el.page).to.equal(2);
+        expect(await el.goToPage(1)).to.equal(true);
+        // The first attempt rejects this input; avoid retrying the same oversized query.
+        (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 0;
+        const result = oneEvent(el, 'lr-anchor-result');
+        expect(await el.scrollToAnchor({ ...anchor, [field]: `${context}x` })).to.equal(false);
+        expect((await result).detail).to.deep.equal({ found: false });
+        expect(el.page).to.equal(1);
+        expect(await el.scrollToAnchor(anchor)).to.equal(true);
+        expect(el.page).to.equal(2);
+      } finally { restore(); }
+    });
+  }
+
+  it('rejects an all-whitespace text quote and preserves navigation to a later valid quote', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    installFakeLoader(el, fakeDocument(3));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/empty-quote.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      expect(await el.goToPage(2)).to.equal(true);
+      (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 0;
+      expect(await el.scrollToAnchor({ kind: 'text-quote', quote: ' \n\t\u00a0 ' })).to.equal(false);
+      expect(el.page).to.equal(2);
+      expect(await el.scrollToAnchor({ kind: 'text-quote', quote: 'revenue grew 12%', page: 1 })).to.equal(true);
+      expect(el.page).to.equal(1);
+    } finally { restore(); }
+  });
+
+  it('prefers the preceding equidistant page when a hinted page lacks the quote', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    installFakeLoader(el, fakeDocumentWithText(['Repeated citation.', 'Unrelated middle page.', 'Repeated citation.']));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/nearby-quotes.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      expect(await el.goToPage(2)).to.equal(true);
+      expect(await el.scrollToAnchor({ kind: 'text-quote', quote: 'Repeated citation.', page: 2 })).to.equal(true);
+      expect(el.page).to.equal(1);
+      expect(await el.scrollToAnchor({ kind: 'text-quote', quote: 'Repeated citation.', page: 3 })).to.equal(true);
+      expect(el.page).to.equal(3);
+    } finally { restore(); }
+  });
+
+  it('resolves a quote spanning search marks and restores the complete selectable text', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    installFakeLoader(el, fakeDocument(3));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/marked-quote.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      expect(await el.search('revenue')).to.equal(1);
+      await waitUntil(() => listShadowRoot(el).querySelectorAll('mark[part~="search-match"]').length === 1);
+      const layer = listShadowRoot(el).querySelector<HTMLElement>('[part="text-layer"]')!;
+      const text = layer.textContent;
+      expect(await el.scrollToAnchor({ kind: 'text-quote', quote: 'revenue grew 12%', page: 1 })).to.equal(true);
+      expect(el.page).to.equal(1);
+      expect(layer.querySelectorAll('mark[part~="search-match"]').length).to.equal(0);
+      expect(layer.textContent).to.equal(text);
+      expect(layer.textContent).to.include('revenue grew 12%');
+      expect(await el.getPageText(1)).to.include('revenue grew 12%');
+    } finally { restore(); }
   });
 
   it("scrollToAnchor with a text-quote anchor that matches nothing resolves false", async () => {

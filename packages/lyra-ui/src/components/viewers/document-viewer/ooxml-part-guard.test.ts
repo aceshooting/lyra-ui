@@ -13,7 +13,7 @@ for (const [entity, decoded] of [
     it(`counts the ${absolute ? 'absolute' : 'relative'} relationship target decoded from ${entity}`, async () => {
       const target = `${absolute ? '/word/' : ''}part${entity}.bin`;
       const relationships = `<Relationships><r:Relationship xmlns:r="urn:relationships"
-        Target \t=\n "${target}" Type = '${OFFICE_RELATIONSHIP}styl&#101;s'/></Relationships>`;
+        Target \t=\n "${target}" Type = '${OFFICE_RELATIONSHIP}style&#115;'/></Relationships>`;
       const parsed = new DOMParser().parseFromString(relationships, 'application/xml');
       expect(parsed.querySelectorAll('parsererror').length).to.equal(0);
       expect(parsed.getElementsByTagNameNS('urn:relationships', 'Relationship')[0]!.getAttribute('Target'))
