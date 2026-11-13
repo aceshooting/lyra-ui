@@ -16,8 +16,8 @@ function source(): LyraSpatialChartSource {
     getPoint: id => ({ ...point, id, sourceIndex: 999999, x: Number.MAX_VALUE, y: 100, radius: Number.MAX_VALUE }),
   };
 }
-async function mounted(input = source()) {
-  const element = await fixture<LyraChart>(html`<lr-chart type="bubble" without-animation with-data-table style="width:600px" .preparedData=${input}></lr-chart>`);
+async function mounted(input = source(), dir = 'ltr') {
+  const element = await fixture<LyraChart>(html`<lr-chart type="bubble" without-animation with-data-table style="width:600px" dir=${dir} .preparedData=${input}></lr-chart>`);
   await waitUntil(() => !!element.chart || !!element.shadowRoot?.querySelector('[part="error"]'), 'chart did not settle', { timeout: 5000 });
   return element;
 }
@@ -349,4 +349,108 @@ it('ignores spatial x zoom when the authoritative x domain is a single coordinat
   expect(element.viewport).to.equal(null);
   expect(events).to.equal(0);
   expect(element.chart!.data.datasets.length).to.equal(2);
+});
+
+for (const dir of ['ltr', 'rtl']) {
+  for (const shape of ['area', 'vertical line', 'horizontal line', 'single coordinate']) {
+    it(`hit-tests a spatial ${shape} at its inclusive pixel boundaries in ${dir}`, async () => {
+      const collapsedX = shape === 'vertical line' || shape === 'single coordinate';
+      const collapsedY = shape === 'horizontal line' || shape === 'single coordinate';
+      const domain = { minX: 0, maxX: collapsedX ? 0 : 100, minY: 0, maxY: collapsedY ? 0 : 100 };
+      const input = { ...source(), bounds: domain,
+        query: () => ({ matchedCount: 1000000, bins: [{ bounds: domain, count: 1000000 }], points: [] }) };
+      const element = await mounted(input, dir);
+      await waitUntil(() => element.getAttribute('aria-busy') === 'false' && element.shadowRoot!.querySelectorAll('[data-spatial-bin]').length === 1);
+      await element.updateComplete;
+      const peer = element.chart!;
+      const click = peer.options['onClick'] as (event: unknown, hits: unknown, chart: typeof peer) => void;
+      const hitTest = peer.getElementsAtEventForMode;
+      const area = peer.chartArea!;
+      const left = collapsedX ? area.left + area.width / 2 - 2 : area.left;
+      const right = collapsedX ? left + 4 : area.right;
+      const top = collapsedY ? area.bottom - area.height / 2 - 2 : area.top;
+      const bottom = collapsedY ? top + 4 : area.bottom;
+      const events: unknown[] = [];
+      element.addEventListener('lr-spatial-bin-select', event => events.push(event.detail));
+      peer.getElementsAtEventForMode = () => [];
+      try {
+        for (const [x, y] of [[left, top], [right, bottom]]) click({ x, y }, [], peer);
+        expect(events).to.deep.equal(Array.from({ length: 2 }, () => ({ revision: 'r', bounds: domain, count: 1000000 })));
+        for (const [x, y] of [[left - 0.5, top], [right + 0.5, bottom], [left, top - 0.5], [right, bottom + 0.5]]) {
+          click({ x, y }, [], peer);
+        }
+        expect(events).to.have.length(2);
+      } finally { peer.getElementsAtEventForMode = hitTest; }
+    });
+  }
+}
+
+it('prioritizes a visible spatial point over its density region and forwards the native event', async () => {
+  const element = await mounted();
+  const peer = element.chart!;
+  const click = peer.options['onClick'] as (event: unknown, hits: unknown, chart: typeof peer) => void;
+  const hitTest = peer.getElementsAtEventForMode;
+  const native = new MouseEvent('click');
+  const pointEvents: unknown[] = [], binEvents: unknown[] = [];
+  let forwarded = false;
+  element.addEventListener('lr-spatial-point-select', event => pointEvents.push(event.detail));
+  element.addEventListener('lr-spatial-bin-select', event => binEvents.push(event.detail));
+  peer.getElementsAtEventForMode = (event, mode, options, final) => {
+    forwarded = event === native;
+    expect(mode).to.equal('nearest');
+    expect(options).to.deep.equal({ intersect: true });
+    expect(final).to.equal(true);
+    return [{ datasetIndex: 0, index: 0 }];
+  };
+  try {
+    const area = peer.chartArea!;
+    click({ native, x: area.left + area.width / 2, y: area.top + area.height / 2 }, [], peer);
+    expect(forwarded).to.equal(true);
+    expect(pointEvents).to.deep.equal([{ revision: 'r', point }]);
+    expect(binEvents).to.deep.equal([]);
+    element.hiddenDatasets = [0];
+    await element.updateComplete;
+    const currentClick = peer.options['onClick'] as typeof click;
+    currentClick({ native, x: area.left + area.width / 2, y: area.top + area.height / 2 }, [], peer);
+    expect(pointEvents).to.have.length(1);
+    expect(binEvents).to.deep.equal([{ revision: 'r', bounds: { ...bounds, maxY: 99 }, count: 999999 }]);
+  } finally { peer.getElementsAtEventForMode = hitTest; }
+});
+
+it('ignores incomplete spatial click geometry and recovers when the chart area is available', async () => {
+  const element = await mounted();
+  const peer = element.chart!;
+  const click = peer.options['onClick'] as (event: unknown, hits: unknown, chart: typeof peer) => void;
+  const hitTest = peer.getElementsAtEventForMode, area = peer.chartArea;
+  const events: unknown[] = [];
+  element.addEventListener('lr-spatial-bin-select', event => events.push(event.detail));
+  peer.getElementsAtEventForMode = () => [{ datasetIndex: 10, index: 100 }];
+  try {
+    const x = area!.left + area!.width / 2, y = area!.top + area!.height / 2;
+    for (const event of [{}, { x }, { y }, { x: 'invalid', y }, { x, y: 'invalid' }, { x: NaN, y }, { x, y: Infinity }]) {
+      click(event, [], peer);
+    }
+    peer.chartArea = undefined;
+    click({ x, y }, [], peer);
+    expect(events).to.deep.equal([]);
+    peer.chartArea = area;
+    click({ x, y }, [], peer);
+    expect(events).to.deep.equal([{ revision: 'r', bounds: { ...bounds, maxY: 99 }, count: 999999 }]);
+  } finally { peer.chartArea = area; peer.getElementsAtEventForMode = hitTest; }
+});
+
+it('retains spatial density rendering when raw configuration supplies a colliding plugin', async () => {
+  const element = await mounted();
+  let collisions = 0, customDraws = 0;
+  const plugins = [
+    { id: 'lyra-spatial-density', beforeDatasetsDraw: () => { collisions++; } },
+    { id: 'custom-spatial-overlay', beforeDatasetsDraw: () => { customDraws++; } },
+  ];
+  element.config = { plugins };
+  await element.updateComplete;
+  await waitUntil(() => customDraws > 0, 'custom plugin was drawn');
+  expect(collisions).to.equal(0);
+  expect(customDraws).to.be.greaterThan(0);
+  expect(element.exportData('csv')).to.include('middle,500000,Middle,0,50,10');
+  expect(element.shadowRoot!.querySelectorAll('[data-spatial-bin]')).to.have.length(2);
 });
