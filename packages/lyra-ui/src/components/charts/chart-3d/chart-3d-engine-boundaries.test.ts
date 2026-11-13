@@ -153,4 +153,23 @@ describe('3D renderer capability and ownership boundaries', () => {
       expect(controller.ready).to.equal(true); expect(notices).to.deep.equal([]);
     } finally { Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', descriptor); }
   });
+
+  it('admits a hidden shadow descendant when its ancestor opens and refreshes inherited palette changes', async () => {
+    const host = container.parentElement!;
+    const ancestor = document.createElement('section'); ancestor.hidden = true;
+    const root = ancestor.attachShadow({ mode: 'open' }); root.append(host); document.body.append(ancestor);
+    chart3dEngineEnvironment.visible = visible;
+    try {
+      controller.update(data(), container, 'webgl', -1, -1, camera);
+      expect(controller.loading).to.equal(false); expect(renderers.length).to.equal(0);
+      ancestor.hidden = false;
+      await waitUntil(() => controller.ready);
+      expect(renderers.length).to.equal(1);
+      const peer = renderers[0]!;
+      ancestor.style.setProperty('--lr-color-text', 'rgb(93, 47, 11)');
+      await waitUntil(() => (peer.styles.at(-1) as { foreground: string }).foreground === 'rgba(93, 47, 11, 1)');
+      expect(controller.ready).to.equal(true); expect(notices).to.deep.equal([]);
+      expect(peer.disposed).to.equal(0);
+    } finally { controller.disconnect(); ancestor.remove(); host.remove(); }
+  });
 });

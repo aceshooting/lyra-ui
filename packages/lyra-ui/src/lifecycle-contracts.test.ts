@@ -42,7 +42,7 @@ before(() => {
  * 4. template-whitespace-contract — no template-formatting whitespace renders
  *    inside a white-space-preserving context anywhere in the shadow tree
  *    (`renderedTemplateWhitespace()` from `test/rendered-whitespace.ts`).
- * 5. adoption-contract — native adoption and connection inside an inert document and a live iframe
+ * 5. adoption-contract — explicit adoption and direct insertion into an inert document and a live iframe
  *    preserves the shadow root and rendering, refreshes inherited locale/direction,
  *    and permits subsequent updates in both the destination and original documents.
  * 6. interrupted-connection — removing a host before its first render or updating it while
@@ -316,8 +316,13 @@ describe('lifecycle contract: adoption-contract', () => {
           expect(el.isConnected).to.equal(false);
           expect(el.shadowRoot === root).to.equal(true);
 
-          for (const destination of [inert.body, foreign.body, host]) {
-            destination.append(destination.ownerDocument.adoptNode(el));
+          for (const [destination, explicitAdoption] of [
+            [inert.body, true], [foreign.body, true], [host, true],
+            [foreign.body, false], [host, false],
+          ] as const) {
+            // Direct insertion runs adoption reactions after the element is connected to its
+            // destination; an explicit adoptNode call runs them while it is still detached.
+            destination.append(explicitAdoption ? destination.ownerDocument.adoptNode(el) : el);
             const lit = el as MaybeLit;
             lit.requestUpdate?.();
             await settle(el);
