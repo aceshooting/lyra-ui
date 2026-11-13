@@ -1369,6 +1369,84 @@ it("bounds deep and cyclic public tree models without rejecting the update", asy
   expect(element.shadowRoot!.querySelectorAll('[part~="row"]').length).to.equal(1);
 });
 
+for (const length of [1, 3]) {
+  it(`selects and clears each row once across a ${length}-row child cycle`, async () => {
+    interface CyclicRow { id: number; children: CyclicRow[] }
+    const cycle: CyclicRow[] = Array.from({ length }, (_value, id) => ({ id, children: [] }));
+    for (let index = 0; index < length; index++) cycle[index]!.children = [cycle[(index + 1) % length]!];
+    const element = await dataGrid<CyclicRow>(html`<lr-data-grid label="Cyclic choices" row-key="id"
+      child-rows="children" selectable="multiple" .columns=${[{ field: 'id', label: 'ID' }]}
+      .expandedKeys=${cycle.map(row => row.id)} .data=${[cycle[0]!]}></lr-data-grid>`);
+    const rootCheckbox = () => element.shadowRoot!.querySelector<HTMLInputElement>('[part~="row"] input[type="checkbox"]')!;
+    expect(element.shadowRoot!.querySelectorAll('[part~="row"]').length).to.equal(length);
+    expect(rootCheckbox().checked).to.equal(false);
+    expect(rootCheckbox().indeterminate).to.equal(false);
+    if (length > 1) {
+      element.selectedKeys = [length - 1];
+      await element.updateComplete;
+      expect(rootCheckbox().checked).to.equal(false);
+      expect(rootCheckbox().indeterminate).to.equal(true);
+    }
+    const selected = oneEvent(element, 'lr-row-select');
+    rootCheckbox().click();
+    const details = (await selected).detail;
+    await element.updateComplete;
+    expect([...element.selectedKeys].sort()).to.deep.equal(cycle.map(row => row.id));
+    expect(details.selectedRows.map((row: CyclicRow) => row.id).sort()).to.deep.equal(cycle.map(row => row.id));
+    expect(Object.isFrozen(details.selectedRows)).to.equal(true);
+    expect(Object.isFrozen(details.selectedKeys)).to.equal(true);
+    expect(rootCheckbox().checked).to.equal(true);
+    expect(rootCheckbox().indeterminate).to.equal(false);
+    const cleared = oneEvent(element, 'lr-row-select');
+    rootCheckbox().click();
+    expect((await cleared).detail.selectedKeys).to.deep.equal([]);
+    await element.updateComplete;
+    expect(element.selectedRows).to.deep.equal([]);
+    expect(rootCheckbox().checked).to.equal(false);
+    expect(rootCheckbox().indeterminate).to.equal(false);
+  });
+}
+
+it('keeps selection and leaf filtering within the admitted tree depth', async () => {
+  interface DeepRow { id: number; children?: DeepRow[] }
+  let root: DeepRow = { id: 66 };
+  for (let id = 65; id >= 0; id--) root = { id, children: [root] };
+  const element = await dataGrid<DeepRow>(html`<lr-data-grid label="Deep choices" row-key="id"
+    child-rows="children" selectable="multiple" filter-from-leaf-rows
+    .columns=${[{ field: 'id', label: 'ID' }]} .data=${[root]}></lr-data-grid>`);
+  element.selectedKeys = [64, 65];
+  expect(element.selectedRows.map(row => row.id)).to.deep.equal([64]);
+  await element.updateComplete;
+  expect([...element.selectedKeys], 'a truncated tree retains controlled keys outside its projection').to.deep.equal([64, 65]);
+  const rootCheckbox = () => element.shadowRoot!.querySelector<HTMLInputElement>('[part~="row"] input[type="checkbox"]')!;
+  expect(rootCheckbox().checked).to.equal(false);
+  expect(rootCheckbox().indeterminate).to.equal(true);
+  const selected = oneEvent(element, 'lr-row-select');
+  rootCheckbox().click();
+  expect((await selected).detail.selectedKeys).to.deep.equal([65, ...Array.from({ length: 65 }, (_value, id) => id)]);
+  await element.updateComplete;
+  expect(rootCheckbox().checked).to.equal(true);
+  expect(rootCheckbox().indeterminate).to.equal(false);
+  expect(element.selectedRows.map(row => row.id)).to.deep.equal(Array.from({ length: 65 }, (_value, id) => id));
+  element.searchTerm = '65';
+  await element.updateComplete;
+  expect(element.shadowRoot!.querySelectorAll('[part~="row"]').length).to.equal(0);
+  expect(element.shadowRoot!.querySelectorAll('[part="no-results"]').length).to.equal(1);
+  expect(element.shadowRoot!.querySelector('[part="table"]')!.getAttribute('data-tree-truncated')).to.equal('true');
+  element.searchTerm = '64';
+  await element.updateComplete;
+  expect(element.shadowRoot!.querySelectorAll('[part~="row"]').length).to.equal(1);
+  expect(rootCheckbox().checked).to.equal(true);
+  expect(rootCheckbox().indeterminate).to.equal(false);
+  const cleared = oneEvent(element, 'lr-row-select');
+  element.shadowRoot!.querySelector<HTMLInputElement>('[part="select-all-checkbox"]')!.click();
+  expect((await cleared).detail.selectedKeys).to.deep.equal([65]);
+  await element.updateComplete;
+  expect(element.selectedRows).to.deep.equal([]);
+  expect(rootCheckbox().checked).to.equal(false);
+  expect(rootCheckbox().indeterminate).to.equal(false);
+});
+
 it("keeps ineligible descendants out of parent selection cascades", async () => {
   const tree: Person[] = [{
     id: 1,
