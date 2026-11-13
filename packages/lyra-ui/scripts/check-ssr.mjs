@@ -55,6 +55,67 @@ assertIsolatedNodeImport(
   `${noBrowserGlobals} await import('@aceshooting/lyra-ui/ssr.js'); ${noBrowserGlobals}`
 );
 assertIsolatedNodeImport(
+  'document-less style runtime and requested-axis attributes',
+  `
+    import assert from 'node:assert/strict';
+    import {
+      defineLyraLook, getLyraStyle, lyraStyleAttributes, parseLyraStyleRecord,
+      resetLyraStyle, setLyraStyle, startLyraStyle,
+    } from '@aceshooting/lyra-ui/theme.js';
+    ${noBrowserGlobals}
+    assert.equal(typeof localStorage, 'undefined');
+    const initial = getLyraStyle();
+    assert.ok(Object.isFrozen(initial));
+    assert.deepEqual(startLyraStyle(), initial);
+    const tokens = { '--lr-theme-color-surface-default': { light: '#ffffff', dark: '#111111' } };
+    const background = { light: '#eeeeee', dark: '#222222' };
+    const overrides = { '--lr-theme-color-text-normal': '#123456' };
+    const selected = setLyraStyle({
+      look: defineLyraLook({ id: 'server-look', tokens }), mode: 'dark', density: 'compact',
+      surface: 'solid', accent: '#123456', accentBackground: background, overrides,
+    });
+    assert.equal(selected.look, 'server-look');
+    assert.equal(selected.lookForm, 'runtime');
+    assert.equal(selected.resolvedMode, 'dark');
+    assert.equal(selected.accent, '#123456');
+    assert.deepEqual(selected.accentBackground, background);
+    assert.deepEqual(selected.overrides, overrides);
+    assert.ok([selected, selected.accentBackground, selected.overrides].every(Object.isFrozen));
+    background.dark = '#999999'; overrides['--lr-theme-color-text-normal'] = '#999999';
+    assert.equal(selected.accentBackground.dark, '#222222');
+    assert.equal(selected.overrides['--lr-theme-color-text-normal'], '#123456');
+    assert.deepEqual(getLyraStyle(), selected);
+    assert.deepEqual(startLyraStyle(), selected);
+    assert.deepEqual(lyraStyleAttributes(selected), {
+      'data-lr-look': 'server-look', 'data-lr-mode': 'dark', 'data-lr-density': 'compact',
+      'data-lr-surface': 'solid', 'data-lr-accent': 'custom',
+    });
+    const partial = resetLyraStyle(['mode', 'look']);
+    assert.equal(partial.mode, initial.mode);
+    assert.equal(partial.look, initial.look);
+    assert.equal(partial.lookForm, 'stylesheet');
+    assert.equal(partial.density, 'compact');
+    assert.equal(partial.accent, '#123456');
+    assert.deepEqual(partial.accentBackground, selected.accentBackground);
+    assert.deepEqual(partial.overrides, selected.overrides);
+    assert.equal(selected.mode, 'dark');
+    assert.equal(setLyraStyle({ accent: {} }).accent, null);
+    assert.equal(lyraStyleAttributes(getLyraStyle())['data-lr-accent'], 'none');
+    const persisted = parseLyraStyleRecord({ version: 2, mode: 'system', density: 'touch' });
+    assert.equal(persisted.mode, 'system');
+    assert.equal(persisted.resolvedMode, null);
+    assert.equal(persisted.density, 'touch');
+    const attributes = lyraStyleAttributes(persisted);
+    assert.equal(attributes['data-lr-mode'], 'system');
+    assert.equal(attributes['data-lr-density'], 'touch');
+    assert.equal(Object.hasOwn(attributes, 'data-lr-theme'), false);
+    assert.equal(Object.hasOwn(attributes, 'data-theme'), false);
+    assert.deepEqual(resetLyraStyle(), initial);
+    assert.deepEqual(startLyraStyle(), initial);
+    ${noBrowserGlobals}
+  `
+);
+assertIsolatedNodeImport(
   'granular registration imports',
   `
     import { readFile } from 'node:fs/promises';
