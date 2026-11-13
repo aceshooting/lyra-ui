@@ -27,6 +27,36 @@ async function fixture(...args: Parameters<typeof renderFixture>): Promise<Eleme
 // The browser runner has no compatible fake-timer harness, so these tests use short real timers
 // with generous margins, matching lr-toast-item's duration and pause tests.
 
+it('continues stall detection and recovery after direct moves between connected documents', async () => {
+  const host = await renderFixture<HTMLElement>(html`<div><lr-stream-status stall-threshold-ms="120"></lr-stream-status><iframe></iframe></div>`);
+  const status = host.querySelector('lr-stream-status')!;
+  const foreign = host.querySelector('iframe')!.contentDocument!;
+  let stalls = 0, recoveries = 0;
+  status.addEventListener('lr-stall', () => { stalls++; });
+  status.addEventListener('lr-recover', () => { recoveries++; });
+  try {
+    status.connectionState = 'streaming';
+    await status.updateComplete;
+    for (const [index, destination] of [foreign.body, host].entries()) {
+      destination.append(status);
+      await status.updateComplete;
+      expect(status.ownerDocument === destination.ownerDocument).to.equal(true);
+      expect(status.phase).to.equal('streaming');
+      await waitUntil(() => stalls === index + 1, 'the destination timer reports the stalled stream', { timeout: 3000 });
+      expect(status.phase).to.equal('stalled');
+      expect(status.connectionState).to.equal('streaming');
+      status.recordActivity();
+      await status.updateComplete;
+      expect(status.phase).to.equal('streaming');
+      expect(recoveries).to.equal(index + 1);
+    }
+    status.connectionState = 'interrupted';
+    await status.updateComplete;
+    expect(status.phase).to.equal('interrupted');
+    expect(stalls).to.equal(2);
+  } finally { status.remove(); }
+});
+
 function liveRegionText(el: LyraStreamStatus): string {
   const region = el.shadowRoot!.querySelector('lr-live-region') as LyraLiveRegion;
   return region.shadowRoot!.querySelector('[part="region"]')!.textContent ?? '';
