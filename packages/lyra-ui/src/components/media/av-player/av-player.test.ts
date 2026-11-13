@@ -976,7 +976,7 @@ describe('playback controls', () => {
   });
 
   it('clears a transient playback rejection after native playback succeeds', async () => {
-    const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
+    const el = (await fixture(html`<lr-av-player kind="audio"></lr-av-player>`)) as LyraAvPlayer;
     const media = mediaEl(el);
     const failure = new DOMException('Playback blocked', 'NotAllowedError');
     Object.defineProperty(media, 'duration', { value: 60, configurable: true });
@@ -984,14 +984,29 @@ describe('playback controls', () => {
     media.dispatchEvent(new Event('loadedmetadata'));
     await el.updateComplete;
     const timeline = el.shadowRoot!.querySelector('[part="timeline"]') as HTMLElement;
+    const rejected = oneEvent(el, 'lr-render-error');
     timeline.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
-    await aTimeout(0);
+    expect((await rejected).detail.error).to.equal(failure);
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="error"]')).to.exist;
+    expect(el.shadowRoot!.querySelector('[part="error"]') !== null).to.equal(true);
 
     media.dispatchEvent(new Event('play'));
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.be.true;
+  });
+
+  it('keeps an independent source failure visible until the media loads again', async () => {
+    const el = await fixture<LyraAvPlayer>(html`<lr-av-player kind="audio"></lr-av-player>`);
+    const media = mediaEl(el);
+    media.dispatchEvent(new Event('error'));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="error"]') !== null).to.equal(true);
+    media.dispatchEvent(new Event('play'));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="error"]') !== null).to.equal(true);
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.equal(true);
   });
 
   it('synchronizes native and authored volume, mute, and rate state without drift', async () => {
