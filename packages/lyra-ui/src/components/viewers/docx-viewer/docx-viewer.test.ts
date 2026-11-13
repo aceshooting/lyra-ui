@@ -1779,6 +1779,21 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
 });
 
 describe('search', () => {
+  for (const operation of ['search', 'next', 'previous'] as const) {
+    it(`stops ${operation} when a search-change listener clears the results`, async () => {
+      const { el, restore } = await loadWithMarkup('<p>cat cat</p>');
+      try {
+        if (operation !== 'search') expect(await el.search('cat')).to.equal(2);
+        el.addEventListener('lr-search-change', () => el.clearSearch(), { once: true });
+        const result = operation === 'search' ? await el.search('cat')
+          : operation === 'next' ? await el.searchNext() : await el.searchPrevious();
+        expect(result).to.equal(operation === 'search' ? 0 : false);
+        expect(el.shadowRoot!.querySelectorAll('[part~="search-match"]').length).to.equal(0);
+        expect(await el.searchNext()).to.equal(false);
+      } finally { restore(); }
+    });
+  }
+
   it('creates search walkers, ranges, and marks in its owner document after adoption', async () => {
     const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
     const iframe = document.createElement('iframe');

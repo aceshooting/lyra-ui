@@ -209,7 +209,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-pagination"></a>`lr-pagination` | data | `import '@aceshooting/lyra-ui/components/lr-pagination.js';` | none | none | none | 32.3 KiB |
 | <a id="lr-pan-zoom"></a>`lr-pan-zoom` | media | `import '@aceshooting/lyra-ui/components/lr-pan-zoom.js';` | none | none | none | 28.4 KiB |
 | <a id="lr-path-strip"></a>`lr-path-strip` | retrieval | `import '@aceshooting/lyra-ui/components/lr-path-strip.js';` | none | `lr-scroller` | none | 33.8 KiB |
-| <a id="lr-pdf-viewer"></a>`lr-pdf-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-pdf-viewer.js';` | `pdfjs-dist` | `lr-highlight-layer`, `lr-virtual-list` | none | 72.3 KiB |
+| <a id="lr-pdf-viewer"></a>`lr-pdf-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-pdf-viewer.js';` | `pdfjs-dist` | `lr-highlight-layer`, `lr-virtual-list` | none | 72.4 KiB |
 | <a id="lr-permission-grant"></a>`lr-permission-grant` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-permission-grant.js';` | none | `lr-button` | none | 36.9 KiB |
 | <a id="lr-permission-rules"></a>`lr-permission-rules` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-permission-rules.js';` | none | none | none | 29.6 KiB |
 | <a id="lr-phone-input"></a>`lr-phone-input` | forms | `import '@aceshooting/lyra-ui/components/lr-phone-input.js';` | none | `lr-flag` | `lr-skeleton` | 52.5 KiB |

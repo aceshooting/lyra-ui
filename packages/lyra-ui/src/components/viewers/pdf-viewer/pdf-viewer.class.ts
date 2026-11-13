@@ -1671,7 +1671,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       }
     }
     if (generation !== this.searchGeneration) return this.searchMatches.length;
-    this.searchState.publish(matches, matchCountExact);
+    if (!this.searchState.publish(matches, matchCountExact)) return 0;
     if (this.searchActiveIndex >= 0) await this.focusSearchMatch(this.searchActiveIndex);
     return matches.length;
   }

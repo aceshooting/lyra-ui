@@ -437,7 +437,7 @@ export class TableViewerController<M extends { row: number; col: number }> {
         matches.push(field.match);
       }
     }
-    this.search.publish(matches, exact);
+    if (!this.search.publish(matches, exact)) return 0;
     if (matches.length > 0) await this.hooks.jump(matches[0]!);
     return matches.length;
   }
@@ -904,7 +904,7 @@ export class TableViewerSourceController implements ReactiveController {
             hits.push({ sheetIndex: index, row: hit.row, col: hit.column });
           }
           if (!lease.isCurrent()) return;
-          this.searchState.publish(hits, exact);
+          if (!this.searchState.publish(hits, exact) || !lease.isCurrent()) { resolve(0); return; }
           if (hits.length) await this.reveal(hits[0]!.sheetIndex, hits[0]!.row, hits[0]!.col);
           if (lease.isCurrent()) resolve(hits.length);
         } catch (error) { if (lease.isCurrent()) { this.fail(error); this.searchState.publish([], false); resolve(0); } }
@@ -914,7 +914,8 @@ export class TableViewerSourceController implements ReactiveController {
     });
   }
   async step(direction: 1 | -1): Promise<boolean> {
-    if (!this.searchState.step(direction)) return false;
+    const intent = this.searchIntent;
+    if (!this.searchState.step(direction) || intent !== this.searchIntent) return false;
     const hit = this.searchState.matches[this.searchState.activeIndex]!;
     return this.reveal(hit.sheetIndex, hit.row, hit.col);
   }

@@ -3129,6 +3129,25 @@ describe("getOutline", () => {
 });
 
 describe("search", () => {
+  for (const operation of ['search', 'next', 'previous'] as const) {
+    it(`stops ${operation} when a search-change listener clears the results`, async () => {
+      const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+      installFakeLoader(el, fakeDocument(1));
+      const restore = stubFetch();
+      try {
+        el.src = 'https://example.test/report.pdf';
+        await waitFor(el, '[part="toolbar"]');
+        if (operation !== 'search') expect(await el.search('demand')).to.equal(1);
+        el.addEventListener('lr-search-change', () => el.clearSearch(), { once: true });
+        const result = operation === 'search' ? await el.search('demand')
+          : operation === 'next' ? await el.searchNext() : await el.searchPrevious();
+        expect(result).to.equal(operation === 'search' ? 0 : false);
+        expect(el.shadowRoot!.querySelectorAll('[part~="search-match"]').length).to.equal(0);
+        expect(await el.searchNext()).to.equal(false);
+      } finally { restore(); }
+    });
+  }
+
   it("finds matches across pages, counts them, and navigates with wraparound", async () => {
     const el = (await fixture(
       html`<lr-pdf-viewer></lr-pdf-viewer>`

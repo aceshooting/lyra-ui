@@ -849,7 +849,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     }
     const { index } = this.getTextIndex(root);
     const matches = index.search(trimmed, index.createWorkBudget());
-    this.searchState.publish(matches, matches.matchCountExact);
+    if (!this.searchState.publish(matches, matches.matchCountExact)) return 0;
     this.paintSearchMatches();
     if (this.searchState.activeIndex >= 0) this.scrollToActiveSearchMatch();
     return matches.length;

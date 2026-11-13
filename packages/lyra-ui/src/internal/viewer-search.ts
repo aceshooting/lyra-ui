@@ -52,6 +52,7 @@ export function sameViewerSearchDetail(first: LyraSearchChangeDetail, second: Ly
 
 /** The query, match set, exactness flag and active index shared by every non-text viewer's search. */
 export class ViewerSearchState<C extends { readonly length: number }> {
+  private revision = 0;
   query = '';
   matches: C;
   exact = true;
@@ -74,17 +75,20 @@ export class ViewerSearchState<C extends { readonly length: number }> {
     this.emitDetail(viewerSearchDetail(this.query, this.matches.length, this.exact, this.activeIndex));
   }
 
-  /** Stores a result (the first match becomes active) and emits; `exact=false` marks a lower bound. */
-  publish(matches: C = this.empty(), exact = true): void {
+  /** Stores and emits a result; returns false when a listener supersedes it. `exact=false` marks a lower bound. */
+  publish(matches: C = this.empty(), exact = true): boolean {
+    const revision = ++this.revision;
     this.matches = matches;
     this.exact = exact;
     this.activeIndex = matches.length > 0 ? 0 : -1;
     this.changed();
     this.emit();
+    return revision === this.revision;
   }
 
   /** Clears the query and results without emitting. */
   reset(): void {
+    this.revision++;
     this.query = '';
     this.matches = this.empty();
     this.exact = true;
@@ -97,12 +101,13 @@ export class ViewerSearchState<C extends { readonly length: number }> {
     this.emit();
   }
 
-  /** Moves the active match with wrap-around and emits; false when nothing matches. */
+  /** Moves and emits the active match; false when empty or superseded by an event listener. */
   step(direction: 1 | -1): boolean {
     if (!this.matches.length) return false;
+    const revision = ++this.revision;
     this.activeIndex = advanceViewerSearchIndex(this.activeIndex, this.matches.length, direction);
     this.changed();
     this.emit();
-    return true;
+    return revision === this.revision;
   }
 }
