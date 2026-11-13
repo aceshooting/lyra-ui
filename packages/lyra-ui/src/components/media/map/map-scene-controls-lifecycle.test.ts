@@ -120,3 +120,119 @@ describe('scene adapter lifecycle ownership', () => {
     expect([...h.listeners.values()].every(set => set.size === 0)).to.equal(true);
   });
 });
+
+describe('scene control callback retirement', () => {
+  it('attempts every unsubscribe after partial subscription failure and can be installed again', () => {
+    const h = peer(), control = new MapGlobeControl();
+    const subscribe = h.value.on, unsubscribe = h.value.off;
+    const removed: string[] = [];
+    let attempts = 0;
+    h.value.on = (type, listener) => {
+      subscribe(type, listener);
+      if (++attempts === 3) throw new Error('Peer subscription failed');
+    };
+    h.value.off = (type, listener) => {
+      removed.push(type); unsubscribe(type, listener);
+      if (type === 'terrain') throw new Error('Peer already removed');
+    };
+    control.setSceneContext(context([]).scene!);
+    try {
+      expect(() => control.onAdd(h.value)).to.throw('Peer subscription failed');
+      expect(removed).to.deep.equal(['terrain', 'projectiontransition', 'style.load', 'sourcedata', 'idle']);
+      expect([...h.listeners.values()].every(set => set.size === 0)).to.equal(true);
+      h.value.on = subscribe; h.value.off = unsubscribe;
+      const root = control.onAdd(h.value);
+      expect(button(root).disabled).to.equal(false);
+      expect([...h.listeners.values()].every(set => set.size === 1)).to.equal(true);
+    } finally { control.onRemove(); }
+  });
+
+  it('ignores a queued refresh from the previous installation while servicing the replacement', async () => {
+    const h = peer(), control = new MapGlobeControl();
+    let reads = 0, activations = 0;
+    control.setSceneContext({ isCurrent: () => true,
+      state: () => { reads++; return { ready: true, busy: false, label: 'Globe' }; },
+      unavailable: () => undefined });
+    control.on('activate', () => { activations++; });
+    try {
+      const previous = control.onAdd(h.value);
+      h.listeners.get('idle')!.forEach(listener => listener());
+      control.onRemove();
+      const current = control.onAdd(h.value);
+      const before = reads;
+      h.listeners.get('idle')!.forEach(listener => listener());
+      await Promise.resolve();
+      expect(reads).to.equal(before + 1);
+      button(previous).click(); expect(activations).to.equal(0);
+      button(current).click(); expect(activations).to.equal(1);
+      await Promise.resolve();
+      expect(button(current).disabled).to.equal(false);
+      expect([...h.listeners.values()].every(set => set.size === 1)).to.equal(true);
+    } finally { control.onRemove(); }
+  });
+
+  for (const boundary of ['state', 'projection'] as const) {
+    it(`does not publish stale state after its ${boundary} callback retires the control`, () => {
+      const h = peer(), control = new MapGlobeControl();
+      let armed = false, publications = 0;
+      const retire = () => { if (armed) { armed = false; control.onRemove(); } };
+      const projection = h.value.getProjection;
+      h.value.getProjection = () => { if (boundary === 'projection') retire(); return projection(); };
+      control.setSceneContext({ isCurrent: () => true,
+        state: () => { const label = armed ? 'Obsolete' : 'Globe'; if (boundary === 'state') retire(); return { ready: true, busy: false, label }; },
+        unavailable: () => { publications++; } });
+      try {
+        const root = control.onAdd(h.value), initial = publications;
+        armed = true;
+        control.refreshSceneControl();
+        expect(publications).to.equal(initial);
+        expect(button(root).getAttribute('aria-label')).to.equal('Globe');
+        expect([...h.listeners.values()].every(set => set.size === 0)).to.equal(true);
+        const replacement = control.onAdd(h.value);
+        expect(button(replacement).disabled).to.equal(false);
+        expect(publications).to.equal(initial + 1);
+      } finally { control.onRemove(); }
+    });
+  }
+
+  it('stops an activation dispatch when the first subscriber removes the control', async () => {
+    const h = peer(), control = new MapGlobeControl(), seen: string[] = [];
+    const retire = () => { seen.push('first'); control.onRemove(); };
+    control.on('activate', retire);
+    control.on('activate', () => { seen.push('second'); });
+    control.setSceneContext(context([]).scene!);
+    try {
+      const previous = control.onAdd(h.value);
+      button(previous).click();
+      expect(seen).to.deep.equal(['first']);
+      expect([...h.listeners.values()].every(set => set.size === 0)).to.equal(true);
+      control.off('activate', retire);
+      const replacement = control.onAdd(h.value);
+      button(replacement).click();
+      expect(seen).to.deep.equal(['first', 'second']);
+      await Promise.resolve();
+      expect(button(replacement).disabled).to.equal(false);
+    } finally { control.onRemove(); }
+  });
+
+  it('refuses unconfigured terrain activation but allows disabling an already active terrain', async () => {
+    const h = peer(), control = new MapTerrainControl(), events: unknown[] = [], unavailable: boolean[] = [];
+    let active = false;
+    const backend = { ...h.value, getTerrain: () => active ? { source: 'dem' } : null };
+    control.setSceneContext({ isCurrent: () => true, state: () => ({ ready: true, busy: false, label: 'Terrain' }),
+      unavailable: (_kind, value) => { unavailable.push(value); } });
+    control.on('activate', event => { events.push(event); });
+    try {
+      const root = control.onAdd(backend), target = button(root);
+      expect(target.disabled).to.equal(true); expect(unavailable.at(-1)).to.equal(true);
+      target.click();
+      target.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      expect(events).to.deep.equal([]);
+      active = true; control.refreshSceneControl();
+      expect(target.disabled).to.equal(false); expect(target.getAttribute('aria-pressed')).to.equal('true');
+      target.click(); expect(events).to.deep.equal([{ kind: 'terrain', pressed: true }]);
+      await Promise.resolve();
+      expect(unavailable.at(-1)).to.equal(false); expect(target.disabled).to.equal(false);
+    } finally { control.onRemove(); }
+  });
+});

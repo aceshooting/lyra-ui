@@ -204,3 +204,25 @@ describe('MarkdownProgressiveSession state transitions', () => {
     expect(value.tail).to.equal(null);
   });
 });
+
+for (const separator of ['\n', '\n\n']) {
+  it(`preserves the first duplicate reference definition across ${separator.length === 1 ? 'adjacent' : 'separated'} streamed definitions`, () => {
+    const value = session();
+    const first = '# Stable\n\nRead [ref].\n\n[ref]: /original "First"';
+    const duplicate = `${separator}[ref]: /ignored "Second"\n\n`;
+    const final = first + duplicate + 'After [ref].\n';
+    value.update(first + '\n'); drain(value);
+    value.update(first + duplicate); drain(value);
+    value.update(final); drain(value); value.step(true, true);
+    const rendered = value.blocks.map(block => block.html).join('');
+    expect(value.failed).to.equal(false);
+    expect(rendered).to.equal(parseMarkdownDocument(options(final)).html);
+    expect(rendered).to.contain("href='/original'");
+    expect(rendered).not.to.contain("href='/ignored'");
+    expect(value.stats.stalls).to.equal(0);
+    value.resume();
+    const appended = final + '\nLast [ref].\n';
+    value.update(appended); drain(value); value.step(true, true);
+    expect(value.blocks.map(block => block.html).join('')).to.equal(parseMarkdownDocument(options(appended)).html);
+  });
+}
