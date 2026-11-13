@@ -1,6 +1,8 @@
 import { expectLabelInName, reviewComponentLabels } from '../../../../test/reviewed-labels.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import './trace-tree.js';
 import type { LyraTraceTree } from './trace-tree.js';
@@ -24,6 +26,42 @@ const SPANS: LyraSpan[] = [
   },
   { id: 'llm', parentId: 'root', name: 'gpt-turbo', kind: 'llm', startMs: 130, endMs: 390, status: 'running' },
 ];
+
+it('keeps a visible tab stop when a browsed span moves under a collapsed branch without stealing outside focus', async () => {
+  const spans: LyraSpan[] = [
+    { id: 'root', name: 'Root', kind: 'agent', startMs: 0, endMs: 100, status: 'success' },
+    { id: 'left', parentId: 'root', name: 'Left', kind: 'tool', startMs: 1, endMs: 40, status: 'success' },
+    { id: 'leaf', parentId: 'left', name: 'Moved span', kind: 'tool', startMs: 2, endMs: 20, status: 'success' },
+    { id: 'right', parentId: 'root', name: 'Right', kind: 'tool', startMs: 41, endMs: 90, status: 'success' },
+    { id: 'other', parentId: 'right', name: 'Other span', kind: 'tool', startMs: 42, endMs: 80, status: 'success' },
+  ];
+  const container = await fixture<HTMLElement>(html`<div><lr-trace-tree .spans=${spans}></lr-trace-tree><button>Outside</button></div>`);
+  const tree = container.querySelector('lr-trace-tree')!;
+  const outside = container.querySelector('button')!;
+  const row = (id: string) => tree.shadowRoot!.querySelector<HTMLElement>(`[part="row"][data-id="${id}"]`)!;
+  row('right').querySelector<HTMLButtonElement>('[part="toggle"]')!.click();
+  await tree.updateComplete;
+  expect(row('right').getAttribute('aria-expanded')).to.equal('false');
+  await focusByKeyboard(row('leaf'));
+  await tree.updateComplete;
+  expect(tree.shadowRoot!.activeElement?.getAttribute('data-id')).to.equal('leaf');
+  await focusByKeyboard(outside);
+  tree.spans = spans.map(span => span.id === 'leaf' ? { ...span, parentId: 'right' } : span);
+  await tree.updateComplete;
+  const stops = tree.shadowRoot!.querySelectorAll('[part="row"][tabindex="0"]');
+  expect(stops.length).to.equal(1);
+  expect(stops[0]!.getAttribute('data-id')).to.equal('right');
+  expect(tree.shadowRoot!.querySelectorAll('[data-id="leaf"]').length).to.equal(0);
+  expect(document.activeElement === outside).to.equal(true);
+  await focusByKeyboard(row('right'));
+  await sendKeys({ press: 'ArrowRight' });
+  await tree.updateComplete;
+  expect(row('right').getAttribute('aria-expanded')).to.equal('true');
+  expect(row('leaf').getAttribute('aria-level')).to.equal('3');
+  await sendKeys({ press: 'ArrowDown' });
+  await tree.updateComplete;
+  expect(tree.shadowRoot!.activeElement?.getAttribute('data-id')).to.equal('leaf');
+});
 
 const motionMatchMedia = (matches: boolean): typeof window.matchMedia =>
   ((query: string) =>
