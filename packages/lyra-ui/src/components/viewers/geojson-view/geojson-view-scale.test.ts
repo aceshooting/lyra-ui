@@ -63,3 +63,27 @@ it('rejects oversized pretty metadata before serializing the parsed document', a
     expect(serializations).equal(0);
   } finally { JSON.stringify = stringify; window.fetch = fetch; }
 });
+
+for (const [name, text] of [
+  ['supplementary Unicode', '\u{1f30d}\u{1f680}'],
+  ['unpaired surrogates', '\ud800x\udfff\ud800'],
+  ['escaped controls and punctuation', '\b\t\n\f\r\u0000\u001f"\\'],
+] as const) {
+  it(`preserves ${name} in GeoJSON metadata keys and values`, async () => {
+    const feature = { type: 'Feature', geometry: null, properties: { [text]: text } };
+    const payload = JSON.stringify(feature);
+    const fetch = window.fetch;
+    window.fetch = async () => new Response(payload);
+    try {
+      const el = await viewer();
+      el.src = 'https://example.test/unicode.geojson';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="metadata"]') !== null,
+        'valid Unicode metadata remains readable without a map peer');
+      const shown = el.shadowRoot!.querySelector('[part="metadata"]')!.textContent!;
+      expect(JSON.parse(shown)).to.deep.equal(feature);
+      expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.equal(true);
+      const fallback = el.shadowRoot!.querySelector('lr-json-viewer');
+      expect(fallback?.data).to.deep.equal(feature);
+    } finally { window.fetch = fetch; }
+  });
+}

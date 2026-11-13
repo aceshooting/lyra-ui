@@ -477,6 +477,60 @@ describe('lr-image-viewer panorama', () => {
     } finally { controller.disconnect(); element.remove(); }
   });
 
+  for (const retirement of ['disable', 'disconnect', 'replacement'] as const) {
+    it(`ignores a pending panorama mount rejection after ${retirement}`, async () => {
+      const element = await fixture<HTMLDivElement>(html`<div style="width:320px;height:180px"></div>`);
+      const image = document.createElement('img');
+      const container = element.appendChild(document.createElement('div'));
+      container.style.cssText = 'width:320px;height:180px';
+      let rejectMount!: (reason: unknown) => void;
+      const pendingMount = new Promise<void>((_resolve, reject) => { rejectMount = reject; });
+      const releases: number[] = [];
+      const dataWrites: number[] = [];
+      let creations = 0;
+      let entered = false;
+      let failures = 0;
+      panoramaLoader.override(async () => ({ createEngine: (): Engine3dInstance => {
+        const serial = ++creations;
+        return {
+          contract: 1,
+          async mount() { if (serial === 1) { entered = true; await pendingMount; } },
+          setStyle() {}, setData() { dataWrites.push(serial); }, setCamera() {}, resize() {},
+          dispose() { releases.push(serial); },
+        };
+      } }));
+      const controller = new PanoramaController(element, {
+        changed: () => {}, updated: async () => {}, localize: key => key,
+        direction: () => 'ltr', camera: () => {}, pick: () => {}, fallback: () => { failures++; },
+      });
+      const hotspots: [] = [];
+      try {
+        controller.update(true, image, 1, hotspots, PANORAMA_DEFAULT_CAMERA, container);
+        await waitUntil(() => entered, 'first renderer waits for mount');
+        if (retirement === 'disconnect') controller.disconnect();
+        else controller.update(retirement !== 'disable', image, 2, hotspots, PANORAMA_DEFAULT_CAMERA, container);
+        expect(releases).to.deep.equal([1]);
+        if (retirement === 'replacement') await waitUntil(() => controller.ready, 'replacement renderer becomes ready');
+        rejectMount(new Error('Retired renderer mount failed'));
+        // The original start task observes the rejection on the next promise turn.
+        await pendingMount.catch(() => {});
+        await Promise.resolve();
+        expect(failures).to.equal(0);
+        expect(releases).to.deep.equal([1]);
+        expect(controller.ready).to.equal(retirement === 'replacement');
+        expect(controller.loading).to.equal(false);
+        if (retirement !== 'replacement') {
+          controller.update(true, image, 3, hotspots, PANORAMA_DEFAULT_CAMERA, container);
+          await waitUntil(() => controller.ready, 'a new explicit intent starts a working renderer');
+        }
+        expect(creations).to.equal(2);
+        expect(dataWrites).to.deep.equal([2]);
+        controller.disconnect();
+        expect(releases).to.deep.equal([1, 2]);
+      } finally { rejectMount(new Error('Test cleanup')); controller.disconnect(); element.remove(); }
+    });
+  }
+
   it('shows the localized native-image fallback when renderer cleanup throws', async () => {
     panoramaLoader.override(async () => ({ createEngine: (): Engine3dInstance => ({
       contract: 1, async mount(_target, callbacks) { host = callbacks; },
