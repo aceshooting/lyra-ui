@@ -158,6 +158,13 @@ test('anonymous Chromium callbacks retain ownership through browser coverage con
     const callback = functions.find(([, fn]) => fn.loc.start.line === 2);
     assert.equal(coverage.f[callback[0]], 1, 'the anonymous function is invoked exactly once');
   }
+  for (const ordered of [entries, [...entries].reverse()]) {
+    const converted = await v8ToIstanbul(config, [], ordered);
+    const coverage = createCoverageMap(converted).fileCoverageFor(filename);
+    const callbacks = Object.entries(coverage.branchMap).filter(([, branch]) => branch.loc.start.line === 2);
+    assert.deepEqual(callbacks.map(([id]) => coverage.b[id][0]).sort((a, b) => a - b), [0, 1],
+      'combining realms before session assembly must also preserve the unexecuted callback arm');
+  }
   assert.deepEqual(entries, before, 'normalization must not mutate native coverage');
 });
 

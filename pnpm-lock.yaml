@@ -191,7 +191,7 @@ packageExtensionsChecksum: sha256-5oBc91IK/iCH5Cm2kcVJI6T1cvRJRDwspF1YwatD2FM=
 patchedDependencies:
   '@codecov/bundler-plugin-core@2.0.1': 7116b3d1b1e41ccfa91c3d7d58e661d2594288534c589b18520a01e60b65dfbe
   '@web/test-runner-core@1.0.1': 20e37f2699c05d3e6bf3cbc4da7860feaffb49beed67de4c851b6a80fc21cc5b
-  '@web/test-runner-coverage-v8@1.0.1': 3e567355f66c19ecfe420653547ea2b4c4de5d6ba3c590a4aec7711ae38f3394
+  '@web/test-runner-coverage-v8@1.0.1': 2da75e2c60893a47ad8bef52c186af2d7ea7355944f85ba24ca78cf765942932
   braces@3.0.3: 6a51944e47fdf849394529628931b895d58dbf01ce01aa96ce460a6f9f45e6b8
   deepmerge@4.1.1: 4e32e68c49fe3eb85931ddd73f814a200bfe03b748cc0cf0a69288fd2c19403d
   sprintf-js@1.0.3: 3cc545bd22e591995f0a9f7841330069463717b32798e92b23976cd8a96d9b69
@@ -10096,7 +10096,7 @@ snapshots:
   '@web/test-runner-chrome@1.0.2(supports-color@10.2.2)':
     dependencies:
       '@web/test-runner-core': 1.0.1(patch_hash=20e37f2699c05d3e6bf3cbc4da7860feaffb49beed67de4c851b6a80fc21cc5b)(supports-color@10.2.2)
-      '@web/test-runner-coverage-v8': 1.0.1(patch_hash=3e567355f66c19ecfe420653547ea2b4c4de5d6ba3c590a4aec7711ae38f3394)(supports-color@10.2.2)
+      '@web/test-runner-coverage-v8': 1.0.1(patch_hash=2da75e2c60893a47ad8bef52c186af2d7ea7355944f85ba24ca78cf765942932)(supports-color@10.2.2)
       chrome-launcher: 0.15.2(supports-color@10.2.2)
       puppeteer-core: 25.17.0
     transitivePeerDependencies:
@@ -10148,7 +10148,7 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@web/test-runner-coverage-v8@1.0.1(patch_hash=3e567355f66c19ecfe420653547ea2b4c4de5d6ba3c590a4aec7711ae38f3394)(supports-color@10.2.2)':
+  '@web/test-runner-coverage-v8@1.0.1(patch_hash=2da75e2c60893a47ad8bef52c186af2d7ea7355944f85ba24ca78cf765942932)(supports-color@10.2.2)':
     dependencies:
       '@web/test-runner-core': 1.0.1(patch_hash=20e37f2699c05d3e6bf3cbc4da7860feaffb49beed67de4c851b6a80fc21cc5b)(supports-color@10.2.2)
       istanbul-lib-coverage: 3.2.2
@@ -10183,7 +10183,7 @@ snapshots:
   '@web/test-runner-playwright@1.0.1(supports-color@10.2.2)':
     dependencies:
       '@web/test-runner-core': 1.0.1(patch_hash=20e37f2699c05d3e6bf3cbc4da7860feaffb49beed67de4c851b6a80fc21cc5b)(supports-color@10.2.2)
-      '@web/test-runner-coverage-v8': 1.0.1(patch_hash=3e567355f66c19ecfe420653547ea2b4c4de5d6ba3c590a4aec7711ae38f3394)(supports-color@10.2.2)
+      '@web/test-runner-coverage-v8': 1.0.1(patch_hash=2da75e2c60893a47ad8bef52c186af2d7ea7355944f85ba24ca78cf765942932)(supports-color@10.2.2)
       playwright: 1.65.0
     transitivePeerDependencies:
       - bufferutil

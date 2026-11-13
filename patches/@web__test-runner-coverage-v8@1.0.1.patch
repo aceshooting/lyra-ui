@@ -1,8 +1,8 @@
 diff --git a/dist/index.js b/dist/index.js
-index d73040a4c..3e9a7067b 100644
+index d73040a4ca589e98dd896a3086625a287a92db89..8231c60d9588d3de12c68a2156beb1f0ebc64192 100644
 --- a/dist/index.js
 +++ b/dist/index.js
-@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
+@@ -5,12 +5,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
  Object.defineProperty(exports, "__esModule", { value: true });
  exports.v8ToIstanbul = v8ToIstanbul;
  const test_runner_core_1 = require("@web/test-runner-core");
@@ -10,16 +10,25 @@ index d73040a4c..3e9a7067b 100644
  const lru_cache_1 = __importDefault(require("lru-cache"));
  const promises_1 = require("node:fs/promises");
  const path_1 = require("path");
-@@ -46,7 +47,7 @@ function getMatcher(patterns) {
+ const picomatch_1 = __importDefault(require("picomatch"));
+ const v8_to_istanbul_1 = __importDefault(require("v8-to-istanbul"));
+ const utils_js_1 = require("./utils.js");
++// Reuse the session merger so an idle callback cannot borrow another realm's module hits.
++const { getTestCoverage } = require((0, path_1.join)((0, path_1.dirname)(require.resolve('@web/test-runner-core')), 'coverage/getTestCoverage.js'));
+ const cachedMatchers = new Map();
+ // Cache the sourcemap/source objects to avoid repeatedly having to load
+ // them from disk per call
+@@ -46,7 +49,8 @@ function getMatcher(patterns) {
  async function v8ToIstanbul(config, testFiles, coverage, userAgent) {
      const included = getMatcher(config?.coverageConfig?.include);
      const excluded = getMatcher(config?.coverageConfig?.exclude);
 -    const istanbulCoverage = {};
 +    const istanbulCoverage = (0, istanbul_lib_coverage_1.createCoverageMap)({});
++    const sessionsByPath = new Map();
      for (const entry of coverage) {
          const url = new URL(entry.url);
          const path = url.pathname;
-@@ -83,8 +84,17 @@ async function v8ToIstanbul(config, testFiles, coverage, userAgent) {
+@@ -83,8 +87,21 @@ async function v8ToIstanbul(config, testFiles, coverage, userAgent) {
                      }
                      const converter = (0, v8_to_istanbul_1.default)(filePath, 0, sources);
                      await converter.load();
@@ -35,41 +44,65 @@ index d73040a4c..3e9a7067b 100644
 +                        return { ...block, functionName: '(anonymous)' };
 +                    });
 +                    converter.applyCoverage(functions);
-+                    istanbulCoverage.merge(converter.toIstanbul());
++                    for (const [path, file] of Object.entries(converter.toIstanbul())) {
++                        let sessions = sessionsByPath.get(path);
++                        if (!sessions) sessionsByPath.set(path, sessions = []);
++                        sessions.push({ testCoverage: { [path]: file } });
++                    }
                  }
              }
              catch (error) {
-@@ -93,6 +103,6 @@ async function v8ToIstanbul(config, testFiles, coverage, userAgent) {
+@@ -93,6 +110,12 @@ async function v8ToIstanbul(config, testFiles, coverage, userAgent) {
              }
          }
      }
 -    return istanbulCoverage;
++    // Bound the merger's working copy to one source file.
++    for (const [path, sessions] of sessionsByPath) {
++        const { coverageMap } = getTestCoverage(sessions, {});
++        istanbulCoverage.addFileCoverage(coverageMap.fileCoverageFor(path));
++        sessionsByPath.delete(path);
++    }
 +    return istanbulCoverage.toJSON();
  }
  //# sourceMappingURL=index.js.map
-\ No newline at end of file
 diff --git a/src/index.ts b/src/index.ts
-index 4bacc56ac..6b2596634 100644
+index 4bacc56ac2bbfd59ad86ff1119a4565a94761c06..6b7ccd43eb0bc7b956fb5110ace376fb1f057c8d 100644
 --- a/src/index.ts
 +++ b/src/index.ts
-@@ -1,6 +1,6 @@
+@@ -1,14 +1,19 @@
  import { TestRunnerCoreConfig, fetchSourceMap } from '@web/test-runner-core';
  import { Profiler } from 'inspector';
 -import { CoverageMapData } from 'istanbul-lib-coverage';
-+import { createCoverageMap } from 'istanbul-lib-coverage';
++import { createCoverageMap, CoverageMap, CoverageMapData } from 'istanbul-lib-coverage';
  import LruCache from 'lru-cache';
  import { readFile } from 'node:fs/promises';
- import { extname, isAbsolute, join, posix, sep } from 'path';
-@@ -63,7 +63,7 @@ export async function v8ToIstanbul(
+-import { extname, isAbsolute, join, posix, sep } from 'path';
++import { dirname, extname, isAbsolute, join, posix, sep } from 'path';
+ import picoMatch from 'picomatch';
+ import v8toIstanbulLib from 'v8-to-istanbul';
+ 
+ import { toFilePath } from './utils.js';
+ 
++// Reuse the session merger so an idle callback cannot borrow another realm's module hits.
++const { getTestCoverage }: {
++  getTestCoverage(sessions: { testCoverage: CoverageMapData }[], config: object): { coverageMap: CoverageMap };
++} = require(join(dirname(require.resolve('@web/test-runner-core')), 'coverage/getTestCoverage.js'));
++
+ type V8Coverage = Profiler.ScriptCoverage;
+ type Matcher = (test: string) => boolean;
+ type IstanbulSource = Required<Parameters<typeof v8toIstanbulLib>>[2];
+@@ -63,7 +68,8 @@ export async function v8ToIstanbul(
  ) {
    const included = getMatcher(config?.coverageConfig?.include);
    const excluded = getMatcher(config?.coverageConfig?.exclude);
 -  const istanbulCoverage: CoverageMapData = {};
 +  const istanbulCoverage = createCoverageMap({});
++  const sessionsByPath = new Map<string, { testCoverage: CoverageMapData }[]>();
  
    for (const entry of coverage) {
      const url = new URL(entry.url);
-@@ -107,8 +107,18 @@ export async function v8ToIstanbul(
+@@ -107,8 +113,22 @@ export async function v8ToIstanbul(
            const converter = v8toIstanbulLib(filePath, 0, sources);
            await converter.load();
  
@@ -86,15 +119,25 @@ index 4bacc56ac..6b2596634 100644
 +            return { ...block, functionName: '(anonymous)' };
 +          });
 +          converter.applyCoverage(functions);
-+          istanbulCoverage.merge(converter.toIstanbul());
++          for (const [path, file] of Object.entries(converter.toIstanbul())) {
++            let sessions = sessionsByPath.get(path);
++            if (!sessions) sessionsByPath.set(path, sessions = []);
++            sessions.push({ testCoverage: { [path]: file } });
++          }
          }
        } catch (error) {
          console.error(`Error while generating code coverage for ${entry.url}.`);
-@@ -117,7 +127,7 @@ export async function v8ToIstanbul(
+@@ -117,7 +137,13 @@ export async function v8ToIstanbul(
      }
    }
  
 -  return istanbulCoverage;
++  // Bound the merger's working copy to one source file.
++  for (const [path, sessions] of sessionsByPath) {
++    const { coverageMap } = getTestCoverage(sessions, {});
++    istanbulCoverage.addFileCoverage(coverageMap.fileCoverageFor(path));
++    sessionsByPath.delete(path);
++  }
 +  return istanbulCoverage.toJSON();
  }
  
