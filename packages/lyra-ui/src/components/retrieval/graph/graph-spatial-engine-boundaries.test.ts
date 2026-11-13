@@ -49,6 +49,39 @@ async function mount(value: ReturnType<typeof setup>): Promise<void> {
 }
 
 describe('graph spatial engine boundaries', () => {
+  for (const fence of ['hidden', 'inert', 'aria-hidden'] as const) {
+    it(`defers an initially ${fence} renderer until its author fence opens without IntersectionObserver`, async () => {
+      const saved = Object.getOwnPropertyDescriptor(window, 'IntersectionObserver');
+      Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: undefined });
+      const value = setup();
+      let fallbacks = 0;
+      value.graph.addEventListener('lr-engine-fallback', () => fallbacks++);
+      value.graph.setAttribute(fence, fence === 'aria-hidden' ? 'true' : '');
+      try {
+        await fixture(value.graph);
+        await waitUntil(() => value.graph.shadowRoot!.querySelector('[data-webgl-host]') !== null);
+        await settle(value.graph);
+        expect(value.loaded()).to.equal(false);
+        expect(value.sizes).to.deep.equal([]);
+        value.graph.removeAttribute(fence);
+        await waitUntil(() => value.loaded() && value.cameras.length > 0, 'removing the authored fence starts the deferred renderer');
+        await settle(value.graph);
+        const surface = value.graph.shadowRoot!.querySelector<HTMLElement>('[data-webgl-host]')!;
+        expect(value.sizes.at(-1)).to.deep.equal([surface.clientWidth, surface.clientHeight]);
+        expect(surface.clientWidth).to.be.greaterThan(0);
+        expect(surface.clientHeight).to.be.greaterThan(0);
+        expect(await value.graph.focusNode('b')).to.equal(true);
+        expect(value.graph.shadowRoot!.querySelectorAll('[data-webgl-host] > canvas:not([data-graph-labels])').length).to.equal(1);
+        expect(value.disposed()).to.equal(0);
+        expect(fallbacks).to.equal(0);
+      } finally {
+        value.graph.remove();
+        if (saved) Object.defineProperty(window, 'IntersectionObserver', saved);
+        else Reflect.deleteProperty(window, 'IntersectionObserver');
+      }
+    });
+  }
+
   for (const capability of ['setGlow', 'setNodeMeshes'] as const) {
     it(`keeps the ordinary scene usable when the optional ${capability} capability getter throws`, async () => {
       const value = setup();
