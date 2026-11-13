@@ -19723,6 +19723,7 @@
           "src/components/overlays/overlay/retired-naming-arrow.test.ts",
           "src/components/overlays/overlay/retired-properties.test.ts",
           "src/components/overlays/overlay/retired-style-hooks.test.ts",
+          "src/components/overlays/overlay/tooltip-delay-reconfiguration.test.ts",
           "src/components/overlays/overlay/tooltip-description.test.ts",
           "src/components/overlays/overlay/tooltip-exit-position.test.ts",
           "src/components/overlays/overlay/tooltip-lifecycle.test.ts",
@@ -41411,6 +41412,7 @@
           "src/components/overlays/overlay/retired-naming-arrow.test.ts",
           "src/components/overlays/overlay/retired-properties.test.ts",
           "src/components/overlays/overlay/retired-style-hooks.test.ts",
+          "src/components/overlays/overlay/tooltip-delay-reconfiguration.test.ts",
           "src/components/overlays/overlay/tooltip-description.test.ts",
           "src/components/overlays/overlay/tooltip-exit-position.test.ts",
           "src/components/overlays/overlay/tooltip-lifecycle.test.ts",
@@ -48342,6 +48344,7 @@
           "src/components/forms/select/required-button-semantics.test.ts",
           "src/components/forms/select/select-change-request.test.ts",
           "src/components/forms/select/select-closed-layout.test.ts",
+          "src/components/forms/select/select-composition.test.ts",
           "src/components/forms/select/select-form-lifecycle.test.ts",
           "src/components/forms/select/select-initial-and-unknown-boundaries.test.ts",
           "src/components/forms/select/select-interaction.test.ts",
@@ -52965,6 +52968,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/swatch-picker/swatch-keys.property.test.ts",
           "src/components/forms/swatch-picker/swatch-picker-live-items.test.ts",
           "src/components/forms/swatch-picker/swatch-picker-remediation.test.ts",
           "src/components/forms/swatch-picker/swatch-picker.test.ts"
@@ -59096,6 +59100,12 @@
               "state": "populated"
             },
             {
+              "file": "src/components/overlays/overlay/tooltip-delay-reconfiguration.test.ts",
+              "test": "replaces a pending hide delay without letting its obsolete timer close a still-visible tooltip",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/overlays/overlay/tooltip.test.ts",
               "test": "T1 opens on Tab onto the slotted trigger with the default trigger, described and accessible",
               "target": "el",
@@ -59271,6 +59281,7 @@
           "src/components/overlays/overlay/retired-naming-arrow.test.ts",
           "src/components/overlays/overlay/retired-properties.test.ts",
           "src/components/overlays/overlay/retired-style-hooks.test.ts",
+          "src/components/overlays/overlay/tooltip-delay-reconfiguration.test.ts",
           "src/components/overlays/overlay/tooltip-description.test.ts",
           "src/components/overlays/overlay/tooltip-exit-position.test.ts",
           "src/components/overlays/overlay/tooltip-lifecycle.test.ts",
