@@ -400,6 +400,9 @@ export class GraphSpatialController {
       }, current, () => yieldGraphNodeRendererTask(this.host.ownerDocument.defaultView, abort.signal), abort.signal).then((meshes) => {
         if (!current()) return;
         this.meshPending = false;
+        // A companion can change the renderer while accepting the meshes. Keep the
+        // pending geometry owned so the replacement can clear it on its next update.
+        this.meshes = meshes;
         try { engine.setNodeMeshes!(meshes); }
         catch (error) {
           if (!current()) return;
@@ -412,7 +415,7 @@ export class GraphSpatialController {
           throw new GraphNodeRendererError(reason);
         }
         if (!current()) return;
-        this.meshes = meshes; this.options.repaint();
+        this.options.repaint();
       }).catch((error: unknown) => {
         if (!current()) return;
         this.meshPending = false; this.meshes = undefined; this.meshFailed = true;

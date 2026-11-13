@@ -257,4 +257,108 @@ describe('graph custom node and glow opt-ins', () => {
     });
   }
 
+  it('retires a completed mesh batch when the last renderer callback schedules a newer option', async () => {
+    const value = setup();
+    let calls = 0, errors = 0;
+    value.graph.addEventListener('lr-node-render-error', () => { errors++; });
+    value.graph.nodeRenderer = context => {
+      calls++;
+      if (context.index === 1) queueMicrotask(() => { value.graph.nodeRenderer = undefined; });
+      return mesh();
+    };
+    await mount(value); await nextFrame();
+    expect(calls).to.equal(2);
+    expect(value.meshes.filter(rows => rows !== undefined).length).to.equal(0);
+    expect(errors).to.equal(0);
+    value.graph.nodeRenderer = () => mesh();
+    await value.graph.updateComplete;
+    await waitUntil(() => value.meshes.some(rows => rows?.length === 2));
+    expect(value.meshes.filter(rows => rows !== undefined).length).to.equal(1);
+    expect(errors).to.equal(0);
+  });
+
+  for (const refusal of ['none', 'throw', 'descriptor'] as const) {
+    it(`keeps a replacement renderer authoritative when a companion mesh commit retires with ${refusal}`, async () => {
+      let armed = true, retired = 0, errors = 0, fallbacks = 0;
+      const value = setup(true, rows => {
+        if (!rows || !armed) return;
+        armed = false;
+        const retire = () => { retired++; value.graph.nodeRenderer = undefined; };
+        if (refusal === 'descriptor') {
+          throw new Proxy({}, { getOwnPropertyDescriptor(_target, key) {
+            if (key === 'reason') retire();
+            return undefined;
+          } });
+        }
+        retire();
+        if (refusal === 'throw') throw new Error('private companion failure');
+      });
+      value.graph.addEventListener('lr-node-render-error', () => { errors++; });
+      value.graph.addEventListener('lr-engine-fallback', () => { fallbacks++; });
+      value.graph.nodeRenderer = () => mesh();
+      await mount(value);
+      await waitUntil(() => retired === 1);
+      await value.graph.updateComplete; await nextFrame();
+      expect(errors).to.equal(0); expect(fallbacks).to.equal(0);
+      expect(value.meshes.at(-1) === undefined, 'retired custom geometry is removed from the companion').to.equal(true);
+      expect(value.graph.shadowRoot!.querySelector('[part="custom-node-notice"]') === null).to.equal(true);
+      const before = value.meshes.filter(rows => rows !== undefined).length;
+      value.graph.nodeRenderer = () => mesh();
+      await value.graph.updateComplete;
+      await waitUntil(() => value.meshes.filter(rows => rows !== undefined).length === before + 1);
+      expect(value.meshes.at(-1)?.length).to.equal(2);
+      expect(errors).to.equal(0); expect(fallbacks).to.equal(0);
+      expect(value.data()).to.equal(1);
+    });
+  }
+
+  it('does not announce a failed renderer after companion cleanup installs a replacement', async () => {
+    let replaced = 0, errors = 0, fallbacks = 0;
+    const value = setup(true, rows => {
+      if (rows !== undefined || replaced !== 0) return;
+      replaced++;
+      value.graph.nodeRenderer = () => mesh();
+    });
+    value.graph.addEventListener('lr-node-render-error', () => { errors++; });
+    value.graph.addEventListener('lr-engine-fallback', () => { fallbacks++; });
+    value.graph.nodeRenderer = () => { throw new Error('private failed renderer'); };
+    await mount(value);
+    await waitUntil(() => value.meshes.some(rows => rows?.length === 2));
+    expect(replaced).to.equal(1);
+    expect(errors).to.equal(0); expect(fallbacks).to.equal(0);
+    expect(value.graph.shadowRoot!.querySelector('[part="custom-node-notice"]') === null).to.equal(true);
+    expect(value.meshes.filter(rows => rows !== undefined).length).to.equal(1);
+    expect(value.data()).to.equal(1);
+  });
+
+  it('retains the ordinary scene and reports a sanitized error when companion cleanup also refuses', async () => {
+    let cleanups = 0, errors = 0, fallbacks = 0;
+    const details: unknown[] = [];
+    const value = setup(true, rows => {
+      if (rows !== undefined) return;
+      cleanups++;
+      throw new Error('private cleanup failure');
+    });
+    value.graph.strings = { graphCustomNodesError: 'Custom geometry refused' };
+    value.graph.addEventListener('lr-node-render-error', event => {
+      errors++;
+      details.push(event.detail);
+    });
+    value.graph.addEventListener('lr-engine-fallback', () => { fallbacks++; });
+    value.graph.nodeRenderer = () => { throw new Error('private renderer failure'); };
+    await mount(value);
+    await waitUntil(() => errors === 1);
+    expect(cleanups).to.equal(1); expect(fallbacks).to.equal(0);
+    expect(details).to.deep.equal([{ reason: 'callback', nodeId: 'a' }]);
+    expect(value.data()).to.equal(1);
+    expect(value.graph.shadowRoot!.textContent).to.contain('Custom geometry refused');
+    expect(value.graph.shadowRoot!.textContent).not.to.contain('private');
+    expect(value.graph.shadowRoot!.querySelector('[data-webgl-host]')?.hasAttribute('hidden')).to.equal(false);
+    value.graph.nodeRenderer = () => mesh();
+    await value.graph.updateComplete;
+    await waitUntil(() => value.meshes.some(rows => rows?.length === 2));
+    expect(value.graph.shadowRoot!.querySelector('[part="custom-node-notice"]') === null).to.equal(true);
+    expect(errors).to.equal(1); expect(fallbacks).to.equal(0);
+  });
+
 });
