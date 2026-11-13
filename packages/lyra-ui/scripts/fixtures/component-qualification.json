@@ -16058,6 +16058,7 @@
           "src/components/data/data-grid/data-grid-coverage.test.ts",
           "src/components/data/data-grid/data-grid-data-lifecycle.test.ts",
           "src/components/data/data-grid/data-grid-export.test.ts",
+          "src/components/data/data-grid/data-grid-fit-virtual-columns.test.ts",
           "src/components/data/data-grid/data-grid-input-boundaries.test.ts",
           "src/components/data/data-grid/data-grid-interaction.test.ts",
           "src/components/data/data-grid/data-grid-keyboard.test.ts",
