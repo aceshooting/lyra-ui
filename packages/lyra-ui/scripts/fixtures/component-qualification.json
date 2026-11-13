@@ -36172,8 +36172,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/viewers/model-viewer/model-viewer-native.test.ts",
-              "test": "orbits and refits with real key presses and reports each user camera change once",
+              "file": "src/components/viewers/model-viewer/model-viewer-engine-reentry.test.ts",
+              "test": "preserves the last camera when ${key} loses its graphics context",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -36307,6 +36307,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/model-viewer/model-viewer-async.test.ts",
+          "src/components/viewers/model-viewer/model-viewer-engine-reentry.test.ts",
           "src/components/viewers/model-viewer/model-viewer-native.test.ts",
           "src/components/viewers/model-viewer/model-viewer-register.test.ts",
           "src/components/viewers/model-viewer/model-viewer-security.test.ts",

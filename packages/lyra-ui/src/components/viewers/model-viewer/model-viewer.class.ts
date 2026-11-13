@@ -178,11 +178,12 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
     const old = this._camera;
     this._camera = next;
     this.authoredCamera = next !== undefined;
+    const generation = this.generation;
     try {
       if (next) this.engine?.setCamera(next);
       else if (this.status === 'ready') this.fit();
     } catch (error) {
-      this.fail('invalid', 'error', error);
+      if (generation === this.generation) this.fail('invalid', 'error', error);
     }
     this.requestUpdate('camera', old);
   }
@@ -299,11 +300,14 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
       this.engine = engine;
       if (typeof engine.fit !== 'function') { this.fail('engineUnavailable', 'unavailable'); return; }
       engine.setStyle(this.engineStyle());
+      if (!current()) return;
       let parsed = false;
       let contextLost = false;
       const publishParsedView = () => {
         if (!current() || contextLost || !parsed) return;
-        this.status = engine.positionOf?.(0) === null ? 'empty' : 'ready';
+        const empty = engine.positionOf?.(0) === null;
+        if (!current() || contextLost) return;
+        this.status = empty ? 'empty' : 'ready';
         this.message = '';
         if (this.status === 'ready' && !this.authoredCamera) this.fit();
       };
@@ -352,6 +356,7 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
       // focus onto it, where the camera surface's key handler never sees the key.
       container.querySelectorAll('canvas').forEach(canvas => { canvas.setAttribute('aria-hidden', 'true'); canvas.removeAttribute('tabindex'); });
       if (this.authoredCamera && this.camera) engine.setCamera(this.camera);
+      if (!current()) return;
       this.watchEnvironment(current);
       this.refreshEngine();
       if (!current()) return;
@@ -400,13 +405,16 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
   }
 
   private refreshEngine(): void {
-    if (!this.engine || !this.isConnected) return;
+    const engine = this.engine;
+    const generation = this.generation;
+    if (!engine || !this.isConnected) return;
     try {
-      this.engine.setStyle(this.engineStyle());
+      engine.setStyle(this.engineStyle());
+      if (generation !== this.generation) return;
       const box = this.viewport?.getBoundingClientRect();
-      if (box) this.engine.resize(Math.max(1, box.width), Math.max(1, box.height));
+      if (box) engine.resize(Math.max(1, box.width), Math.max(1, box.height));
     } catch (error) {
-      this.fail('invalid', 'error', error);
+      if (generation === this.generation) this.fail('invalid', 'error', error);
     }
   }
 
@@ -446,7 +454,13 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
   /** Fits the current model without emitting a camera change. Does nothing until a model is ready. */
   fit(): void {
     if (this.engine && this.status === 'ready') {
-      try { this.acceptCamera(this.engine.fit?.(), false); } catch (error) { this.fail('invalid', 'error', error); }
+      const generation = this.generation;
+      try {
+        const camera = this.engine.fit?.();
+        if (generation === this.generation && this.status === 'ready') this.acceptCamera(camera, false);
+      } catch (error) {
+        if (generation === this.generation) this.fail('invalid', 'error', error);
+      }
     }
   }
 
@@ -472,11 +486,12 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
       pitch: current.pitch + (action === 'up' ? 0.1 : action === 'down' ? -0.1 : 0),
       distance: current.distance * (action === 'in' ? 0.8 : action === 'out' ? 1.25 : 1),
     });
+    const generation = this.generation;
     try {
       this.engine.setCamera(next);
-      this.acceptCamera(next, true);
+      if (generation === this.generation && this.status === 'ready') this.acceptCamera(next, true);
     } catch (error) {
-      this.fail('invalid', 'error', error);
+      if (generation === this.generation) this.fail('invalid', 'error', error);
     }
   }
 
