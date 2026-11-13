@@ -939,7 +939,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   // change the effective Chart.js type out from under `this.type`, so
   // reusing whenever a chart already exists is always safe here.
   private draw(): void {
-    if (!this.chartJsModule || !this.canvasEl) return;
+    if (!this.chartJsModule || !this.canvasEl || !this.ownerWindow) return;
     if (!this.chart && !this.canvasEl.getContext('2d')) {
       this.setCanvasUnavailable(true);
       return;

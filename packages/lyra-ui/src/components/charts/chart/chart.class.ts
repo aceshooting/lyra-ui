@@ -5581,7 +5581,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   private draw(): void {
     if (this.preparedInvalid || this.spatialActive && this.spatial.error) { this.discardChart(false); return; }
     if (this.spatialActive && this.spatial.loading && this.chart) return;
-    if (!this.chartJsModule || !this.canvasEl) return;
+    if (!this.chartJsModule || !this.canvasEl || !this.ownerWindow) return;
     if (!this.chart && !this.canvasEl.getContext('2d')) {
       this.setCanvasUnavailable(true);
       return;
