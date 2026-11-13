@@ -1805,21 +1805,27 @@ describe('coverage-gap fixes', () => {
   });
 
   it('falls back to a dash range separator when Intl formatRangeToParts throws while parsing typed range text', async () => {
-    const el = (await fixture(
-      html`<lr-date-input mode="range"></lr-date-input>`
-    )) as LyraDateInput;
+    const form = await fixture<HTMLFormElement>(html`<form><lr-date-input mode="range" lang="en-US" name="period"></lr-date-input></form>`);
+    const el = form.querySelector<LyraDateInput>('lr-date-input')!;
     const input = el.shadowRoot!.querySelector(
       '[part="input"]'
     ) as HTMLInputElement;
     const original = Intl.DateTimeFormat.prototype.formatRangeToParts;
+    let calls = 0;
     try {
       Intl.DateTimeFormat.prototype.formatRangeToParts = () => {
+        calls++;
         throw new Error("boom");
       };
-      input.value = "7/10/2026 – 7/15/2026";
-      setTimeout(() => input.dispatchEvent(new Event("change")));
-      await oneEvent(el, "change");
-      expect(el.value).to.equal("2026-07-10/2026-07-15");
+      input.value = 'July 10, 2026 – July 15, 2026';
+      let changes = 0;
+      el.addEventListener('change', () => { changes++; });
+      input.dispatchEvent(new Event('change'));
+      await el.updateComplete;
+      expect(el.value).to.equal('2026-07-10/2026-07-15');
+      expect(new FormData(form).get('period')).to.equal(el.value);
+      expect(changes).to.equal(1);
+      expect(calls, 'the typed text reaches the formatter fallback').to.be.greaterThan(0);
     } finally {
       Intl.DateTimeFormat.prototype.formatRangeToParts = original;
     }
@@ -1830,23 +1836,30 @@ describe('coverage-gap fixes', () => {
     // but its parts contain nothing between the last `startRange` part and the first `endRange`
     // part, so the computed separator is the empty string and the `|| '–'` fallback (not the
     // catch block) is what has to supply the dash.
-    const el = (await fixture(
-      html`<lr-date-input mode="range"></lr-date-input>`
-    )) as LyraDateInput;
+    const form = await fixture<HTMLFormElement>(html`<form><lr-date-input mode="range" lang="en-US" name="period"></lr-date-input></form>`);
+    const el = form.querySelector<LyraDateInput>('lr-date-input')!;
     const input = el.shadowRoot!.querySelector(
       '[part="input"]'
     ) as HTMLInputElement;
     const original = Intl.DateTimeFormat.prototype.formatRangeToParts;
+    let calls = 0;
     try {
-      Intl.DateTimeFormat.prototype.formatRangeToParts = () =>
-        [
+      Intl.DateTimeFormat.prototype.formatRangeToParts = () => {
+        calls++;
+        return [
           { type: 'day', value: '10', source: 'startRange' },
           { type: 'day', value: '15', source: 'endRange' },
         ] as Intl.DateTimeRangeFormatPart[];
-      input.value = "7/10/2026–7/15/2026";
-      setTimeout(() => input.dispatchEvent(new Event("change")));
-      await oneEvent(el, "change");
-      expect(el.value).to.equal("2026-07-10/2026-07-15");
+      };
+      input.value = 'July 15, 2026–July 10, 2026';
+      let changes = 0;
+      el.addEventListener('change', () => { changes++; });
+      input.dispatchEvent(new Event('change'));
+      await el.updateComplete;
+      expect(el.value).to.equal('2026-07-10/2026-07-15');
+      expect(new FormData(form).get('period')).to.equal(el.value);
+      expect(changes).to.equal(1);
+      expect(calls, 'the typed text reaches the formatter fallback').to.be.greaterThan(0);
     } finally {
       Intl.DateTimeFormat.prototype.formatRangeToParts = original;
     }

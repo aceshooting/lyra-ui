@@ -392,6 +392,7 @@ function codeBlockSelectionAnchor(
       return null;
     range = selection.getRangeAt(0);
   }
+  if (!shadowRoot.contains(range.commonAncestorContainer)) return null;
   const text = boundedSelectionText(range);
   if (!text) return null;
   const lineOf = (node: Node): number | null => {

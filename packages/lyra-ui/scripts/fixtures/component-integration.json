@@ -1284,9 +1284,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 55612,
+        "bytes": 55626,
         "kib": 54.3,
-        "bundleSha256": "a13ad60778af738b289e7388f720a0481afbc6c1f9da95ef2aebcd8ca5e1a8c9",
+        "bundleSha256": "ff2924d54b861ef5c864f6ea4c5733cb278ba198455b6bba2feeda7a4912d561",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -1309,9 +1309,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 54442,
+        "bytes": 54458,
         "kib": 53.2,
-        "bundleSha256": "b822cc6b53fdea18a024efc1594957b8597d5dd5aad9764934b1683e74763a3c",
+        "bundleSha256": "12b64d283e4ea5cc0e07d7f36ba14a229ce46bfffd28b421dfbd8862774a350c",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -2631,9 +2631,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 219429,
+        "bytes": 219451,
         "kib": 214.3,
-        "bundleSha256": "5de9d3fbb3c0fd47a150148d2f89d88f60b4b505ac26fbb6f2e23c00c6e86bc5",
+        "bundleSha256": "b426e22306408d3537884da4bf9c97659aa8de358f9ac3bc04514b9cfe3216a0",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -4405,9 +4405,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 135379,
+        "bytes": 135402,
         "kib": 132.2,
-        "bundleSha256": "da06cb58d0b9a4b2f8163daa2850264f371cc07c9e22fbfc3ec2291a99f500f4",
+        "bundleSha256": "4124a9fb8b88b390eb57975935dc5988d423424dbb1b97da7bc1a624352cd43b",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
