@@ -1,4 +1,4 @@
-import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './ebook-viewer.js';
 import type { LyraEbookViewer } from './ebook-viewer.js';
 import { __setEpubJsForTesting, type EpubBook } from './ebook-loader.js';
@@ -160,4 +160,48 @@ for (const boundary of ['book value', 'rendition value', 'display', 'prev', 'nex
     expect(replacement.displayed.at(-1)).to.equal('replacement-cfi');
     element.remove();
   });
+}
+
+for (const stage of ['book ready', 'first display'] as const) {
+  for (const retirement of ['aborted', 'replaced', 'disconnected'] as const) {
+    it(`releases a candidate ebook after a ${retirement} ${stage} rejection without damaging its successor`, async () => {
+      const stale = peer(), fresh = peer();
+      let reject!: (reason: Error) => void;
+      const pending = new Promise<void>((_resolve, fail) => { reject = fail; });
+      let started = false, destroyed = 0, freshDestroyed = 0, errors = 0;
+      stale.book.destroy = () => { destroyed++; };
+      fresh.book.destroy = () => { freshDestroyed++; };
+      if (stage === 'book ready') {
+        stale.book.ready = pending;
+        stale.book.renderTo = () => { started = true; return stale.rendition; };
+      } else stale.rendition.display = () => { started = true; return pending; };
+      provide(stale.book);
+      const element = await fixture<LyraEbookViewer>(html`<lr-ebook-viewer></lr-ebook-viewer>`);
+      element.addEventListener('lr-render-error', () => { errors++; });
+      element.src = 'https://example.test/first.epub';
+      await waitUntil(() => started, 'initial ebook reached the delayed stage');
+      if (retirement === 'replaced') {
+        provide(fresh.book); element.src = 'https://example.test/second.epub';
+        await waitUntil(() => element.shadowRoot!.querySelector<HTMLButtonElement>('[part="next-button"]')?.disabled === false,
+          'replacement ebook ready');
+      } else if (retirement === 'disconnected') {
+        element.remove(); await aTimeout(0);
+      } else {
+        element.src = ''; await element.updateComplete; await aTimeout(0);
+      }
+      reject(retirement === 'aborted' ? new DOMException('Cancelled ebook', 'AbortError') : new Error('Retired ebook failure'));
+      await waitUntil(() => destroyed === 1, 'candidate ebook released');
+      await element.updateComplete;
+      expect(errors).to.equal(0);
+      expect(element.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
+      expect(freshDestroyed).to.equal(0);
+      if (retirement === 'replaced') {
+        expect(await element.scrollToAnchor({ kind: 'cfi', cfi: 'current-book-location' })).to.equal(true);
+        expect(fresh.displayed.at(-1)).to.equal('current-book-location');
+      }
+      element.remove(); await aTimeout(0);
+      expect(destroyed).to.equal(1);
+      expect(freshDestroyed).to.equal(retirement === 'replaced' ? 1 : 0);
+    });
+  }
 }

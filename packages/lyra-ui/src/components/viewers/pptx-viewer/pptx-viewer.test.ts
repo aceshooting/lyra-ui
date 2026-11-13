@@ -2108,3 +2108,56 @@ it('keeps a valid search usable when the renderer has no highlight handle', asyn
     expect(el.pageViewerSnapshot.status).to.equal('ready');
   } finally { restore(); }
 });
+
+for (const stage of ['response body', 'renderer open'] as const) {
+  for (const retirement of ['aborted', 'replaced', 'disconnected'] as const) {
+    it(`contains a ${retirement} ${stage} rejection without publishing an obsolete presentation error`, async () => {
+      const original = window.fetch;
+      const bytes = deferred<ArrayBuffer>(), opened = deferred<PptxViewerApi>();
+      const fresh = fakeModule(3);
+      let started = false, errors = 0, loads = 0;
+      window.fetch = (url: RequestInfo | URL) => Promise.resolve(
+        stage === 'response body' && String(url).includes('first.pptx')
+          ? { ...response(), arrayBuffer() { started = true; return bytes.promise; } }
+          : response(),
+      );
+      try {
+        const element = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+        const pendingModule: PptxRendererModule = {
+          PptxViewer: { open: () => { started = true; return opened.promise; } },
+          RECOMMENDED_ZIP_LIMITS: { maxEntries: 10, maxEntryUncompressedBytes: 1024,
+            maxTotalUncompressedBytes: 4096, maxMediaBytes: 4096, maxConcurrency: 1 },
+        };
+        element.loadRenderer = async () => stage === 'renderer open' ? pendingModule : fresh.module;
+        element.addEventListener('lr-render-error', () => { errors++; });
+        element.addEventListener('lr-load', () => { loads++; });
+        element.src = 'https://example.test/first.pptx';
+        await waitUntil(() => started, 'initial presentation reached the delayed stage');
+        if (retirement === 'replaced') {
+          element.loadRenderer = async () => fresh.module;
+          const loaded = oneEvent(element, 'lr-load');
+          element.src = 'https://example.test/second.pptx';
+          await loaded;
+        } else if (retirement === 'disconnected') {
+          element.remove(); await aTimeout(0);
+        } else {
+          element.src = ''; await element.updateComplete; await aTimeout(0);
+        }
+        const error = retirement === 'aborted' ? new DOMException('Cancelled presentation', 'AbortError')
+          : new Error('Retired presentation failure');
+        if (stage === 'response body') bytes.reject(error);
+        else opened.reject(error);
+        await aTimeout(0); await element.updateComplete;
+        expect(errors).to.equal(0);
+        expect(loads).to.equal(retirement === 'replaced' ? 1 : 0);
+        expect(element.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
+        expect(fresh.calls.destroy).to.equal(0);
+        if (retirement === 'replaced') {
+          expect(element.pageViewerSnapshot).to.deep.include({ status: 'ready', page: 1, pageCount: 3 });
+          await element.goToSlide(1);
+          expect(element.pageViewerSnapshot.page).to.equal(2);
+        }
+      } finally { window.fetch = original; }
+    });
+  }
+}
