@@ -195,6 +195,7 @@ patchedDependencies:
   braces@3.0.3: 6a51944e47fdf849394529628931b895d58dbf01ce01aa96ce460a6f9f45e6b8
   deepmerge@4.1.1: 4e32e68c49fe3eb85931ddd73f814a200bfe03b748cc0cf0a69288fd2c19403d
   sprintf-js@1.0.3: 3cc545bd22e591995f0a9f7841330069463717b32798e92b23976cd8a96d9b69
+  v8-to-istanbul@9.3.0: cd92533fbd3bfd73dd8d71eda33436ead72d79c4a5b45a069fd61973db14b936
 
 importers:
 
@@ -325,7 +326,7 @@ importers:
         version: 4.3.5
       v8-to-istanbul:
         specifier: ^9.3.0
-        version: 9.3.0
+        version: 9.3.0(patch_hash=cd92533fbd3bfd73dd8d71eda33436ead72d79c4a5b45a069fd61973db14b936)
       vite:
         specifier: ^8.3.8
         version: 8.3.8(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
@@ -396,7 +397,7 @@ importers:
         version: 7.0.2
       v8-to-istanbul:
         specifier: ^9.3.0
-        version: 9.3.0
+        version: 9.3.0(patch_hash=cd92533fbd3bfd73dd8d71eda33436ead72d79c4a5b45a069fd61973db14b936)
       vite:
         specifier: ^8.3.8
         version: 8.3.8(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
@@ -10154,7 +10155,7 @@ snapshots:
       istanbul-lib-coverage: 3.2.2
       lru-cache: 8.0.5
       picomatch: 2.3.2
-      v8-to-istanbul: 9.3.0
+      v8-to-istanbul: 9.3.0(patch_hash=cd92533fbd3bfd73dd8d71eda33436ead72d79c4a5b45a069fd61973db14b936)
     transitivePeerDependencies:
       - bufferutil
       - supports-color
@@ -13621,7 +13622,7 @@ snapshots:
 
   uuid@11.1.1: {}
 
-  v8-to-istanbul@9.3.0:
+  v8-to-istanbul@9.3.0(patch_hash=cd92533fbd3bfd73dd8d71eda33436ead72d79c4a5b45a069fd61973db14b936):
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       '@types/istanbul-lib-coverage': 2.0.6

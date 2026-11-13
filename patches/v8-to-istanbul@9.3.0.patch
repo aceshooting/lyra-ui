@@ -1,0 +1,44 @@
+diff --git a/lib/v8-to-istanbul.js b/lib/v8-to-istanbul.js
+index 3616437b00658861dc5a8910c64d1449e9fdf467..8e01993dd932ad774a349ba5019644a5ec03a3e1 100644
+--- a/lib/v8-to-istanbul.js
++++ b/lib/v8-to-istanbul.js
+@@ -16,7 +16,7 @@ try {
+ } catch (_err) {
+   // most likely we're on an older version of Node.js.
+ }
+-const { TraceMap } = require('@jridgewell/trace-mapping')
++const { TraceMap, decodedMappings } = require('@jridgewell/trace-mapping')
+ const isOlderNode10 = /^v10\.(([0-9]\.)|(1[0-5]\.))/u.test(process.version)
+ const isNode8 = /^v8\./.test(process.version)
+ 
+@@ -129,7 +129,29 @@ module.exports = class V8ToIstanbul {
+     blocks.forEach(block => {
+       block.ranges.forEach((range, i) => {
+         const isEmptyCoverage = block.functionName === '(empty-report)'
+-        const { startCol, endCol, path, covSource } = this._maybeRemapStartColEndCol(range, isEmptyCoverage)
++        let { startCol, endCol, path, covSource } = this._maybeRemapStartColEndCol(range, isEmptyCoverage)
++        // A whole script can start/end in unmapped compiler helpers or a map
++        // trailer. Retain its native counter over the mapped source envelope,
++        // without turning the script into a function or changing child ranges.
++        if (i === 0 && !block.functionName && this.sourceMap &&
++            this.sourceMap.sources.length === 1 && this.sources.source &&
++            range.startOffset === 0 && range.endOffset === this.sources.source.length) {
++          let first = Infinity
++          let last = -1
++          for (const line of decodedMappings(this.sourceMap)) {
++            for (const segment of line) {
++              if (segment.length < 4 || segment[1] !== 0) continue
++              const originalLine = covSource.lines[segment[2]]
++              if (!originalLine) continue
++              first = Math.min(first, originalLine.startCol + segment[3])
++              last = Math.max(last, originalLine.endCol)
++            }
++          }
++          if (first < last) {
++            startCol = first
++            endCol = last
++          }
++        }
+         if (this.excludePath(path)) {
+           return
+         }

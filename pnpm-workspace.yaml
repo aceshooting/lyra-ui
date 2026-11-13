@@ -10,6 +10,7 @@ patchedDependencies:
   braces@3.0.3: patches/braces@3.0.3.patch
   deepmerge@4.1.1: patches/deepmerge@4.1.1.patch
   sprintf-js@1.0.3: patches/sprintf-js@1.0.3.patch
+  v8-to-istanbul@9.3.0: patches/v8-to-istanbul@9.3.0.patch
 # dependency-cruiser parses TypeScript through the legacy compiler API, which typescript@7 no longer
 # exports (its range is >=2 <7). Give it a private typescript@6 instead of the hoisted workspace copy;
 # lyra-ui and every other package keep typescript@7. Drop this when dependency-cruiser supports 7.

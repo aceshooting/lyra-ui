@@ -301,6 +301,14 @@ Every upload names only that prepared report and its matching flag, disables rep
 file fixes, and leaves Codecov outages informational. Local coverage commands and floors remain
 blocking.
 
+Native V8 reports retain function ownership when combining browser realms, test sessions and
+shards: an imported module cannot supply hits to an idle callback. The pinned runner patches enforce
+that boundary. The `v8-to-istanbul` patch also retains an observed whole-script counter over its
+single source map's mapped extent when generated helpers or a source-map trailer have unmapped
+endpoints. It preserves the native count and child ranges; it does not create module counters absent
+from a snapshot. `scripts/coverage-realms.test.mjs` verifies these rules with precise V8 execution,
+real TypeScript transformation, both merge orders and unexecuted callback branches.
+
 README badges never request Codecov's own badge image: GitHub serves README images through a proxy
 that gives up after about four seconds, and Codecov needs longer than that to render a flagged badge
 (it recomputes the flag on every request), so those images rendered broken. The `Deploy docs`

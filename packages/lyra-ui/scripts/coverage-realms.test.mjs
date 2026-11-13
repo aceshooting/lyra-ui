@@ -18,6 +18,114 @@ const runnerRequire = createRequire(require.resolve('@web/test-runner-playwright
 const { v8ToIstanbul } = runnerRequire('@web/test-runner-coverage-v8');
 const { getTestCoverage } = runnerRequire(join(dirname(runnerRequire.resolve('@web/test-runner-core')), 'coverage/getTestCoverage.js'));
 const nativeConverter = createRequire(runnerRequire.resolve('@web/test-runner-coverage-v8'))('v8-to-istanbul');
+const { transform } = createRequire(require.resolve('@web/dev-server-esbuild'))('esbuild');
+
+test('source-mapped module execution survives generated helpers without covering idle callbacks', async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), 'lyra-mapped-coverage-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const original = [
+    'function decorate(_target: unknown) {}',
+    '@decorate',
+    'class Example {',
+    '  fallback(value?: string) { return value ?? "unused fallback"; }',
+    '  untouched() { return "never called"; }',
+    '}',
+    'globalThis.result = globalThis.optional?.("ready");',
+    'globalThis.instance = new Example();',
+    'globalThis.callback = () => "unused callback";',
+    'if (globalThis.invoke) globalThis.instance.fallback("authored");',
+    '',
+  ].join('\n');
+  const filename = join(directory, 'mapped-root.ts');
+  await writeFile(filename, original);
+  const { code } = await transform(original, {
+    loader: 'ts', target: 'es2022', sourcefile: filename, sourcemap: 'inline',
+    tsconfigRaw: { compilerOptions: { experimentalDecorators: true, useDefineForClassFields: false } },
+  });
+  const server = createServer((_request, response) => {
+    response.setHeader('Content-Type', 'application/javascript');
+    response.end(code);
+  });
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  t.after(() => new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve())));
+  const port = server.address().port;
+  const url = `http://127.0.0.1:${port}/mapped-root.ts`;
+  const session = new Session();
+  session.connect();
+  t.after(() => session.disconnect());
+  await session.post('Profiler.enable');
+  await session.post('Profiler.startPreciseCoverage', { callCount: true, detailed: true });
+  const entries = [];
+  for (const active of [false, true]) {
+    const context = { optional: active ? value => value : undefined, invoke: !active };
+    runInNewContext(code, context, { filename: url });
+    const snapshot = await session.post('Profiler.takePreciseCoverage');
+    entries.push(...snapshot.result.filter(entry => entry.url === url));
+    assert.equal(context.result, active ? 'ready' : undefined);
+  }
+  await session.post('Profiler.stopPreciseCoverage');
+  assert.equal(entries.length, 2);
+  const before = structuredClone(entries);
+  const config = { rootDir: directory, protocol: 'http:', hostname: '127.0.0.1', port,
+    coverageConfig: { include: ['**/*.ts'], exclude: ['**/ignored/**'] } };
+  for (const ordered of [entries, [...entries].reverse()]) {
+    const coverage = createCoverageMap(await v8ToIstanbul(config, [], ordered)).fileCoverageFor(filename);
+    const moduleCall = Object.entries(coverage.branchMap).filter(([, branch]) => branch.loc.start.line === 7);
+    assert.equal(moduleCall.length, 1, 'the native optional-call range is retained');
+    assert.deepEqual(coverage.b[moduleCall[0][0]], [1], 'the optional call executed in exactly one context');
+    const fallback = Object.entries(coverage.fnMap).find(([, fn]) => fn.name === 'fallback');
+    assert.equal(coverage.f[fallback[0]], 1);
+    const callbackBranches = Object.entries(coverage.branchMap).filter(([, branch]) => branch.loc.start.line === 4);
+    assert.deepEqual(callbackBranches.map(([id]) => coverage.b[id][0]).sort(), [0, 1],
+      'the idle context cannot credit the untaken method fallback');
+    for (const name of ['untouched', 'globalThis.callback']) {
+      const fn = Object.entries(coverage.fnMap).find(([, fn]) => fn.name === name);
+      assert.equal(coverage.f[fn[0]], 0, `${name} remains uncalled`);
+    }
+    assert.deepEqual(Object.keys(coverage.getLineCoverage()), Array.from({ length: 10 }, (_, index) => String(index + 1)),
+      'the original source inventory is unchanged');
+  }
+  assert.deepEqual(entries, before, 'mapping must not mutate native evidence');
+});
+
+test('source mapping does not invent module counters when only a previously loaded callback executes', async (t) => {
+  const filename = '/fixture/already-loaded.ts';
+  const url = `file://${filename}`;
+  const original = [
+    'globalThis.topLevel = "loaded before capture";',
+    'globalThis.callback = (value?: string) => {',
+    '  return value ?? "untaken";',
+    '};',
+    '',
+  ].join('\n');
+  const { code } = await transform(original, { loader: 'ts', target: 'es2022', sourcefile: filename, sourcemap: 'inline' });
+  const context = {};
+  runInNewContext(code, context, { filename: url });
+  assert.equal(context.topLevel, 'loaded before capture');
+  const session = new Session();
+  session.connect();
+  t.after(() => session.disconnect());
+  await session.post('Profiler.enable');
+  await session.post('Profiler.startPreciseCoverage', { callCount: true, detailed: true });
+  assert.equal(context.callback('authored'), 'authored');
+  const snapshot = await session.post('Profiler.takePreciseCoverage');
+  await session.post('Profiler.stopPreciseCoverage');
+  const entry = snapshot.result.find(script => script.url === url);
+  assert.ok(entry);
+  assert.equal(entry.functions.some(fn => fn.ranges[0].startOffset === 0), false,
+    'V8 omitted the module that did not execute during capture');
+  const converter = nativeConverter(filename, 0, { source: code });
+  await converter.load();
+  converter.applyCoverage(entry.functions);
+  const coverage = createCoverageMap(converter.toIstanbul()).fileCoverageFor(filename);
+  assert.equal(Object.values(coverage.branchMap).some(range => range.loc.start.line === 1), false,
+    'mapping must not invent a module counter absent from the snapshot');
+  const branch = Object.entries(coverage.branchMap).find(([, range]) => range.loc.start.line === 3);
+  assert.deepEqual(coverage.b[branch[0]], [0], 'the callback fallback remains untaken');
+  const callback = Object.entries(coverage.fnMap).find(([, fn]) => fn.name === 'globalThis.callback');
+  assert.equal(coverage.f[callback[0]], 1);
+});
 
 function branchSession(rows) {
   const path = '/fixture/branches.ts';
