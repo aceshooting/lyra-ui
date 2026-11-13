@@ -18090,6 +18090,7 @@
           "src/components/data/document-library/document-library-remediation.test.ts",
           "src/components/data/document-library/document-library-scale.test.ts",
           "src/components/data/document-library/document-library-search-sizing.test.ts",
+          "src/components/data/document-library/document-library-source-admission.test.ts",
           "src/components/data/document-library/document-library-source-scale.test.ts",
           "src/components/data/document-library/document-library.test.ts"
         ],
@@ -21828,6 +21829,7 @@
           "src/components/agent-tools/eval-dataset/eval-dataset-facet-recovery.test.ts",
           "src/components/agent-tools/eval-dataset/eval-dataset-scale.test.ts",
           "src/components/agent-tools/eval-dataset/eval-dataset-search-sizing.test.ts",
+          "src/components/agent-tools/eval-dataset/eval-dataset-source-admission.test.ts",
           "src/components/agent-tools/eval-dataset/eval-dataset-source-scale.test.ts",
           "src/components/agent-tools/eval-dataset/eval-dataset-tag-cost.test.ts",
           "src/components/agent-tools/eval-dataset/eval-dataset.test.ts"
@@ -46967,6 +46969,7 @@
           "src/components/retrieval/retrieval-results/retrieval-results-membership-cost.test.ts",
           "src/components/retrieval/retrieval-results/retrieval-results-model.test.ts",
           "src/components/retrieval/retrieval-results/retrieval-results-scale.test.ts",
+          "src/components/retrieval/retrieval-results/retrieval-results-source-admission.test.ts",
           "src/components/retrieval/retrieval-results/retrieval-results-source-scale.test.ts",
           "src/components/retrieval/retrieval-results/retrieval-results-source-states.test.ts",
           "src/components/retrieval/retrieval-results/retrieval-results.test.ts"
