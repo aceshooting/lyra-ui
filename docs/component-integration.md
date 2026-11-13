@@ -58,7 +58,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-carousel"></a>`lr-carousel` | layout | `import '@aceshooting/lyra-ui/components/lr-carousel.js';` | none | none | none | 37.4 KiB |
 | <a id="lr-carousel-item"></a>`lr-carousel-item` | layout | `import '@aceshooting/lyra-ui/components/lr-carousel-item.js';` | none | none | none | 22.4 KiB |
 | <a id="lr-change-review"></a>`lr-change-review` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-change-review.js';` | `shiki` | `lr-diff-view` | none | 49.4 KiB |
-| <a id="lr-chart"></a>`lr-chart` | charts | `import '@aceshooting/lyra-ui/components/lr-chart.js';` | `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` | `lr-skeleton` | none | 84.5 KiB |
+| <a id="lr-chart"></a>`lr-chart` | charts | `import '@aceshooting/lyra-ui/components/lr-chart.js';` | `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` | `lr-skeleton` | none | 84.6 KiB |
 | <a id="lr-chart-3d"></a>`lr-chart-3d` | charts | `import '@aceshooting/lyra-ui/components/lr-chart-3d.js';` | `@aceshooting/lyra-3d` | none | none | 38.3 KiB |
 | <a id="lr-chat-composer"></a>`lr-chat-composer` | conversation | `import '@aceshooting/lyra-ui/components/lr-chat-composer.js';` | none | none | none | 37.7 KiB |
 | <a id="lr-chat-message"></a>`lr-chat-message` | conversation | `import '@aceshooting/lyra-ui/components/lr-chat-message.js';` | none | none | none | 29.4 KiB |

@@ -1759,6 +1759,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   private spatialWaiters = new Set<() => void>();
   private spatialRevealToken: object = {};
   private preparedGeneration: object = {};
+  private legendDataGeneration: object = {};
   private spatialKeyboardIndex = 0;
   private spatialChanged(): void {
     this.preparedChanged = true;
@@ -6107,6 +6108,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       'type', 'indexAxis', 'formatter', 'valueFormatter', 'locale', 'strings', 'stacked', 'stackedAxes', 'stackTotals',
       'xLabel', 'yLabel', 'y2Label', 'withDataTable', 'dataTableToggle', 'dataTableExpandedOverride',
       'maxRecords', 'samplingWidth', 'canvasUnavailable'].includes(String(key))) {
+      this.legendDataGeneration = {};
       this.dataTableRows = undefined;
       if (!this.streamingTableUpdate || this.dataTableVisible || this.canvasUnavailable) this.clearDeferredTable();
     }
@@ -6286,7 +6288,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private toggleDataset(datasetIndex: number): void {
-    if (!this.chart) return;
+    const chart = this.chart;
+    const generation = this.legendDataGeneration;
+    if (!chart) return;
     const datasetCount = this.effectiveData().datasets.length;
     if (datasetIndex < 0 || datasetIndex >= datasetCount) return;
     const hidden = this.effectiveHiddenDatasetIndexes();
@@ -6301,13 +6305,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       legendVisibilityDetail(datasetIndex, visible, nextHidden),
       { cancelable: true }
     );
-    if (proposed.defaultPrevented) return;
+    if (proposed.defaultPrevented || this.chart !== chart || generation !== this.legendDataGeneration) return;
     // Materialize the full effective snapshot, including any configured-hidden peers, so an
     // accepted user choice survives Chart.js reconstruction and can be persisted by a host.
     this.hiddenDatasets = nextHidden;
-    const appliedVisibility = { chart: this.chart, hidden: this.canonicalHiddenDatasets() };
+    const appliedVisibility = { chart, hidden: this.canonicalHiddenDatasets() };
     this.applyDatasetVisibility();
-    this.chart.update('none');
+    chart.update('none');
     this.appliedLegendVisibility = appliedVisibility;
     this.requestUpdate('canvasPresentation', null);
     this.emit(
@@ -6317,7 +6321,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private toggleDatum(index: number): void {
-    if (!this.chart || !this.isSliceChart()) return;
+    const chart = this.chart;
+    const generation = this.legendDataGeneration;
+    if (!chart || !this.isSliceChart()) return;
     const count = this.dataTableSample().rowCount;
     if (index < 0 || index >= count) return;
     const hidden = normalizeHiddenDatasets(this.hiddenDatums, count) ?? [];
@@ -6325,10 +6331,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const next = visible ? hidden.filter((item) => item !== index) : [...hidden, index].sort((a, b) => a - b);
     const detail: LyraChartDatumVisibilityChangeDetail = { index, visible, hiddenDatums: next };
     const proposed = this.emit('lr-datum-visibility-change-request', detail, { cancelable: true });
-    if (proposed.defaultPrevented) return;
+    if (proposed.defaultPrevented || this.chart !== chart || generation !== this.legendDataGeneration) return;
     this.hiddenDatums = next;
     this.applyDatumVisibility();
-    this.chart.update('none');
+    chart.update('none');
     this.emit('lr-datum-visibility-change', detail);
   }
 
