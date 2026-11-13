@@ -1,6 +1,6 @@
 import { expect, fixtureCleanup, waitUntil } from '@open-wc/testing';
 import { sceneArc, scenePath } from '../../../../test/map-scene-admission-fixtures.js';
-import { renderEnvironment } from '../../../../test/map-scene-render-component-fixtures.js';
+import { renderEnvironment, renderTurns } from '../../../../test/map-scene-render-component-fixtures.js';
 import type { RenderPeer } from '../../../../test/map-scene-render-component-fixtures.js';
 import type { LyraMapCustomLayer } from '../../../internal/map-custom-layer-types.js';
 import type { LyraMap } from './map.js';
@@ -136,4 +136,133 @@ describe('lr-map elevated scene paths and arcs', () => {
     await settled(reported, 'ready');
     expect(imports).to.equal(0);
   });
+  for (const failure of ['missing capability', 'throwing capability', 'throwing cleanup'] as const) {
+    it(`releases an elevated handle with ${failure} before falling back to ground tracks`, async () => {
+      const runtime = fakeRuntime();
+      let disposals = 0;
+      env.setLayerImporter(async () => ({ createSceneLayer(...args: Parameters<typeof runtime.module.createSceneLayer>) {
+        const handle = runtime.module.createSceneLayer(...args);
+        if (failure === 'missing capability') Reflect.deleteProperty(handle, 'styleReady');
+        else Object.defineProperty(handle, 'styleReady', { get() { throw new Error('Capability unavailable'); } });
+        const dispose = handle.dispose;
+        handle.dispose = () => {
+          disposals++; dispose();
+          if (failure === 'throwing cleanup') throw new Error('Cleanup refused');
+        };
+        return handle;
+      } }));
+      let reported: StateDetail[] = [];
+      const { element, peer } = await env.mount(element => {
+        reported = states(element); element.scene = { objects: [sceneArc('raised')] };
+      }, recordSourceData);
+      await settled(reported, 'partial', 'altitude');
+      expect(disposals).to.equal(1);
+      expect(runtime.layers[0]!.host.signal.aborted).to.equal(true);
+      expect(runtime.live().length).to.equal(0);
+      expect(flatIds(peer)).to.deep.equal(['raised']);
+      expect(peer.removed).to.equal(false);
+      element.remove(); expect(disposals).to.equal(1);
+    });
+  }
+
+  for (const failedRenderer of ['ground', 'elevated'] as const) {
+    it(`reports a ${failedRenderer} renderer failure in a mixed line scene and recovers`, async () => {
+      const runtime = fakeRuntime(); env.setLayerImporter(async () => runtime.module);
+      let reported: StateDetail[] = [];
+      const { element, peer } = await env.mount(element => {
+        reported = states(element); element.scene = { objects: [sceneArc('raised'), scenePath('ground')] };
+      }, peer => {
+        recordSourceData(peer);
+        if (failedRenderer === 'ground') peer.prepareFeatures = (features?: { sources?: Record<string, unknown> }) =>
+          Object.keys(features?.sources ?? {}).some(id => id.startsWith('lr-scene-lines'))
+            ? Promise.reject(new Error('Preparation failed')) : Promise.resolve();
+      });
+      await waitUntil(() => runtime.live().length === 1, 'elevated renderer installed');
+      const layer = runtime.live()[0]!;
+      layer.host.onState?.('ready');
+      if (failedRenderer === 'elevated') {
+        await settled(reported, 'ready');
+        layer.host.onState?.('unavailable', 'context-lost');
+      }
+      await settled(reported, 'unavailable', failedRenderer === 'ground' ? 'engine' : 'context-lost');
+      if (failedRenderer === 'ground') {
+        peer.prepareFeatures = () => Promise.resolve();
+        element.scene = { objects: [sceneArc('raised-again'), scenePath('ground-again')] };
+        await waitUntil(() => layer.disposed && runtime.live().length === 1, 'new intent replaces failed scene');
+        runtime.live()[0]!.host.onState?.('ready');
+      } else layer.host.onState?.('ready');
+      await settled(reported, 'ready');
+      expect(peer.removed).to.equal(false);
+      expect(flatIds(peer)).to.deep.equal([failedRenderer === 'ground' ? 'ground-again' : 'ground']);
+    });
+  }
+
+  it('ignores callbacks from a replaced elevated renderer after the replacement is ready', async () => {
+    const runtime = fakeRuntime(); env.setLayerImporter(async () => runtime.module);
+    let reported: StateDetail[] = [];
+    const { element, peer } = await env.mount(element => {
+      reported = states(element); element.scene = { objects: [sceneArc('old')] };
+    });
+    await waitUntil(() => runtime.live().length === 1, 'first renderer installed');
+    const old = runtime.live()[0]!;
+    element.scene = { objects: [sceneArc('new'), scenePath('ground')] };
+    await waitUntil(() => old.disposed && runtime.live().length === 1, 'replacement renderer installed');
+    const current = runtime.live()[0]!;
+    current.host.onState?.('ready'); await settled(reported, 'ready');
+    const count = reported.length;
+    old.host.onState?.('loading'); old.host.onState?.('unavailable', 'context-lost'); old.host.onState?.('unavailable', 'render');
+    await renderTurns(); await element.updateComplete;
+    expect(reported.length).to.equal(count);
+    expect(current.disposed || current.host.signal.aborted || peer.removed).to.equal(false);
+    expect(flatIds(peer)).to.deep.equal(['ground']);
+  });
+
+  it('disposes a valid handle returned after its factory has already reported failure', async () => {
+    const runtime = fakeRuntime();
+    env.setLayerImporter(async () => ({ createSceneLayer(...args: Parameters<typeof runtime.module.createSceneLayer>) {
+      const handle = runtime.module.createSceneLayer(...args);
+      args[2].onState?.('unavailable', 'render');
+      return handle;
+    } }));
+    let reported: StateDetail[] = [];
+    const { peer } = await env.mount(element => {
+      reported = states(element); element.scene = { objects: [sceneArc('raised')] };
+    }, recordSourceData);
+    await settled(reported, 'partial', 'altitude');
+    expect(runtime.layers.length).to.equal(1);
+    expect(runtime.live().length).to.equal(0);
+    expect(runtime.layers[0]!.host.signal.aborted).to.equal(true);
+    expect(flatIds(peer)).to.deep.equal(['raised']);
+  });
+
+  it('keeps flat lines and teardown usable when elevated lifecycle methods throw', async () => {
+    const runtime = fakeRuntime();
+    let invalidations = 0, ready = 0, disposals = 0;
+    env.setLayerImporter(async () => ({ createSceneLayer(...args: Parameters<typeof runtime.module.createSceneLayer>) {
+      const handle = runtime.module.createSceneLayer(...args), dispose = handle.dispose;
+      return { ...handle,
+        invalidateStyle() { invalidations++; throw new Error('Style invalidation refused'); },
+        styleReady() { ready++; throw new Error('Style replay refused'); },
+        dispose() { disposals++; dispose(); throw new Error('Cleanup refused'); },
+      };
+    } }));
+    let reported: StateDetail[] = [];
+    const { element, peer } = await env.mount(element => {
+      reported = states(element); element.scene = { objects: [sceneArc('raised'), scenePath('ground')] };
+    }, recordSourceData);
+    await waitUntil(() => runtime.live().length === 1, 'elevated renderer installed');
+    runtime.live()[0]!.host.onState?.('ready'); await settled(reported, 'ready');
+    element.mapStyle = { version: 8, sources: {}, layers: [] };
+    await element.updateComplete; await element.whenStyleReady();
+    await waitUntil(() => ready > 0, 'style replay attempted');
+    expect(invalidations).to.equal(1);
+    await waitUntil(() => flatIds(peer).join() === 'ground', 'ground lines restored');
+    element.scene = { objects: [scenePath('remaining')] };
+    await settled(reported, 'ready');
+    await waitUntil(() => flatIds(peer).join() === 'remaining', 'flat-only intent installed');
+    expect(disposals).to.equal(1);
+    expect(peer.removed).to.equal(false);
+    element.remove(); expect(peer.removed).to.equal(true); expect(disposals).to.equal(1);
+  });
+
 });

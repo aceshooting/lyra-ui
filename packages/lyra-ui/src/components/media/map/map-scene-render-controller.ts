@@ -174,8 +174,9 @@ export function createMapSceneRenderController(options: {
       // Fall back to ground tracks outside the native callback that reported the failure.
       queueMicrotask(linesInvalidated);
     };
+    let unclaimed: unknown;
     try {
-      const handle: unknown = runtime.layers.createSceneLayer(map,
+      const handle: unknown = unclaimed = runtime.layers.createSceneLayer(map,
         runtime.lines.createElevatedSceneLineLayer(SCENE_ELEVATED_LINE_LAYER, data), {
           signal: installation.controller.signal, reducedMotion: () => prefersReducedMotion(element),
           onState: (state, code) => {
@@ -188,9 +189,18 @@ export function createMapSceneRenderController(options: {
           },
         });
       if (!isMapSceneLayerHandle(handle)) throw new TypeError('Map custom layers are unavailable');
+      unclaimed = undefined;
       if (elevated !== installation) { handle.dispose(); return; }
       installation.handle = handle;
-    } catch { fail(); }
+    } catch {
+      if (typeof unclaimed === 'object' && unclaimed !== null) {
+        try {
+          const dispose: unknown = Reflect.get(unclaimed, 'dispose');
+          if (typeof dispose === 'function') Reflect.apply(dispose, unclaimed, []);
+        } catch { /* Failed cleanup must not prevent the ground-track fallback. */ }
+      }
+      fail();
+    }
   }
   function syncLines(): void {
     if (!current()) return;
