@@ -2,6 +2,7 @@ import { expect, fixture, html, waitUntil, oneEvent } from '@open-wc/testing';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { sendMouse, sendWheel, resetMouse, hoverUntilMatched } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { sendKeys } from '@web/test-runner-commands';
 import { LyraGraph } from './graph.js';
 
 const nodes = [
@@ -142,6 +143,38 @@ describe('graph spatial views', () => {
     item.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     expect((await expanded).detail.nodeId).to.equal('expand-me');
     expect(expansions).to.equal(1);
+  });
+
+  it('activates a focused list node with Space and ignores unrelated keys when counting expansion', async () => {
+    const el = await fixture<LyraGraph>(html`<lr-graph view="list" .nodes=${[{ id: 'space-node', label: 'Space node' }]}></lr-graph>`);
+    const item = el.shadowRoot!.querySelector<HTMLButtonElement>('[data-node-id="space-node"]')!;
+    await focusByKeyboard(item);
+    const activations: string[] = [], expansions: string[] = [];
+    el.addEventListener('lr-node-activate', event => { activations.push(event.detail.nodeId); });
+    el.addEventListener('lr-node-expand', event => { expansions.push(event.detail.nodeId); });
+    await sendKeys({ press: 'ArrowRight' });
+    await sendKeys({ press: 'Space' });
+    expect(activations).to.deep.equal(['space-node']);
+    expect(expansions).to.deep.equal([]);
+  });
+
+  it('activates an unlabeled community from the list without treating it as an expandable node', async () => {
+    const el = await fixture<LyraGraph>(html`<lr-graph view="list"
+      .nodes=${[{ id: 'member', communityId: 'group-id' }]}
+      .communities=${[{ id: 'group-id', memberIds: ['member'] }]}
+      .strings=${{ graphCommunity: '{label}: {count} members' }}></lr-graph>`);
+    const community = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="spatial-list-item"]')]
+      .find(item => item.textContent?.includes('group-id:'))!;
+    expect(community?.textContent?.trim()).to.equal('group-id: 1 members');
+    await focusByKeyboard(community);
+    const activations: string[] = [];
+    let expansions = 0;
+    el.addEventListener('lr-community-activate', event => { activations.push(event.detail.communityId); });
+    el.addEventListener('lr-node-expand', () => { expansions++; });
+    await sendKeys({ press: 'Enter' });
+    await sendKeys({ press: 'Space' });
+    expect(activations).to.deep.equal(['group-id', 'group-id']);
+    expect(expansions).to.equal(0);
   });
 
   it('releases a cancelled gesture and returns to the 2D renderer', async () => {
