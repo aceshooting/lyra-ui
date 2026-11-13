@@ -117,7 +117,7 @@ it('repairs an owned focused key removed by a source replacement without a globa
   next.project = async request => { const result = await project(request); return { ...result, total: 2, rows: { ...result.rows, count: 2 } }; };
   el.treeSource = next;
   await waitUntil(() => deepActiveElementIn(document)?.getAttribute('data-source-key') === 'n0');
-  expect(el.shadowRoot!.querySelector('[data-source-key="n9"]')).to.equal(null);
+  expect(el.shadowRoot!.querySelectorAll('[data-source-key="n9"]').length).to.equal(0);
 });
 
 
@@ -206,3 +206,28 @@ for (const retirement of ['replacement', 'disconnect'] as const) {
     expect(deepActiveElementIn(document)?.getAttribute('data-source-key')).to.equal('n1');
   });
 }
+
+it('refuses to focus a disabled reveal target and accepts it after a provider replacement enables it', async () => {
+  const disabled = provider();
+  const project = disabled.project;
+  disabled.project = async request => {
+    const result = await project(request);
+    return { ...result, rows: { ...result.rows, itemAt: (index: number) => ({ ...row(index), disabled: index === 9 }) } };
+  };
+  const el = await fixture<LyraTree>(html`<lr-tree label="Disabled reveal" .treeSource=${disabled}></lr-tree>`);
+  await ready(el);
+  const root = el.shadowRoot!.querySelector<HTMLElement>('[role="tree"]')!;
+  await focusByKeyboard(root);
+  let selections = 0;
+  el.addEventListener('lr-source-selection-change', () => { selections++; });
+  expect(await el.revealSourceKey('n9')).to.equal(false);
+  expect(el.shadowRoot!.querySelector('[data-source-key="n9"]')?.getAttribute('aria-disabled')).to.equal('true');
+  expect(deepActiveElementIn(document) === root).to.equal(true);
+  expect(selections).to.equal(0);
+  el.treeSource = provider();
+  await ready(el);
+  expect(await el.revealSourceKey('n9')).to.equal(true);
+  expect(deepActiveElementIn(document)?.getAttribute('data-source-key')).to.equal('n9');
+  expect(el.shadowRoot!.querySelector('[data-source-key="n9"]')?.getAttribute('aria-disabled')).to.equal('false');
+  expect(selections).to.equal(0);
+});

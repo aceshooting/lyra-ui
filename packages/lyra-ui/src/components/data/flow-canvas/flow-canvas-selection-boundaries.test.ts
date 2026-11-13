@@ -118,3 +118,33 @@ for (const kind of ['node', 'edge'] as const) {
     expect(element.selectedEdgeIds).to.deep.equal([]);
   });
 }
+
+for (const kind of ['node', 'edge'] as const) {
+  it(`retains the ${kind} selection snapshot until the caller assigns a new array`, async () => {
+    const element = await canvas();
+    const property = kind === 'node' ? 'selectedNodeIds' : 'selectedEdgeIds';
+    const ids = [kind === 'node' ? 'a' : 'a-b'];
+    const target = kind === 'node' ? node(element, 'a') : element.shadowRoot!.querySelector('[part="edge"]')!;
+    let changes = 0;
+    element.addEventListener('lr-selection-change', () => { changes++; });
+    element[property] = ids;
+    await element.updateComplete;
+    const snapshot = element[property];
+    expect(snapshot).to.deep.equal(ids);
+    expect(Object.isFrozen(snapshot)).to.equal(true);
+    expect(target.getAttribute('aria-pressed')).to.equal('true');
+    ids.length = 0;
+    element[property] = ids;
+    await element.updateComplete;
+    expect(element[property] === snapshot).to.equal(true);
+    expect(target.getAttribute('aria-pressed')).to.equal('true');
+    element[property] = snapshot;
+    await element.updateComplete;
+    expect(element[property] === snapshot).to.equal(true);
+    element[property] = [...ids];
+    await element.updateComplete;
+    expect(element[property]).to.deep.equal([]);
+    expect(target.getAttribute('aria-pressed')).to.equal('false');
+    expect(changes).to.equal(0);
+  });
+}
