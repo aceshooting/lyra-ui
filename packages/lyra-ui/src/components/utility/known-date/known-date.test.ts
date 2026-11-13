@@ -9,6 +9,7 @@ import { LyraKnownDate, type LyraKnownDateParts } from './known-date.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 class KnownDateErrorForwardWrapper extends HTMLElement {
   constructor() {
@@ -341,7 +342,7 @@ describe('mirrored Web Awesome public surface', () => {
   });
 });
 
-it('leaves value empty and out of FormData while any field is blank', async () => {
+it('submits an empty value while any field is blank', async () => {
   const form = (await fixture(html`
     <form><lr-known-date name="dob" locale="en-GB"></lr-known-date></form>
   `)) as HTMLFormElement;
@@ -1828,6 +1829,40 @@ it("tolerates a non-digit parts assignment that survives computeCanonicalValue's
   await el.updateComplete;
   expect(el.value, 'a non-numeric day never resolves to a composite value').to.equal('');
 });
+
+for (const parts of [
+  { day: '', month: '', year: '' },
+  { day: '02', month: '', year: '2026' },
+  { day: '02', month: '03', year: '2026' },
+]) {
+  it(`preserves editing state when parts with unchanged field text are assigned (${JSON.stringify(parts)})`, async () => {
+    const form = await fixture<HTMLFormElement>(html`<form><lr-known-date name="date" locale="en-GB"></lr-known-date></form>`);
+    const el = form.querySelector<LyraKnownDate>('lr-known-date')!;
+    el.parts = parts;
+    await el.updateComplete;
+    const value = el.value;
+    const input = fieldFor(el, 'day');
+    await focusByKeyboard(input);
+    input.setSelectionRange(0, input.value.length);
+    el.setCustomValidity('Check this date');
+    await el.updateComplete;
+    const events: string[] = [];
+    el.addEventListener('input', () => events.push('input'));
+    el.addEventListener('change', () => events.push('change'));
+
+    el.parts = { ...parts };
+    expect(el.isUpdatePending).to.equal(false);
+    await el.updateComplete;
+    expect(el.parts).to.deep.equal(parts);
+    expect(el.value).to.equal(value);
+    expect(fieldFor(el, 'day') === input).to.equal(true);
+    expect(el.shadowRoot!.activeElement === input).to.equal(true);
+    expect([input.selectionStart, input.selectionEnd]).to.deep.equal([0, parts.day.length]);
+    expect(el.validationMessage).to.equal('Check this date');
+    expect(new FormData(form).get('date')).to.equal(value);
+    expect(events).to.deep.equal([]);
+  });
+}
 
 it('tolerates a null or partial parts assignment, defaulting missing fields to empty strings', async () => {
   const el = (await fixture(html`<lr-known-date value="2007-03-27"></lr-known-date>`)) as LyraKnownDate;

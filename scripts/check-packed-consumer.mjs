@@ -155,17 +155,17 @@ const optionalPeerFamilyTags = componentInventory.components
 const rootHelperRegisteredTags = [];
 
 // Packed core/all.js includes every non-optional registration and every emitted chunk.
-// Heatmap gesture ownership checks use 5,669,098 raw bytes across the same 64 files;
-// the next 64-byte ceiling leaves 22 bytes of headroom.
+// Finite chart-domain precision fixes use 5,669,474 raw bytes across the same 64 files;
+// the next 64-byte ceiling leaves 30 bytes of headroom.
 // Optional-peer exclusions and the complete file sum stay fixed. Core has no WASM allowance;
 // the explicit Oniguruma canary retains its separate exact 466,610-byte binary requirement.
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/7859878f724ef4237ee93a5414fa6b54f204313a/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'File-icon registry validation and XML/SVG theme scopes use 5,669,399 raw bytes across the same 64 files, an increase of 301 bytes. The ceiling advances only to the next 64-byte boundary, 5,669,440 bytes. The explicit Oniguruma canary retains its separate exact binary requirement.',
-  reviewedCoreMeasurementBytes: 5_669_399,
+  $comment: 'Finite chart-domain precision fixes use 5,669,474 raw bytes across the same 64 files, an increase of 75 bytes. The ceiling advances only to the next 64-byte boundary, 5,669,504 bytes. The explicit Oniguruma canary retains its separate exact binary requirement.',
+  reviewedCoreMeasurementBytes: 5_669_474,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 41,
+  selectedRegressionHeadroomBytes: 30,
 };
 
 /**

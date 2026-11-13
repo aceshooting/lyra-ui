@@ -236,7 +236,12 @@ function logDomainFraction(value: number, lo: number, hi: number): number {
   }
   if (!Number.isFinite(value) || value <= bottom) return 0;
   if (value >= top) return 1;
-  const fraction = (Math.log10(value) - Math.log10(bottom)) / (Math.log10(top) - Math.log10(bottom));
+  // Nearby endpoints can have identical rounded logarithms. Relative differences retain their
+  // significant bits, while log1p keeps the logarithm accurate for a narrow domain.
+  const relativeSpan = (top - bottom) / bottom;
+  const fraction = relativeSpan <= 1
+    ? Math.log1p((value - bottom) / bottom) / Math.log1p(relativeSpan)
+    : (Math.log10(value) - Math.log10(bottom)) / (Math.log10(top) - Math.log10(bottom));
   return Number.isFinite(fraction) ? Math.min(1, Math.max(0, fraction)) : 0;
 }
 
@@ -258,8 +263,11 @@ function domainFraction(value: number, lo: number, hi: number): number {
  * grid values.
  */
 function snapToStep(value: number, step: number): number {
-  return Number.isFinite(step) && step > 0
-    ? Number(value.toFixed(Math.min(decimalPlaces(step), 100)))
+  const places = decimalPlaces(step);
+  // toFixed supports at most 100 places. Clamping a smaller step to that precision would erase
+  // the entire domain, so preserve its representable values instead.
+  return Number.isFinite(step) && step > 0 && places <= 100
+    ? Number(value.toFixed(places))
     : value;
 }
 
@@ -324,8 +332,9 @@ function niceDomain(dataLo: number, dataHi: number, beginAtZero: boolean, count:
   const snap = (value: number): number => snapToStep(value, step);
   const roundedLo = snap(Math.floor(lo / step) * step);
   const roundedHi = snap(Math.ceil(hi / step) * step);
-  if (Number.isFinite(roundedLo)) lo = roundedLo;
-  if (Number.isFinite(roundedHi)) hi = roundedHi;
+  // Floating-point multiplication can round an outward step back inside a narrow domain.
+  if (Number.isFinite(roundedLo)) lo = Math.min(lo, roundedLo);
+  if (Number.isFinite(roundedHi)) hi = Math.max(hi, roundedHi);
   const slots = Math.floor((hi - lo) / step);
   if (!Number.isFinite(slots) || slots < 0 || slots > 100) {
     return { lo, hi, ticks: safeDomainTicks(lo, hi, count) };

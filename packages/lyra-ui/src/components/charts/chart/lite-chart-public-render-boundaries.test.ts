@@ -86,6 +86,48 @@ it('renders logarithmic subnormal values with bounded finite ticks and preserves
   for (let index = 0; index < values.length; index++) expect(csv).to.include(`${['First', 'Middle', 'Last'][index]},${values[index]}`);
 });
 
+for (const scale of ['linear', 'logarithmic'] as const) {
+  for (const type of ['line', 'bar'] as const) {
+    it(`keeps distinct small normal values separated on a ${scale} ${type} chart`, async () => {
+      const values = [1e-200, 2e-200, 3e-200];
+      const element = await fixture<LyraLiteChart>(html`<lr-lite-chart .type=${type} .scale=${scale} without-zero-baseline
+        style="inline-size:500px;block-size:240px" .labels=${['First', 'Middle', 'Last']}
+        .datasets=${[{ label: 'Small', data: values }]}></lr-lite-chart>`);
+      const nodes = await marks(element, 3, type === 'line' ? 3 : 0);
+      await twoFrames();
+      const ys = nodes.map(node => Number(node.getAttribute(type === 'line' ? 'cy' : 'y')));
+      expect(ys.every(Number.isFinite)).to.equal(true);
+      expect(ys[0], 'the first value is below the middle value').to.be.greaterThan(ys[1]!);
+      expect(ys[1], 'the middle value is below the last value').to.be.greaterThan(ys[2]!);
+      expect(ys[0]! - ys[2]!, 'the data use the plot height').to.be.greaterThan(50);
+      const csv = element.exportData('csv');
+      for (let index = 0; index < values.length; index++) expect(csv).to.include(`${['First', 'Middle', 'Last'][index]},${values[index]}`);
+    });
+  }
+}
+
+for (const base of [1e-50, 1, 1e50, 1e79, 1e200]) {
+  for (const scale of ['linear', 'logarithmic'] as const) {
+    it(`separates neighboring representable values on a ${scale} axis around ${base}`, async () => {
+      const values = [base, base * (1 + Number.EPSILON), base * (1 + 2 * Number.EPSILON)];
+      expect(values[0]).to.be.lessThan(values[1]!);
+      expect(values[1]).to.be.lessThan(values[2]!);
+      const element = await fixture<LyraLiteChart>(html`<lr-lite-chart type="line" .scale=${scale} without-zero-baseline
+        style="inline-size:500px;block-size:240px" .labels=${['First', 'Middle', 'Last']}
+        .datasets=${[{ label: 'Neighbors', data: values }]}></lr-lite-chart>`);
+      const points = await marks(element, 3);
+      await twoFrames();
+      const ys = points.map(point => Number(point.getAttribute('cy')));
+      expect(ys.every(Number.isFinite)).to.equal(true);
+      expect(ys[0], 'the first and middle values remain distinguishable').to.be.greaterThan(ys[1]!);
+      expect(ys[1], 'the middle and last values remain distinguishable').to.be.greaterThan(ys[2]!);
+      const geometry = [...element.shadowRoot!.querySelectorAll('[d], [x], [y], [cx], [cy]')]
+        .map(node => ['d', 'x', 'y', 'cx', 'cy'].map(name => node.getAttribute(name) ?? '').join(' ')).join(' ');
+      expect(geometry).not.to.match(/NaN|Infinity/);
+    });
+  }
+}
+
 it('treats datasets that are not a list as no data and recovers when a list is assigned again', async () => {
   const element = await fixture<LyraLiteChart>(html`<lr-lite-chart type="bar" .labels=${['A', 'B']}
     .datasets=${[{ label: 'S', data: [1, 2] }]}></lr-lite-chart>`);

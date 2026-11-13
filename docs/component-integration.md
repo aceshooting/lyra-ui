@@ -170,7 +170,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-known-date"></a>`lr-known-date` | utility | `import '@aceshooting/lyra-ui/components/lr-known-date.js';` | none | none | none | 49.1 KiB |
 | <a id="lr-lightbox"></a>`lr-lightbox` | media | `import '@aceshooting/lyra-ui/components/lr-lightbox.js';` | none | `lr-pan-zoom` | none | 55 KiB |
 | <a id="lr-line-chart"></a>`lr-line-chart` | charts | `import '@aceshooting/lyra-ui/components/lr-line-chart.js';` | `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` | `lr-chart`, `lr-skeleton` | none | 84.6 KiB |
-| <a id="lr-lite-chart"></a>`lr-lite-chart` | charts | `import '@aceshooting/lyra-ui/components/lr-lite-chart.js';` | none | `lr-live-region` | none | 61.8 KiB |
+| <a id="lr-lite-chart"></a>`lr-lite-chart` | charts | `import '@aceshooting/lyra-ui/components/lr-lite-chart.js';` | none | `lr-live-region` | none | 61.9 KiB |
 | <a id="lr-live-region"></a>`lr-live-region` | utility | `import '@aceshooting/lyra-ui/components/lr-live-region.js';` | none | none | none | 26.2 KiB |
 | <a id="lr-locale-picker"></a>`lr-locale-picker` | forms | `import '@aceshooting/lyra-ui/components/lr-locale-picker.js';` | none | `lr-flag` | `lr-skeleton` | 73.7 KiB |
 | <a id="lr-map"></a>`lr-map` | media | `import '@aceshooting/lyra-ui/components/lr-map.js';` | `@aceshooting/lyra-map`, `dompurify`, `maplibre-gl` | `lr-skeleton` | none | 204.8 KiB |
