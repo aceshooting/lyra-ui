@@ -23562,6 +23562,7 @@
           "src/components/data/flow-canvas/flow-canvas-source-ownership.test.ts",
           "src/components/data/flow-canvas/flow-canvas-source-scale.test.ts",
           "src/components/data/flow-canvas/flow-canvas-viewport-api.test.ts",
+          "src/components/data/flow-canvas/flow-canvas-viewport-boundaries.test.ts",
           "src/components/data/flow-canvas/flow-canvas-viewport.test.ts",
           "src/components/data/flow-canvas/flow-canvas.test.ts",
           "src/components/data/flow-canvas/flow-companion-controller.test.ts",
