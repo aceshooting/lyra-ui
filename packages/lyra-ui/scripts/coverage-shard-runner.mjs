@@ -41,7 +41,7 @@ import {
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const coverageDir = resolve(packageDir, 'coverage');
 const SHARD_MANIFEST = 'test-files.json';
-export const COVERAGE_SHARD_TOTAL = 5;
+export const COVERAGE_SHARD_TOTAL = 8;
 export const MAX_FILES_PER_COVERAGE_SESSION = 140;
 
 function shardIndices() {

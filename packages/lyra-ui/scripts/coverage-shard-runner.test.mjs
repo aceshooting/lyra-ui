@@ -102,16 +102,16 @@ test('parses only the full, single-shard, and merge coverage commands', () => {
     mode: 'shard',
     shardIndex: 2,
   });
-  assert.deepEqual(parseCoverageArguments(['--shard', '5']), {
+  assert.deepEqual(parseCoverageArguments(['--shard', String(COVERAGE_SHARD_TOTAL)]), {
     mode: 'shard',
-    shardIndex: 5,
+    shardIndex: COVERAGE_SHARD_TOTAL,
   });
   assert.deepEqual(parseCoverageArguments(['--merge']), { mode: 'merge' });
 
   for (const args of [
     ['--shard'],
     ['--shard', '0'],
-    ['--shard', '6'],
+    ['--shard', String(COVERAGE_SHARD_TOTAL + 1)],
     ['--shard', '2.5'],
     ['--merge', '1'],
     ['--unknown'],
@@ -156,7 +156,7 @@ test('keeps the default command sequential, exhaustive, merged, and cleaned', as
   );
 
   assert.equal(result, 1);
-  assert.deepEqual(actions, ['run-1', 'run-2', 'run-3', 'run-4', 'run-5', 'ssr', 'merge', 'cleanup']);
+  assert.deepEqual(actions, [...Array.from({ length: COVERAGE_SHARD_TOTAL }, (_, index) => `run-${index + 1}`), 'ssr', 'merge', 'cleanup']);
 });
 
 test('the merge command performs no browser work and retains downloaded artifacts', async () => {
@@ -400,43 +400,45 @@ test('merge fails closed when any raw coverage, junit, or shard manifest is abse
     await unlink(join(coverageShardDirectory(fixture, 2), 'coverage-final.json'));
     assert.throws(
       () => mergeCoverageReports(inventory, { coverageDirectory: fixture }),
-      /shard 2\/5.*coverage-final\.json/iu,
+      /shard 2\/8.*coverage-final\.json/iu,
     );
 
     await writeShardFixture(fixture, 2);
-    await unlink(join(coverageShardDirectory(fixture, 5), 'junit.xml'));
+    await unlink(join(coverageShardDirectory(fixture, COVERAGE_SHARD_TOTAL), 'junit.xml'));
     assert.throws(
       () => mergeCoverageReports(inventory, { coverageDirectory: fixture }),
-      /shard 5\/5.*junit\.xml/iu,
+      /shard 8\/8.*junit\.xml/iu,
     );
 
-    await writeShardFixture(fixture, 5);
+    await writeShardFixture(fixture, COVERAGE_SHARD_TOTAL);
     await unlink(join(coverageShardDirectory(fixture, 3), 'test-files.json'));
     assert.throws(
       () => mergeCoverageReports(inventory, { coverageDirectory: fixture }),
-      /shard 3\/5.*test-files\.json/iu,
+      /shard 3\/8.*test-files\.json/iu,
     );
   } finally {
     await rm(fixture, { recursive: true, force: true });
   }
 });
 
-test('rejects an old four-shard run rather than publishing a partial five-shard report', async () => {
+test('rejects an old five-shard run rather than publishing a partial eight-shard report', async () => {
   const fixture = await mkdtemp(join(tmpdir(), 'lyra-coverage-old-shards-'));
   try {
     await writeCompleteFixture(fixture);
-    await rm(coverageShardDirectory(fixture, 5), { recursive: true });
+    for (let index = 6; index <= COVERAGE_SHARD_TOTAL; index += 1) {
+      await rm(coverageShardDirectory(fixture, index), { recursive: true });
+    }
     assert.throws(
       () => mergeCoverageReports(inventory, { coverageDirectory: fixture }),
-      /shard 5\/5.*coverage-final\.json/iu,
+      /shard 6\/8.*coverage-final\.json/iu,
     );
     assert.equal(existsSync(join(fixture, 'lcov.info')), false);
     assert.equal(existsSync(join(fixture, 'coverage-summary.json')), false);
 
-    await writeShardFixture(fixture, 5);
+    await writeCompleteFixture(fixture);
     const manifestPath = join(coverageShardDirectory(fixture, 1), 'test-files.json');
     const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
-    manifest.shardTotal = 4;
+    manifest.shardTotal = 5;
     await writeFile(manifestPath, `${JSON.stringify(manifest)}\n`);
     assert.throws(
       () => mergeCoverageReports(inventory, { coverageDirectory: fixture }),

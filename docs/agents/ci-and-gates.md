@@ -222,16 +222,16 @@ real data dependencies, so a red check names the phase to reproduce:
 3. **`build-and-coverage`** shares one build and fans out: `build_and_coverage_build` (`pnpm build`)
    uploads `dist/`; `_quality` (`check:component-quality:built`, `check:bundle-size`,
    `codecov:bundle`), `_ssr` (`test:ssr`) and `_hydration` (`test:hydration`) consume it;
-   `_coverage_shard` is a five-leg matrix, each worker running
+   `_coverage_shard` is an eight-leg matrix, each worker running
    `node scripts/coverage-shard-runner.mjs --shard N` in the pinned Playwright image and uploading one
    `coverage/shards/coverage-shard-N` artifact (`if-no-files-found: error`); `_coverage` runs with
    `always()`, merges (`--merge`), enforces `check:coverage-floors` on the merged report, and does the
    non-fatal Codecov uploads. The runner refuses a missing `coverage-final.json`, `junit.xml` or
-   `test-files.json` and proves the five test manifests are disjoint, exhaustive and the
+   `test-files.json` and proves the eight test manifests are disjoint, exhaustive and the
    deterministic partition of the inventory; the job separately rejects any non-success shard.
    Each worker runs one browser file at a time (determinism); only workers run concurrently. Each
    shard also bounds its browser sessions to 140 files and merges their raw reports. Local
-   `pnpm --filter @aceshooting/lyra-ui test:coverage` stays complete and sequential (all five shards,
+   `pnpm --filter @aceshooting/lyra-ui test:coverage` stays complete and sequential (all eight shards,
    merge, cleanup); `scripts/ci.sh` and `scripts/test.sh` use that default. This is the one run of
    lyra-ui's own Chromium suite in push CI. Browser lanes use the Playwright image pinned in the
    workflow.
@@ -309,7 +309,7 @@ endpoints. It preserves the native count and child ranges; it does not create mo
 from a snapshot. `scripts/coverage-realms.test.mjs` verifies these rules with precise V8 execution,
 real TypeScript transformation, both merge orders and unexecuted callback branches.
 
-The complete UI report combines all five browser shards with `test:coverage:ssr`. This additional
+The complete UI report combines all eight browser shards with `test:coverage:ssr`. This additional
 capture runs the document-less SSR import/render matrix in default and development conditions,
 including its isolated child processes. A Node loader compiles the corresponding TypeScript with
 the browser runner's installed compiler and configuration; published-artifact SSR and hydration
@@ -347,7 +347,7 @@ metric.
 `.github/workflows/full-engine.yml` runs the complete non-coverage `src/**/*.test.ts` suite in
 Firefox and WebKit weekly and on `workflow_dispatch`, each browser in eight cost-balanced shards
 under Node 22. The runner discovers and lexically sorts the live inventory, so every file runs
-exactly once without a second allowlist. Shards (these and the five coverage shards) are packed
+exactly once without a second allowlist. Shards (these and the eight coverage shards) are packed
 longest-first onto the least-loaded shard from the committed per-file seconds in
 `scripts/fixtures/test-file-costs.json`; a file it does not list costs the table's median. Regenerate
 the table from several runs' `lyra-ui-test-timing` artifacts (median per file, so one slow runner
@@ -489,7 +489,7 @@ and a failing lane's log is printed in full at the end.
 The `firefox`/`webkit` lanes run `test:full-engine-shard` with `WTR_SHARD_INDEX=1 WTR_SHARD_TOTAL=1`
 (the complete suite in one process) when the host affords one engine shard. The sweep budgets every
 core but two at two cores (and 1 GiB of available memory) per browser page; unset, it splits each
-engine into as many shard lanes as that budget leaves after the five coverage shards, which run
+engine into as many shard lanes as that budget leaves after the eight coverage shards, which run
 concurrently and are merged as in CI (`--serial` keeps one of each). `TEST_SH_ENGINE_SHARDS=<n>`
 pins `n` shard lanes, mirroring `full-engine.yml`, so a failing CI shard reproduces as the
 same-numbered local one; raising `WTR_LANE_CONCURRENCY` instead reintroduces the hover/paint
