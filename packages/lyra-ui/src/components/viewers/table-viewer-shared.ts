@@ -536,6 +536,7 @@ export class TableViewerSourceController implements ReactiveController {
   private sourceRows = this.makeRows();
   private searchRunning = false;
   private queuedSearch?: () => Promise<void>;
+  private searchIntent = 0;
 
   constructor(private readonly host: TableViewerHost, private readonly chrome: SourceTableChrome, private readonly hooks: TabularSourceHooks) {
     this.searchState = new ViewerSearchState(() => [], detail => hooks.emitSearch(detail), () => hooks.repaint());
@@ -557,6 +558,7 @@ export class TableViewerSourceController implements ReactiveController {
   }
   private reset(): void {
     this.epoch++;
+    this.searchIntent++;
     this.dirty = true;
     for (const slot of this.slots) slot.settle(false);
     this.slots = [];
@@ -857,14 +859,26 @@ export class TableViewerSourceController implements ReactiveController {
     return this.chrome.revealCell(target) && lease.isCurrent();
   }
 
-  async search(query: string): Promise<number> {
+  private beginSearchChange(): number | undefined {
+    const intent = ++this.searchIntent;
     this.hooks.cancelAnchor();
-    this.authority.invalidate('search'); this.authority.invalidate('reveal');
+    // Abort callbacks can synchronously start a newer search or clear operation.
+    for (const channel of ['search', 'reveal'] as const) {
+      if (intent !== this.searchIntent) return undefined;
+      this.authority.invalidate(channel);
+    }
+    return intent === this.searchIntent ? intent : undefined;
+  }
+
+  async search(query: string): Promise<number> {
+    const intent = this.beginSearchChange();
+    if (intent === undefined) return 0;
     this.searchState.query = query;
     const bounded = boundedViewerSearchQuery(query, this.locale);
     if (!bounded.needle || !bounded.accepted) { this.searchState.publish([], bounded.accepted); return 0; }
     const source = this.bound;
     const search = this.hooks.workbook ? (source as LyraWorkbookSource | undefined)?.search : this.sheet?.data.search;
+    if (intent !== this.searchIntent) return 0;
     if (!source || !search || this.failure) { this.searchState.publish([], false); return 0; }
     const lease = this.authority.begin('search', this.locale);
     if (!lease) return 0;
@@ -905,7 +919,7 @@ export class TableViewerSourceController implements ReactiveController {
     return this.reveal(hit.sheetIndex, hit.row, hit.col);
   }
   clearSearch(): void {
-    this.hooks.cancelAnchor(); this.authority.invalidate('search'); this.authority.invalidate('reveal');
+    if (this.beginSearchChange() === undefined) return;
     this.activeRow = ''; this.searchState.clear(); this.notify();
   }
 }
