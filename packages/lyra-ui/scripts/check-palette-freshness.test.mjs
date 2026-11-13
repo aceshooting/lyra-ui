@@ -75,6 +75,32 @@ test('the checked-in palette artifacts round-trip through every generator', () =
   assert.deepEqual(checkPaletteFreshness(), []);
 });
 
+test('palette generation never exposes temporary output to readers of the audited tree', () => {
+  const scratch = mkdtempSync(join(tmpdir(), 'lyra-palette-readers-'));
+  try {
+    cpSync(join(packageDir, 'tokens'), join(scratch, 'tokens'), { recursive: true });
+    mkdirSync(join(scratch, 'src/theme'), { recursive: true });
+    cpSync(join(packageDir, 'src/theme/gemstones-data.ts'), join(scratch, 'src/theme/gemstones-data.ts'));
+    const originals = {};
+    for (const file of PALETTE_ARTIFACTS) {
+      mkdirSync(join(scratch, file, '..'), { recursive: true });
+      originals[file] = file === 'src/theme.css' ? renderThemeCss(readStyleModel(scratch)) : file;
+      writeFileSync(join(scratch, file), originals[file]);
+    }
+    mkdirSync(join(scratch, 'scripts'), { recursive: true });
+    for (const generator of PALETTE_GENERATORS) {
+      writeFileSync(join(scratch, generator), `import assert from 'node:assert/strict';\n` +
+        `import { readFileSync, writeFileSync } from 'node:fs';\n` +
+        `import { join } from 'node:path';\n` +
+        `const source = ${JSON.stringify(scratch)}, originals = ${JSON.stringify(originals)};\n` +
+        `for (const file of Object.keys(originals).filter(file => file !== 'src/theme.css')) writeFileSync(file, 'regenerated');\n` +
+        `for (const [file, original] of Object.entries(originals)) assert.equal(readFileSync(join(source, file), 'utf8'), original, 'audited source changed while generating ' + file);\n`);
+    }
+    assert.deepEqual(checkPaletteFreshness(scratch), PALETTE_ARTIFACTS.filter(file => file !== 'src/theme.css'));
+    assert.deepEqual(PALETTE_ARTIFACTS.map(file => readFileSync(join(scratch, file), 'utf8')), Object.values(originals));
+  } finally { rmSync(scratch, { recursive: true, force: true }); }
+});
+
 test('the palette gate runs when its entry module is reached through a symlink', () => {
   const scratch = mkdtempSync(join(tmpdir(), 'lyra-palette-gate-symlink-'));
   const entry = fileURLToPath(new URL('./check-palette-freshness.mjs', import.meta.url));
@@ -89,7 +115,7 @@ test('the palette gate runs when its entry module is reached through a symlink',
   }
 });
 
-test('concurrent palette gates over one tree serialize instead of reading partial writes', async () => {
+test('concurrent palette gates audit one tree without sharing generated output', async () => {
   const entry = fileURLToPath(new URL('./check-palette-freshness.mjs', import.meta.url));
   const { spawn } = await import('node:child_process');
   const run = () => new Promise((resolveRun) => {
