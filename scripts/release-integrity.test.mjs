@@ -3024,8 +3024,11 @@ test('MapLibre declaration overrides match the reviewed source owner and every d
   }
 });
 
-test('upgrade keeps the supported Shiki peer floor while refreshing its development version', () => {
-  const root = mkdtempSync(path.join(tmpdir(), 'lyra-upgrade-shiki-'));
+for (const [dependency, supported, latest] of [
+  ['shiki', '^4.4.3', '^4.5.0'],
+  ['papaparse', '^5.7.0', '^5.7.1'],
+]) test(`upgrade keeps the supported ${dependency} peer floor while refreshing its development version`, () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'lyra-upgrade-peer-floor-'));
   try {
     mkdirSync(path.join(root, 'scripts'), { recursive: true });
     mkdirSync(path.join(root, 'packages/lyra-ui'), { recursive: true });
@@ -3034,8 +3037,8 @@ test('upgrade keeps the supported Shiki peer floor while refreshing its developm
     writeFileSync(path.join(root, '.nvmrc'), '22.23.2\n');
     const manifestPath = path.join(root, 'packages/lyra-ui/package.json');
     writeFileSync(manifestPath, JSON.stringify({
-      peerDependencies: { shiki: '^4.4.3' },
-      devDependencies: { shiki: '^4.4.3' },
+      peerDependencies: { [dependency]: supported },
+      devDependencies: { [dependency]: supported },
     }));
     const nodeStub = path.join(root, 'bin/node');
     writeFileSync(nodeStub, '#!/usr/bin/env bash\nif [[ "$1" == "-p" ]]; then echo "22.23.2"; fi\n');
@@ -3044,14 +3047,16 @@ test('upgrade keeps the supported Shiki peer floor while refreshing its developm
     writeFileSync(pnpmStub, `#!${process.execPath}
 const fs = require('node:fs');
 const args = process.argv.slice(2);
+const dependency = ${JSON.stringify(dependency)};
+const latest = ${JSON.stringify(latest)};
 if (args[0] === 'dlx') {
   const manifest = JSON.parse(fs.readFileSync('packages/lyra-ui/package.json', 'utf8'));
   const section = args[args.indexOf('--dep') + 1];
   const rejected = args.includes('--reject') ? args[args.indexOf('--reject') + 1].split(',') : [];
   if (section === 'peer') {
-    if (!rejected.includes('shiki')) manifest.peerDependencies.shiki = '^4.5.0';
+    if (!rejected.includes(dependency)) manifest.peerDependencies[dependency] = latest;
   } else {
-    manifest.devDependencies.shiki = '^4.5.0';
+    manifest.devDependencies[dependency] = latest;
   }
   fs.writeFileSync('packages/lyra-ui/package.json', JSON.stringify(manifest));
 }
@@ -3064,8 +3069,8 @@ if (args[0] === 'dlx') {
     });
     assert.equal(result.status, 0, result.stderr);
     const upgraded = JSON.parse(readFileSync(manifestPath, 'utf8'));
-    assert.equal(upgraded.devDependencies.shiki, '^4.5.0');
-    assert.equal(upgraded.peerDependencies.shiki, '^4.4.3');
+    assert.equal(upgraded.devDependencies[dependency], latest);
+    assert.equal(upgraded.peerDependencies[dependency], supported);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

@@ -27,7 +27,7 @@
     "pdfjs-dist": "6.5.438"
   },
   "toolchain": {
-    "playwright": "1.65.0",
+    "playwright": "1.65.1",
     "typescript": "7.0.2",
     "vite": "8.3.8"
   },

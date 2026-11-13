@@ -2,7 +2,7 @@
 # Upgrade dependency ranges in the root package and every pnpm workspace package, install the
 # resulting dependency graph, then build every workspace package. Peer dependencies are upgraded
 # separately because npm-check-updates does not include them by default. The curated
-# libphonenumber-js, MapLibre, postal-mime, Shiki and Vite peer ranges keep their compatibility bounds;
+# libphonenumber-js, MapLibre, PapaParse, postal-mime, Shiki and Vite peer ranges keep their compatibility bounds;
 # their dev dependencies are upgraded separately from peer floors. The MapLibre renderer source
 # and DOCX maintainer inputs stay pinned to their reviewed source locks and transformations; update
 # those together before changing their versions. Native MapLibre development consumers still update.
@@ -144,7 +144,7 @@ pnpm dlx npm-check-updates@latest \
   --workspaces \
   --root \
   --dep peer \
-  --reject @sgratzl/chartjs-chart-boxplot,chart.js,chartjs-plugin-annotation,chartjs-plugin-datalabels,chartjs-plugin-zoom,dompurify,katex,mammoth,marked,pdfjs-dist,libphonenumber-js,maplibre-gl,postal-mime,shiki,vite,xlsx \
+  --reject @sgratzl/chartjs-chart-boxplot,chart.js,chartjs-plugin-annotation,chartjs-plugin-datalabels,chartjs-plugin-zoom,dompurify,katex,mammoth,marked,pdfjs-dist,libphonenumber-js,maplibre-gl,papaparse,postal-mime,shiki,vite,xlsx \
   --target latest \
   --install never \
   --upgrade
