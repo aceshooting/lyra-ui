@@ -36686,6 +36686,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/utility/mutation-observer/mutation-observer-coverage.test.ts",
+          "src/components/utility/mutation-observer/mutation-observer-delivery.test.ts",
           "src/components/utility/mutation-observer/mutation-observer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
