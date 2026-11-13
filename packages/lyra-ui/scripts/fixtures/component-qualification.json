@@ -37841,6 +37841,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/notebook-viewer/dompurify-loader.test.ts",
+          "src/components/viewers/notebook-viewer/notebook-viewer-markup.property.test.ts",
           "src/components/viewers/notebook-viewer/notebook-viewer-register.test.ts",
           "src/components/viewers/notebook-viewer/notebook-viewer-remediation.test.ts",
           "src/components/viewers/notebook-viewer/notebook-viewer.test.ts"

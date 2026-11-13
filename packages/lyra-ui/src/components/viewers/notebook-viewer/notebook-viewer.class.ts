@@ -249,6 +249,39 @@ function* notebookSearchTextParts(text: unknown): Generator<string> {
 
 const MARKUP_ENTITIES: Readonly<Record<string, string>> = { lt: '<', gt: '>', quot: '"', apos: '\'', amp: '&' };
 
+function isMarkupTagBoundary(markup: string, index: number): boolean {
+  return /[\t\n\f\r />]/.test(markup[index] ?? '');
+}
+
+function markupTagEnd(markup: string, start: number): number {
+  let quote = '';
+  let inName = true, beforeValue = false, unquotedValue = false;
+  for (let index = start; index < markup.length; index++) {
+    const character = markup[index]!;
+    if (quote) {
+      if (character === quote) quote = '';
+      continue;
+    }
+    if (character === '>') return index;
+    const whitespace = /[\t\n\f\r ]/.test(character);
+    if (inName) {
+      if (whitespace || (character === '/' && index > start)) inName = false;
+      continue;
+    }
+    if (beforeValue) {
+      if (whitespace) continue;
+      beforeValue = false;
+      if (character === '"' || character === '\'') quote = character;
+      else unquotedValue = true;
+    } else if (unquotedValue) {
+      if (whitespace) unquotedValue = false;
+    } else if (character === '=') {
+      beforeValue = true;
+    }
+  }
+  return -1;
+}
+
 /** Visible text of HTML/SVG markup (no tags, comments, script/style), in one linear pass. */
 function visibleMarkupText(markup: string): string {
   const lower = markup.toLowerCase();
@@ -266,12 +299,17 @@ function visibleMarkupText(markup: string): string {
       index = end < 0 ? markup.length : end + 3;
       continue;
     }
-    const close = markup.indexOf('>', open + 1);
+    const close = markupTagEnd(markup, open + 1);
     if (close < 0) break;
-    const rawText = lower.startsWith('<script', open) ? '</script' : lower.startsWith('<style', open) ? '</style' : '';
+    const rawText = lower.startsWith('<script', open) && isMarkupTagBoundary(lower, open + 7) ? '</script'
+      : lower.startsWith('<style', open) && isMarkupTagBoundary(lower, open + 6) ? '</style' : '';
     if (rawText) {
-      const end = lower.indexOf(rawText, close + 1);
-      const endClose = end < 0 ? -1 : markup.indexOf('>', end);
+      let end = lower.indexOf(rawText, close + 1);
+      // A longer tag name is still raw text, not a closing script/style element.
+      while (end >= 0 && !isMarkupTagBoundary(lower, end + rawText.length)) {
+        end = lower.indexOf(rawText, end + rawText.length);
+      }
+      const endClose = end < 0 ? -1 : markupTagEnd(markup, end + 2);
       index = endClose < 0 ? markup.length : endClose + 1;
       continue;
     }

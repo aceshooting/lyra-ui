@@ -2380,3 +2380,156 @@ describe('DOM moves', () => {
     }
   });
 });
+
+for (const tagName of ['scripture', 'script-note', 'stylesheet', 'style-note']) {
+  it(`searches visible text inside the non-raw-text ${tagName} element`, async () => {
+    const el = await fixture<LyraNotebookViewer>(html`<lr-notebook-viewer .notebook=${{
+      nbformat: 4, nbformat_minor: 5,
+      cells: [{ cell_type: 'code', source: 'render()', outputs: [{
+        output_type: 'display_data',
+        data: { 'text/html': `<${tagName}>visible-needle</${tagName}>` },
+      }] }],
+    }}></lr-notebook-viewer>`);
+    await waitUntil(() => rowRoot(el).querySelector('[part~="output"]')?.textContent?.includes('visible-needle') === true);
+    expect(await el.search('visible-needle')).to.equal(1);
+  });
+}
+
+for (const tagName of ['script', 'style']) {
+  it(`ignores a closing-tag prefix inside ${tagName} while searching only visible output`, async () => {
+    const el = await fixture<LyraNotebookViewer>(html`<lr-notebook-viewer .notebook=${{
+      nbformat: 4, nbformat_minor: 5,
+      cells: [{ cell_type: 'code', source: 'render()', outputs: [{
+        output_type: 'display_data',
+        data: { 'text/html': `<${tagName}>hidden-needle</${tagName}-note><p>still-hidden-needle</p></${tagName}><p>visible-needle</p>` },
+      }] }],
+    }}></lr-notebook-viewer>`);
+    await waitUntil(() => rowRoot(el).querySelector('[part~="output"]')?.textContent?.includes('visible-needle') === true);
+    const output = rowRoot(el).querySelector('[part~="output"]')!.textContent;
+    expect(output).not.to.include('hidden-needle');
+    expect(await el.search('visible-needle')).to.equal(1);
+    expect(await el.search('hidden-needle')).to.equal(0);
+  });
+}
+
+for (const suffix of ['<!-- hidden-needle', '<partial hidden-needle', '<script>hidden-needle', '<style>hidden-needle</style']) {
+  it(`keeps visible output searchable before incomplete markup (${suffix})`, async () => {
+    const el = await fixture<LyraNotebookViewer>(html`<lr-notebook-viewer .notebook=${{
+      nbformat: 4, nbformat_minor: 5,
+      cells: [{ cell_type: 'code', source: 'render()', outputs: [{
+        output_type: 'display_data',
+        data: { 'text/html': `<p>visible-needle</p>${suffix}` },
+      }] }],
+    }}></lr-notebook-viewer>`);
+    await waitUntil(() => rowRoot(el).querySelector('[part~="output"]')?.textContent?.includes('visible-needle') === true);
+    expect(rowRoot(el).querySelector('[part~="output"]')!.textContent).not.to.include('hidden-needle');
+    expect(await el.search('visible-needle')).to.equal(1);
+    expect(await el.search('hidden-needle')).to.equal(0);
+  });
+}
+
+for (const quote of ['"', "'"]) {
+  it(`retains visible output after a quote inside an unquoted attribute (${quote})`, async () => {
+    const el = await fixture<LyraNotebookViewer>(html`<lr-notebook-viewer .notebook=${{
+      nbformat: 4, nbformat_minor: 5,
+      cells: [{ cell_type: 'code', source: 'render()', outputs: [{
+        output_type: 'display_data',
+        data: { 'text/html': `<p title=can${quote}t>visible-needle</p>` },
+      }] }],
+    }}></lr-notebook-viewer>`);
+    await waitUntil(() => rowRoot(el).querySelector('[part~="output"]')?.textContent?.includes('visible-needle') === true);
+    expect(await el.search('visible-needle')).to.equal(1);
+  });
+
+  it(`does not search quoted attribute text after a greater-than character (${quote})`, async () => {
+    const el = await fixture<LyraNotebookViewer>(html`<lr-notebook-viewer .notebook=${{
+      nbformat: 4, nbformat_minor: 5,
+      cells: [{ cell_type: 'code', source: 'render()', outputs: [{
+        output_type: 'display_data',
+        data: { 'text/html': `<p title=${quote}hidden > attribute-needle${quote}>visible-needle</p>` },
+      }] }],
+    }}></lr-notebook-viewer>`);
+    await waitUntil(() => rowRoot(el).querySelector('[part~="output"]')?.textContent?.includes('visible-needle') === true);
+    expect(rowRoot(el).querySelector('[part~="output"]')!.textContent).not.to.include('attribute-needle');
+    expect(await el.search('visible-needle')).to.equal(1);
+    expect(await el.search('attribute-needle')).to.equal(0);
+  });
+
+  for (const tagName of ['script', 'style']) {
+    it(`skips a quoted greater-than character in the ${tagName} closing tag (${quote})`, async () => {
+      const el = await fixture<LyraNotebookViewer>(html`<lr-notebook-viewer .notebook=${{
+        nbformat: 4, nbformat_minor: 5,
+        cells: [{ cell_type: 'code', source: 'render()', outputs: [{
+          output_type: 'display_data',
+          data: { 'text/html': `<${tagName}>hidden-needle</${tagName} title=${quote}> attribute-needle${quote}><p>visible-needle</p>` },
+        }] }],
+      }}></lr-notebook-viewer>`);
+      await waitUntil(() => rowRoot(el).querySelector('[part~="output"]')?.textContent?.includes('visible-needle') === true);
+      expect(rowRoot(el).querySelector('[part~="output"]')!.textContent).not.to.include('attribute-needle');
+      expect(await el.search('visible-needle')).to.equal(1);
+      expect(await el.search('attribute-needle')).to.equal(0);
+    });
+  }
+}
+
+describe('notebook record ownership and aggregate limits', () => {
+  it('owns null-prototype records and keeps their original visible text searchable', async () => {
+    const source = ['visible original'];
+    const cell = Object.assign(Object.create(null), { cell_type: 'raw', source });
+    const language = Object.assign(Object.create(null), { name: 'python' });
+    const metadata = Object.assign(Object.create(null), { language_info: language });
+    const notebook = Object.assign(Object.create(null), { nbformat: 4, nbformat_minor: 5, cells: [cell], metadata });
+    const el = document.createElement('lr-notebook-viewer') as LyraNotebookViewer;
+    el.notebook = notebook;
+    source[0] = 'mutated later';
+    language.name = 'javascript';
+    const snapshot = el.notebook as NotebookDocument;
+    expect(Object.getPrototypeOf(snapshot)).to.equal(Object.prototype);
+    expect(Object.isFrozen(snapshot.metadata!.language_info)).to.be.true;
+    expect(Object.isFrozen(snapshot.cells[0])).to.be.true;
+    expect(snapshot.metadata!.language_info).to.deep.equal({ name: 'python' });
+    expect(await el.search('visible original')).to.equal(1);
+    expect(await el.search('mutated later')).to.equal(0);
+  });
+
+  it('rejects class and constructor-accessor roots without evaluating their properties, then recovers', async () => {
+    class NotebookInstance {
+      nbformat = 4;
+      nbformat_minor = 5;
+      cells = [{ cell_type: 'raw', source: 'hidden instance' }];
+    }
+    let constructorReads = 0;
+    const prototype = Object.defineProperty({}, 'constructor', {
+      get() { constructorReads++; throw new Error('constructor must not execute'); },
+    });
+    const accessorRoot = Object.assign(Object.create(prototype), {
+      nbformat: 4, nbformat_minor: 5, cells: [{ cell_type: 'raw', source: 'hidden accessor' }],
+    });
+    const el = document.createElement('lr-notebook-viewer') as LyraNotebookViewer;
+    for (const rejected of [new NotebookInstance(), accessorRoot]) {
+      el.notebook = rejected as NotebookDocument;
+      expect(el.notebook).to.deep.equal({});
+      expect(await el.search('hidden')).to.equal(0);
+    }
+    expect(constructorReads).to.equal(0);
+    el.notebook = { nbformat: 4, nbformat_minor: 5, cells: [{ cell_type: 'raw', source: 'recovered record' }] };
+    expect(await el.search('recovered record')).to.equal(1);
+  });
+
+  it('applies one node budget across sibling metadata arrays and replaces rejected input atomically', async () => {
+    const el = document.createElement('lr-notebook-viewer') as LyraNotebookViewer;
+    const valid: NotebookDocument = {
+      nbformat: 4, nbformat_minor: 5, cells: [{ cell_type: 'raw', source: 'retained record' }],
+    };
+    el.notebook = valid;
+    expect(await el.search('retained record')).to.equal(1);
+    el.notebook = {
+      ...valid,
+      metadata: { first: new Array(50_000).fill(null), second: new Array(50_000).fill(null) },
+    } as NotebookDocument;
+    expect(el.notebook).to.deep.equal({});
+    expect(await el.search('retained record')).to.equal(0);
+    el.notebook = valid;
+    expect(await el.search('retained record')).to.equal(1);
+  });
+});

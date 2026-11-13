@@ -3,7 +3,9 @@ import { normalizeSelectionValue, snapshotSelectionCatalog } from './selection-c
 
 describe('selection catalog snapshots', () => {
   it('preserves ordered first occurrences and clone-owns display configuration', () => {
-    const source = [{ code: ' gb ', label: 'Britain', group: 'Common' }, { code: 'FR', disabled: true }, { code: 'GB' }];
+    const source: { code: string; label?: string; group?: string; disabled?: boolean }[] = [
+      { code: ' gb ', label: 'Britain', group: 'Common' }, { code: 'FR', disabled: true }, { code: 'GB' },
+    ];
     const rows = snapshotSelectionCatalog(source, (code) => code.trim().toUpperCase());
     source[0]!.label = 'Changed';
     expect(rows?.map((row) => row.code)).to.deep.equal(['GB', 'FR']);
