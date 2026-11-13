@@ -149,3 +149,31 @@ it('omits arbitrary symbols and getters while keeping the supported adapter usab
   expect(adaptDocumentRenderer(retained, FILE).capabilities?.search).to.equal(true);
   expect(reads).to.equal(0);
 });
+
+for (const kind of ['revoked', 'throwing'] as const) {
+  it(`rejects an adapter with ${kind} descriptor access without invoking its callbacks`, () => {
+    let calls = 0;
+    const original = createDocumentRendererAdapter({ kind: 'document',
+      adapt: file => { calls++; return { kind: 'document', file }; },
+      capabilities: () => { calls++; return undefined; },
+      render: () => { calls++; return 'output'; },
+    });
+    const revocable = Proxy.revocable(original, {});
+    revocable.revoke();
+    const adapter = kind === 'revoked' ? revocable.proxy : new Proxy(original, {
+      getOwnPropertyDescriptor() { throw new Error('Descriptor access denied'); },
+    });
+    expect(() => createDocumentRendererRegistry([['application/x-test', { adapter }]]))
+      .to.throw(TypeError, 'must be created with createDocumentRendererAdapter');
+    expect(calls).to.equal(0);
+    const valid = createDocumentRendererRegistry([['application/x-test', { adapter: original }]]);
+    expect(valid.get('application/x-test')?.adapter?.kind).to.equal('document');
+  });
+}
+
+for (const adapter of [null, true]) {
+  it(`rejects a ${adapter === null ? 'null' : 'primitive'} renderer adapter`, () => {
+    expect(() => createDocumentRendererRegistry([['application/x-test', { adapter } as never]]))
+      .to.throw(TypeError, 'must be created with createDocumentRendererAdapter');
+  });
+}

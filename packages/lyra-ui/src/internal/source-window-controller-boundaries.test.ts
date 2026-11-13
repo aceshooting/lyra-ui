@@ -144,3 +144,48 @@ describe('source window provider boundaries', () => {
     } finally { test.cleanup(); }
   });
 });
+
+it('does not queue a range after capability detection replaces its binding', async () => {
+  const test = setup(); let armed = false, reads = 0;
+  const view = { count: 2, read: async () => { reads++; return [{ key: 'obsolete' }]; } };
+  Object.defineProperty(view, 'itemAt', { get() {
+    if (armed) { armed = false; test.bind({ count: 1, itemAt: () => ({ key: 'replacement' }) }); }
+    return undefined;
+  } });
+  try {
+    test.bind(view); armed = true;
+    expect(test.control.source.itemAt(0).state).to.equal('loading');
+    await Promise.resolve();
+    expect(reads).to.equal(0);
+    const current = test.control.source.itemAt(0);
+    expect(current.state === 'ready' && current.value.key).to.equal('replacement');
+  } finally { test.cleanup(); }
+});
+
+for (const callback of ['normalize', 'keyOf', 'weightOf'] as const) {
+  it(`settles an obsolete range when ${callback} ensures a different row`, async () => {
+    let armed = true, replacements = 0;
+    let replacement: Promise<boolean> | undefined;
+    const move = () => {
+      if (!armed) return;
+      armed = false; replacements++;
+      replacement = test.control.ensure(2);
+    };
+    const test = setup({ maxWeight: 1,
+      normalize: value => { if (callback === 'normalize') move(); return value as Row; },
+      keyOf: value => { if (callback === 'keyOf') move(); return value.key; },
+      weightOf: () => { if (callback === 'weightOf') move(); return 1; },
+    });
+    const reads: number[] = [];
+    try {
+      test.bind({ count: 3, read: async ({ offset }) => { reads.push(offset); return [{ key: `row-${offset}` }]; } });
+      expect(await test.control.ensure(0)).to.equal(false);
+      expect(replacements).to.equal(1);
+      expect(await replacement).to.equal(true);
+      expect(test.control.source.indexOfKey!('row-0')).to.equal(-1);
+      const current = test.control.source.itemAt(2);
+      expect(current.state === 'ready' && current.value.key).to.equal('row-2');
+      expect(reads).to.deep.equal([0, 2]);
+    } finally { test.cleanup(); }
+  });
+}
