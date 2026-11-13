@@ -512,3 +512,33 @@ describe("ResizeObserver callback batching (perf)", () => {
     }
   });
 });
+
+for (const mode of ['server', 'dataSource'] as const) {
+  it(`keeps ${mode} tree ordering and membership authoritative until client processing resumes`, async () => {
+    const treeRows: Person[] = [{ id: 10, name: 'Parent', team: 'Tree', score: 0, children: [
+      { id: 13, name: 'Zulu', team: 'Tree', score: 3 },
+      { id: 11, name: 'Alpha', team: 'Tree', score: 1 },
+      { id: 12, name: 'Tango', team: 'Tree', score: 2 },
+    ] }];
+    const element = await dataGrid(html`<lr-data-grid label="Server tree" child-rows="children" row-key="id"
+      .server=${mode === 'server'} .dataSource=${mode === 'dataSource' ? async () => ({ rows: treeRows, total: 1 }) : null}
+      .columns=${columns} .data=${treeRows}
+      .sort=${[{ id: 'name', desc: false }]} .filters=${[{ id: 'team', value: 'not returned by server' }]}
+      .searchTerm=${'not returned by server'}></lr-data-grid>`);
+    if (mode === 'dataSource') await element.reload();
+    element.expandAllRows();
+    await element.updateComplete;
+    const ids = () => [...element.shadowRoot!.querySelectorAll<HTMLElement>('[part~="row"]')]
+      .map(row => row.dataset['virtualItemKey']);
+    expect(ids()).to.deep.equal(['row:number:10', 'row:number:13', 'row:number:11', 'row:number:12']);
+    expect(element.getVisibleRows().map(row => row.id)).to.deep.equal([10]);
+    expect(element.shadowRoot!.querySelectorAll('[aria-level="2"]').length).to.equal(3);
+    element.server = false; element.dataSource = null;
+    element.filters = []; element.searchTerm = 'Zulu'; element.filterFromLeafRows = true;
+    await element.updateComplete;
+    expect(ids()).to.deep.equal(['row:number:10', 'row:number:13']);
+    element.searchTerm = '';
+    await element.updateComplete;
+    expect(ids()).to.deep.equal(['row:number:10', 'row:number:11', 'row:number:12', 'row:number:13']);
+  });
+}

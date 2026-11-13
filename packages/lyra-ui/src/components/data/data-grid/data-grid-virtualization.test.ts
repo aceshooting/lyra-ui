@@ -1856,3 +1856,46 @@ it('invalidates measured heights for every finite fractional body-width change',
   expect(state.recordMeasuredBodyWidth(100.25)).to.equal(true);
   expect(state.measuredItemHeights.has('fractional-width-sentinel')).to.equal(false);
 });
+
+for (const decoration of ['transform', 'zoom'] as const) {
+  it(`aligns painted ${decoration} row parts inside a scaled data-grid viewport`, async () => {
+    const data: Person[] = Array.from({ length: 100 }, (_, id) => ({ id, name: `Row ${id}`, team: 'Geometry', score: id }));
+    const wrapper = await fixture<HTMLElement>(html`<div style="transform:scale(0.8);transform-origin:top left">
+      <style>
+        .geometry-grid::part(row) { transform-origin: top left; }
+        .geometry-grid::part(body) { max-height: 160px; overflow: auto; }
+        .geometry-grid.transformed::part(row) { transform: translateY(8px) scaleY(1.1); }
+        .geometry-grid.zoomed::part(row) { zoom: 125%; }
+      </style>
+      <lr-data-grid class=${`geometry-grid ${decoration === 'transform' ? 'transformed' : 'zoomed'}`}
+        label="Decorated rows" row-key="id" style="--row-height:40px;--max-height:none"
+        .columns=${columns} .data=${data}></lr-data-grid>
+    </div>`);
+    const element = wrapper.querySelector<LyraDataGrid<Person>>('lr-data-grid')!;
+    await element.updateComplete; await settleFrames();
+    const body = element.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+    const target = element.shadowRoot!.querySelector<HTMLElement>('[part~="row"][data-visible-index="70"]')!;
+    expect(element.shadowRoot!.querySelectorAll('[part~="row"]').length).to.equal(100);
+    const painted = getComputedStyle(target);
+    if (decoration === 'transform') expect(painted.transform).not.to.equal('none');
+    else expect(Number.parseFloat(painted.zoom)).to.equal(1.25);
+    const pageY = window.scrollY;
+    for (const align of ['start', 'center', 'end', 'nearest'] as const) {
+      body.scrollTop = 0;
+      body.dispatchEvent(new Event('scroll'));
+      await settleFrames();
+      if (align === 'nearest') element.scrollToIndex(70);
+      else element.scrollToIndex(70, { align });
+      await settleFrames();
+      const bodyRect = body.getBoundingClientRect(), rowRect = target.getBoundingClientRect();
+      const scale = bodyRect.height / body.offsetHeight;
+      const top = bodyRect.top + body.clientTop * scale;
+      const bottom = top + body.clientHeight * scale;
+      const error = align === 'start' ? rowRect.top - top
+        : align === 'center' ? (rowRect.top + rowRect.bottom - top - bottom) / 2
+        : rowRect.bottom - bottom;
+      expect(Math.abs(error), `${decoration} ${align} uses painted coordinates`).to.be.at.most(2);
+      expect(window.scrollY).to.equal(pageY);
+    }
+  });
+}
