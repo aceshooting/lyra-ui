@@ -5,7 +5,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runInNewContext } from 'node:vm';
 import test from 'node:test';
-import { COVERAGE_SHARD_TOTAL } from '../packages/lyra-ui/scripts/coverage-shard-runner.mjs';
 
 const read = (file) => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
 
@@ -78,26 +77,6 @@ test('the coverage shard step runs under the strict console gate', () => {
   const at = step.indexOf('name: Run coverage shard');
   assert(at >= 0);
   assert.match(step.slice(at, at + 400), /WTR_STRICT_CONSOLE: "1"/u);
-});
-
-test('coverage workers and downloaded reports match the complete runner inventory', () => {
-  const workflow = read('.github/workflows/ci.yml');
-  const producer = job(workflow, 'build_and_coverage_coverage_shard');
-  const consumer = job(workflow, 'build_and_coverage_coverage');
-  const indices = Array.from({ length: COVERAGE_SHARD_TOTAL }, (_, index) => index + 1);
-  const matrix = producer.match(/^ {8}shard: (\[[^\n]+\])$/mu)?.[1];
-  assert.ok(matrix, 'coverage matrix declares its shard indices');
-  assert.deepEqual(JSON.parse(matrix), indices);
-  const downloads = consumer.split(/\n(?= {6}- )/u)
-    .filter(step => /name: lyra-ui-coverage-shard-/u.test(step));
-  assert.deepEqual(downloads.map(step => Number(step.match(/name: lyra-ui-coverage-shard-(\d+)/u)?.[1])), indices);
-  for (const [index, step] of downloads.entries()) {
-    assert.match(step, /uses: actions\/download-artifact@/u);
-    assert.equal(step.match(/^ {10}path: (.+)$/mu)?.[1], `packages/lyra-ui/coverage/shards/coverage-shard-${index + 1}`);
-  }
-  assert.match(consumer, /^ {6}- build_and_coverage_coverage_shard$/mu);
-  assert.match(consumer, /run: node scripts\/coverage-shard-runner\.mjs --merge/u);
-  assert.match(consumer, /name: lyra-ui-coverage-ssr/u);
 });
 
 test('the complete DOCX group runs once per engine with Firefox owned by platform shard 2', () => {

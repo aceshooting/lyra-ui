@@ -47,6 +47,7 @@ import {
 } from './changeset-release-plan.mjs';
 import { normalizeBrowserInput } from './plan-test-browsers.mjs';
 import { updateDocumentationCounts, updateReadmeStatusLine } from './update-readme-status.mjs';
+import { COVERAGE_SHARD_TOTAL } from '../packages/lyra-ui/scripts/coverage-shard-runner.mjs';
 
 const repoRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const sha = '0123456789abcdef0123456789abcdef01234567';
@@ -1318,13 +1319,16 @@ test('requires complete fail-closed coverage shards before the stable build gate
   const shardJob = workflow.slice(shardStart, mergeStart);
   const mergeJob = workflow.slice(mergeStart, aggregateStart);
   const aggregateJob = workflow.slice(aggregateStart, packedStart);
-  assert.match(
-    shardJob,
-    /name: build-and-coverage \/ coverage \/ shard \$\{\{ matrix\.shard \}\}\/5/u
+  const shards = Array.from({ length: COVERAGE_SHARD_TOTAL }, (_, index) => index + 1);
+  assert.equal(
+    shardJob.match(/^ {4}name: (.+)$/mu)?.[1],
+    `build-and-coverage / coverage / shard \${{ matrix.shard }}/${COVERAGE_SHARD_TOTAL}`
   );
   assert.match(shardJob, /needs: \[build_and_coverage_build, changes\]/u);
   assert.match(shardJob, /fail-fast: false/u);
-  assert.match(shardJob, /shard: \[1, 2, 3, 4, 5\]/u);
+  const matrix = shardJob.match(/^ {8}shard: (\[[^\n]+\])$/mu)?.[1];
+  assert.ok(matrix, 'coverage matrix declares its shard indices');
+  assert.deepEqual(JSON.parse(matrix), shards);
   assert.match(
     shardJob,
     /image: mcr\.microsoft\.com\/playwright:v[0-9.]+-noble/u
@@ -1355,7 +1359,7 @@ test('requires complete fail-closed coverage shards before the stable build gate
   assert.match(mergeJob, /if: \$\{\{ always\(\) && needs\.changes\.outputs\.runtime != 'false' \}\}/u);
   assert.match(mergeJob, /- build_and_coverage_coverage_shard\b/u);
   assert.match(mergeJob, /- build_and_coverage_ssr_hydration\b/u);
-  for (const shard of [1, 2, 3, 4, 5]) {
+  for (const shard of shards) {
     assert.match(
       mergeJob,
       new RegExp(
@@ -1366,8 +1370,8 @@ test('requires complete fail-closed coverage shards before the stable build gate
   }
   assert.equal(
     [...mergeJob.matchAll(/uses: actions\/download-artifact@/gu)].length,
-    6,
-    'the merge job must download five individually named browser artifacts and the SSR artifact'
+    COVERAGE_SHARD_TOTAL + 1,
+    'the merge job must download every individually named browser artifact and the SSR artifact'
   );
   assert.match(mergeJob, /name: lyra-ui-coverage-ssr\s+path: packages\/lyra-ui\/coverage\/ssr\b/u);
   const ssrJob = workflow.slice(workflow.indexOf('\n  build_and_coverage_ssr_hydration:'), shardStart);
