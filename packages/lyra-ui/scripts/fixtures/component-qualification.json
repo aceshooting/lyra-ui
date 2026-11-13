@@ -15443,6 +15443,7 @@
           "src/components/viewers/csv-viewer/csv-viewer-refresh.test.ts",
           "src/components/viewers/csv-viewer/csv-viewer-register.test.ts",
           "src/components/viewers/csv-viewer/csv-viewer-scale.test.ts",
+          "src/components/viewers/csv-viewer/csv-viewer-search-load-ownership.test.ts",
           "src/components/viewers/csv-viewer/csv-viewer-yield.test.ts",
           "src/components/viewers/csv-viewer/csv-viewer.test.ts"
         ],
