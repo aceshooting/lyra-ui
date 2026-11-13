@@ -104,3 +104,21 @@ it('retains the safe selection prefix when an assigned array iterator fails', as
   expect(element.selectedDocumentIds).to.deep.equal(['fresh']);
   expect(element.shadowRoot!.querySelector('[part="selection-count"]')?.textContent).to.contain('1');
 });
+
+for (const sortKey of ['version', 'updatedAt'] as const) {
+  it(`sorts missing ${sortKey} values with stable ties in both directions`, async () => {
+    const records: LibraryDocument[] = [
+      { id: 'missing-first', name: 'Missing first' },
+      { id: 'newer', name: 'Newer', version: 'v10', updatedAt: '2026-02-01T00:00:00Z' },
+      { id: 'older', name: 'Older', version: 'v2', updatedAt: '2026-01-01T00:00:00Z' },
+      { id: 'missing-last', name: 'Missing last', updatedAt: new Date(NaN) },
+    ];
+    const element = await fixture<LyraDocumentLibrary>(html`<lr-document-library .documents=${records} .sortKey=${sortKey}></lr-document-library>`);
+    await waitUntil(() => names(element).length === 4);
+    expect(names(element)).to.deep.equal(['Missing first', 'Missing last', 'Older', 'Newer']);
+    element.sortDir = 'desc';
+    await element.updateComplete; await table(element).updateComplete;
+    expect(names(element)).to.deep.equal(['Newer', 'Older', 'Missing first', 'Missing last']);
+    expect(element.documents.map(record => record.id)).to.deep.equal(['missing-first', 'newer', 'older', 'missing-last']);
+  });
+}

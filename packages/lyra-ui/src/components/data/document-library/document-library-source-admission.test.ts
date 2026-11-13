@@ -70,3 +70,45 @@ it('accepts exactly the document text budget and the complete per-record tag lim
   expect(grid.rows[0]?.tags).to.deep.equal(tags);
   expect(grid.error).to.equal(false);
 });
+
+for (const problem of ['missing facets', 'unrequested unavailable facet'] as const) {
+  it(`rejects ${problem} and recovers when the visible retry returns valid facets`, async () => {
+    let invalid = true;
+    const source: DocumentLibrarySource = { revision: 1,
+      query: async () => ({ total: 1, rows: [{ key: 'd0', order: 0, value: documentRecord() }],
+        ...(invalid && problem === 'missing facets' ? {} : { tags: invalid
+          ? { ...facets, unavailableSelected: ['unrequested'] } : facets }) }),
+      lookup: async () => [], locate: async () => null };
+    const viewer = await fixture<LyraDocumentLibrary>(html`<lr-document-library .dataSource=${source}></lr-document-library>`);
+    const grid = viewer.shadowRoot!.querySelector<LyraTable<LibraryDocument>>('lr-table')!;
+    await waitUntil(() => grid.error);
+    await grid.updateComplete;
+    expect(viewer.sourceTotal).to.equal(null);
+    expect(grid.rows.length).to.equal(0);
+    expect(grid.shadowRoot!.textContent).not.to.include('Invalid document source facets');
+    invalid = false;
+    grid.shadowRoot!.querySelector<HTMLElement>('[part="retry-button"]')!.click();
+    await waitUntil(() => !grid.error && grid.rows[0]?.id === 'd0');
+    expect(viewer.sourceTotal).to.equal(1);
+    expect(viewer.tagFilter).to.deep.equal([]);
+  });
+}
+
+it('shows omitted source tag counts and provider labels without refetching for localized summary text', async () => {
+  let requests = 0;
+  const source: DocumentLibrarySource = { revision: 1,
+    query: async () => { requests++; return { total: 1, rows: [{ key: 'd0', order: 0, value: documentRecord() }],
+      tags: { total: 1202, values: [{ key: 'topic', label: 'Research topic' }, { key: 'guide', label: 'Guides' }], unavailableSelected: [] } }; },
+    lookup: async () => [], locate: async () => null };
+  const viewer = await fixture<LyraDocumentLibrary>(html`<lr-document-library .dataSource=${source}></lr-document-library>`);
+  await waitUntil(() => viewer.sourceTotal === 1);
+  await viewer.updateComplete;
+  const summary = () => viewer.shadowRoot!.querySelector('[part="limit"]')?.textContent;
+  expect(summary()).to.equal('+1,200 more tags');
+  expect([...viewer.shadowRoot!.querySelectorAll('lr-option')].map(option => option.textContent)).to.deep.equal(['Research topic', 'Guides']);
+  viewer.strings = { tagFacetLimit: 'Additional categories: {count}' };
+  await viewer.updateComplete;
+  expect(summary()).to.equal('Additional categories: 1,200');
+  expect(requests).to.equal(1);
+  expect(viewer.documents.length).to.equal(0);
+});

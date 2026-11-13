@@ -1,4 +1,5 @@
 import { toRgba } from '../../../../test/color-contrast.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { aTimeout, expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import type { TemplateResult } from 'lit';
@@ -1934,3 +1935,72 @@ describe('navigation menu label and glass foregrounds', () => {
     }
   });
 });
+
+for (const pending of ['show', 'hide'] as const) {
+  it(`retires a pending ${pending} when its menu item is removed and reacquires it after reinsertion`, async () => {
+    const menu = await menuFixture(html`<lr-navigation-menu show-delay="0" hide-delay="300" skip-delay="0">${items()}</lr-navigation-menu>`);
+    const products = item(menu, 'products');
+    if (pending === 'show') { menu.showDelay = 300; await settle(menu); }
+    hoverSynthetic(products);
+    if (pending === 'hide') {
+      await waitPlaced(products);
+      leaveSynthetic(products);
+    }
+    products.remove();
+    await settle(menu);
+    // wait-reason: outlast the removed item's hover timer to reject obsolete reopen/close work.
+    await aTimeout(350);
+    expect(products.open).to.equal(false);
+    expect(products.hasAttribute('role')).to.equal(false);
+    menu.prepend(products); menu.showDelay = 0;
+    await settle(menu);
+    expect(products.getAttribute('role')).to.equal('listitem');
+    hoverSynthetic(products);
+    await waitPlaced(products);
+    expect(products.open).to.equal(true);
+  });
+}
+
+it('cancels a pending hide when the pointer returns to the open item', async () => {
+  const menu = await menuFixture(html`<lr-navigation-menu show-delay="0" hide-delay="200">${items()}</lr-navigation-menu>`);
+  const products = item(menu, 'products');
+  const events = recordToggles(menu);
+  hoverSynthetic(products);
+  await waitPlaced(products);
+  leaveSynthetic(products);
+  hoverSynthetic(products);
+  // wait-reason: reentry must cancel the pending hide after its original deadline has elapsed.
+  await aTimeout(250);
+  expect(products.open).to.equal(true);
+  expect(events.filter(event => event.id === 'products').map(event => event.expanded)).to.deep.equal([true]);
+});
+
+it('retains a panel when keyboard focus enters after its hover hide was scheduled', async () => {
+  const menu = await menuFixture(html`<lr-navigation-menu show-delay="0" hide-delay="300">${items()}</lr-navigation-menu>`);
+  const products = item(menu, 'products');
+  hoverSynthetic(products);
+  await waitPlaced(products);
+  leaveSynthetic(products);
+  const link = products.querySelector<HTMLElement>('#products-a')!;
+  await focusByKeyboard(link);
+  // wait-reason: focus acquired after scheduling must protect the panel when the hide timer fires.
+  await aTimeout(350);
+  expect(products.open).to.equal(true);
+  expect(deepActive() === link).to.equal(true);
+});
+
+for (const ignored of [{ button: 1, isPrimary: true }, { button: 0, isPrimary: false }]) {
+  it(`does not defer focus dismissal for an item press with button=${ignored.button} and primary=${ignored.isPrimary}`, async () => {
+    const menu = await menuFixture(html`<div><lr-navigation-menu>${items()}</lr-navigation-menu><input id="outside-press" aria-label="Outside" /></div>`);
+    const products = item(menu, 'products');
+    products.open = true;
+    await waitPlaced(products);
+    await focusByKeyboard(products.querySelector<HTMLElement>('#products-a')!);
+    pointer(base(products), 'pointerdown', ignored);
+    expect(products.open).to.equal(true);
+    await focusByKeyboard(menu.parentElement!.querySelector<HTMLElement>('#outside-press')!);
+    await settle(menu);
+    expect(products.open, 'a non-primary item press must not postpone focus dismissal until pointerup').to.equal(false);
+    pointer(document.body, 'pointerup', ignored);
+  });
+}
