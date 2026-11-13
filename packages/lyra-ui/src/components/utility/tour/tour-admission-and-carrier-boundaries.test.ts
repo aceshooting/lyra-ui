@@ -66,6 +66,44 @@ it('restores default spotlight padding after removing its authored length', asyn
   }
 });
 
+it('vetoes native cancellation before accepting it through the tour end contract', async () => {
+  const wrapper = await fixture<HTMLElement>(html`<div><dialog><button>Existing modal</button></dialog><lr-tour></lr-tour></div>`);
+  const outer = wrapper.querySelector<HTMLDialogElement>('dialog')!;
+  const tour = wrapper.querySelector<LyraTour>('lr-tour')!;
+  tour.steps = [{ stepId: 'current', target: '#missing-native-cancel-target', heading: 'Current step' }];
+  const requests: string[] = [];
+  const ends: string[] = [];
+  tour.addEventListener('lr-tour-end-request', event => {
+    requests.push(event.detail.reason);
+    if (requests.length === 1) event.preventDefault();
+  });
+  tour.addEventListener('lr-tour-end', event => ends.push(event.detail.reason));
+  try {
+    outer.showModal();
+    tour.start();
+    await tour.updateComplete;
+    const carrier = tour.shadowRoot!.querySelector<HTMLDialogElement>('[data-native-modal-carrier]')!;
+    await waitUntil(() => carrier.matches(':modal'));
+    carrier.requestClose();
+    await tour.updateComplete;
+    expect(tour.open).to.equal(true);
+    expect(carrier.matches(':modal')).to.equal(true);
+    expect(requests).to.deep.equal(['escape']);
+    expect(ends).to.deep.equal([]);
+    expect(tour.shadowRoot!.querySelector('[part="heading"]')?.textContent).to.equal('Current step');
+    carrier.requestClose();
+    await tour.updateComplete;
+    expect(tour.open).to.equal(false);
+    expect(carrier.matches(':modal')).to.equal(false);
+    expect(requests).to.deep.equal(['escape', 'escape']);
+    expect(ends).to.deep.equal(['escape']);
+    expect(outer.matches(':modal')).to.equal(true);
+  } finally {
+    tour.remove();
+    outer.close();
+  }
+});
+
 for (const veto of [false, true]) {
   it(`${veto ? 'restores' : 'dismisses'} its native carrier after external closure ${veto ? 'when ending is vetoed' : 'through the tour end contract'}`, async () => {
     const wrapper = await fixture<HTMLElement>(html`<div><dialog><button>Existing modal</button></dialog><lr-tour></lr-tour></div>`);

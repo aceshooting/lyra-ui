@@ -21834,6 +21834,7 @@
           "src/components/agent-tools/eval-dataset/eval-dataset-scale.test.ts",
           "src/components/agent-tools/eval-dataset/eval-dataset-search-sizing.test.ts",
           "src/components/agent-tools/eval-dataset/eval-dataset-source-admission.test.ts",
+          "src/components/agent-tools/eval-dataset/eval-dataset-source-facets.test.ts",
           "src/components/agent-tools/eval-dataset/eval-dataset-source-scale.test.ts",
           "src/components/agent-tools/eval-dataset/eval-dataset-tag-cost.test.ts",
           "src/components/agent-tools/eval-dataset/eval-dataset.test.ts"
@@ -42409,6 +42410,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/prompt-input/prompt-input-attachment-requests.test.ts",
           "src/components/conversation/prompt-input/prompt-input-immediate-disabled.test.ts",
           "src/components/conversation/prompt-input/prompt-input-input-limit-scale.test.ts",
           "src/components/conversation/prompt-input/prompt-input-register.test.ts",
@@ -46083,7 +46085,7 @@
           "evidence": [
             {
               "file": "src/components/layout/responsive-panel/native-modal-coverage.test.ts",
-              "test": "${tag} restores an unexpected carrier close and honors Escape veto and acceptance",
+              "test": "${tag} restores an unexpected carrier close and honors ${dismissal} veto and acceptance",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -46111,7 +46113,7 @@
           "evidence": [
             {
               "file": "src/components/layout/responsive-panel/native-modal-coverage.test.ts",
-              "test": "${tag} restores an unexpected carrier close and honors Escape veto and acceptance",
+              "test": "${tag} restores an unexpected carrier close and honors ${dismissal} veto and acceptance",
               "kind": "320px allocation test signal"
             }
           ]

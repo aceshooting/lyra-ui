@@ -9,7 +9,8 @@ import '../widget/widget.js';
 import '../app-rail/app-rail.js';
 import '../multi-split/multi-split.js';
 
-type LayoutTag = 'lr-responsive-panel' | 'lr-page' | 'lr-widget' | 'lr-app-rail' | 'lr-multi-split';
+const layoutTags = ['lr-responsive-panel', 'lr-page', 'lr-widget', 'lr-app-rail', 'lr-multi-split'] as const;
+type LayoutTag = typeof layoutTags[number];
 
 function stateName(tag: LayoutTag): 'open' | 'navOpen' | 'fullscreen' {
   if (tag === 'lr-page') return 'navOpen';
@@ -52,48 +53,105 @@ async function click(target: HTMLElement): Promise<void> {
   });
 }
 
-for (const tag of ['lr-responsive-panel', 'lr-page', 'lr-widget', 'lr-app-rail', 'lr-multi-split'] as const) {
-  it(`${tag} restores an unexpected carrier close and honors Escape veto and acceptance`, async () => {
-    const wrapper = await fixture<HTMLDivElement>(html`<div><dialog></dialog></div>`);
-    const native = wrapper.querySelector('dialog')!;
-    const host = document.createElement(tag);
-    configure(host, tag);
-    host.setAttribute('data-lr-theme-scope', '');
-    host.style.cssText = 'inline-size:320px;block-size:240px;--lr-transition-base:0ms';
-    wrapper.append(host);
+for (const tag of layoutTags) {
+  for (const nativeCancellation of [false, true]) {
+    const dismissal = nativeCancellation ? 'native cancellation' : 'Escape';
+    it(`${tag} restores an unexpected carrier close and honors ${dismissal} veto and acceptance`, async () => {
+      const wrapper = await fixture<HTMLDivElement>(html`<div><dialog></dialog></div>`);
+      const native = wrapper.querySelector('dialog')!;
+      const host = document.createElement(tag);
+      configure(host, tag);
+      host.setAttribute('data-lr-theme-scope', '');
+      host.style.cssText = 'inline-size:320px;block-size:240px;--lr-transition-base:0ms';
+      wrapper.append(host);
 
+      try {
+        native.showModal();
+        setOpen(host, tag, true);
+        await host.updateComplete;
+        const carrier = host.shadowRoot!.querySelector<HTMLDialogElement>('[data-native-modal-carrier]')!;
+        await waitUntil(() => carrier.matches(':modal'), 'the layout carrier entered the native modal stack');
+
+        carrier.close();
+        await waitUntil(() => carrier.matches(':modal'), 'an unexpected close restores the still-open carrier');
+        expect(getOpen(host, tag), 'restoring the carrier preserves the public layout state').to.equal(true);
+
+        const dismiss = async (): Promise<void> => {
+          if (nativeCancellation) carrier.requestClose();
+          else await sendKeys({ press: 'Escape' });
+        };
+        const requests: boolean[] = [];
+        const vetoFirst = (event: Event): void => {
+          requests.push(event.cancelable);
+          if (requests.length === 1) event.preventDefault();
+        };
+        host.addEventListener(requestName(tag), vetoFirst);
+        await dismiss();
+        await waitUntil(() => requests.length === 1, 'dismissal dispatched the cancellable layout request');
+        expect(requests[0], 'the close request is cancelable').to.equal(true);
+        await waitUntil(() => carrier.matches(':modal'), 'the veto retained native modality');
+        expect(getOpen(host, tag), 'a canceled request leaves the public layout state open').to.equal(true);
+        expect(native.open, 'the original native modal remains open after a veto').to.equal(true);
+
+        await dismiss();
+        await waitUntil(() => requests.length === 2 && !getOpen(host, tag), 'a second dismissal was accepted');
+        expect(requests).to.deep.equal([true, true]);
+        expect(carrier.matches(':modal'), 'an accepted dismissal releases the native carrier').to.equal(false);
+        expect(native.open, 'the original native modal remains open').to.equal(true);
+        host.removeEventListener(requestName(tag), vetoFirst);
+      } finally {
+        host.remove();
+        native.close();
+      }
+    });
+  }
+}
+
+for (const tag of layoutTags) {
+  it(`${tag} ignores native cancellation while an upper overlay owns the modal stack`, async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div><dialog><button>Existing modal</button></dialog></div>`);
+    const native = wrapper.querySelector('dialog')!;
+    const lower = document.createElement(tag);
+    const upper = document.createElement('lr-responsive-panel');
+    configure(lower, tag);
+    configure(upper, 'lr-responsive-panel');
+    for (const host of [lower, upper]) {
+      host.setAttribute('data-lr-theme-scope', '');
+      host.style.cssText = 'inline-size:320px;block-size:240px;--lr-transition-base:0ms';
+    }
+    wrapper.append(lower, upper);
     try {
       native.showModal();
-      setOpen(host, tag, true);
-      await host.updateComplete;
-      const carrier = host.shadowRoot!.querySelector<HTMLDialogElement>('[data-native-modal-carrier]')!;
-      await waitUntil(() => carrier.matches(':modal'), 'the layout carrier entered the native modal stack');
-
-      carrier.close();
-      await waitUntil(() => carrier.matches(':modal'), 'an unexpected close restores the still-open carrier');
-      expect(getOpen(host, tag), 'restoring the carrier preserves the public layout state').to.equal(true);
-
+      setOpen(lower, tag, true);
+      await lower.updateComplete;
+      const lowerCarrier = lower.shadowRoot!.querySelector<HTMLDialogElement>('[data-native-modal-carrier]')!;
+      await waitUntil(() => lowerCarrier.matches(':modal'));
+      upper.open = true;
+      await upper.updateComplete;
+      const upperCarrier = upper.shadowRoot!.querySelector<HTMLDialogElement>('[data-native-modal-carrier]')!;
+      await waitUntil(() => upperCarrier.matches(':modal'));
       const requests: boolean[] = [];
-      const vetoFirst = (event: Event): void => {
-        requests.push(event.cancelable);
-        if (requests.length === 1) event.preventDefault();
-      };
-      host.addEventListener(requestName(tag), vetoFirst);
-      await sendKeys({ press: 'Escape' });
-      await waitUntil(() => requests.length === 1, 'Escape dispatched the cancellable layout request');
-      expect(requests[0], 'the close request is cancelable').to.equal(true);
-      await waitUntil(() => carrier.matches(':modal'), 'the veto retained native modality');
-      expect(getOpen(host, tag), 'a canceled request leaves the public layout state open').to.equal(true);
-      expect(native.open, 'the original native modal remains open after a vetoed Escape').to.equal(true);
+      lower.addEventListener(requestName(tag), event => requests.push(event.cancelable));
+      lowerCarrier.requestClose();
+      await lower.updateComplete;
+      expect(getOpen(lower, tag)).to.equal(true);
+      expect(requests).to.deep.equal([]);
+      expect(upper.open).to.equal(true);
+      expect(upperCarrier.matches(':modal')).to.equal(true);
 
-      await sendKeys({ press: 'Escape' });
-      await waitUntil(() => requests.length === 2 && !getOpen(host, tag), 'a second Escape was accepted');
-      expect(requests).to.deep.equal([true, true]);
-      expect(carrier.matches(':modal'), 'an accepted Escape releases the native carrier').to.equal(false);
-      expect(native.open, 'the original native modal remains open').to.equal(true);
-      host.removeEventListener(requestName(tag), vetoFirst);
+      upperCarrier.requestClose();
+      await upper.updateComplete;
+      await waitUntil(() => !upperCarrier.matches(':modal'));
+      expect(upper.open).to.equal(false);
+      lowerCarrier.requestClose();
+      await lower.updateComplete;
+      expect(getOpen(lower, tag)).to.equal(false);
+      expect(requests).to.deep.equal([true]);
+      expect(lowerCarrier.matches(':modal')).to.equal(false);
+      expect(native.matches(':modal')).to.equal(true);
     } finally {
-      host.remove();
+      upper.remove();
+      lower.remove();
       native.close();
     }
   });
