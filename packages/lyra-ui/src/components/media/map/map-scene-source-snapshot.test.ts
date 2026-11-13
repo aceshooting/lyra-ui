@@ -1,7 +1,7 @@
 import { expect } from '@open-wc/testing';
 import { sceneSourceHarness } from '../../../../test/map-scene-admission-fixtures.js';
 import { mapSceneAdmissionErrorCode } from './map-scene-errors.js';
-import { readMapSceneSource, type SceneSourceValue } from './map-scene-source-snapshot.js';
+import { captureMapSceneSourceMetadata, readMapSceneSource, type SceneSourceValue } from './map-scene-source-snapshot.js';
 
 describe('map scene source snapshots', () => {
   it('rejects malformed source metadata before allocating or resolving anything', () => {
@@ -314,4 +314,102 @@ describe('map scene source snapshots', () => {
     expect(h.liveBytes).to.equal(0); expect(h.releases).to.equal(2);
     h.sources.dispose();
   });
+  it('rejects mismatched metadata-list lengths before reserving source bytes', () => {
+    const h = sceneSourceHarness();
+    const source = { format: 'glb' as const, bytes: new Uint8Array([1, 2]) };
+    const meta = captureMapSceneSourceMetadata(source);
+    try {
+      for (const expected of [[], [meta, meta]]) {
+        let failure: unknown;
+        try { h.sources.stage([source], h.request(), expected); } catch (error) { failure = error; }
+        expect(mapSceneAdmissionErrorCode(failure)).to.equal('invalid');
+        expect(h.allocations).to.equal(0);
+      }
+      const accepted = h.sources.publish(h.sources.stage([source], h.request(), [meta]));
+      expect(accepted.length).to.equal(1); expect(h.liveBytes).to.equal(2);
+      accepted[0]!.release(); expect(h.releases).to.equal(1);
+    } finally { h.sources.dispose(); }
+  });
+
+  it('rejects a stage disposed by the publication ownership callback and releases it only once', () => {
+    const h = sceneSourceHarness();
+    const source = { format: 'glb' as const, bytes: new Uint8Array([1, 2]) };
+    const stage = h.sources.stage([source], h.request());
+    h.hooks.current = () => { stage.dispose(); };
+    try {
+      let failure: unknown;
+      try { h.sources.publish(stage); } catch (error) { failure = error; }
+      expect(mapSceneAdmissionErrorCode(failure)).to.equal('invalid');
+      expect(h.liveBytes).to.equal(0); expect(h.releases).to.equal(1);
+      stage.dispose(); expect(h.releases).to.equal(1);
+      h.hooks.current = undefined;
+      const accepted = h.sources.publish(h.sources.stage([source], h.request()));
+      expect(accepted[0]!.receipt.sourceId).not.to.equal(stage.receipts[0]!.sourceId);
+      accepted[0]!.release(); expect(h.releases).to.equal(2);
+    } finally { h.sources.dispose(); }
+  });
+
+  it('sanitizes a throwing publication callback without consuming the retryable stage', () => {
+    const h = sceneSourceHarness();
+    const stage = h.sources.stage([{ format: 'glb', bytes: new Uint8Array([1, 2]) }], h.request());
+    h.hooks.current = () => { throw new Error('Private ownership failure'); };
+    try {
+      let failure: unknown;
+      try { h.sources.publish(stage); } catch (error) { failure = error; }
+      expect(mapSceneAdmissionErrorCode(failure)).to.equal('invalid');
+      expect(h.liveBytes).to.equal(2); expect(h.releases).to.equal(0);
+      h.hooks.current = undefined;
+      const accepted = h.sources.publish(stage);
+      expect(accepted[0]!.receipt.sourceId).to.equal(stage.receipts[0]!.sourceId);
+      accepted[0]!.release(); expect(h.liveBytes).to.equal(0); expect(h.releases).to.equal(1);
+    } finally { stage.dispose(); h.sources.dispose(); }
+  });
+
+  it('releases every provisional copy when reserving a later source changes an earlier source record', () => {
+    const h = sceneSourceHarness();
+    const first = { format: 'glb' as const, bytes: new Uint8Array([1]) };
+    const second = { format: 'glb' as const, bytes: new Uint8Array([2, 3]) };
+    h.hooks.reserve = size => { if (size === 2) first.bytes = new Uint8Array([9]); };
+    try {
+      let failure: unknown;
+      try { h.sources.stage([first, second], h.request()); } catch (error) { failure = error; }
+      expect(mapSceneAdmissionErrorCode(failure)).to.equal('invalid');
+      expect(h.allocations).to.equal(2); expect(h.releases).to.equal(2); expect(h.liveBytes).to.equal(0);
+      h.hooks.reserve = undefined;
+      const accepted = h.sources.publish(h.sources.stage([first, second], h.request()));
+      const snapshot = h.sources.snapshot(accepted[0]!.receipt);
+      if (snapshot.kind !== 'bytes') throw new Error('Expected retained bytes');
+      expect([...snapshot.bytes]).to.deep.equal([9]);
+      accepted.forEach(lease => lease.release());
+      expect(h.releases).to.equal(4); expect(h.liveBytes).to.equal(0);
+    } finally { h.sources.dispose(); }
+  });
+
+  it('rejects malformed resolved URLs and owners without allocating or retaining a source', () => {
+    const h = sceneSourceHarness();
+    const source = { format: 'glb' as const, src: 'model.glb' };
+    const invalid: unknown[] = [[], new URL('https://example.test/model.glb'),
+      { url: 42, owner: h.owner }, { url: '', owner: h.owner },
+      { url: 'https://example.test/model.glb', owner: null },
+      { url: 'https://example.test/model.glb', owner: 'owner' }];
+    try {
+      for (const result of invalid) {
+        h.hooks.resolve = () => result as ReturnType<NonNullable<typeof h.hooks.resolve>>;
+        let failure: unknown;
+        try { h.sources.stage([source], h.request()); } catch (error) { failure = error; }
+        expect(mapSceneAdmissionErrorCode(failure)).to.equal('invalid');
+        expect(h.allocations).to.equal(0);
+      }
+      let calls = 0;
+      const owner = () => { calls++; };
+      h.hooks.resolve = () => ({ url: 'https://example.test/model.glb', owner });
+      const accepted = h.sources.publish(h.sources.stage([source], h.request()));
+      const snapshot = h.sources.snapshot(accepted[0]!.receipt);
+      if (snapshot.kind !== 'url') throw new Error('Expected retained URL request');
+      expect(snapshot.request.url).to.equal('https://example.test/model.glb');
+      expect(snapshot.request.owner === owner).to.equal(true); expect(calls).to.equal(0);
+      accepted[0]!.release(); expect(h.liveBytes).to.equal(0);
+    } finally { h.sources.dispose(); }
+  });
+
 });
