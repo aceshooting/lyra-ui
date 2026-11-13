@@ -16475,6 +16475,7 @@
           "src/components/forms/date-picker/date-input-public-value-boundaries.test.ts",
           "src/components/forms/date-picker/date-input-rendering-a11y.test.ts",
           "src/components/forms/date-picker/date-input.test.ts",
+          "src/components/forms/date-picker/date-picker-readonly-periods.test.ts",
           "src/components/forms/date-picker/date-picker-remediation.test.ts",
           "src/components/forms/date-picker/date-picker-rendering-a11y.test.ts",
           "src/components/forms/date-picker/date-picker.test.ts",
@@ -16514,6 +16515,12 @@
           "applicability": "applicable",
           "status": "automated",
           "evidence": [
+            {
+              "file": "src/components/forms/date-picker/date-picker-readonly-periods.test.ts",
+              "test": "keeps ${view} navigable without changing the selection, then permits editing after unlock",
+              "target": "el",
+              "state": "populated"
+            },
             {
               "file": "src/components/forms/date-picker/date-picker-rendering-a11y.test.ts",
               "test": "is accessible",
@@ -16682,6 +16689,7 @@
           "src/components/forms/date-picker/date-input-public-value-boundaries.test.ts",
           "src/components/forms/date-picker/date-input-rendering-a11y.test.ts",
           "src/components/forms/date-picker/date-input.test.ts",
+          "src/components/forms/date-picker/date-picker-readonly-periods.test.ts",
           "src/components/forms/date-picker/date-picker-remediation.test.ts",
           "src/components/forms/date-picker/date-picker-rendering-a11y.test.ts",
           "src/components/forms/date-picker/date-picker.test.ts",
@@ -55659,6 +55667,12 @@
             {
               "file": "src/components/forms/input/time-input-picker-boundaries.test.ts",
               "test": "renders the complete ${format}-hour unrestricted grid and commits its last minute",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/forms/input/time-input-picker-boundaries.test.ts",
+              "test": "uses a valid minute grid for step=${step} and updates it when the step recovers",
               "target": "el",
               "state": "populated"
             },

@@ -9,6 +9,48 @@ function values(el: LyraTimeInput, segment: string): string[] {
 }
 
 describe('time picker unrestricted and upper-bound choices', () => {
+  for (const step of [0, -1]) {
+    it(`uses a valid minute grid for step=${step} and updates it when the step recovers`, async () => {
+      const form = await fixture<HTMLFormElement>(html`
+        <form><lr-time-input name="start" label="Start time" hour-format="24" .step=${step}
+          min="00:00" value="13:00" style="--lr-duration-base: 0ms"></lr-time-input></form>
+      `);
+      const el = form.querySelector<LyraTimeInput>('lr-time-input')!;
+      const native = document.createElement('input');
+      native.type = 'time';
+      native.min = '00:00';
+      native.step = String(step);
+      try {
+        await el.show();
+        expect(values(el, 'minute')).to.deep.equal(Array.from({ length: 60 }, (_, minute) => String(minute)));
+        expect(el.step).to.equal(60);
+        expect(values(el, 'second')).to.deep.equal([]);
+        el.shadowRoot!.querySelector<HTMLButtonElement>('[data-column="minute"][data-value="59"]')!.click();
+        await el.updateComplete;
+        expect(el.value).to.equal('13:59');
+        native.value = el.value;
+        expect(native.validity.valid).to.equal(true);
+        expect(el.validity.valid).to.equal(native.validity.valid);
+        expect(new FormData(form).get('start')).to.equal(el.value);
+        await expect(el).to.be.accessible();
+
+        el.step = 900;
+        native.step = '900';
+        await el.updateComplete;
+        expect(values(el, 'minute')).to.deep.equal(['0', '15', '30', '45']);
+        el.shadowRoot!.querySelector<HTMLButtonElement>('[data-column="minute"][data-value="45"]')!.click();
+        await el.updateComplete;
+        native.value = el.value;
+        expect(el.valueAsNumber).to.equal(49_500_000);
+        expect(native.validity.valid).to.equal(true);
+        expect(el.validity.valid).to.equal(native.validity.valid);
+        expect(new FormData(form).get('start')).to.equal(el.value);
+      } finally {
+        await el.hide();
+      }
+    });
+  }
+
   it('closes a picker whose anchor cannot be measured and opens normally after geometry recovers', async () => {
     const wrapper = await fixture<HTMLDivElement>(html`<div><button>Continue</button>
       <lr-time-input label="Start time" hour-format="24" value="13:25" style="--lr-duration-base:0ms"></lr-time-input></div>`);
