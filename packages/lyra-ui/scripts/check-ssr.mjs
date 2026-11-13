@@ -116,6 +116,39 @@ assertIsolatedNodeImport(
   `
 );
 assertIsolatedNodeImport(
+  'document-less announcement sinks and queued announcements',
+  `
+    import assert from 'node:assert/strict';
+    import { Announcer, acquireAnnouncementSink } from '@aceshooting/lyra-ui/utilities/announcer.js';
+    ${noBrowserGlobals}
+    for (const politeness of ['polite', 'assertive']) {
+      const sink = acquireAnnouncementSink(politeness);
+      assert.equal(sink.politeness, politeness);
+      assert.equal(sink.element, undefined);
+      const flushed = [];
+      const announcer = new Announcer({
+        throttleMs: 10,
+        onFlush(text) { flushed.push(text); sink.announce(text); },
+      });
+      try {
+        announcer.announce('Partial result');
+        assert.equal(announcer.isPending, true);
+        announcer.announce('Complete result', { force: true });
+        assert.equal(announcer.isPending, false);
+        assert.deepEqual(flushed, ['Complete result']);
+        announcer.announce('Canceled result');
+        announcer.cancel();
+        await new Promise(resolve => setTimeout(resolve, 30));
+        assert.equal(announcer.isPending, false);
+        assert.deepEqual(flushed, ['Complete result']);
+        sink.release(); sink.release();
+        assert.equal(sink.announce('Released result'), undefined);
+      } finally { announcer.cancel(); sink.release(); }
+    }
+    ${noBrowserGlobals}
+  `
+);
+assertIsolatedNodeImport(
   'granular registration imports',
   `
     import { readFile } from 'node:fs/promises';
