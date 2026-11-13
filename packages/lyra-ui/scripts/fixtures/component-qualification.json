@@ -55608,8 +55608,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/conversation/thread-list/thread-list-remediation.test.ts",
-              "test": "moves ArrowDown/ArrowUp from a row action to the adjacent row",
+              "file": "src/components/conversation/thread-list/thread-list-keyboard-boundaries.test.ts",
+              "test": "moves native Home and End across slotted threads while skipping hidden and inert endpoints",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -55744,6 +55744,7 @@
           "src/components/conversation/thread-list/thread-list-adoption.test.ts",
           "src/components/conversation/thread-list/thread-list-coverage.test.ts",
           "src/components/conversation/thread-list/thread-list-input-limit.test.ts",
+          "src/components/conversation/thread-list/thread-list-keyboard-boundaries.test.ts",
           "src/components/conversation/thread-list/thread-list-remediation.test.ts",
           "src/components/conversation/thread-list/thread-list-scale.test.ts",
           "src/components/conversation/thread-list/thread-list-search-size.test.ts",
@@ -59793,6 +59794,7 @@
           "src/components/agent-tools/trace-tree/span-scale.test.ts",
           "src/components/agent-tools/trace-tree/trace-tree-remediation.test.ts",
           "src/components/agent-tools/trace-tree/trace-tree-scale.test.ts",
+          "src/components/agent-tools/trace-tree/trace-tree-source-display.test.ts",
           "src/components/agent-tools/trace-tree/trace-tree-source-scale.test.ts",
           "src/components/agent-tools/trace-tree/trace-tree.test.ts"
         ],

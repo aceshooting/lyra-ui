@@ -1328,12 +1328,14 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   // Data mode's rows are rendered into `lr-virtual-list`'s own shadow root (this component only
   // supplies the `renderItem` callback), so they are reached through that component's public
   // `renderedRows` accessor -- the currently-windowed row wrappers -- rather than by querying its
-  // render root directly. Slotted mode's rows are this element's own light-DOM children.
+  // render root directly. Slotted mode includes only children assigned to the default slot.
   private rowElements(): LyraConversationItem[] {
     if (!this.dataMode)
-      return [
-        ...this.querySelectorAll<LyraConversationItem>(tag('conversation-item')),
-      ];
+      return this.defaultSlottedElements().flatMap((element) =>
+        element.localName === tag('conversation-item')
+          ? [element as LyraConversationItem]
+          : [...element.querySelectorAll<LyraConversationItem>(tag('conversation-item'))]
+      );
     return (this.virtualListEl?.renderedRows ?? []).flatMap((row) => [
       ...row.querySelectorAll<LyraConversationItem>(tag('conversation-item')),
     ]);
@@ -1865,7 +1867,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   }
 
   private renderSlottedList(label: string): TemplateResult {
-    return html`<div part="list" role="list" aria-label=${label}>
+    return html`<div part="list" role="list" aria-label=${label} @keydown=${this.onListKeyDown}>
       <slot
         @slotchange=${this.onDefaultSlotChange}
         @lr-select=${this.stopEvent}
