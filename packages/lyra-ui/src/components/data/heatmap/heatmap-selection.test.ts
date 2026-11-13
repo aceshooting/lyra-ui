@@ -48,11 +48,14 @@ describe('lr-heatmap controlled multiple selection', () => {
     const el = await fixture<LyraHeatmap>(html`<lr-heatmap accessible-cells .data=${data}
       .selectedCell=${{ row: 0, col: 0 }} .selectedCells=${[{ row: 1, col: 1 }]}></lr-heatmap>`);
     const details = changes(el);
-    let clicks = 0;
-    el.addEventListener('lr-cell-activate', () => clicks++);
+    const activations: unknown[] = [];
+    el.addEventListener('lr-cell-activate', event => { activations.push(event.detail); });
     cell(el, 1, 1).click();
     await el.updateComplete;
-    expect(clicks).to.equal(1);
+    expect(activations).to.deep.equal([{ row: 1, col: 1, value: 5 }]);
+    await sendMouse({ type: 'click', position: await point(cell(el, 1, 1)) });
+    await waitUntil(() => activations.length === 2, 'native clicking activates the same accessible cell');
+    expect(activations).to.deep.equal([{ row: 1, col: 1, value: 5 }, { row: 1, col: 1, value: 5 }]);
     expect(details.length).to.equal(0);
     expect(cell(el, 0, 0).getAttribute('aria-selected')).to.equal('true');
     expect(cell(el, 1, 1).getAttribute('aria-selected')).to.equal('false');

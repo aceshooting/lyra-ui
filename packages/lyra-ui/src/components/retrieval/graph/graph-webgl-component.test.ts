@@ -450,7 +450,16 @@ describe('graph optional engine component integration', () => {
     const changes: LyraGraphCamera[] = []; value.graph.addEventListener('lr-camera-change', (event) => changes.push(event.detail.camera));
     const initial = engine.cameras.at(-1)!.distance; control(value.graph, 'zoom-in').click(); await settle(value.graph);
     expect(engine.cameras.at(-1)!.distance).to.be.lessThan(initial); expect(changes.length).to.equal(1);
-    const surface = value.graph.shadowRoot!.querySelector<HTMLElement>('[data-webgl-host]')!; await focusByKeyboard(surface);
+    const surface = value.graph.shadowRoot!.querySelector<HTMLElement>('[data-webgl-host]')!;
+    await focusByKeyboard(control(value.graph, 'zoom-in'));
+    const unfocusedDistance = engine.cameras.at(-1)!.distance;
+    const unfocusedWheel = new WheelEvent('wheel', { deltaY: -80, bubbles: true, cancelable: true });
+    surface.dispatchEvent(unfocusedWheel);
+    await settle(value.graph);
+    expect(unfocusedWheel.defaultPrevented).to.equal(false);
+    expect(engine.cameras.at(-1)!.distance).to.equal(unfocusedDistance);
+    expect(changes.length).to.equal(1);
+    await focusByKeyboard(surface);
     const before = engine.cameras.at(-1)!.distance;
     const wheel = new WheelEvent('wheel', { deltaY: -80, bubbles: true, cancelable: true }); surface.dispatchEvent(wheel); await settle(value.graph);
     expect(wheel.defaultPrevented).to.equal(true); expect(engine.cameras.at(-1)!.distance).to.be.lessThan(before); expect(changes.length).to.equal(2);
