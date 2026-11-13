@@ -54325,6 +54325,7 @@
           "src/components/data/table/table-filter-work.test.ts",
           "src/components/data/table/table-layout.test.ts",
           "src/components/data/table/table-million-provider-scale.test.ts",
+          "src/components/data/table/table-ordering-boundaries.test.ts",
           "src/components/data/table/table-ownership.test.ts",
           "src/components/data/table/table-performance-regressions.test.ts",
           "src/components/data/table/table-processing.test.ts",
