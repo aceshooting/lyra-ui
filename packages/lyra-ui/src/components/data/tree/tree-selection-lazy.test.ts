@@ -1,7 +1,8 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './tree.js';
 import type { LyraTree, LyraTreeNodeData } from './tree.js';
 import type { LyraTreeItem } from './tree-item.js';
+import { TREE_MAX_RENDER_DEPTH } from './tree-types.js';
 
 describe('tree upstream-compatible selection and lazy lifecycle', () => {
   const selectableTree = () => html`
@@ -452,4 +453,47 @@ describe('tree upstream-compatible selection and lazy lifecycle', () => {
     expect(el.selectedItems.length).to.be.greaterThan(0);
     await expect(el).to.be.accessible();
   });
+
+
+  for (const selection of ['multiple', 'leaf-multiple'] as const) {
+    it(`bounds ${selection} derivation and admits a selected leaf moved back into range`, async () => {
+      const wrapper = await fixture<HTMLDivElement>(html`<div></div>`);
+      const tree = document.createElement('lr-tree') as LyraTree;
+      tree.label = 'Nested choices';
+      tree.selection = selection;
+      const chain = Array.from({ length: TREE_MAX_RENDER_DEPTH + 2 }, (_, depth) => {
+        const item = document.createElement('lr-tree-item') as LyraTreeItem;
+        item.id = `depth-choice-${depth}`;
+        item.label = `Choice ${depth}`;
+        return item;
+      });
+      for (let index = 1; index < chain.length; index++) chain[index - 1]!.append(chain[index]!);
+      const root = chain[0]!;
+      const leaf = chain.at(-1)!;
+      root.expanded = true;
+      leaf.selected = true;
+      const standalone = document.createElement('lr-tree-item') as LyraTreeItem;
+      standalone.id = 'standalone-choice';
+      standalone.label = 'Standalone';
+      standalone.selected = true;
+      tree.append(root, standalone);
+      let changes = 0;
+      tree.addEventListener('lr-selection-change', () => { changes++; });
+      wrapper.append(tree);
+      await tree.updateComplete;
+      expect(tree.selectedItems.map(item => item.id)).to.deep.equal(['standalone-choice']);
+      expect(root.getAttribute('aria-checked')).to.equal('false');
+      expect(root.indeterminate).to.equal(false);
+      expect(leaf.selected).to.equal(true);
+      root.replaceChildren(leaf);
+      await waitUntil(() => root.selected, 'moving the selected leaf restores its parent selection');
+      await tree.updateComplete;
+      expect(tree.selectedItems.map(item => item.id)).to.deep.equal([root.id, leaf.id, standalone.id]);
+      expect(root.getAttribute('aria-checked')).to.equal('true');
+      expect(root.indeterminate).to.equal(false);
+      expect(leaf.getAttribute('aria-level')).to.equal('2');
+      expect(leaf.getBoundingClientRect().height).to.be.greaterThan(0);
+      expect(changes).to.equal(0);
+    });
+  }
 });

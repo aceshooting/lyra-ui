@@ -527,7 +527,6 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.assignChildSlots();
     // The observer is intentionally absent while detached. A reconnect must therefore sample once
     // before relying on future mutations; first connections remain hydration-aware in willUpdate().
     if (this.hasUpdated) this.sampleLightDomState();
@@ -579,6 +578,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
       key === 'selected' || key === 'expanded' || key === 'disabled' || key === '_loading' || key === '_collapsing',
     )) this.labelTextObserver.preserveBindingForNextUpdate();
     // Runs before render so a nested child is never briefly painted inside [part="label"].
+    // Doing this during connection can recursively flush descendant connection reactions.
     this.assignChildSlots();
     if (this.hasUpdated) this.sampleLightDomState();
     else this.seedFirstRenderState(() => this.sampleLightDomState());

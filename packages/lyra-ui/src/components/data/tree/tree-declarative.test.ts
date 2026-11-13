@@ -600,6 +600,8 @@ describe('tree declarative child model', () => {
   it('is accessible when written declaratively', async () => {
     const el = (await fixture(declarative)) as LyraTree;
     await el.expandAll();
+    const children = el.querySelector('lr-tree-item')!.shadowRoot!.querySelector('[part="children"]')!;
+    await Promise.all(children.getAnimations().map(animation => animation.finished));
     await expect(el).to.be.accessible();
   });
 

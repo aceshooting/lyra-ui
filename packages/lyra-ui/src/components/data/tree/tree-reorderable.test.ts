@@ -460,6 +460,8 @@ describe('reorderable', () => {
     el.data = clone();
     await el.updateComplete;
     await el.expandAll();
+    const children = el.querySelector('lr-tree-item')!.shadowRoot!.querySelector('[part="children"]')!;
+    await Promise.all(children.getAnimations().map(animation => animation.finished));
     await expect(el).to.be.accessible();
   });
   it('formats reorder-announcement numbers with the effective locale', async () => {
