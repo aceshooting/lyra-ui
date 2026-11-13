@@ -87,7 +87,12 @@ export function createMapCustomLayerController(element: HTMLElement, input: Lyra
         if (!isMapSceneLayerHandle(created)) throw new TypeError('Map custom layers are unavailable');
       } catch {
         controller.abort();
-        if (isMapSceneLayerHandle(created)) { try { created.dispose(); } catch { /* Best effort. */ } }
+        if (typeof created === 'object' && created !== null) {
+          try {
+            const dispose: unknown = Reflect.get(created, 'dispose');
+            if (typeof dispose === 'function') Reflect.apply(dispose, created, []);
+          } catch { /* Failed capability access must not prevent the unavailable state. */ }
+        }
         if (ticket === attempt) setStatus('unavailable', 'engine');
         return;
       }

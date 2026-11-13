@@ -279,4 +279,37 @@ describe('addMapCustomLayer()', () => {
     await waitUntil(() => runtime.live().length === 1, 'installed after style ready', { timeout: 2000 });
     expect(handleState).to.equal('loading');
   });
+  for (const failure of ['capability', 'disposal-getter', 'disposal-call'] as const) {
+    it(`reports unavailable when bridge validation encounters a throwing ${failure}`, async () => {
+      const runtime = fakeRuntime(), create = runtime.module.createSceneLayer;
+      runtime.module.createSceneLayer = (map, descriptor, host) => {
+        const created = create(map, descriptor, host);
+        if (failure === 'disposal-getter') {
+          Object.defineProperty(created, 'dispose', { get() { throw new Error('Disposal getter failed'); } });
+        } else {
+          Object.defineProperty(created, 'invalidateStyle', { get() { throw new Error('Capability getter failed'); } });
+          if (failure === 'disposal-call') {
+            const dispose = created.dispose;
+            created.dispose = () => { dispose(); throw new Error('Disposal call failed'); };
+          }
+        }
+        return created;
+      };
+      env.setLayerImporter(async () => runtime.module);
+      const { element } = await env.mount();
+      const failed = addMapCustomLayer(element, layer());
+      await waitUntil(() => failed.status.state === 'unavailable', 'invalid bridge settles as unavailable');
+      expect(failed.status).to.deep.equal({ state: 'unavailable', code: 'engine' });
+      expect(runtime.records[0]!.host.signal.aborted).to.equal(true);
+      if (failure !== 'disposal-getter') expect(runtime.records[0]!.disposed).to.equal(true);
+      expect(await failed.pick([1, 2])).to.equal(null);
+      failed.remove();
+      const replacementRuntime = fakeRuntime(); env.setLayerImporter(async () => replacementRuntime.module);
+      const replacement = addMapCustomLayer(element, layer());
+      await waitUntil(() => replacementRuntime.live().length === 1, 'a replacement bridge can install');
+      replacementRuntime.live()[0]!.host.onState?.('ready');
+      expect(replacement.status.state).to.equal('ready');
+      replacement.remove(); expect(replacementRuntime.records[0]!.disposed).to.equal(true);
+    });
+  }
 });
