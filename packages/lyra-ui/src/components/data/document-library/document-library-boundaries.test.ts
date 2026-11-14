@@ -56,6 +56,19 @@ it('contains an unsupported composed-table sort proposal without committing or l
   expect(element.sortKey).to.equal('name');
 });
 
+it('ignores an unsupported composed-table sort commit and keeps the current sort', async () => {
+  const element = await fixture<LyraDocumentLibrary>(html`<lr-document-library .documents=${documents} sort-dir="desc"></lr-document-library>`);
+  let commits = 0;
+  element.addEventListener('lr-sort', () => commits++);
+  table(element).dispatchEvent(new CustomEvent('lr-sort', { detail: { phase: 'commit', sortKey: 'unsupported', sortDir: 'asc' }, bubbles: true, composed: true }));
+  expect(commits).to.equal(0);
+  expect(element.sortKey).to.equal('name');
+  expect(element.sortDir).to.equal('desc');
+  table(element).dispatchEvent(new CustomEvent('lr-sort', { detail: { phase: 'commit', sortKey: 'owner', sortDir: 'asc' }, bubbles: true, composed: true }));
+  expect(commits).to.equal(1);
+  expect(element.sortKey).to.equal('owner');
+});
+
 it('updates the failed-load slot when authored content changes its slot assignment after mount', async () => {
   const element = await fixture<LyraDocumentLibrary>(html`<lr-document-library error><div>Recovery controls</div></lr-document-library>`);
   const content = element.querySelector('div')!;

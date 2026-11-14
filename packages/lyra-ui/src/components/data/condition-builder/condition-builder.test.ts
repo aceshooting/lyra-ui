@@ -331,6 +331,26 @@ describe('lr-condition-builder v9 contract', () => {
     expect(ev.detail.value.conditions[0].value).to.be.undefined;
   });
 
+  it('changing one row field resets only that row', async () => {
+    const value: ConditionBuilderValue = {
+      combinator: 'and',
+      conditions: [
+        { id: 'c1', field: 'name', operator: 'contains', value: 'acme' },
+        { id: 'c2', field: 'name', operator: 'eq', value: 'beta' },
+      ],
+    };
+    const el = (await fixture(html`<lr-condition-builder .fields=${FIELDS} .value=${value}></lr-condition-builder>`)) as LyraConditionBuilder;
+    await el.updateComplete;
+    const fieldSelect = conditionRow(el, 1).querySelector('[part="field-select"]') as LyraSelect;
+    const promise = oneEvent(el, 'lr-input');
+    setAndDispatch(fieldSelect, 'value', 'age', 'change');
+    const ev = await promise;
+    expect(ev.detail.value.conditions[0]).to.deep.equal({ id: 'c1', field: 'name', operator: 'contains', value: 'acme' });
+    expect(ev.detail.value.conditions[1].field).to.equal('age');
+    expect(ev.detail.value.conditions[1].operator).to.equal('');
+    expect(ev.detail.value.conditions[1].value).to.be.undefined;
+  });
+
   it('changing the operator to a unary operator clears the value', async () => {
     const value: ConditionBuilderValue = {
       combinator: 'and',
@@ -1249,6 +1269,7 @@ for (const example of [
   { name: 'missing field', condition: { id: 'invalid', field: 'retired', operator: 'eq', value: 'x' }, part: 'field-select', code: 'field-unavailable' },
   { name: 'invalid scalar type', condition: { id: 'invalid', field: 'active', operator: 'eq', value: 'not a boolean' }, part: 'value', code: 'value-type' },
   { name: 'unary operator with a stale value', condition: { id: 'invalid', field: 'name', operator: 'isEmpty', value: 'stale' }, part: 'operator-select', code: 'operator-arity' },
+  { name: 'unchosen operator with a stale value', condition: { id: 'invalid', field: 'name', operator: '', value: 'stale' }, part: 'operator-select', code: 'operator-arity' },
 ]) {
   it(`reports ${example.name} on its actionable recovery control without rewriting the caller model`, async () => {
     const model = { combinator: 'and', conditions: [example.condition] };

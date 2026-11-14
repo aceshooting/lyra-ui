@@ -148,3 +148,23 @@ it('does not schedule an update when the same rows array or strings object is re
   element.strings = strings;
   expect(element.isUpdatePending).to.equal(false);
 });
+
+it('activates the linked anchor once for a non-pointer click on passive content', async () => {
+  const element = await fixture<LyraStat>(html`<lr-stat href="#stat-target" value="42"><span slot="caption">Passive caption</span></lr-stat>`);
+  const anchor = element.shadowRoot!.querySelector<HTMLAnchorElement>('[part="base"]')!;
+  let activations = 0;
+  anchor.addEventListener('click', (event) => { event.preventDefault(); activations++; });
+  element.querySelector('span')!.dispatchEvent(new Event('click', { bubbles: true, composed: true }));
+  expect(activations).to.equal(1);
+});
+
+it('does not activate the linked anchor when a content click was already cancelled', async () => {
+  const element = await fixture<LyraStat>(html`<lr-stat href="#stat-target" value="42"><span slot="caption">Owned caption</span></lr-stat>`);
+  const anchor = element.shadowRoot!.querySelector<HTMLAnchorElement>('[part="base"]')!;
+  let activations = 0;
+  anchor.addEventListener('click', (event) => { event.preventDefault(); activations++; });
+  const caption = element.querySelector('span')!;
+  caption.addEventListener('click', (event) => event.preventDefault());
+  caption.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true, cancelable: true }));
+  expect(activations).to.equal(0);
+});

@@ -561,3 +561,13 @@ it('lets a host aria-label outrank the label property, and falls back to label w
     'Revenue',
   );
 });
+
+it('keeps two significant digits for a final value below one in the generated name', async () => {
+  const el = (await fixture(`<lr-sparkline></lr-sparkline>`)) as LyraSparkline;
+  el.values = [1, 0.000123456];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal('Trend of 2 values, last 0.00012');
+  el.values = [1, -0.5678];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal('Trend of 2 values, last -0.57');
+});

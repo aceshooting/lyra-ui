@@ -116,3 +116,18 @@ it('handles zero/all-invalid summaries and reconnect without reading the source'
     await expect(element).to.be.accessible();
   }
 });
+
+it('describes the prepared series trend from its first and last displayed samples', async () => {
+  const strings = { chartTrendIncreasing: 'TREND-UP', chartTrendDecreasing: 'TREND-DOWN', chartTrendFlat: 'TREND-FLAT' };
+  const withYs = (ys: number[]): LyraPreparedSeriesData => {
+    const data = prepared();
+    return { ...data, series: [{ ...data.series[0]!, samples: data.series[0]!.samples.map((sample, index) => ({ ...sample, y: ys[index]! })) }] };
+  };
+  const element = await fixture<PreparedSparkline>(html`<lr-sparkline .strings=${strings} .preparedData=${withYs([0, 10, 20, 30])}></lr-sparkline>`);
+  const label = () => element.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')!;
+  expect(label()).to.include('TREND-UP');
+  element.preparedData = withYs([30, 20, 10, 0]); await element.updateComplete;
+  expect(label()).to.include('TREND-DOWN');
+  element.preparedData = withYs([5, 20, 0, 5]); await element.updateComplete;
+  expect(label()).to.include('TREND-FLAT');
+});
