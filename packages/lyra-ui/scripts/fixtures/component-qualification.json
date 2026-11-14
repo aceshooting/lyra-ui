@@ -16044,7 +16044,7 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid.class.ts",
-              "line": 2900,
+              "line": 2904,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -16096,6 +16096,7 @@
           "src/components/data/data-grid/data-grid-processing-cost.test.ts",
           "src/components/data/data-grid/data-grid-processing.test.ts",
           "src/components/data/data-grid/data-grid-public-filter-state.test.ts",
+          "src/components/data/data-grid/data-grid-query-assignment-order.test.ts",
           "src/components/data/data-grid/data-grid-remediation.test.ts",
           "src/components/data/data-grid/data-grid-render-refresh.test.ts",
           "src/components/data/data-grid/data-grid-request-authority-scale.test.ts",

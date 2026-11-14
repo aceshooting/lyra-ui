@@ -155,17 +155,17 @@ const optionalPeerFamilyTags = componentInventory.components
 const rootHelperRegisteredTags = [];
 
 // Packed core/all.js includes every non-optional registration and every emitted chunk.
-// With panorama assignment ownership, the graph uses 5,671,962 raw bytes
-// across 64 files; the next 64-byte ceiling leaves 38 bytes of headroom.
+// With data-grid query assignment ownership, the graph uses 5,672,110 raw bytes
+// across 64 files; the next 64-byte ceiling leaves 18 bytes of headroom.
 // Optional-peer exclusions and the complete file sum stay fixed. Core has no WASM allowance;
 // the explicit Oniguruma canary retains its separate exact 466,610-byte binary requirement.
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/ad043b8e3479fcd9990cd6ecc36e4638b48cfcc4/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'Panorama camera and hotspot assignment guards add 362 raw bytes to the packed graph, measuring 5,671,962 bytes across the same 64 files. Only the exceeded raw ceiling advances to the next 64-byte boundary, 5,672,000 bytes. Gzip ceilings and the exact binary requirement for the explicit Oniguruma canary remain unchanged.',
-  reviewedCoreMeasurementBytes: 5_671_962,
+  $comment: 'Data-grid filter and sort assignment guards add 148 raw bytes to the packed graph, measuring 5,672,110 bytes across the same 64 files. Only the exceeded raw ceiling advances to the next 64-byte boundary, 5,672,128 bytes. Gzip ceilings and the exact binary requirement for the explicit Oniguruma canary remain unchanged.',
+  reviewedCoreMeasurementBytes: 5_672_110,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 38,
+  selectedRegressionHeadroomBytes: 18,
 };
 
 /**

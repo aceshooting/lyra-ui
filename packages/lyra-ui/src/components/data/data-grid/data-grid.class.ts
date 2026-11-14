@@ -1079,6 +1079,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   @property({ type: Boolean, attribute: 'filter-from-leaf-rows' })
   filterFromLeafRows = false;
   private _filters: readonly DataGridFilter[] = Object.freeze([]);
+  private filterAssignment = 0;
   /** Clone-owned controlled per-column filters. Re-binding an equal value is not a change: the
    *  held value and its reference survive, nothing re-renders, and no server request is
    *  rescheduled, so a host that re-binds on every render cannot postpone the request forever. */
@@ -1087,6 +1088,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     return this._filters;
   }
   set filters(value: readonly DataGridFilter[]) {
+    const assignment = ++this.filterAssignment;
     const previous = this._filters;
     const next: DataGridFilter[] = [];
     if (Array.isArray(value)) {
@@ -1107,7 +1109,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     }
     // A re-bind carrying the same values is not a change: keep the existing frozen reference so
     // Lit's dirty check stays quiet and the server-request debounce is not restarted.
-    if (sameFilterState(previous, next)) return;
+    if (assignment !== this.filterAssignment || sameFilterState(previous, next)) return;
     this._filters = Object.freeze(next);
     this.requestUpdate('filters', previous);
   }
@@ -1303,6 +1305,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   /** Density on the shared Lyra size ladder. */
   @property({ reflect: true }) size: DataGridSize = 'm';
   private _sort: SortingState = Object.freeze([]);
+  private sortAssignment = 0;
   /** Clone-owned controlled multi-column sorting state. Like `filters`, re-binding an equal value
    *  is not a change and reschedules nothing. */
   @property({ attribute: false })
@@ -1310,6 +1313,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     return this._sort;
   }
   set sort(value: SortingState) {
+    const assignment = ++this.sortAssignment;
     const previous = this._sort;
     const next: DataGridSortingState[number][] = [];
     if (Array.isArray(value)) {
@@ -1323,7 +1327,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       }
     }
     // Same reasoning as `filters` above: an unchanged re-bind must not reschedule anything.
-    if (sameSortState(previous, next)) return;
+    if (assignment !== this.sortAssignment || sameSortState(previous, next)) return;
     this._sort = Object.freeze(next);
     this.requestUpdate('sort', previous);
   }
