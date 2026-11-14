@@ -407,6 +407,11 @@ qualify a release, because the waits accept dispatched runs only.
 | bundle composition | the report cannot be built (a missing or unbuildable entry) | Minified and gzip size of representative built entries attributed to the modules that make them up, the modules nearly every component entry shares, and the esbuild metafiles for [esbuild's analyzer](https://esbuild.github.io/analyze/). Complements `check:bundle-size`, which only compares totals with budgets. | `node scripts/bundle-composition-report.mjs` after a build |
 | A/B benchmark | the 95% interval of a workload's slowdown lies entirely above 10%, or a workload produced no interval | tachometer (pinned in `benchmarks/ab.mjs`, run through `npx`, never a dependency) interleaves the built package and the latest published release in one browser session and samples until the interval is bounded within 5% either way or the timeout passes: 1,000 `lr-button`, a 10,000-row `lr-data-grid`, a 10,000-item `lr-virtual-list`. An interval that reaches past 10% but includes smaller values is inconclusive and warns. `benchmarks/` stays the phase-level regression gate; this is the second opinion against the last release. | `pnpm benchmark:ab` on a quiet machine (`--fail-above 10`) |
 
+The A/B launcher reads the configured Chromium binary's version and installs the matching
+ChromeDriver using the pinned installer in a fresh, run-local npm cache. This prevents a stable
+or cached driver from lagging behind Playwright's Chromium after dependency upgrades. Both
+variants use that same browser and driver.
+
 The A/B limit is `DEFAULT_FAIL_ABOVE_PERCENT` in `benchmarks/ab.mjs` (10, passed explicitly by the
 workflow). Tachometer's `percentChange` interval is (local - published) / published, so positive means the
 built package is slower; the gate compares its lower bound with the limit, which is the statistically

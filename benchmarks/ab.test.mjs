@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  DEFAULT_FAIL_ABOVE_PERCENT, TACHOMETER_VERSION, WORKLOADS, evaluateAb, judgeWorkload, parseArguments, renderSummary, splitFlags,
-  summarizeResult, tachometerConfig, workloadPage,
+  DEFAULT_FAIL_ABOVE_PERCENT, CHROMEDRIVER_INSTALLER_VERSION, TACHOMETER_VERSION, WORKLOADS, evaluateAb, judgeWorkload, parseArguments, renderSummary, splitFlags,
+  summarizeResult, tachometerConfig, tachometerInvocation, workloadPage,
 } from './ab.mjs';
 
 test('pins tachometer and describes three workloads that assert real work after the timed region', () => {
@@ -106,4 +106,25 @@ test('splits --flag=value so a dash-leading value survives', () => {
     '--timeout', '3', '--auto-sample-conditions', '-5%,+5%', '--workloads', 'button,data-grid',
   ]);
   assert.deepEqual(splitFlags(['--published', 'latest', 'x=y']), ['--published', 'latest', 'x=y']);
+});
+
+test('pairs the driver with the selected Chromium instead of the stable installer default or a cached driver', () => {
+  const inherited = { PATH: '/usr/bin', CHROMEDRIVER_VERSION: '157.0.0.0', npm_config_cache: '/old/cache' };
+  const invocation = tachometerInvocation('Chromium 159.0.8154.6\n', '/work/ab', inherited);
+  assert.match(CHROMEDRIVER_INSTALLER_VERSION, /^\d+\.\d+\.\d+$/u);
+  assert.deepEqual(invocation.args, [
+    '--yes', '--cache', '/work/ab/tool-cache',
+    '--package', `tachometer@${TACHOMETER_VERSION}`, '--package', `chromedriver@${CHROMEDRIVER_INSTALLER_VERSION}`, 'tachometer',
+  ]);
+  assert.equal(invocation.env.CHROMEDRIVER_VERSION, '159.0.8154.6');
+  assert.equal(invocation.env.PATH, '/usr/bin');
+  assert.equal(inherited.CHROMEDRIVER_VERSION, '157.0.0.0', 'does not mutate the parent environment');
+  assert.equal(tachometerInvocation('Google Chrome for Testing 159.0.8154.6', '/next/run', inherited).args[2], '/next/run/tool-cache');
+  assert.equal(tachometerInvocation('Google Chrome 157.0.8021.42', '/work/ab', inherited).env.CHROMEDRIVER_VERSION, '157.0.8021.42');
+});
+
+test('rejects an unrecognized browser version before installing or launching a driver', () => {
+  for (const version of ['', '159', 'Chrome 159.0.8154', 'untrusted 159.0.8154.6', 'Chromium 159.0.8154.6 extra', 'Chromium 159.0.8154.6\nother command']) {
+    assert.throws(() => tachometerInvocation(version, '/work/ab', {}), /Cannot read Chromium version/u, version);
+  }
 });

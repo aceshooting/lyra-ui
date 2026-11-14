@@ -25,6 +25,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const TACHOMETER_VERSION = '0.7.2';
+export const CHROMEDRIVER_INSTALLER_VERSION = '157.0.2';
 /** A workload fails the gate when it is slower than the published release by more than this, with 95% confidence. */
 export const DEFAULT_FAIL_ABOVE_PERCENT = 10;
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -264,8 +265,19 @@ export function installedVersion(requireFromLibrary, name) {
   }
 }
 
-function run(command, args, { cwd, label, capture = false } = {}) {
-  const result = spawnSync(command, args, { cwd, encoding: 'utf8', stdio: capture ? ['ignore', 'pipe', 'inherit'] : 'inherit', maxBuffer: 64 * 1024 * 1024 });
+/** Install the driver for this browser, even when npm's stable driver or an older npx cache differs. */
+export function tachometerInvocation(browserVersion, outputDir, environment = process.env) {
+  const version = /^(?:Chromium|Google Chrome(?: for Testing)?) (\d+\.\d+\.\d+\.\d+)$/u.exec(browserVersion.trim())?.[1];
+  if (!version) throw new Error(`Cannot read Chromium version: ${browserVersion.trim()}`);
+  return {
+    args: ['--yes', '--cache', join(outputDir, 'tool-cache'), '--package', `tachometer@${TACHOMETER_VERSION}`,
+      '--package', `chromedriver@${CHROMEDRIVER_INSTALLER_VERSION}`, 'tachometer'],
+    env: { ...environment, CHROMEDRIVER_VERSION: version },
+  };
+}
+
+function run(command, args, { cwd, label, capture = false, env } = {}) {
+  const result = spawnSync(command, args, { cwd, env, encoding: 'utf8', stdio: capture ? ['ignore', 'pipe', 'inherit'] : 'inherit', maxBuffer: 64 * 1024 * 1024 });
   if (result.error) throw result.error;
   if (result.status !== 0) throw new Error(`${label ?? command} failed with exit code ${result.status}.`);
   return result.stdout;
@@ -310,6 +322,9 @@ async function main() {
     const { chromium } = createRequire(join(root, 'package.json'))('playwright');
     browserBinary = chromium.executablePath();
   }
+  // outputDir was cleared above: a driver installed for an earlier browser cannot survive here.
+  const invocation = tachometerInvocation(run(browserBinary, ['--version'], { capture: true, label: 'Chromium version' }), options.outputDir);
+  console.log(`A/B browser and ChromeDriver: ${invocation.env.CHROMEDRIVER_VERSION}`);
   const rows = [];
   for (const workload of options.workloads) {
     for (const variant of Object.keys(variants)) {
@@ -332,7 +347,7 @@ async function main() {
       timeoutMinutes: options.timeoutMinutes, autoSampleConditions: options.autoSampleConditions, browserBinary,
     }), null, 2));
     console.log(`\n== ${WORKLOADS[workload].title}: published ${publishedVersion} vs local ${version}`);
-    run('npx', ['--yes', `tachometer@${TACHOMETER_VERSION}`, '--config', configPath, '--json-file', resultPath], { cwd: options.outputDir, label: 'tachometer' });
+    run('npx', [...invocation.args, '--config', configPath, '--json-file', resultPath], { cwd: options.outputDir, env: invocation.env, label: 'tachometer' });
     const results = JSON.parse(readFileSync(resultPath, 'utf8')).benchmarks ?? [];
     rows.push({ title: WORKLOADS[workload].title, summary: summarizeResult(results) });
   }
