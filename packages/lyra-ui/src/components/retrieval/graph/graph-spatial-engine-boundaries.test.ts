@@ -97,6 +97,36 @@ describe('graph spatial engine boundaries', () => {
     });
   }
 
+  for (const retirement of ['disable', 'view', 'disconnect'] as const) {
+    it(`does not enable glow when capability inspection causes ${retirement} and recovers afterward`, async () => {
+      const value = setup();
+      await mount(value);
+      const parent = value.graph.parentNode!;
+      const enabled: boolean[] = [];
+      let first = true, inspected = false;
+      Object.defineProperty(value.engine, 'setGlow', { configurable: true, get() {
+        inspected = true;
+        if (first) {
+          first = false;
+          if (retirement === 'disable') value.graph.glow = false;
+          else if (retirement === 'view') value.graph.view = 'list';
+          else value.graph.remove();
+        }
+        return async (state: boolean) => { enabled.push(state); };
+      } });
+      value.graph.glow = true;
+      await waitUntil(() => inspected, 'requested glow inspects its optional capability');
+      await settle(value.graph);
+      expect(enabled.includes(true)).to.equal(false);
+      if (retirement === 'disconnect') parent.appendChild(value.graph);
+      if (retirement === 'view') value.graph.view = '3d';
+      value.graph.glow = true;
+      await waitUntil(() => enabled.includes(true), 'the current request can enable glow after recovery');
+      expect(await value.graph.focusNode('b')).to.equal(true);
+      expect(value.graph.shadowRoot!.querySelectorAll('[data-webgl-host] > canvas:not([data-graph-labels])').length).to.equal(1);
+    });
+  }
+
   for (const asynchronous of [false, true]) {
     it(`retires a renderer whose glow update ${asynchronous ? 'rejects' : 'throws'} and retains accessible navigation`, async () => {
       const value = setup();
