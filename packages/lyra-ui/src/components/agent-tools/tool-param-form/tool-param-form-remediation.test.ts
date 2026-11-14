@@ -174,3 +174,35 @@ it('hands out its frozen effective value without re-cloning it on every read', a
   expect(el.effectiveValue === first).to.equal(true);
   expect(first['days']).to.equal(3);
 });
+
+it('associates with a form by id through the form property and clears the association', async () => {
+  const host = await fixture<HTMLDivElement>(html`<div><form id="tool-form-owner"></form><lr-tool-param-form .schema=${{ type: 'object', properties: { q: { type: 'string' } } }}></lr-tool-param-form></div>`);
+  const el = host.querySelector('lr-tool-param-form')!;
+  const form = host.querySelector('form')!;
+  expect(el.form === null).to.equal(true);
+  el.form = 'tool-form-owner';
+  expect(el.getAttribute('form')).to.equal('tool-form-owner');
+  expect(el.form === form).to.equal(true);
+  el.form = null;
+  expect(el.hasAttribute('form')).to.equal(false);
+  expect(el.form).to.equal(null);
+});
+
+it('does not repeat a visible error announcement when the form is moved to another parent', async () => {
+  const schema = { type: 'object' as const, properties: { limit: { type: 'integer' as const } }, required: ['limit'] };
+  const host = await fixture<HTMLDivElement>(html`<div><section></section><lr-tool-param-form .schema=${schema}></lr-tool-param-form></div>`);
+  const el = host.querySelector('lr-tool-param-form')!;
+  const before = assertiveAnnouncements().length;
+  paramField(el, 'limit').dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(assertiveAnnouncements().slice(before)).to.deep.equal(['This field is required.']);
+  host.querySelector('section')!.append(el);
+  await el.updateComplete;
+  expect(el.checkValidity()).to.equal(false);
+  expect(assertiveAnnouncements(), 'the still-visible error is resting content after the move').not.to.include('This field is required.');
+  el.value = { limit: 1.5 };
+  await el.updateComplete;
+  el.reportValidity();
+  await el.updateComplete;
+  expect(assertiveAnnouncements().length, 'a fresh error is still announced after the move').to.be.greaterThan(0);
+});

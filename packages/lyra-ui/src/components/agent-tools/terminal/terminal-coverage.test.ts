@@ -26,3 +26,20 @@ it('gives a blank highlighted output line a localized accessible name', async ()
   await terminal.updateComplete;
   expect(line.getAttribute('aria-label')).to.equal('Blank output at line 2');
 });
+
+it('rescans a capped search from the start when more output arrives and keeps the lower bound', async () => {
+  const terminal = await fixture<LyraTerminal>(html`<lr-terminal></lr-terminal>`);
+  terminal.write('a'.repeat(12_000));
+  expect(await terminal.search('a')).to.equal(10_000);
+  const changes: { matchCount: number; matchCountExact: boolean }[] = [];
+  terminal.addEventListener('lr-search-change', (event) => changes.push((event as CustomEvent).detail));
+  terminal.write('\nb a');
+  await terminal.updateComplete;
+  expect(changes, 'a still-capped count is not a search change').to.deep.equal([]);
+  terminal.replace('a\nb a');
+  await terminal.updateComplete;
+  expect(changes.at(-1), 'replacement resets the search').to.include({ matchCount: 0, matchCountExact: true });
+  expect(await terminal.search('a')).to.equal(2);
+  terminal.write('\na');
+  expect(changes.at(-1)).to.include({ matchCount: 3, matchCountExact: true });
+});

@@ -227,3 +227,12 @@ describe('lr-agent-question heading', () => {
     expect(heading() === null).to.equal(true);
   });
 });
+
+it('treats a schema with unknown top-level keys or no properties object as unsupported', async () => {
+  for (const unsupported of [{ ...schema, $defs: {} }, { type: 'object', properties: [] }, { type: 'object' }]) {
+    const el = await fixture<LyraAgentQuestion>(html`<lr-agent-question request-id="q" .schema=${unsupported}></lr-agent-question>`);
+    expect(action(el, 'accept').disabled, JSON.stringify(unsupported)).to.equal(true);
+    expect(el.shadowRoot!.querySelector('lr-tool-param-form') === null).to.equal(true);
+    expect(action(el, 'decline').disabled).to.equal(false);
+  }
+});

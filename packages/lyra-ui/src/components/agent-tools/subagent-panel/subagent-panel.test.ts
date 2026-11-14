@@ -886,3 +886,38 @@ it('names retry actions from their visible localized labels and keeps the run co
   await expectValidAriaRules(button, ['label-content-name-mismatch']);
   expect(accessibleName(button)).to.equal('Relancer le sous-agent');
 });
+
+it('leaves nested-button activation and unhandled keys to the browser', async () => {
+  const el = await fixture<LyraSubagentPanel>(html`<lr-subagent-panel .runs=${runs}></lr-subagent-panel>`);
+  const key = (target: Element, value: string) => {
+    const event = new KeyboardEvent('keydown', { key: value, bubbles: true, composed: true, cancelable: true });
+    target.dispatchEvent(event);
+    return event.defaultPrevented;
+  };
+  const activations: Event[] = [];
+  el.addEventListener('lr-run-activate', (event) => activations.push(event));
+  const trigger = el.shadowRoot!.querySelector('[data-run-id="research"] [part="run-trigger"]')!;
+  expect(key(trigger, 'Enter'), 'the nested button keeps its native activation').to.equal(false);
+  expect(key(el.shadowRoot!.querySelector('[data-run-id="research"]')!, 'a')).to.equal(false);
+  expect(activations.length).to.equal(0);
+  const review = el.shadowRoot!.querySelector<HTMLElement>('[data-run-id="review"]')!;
+  review.focus();
+  expect(key(review, 'ArrowRight'), 'a leaf claims the child key without moving').to.equal(true);
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement === review).to.equal(true);
+});
+
+it('roots every run of a parent cycle and keeps a root in place on the parent key', async () => {
+  const el = await fixture<LyraSubagentPanel>(html`<lr-subagent-panel selected-run-id="a" .runs=${[
+    { id: 'a', parentId: 'b', label: 'Alpha', status: 'running' },
+    { id: 'b', parentId: 'a', label: 'Beta', status: 'done' },
+  ]}></lr-subagent-panel>`);
+  const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[role="treeitem"]')];
+  expect(rows.map((row) => [row.dataset['runId'], row.getAttribute('aria-level')])).to.deep.equal([['a', '1'], ['b', '1']]);
+  rows[0]!.focus();
+  const left = new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, composed: true, cancelable: true });
+  rows[0]!.dispatchEvent(left);
+  await el.updateComplete;
+  expect(left.defaultPrevented).to.equal(true);
+  expect(el.shadowRoot!.activeElement === rows[0]).to.equal(true);
+});

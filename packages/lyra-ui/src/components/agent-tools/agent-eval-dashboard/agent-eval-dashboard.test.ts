@@ -545,3 +545,15 @@ it('announces a newly bounded history in the adopted document without repeating 
     frame.remove();
   }
 });
+
+it('omits the chart until a metric exists and shows a non-finite metric as zero', async () => {
+  const runs = [{ id: 'r1', label: 'Run 1', status: 'done' as const }];
+  const el = await fixture<LyraAgentEvalDashboard>(html`<lr-agent-eval-dashboard .runs=${runs}></lr-agent-eval-dashboard>`);
+  expect(el.shadowRoot!.querySelector('lr-lite-chart') === null).to.equal(true);
+  expect(el.shadowRoot!.querySelectorAll('[part="run"]').length).to.equal(1);
+  el.metrics = [{ id: 'score', label: 'Score', value: Number.NaN }];
+  await el.updateComplete;
+  const metric = el.shadowRoot!.querySelector('[part="metric"]')!;
+  expect(metric.getAttribute('aria-label')).to.include('Score').and.include('0').and.not.include('NaN');
+  expect((el.shadowRoot!.querySelector('lr-lite-chart') as LyraLiteChart).datasets).to.deep.equal([{ label: 'Score', data: [null] }]);
+});

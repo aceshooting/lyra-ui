@@ -204,3 +204,20 @@ describe('lr-connector-manager', () => {
     expect(el.shadowRoot!.querySelector('[part="legend"]')?.textContent).to.equal('Connectors');
   });
 });
+
+it('drops a connector whose fields cannot be read and keeps its valid neighbors', async () => {
+  const hostile = { id: 'hostile', kind: 'mcp', status: 'connected', get name(): string { throw new Error('revoked'); } };
+  const el = await fixture<LyraConnectorManager>(html`<lr-connector-manager .connectors=${[hostile, connectors[1]!] as AgentConnector[]}></lr-connector-manager>`);
+  expect([...el.shadowRoot!.querySelectorAll<HTMLElement>('[data-connector-id]')].map((row) => row.dataset['connectorId'])).to.deep.equal(['calendar']);
+});
+
+it('leaves focus alone when the focused connector row is removed by the host', async () => {
+  const el = await fixture<LyraConnectorManager>(html`<lr-connector-manager .connectors=${connectors}></lr-connector-manager>`);
+  const connect = rowPart(el, 'files', 'action')!;
+  await focusByKeyboard(connect);
+  el.connectors = connectors.slice(1);
+  await el.updateComplete;
+  expect(rowPart(el, 'files', 'action') === null).to.equal(true);
+  expect(el.shadowRoot!.activeElement === rowPart(el, 'calendar', 'action')).to.equal(false);
+  expect(el.shadowRoot!.querySelectorAll('[data-connector-id]').length).to.equal(3);
+});

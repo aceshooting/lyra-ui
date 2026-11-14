@@ -424,3 +424,32 @@ describe('reorderable', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+it('ignores modified horizontal arrows and keeps a reorder pending across an unrelated refresh', async () => {
+  const el = await fixture<LyraTaskList>(html`<lr-task-list reorderable .items=${clone()}></lr-task-list>`);
+  const events: CustomEvent[] = [];
+  el.addEventListener('lr-reorder', (event) => events.push(event as CustomEvent));
+  const sideways = new KeyboardEvent('keydown', { key: 'ArrowRight', ctrlKey: true, bubbles: true, composed: true, cancelable: true });
+  itemRow(el, 'write').dispatchEvent(sideways);
+  expect(sideways.defaultPrevented).to.equal(false);
+  expect(events.length).to.equal(0);
+
+  itemRow(el, 'write').focus();
+  modifiedArrow(itemRow(el, 'write'), 'ArrowDown');
+  expect(events.length).to.equal(1);
+  const refreshed = clone() as MutableTaskItem[];
+  refreshed[1]!.status = 'running';
+  el.items = refreshed as TaskItem[];
+  await el.updateComplete;
+  expect(await liveRegionText(el)).not.to.include('moved');
+  applyItemsReorder(el, events[0]!);
+  await el.updateComplete;
+  expect(el.items.map((item) => item.id)).to.deep.equal(['prepare', 'review', 'write']);
+  await waitUntil(async () => (await liveRegionText(el)).includes('Write response'), 'the confirmed move is announced');
+  expect(focusedItemId(el)).to.equal('write');
+});
+
+it('reports that no key can be revealed without a source', async () => {
+  const el = await fixture<LyraTaskList>(html`<lr-task-list .items=${clone()}></lr-task-list>`);
+  expect(await el.revealSourceKey('write')).to.equal(false);
+});

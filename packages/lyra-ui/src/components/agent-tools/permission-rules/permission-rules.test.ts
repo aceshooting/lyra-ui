@@ -190,3 +190,14 @@ describe('lr-permission-rules', () => {
     expect(getComputedStyle(populated.shadowRoot!.querySelector('[part="rule"]')!).direction).to.equal('rtl');
   });
 });
+
+it('keeps the native select on the original decision when the host removes the rule while acknowledging', async () => {
+  const el = await fixture<LyraPermissionRules>(html`<lr-permission-rules .rules=${rules}></lr-permission-rules>`);
+  const select = el.shadowRoot!.querySelector<HTMLSelectElement>('[part="decision"]')!;
+  el.addEventListener('lr-permission-rule-change', () => { el.rules = []; }, { once: true });
+  select.value = 'allow';
+  select.dispatchEvent(new Event('change', { bubbles: true }));
+  expect(select.value).to.equal('ask');
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="decision"]').length).to.equal(0);
+});

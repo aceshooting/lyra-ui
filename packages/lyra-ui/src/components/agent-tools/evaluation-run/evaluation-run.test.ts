@@ -816,3 +816,11 @@ it('keeps an explicitly empty label verbatim instead of falling back to the defa
   const el = await fixture<LyraEvalRun>(html`<lr-eval-run label=""></lr-eval-run>`);
   expect(el.shadowRoot!.querySelector('[part="header-label"]')!.textContent).to.equal('');
 });
+
+it('lets a non-empty host aria-label own the run region name and role', async () => {
+  const el = await fixture<LyraEvalRun>(html`<lr-eval-run aria-label="Nightly evaluation" .examples=${examples}></lr-eval-run>`);
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(base.hasAttribute('role')).to.equal(false);
+  expect(base.hasAttribute('aria-label')).to.equal(false);
+  expect(el.shadowRoot!.querySelectorAll('[part~="example"]').length).to.be.greaterThan(0);
+});

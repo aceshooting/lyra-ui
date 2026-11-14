@@ -1057,3 +1057,21 @@ describe('lr-test-results remediation', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="test"]')[2] === before).to.equal(true);
   });
 });
+
+it('omits a whole suite whose tests the status filter hides while keeping matching suites', async () => {
+  const mixed: TestSuiteResult[] = [
+    ...suites,
+    { id: 's2', name: 'strings.test.ts', tests: [{ id: 'u1', name: 'trims', status: 'passed' }] },
+  ];
+  const el = await fixture<LyraTestResults>(html`<lr-test-results .suites=${mixed} .statusFilter=${['failed']}></lr-test-results>`);
+  const headers = [...el.shadowRoot!.querySelectorAll('[part="suite-header"]')].map((header) => header.textContent?.trim());
+  expect(headers).to.deep.equal(['math.test.ts']);
+  expect(el.shadowRoot!.querySelectorAll('[part~="test"]').length).to.equal(1);
+});
+
+it('lets a non-empty host aria-label own the results group name and role', async () => {
+  const el = await fixture<LyraTestResults>(html`<lr-test-results aria-label="CI results" .suites=${suites}></lr-test-results>`);
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(base.hasAttribute('role')).to.equal(false);
+  expect(base.hasAttribute('aria-label')).to.equal(false);
+});

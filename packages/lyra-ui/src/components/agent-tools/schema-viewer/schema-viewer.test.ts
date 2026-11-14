@@ -1113,3 +1113,92 @@ it('keeps its schema snapshot on a same-reference rebind', async () => {
     host.remove();
   }
 });
+
+it('leaves focus in place for modified, unhandled and already-handled tree keys', async () => {
+  const el = await fixture<LyraJsonSchemaViewer>(html`<lr-json-schema-viewer .schema=${schema}></lr-json-schema-viewer>`);
+  const triggers = () => [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="node-trigger"]')];
+  const active = () => triggers().indexOf(el.shadowRoot!.activeElement as HTMLElement);
+  await focusByKeyboard(triggers()[1]!);
+  for (const press of ['Alt+ArrowDown', 'Control+ArrowDown', 'Shift+a', 'Enter']) {
+    await sendKeys({ press });
+    expect(active(), press).to.equal(1);
+  }
+  const consume = (event: Event) => event.preventDefault();
+  triggers()[1]!.addEventListener('keydown', consume);
+  await sendKeys({ press: 'ArrowDown' });
+  expect(active(), 'a key the trigger already handled').to.equal(1);
+  triggers()[1]!.removeEventListener('keydown', consume);
+
+  const tree = el.shadowRoot!.querySelector<HTMLElement>('[part="tree"]')!;
+  const fromTree = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true });
+  tree.dispatchEvent(fromTree);
+  expect(fromTree.defaultPrevented, 'a key outside any node trigger is not claimed').to.equal(false);
+  tree.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+  await el.updateComplete;
+  expect(triggers().filter((trigger) => trigger.tabIndex === 0).map((trigger) => trigger.dataset['path'])).to.deep.equal(['/properties/query']);
+  await sendKeys({ press: 'ArrowDown' });
+  expect(active()).to.equal(2);
+  await sendKeys({ press: 'ArrowUp' });
+  expect(active()).to.equal(1);
+});
+
+it('stops composition and tuple children once the node budget is spent', async () => {
+  const properties = Object.fromEntries(Array.from({ length: 499 }, (_, index) => [`property-${index}`, { type: 'string' }]));
+  const composed = await fixture<LyraJsonSchemaViewer>(html`<lr-json-schema-viewer .schema=${{
+    type: 'object', properties, allOf: [{ description: 'Over budget A' }, { description: 'Over budget B' }],
+  }}></lr-json-schema-viewer>`);
+  expect(composed.shadowRoot!.querySelectorAll('[part~="node"]').length).to.equal(500);
+  expect(composed.shadowRoot!.querySelector('[data-path="/allOf/0"]') === null).to.equal(true);
+  expect(composed.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.contain('500');
+  const tuple = await fixture<LyraJsonSchemaViewer>(html`<lr-json-schema-viewer .schema=${{
+    type: 'array', items: Array.from({ length: 600 }, (_, index) => ({ type: 'number', description: `Slot ${index}` })),
+  }}></lr-json-schema-viewer>`);
+  expect(tuple.shadowRoot!.querySelectorAll('[part~="node"]').length).to.equal(500);
+  expect(tuple.shadowRoot!.querySelector('[data-path="/items/498"]')).to.not.equal(null);
+  expect(tuple.shadowRoot!.querySelector('[data-path="/items/499"]') === null).to.equal(true);
+});
+
+it('elides array and object constraint values nested past depth 3 by container kind', async () => {
+  const el = await fixture<LyraJsonSchemaViewer>(html`<lr-json-schema-viewer .schema=${{
+    type: 'array', default: [[[[1]], [{ deep: true }]]],
+  }}></lr-json-schema-viewer>`);
+  expect(el.shadowRoot!.textContent).to.contain('default: [[[[…]], [{…}]]]');
+});
+
+it('lets a non-empty host aria-label own the name instead of the inner section', async () => {
+  const empty = await fixture<LyraJsonSchemaViewer>(html`<lr-json-schema-viewer aria-label="Tool input"></lr-json-schema-viewer>`);
+  expect(empty.shadowRoot!.querySelector('[part="empty"]')).to.not.equal(null);
+  expect(empty.shadowRoot!.querySelector('[part="base"]')!.hasAttribute('aria-label')).to.equal(false);
+  const populated = await fixture<LyraJsonSchemaViewer>(html`<lr-json-schema-viewer aria-label="Tool input" .schema=${schema}></lr-json-schema-viewer>`);
+  expect(populated.shadowRoot!.querySelectorAll('[part="node-trigger"]').length).to.equal(4);
+  expect(populated.shadowRoot!.querySelector('[part="base"]')!.hasAttribute('aria-label')).to.equal(false);
+  await expect(populated).to.be.accessible();
+});
+
+it('does not reserve a relative selection pointer past the render budget', async () => {
+  const properties = Object.fromEntries(Array.from({ length: 600 }, (_, index) => [`property-${index}`, { type: 'string' }]));
+  const el = await fixture<LyraJsonSchemaViewer>(html`<lr-json-schema-viewer .schema=${{ type: 'object', properties }} selected-path="properties/property-599"></lr-json-schema-viewer>`);
+  expect(el.shadowRoot!.querySelectorAll('[part~="node"]').length).to.equal(500);
+  expect(el.shadowRoot!.querySelector('[aria-pressed="true"]') === null).to.equal(true);
+  expect(el.shadowRoot!.querySelector('[data-path="/properties/property-599"]') === null).to.equal(true);
+});
+
+it('re-homes its limit announcements when adopted into another document', async () => {
+  const el = await fixture<LyraJsonSchemaViewer>(html`<lr-json-schema-viewer .schema=${schema}></lr-json-schema-viewer>`);
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const destination = frame.contentDocument!;
+  try {
+    destination.body.append(destination.adoptNode(el));
+    await el.updateComplete;
+    expect(destination.querySelectorAll(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="polite"]`).length).to.equal(1);
+    el.issues = Array.from({ length: 501 }, (_, index) => ({ path: '', message: `Issue ${index}` }));
+    await el.updateComplete;
+    expect(sinkTexts('polite', destination)).to.deep.equal(['Only the first 500 validation issues are shown.']);
+    expect(sinkTexts()).to.deep.equal([]);
+  } finally {
+    document.adoptNode(el);
+    el.remove();
+    frame.remove();
+  }
+});

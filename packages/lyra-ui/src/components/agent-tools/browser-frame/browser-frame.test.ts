@@ -309,6 +309,11 @@ describe('lr-browser-frame', () => {
     expect(el.shadowRoot!.querySelector('[part="frame"]')?.getAttribute('alt')).to.equal('Browser view');
   });
 
+  it('names a screenshot by the page URL it shows', async () => {
+    const el = await fixture<LyraBrowserFrame>(html`<lr-browser-frame url="https://example.com/docs" frame-src="data:image/gif;base64,R0lGODlhAQABAAAAACw="></lr-browser-frame>`);
+    expect(el.shadowRoot!.querySelector('[part="frame"]')?.getAttribute('alt')).to.equal('Browser view of https://example.com/docs');
+  });
+
   it('draws its borders from the shared border-width ladder and buttons from the button tokens', async () => {
     const el = await fixture<LyraBrowserFrame>(html`<lr-browser-frame data-lr-theme-scope
       style="--lr-theme-border-width-thin: 2px; --lr-theme-border-width-medium: 4px; --lr-button-radius: 7px"
@@ -778,3 +783,11 @@ for (const width of [640, 320]) {
     });
   }
 }
+
+it('lets a non-empty host aria-label own the frame name and role', async () => {
+  const el = await fixture<LyraBrowserFrame>(html`<lr-browser-frame aria-label="Agent browser"></lr-browser-frame>`);
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(base.hasAttribute('role')).to.equal(false);
+  expect(base.hasAttribute('aria-label')).to.equal(false);
+  await expect(el).to.be.accessible();
+});

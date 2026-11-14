@@ -126,3 +126,16 @@ it('requests a decision through lr-change-decision-request, and no longer fires 
   (el.shadowRoot!.querySelector('[data-decision="keep"]') as HTMLButtonElement).click();
   expect(seen).to.deep.equal(['lr-change-decision-request:keep']);
 });
+
+it('shows a renamed file path and diffs a hunk without text as empty, tolerating unloaded hunks', async () => {
+  const el = await fixture<LyraChangeReview>(html`<lr-change-review .files=${[
+    { id: 'renamed', path: 'src/new-name.ts', previousPath: 'src/old-name.ts', hunks: [{ id: 'blank', before: 7, after: null }] },
+    { id: 'pending', path: 'src/pending.ts', hunks: null },
+  ] as unknown as ChangeReviewFile[]}></lr-change-review>`);
+  const headers = [...el.shadowRoot!.querySelectorAll('[part="file-header"]')];
+  expect(headers.map((header) => header.textContent?.trim())).to.deep.equal(['src/new-name.tssrc/old-name.ts', 'src/pending.ts']);
+  expect(el.shadowRoot!.querySelector('[part="previous-path"]')?.textContent).to.equal('src/old-name.ts');
+  const diff = el.shadowRoot!.querySelector('lr-diff-view') as HTMLElement & { oldText: string; newText: string };
+  expect([diff.oldText, diff.newText]).to.deep.equal(['', '']);
+  expect(el.shadowRoot!.querySelectorAll('[part="hunk"]').length).to.equal(1);
+});
