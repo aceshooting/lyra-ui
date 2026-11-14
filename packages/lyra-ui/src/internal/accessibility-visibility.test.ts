@@ -938,4 +938,86 @@ describe('adversarial accessibility visibility boundaries', () => {
       else Reflect.deleteProperty(el, 'checkVisibility');
     }
   });
+
+  it('skips unusable reflected references while preserving a later valid accessible label', async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div><span>Valid label</span><button aria-labelledby="">Fallback</button></div>`);
+    const label = wrapper.querySelector('span')!, button = wrapper.querySelector('button')!;
+    const prototype = window.Element.prototype;
+    const descriptor = Object.getOwnPropertyDescriptor(prototype, 'ariaLabelledByElements');
+    try {
+      Object.defineProperty(prototype, 'ariaLabelledByElements', { configurable: true, get() {
+        return this === button ? [null, document.createTextNode('Not an element reference'), label] : descriptor?.get?.call(this);
+      } });
+      const result = composedAccessibilityTextResult(button);
+      expect(result.text).to.equal('Valid label');
+      expect(result.truncated).to.equal(false);
+      expect(result.referencedElements.has(label)).to.equal(true);
+    } finally {
+      if (descriptor) Object.defineProperty(prototype, 'ariaLabelledByElements', descriptor);
+      else Reflect.deleteProperty(prototype, 'ariaLabelledByElements');
+    }
+  });
+
+  it('bounds reflected relationship reads and resolves the full name when given sufficient work', async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div><button aria-labelledby="">Fallback</button></div>`);
+    const button = wrapper.querySelector('button')!;
+    const labels = Array.from({ length: 20 }, (_, index) => {
+      const label = document.createElement('span'); label.textContent = `Label ${index}`; wrapper.append(label); return label;
+    });
+    const reads: number[] = [];
+    const references = new Proxy(labels, { get(target, key, receiver) {
+      if (typeof key === 'string' && /^\d+$/.test(key)) reads.push(Number(key));
+      return Reflect.get(target, key, receiver);
+    } });
+    const prototype = window.Element.prototype;
+    const descriptor = Object.getOwnPropertyDescriptor(prototype, 'ariaLabelledByElements');
+    try {
+      Object.defineProperty(prototype, 'ariaLabelledByElements', { configurable: true, get() {
+        return this === button ? references : descriptor?.get?.call(this);
+      } });
+      const limited = composedAccessibilityTextResult(button, { maxNodes: 12, skipRootAncestorValidation: true });
+      expect(limited.truncationReasons).to.include('nodes');
+      expect(limited.text).not.to.include('Fallback');
+      expect(reads.length).to.be.greaterThan(0).and.lessThan(labels.length);
+      expect(Math.max(...reads)).to.be.lessThan(12);
+      reads.length = 0;
+      const complete = composedAccessibilityTextResult(button, { maxNodes: 256, skipRootAncestorValidation: true });
+      expect(complete.text).to.equal(labels.map(label => label.textContent).join(' '));
+      expect(complete.truncated).to.equal(false);
+      expect(reads).to.deep.equal(labels.map((_, index) => index));
+    } finally {
+      if (descriptor) Object.defineProperty(prototype, 'ariaLabelledByElements', descriptor);
+      else Reflect.deleteProperty(prototype, 'ariaLabelledByElements');
+    }
+  });
+
+  it('fails closed when finding a closed-details summary exhausts the available node work', async () => {
+    const details = await fixture<HTMLElement>(html`<details></details>`);
+    for (let index = 0; index < 20; index++) details.append(document.createElement('span'));
+    const summary = document.createElement('summary'); summary.textContent = 'Late summary'; details.append(summary);
+    expect(isAccessibilityVisible(summary, { maxNodes: 8 })).to.equal(false);
+    expect(isAccessibilityVisible(summary, { maxNodes: 128 })).to.equal(true);
+    const limited = composedAccessibilityTextResult(summary, { maxNodes: 8 });
+    expect(limited.text).to.equal('');
+    expect(limited.truncationReasons).to.include('nodes');
+    const complete = composedAccessibilityTextResult(summary, { maxNodes: 128 });
+    expect(complete.text).to.equal('Late summary');
+    expect(complete.truncated).to.equal(false);
+  });
+
+  it('contains an unavailable boundary visibility probe before recovering a closed-popup name', async () => {
+    const popup = await fixture<HTMLElement>(html`<div part="popup" hidden><div><span>Popup label</span></div></div>`);
+    const boundary = popup.firstElementChild as HTMLElement, label = boundary.firstElementChild!;
+    const options = { ancestorBoundary: boundary, ignoreInheritedVisibility: true };
+    expect(composedAccessibilityText(label, options)).to.equal('Popup label');
+    const descriptor = Object.getOwnPropertyDescriptor(boundary, 'checkVisibility');
+    try {
+      Object.defineProperty(boundary, 'checkVisibility', { configurable: true, value() { throw new Error('Visibility unavailable'); } });
+      expect(composedAccessibilityText(label, options)).to.equal('');
+    } finally {
+      if (descriptor) Object.defineProperty(boundary, 'checkVisibility', descriptor);
+      else Reflect.deleteProperty(boundary, 'checkVisibility');
+    }
+    expect(composedAccessibilityText(label, options)).to.equal('Popup label');
+  });
 });
