@@ -7055,6 +7055,7 @@
           "src/components/forms/button/button-label-layout.test.ts",
           "src/components/forms/button/button-loading.test.ts",
           "src/components/forms/button/button-remediation.test.ts",
+          "src/components/forms/button/button-state-restoration.test.ts",
           "src/components/forms/button/button.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -49302,6 +49303,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/signature-pad/signature-pad-public-stroke-boundaries.test.ts",
+          "src/components/forms/signature-pad/signature-pad-state-restoration.test.ts",
           "src/components/forms/signature-pad/signature-pad.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
