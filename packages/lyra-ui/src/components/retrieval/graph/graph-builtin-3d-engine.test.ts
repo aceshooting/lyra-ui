@@ -81,3 +81,52 @@ describe('builtin graph spatial renderer extraction', () => {
     expect([...f.context.getImageData(0, 0, 1, 1).data]).to.deep.equal(before);
   });
 });
+
+describe('builtin graph spatial renderer label measurement cache', () => {
+  it('keeps at most 10,000 measured label widths and evicts the oldest first', async () => {
+    const f = await setup();
+    const labelled = (count: number, from = 0): SpatialWorldNode[] => Array.from({ length: count }, (_, index) => ({
+      ...f.node, node: { id: `n${from + index}`, label: `Label ${from + index}` },
+    }));
+    const measured: string[] = [];
+    const measure = f.context.measureText.bind(f.context);
+    f.context.measureText = (text: string) => { measured.push(text); return measure(text); };
+    try {
+      f.engine.draw({ ...f.frame, nodeLabels: 'always', world: labelled(10_001) });
+      expect(measured.length).to.equal(10_001);
+      measured.length = 0;
+      // The newest width is still cached; the very first one was evicted by the 10,001st label.
+      f.engine.draw({ ...f.frame, nodeLabels: 'always', world: labelled(1, 10_000) });
+      expect(measured).to.deep.equal([]);
+      f.engine.draw({ ...f.frame, nodeLabels: 'always', world: labelled(1, 0) });
+      expect(measured).to.deep.equal(['Label 0']);
+    } finally {
+      Reflect.deleteProperty(f.context, 'measureText');
+      f.engine.dispose();
+    }
+  });
+});
+
+describe('builtin graph spatial renderer curved arrows', () => {
+  it('fills an arrowhead at the end of a directed curved edge and none for an undirected one', async () => {
+    const f = await setup();
+    const left: SpatialWorldNode = { ...f.node, node: { id: 'a' }, radius: 6, position: { x: -100, y: 0, z: 0 } };
+    const right: SpatialWorldNode = { ...f.node, node: { id: 'b' }, radius: 6, position: { x: 100, y: 0, z: 0 } };
+    const fills = (directed: boolean): number => {
+      const edge = { id: `curve-${String(directed)}`, source: 'a', target: 'b', curvature: 0.5, directed };
+      const id = graphLinkIdentity(edge);
+      let count = 0;
+      const fill = f.context.fill.bind(f.context) as (...args: unknown[]) => void;
+      f.context.fill = ((...args: unknown[]) => { count++; fill(...args); }) as CanvasRenderingContext2D['fill'];
+      try {
+        f.engine.draw({ ...f.frame, world: [left, right], edges: [edge],
+          paint: { ...f.frame.paint, edges: new Map([[id, '#00ff00']]), visibleEdges: new Set([id]) } });
+      } finally {
+        Reflect.deleteProperty(f.context, 'fill');
+      }
+      return count;
+    };
+    expect(fills(true) - fills(false)).to.equal(1);
+    f.engine.dispose();
+  });
+});

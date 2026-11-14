@@ -1649,3 +1649,21 @@ describe('hover feedback on [part="node"]', () => {
     }
   });
 });
+
+describe('lr-mind-map topics reassignment', () => {
+  it('treats reassigning the published snapshot or the original source array as a no-op', async () => {
+    const source: LyraTopic[] = [{ id: 'root', label: 'Root', children: [{ id: 'leaf', label: 'Leaf' }] }];
+    const el = await fixture<LyraMindMap>(html`<lr-mind-map .topics=${source}></lr-mind-map>`);
+    const snapshot = el.topics;
+    expect(snapshot).to.not.equal(source);
+    el.topics = snapshot;
+    expect(el.isUpdatePending).to.equal(false);
+    el.topics = source;
+    expect(el.isUpdatePending).to.equal(false);
+    expect(el.topics).to.equal(snapshot);
+    el.topics = [...source];
+    expect(el.isUpdatePending).to.equal(true);
+    await el.updateComplete;
+    expect(el.topics).to.not.equal(snapshot);
+  });
+});

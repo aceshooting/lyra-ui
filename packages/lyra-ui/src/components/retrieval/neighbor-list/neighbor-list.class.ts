@@ -404,13 +404,6 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     return rows.sort((a, b) => compare(a.relation, b.relation));
   }
 
-  private groups(
-    sorted: readonly LyraNeighborRow[]
-  ): LyraVirtualListGroup[] | undefined {
-    if (sorted === this.sortedRowsCache) return this.groupsCache;
-    return this.computeGroups(sorted);
-  }
-
   private computeGroups(
     sorted: readonly LyraNeighborRow[]
   ): LyraVirtualListGroup[] | undefined {
@@ -460,8 +453,9 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     );
   }
 
-  private renderRow = (item: unknown): TemplateResult =>
-    this.renderNeighborRow(item as LyraNeighborRow);
+  /** Row renderer handed to the virtual list; `willUpdate()` replaces it whenever a presentation
+   *  input changes, so it is always assigned before the first `render()`. */
+  private renderRow!: (item: unknown) => TemplateResult;
 
   // Stable across every render (unlike an inline arrow literal in the template) so the composed
   // `<lr-virtual-list>`'s `.keyFunction` binding never appears to change on an unrelated
@@ -626,12 +620,12 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
             .items=${guard([sorted], () => sorted)}
             .renderItem=${this.renderRow}
             .keyFunction=${this.virtualListKeyFunction}
-            .groups=${this.groups(sorted)}
+            .groups=${this.groupsCache}
           ></lr-virtual-list>
         </div>
       `;
     }
-    const groups = this.groups(sorted);
+    const groups = this.groupsCache;
     // Looked up once per row below -- indexing by startIndex up front keeps the render O(rows +
     // groups) instead of rescanning the whole `groups` array (O(groups)) for every row
     // (O(rows x groups), worst-case O(n^2) since groups can scale with distinct relations up to

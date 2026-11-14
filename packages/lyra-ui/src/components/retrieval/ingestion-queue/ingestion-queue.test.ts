@@ -113,6 +113,21 @@ it('omits ingestion rows without a usable document record before rendering', asy
   ).to.contain('Doc valid');
 });
 
+it('skips non-record ingestion entries and treats a non-array items value as empty', async () => {
+  const el = (await fixture(
+    html`<lr-ingestion-queue></lr-ingestion-queue>`
+  )) as LyraIngestionQueue;
+  (el as unknown as { items: unknown }).items = [null, 'doc-1', 42, item({ id: 'valid', stage: 'queued' })];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="item"]')).to.have.length(1);
+  expect(el.shadowRoot!.querySelector('[part="item-name"]')!.textContent).to.contain('Doc valid');
+
+  (el as unknown as { items: unknown }).items = { id: 'valid', stage: 'queued' };
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="item"]')).to.have.length(0);
+  expect(el.shadowRoot!.querySelector('lr-empty') !== null).to.equal(true);
+});
+
 it('clips horizontal overflow from long queue metadata', async () => {
   const el = (await fixture(
     html`<lr-ingestion-queue

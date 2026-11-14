@@ -76,6 +76,18 @@ it('roves each section primary action while preserving secondary row buttons', a
   expect(el.shadowRoot!.querySelector<HTMLButtonElement>('[data-scope="short-term"] [part="remove-button"]')!.tabIndex).to.equal(0);
 });
 
+it('leaves modified and unrelated keys on a section primary action to the browser', async () => {
+  const el = await populated();
+  const short = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[data-scope="short-term"] [part="add-button"]')];
+  await focusByKeyboard(short[0]!);
+  for (const init of [{ key: 'ArrowDown', metaKey: true }, { key: 'PageDown' }]) {
+    const event = new KeyboardEvent('keydown', { ...init, bubbles: true, cancelable: true });
+    short[0]!.dispatchEvent(event);
+    expect(event.defaultPrevented, init.key).to.equal(false);
+    expect(el.shadowRoot!.activeElement === short[0], init.key).to.equal(true);
+  }
+});
+
 // Locale/numbering fixtures intentionally use English fallback text.
 expectLocaleFallback('ar-u-nu-arab', [
   'memoryPanelLabel',

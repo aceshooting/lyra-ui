@@ -28,6 +28,13 @@ describe('graph engine column seam', () => {
     expect(admitGraphEngineColumns({ ...input, x: new Float32Array([1e7 + 1, 0]) }).ok).to.equal(false);
     expect(admitGraphEngineColumns({ ...input, ids: ['same', 'same'] }).ok).to.equal(false);
   });
+  it('resolves only integer item indices inside the node-then-edge range', () => {
+    const result = admitGraphEngineColumns({ ids: ['a', 'b'], labels: ['Alpha', 'Beta'], source: new Uint32Array([0]), target: new Uint32Array([1]) });
+    expect(result.ok).to.equal(true); if (!result.ok) return;
+    expect(result.value.item(1)).to.deep.equal({ kind: 'node', row: 1, id: 'b', label: 'Beta' });
+    expect(result.value.item(2)).to.deep.equal({ kind: 'edge', row: 0, source: 'a', target: 'b' });
+    for (const index of [-1, 3, 0.5, Number.NaN]) expect(result.value.item(index)).to.equal(undefined);
+  });
 });
 
 describe('filtered graph engine column scene', () => {

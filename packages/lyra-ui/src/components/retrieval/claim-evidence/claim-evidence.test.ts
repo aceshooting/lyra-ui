@@ -47,6 +47,18 @@ it('roves claim selection across a single tab stop while evidence badges remain 
   expect(el.shadowRoot!.querySelector('lr-citation-badge')).to.exist;
 });
 
+it('leaves modified and unrelated keys on a claim trigger to the browser', async () => {
+  const el = (await fixture(html`<lr-claim-evidence .claims=${claims} .citations=${citations}></lr-claim-evidence>`)) as LyraClaimEvidence;
+  const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="claim-trigger"]')];
+  await focusByKeyboard(buttons[0]!);
+  for (const init of [{ key: 'ArrowDown', ctrlKey: true }, { key: 'ArrowRight' }, { key: 'a' }]) {
+    const event = new KeyboardEvent('keydown', { ...init, bubbles: true, cancelable: true });
+    buttons[0]!.dispatchEvent(event);
+    expect(event.defaultPrevented, init.key).to.equal(false);
+    expect(el.shadowRoot!.activeElement === buttons[0], init.key).to.equal(true);
+  }
+});
+
 it('renders claim status, confidence, and only evidence that resolves', async () => {
   const el = (await fixture(
     html`<lr-claim-evidence

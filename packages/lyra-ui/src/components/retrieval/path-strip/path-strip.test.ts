@@ -560,3 +560,36 @@ it('mirrors a reverse directed edge in both logical directions', async () => {
   expect(ltr!.shadowRoot!.querySelector('[part="arrow"]')!.textContent).to.equal('←');
   expect(rtl!.shadowRoot!.querySelector('[part="arrow"]')!.textContent).to.equal('→');
 });
+
+it('announces an unlabeled node by its id', async () => {
+  const el = await fixture<LyraPathStrip>(html`<lr-path-strip .path=${[
+    { kind: 'node', node: { id: 'unlabeled-node', label: '' } },
+    { kind: 'edge', relation: 'cites' },
+    { kind: 'node', node: { id: 'e2', label: 'Polonium' } },
+  ] as LyraPathElement[]}></lr-path-strip>`);
+  el.shadowRoot!.querySelector<HTMLButtonElement>('[part="node"]')!.focus();
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('.sr-only')!.textContent).to.equal('unlabeled-node, node 1 of 3');
+  expect(el.shadowRoot!.querySelector('[part="node"]')!.textContent).to.contain('unlabeled-node');
+});
+
+it('leaves keys it does not navigate with to the browser', async () => {
+  const el = await fixture<LyraPathStrip>(html`<lr-path-strip .path=${path}></lr-path-strip>`);
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  const event = new KeyboardEvent('keydown', { key: 'PageDown', bubbles: true, composed: true, cancelable: true });
+  base.dispatchEvent(event);
+  await el.updateComplete;
+  expect(event.defaultPrevented).to.equal(false);
+  expect([...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="node"], [part="relation"]')].map((control) => control.tabIndex))
+    .to.deep.equal([0, -1, -1]);
+});
+
+it('renders the empty state for a runtime path value that is not an array, and ignores keys there', async () => {
+  const el = await fixture<LyraPathStrip>(html`<lr-path-strip .path=${'e1 -> e2' as unknown as LyraPathElement[]}></lr-path-strip>`);
+  expect(el.shadowRoot!.querySelector('[part="empty"]')).to.exist;
+  expect(el.shadowRoot!.querySelectorAll('[part="node"], [part="relation"]')).to.have.lengthOf(0);
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]');
+  const event = new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true, cancelable: true });
+  (base ?? el.shadowRoot!.firstElementChild!).dispatchEvent(event);
+  expect(event.defaultPrevented).to.equal(false);
+});

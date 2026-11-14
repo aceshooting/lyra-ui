@@ -379,6 +379,21 @@ it('keeps run history to one tab stop and moves focus with Arrow, Home and End',
   expect(el.shadowRoot!.activeElement === buttons[0]).to.equal(true);
 });
 
+it('leaves modified and unrelated keys in run history to the browser', async () => {
+  const el = (await fixture(html`<lr-rag-eval-dashboard .runs=${[
+    { id: 'one', label: 'One', metrics: {} },
+    { id: 'two', label: 'Two', metrics: {} },
+  ]}></lr-rag-eval-dashboard>`)) as LyraRagEvalDashboard;
+  const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="run"]')];
+  await focusByKeyboard(buttons[0]!);
+  for (const init of [{ key: 'End', ctrlKey: true }, { key: 'ArrowRight' }]) {
+    const event = new KeyboardEvent('keydown', { ...init, bubbles: true, cancelable: true });
+    buttons[0]!.dispatchEvent(event);
+    expect(event.defaultPrevented, init.key).to.equal(false);
+    expect(el.shadowRoot!.activeElement === buttons[0], init.key).to.equal(true);
+  }
+});
+
 it('normalizes non-array collections and non-finite metric values', async () => {
   const el = (await fixture(html`
     <lr-rag-eval-dashboard

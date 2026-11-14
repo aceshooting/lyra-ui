@@ -2179,6 +2179,32 @@ describe('review fixes', () => {
     expect(isExpanded(other)).to.equal(false);
   });
 
+  it('collapses a row on a second toggle and forgets the expansion of a chunk that leaves the list', async () => {
+    const el = (await fixture(html`<lr-retrieval-results .chunks=${chunks}></lr-retrieval-results>`)) as LyraRetrievalResults;
+    const first = inspectorFor(el, 'c1')!;
+    await first.updateComplete;
+    const toggle = () => inspectorFor(el, 'c1')!.shadowRoot!.querySelector<HTMLElement>('[part="toggle"]')!.click();
+    toggle();
+    await el.updateComplete;
+    await first.updateComplete;
+    expect(isExpanded(first)).to.equal(true);
+    toggle();
+    await el.updateComplete;
+    await first.updateComplete;
+    expect(isExpanded(first)).to.equal(false);
+
+    toggle();
+    await el.updateComplete;
+    el.chunks = chunks.filter((chunk) => chunk.id !== 'c1');
+    await el.updateComplete;
+    expect(inspectorFor(el, 'c1') === null).to.equal(true);
+    el.chunks = chunks;
+    await el.updateComplete;
+    const back = inspectorFor(el, 'c1')!;
+    await back.updateComplete;
+    expect(isExpanded(back), 'a returning chunk starts collapsed').to.equal(false);
+  });
+
   it('keeps a row\'s expansion when the virtualized row scrolls out and back', async () => {
     const many = Array.from({ length: 200 }, (_, index) => ({ id: `m${index}`, text: 'text', score: 0.9 - index / 100, source: { id: 's', name: 'doc.pdf' } }));
     const el = (await fixture(html`<lr-retrieval-results virtualize-at="3" .chunks=${many}></lr-retrieval-results>`)) as LyraRetrievalResults;

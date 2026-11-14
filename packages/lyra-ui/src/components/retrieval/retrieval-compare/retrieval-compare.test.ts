@@ -106,6 +106,18 @@ it('uses one roving tab stop per result set while keeping chunk activation intac
   expect(second.map((button) => button.tabIndex)).to.deep.equal([0, -1]);
 });
 
+it('leaves modified and unrelated keys on a result chunk to the browser', async () => {
+  const el = (await fixture(html`<lr-retrieval-compare .sets=${sets}></lr-retrieval-compare>`)) as LyraRetrievalCompare;
+  const first = [...el.shadowRoot!.querySelectorAll('[part="set"]')[0]!.querySelectorAll<HTMLButtonElement>('[part~="chunk"]')];
+  await focusByKeyboard(first[0]!);
+  for (const init of [{ key: 'End', shiftKey: false, altKey: true }, { key: 'ArrowRight' }]) {
+    const event = new KeyboardEvent('keydown', { ...init, bubbles: true, cancelable: true });
+    first[0]!.dispatchEvent(event);
+    expect(event.defaultPrevented, init.key).to.equal(false);
+    expect(el.shadowRoot!.activeElement === first[0], init.key).to.equal(true);
+  }
+});
+
 it('renders a localized empty state and remains accessible at populated state', async () => {
   const empty = (await fixture(
     html`<lr-retrieval-compare

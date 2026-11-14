@@ -1018,4 +1018,18 @@ describe('lr-rag-answer heading level', () => {
     expect([heading.getAttribute('role'), heading.getAttribute('aria-level')]).to.deep.equal([null, null]);
     expect(heading.textContent?.trim().length).to.be.greaterThan(0);
   });
+  it('renders the answer without evidence for runtime citations, sources and claims that are not arrays', async () => {
+    const el = (await fixture(html`<lr-rag-answer
+      answer="Answer text"
+      .citations=${{ id: 'c1' } as unknown as []}
+      .sources=${'d1' as unknown as []}
+      .assessment=${{ supportedClaims: 1, unsupportedClaims: 0, coverage: 1, claims: 'c1' } as unknown as { supportedClaims: number }}
+    ></lr-rag-answer>`)) as LyraRagAnswer;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('lr-markdown')).to.exist;
+    expect(el.shadowRoot!.querySelectorAll('lr-citation-badge')).to.have.lengthOf(0);
+    expect(el.shadowRoot!.querySelectorAll('lr-source-card')).to.have.lengthOf(0);
+    const grounding = el.shadowRoot!.querySelector('lr-grounding-summary') as HTMLElement & { assessment?: { claims?: unknown } } | null;
+    if (grounding) expect(grounding.assessment?.claims).to.deep.equal([]);
+  });
 });

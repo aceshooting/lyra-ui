@@ -544,12 +544,9 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
     this.announcementSink?.announce(text);
   }
 
+  /** Local-topics toggle. Source mode never reaches this: `activate()` routes source rows first
+   *  and the source keydown path delegates to the hierarchy controller. */
   private toggle(node: PlacedTopic, announce = true): void {
-    if (this.treeSource !== undefined) {
-      const row = this.sourceDiagramRows.get(node.id);
-      if (row && this.sourceDiagramCurrent()) this.selectSourceRow(row);
-      return;
-    }
     const expanded = !this.isExpanded(node.id, node.depth);
     const next = new Map(this.expandedOverrides);
     next.set(node.id, expanded);

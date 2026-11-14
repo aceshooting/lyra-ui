@@ -349,6 +349,20 @@ it('roves the evidence badge buttons through one tab stop', async () => {
   expect(buttons.map((button) => button.tabIndex)).to.deep.equal([-1, 0]);
 });
 
+it('leaves modified and unrelated keys on an evidence badge to the browser', async () => {
+  const el = (await fixture(html`<lr-grounding-summary .assessment=${ASSESSMENT} .citations=${CITATIONS}></lr-grounding-summary>`)) as LyraGroundingSummary;
+  const badges = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="evidence-list"] lr-citation-badge')];
+  await Promise.all(badges.map((badge) => (badge as HTMLElement & { updateComplete: Promise<boolean> }).updateComplete));
+  const button = badges[0]!.shadowRoot!.querySelector<HTMLButtonElement>('[part="base"]')!;
+  await focusByKeyboard(button);
+  for (const init of [{ key: 'ArrowDown', altKey: true }, { key: 'ArrowLeft' }]) {
+    const event = new KeyboardEvent('keydown', { ...init, bubbles: true, composed: true, cancelable: true });
+    button.dispatchEvent(event);
+    expect(event.defaultPrevented, init.key).to.equal(false);
+    expect(badges[0]!.shadowRoot!.activeElement === button, init.key).to.equal(true);
+  }
+});
+
 it("renders a citation's label and formatted span next to its badge, omitting evidence-span when span is unset", async () => {
   const el = (await fixture(
     html`<lr-grounding-summary></lr-grounding-summary>`

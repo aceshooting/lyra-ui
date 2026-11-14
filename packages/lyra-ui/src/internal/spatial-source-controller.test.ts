@@ -142,3 +142,26 @@ it('rejects wrong-ID and undeclared-series exact results without retaining them'
     expect(await value.reveal('other')).to.equal(null); expect(value.error).to.equal(true); expect(value.points().length).to.equal(1);
   }
 });
+
+it('rejects an unsupported chart policy, a non-spatial chart source and non-array series before any query', async () => {
+  const cases: [Partial<LyraSpatialChartSource> | Record<string, unknown>, { type: 'scatter' | 'bubble' }][] = [
+    [{}, { type: 'line' as 'scatter' }],
+    [{ kind: 'points' }, { type: 'scatter' }],
+    [{ series: { 0: { id: 'a', label: 'Alpha' }, length: 1 } }, { type: 'scatter' }],
+  ];
+  for (const [overrides, policy] of cases) {
+    const value = await controller(); let calls = 0;
+    value.bind({ ...source(), ...overrides, query: () => { calls++; throw new Error('must not query'); } } as LyraSpatialChartSource, null, 1000, '', policy);
+    expect(value.error).to.equal(true); expect(calls).to.equal(0);
+  }
+});
+
+it('captures a string embedding cluster as bounded text alongside a numeric one', async () => {
+  const value = await controller(); const input = source();
+  const named = { id: 'named', sourceIndex: 21, x: 30, y: 30, cluster: 'topic-a', sourceId: 'doc-1' };
+  const numbered = { id: 'numbered', sourceIndex: 22, x: 40, y: 40, cluster: 7 };
+  input.query = () => ({ matchedCount: 100, bins: [{ bounds, count: 100 }], points: [named, numbered] as unknown as LyraSpatialChartPoint[] });
+  value.bind(input, null, 1000, ''); await settle(value);
+  expect(value.error).to.equal(false);
+  expect(value.result!.points).to.deep.equal([named, numbered]);
+});

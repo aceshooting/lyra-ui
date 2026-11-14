@@ -667,3 +667,20 @@ for (const [offset, expected] of [['0px', '-3px'], ['5px', '-8px'], ['-5px', '-3
     }
   });
 }
+
+it('keeps list semantics for an author-declared listitem and keeps its role after release', async () => {
+  const el = (await fixture(html`
+    <lr-source-list expanded>
+      <article role="listitem">Author item <span class="inner">detail</span></article>
+    </lr-source-list>
+  `)) as LyraSourceList;
+  const item = el.querySelector('article')!;
+  await aTimeout(0);
+  expect(el.shadowRoot!.querySelector('[part="list"]')!.getAttribute('role')).to.equal('list');
+  // A role change on a nested descendant is not a direct slotted item and leaves the list as is.
+  el.querySelector('.inner')!.setAttribute('role', 'button');
+  await aTimeout(0);
+  expect(el.shadowRoot!.querySelector('[part="list"]')!.getAttribute('role')).to.equal('list');
+  el.remove();
+  expect(item.getAttribute('role'), 'the author role is not owned, so it survives release').to.equal('listitem');
+});

@@ -162,6 +162,34 @@ describe("lr-retrieval-trace", () => {
     expect(waterfall.shadowRoot!.textContent).not.to.include("dedupe");
   });
 
+  it("reports a non-text runtime stage kind by its type and labels it as unknown", async () => {
+    (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings?.delete('lr-retrieval-trace:unknown-kind');
+    const stages = [{ id: "numeric", kind: 7, startMs: 0, endMs: 5, status: "success" }] as unknown as RetrievalStage[];
+    const originalWarn = console.warn;
+    const warnings: string[] = [];
+    console.warn = (...args: unknown[]) => warnings.push(args.join(' '));
+    let el: LyraRetrievalTrace;
+    try {
+      el = await fixture<LyraRetrievalTrace>(html`<lr-retrieval-trace .stages=${stages}></lr-retrieval-trace>`);
+    } finally {
+      console.warn = originalWarn;
+    }
+    expect(warnings.some((warning) => warning.includes('unknown stage kind "number"'))).to.equal(true);
+    const waterfall = el.shadowRoot!.querySelector("lr-span-waterfall") as LyraSpanWaterfall;
+    await waterfall.updateComplete;
+    expect(waterfall.shadowRoot!.textContent).to.include("Unknown stage");
+  });
+
+  it("renders no stages for a runtime stages value that is not an array", async () => {
+    const el = await fixture<LyraRetrievalTrace>(
+      html`<lr-retrieval-trace .stages=${{ id: 'one' } as unknown as RetrievalStage[]}></lr-retrieval-trace>`
+    );
+    expect(el.shadowRoot!.querySelector('[part="empty"]') !== null).to.equal(true);
+    const waterfall = el.shadowRoot!.querySelector("lr-span-waterfall") as LyraSpanWaterfall;
+    await waterfall.updateComplete;
+    expect(waterfall.shadowRoot!.querySelectorAll('[part="bar"]').length).to.equal(0);
+  });
+
   it('keeps an explicit unknown runtime stage status neutral in the timeline', async () => {
     const stages = [{ id: 'future', kind: 'retrieve', startMs: 0, endMs: 5, status: 'awaiting-review' }] as unknown as RetrievalStage[];
     const el = await fixture<LyraRetrievalTrace>(html`<lr-retrieval-trace .stages=${stages}></lr-retrieval-trace>`);
