@@ -34,6 +34,32 @@ describe('map anchor placement failure and recovery', () => {
     expect(events.order).to.deep.equal([]);
   });
 
+  it('re-places child anchors synchronously after a style replacement when frame scheduling is unavailable', async () => {
+    const { map, engine } = await mountMap();
+    const anchor = addAnchor(map), events = captureCloses(anchor);
+    await placed(anchor);
+    const before = base(anchor).getBoundingClientRect().left;
+    const frame = Object.getOwnPropertyDescriptor(window, 'requestAnimationFrame');
+    let calls = 0;
+    const sync = engine.project;
+    engine.project = coordinate => { calls++; return sync.call(engine, coordinate); };
+    try {
+      Object.defineProperty(window, 'requestAnimationFrame', { configurable: true, value: undefined });
+      calls = 0;
+      map.mapStyle = { ...map.mapStyle as object } as typeof map.mapStyle;
+      await map.updateComplete; await map.whenStyleReady(); await map.updateComplete;
+      expect(calls, 'the replaced style re-projects the anchor without waiting for a frame').to.be.greaterThan(0);
+    } finally {
+      engine.project = sync;
+      if (frame) Object.defineProperty(window, 'requestAnimationFrame', frame);
+      else Reflect.deleteProperty(window, 'requestAnimationFrame');
+    }
+    await placed(anchor);
+    expect(base(anchor).getBoundingClientRect().left).to.be.closeTo(before, 1);
+    expect(anchor.open).to.equal(true);
+    expect(events.order).to.deep.equal([]);
+  });
+
   for (const phase of ['projection', 'boundary measurement'] as const) {
     it(`discards geometry when the anchor is withdrawn during ${phase} and recovers on reopening`, async () => {
       const { map, engine, wrapper } = await mountMap();

@@ -294,4 +294,54 @@ describe('map scene accepted position registry', () => {
     close(); close(); expect(h.liveBytes).to.equal(0); expect(h.releases).to.equal(1);
     expect(registry.target('target').status).to.equal('absent');
   });
+
+  it('skips a listener another listener unsubscribes during the same notice', () => {
+    const { registry, stage, close } = setup();
+    const calls: string[] = [];
+    let unsubscribeSecond = () => {};
+    registry.subscribe(() => { calls.push('first'); unsubscribeSecond(); });
+    unsubscribeSecond = registry.subscribe(() => calls.push('second'));
+    registry.subscribe(() => calls.push('third'));
+    expect(registry.commit(stage([sceneMarker()]))).to.equal(true);
+    expect(calls).to.deep.equal(['first', 'third']);
+    close();
+  });
+
+  it('rejects a non-function listener and ignores subscriptions after disposal', () => {
+    const { registry, stage, h, close } = setup();
+    expect(() => registry.subscribe(null as never)).to.throw(TypeError, 'Invalid map scene listener');
+    registry.dispose();
+    let calls = 0;
+    const unsubscribe = registry.subscribe(() => calls++);
+    unsubscribe();
+    expect(registry.commit(stage([sceneMarker()]))).to.equal(false);
+    expect(calls).to.equal(0);
+    expect(h.liveBytes).to.equal(0);
+    close();
+  });
+
+  it('clears an empty registry without advancing the registry revision', () => {
+    const { registry, h, close } = setup();
+    const notices: number[] = [];
+    registry.subscribe(notice => notices.push(notice.registryRevision));
+    const before = registry.capture();
+    expect(registry.clear(h.next())).to.equal(true);
+    expect(registry.acceptedSceneRevision).to.equal(1);
+    expect(registry.capture().registryRevision).to.equal(before.registryRevision);
+    expect(notices).to.deep.equal([]);
+    close();
+  });
+
+  it('releases published model sources when publication reentrantly disposes the registry', () => {
+    const { registry, stage, h, close } = setup();
+    const candidate = stage([sceneModel()]);
+    let calls = 0;
+    h.hooks.current = () => { if (++calls === 2) registry.dispose(); };
+    expect(registry.commit(candidate)).to.equal(false);
+    h.hooks.current = undefined;
+    expect(calls).to.be.greaterThan(1);
+    expect(registry.target('model')).to.deep.equal({ status: 'absent' });
+    expect(h.liveBytes).to.equal(0);
+    close();
+  });
 });

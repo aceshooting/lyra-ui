@@ -83,4 +83,14 @@ describe('map scene configuration', () => {
     expect(mapScenePreparation({ type: 'globe' }, undefined, undefined)).to.deep.equal({ projection: { type: 'globe' } });
   });
 
+  it('rejects an empty projection expression, a non-record current style and a non-string projection type', () => {
+    expect(() => snapshotMapSceneBaseline({ type: [] }, undefined)).to.throw(TypeError, 'Invalid map projection');
+    expect(snapshotMapSceneBaseline({ type: ['literal', 'globe'] }, undefined).projection).to.deep.equal({ type: ['literal', 'globe'] });
+    for (const style of [undefined, null, [], 'style']) {
+      expect(() => mapScenePreparation({ type: 'globe' }, { source: 'dem', exaggeration: 1 }, style)).to.throw(TypeError, 'Invalid current map style');
+    }
+    for (const type of [1, null, { kind: 'globe' }]) {
+      expect(() => mapScenePreparation({ type } as never, undefined, undefined)).to.throw(TypeError, 'Invalid map projection');
+    }
+  });
 });

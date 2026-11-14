@@ -62,3 +62,39 @@ it('rejects unsafe scene colors before allocating a leading model and accepts a 
     valid.dispose(); expect(h.liveBytes).to.equal(0);
   } finally { h.sources.dispose(); }
 });
+
+it('rejects a position carrying more than two coordinates as an invalid descriptor, not a limit', () => {
+  const h = sceneSourceHarness();
+  try {
+    const marker = { ...sceneMarker(), position: { lngLat: [1, 2, 3] } };
+    expect(() => stageMapSceneAdmission({ objects: [marker] }, { request: h.request(), sources: h.sources }))
+      .to.throw(TypeError, 'Invalid map scene descriptor');
+    expect(stageMapSceneAdmission({ objects: [sceneMarker()] }, { request: h.request(), sources: h.sources }).objects.length).to.equal(1);
+  } finally { h.sources.dispose(); }
+});
+
+it('reports a revoked object list as an invalid descriptor rather than leaking the reflection error', () => {
+  const h = sceneSourceHarness();
+  const revoked = Proxy.revocable([], {});
+  revoked.revoke();
+  try {
+    expect(() => stageMapSceneAdmission({ objects: revoked.proxy }, { request: h.request(), sources: h.sources }))
+      .to.throw(TypeError, 'Invalid map scene descriptor');
+    expect(h.allocations).to.equal(0);
+  } finally { h.sources.dispose(); }
+});
+
+it('disposes a staged source set whose receipts do not cover every model and owns no bytes afterwards', () => {
+  const h = sceneSourceHarness();
+  let disposed = 0;
+  const sources = { ...h.sources, stage: (...args: Parameters<typeof h.sources.stage>) => {
+    const stage = h.sources.stage(...args);
+    return { receipts: [], dispose() { disposed++; stage.dispose(); } };
+  } };
+  try {
+    expect(() => stageMapSceneAdmission({ objects: [sceneModel()] }, { request: h.request(), sources }))
+      .to.throw(TypeError, 'Invalid map scene descriptor');
+    expect(disposed).to.equal(1);
+    expect(h.liveBytes).to.equal(0);
+  } finally { h.sources.dispose(); }
+});

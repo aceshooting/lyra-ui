@@ -190,4 +190,38 @@ describe('map scene render input', () => {
       }
     } finally { h.owner.close(); }
   });
+
+  it('contains a revoked presentation marker list and accepts the next valid snapshot', () => {
+    const revoked = Proxy.revocable([], {});
+    revoked.revoke();
+    expect(snapshotScenePresentation({ markers: revoked.proxy, reducedMotion: false })).to.equal(undefined);
+    expect(snapshotScenePresentation({ markers: [{ id: 'pin', rgba: [0, 0, 0, 1] }], reducedMotion: false })?.markers.length).to.equal(1);
+  });
+
+  it('refuses a viewport notice whose allocation revision is not a positive safe integer', async () => {
+    const h = await inputHarness([sceneMarker()]);
+    try {
+      for (const allocationRevision of [0, -1, 1.5, Number.MAX_SAFE_INTEGER + 2]) {
+        expect(buildSceneRenderInput({ accepted: h.accepted, state: { ...h.state, viewport: { ...sceneViewport(), allocationRevision } },
+          phase: 'pending', presentationRevision: 13 })).to.equal(undefined);
+      }
+      expect(buildSceneRenderInput({ accepted: h.accepted, state: { ...h.state, viewport: { ...sceneViewport(), allocationRevision: 1 } },
+        phase: 'pending', presentationRevision: 13 })?.allocation?.revision).to.equal(1);
+    } finally { h.owner.close(); }
+  });
+
+  it('refuses duplicate target facts and contains a throwing snapshot reader', async () => {
+    const h = await inputHarness([sceneMarker('A'), sceneMarker('B')]);
+    try {
+      const presentation = scenePresentation(h.accepted);
+      expect(buildSceneRenderInput({ accepted: h.accepted, state: h.state, phase: 'resolved', presentationRevision: 14, presentation })?.markers.length)
+        .to.equal(2);
+      const duplicated = { ...h.state, targets: [...h.state.targets, h.state.targets[0]!] };
+      expect(buildSceneRenderInput({ accepted: h.accepted, state: duplicated, phase: 'resolved', presentationRevision: 14, presentation }))
+        .to.equal(undefined);
+      const throwing = Object.defineProperty({ ...h.accepted }, 'objects', { get() { throw new Error('private snapshot failure'); } });
+      expect(buildSceneRenderInput({ accepted: throwing, state: h.state, phase: 'resolved', presentationRevision: 14, presentation }))
+        .to.equal(undefined);
+    } finally { h.owner.close(); }
+  });
 });

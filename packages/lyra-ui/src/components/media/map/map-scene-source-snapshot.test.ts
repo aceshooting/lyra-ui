@@ -1,7 +1,7 @@
 import { expect } from '@open-wc/testing';
 import { sceneSourceHarness } from '../../../../test/map-scene-admission-fixtures.js';
 import { mapSceneAdmissionErrorCode } from './map-scene-errors.js';
-import { captureMapSceneSourceMetadata, readMapSceneSource, type SceneSourceValue } from './map-scene-source-snapshot.js';
+import { captureMapSceneSourceMetadata, createMapSceneSourceOwner, readMapSceneSource, type SceneSourceValue } from './map-scene-source-snapshot.js';
 
 describe('map scene source snapshots', () => {
   it('rejects malformed source metadata before allocating or resolving anything', () => {
@@ -412,4 +412,75 @@ describe('map scene source snapshots', () => {
     } finally { h.sources.dispose(); }
   });
 
+  it('refuses invalid owner options and non-record requests', () => {
+    const valid = { connection: {}, isCurrent: () => true, reserveBytes: () => ({ release() {} }),
+      resolveUrl: (src: string) => ({ url: src, owner: {} }), maxEncodedBytes: 8 };
+    for (const override of [{ connection: null }, { isCurrent: 1 }, { reserveBytes: undefined }, { resolveUrl: 'x' },
+      { maxEncodedBytes: -1 }, { maxEncodedBytes: 1.5 }]) {
+      let failure: unknown;
+      try { createMapSceneSourceOwner({ ...valid, ...override } as never); } catch (error) { failure = error; }
+      expect(mapSceneAdmissionErrorCode(failure)).to.equal('invalid');
+    }
+    const h = sceneSourceHarness();
+    try {
+      for (const request of [null, [], 'request']) {
+        let failure: unknown;
+        try { h.sources.stage([], request as never); } catch (error) { failure = error; }
+        expect(mapSceneAdmissionErrorCode(failure)).to.equal('invalid');
+      }
+    } finally { h.sources.dispose(); }
+  });
+
+  it('rejects a URL source whose src changes while the host resolves it', () => {
+    const h = sceneSourceHarness();
+    const source = { format: 'obj' as const, src: 'first.obj' };
+    h.hooks.resolve = src => { source.src = 'second.obj'; return { url: `https://example.invalid/${src}`, owner: h.owner }; };
+    try {
+      let failure: unknown;
+      try { h.sources.stage([source], h.request()); } catch (error) { failure = error; }
+      expect(mapSceneAdmissionErrorCode(failure)).to.equal('invalid');
+      h.hooks.resolve = undefined;
+      expect(h.sources.stage([source], h.request()).receipts.length).to.equal(1);
+    } finally { h.sources.dispose(); }
+  });
+
+  it('contains a failing host release after the request is superseded during byte reservation', () => {
+    const connection = Object.freeze({});
+    let current = true, reservations = 0, releases = 0;
+    const owner = createMapSceneSourceOwner({ connection, maxEncodedBytes: 8, isCurrent: () => current, resolveUrl: () => null,
+      reserveBytes: () => { if (++reservations === 1) current = false; return { release() { if (++releases === 1) throw new Error('host release failed'); } }; } });
+    try {
+      let failure: unknown;
+      try { owner.stage([{ format: 'glb', bytes: new Uint8Array(8) }], Object.freeze({ connection, revision: 1 })); } catch (error) { failure = error; }
+      expect(mapSceneAdmissionErrorCode(failure)).to.equal('invalid');
+      expect([reservations, releases]).to.deep.equal([1, 1]);
+      current = true;
+      const stage = owner.stage([{ format: 'glb', bytes: new Uint8Array(8) }], Object.freeze({ connection, revision: 2 }));
+      expect(stage.receipts.length, 'the failed reservation no longer counts against the byte ceiling').to.equal(1);
+      stage.dispose();
+    } finally { owner.dispose(); }
+  });
+
+  it('refuses publication of a sealed stage and of a duplicate entry replaced by a sibling stage', () => {
+    const h = sceneSourceHarness();
+    try {
+      const sealedSource = { format: 'glb' as const, bytes: new Uint8Array([1]) };
+      const sealed = h.sources.stage([sealedSource], h.next());
+      h.sources.sealCurrent();
+      let failure: unknown;
+      try { h.sources.publish(sealed); } catch (error) { failure = error; }
+      expect(mapSceneAdmissionErrorCode(failure)).to.equal('invalid');
+      sealed.dispose();
+      const shared = { format: 'glb' as const, bytes: new Uint8Array([2, 3]) };
+      const request = h.next();
+      const first = h.sources.stage([shared], request), second = h.sources.stage([shared], request);
+      expect(first.receipts[0]!.sourceId).not.to.equal(second.receipts[0]!.sourceId);
+      expect(h.sources.publish(first).length).to.equal(1);
+      failure = undefined;
+      try { h.sources.publish(second); } catch (error) { failure = error; }
+      expect(mapSceneAdmissionErrorCode(failure)).to.equal('invalid');
+      second.dispose();
+      expect(h.liveBytes).to.equal(2);
+    } finally { h.sources.dispose(); }
+  });
 });
