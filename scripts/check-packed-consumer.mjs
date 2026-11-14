@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { attwCommandArguments, parsePackedConsumerArguments } from './packed-attw.mjs';
-import { PACKED_TARBALL_ENVIRONMENT, packedManifest, suppliedPackedTarball } from './packed-tarball-input.mjs';
+import { PACKED_TARBALL_ENVIRONMENT, packedManifest, suppliedPackedTarball, writePackedUiOverride } from './packed-tarball-input.mjs';
 import { checkPublishedCompatibilitySync, readCurrentCompatibilityContext } from '../packages/lyra-ui/scripts/check-published-compatibility.mjs';
 import { checkPublishedFieldHistorySync } from '../packages/lyra-ui/scripts/published-field-compatibility-io.mjs';
 import { preservePackedTarball, verifyPackedMigrationConsumers, writeResolvedMigrationEntry, verifyResolvedMigrationBrowser } from './packed-migration-consumer.mjs';
@@ -382,8 +382,8 @@ async function verifyPackedDocsPackage({ workspace, uiTarball, docsTarball }) {
   await writeFile(join(fixtureDir, 'package.json'), JSON.stringify({
     name: 'lr-packed-docs-consumer', private: true, type: 'module',
     dependencies: { '@aceshooting/lyra-docs': `file:${relative(fixtureDir, docsTarball)}`, '@aceshooting/lyra-ui': uiSpecifier },
-    pnpm: { overrides: { '@aceshooting/lyra-ui': uiSpecifier } },
   }));
+  await writePackedUiOverride(fixtureDir, uiSpecifier);
   await writeFile(join(fixtureDir, 'load.mjs'), `globalThis.customElements = { get: () => undefined, define: () => { throw new Error('Unexpected registration'); } };
 const { createDocxSession } = await import('@aceshooting/lyra-docs/docx');
 const { LyraDocxEditor } = await import('@aceshooting/lyra-docs/docx/editor.class');
@@ -417,8 +417,8 @@ async function verifyPackedTranslationsPackage({ workspace, uiTarball, translati
   await writeFile(join(fixtureDir, 'package.json'), JSON.stringify({
     name: 'lr-packed-translations-consumer', private: true, type: 'module',
     dependencies: { '@aceshooting/lyra-translations': `file:${relative(fixtureDir, translationsTarball)}`, '@aceshooting/lyra-ui': uiSpecifier },
-    pnpm: { overrides: { '@aceshooting/lyra-ui': uiSpecifier } },
   }));
+  await writePackedUiOverride(fixtureDir, uiSpecifier);
   await writeFile(join(fixtureDir, 'load.mjs'), `import '@aceshooting/lyra-translations/fr.js';
 import '@aceshooting/lyra-translations/ar/forms.js';
 import { getRegisteredLyraLocales } from '@aceshooting/lyra-ui/localization.js';
@@ -450,8 +450,8 @@ async function verifyPackedIdePackage({ workspace, uiTarball, ideTarball }) {
   await writeFile(join(fixtureDir, 'package.json'), JSON.stringify({
     name: 'lr-packed-ide-consumer', private: true, type: 'module',
     dependencies: { '@aceshooting/lyra-ide': `file:${relative(fixtureDir, ideTarball)}`, '@aceshooting/lyra-ui': uiSpecifier },
-    pnpm: { overrides: { '@aceshooting/lyra-ui': uiSpecifier } },
   }));
+  await writePackedUiOverride(fixtureDir, uiSpecifier);
   await writeFile(join(fixtureDir, 'load.mjs'), `import { readFile } from 'node:fs/promises';
 const read = async (specifier) => JSON.parse(await readFile(new URL(import.meta.resolve(specifier)), 'utf8'));
 const cem = await read('@aceshooting/lyra-ide/custom-elements.json');

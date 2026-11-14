@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { compactBuildCss } from '../packages/lyra-ui/scripts/compact-build-css.mjs';
 import { execFileSync } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { suppliedPackedTarball } from './packed-tarball-input.mjs';
+import { suppliedPackedTarball, writePackedUiOverride } from './packed-tarball-input.mjs';
 
 const checkerSource = await readFile(
   new URL('check-packed-consumer.mjs', import.meta.url),
@@ -20,6 +20,19 @@ const bundleBudgets = JSON.parse(
     'utf8',
   ),
 );
+
+test('the installed pnpm reads the packed UI override for a standalone companion consumer', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'lyra-packed-ui-override-'));
+  try {
+    const uiSpecifier = 'file:../reviewed packages/lyra-ui.tgz';
+    await writeFile(join(directory, 'package.json'), JSON.stringify({ name: 'packed-ui-override-test', private: true }));
+    await writePackedUiOverride(directory, uiSpecifier);
+    const effective = execFileSync('pnpm', ['config', 'get', 'overrides', '--json'], {
+      cwd: directory, encoding: 'utf8',
+    });
+    assert.deepEqual(JSON.parse(effective), { '@aceshooting/lyra-ui': uiSpecifier });
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
 
 test('the migrated consumer configures its modular worker without changing native map or core builds', async () => {
   const start = checkerSource.indexOf("  await writeFile(\n    join(fixtureDir, 'vite.config.mjs'),");

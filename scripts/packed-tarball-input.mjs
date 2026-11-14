@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { copyFile, readFile } from 'node:fs/promises';
+import { copyFile, readFile, writeFile } from 'node:fs/promises';
 import { basename, join, resolve } from 'node:path';
 
 // Tarballs CI already packed (real prepack, SHA256SUMS-verified); unset, each check packs as before.
@@ -17,6 +17,13 @@ export const PACKED_TARBALL_ENVIRONMENT = Object.freeze({
 export const packedManifest = (tarball) => JSON.parse(execFileSync('tar', ['-xzOf', tarball, 'package/package.json'], {
   encoding: 'utf8', maxBuffer: 16 * 1024 * 1024,
 }));
+
+/** pnpm 12 reads overrides from workspace settings, including in standalone consumers. */
+export async function writePackedUiOverride(fixtureDir, uiSpecifier) {
+  await writeFile(join(fixtureDir, 'pnpm-workspace.yaml'),
+    `packages: []\noverrides:\n  '@aceshooting/lyra-ui': ${JSON.stringify(uiSpecifier)}\n`,
+    { flag: 'wx' });
+}
 
 /** The supplied tarball copied into `destination`, after proving it is this checkout's package; undefined when unset. */
 export async function suppliedPackedTarball(variable, { packageDir, destination, compareExports = false, environment = process.env }) {
