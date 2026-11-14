@@ -2215,7 +2215,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    *  component's own `ResizeObserver`s is watching, from inside that observer's own delivery.
    *  See `beginResizeDelivery()`. */
   private get defersMeasurementApplication(): boolean {
-    return this.inResizeDelivery && this.externalScroller !== undefined;
+    return this.inResizeDelivery;
   }
 
   /**
@@ -2244,13 +2244,10 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    * matters beyond this component -- holding a render would move this element's `updateComplete`
    * out from under every parent composing it, which used to resolve in the same microtask run.
    *
-   * Only the external-`scrollElement` case defers, because that is the only one where the extent
-   * write reaches an observed box; with this component's own viewport scrolling, `[part="base"]`
-   * takes its block size from `--lr-virtual-list-height` instead, so every measurement there stays
-   * exactly as immediate as it was. What a row whose measurement is waiting shows during that one
-   * frame is the same `DEFAULT_ROW_ESTIMATE_PX` geometry it already would have shown, and the
-   * scroll-anchor correction travels with the measurement that causes it, so no frame is ever
-   * painted with one applied and the other still pending.
+   * Local auto heights and percentages under indefinite ancestors also follow the spacer.
+   * Defer measurements in both modes to avoid resizing their observed viewport during delivery.
+   * Retain previous geometry until the frame applies measurements and scroll-anchor corrections
+   * together, so a paint never sees only one half of the adjustment.
    */
   private beginResizeDelivery(): void {
     this.inResizeDelivery = true;

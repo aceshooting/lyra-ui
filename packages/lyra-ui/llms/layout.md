@@ -2128,6 +2128,7 @@ row is "active." `options.align` is `'start'`, `'end'`, or `'auto'` (default —
 already fully visible); `options.behavior` (default `'smooth'`) is forced to `'auto'` under
 `prefers-reduced-motion: reduce`. `index` is clamped to the effective source's `0…count-1` range.
 In auto-height mode, estimate-based jumps are corrected as row and group-marker measurements arrive.
+Measurements and scroll-anchor corrections apply together on the next frame.
 That correction is bound to the source, key function, and target identity and is canceled on a new
 target, data replacement, manual scroll intent, or disconnect, so late observations cannot pull a
 newer view back to stale content.

@@ -754,6 +754,7 @@ it("uses a row's rendered height when a ResizeObserver entry omits borderBoxSize
       [{ target: row } as unknown as ResizeObserverEntry],
       record!.observer
     );
+    await waitUntil(() => el.offsetForIndex(1) === 96, 'observer measurements apply on the next frame');
     await el.updateComplete;
 
     expect(el.offsetForIndex(1)).to.equal(96);
@@ -801,6 +802,7 @@ it("uses a group marker's rendered height when a ResizeObserver entry omits bord
       [{ target: marker } as unknown as ResizeObserverEntry],
       record!.observer
     );
+    await waitUntil(() => el.offsetForIndex(1) === 104, 'observer measurements apply on the next frame');
     await el.updateComplete;
 
     // Fixed row-height=40 for row 0, plus the group marker's own measured height (64, replacing
@@ -844,6 +846,7 @@ it("keeps a measured group height when a fresh-but-content-identical groups arra
       [{ target: marker } as unknown as ResizeObserverEntry],
       record!.observer
     );
+    await waitUntil(() => el.offsetForIndex(1) === 104, 'observer measurements apply on the next frame');
     await el.updateComplete;
     expect(el.offsetForIndex(1)).to.equal(64 + 40);
 
@@ -962,6 +965,7 @@ it("adjusts an indexed source's offset by real measured deltas from earlier auto
       [{ target: row } as unknown as ResizeObserverEntry],
       record!.observer
     );
+    await waitUntil(() => el.offsetForIndex(5) === beforeOffset + 48, 'observer measurements apply on the next frame');
     await el.updateComplete;
 
     const afterOffset = el.offsetForIndex(5);
@@ -2276,6 +2280,9 @@ it("measures group markers as virtual entries before their indexed rows", async 
   ]);
   const firstHeight = groups[0]!.getBoundingClientRect().height;
   const secondHeight = groups[1]!.getBoundingClientRect().height;
+  await waitUntil(() => Math.abs(el.offsetForIndex(3) - (120 + firstHeight + secondHeight)) < 1,
+    'both group measurements apply before querying their row positions');
+  await el.updateComplete;
   const rows = [
     ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]'),
   ];

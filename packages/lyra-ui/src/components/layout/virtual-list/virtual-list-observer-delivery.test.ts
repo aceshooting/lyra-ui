@@ -86,3 +86,34 @@ it('retires automatic measurements when a fixed row height replaces a queued del
   await waitUntil(() => list.renderedRows.some(value => value.dataset['rowIndex'] === '50'));
   expect(list.scrollContainer!.scrollTop).to.equal(1600);
 }));
+
+it('coalesces local row measurements outside the observer delivery before changing offsets', async () => withObservers(async (list, observers) => {
+  const row = list.renderedRows[0]!;
+  const observer = observers.find(value => value.targets.has(row) && !value.disconnected)!;
+  const originalOffset = list.offsetForIndex(1);
+  observer.deliver(row, 73);
+  observer.deliver(row, 91);
+  await list.updateComplete;
+  expect(list.offsetForIndex(1)).to.equal(originalOffset);
+  await waitUntil(() => list.offsetForIndex(1) === 91);
+  expect(list.offsetForIndex(2) - list.offsetForIndex(1)).to.equal(originalOffset);
+}));
+
+for (const height of ['auto', '100%']) {
+  it(`stabilizes a content-sized local viewport with ${height} height as its rows resize`, async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div><lr-virtual-list
+      style=${`--lr-virtual-list-height:${height}`}
+      .items=${[0, 1, 2]}
+      .renderItem=${(value: unknown) => html`<div style="height:24px">Row ${value}</div>`}
+    ></lr-virtual-list></div>`);
+    const list = wrapper.querySelector<LyraVirtualList>('lr-virtual-list')!;
+    await waitUntil(() => list.offsetForIndex(2) === 48 && list.scrollContainer!.getBoundingClientRect().height === 72,
+      'the local viewport follows its measured rows without an observer loop');
+    expect(list.renderedRows.map(row => row.dataset['rowIndex'])).to.deep.equal(['0', '1', '2']);
+    list.renderedRows[0]!.querySelector<HTMLElement>('div')!.style.height = '73px';
+    await waitUntil(() => list.offsetForIndex(1) === 73 && list.scrollContainer!.getBoundingClientRect().height === 121,
+      'a resized row updates both offsets and the local viewport');
+    expect(list.offsetForIndex(2)).to.equal(97);
+    expect(list.renderedRows.map(row => row.dataset['rowIndex'])).to.deep.equal(['0', '1', '2']);
+  });
+}
