@@ -18105,6 +18105,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/data/document-library/document-library-boundaries.test.ts",
+          "src/components/data/document-library/document-library-collection-boundaries.test.ts",
           "src/components/data/document-library/document-library-record-projection.test.ts",
           "src/components/data/document-library/document-library-remediation.test.ts",
           "src/components/data/document-library/document-library-scale.test.ts",
@@ -21666,6 +21667,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/data/env-list/env-list-record-boundaries.test.ts",
           "src/components/data/env-list/env-list.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -24142,6 +24144,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/data/flow-node/flow-node-handle-boundaries.test.ts",
           "src/components/data/flow-node/flow-node.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -53146,6 +53149,7 @@
         "tests": [
           "src/components/forms/swatch-picker/swatch-keys.property.test.ts",
           "src/components/forms/swatch-picker/swatch-picker-live-items.test.ts",
+          "src/components/forms/swatch-picker/swatch-picker-record-boundaries.test.ts",
           "src/components/forms/swatch-picker/swatch-picker-remediation.test.ts",
           "src/components/forms/swatch-picker/swatch-picker.test.ts"
         ],
@@ -54987,6 +54991,7 @@
         "tests": [
           "src/components/agent-tools/terminal/terminal-coverage.test.ts",
           "src/components/agent-tools/terminal/terminal-remediation.test.ts",
+          "src/components/agent-tools/terminal/terminal-scalar-input.test.ts",
           "src/components/agent-tools/terminal/terminal-scale.test.ts",
           "src/components/agent-tools/terminal/terminal.test.ts"
         ],
