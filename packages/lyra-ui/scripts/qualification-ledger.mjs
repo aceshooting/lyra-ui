@@ -489,7 +489,7 @@ export function qualificationApplicabilitySignals({
     ),
     securitySignal: firstSignal(
       [...allImplementation, ...tests],
-      /safeFetchUrl|readResponse(?:ArrayBuffer|Text)|DOMPurify|sanitize\s*\(|unsafeHTML|unsafeSVG|LyraResourceLimitError|generation\s*!==/,
+      /safeFetchUrl|readResponse(?:ArrayBuffer|Text)|DOMPurify|sanitize\s*\(|unsafeHTML|unsafeSVG|LyraResourceLimitError|generation\s*(?:!==|===)/,
       packageDir,
     ),
   };

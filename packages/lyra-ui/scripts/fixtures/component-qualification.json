@@ -4200,7 +4200,7 @@
           "evidence": [
             {
               "file": "src/components/media/av-player/av-player.class.ts",
-              "line": 537,
+              "line": 536,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -7770,10 +7770,16 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/overlays/callout/callout.class.ts",
+              "line": 349,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -7799,7 +7805,7 @@
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
         "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -12796,7 +12802,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/commit-card/commit-card.class.ts",
-              "line": 324,
+              "line": 312,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -13542,10 +13548,16 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/agent-tools/confirm-bar/confirm-bar.class.ts",
+              "line": 556,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -13571,7 +13583,7 @@
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
         "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -16031,7 +16043,7 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid.class.ts",
-              "line": 2923,
+              "line": 2900,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -16086,6 +16098,7 @@
           "src/components/data/data-grid/data-grid-remediation.test.ts",
           "src/components/data/data-grid/data-grid-render-refresh.test.ts",
           "src/components/data/data-grid/data-grid-request-authority-scale.test.ts",
+          "src/components/data/data-grid/data-grid-request-ownership.test.ts",
           "src/components/data/data-grid/data-grid-review.test.ts",
           "src/components/data/data-grid/data-grid-scale.test.ts",
           "src/components/data/data-grid/data-grid-selection.test.ts",
@@ -18439,7 +18452,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/document-viewer/document-viewer.class.ts",
-              "line": 385,
+              "line": 378,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -23311,10 +23324,16 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/media/flag/flag.class.ts",
+              "line": 283,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -23341,7 +23360,7 @@
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
         "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -29434,10 +29453,16 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/utility/json-viewer/json-viewer.class.ts",
+              "line": 718,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -29461,7 +29486,7 @@
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
         "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -30566,10 +30591,16 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/media/lightbox/lightbox.class.ts",
+              "line": 472,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -30594,7 +30625,7 @@
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
         "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -34684,7 +34715,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menubar/menubar-item.class.ts",
-              "line": 146,
+              "line": 91,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -34902,7 +34933,7 @@
           "evidence": [
             {
               "file": "src/components/layout/menubar/menubar-item.class.ts",
-              "line": 146,
+              "line": 91,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -35669,10 +35700,16 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/retrieval/mind-map/mind-map-source-scale.test.ts",
+              "test": "stops old value fields when an id descriptor starts a newer reveal",
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -35697,7 +35734,7 @@
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
         "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -38950,7 +38987,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/page-rail/page-rail.class.ts",
-              "line": 612,
+              "line": 512,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -42380,7 +42417,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/prompt-input/prompt-input.class.ts",
-              "line": 639,
+              "line": 572,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -43091,10 +43128,16 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/conversation/push-to-talk/push-to-talk.class.ts",
+              "line": 392,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -43121,7 +43164,7 @@
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
         "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -44218,7 +44261,6 @@
           "narrowAllocation",
           "visual",
           "peerFailure",
-          "security",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -44335,8 +44377,14 @@
         },
         "security": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/retrieval/rag-answer/rag-answer.class.ts",
+              "line": 178,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
           "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
@@ -46956,7 +47004,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.class.ts",
-              "line": 923,
+              "line": 704,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -47158,7 +47206,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-search/retrieval-search.class.ts",
-              "line": 402,
+              "line": 285,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -48617,7 +48665,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/selection-toolbar/selection-toolbar.class.ts",
-              "line": 901,
+              "line": 401,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -51323,7 +51371,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/stack-trace/stack-trace.class.ts",
-              "line": 301,
+              "line": 289,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -53496,7 +53544,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.class.ts",
-              "line": 533,
+              "line": 507,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -53745,7 +53793,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.class.ts",
-              "line": 533,
+              "line": 507,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -53989,7 +54037,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.class.ts",
-              "line": 533,
+              "line": 507,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -54898,7 +54946,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/terminal/terminal.class.ts",
-              "line": 916,
+              "line": 903,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -55078,10 +55126,16 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/agent-tools/test-results/test-results.class.ts",
+              "line": 467,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -55108,7 +55162,7 @@
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
         "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -57852,10 +57906,16 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.class.ts",
+              "line": 585,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -57881,7 +57941,7 @@
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
         "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -61402,7 +61462,7 @@
           "evidence": [
             {
               "file": "src/components/media/video-playlist/video-playlist.class.ts",
-              "line": 532,
+              "line": 424,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

@@ -16,6 +16,20 @@ import {
 
 const sourceFile = (file, source) => ({ file, source });
 
+test('security applicability recognizes both current and stale generation checks', () => {
+  for (const comparison of ['generation === this.requestGeneration', 'generation !== this.requestGeneration']) {
+    const signals = qualificationApplicabilitySignals({
+      component: component('lr-request', 'stable'),
+      packageDir: '/fixture',
+      sources: [sourceFile('/fixture/request.class.ts', `const current = () => ${comparison};`)],
+      styles: [],
+      tests: [],
+      interactiveTags: new Set(),
+    });
+    assert.deepEqual(signals.securitySignal, { file: 'request.class.ts', line: 1 }, comparison);
+  }
+});
+
 test('qualification applicability ignores prose-only motion tokens', () => {
   const signals = qualificationApplicabilitySignals({
     component: component('lr-static', 'stable'),

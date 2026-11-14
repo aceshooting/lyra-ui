@@ -2897,6 +2897,11 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       pageSize: this.safePageSize,
       signal: this.requestController?.signal,
     });
+    const current = (): boolean => generation === this.requestGeneration
+      && !request.signal?.aborted
+      && this.isConnected
+      && this.ownerDocument.defaultView === owner
+      && this.matchesCurrentServerRequest();
     const requestDetail = (): DataGridRequest =>
       Object.freeze({
         ...request,
@@ -2913,31 +2918,21 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         ),
       });
     this.emit('lr-request', requestDetail());
+    if (!current()) return;
     this.emit('request', requestDetail());
+    if (!current()) return;
     if (!this.dataSource) return;
     this.ownsLoadingState = true;
     this.loading = true;
     try {
       const response = await this.dataSource(request);
-      if (
-        generation !== this.requestGeneration ||
-        request.signal?.aborted ||
-        !this.isConnected ||
-        this.ownerDocument.defaultView !== owner
-      )
-        return;
+      if (!current()) return;
       this.data = Array.isArray(response.rows) ? response.rows : [];
       this.total = finiteCount(response.total);
       this.loading = false;
       this.ownsLoadingState = false;
     } catch (error) {
-      if (
-        generation !== this.requestGeneration ||
-        request.signal?.aborted ||
-        !this.isConnected ||
-        this.ownerDocument.defaultView !== owner
-      )
-        return;
+      if (!current()) return;
       this.loading = false;
       this.ownsLoadingState = false;
       // Deliberately does NOT set `this.error` -- `lr-data-error`'s own documented contract keeps

@@ -16044,6 +16044,8 @@ are `text`, `equals`, `number-range`, `date-range`, `set`, `includes-any`, and `
 query immediately aborts and supersedes the previous request, including while its replacement
 waits for `filterDebounce`. Obsolete results and errors cannot update the grid even when a loader
 ignores the signal. A rejected current request keeps prior rows and emits `lr-data-error`.
+Request listeners can disconnect the grid, replace its source or query, or call `reload()`;
+the superseded invocation stops before emitting further notifications or starting its loader.
 Filter/search requests use `filterDebounce`; sorting and paging load immediately.
 For event-driven loading, set `server`, listen to the mirrored `request` event, and assign `data`,
 `total`, and `loading` yourself. The redundant Lyra-only `lr-data-request` event was removed in
