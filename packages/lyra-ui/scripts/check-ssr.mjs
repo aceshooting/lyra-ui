@@ -55,6 +55,58 @@ assertIsolatedNodeImport(
   `${noBrowserGlobals} await import('@aceshooting/lyra-ui/ssr.js'); ${noBrowserGlobals}`
 );
 assertIsolatedNodeImport(
+  'document-less public readiness and discovery helpers',
+  `
+    import assert from 'node:assert/strict';
+    import { discover, start, stop } from '@aceshooting/lyra-ui/autoloader.js';
+    import { allDefined } from '@aceshooting/lyra-ui/utilities/defined.js';
+    import { invalidateLyraTheme } from '@aceshooting/lyra-ui/utilities/theme.js';
+    import { diagnoseLyraHydration } from '@aceshooting/lyra-ui/ssr.js';
+    import { supportsScopedRegistries, createScopedRegistry } from '@aceshooting/lyra-ui/utilities/scoped-registry.js';
+    ${noBrowserGlobals}
+    for (let pass = 0; pass < 2; pass++) {
+      assert.deepEqual(await discover(), []);
+      assert.deepEqual(await start(), []);
+      assert.equal(await allDefined(), undefined);
+      assert.deepEqual(await diagnoseLyraHydration(), []);
+      assert.equal(invalidateLyraTheme(), undefined);
+      assert.equal(stop(), undefined);
+      assert.equal(stop(), undefined);
+    }
+    assert.equal(supportsScopedRegistries(), false);
+    assert.throws(() => createScopedRegistry({}), /Scoped custom element registries are not supported/);
+    await import('@aceshooting/lyra-ui/autoloader-cdn.js');
+    assert.deepEqual(await discover(), []);
+    ${noBrowserGlobals}
+  `
+);
+assertIsolatedNodeImport(
+  'shared public test setup stays inert in plain Node',
+  `
+    import assert from 'node:assert/strict';
+    import {
+      installHappyDomAriaControlsShim, installHappyDomCascadeLayerShim,
+      installHappyDomFormAssociatedShims, installHappyDomShadowFocusShim, installHappyDomShims,
+      installJsdomAdoptedStyleSheetsShim, installJsdomFormAssociatedShim, installJsdomShims,
+    } from '@aceshooting/lyra-ui/testing';
+    const absent = ['window', 'document', 'HTMLElement', 'Element', 'Document', 'ShadowRoot', 'CSSStyleSheet'];
+    for (const name of absent) assert.equal(globalThis[name], undefined, name);
+    for (let pass = 0; pass < 2; pass++) {
+      assert.equal(installHappyDomAriaControlsShim(), undefined);
+      assert.equal(installHappyDomFormAssociatedShims(), undefined);
+      assert.equal(installHappyDomShims(), undefined);
+      for (const install of [installHappyDomCascadeLayerShim, installHappyDomShadowFocusShim,
+        installJsdomAdoptedStyleSheetsShim, installJsdomFormAssociatedShim, installJsdomShims]) {
+        const cleanup = install();
+        assert.equal(typeof cleanup, 'function');
+        assert.equal(cleanup(), undefined);
+        assert.equal(cleanup(), undefined);
+      }
+    }
+    for (const name of absent) assert.equal(globalThis[name], undefined, name);
+  `
+);
+assertIsolatedNodeImport(
   'document-less style runtime and requested-axis attributes',
   `
     import assert from 'node:assert/strict';
@@ -211,6 +263,21 @@ assert.match(
   /part="base"/,
   'lr-animated-image must render without an owner document on the server'
 );
+
+for (const [width, height, expected] of [
+  ['12rem', '2rem', 'margin-inline:1rem;--lr-skeleton-w:12rem;--lr-skeleton-h:2rem'],
+  ['calc(100% - 2rem)', 'var(--placeholder-height)', 'margin-inline:1rem;--lr-skeleton-w:calc(100% - 2rem);--lr-skeleton-h:var(--placeholder-height)'],
+  ['12px;position:fixed', 'url(https://example.test/image)', 'margin-inline:1rem'],
+  [undefined, undefined, 'margin-inline:1rem'],
+]) {
+  const skeletonHtml = await collectResult(render(html`<lr-skeleton
+    style="margin-inline:1rem" .width=${width} .height=${height}
+  ></lr-skeleton>`, { elementRenderers: animatedImageContext.elementRenderers }));
+  const host = skeletonHtml.match(/<lr-skeleton\b[^>]*>/)?.[0];
+  assert.ok(host, 'skeleton SSR must retain its host');
+  assert.equal(host.match(/\sstyle="([^"]*)"/)?.[1], expected);
+  assert.match(skeletonHtml, /part="base indicator"/);
+}
 
 // Color-picker's pre-render disabled check must also work without Element.matches on the server.
 for (const disabled of [false, true]) {
