@@ -2,6 +2,7 @@ import { expect } from '@open-wc/testing';
 import { captureDeprecationWarnings } from '../../test/expected-deprecations.js';
 import * as development from './dev-warning.development.js';
 import * as production from './dev-warning.production.js';
+import { warnThemeScopeUsage, warnUnknownAttributes } from './dev-mode-attribute-warning.production.js';
 
 describe('production diagnostics entry', () => {
   /** Runs `body` while recording every `console.warn`, restoring the real one afterwards. */
@@ -32,6 +33,20 @@ describe('production diagnostics entry', () => {
   it('is silent where the development entry speaks, on the same inputs', () => {
     const warnings = warningsWhile(() => development.devWarn('visible in development'));
     expect(warnings).to.deep.equal(['visible in development']);
+  });
+
+  it('keeps production attribute and theme diagnostics silent without changing author markup', () => {
+    const host = document.createElement('div');
+    host.setAttribute('unknown-option', 'preserved');
+    host.setAttribute('data-lr-theme', 'dark');
+    const markup = host.outerHTML;
+    const warnings = warningsWhile(() => {
+      warnUnknownAttributes(host);
+      warnUnknownAttributes(host, ['observed-option'], ['allowed-option']);
+      warnThemeScopeUsage(host);
+    });
+    expect(warnings).to.deep.equal([]);
+    expect(host.outerHTML).to.equal(markup);
   });
 
   it('names a deprecation exactly as the development entry keys it', async () => {
