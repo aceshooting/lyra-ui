@@ -85,18 +85,14 @@ export function widestEstimatedCategoryLabel(
   return widest;
 }
 
-/** Width-only automatic cap for non-monotonic tick positions. */
+/** Width-only automatic cap for non-monotonic tick positions. The caller has already resolved a
+ *  positive `widest` estimate for a multi-category domain. */
 function automaticMaxCategoryLabels(
   count: number,
   plotWidth: number,
-  renderedIndexes: readonly number[],
-  labels: readonly string[],
-  bounds: Pick<CategoryLabelSelectionBounds, 'characterWidth' | 'laneInset' | 'maxContentWidth'>,
-  estimatedWidth?: number,
+  bounds: Pick<CategoryLabelSelectionBounds, 'laneInset' | 'maxContentWidth'>,
+  widest: number,
 ): number {
-  if (count <= 1) return count;
-  const widest = estimatedWidth ?? widestEstimatedCategoryLabel(labels, renderedIndexes, bounds.characterWidth);
-  if (widest === 0) return count;
   const lane = widest + bounds.laneInset;
   const fits = Math.floor(finiteRange(plotWidth, 0, 0, bounds.maxContentWidth) / lane);
   return Math.min(count, Math.max(2, fits));
@@ -149,7 +145,7 @@ export function visibleCategoryLabelIndexes(
       const automatic = automaticCategoryLabelIndexes(count, renderedIndexes, positions, labels, bounds, widest);
       if (automatic !== null) return automatic;
     }
-    requested = automaticMaxCategoryLabels(count, plotWidth, renderedIndexes, labels, bounds, widest);
+    requested = automaticMaxCategoryLabels(count, plotWidth, bounds, widest);
   }
   if (typeof requested !== 'number') return undefined;
   const max = finiteCount(requested, count);

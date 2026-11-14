@@ -33,6 +33,15 @@ describe('histogram distribution admission', () => {
     expect(() => snapshotHistogramDistribution({ ...distribution(), domain: 'wide' })).to.throw(TypeError, 'Invalid distribution');
   });
 
+  it('admits an all-invalid distribution only with a null domain', () => {
+    const empty = {
+      revision: 'r', counts: { sourceCount: 2, validCount: 0, invalidCount: 2 },
+      edges: [], binCounts: [], belowCount: 0, aboveCount: 0,
+    };
+    expect(snapshotHistogramDistribution({ ...empty, domain: null }).domain).to.equal(null);
+    expect(() => snapshotHistogramDistribution({ ...empty, domain: { min: 0, max: 1 } })).to.throw(TypeError, 'Invalid empty domain');
+  });
+
   it('rejects edges or counts that are not arrays', () => {
     expect(() => snapshotHistogramDistribution({ ...distribution(), edges: 'abc' })).to.throw(TypeError, 'Invalid bins');
     expect(() => snapshotHistogramDistribution({ ...distribution(), binCounts: 'abc' })).to.throw(TypeError, 'Invalid bins');

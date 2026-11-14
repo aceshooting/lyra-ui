@@ -316,6 +316,14 @@ describe('pure category-axis layout math', () => {
     expect(categoryLabelGrowth(0, 1)).to.equal('middle');
   });
 
+  it('selects no label when a capped domain has no rendered category, and one for a single survivor', () => {
+    const labels = ['A', 'B', 'C', 'D', 'E'];
+    expect(visibleCategoryLabelIndexes(5, 100, [], labels, 2, undefined, SELECTION_BOUNDS)).to.deep.equal(new Set());
+    expect(visibleCategoryLabelIndexes(5, 100, [3], labels, 2, undefined, SELECTION_BOUNDS)).to.deep.equal(new Set([3]));
+    expect(visibleCategoryLabelIndexes(5, 100, [0, 2, 4], labels, 2, undefined, { ...SELECTION_BOUNDS, maxRenderedRecords: 1 }))
+      .to.deep.equal(new Set([0]));
+  });
+
   it('preserves first and last sampled categories when a narrow plot requests two labels', () => {
     const labels = Array.from({ length: 10 }, () => 'Category');
     const indexes = Array.from({ length: labels.length }, (_, index) => index);
