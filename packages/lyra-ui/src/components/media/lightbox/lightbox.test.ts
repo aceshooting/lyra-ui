@@ -1441,3 +1441,36 @@ it('does not hijack navigation keys from a slotted action button', async () => {
   expect(key.defaultPrevented).to.be.false;
   el.open = false;
 });
+
+it('treats a gallery of only non-record or src-less entries as empty', async () => {
+  const el = await fixture<LyraLightbox>(html`<lr-lightbox .images=${[image]}></lr-lightbox>`);
+  el.images = [null, 7, 'image.png', {}, { src: 42 }, { alt: 'No source' }] as unknown as LyraLightboxImage[];
+  await el.updateComplete;
+  expect(el.images.length).to.equal(0);
+  expect(Object.isFrozen(el.images)).to.equal(true);
+  el.images = [null, { src: image.src, caption: 'Only valid record' }] as unknown as LyraLightboxImage[];
+  await el.updateComplete;
+  expect(el.images.map((entry) => entry.caption)).to.deep.equal(['Only valid record']);
+});
+
+for (const phase of ['lr-show', 'lr-hide'] as const) {
+  it(`lets an open write during ${phase} supersede the pending transition`, async () => {
+    const el = await fixture<LyraLightbox>(html`<lr-lightbox .images=${[image]}></lr-lightbox>`);
+    if (phase === 'lr-hide') await el.show();
+    const reentrant = phase === 'lr-show' ? false : true;
+    const events: string[] = [];
+    for (const name of ['lr-show', 'lr-after-show', 'lr-hide', 'lr-close', 'lr-after-hide']) {
+      el.addEventListener(name, () => events.push(name));
+    }
+    el.addEventListener(phase, () => { el.open = reentrant; }, { once: true });
+    if (phase === 'lr-show') await el.show();
+    else await el.hide();
+    await el.updateComplete;
+    // The write during preflight coalesces into the request instead of starting a nested one,
+    // and wins: the lightbox stays in the state the listener asked for.
+    expect(el.open).to.equal(reentrant);
+    expect(el.hasAttribute('open')).to.equal(reentrant);
+    expect(events).to.deep.equal([phase]);
+    if (el.open) await el.close();
+  });
+}

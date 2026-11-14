@@ -131,6 +131,26 @@ it("omits invalid public highlight rectangles and renders finite ones", async ()
   expect(highlights[0]!.style.position).to.equal("");
 });
 
+it('skips null, id-less, blank-id and duplicate-id highlights, keeping the first valid record', async () => {
+  const el = await fixture<LyraImageViewer>(
+    html`<lr-image-viewer src=${PNG_SRC}></lr-image-viewer>`
+  );
+  await stubImageLoad(el);
+  const rect = { x: 10, y: 20, width: 30, height: 40 };
+  el.highlights = [
+    null,
+    { anchor: { kind: 'region', rect } },
+    { id: '   ', anchor: { kind: 'region', rect } },
+    { id: 'first', anchor: { kind: 'region', rect } },
+    { id: 'first', anchor: { kind: 'region', rect: { x: 50, y: 50, width: 10, height: 10 } } },
+    { id: 'second', anchor: { kind: 'region', rect: { x: 1, y: 2, width: 3, height: 4 } } },
+  ] as unknown as LyraHighlight[];
+  await el.updateComplete;
+  const rendered = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="highlight"]')];
+  expect(rendered.map((node) => node.dataset['highlightId'])).to.deep.equal(['first', 'second']);
+  expect(rendered[0]!.style.left).to.equal('10%');
+});
+
 it('keeps the loaded image rendered when a highlight omits its anchor', async () => {
   const el = await fixture<LyraImageViewer>(
     html`<lr-image-viewer src=${LOADABLE_PNG}></lr-image-viewer>`,
@@ -213,6 +233,19 @@ describe("image loading", () => {
       "The image failed to load.",
       "The image failed to load.",
     ]);
+  });
+
+  it("announces once when a mounted viewer's src is replaced by an unsafe URL", async () => {
+    const el = (await fixture(
+      html`<lr-image-viewer src=${PNG_SRC}></lr-image-viewer>`
+    )) as LyraImageViewer;
+    const before = assertiveAnnouncements().length;
+    el.src = "javascript:alert(1)";
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector("img") == null).to.equal(true);
+    expect(el.shadowRoot!.querySelector('[part="error"]')).to.exist;
+    await waitUntil(() => assertiveAnnouncements().length === before + 1, "unsafe replacement is announced");
+    expect(assertiveAnnouncements().at(-1)).to.equal("The image failed to load.");
   });
 
   it("renders the empty state and never sets an img src for an unsafe src", async () => {
@@ -342,6 +375,15 @@ describe("zoom, rotation, and fit", () => {
       '[part="image-wrapper"]'
     ) as HTMLElement;
     expect(wrapper.style.transform).to.equal("rotate(270deg)");
+
+    // A runtime string is not numerically coerced: it resets to the unrotated default.
+    el.rotation = "90" as unknown as LyraImageRotation;
+    await el.updateComplete;
+    expect(el.rotation).to.equal(0);
+    wrapper = el.shadowRoot!.querySelector(
+      '[part="image-wrapper"]'
+    ) as HTMLElement;
+    expect(wrapper.style.transform).to.equal("rotate(0deg)");
   });
 
   it("rotate() normalizes an already-invalid rotation before stepping instead of propagating NaN", async () => {
@@ -2465,6 +2507,13 @@ it("registers one shared image renderer across every raster MIME type", async ()
   const viewer = host.querySelector("lr-image-viewer") as LyraImageViewer;
   expect(viewer).to.exist;
   expect(viewer.name).to.equal("photo.png");
+
+  const unnamed = (await fixture(
+    html`<div>
+      ${def!.render!({ name: "scan.png", mimeType: "image/png", src: PNG_SRC })}
+    </div>`
+  )) as HTMLElement;
+  expect(unnamed.querySelector<LyraImageViewer>("lr-image-viewer")!.alt, "alt falls back to the file name").to.equal("scan.png");
 });
 
 it('projects a host description onto the region', async function () {

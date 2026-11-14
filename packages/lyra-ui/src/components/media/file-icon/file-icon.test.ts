@@ -146,6 +146,19 @@ describe('file type metadata', () => {
     expect(registry.resolve('', 'x.new').label).to.equal('New');
   });
 
+  it('skips an entry whose metadata getter throws and keeps later valid entries', () => {
+    const hostile = Object.defineProperty({ icon: 'code', category: 'code' }, 'label', {
+      get(): never { throw new Error('label unavailable'); },
+    });
+    const registry = createFileTypeMetadataRegistry([
+      { mimeTypes: 'application/x-hostile', metadata: hostile as unknown as LyraFileTypeMetadataEntry['metadata'] },
+      { mimeTypes: 'application/x-after', metadata: { label: 'After', icon: 'code', category: 'code', extensions: ['.after'] } },
+    ]);
+    expect(registry.resolve('application/x-hostile').category).to.equal('generic');
+    expect(registry.resolve('application/x-after').label).to.equal('After');
+    expect(registry.resolve('', 'x.after').label).to.equal('After');
+  });
+
   it('gives an explicit MIME type precedence over a conflicting filename extension', () => {
     const metadata = getFileTypeMetadata('application/pdf', 'notes.zip');
     expect(metadata.category).to.equal('document');
@@ -367,6 +380,14 @@ describe('lr-file-icon', () => {
       <lr-file-icon name="scan.jpeg" mime-type="application/octet-stream"></lr-file-icon>
     `);
     expect(filename.shadowRoot!.querySelector('.token')!.textContent).to.equal('JPEG');
+
+    // A runtime non-string name contributes no extension token instead of throwing.
+    filename.name = 42 as unknown as string;
+    await filename.updateComplete;
+    expect(filename.shadowRoot!.querySelector('.token')?.textContent ?? '').to.equal('');
+    filename.name = 'archive/scan.png';
+    await filename.updateComplete;
+    expect(filename.shadowRoot!.querySelector('.token')!.textContent).to.equal('PNG');
   });
 
   it('--lr-file-icon-bg / --lr-file-icon-color retint the format badge independently of the shared brand tokens', async () => {

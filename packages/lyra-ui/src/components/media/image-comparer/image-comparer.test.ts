@@ -788,3 +788,36 @@ describe('aria-describedby forwarding', () => {
     }
   });
 });
+
+it('leaves non-slider keys and boundary presses to the browser without emitting', async () => {
+  const el = (await fixture(html`<lr-image-comparer position="0"></lr-image-comparer>`)) as LyraImageComparer;
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  const emitted: string[] = [];
+  el.addEventListener('input', () => emitted.push('input'));
+  el.addEventListener('change', () => emitted.push('change'));
+  const press = (type: 'keydown' | 'keyup', key: string): boolean => {
+    const event = new KeyboardEvent(type, { key, bubbles: true, cancelable: true });
+    input.dispatchEvent(event);
+    return event.defaultPrevented;
+  };
+
+  // A non-slider key is never claimed, so Tab and typing keep their native behavior.
+  expect(press('keydown', 'Tab')).to.be.false;
+  expect(press('keyup', 'Tab')).to.be.false;
+  // Home at the minimum is claimed (no native double move) but changes nothing.
+  expect(press('keydown', 'Home')).to.be.true;
+  await el.updateComplete;
+  expect(el.position).to.equal(0);
+  // A slider keyup without a preceding value change commits nothing.
+  expect(press('keyup', 'Home')).to.be.false;
+  expect(press('keydown', 'ArrowLeft')).to.be.true;
+  expect(press('keyup', 'ArrowLeft')).to.be.false;
+  expect(emitted).to.deep.equal([]);
+
+  el.position = 100;
+  await el.updateComplete;
+  expect(press('keydown', 'End')).to.be.true;
+  expect(press('keydown', 'PageUp')).to.be.true;
+  expect(el.position).to.equal(100);
+  expect(emitted).to.deep.equal([]);
+});

@@ -470,6 +470,12 @@ describe('loadFlagUrl (uncached, dependency-injectable)', () => {
     try {
       expect(await loadFlagUrl(() => Promise.resolve({ flagUrl: 'not callable' }))).to.equal(null);
       expect(await loadFlagUrl(() => Promise.resolve({}))).to.equal(null);
+      // A primitive or null module namespace carries no capability and never reads fields off it.
+      expect(await loadFlagUrl(() => Promise.resolve(null))).to.equal(null);
+      expect(await loadFlagUrl(() => Promise.resolve('flagUrl'))).to.equal(null);
+      expect(await loadBulkFlagUrl(() => Promise.resolve(7))).to.equal(null);
+      // A callable module is accepted as the resolver itself.
+      expect(await loadFlagUrl(() => Promise.resolve(fallback))).to.equal(fallback);
     } finally {
       console.warn = originalWarn;
     }
@@ -1452,4 +1458,40 @@ it('mounts its assertive announcement sink only once it starts loading a flag', 
   el.country = 'LB';
   await waitUntil(() => document.querySelector(selector) !== null, 'the sink mounts when the load starts');
   el.remove();
+});
+
+describe('resolver output admission', () => {
+  afterEach(() => setFlagUrlResolver(registerLyraFlagPeer()));
+
+  it('fails visibly when the resolver returns an unsafe URL and recovers with a safe one', async () => {
+    setFlagUrlResolver(async () => 'javascript:alert(1)');
+    const el = await fixture<LyraFlag>(html`<lr-flag country="de"></lr-flag>`);
+    await waitUntil(() => !!el.shadowRoot!.querySelector('[part="error"]'), 'unsafe resolver URL fails closed');
+    expect(el.shadowRoot!.querySelector('img') === null).to.equal(true);
+    expect(el.hasAttribute('data-error')).to.equal(true);
+    expect(el.getAttribute('aria-busy')).to.equal('false');
+
+    setFlagUrlResolver(async () => TEST_FLAG_SRC);
+    el.country = 'it';
+    const image = await img(el);
+    expect(image.getAttribute('src')).to.equal(TEST_FLAG_SRC);
+    expect(el.hasAttribute('data-error')).to.equal(false);
+  });
+});
+
+describe('synchronously throwing resolver', () => {
+  afterEach(() => setFlagUrlResolver(registerLyraFlagPeer()));
+
+  it('contains a resolver that throws before returning a promise', async () => {
+    setFlagUrlResolver(((): never => { throw new Error('Resolver table unavailable'); }) as unknown as Parameters<typeof setFlagUrlResolver>[0]);
+    reopenResolveFailureWarning();
+    const { result: el, warnings } = await captureConsoleWarnings(async () => {
+      const mounted = await fixture<LyraFlag>(html`<lr-flag country="nl"></lr-flag>`);
+      await waitUntil(() => !!mounted.shadowRoot!.querySelector('[part="error"]'), 'synchronous throw fails closed');
+      return mounted;
+    });
+    expect(warnings.join('\n')).to.include('failed to resolve a flag URL for "nl"');
+    expect(el.getAttribute('aria-busy')).to.equal('false');
+    expect(el.shadowRoot!.querySelector('img') === null).to.equal(true);
+  });
 });

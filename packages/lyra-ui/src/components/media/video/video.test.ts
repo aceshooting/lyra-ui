@@ -316,6 +316,31 @@ describe('lr-video public contract', () => {
     expect(media.getAttribute('aria-label')).to.equal('Video player');
   });
 
+  it('keeps an explicitly empty host aria-label empty on the native video instead of a fallback name', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video aria-label=""></lr-video>`);
+    expect(nativeVideo(el).getAttribute('aria-label')).to.equal('');
+    el.setAttribute('aria-label', 'Lecture');
+    await el.updateComplete;
+    // A non-empty host name stays on the host; the inner video gets the generic role name.
+    expect(nativeVideo(el).getAttribute('aria-label')).to.equal('Video player');
+    el.removeAttribute('aria-label');
+    el.title = 'Keynote';
+    await el.updateComplete;
+    expect(nativeVideo(el).getAttribute('aria-label')).to.equal('Keynote');
+  });
+
+  it('does not re-seek when the current-time attribute is rewritten with the same value', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video current-time="4"></lr-video>`);
+    expect(el.currentTime).to.equal(4);
+    el.currentTime = 9;
+    el.setAttribute('current-time', '4');
+    await el.updateComplete;
+    expect(el.currentTime).to.equal(9);
+    el.removeAttribute('current-time');
+    await el.updateComplete;
+    expect(el.currentTime).to.equal(0);
+  });
+
   it('returns a fresh, synchronous, exact state snapshot and the native video', async () => {
     const el = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
     const media = nativeVideo(el);

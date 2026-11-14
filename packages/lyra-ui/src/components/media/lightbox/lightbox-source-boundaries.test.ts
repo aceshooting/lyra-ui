@@ -76,3 +76,17 @@ it('rejects a defined primitive source and clears its error when unset', () => {
     expect(test.control.state).to.equal('empty'); expect(test.control.image).to.equal(undefined);
   } finally { test.dispose(); }
 });
+
+it('keeps a replacement source installed by a revision getter that then throws', async () => {
+  const test = setup(); const replacement = source();
+  try {
+    const hostile = { get revision(): number { test.control.update(replacement, 'fr'); throw new Error('Revision unavailable'); },
+      images: replacement.images };
+    // The superseded call reports that it lost authority instead of overwriting the newer binding
+    // with its own error state.
+    expect(test.control.update(hostile as LyraLightboxSource, 'en')).to.equal(false);
+    expect(test.control.state).to.equal('loading'); expect(test.control.count).to.equal(1);
+    test.control.select(0); await waitUntil(() => test.control.state === 'ready', 'replacement remains authoritative');
+    expect(test.control.image?.caption).to.equal('Current caption');
+  } finally { test.dispose(); }
+});

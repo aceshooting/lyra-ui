@@ -1013,3 +1013,31 @@ describe('string localization', () => {
 });
 
 expectStaleAttribute('lr-sequence-playback', 'loop');
+
+it('wraps from the last index back to the first on the next tick by default', async () => {
+  const el = (await fixture(
+    html`<lr-sequence-playback item-count="3" current-index="2" interval-ms="20"></lr-sequence-playback>`,
+  )) as LyraSequencePlayback;
+  const steps: number[] = [];
+  el.addEventListener('lr-sequence-step', (event) => steps.push((event as CustomEvent<{ currentIndex: number }>).detail.currentIndex));
+  el.play();
+  await waitUntil(() => steps.length > 0, 'the looping sequence never stepped');
+  el.pause();
+  expect(steps[0]).to.equal(0);
+  expect(el.playing).to.be.false;
+});
+
+it('leaves non-arrow slider keys to the native range input', async () => {
+  const el = (await fixture(html`<lr-sequence-playback item-count="5" current-index="2"></lr-sequence-playback>`)) as LyraSequencePlayback;
+  const slider = el.shadowRoot!.querySelector('[part="slider"]') as HTMLInputElement;
+  const steps: number[] = [];
+  el.addEventListener('lr-sequence-step', (event) => steps.push((event as CustomEvent<{ currentIndex: number }>).detail.currentIndex));
+  for (const key of ['Tab', 'Enter', 'a']) {
+    const keydown = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+    slider.dispatchEvent(keydown);
+    expect(keydown.defaultPrevented, `${key} keeps its native behavior`).to.be.false;
+  }
+  await el.updateComplete;
+  expect(el.currentIndex).to.equal(2);
+  expect(steps).to.deep.equal([]);
+});

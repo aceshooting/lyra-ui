@@ -259,3 +259,36 @@ for (const throws of [false, true]) {
     expect(result.calls.every(call => call[3] === 14)).to.equal(true);
   });
 }
+
+it('rejects non-record metadata, non-array buckets and short coverage, then recovers on a valid envelope', async () => {
+  const bad: unknown[] = [
+    { ...envelope(), counts: null },
+    { ...envelope(), buckets: [null] },
+    { ...envelope(), buckets: { length: 1, 0: { startIndex: 0, endIndex: 100, maxAmplitude: 1 } } },
+    { ...envelope(), buckets: [{ startIndex: 0, endIndex: 90, maxAmplitude: 0.1 }], lastAmplitude: 0 },
+  ];
+  const element = await mount(null);
+  for (const waveform of bad) {
+    element.waveform = waveform as LyraPreparedWaveform; await element.updateComplete;
+    expect(element.shadowRoot!.querySelectorAll('canvas').length).to.equal(0);
+    expect(element.shadowRoot!.textContent).to.include('Waveform data is unavailable');
+  }
+  element.waveform = envelope(); await element.updateComplete;
+  expect(element.shadowRoot!.querySelectorAll('canvas').length).to.equal(1);
+  expect(element.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
+});
+
+it('treats a revoked peaks array as unavailable rather than throwing from the setter', async () => {
+  const element = await mount(null);
+  element.peaks = [0.5, 1]; await element.updateComplete;
+  expect(element.shadowRoot!.querySelectorAll('canvas').length).to.equal(1);
+  const revoked = Proxy.revocable([0.5], {}); revoked.revoke();
+  expect(() => { element.peaks = revoked.proxy; }).not.to.throw();
+  await element.updateComplete;
+  expect(element.peaks.length).to.equal(0);
+  expect(element.shadowRoot!.querySelectorAll('canvas').length).to.equal(0);
+  expect(element.shadowRoot!.textContent).to.include('Waveform data is unavailable');
+  element.peaks = [1]; await element.updateComplete;
+  expect(element.shadowRoot!.querySelectorAll('canvas').length).to.equal(1);
+  expect(element.shadowRoot!.textContent).not.to.include('Waveform data is unavailable');
+});

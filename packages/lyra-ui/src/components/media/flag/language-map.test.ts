@@ -100,6 +100,9 @@ describe('localeNativeName', () => {
       expect(languageToCountry(42 as never)).to.equal(undefined);
       // Without likely-subtags data only the base-language default remains.
       expect(languageToCountry('zh-Hant')).to.equal('cn');
+      // An explicit alpha-2 region still wins over the language default after a script subtag.
+      expect(languageToCountry('pt-BR')).to.equal('br');
+      expect(languageToCountry('sr-latn-me')).to.equal('me');
     } finally {
       if (descriptor) Object.defineProperty(Intl, 'Locale', descriptor);
       else delete (Intl as { Locale?: typeof Intl.Locale }).Locale;

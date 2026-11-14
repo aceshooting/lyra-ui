@@ -563,6 +563,11 @@ it("owns a bounded readonly threshold snapshot and retains only finite values fr
   });
   el.threshold = mixed as readonly number[];
   expect(el.threshold).to.deep.equal([0.25]);
+  // Numeric strings and other non-number entries are not coerced into observer thresholds.
+  el.threshold = ["0.5", null, 0.75, {}] as unknown as readonly number[];
+  expect(el.threshold).to.deep.equal([0.75]);
+  el.threshold = "0.5" as unknown as number;
+  expect(el.threshold).to.equal(0);
 
   el.threshold = Array.from({ length: 1_005 }, (_, index) => index / 1_005);
   expect((el.threshold as readonly number[]).length).to.equal(1_000);

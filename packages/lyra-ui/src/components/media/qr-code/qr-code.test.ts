@@ -980,6 +980,36 @@ describe('lr-qr-code', () => {
     expect(correction).to.equal('H');
   });
 
+  it('draws an embedded image at the default half coverage with no padding when geometry is unset', async () => {
+    const el = (await fixture(html`
+      <lr-qr-code
+        size="100"
+        image=${RED_IMAGE_DATA}
+        error-correction="L"
+        style="--lr-qr-code-fill:#000; --lr-qr-code-bg:#fff"
+      ></lr-qr-code>
+    `)) as LyraQrCode;
+    installFakeLoader(el, fakeApi(() => ({ modules: fakeModules(false) })));
+    el.value = 'hello';
+    await waitForInitialPaint(el);
+    await waitUntil(
+      () => Boolean((el as unknown as { loadState?: { image?: HTMLImageElement } }).loadState?.image),
+    );
+    await el.updateComplete;
+    expect(el.imageCoverage).to.equal(null);
+    expect(el.imagePadding).to.equal(null);
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const at = (x: number): number[] => {
+      const scale = canvas.width / el.size;
+      return [...ctx.getImageData(Math.round(x * scale), Math.round(50 * scale), 1, 1).data.slice(0, 3)];
+    };
+    // A 50% box centered on a 100px symbol spans 25..75 and, without padding, the square image fills it.
+    expect(at(50)).to.deep.equal([255, 0, 0]);
+    expect(at(27)).to.deep.equal([255, 0, 0]);
+    expect(at(20)).to.not.deep.equal([255, 0, 0]);
+  });
+
   it('rejects an unsafe embedded-image URL without preventing the QR symbol from rendering', async () => {
     const el = (await fixture(html`
       <lr-qr-code image="javascript:alert(1)"></lr-qr-code>

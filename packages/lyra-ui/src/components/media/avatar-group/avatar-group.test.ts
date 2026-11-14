@@ -814,6 +814,28 @@ it('defaults omitted child presentation while preserving explicit and later auth
   expect(owned.hasAttribute('variant')).to.be.false;
 });
 
+it('keeps an author attribute written after a group default change in the same task', async () => {
+  const el = (await fixture(html`
+    <lr-avatar-group size="large"><lr-avatar id="owned"></lr-avatar></lr-avatar-group>
+  `)) as LyraAvatarGroup;
+  const owned = el.querySelector('#owned')!;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  expect(owned.getAttribute('size')).to.equal('large');
+
+  // The group update is queued before the author's mutation record is delivered, so the group
+  // must recognize the foreign value itself rather than overwrite it with its new default.
+  el.size = 'xl';
+  owned.setAttribute('size', 'xs');
+  await el.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  expect(owned.getAttribute('size')).to.equal('xs');
+  el.size = 'small';
+  await el.updateComplete;
+  expect(owned.getAttribute('size')).to.equal('xs');
+  el.remove();
+  expect(owned.getAttribute('size')).to.equal('xs');
+});
+
 it('relinquishes a group-owned default after an explicit same-value author attribute write', async () => {
   const el = (await fixture(html`
     <lr-avatar-group size="large"><lr-avatar id="owned"></lr-avatar></lr-avatar-group>
