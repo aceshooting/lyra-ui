@@ -13935,6 +13935,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/viewers/contact-viewer/contact-viewer-load-lifecycle.test.ts",
           "src/components/viewers/contact-viewer/contact-viewer.test.ts",
           "src/components/viewers/contact-viewer/vcard.test.ts"
         ],

@@ -182,6 +182,7 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
     this.fetchState = { kind: 'loading' };
     try {
       const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
+      if (!this.isConnected || generation !== this.generation) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const source = await readResponseText(response);
       if (!this.isConnected || generation !== this.generation) return;

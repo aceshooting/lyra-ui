@@ -54,9 +54,11 @@ export function describeViewerResponseLifecycle(name: string, template: Template
       }
     });
 
+    const retirements = ['disconnect', 'replacement'] as const;
+    const outcomes = ['fulfilled', 'failed', 'aborted'] as const;
     for (const boundary of ['headers', 'body'] as const) {
-      for (const retirement of ['disconnect', 'replacement'] as const) {
-        it(`ignores obsolete ${boundary} after ${retirement} and loads the current document`, async () => {
+      for (const [retirement, outcome] of retirements.flatMap(retirement => outcomes.map(outcome => [retirement, outcome] as const))) {
+        it(`ignores obsolete ${boundary} ${outcome} after ${retirement} and loads the current document`, async () => {
           // Preload the real peer so a late import cannot conceal a stale render.
           await options.preload?.();
           const host = await fixture<HTMLDivElement>(html`<div>${template}</div>`);
@@ -67,6 +69,7 @@ export function describeViewerResponseLifecycle(name: string, template: Template
           const obsoleteLabel = 'obsolete-document', currentLabel = 'current-document';
           const obsoleteSource = await options.source(obsoleteLabel), currentSource = await options.source(currentLabel);
           let resolveHeaders: ((response: Response) => void) | undefined;
+          let rejectHeaders: ((error: Error) => void) | undefined;
           let bodyController: ReadableStreamDefaultController<Uint8Array> | undefined;
           const body = new ReadableStream<Uint8Array>({ start(controller) { bodyController = controller; } });
           const obsolete = new Response(body);
@@ -79,7 +82,7 @@ export function describeViewerResponseLifecycle(name: string, template: Template
             signals.push(init?.signal);
             if (signals.length > 1) return new Response(currentSource);
             if (boundary === 'body') return obsolete;
-            return new Promise<Response>(resolve => { resolveHeaders = resolve; });
+            return new Promise<Response>((resolve, reject) => { resolveHeaders = resolve; rejectHeaders = reject; });
           };
           try {
             viewer.src = obsoleteUrl;
@@ -94,9 +97,18 @@ export function describeViewerResponseLifecycle(name: string, template: Template
               await waitUntil(() => content().includes(currentLabel));
             }
             expect(signals[0]?.aborted).to.equal(true);
-            bodyController!.enqueue(typeof obsoleteSource === 'string' ? new TextEncoder().encode(obsoleteSource) : new Uint8Array(obsoleteSource));
-            bodyController!.close();
-            resolveHeaders?.(obsolete);
+            if (outcome === 'fulfilled') {
+              bodyController!.enqueue(typeof obsoleteSource === 'string' ? new TextEncoder().encode(obsoleteSource) : new Uint8Array(obsoleteSource));
+              bodyController!.close();
+              resolveHeaders?.(obsolete);
+            } else {
+              const error = outcome === 'aborted' ? new DOMException('Obsolete response aborted', 'AbortError') : new Error('Obsolete response failed');
+              if (boundary === 'body') bodyController!.error(error);
+              else {
+                bodyController!.close();
+                rejectHeaders!(error);
+              }
+            }
             if (boundary === 'body') await waitUntil(() => !body.locked);
             await twoFrames();
             await viewer.updateComplete;
