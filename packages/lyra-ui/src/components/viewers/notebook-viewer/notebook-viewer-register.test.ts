@@ -35,5 +35,12 @@ describe('notebook-viewer-register', () => {
     expect(viewer.src).to.equal(file.src);
     expect(viewer.anchor).to.deep.equal(anchor);
     expect(viewer.highlights).to.deep.equal(highlights);
+    // The lazy definition (not the eager one the loaded module re-registers) falls back to a null
+    // anchor and an empty highlight list for a file that carries neither.
+    const bare = document.createElement('div');
+    render(definition.render!(file) as never, bare);
+    const fallback = bare.querySelector(NOTEBOOK_VIEWER_TAG) as unknown as { anchor: unknown; highlights: unknown };
+    expect(fallback.anchor).to.equal(null);
+    expect(fallback.highlights).to.deep.equal([]);
   });
 });

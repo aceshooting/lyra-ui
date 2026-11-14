@@ -44,6 +44,18 @@ describe('bounded model-viewer search work', () => {
     expect(budget.exhausted).to.be.true;
   });
 
+  it('falls back to the hard work ceiling for a non-finite budget and clamps a negative one to zero', () => {
+    for (const limit of [Number.NaN, Number.POSITIVE_INFINITY]) {
+      const budget = new ViewerSearchWorkBudget(limit);
+      expect(budget.consume('x'.repeat(VIEWER_SEARCH_WORK_LIMIT)), String(limit)).to.be.true;
+      expect(budget.consume('x'), String(limit)).to.be.false;
+    }
+    const empty = new ViewerSearchWorkBudget(-5);
+    expect(empty.canConsume('')).to.be.false;
+    expect(empty.includes('needle', 'needle', 'en')).to.be.false;
+    expect(empty.complete).to.be.false;
+  });
+
   it('can reject one oversized field without spending a later sibling\'s admission budget', () => {
     const budget = new ViewerSearchWorkBudget(2);
     expect(budget.canConsume('abc')).to.be.false;

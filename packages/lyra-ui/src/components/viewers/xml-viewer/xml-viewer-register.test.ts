@@ -45,5 +45,13 @@ describe('xml registry', () => {
     const rendered = host.querySelector(XML_VIEWER_TAG) as unknown as { anchor: unknown };
     expect(rendered).to.exist;
     expect(rendered.anchor).to.deep.equal(anchor);
+    // The lazy definition (not the eager one the loaded module re-registers) falls back to a null
+    // anchor and forwards highlights unchanged when the file carries no anchor.
+    const highlights = [{ id: 'h1', anchor }];
+    const bare = document.createElement('div');
+    render(definition.render!({ ...xml, highlights }) as never, bare);
+    const fallback = bare.querySelector(XML_VIEWER_TAG) as unknown as { anchor: unknown; highlights: unknown };
+    expect(fallback.anchor).to.equal(null);
+    expect(fallback.highlights).to.deep.equal(highlights);
   });
 });

@@ -874,6 +874,14 @@ describe('lr-dataset-viewer', () => {
       }
     });
 
+    it('resolves false for a cell anchor while no table is loaded', async () => {
+      const el = (await fixture(
+        html`<lr-dataset-viewer></lr-dataset-viewer>`
+      )) as LyraDatasetViewer;
+      shrinkAnchorRetry(el);
+      expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'A1' })).to.be.false;
+    });
+
     it('resolves false for an anchor with a sheet set', async () => {
       const el = (await fixture(
         html`<lr-dataset-viewer></lr-dataset-viewer>`

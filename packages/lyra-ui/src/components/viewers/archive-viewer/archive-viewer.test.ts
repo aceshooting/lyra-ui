@@ -279,6 +279,27 @@ describe('lr-archive-viewer', () => {
       restore();
     }
   });
+  it('applies a search issued while the archive is still loading once its listing arrives', async () => {
+    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
+    const buffer = await buildZip({ 'README.md': 'a', 'docs/readme.txt': 'b', 'other.txt': 'c' });
+    const response = deferred<Response>();
+    const original = window.fetch;
+    window.fetch = (() => response.promise) as typeof window.fetch;
+    const restore = () => { window.fetch = original; };
+    try {
+      const changes: Array<{ query: string; matchCount: number }> = [];
+      el.addEventListener('lr-search-change', (event) => changes.push((event as CustomEvent).detail));
+      el.src = 'https://example.test/archive.zip';
+      await el.updateComplete;
+      expect(await el.search('readme')).to.equal(0);
+      response.resolve({ ok: true, status: 200, statusText: 'OK', arrayBuffer: () => Promise.resolve(buffer) } as Response);
+      await waitUntil(() => changes.some((change) => change.matchCount === 2), 'the pending query ran on the loaded listing');
+      expect(changes.at(-1)).to.deep.include({ query: 'readme', matchCount: 2 });
+    } finally {
+      restore();
+    }
+  });
+
   it('navigates to the previous search match, wrapping from the first to the last', async () => {
     const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
     const restore = stubFetch(await buildZip({
@@ -920,6 +941,33 @@ describe('lr-archive-viewer part reachability through the embedded virtual list'
         kind: 'text-quote',
         quote: 'README',
       });
+    } finally {
+      selection.removeAllRanges();
+      restore();
+    }
+  });
+
+  it('does not emit an archive anchor for a selection spanning two entry rows', async function () {
+    const { el, vlistRoot, restore } = await listing();
+    const names = Array.from(vlistRoot.querySelectorAll<HTMLElement>('[part~="entry-name"]'));
+    const textOf = (element: HTMLElement): Text => Array.from(element.childNodes)
+      .find((node): node is Text => node.nodeType === Node.TEXT_NODE && (node.textContent ?? '').trim().length > 0)!;
+    const range = document.createRange();
+    range.setStart(textOf(names[0]!), 0);
+    range.setEnd(textOf(names.at(-1)!), 2);
+    const selection = (
+      vlistRoot as unknown as { getSelection?: () => Selection | null }
+    ).getSelection?.() ?? window.getSelection()!;
+    const events: CustomEvent[] = [];
+    el.addEventListener('lr-text-select', (event) => events.push(event as CustomEvent));
+    try {
+      selection.removeAllRanges();
+      selection.addRange(range);
+      // See the single-entry selection test: WebKit drops programmatic shadow-tree ranges.
+      if (selection.rangeCount === 0) this.skip();
+      names[0]!.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true }));
+      await twoFrames();
+      expect(events.filter((event) => event.detail?.anchor != null)).to.have.lengthOf(0);
     } finally {
       selection.removeAllRanges();
       restore();

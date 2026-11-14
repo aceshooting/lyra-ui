@@ -497,6 +497,31 @@ describe('lr-highlight-layer', () => {
     ]);
   });
 
+  it('moves focus to the surviving item that takes over the position of the removed middle item', async () => {
+    const items: HighlightLayerItem[] = ['a', 'b', 'c', 'd', 'e'].map((id, index) => ({
+      id,
+      rects: [{ x: 10, y: 5 + index * 15, width: 20, height: 5 }],
+    }));
+    const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer .items=${items}></lr-highlight-layer>`);
+    itemActions(el)[2]!.focus();
+    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id']).to.equal('c');
+
+    el.items = items.filter((item) => item.id !== 'c');
+    await el.updateComplete;
+    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id']).to.equal('d');
+    expect(itemActions(el).filter((target) => target.tabIndex === 0).map((target) => target.dataset['id']))
+      .to.deep.equal(['d']);
+  });
+
+  it('treats a non-array items assignment as an empty layer', async () => {
+    const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>`);
+    expect(el.shadowRoot!.querySelectorAll('[part="rect"]')).to.have.length(2);
+    el.items = { 0: ITEMS[0], length: 1 } as unknown as HighlightLayerItem[];
+    await el.updateComplete;
+    expect(el.items).to.deep.equal([]);
+    expect(el.shadowRoot!.querySelectorAll('[part="rect"]')).to.have.length(0);
+  });
+
   it('drops the roving cursor when a focused item is replaced by items with no renderable rects', async () => {
     const el = await fixture<LyraHighlightLayer>(html`
       <lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>

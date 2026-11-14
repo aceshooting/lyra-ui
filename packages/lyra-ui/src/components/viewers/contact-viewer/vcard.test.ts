@@ -70,6 +70,18 @@ describe('parseVCards', () => {
     expect(contact.fn).to.equal('JörgMüller');
     expect(contact.tel).to.deep.equal([{ value: '+352', types: ['work\\phone'] }]);
   });
+  it('joins a quoted-printable soft break whose continuation line is itself only a soft break', () => {
+    const source = [
+      'BEGIN:VCARD',
+      'VERSION:2.1',
+      'FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:J=C3=B6rg=',
+      '=',
+      'M=C3=BCller',
+      'END:VCARD',
+    ].join('\r\n');
+    expect(first(parseVCards(source)).fn).to.equal('JörgMüller');
+  });
+
   it('rejects malformed blocks, profiles, parameters, encodings and quoted-printable input', () => {
     for (const source of [
       'BEGIN:VCARD\r\nFN:Missing version\r\nEND:VCARD',
@@ -81,6 +93,12 @@ describe('parseVCards', () => {
       'END:VCARD',
     ]) expect(() => parseVCards(source)).to.throw();
   });
+  it('applies the default 250-contact ceiling when an options object omits maxContacts', () => {
+    const card = 'BEGIN:VCARD\r\nVERSION:4.0\r\nFN:Ada\r\nEND:VCARD';
+    expect(parseVCards(Array(250).fill(card).join('\r\n'), {})).to.have.lengthOf(250);
+    expect(() => parseVCards(Array(251).fill(card).join('\r\n'), {})).to.throw(LyraResourceLimitError);
+  });
+
   it('normalizes adversarial numeric limits before enforcing the hard ceiling', () => {
     const two = `${CARD}\r\n${CARD}`;
     expect(parseVCards(two, Number.NaN)).to.have.lengthOf(2);

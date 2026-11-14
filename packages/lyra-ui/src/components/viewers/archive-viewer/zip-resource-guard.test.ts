@@ -660,6 +660,30 @@ describe('ZIP resource guard agrees with the archive the peer readers open', () 
     }
   });
 
+  it('accepts a ZIP64 extended-information field that restates only the uncompressed size', async () => {
+    const content = '<root/>';
+    const entry = await zipEntry('document.xml', content);
+    const sizes = new Uint8Array(8);
+    new DataView(sizes.buffer).setUint32(0, entry.uncompressedSize, true);
+    const extra = extraField(0x0001, sizes);
+    const local = localRecord(entry, { extra });
+    const central = centralRecord(entry, 0, { extra });
+    const source = toArrayBuffer(concatBytes(
+      local,
+      central,
+      endRecord({ records: 1, directorySize: central.length, directoryOffset: local.length }),
+    ));
+    const names: string[] = [];
+    await assertZipArchiveWithinLimits(source, {
+      ...options,
+      createInspector: (parsed) => {
+        names.push(parsed.name);
+        return { write: () => {}, close: () => {} };
+      },
+    });
+    expect(names).to.deep.equal(['document.xml']);
+  });
+
   it('accepts matching ZIP64 extended-information fields and streams the declared entry', async () => {
     const content = '<root><row>ok</row></root>';
     const entry = await zipEntry('document.xml', content);
@@ -795,6 +819,16 @@ describe('streaming XML complexity inspector', () => {
       rows.write(new TextEncoder().encode('w/>'));
       rows.close();
     }).to.throw(LyraResourceLimitError, /too many document nodes/);
+  });
+
+  it('counts a row whose element name is still open when the entry ends', () => {
+    const inspect = createXmlComplexityInspectorFactory({ includeEntry: () => true, maxNodes: 100, maxRows: 1 });
+    const complete = inspect({ name: 'sheet.xml', compressedBytes: 0, uncompressedBytes: 0 })!;
+    complete.write(new TextEncoder().encode('<row/>'));
+    complete.close();
+    const truncated = inspect({ name: 'sheet2.xml', compressedBytes: 0, uncompressedBytes: 0 })!;
+    truncated.write(new TextEncoder().encode('<row'));
+    expect(() => truncated.close()).to.throw(LyraResourceLimitError, /too many document nodes/);
   });
 
   it('counts namespaced nodes, rows, and cells across chunk and quote boundaries', () => {

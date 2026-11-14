@@ -1658,6 +1658,38 @@ describe("anchor-target adoption", () => {
     }
   });
 
+  it("scrolls region and text-quote anchors instantly under an inherited reduced-motion preference", async () => {
+    const el = (await fixture(
+      html`<lr-pdf-viewer data-lr-motion="reduce"></lr-pdf-viewer>`
+    )) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(3));
+    const restore = stubFetch();
+    try {
+      el.src = "https://example.test/report.pdf";
+      await waitFor(el, '[part="toolbar"]');
+      const scroller = listShadowRoot(el).querySelector<HTMLElement>('[part="base"]')!;
+      const behaviors: Array<ScrollBehavior | undefined> = [];
+      const originalScrollBy = scroller.scrollBy;
+      scroller.scrollBy = ((options?: ScrollToOptions) => {
+        behaviors.push(options?.behavior);
+      }) as typeof scroller.scrollBy;
+      try {
+        expect(await el.scrollToAnchor({
+          kind: "region",
+          page: 2,
+          rect: { x: 10, y: 20, width: 30, height: 15 },
+        })).to.equal(true);
+        expect(await el.scrollToAnchor({ kind: "text-quote", quote: "operating costs" })).to.equal(true);
+      } finally {
+        scroller.scrollBy = originalScrollBy;
+      }
+      expect(behaviors.length).to.be.at.least(2);
+      expect(behaviors.every((behavior) => behavior === "auto")).to.equal(true);
+    } finally {
+      restore();
+    }
+  });
+
   it("rejects out-of-range page and region anchors instead of clamping them", async () => {
     const el = (await fixture(
       html`<lr-pdf-viewer></lr-pdf-viewer>`
@@ -3988,6 +4020,32 @@ describe("search", () => {
       expect(
         listShadowRoot(el).querySelectorAll('[part~="search-match"]').length
       ).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it("announces one canonical empty search state when src replaces a searched document", async () => {
+    const el = (await fixture(
+      html`<lr-pdf-viewer></lr-pdf-viewer>`
+    )) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(3));
+    const restore = stubFetch();
+    try {
+      el.src = "https://example.test/report.pdf";
+      await waitUntil(() => el.pageViewerSnapshot.status === "ready");
+      expect(await el.search("page")).to.equal(2);
+      const details: unknown[] = [];
+      el.addEventListener("lr-search-change", (event) => details.push(event.detail));
+      el.src = "https://example.test/other.pdf";
+      await el.updateComplete;
+      expect(details).to.deep.equal([
+        { query: "", matchCount: 0, matchCountExact: true, activeIndex: -1 },
+      ]);
+      // A second replacement with no search state left to clear stays silent.
+      el.src = "https://example.test/third.pdf";
+      await el.updateComplete;
+      expect(details).to.have.lengthOf(1);
     } finally {
       restore();
     }

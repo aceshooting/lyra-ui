@@ -946,6 +946,18 @@ describe("lr-pptx-viewer", () => {
       expect(await el.scrollToAnchor({ kind: 'page', page: 2 })).to.equal(true);
       expect(el.page).to.equal(2);
       expect(el.anchorKinds).to.include('page');
+      // Out-of-range and fractional pages decline without moving the deck.
+      const timing = el as unknown as { anchorTimeoutMs: number; anchorRetryIntervalMs: number };
+      timing.anchorTimeoutMs = 20;
+      timing.anchorRetryIntervalMs = 2;
+      for (const page of [0, 5, 1.5]) {
+        expect(await el.scrollToAnchor({ kind: 'page', page }), String(page)).to.equal(false);
+      }
+      expect(el.page).to.equal(2);
+      // A blank quote, or one on no slide, declines without selecting another slide.
+      expect(await el.scrollToAnchor({ kind: 'text-quote', quote: '   ' })).to.equal(false);
+      expect(await el.scrollToAnchor({ kind: 'text-quote', quote: 'not on any slide' })).to.equal(false);
+      expect(el.page).to.equal(2);
     } finally {
       restore();
     }

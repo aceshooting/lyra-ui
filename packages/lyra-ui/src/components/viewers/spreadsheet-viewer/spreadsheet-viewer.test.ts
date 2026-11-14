@@ -902,6 +902,52 @@ describe('lr-spreadsheet-viewer', () => {
     await run(['One'], 'A1:A10001');
   });
 
+  it('treats a sheet missing from the workbook map as a one-cell sheet, renders null cells as blank and keeps date seconds', async () => {
+    const el = (await fixture(
+      html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`
+    )) as LyraSpreadsheetViewer;
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary =
+      () =>
+        Promise.resolve({
+          read: () => ({ SheetNames: ['Ghost'], Sheets: {} }),
+          utils: { sheet_to_json: () => [['Name', null], [undefined, 'Kept'], [new Date(Date.UTC(2024, 0, 2, 3, 4, 5)), 'Stamp']] },
+        });
+    const restore = fetchBuffer(new Uint8Array([0xd0, 0xcf, 0x11, 0xe0]).buffer);
+    try {
+      el.src = 'https://example.test/book.xls';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="sheet"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.equal(true);
+      expect(await el.search('Kept')).to.equal(1);
+      expect(await el.search('null')).to.equal(0);
+      expect(await el.search('undefined')).to.equal(0);
+      // A date-time cell with seconds keeps them in its locale-formatted text.
+      expect(await el.search('3:04:05')).to.equal(1);
+    } finally {
+      restore();
+    }
+  });
+
+  it('surfaces the load-failure state for a sheet whose declared range is malformed', async () => {
+    const el = (await fixture(
+      html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`
+    )) as LyraSpreadsheetViewer;
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary =
+      () =>
+        Promise.resolve({
+          read: () => ({ SheetNames: ['Broken'], Sheets: { Broken: { '!ref': 'not a range' } } }),
+          utils: { sheet_to_json: () => [] },
+        });
+    const restore = fetchBuffer(new Uint8Array([0xd0, 0xcf, 0x11, 0xe0]).buffer);
+    try {
+      const event = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/book.xls';
+      await event;
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Failed to load document.');
+    } finally {
+      restore();
+    }
+  });
+
   it('surfaces the standard load-failure state when the xlsx peer returns a SheetNames array with non-string entries', async () => {
     const el = (await fixture(
       html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`

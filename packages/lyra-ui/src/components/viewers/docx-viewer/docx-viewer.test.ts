@@ -172,6 +172,28 @@ describe('lr-docx-viewer', () => {
     }
   });
 
+  it('shows the generic load error when the converter resolves a non-record result', async () => {
+    for (const result of [null, '<p>bare markup</p>', 7]) {
+      const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
+      useLibrary(el, {
+        mammoth: { convertToHtml: () => Promise.resolve(result) },
+        DOMPurify: { sanitize: (value: string) => value },
+      });
+      const restore = stubFetch(BUFFER);
+      try {
+        const event = oneEvent(el, 'lr-render-error');
+        el.src = 'https://example.test/report.docx';
+        await event;
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+        expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent, String(result))
+          .to.equal('Failed to load document.');
+        expect(el.shadowRoot!.querySelector('[part="content"]') === null).to.equal(true);
+      } finally {
+        restore();
+      }
+    }
+  });
+
   it('blocks rendering when DOMPurify is unavailable', async () => {
     const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
     useLibrary(el, { mammoth: { convertToHtml: () => Promise.resolve({ value: '<h1>Unsafe</h1>', messages: [] }) }, DOMPurify: undefined });

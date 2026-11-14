@@ -632,6 +632,30 @@ describe('lr-document-compare', () => {
       expect(calledWith).to.equal('h1');
     });
 
+    it('scrolls the old pane when a highlight on the new pane is activated', async () => {
+      const el = (await fixture(html`
+        <lr-document-compare
+          view="side-by-side"
+          .oldVersion=${{ id: 'v1', name: 'Old', mimeType: 'image/png', uri: PIXEL,
+            highlights: [{ id: 'h1', anchor: { kind: 'region', rect: { x: 10, y: 10, width: 20, height: 20 } } }] }}
+          .newVersion=${{ id: 'v2', name: 'New', mimeType: 'image/png', uri: PIXEL,
+            highlights: [{ id: 'h1', anchor: { kind: 'region', rect: { x: 40, y: 40, width: 20, height: 20 } } }] }}
+        ></lr-document-compare>
+      `)) as LyraDocumentCompare;
+      await el.updateComplete;
+      const previewOld = el.shadowRoot!.querySelector('[part="pane-old"] lr-document-preview') as LyraDocumentPreview;
+      const previewNew = el.shadowRoot!.querySelector('[part="pane-new"] lr-document-preview') as LyraDocumentPreview;
+      await previewNew.updateComplete;
+      let calledWith: unknown;
+      previewOld.scrollToAnchor = async (target: unknown) => {
+        calledWith = target;
+        return true;
+      };
+      const target = previewNew.shadowRoot!.querySelector('[part="region-highlight-target"]') as HTMLButtonElement;
+      target.click();
+      expect(calledWith).to.equal('h1');
+    });
+
     it('does nothing on the other pane when no highlight with the same id exists there', async () => {
       const el = await highlightsFixture();
       await el.updateComplete;

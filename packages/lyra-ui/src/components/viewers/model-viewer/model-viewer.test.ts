@@ -7,6 +7,7 @@ import { modelEngineEnvironment, modelEngineLoader } from './model-viewer-loader
 import type { LyraModelViewer } from './model-viewer.class.js';
 import type { Engine3dHost } from '../../../internal/engine-3d-loader.js';
 import { DEFAULT_MODEL_CAMERA } from './model-viewer-source.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 
 const camera = () => ({ yaw: 0, pitch: 0, distance: 10, target: { x: 0, y: 0, z: 0 } });
 const source = 'data:text/plain,v%200%200%200%0Av%201%200%200%0Av%200%201%200%0Af%201%202%203';
@@ -476,4 +477,14 @@ describe('ownership', () => {
     loose['src'] = undefined; loose['name'] = null; loose['mimeType'] = 5; loose['format'] = undefined; await viewer.updateComplete;
     expect([viewer.src, viewer.name, viewer.mimeType, viewer.format]).to.deep.equal(['', '', '', 'auto']); expect(imports).to.equal(0);
   });
+});
+
+it('reports a localized unavailable-engine state when the installed engine breaks its contract', async () => {
+  expectDevWarning('lyra-3d-model-incompatible');
+  modelEngineLoader.override(async () => ({ createEngine: () => { throw new Error('incompatible build'); } }));
+  const viewer = await fixture<LyraModelViewer>(html`<lr-model-viewer src=${source} format="obj"
+    .strings=${{ engine3dUnavailable: 'Moteur 3D indisponible' }}></lr-model-viewer>`);
+  await waitUntil(() => (viewer.shadowRoot!.textContent ?? '').includes('Moteur 3D indisponible'));
+  expect(viewer.shadowRoot!.querySelector('[part="viewport"]')?.hasAttribute('data-ready')).to.not.equal(true);
+  await expect(viewer).to.be.accessible();
 });

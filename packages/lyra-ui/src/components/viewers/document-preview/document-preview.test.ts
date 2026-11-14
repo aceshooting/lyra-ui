@@ -398,6 +398,16 @@ describe("text/* and application/json dispatch", () => {
     }
   });
 
+  it("names the image type in the empty note for an image preview with no src", async () => {
+    const el = (await fixture(
+      html`<lr-document-preview mime-type="image/png"></lr-document-preview>`
+    )) as LyraDocumentPreview;
+    const emptyNote = el.shadowRoot!.querySelector('[part="body"] .empty-note');
+    expect(emptyNote != null).to.equal(true);
+    expect(emptyNote!.textContent).to.equal("No image to display.");
+    expect(el.shadowRoot!.querySelector('[part="body"] img') == null).to.equal(true);
+  });
+
   it("refetches once status leaves converting/error and a text src was already set but never fetched", async () => {
     let callCount = 0;
     const urls: string[] = [];

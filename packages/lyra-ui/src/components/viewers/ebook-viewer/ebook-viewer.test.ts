@@ -2871,6 +2871,29 @@ describe("scrollToAnchor (ebook)", () => {
     }
   });
 
+  it("falls back to the light-theme tone fill when the tone token resolves to nothing", async () => {
+    const fake = fakeBookWithFeatures({ "ch1.xhtml": "hello world" });
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(
+        html`<lr-ebook-viewer
+          src="https://example.test/book.epub"
+          style="--lr-color-success-quiet: initial"
+        ></lr-ebook-viewer>`
+      )) as LyraEbookViewer;
+      await twoFrames();
+      el.highlights = [
+        { id: "h1", anchor: { kind: "cfi", cfi: "epubcfi(/6/6!)" }, tone: "success" },
+      ];
+      await el.updateComplete;
+      const call = fake.highlightCalls.find((entry) => entry.cfi === "epubcfi(/6/6!)");
+      expect(call?.styles?.['fill']).to.equal("#dafbe1");
+    } finally {
+      restore();
+    }
+  });
+
   it("paints the active highlight with a non-color outline and clears it for an unknown id", async () => {
     const fake = fakeBookWithFeatures({ "ch1.xhtml": "hello world" });
     __setEpubJsForTesting(fake.factory as never);

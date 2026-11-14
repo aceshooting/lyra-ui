@@ -41,3 +41,26 @@ it('counts linked XML when archive entry names use Windows path separators', asy
   await assertOoxmlPartsWithinLimits(source, { ...config, maxNodes: 6 });
   await expectResourceLimit(() => assertOoxmlPartsWithinLimits(source, { ...config, maxNodes: 5 }));
 });
+
+it('keeps unknown and out-of-range character references literal in a relationship target', async () => {
+  const name = 'part&bogus;&#x110000;.bin';
+  const source = assembleZip([
+    await zipEntry('word/_rels/document.xml.rels', `<Relationships><Relationship Type="${OFFICE_RELATIONSHIP}styles" Target="${name}"/></Relationships>`),
+    await zipEntry(`word/${name}`, '<part><item/><item/><item/></part>'),
+  ]);
+  const config = { guardOptions, partName: /\.rels$/i,
+    isPartType: (type: string) => type === OFFICE_RELATIONSHIP + 'styles' };
+  await assertOoxmlPartsWithinLimits(source, { ...config, maxNodes: 6 });
+  await expectResourceLimit(() => assertOoxmlPartsWithinLimits(source, { ...config, maxNodes: 5 }));
+});
+
+it('stops reading a relationship at an unterminated attribute value', async () => {
+  const source = assembleZip([
+    await zipEntry('word/_rels/document.xml.rels', `<Relationships><Relationship Type="${OFFICE_RELATIONSHIP}styles" Target="styles.bin`),
+    await zipEntry('word/styles.bin', '<part><item/><item/><item/></part>'),
+  ]);
+  const config = { guardOptions, partName: /\.rels$/i,
+    isPartType: (type: string) => type === OFFICE_RELATIONSHIP + 'styles' };
+  // The truncated relationship never names a target, so its would-be part is not node-counted.
+  await assertOoxmlPartsWithinLimits(source, { ...config, maxNodes: 3 });
+});

@@ -1580,6 +1580,27 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
     );
   });
 
+  it('wraps a dateline-crossing center that falls east of the antimeridian back into range', async () => {
+    stubFetch({
+      type: 'MultiPoint',
+      coordinates: [
+        [175, 10],
+        [-165, 12],
+      ],
+    });
+    const el = (await fixture(
+      html`<lr-geojson-viewer src=${GEOJSON_URL}></lr-geojson-viewer>`
+    )) as LyraGeoJsonViewer;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('lr-map') !== null,
+      'map branch never rendered',
+      { timeout: 2000 }
+    );
+    const map = el.shadowRoot!.querySelector('lr-map') as unknown as HTMLElement & { center: [number, number] };
+    expect(map.center[0]).to.be.closeTo(-175, 0.001);
+    expect(map.center[1]).to.be.closeTo(11, 0.001);
+  });
+
   it('fits dateline-crossing coordinates across the short antimeridian span', async () => {
     stubFetch({
       type: 'MultiPoint',

@@ -418,6 +418,25 @@ describe('lr-csv-viewer', () => {
       restore();
     }
   });
+  it('keeps an active search when without-header-row is re-assigned its current value', async () => {
+    const el = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
+    const restore = fetchText(CSV);
+    try {
+      el.src = 'https://example.test/people.csv';
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+      const total = await el.search('a');
+      expect(total).to.be.greaterThan(0);
+      const changes: unknown[] = [];
+      el.addEventListener('lr-search-change', (event) => changes.push((event as CustomEvent).detail));
+      el.withoutHeaderRow = false;
+      expect(el.isUpdatePending).to.equal(false);
+      await el.updateComplete;
+      expect(changes).to.deep.equal([]);
+      expect(el.shadowRoot!.querySelector('[part="header-row"]') !== null).to.equal(true);
+    } finally {
+      restore();
+    }
+  });
   describe('retired has-header-row alias', () => {
     async function renderedRows(el: LyraCsvViewer): Promise<{ header: boolean; body: number }> {
       const restore = fetchText(CSV);
@@ -778,6 +797,12 @@ describe('lr-csv-viewer', () => {
       } finally {
         restore();
       }
+    });
+
+    it('resolves false for a cell anchor while no table is loaded', async () => {
+      const el = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
+      shrinkAnchorRetry(el);
+      expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'A1' })).to.be.false;
     });
 
     it('resolves false for an anchor with a sheet set (csv has no sheets)', async () => {

@@ -524,6 +524,26 @@ describe('region highlights', () => {
     }
   });
 
+  it('paints only the first region per highlight id and skips non-region anchors', async () => {
+    const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
+    const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120"></svg>');
+    try {
+      el.src = 'https://example.test/icon.svg';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
+      el.highlights = [
+        { id: 'dup', anchor: { kind: 'region', rect: { x: 10, y: 10, width: 20, height: 20 } } },
+        { id: 'dup', anchor: { kind: 'region', rect: { x: 60, y: 60, width: 20, height: 20 } } },
+        { id: 'quote', anchor: { kind: 'text-quote', exact: 'circle' } },
+      ] as LyraSvgViewer['highlights'];
+      await el.updateComplete;
+      const painted = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="region-highlight"]')];
+      expect(painted.map((region) => region.dataset['id'] ?? region.getAttribute('data-id'))).to.deep.equal(['dup']);
+      expect(painted[0]!.style.left).to.equal('10%');
+    } finally {
+      restore();
+    }
+  });
+
   it('paints a rendered hover treatment on the region-highlight target', async () => {
     const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
     const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120"></svg>');

@@ -984,6 +984,31 @@ describe("anchor/highlights/alt widening", () => {
     expect(capturedFile?.highlights?.[0]?.label).to.equal("First");
   });
 
+  it("treats re-assigning the same highlights array, or its own snapshot, as a no-op", async () => {
+    let renders = 0;
+    registerDocumentRenderer("application/pdf", {
+      render: () => {
+        renders++;
+        return html`<div>stub</div>`;
+      },
+    });
+    const el = (await fixture(html`
+      <lr-document-viewer open name="report.pdf" mime-type="application/pdf" src="report.pdf"></lr-document-viewer>
+    `)) as LyraDocumentViewer;
+    const source = [{ id: "a", anchor: { kind: "page" as const, page: 1 } }];
+    el.highlights = source;
+    await el.updateComplete;
+    const snapshot = el.highlights;
+    const rendersAfterAssign = renders;
+    el.highlights = source;
+    expect(el.isUpdatePending, "same source array").to.equal(false);
+    el.highlights = snapshot;
+    expect(el.isUpdatePending, "own snapshot").to.equal(false);
+    await el.updateComplete;
+    expect(el.highlights).to.equal(snapshot);
+    expect(renders).to.equal(rendersAfterAssign);
+  });
+
   it("forwards alt and highlights to the built-in fallback preview", async () => {
     const highlight = {
       id: "cite-1",

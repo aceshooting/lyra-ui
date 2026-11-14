@@ -174,6 +174,20 @@ describe('TextViewerTarget mixin', () => {
     expect(internals(el).computeSelectionAnchor(range, PARAGRAPH_ONE)?.quote).to.equal(PARAGRAPH_ONE);
   });
 
+  it('reports zero search matches while its content root is absent and finds them once it returns', async () => {
+    const el = await stubFixture();
+    el.noBody = true;
+    await el.updateComplete;
+    let detail: { query: string; matchCount: number; activeIndex: number } | undefined;
+    el.addEventListener('lr-search-change', event => { detail = event.detail; });
+    expect(await el.search('fox')).to.equal(0);
+    expect(detail).to.include({ query: 'fox', matchCount: 0, activeIndex: -1 });
+    el.noBody = false;
+    await el.updateComplete;
+    expect(await el.search('fox')).to.equal(2);
+    expect(detail).to.include({ query: 'fox', matchCount: 2, activeIndex: 0 });
+  });
+
   it('ignores non-text highlights while retaining resolvable text highlights', async () => {
     const el = await stubFixture();
     el.highlights = [

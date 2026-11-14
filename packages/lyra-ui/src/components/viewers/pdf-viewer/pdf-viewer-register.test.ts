@@ -56,5 +56,12 @@ describe('pdf registry', () => {
     expect(rendered).to.exist;
     expect(rendered.anchor).to.deep.equal(anchor);
     expect(rendered.highlights).to.deep.equal(highlights);
+    // The lazy definition (not the eager one the loaded module re-registers) falls back to a null
+    // anchor and an empty highlight list for a file that carries neither.
+    const bare = document.createElement('div');
+    render(definition.render!(pdf) as never, bare);
+    const fallback = bare.querySelector(PDF_VIEWER_TAG) as unknown as { anchor: unknown; highlights: unknown };
+    expect(fallback.anchor).to.equal(null);
+    expect(fallback.highlights).to.deep.equal([]);
   });
 });

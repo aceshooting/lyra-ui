@@ -391,6 +391,21 @@ describe('lr-include', () => {
     } finally { window.fetch = original; }
   });
 
+  it('emits lr-include-error with reason network when reading an ok response body fails', async () => {
+    const original = window.fetch;
+    const failing = { ...response('ignored'), text: () => Promise.reject(new TypeError('body stream failed')) } as unknown as Response;
+    window.fetch = (() => Promise.resolve(failing)) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraInclude>(html`<lr-include>Fallback</lr-include>`);
+      const errorPromise = oneEvent(el, 'lr-include-error');
+      el.src = 'https://example.test/broken-body.html';
+      const event = await errorPromise;
+      expect(event.detail.reason).to.equal('network');
+      expect(el.textContent).to.equal('Fallback');
+      expect(el.getAttribute('aria-busy')).to.equal('false');
+    } finally { window.fetch = original; }
+  });
+
   it('emits lr-include-error with reason network for a rejected fetch', async () => {
     const original = window.fetch;
     window.fetch = (() => Promise.reject(new Error('network down'))) as typeof window.fetch;
@@ -1056,6 +1071,25 @@ describe('lr-include', () => {
     expect(el.querySelector('a')!.getAttribute('href')).to.equal(`#${target.id}`);
   });
 
+  it('rebases a local hash href written with surrounding whitespace', async () => {
+    const fixtureRoot = await fixture<HTMLDivElement>(html`
+      <div>
+        <div id="href-padded-source">
+          <a href="  #padded-target ">Link</a>
+          <span id="padded-target">Target</span>
+        </div>
+        <lr-include></lr-include>
+      </div>
+    `);
+    const el = fixtureRoot.querySelector('lr-include') as LyraInclude;
+    const loaded = oneEvent(el, 'lr-load');
+    el.src = '#href-padded-source';
+    await loaded;
+    const target = el.querySelector('span[id]')!;
+    expect(target.id).to.not.equal('padded-target');
+    expect(el.querySelector('a')!.getAttribute('href')).to.equal(`#${target.id}`);
+  });
+
   it('rewrites quoted, whitespace-variant and mixed-case local URL references', async () => {
     const fixtureRoot = await fixture<HTMLDivElement>(html`
       <div>
@@ -1095,6 +1129,31 @@ describe('lr-include', () => {
     expect(el.querySelector('.external-url')!.hasAttribute('data-external')).to.equal(false);
     expect(el.querySelector('.compound-url')!.hasAttribute('data-compound')).to.equal(false);
     expect(el.querySelector('[data-escaped-marker]')!.hasAttribute('fill')).to.equal(false);
+  });
+
+  it('rebases id references to cloned ids and drops dangling references and external links', async () => {
+    const fixtureRoot = await fixture<HTMLDivElement>(html`
+      <div>
+        <div id="idref-source">
+          <span id="idref-label">Label</span>
+          <span id="idref-hint">Hint</span>
+          <div class="partial" role="group" aria-labelledby="idref-label missing-label idref-hint">Group</div>
+          <p class="dangling" aria-describedby="nowhere elsewhere">Para</p>
+          <a class="external" href="https://example.test/page">External</a>
+        </div>
+        <lr-include></lr-include>
+      </div>
+    `);
+    const el = fixtureRoot.querySelector('lr-include') as LyraInclude;
+    const loaded = oneEvent(el, 'lr-load');
+    el.src = '#idref-source';
+    await loaded;
+    const [label, hint] = [...el.querySelectorAll('span[id]')].map((span) => span.id);
+    expect(label).to.not.equal('idref-label');
+    expect(el.querySelector('.partial')!.getAttribute('aria-labelledby')).to.equal(`${label} ${hint}`);
+    expect(el.querySelector('.dangling')!.hasAttribute('aria-describedby')).to.equal(false);
+    expect(el.querySelector('.external')!.hasAttribute('href')).to.equal(false);
+    expect(el.querySelector('.external')!.textContent).to.equal('External');
   });
 
   // No .strings override test: this component renders no built-in visible
