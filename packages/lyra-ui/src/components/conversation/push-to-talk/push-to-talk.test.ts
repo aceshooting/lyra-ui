@@ -1998,6 +1998,144 @@ it("keeps deviceId as the sole microphone-device authority", async () => {
   }
 });
 
+it('uses an explicit recording MIME type without probing alternatives and preserves it in the completed blob', async () => {
+  const restore = stubSuccessfulCapture();
+  const recorders: FakeMediaRecorder[] = [];
+  let probes = 0;
+  window.MediaRecorder = class extends FakeMediaRecorder {
+    static override isTypeSupported(): boolean { probes++; return false; }
+    constructor(stream: FakeStream, options?: { mimeType?: string }) {
+      super(stream, options); recorders.push(this);
+    }
+  } as unknown as typeof MediaRecorder;
+  let el: LyraPushToTalk | undefined;
+  try {
+    el = await fixture<LyraPushToTalk>(html`<lr-push-to-talk mime-type="audio/ogg;codecs=opus"></lr-push-to-talk>`);
+    expect(await el.start()).to.equal(true);
+    expect(probes).to.equal(0);
+    expect(recorders.length).to.equal(1);
+    expect(recorders[0]!.mimeType).to.equal('audio/ogg;codecs=opus');
+    const stopped = oneEvent(el, 'lr-record-stop');
+    el.stop();
+    const blob = (await stopped).detail.blob as Blob;
+    expect(blob.type).to.equal('audio/ogg;codecs=opus');
+    expect(await blob.text()).to.equal('x');
+    expect(recorders[0]!.stream.getTracks()[0]!.stopCalls).to.equal(1);
+    expect(el.state).to.equal('idle');
+    expect(el.stream === null).to.equal(true);
+  } finally { el?.remove(); restore(); }
+});
+
+it('ignores empty recorder chunks while preserving nonempty chunk order and the final recording', async () => {
+  const restore = stubSuccessfulCapture();
+  let recorder: FakeMediaRecorder | undefined;
+  window.MediaRecorder = class extends FakeMediaRecorder {
+    constructor(stream: FakeStream, options?: { mimeType?: string }) { super(stream, options); recorder = this; }
+  } as unknown as typeof MediaRecorder;
+  let el: LyraPushToTalk | undefined;
+  try {
+    el = await fixture<LyraPushToTalk>(html`<lr-push-to-talk timeslice-ms="250"></lr-push-to-talk>`);
+    const chunks: Blob[] = [];
+    el.addEventListener('lr-record-chunk', event => { chunks.push(event.detail.blob); });
+    expect(await el.start()).to.equal(true);
+    recorder!.ondataavailable!({ data: new Blob([]) });
+    expect(chunks.length).to.equal(0);
+    for (const text of ['first', '', 'second', '']) recorder!.ondataavailable!({ data: new Blob([text]) });
+    expect(chunks.length).to.equal(2);
+    const stopped = oneEvent(el, 'lr-record-stop');
+    el.stop();
+    const blob = (await stopped).detail.blob as Blob;
+    expect(await Promise.all(chunks.map(chunk => chunk.text()))).to.deep.equal(['first', 'second', 'x']);
+    expect(await blob.text()).to.equal('firstsecondx');
+    expect(el.state).to.equal('idle');
+    expect(recorder!.stream.getTracks()[0]!.stopCalls).to.equal(1);
+  } finally { el?.remove(); restore(); }
+});
+
+it('localizes an unannotated recorder error and allows a new take without accepting stale callbacks', async () => {
+  const restore = stubSuccessfulCapture();
+  const recorders: FakeMediaRecorder[] = [];
+  window.MediaRecorder = class extends FakeMediaRecorder {
+    constructor(stream: FakeStream, options?: { mimeType?: string }) { super(stream, options); recorders.push(this); }
+  } as unknown as typeof MediaRecorder;
+  let el: LyraPushToTalk | undefined;
+  try {
+    el = await fixture<LyraPushToTalk>(html`<lr-push-to-talk .strings=${{ pushToTalkError: 'Capture could not continue.' }}></lr-push-to-talk>`);
+    const errors: Error[] = [];
+    let stops = 0, cancellations = 0;
+    el.addEventListener('lr-record-error', event => { errors.push(event.detail.error); });
+    el.addEventListener('lr-record-stop', () => { stops++; });
+    el.addEventListener('lr-record-cancel', () => { cancellations++; });
+    expect(await el.start()).to.equal(true);
+    const obsolete = recorders[0]!;
+    const lateError = obsolete.onerror!, lateData = obsolete.ondataavailable!, lateStop = obsolete.onstop!;
+    lateError(new Event('error'));
+    await el.updateComplete;
+    expect(el.state).to.equal('error');
+    expect(el.stream === null).to.equal(true);
+    expect(errors.map(error => error.message)).to.deep.equal(['MediaRecorder failed']);
+    expect(el.shadowRoot!.querySelector('[part="status"]')?.textContent).to.equal('Capture could not continue.');
+    expect(el.shadowRoot!.textContent).not.to.include('MediaRecorder failed');
+    expect(obsolete.stream.getTracks()[0]!.stopCalls).to.equal(1);
+    expect(stops).to.equal(0);
+    expect(cancellations).to.equal(0);
+    expect(await el.start()).to.equal(true);
+    lateError(new Event('error')); lateData({ data: new Blob(['obsolete']) }); lateStop();
+    expect(el.state).to.equal('recording');
+    expect(errors.length).to.equal(1);
+    expect(recorders[1]!.stream.getTracks()[0]!.stopCalls).to.equal(0);
+    const stopped = oneEvent(el, 'lr-record-stop');
+    el.stop();
+    expect(await ((await stopped).detail.blob as Blob).text()).to.equal('x');
+    expect(stops).to.equal(1);
+    expect(cancellations).to.equal(0);
+    expect(recorders[1]!.stream.getTracks()[0]!.stopCalls).to.equal(1);
+  } finally { el?.remove(); restore(); }
+});
+
+for (const fallback of ['legacy', 'absent'] as const) {
+  it(`keeps recording functional with a ${fallback} optional audio-analysis constructor`, async () => {
+    const restore = stubSuccessfulCapture();
+    const legacy = Object.getOwnPropertyDescriptor(window, 'webkitAudioContext');
+    let contexts = 0, closed = 0;
+    class LegacyAudioContext extends FakeAudioContext {
+      constructor() { super(); contexts++; }
+      override close(): Promise<void> { closed++; return Promise.resolve(); }
+    }
+    Reflect.set(window, 'AudioContext', undefined);
+    Object.defineProperty(window, 'webkitAudioContext', { configurable: true, writable: true,
+      value: fallback === 'legacy' ? LegacyAudioContext : undefined });
+    let el: LyraPushToTalk | undefined;
+    try {
+      el = await fixture<LyraPushToTalk>(html`<lr-push-to-talk level-events></lr-push-to-talk>`);
+      let errors = 0;
+      const levels: number[] = [];
+      el.addEventListener('lr-record-error', () => { errors++; });
+      el.addEventListener('lr-level', event => { levels.push(event.detail.level); });
+      expect(await el.start()).to.equal(true);
+      expect(el.state).to.equal('recording');
+      expect(contexts).to.equal(fallback === 'legacy' ? 1 : 0);
+      if (fallback === 'legacy') {
+        expect(levels.length).to.be.greaterThan(0);
+        expect(levels[0]).to.be.within(0, 1);
+      } else expect(levels.length).to.equal(0);
+      const stream = el.stream as unknown as FakeStream;
+      const stopped = oneEvent(el, 'lr-record-stop');
+      el.stop();
+      expect(await ((await stopped).detail.blob as Blob).text()).to.equal('x');
+      expect(stream.getTracks()[0]!.stopCalls).to.equal(1);
+      expect(el.state).to.equal('idle');
+      expect(closed).to.equal(contexts);
+      expect(errors).to.equal(0);
+    } finally {
+      el?.remove();
+      if (legacy) Object.defineProperty(window, 'webkitAudioContext', legacy);
+      else Reflect.deleteProperty(window, 'webkitAudioContext');
+      restore();
+    }
+  });
+}
+
 // -- Chunked streaming -------------------------------------------------------
 
 it("snapshots chunk emission from the sanitized timeslice at the start of each take", async () => {
