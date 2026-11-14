@@ -1,4 +1,4 @@
-import { aTimeout, fixture, expect, oneEvent, waitUntil } from '@open-wc/testing';
+import { aTimeout, fixture, expect, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { html as litHtml, nothing, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from './lyra-element.js';
@@ -119,6 +119,73 @@ describe('TextViewerTarget mixin', () => {
     await waitUntil(() => internals(el).searchMatches.length === 0, 'the replaced document recomputes its match count');
     expect(internals(el).searchActiveIndex).to.equal(-1);
     expect(await el.searchPrevious()).to.equal(false);
+  });
+
+  for (const action of ['clear', 'disconnect', 'navigate'] as const) {
+    it(`retires queued search recomputation when a consumer mutation observer requests ${action}`, async () => {
+      const el = await stubFixture();
+      const parent = el.parentNode!;
+      expect(await el.search('fox')).to.equal(2);
+      const body = el.shadowRoot!.querySelector('[part="body"]')!;
+      const details: Array<{ query: string; matchCount: number; activeIndex: number }> = [];
+      el.addEventListener('lr-search-change', event => { details.push(event.detail); });
+      let navigated: Promise<boolean> | undefined;
+      let complete!: () => void;
+      const observed = new Promise<void>(resolve => { complete = resolve; });
+      const observer = new MutationObserver(() => {
+        observer.disconnect();
+        if (action === 'clear') el.clearSearch();
+        else if (action === 'disconnect') el.remove();
+        else navigated = el.searchPrevious();
+        complete();
+      });
+      try {
+        observer.observe(body, { characterData: true, subtree: true });
+        const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT);
+        while (walker.nextNode()) {
+          const text = walker.currentNode as Text;
+          text.data = text.data.replaceAll('fox', 'cat');
+        }
+        await observed;
+        if (navigated) expect(await navigated).to.equal(false);
+        await nextFrame();
+        expect(details.map(detail => [detail.query, detail.matchCount, detail.activeIndex])).to.deep.equal(
+          action === 'disconnect' ? [] : [[action === 'clear' ? '' : 'fox', 0, -1]],
+        );
+        if (action === 'disconnect') parent.appendChild(el);
+        await el.updateComplete;
+        expect(await el.search('cat')).to.equal(2);
+        expect(details.at(-1)).to.include({ query: 'cat', matchCount: 2, activeIndex: 0 });
+      } finally { observer.disconnect(); }
+    });
+  }
+
+  it('returns no selection anchor after its content root disappears and recovers with the root', async () => {
+    const el = await stubFixture();
+    const range = document.createRange();
+    range.selectNodeContents(el.shadowRoot!.querySelector('#section-one')!);
+    expect(internals(el).computeSelectionAnchor(range, PARAGRAPH_ONE)?.quote).to.equal(PARAGRAPH_ONE);
+    el.noBody = true;
+    await el.updateComplete;
+    expect(internals(el).computeSelectionAnchor(range, PARAGRAPH_ONE)).to.equal(null);
+    el.noBody = false;
+    await el.updateComplete;
+    range.selectNodeContents(el.shadowRoot!.querySelector('#section-one')!);
+    expect(internals(el).computeSelectionAnchor(range, PARAGRAPH_ONE)?.quote).to.equal(PARAGRAPH_ONE);
+  });
+
+  it('ignores non-text highlights while retaining resolvable text highlights', async () => {
+    const el = await stubFixture();
+    el.highlights = [
+      { id: 'fragment', anchor: { kind: 'fragment', id: 'section-one' } },
+      { id: 'quote', anchor: { kind: 'text-quote', quote: 'quick brown' } },
+    ];
+    await el.updateComplete;
+    expect(internals(el).highlightPaintedRangeCount()).to.equal(1);
+    el.highlights = [{ id: 'fragment', anchor: { kind: 'fragment', id: 'section-one' } }];
+    await el.updateComplete;
+    expect(internals(el).highlightPaintedRangeCount()).to.equal(0);
+    expect(await el.search('fox')).to.equal(2);
   });
 
   it('search(query) finds matches, sets activeIndex to 0, emits lr-search-change, and scrolls the active match', async () => {
@@ -501,7 +568,7 @@ describe('TextViewerTarget mixin', () => {
       expect(internals(el).textScopeBuildCount()).to.be.greaterThan(builds);
     });
 
-    it('drains a same-task DOM mutation before search navigation emits state', async () => {
+    for (const direction of ['searchNext', 'searchPrevious'] as const) it(`drains a same-task DOM mutation before ${direction} emits state`, async () => {
       const el = await stubFixture();
       await el.search('fox');
       const details: Array<{
@@ -518,7 +585,7 @@ describe('TextViewerTarget mixin', () => {
         textNode.data = textNode.data.replaceAll('fox', 'cat');
       }
 
-      expect(await el.searchNext()).to.be.false;
+      expect(await el[direction]()).to.be.false;
       expect(details).to.deep.equal([{ query: 'fox', matchCount: 0, matchCountExact: true, activeIndex: -1 }]);
       await Promise.resolve();
       await el.updateComplete;
