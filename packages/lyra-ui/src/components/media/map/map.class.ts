@@ -420,7 +420,7 @@ function isUnsafeDescriptor(
 
 function optionalDescriptorValue(
   descriptor: ReturnType<typeof getOwnDataDescriptor>,
-): unknown | undefined {
+): unknown {
   return descriptor === MISSING_OWN_DATA_DESCRIPTOR || isUnsafeDescriptor(descriptor)
     ? undefined
     : descriptor.value;
@@ -1863,7 +1863,7 @@ interface CanonicalMapMarker {
   readonly lngLat: readonly [number, number];
   readonly color: string | undefined;
   readonly label: string | undefined;
-  readonly unsafeHtml: unknown | undefined;
+  readonly unsafeHtml: unknown;
 }
 
 const EMPTY_CANONICAL_MAP_MARKERS: readonly CanonicalMapMarker[] = Object.freeze([]);
@@ -3852,9 +3852,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   @property({ attribute: false })
   get mapStyle(): Readonly<LyraMapStyleSpecification> | string | undefined { return this._mapStyle; }
   set mapStyle(value: Readonly<LyraMapStyleSpecification> | string | undefined) {
-    if (value === this._mapStyleSource || value === this._mapStyle) return;
+    if (value === this._mapStyleSource) return;
     const revision = ++this._mapStyleRevision;
     this._mapStyleSource = value;
+    if (value === this._mapStyle) return;
     const previous = this._mapStyle;
     const snapshot = snapshotMapStyle(value, this.ownerDocument.defaultView) as Readonly<LyraMapStyleSpecification> | string | undefined;
     if (revision !== this._mapStyleRevision) return;
@@ -3863,6 +3864,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
   private _legend = EMPTY_MAP_LEGEND;
   private _legendSource?: unknown;
+  private _legendRevision = 0;
   private _legendProjection = EMPTY_MAP_LEGEND_PROJECTION;
   private _legendGrouped = false;
   /** Immutable, bounded entries rendered in the optional map legend. A required pattern keeps
@@ -3872,10 +3874,13 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     return this._legend;
   }
   set legend(value: readonly LyraMapLegendEntry[]) {
-    if (value === this._legendSource || value === this._legend) return;
+    if (value === this._legendSource) return;
+    const revision = ++this._legendRevision;
     this._legendSource = value;
+    if (value === this._legend) return;
     const previous = this._legend;
     const normalized = normalizeMapLegend(value);
+    if (revision !== this._legendRevision) return;
     this._legend = normalized.entries;
     this._legendProjection = normalized.projection;
     this._legendGrouped = normalized.grouped;
@@ -3904,6 +3909,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
   private _legendGradient: readonly (readonly [number, string])[] = Object.freeze([]);
   private _legendGradientSource?: unknown;
+  private _legendGradientRevision = 0;
   private legendIsLine = false;
   /**
    * Renders the legend as a **continuous** gradient bar with endpoint labels instead of (or
@@ -3924,10 +3930,14 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     return this._legendGradient;
   }
   set legendGradient(value: readonly (readonly [number, string])[]) {
-    if (value === this._legendGradientSource || value === this._legendGradient) return;
+    if (value === this._legendGradientSource) return;
+    const revision = ++this._legendGradientRevision;
     this._legendGradientSource = value;
+    if (value === this._legendGradient) return;
     const previous = this._legendGradient;
-    this._legendGradient = normalizeMapLegendGradient(value);
+    const normalized = normalizeMapLegendGradient(value);
+    if (revision !== this._legendGradientRevision) return;
+    this._legendGradient = normalized;
     this.requestUpdate('legendGradient', previous);
   }
 
@@ -3976,6 +3986,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   private _legendGradientTicks = EMPTY_LEGEND_GRADIENT_TICKS;
   private _legendGradientTicksSource?: unknown;
+  private _legendGradientTicksRevision = 0;
   /**
    * Labelled marks under the legend gradient bar, `[{ value, label? }]` or bare numbers, at their
    * position on the ramp. Values are in the data's own units, so a logarithmic ramp keeps its marks
@@ -3993,13 +4004,16 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
   set legendGradientTicks(value: readonly (number | LyraMapLegendGradientTick)[]) {
     if (value === this._legendGradientTicksSource) return;
+    const revision = ++this._legendGradientTicksRevision;
     this._legendGradientTicksSource = value;
     const previous = this._legendGradientTicks;
-    this._legendGradientTicks = normalizeMapLegendGradientTicks(value);
-    this._legendGradientTicksAssigned = Array.isArray(value);
+    const normalized = normalizeMapLegendGradientTicks(value);
+    if (revision !== this._legendGradientTicksRevision) return;
+    this._legendGradientTicks = normalized;
+    this._legendGradientTicksAssigned = isRuntimeArray(value);
     this.requestUpdate('legendGradientTicks', previous);
   }
-  private _legendGradientTicksAssigned = false;
+  @state() private _legendGradientTicksAssigned = false;
 
   /**
    * Derives the legend from `choropleth`. A `'step'` ramp renders one swatch row per band
@@ -4146,6 +4160,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   private _hiddenCategories: readonly string[] = EMPTY_HIDDEN_CATEGORIES;
   private _hiddenCategoriesSource?: unknown;
+  private _hiddenCategoriesRevision = 0;
   /**
    * Complete controlled set of muted category keys, mirroring `lr-chart`'s `hiddenDatasets`.
    * Clone-owned and frozen; non-string, empty, whitespace-only and duplicate entries are dropped,
@@ -4161,10 +4176,14 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     return this._hiddenCategories;
   }
   set hiddenCategories(value: readonly string[]) {
-    if (value === this._hiddenCategoriesSource || value === this._hiddenCategories) return;
+    if (value === this._hiddenCategoriesSource) return;
+    const revision = ++this._hiddenCategoriesRevision;
     this._hiddenCategoriesSource = value;
+    if (value === this._hiddenCategories) return;
     const previous = this._hiddenCategories;
-    this._hiddenCategories = normalizeMapHiddenCategories(value);
+    const normalized = normalizeMapHiddenCategories(value);
+    if (revision !== this._hiddenCategoriesRevision) return;
+    this._hiddenCategories = normalized;
     this.requestUpdate('hiddenCategories', previous);
   }
   /** Optional GeoJSON choropleth layer and value-to-color configuration. */
