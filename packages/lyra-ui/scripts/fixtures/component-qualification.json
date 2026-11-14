@@ -57950,6 +57950,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog-decision-boundaries.test.ts",
           "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
