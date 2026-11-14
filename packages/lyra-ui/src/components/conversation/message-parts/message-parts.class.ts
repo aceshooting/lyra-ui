@@ -98,6 +98,7 @@ type PartRenderer = keyof typeof PART_RENDERER_LOADERS;
 function sameWidgetSnapshot(left: unknown, right: unknown): boolean {
   const pending: [unknown, unknown][] = [[left, right]];
   const seen = new WeakMap<object, object>();
+  const seenRight = new WeakSet<object>();
   while (pending.length > 0) {
     const [a, b] = pending.pop()!;
     if (Object.is(a, b)) continue;
@@ -114,7 +115,9 @@ function sameWidgetSnapshot(left: unknown, right: unknown): boolean {
       if (paired !== b) return false;
       continue;
     }
+    if (seenRight.has(b)) return false;
     seen.set(a, b);
+    seenRight.add(b);
     const aKeys = Object.keys(a);
     if (aKeys.length !== Object.keys(b).length) return false;
     for (const key of aKeys) {

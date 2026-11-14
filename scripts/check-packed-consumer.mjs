@@ -155,17 +155,17 @@ const optionalPeerFamilyTags = componentInventory.components
 const rootHelperRegisteredTags = [];
 
 // Packed core/all.js includes every non-optional registration and every emitted chunk.
-// With data-grid collection assignment ownership, the graph uses 5,673,112 raw bytes
-// across 64 files; the next 64-byte ceiling leaves 40 bytes of headroom.
+// With message-widget payload alias ownership, the graph uses 5,673,156 raw bytes
+// across 64 files; the next 64-byte ceiling leaves 60 bytes of headroom.
 // Optional-peer exclusions and the complete file sum stay fixed. Core has no WASM allowance;
 // the explicit Oniguruma canary retains its separate exact 466,610-byte binary requirement.
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/ad043b8e3479fcd9990cd6ecc36e4638b48cfcc4/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'Data-grid collection and selection assignment guards add 1,002 raw bytes to the packed graph, measuring 5,673,112 bytes across the same 64 files. Only the exceeded raw ceiling advances to the next 64-byte boundary, 5,673,152 bytes. Gzip ceilings and the exact binary requirement for the explicit Oniguruma canary remain unchanged.',
-  reviewedCoreMeasurementBytes: 5_673_112,
+  $comment: 'Message-widget payload alias ownership adds 44 raw bytes to the packed graph, measuring 5,673,156 bytes across the same 64 files. Only the exceeded raw ceiling advances to the next 64-byte boundary, 5,673,216 bytes. Gzip ceilings and the exact binary requirement for the explicit Oniguruma canary remain unchanged.',
+  reviewedCoreMeasurementBytes: 5_673_156,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 40,
+  selectedRegressionHeadroomBytes: 60,
 };
 
 /**
