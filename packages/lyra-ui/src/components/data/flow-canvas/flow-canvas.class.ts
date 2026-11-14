@@ -557,15 +557,14 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     const x = clamp(-this.panX / this.zoomLevel), y = clamp(-this.panY / this.zoomLevel);
     return Object.freeze({ x, y, width: Math.max(0, clamp((rect.width - this.panX) / this.zoomLevel) - x), height: Math.max(0, clamp((rect.height - this.panY) / this.zoomLevel) - y) });
   }
-  private requestSourceScene(extraKey?: string): Promise<boolean> {
+  private requestSourceScene(): Promise<boolean> {
     if (!this.sourceMode || !this.sourceInputs || this.sourceError) return Promise.resolve(false);
     const keys = new Set<string>();
-    if (extraKey) keys.add(extraKey);
     for (const [prefix, ids] of [['node', this.selectedNodeIds], ['edge', this.selectedEdgeIds]] as const)
       for (const id of ids) { if (keys.size >= 32) break; if (id.length + 5 <= 65_536) keys.add(`${prefix}:${id}`); }
     const bounds = this.sourceViewportBounds(), includeKeys = Object.freeze([...keys]);
     const signature = JSON.stringify([this.sourceEpoch, bounds, includeKeys]);
-    if (!extraKey && signature === this.sourceSceneInputs) return Promise.resolve(!this.sourceScene.state.error);
+    if (signature === this.sourceSceneInputs) return Promise.resolve(!this.sourceScene.state.error);
     this.sourceSceneInputs = signature;
     return this.sourceScene.request({ mode: 'viewport', centerKey: null, bounds, includeKeys });
   }

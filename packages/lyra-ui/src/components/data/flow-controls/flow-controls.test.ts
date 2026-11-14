@@ -654,3 +654,11 @@ describe('a slotted [hidden] action button', () => {
     expect(shown.getClientRects().length).to.equal(1);
   });
 });
+
+it('normalizes an unsupported orientation property to vertical and reflects it', async () => {
+  const el = await fixture<LyraFlowControls>(html`<lr-flow-controls orientation="horizontal"></lr-flow-controls>`);
+  (el as unknown as { orientation: string }).orientation = 'diagonal';
+  await el.updateComplete;
+  expect(el.orientation).to.equal('vertical');
+  expect(el.getAttribute('orientation')).to.equal('vertical');
+});
