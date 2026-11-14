@@ -27,6 +27,26 @@ describe('top-layer style ownership boundaries', () => {
     } finally { releaseTopLayer(popup); }
   });
 
+  it('compensates only the zoom between the popup and a zoomed offset parent', async () => {
+    const outer = await fixture<HTMLElement>(html`<div style="zoom:2"><div style="zoom:3"><div style="inline-size:40px;block-size:20px">Popup</div></div><svg width="10" height="10"></svg></div>`);
+    const inner = outer.firstElementChild as HTMLElement;
+    const popup = inner.firstElementChild as HTMLElement;
+    const svg = outer.querySelector('svg')!;
+    try {
+      expect(ancestorZoom(popup)).to.be.closeTo(6, 0.001);
+      // Positioned relative to the inner box, which already renders at the full 6x scale.
+      expect(compensateAncestorZoom(popup, inner)).to.equal(false);
+      expect(popup.style.getPropertyValue('zoom')).to.equal('');
+      // Relative to an outer box at 2x, only the inner 3x needs undoing.
+      expect(compensateAncestorZoom(popup, outer)).to.equal(true);
+      expect(Number.parseFloat(popup.style.getPropertyValue('zoom'))).to.be.closeTo(1 / 3, 0.001);
+      // A non-HTML offset parent contributes only its own computed zoom.
+      expect(compensateAncestorZoom(popup, svg)).to.equal(true);
+      expect(Number.parseFloat(popup.style.getPropertyValue('zoom'))).to.be.closeTo(1 / 6, 0.001);
+    } finally { releaseTopLayer(popup); }
+    expect(popup.style.getPropertyValue('zoom')).to.equal('');
+  });
+
   it('leaves an authored inline zoom untouched instead of claiming it', async () => {
     const { popup } = await zoomedPopup();
     popup.style.setProperty('zoom', '0.75', 'important');

@@ -49,3 +49,35 @@ it('rolls back speculative sizing immediately and keeps observer callbacks suspe
     expect(rectReads, 'A disposed session cannot resume').to.equal(disposedReads);
   } finally { release(); platform.getDimensions = dimensions; session(); }
 });
+
+it('ignores scroll deliveries while suspended and resumes from an explicit update', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div style="overflow:auto;height:60px">
+    <button>Reference</button><div id="panel" style="width:40px;height:20px"></div><div style="height:400px"></div>
+  </div>`);
+  const popup = wrapper.querySelector<HTMLElement>('#panel')!;
+  let rect = new DOMRect(100, 100, 40, 20), placements = 0, rectReads = 0;
+  const session = placeAnchoredSurfaceSession({ contextElement: wrapper.querySelector('button')!,
+    getBoundingClientRect: () => { rectReads++; return rect; } }, popup,
+  { placement: 'bottom', flip: false, shift: false, onPlaced: () => { placements++; } });
+  const scrollTo = async (top: number): Promise<void> => {
+    const scrolled = new Promise<void>(resolve => wrapper.addEventListener('scroll', () => resolve(), { once: true }));
+    wrapper.scrollTop = top;
+    await scrolled;
+    await settle();
+  };
+  try {
+    await waitUntil(() => placements > 0, 'Initial geometry publishes'); await settle();
+    session.invalidate();
+    const suspendedReads = rectReads, before = placements;
+    rect = new DOMRect(300, 100, 40, 20);
+    await scrollTo(30);
+    expect(rectReads, 'A suspended session schedules no scroll frame').to.equal(suspendedReads);
+    expect(placements).to.equal(before);
+    session.update();
+    await waitUntil(() => placements > before, 'Explicit update resumes placement');
+    await settle();
+    const resumed = placements;
+    await scrollTo(60);
+    expect(placements, 'Scroll tracking resumes with the session').to.be.greaterThan(resumed);
+  } finally { session(); }
+});

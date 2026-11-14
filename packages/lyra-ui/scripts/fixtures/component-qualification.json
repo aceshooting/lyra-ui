@@ -3098,6 +3098,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/approval-queue/approval-queue-decisions.test.ts",
           "src/components/agent-tools/approval-queue/approval-queue.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -20437,7 +20438,9 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/email-viewer/email-loader.test.ts",
+          "src/components/viewers/email-viewer/email-viewer-parser-results.test.ts",
           "src/components/viewers/email-viewer/email-viewer-quote-cost.test.ts",
+          "src/components/viewers/email-viewer/email-viewer-register.test.ts",
           "src/components/viewers/email-viewer/email-viewer-remediation.test.ts",
           "src/components/viewers/email-viewer/email-viewer.test.ts"
         ],
@@ -20523,8 +20526,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/retrieval/embedding-explorer/embedding-explorer-engine.test.ts",
-              "test": "pages all columns, gives columns precedence and reaches the last row by keyboard",
+              "file": "src/components/retrieval/embedding-explorer/embedding-explorer-boundaries.test.ts",
+              "test": "moves to the last point on End and leaves an unrelated key to the page",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -20657,6 +20660,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/retrieval/embedding-explorer/embedding-explorer-boundaries.test.ts",
           "src/components/retrieval/embedding-explorer/embedding-explorer-data.test.ts",
           "src/components/retrieval/embedding-explorer/embedding-explorer-engine-lifecycle-boundaries.test.ts",
           "src/components/retrieval/embedding-explorer/embedding-explorer-engine-reentry.test.ts",
@@ -25963,8 +25967,10 @@
           "src/components/retrieval/graph/graph-builtin-paint-boundaries.test.ts",
           "src/components/retrieval/graph/graph-canvas-coverage.test.ts",
           "src/components/retrieval/graph/graph-canvas-drag-scale.test.ts",
+          "src/components/retrieval/graph/graph-canvas-draw-boundaries.test.ts",
           "src/components/retrieval/graph/graph-canvas-scale.test.ts",
           "src/components/retrieval/graph/graph-canvas-shapes.test.ts",
+          "src/components/retrieval/graph/graph-canvas-tick-geometry.test.ts",
           "src/components/retrieval/graph/graph-canvas.test.ts",
           "src/components/retrieval/graph/graph-column-view-transitions.test.ts",
           "src/components/retrieval/graph/graph-contract.test.ts",
@@ -28479,7 +28485,6 @@
           "rtl",
           "narrowAllocation",
           "visual",
-          "peerFailure",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -28578,8 +28583,14 @@
         },
         "peerFailure": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/viewers/include/include.test.ts",
+              "test": "emits lr-include-error with reason network when reading an ok response body fails",
+              "kind": "optional-peer failure-path test signal"
+            }
+          ],
           "limitation": "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion."
         },
         "security": {
@@ -29236,6 +29247,12 @@
               "file": "src/components/agent-tools/schema-viewer/schema-viewer.test.ts",
               "test": "fails closed for malformed/circular input and is accessible",
               "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/agent-tools/schema-viewer/schema-viewer.test.ts",
+              "test": "lets a non-empty host aria-label own the name instead of the inner section",
+              "target": "populated",
               "state": "populated"
             },
             {
@@ -30208,8 +30225,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-rebinding.test.ts",
-              "test": "caps search results and gives them one roving tab stop",
+              "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-boundaries.test.ts",
+              "test": "leaves search-result focus and default handling alone for a non-navigation key",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -30338,6 +30355,7 @@
         "tests": [
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-admission.test.ts",
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-aliases.test.ts",
+          "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-boundaries.test.ts",
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-coverage.test.ts",
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-custom-nodes-glow.test.ts",
           "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer-lazy.test.ts",
@@ -36352,6 +36370,12 @@
             },
             {
               "file": "src/components/viewers/model-viewer/model-viewer.test.ts",
+              "test": "reports a localized unavailable-engine state when the installed engine breaks its contract",
+              "target": "viewer",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/viewers/model-viewer/model-viewer.test.ts",
               "test": "shows an accessible failure with the alternative and download link, then retries from the button",
               "target": "viewer",
               "state": "populated"
@@ -38111,6 +38135,7 @@
         "tests": [
           "src/components/viewers/notebook-viewer/dompurify-loader.test.ts",
           "src/components/viewers/notebook-viewer/notebook-viewer-ansi-styles.test.ts",
+          "src/components/viewers/notebook-viewer/notebook-viewer-fallbacks.test.ts",
           "src/components/viewers/notebook-viewer/notebook-viewer-markup.property.test.ts",
           "src/components/viewers/notebook-viewer/notebook-viewer-register.test.ts",
           "src/components/viewers/notebook-viewer/notebook-viewer-remediation.test.ts",
@@ -39136,6 +39161,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/viewers/page-rail/page-rail-fallbacks.test.ts",
           "src/components/viewers/page-rail/page-rail-thumbnail-lifecycle.test.ts",
           "src/components/viewers/page-rail/page-rail.test.ts",
           "src/components/viewers/page-rail/page-viewer-snapshot.test.ts"
@@ -39785,7 +39811,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.test.ts",
-              "line": 5209,
+              "line": 5267,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -42798,6 +42824,12 @@
           "applicability": "applicable",
           "status": "automated",
           "evidence": [
+            {
+              "file": "src/components/agent-tools/prompt-studio/prompt-studio-coverage.test.ts",
+              "test": "lets a non-empty host aria-label name the studio instead of its inner section",
+              "target": "el",
+              "state": "populated"
+            },
             {
               "file": "src/components/agent-tools/prompt-studio/prompt-studio-coverage.test.ts",
               "test": "renders each supported native toolbar heading level",
@@ -50463,8 +50495,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/agent-tools/span-waterfall/span-waterfall-source-scale.test.ts",
-              "test": "keeps explicit view overrides and keyboard End on the provider preorder",
+              "file": "src/components/agent-tools/span-waterfall/span-waterfall-guards.test.ts",
+              "test": "claims no navigation key while the view window hides every span",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -50594,6 +50626,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/span-waterfall/span-waterfall-guards.test.ts",
           "src/components/agent-tools/span-waterfall/span-waterfall-scale.test.ts",
           "src/components/agent-tools/span-waterfall/span-waterfall-source-scale.test.ts",
           "src/components/agent-tools/span-waterfall/span-waterfall.test.ts"
@@ -59129,8 +59162,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/agent-tools/tool-select-dialog/tool-select-dialog.test.ts",
-              "test": "renders icon hints as decorative literal text while keeping the tool keyboard selectable",
+              "file": "src/components/agent-tools/tool-select-dialog/tool-select-dialog-lifecycle.test.ts",
+              "test": "stays modal and focus-trapped when an open dialog is moved to another parent",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -59251,6 +59284,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/tool-select-dialog/tool-select-dialog-lifecycle.test.ts",
           "src/components/agent-tools/tool-select-dialog/tool-select-dialog-remediation.test.ts",
           "src/components/agent-tools/tool-select-dialog/tool-select-dialog-search-sizing.test.ts",
           "src/components/agent-tools/tool-select-dialog/tool-select-dialog.test.ts"
@@ -59428,6 +59462,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/agent-tools/tool-timeline/tool-timeline-decisions.test.ts",
           "src/components/agent-tools/tool-timeline/tool-timeline-lazy-dialog.test.ts",
           "src/components/agent-tools/tool-timeline/tool-timeline-scale.test.ts",
           "src/components/agent-tools/tool-timeline/tool-timeline.test.ts"
@@ -59915,6 +59950,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/agent-tools/trace-tree/trace-tree-source-guards.test.ts",
+              "test": "renders blank detail and cost cells for a provider span that omits them",
+              "target": "element",
+              "state": "populated"
+            },
+            {
               "file": "src/components/agent-tools/trace-tree/trace-tree.test.ts",
               "test": "is accessible",
               "target": "el",
@@ -60061,6 +60102,7 @@
           "src/components/agent-tools/trace-tree/trace-tree-remediation.test.ts",
           "src/components/agent-tools/trace-tree/trace-tree-scale.test.ts",
           "src/components/agent-tools/trace-tree/trace-tree-source-display.test.ts",
+          "src/components/agent-tools/trace-tree/trace-tree-source-guards.test.ts",
           "src/components/agent-tools/trace-tree/trace-tree-source-scale.test.ts",
           "src/components/agent-tools/trace-tree/trace-tree.test.ts"
         ],

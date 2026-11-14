@@ -474,3 +474,49 @@ it('copies an own prototype-named catalog field without changing the normalized 
   expect(row.disabled).to.equal(undefined);
   expect(Object.getOwnPropertyDescriptor(row, '__proto__')?.value).to.deep.equal({ disabled: true });
 });
+
+it('restores the committed label when a read-only picker input is edited, without searching or relaying the event', () => {
+  const host = document.createElement('div') as unknown as PickerHost;
+  const renderRoot = host.attachShadow({ mode: 'open' });
+  Object.defineProperties(host, {
+    effectiveDisabled: { configurable: true, value: false },
+    renderRoot: { configurable: true, value: renderRoot },
+    updateComplete: { configurable: true, value: Promise.resolve(true) },
+  });
+  let emitted = 0;
+  const controller = new CatalogPickerController(host, {
+    catalog: () => [{ id: 'a', label: 'Alpha' }, { id: 'b', label: 'Beta' }],
+    allowCustom: () => false,
+    isReadonly: () => true,
+    locale: () => 'en',
+    searchableFields: (entry) => [entry.id, entry.label],
+    emitInput: () => { emitted += 1; },
+    emitChange: () => { emitted += 1; },
+    onValueChange: () => {},
+    onDefaultValueChange: () => {},
+    onStateChange: () => {},
+  });
+  controller.value = 'b';
+  const input = document.createElement('input');
+  const wrapper = document.createElement('div');
+  wrapper.append(input);
+  let relayed = 0;
+  wrapper.addEventListener('input', () => { relayed += 1; });
+  input.addEventListener('input', (event) => controller.handleInput(event));
+  input.value = 'Alp';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  expect(input.value).to.equal('Beta');
+  expect(controller.query).to.equal('');
+  expect(controller.value).to.equal('b');
+  expect(relayed).to.equal(0);
+  // While open, the edit is reverted to the current search text instead.
+  controller.setOpen(true);
+  controller.setQuery('Be');
+  input.value = 'Bex';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  expect(input.value).to.equal('Be');
+  expect(controller.query).to.equal('Be');
+  expect(relayed).to.equal(0);
+  expect(emitted).to.equal(0);
+  controller.setOpen(false);
+});

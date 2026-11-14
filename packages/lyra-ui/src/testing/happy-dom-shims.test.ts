@@ -347,6 +347,25 @@ describe('installHappyDomCascadeLayerShim', () => {
     expect(seen[2]).to.equal('@layer a{b{c:d}}');
   });
 
+  it('hands non-string sheet text to the engine unchanged so its own coercion and errors apply', async () => {
+    const received: unknown[] = [];
+    const proto = {
+      replaceSync(text: unknown): void { received.push(text); },
+      replace(text: unknown): Promise<unknown> { received.push(text); return Promise.resolve(this); },
+    };
+    const restore = installHappyDomCascadeLayerShim(proto as never, () => true);
+    try {
+      const value = { toString: () => '@layer a{b{c:d}}' };
+      (proto.replaceSync as (text: unknown) => void)(value);
+      await (proto.replace as (text: unknown) => Promise<unknown>)(undefined);
+      expect(received.length).to.equal(2);
+      expect(received[0] === value).to.equal(true);
+      expect(received[1]).to.equal(undefined);
+    } finally {
+      restore();
+    }
+  });
+
   it('installs once: a second call neither re-wraps nor breaks the first restore', () => {
     const { proto } = fakeSheetPrototype();
     const original = proto.replaceSync;

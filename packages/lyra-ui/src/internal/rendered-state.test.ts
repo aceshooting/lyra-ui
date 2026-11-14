@@ -267,3 +267,23 @@ it('observes native dialog visibility in a shadow root before the next rendering
     dialog.close();
   }
 });
+
+it('treats repeated start() and stop() calls, and stop() before start(), as no-ops', async () => {
+  const { wrapper, host } = createRenderedHost();
+  const states: boolean[] = [];
+  const controller = new RenderedStateController(host, (rendered) => states.push(rendered));
+  controller.stop();
+  expect(states).to.deep.equal([]);
+  controller.start();
+  controller.start();
+  expect(states).to.deep.equal([true]);
+  controller.stop();
+  controller.stop();
+  wrapper.style.display = 'none';
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  expect(states, 'A stopped controller reports nothing').to.deep.equal([true]);
+  controller.start();
+  expect(states).to.deep.equal([true, false]);
+  controller.stop();
+});

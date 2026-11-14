@@ -137,6 +137,24 @@ it('applies safe immutable shared-state patches and rejects prototype paths', ()
   expect(({} as Record<string, unknown>)['polluted']).to.equal(undefined);
 });
 
+it('rejects a shared-state snapshot event without an ownable snapshot and keeps the prior state', () => {
+  const initial = reduceAgentStream(createAgentStreamState(), {
+    type: 'state-snapshot',
+    generation: 0,
+    sequence: 1,
+    snapshot: { view: 'table' },
+  });
+  const missing = reduceAgentStream(initial, {
+    type: 'state-snapshot',
+    generation: 0,
+    sequence: 2,
+  } as unknown as AgentStreamEvent);
+  expect(initial.sharedState).to.deep.equal({ view: 'table' });
+  expect(missing.error?.code).to.equal('invalid_stream_event');
+  expect(missing.error?.message).to.equal('Shared state snapshot is invalid.');
+  expect(missing.sharedState).to.deep.equal({ view: 'table' });
+});
+
 it('applies root, object, and array patch operations without mutating the input', () => {
   const original = {
     keep: true,

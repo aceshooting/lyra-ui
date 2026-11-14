@@ -119,6 +119,32 @@ describe('acquireHighlightHandle', () => {
     }).to.not.throw();
   });
 
+  it('paints owned marks in a windowless document and keeps a flash until it is replaced', () => {
+    const inert = document.implementation.createHTMLDocument('inert');
+    inert.body.innerHTML = '<p>alpha beta gamma</p>';
+    const text = inert.querySelector('p')!.firstChild as Text;
+    const range = inert.createRange();
+    range.setStart(text, 6);
+    range.setEnd(text, 10);
+    const handle = acquireHighlightHandle({}, inert);
+    try {
+      handle.setRanges('accent', [range]);
+      const marks = [...inert.querySelectorAll('mark')];
+      expect(marks.map((mark) => mark.textContent)).to.deep.equal(['beta']);
+      expect(marks[0]!.getAttribute('data-lr-highlight-tone')).to.equal('accent');
+      const flashRange = inert.createRange();
+      flashRange.selectNodeContents(inert.querySelector('p')!);
+      handle.setRanges('accent', []);
+      handle.flash(flashRange, 1);
+      // No browsing context means no timer: the flash persists until the owner repaints it.
+      expect(inert.querySelectorAll('mark[data-lr-highlight-name="lr-highlight-flash"]').length).to.equal(1);
+    } finally {
+      handle.release();
+    }
+    expect(inert.querySelectorAll('mark')).to.have.length(0);
+    expect(inert.querySelector('p')!.textContent).to.equal('alpha beta gamma');
+  });
+
   it('isolates ranges between two owners; releasing one leaves the other painted', () => {
     const root = makeContent('<p>Revenue grew 12% year over year, driven by strong demand.</p>');
     try {

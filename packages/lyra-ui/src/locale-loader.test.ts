@@ -51,3 +51,11 @@ for (const [tag, parent, sample] of [
     expect(getLyraLocaleDirection(tag)).to.equal('ltr');
   });
 }
+
+it('reports no registered keys for a blank or whitespace-only locale', () => {
+  for (const locale of ['', '   ', '\t']) {
+    const keys = getRegisteredLyraLocaleKeys(locale);
+    expect(keys).to.deep.equal([]);
+    expect(Object.isFrozen(keys)).to.equal(true);
+  }
+});

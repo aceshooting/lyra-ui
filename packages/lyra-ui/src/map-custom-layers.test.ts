@@ -246,6 +246,25 @@ describe('addMapCustomLayer()', () => {
     expect(record!.calls.filter(call => call.startsWith('pick')).length).to.equal(2);
   });
 
+  it('still installs the layer without pointer picking when the native map rejects a click listener', async () => {
+    const runtime = fakeRuntime(); env.setLayerImporter(async () => runtime.module);
+    const { element, peer } = await env.mount();
+    const descriptor = Object.getOwnPropertyDescriptor(peer, 'on');
+    Object.defineProperty(peer, 'on', { configurable: true, value: () => { throw new Error('Native listeners are unavailable'); } });
+    const states: string[] = [];
+    try {
+      const handle = addMapCustomLayer(element, layer(), { onStateChange: status => states.push(status.state) });
+      await waitUntil(() => runtime.live().length === 1, 'engine layer created', { timeout: 2000 });
+      expect(handle.status.state).to.not.equal('unavailable');
+      peer.fire('click', { point: { x: 1, y: 2 } }); await renderTurns();
+      expect(runtime.live()[0]!.calls.some(call => call.startsWith('pick'))).to.equal(false);
+      handle.remove();
+      expect(states.at(-1)).to.equal('removed');
+    } finally {
+      if (descriptor) Object.defineProperty(peer, 'on', descriptor); else Reflect.deleteProperty(peer, 'on');
+    }
+  });
+
   it('reports an unavailable engine when the optional bridge cannot load or misbehaves', async () => {
     const { element } = await env.mount();
     const failed = addMapCustomLayer(element, layer());

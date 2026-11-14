@@ -92,6 +92,27 @@ describe('warnUnknownAttributes', () => {
     expect(warnStub.calls[0]![0]).to.contain('disable-stikcy');
   });
 
+  it("falls back to the class's own observedAttributes when only the unobserved list is supplied", () => {
+    class ObservingFixture extends HTMLElement {
+      static get observedAttributes(): string[] { return ['alpha']; }
+    }
+    class PlainFixture extends HTMLElement {}
+    if (!customElements.get('lr-observing-warning-fixture')) customElements.define('lr-observing-warning-fixture', ObservingFixture);
+    if (!customElements.get('lr-plain-warning-fixture')) customElements.define('lr-plain-warning-fixture', PlainFixture);
+    withDevMode();
+    const observing = document.createElement('lr-observing-warning-fixture');
+    for (const name of ['alpha', 'beta', 'gamma-unknown']) observing.setAttribute(name, '');
+    warnUnknownAttributes(observing, undefined, ['beta']);
+    expect(warnStub.calls).to.have.length(1);
+    expect(warnStub.calls[0]![0]).to.contain('gamma-unknown');
+    // A class that declares no observedAttributes contributes none: only the supplied list is known.
+    const plain = document.createElement('lr-plain-warning-fixture');
+    for (const name of ['beta', 'alpha']) plain.setAttribute(name, '');
+    warnUnknownAttributes(plain, undefined, ['beta']);
+    expect(warnStub.calls).to.have.length(2);
+    expect(warnStub.calls[1]![0]).to.contain("'alpha'");
+  });
+
   it('treats an omitted knownUnobservedAttributes list as empty', () => {
     withDevMode();
     const host = document.createElement('lr-fake-tag');

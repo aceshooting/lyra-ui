@@ -1380,3 +1380,53 @@ it('bounds assigned slot traversal before admitting its real focusable child', a
   expect(admitted.elements.map(element => element.id)).to.deep.equal(['bounded-slotted']);
   expect(admitted.truncationReasons).to.not.include('depth');
 });
+
+describe('nearestExternalFocusTarget', () => {
+  it('returns the next focus target after the owner, else the previous one, and null for an owner with none', async () => {
+    const root = await fixture<HTMLElement>(html`<div>
+      <button id="before">Before</button>
+      <section id="owner"><button id="inside">Inside</button></section>
+      <section id="empty"><span>No controls</span></section>
+      <button id="after">After</button>
+    </div>`);
+    const owner = root.querySelector('#owner')!;
+    expect(nearestExternalFocusTarget(owner)?.id).to.equal('after');
+    root.querySelector('#after')!.remove();
+    expect(nearestExternalFocusTarget(owner)?.id).to.equal('before');
+    expect(nearestExternalFocusTarget(root.querySelector('#empty')!)).to.equal(null);
+  });
+});
+
+it('does not defer a focus repair when focus is outside the owner', async () => {
+  const root = await fixture<HTMLElement>(html`<div>
+    <button id="outside">Outside</button>
+    <section id="owner"><button id="inside">Inside</button></section>
+    <button id="bridge">Bridge</button>
+  </div>`);
+  const outside = root.querySelector<HTMLButtonElement>('#outside')!;
+  await focusByKeyboard(outside);
+  let resolved = 0;
+  deferComposedFocusRepair(root.querySelector('#owner')!, root.querySelector<HTMLElement>('#bridge')!, () => {
+    resolved += 1;
+    return root.querySelector<HTMLElement>('#bridge');
+  });
+  await nextHostUpdateOpportunity();
+  await nextHostUpdateOpportunity();
+  expect(resolved).to.equal(0);
+  expect(document.activeElement === outside).to.equal(true);
+});
+
+it('orders positive tabindex targets first by value, then zero targets in document order, in either source order', async () => {
+  const root = await fixture<HTMLElement>(html`<div>
+    <button id="zero-a">A</button>
+    <button id="two" tabindex="2">Two</button>
+    <button id="zero-b">B</button>
+    <button id="one" tabindex="1">One</button>
+    <button id="zero-c">C</button>
+  </div>`);
+  const ids = () => collectComposedFocusTargets(root, { mode: 'tabbable' }).elements.map((element) => element.id);
+  expect(ids()).to.deep.equal(['one', 'two', 'zero-a', 'zero-b', 'zero-c']);
+  // Reverse the source order: the comparator sees each positive/zero pair the other way round.
+  for (const element of [...root.children].reverse()) root.append(element);
+  expect(ids()).to.deep.equal(['one', 'two', 'zero-c', 'zero-b', 'zero-a']);
+});
