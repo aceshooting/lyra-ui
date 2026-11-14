@@ -8,6 +8,7 @@ import '../components/lr-file-input.js';
 import '../components/lr-graph-query-builder.js';
 import '../components/lr-locale-picker.js';
 import '../components/lr-model-select.js';
+import '../components/lr-radio.js';
 import '../components/lr-rating.js';
 import '../components/lr-rubric-form.js';
 import '../components/lr-select.js';
@@ -26,7 +27,7 @@ interface ValidityControl extends LyraElement {
 
 const CONTROLS = [
   'button', 'checkbox-group', 'combobox', 'file-input', 'graph-query-builder',
-  'locale-picker', 'model-select', 'rating', 'rubric-form', 'select',
+  'locale-picker', 'model-select', 'radio', 'rating', 'rubric-form', 'select',
   'signature-pad', 'slider', 'time-range', 'token-input', 'tool-param-form', 'voice-picker',
 ] as const;
 

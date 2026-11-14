@@ -429,4 +429,112 @@ describe('lr-map on-demand runtimes', () => {
     element.controls = { geolocate: true }; await element.updateComplete;
     await waitUntil(() => peer.controls.size === 2); expect(text(element)).not.to.include('Controls unavailable');
   });
+
+  for (const change of ['style', 'disconnect'] as const) {
+    it(`cancels a failed export import quietly after ${change}`, async () => {
+      const gate = hold(loadMapImageExportRuntime, exportRuntime);
+      const { element } = await mount(el => { el.strings = { mapExportUnavailable: 'Export unavailable' }; });
+      const errors = capture(element, 'lr-map-export-error');
+      const pending = element.exportImage({ attribution: false }).then(() => 'exported', error => {
+        expect(error instanceof LyraMapImageExportError).to.equal(true);
+        return (error as LyraMapImageExportError).code;
+      });
+      if (change === 'style') element.mapStyle = { ...LYRA_MAP_EMPTY_STYLE };
+      else element.remove();
+      await element.updateComplete;
+      gate.fail();
+      expect(await pending).to.equal('cancelled');
+      await element.updateComplete;
+      expect(errors).to.deep.equal([]);
+      expect(text(element)).not.to.include('Export unavailable');
+    });
+  }
+
+  for (const fails of [false, true]) {
+    it(`keeps controls detached when their pending import ${fails ? 'fails' : 'loads'} after disconnect`, async () => {
+      const gate = hold(loadMapControlRuntime, controlRuntime);
+      const { element, peer, wrapper } = await mount(el => {
+        el.controls = { geolocate: true, attribution: false };
+        el.strings = { mapControlUnavailable: 'Controls unavailable' };
+      });
+      await waitUntil(() => gate.imports === 1);
+      const pending = loadMapControlRuntime().then(() => 'loaded', () => 'failed');
+      element.remove();
+      if (fails) gate.fail(); else gate.release();
+      expect(await pending).to.equal(fails ? 'failed' : 'loaded');
+      await element.updateComplete;
+      expect(peer.controls.size).to.equal(0);
+      expect(peer.removed).to.equal(true);
+      expect(text(element)).not.to.include('Controls unavailable');
+      if (fails) __setMapFeatureImporterForTesting(loadMapControlRuntime, async () => controlRuntime);
+      wrapper.append(element);
+      await waitUntil(() => element.map !== undefined && element.map !== peer);
+      const replacement = element.map as unknown as LazyMap;
+      await waitUntil(() => replacement.controls.size === 1);
+      expect(peer.controls.size).to.equal(0);
+      expect(text(element)).not.to.include('Controls unavailable');
+    });
+  }
+
+  it('does not load feature-state ownership for writes before connection or after disconnect', async () => {
+    const requests = count(loadMapFeatureStateRuntime, stateRuntime);
+    const element = create(el => { el.controls = { attribution: false }; });
+    const target = { origin: 'data-layer' as const, source: 'points', id: 1 };
+    const declined = () => {
+      expect(element.setFeatureState(target, { selected: true })).to.equal(false);
+      expect(element.removeFeatureState(target)).to.equal(false);
+      expect(element.getFeatureState(target)).to.equal(undefined);
+    };
+    declined();
+    const wrapper = await fixture<HTMLDivElement>(html`<div></div>`);
+    wrapper.append(element);
+    await waitUntil(() => element.map !== undefined);
+    await element.updateComplete;
+    element.remove();
+    declined();
+    expect(requests.imports).to.equal(0);
+  });
+
+  for (const change of ['replace', 'remove', 'disconnect'] as const) {
+    it(`retires an image provider on ${change} while its ownership runtime loads`, async () => {
+      const gate = hold(loadMapOwnedFeatureRuntime, ownedRuntime);
+      const calls: string[] = [];
+      const descriptor = (id: string): imageRuntime.LyraMapImage => ({ id, width: 4, height: 4, pixelRatio: 1,
+        source: { kind: 'svg', markup: '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"><rect width="4" height="4" fill="red"/></svg>' } });
+      const { element, peer } = await mount(el => {
+        el.controls = { attribution: false };
+        el.imageProvider = id => { calls.push(`old:${id}`); return descriptor(id); };
+      });
+      await waitUntil(() => gate.imports === 1);
+      if (change === 'disconnect') element.remove();
+      else element.imageProvider = change === 'remove' ? undefined : id => { calls.push(`new:${id}`); return descriptor(id); };
+      await element.updateComplete;
+      gate.release();
+      await loadMapOwnedFeatureRuntime();
+      if (change !== 'disconnect') await settle(element, peer);
+      peer.fire('styleimagemissing', { id: 'pin' });
+      if (change === 'replace') await waitUntil(() => peer.images.has('pin'));
+      expect(calls).to.deep.equal(change === 'replace' ? ['new:pin'] : []);
+      expect(peer.images.size).to.equal(change === 'replace' ? 1 : 0);
+      expect(peer.removed).to.equal(change === 'disconnect');
+    });
+  }
+
+  it('retries a failed drawing import when editing a saved drawing', async () => {
+    const gate = hold(loadMapDrawingRuntime, drawingRuntime);
+    const { element, peer } = await mount(el => { el.strings = { mapDrawingUnavailable: 'Drawing tools unavailable' }; });
+    const input = completed();
+    expect(element.editDrawing(input)).to.equal(false);
+    gate.fail();
+    await waitUntil(() => text(element).includes('Drawing tools unavailable'));
+    const requests = count(loadMapDrawingRuntime, drawingRuntime);
+    expect(element.editDrawing(input)).to.equal(false);
+    await settle(element, peer);
+    expect(element.editDrawing(input)).to.equal(true);
+    await settle(element, peer);
+    expect(requests.imports).to.equal(1);
+    expect(peer.sources.size).to.equal(1);
+    expect(text(element)).not.to.include('Drawing tools unavailable');
+    expect(element.cancelDrawing()).to.equal(true);
+  });
 });

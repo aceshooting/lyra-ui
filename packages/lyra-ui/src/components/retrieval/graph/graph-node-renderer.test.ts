@@ -11,6 +11,59 @@ describe('graph node renderer admission', () => {
     expect(await admit(null)).to.equal(undefined);
     expect(await admit(() => null, 200)).to.equal(undefined);
   });
+
+  for (const [name, make] of [
+    ['a primitive result', () => false],
+    ['a callable result', () => () => mesh()],
+    ['missing positions', () => ({ normals: mesh().normals })],
+    ['missing normals', () => ({ positions: mesh().positions })],
+    ['ordinary position array', () => ({ ...mesh(), positions: Array.from(mesh().positions) })],
+    ['double precision positions', () => ({ ...mesh(), positions: new Float64Array(mesh().positions) })],
+    ['integer normals', () => ({ ...mesh(), normals: new Uint8Array([0, 0, 1]) })],
+    ['data view positions', () => ({ ...mesh(), positions: new DataView(mesh().positions.buffer) })],
+    ['proxied positions', () => ({ ...mesh(), positions: new Proxy(mesh().positions, {}) })],
+    ['an empty mesh', () => ({ positions: new Float32Array(), normals: new Float32Array() })],
+    ['an incomplete triangle', () => ({ ...mesh(), positions: new Float32Array(8) })],
+    ['too few normals', () => ({ ...mesh(), normals: new Float32Array(2) })],
+    ['too many normals', () => ({ ...mesh(), normals: new Float32Array(6) })],
+    ['a typed color tuple', () => ({ ...mesh(), color: new Float32Array([1, 0, 0, 1]) })],
+    ['a short color tuple', () => ({ ...mesh(), color: [1, 0, 0] })],
+    ['a long color tuple', () => ({ ...mesh(), color: [1, 0, 0, 1, 1] })],
+    ['a sparse color tuple', () => ({ ...mesh(), color: [1, , 0, 1] })],
+    ['a decorated color tuple', () => ({ ...mesh(), color: Object.assign([1, 0, 0, 1], { label: 'red' }) })],
+    ['a color tuple with a symbol in place of a channel', () => {
+      const color = [1, , 0, 1]; Object.defineProperty(color, Symbol('channel'), { value: 0 });
+      return { ...mesh(), color };
+    }],
+    ['a color tuple with a named member in place of a channel', () => {
+      const color = [1, , 0, 1]; Object.defineProperty(color, 'green', { value: 0 });
+      return { ...mesh(), color };
+    }],
+    ['resizable position storage', () => {
+      const buffer = Reflect.construct(ArrayBuffer, [36, { maxByteLength: 72 }]) as ArrayBuffer;
+      expect(Reflect.get(buffer, 'resizable')).to.equal(true);
+      const positions = new Float32Array(buffer); positions.set(mesh().positions);
+      return { ...mesh(), positions };
+    }],
+  ] as const) {
+    it(`rejects ${name} at its node without continuing or poisoning the next admission`, async () => {
+      const visited: number[] = [];
+      let failure: unknown;
+      try {
+        await admit((row: { index: number }) => {
+          visited.push(row.index);
+          return row.index === 1 ? make() : mesh();
+        }, 3);
+      } catch (error) { failure = error; }
+      expect(failure instanceof GraphNodeRendererError).to.equal(true);
+      expect((failure as GraphNodeRendererError).reason).to.equal('invalid');
+      expect((failure as GraphNodeRendererError).nodeId).to.equal('1');
+      expect(visited).to.deep.equal([0, 1]);
+      const recovered = await admit(() => mesh());
+      expect(Array.from(recovered![0]!.positions)).to.deep.equal(Array.from(mesh().positions));
+      expect(Array.from(recovered![0]!.normals)).to.deep.equal([0, 0, 1]);
+    });
+  }
   it('owns callback bytes before invoking another row', async () => {
     const input = mesh();
     const result = await admit((row: { index: number }) => {
