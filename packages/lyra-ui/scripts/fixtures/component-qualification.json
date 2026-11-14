@@ -16044,7 +16044,7 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid.class.ts",
-              "line": 2904,
+              "line": 2944,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -16080,6 +16080,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/data/data-grid/data-grid-boundaries.test.ts",
+          "src/components/data/data-grid/data-grid-collection-assignment-order.test.ts",
           "src/components/data/data-grid/data-grid-columns.test.ts",
           "src/components/data/data-grid/data-grid-coverage-gaps.test.ts",
           "src/components/data/data-grid/data-grid-coverage.test.ts",

@@ -946,16 +946,18 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   }
 
   private _columnOrder: readonly string[] = Object.freeze([]);
+  private columnOrderAssignment = 0;
   /** Clone-owned controlled column order; an empty array uses declaration order. */
   @property({ attribute: false })
   get columnOrder(): readonly string[] {
     return this._columnOrder;
   }
   set columnOrder(value: readonly string[]) {
+    const assignment = ++this.columnOrderAssignment;
     if (this.isRebind('columnOrder', value, this._columnOrder)) return;
     const previous = this._columnOrder;
     const seen = new Set<string>();
-    this._columnOrder = frozenArray(
+    const next = frozenArray(
       Array.isArray(value)
         ? value.filter((id): id is string => {
             if (typeof id !== 'string' || id.trim() === '' || seen.has(id))
@@ -965,6 +967,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
           })
         : []
     );
+    if (assignment !== this.columnOrderAssignment) return;
+    this._columnOrder = next;
     this.requestUpdate('columnOrder', previous);
   }
 
@@ -973,6 +977,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   private readonly rowOccurrenceIds = new WeakMap<object, string>();
   private nextRowOccurrenceId = 1;
   private _columns: readonly DataGridColumn<Row>[] = Object.freeze([]);
+  private columnsAssignment = 0;
   /** Clone-owned readonly column-definition sequence. Reassign to update.
    * @default [] */
   @property({ attribute: false })
@@ -980,9 +985,10 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     return this._columns;
   }
   set columns(value: readonly DataGridColumn<Row>[]) {
+    const assignment = ++this.columnsAssignment;
     if (this.isRebind('columns', value, this._columns)) return;
     const previous = this._columns;
-    this._columns = snapshotColumns(value, (column) => {
+    const next = snapshotColumns(value, (column) => {
       const current = this.columnOccurrenceIds.get(column);
       if (current) return current;
       const identity = `column-occurrence-${this.nextColumnOccurrenceId}`;
@@ -990,6 +996,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       this.columnOccurrenceIds.set(column, identity);
       return identity;
     });
+    if (assignment !== this.columnsAssignment) return;
+    this._columns = next;
     this.requestUpdate('columns', previous);
   }
 
@@ -1004,6 +1012,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   private dataAdmissionTruncated = false;
   private dataAdmissionLimit = 10_000;
   private _data: readonly Row[] = Object.freeze([]);
+  private dataAssignment = 0;
   /** Clone-owned readonly client rows or current server page. Row identities are preserved.
    * Admission inspects at most maxRows source positions, retaining own data properties only.
    * Set maxRows before assigning data; reassign the source to restore excluded rows.
@@ -1013,8 +1022,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     return this._data;
   }
   set data(value: readonly Row[]) {
-    if (this.isRebind('data', value, this._data) && this.dataAdmissionLimit === this.rowLimit) return;
-    this.dataAdmissionLimit = this.rowLimit;
+    const assignment = ++this.dataAssignment;
+    const limit = this.rowLimit;
+    if (this.isRebind('data', value, this._data) && this.dataAdmissionLimit === limit) return;
     const previous = this._data;
     const admitted: Row[] = [];
     let length = 0;
@@ -1023,7 +1033,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         const descriptor = getOwnDataDescriptor(value, 'length');
         if (descriptor !== MISSING_OWN_DATA_DESCRIPTOR && descriptor !== UNSAFE_OWN_DATA_DESCRIPTOR &&
             typeof descriptor.value === 'number' && Number.isSafeInteger(descriptor.value) && descriptor.value >= 0) length = descriptor.value;
-        const end = Math.min(length, this.rowLimit);
+        const end = Math.min(length, limit);
         for (let index = 0; index < end; index += 1) {
           const entry = getOwnDataDescriptor(value, String(index));
           if (entry === MISSING_OWN_DATA_DESCRIPTOR || entry === UNSAFE_OWN_DATA_DESCRIPTOR) continue;
@@ -1032,7 +1042,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         }
       }
     } catch { /* Keep the safely admitted prefix of a revoked or hostile array. */ }
-    this.dataAdmissionTruncated = length > this.rowLimit;
+    if (assignment !== this.dataAssignment) return;
+    this.dataAdmissionLimit = limit;
+    this.dataAdmissionTruncated = length > limit;
     this._data = Object.freeze(admitted);
     this.requestUpdate('data', previous);
   }
@@ -1043,15 +1055,19 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     | ((request: DataGridRequest) => Promise<DataGridResponse<Row>>)
     | null = null;
   private _expandedRowKeys: readonly DataGridKey[] = Object.freeze([]);
+  private expandedRowKeysAssignment = 0;
   /** Clone-owned controlled expanded tree/detail/group row keys. */
   @property({ attribute: false })
   get expandedRowKeys(): readonly DataGridKey[] {
     return this._expandedRowKeys;
   }
   set expandedRowKeys(value: readonly DataGridKey[]) {
+    const assignment = ++this.expandedRowKeysAssignment;
     if (this.isRebind('expandedRowKeys', value, this._expandedRowKeys)) return;
     const previous = this._expandedRowKeys;
-    this._expandedRowKeys = snapshotKeys(value);
+    const next = snapshotKeys(value);
+    if (assignment !== this.expandedRowKeysAssignment) return;
+    this._expandedRowKeys = next;
     this.requestUpdate('expandedRowKeys', previous);
     this.requestUpdate('expandedKeys', previous);
   }
@@ -1114,6 +1130,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     this.requestUpdate('filters', previous);
   }
   private _groupBy: string | readonly string[] | null = null;
+  private groupByAssignment = 0;
   /** One or more field/column identifiers used to group client rows.
    * @default null */
   @property({ attribute: 'group-by' })
@@ -1121,9 +1138,10 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     return this._groupBy;
   }
   set groupBy(value: string | readonly string[] | null) {
+    const assignment = ++this.groupByAssignment;
     if (this.isRebind('groupBy', value, this._groupBy)) return;
     const previous = this._groupBy;
-    this._groupBy =
+    const next =
       typeof value === 'string'
         ? value
         : Array.isArray(value)
@@ -1131,6 +1149,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
             value.filter((item): item is string => typeof item === 'string')
           )
         : null;
+    if (assignment !== this.groupByAssignment) return;
+    this._groupBy = next;
     this.requestUpdate('groupBy', previous);
   }
   /** Accessible name used when host `aria-label` is absent. */
@@ -1171,6 +1191,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   private _pageSizeOptions: readonly number[] = Object.freeze([
     10, 20, 50, 100,
   ]);
+  private pageSizeOptionsAssignment = 0;
   /** Clone-owned choices rendered by the page-size selector.
    * @default [10, 20, 50, 100] */
   @property({ attribute: false })
@@ -1178,9 +1199,12 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     return this._pageSizeOptions;
   }
   set pageSizeOptions(value: readonly number[]) {
+    const assignment = ++this.pageSizeOptionsAssignment;
     if (this.isRebind('pageSizeOptions', value, this._pageSizeOptions)) return;
     const previous = this._pageSizeOptions;
-    this._pageSizeOptions = frozenArray(Array.isArray(value) ? value : []);
+    const next = frozenArray(Array.isArray(value) ? value : []);
+    if (assignment !== this.pageSizeOptionsAssignment) return;
+    this._pageSizeOptions = next;
     this.requestUpdate('pageSizeOptions', previous);
   }
   /** Enables client slicing and pager controls. */
@@ -1235,15 +1259,23 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     | ((row: Row) => boolean)
     | null = null;
   private _selectedRowKeys: readonly DataGridKey[] = Object.freeze([]);
+  private selectionAssignment = 0;
   /** Clone-owned controlled selected row keys. */
   @property({ attribute: false })
   get selectedRowKeys(): readonly DataGridKey[] {
     return this._selectedRowKeys;
   }
   set selectedRowKeys(value: readonly DataGridKey[]) {
+    const assignment = ++this.selectionAssignment;
+    this.pendingInitialSelectedRows = undefined;
+    this.assignSelectedRowKeys(value, assignment);
+  }
+  private assignSelectedRowKeys(value: readonly DataGridKey[], assignment: number): void {
     if (this.isRebind('selectedRowKeys', value, this._selectedRowKeys)) return;
     const previous = this._selectedRowKeys;
-    this._selectedRowKeys = snapshotKeys(value);
+    const next = snapshotKeys(value);
+    if (assignment !== this.selectionAssignment) return;
+    this._selectedRowKeys = next;
     this.requestUpdate('selectedRowKeys', previous);
     this.requestUpdate('selectedKeys', previous);
   }
@@ -1267,8 +1299,13 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     });
   }
   set selectedRows(next: readonly Row[]) {
+    const assignment = ++this.selectionAssignment;
     // The getter derives a fresh array, so only the last assigned value marks a rebind.
-    if (this.isRebind('selectedRows', next, REBIND_NO_SNAPSHOT)) return;
+    if (this.isRebind('selectedRows', next, REBIND_NO_SNAPSHOT)) {
+      if (this.pendingInitialSelectedRows)
+        this.pendingInitialSelectedRows.assignment = assignment;
+      return;
+    }
     const candidates = Array.isArray(next) ? next : [];
     // Before this element's first update, Lit property bindings from an enclosing template commit
     // in source order -- `.selectedRows=${…}` can run before a later `.data=${…}` in the very same
@@ -1278,14 +1315,14 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     // rows. Retrying once more from `willUpdate()`, once `data` has settled for this update, covers
     // exactly that declarative-binding-order case without changing the synchronous, immediately-
     // readable-back behavior a post-mount `el.selectedRows = …` assignment already relies on.
-    if (!this.hasUpdated) this.pendingInitialSelectedRows = candidates;
-    this.resolveSelectedRowsAssignment(candidates);
+    if (!this.hasUpdated) this.pendingInitialSelectedRows = { candidates, assignment };
+    this.resolveSelectedRowsAssignment(candidates, assignment);
   }
   /** @internal Raw `selectedRows` candidates from a setter call before this element's first
    *  update, re-resolved from `willUpdate()` once `data`/`rowKey` have settled for that update --
    *  see `selectedRows`'s setter doc. */
-  private pendingInitialSelectedRows?: readonly Row[];
-  private resolveSelectedRowsAssignment(candidates: readonly Row[]): void {
+  private pendingInitialSelectedRows?: { candidates: readonly Row[]; assignment: number };
+  private resolveSelectedRowsAssignment(candidates: readonly Row[], assignment: number): void {
     const source = this.allSourceRows;
     const sourceSet = new Set(source);
     const sourceIndexes = this.sourceIndexMap(source);
@@ -1296,9 +1333,11 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       return true;
     });
     const limited = this.selectionMode === 'single' ? rows.slice(0, 1) : rows;
-    this.selectedKeys = limited.map((row) =>
+    const keys = limited.map((row) =>
       this.keyForRow(row, this.sourceIndexFor(row, sourceIndexes) ?? 0)
     );
+    if (assignment !== this.selectionAssignment) return;
+    this.assignSelectedRowKeys(keys, assignment);
   }
   /** Uses server/event-driven loading and skips client processing. */
   @property({ type: Boolean, reflect: true }) server = false;
@@ -1594,7 +1633,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     if (!this.hasUpdated && this.pendingInitialSelectedRows !== undefined) {
       const pending = this.pendingInitialSelectedRows;
       this.pendingInitialSelectedRows = undefined;
-      this.resolveSelectedRowsAssignment(pending);
+      if (pending.assignment === this.selectionAssignment)
+        this.resolveSelectedRowsAssignment(pending.candidates, pending.assignment);
     }
 
     if (
