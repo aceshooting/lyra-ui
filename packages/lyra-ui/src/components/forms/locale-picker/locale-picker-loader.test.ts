@@ -271,3 +271,21 @@ it('preserves a request listener focus move while retrying a failed load', async
   expect(document.activeElement?.id).to.equal(other.id);
   expect(el.value).to.equal('de');
 });
+
+it('keeps an in-flight load when the same loader is assigned again', async () => {
+  const el = await create();
+  const load = pending();
+  const loader: LyraLocaleLoader = () => load.promise;
+  el.localeLoader = loader;
+  pick(el, 'fr');
+  await el.updateComplete;
+  expect(trigger(el).getAttribute('aria-busy')).to.equal('true');
+
+  el.localeLoader = loader;
+  await el.updateComplete;
+  expect(trigger(el).getAttribute('aria-busy'), 'reassignment does not cancel the load').to.equal('true');
+
+  load.resolve();
+  await waitUntil(() => el.value === 'fr');
+  expect(getLyraLocale()).to.equal('fr');
+});

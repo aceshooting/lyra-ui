@@ -49,3 +49,18 @@ for (const [value, invalidKey] of [
     expect(LyraNativeTimeInput.validators.length).to.equal(1);
   });
 }
+
+it('drops a removed min or max bound from the native control and its validation', async () => {
+  const el = await fixture<LyraNativeTimeInput>(
+    html`<lr-native-time-input min="09:00" max="17:00" value="08:00"></lr-native-time-input>`,
+  );
+  expect(el.checkValidity()).to.equal(false);
+  el.removeAttribute('min');
+  el.removeAttribute('max');
+  await el.updateComplete;
+  expect(el.min).to.equal(undefined);
+  expect(el.max).to.equal(undefined);
+  expect(nativeInput(el).hasAttribute('min')).to.equal(false);
+  expect(nativeInput(el).hasAttribute('max')).to.equal(false);
+  expect(el.checkValidity()).to.equal(true);
+});
