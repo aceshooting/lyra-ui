@@ -415,3 +415,17 @@ it('refreshes its visible label when a custom child is defined later', async () 
   const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
   await waitUntil(() => base.getAttribute('aria-label') === 'Loading records');
 });
+
+it('drops the visible label from the accessible name when label-placement leaves "after"', async () => {
+  const el = (await fixture(html`<lr-spinner label-placement="after">Saving draft</lr-spinner>`)) as LyraSpinner;
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+  expect(base.getAttribute('aria-label')).to.equal('Saving draft');
+
+  el.labelPlacement = 'none';
+  await el.updateComplete;
+  expect(base.getAttribute('aria-label')).to.equal('Loading…');
+
+  el.labelPlacement = 'after';
+  await el.updateComplete;
+  expect(base.getAttribute('aria-label')).to.equal('Saving draft');
+});
