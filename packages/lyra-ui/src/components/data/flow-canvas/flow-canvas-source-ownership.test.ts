@@ -1,4 +1,6 @@
-import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraGraphSource } from '../../../data-sources.js';
 import type { LyraFlowCanvas } from './flow-canvas.class.js';
 import type { FlowNode, FlowEdge, FlowStructureSnapshot } from './flow-types.js';
@@ -249,4 +251,110 @@ it('lets a newer reveal from a focus listener own the final focused record', asy
   expect(await latest).to.equal(true);
   expect(el.shadowRoot!.activeElement?.getAttribute('data-source-key')).to.equal('node:1');
   expect(el.sourcePage).to.equal(1);
+});
+
+for (const retirement of ['replacement', 'unset', 'disconnect', 'new reveal'] as const) {
+  it(`keeps current focus when keyboard paging is interrupted by ${retirement}`, async () => {
+    const source = provider(), replacement = provider(7), query = source.records.query;
+    let finish: (() => void) | undefined, pendingSignal: AbortSignal | undefined;
+    source.records.query = async request => {
+      const result = await query(request);
+      if (request.page !== 1) return result;
+      pendingSignal = request.signal;
+      return new Promise(resolve => { finish = () => resolve(result); });
+    };
+    const el = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas .graphSource=${source} .sourcePageSize=${1}></lr-flow-canvas>`);
+    await ready(el);
+    const parent = el.parentNode!;
+    await focusByKeyboard(el.shadowRoot!.querySelector<HTMLButtonElement>('[data-source-key="node:0"]')!);
+    await sendKeys({ press: 'End' });
+    await waitUntil(() => finish !== undefined, 'keyboard navigation has requested the destination page');
+    expect(el.sourcePage).to.equal(1);
+    try {
+      let latest: Promise<boolean> | undefined;
+      if (retirement === 'replacement') el.graphSource = replacement;
+      else if (retirement === 'unset') el.graphSource = undefined;
+      else if (retirement === 'disconnect') el.remove();
+      else latest = el.revealSourceKey('node:0');
+      expect(pendingSignal!.aborted).to.equal(true);
+      finish!();
+      if (latest) expect(await latest).to.equal(true);
+      else {
+        if (retirement !== 'replacement') el.graphSource = replacement;
+        if (retirement === 'disconnect') parent.appendChild(el);
+        await ready(el, 'node:7');
+        expect(await el.revealSourceKey('node:8')).to.equal(true);
+      }
+      await nextFrame();
+      expect(el.shadowRoot!.activeElement?.getAttribute('data-source-key')).to.equal(latest ? 'node:0' : 'node:8');
+      expect(el.sourcePage).to.equal(latest ? 0 : 1);
+      expect(el.selectedNodeIds).to.deep.equal([]);
+      expect(el.shadowRoot!.querySelectorAll('[data-source-key="node:1"]').length).to.equal(0);
+    } finally { finish?.(); }
+  });
+}
+
+for (const unavailable of ['missing', 'disabled'] as const) {
+  it(`does not focus a ${unavailable} keyboard destination and can navigate after recovery`, async () => {
+    const source = provider(), query = source.records.query;
+    let invalid = true;
+    source.records.query = async request => {
+      const result = await query(request);
+      if (request.page !== 1 || !invalid) return result;
+      return { ...result, rows: unavailable === 'missing' ? [] : result.rows.map(row => ({ ...row,
+        value: { kind: 'node' as const, value: { ...row.value.value, disabled: true } },
+      })) };
+    };
+    const el = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas .graphSource=${source} .sourcePageSize=${1}
+      .strings=${{ graphSourceRecordsError: 'Records unavailable' }}></lr-flow-canvas>`);
+    await ready(el);
+    await focusByKeyboard(el.shadowRoot!.querySelector<HTMLButtonElement>('[data-source-key="node:0"]')!);
+    await sendKeys({ press: 'End' });
+    await waitUntil(() => el.sourcePage === 1 &&
+      el.shadowRoot!.querySelector('[part="source-navigator"]')?.getAttribute('aria-busy') === 'false');
+    await nextFrame();
+    expect(el.shadowRoot!.activeElement?.getAttribute('data-source-key') === 'node:1').to.equal(false);
+    expect(el.selectedNodeIds).to.deep.equal([]);
+    if (unavailable === 'missing') expect(el.shadowRoot!.textContent).to.include('Records unavailable');
+    else expect(el.shadowRoot!.querySelector<HTMLButtonElement>('[data-source-key="node:1"]')!.disabled).to.equal(true);
+    invalid = false;
+    expect(await el.revealSourceKey('node:0')).to.equal(true);
+    await sendKeys({ press: 'End' });
+    await waitUntil(() => el.shadowRoot!.activeElement?.getAttribute('data-source-key') === 'node:1');
+    expect(el.shadowRoot!.querySelector<HTMLButtonElement>('[data-source-key="node:1"]')!.disabled).to.equal(false);
+    expect(el.shadowRoot!.textContent).not.to.include('Records unavailable');
+  });
+}
+
+it('ignores keyboard events from a retired records navigator', async () => {
+  const source = provider(), replacement = provider(7), query = source.records.query;
+  let queries = 0;
+  source.records.query = async request => { queries++; return query(request); };
+  const el = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas .graphSource=${source} .sourcePageSize=${1}></lr-flow-canvas>`);
+  await ready(el);
+  const obsolete = el.shadowRoot!.querySelector<HTMLButtonElement>('[data-source-key="node:0"]')!;
+  const before = queries;
+  el.graphSource = replacement;
+  const event = new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true });
+  obsolete.dispatchEvent(event);
+  expect(event.defaultPrevented).to.equal(false);
+  expect(queries).to.equal(before);
+  await ready(el, 'node:7');
+  expect(el.sourcePage).to.equal(0);
+  expect(el.selectedNodeIds).to.deep.equal([]);
+});
+
+it('bounds arrow navigation to the first and last source records and leaves unrelated keys alone', async () => {
+  const el = await fixture<LyraFlowCanvas>(html`<lr-flow-canvas .graphSource=${provider()} .sourcePageSize=${1}></lr-flow-canvas>`);
+  await ready(el);
+  await focusByKeyboard(el.shadowRoot!.querySelector<HTMLButtonElement>('[data-source-key="node:0"]')!);
+  for (const [key, expected] of [['ArrowUp', 'node:0'], ['ArrowDown', 'node:1'], ['ArrowDown', 'node:1'], ['ArrowUp', 'node:0']] as const) {
+    await sendKeys({ press: key });
+    await waitUntil(() => el.shadowRoot!.activeElement?.getAttribute('data-source-key') === expected);
+  }
+  const event = new KeyboardEvent('keydown', { key: 'x', bubbles: true, cancelable: true });
+  el.shadowRoot!.activeElement!.dispatchEvent(event);
+  expect(event.defaultPrevented).to.equal(false);
+  expect(el.sourcePage).to.equal(0);
+  expect(el.selectedNodeIds).to.deep.equal([]);
 });
