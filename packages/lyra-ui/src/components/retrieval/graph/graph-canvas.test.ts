@@ -961,14 +961,10 @@ it('still retunes chargeStrength/edgeDistance when width/height change in the sa
   expect(chargeForce.strength()()).to.equal(-900);
 });
 
-it('recenters the simulation and bumps alpha when width/height change post-mount', async function () {
-  // Waiting for a *full* default-alphaDecay settle (ALPHA_SETTLE_TIMEOUT
-  // below) genuinely takes close to 5s on its own -- raise this test's own
-  // Mocha timeout (web-test-runner.config.js sets a 6s default for every
-  // test) so that wait isn't cut off by the runner before it gets the
-  // chance to finish.
-  this.timeout(20_000);
-  const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
+it('recenters the simulation and bumps alpha when width/height change post-mount', async () => {
+  // A seeded layout finishes its initial physics synchronously. The resize still has to
+  // recenter and restart a cooled simulation, without waiting through unrelated animation frames.
+  const el = (await fixture(html`<lr-graph seed="7"></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
   el.edges = links;
   await el.updateComplete;
@@ -985,14 +981,7 @@ it('recenters the simulation and bumps alpha when width/height change post-mount
     alphaMin: () => number;
     force: (name: string) => { x: () => number; y: () => number };
   };
-  // Let the initial settle finish so the alpha bump below is unambiguous.
-  await waitUntil(
-    () => simulation.alpha() <= simulation.alphaMin(),
-    undefined,
-    {
-      timeout: ALPHA_SETTLE_TIMEOUT,
-    }
-  );
+  expect(simulation.alpha(), 'the initial simulation has cooled').to.be.at.most(simulation.alphaMin());
 
   el.width = 1000;
   el.height = 400;

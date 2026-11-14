@@ -140,12 +140,24 @@ describe('MCP Apps negotiation and request recovery', () => {
     expect(value.messages.length).to.equal(0);
   });
 
-  it('expires unresponsive host work, rejects its late response, and permits the wire ID to be reused', async function () {
-    this.timeout(40_000);
+  it('expires unresponsive host work, rejects its late response, and permits the wire ID to be reused', async () => {
     const value = setup(); value.ready();
-    value.send({ id: 'slow', method: 'tools/call', params: { name: 'lookup' } });
+    const timerOwner: Window = window;
+    const nativeSetTimeout = timerOwner.setTimeout;
+    const deadlines: number[] = [];
+    try {
+      // Check the production deadline while using a short real browser timer for this request.
+      // Restore the hook before yielding so the runner and other work retain their own timers.
+      timerOwner.setTimeout = (callback, delay, ...args) => {
+        deadlines.push(delay ?? 0);
+        return nativeSetTimeout.call(timerOwner, callback, delay === 30_000 ? 50 : delay, ...args);
+      };
+      value.send({ id: 'slow', method: 'tools/call', params: { name: 'lookup' } });
+    } finally { timerOwner.setTimeout = nativeSetTimeout; }
+    expect(deadlines).to.deep.equal([30_000]);
     const request = value.requests[0]!;
-    await waitUntil(() => request.signal.aborted, 'host request did not expire', { timeout: 35_000, interval: 100 });
+    expect(request.signal.aborted).to.equal(false);
+    await waitUntil(() => request.signal.aborted, 'host request did not expire');
     expect(value.messages).to.deep.equal([{ jsonrpc: '2.0', id: 'slow', error: { code: -32000, message: 'Host request timed out' } }]);
     value.send({ id: 'slow', method: 'tools/call', params: { name: 'lookup' } });
     const next = value.requests[1]!;
