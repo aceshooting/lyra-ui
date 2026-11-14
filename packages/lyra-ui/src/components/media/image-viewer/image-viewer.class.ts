@@ -326,16 +326,20 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     this._engine = next; this.panorama?.invalidate(); this.requestUpdate('engine', old);
   }
   private _panoramaCamera: LyraPanoramaCamera = PANORAMA_DEFAULT_CAMERA;
+  private panoramaCameraRevision = 0;
   /** Camera yaw/pitch in radians and vertical fieldOfView in degrees (20–100). Authored writes are silent. */
   @property({ attribute: false, noAccessor: true })
   get panoramaCamera(): LyraPanoramaCamera { return this._panoramaCamera; }
   set panoramaCamera(value: LyraPanoramaCamera) {
+    const revision = ++this.panoramaCameraRevision;
     const next = normalizePanoramaCamera(value), old = this._panoramaCamera;
+    if (revision !== this.panoramaCameraRevision) return;
     if (next.yaw === old.yaw && next.pitch === old.pitch && next.fieldOfView === old.fieldOfView) return;
     this._panoramaCamera = next; this.requestUpdate('panoramaCamera', old);
   }
   private _hotspots: readonly LyraPanoramaHotspot[] = Object.freeze([]);
   private hotspotSource: unknown = this._hotspots;
+  private hotspotRevision = 0;
   /** Bounded clone-owned hotspot snapshot. First valid unique ID wins; reassign after changes.
    * Angles are radians, pitch is within ±π/2, and invalid rows are omitted. */
   @property({ attribute: false, noAccessor: true })
@@ -343,7 +347,10 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   set hotspots(value: readonly LyraPanoramaHotspot[]) {
     if (value === this.hotspotSource || value === this._hotspots) return;
     const old = this._hotspots; this.hotspotSource = value;
-    this._hotspots = snapshotPanoramaHotspots(value, this.ownerDocument?.defaultView ?? null);
+    const revision = ++this.hotspotRevision;
+    const next = snapshotPanoramaHotspots(value, this.ownerDocument?.defaultView ?? null);
+    if (revision !== this.hotspotRevision) return;
+    this._hotspots = next;
     this.panorama?.invalidate(); this.requestUpdate('hotspots', old);
   }
   private get panoramaEnabled(): boolean { return this.projection === 'equirectangular' && this.engine === 'webgl'; }
