@@ -8972,6 +8972,8 @@ describe('fitBounds and lr-map-view-change', () => {
         [],
         [[0, 0]],
         [[0, 0], [1, 1], [2, 2]],
+        [[0, 0], null],
+        ['south-west', [1, 1]],
         [[0], [1, 1]],
         [[Number.NaN, 0], [1, 1]],
         [[0, 0], [Number.POSITIVE_INFINITY, 1]],

@@ -119,6 +119,14 @@ describe('lr-map drawing integration', () => {
     expect(element.drawMode).to.equal('polygon'); expect(complete.length).to.equal(0); expect(element.shadowRoot!.textContent).to.include('Need 3 points');
     await vertex(element, peer, 1, 0); await vertex(element, peer, 0, 1); expect(element.completeDrawing()).to.equal(true); await settle(element, peer);
   });
+  it('reports a self-intersecting polygon as invalid geometry and keeps the drawing armed for correction', async () => {
+    const { element, peer } = await drawing('polygon', el => { el.strings = { mapDrawingInvalidGeometry: 'Shape crosses itself' }; });
+    const complete = capture(element, 'lr-map-draw-complete');
+    for (const [lng, lat] of [[0, 0], [10, 10], [10, 0], [0, 10]] as const) await vertex(element, peer, lng, lat);
+    expect(element.completeDrawing()).to.equal(false); await element.updateComplete;
+    expect(complete.length).to.equal(0); expect(element.drawMode).to.equal('polygon');
+    expect(element.shadowRoot!.textContent).to.include('Shape crosses itself');
+  });
   it('provides unregistered English actions, group/status/error text and live string overrides', async () => {
     const { element, peer } = await drawing(); const group = element.shadowRoot!.querySelector<HTMLElement>('[part="drawing-controls"]')!;
     expect(group.getAttribute('aria-label')).to.equal('Drawing controls');
@@ -191,6 +199,21 @@ describe('lr-map drawing integration', () => {
       }
       peer.ready = true; peer.fire('load'); await element.updateComplete; await element.whenStyleReady(); await element.updateComplete;
       expect(starts.length).to.equal(0); expect(element.drawMode).to.equal(kind === 'mode' ? 'polygon' : kind === 'style' ? 'line' : 'none'); expect(peer.sources.size).to.equal(0); element.remove();
+    }
+  });
+  it('cancels an armed pre-ready polygon as a polygon for mode and pick replacement', async () => {
+    for (const kind of ['mode', 'pick'] as const) {
+      const { element, peer } = await pendingDrawing();
+      element.drawMode = 'polygon'; await element.updateComplete;
+      const cancels = capture(element, 'lr-map-draw-cancel');
+      if (kind === 'mode') element.drawMode = 'line'; else element.pickMode = true;
+      await element.updateComplete;
+      expect(cancels).to.have.length(1);
+      expect(cancels[0]).to.include({ mode: 'polygon', phase: 'cancelled', reason: kind === 'mode' ? 'mode-change' : 'pick-mode' });
+      expect((cancels[0] as LyraMapDrawingSnapshot).vertices).to.deep.equal([]);
+      expect(element.drawMode).to.equal(kind === 'mode' ? 'line' : 'none');
+      peer.ready = true; peer.fire('load'); await element.updateComplete; await element.whenStyleReady();
+      expect(peer.sources.size).to.equal(0); element.remove();
     }
   });
   for (const addSource of [false, true]) {

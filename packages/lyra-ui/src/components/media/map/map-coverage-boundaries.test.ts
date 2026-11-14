@@ -467,4 +467,25 @@ describe('lr-map public renderer and input boundaries', () => {
     expect(element.legend.length).to.equal(0);
     expect(element.shadowRoot!.querySelectorAll('[part="legend-swatch"]').length).to.equal(0);
   });
+
+  it('constructs and gates interaction from live inert state without mutation or resize observers', async () => {
+    const mutation = Object.getOwnPropertyDescriptor(window, 'MutationObserver');
+    const resize = Object.getOwnPropertyDescriptor(window, 'ResizeObserver');
+    Object.defineProperty(window, 'MutationObserver', { configurable: true, writable: true, value: undefined });
+    Object.defineProperty(window, 'ResizeObserver', { configurable: true, writable: true, value: undefined });
+    try {
+      const { element, peer } = await mount(el => { el.interactiveBasemapLayers = [{ layerId: 'places' }]; el.setAttribute('inert', ''); });
+      const enters = capture<LyraMapInteractionDetail>(element, 'lr-map-feature-enter');
+      expect(element.shadowRoot!.querySelector('[part="container"]') !== null).to.equal(true);
+      hover(peer, {});
+      expect(enters).to.have.length(0);
+      element.removeAttribute('inert');
+      leave(peer); hover(peer, {});
+      expect(enters).to.have.length(1);
+      expect(enters[0]!.feature!.id).to.equal(7);
+    } finally {
+      if (mutation) Object.defineProperty(window, 'MutationObserver', mutation);
+      if (resize) Object.defineProperty(window, 'ResizeObserver', resize);
+    }
+  });
 });

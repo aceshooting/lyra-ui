@@ -62,5 +62,16 @@ export function mapHashBoundaryTests(direction: 'read' | 'write'): void {
         });
       }
     }
+    if (direction === 'write') {
+      it('writes an unrotated, untilted URL camera for an engine without bearing or pitch readers', async () => {
+        const { element, peer } = await mountCameraPeerMap();
+        element.hash = true; await element.updateComplete;
+        Reflect.set(peer, 'getBearing', undefined); Reflect.set(peer, 'getPitch', undefined);
+        history.replaceState({ section: 'retained' }, '', '#section&map=9/2/1/45/30');
+        peer.zoom = 6; peer.fire('moveend');
+        expect(location.hash).to.equal('#section&map=6/0/0');
+        expect(history.state).to.deep.equal({ section: 'retained' });
+      });
+    }
   });
 }

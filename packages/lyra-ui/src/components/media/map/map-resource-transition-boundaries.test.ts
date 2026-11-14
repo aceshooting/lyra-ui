@@ -504,4 +504,18 @@ describe('lr-map resource transition ownership', () => {
     expect(label(recovered).paint).to.include({ 'text-color': 'rgb(70, 80, 90)', 'text-halo-width': 2 });
     expect(element.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
   });
+
+  it('paints the default canvas color when both the author color and the tone token are unusable', async () => {
+    const { element, peer } = await mount([]);
+    element.style.setProperty('--lr-color-danger', 'not-a-color');
+    element.dataLayers = [{ sourceId: 'places', geojson: points, tone: 'danger', color: 'also-not-a-color' }];
+    await settle(element, peer);
+    const circle = [...peer.layers.values()].find(value => (value as Layer).type === 'circle') as Layer | undefined;
+    expect(circle?.paint?.['circle-color']).to.equal('#0969da');
+    element.style.setProperty('--lr-color-danger', 'rgb(200, 10, 20)');
+    element.dataLayers = [{ sourceId: 'places', geojson: points, tone: 'danger' }];
+    await settle(element, peer);
+    const repainted = [...peer.layers.values()].find(value => (value as Layer).type === 'circle') as Layer | undefined;
+    expect(repainted?.paint?.['circle-color']).to.equal('rgb(200, 10, 20)');
+  });
 });

@@ -16,6 +16,7 @@ import { LyraMapImageExportError } from './map-image-export.js';
 import * as imageRuntime from './map-images.js';
 import * as ownedRuntime from './map-owned-features.js';
 import * as overrideRuntime from './map-style-overrides.js';
+import { captureDevWarnings } from '../../../../test/expected-dev-warnings.js';
 import './map.js';
 import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from './map.js';
 
@@ -536,5 +537,40 @@ describe('lr-map on-demand runtimes', () => {
     expect(peer.sources.size).to.equal(1);
     expect(text(element)).not.to.include('Drawing tools unavailable');
     expect(element.cancelDrawing()).to.equal(true);
+  });
+
+  it('warns once and leaves missing images missing when the image provider runtime cannot load', async () => {
+    const gate = hold(loadMapOwnedFeatureRuntime, ownedRuntime);
+    const calls: string[] = [];
+    let element!: LyraMap, peer!: LazyMap;
+    const warnings = await captureDevWarnings(async () => {
+      ({ element, peer } = await mount(el => {
+        el.controls = { attribution: false };
+        el.imageProvider = id => { calls.push(id); return undefined; };
+      }));
+      await waitUntil(() => gate.imports === 1);
+      gate.fail();
+      await tick(); await element.updateComplete;
+    });
+    expect(warnings.filter(message => message.includes('imageProvider runtime could not be loaded'))).to.have.length(1);
+    peer.fire('styleimagemissing', { id: 'pin' }); await tick();
+    expect(calls).to.deep.equal([]);
+    expect(peer.images.size).to.equal(0);
+    expect(peer.removed).to.equal(false);
+    expect(element.map === (peer as unknown)).to.equal(true);
+  });
+
+  it('loads resource ownership for an overlays record whose keys cannot be listed, then reports it unusable', async () => {
+    const gate = hold(loadMapOwnedFeatureRuntime, ownedRuntime);
+    const { element, peer } = await mount(el => {
+      el.controls = { attribution: false };
+      el.strings = { mapInitializationFailed: 'Overlay unavailable' };
+      el.overlays = new Proxy({}, { ownKeys() { throw new TypeError('unlistable keys'); } }) as never;
+    });
+    await waitUntil(() => gate.imports === 1, 'an unlistable overlays record must not pass as the empty default');
+    gate.release();
+    await waitUntil(() => text(element).includes('Overlay unavailable'));
+    expect(peer.sources.size).to.equal(0);
+    expect(peer.layers.size).to.equal(0);
   });
 });

@@ -230,6 +230,16 @@ describe('lr-map accepted geographic scene', () => {
     expect(propagation).to.deep.equal([[true, true, false], [true, true, false], [true, true, false]]);
   });
 
+  it('activates an interactive path row without a point position', async () => {
+    const { element } = await mount({ objects: [scenePath('route')] });
+    await expand(element); const events = activations(element);
+    const rows = rowButtons(element); expect(rows.length).to.equal(1);
+    rows[0]!.click();
+    expect(events.length).to.equal(1);
+    expect(Object.keys(events[0]!).sort()).to.deep.equal(['id', 'kind', 'source']);
+    expect([events[0]!.id, events[0]!.kind]).to.deep.equal(['route', 'path']);
+  });
+
   it('refuses an old rendered row after same-ID position or kind replacement before Lit paints', async () => {
     for (const next of [sceneMarker('target', 8), sceneModel('target')]) {
       const { element } = await mount({ objects: [sceneMarker('target', 2)] }); await expand(element);
