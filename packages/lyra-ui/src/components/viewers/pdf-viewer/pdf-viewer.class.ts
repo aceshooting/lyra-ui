@@ -542,6 +542,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
    *  `activeItemId` in that case so `<lr-virtual-list>` doesn't `scrollActiveIntoView()` back to a
    *  page boundary on every scroll-driven page crossing, fighting the user's own scroll. */
   @state() private scrollDrivenPage = false;
+  private firstVisiblePage = 1;
   private loadLibrary: (workerSrc?: string | null) => Promise<PdfJsApi | null> = loadPdfJs;
   private generation = 0;
   private pendingDocument?: { task: PdfLoadingTaskApi; retired: boolean };
@@ -827,6 +828,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
 
   private async load(): Promise<void> {
     const generation = ++this.generation;
+    this.firstVisiblePage = 1;
     this.retirePendingDocument();
     this.pageViewerState.advance();
     const signal = this.beginAbortableLoad();
@@ -2287,6 +2289,10 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     event.stopPropagation();
     if (this.loadState.kind !== 'ready') return;
     const next = this.clampPage(event.detail.start + 1);
+    // Measurement and viewport changes can move only the range's end. They must not undo a
+    // selected page while navigation or a same-task DOM move is still settling.
+    if (next === this.firstVisiblePage) return;
+    this.firstVisiblePage = next;
     if (next === this.page) return;
     this.scrollDrivenPage = true;
     this.page = next;

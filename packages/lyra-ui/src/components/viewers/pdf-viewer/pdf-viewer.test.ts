@@ -15,6 +15,7 @@ import {
   loadDocumentRenderer,
 } from "../document-viewer/registry.js";
 import type { LyraPageRail } from "../page-rail/page-rail.js";
+import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 import type { LyraPdfViewer } from "./pdf-viewer.js";
 import { TEXT_QUOTE_LIMITS } from "../../../internal/text-quote.js";
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
@@ -663,6 +664,37 @@ describe("lr-pdf-viewer", () => {
     }
   });
 
+  it('keeps the selected page when measurements change only the end of the visible range', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    installFakeLoader(el, fakeDocument(5));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, 'lr-virtual-list');
+      const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+      const range = (start: number, end: number): void => {
+        list.dispatchEvent(new CustomEvent('lr-visible-range-change', {
+          detail: { start, end }, bubbles: true, composed: true,
+        }));
+      };
+      range(0, 1);
+      await el.updateComplete;
+      el.page = 2;
+      await el.updateComplete;
+      range(0, 2);
+      await el.updateComplete;
+      expect(el.page, 'an end-only measurement change must not undo navigation').to.equal(2);
+      range(2, 3);
+      await el.updateComplete;
+      expect(el.page, 'crossing a page boundary still follows the scroll position').to.equal(3);
+      range(0, 1);
+      await el.updateComplete;
+      expect(el.page, 'scrolling back restores the first page').to.equal(1);
+    } finally {
+      restore();
+    }
+  });
+
   it('does not expose the internal virtual-list scroll event', async () => {
     const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
     installFakeLoader(el, fakeDocument(2));
@@ -1010,7 +1042,9 @@ describe("lr-pdf-viewer", () => {
       const snapshot = el.pageViewerSnapshot;
       host.append(el); // a move: disconnect and reconnect within one task
       await el.updateComplete;
-      await twoFrames();
+      const list = el.shadowRoot!.querySelector<LyraVirtualList>('lr-virtual-list')!;
+      await waitUntil(() => list.offsetForIndex(3) >= 900,
+        'all three 300px pages must be measured after the move');
       expect(fetches).to.equal(1);
       expect(el.page).to.equal(2);
       expect(el.pageViewerSnapshot.identity).to.equal(snapshot.identity);
@@ -1020,6 +1054,29 @@ describe("lr-pdf-viewer", () => {
       ).to.exist;
     } finally {
       window.fetch = original;
+      host.remove();
+    }
+  });
+
+  it('retains search matches and their next-page navigation after a same-task DOM move', async () => {
+    const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+    installFakeLoader(el, fakeDocument(3));
+    const restore = stubFetch();
+    const host = document.createElement('div');
+    document.body.append(host);
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitUntil(() => el.pageViewerSnapshot.status === 'ready');
+      expect(await el.search('page')).to.equal(2);
+      expect(el.page).to.equal(2);
+      host.append(el);
+      await el.updateComplete;
+      const changed = oneEvent(el, 'lr-search-change');
+      expect(await el.searchNext()).to.equal(true);
+      expect((await changed).detail).to.include({ query: 'page', matchCount: 2, activeIndex: 1 });
+      expect(el.page).to.equal(3);
+    } finally {
+      restore();
       host.remove();
     }
   });
