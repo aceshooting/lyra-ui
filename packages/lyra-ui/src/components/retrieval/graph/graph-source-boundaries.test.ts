@@ -32,6 +32,60 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
+for (const renderer of ['svg', 'canvas'] as const) {
+  it(`waits for the graphical peer when focusing an accepted source scene (${renderer})`, async () => {
+    const graph = document.createElement('lr-graph');
+    graph.renderer = renderer;
+    graph.sourcePageSize = 1;
+    graph.graphSource = source();
+    const gate = deferred<void>();
+    const seam = graph as unknown as {
+      loadLibrary(): Promise<unknown>;
+      sourceScene: { state: { scene?: { nodes: readonly { key: string }[] } } };
+    };
+    const load = seam.loadLibrary;
+    seam.loadLibrary = () => gate.promise.then(load);
+    await fixture(graph);
+    try {
+      let settled = false;
+      const focus = graph.focusNode('a').then(result => { settled = true; return result; });
+      await waitUntil(() => seam.sourceScene.state.scene?.nodes.some(row => row.key === 'node:a') === true, 'source scene accepted before the peer loads');
+      expect(graph.getAttribute('aria-busy')).to.equal('true');
+      expect(settled, 'acceptance must not discard focus while the renderer is loading').to.equal(false);
+      gate.resolve();
+      expect(await focus).to.equal(true);
+      expect(graph.getNodeScreenPosition('a') !== undefined).to.equal(true);
+      expect(graph.selectedNodeIds, 'camera focus does not select the node').to.deep.equal([]);
+    } finally { gate.resolve(); }
+  });
+}
+
+for (const interruption of ['source', 'view', 'disconnect'] as const) {
+  it(`revokes source focus while the peer loads after a ${interruption} change`, async () => {
+    const graph = document.createElement('lr-graph');
+    graph.sourcePageSize = 1;
+    graph.graphSource = source();
+    const gate = deferred<void>();
+    const seam = graph as unknown as {
+      loadLibrary(): Promise<unknown>;
+      sourceScene: { state: { scene?: { nodes: readonly { key: string }[] } } };
+    };
+    const load = seam.loadLibrary;
+    seam.loadLibrary = () => gate.promise.then(load);
+    await fixture(graph);
+    try {
+      const focus = graph.focusNode('a');
+      await waitUntil(() => seam.sourceScene.state.scene?.nodes.some(row => row.key === 'node:a') === true, 'source scene accepted');
+      if (interruption === 'source') graph.graphSource = undefined;
+      else if (interruption === 'view') graph.view = 'list';
+      else graph.remove();
+      gate.resolve();
+      expect(await focus, 'obsolete focus does not move the current camera').to.equal(false);
+      expect(graph.selectedNodeIds).to.deep.equal([]);
+    } finally { gate.resolve(); }
+  });
+}
+
 describe('graph source response boundaries', () => {
   const cases: readonly [string, unknown][] = [
     ['a null response', null],

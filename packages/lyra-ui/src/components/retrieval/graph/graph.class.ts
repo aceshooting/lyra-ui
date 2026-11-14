@@ -1194,6 +1194,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   // stubbed loader before the element ever connects -- matches map/docx-viewer's own
   // `loadLibrary` field/rationale exactly.
   private loadLibrary: () => Promise<D3Modules | null> = loadD3;
+  private libraryLoad?: Promise<void>;
   // Invalidates a lazy-load callback when this element disconnects/reconnects. A stale callback
   // must not rebuild a freshly reconnected graph from the previous mount's lifecycle.
   private loadGeneration = 0;
@@ -1691,7 +1692,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       return;
     }
     const generation = ++this.loadGeneration;
-    void this.loadLibrary().then(async (mods) => {
+    const pending = this.loadLibrary().then(async (mods) => {
       // Keep the server-rendered loading branch stable through Lit's first browser update. A
       // cached/fast d3 import may otherwise switch render() to SVG before declarative-shadow-DOM
       // hydration has claimed its markers, producing a mismatch and replacing the whole shadow
@@ -1722,7 +1723,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       // detached instance (disconnectedCallback's cleanup already ran).
       this.d3 = mods;
       this.rebuildSimulation();
-    });
+    }).finally(() => { if (this.libraryLoad === pending) this.libraryLoad = undefined; });
+    this.libraryLoad = pending;
   }
 
   override disconnectedCallback(): void {
@@ -2340,6 +2342,12 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   }
 
   private async focusSceneNode(id: string, options?: { zoom?: number }, currentSource: () => boolean = () => true): Promise<boolean> {
+    if (this.sourceMode && this.view === '2d' && this.libraryLoad) {
+      await this.libraryLoad;
+      if (!currentSource() || !this.isConnected || this.view !== '2d') return false;
+      await this.updateComplete;
+      if (!currentSource() || !this.isConnected || this.view !== '2d') return false;
+    }
     if (this.view !== '2d') {
       if (!this.isConnected) return false;
       await this.ensureSpatial();

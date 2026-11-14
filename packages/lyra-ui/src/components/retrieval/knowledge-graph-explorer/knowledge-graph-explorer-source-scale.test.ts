@@ -5,6 +5,8 @@ import './knowledge-graph-explorer.js';
 import type { LyraKnowledgeGraphExplorer } from './knowledge-graph-explorer.js';
 import type { LyraGraph, GraphSource } from '../graph/graph.class.js';
 import type { LyraGraphSourceQuery } from '../../../data-sources.js';
+import type { LyraPopover } from '../../overlays/overlay/popover.class.js';
+import type { LyraEntityCard } from '../entity-card/entity-card.class.js';
 type Explorer = LyraKnowledgeGraphExplorer & { graphSource: GraphSource | undefined; sourcePage: number; sourcePageSize: number; readonly sourceTotal: number | null; revealSourceKey(key: string): Promise<boolean> };
 function provider() {
  const ids = new Uint32Array(1_000_000); for(let i=0;i<ids.length;i++) ids[i]=i;
@@ -17,6 +19,41 @@ function provider() {
  return {source,queries,lookups,get scenes(){return scenes;},get read(){return read;}};
 }
 function graph(el: Explorer){return el.shadowRoot!.querySelector<LyraGraph>('[part="graph"]')!;}
+for (const renderer of ['svg', 'canvas'] as const) {
+  it(`opens source-backed graphical details and clears them on close (${renderer})`, async () => {
+    const data = provider();
+    const el = await fixture<Explorer>(html`<lr-knowledge-graph-explorer
+      view="2d" renderer=${renderer} .graphSource=${data.source}
+    ></lr-knowledge-graph-explorer>`);
+    const child = graph(el);
+    await child.updateComplete;
+    expect(data.queries.some(request => request.query.centerKey !== null), 'closed details do not request neighbors').to.equal(false);
+    const selections: unknown[] = [];
+    el.addEventListener('lr-selection-change', event => selections.push(event.detail));
+    el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(new CustomEvent('lr-entity-select', {
+      detail: { entityId: '9' }, bubbles: true, composed: true,
+    }));
+    const popover = el.shadowRoot!.querySelector<LyraPopover>('[part="detail-popover"]')!;
+    await waitUntil(() => popover.open && data.queries.some(request => request.query.centerKey === 'node:9'), 'source details open');
+    await el.updateComplete;
+    const card = el.shadowRoot!.querySelector<LyraEntityCard>('[part="detail-card"]')!;
+    await card.updateComplete;
+    expect(card.entity?.id).to.equal('9');
+    expect(card.shadowRoot!.textContent).to.include('Node 9');
+    expect(el.selectedNodeId).to.equal('9');
+    expect(selections).to.deep.equal([{ selectedNodeId: '9', selectedNodeIds: ['9'], selectedEdgeIds: [] }]);
+    const position = child.getNodeScreenPosition('9');
+    expect(position !== undefined, 'the selected node belongs to the rendered scene').to.equal(true);
+    expect(Number.isFinite(position?.x) && Number.isFinite(position?.y)).to.equal(true);
+    expect(child.renderer).to.equal(renderer);
+
+    popover.hide();
+    await waitUntil(() => el.selectedNodeId === null);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="detail-neighbors"]').length).to.equal(0);
+  });
+}
+
 async function ready(el: Explorer){await waitUntil(()=>el.sourceTotal!==undefined&&el.sourceTotal!==null,'source ready',{timeout:3000});await graph(el).updateComplete;}
 it('composes one global navigator and forwards million-node and edge reveal',async()=>{
  const data=provider();const el=await fixture<Explorer>(html`<lr-knowledge-graph-explorer view="list" .graphSource=${data.source}></lr-knowledge-graph-explorer>`);await ready(el);

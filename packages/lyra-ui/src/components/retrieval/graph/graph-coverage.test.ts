@@ -1,6 +1,7 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { twoFrames } from '../../../../test/frames.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { LyraGraph } from './graph.js';
 import type { LyraGraphSource, LyraGraphRecord, LyraSourceRecord, LyraGraphSceneRequest } from '../../../data-sources.js';
 import type { LyraGraphNode, LyraGraphEdge } from './graph.js';
@@ -174,6 +175,33 @@ describe('graph canvas renderer overlays and screen positions', () => {
     { id: 'b', label: 'B', radius: 12 },
   ];
 
+  it('keeps the label, expand badge and focus halo attached during a native node drag', async () => {
+    const el = await fixture<LyraGraph>(html`<lr-graph renderer="canvas" seed="7" width="400" height="300"
+      style="inline-size:400px;block-size:300px" focus-node-id="moving"
+      .nodes=${[{ id: 'moving', label: 'Moving label', radius: 12, expandable: true }]}
+    ></lr-graph>`);
+    await waitUntil(() => el.getNodeScreenPosition('moving') !== undefined && paintedPixels(el, 'moving', 15.5, 21, 50, 130) > 0,
+      'the seeded node and its focus halo are painted', { timeout: 5000 });
+    const start = el.getNodeScreenPosition('moving')!;
+    const box = el.getBoundingClientRect();
+    const x = Math.round(box.left + start.x), y = Math.round(box.top + start.y);
+    try {
+      await sendMouse({ type: 'move', position: [x, y] });
+      await sendMouse({ type: 'down', button: 'left' });
+      await sendMouse({ type: 'move', position: [x + 70, y + 45] });
+      await waitUntil(() => {
+        const point = el.getNodeScreenPosition('moving')!;
+        return point.x > start.x + 60 && point.y > start.y + 35 &&
+          paintedPixels(el, 'moving', 15.5, 21, 50, 130) > 0 &&
+          paintedPixels(el, 'moving', 14.5, 17, -60, -30) > 0 &&
+          paintedPixels(el, 'moving', 24, 60, -10, 10) > 0;
+      }, 'the dragged node and each decoration paint at the new position');
+      expect(paintedPixels(el, 'moving', 15.5, 21, 50, 130), 'focus halo moved').to.be.greaterThan(0);
+      expect(paintedPixels(el, 'moving', 14.5, 17, -60, -30), 'expand badge moved').to.be.greaterThan(0);
+      expect(paintedPixels(el, 'moving', 24, 60, -10, 10), 'label moved').to.be.greaterThan(0);
+    } finally { await resetMouse(); }
+  });
+
   it('paints the focus halo and expand badge where the settled nodes are, and moves the halo with focus-node-id', async () => {
     const el = await fixture<LyraGraph>(html`<lr-graph renderer="canvas" seed="7" node-labels="none" width="400" height="300"
       style="inline-size:400px;block-size:300px" focus-node-id="b" .nodes=${canvasNodes}></lr-graph>`);
@@ -186,7 +214,8 @@ describe('graph canvas renderer overlays and screen positions', () => {
     el.focusNodeId = 'a';
     await waitUntil(() => paintedPixels(el, 'a', 15.5, 21, 50, 130) > 0 && paintedPixels(el, 'b', 15.5, 21, 50, 130) === 0, 'halo follows focus-node-id', { timeout: 5000 });
     el.focusNodeId = null;
-    await waitUntil(() => paintedPixels(el, 'a', 15.5, 21, 50, 130) === 0, 'halo removed with focus-node-id', { timeout: 5000 });
+    await waitUntil(() => paintedPixels(el, 'a', 15.5, 21, 50, 130) === 0 && paintedPixels(el, 'a', 14.5, 17, -60, -30) > 0,
+      'halo removed while the expand badge remains painted', { timeout: 5000 });
     expect(paintedPixels(el, 'a', 14.5, 17, -60, -30), 'the expandable node has an upper-right badge').to.be.greaterThan(0);
     expect(paintedPixels(el, 'b', 14.5, 17, -60, -30), 'a plain node has no badge').to.equal(0);
     el.nodes = canvasNodes.map(node => ({ ...node, expandable: false }));

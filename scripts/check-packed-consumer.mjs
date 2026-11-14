@@ -326,9 +326,9 @@ const bundleEntries = {
   },
   graph: {
     fixture: 'optional',
-    // Retiring stale geometry observer deliveries measures 460,762 raw bytes across the same
-    // 14 files; the next 64-byte boundary leaves 38 bytes.
-    maxRawBytes: 460_800,
+    // Source focus retains its intent until the optional renderer is ready: 461,047 measured
+    // bytes across 14 files, bounded by the next 64-byte boundary.
+    maxRawBytes: 461_056,
   },
 };
 
