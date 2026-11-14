@@ -277,7 +277,7 @@ describe('lr-flow-canvas gesture outcomes', () => {
     const output = addHandle(el, 'a', 'output');
     output.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 94, clientX: 0, clientY: 0, bubbles: true, composed: true }));
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="connection-line"]')).to.equal(null);
+    expect(el.shadowRoot!.querySelector('[part="connection-line"]') === null).to.equal(true);
   });
 
   it('clears the hovered-invalid marker once the pointer moves to a valid target', async () => {

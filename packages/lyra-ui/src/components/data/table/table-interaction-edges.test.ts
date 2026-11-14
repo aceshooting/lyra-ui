@@ -71,7 +71,7 @@ describe('lr-table interaction edges', () => {
       t.columns = columns;
       t.rows = three;
       t.expansionMode = 'single';
-      t.rowDetail = (r: Row) => html`<p>${r.name} detail</p>`;
+      t.expandedContent = (r: Row) => html`<p>${r.name} detail</p>`;
     });
     el.expandedRowKeys = new Set(['c', 'a']);
     await el.updateComplete;
@@ -147,7 +147,7 @@ describe('lr-table row keys and editor triggers', () => {
     const cell = el.shadowRoot!.querySelector<HTMLElement>('[part="row"] [part="cell"]')!;
     cell.querySelector('button')!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
     await el.updateComplete;
-    expect(cell.querySelector('[part="cell-editor"]')).to.equal(null);
+    expect(cell.querySelector('[part="cell-editor"]') === null).to.equal(true);
     cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
     await el.updateComplete;
     expect(cell.querySelector<HTMLInputElement>('[part="cell-editor"]')?.value).to.equal('Alpha');

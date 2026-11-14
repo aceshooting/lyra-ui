@@ -55,6 +55,6 @@ describe('lr-histogram appendSamples edges', () => {
     expect(limit?.textContent).to.include('10,000 samples');
     el.values = [1, 2, 3];
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="limit"]')).to.equal(null);
+    expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
   });
 });

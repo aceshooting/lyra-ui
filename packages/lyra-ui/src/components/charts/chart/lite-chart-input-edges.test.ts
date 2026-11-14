@@ -1,7 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './lite-chart.js';
 import type { LyraLiteChart } from './lite-chart.class.js';
-import type { LyraChartFormatterContext } from './chart.class.js';
+import type { LyraChartFormatter, LyraChartFormatterContext } from './chart.class.js';
 import type { LyraPreparedSeriesData } from '../../../utilities/data-preparation.js';
 
 type PreparedLite = LyraLiteChart & { preparedData: LyraPreparedSeriesData | null };
@@ -77,7 +77,7 @@ describe('lr-lite-chart prepared series edges', () => {
   it('centers a zero-width x domain, describes flat and falling series, and ignores appendData', async () => {
     const el = await fixture<PreparedLite>(html`<lr-lite-chart type="line" style="width:400px" .preparedData=${prepared()}></lr-lite-chart>`);
     await settle(el);
-    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="point"]').length === 3, () => `points ${el.shadowRoot!.querySelectorAll('[part="point"]').length}`);
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="point"]').length === 3, 'three prepared points render');
     const description = el.shadowRoot!.querySelector('[part="description"]')!.textContent!;
     expect(description).to.match(/flat/i);
     expect(description).to.match(/decreas/i);
@@ -98,17 +98,18 @@ describe('lr-lite-chart prepared series edges', () => {
   it('exports prepared observations through the formatter, falling back to the raw value', async () => {
     const el = await fixture<PreparedLite>(html`<lr-lite-chart type="line" style="width:400px" .preparedData=${prepared()}></lr-lite-chart>`);
     await settle(el);
-    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="point"]').length === 3, () => `points ${el.shadowRoot!.querySelectorAll('[part="point"]').length}`);
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="point"]').length === 3, 'three prepared points render');
     const contexts: LyraChartFormatterContext[] = [];
-    el.formatter = (context) => {
+    // An untyped consumer may return nothing for a value.
+    el.formatter = ((context: LyraChartFormatterContext) => {
       contexts.push(context);
       return context.datasetIndex === 0 ? `~${context.value}` : undefined;
-    };
+    }) as LyraChartFormatter;
     const rows = el.exportData('csv').split('\r\n');
     expect(rows).to.have.length(4);
     expect(rows[1]).to.include('~3');
     expect(contexts.filter((context) => context.surface === 'export').map((context) => context.seriesLabel)).to.deep.equal(['Flat', 'Falling', 'Falling']);
-    el.formatter = () => undefined;
+    el.formatter = (() => undefined) as unknown as LyraChartFormatter;
     expect(el.exportData('csv').split('\r\n')[1]!.endsWith(',3,')).to.equal(true);
     el.formatter = undefined;
     expect(el.exportData('csv').split('\r\n')[1]!.endsWith(',3,')).to.equal(true);

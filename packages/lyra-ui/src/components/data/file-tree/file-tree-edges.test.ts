@@ -70,7 +70,7 @@ describe('lr-file-tree edges', () => {
     await waitUntil(() => el.shadowRoot!.querySelectorAll('[part~="source-row"]').length === 2, 'source rows render', { timeout: 2000 });
     expect(el.expandAll()).to.equal(undefined);
     el.collapseAll();
-    expect(el.shadowRoot!.querySelector('lr-tree')).to.equal(null);
+    expect(el.shadowRoot!.querySelector('lr-tree') === null).to.equal(true);
   });
 
   it('drops unknown statuses and invalid counts from provider rows', async () => {
