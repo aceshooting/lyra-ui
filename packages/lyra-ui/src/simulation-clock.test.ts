@@ -444,3 +444,117 @@ it('accepts an explicitly absent subscription signal', () => {
     expect(values).to.deep.equal([0, 10]);
   } finally { clock.dispose(); }
 });
+
+for (const mode of ['replay', 'live'] as const) {
+  for (const failure of ['throw', 'NaN', 'infinity'] as const) {
+    it(`contains a late ${failure} ${mode} sample and resumes after the scheduler recovers`, () => {
+      const time = scheduler(), errors: unknown[] = [], values: number[] = [];
+      let failing = false;
+      const read = (kind: 'monotonicNow' | 'epochNow') => {
+        if (!failing) return time.api[kind]();
+        if (failure === 'throw') throw new Error('Time source unavailable');
+        return failure === 'NaN' ? NaN : Infinity;
+      };
+      const clock = createSimulationClock({ range: [0, 10000], instant: 0 }, {
+        scheduler: { ...time.api, monotonicNow: () => read('monotonicNow'), epochNow: () => read('epochNow') },
+        onSubscriberError: error => errors.push(error),
+      });
+      try {
+        clock.setMode(mode);
+        clock.subscribe(value => values.push(value.instant));
+        if (mode === 'replay') clock.play();
+        const before = clock.snapshot, delivered = [...values];
+        expect(time.jobs.size).to.equal(1);
+        time.advance(25);
+        failing = true;
+        expect(() => clock.currentInstant()).to.throw(SimulationClockError, 'invalid-capabilities');
+        time.frame();
+        expect(clock.snapshot).to.equal(before);
+        expect(values).to.deep.equal(delivered);
+        expect(errors.length).to.equal(1);
+        expect(errors[0]).to.be.instanceOf(SimulationClockError);
+        expect((errors[0] as SimulationClockError).code).to.equal('invalid-capabilities');
+        expect(time.jobs.size).to.equal(0);
+        failing = false;
+        clock.setRate(2);
+        expect(values.at(-1)).to.equal(mode === 'replay' ? 25 : 1025);
+        expect(time.jobs.size).to.equal(1);
+        time.advance(10); time.frame();
+        expect(values.at(-1)).to.equal(mode === 'replay' ? 45 : 1035);
+        expect(errors.length).to.equal(1);
+      } finally { failing = false; clock.dispose(); }
+      expect(time.jobs.size).to.equal(0);
+    });
+  }
+}
+
+it('retains a delivered tick when scheduling its successor fails and resumes without duplicate delivery', () => {
+  const time = scheduler(), errors: unknown[] = [], values: number[] = [];
+  let failing = false;
+  const clock = createSimulationClock({ range: [0, 1000], instant: 0 }, {
+    scheduler: { ...time.api, requestFrame: callback => {
+      if (failing) throw new Error('Frame queue unavailable');
+      return time.api.requestFrame(callback);
+    } },
+    onSubscriberError: error => errors.push(error),
+  });
+  try {
+    clock.subscribe(value => values.push(value.instant));
+    clock.play();
+    failing = true;
+    time.advance(20); time.frame();
+    expect(values).to.deep.equal([0, 0, 20]);
+    expect(clock.snapshot.instant).to.equal(20);
+    expect(errors.length).to.equal(1);
+    expect(errors[0]).to.be.instanceOf(SimulationClockError);
+    expect((errors[0] as SimulationClockError).code).to.equal('invalid-capabilities');
+    expect(time.jobs.size).to.equal(0);
+    failing = false;
+    clock.play();
+    expect(values).to.deep.equal([0, 0, 20]);
+    expect(time.jobs.size).to.equal(1);
+    time.advance(10); time.frame();
+    expect(values).to.deep.equal([0, 0, 20, 30]);
+    expect(errors.length).to.equal(1);
+  } finally { failing = false; clock.dispose(); }
+  expect(time.jobs.size).to.equal(0);
+});
+
+it('rejects missing default frame capabilities without changing state and retries after restoration', () => {
+  const descriptor = Object.getOwnPropertyDescriptor(window, 'requestAnimationFrame')!;
+  const clock = createSimulationClock({ range: [0, 1000], instant: 0 });
+  try {
+    const before = clock.snapshot;
+    try {
+      Object.defineProperty(window, 'requestAnimationFrame', { configurable: true, value: undefined });
+      expect(() => clock.play()).to.throw(SimulationClockError, 'invalid-capabilities');
+      expect(clock.snapshot).to.equal(before);
+    } finally { Object.defineProperty(window, 'requestAnimationFrame', descriptor); }
+    clock.play();
+    expect(clock.snapshot.playing).to.equal(true);
+    expect(clock.snapshot.reason).to.equal('play');
+    expect(clock.snapshot.revision).to.equal(before.revision + 1);
+  } finally { clock.dispose(); }
+});
+
+it('cannot restart a clock disposed by its scheduler during a playback command', () => {
+  const time = scheduler();
+  let samplingCalls = 0;
+  const values: number[] = [];
+  const clock = createSimulationClock({ range: [0, 1000], instant: 12 }, { scheduler: {
+    ...time.api,
+    monotonicNow: () => { samplingCalls++; clock.dispose(); return time.api.monotonicNow(); },
+  } });
+  try {
+    clock.subscribe(value => values.push(value.instant));
+    clock.play();
+    expect(samplingCalls).to.equal(1);
+    expect(clock.snapshot.instant).to.equal(12);
+    expect(clock.snapshot.playing).to.equal(false);
+    expect(clock.snapshot.revision).to.equal(0);
+    expect(clock.currentInstant()).to.equal(12);
+    expect(values).to.deep.equal([12]);
+    expect(time.jobs.size).to.equal(0);
+    expect(() => clock.play()).to.throw(SimulationClockError, 'disposed');
+  } finally { clock.dispose(); }
+});
