@@ -176,3 +176,63 @@ describe('intersection observer capability boundaries', () => {
     expect(BoundaryObserver.instances.length).to.equal(count + 1);
   });
 });
+
+describe('intersection observer option and lifecycle edges', () => {
+  let originalObserver: typeof IntersectionObserver;
+  beforeEach(() => {
+    originalObserver = window.IntersectionObserver;
+    BoundaryObserver.instances = [];
+    window.IntersectionObserver = BoundaryObserver;
+  });
+  afterEach(() => { window.IntersectionObserver = originalObserver; });
+
+  it('falls back to a zero threshold when every listed threshold is out of range', async () => {
+    await fixture<LyraIntersectionObserver>(html`<lr-intersection-observer threshold="1.5 -1 nope"><div>Target</div></lr-intersection-observer>`);
+    await aTimeout(0);
+    expect(latestObserver().thresholds).to.deep.equal([0]);
+  });
+
+  it('ignores a callback delivered to an observer retired by disconnection', async () => {
+    const wrapper = await fixture<LyraIntersectionObserver>(html`<lr-intersection-observer><div>Target</div></lr-intersection-observer>`);
+    await aTimeout(0);
+    const observer = latestObserver();
+    const target = wrapper.firstElementChild!;
+    let events = 0;
+    wrapper.addEventListener('lr-intersect', () => (events += 1));
+    wrapper.addEventListener('lr-intersection', () => (events += 1));
+    wrapper.remove();
+    observer.callback([entry(target)], observer);
+    expect(events).to.equal(0);
+  });
+
+  it('stops a native batch once an item listener disconnects the wrapper', async () => {
+    const wrapper = await fixture<LyraIntersectionObserver>(html`<lr-intersection-observer><div>One</div><div>Two</div></lr-intersection-observer>`);
+    await aTimeout(0);
+    const observer = latestObserver();
+    const [first, second] = [...wrapper.children];
+    const items: string[] = [];
+    let batches = 0;
+    wrapper.addEventListener('lr-intersect', (event) => {
+      items.push(event.detail.entry.target.textContent ?? '');
+      wrapper.remove();
+    });
+    wrapper.addEventListener('lr-intersection', () => (batches += 1));
+    observer.callback([entry(first!), entry(second!)], observer);
+    expect(items).to.deep.equal(['One']);
+    expect(batches).to.equal(0);
+  });
+
+  it('disconnects an observer that could not observe any target', async () => {
+    class RejectingObserver extends BoundaryObserver {
+      disconnects = 0;
+      override observe(): void { throw new TypeError('target rejected'); }
+      override disconnect(): void { this.disconnects += 1; super.disconnect(); }
+    }
+    window.IntersectionObserver = RejectingObserver;
+    await fixture<LyraIntersectionObserver>(html`<lr-intersection-observer><div>Target</div></lr-intersection-observer>`);
+    await aTimeout(0);
+    const observer = latestObserver() as RejectingObserver;
+    expect(observer.observed.length).to.equal(0);
+    expect(observer.disconnects).to.be.greaterThan(0);
+  });
+});

@@ -89,3 +89,14 @@ it('closes safely when a caller-provided non-editor anchor rejects focus restora
     Reflect.deleteProperty(anchor, 'focus');
   }
 });
+
+it('ignores a listbox click that lands outside every option', async () => {
+  const { viewer } = await focusedPopover();
+  let selections = 0;
+  viewer.addEventListener('lr-mention-select', () => (selections += 1));
+  const listbox = viewer.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!;
+  listbox.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+  await viewer.updateComplete;
+  expect(selections).to.equal(0);
+  expect(viewer.open).to.equal(true);
+});

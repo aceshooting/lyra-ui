@@ -46,3 +46,31 @@ it('re-arms observation when an observer implementation cannot drain pending rec
     window.MutationObserver = NativeObserver;
   }
 });
+
+it('disconnects its observer when every slotted target rejects observation', async () => {
+  const NativeObserver = window.MutationObserver;
+  let disconnects = 0;
+  let rejected = 0;
+  class RejectingObserver extends NativeObserver {
+    override observe(): void {
+      rejected += 1;
+      throw new TypeError('target rejected');
+    }
+    override disconnect(): void {
+      disconnects += 1;
+      super.disconnect();
+    }
+  }
+  window.MutationObserver = RejectingObserver;
+  let viewer: LyraMutationObserver | undefined;
+  try {
+    viewer = await fixture<LyraMutationObserver>(html`<lr-mutation-observer child-list><div>Target</div></lr-mutation-observer>`);
+    await viewer.updateComplete;
+    await Promise.resolve();
+    expect(rejected).to.be.greaterThan(0);
+    expect(disconnects, 'an observer with no accepted target is retired').to.be.greaterThan(0);
+  } finally {
+    viewer?.remove();
+    window.MutationObserver = NativeObserver;
+  }
+});

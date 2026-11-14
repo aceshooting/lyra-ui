@@ -272,6 +272,7 @@
         "tests": [
           "src/components/layout/details/accordion.test.ts",
           "src/components/layout/details/details-coverage.test.ts",
+          "src/components/layout/details/details-lifecycle-edges.test.ts",
           "src/components/layout/details/details.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -479,6 +480,7 @@
         "tests": [
           "src/components/layout/details/accordion.test.ts",
           "src/components/layout/details/details-coverage.test.ts",
+          "src/components/layout/details/details-lifecycle-edges.test.ts",
           "src/components/layout/details/details.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -2465,8 +2467,10 @@
           "src/components/layout/app-rail/app-rail-item-top-layer.test.ts",
           "src/components/layout/app-rail/app-rail-item.test.ts",
           "src/components/layout/app-rail/app-rail-mobile-shadow.test.ts",
+          "src/components/layout/app-rail/app-rail-peek-focus.test.ts",
           "src/components/layout/app-rail/app-rail-remediation.test.ts",
           "src/components/layout/app-rail/app-rail-resize-keys.test.ts",
+          "src/components/layout/app-rail/app-rail-resizer-keys-ignored.test.ts",
           "src/components/layout/app-rail/app-rail-resizer-position-reduced-motion.test.ts",
           "src/components/layout/app-rail/app-rail-resizer-position.test.ts",
           "src/components/layout/app-rail/app-rail-scale.test.ts",
@@ -2918,8 +2922,10 @@
           "src/components/layout/app-rail/app-rail-item-top-layer.test.ts",
           "src/components/layout/app-rail/app-rail-item.test.ts",
           "src/components/layout/app-rail/app-rail-mobile-shadow.test.ts",
+          "src/components/layout/app-rail/app-rail-peek-focus.test.ts",
           "src/components/layout/app-rail/app-rail-remediation.test.ts",
           "src/components/layout/app-rail/app-rail-resize-keys.test.ts",
+          "src/components/layout/app-rail/app-rail-resizer-keys-ignored.test.ts",
           "src/components/layout/app-rail/app-rail-resizer-position-reduced-motion.test.ts",
           "src/components/layout/app-rail/app-rail-resizer-position.test.ts",
           "src/components/layout/app-rail/app-rail-scale.test.ts",
@@ -5945,6 +5951,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/breadcrumb/breadcrumb-item.test.ts",
+          "src/components/layout/breadcrumb/breadcrumb-separator-sources.test.ts",
           "src/components/layout/breadcrumb/breadcrumb.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -6157,6 +6164,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/breadcrumb/breadcrumb-item.test.ts",
+          "src/components/layout/breadcrumb/breadcrumb-separator-sources.test.ts",
           "src/components/layout/breadcrumb/breadcrumb.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -7052,6 +7060,7 @@
         "tests": [
           "src/components/forms/button/button-barred-validity.test.ts",
           "src/components/forms/button/button-icon-only-live-resize.test.ts",
+          "src/components/forms/button/button-label-activation.test.ts",
           "src/components/forms/button/button-label-layout.test.ts",
           "src/components/forms/button/button-loading.test.ts",
           "src/components/forms/button/button-remediation.test.ts",
@@ -8251,6 +8260,7 @@
         "tests": [
           "src/components/layout/carousel/carousel-between-page-starts.test.ts",
           "src/components/layout/carousel/carousel-item.test.ts",
+          "src/components/layout/carousel/carousel-navigation-focus.test.ts",
           "src/components/layout/carousel/carousel-remediation.test.ts",
           "src/components/layout/carousel/carousel.test.ts"
         ],
@@ -8435,6 +8445,7 @@
         "tests": [
           "src/components/layout/carousel/carousel-between-page-starts.test.ts",
           "src/components/layout/carousel/carousel-item.test.ts",
+          "src/components/layout/carousel/carousel-navigation-focus.test.ts",
           "src/components/layout/carousel/carousel-remediation.test.ts",
           "src/components/layout/carousel/carousel.test.ts"
         ],
@@ -10618,6 +10629,7 @@
         "tests": [
           "src/components/overlays/chip/chip-coverage.test.ts",
           "src/components/overlays/chip/chip-group-coverage.test.ts",
+          "src/components/overlays/chip/chip-group-focus-loss.test.ts",
           "src/components/overlays/chip/chip-group.test.ts",
           "src/components/overlays/chip/chip-label-observation-scale.test.ts",
           "src/components/overlays/chip/chip-remediation.test.ts",
@@ -10798,6 +10810,7 @@
         "tests": [
           "src/components/overlays/chip/chip-coverage.test.ts",
           "src/components/overlays/chip/chip-group-coverage.test.ts",
+          "src/components/overlays/chip/chip-group-focus-loss.test.ts",
           "src/components/overlays/chip/chip-group.test.ts",
           "src/components/overlays/chip/chip-label-observation-scale.test.ts",
           "src/components/overlays/chip/chip-remediation.test.ts",
@@ -12427,6 +12440,7 @@
         "tests": [
           "src/components/forms/combobox/combobox-catalog.test.ts",
           "src/components/forms/combobox/combobox-form-lifecycle.test.ts",
+          "src/components/forms/combobox/combobox-live-option-writes.test.ts",
           "src/components/forms/combobox/combobox-projection.test.ts",
           "src/components/forms/combobox/combobox-refresh.test.ts",
           "src/components/forms/combobox/combobox-remediation.test.ts",
@@ -12655,6 +12669,7 @@
           "src/components/layout/command-palette/command-palette-coverage.test.ts",
           "src/components/layout/command-palette/command-palette-input-limit.test.ts",
           "src/components/layout/command-palette/command-palette-native-scroll.test.ts",
+          "src/components/layout/command-palette/command-palette-noop-writes.test.ts",
           "src/components/layout/command-palette/command-palette-remediation.test.ts",
           "src/components/layout/command-palette/command-palette-scale.test.ts",
           "src/components/layout/command-palette/command-palette-search-sizing.test.ts",
@@ -14301,6 +14316,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/overlays/context-menu/context-menu-anchor-lifecycle.test.ts",
+          "src/components/overlays/context-menu/context-menu-gesture-edges.test.ts",
           "src/components/overlays/context-menu/context-menu-resize-anchor.test.ts",
           "src/components/overlays/context-menu/context-menu-stable-anchor.test.ts",
           "src/components/overlays/context-menu/context-menu.test.ts"
@@ -15076,6 +15092,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/utility/copy-button/copy-button-composition.test.ts",
+          "src/components/utility/copy-button/copy-button-disabled-trigger.test.ts",
           "src/components/utility/copy-button/copy-button-remediation.test.ts",
           "src/components/utility/copy-button/copy-button-size.test.ts",
           "src/components/utility/copy-button/copy-button.test.ts"
@@ -15262,6 +15279,7 @@
         "tests": [
           "src/components/forms/country-picker/country-picker-register.test.ts",
           "src/components/forms/country-picker/country-picker-scale.test.ts",
+          "src/components/forms/country-picker/country-picker-value-normalization.test.ts",
           "src/components/forms/country-picker/country-picker.integration.test.ts",
           "src/components/forms/country-picker/country-picker.test.ts"
         ],
@@ -15826,6 +15844,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/dashboard-grid/dashboard-grid-coverage.test.ts",
+          "src/components/layout/dashboard-grid/dashboard-grid-input-edges.test.ts",
           "src/components/layout/dashboard-grid/dashboard-grid-register.test.ts",
           "src/components/layout/dashboard-grid/dashboard-grid-remediation.test.ts",
           "src/components/layout/dashboard-grid/dashboard-grid.test.ts",
@@ -16522,6 +16541,7 @@
           "src/components/forms/date-picker/date-input-public-value-boundaries.test.ts",
           "src/components/forms/date-picker/date-input-rendering-a11y.test.ts",
           "src/components/forms/date-picker/date-input.test.ts",
+          "src/components/forms/date-picker/date-picker-nullish-projections.test.ts",
           "src/components/forms/date-picker/date-picker-readonly-periods.test.ts",
           "src/components/forms/date-picker/date-picker-remediation.test.ts",
           "src/components/forms/date-picker/date-picker-rendering-a11y.test.ts",
@@ -16736,6 +16756,7 @@
           "src/components/forms/date-picker/date-input-public-value-boundaries.test.ts",
           "src/components/forms/date-picker/date-input-rendering-a11y.test.ts",
           "src/components/forms/date-picker/date-input.test.ts",
+          "src/components/forms/date-picker/date-picker-nullish-projections.test.ts",
           "src/components/forms/date-picker/date-picker-readonly-periods.test.ts",
           "src/components/forms/date-picker/date-picker-remediation.test.ts",
           "src/components/forms/date-picker/date-picker-rendering-a11y.test.ts",
@@ -16947,6 +16968,7 @@
         "tests": [
           "src/components/layout/details/accordion.test.ts",
           "src/components/layout/details/details-coverage.test.ts",
+          "src/components/layout/details/details-lifecycle-edges.test.ts",
           "src/components/layout/details/details.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -17400,6 +17422,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/utility/diff-view/diff-line-diff.test.ts",
+          "src/components/utility/diff-view/diff-view-highlight-resolution.test.ts",
           "src/components/utility/diff-view/diff-view-scale.test.ts",
           "src/components/utility/diff-view/diff-view.test.ts"
         ],
@@ -17624,8 +17647,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/dock-panel/dock-panel-remediation.test.ts",
-              "test": "leaves modified arrows to the browser",
+              "file": "src/components/layout/dock-panel/dock-panel-gesture-edges.test.ts",
+              "test": "skips the remaining resize events when an lr-resize listener collapses the panel",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -17746,6 +17769,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/dock-panel/dock-panel-gesture-edges.test.ts",
           "src/components/layout/dock-panel/dock-panel-rail.test.ts",
           "src/components/layout/dock-panel/dock-panel-remediation.test.ts",
           "src/components/layout/dock-panel/dock-panel.test.ts"
@@ -19649,8 +19673,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/overlays/overlay/overlay-closed-layout.test.ts",
-              "test": "keeps a settled-closed ${tag} popup out of the scrollable layout after a resize",
+              "file": "src/components/overlays/overlay/dropdown-sync-reposition.test.ts",
+              "test": "re-syncs the open popup width when sync changes while open",
               "kind": "320px allocation test signal"
             }
           ]
@@ -19763,6 +19787,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/overlays/overlay/dropdown-dialog-position.test.ts",
+          "src/components/overlays/overlay/dropdown-sync-reposition.test.ts",
           "src/components/overlays/overlay/dropdown.test.ts",
           "src/components/overlays/overlay/overlay-closed-layout.test.ts",
           "src/components/overlays/overlay/overlay-public-lifecycle.test.ts",
@@ -19785,6 +19810,7 @@
           "src/components/overlays/overlay/tooltip-lifecycle.test.ts",
           "src/components/overlays/overlay/tooltip-placement-focus-recovery.test.ts",
           "src/components/overlays/overlay/tooltip-placement-recovery.test.ts",
+          "src/components/overlays/overlay/tooltip-property-normalization.test.ts",
           "src/components/overlays/overlay/tooltip-top-layer.test.ts",
           "src/components/overlays/overlay/tooltip-visibility.test.ts",
           "src/components/overlays/overlay/tooltip.test.ts"
@@ -20003,6 +20029,7 @@
           "src/components/layout/menu/menu-content-contract.test.ts",
           "src/components/layout/menu/menu-coverage-gaps.test.ts",
           "src/components/layout/menu/menu-coverage.test.ts",
+          "src/components/layout/menu/menu-edge-interactions.test.ts",
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
@@ -22392,6 +22419,7 @@
           "src/components/utility/export-button/csv.test.ts",
           "src/components/utility/export-button/export-button-closed-layout.test.ts",
           "src/components/utility/export-button/export-button-collection-boundaries.test.ts",
+          "src/components/utility/export-button/export-button-menu-toggling.test.ts",
           "src/components/utility/export-button/export-button.test.ts",
           "src/components/utility/export-button/positioning-strategy.test.ts"
         ],
@@ -27806,6 +27834,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/utility/icon/dompurify-loader.test.ts",
+          "src/components/utility/icon/icon-superseded-loads.test.ts",
           "src/components/utility/icon/icon.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -28948,6 +28977,7 @@
         "tests": [
           "src/components/forms/input/field-appearance-parity.test.ts",
           "src/components/forms/input/input-family-locale.test.ts",
+          "src/components/forms/input/input-native-value-views.test.ts",
           "src/components/forms/input/input-remediation.test.ts",
           "src/components/forms/input/input-required.test.ts",
           "src/components/forms/input/input.test.ts",
@@ -34088,6 +34118,7 @@
           "src/components/layout/menu/menu-content-contract.test.ts",
           "src/components/layout/menu/menu-coverage-gaps.test.ts",
           "src/components/layout/menu/menu-coverage.test.ts",
+          "src/components/layout/menu/menu-edge-interactions.test.ts",
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
@@ -34343,6 +34374,7 @@
           "src/components/layout/menu/menu-content-contract.test.ts",
           "src/components/layout/menu/menu-coverage-gaps.test.ts",
           "src/components/layout/menu/menu-coverage.test.ts",
+          "src/components/layout/menu/menu-edge-interactions.test.ts",
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
@@ -34542,6 +34574,7 @@
           "src/components/layout/menu/menu-content-contract.test.ts",
           "src/components/layout/menu/menu-coverage-gaps.test.ts",
           "src/components/layout/menu/menu-coverage.test.ts",
+          "src/components/layout/menu/menu-edge-interactions.test.ts",
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
@@ -34773,6 +34806,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/menubar/menubar-dynamic-ownership.test.ts",
+          "src/components/layout/menubar/menubar-expanded-state.test.ts",
           "src/components/layout/menubar/menubar-item-coverage.test.ts",
           "src/components/layout/menubar/menubar-item.test.ts",
           "src/components/layout/menubar/menubar-reconcile-cost.test.ts",
@@ -34991,6 +35025,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/menubar/menubar-dynamic-ownership.test.ts",
+          "src/components/layout/menubar/menubar-expanded-state.test.ts",
           "src/components/layout/menubar/menubar-item-coverage.test.ts",
           "src/components/layout/menubar/menubar-item.test.ts",
           "src/components/layout/menubar/menubar-reconcile-cost.test.ts",
@@ -36638,11 +36673,14 @@
           "src/components/layout/multi-split/multi-split-initialization-boundaries.test.ts",
           "src/components/layout/multi-split/multi-split-modal-layering.test.ts",
           "src/components/layout/multi-split/multi-split-native-close.test.ts",
+          "src/components/layout/multi-split/multi-split-pane-intent-noop.test.ts",
           "src/components/layout/multi-split/multi-split-panel-collapse.test.ts",
           "src/components/layout/multi-split/multi-split-panel-ownership.test.ts",
           "src/components/layout/multi-split/multi-split-pending-sizes.test.ts",
+          "src/components/layout/multi-split/multi-split-persisted-edges.test.ts",
           "src/components/layout/multi-split/multi-split-remediation.test.ts",
           "src/components/layout/multi-split/multi-split-trigger.test.ts",
+          "src/components/layout/multi-split/multi-split-vertical-drag.test.ts",
           "src/components/layout/multi-split/multi-split.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -36990,6 +37028,7 @@
         "tests": [
           "src/components/forms/input/field-appearance-parity.test.ts",
           "src/components/forms/input/input-family-locale.test.ts",
+          "src/components/forms/input/input-native-value-views.test.ts",
           "src/components/forms/input/input-remediation.test.ts",
           "src/components/forms/input/input-required.test.ts",
           "src/components/forms/input/input.test.ts",
@@ -37066,8 +37105,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/navigation-menu/navigation-menu.test.ts",
-              "test": "acts on the focused trigger for Enter and Space while the pointer hovers another",
+              "file": "src/components/layout/navigation-menu/navigation-menu-interactions.test.ts",
+              "test": "keeps focus on the trigger when its panel closes before ArrowDown can enter it",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -37212,6 +37251,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/navigation-menu/navigation-menu-allocation.test.ts",
+          "src/components/layout/navigation-menu/navigation-menu-interactions.test.ts",
           "src/components/layout/navigation-menu/navigation-menu-observer.test.ts",
           "src/components/layout/navigation-menu/navigation-menu.test.ts",
           "src/components/layout/navigation-menu/top-layer.test.ts"
@@ -38205,6 +38245,7 @@
         "tests": [
           "src/components/forms/input/field-appearance-parity.test.ts",
           "src/components/forms/input/input-family-locale.test.ts",
+          "src/components/forms/input/input-native-value-views.test.ts",
           "src/components/forms/input/input-remediation.test.ts",
           "src/components/forms/input/input-required.test.ts",
           "src/components/forms/input/input.test.ts",
@@ -38419,6 +38460,7 @@
         "tests": [
           "src/components/forms/combobox/combobox-catalog.test.ts",
           "src/components/forms/combobox/combobox-form-lifecycle.test.ts",
+          "src/components/forms/combobox/combobox-live-option-writes.test.ts",
           "src/components/forms/combobox/combobox-projection.test.ts",
           "src/components/forms/combobox/combobox-refresh.test.ts",
           "src/components/forms/combobox/combobox-remediation.test.ts",
@@ -38639,6 +38681,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/otp-input/otp-input-completion-lifecycle.test.ts",
+          "src/components/forms/otp-input/otp-input-host-delegation.test.ts",
           "src/components/forms/otp-input/otp-input-rejected-edit-boundaries.test.ts",
           "src/components/forms/otp-input/otp-input.test.ts"
         ],
@@ -40342,7 +40385,8 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/phone-input/phone-input-remediation.test.ts",
-          "src/components/forms/phone-input/phone-input.test.ts"
+          "src/components/forms/phone-input/phone-input.test.ts",
+          "src/components/forms/phone-input/phone-number-adapter.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
         "ssr": "src/ssr.ts"
@@ -41263,6 +41307,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/utility/poll-status/poll-status-inactive-race.test.ts",
           "src/components/utility/poll-status/poll-status-remediation.test.ts",
           "src/components/utility/poll-status/poll-status.test.ts"
         ],
@@ -41437,8 +41482,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/overlays/overlay/overlay-closed-layout.test.ts",
-              "test": "keeps a settled-closed ${tag} popup out of the scrollable layout after a resize",
+              "file": "src/components/overlays/overlay/dropdown-sync-reposition.test.ts",
+              "test": "re-syncs the open popup width when sync changes while open",
               "kind": "320px allocation test signal"
             }
           ]
@@ -41549,6 +41594,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/overlays/overlay/dropdown-dialog-position.test.ts",
+          "src/components/overlays/overlay/dropdown-sync-reposition.test.ts",
           "src/components/overlays/overlay/dropdown.test.ts",
           "src/components/overlays/overlay/overlay-closed-layout.test.ts",
           "src/components/overlays/overlay/overlay-public-lifecycle.test.ts",
@@ -41571,6 +41617,7 @@
           "src/components/overlays/overlay/tooltip-lifecycle.test.ts",
           "src/components/overlays/overlay/tooltip-placement-focus-recovery.test.ts",
           "src/components/overlays/overlay/tooltip-placement-recovery.test.ts",
+          "src/components/overlays/overlay/tooltip-property-normalization.test.ts",
           "src/components/overlays/overlay/tooltip-top-layer.test.ts",
           "src/components/overlays/overlay/tooltip-visibility.test.ts",
           "src/components/overlays/overlay/tooltip.test.ts"
@@ -43867,6 +43914,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/radio/radio-button.test.ts",
+          "src/components/forms/radio/radio-fieldset-and-restore.test.ts",
           "src/components/forms/radio/radio-form-lifecycle.test.ts",
           "src/components/forms/radio/radio-remediation.test.ts",
           "src/components/forms/radio/radio-rendering-a11y.test.ts",
@@ -44059,6 +44107,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/radio/radio-button.test.ts",
+          "src/components/forms/radio/radio-fieldset-and-restore.test.ts",
           "src/components/forms/radio/radio-form-lifecycle.test.ts",
           "src/components/forms/radio/radio-remediation.test.ts",
           "src/components/forms/radio/radio-rendering-a11y.test.ts",
@@ -44251,6 +44300,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/radio/radio-button.test.ts",
+          "src/components/forms/radio/radio-fieldset-and-restore.test.ts",
           "src/components/forms/radio/radio-form-lifecycle.test.ts",
           "src/components/forms/radio/radio-remediation.test.ts",
           "src/components/forms/radio/radio-rendering-a11y.test.ts",
@@ -44984,6 +45034,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/overlays/rating/rating-default-coercion.test.ts",
           "src/components/overlays/rating/rating-remediation.test.ts",
           "src/components/overlays/rating/rating.test.ts"
         ],
@@ -45554,6 +45605,7 @@
           "src/components/layout/reorder-list/reorder-item-composition.test.ts",
           "src/components/layout/reorder-list/reorder-item.test.ts",
           "src/components/layout/reorder-list/reorder-list-coverage.test.ts",
+          "src/components/layout/reorder-list/reorder-list-move-guards.test.ts",
           "src/components/layout/reorder-list/reorder-list-nested-controls.test.ts",
           "src/components/layout/reorder-list/reorder-list-remediation.test.ts",
           "src/components/layout/reorder-list/reorder-list-scale.test.ts",
@@ -45751,6 +45803,7 @@
           "src/components/layout/reorder-list/reorder-item-composition.test.ts",
           "src/components/layout/reorder-list/reorder-item.test.ts",
           "src/components/layout/reorder-list/reorder-list-coverage.test.ts",
+          "src/components/layout/reorder-list/reorder-list-move-guards.test.ts",
           "src/components/layout/reorder-list/reorder-list-nested-controls.test.ts",
           "src/components/layout/reorder-list/reorder-list-remediation.test.ts",
           "src/components/layout/reorder-list/reorder-list-scale.test.ts",
@@ -46291,6 +46344,7 @@
           "src/components/layout/responsive-panel/native-modal-premounted.test.ts",
           "src/components/layout/responsive-panel/native-modal-recovery-lifecycle.test.ts",
           "src/components/layout/responsive-panel/native-modal.test.ts",
+          "src/components/layout/responsive-panel/responsive-panel-heading-fallback.test.ts",
           "src/components/layout/responsive-panel/responsive-panel-top-layer.test.ts",
           "src/components/layout/responsive-panel/responsive-panel.test.ts"
         ],
@@ -47614,6 +47668,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/rubric-form/rubric-form-nullish-schema.test.ts",
           "src/components/forms/rubric-form/rubric-form-remediation.test.ts",
           "src/components/forms/rubric-form/rubric-form-runtime-values.test.ts",
           "src/components/forms/rubric-form/rubric-form-schema-boundaries.test.ts",
@@ -48265,6 +48320,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/segmented/segmented-checked-contrast.test.ts",
+          "src/components/layout/segmented/segmented-items-replacement.test.ts",
           "src/components/layout/segmented/segmented.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -48533,6 +48589,7 @@
           "src/components/forms/select/select-form-lifecycle.test.ts",
           "src/components/forms/select/select-initial-and-unknown-boundaries.test.ts",
           "src/components/forms/select/select-interaction.test.ts",
+          "src/components/forms/select/select-live-option-writes.test.ts",
           "src/components/forms/select/select-occurrence-cost.test.ts",
           "src/components/forms/select/select-refresh.test.ts",
           "src/components/forms/select/select-rendering-a11y.test.ts",
@@ -49192,8 +49249,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/signature-pad/signature-pad-public-stroke-boundaries.test.ts",
-              "test": "refuses keyboard and pointer starts at the stroke ceiling and draws again after a public clear",
+              "file": "src/components/forms/signature-pad/signature-pad-modifier-keys.test.ts",
+              "test": "leaves ${modifier} chords to the platform instead of drawing",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -49314,6 +49371,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/forms/signature-pad/signature-pad-modifier-keys.test.ts",
           "src/components/forms/signature-pad/signature-pad-public-stroke-boundaries.test.ts",
           "src/components/forms/signature-pad/signature-pad-state-restoration.test.ts",
           "src/components/forms/signature-pad/signature-pad.test.ts"
@@ -49704,6 +49762,7 @@
         "tests": [
           "src/components/forms/slider/slider-form-lifecycle.test.ts",
           "src/components/forms/slider/slider-pending-focus-authority.test.ts",
+          "src/components/forms/slider/slider-pointer-ownership.test.ts",
           "src/components/forms/slider/slider-remediation.test.ts",
           "src/components/forms/slider/slider-rendering-a11y.test.ts",
           "src/components/forms/slider/slider.test.ts"
@@ -50899,8 +50958,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/split-panel/split-panel-remediation.test.ts",
-              "test": "proposes ${primary}-edge percentages and pixels with cancellation=${canceled}",
+              "file": "src/components/layout/split-panel/split-panel-gesture-edges.test.ts",
+              "test": "does not re-request a reposition when Home is pressed at the minimum",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -51032,6 +51091,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/split-panel/split-panel-gesture-edges.test.ts",
           "src/components/layout/split-panel/split-panel-remediation.test.ts",
           "src/components/layout/split-panel/split-panel-snap-grammar-interactions.test.ts",
           "src/components/layout/split-panel/split-panel.test.ts"
@@ -51709,8 +51769,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/stepper/stepper.test.ts",
-              "test": "supports ArrowRight/ArrowLeft/Home/End among non-disabled steps, clamped (not cyclic)",
+              "file": "src/components/layout/stepper/stepper-input-and-reconnect.test.ts",
+              "test": "ignores navigation keys when every step is disabled",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -51832,6 +51892,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/stepper/stepper-coverage.test.ts",
+          "src/components/layout/stepper/stepper-input-and-reconnect.test.ts",
           "src/components/layout/stepper/stepper.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -53158,6 +53219,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/swatch-picker/swatch-keys.property.test.ts",
+          "src/components/forms/swatch-picker/swatch-picker-duplicate-values.test.ts",
           "src/components/forms/swatch-picker/swatch-picker-live-items.test.ts",
           "src/components/forms/swatch-picker/swatch-picker-record-boundaries.test.ts",
           "src/components/forms/swatch-picker/swatch-picker-remediation.test.ts",
@@ -56024,6 +56086,7 @@
         "tests": [
           "src/components/forms/input/field-appearance-parity.test.ts",
           "src/components/forms/input/input-family-locale.test.ts",
+          "src/components/forms/input/input-native-value-views.test.ts",
           "src/components/forms/input/input-remediation.test.ts",
           "src/components/forms/input/input-required.test.ts",
           "src/components/forms/input/input.test.ts",
@@ -56858,8 +56921,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/overlays/toast/toaster.test.ts",
-              "test": "keeps helper toasts interactive and announced inside mobile Page navigation",
+              "file": "src/components/overlays/toast/toast-item-focus-return.test.ts",
+              "test": "returns focus to the control focus arrived from when the only toast is dismissed",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -57001,7 +57064,9 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/overlays/toast/toast-detached-document.test.ts",
           "src/components/overlays/toast/toast-item-first.test.ts",
+          "src/components/overlays/toast/toast-item-focus-return.test.ts",
           "src/components/overlays/toast/toast-item.test.ts",
           "src/components/overlays/toast/toast-region-first.test.ts",
           "src/components/overlays/toast/toast.test.ts",
@@ -57054,8 +57119,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/overlays/toast/toaster.test.ts",
-              "test": "keeps helper toasts interactive and announced inside mobile Page navigation",
+              "file": "src/components/overlays/toast/toast-item-focus-return.test.ts",
+              "test": "returns focus to the control focus arrived from when the only toast is dismissed",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -57186,7 +57251,9 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/overlays/toast/toast-detached-document.test.ts",
           "src/components/overlays/toast/toast-item-first.test.ts",
+          "src/components/overlays/toast/toast-item-focus-return.test.ts",
           "src/components/overlays/toast/toast-item.test.ts",
           "src/components/overlays/toast/toast-region-first.test.ts",
           "src/components/overlays/toast/toast.test.ts",
@@ -57443,8 +57510,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/toggle-group/toggle-group.test.ts",
-              "test": "keeps exactly one tab stop on an internal button and lets Tab enter and leave the group",
+              "file": "src/components/forms/toggle-group/toggle-group-foreign-children.test.ts",
+              "test": "ignores keyboard and pointer interaction on a non-toggle child",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -57572,6 +57639,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/toggle-group/toggle-group-collection-cost.test.ts",
+          "src/components/forms/toggle-group/toggle-group-foreign-children.test.ts",
           "src/components/forms/toggle-group/toggle-group-late-definition.test.ts",
           "src/components/forms/toggle-group/toggle-group.test.ts"
         ],
@@ -59362,8 +59430,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/overlays/overlay/overlay-closed-layout.test.ts",
-              "test": "keeps a settled-closed ${tag} popup out of the scrollable layout after a resize",
+              "file": "src/components/overlays/overlay/dropdown-sync-reposition.test.ts",
+              "test": "re-syncs the open popup width when sync changes while open",
               "kind": "320px allocation test signal"
             }
           ]
@@ -59474,6 +59542,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/overlays/overlay/dropdown-dialog-position.test.ts",
+          "src/components/overlays/overlay/dropdown-sync-reposition.test.ts",
           "src/components/overlays/overlay/dropdown.test.ts",
           "src/components/overlays/overlay/overlay-closed-layout.test.ts",
           "src/components/overlays/overlay/overlay-public-lifecycle.test.ts",
@@ -59496,6 +59565,7 @@
           "src/components/overlays/overlay/tooltip-lifecycle.test.ts",
           "src/components/overlays/overlay/tooltip-placement-focus-recovery.test.ts",
           "src/components/overlays/overlay/tooltip-placement-recovery.test.ts",
+          "src/components/overlays/overlay/tooltip-property-normalization.test.ts",
           "src/components/overlays/overlay/tooltip-top-layer.test.ts",
           "src/components/overlays/overlay/tooltip-visibility.test.ts",
           "src/components/overlays/overlay/tooltip.test.ts"
@@ -59689,6 +59759,7 @@
           "src/components/utility/tour/positioning-strategy.test.ts",
           "src/components/utility/tour/svg-backdrop.test.ts",
           "src/components/utility/tour/tour-admission-and-carrier-boundaries.test.ts",
+          "src/components/utility/tour/tour-focus-routing.test.ts",
           "src/components/utility/tour/tour-reparent-layering.test.ts",
           "src/components/utility/tour/tour.test.ts"
         ],
@@ -61735,6 +61806,7 @@
           "src/components/layout/virtual-list/virtual-list-composition-demand.test.ts",
           "src/components/layout/virtual-list/virtual-list-composition-scale.test.ts",
           "src/components/layout/virtual-list/virtual-list-coverage.test.ts",
+          "src/components/layout/virtual-list/virtual-list-geometry-edges.test.ts",
           "src/components/layout/virtual-list/virtual-list-indexed-groups.test.ts",
           "src/components/layout/virtual-list/virtual-list-indexed-measurement.test.ts",
           "src/components/layout/virtual-list/virtual-list-layout-fallback.test.ts",
@@ -62357,6 +62429,7 @@
         "tests": [
           "src/components/layout/widget/viewport-modal-layering.test.ts",
           "src/components/layout/widget/widget-remediation.test.ts",
+          "src/components/layout/widget/widget-views-normalization.test.ts",
           "src/components/layout/widget/widget.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",

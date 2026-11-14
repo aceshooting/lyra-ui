@@ -228,3 +228,29 @@ describe('<lr-resize-observer>', () => {
     }
   });
 });
+
+describe('lr-resize-observer box option fallback', () => {
+  it('observes without the box option when the implementation rejects it', async () => {
+    const originalObserver = window.ResizeObserver;
+    const calls: Array<{ id: string; withOptions: boolean }> = [];
+    class BoxRejectingObserver implements ResizeObserver {
+      observe(target: Element, options?: ResizeObserverOptions): void {
+        if (options) throw new TypeError('box option unsupported');
+        calls.push({ id: target.id, withOptions: false });
+      }
+      unobserve(): void {}
+      disconnect(): void {}
+    }
+    window.ResizeObserver = BoxRejectingObserver as unknown as typeof ResizeObserver;
+    try {
+      const el = await fixture<LyraResizeObserver>(
+        html`<lr-resize-observer box="border-box"><div id="measured">Measured</div></lr-resize-observer>`,
+      );
+      await el.updateComplete;
+      await aTimeout(0);
+      expect(calls.at(-1)).to.deep.equal({ id: 'measured', withOptions: false });
+    } finally {
+      window.ResizeObserver = originalObserver;
+    }
+  });
+});
