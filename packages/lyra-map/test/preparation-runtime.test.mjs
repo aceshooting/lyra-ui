@@ -268,3 +268,60 @@ test('transactions preserve thrown values and mark only non-abort Error instance
     });
   }
 });
+
+test('style snapshots retain callable hooks even when their function prototype is customized', () => {
+  const { snapshotStyle } = createPreparationRuntime({});
+  for (const prototype of [null, Object.prototype]) {
+    const render = value => value + 1;
+    Object.setPrototypeOf(render, prototype);
+    render.metadata = { label: 'caller-owned hook' };
+    const input = { layers: [{ id: 'custom', type: 'custom', render }] };
+    const snapshot = snapshotStyle(input);
+    assert.notEqual(snapshot, input);
+    assert.notEqual(snapshot.layers[0], input.layers[0]);
+    assert.equal(snapshot.layers[0].render, render);
+    assert.equal(snapshot.layers[0].render(2), 3);
+    assert.equal(render.metadata.label, 'caller-owned hook');
+  }
+});
+
+test('a synchronous loader abort settles preparation even when its returned work never settles', async () => {
+  const controller = new AbortController(), blocked = deferred();
+  let workers = 0, outcome;
+  const dependencies = { derefLayers, MessageType: { prepareFeatures: 'prepareFeatures' } };
+  for (const name of ['prepareStyleLayers', 'prepareDraws', 'prepareShaders', 'prepareUniforms', 'prepareProjection', 'prepareSymbols', 'prepareTerrain']) {
+    dependencies[name] = async () => {};
+  }
+  dependencies.prepareSources = () => { controller.abort(); return blocked.promise; };
+  const operations = createPreparationRuntime(dependencies);
+  const style = { dispatcher: { actorsPromise: Promise.resolve([{ async sendAsync() { workers++; } }]) } };
+  const pending = operations.prepareTransaction(style, input(), controller);
+  void pending.then(() => { outcome = 'fulfilled'; }, error => { outcome = error.name; });
+  try {
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(outcome, 'AbortError', 'cancellation must settle without waiting for the loader');
+    assert.equal(workers, 0);
+    assert.equal(getEventListeners(controller.signal, 'abort').length, 0);
+  } finally {
+    blocked.resolve();
+    await pending.catch(() => undefined);
+  }
+});
+
+test('cancellation during actor readiness settlement prevents worker preparation from starting', async () => {
+  await both(async generated => {
+    const actors = deferred(), controller = new AbortController();
+    const h = harness(generated, { actors: actors.promise });
+    let workers = 0;
+    const pending = h.operations.prepareMapFeatures(h.map, input(), { signal: controller.signal });
+    await h.actorsRead.promise;
+    const cancelOnReady = actors.promise.then(() => controller.abort());
+    actors.resolve([{ async sendAsync() { workers++; } }]);
+    await assert.rejects(pending, { name: 'AbortError' });
+    await cancelOnReady;
+    assert.equal(workers, 0, 'ready actors must not receive work after cancellation');
+    assert.equal(h.style._modularFeaturePreparations.size, 0);
+    assert.equal(getEventListeners(controller.signal, 'abort').length, 0);
+    return { workers };
+  });
+});
