@@ -11,6 +11,59 @@ import '../../../translations/ar/data.js';
 import { installTableTestHooks, type Row, columns, rows } from '../../../../test/table.js';
 installTableTestHooks();
 
+for (const cleared of [null, undefined]) {
+  it(`clears a controlled selection bound to ${String(cleared)} and accepts subsequent selection`, async () => {
+    const el = await fixture<LyraTable<Row>>(html`<lr-table
+      .columns=${columns} .rows=${rows} .rowKey=${(row: Row) => row.id}
+      selection-mode="multiple" .selectedRowKeys=${new Set(['a'])}
+    ></lr-table>`);
+    const changes: unknown[] = [];
+    el.addEventListener('lr-selection-change', event => changes.push(event.detail));
+    const previous = el.selectedRowKeys;
+    expect(el.rowElement('a')?.getAttribute('aria-selected')).to.equal('true');
+
+    Reflect.set(el, 'selectedRowKeys', cleared);
+    await el.updateComplete;
+    expect([...el.selectedRowKeys]).to.deep.equal([]);
+    expect([...previous], 'previous snapshots remain detached').to.deep.equal(['a']);
+    expect(el.rowElement('a')?.getAttribute('aria-selected')).to.equal('false');
+    expect(changes, 'controlled clearing is silent').to.deep.equal([]);
+
+    el.selectedRowKeys = new Set(['b']);
+    await el.updateComplete;
+    expect(el.rowElement('b')?.getAttribute('aria-selected')).to.equal('true');
+    expect(changes, 'controlled restoration is silent').to.deep.equal([]);
+    el.rowElement('a')!.click();
+    await el.updateComplete;
+    expect([...el.selectedRowKeys]).to.deep.equal(['b', 'a']);
+    expect(changes.length, 'user selection still emits once').to.equal(1);
+  });
+
+  it(`clears controlled expanded rows bound to ${String(cleared)} and restores their content`, async () => {
+    const el = await fixture<LyraTable<Row>>(html`<lr-table
+      .columns=${columns} .rows=${rows} .rowKey=${(row: Row) => row.id}
+      .expandedContent=${(row: Row) => html`<p>${row.name} details</p>`}
+      .expandedRowKeys=${new Set(['a'])}
+    ></lr-table>`);
+    const changes: unknown[] = [];
+    el.addEventListener('lr-row-expand-toggle', event => changes.push(event.detail));
+    const previous = el.expandedRowKeys;
+    expect(el.expandedContentElement('a')?.textContent?.trim()).to.equal('Alpha details');
+
+    Reflect.set(el, 'expandedRowKeys', cleared);
+    await el.updateComplete;
+    expect([...el.expandedRowKeys]).to.deep.equal([]);
+    expect([...previous]).to.deep.equal(['a']);
+    expect(el.shadowRoot!.querySelectorAll('[part="expanded-row"]').length).to.equal(0);
+
+    el.expandedRowKeys = new Set(['b']);
+    await el.updateComplete;
+    expect(el.expandedContentElement('a') === null).to.equal(true);
+    expect(el.expandedContentElement('b')?.textContent?.trim()).to.equal('Beta details');
+    expect(changes, 'controlled clearing and restoration are silent').to.deep.equal([]);
+  });
+}
+
 
 
 
