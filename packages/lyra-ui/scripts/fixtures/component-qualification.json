@@ -39031,6 +39031,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/viewers/page-rail/page-rail-thumbnail-lifecycle.test.ts",
           "src/components/viewers/page-rail/page-rail.test.ts",
           "src/components/viewers/page-rail/page-viewer-snapshot.test.ts"
         ],
