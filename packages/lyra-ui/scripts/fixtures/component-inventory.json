@@ -23368,6 +23368,16 @@
             "default": "off"
           },
           {
+            "name": "live-settle",
+            "property": "liveSettle",
+            "type": "number | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -23439,6 +23449,16 @@
             "default": "off"
           },
           {
+            "name": "liveSettle",
+            "attribute": "live-settle",
+            "type": "number | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "locale",
             "attribute": "locale",
             "type": "string",
@@ -23495,7 +23515,26 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-chat-viewport-content-max-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "none"
+          },
+          {
+            "name": "--lr-chat-viewport-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
+            "name": "--lr-chat-viewport-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-m)"
+          }
+        ],
         "cssStates": [],
         "methods": [
           {

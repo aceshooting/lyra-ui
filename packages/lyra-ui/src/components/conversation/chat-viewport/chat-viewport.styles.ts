@@ -30,7 +30,7 @@ export const styles = css`
        identical reason. */
     overflow-x: hidden;
     overflow-y: auto;
-    padding: var(--lr-space-m);
+    padding: var(--lr-chat-viewport-padding, var(--lr-space-m));
   }
   [part='scroll']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -44,16 +44,27 @@ export const styles = css`
     block-size: auto;
     padding: 0;
   }
-  /* Deliberately no padding/gap/margin here -- this coordinate system (the offsetParent for every
-   * slotted row) is exactly what the unread divider's own pixel position is computed against.
-   * Any block-direction spacing added here would shift that math by a constant amount for every
-   * row after the first; breathing room around the transcript belongs on [part="scroll"] instead,
-   * one level up, where it can't skew that measurement. Inter-message spacing is left entirely to
-   * slotted content (or its host) -- this component renders no messages and imposes no spacing
-   * contract of its own. */
+  /* Deliberately no padding here -- this box is the coordinate system the unread divider's pixel
+   * position is measured against; breathing room around the transcript belongs on
+   * [part="scroll"] instead, one level up. The opt-in inter-message gap is safe: the divider is
+   * positioned from measured row rectangles (centred in the space above the first unread row), not
+   * from a row index times a fixed pitch. The gap defaults to 0, so slotted content keeps owning
+   * its own spacing unless a consumer sets the token. */
   [part='content'] {
     position: relative;
     min-block-size: 100%;
+    max-inline-size: var(--lr-chat-viewport-content-max-inline-size, none);
+    margin-inline: auto;
+  }
+  [part='base']:not([data-virtual]) [part='content'] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lr-chat-viewport-gap, 0);
+  }
+  /* The hidden semantic unread boundary is an empty light-DOM sibling of the rows; taking it out of
+     flow keeps it from contributing a second gap between the two rows it separates. */
+  ::slotted([data-lr-chat-viewport-unread-boundary]) {
+    position: absolute;
   }
   [part='base'][data-virtual] [part='content'] {
     block-size: 100%;

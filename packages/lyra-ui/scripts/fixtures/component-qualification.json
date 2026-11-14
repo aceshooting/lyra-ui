@@ -9731,7 +9731,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-viewport/chat-viewport.class.ts",
-              "line": 838,
+              "line": 956,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -9769,8 +9769,10 @@
         "tests": [
           "src/components/conversation/chat-viewport/chat-viewport-async-announcements.test.ts",
           "src/components/conversation/chat-viewport/chat-viewport-boundaries.test.ts",
+          "src/components/conversation/chat-viewport/chat-viewport-layout-tokens.test.ts",
           "src/components/conversation/chat-viewport/chat-viewport-million-scale.test.ts",
           "src/components/conversation/chat-viewport/chat-viewport-scale.test.ts",
+          "src/components/conversation/chat-viewport/chat-viewport-settled-announcements.test.ts",
           "src/components/conversation/chat-viewport/chat-viewport.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",

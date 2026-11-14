@@ -6,7 +6,7 @@ import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { keyEventOwnedByInnerControl } from '../../../internal/hotkey.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
-import { finiteCount, finiteRange } from '../../../internal/numbers.js';
+import { finiteCount, finiteDuration, finiteMidpoint, finiteRange } from '../../../internal/numbers.js';
 import type {
   LyraVirtualList,
   LyraVirtualListIndexedSource,
@@ -81,6 +81,19 @@ const virtualCount = (list: LyraVirtualList): number => {
  * Existing declarative children stay silent on mount, and appending the same text again creates a
  * new announcement. The shadow log itself always remains `aria-live="off"`.
  *
+ * **Streamed messages: announce when settled.** Setting `live-settle` (a delay in ms) alongside a
+ * `polite`/`assertive` `live` defers each appended child's announcement until its text has stopped
+ * changing for that long and it no longer reports work in progress (`aria-busy="true"`,
+ * `status="streaming"`, or a `streaming` descendant), then announces its final text once. An
+ * `<lr-chat-message>` moving from `streaming` to `sent` also makes its own short completion
+ * announcement; the settled announcement carries the reply text and follows it.
+ *
+ * **Host layout contract.** The host is a flex column (`display: flex; flex-direction: column`)
+ * whose `[part="base"]` and `[part="scroll"]` grow with `flex: 1` -- do not override the host's
+ * `display`. The viewport also needs a bounded block size: an explicit height, a definite-height
+ * flex/grid track, or a positioned container. With `display: block`, or an unbounded parent, the
+ * transcript grows with its content and nothing scrolls, without any error.
+ *
  * **`scrollToUnread()` in virtual mode.** The target row is scrolled with `align: 'start'` so the
  * divider boundary lands at the top of the view with the unread content visible below it -- the
  * only alignment that matches what "scroll to the divider" means here. The underlying virtual list
@@ -114,6 +127,11 @@ const virtualCount = (list: LyraVirtualList): number => {
  * @csspart content - The slotted-content wrapper the growth observers watch.
  * @csspart jump-pill - The built-in jump-to-latest button, absent while `follow` is engaged.
  * @csspart unread-divider - The "New messages" separator (slotted mode only).
+ * @cssprop [--lr-chat-viewport-padding=var(--lr-space-m)] - Padding of the scroll container around
+ *   the transcript (slotted mode; in virtual mode the slotted list owns its own spacing).
+ * @cssprop [--lr-chat-viewport-gap=0] - Block-direction gap between slotted messages (slotted mode).
+ * @cssprop [--lr-chat-viewport-content-max-inline-size=none] - Maximum inline size of the transcript
+ *   column; a narrower column is centred in the scroll container.
  * @status stable
  * @since 4.0.0
  */
@@ -148,6 +166,16 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
    * cadence. Only accessibility-exposed text is copied. The shadow `role="log"` remains non-live;
    * announcements use a shared light-DOM sink. */
   @property({ reflect: true }) live: ChatViewportLive = 'off';
+
+  /** Announce-when-settled delay in ms for streamed messages, or `null` (the default) to announce
+   *  each appended direct child once, at append time. When set and `live` is `polite` or
+   *  `assertive`, a newly appended child is announced once, with its final accessibility-exposed
+   *  text, after that text has stayed unchanged for at least this long and the child no longer
+   *  reports work in progress (`aria-busy="true"`, `status="streaming"`, or a `streaming`
+   *  descendant such as a streaming `<lr-streaming-text>`). Values below 50 are raised to 50;
+   *  a non-finite value uses 1000. A child that is removed first, or never gains text, is not
+   *  announced. */
+  @property({ type: Number, attribute: 'live-settle' }) liveSettle: number | null = null;
 
   /** Px distance from the end still counted as "at bottom." */
   @property({ type: Number, attribute: 'bottom-threshold' }) bottomThreshold = 24;
@@ -213,6 +241,9 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   private armGeneration = 0;
   private followFocusRepair: ComposedFocusRepairSnapshot | null = null;
   private readonly knownProjectedNodes = new WeakSet<Node>();
+  /** Appended children waiting to settle (`liveSettle` mode): the text seen at the previous
+   *  sample (`null` before the first stable sample) and the owner-bound pending timer. */
+  private readonly settlingNodes = new Map<Node, { text: string | null; owner: Window; handle: number }>();
   private unreadBoundaryEl?: HTMLElement;
 
   /** Flattened message list, rebuilt only after a slotchange / update / public read invalidates it. */
@@ -280,6 +311,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     this.clearKeyboardScrollIntent();
     this.scrollbarDragActive = false;
     this.followFocusRepair = null;
+    this.clearSettlingNodes();
     this.unreadBoundaryEl?.remove();
     this.unreadBoundaryEl = undefined;
   }
@@ -318,6 +350,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('live')) this.announcements.setExclusiveChannel(this.livePoliteness);
+    if (!this.livePoliteness || this.effectiveLiveSettle === null) this.clearSettlingNodes();
     this.unreadBoundaryEl?.setAttribute('aria-label', this.localize('newMessages'));
     const wasMounting = this.isMounting;
     this.isMounting = false;
@@ -453,7 +486,17 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     // A getBoundingClientRect() delta is well-defined regardless of that boundary and, since both
     // rects move together by the same amount when the scroll container scrolls, is unaffected by
     // the current scroll position.
-    this.unreadDividerTop = target.getBoundingClientRect().top - content.getBoundingClientRect().top;
+    //
+    // With a `--lr-chat-viewport-gap` (or any other space between the rows), the divider is
+    // centred in the space above the first unread row rather than straddling that row's own top
+    // edge. Rows that touch keep the previous position exactly, since both edges then coincide.
+    const targetTop = target.getBoundingClientRect().top;
+    const previousBottom = children[unreadStartIndex - 1]?.getBoundingClientRect().bottom;
+    const boundaryTop =
+      previousBottom !== undefined && previousBottom < targetTop
+        ? finiteMidpoint(previousBottom, targetTop)
+        : targetTop;
+    this.unreadDividerTop = boundaryTop - content.getBoundingClientRect().top;
   }
 
   private syncSemanticUnreadBoundary(target?: HTMLElement): void {
@@ -759,6 +802,10 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
    * its pending update, provided it is still a direct child and announcements are still enabled.
    */
   private announceProjectedNode(node: Node, sink: AnnouncementSink): void {
+    if (this.effectiveLiveSettle !== null) {
+      this.trackSettlingNode(node);
+      return;
+    }
     const text = this.announcementTextFor(node).replace(/\s+/g, ' ').trim();
     if (text) {
       sink.announce(text);
@@ -789,6 +836,77 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     if (!sink || !this.isConnected || node.parentNode !== this) return;
     const text = this.announcementTextFor(node).replace(/\s+/g, ' ').trim();
     if (text) sink.announce(text);
+  }
+
+  /** `liveSettle` normalized to a timer delay, or `null` while the settle mode is off. */
+  private get effectiveLiveSettle(): number | null {
+    return this.liveSettle == null ? null : finiteDuration(this.liveSettle, 1000, 50);
+  }
+
+  private trackSettlingNode(node: Node): void {
+    if (this.settlingNodes.has(node)) return;
+    const owner = this.ownerDocument.defaultView;
+    if (!owner) return;
+    const entry = { text: null, owner, handle: 0 };
+    this.settlingNodes.set(node, entry);
+    this.scheduleSettleSample(node, entry);
+  }
+
+  private scheduleSettleSample(node: Node, entry: { text: string | null; owner: Window; handle: number }): void {
+    const delay = this.effectiveLiveSettle;
+    if (delay === null) {
+      this.settlingNodes.delete(node);
+      return;
+    }
+    entry.handle = entry.owner.setTimeout(() => this.sampleSettlingNode(node), delay);
+  }
+
+  /**
+   * One settle sample. Polling, rather than a subtree MutationObserver, is what lets this follow
+   * text a child renders inside its own shadow root (a streaming-text element's content is a
+   * property rendered into shadow DOM, invisible to light-DOM mutation records). The text must
+   * match the previous sample exactly, so it has been stable for at least one full delay.
+   */
+  private sampleSettlingNode(node: Node): void {
+    const entry = this.settlingNodes.get(node);
+    if (!entry) return;
+    const sink = this.announcementSink;
+    if (
+      !sink ||
+      !this.isConnected ||
+      this.ownerDocument.defaultView !== entry.owner ||
+      !(node.parentNode === this || this.messageElements.includes(node as HTMLElement))
+    ) {
+      this.settlingNodes.delete(node);
+      return;
+    }
+    if (this.reportsWorkInProgress(node)) {
+      entry.text = null;
+      this.scheduleSettleSample(node, entry);
+      return;
+    }
+    const text = this.announcementTextFor(node).replace(/\s+/g, ' ').trim();
+    if (text && text === entry.text) {
+      this.settlingNodes.delete(node);
+      sink.announce(text);
+      return;
+    }
+    entry.text = text || null;
+    this.scheduleSettleSample(node, entry);
+  }
+
+  private reportsWorkInProgress(node: Node): boolean {
+    if (node.nodeType !== Node.ELEMENT_NODE) return false;
+    const element = node as Element;
+    return (
+      element.matches('[aria-busy="true"], [status="streaming"]') ||
+      element.querySelector('[aria-busy="true"], [status="streaming"], [streaming]') !== null
+    );
+  }
+
+  private clearSettlingNodes(): void {
+    for (const entry of this.settlingNodes.values()) entry.owner.clearTimeout(entry.handle);
+    this.settlingNodes.clear();
   }
 
   private announceNewProjectedNodes(): void {

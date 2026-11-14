@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -41,6 +41,13 @@ Hidden, inert, `aria-hidden`, and CSS-hidden content is omitted. Existing declar
 silent on mount, and appending the same text again creates another announcement. `off` acquires no
 sink and produces no announcements.
 
+**Host layout contract.** The host is a flex column (`display: flex; flex-direction: column`), and
+`[part="base"]` and `[part="scroll"]` grow with `flex: 1` inside it. Do not override the host's
+`display`, and give the viewport a bounded block size: an explicit height, a definite-height
+flex/grid track, or a positioned container. With `display: block` (or an unbounded parent) the
+transcript grows with its content and nothing scrolls, without any error. This applies to both
+slotted and virtual mode.
+
 **Properties:** `follow: boolean = true` (reflected) — component-managed stick-to-bottom state,
 host-writable: setting `true` scrolls to the end and re-engages following, setting `false` releases
 it. `bottomThreshold: number = 24` (attribute `bottom-threshold`) — px distance from the end still
@@ -50,7 +57,20 @@ index of the first unread item (element-child index in slotted mode, `items` ind
 `null` disables both the divider and the pill's unread count. `live: 'off' | 'polite' | 'assertive' =
 'off'` (reflected) — policy for the shared light-DOM announcement sink; the internal log itself
 remains non-live. Keep `off` for token-by-token streaming and opt in only when complete messages are
-appended as direct children at an announcement-safe cadence.
+appended as direct children at an announcement-safe cadence, or use `liveSettle` for streamed
+replies. `liveSettle: number | null = null` (attribute `live-settle`) — announce-when-settled delay
+in ms. While `null`, each appended direct child is announced once at append time. When set and
+`live` is `polite` or `assertive`, a newly appended child is instead announced once, with its final
+accessibility-exposed text, after that text has stayed unchanged for at least the delay and the child
+no longer reports work in progress: `aria-busy="true"` or `status="streaming"` on the child, or an
+`aria-busy="true"`, `status="streaming"` or `streaming` descendant (such as a streaming
+`lr-streaming-text`). The text is sampled every delay, so text rendered in a child's own shadow
+root is followed too; the announcement lands between one and two delays after the last change.
+Values below `50` are raised to `50`; a non-finite value uses `1000`. A child removed before it
+settles, or that never gains text, is not announced; switching `live` to `off`, clearing
+`liveSettle`, or disconnecting drops pending announcements. An `lr-chat-message` moving from
+`streaming` to `sent` still makes its own short "Message complete." announcement; the settled
+announcement follows with the reply text.
 `label?: string` — accessible name
 for the log region. Omitting it localizes the default `chatViewportLabel` message; an explicit
 empty string suppresses that default and renders no label. `accessibleLabel: string | null =
@@ -86,6 +106,23 @@ target, never for arbitrary descendant controls.
 slotted-content wrapper the growth observers watch), `jump-pill` (the built-in jump-to-latest button,
 absent while `follow` is engaged), `unread-divider` (the "New messages" separator, slotted mode
 only).
+
+**Themeable custom properties:** `--lr-chat-viewport-padding` (default `var(--lr-space-m)`) —
+padding of `[part="scroll"]` around the transcript, slotted mode only (in virtual mode the slotted
+list owns its spacing). `--lr-chat-viewport-gap` (default `0`) — block-direction gap between slotted
+messages. In slotted mode `[part="content"]` is a flex column, so adjacent message margins add up
+rather than collapse. The unread divider is centred in the space above the first unread message.
+`--lr-chat-viewport-content-max-inline-size` (default `none`) — maximum inline size of the
+transcript column (`[part="content"]`), centred in the scroll container when narrower.
+
+```html
+<lr-chat-viewport
+  style="--lr-chat-viewport-padding: 1rem; --lr-chat-viewport-gap: 0.75rem; --lr-chat-viewport-content-max-inline-size: 44rem"
+>
+  <lr-chat-message message-role="user">A</lr-chat-message>
+  <lr-chat-message message-role="assistant">B</lr-chat-message>
+</lr-chat-viewport>
+```
 
 Renders no messages and computes no unread state itself — the host supplies `unreadStartIndex`; no
 virtualization of its own (`lr-virtual-list`); not a generic overflow surface (`lr-scroller`); no

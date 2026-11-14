@@ -2369,6 +2369,7 @@ export interface LyraComponentTypeMap {
       | 'follow'
       | 'label'
       | 'live'
+      | 'liveSettle'
       | 'locale'
       | 'strings'
       | 'unreadStartIndex',
@@ -2376,10 +2377,13 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraChatViewportEventMap;
     eventNames:       | 'lr-follow-change';
-    cssNames: never;
+    cssNames:       | '--lr-chat-viewport-content-max-inline-size'
+      | '--lr-chat-viewport-gap'
+      | '--lr-chat-viewport-padding';
     attributeAliases: {
       'aria-label'?: LyraChatViewport['accessibleLabel'];
       'bottom-threshold'?: LyraChatViewport['bottomThreshold'];
+      'live-settle'?: LyraChatViewport['liveSettle'];
       'unread-start-index'?: LyraChatViewport['unreadStartIndex'];
     };
   };

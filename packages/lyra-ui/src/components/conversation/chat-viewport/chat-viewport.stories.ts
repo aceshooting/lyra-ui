@@ -52,6 +52,51 @@ export const PoliteAnnouncements: Story = {
   `,
 };
 
+export const LayoutTokens: Story = {
+  render: () => html`
+    <div style="block-size:260px;border:1px solid var(--lr-color-border);">
+      <lr-chat-viewport
+        style="--lr-chat-viewport-padding:var(--lr-space-l);--lr-chat-viewport-gap:var(--lr-space-s);--lr-chat-viewport-content-max-inline-size:28rem"
+      >
+        ${bubble('Padding, gap and a readable column width come from three tokens.')}
+        ${bubble('The column is centred once it is narrower than the viewport.')}
+        ${bubble('No ::part() overrides needed.')}
+      </lr-chat-viewport>
+    </div>
+  `,
+};
+
+export const SettledStreamingAnnouncements: Story = {
+  render: () => {
+    const viewport = createRef<LyraChatViewport>();
+    const streamReply = (): void => {
+      const host = viewport.value;
+      if (!host) return;
+      const reply = document.createElement('div');
+      reply.setAttribute('aria-busy', 'true');
+      reply.style.cssText = 'padding:8px 12px;border-radius:8px;background:var(--lr-color-surface-raised);max-width:70%;';
+      host.append(reply);
+      const words = 'This reply streams in word by word and is announced once, complete.'.split(' ');
+      let index = 0;
+      const timer = setInterval(() => {
+        reply.textContent = words.slice(0, ++index).join(' ');
+        if (index >= words.length) {
+          clearInterval(timer);
+          reply.removeAttribute('aria-busy');
+        }
+      }, 150);
+    };
+    return html`
+      <div style="block-size:220px;border:1px solid var(--lr-color-border);">
+        <lr-chat-viewport ${ref(viewport)} live="polite" live-settle="800">
+          ${bubble('Streamed replies are announced with their final text once they settle.')}
+        </lr-chat-viewport>
+      </div>
+      <button type="button" @click=${streamReply}>Stream a reply</button>
+    `;
+  },
+};
+
 export const WithUnreadDivider: Story = {
   render: () => html`
     <div style="block-size:200px;border:1px solid var(--lr-color-border);">
