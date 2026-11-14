@@ -374,6 +374,10 @@ it('falls back to the dir attribute when the element has no browsing-context win
   try {
     const resolved = getAnimation(el, 'test.inert-dir');
     expect(resolved.keyframes[0]?.['opacity']).to.equal(1);
+    el.removeAttribute('dir');
+    expect(getAnimation(el, 'test.inert-dir').keyframes[0]?.['opacity']).to.equal(0);
+    el.setAttribute('dir', 'ltr');
+    expect(getAnimation(el, 'test.inert-dir').keyframes[0]?.['opacity']).to.equal(0);
   } finally {
     cleanup();
   }
@@ -593,4 +597,26 @@ it('snapshots hostile animation records inertly and resolves the caller fallback
       cleanup?.();
     }
   });
+});
+
+it('rejects primitive and array option records without losing the component fallback or later registrations', () => {
+  const element = document.createElement('div');
+  const fallback = animation(0.3, { duration: 180 });
+  for (const options of [null, false, 12, 'duration:20', []]) {
+    const cleanup = setAnimation(element, 'test.invalid-option-shape', {
+      keyframes: [{ opacity: 1 }], options: options as unknown as KeyframeAnimationOptions,
+    });
+    try {
+      const resolved = getAnimation(element, 'test.invalid-option-shape', { fallback, respectReducedMotion: false });
+      expect(resolved.keyframes).to.deep.equal(fallback.keyframes);
+      expect(resolved.options.duration).to.equal(180);
+      const replace = setAnimation(element, 'test.invalid-option-shape', animation(0.8, { duration: 75 }));
+      try {
+        const current = getAnimation(element, 'test.invalid-option-shape', { fallback, respectReducedMotion: false });
+        expect(current.keyframes[1]?.['opacity']).to.equal(0.8);
+        expect(current.options.duration).to.equal(75);
+      } finally { replace(); }
+      expect(getAnimation(element, 'test.invalid-option-shape', { fallback }).keyframes).to.deep.equal(fallback.keyframes);
+    } finally { cleanup(); }
+  }
 });

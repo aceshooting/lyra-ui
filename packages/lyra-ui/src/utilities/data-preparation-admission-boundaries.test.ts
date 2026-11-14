@@ -1,6 +1,6 @@
 import { expect } from '@open-wc/testing';
 import {
-  prepareLyraCategoryData, prepareLyraHistogram, prepareLyraWaveform, prepareLyraWordCloud,
+  prepareLyraCategoryData, prepareLyraHistogram, prepareLyraSeriesData, prepareLyraWaveform, prepareLyraWordCloud,
   type LyraIndexedInput, type LyraWeightedWord,
 } from './data-preparation.js';
 
@@ -16,6 +16,24 @@ async function rejected(promise: Promise<unknown>, message: RegExp): Promise<voi
 }
 
 describe('data preparation admission boundaries', () => {
+  it('rejects unknown series without reading a provider and keeps valid exact lookups usable', async () => {
+    const values = [{ x: 0, y: 2 }, { x: 1, y: 4 }];
+    let reads = 0;
+    const source = { ...input(values), read: (start: number, count: number) => {
+      reads++;
+      return values.slice(start, start + count);
+    } };
+    const result = await prepareLyraSeriesData([{ id: 'measurements', label: 'Measurements', input: source }]);
+    reads = 0;
+    const request = { signal: new AbortController().signal };
+    for (const seriesId of ['', 'missing', '__proto__']) {
+      await rejected(Promise.resolve(result.getPoint({ seriesId, sourceIndex: 0 }, request)), /Unknown series ID/);
+    }
+    expect(reads).to.equal(0);
+    expect(await result.getPoint({ seriesId: 'measurements', sourceIndex: 1 }, request)).to.deep.equal(values[1]);
+    expect(reads).to.equal(1);
+  });
+
   it('rejects a missing source reader before starting histogram work', async () => {
     const source = input([1]);
     Reflect.set(source, 'read', undefined);
