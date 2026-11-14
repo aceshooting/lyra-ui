@@ -41,3 +41,38 @@ export async function loadVisualStory(page, url, deterministicStyle) {
     { cause: lastError },
   );
 }
+
+/**
+ * Repaint measured virtual rows at their final fractional offsets before comparing pixels.
+ * Chromium can retain text rasterized at an estimated whole-pixel transform after measurement
+ * moves the layer by half a pixel. Releasing the compositor hint for one paint, then restoring
+ * the exact author value and priority, makes capture independent of the first measurement frame.
+ */
+export async function refreshVirtualRowPaint(page) {
+  await page.evaluate(async () => {
+    const roots = [document];
+    const saved = [];
+    for (const root of roots) {
+      for (const element of root.querySelectorAll('*')) {
+        if (element.shadowRoot) roots.push(element.shadowRoot);
+        if (element.localName !== 'lr-virtual-list') continue;
+        for (const row of element.shadowRoot?.querySelectorAll('[part="row"]') ?? []) {
+          if (!getComputedStyle(row).willChange.split(',').some(value => value.trim() === 'transform')) continue;
+          saved.push([row, row.style.getPropertyValue('will-change'), row.style.getPropertyPriority('will-change')]);
+          row.style.setProperty('will-change', 'auto', 'important');
+        }
+      }
+    }
+    if (saved.length === 0) return;
+    const paint = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    try {
+      await paint();
+    } finally {
+      for (const [row, value, priority] of saved) {
+        if (value) row.style.setProperty('will-change', value, priority);
+        else row.style.removeProperty('will-change');
+      }
+    }
+    await paint();
+  });
+}

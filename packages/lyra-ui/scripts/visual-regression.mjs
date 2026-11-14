@@ -32,7 +32,7 @@ import {
   shardVisualCaptures,
   visualCapturePlan,
 } from './visual-regression-shard.mjs';
-import { loadVisualStory, visualStoryUrl } from './visual-story-readiness.mjs';
+import { loadVisualStory, refreshVirtualRowPaint, visualStoryUrl } from './visual-story-readiness.mjs';
 import { assembleVisualManifest, readVisualManifestSources } from './visual-manifest-source.mjs';
 
 const packageRoot = fileURLToPath(new URL('..', import.meta.url));
@@ -640,6 +640,7 @@ async function captureStory(page, baseUrl, story, axis) {
   // resting state. `caret: 'hide'` is Playwright's default but is stated explicitly here because
   // the sampled form controls (input, textarea, combobox, select) autofocus in some stories and a
   // blinking caret is otherwise a coin-flip pixel.
+  await refreshVirtualRowPaint(page);
   await assertStoryReady(page, id, EXPECTED_TAGS_BY_STORY.get(id) ?? []);
   if (axis.name === 'forced-colors') {
     await assertForcedColorsPaintedPixels(page, story);

@@ -168,32 +168,18 @@ function paintedPixels(el: LyraGraph, id: string, inner: number, outer: number, 
   return count;
 }
 
-describe('graph canvas renderer overlays and screen positions', function () {
-  // Covers the mount, 20 s force-layout settle and follow-up waits below, so a slow engine fails
-  // on the named wait instead of the generic per-test timeout.
-  this.timeout(40_000);
+describe('graph canvas renderer overlays and screen positions', () => {
   const canvasNodes: LyraGraphNode[] = [
     { id: 'a', label: 'A', radius: 12, expandable: true },
     { id: 'b', label: 'B', radius: 12 },
   ];
 
-  async function settled(el: LyraGraph): Promise<void> {
-    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas') && el.getNodePosition('a') !== undefined && el.getNodePosition('b') !== undefined, 'canvas graph mounted', { timeout: 5000 });
-    let previous = '';
-    let stable = 0;
-    await waitUntil(() => {
-      const now = JSON.stringify([el.getNodePosition('a'), el.getNodePosition('b')]);
-      stable = now === previous ? stable + 1 : 0;
-      previous = now;
-      return stable >= 12;
-    }, 'layout settled', { timeout: 20_000, interval: 50 });
-    await twoFrames();
-  }
-
   it('paints the focus halo and expand badge where the settled nodes are, and moves the halo with focus-node-id', async () => {
-    const el = await fixture<LyraGraph>(html`<lr-graph renderer="canvas" node-labels="none" width="400" height="300"
+    const el = await fixture<LyraGraph>(html`<lr-graph renderer="canvas" seed="7" node-labels="none" width="400" height="300"
       style="inline-size:400px;block-size:300px" focus-node-id="b" .nodes=${canvasNodes}></lr-graph>`);
-    await settled(el);
+    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas') && el.getNodeScreenPosition('a') !== undefined && el.getNodeScreenPosition('b') !== undefined,
+      'the seeded canvas layout is ready', { timeout: 5000 });
+    await waitUntil(() => paintedPixels(el, 'b', 15.5, 21, 50, 130) > 0, 'the focus halo is painted', { timeout: 5000 });
     expect(paintedPixels(el, 'b', 15.5, 21, 50, 130), 'halo ring below the focused node').to.be.greaterThan(0);
     expect(paintedPixels(el, 'a', 15.5, 21, 50, 130), 'no halo on the unfocused node').to.equal(0);
 
@@ -201,6 +187,11 @@ describe('graph canvas renderer overlays and screen positions', function () {
     await waitUntil(() => paintedPixels(el, 'a', 15.5, 21, 50, 130) > 0 && paintedPixels(el, 'b', 15.5, 21, 50, 130) === 0, 'halo follows focus-node-id', { timeout: 5000 });
     el.focusNodeId = null;
     await waitUntil(() => paintedPixels(el, 'a', 15.5, 21, 50, 130) === 0, 'halo removed with focus-node-id', { timeout: 5000 });
+    expect(paintedPixels(el, 'a', 14.5, 17, -60, -30), 'the expandable node has an upper-right badge').to.be.greaterThan(0);
+    expect(paintedPixels(el, 'b', 14.5, 17, -60, -30), 'a plain node has no badge').to.equal(0);
+    el.nodes = canvasNodes.map(node => ({ ...node, expandable: false }));
+    await waitUntil(() => paintedPixels(el, 'a', 14.5, 17, -60, -30) === 0, 'the badge clears when expansion is unavailable');
+    expect(paintedPixels(el, 'a', 0, 9, -180, 180), 'the node remains painted after its badge clears').to.be.greaterThan(20);
   });
 
   it('projects a canvas node to its painted position', async () => {
