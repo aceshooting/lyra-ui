@@ -151,6 +151,124 @@ describe('lr-map public renderer and input boundaries', () => {
     expect(views.map(detail => detail.source)).to.deep.equal(['command']);
   });
 
+  for (const kind of ['data layer', 'choropleth', 'overlay'] as const) {
+    it(`forwards ${kind} diffs by public source ID and replays controlled data after a style swap`, async () => {
+      const data = { type: 'FeatureCollection' as const, features: [{
+        type: 'Feature' as const, id: 'place', properties: { value: 1 },
+        geometry: { type: 'Point' as const, coordinates: [1, 2] },
+      }] };
+      const { element, peer } = await mount(el => {
+        if (kind === 'data layer') el.dataLayers = [{ sourceId: 'places', geojson: data }];
+        else if (kind === 'choropleth') el.choropleth = { sourceId: 'places', geojson: data, field: 'value', stops: [[0, '#000000'], [10, '#ffffff']] };
+        else el.overlays = { sources: [{ id: 'places', source: { type: 'geojson', data } }],
+          layers: [{ layer: { id: 'place-points', type: 'circle', source: 'places' } }] };
+      });
+      await element.whenIdle();
+      const sourceId = [...peer.sources.keys()].find(id => peer.sourceDescriptors.get(id) !== undefined)!;
+      expect(typeof sourceId).to.equal('string');
+      const source = peer.sources.get(sourceId)!;
+      const forwarded: unknown[] = [], receivers: unknown[] = [];
+      const update = source.updateData;
+      source.updateData = function (diff) { forwarded.push(diff); receivers.push(this); update.call(this, diff); };
+      const diff = { update: [{ id: 'place', addOrUpdateProperties: [{ key: 'value', value: 8 }] }] };
+      expect(element.updateSourceData('  places  ', diff)).to.equal(true);
+      expect(forwarded.length).to.equal(1);
+      expect(forwarded[0] === diff).to.equal(true);
+      expect(receivers[0] === source).to.equal(true);
+      expect(data.features[0]!.properties.value).to.equal(1);
+      expect(element.updateSourceData('unknown', diff)).to.equal(false);
+      expect(forwarded.length).to.equal(1);
+      await element.whenIdle();
+
+      element.mapStyle = { ...LYRA_MAP_EMPTY_STYLE, name: 'Replacement style' };
+      await element.updateComplete;
+      await element.whenIdle();
+      const restored = [...peer.sourceDescriptors.values()].find(value => (value as { type?: string }).type === 'geojson') as { data: unknown };
+      expect(restored.data).to.deep.equal(data);
+      expect(peer.sources.get(sourceId) === source).to.equal(false);
+      expect(element.updateSourceData('places', diff)).to.equal(true);
+      expect(forwarded.length).to.equal(1);
+      element.remove();
+      expect(element.updateSourceData('places', diff)).to.equal(false);
+      expect(forwarded.length).to.equal(1);
+    });
+  }
+
+  for (const outcome of ['return', 'throw'] as const) {
+    for (const replacement of ['style', 'clear'] as const) {
+      it(`retains a newer ${replacement} assignment when obsolete style reflection will ${outcome}`, async () => {
+        const { element, peer } = await mount();
+        const latest = replacement === 'style' ? { ...LYRA_MAP_EMPTY_STYLE, name: 'Current style' } : undefined;
+        let assigned = false;
+        const obsolete = new Proxy({ ...LYRA_MAP_EMPTY_STYLE, name: 'Obsolete style' }, {
+          getOwnPropertyDescriptor(target, key) {
+            if (!assigned) { assigned = true; element.mapStyle = latest; }
+            if (outcome === 'throw') throw new Error('Obsolete style unavailable');
+            return Reflect.getOwnPropertyDescriptor(target, key);
+          },
+        });
+        element.mapStyle = obsolete;
+        expect(assigned).to.equal(true);
+        expect(element.mapStyle).to.deep.equal(latest);
+        await element.updateComplete;
+        if (replacement === 'clear') {
+          await waitUntil(() => element.map === undefined);
+          expect(peer.removed).to.equal(true);
+          element.mapStyle = { ...LYRA_MAP_EMPTY_STYLE, name: 'Recovered style' };
+          await waitUntil(() => element.map !== undefined);
+          const current = element.map as unknown as BoundaryMap;
+          current.ready = true; current.fire('load');
+          await element.whenStyleReady();
+          expect((current.options['style'] as { name: string }).name).to.equal('Recovered style');
+        } else {
+          await element.whenStyleReady();
+          expect(element.map === peer).to.equal(true);
+          expect(peer.removed).to.equal(false);
+        }
+        expect(element.shadowRoot!.textContent).not.to.include('Obsolete style unavailable');
+      });
+    }
+  }
+
+  for (const method of ['getBearing', 'getPitch'] as const) {
+    it(`stops history navigation when ${method} disconnects the map and restores the URL on reconnect`, async () => {
+      const originalUrl = location.href, originalState: unknown = history.state;
+      let element: LyraMap | undefined;
+      try {
+        history.replaceState({ retained: true }, '', '#section&camera=5/2/1/10/15');
+        const mounted = await mount(el => { el.hash = 'camera'; });
+        element = mounted.element;
+        const parent = element.parentElement!;
+        const peer = mounted.peer;
+        const commands = peer.commands;
+        const read = peer[method];
+        let reads = 0;
+        peer[method] = () => { reads++; mounted.element.remove(); return read.call(peer); };
+        history.replaceState({ retained: true }, '', '#section&camera=6/4/3/20/25');
+        window.dispatchEvent(new HashChangeEvent('hashchange'));
+        expect(reads).to.equal(1);
+        expect(peer.commands).to.equal(commands);
+        expect(peer.removed).to.equal(true);
+        expect(location.hash).to.equal('#section&camera=6/4/3/20/25');
+        expect(history.state).to.deep.equal({ retained: true });
+        parent.append(element);
+        await waitUntil(() => element?.map !== undefined);
+        const current = element.map as unknown as BoundaryMap;
+        current.ready = true; current.fire('load');
+        await element.whenStyleReady();
+        await element.updateComplete;
+        expect(current.center).to.deep.equal({ lng: 3, lat: 4 });
+        expect(current.zoom).to.equal(6);
+        expect(current.bearing).to.equal(20);
+        expect(current.pitch).to.equal(25);
+        expect(peer.commands).to.equal(commands);
+      } finally {
+        element?.remove();
+        history.replaceState(originalState, '', originalUrl);
+      }
+    });
+  }
+
   it('leaves the URL camera intact when native orientation reads fail and resumes history navigation', async () => {
     const originalUrl = location.href, originalState: unknown = history.state;
     let element: LyraMap | undefined;
