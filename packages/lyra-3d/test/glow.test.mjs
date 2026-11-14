@@ -103,3 +103,61 @@ test('a borrowed shader-error callback remains observable after renderer unwindi
   assert.throws(()=>effect.render(new Scene(),new PerspectiveCamera()),/external shader observer/);
   assert.equal(observed,true);assert.equal(r.value.debug.onShaderError,previous);assert.equal(r.state.target,null);effect.dispose();
 });
+
+test('halo dimensions whose physical size overflows are rejected', () => {
+  assert.throws(() => glowTargetSize(Number.MAX_VALUE, 10, 4), RangeError);
+  assert.throws(() => glowTargetSize(10, Number.MAX_VALUE, 4), RangeError);
+});
+
+test('halo targets are reallocated only when their physical size changes', () => {
+  const r = renderer(), effect = createLyra3dGlow(r.value), scene = new Scene(), camera = new PerspectiveCamera();
+  const targetsOf = () => [...new Set(r.calls.filter(call => call[0] === 'target' && call[1]).map(call => call[1]))];
+  effect.resize(640, 480, 1); effect.render(scene, camera);
+  const first = targetsOf(); const disposed = [];
+  first.forEach((target, index) => target.addEventListener('dispose', () => disposed.push(index)));
+  r.calls.length = 0; effect.resize(640, 480, 1); effect.resize(641, 481, 1); effect.render(scene, camera);
+  assert.deepEqual(targetsOf(), first, 'the same physical size keeps the allocated targets');
+  assert.equal(disposed.length, 0);
+  r.calls.length = 0; effect.resize(320, 240, 1); effect.render(scene, camera);
+  assert.equal(effect.storageBytes, 160 * 120 * 16);
+  assert.ok(targetsOf().every(target => !first.includes(target)));
+  assert.deepEqual(disposed.sort(), [0, 1, 2]);
+  effect.dispose();
+});
+
+test('a halo rendered before any resize allocates minimal targets from the default size', () => {
+  const r = renderer(), effect = createLyra3dGlow(r.value);
+  assert.equal(effect.storageBytes, 0);
+  effect.render(new Scene(), new PerspectiveCamera());
+  assert.equal(effect.storageBytes, 16);
+  assert.equal(r.calls.filter(call => call[0] === 'render').length, 5);
+  effect.dispose();
+});
+
+test('a disposed halo ignores later resize and draw requests', () => {
+  const unused = createLyra3dGlow(renderer().value); assert.doesNotThrow(() => unused.dispose());
+  const r = renderer(), effect = createLyra3dGlow(r.value); effect.resize(640, 480, 1); effect.dispose();
+  r.calls.length = 0;
+  effect.resize(320, 240, 1); effect.render(new Scene(), new PerspectiveCamera()); effect.prepare(new Scene(), new PerspectiveCamera());
+  assert.deepEqual(r.calls, []); assert.equal(effect.storageBytes, 0);
+});
+
+test('readiness rejects an incomplete offscreen framebuffer and restores borrowed state', () => {
+  const r = renderer(), effect = createLyra3dGlow(r.value); effect.resize(640, 480, 1);
+  const context = r.value.getContext; r.value.getContext = () => ({ ...context(), checkFramebufferStatus: () => 0 });
+  assert.throws(() => effect.prepare(new Scene(), new PerspectiveCamera()), /framebuffer is incomplete/);
+  assert.equal(r.calls.filter(call => call[0] === 'render').length, 0);
+  assert.equal(r.state.target, null); assert.equal(r.state.test, true); assert.equal(r.value.autoClear, true);
+  r.value.getContext = context; effect.render(new Scene(), new PerspectiveCamera());
+  assert.equal(r.calls.filter(call => call[0] === 'render').length, 5);
+  effect.dispose();
+});
+
+test('readiness tolerates a renderer that reports no program inventory', () => {
+  const r = renderer(), effect = createLyra3dGlow(r.value); effect.resize(640, 480, 1);
+  r.value.info = {};
+  assert.doesNotThrow(() => effect.prepare(new Scene(), new PerspectiveCamera()));
+  assert.equal(r.calls.some(call => call[0] === 'link'), false);
+  assert.equal(r.state.target, null);
+  effect.dispose();
+});

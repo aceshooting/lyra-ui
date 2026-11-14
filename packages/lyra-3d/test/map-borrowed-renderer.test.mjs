@@ -251,3 +251,32 @@ test('failed renderer CPU teardown remains failed across admitted recovery and l
   assert.throws(() => epoch.dispose()); assert.throws(() => epoch.dispose());
   assert.equal(f.calls.length, count); assert.equal(f.leases.size, 0); assert.equal(f.expiredEntryCalls, 0);
 });
+
+test('a host without the epoch predicate or state envelope is rejected before any native work', () => {
+  const f = fixture();
+  for (const host of [null, undefined, {}, { ...f.host, isCurrent: undefined }, { ...f.host, withThreeState: 'construct' }]) {
+    assert.throws(() => createBorrowedRendererEpoch(host, f.budget), { name: 'TypeError', message: 'Invalid graphics host' });
+  }
+  assert.equal(f.calls.length, 0); assert.equal(f.operations.length, 0);
+});
+
+test('a construction envelope refused before entry leaves no owner to recover', () => {
+  const f = fixture(); const original = f.host.withThreeState;
+  f.host.withThreeState = () => { throw new Error('Private envelope refusal'); };
+  assert.throws(() => createBorrowedRendererEpoch(f.host, f.budget), { name: 'TypeError', message: 'Invalid graphics host' });
+  assert.equal(f.calls.length, 0); assert.equal(f.leases.size, 0);
+  f.host.withThreeState = original;
+});
+
+test('a disposal envelope for another epoch is refused and an admitted retry completes retirement', () => {
+  const f = fixture(), epoch = createBorrowedRendererEpoch(f.host, f.budget), original = f.host.withThreeState;
+  let foreign = true;
+  f.host.withThreeState = (operation, work) => original.call(f.host, operation, entry => work(foreign ? { ...entry, epoch: 2 } : entry));
+  const before = f.calls.length;
+  assert.throws(() => epoch.dispose(), /Borrowed graphics capability unavailable/);
+  assert.equal(f.calls.length, before, 'a foreign epoch never reaches the borrowed context');
+  assert.ok(f.leases.size > 0);
+  foreign = false; epoch.dispose();
+  assert.equal(f.leases.size, 0);
+  assert.equal(epoch.handles.live.texture, 0); assert.equal(epoch.handles.live.framebuffer, 0);
+});

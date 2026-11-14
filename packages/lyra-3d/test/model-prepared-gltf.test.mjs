@@ -4,7 +4,7 @@ import { Color, ColorManagement, LinearSRGBColorSpace, SRGBColorSpace } from 'th
 import { LinearDisplayP3ColorSpace, LinearDisplayP3ColorSpaceImpl } from 'three/addons/math/ColorSpaces.js';
 import { parseModel } from '../dist/model/model-parsers.js';
 import { createPreparedGltf } from '../dist/model/parsers/prepared-gltf.js';
-import { admittedFixture, basicFixture, interleavedFixture, primitiveFixture, richFixture, stridedIndexFixture } from './fixtures/model-prepared-gltf.mjs';
+import { admittedFixture, appendAttribute, basicFixture, interleavedFixture, primitiveFixture, richFixture, stridedIndexFixture } from './fixtures/model-prepared-gltf.mjs';
 
 const constructors = { i8: Int8Array, u8: Uint8Array, u8c: Uint8ClampedArray, i16: Int16Array, u16: Uint16Array, i32: Int32Array, u32: Uint32Array, f32: Float32Array, f64: Float64Array };
 function services() { const allocations = []; return { allocations, allocateAttribute(kind, length) { allocations.push([kind, length]); return new constructors[kind](length); }, allocateIndex(kind, length) { allocations.push([kind, length]); return new constructors[kind](length); } }; }
@@ -167,4 +167,50 @@ test('an allocator failure closes glTF work without publishing or touching parti
   assert.throws(() => work.step({ bytes: 1, scalars: 1, records: 1 }), /no longer active/);
   assert.equal(resourceReads, readsAtFailure); assert.equal(calls, 2); assert.deepEqual(retained[0], partial);
   await compare(document);
+});
+
+test('prepared glTF widens strip and fan indices once a vertex reaches the 16-bit sentinel', async () => {
+  for (const mode of [5, 6]) {
+    const count = 65537; const positions = new Float32Array(count * 3);
+    for (let vertex = 0; vertex < count; vertex++) positions.set([vertex % 7, Math.floor(vertex / 7) % 5, vertex % 3], vertex * 3);
+    const document = { asset: { version: '2.0' }, buffers: [], bufferViews: [], accessors: [], meshes: [{ primitives: [{ attributes: {}, mode }] }], nodes: [{ mesh: 0 }], scenes: [{ nodes: [0] }], scene: 0 };
+    document.meshes[0].primitives[0].attributes.POSITION = appendAttribute(document, positions, 3);
+    document.accessors[0].min = [0, 0, 0]; document.accessors[0].max = [6, 4, 2];
+    document.meshes[0].primitives[0].indices = appendAttribute(document, new Uint32Array([0, 65535, 65536, 1]), 1, 5125);
+    const fixture = admittedFixture(document); const reference = await parseModel(fixture.receipt);
+    try {
+      const { index } = drain(fixture.input, 4096).value.geometries[0]; let actual;
+      reference.object.traverse(object => { if (object.geometry) actual = object.geometry.index; });
+      assert.equal(index.constructor.name, 'Uint32Array');
+      assert.deepEqual(Array.from(index), Array.from(actual.array));
+      assert.deepEqual(Array.from(index), mode === 5 ? [0, 65535, 65536, 1, 65536, 65535] : [0, 65535, 65536, 0, 65536, 1]);
+    } finally { reference.dispose(); }
+  }
+});
+
+test('prepared glTF shares one material, base material and node per native reuse', async () => {
+  const document = basicFixture(); document.materials = [{ name: 'Shared', pbrMetallicRoughness: { baseColorFactor: [0.2, 0.4, 0.6, 1] } }];
+  const position = document.meshes[0].primitives[0].attributes.POSITION;
+  document.meshes = [{ name: 'Pair', primitives: [{ attributes: { POSITION: position }, material: 0 }, { attributes: { POSITION: position }, material: 0, mode: 0 }] },
+    { name: 'Copy', primitives: [{ attributes: { POSITION: position }, indices: appendAttribute(document, new Uint8Array([0, 1, 2]), 1, 5121), material: 0 }] }];
+  document.nodes = [{ name: 'First', mesh: 0 }, { name: 'Second', mesh: 0 }, { mesh: 1 }];
+  document.scenes = [{ nodes: [0, 1, 2] }];
+  await compare(document);
+  const descriptor = drain(admittedFixture(document).input, 1).value;
+  const meshes = descriptor.nodes.filter(node => node.kind === 'mesh'); const points = descriptor.nodes.filter(node => node.kind === 'points');
+  assert.equal(meshes.length, 3); assert.equal(points.length, 2);
+  assert.equal(new Set(meshes.map(node => node.materials[0])).size, 1, 'mesh primitives with one material key share a descriptor');
+  assert.notEqual(points[0].materials[0], meshes[0].materials[0]);
+  assert.equal(descriptor.materials.length, 2);
+  assert.ok(descriptor.materials.every(material => material.name === 'Shared'));
+});
+
+test('prepared glTF keeps smooth shading off point and line materials that carry normals', async () => {
+  for (const mode of [0, 2, 3]) {
+    const document = interleavedFixture(); document.meshes[0].primitives[0].mode = mode;
+    await compare(document);
+    const [material] = drain(admittedFixture(document).input, 1).value.materials;
+    assert.equal(material.kind, mode === 0 ? 'points' : 'line-basic');
+    assert.equal(Object.hasOwn(material, 'flatShading'), false);
+  }
 });
