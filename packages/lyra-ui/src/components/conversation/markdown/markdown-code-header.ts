@@ -234,16 +234,18 @@ export class MarkdownCodeHeaderController implements ReactiveController {
     const token = this.tokens[index];
     const generation = this.generation;
     const owner = this.host.ownerDocument.defaultView;
+    const current = () => this.host.isConnected && owner === this.host.ownerDocument.defaultView &&
+      generation === this.generation && token === this.tokens[index] && this.options.isEnabled();
     const outcome = await writeClipboardText(owner, record.source);
-    if (!this.host.isConnected || owner !== this.host.ownerDocument.defaultView ||
-        generation !== this.generation || token !== this.tokens[index]) return;
+    if (!current()) return;
     this.statuses[index] = outcome.ok ? 'success' : 'error';
     if (outcome.ok) this.options.emitCopy(outcome);
     else this.options.emitCopyError(outcome);
+    if (!current()) return;
     this.sink?.announce(outcome.ok ? this.options.localize('copiedToClipboard') : this.options.localize('copyFailed'));
     this.host.requestUpdate();
     if (owner) this.timers.set(index, { owner, handle: owner.setTimeout(() => {
-      if (generation !== this.generation || token !== this.tokens[index]) return;
+      if (!current()) return;
       this.timers.delete(index);
       this.statuses[index] = 'rest';
       this.host.requestUpdate();

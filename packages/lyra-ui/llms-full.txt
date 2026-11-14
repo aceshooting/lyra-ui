@@ -46356,7 +46356,8 @@ defers highlighting until completion; progressive streaming highlights settled b
   light-DOM `MutationObserver` on that container can never see a property-driven update rendered
   entirely inside this element's own shadow root. See `<lr-thinking-panel>`'s own reference at `llms/components/lr-thinking-panel.md`.
 - `lr-copy` and `lr-copy-error` — the fulfilled and failed clipboard outcomes from the optional
-  code-block copy chrome; both bubble and are composed.
+  code-block copy chrome; both bubble and are composed. If an outcome listener disconnects the
+  element, disables the header, or starts another copy, superseded feedback is canceled.
 **Slots:** none — content comes from the `content` property, not light-DOM children.
 
 **CSS parts:** `content` (the wrapper around the rendered or plain-text-fallback output; respects

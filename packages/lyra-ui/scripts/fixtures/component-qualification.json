@@ -32737,6 +32737,7 @@
         "tests": [
           "src/components/conversation/markdown/katex-loader.test.ts",
           "src/components/conversation/markdown/markdown-code-chrome.test.ts",
+          "src/components/conversation/markdown/markdown-code-copy-reentry.test.ts",
           "src/components/conversation/markdown/markdown-code-header.test.ts",
           "src/components/conversation/markdown/markdown-core.test.ts",
           "src/components/conversation/markdown/markdown-direction.test.ts",
@@ -32969,6 +32970,7 @@
         "tests": [
           "src/components/conversation/markdown/katex-loader.test.ts",
           "src/components/conversation/markdown/markdown-code-chrome.test.ts",
+          "src/components/conversation/markdown/markdown-code-copy-reentry.test.ts",
           "src/components/conversation/markdown/markdown-code-header.test.ts",
           "src/components/conversation/markdown/markdown-core.test.ts",
           "src/components/conversation/markdown/markdown-direction.test.ts",
