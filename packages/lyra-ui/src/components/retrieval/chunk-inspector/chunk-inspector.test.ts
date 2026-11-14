@@ -411,6 +411,12 @@ describe('row styling across both rendering paths', () => {
     await nextFrame();
     const list = el.shadowRoot!.querySelector('lr-virtual-list');
     expect(!!list, `${path}: virtual-list presence`).to.equal(path === 'virtualized');
+    if (list) {
+      await waitUntil(() => {
+        const boxes = [...list.shadowRoot!.querySelectorAll('[part~="chunk"]')].map(row => row.getBoundingClientRect());
+        return boxes.length > 1 && boxes.every((box, index) => index === 0 || box.top >= boxes[index - 1]!.bottom - 0.5);
+      }, 'measured virtual rows must stop overlapping before styling and accessibility checks');
+    }
     return { el, root: list ? list.shadowRoot! : el.shadowRoot! };
   }
 

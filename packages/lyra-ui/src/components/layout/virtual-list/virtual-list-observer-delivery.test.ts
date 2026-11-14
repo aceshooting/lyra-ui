@@ -99,6 +99,49 @@ it('coalesces local row measurements outside the observer delivery before changi
   expect(list.offsetForIndex(2) - list.offsetForIndex(1)).to.equal(originalOffset);
 }));
 
+for (const property of ['items', 'source'] as const) {
+  it(`discards a removed ${property} row's queued measurement before consulting its key`, async () => withObservers(async (list, observers) => {
+    let invalidKeyReads = 0;
+    list.keyFunction = value => {
+      if (typeof value !== 'number') invalidKeyReads++;
+      return Number(value);
+    };
+    list[property] = [0, 1, 2];
+    await list.updateComplete;
+    const estimate = list.offsetForIndex(1);
+    const row = list.renderedRows.find(value => value.dataset['rowIndex'] === '2')!;
+    const observer = observers.find(value => value.targets.has(row) && !value.disconnected)!;
+    expect(observer !== undefined).to.equal(true);
+    observer.deliver(row, 95);
+    list[property] = [0];
+    await list.updateComplete;
+    await nextFrame(); await list.updateComplete;
+    expect(invalidKeyReads, 'removed rows must never reach the caller key function').to.equal(0);
+    expect(list.offsetForIndex(1)).to.equal(estimate);
+    list[property] = [0, 1, 2];
+    await list.updateComplete;
+    expect(list.offsetForIndex(3), 'reinserted rows cannot inherit a retired observation').to.equal(estimate * 3);
+  }));
+
+  it(`applies a queued ${property} measurement at the surviving row's new position`, async () => withObservers(async (list, observers) => {
+    list[property] = [0, 1, 2];
+    await list.updateComplete;
+    const estimate = list.offsetForIndex(1);
+    const row = list.renderedRows.find(value => value.dataset['rowIndex'] === '2')!;
+    const observer = observers.find(value => value.targets.has(row) && !value.disconnected)!;
+    expect(observer !== undefined).to.equal(true);
+    row.querySelector<HTMLElement>('div')!.style.height = '95px';
+    observer.deliver(row, 95);
+    list[property] = [2, 0, 1];
+    await list.updateComplete;
+    await nextFrame(); await list.updateComplete;
+    expect(list.offsetForIndex(1)).to.equal(95);
+    expect(list.offsetForIndex(2)).to.equal(95 + estimate);
+    expect(list.offsetForIndex(3)).to.equal(95 + estimate * 2);
+    expect(list.renderedRows[0]?.textContent).to.include('Row 2');
+  }));
+}
+
 for (const height of ['auto', '100%']) {
   it(`stabilizes a content-sized local viewport with ${height} height as its rows resize`, async () => {
     const wrapper = await fixture<HTMLDivElement>(html`<div><lr-virtual-list

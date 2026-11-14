@@ -2120,7 +2120,12 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       // Retained measurements are window-bounded; build ownership once for the whole batch.
       for (const [identity, index] of this.measuredIndices) measuredByIndex.set(index, identity);
     }
-    for (const [key, { index, height }] of observations) {
+    for (const [key, observation] of observations) {
+      // Array rows can move or disappear between delivery and the frame flush. Resolve their
+      // current position by identity before reading geometry or invalidating the offset suffix.
+      const index = indexed ? observation.index : this.identityIndices.get(key);
+      if (index === undefined) continue;
+      const { height } = observation;
       // A ranged source can replace a loading identity with its resolved row key. An observer
       // delivery from the discarded wrapper must not reclaim that logical position.
       if (indexed && (index < 0 || index >= this.itemCount || this.identityAt(index) !== key)) continue;
