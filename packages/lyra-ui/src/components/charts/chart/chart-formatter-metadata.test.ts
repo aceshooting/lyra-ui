@@ -91,6 +91,52 @@ describe('lr-chart formatter metadata', () => {
     expect(visual?.axis, "the series' own value axis reaches the visual surface").to.equal('y2');
   });
 
+  it('omits a blank category label from tooltip metadata', () => {
+    const el = bar();
+    el.labels = ['', 'Q2'];
+    const seen = record(el);
+    config(el).options.plugins.tooltip!.callbacks!.label!({
+      datasetIndex: 0,
+      dataIndex: 0,
+      parsed: { x: 0, y: 10 },
+      raw: 10,
+      dataset: { label: 'Revenue' },
+    });
+    const tooltip = surfaces(seen, 'tooltip')[0];
+    expect(tooltip?.index, 'the datum index still reaches the tooltip surface').to.equal(0);
+    expect(tooltip?.label, 'a blank category is not reported as a label').to.equal(undefined);
+    expect(tooltip?.seriesLabel).to.equal('Revenue');
+  });
+
+  it('reports a point label as the tooltip metadata label', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.type = 'scatter';
+    el.datasets = [{ label: 'Points', points: [{ x: 1, y: 2, label: 'Origin-ish' }] }];
+    const seen = record(el);
+    config(el).options.plugins.tooltip!.callbacks!.label!({
+      datasetIndex: 0,
+      dataIndex: 0,
+      parsed: { x: 1, y: 2 },
+      raw: { x: 1, y: 2, label: 'Origin-ish' },
+      dataset: { label: 'Points' },
+    });
+    const tooltip = surfaces(seen, 'tooltip')[0];
+    expect(tooltip?.label).to.equal('Origin-ish');
+    expect(tooltip?.seriesLabel).to.equal('Points');
+  });
+
+  it('stops formatting through a retained tooltip title callback once its formatter is removed', () => {
+    const el = bar();
+    el.tooltipTitleFormatter = (contexts) => `Title ${contexts.length}`;
+    const callbacks = (el as unknown as {
+      buildConfig(): { options: { plugins: { tooltip: { callbacks: { title(items: unknown[]): unknown } } } } };
+    }).buildConfig().options.plugins.tooltip.callbacks;
+    const item = { datasetIndex: 0, dataIndex: 1, parsed: { x: 1, y: 20 }, raw: 20, dataset: { label: 'Revenue' } };
+    expect(callbacks.title([item])).to.equal('Title 1');
+    el.tooltipTitleFormatter = undefined;
+    expect(callbacks.title([item])).to.equal(undefined);
+  });
+
   it('identifies the series and datum a tooltip value belongs to', () => {
     const el = bar();
     const seen = record(el);

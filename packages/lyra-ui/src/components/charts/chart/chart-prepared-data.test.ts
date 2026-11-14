@@ -114,6 +114,22 @@ describe('preparedResponse', () => {
 describe('prepared source point reveal', () => {
   const ref = { seriesId: 's', sourceIndex: 500 };
 
+  it('rejects a reveal for a series the prepared model does not contain before reading the source', async () => {
+    const input = source();
+    let reads = 0;
+    input.getPoint = () => { reads++; return { x: 1, y: 1 }; };
+    const model = prepareChartModel(input, 'line', 1000);
+    let failure: unknown;
+    try {
+      await revealPreparedSourcePoint(model, { seriesId: 'missing', sourceIndex: 1 }, new AbortController().signal, () => true);
+    } catch (error) {
+      failure = error;
+    }
+    expect(failure instanceof RangeError).to.equal(true);
+    expect((failure as Error).message).to.equal('Unknown prepared series');
+    expect(reads).to.equal(0);
+  });
+
   it('distinguishes absent points from an obsolete reply without refining either', async () => {
     const input = source();
     let queries = 0;

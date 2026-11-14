@@ -105,3 +105,18 @@ it('preserves bucket extremes and endpoints inside width and record budgets', ()
   expect(sample.rowIndexes.at(-1)).to.equal(9_999);
   expect(sample.rowIndexes.length).to.be.at.most(40);
 });
+
+it('falls back to even spacing when a gapped series cannot fill one extrema bucket', () => {
+  const values: (number | null)[] = Array.from({ length: 100 }, (_, row) => row);
+  values[40] = null;
+  values[70] = 1_000;
+  const gapped = sampleChartTableIndexes(100, 1, { maxRecords: 4, valueAt: (row: number) => values[row] });
+  expect(gapped.rowIndexes).to.deep.equal([0, 33, 66, 99]);
+  expect(gapped.seriesIndexes).to.deep.equal([0]);
+  const complete = sampleChartTableIndexes(100, 1, {
+    maxRecords: 4,
+    valueAt: (row: number) => (row === 40 ? 0 : values[row]),
+  });
+  expect(complete.rowIndexes).to.include(70);
+  expect(complete.rowIndexes.length).to.be.at.most(4);
+});

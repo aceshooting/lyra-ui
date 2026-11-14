@@ -137,6 +137,21 @@ describe('chart bidi localized messages', () => {
     }
   });
 
+  it('renders an isolated placeholder the caller left without a value as an empty isolate', () => {
+    const container = host();
+    try {
+      render(isolatedMessage(
+        (values) => `${values['label']} [${values['unit']}]`,
+        { label: 'cpu' },
+        ['label', 'unit'],
+      ), container);
+      expect(container.textContent).to.equal('cpu []');
+      expect([...container.querySelectorAll('span.bidi')].map((span) => span.textContent)).to.deep.equal(['cpu', '']);
+    } finally {
+      container.remove();
+    }
+  });
+
   it('keeps sentinel-looking text from a caller value as ordinary text', () => {
     const container = host();
     const lookalike = 'a\ue0007\ue001b';
