@@ -16309,6 +16309,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/dataset-viewer/dataset-viewer-load-lifecycle.test.ts",
+          "src/components/viewers/dataset-viewer/dataset-viewer-public-admission.test.ts",
           "src/components/viewers/dataset-viewer/dataset-viewer-remediation.test.ts",
           "src/components/viewers/dataset-viewer/dataset-viewer-scale.test.ts",
           "src/components/viewers/dataset-viewer/dataset-viewer-yield.test.ts",
@@ -51216,6 +51217,7 @@
         "tests": [
           "src/components/viewers/spreadsheet-viewer/spreadsheet-loader.test.ts",
           "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer-load-lifecycle.test.ts",
+          "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer-public-admission.test.ts",
           "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer-register.test.ts",
           "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer-scale.test.ts",
           "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer-yield.test.ts",
