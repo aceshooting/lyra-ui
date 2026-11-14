@@ -10,6 +10,16 @@ const select = async (page, id, index = 0) => {
   await page.locator(`#${id} .docx-pages img`).nth(index).click();
   await page.waitForFunction(id => !!document.getElementById(id).snapshot().image, id);
 };
+// Avoid serializing large packages as millions of JSON numbers over the browser connection.
+async function readBrowserBytes(handle) {
+  const encoded = await handle.evaluate(bytes => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.slice(reader.result.indexOf(',') + 1));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(new Blob([bytes]));
+  }));
+  return Buffer.from(encoded, 'base64');
+}
 function images(bytes) {
   const result = [], parser = new SaxesParser({ xmlns: true });
   parser.on('opentag', node => {
@@ -172,24 +182,44 @@ export async function runImageEditing(page, check, { createEditor, saveEditor })
     await remove(page, id);
   });
   await check('near-admission-limit package preserves opaque bytes at escaped metadata limits and reopens', async () => {
-    const id = 'image-near-limit', source = await createEditor(page, id, 'image-near-limit');
-    assert.ok(source.length > 3.9 * 1024 * 1024 && source.length < 4 * 1024 * 1024);
-    await select(page, id);
-    const action = { type: 'image-description', title: '🙂'.repeat(128), description: '&'.repeat(2048) };
-    const result = await page.locator(`#${id}`).evaluate((element, action) => element.execute(action), action);
-    assert.equal(result.ok, true, JSON.stringify(result));
-    const saved = await saveEditor(page, id);
-    assert.deepEqual([images(saved)[0].title, images(saved)[0].description], [action.title, action.description]);
-    const digest = bytes => createHash('sha256').update(unzipSync(Uint8Array.from(bytes))['custom/payload.bin']).digest('hex');
-    assert.equal(digest(saved), digest(source));
-    await remove(page, id);
-    const reopened = await page.evaluate(async ({ id, saved }) => {
+    const id = 'image-near-limit';
+    const sourceHandle = await page.evaluateHandle(async id => {
+      const bytes = await window.__docxTest.fixture('image-near-limit');
       const element = document.createElement('lr-docx-editor'); element.id = id; document.querySelector('#fixture').append(element);
-      return element.open(Uint8Array.from(saved));
-    }, { id, saved });
-    assert.equal(reopened.ok, true, JSON.stringify(reopened)); await select(page, id);
-    assert.deepEqual(await page.locator(`#${id}`).evaluate(element => element.imageDescription()), { ok: true, value: { title: action.title, description: action.description } });
-    await remove(page, id);
+      const opened = await element.open(bytes.slice());
+      if (!opened.ok) throw new Error(`${id}: ${JSON.stringify(opened)}`);
+      return bytes;
+    }, id);
+    let savedHandle;
+    try {
+      const source = await readBrowserBytes(sourceHandle);
+      assert.ok(source.length > 3.9 * 1024 * 1024 && source.length < 4 * 1024 * 1024);
+      await page.locator(`#${id} .docx-pages`).waitFor({ state: 'visible' });
+      await select(page, id);
+      const action = { type: 'image-description', title: '🙂'.repeat(128), description: '&'.repeat(2048) };
+      const result = await page.locator(`#${id}`).evaluate((element, action) => element.execute(action), action);
+      assert.equal(result.ok, true, JSON.stringify(result));
+      savedHandle = await page.locator(`#${id}`).evaluateHandle(async element => {
+        const saved = await element.save();
+        if (!saved.ok) throw new Error(`${element.id}: ${JSON.stringify(saved)}`);
+        return saved.value.bytes;
+      });
+      const saved = await readBrowserBytes(savedHandle);
+      assert.deepEqual([images(saved)[0].title, images(saved)[0].description], [action.title, action.description]);
+      const digest = bytes => createHash('sha256').update(unzipSync(bytes)['custom/payload.bin']).digest('hex');
+      assert.equal(digest(saved), digest(source));
+      await remove(page, id);
+      const reopened = await savedHandle.evaluate(async (bytes, id) => {
+        const element = document.createElement('lr-docx-editor'); element.id = id; document.querySelector('#fixture').append(element);
+        return element.open(bytes.slice());
+      }, id);
+      assert.equal(reopened.ok, true, JSON.stringify(reopened)); await select(page, id);
+      assert.deepEqual(await page.locator(`#${id}`).evaluate(element => element.imageDescription()), { ok: true, value: { title: action.title, description: action.description } });
+      await remove(page, id);
+    } finally {
+      await savedHandle?.dispose();
+      await sourceHandle.dispose();
+    }
   });
   for (const kind of ['image-picture-lock', 'image-frame-lock', 'image-crop', 'image-rotation', 'image-long-metadata']) {
     await check(`selected image ${kind} refusal preserves bytes/revision/history`, async () => {
