@@ -671,3 +671,20 @@ describe("data-grid processing boundaries", () => {
     expect(aggregateValues("mean", asRows, zeros)).to.equal(0);
   });
 });
+
+it("excludes non-finite numeric timestamps from a date-range filter", () => {
+  const column: DataGridColumn<{ at: unknown }> = { field: "at", filterType: "date-range" };
+  const day = new Date(2024, 0, 15, 12).getTime();
+  const range = ["2024-01-01", "2024-01-31"];
+  expect(matchesFilter({ at: day }, column, range, "en")).to.equal(true);
+  expect(matchesFilter({ at: Number.POSITIVE_INFINITY }, column, range, "en")).to.equal(false);
+  expect(matchesFilter({ at: Number.NaN }, column, range, "en")).to.equal(false);
+});
+
+it("falls back to the column id for an unlabeled CSV header", () => {
+  const csv = rowsAsDelimited(
+    [{ code: "a1", size: 2 }],
+    [{ field: "code" }, { id: "size-col", field: "size", label: "Size" }],
+  );
+  expect(csv.split(/\r?\n/u)[0]).to.equal("code,Size");
+});
