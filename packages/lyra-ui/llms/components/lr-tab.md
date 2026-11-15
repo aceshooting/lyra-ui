@@ -31,6 +31,11 @@ prevents activation; `active: boolean = false` (reflected) — SSR selection hin
 the owning group after hydration; `closable: boolean = false` (reflected) — shows the mapped close
 affordance.
 
+**Methods:** `focus(options?: FocusOptions): void` forwards to the owning group's real tab button,
+exactly as the group's `focusTab(panel)` (under `activation="auto"` that also selects the tab); a
+disabled or inert tab, or a descriptor outside an upgraded group, is not focusable and is left
+alone. `blur(): void` removes focus from that button when it has it.
+
 **Events:** `lr-close` (no detail) — the Lyra-convention mapping of Shoelace's `sl-close`, emitted
 when the close affordance is clicked or Delete is pressed on the focused owning tab. It bubbles, is
 composed and noncancelable. A disabled tab never emits it. The tab never removes itself or its

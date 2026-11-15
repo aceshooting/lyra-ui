@@ -97,7 +97,19 @@ selection.
 
 **Methods:** `show(name: string): void` activates the matching enabled tab through the same
 `lr-tab-hide` then `lr-tab-show` sequence as pointer/keyboard selection. Unknown, disabled, and
-already-active names are no-ops.
+already-active names are no-ops. `focusTab(name: string, options?: FocusOptions): boolean` moves
+keyboard focus to the real `role="tab"` button of the matching enabled, non-inert tab and moves the
+roving `tabindex` with it — for example after `show(name)`, or when closing an overlay opened from a
+tab. Under `activation="auto"` focus and selection move together, so focusing an unselected tab
+also selects it exactly as `show()` does (`lr-tab-hide`/`lr-tab-show`, never `lr-activate`); under
+`activation="manual"` only focus moves. It returns `false` and changes nothing for an unknown,
+disabled or inert name, or for a tab added since the group last read its children (await
+`updateComplete` first). Calling `focus()` on an `<lr-tab>` descriptor does the same for that tab.
+
+```js
+group.show("activity");
+group.focusTab("activity");
+```
 
 **Overflow and scrolling.** The tablist is a native scroll container (`overflow-x: auto`). A
 horizontal row that does not fit additionally gets two pointer scroll controls flanking it inside

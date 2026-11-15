@@ -64,6 +64,9 @@ properties existed:
   `<lr-markdown>`'s own `linkTarget`; the composed element always applies its own
   `rel="noopener noreferrer"` guard whenever a `target` is emitted, including a forwarded
   non-default value, and never a bare `opener`.
+- `linkSchemes?: string` (attribute `link-schemes`) — forwarded to the composed `<lr-markdown>`'s
+  own `linkSchemes`; `link-schemes="https"` keeps only `https:` links in streamed model output and
+  renders every other link as plain text.
 - `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`) — forwarded to the composed
   `<lr-markdown>`'s own `internalLinkPrefix`.
 - `headingOffset: number = 0` (attribute `heading-offset`) — forwarded to the composed
@@ -169,7 +172,7 @@ showing the previous stream's stale final content for the length of the window.
 Rendering itself is never reimplemented here: Markdown mode composes `<lr-markdown>` directly,
 forwarding this component's own `streaming` through as that component's `streaming` hint prop,
   `streamingRender`, `codeBlockHeader`, `languages` verbatim, and the rest of `<lr-markdown>`'s
-  configuration surface verbatim too (`tabSize`, `htmlMode`, `withoutGfm`, `withoutImages`, `linkTarget`,
+  configuration surface verbatim too (`tabSize`, `htmlMode`, `withoutGfm`, `withoutImages`, `linkTarget`, `linkSchemes`,
   `internalLinkPrefix`, `headingOffset`, `withoutSyntaxHighlighting`, `headingAnchors`, `math`, `maxHeight` —
   see **Properties** above); plain-text mode
 renders into a `white-space: pre-wrap` span instead. The

@@ -32826,6 +32826,7 @@
           "src/components/conversation/markdown/markdown-direction.test.ts",
           "src/components/conversation/markdown/markdown-fallback-code.test.ts",
           "src/components/conversation/markdown/markdown-language-loaders.test.ts",
+          "src/components/conversation/markdown/markdown-link-schemes.test.ts",
           "src/components/conversation/markdown/markdown-loader.test.ts",
           "src/components/conversation/markdown/markdown-math-delimiters.test.ts",
           "src/components/conversation/markdown/markdown-presentation.test.ts",
@@ -33059,6 +33060,7 @@
           "src/components/conversation/markdown/markdown-direction.test.ts",
           "src/components/conversation/markdown/markdown-fallback-code.test.ts",
           "src/components/conversation/markdown/markdown-language-loaders.test.ts",
+          "src/components/conversation/markdown/markdown-link-schemes.test.ts",
           "src/components/conversation/markdown/markdown-loader.test.ts",
           "src/components/conversation/markdown/markdown-math-delimiters.test.ts",
           "src/components/conversation/markdown/markdown-presentation.test.ts",
@@ -52741,7 +52743,19 @@
             },
             {
               "file": "src/components/conversation/suggestion-chips/suggestion-chips.test.ts",
+              "test": "projects a per-suggestion icon-<suggestionId> slot that wins over iconName and icon",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/conversation/suggestion-chips/suggestion-chips.test.ts",
               "test": "renders an optional literal icon as decorative content without changing chip focus ownership",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/conversation/suggestion-chips/suggestion-chips.test.ts",
+              "test": "renders iconName as a decorative lr-icon that wins over the literal icon",
               "target": "el",
               "state": "populated"
             }
@@ -52840,7 +52854,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/suggestion-chips/suggestion-chips.class.ts",
-              "line": 205,
+              "line": 222,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -53531,6 +53545,12 @@
               "state": "open"
             },
             {
+              "file": "src/components/layout/tab-group/tab-group-focus.test.ts",
+              "test": "focusTab after show() lands focus on the newly selected tab",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
               "test": "builds one tab per <lr-tab> and activates the first enabled one",
               "target": "el",
@@ -53718,6 +53738,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/tab-group/tab-group-focus.test.ts",
           "src/components/layout/tab-group/tab-group-projected-label.test.ts",
           "src/components/layout/tab-group/tab-group-reconcile-cost.test.ts",
           "src/components/layout/tab-group/tab-group-remediation.test.ts",
@@ -53760,6 +53781,12 @@
               "test": "omits closed <details> text from a rich tab name and restores it when opened",
               "target": "el",
               "state": "open"
+            },
+            {
+              "file": "src/components/layout/tab-group/tab-group-focus.test.ts",
+              "test": "focusTab after show() lands focus on the newly selected tab",
+              "target": "el",
+              "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
@@ -53967,6 +53994,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/tab-group/tab-group-focus.test.ts",
           "src/components/layout/tab-group/tab-group-projected-label.test.ts",
           "src/components/layout/tab-group/tab-group-reconcile-cost.test.ts",
           "src/components/layout/tab-group/tab-group-remediation.test.ts",
@@ -54010,6 +54038,12 @@
               "test": "omits closed <details> text from a rich tab name and restores it when opened",
               "target": "el",
               "state": "open"
+            },
+            {
+              "file": "src/components/layout/tab-group/tab-group-focus.test.ts",
+              "test": "focusTab after show() lands focus on the newly selected tab",
+              "target": "el",
+              "state": "populated"
             },
             {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
@@ -54211,6 +54245,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/tab-group/tab-group-focus.test.ts",
           "src/components/layout/tab-group/tab-group-projected-label.test.ts",
           "src/components/layout/tab-group/tab-group-reconcile-cost.test.ts",
           "src/components/layout/tab-group/tab-group-remediation.test.ts",

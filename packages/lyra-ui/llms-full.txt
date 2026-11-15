@@ -2140,8 +2140,21 @@ no `:root` rules.
 **Every reservation is expressed with the same custom property and fallback token the component's
 own stylesheet uses** — `--lr-chart-height` / `--lr-size-280px` for the chart family,
 `--lr-map-height` for `lr-map`, `--lr-canvas-reserved-height` for graph/canvas surfaces,
-`--lr-flag-aspect-ratio` for `lr-flag`, `--lr-form-control-height` for the field controls, and so
-on. That is the point of shipping it rather than documenting measured pixel values: a hand-written
+`--lr-flag-aspect-ratio` for `lr-flag`, `--lr-form-control-height` for the field controls,
+`--lr-checkbox-label-indent` and `--lr-icon-button-size` for `lr-checkbox`, `--lr-badge-min-height`,
+`--lr-badge-padding-inline` and `--lr-badge-font-size` for `lr-badge`, `--lr-chat-composer-padding`
+for `lr-chat-composer`, and so on.
+
+Covered tags: the chart family, `lr-map`, `lr-flag`, `lr-flow-canvas`, `lr-graph`,
+`lr-knowledge-graph-explorer`, the inline form-control row (`lr-input`, `lr-number-input`,
+`lr-select`, `lr-combobox`, `lr-date-input`, `lr-phone-input`, `lr-color-picker`, `lr-button`,
+`lr-icon-button`), `lr-checkbox`, `lr-badge`, `lr-chat-composer`, and the tab trio
+`lr-tab-group`/`lr-tab`/`lr-tab-panel`. Before upgrade a tab group lays its descriptors out as one
+row of tab-sized boxes and shows only the panel that will be shown (the one marked `active`, else
+the first), for the default top `placement`. The text-bearing reservations (`lr-checkbox`,
+`lr-badge`, the tab trio) also set `font-family: var(--lr-font)`, as every defined Lyra host does,
+because the reserved box is measured from the same text. The badge and checkbox reservations cover
+their default `m` size; a non-default `size` reserves the default footprint. That is the point of shipping it rather than documenting measured pixel values: a hand-written
 reservation rots silently the moment a component's default changes, whereas these track it, and
 theming a component through its documented custom property re-themes its reservation with it.
 
@@ -22558,7 +22571,19 @@ selection.
 
 **Methods:** `show(name: string): void` activates the matching enabled tab through the same
 `lr-tab-hide` then `lr-tab-show` sequence as pointer/keyboard selection. Unknown, disabled, and
-already-active names are no-ops.
+already-active names are no-ops. `focusTab(name: string, options?: FocusOptions): boolean` moves
+keyboard focus to the real `role="tab"` button of the matching enabled, non-inert tab and moves the
+roving `tabindex` with it — for example after `show(name)`, or when closing an overlay opened from a
+tab. Under `activation="auto"` focus and selection move together, so focusing an unselected tab
+also selects it exactly as `show()` does (`lr-tab-hide`/`lr-tab-show`, never `lr-activate`); under
+`activation="manual"` only focus moves. It returns `false` and changes nothing for an unknown,
+disabled or inert name, or for a tab added since the group last read its children (await
+`updateComplete` first). Calling `focus()` on an `<lr-tab>` descriptor does the same for that tab.
+
+```js
+group.show("activity");
+group.focusTab("activity");
+```
 
 **Overflow and scrolling.** The tablist is a native scroll container (`overflow-x: auto`). A
 horizontal row that does not fit additionally gets two pointer scroll controls flanking it inside
@@ -22929,6 +22954,11 @@ reveals; `disabled: boolean = false` (reflected) — removes the tab from keyboa
 prevents activation; `active: boolean = false` (reflected) — SSR selection hint, synchronized by
 the owning group after hydration; `closable: boolean = false` (reflected) — shows the mapped close
 affordance.
+
+**Methods:** `focus(options?: FocusOptions): void` forwards to the owning group's real tab button,
+exactly as the group's `focusTab(panel)` (under `activation="auto"` that also selects the tab); a
+disabled or inert tab, or a descriptor outside an upgraded group, is not focusable and is left
+alone. `blur(): void` removes focus from that button when it has it.
 
 **Events:** `lr-close` (no detail) — the Lyra-convention mapping of Shoelace's `sl-close`, emitted
 when the close affordance is clicked or Delete is pressed on the focused owning tab. It bubbles, is
@@ -46224,6 +46254,19 @@ uses for its own `[part="body"]`.
   emitted. `'_blank'` (the default) preserves the original output; a falsy value (`null`, or the
   empty string via `link-target=""`) omits `target`/`rel` entirely instead of always defaulting to
   `_blank`, so rendered links open in the same tab
+- `linkSchemes?: string` (attribute `link-schemes`) — narrows which link destinations may become
+  anchors. A space- or comma-separated list of `http`, `https`, `blob`, `mailto` and `relative`
+  (a URL with no scheme of its own: a path, query, fragment or scheme-relative `//host` URL, which
+  inherits the page's scheme). Tokens are case-insensitive and may end in `:`. Unset (the default)
+  keeps the standard allowlist below. Any other token (`data`, `javascript`, a typo) is ignored, so
+  the list can only narrow that allowlist, never widen it; a list with no recognised token,
+  including `link-schemes=""`, allows no link at all. A refused link fails closed: it renders as its
+  plain text, never as an anchor. When set, it applies in every `htmlMode`, `trusted` included, to
+  Markdown links and GFM autolinks and, after sanitization, to raw-HTML and SVG `<a>` elements
+  (unwrapped to their content) and `<area>` elements (removed). Sanitization itself is unchanged.
+  Images are governed by `withoutImages`, not by this list. Changing it re-renders.
+  `<lr-markdown link-schemes="https"></lr-markdown>` keeps only `https:` links;
+  `link-schemes="https relative"` also keeps same-site paths.
 - `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`) — when set, a rendered link
   whose `href` _attribute_ (not the browser-resolved `.href` property) starts with this prefix is
   intercepted on click and reported via `lr-link-activate` instead of navigating; empty (the default)
@@ -46505,7 +46548,8 @@ can cover the other. Both surfaces use `white-space: pre` and scroll horizontall
   `escape` both reject a disallowed scheme (e.g. `javascript:`) by dropping the anchor/image and
   rendering only its text/alt content, exactly like the malformed-`href` case above; only
   `html-mode="trusted"` skips this check, consistent with its documented full bypass. The allowlist
-  does not stop an allowed image URL from being fetched; set `without-images` for that.
+  does not stop an allowed image URL from being fetched; set `without-images` for that. To narrow
+  the link half of it (for example to `https:` only), set `link-schemes`.
 - `target` is not in DOMPurify's default attribute allowlist (unlike `part`/`rel`/`class`, which
   already are), so sanitization is called with `ADD_ATTR: ['target']` — without that, every rendered
   link's `target` would be silently stripped by sanitization even though the anchor itself survives.
@@ -46575,7 +46619,8 @@ clamped to `[1, 32]` (`0` becomes `1`, `33` becomes `32`), and only non-finite v
 instance's isolated peer-neutral configurable parser; `htmlMode: 'sanitize' | 'escape' | 'trusted' =
 'sanitize'` (attribute `html-mode`), `withoutGfm: boolean = false` (attribute `without-gfm`),
 `withoutImages: boolean = false` (attribute `without-images`), `linkTarget: string | null = '_blank'` (attribute
-`link-target`), `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`),
+`link-target`), `linkSchemes?: string` (attribute `link-schemes`, the same narrowed link allowlist),
+`internalLinkPrefix: string = ''` (attribute `internal-link-prefix`),
 `headingOffset: number = 0` (attribute `heading-offset`), `streaming: boolean = false` (reflected),
 `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected),
 `codeBlockHeader: boolean = false` (attribute `code-block-header`),
@@ -47847,6 +47892,9 @@ properties existed:
   `<lr-markdown>`'s own `linkTarget`; the composed element always applies its own
   `rel="noopener noreferrer"` guard whenever a `target` is emitted, including a forwarded
   non-default value, and never a bare `opener`.
+- `linkSchemes?: string` (attribute `link-schemes`) — forwarded to the composed `<lr-markdown>`'s
+  own `linkSchemes`; `link-schemes="https"` keeps only `https:` links in streamed model output and
+  renders every other link as plain text.
 - `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`) — forwarded to the composed
   `<lr-markdown>`'s own `internalLinkPrefix`.
 - `headingOffset: number = 0` (attribute `heading-offset`) — forwarded to the composed
@@ -47952,7 +48000,7 @@ showing the previous stream's stale final content for the length of the window.
 Rendering itself is never reimplemented here: Markdown mode composes `<lr-markdown>` directly,
 forwarding this component's own `streaming` through as that component's `streaming` hint prop,
   `streamingRender`, `codeBlockHeader`, `languages` verbatim, and the rest of `<lr-markdown>`'s
-  configuration surface verbatim too (`tabSize`, `htmlMode`, `withoutGfm`, `withoutImages`, `linkTarget`,
+  configuration surface verbatim too (`tabSize`, `htmlMode`, `withoutGfm`, `withoutImages`, `linkTarget`, `linkSchemes`,
   `internalLinkPrefix`, `headingOffset`, `withoutSyntaxHighlighting`, `headingAnchors`, `math`, `maxHeight` —
   see **Properties** above); plain-text mode
 renders into a `white-space: pre-wrap` span instead. The
@@ -47991,7 +48039,7 @@ A build-lean `<lr-streaming-text>` variant for a consumer whose fenced-code `lan
 covers every language it will ever stream, or who never renders fenced code at all. Every
 capability — token coalescing, `contentMode` auto-detection, the blinking cursor, the
 `lr-content-settled` event, the `languages` property, and the full forwarded Markdown configuration
-surface (`tabSize`, `htmlMode`, `withoutGfm`, `withoutImages`, `linkTarget`, `internalLinkPrefix`, `headingOffset`,
+surface (`tabSize`, `htmlMode`, `withoutGfm`, `withoutImages`, `linkTarget`, `linkSchemes`, `internalLinkPrefix`, `headingOffset`,
 `withoutSyntaxHighlighting`, `headingAnchors`, `math`, `maxHeight`) — is identical to `<lr-streaming-text>`;
 only which Markdown element Markdown mode composes differs: this variant renders
 `<lr-markdown-core>` (`../markdown/markdown-core.js`) instead of `<lr-markdown>`, so importing this
@@ -48019,7 +48067,8 @@ attribute names, and defaults described under `<lr-streaming-text>`'s own **Prop
 'sanitize'` (attribute `html-mode`); `withoutGfm: boolean = false` (attribute `without-gfm`);
 `withoutImages: boolean = false` (attribute `without-images`); `linkTarget: string | null = '_blank'`
 (attribute `link-target`, still guarded by the composed element's own
-`rel="noopener noreferrer"` whenever a `target` is emitted); `internalLinkPrefix: string = ''`
+`rel="noopener noreferrer"` whenever a `target` is emitted); `linkSchemes?: string` (attribute
+`link-schemes`); `internalLinkPrefix: string = ''`
 (attribute `internal-link-prefix`); `headingOffset: number = 0` (attribute `heading-offset`);
 `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected);
 `codeBlockHeader: boolean = false` (attribute `code-block-header`); `withoutSyntaxHighlighting: boolean = false` (attribute
@@ -49243,12 +49292,17 @@ identifier disappears, focus repairs to the nearest surviving occurrence without
 external focus move.
 
 **Properties:** `suggestions: readonly LyraChatSuggestion[] = []` (attribute: false) —
-`LyraChatSuggestion { suggestionId: string; label: string; icon?: string; detail?: string; disabled?: boolean }`
+`LyraChatSuggestion { suggestionId: string; label: string; icon?: string; iconName?: string; iconLibrary?: string; detail?: string; disabled?: boolean }`
 (exported here). Identifiers must be nonempty and unique; invalid/later duplicates are omitted with
 the first valid occurrence winning. The input is clone-owned, bounded, and frozen; reassign a new
-array after changing the sequence or a row. `icon` is an optional
-peer-neutral literal hint (for example, an emoji), rendered decoratively before the text, and
-`detail` is an optional secondary line. `disabled` marks a suggestion non-actionable: its chip
+array after changing the sequence or a row. Each chip can show one decorative icon before its
+text, in increasing precedence: `icon`, an optional literal hint (for example, an emoji) rendered as
+text, so SVG or other markup in it is shown verbatim and never parsed; `iconName` (with optional
+`iconLibrary`, a registered `lr-icon` library; omitted uses the default set), rendered as an
+`<lr-icon>`; or a light-DOM element assigned to the per-suggestion `icon-<suggestionId>` slot, such
+as an inline `<svg>` or `<lr-icon>`. A slotted `<svg>` without its own `width` is sized to `1em`.
+Icons are always `aria-hidden`; the chip's accessible name stays its `label`. `detail` is an
+optional secondary line. `disabled` marks a suggestion non-actionable: its chip
 renders a genuinely disabled `<button>` (no roving tab stop, no hover/press affordance), activating
 it emits nothing, and arrow-key/Home/End roving navigation steps past it. Empty renders nothing at
 all. `wrap: boolean = false`
@@ -49258,9 +49312,13 @@ explicit empty string intentionally leaves the group unnamed.
 
 **Events:** `lr-suggestion-select` — `detail: { suggestionId, label }`.
 
+**Slots:** `icon-<suggestionId>` — decorative icon for the suggestion with that `suggestionId`
+(`slot="icon-a"` for `suggestionId: 'a'`); it replaces that suggestion's `iconName`/`icon`, and the
+fallback returns when the slotted element is removed.
+
 **CSS parts:** `base` (the labeled group), `row` (the flex container holding the chips, present in
 both the wrapping and the scrolling layout), `chip` (each suggestion button), `chip-icon` (the
-optional decorative literal icon), `chip-label` (the primary text), `chip-detail` (the secondary
+optional decorative icon wrapper: literal `icon`, `iconName` icon or slotted icon), `chip-label` (the primary text), `chip-detail` (the secondary
 line, only rendered when `detail` is set).
 
 **Themeable custom properties:** `--lr-suggestion-chips-justify` (default `flex-start`) — main-axis
@@ -49293,6 +49351,20 @@ Enter/Space activate. Renders inside an internal `lr-scroller` (`orientation="ho
   const composer = document.querySelector("lr-chat-composer");
   chips.suggestions = followUps;
   chips.addEventListener("lr-suggestion-select", (e) => (composer.value = e.detail.label));
+</script>
+```
+
+Vector icons per chip, by name or by slot:
+
+```html
+<lr-suggestion-chips id="starters">
+  <svg slot="icon-chart" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4"></circle></svg>
+</lr-suggestion-chips>
+<script type="module">
+  document.querySelector("#starters").suggestions = [
+    { suggestionId: "search", label: "Search the docs", iconName: "search" },
+    { suggestionId: "chart", label: "Chart last week" },
+  ];
 </script>
 ```
 
@@ -51325,6 +51397,8 @@ These named interfaces and helper signatures are available to typed integrations
     suggestionId: string;
     label: string;
     icon?: string;
+    iconName?: string;
+    iconLibrary?: string;
     detail?: string;
     disabled?: boolean;
   }`

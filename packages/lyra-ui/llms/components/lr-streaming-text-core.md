@@ -20,7 +20,7 @@ A build-lean `<lr-streaming-text>` variant for a consumer whose fenced-code `lan
 covers every language it will ever stream, or who never renders fenced code at all. Every
 capability — token coalescing, `contentMode` auto-detection, the blinking cursor, the
 `lr-content-settled` event, the `languages` property, and the full forwarded Markdown configuration
-surface (`tabSize`, `htmlMode`, `withoutGfm`, `withoutImages`, `linkTarget`, `internalLinkPrefix`, `headingOffset`,
+surface (`tabSize`, `htmlMode`, `withoutGfm`, `withoutImages`, `linkTarget`, `linkSchemes`, `internalLinkPrefix`, `headingOffset`,
 `withoutSyntaxHighlighting`, `headingAnchors`, `math`, `maxHeight`) — is identical to `<lr-streaming-text>`;
 only which Markdown element Markdown mode composes differs: this variant renders
 `<lr-markdown-core>` (`../markdown/markdown-core.js`) instead of `<lr-markdown>`, so importing this
@@ -48,7 +48,8 @@ attribute names, and defaults described under `<lr-streaming-text>`'s own **Prop
 'sanitize'` (attribute `html-mode`); `withoutGfm: boolean = false` (attribute `without-gfm`);
 `withoutImages: boolean = false` (attribute `without-images`); `linkTarget: string | null = '_blank'`
 (attribute `link-target`, still guarded by the composed element's own
-`rel="noopener noreferrer"` whenever a `target` is emitted); `internalLinkPrefix: string = ''`
+`rel="noopener noreferrer"` whenever a `target` is emitted); `linkSchemes?: string` (attribute
+`link-schemes`); `internalLinkPrefix: string = ''`
 (attribute `internal-link-prefix`); `headingOffset: number = 0` (attribute `heading-offset`);
 `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected);
 `codeBlockHeader: boolean = false` (attribute `code-block-header`); `withoutSyntaxHighlighting: boolean = false` (attribute

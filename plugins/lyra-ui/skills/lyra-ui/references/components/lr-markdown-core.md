@@ -55,7 +55,8 @@ clamped to `[1, 32]` (`0` becomes `1`, `33` becomes `32`), and only non-finite v
 instance's isolated peer-neutral configurable parser; `htmlMode: 'sanitize' | 'escape' | 'trusted' =
 'sanitize'` (attribute `html-mode`), `withoutGfm: boolean = false` (attribute `without-gfm`),
 `withoutImages: boolean = false` (attribute `without-images`), `linkTarget: string | null = '_blank'` (attribute
-`link-target`), `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`),
+`link-target`), `linkSchemes?: string` (attribute `link-schemes`, the same narrowed link allowlist),
+`internalLinkPrefix: string = ''` (attribute `internal-link-prefix`),
 `headingOffset: number = 0` (attribute `heading-offset`), `streaming: boolean = false` (reflected),
 `streamingRender: MarkdownStreamingRender = 'plain'` (attribute `streaming-render`, not reflected),
 `codeBlockHeader: boolean = false` (attribute `code-block-header`),

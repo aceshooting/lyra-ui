@@ -4485,7 +4485,7 @@
       "module": "src/components/conversation/suggestion-chips/suggestion-chips.class.ts",
       "exportName": "LyraChatSuggestion",
       "kind": "interface",
-      "fingerprint": "c95242b6cd7be4c7fd8b",
+      "fingerprint": "8239aaa5073e3478e8bb",
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
@@ -14695,7 +14695,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "d2fda8ec9ed68bec1580",
+      "fingerprint": "b5c256563f002b944975",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -16320,7 +16320,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "a9fe4faa1e671773800e",
+      "fingerprint": "f2a3f06bcf2bcc6d2400",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16336,7 +16336,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "8ab5d584e16164826f41",
+      "fingerprint": "079aa43d06cf346deedb",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16896,7 +16896,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "241a76b6724c1738b33b",
+      "fingerprint": "a565313d897ddfa855f3",
       "routes": [
         "src/vue.ts"
       ],
@@ -17305,7 +17305,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "7185b42f92eecc557809",
+      "fingerprint": "5536bdb33c54ac3af546",
       "routes": [
         "src/framework-types.ts"
       ],

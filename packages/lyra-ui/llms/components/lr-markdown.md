@@ -101,6 +101,19 @@ uses for its own `[part="body"]`.
   emitted. `'_blank'` (the default) preserves the original output; a falsy value (`null`, or the
   empty string via `link-target=""`) omits `target`/`rel` entirely instead of always defaulting to
   `_blank`, so rendered links open in the same tab
+- `linkSchemes?: string` (attribute `link-schemes`) — narrows which link destinations may become
+  anchors. A space- or comma-separated list of `http`, `https`, `blob`, `mailto` and `relative`
+  (a URL with no scheme of its own: a path, query, fragment or scheme-relative `//host` URL, which
+  inherits the page's scheme). Tokens are case-insensitive and may end in `:`. Unset (the default)
+  keeps the standard allowlist below. Any other token (`data`, `javascript`, a typo) is ignored, so
+  the list can only narrow that allowlist, never widen it; a list with no recognised token,
+  including `link-schemes=""`, allows no link at all. A refused link fails closed: it renders as its
+  plain text, never as an anchor. When set, it applies in every `htmlMode`, `trusted` included, to
+  Markdown links and GFM autolinks and, after sanitization, to raw-HTML and SVG `<a>` elements
+  (unwrapped to their content) and `<area>` elements (removed). Sanitization itself is unchanged.
+  Images are governed by `withoutImages`, not by this list. Changing it re-renders.
+  `<lr-markdown link-schemes="https"></lr-markdown>` keeps only `https:` links;
+  `link-schemes="https relative"` also keeps same-site paths.
 - `internalLinkPrefix: string = ''` (attribute `internal-link-prefix`) — when set, a rendered link
   whose `href` _attribute_ (not the browser-resolved `.href` property) starts with this prefix is
   intercepted on click and reported via `lr-link-activate` instead of navigating; empty (the default)
@@ -382,7 +395,8 @@ can cover the other. Both surfaces use `white-space: pre` and scroll horizontall
   `escape` both reject a disallowed scheme (e.g. `javascript:`) by dropping the anchor/image and
   rendering only its text/alt content, exactly like the malformed-`href` case above; only
   `html-mode="trusted"` skips this check, consistent with its documented full bypass. The allowlist
-  does not stop an allowed image URL from being fetched; set `without-images` for that.
+  does not stop an allowed image URL from being fetched; set `without-images` for that. To narrow
+  the link half of it (for example to `https:` only), set `link-schemes`.
 - `target` is not in DOMPurify's default attribute allowlist (unlike `part`/`rel`/`class`, which
   already are), so sanitization is called with `ADD_ATTR: ['target']` — without that, every rendered
   link's `target` would be silently stripped by sanitization even though the anchor itself survives.

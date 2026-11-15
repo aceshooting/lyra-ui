@@ -84008,6 +84008,15 @@
             "default": ""
           },
           {
+            "name": "link-schemes",
+            "property": "linkSchemes",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "link-target",
             "property": "linkTarget",
             "type": "string | null",
@@ -84222,6 +84231,15 @@
             "name": "languages",
             "attribute": null,
             "type": "Readonly<Record<string, ShikiLanguageSource>> | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "linkSchemes",
+            "attribute": "link-schemes",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -84784,6 +84802,15 @@
             "default": ""
           },
           {
+            "name": "link-schemes",
+            "property": "linkSchemes",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "link-target",
             "property": "linkTarget",
             "type": "string | null",
@@ -84994,6 +85021,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "{}"
+          },
+          {
+            "name": "linkSchemes",
+            "attribute": "link-schemes",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "linkTarget",
@@ -132375,6 +132411,15 @@
             "default": ""
           },
           {
+            "name": "link-schemes",
+            "property": "linkSchemes",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "link-target",
             "property": "linkTarget",
             "type": "string | null",
@@ -132560,6 +132605,15 @@
             "name": "languages",
             "attribute": null,
             "type": "Readonly<Record<string, ShikiLanguageInput>> | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "linkSchemes",
+            "attribute": "link-schemes",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -132948,6 +133002,15 @@
             "default": ""
           },
           {
+            "name": "link-schemes",
+            "property": "linkSchemes",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "link-target",
             "property": "linkTarget",
             "type": "string | null",
@@ -133133,6 +133196,15 @@
             "name": "languages",
             "attribute": null,
             "type": "Readonly<Record<string, ShikiLanguageInput>> | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "linkSchemes",
+            "attribute": "link-schemes",
+            "type": "string | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -133746,6 +133818,7 @@
       },
       "dependencies": {
         "direct": [
+          "lr-icon",
           "lr-scroller"
         ],
         "transitive": [],
@@ -133825,7 +133898,12 @@
             "default": false
           }
         ],
-        "slots": [],
+        "slots": [
+          {
+            "name": "icon-<suggestionId>",
+            "deprecated": null
+          }
+        ],
         "events": [
           {
             "name": "lr-suggestion-select",
@@ -135597,7 +135675,33 @@
         ],
         "cssProperties": [],
         "cssStates": [],
-        "methods": [],
+        "methods": [
+          {
+            "name": "blur",
+            "overloads": [
+              {
+                "parameters": [],
+                "returnType": "void"
+              }
+            ]
+          },
+          {
+            "name": "focus",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "options",
+                    "type": "FocusOptions",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "void"
+              }
+            ]
+          }
+        ],
         "staticProperties": [],
         "staticMethods": [],
         "moduleExports": [],
@@ -135610,7 +135714,10 @@
         },
         "native": {
           "forwardedEvents": [],
-          "delegatedMethods": []
+          "delegatedMethods": [
+            "blur",
+            "focus"
+          ]
         }
       }
     },
@@ -136034,6 +136141,28 @@
         ],
         "cssStates": [],
         "methods": [
+          {
+            "name": "focusTab",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "panel",
+                    "type": "string",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "options",
+                    "type": "FocusOptions",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "boolean"
+              }
+            ]
+          },
           {
             "name": "show",
             "overloads": [

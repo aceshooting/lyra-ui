@@ -260,7 +260,7 @@ export const scopedDefinitionClosures: Readonly<Record<string, readonly string[]
   'lr-streaming-text': ['lr-markdown', 'lr-streaming-text'],
   'lr-streaming-text-core': ['lr-markdown-core', 'lr-streaming-text-core'],
   'lr-subagent-panel': ['lr-badge', 'lr-empty', 'lr-subagent-panel'],
-  'lr-suggestion-chips': ['lr-scroller', 'lr-suggestion-chips'],
+  'lr-suggestion-chips': ['lr-icon', 'lr-scroller', 'lr-suggestion-chips'],
   'lr-svg-viewer': ['lr-pan-zoom', 'lr-svg-viewer'],
   'lr-swatch-picker': ['lr-swatch-picker'],
   'lr-switch': ['lr-switch'],

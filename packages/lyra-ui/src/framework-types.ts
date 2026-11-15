@@ -7567,6 +7567,7 @@ export interface LyraComponentTypeMap {
       | 'internalLinkPrefix'
       | 'languageLoaders'
       | 'languages'
+      | 'linkSchemes'
       | 'linkTarget'
       | 'locale'
       | 'math'
@@ -7615,6 +7616,7 @@ export interface LyraComponentTypeMap {
       'heading-offset'?: LyraMarkdown['headingOffset'];
       'html-mode'?: LyraMarkdown['htmlMode'];
       'internal-link-prefix'?: LyraMarkdown['internalLinkPrefix'];
+      'link-schemes'?: LyraMarkdown['linkSchemes'];
       'link-target'?: LyraMarkdown['linkTarget'];
       'max-height'?: LyraMarkdown['maxHeight'];
       'streaming-render'?: LyraMarkdown['streamingRender'];
@@ -7638,6 +7640,7 @@ export interface LyraComponentTypeMap {
       | 'htmlMode'
       | 'internalLinkPrefix'
       | 'languages'
+      | 'linkSchemes'
       | 'linkTarget'
       | 'locale'
       | 'math'
@@ -7686,6 +7689,7 @@ export interface LyraComponentTypeMap {
       'heading-offset'?: LyraMarkdownCore['headingOffset'];
       'html-mode'?: LyraMarkdownCore['htmlMode'];
       'internal-link-prefix'?: LyraMarkdownCore['internalLinkPrefix'];
+      'link-schemes'?: LyraMarkdownCore['linkSchemes'];
       'link-target'?: LyraMarkdownCore['linkTarget'];
       'max-height'?: LyraMarkdownCore['maxHeight'];
       'streaming-render'?: LyraMarkdownCore['streamingRender'];
@@ -11718,6 +11722,7 @@ export interface LyraComponentTypeMap {
       | 'internalLinkPrefix'
       | 'languageLoaders'
       | 'languages'
+      | 'linkSchemes'
       | 'linkTarget'
       | 'locale'
       | 'math'
@@ -11746,6 +11751,7 @@ export interface LyraComponentTypeMap {
       'heading-offset'?: LyraStreamingText['headingOffset'];
       'html-mode'?: LyraStreamingText['htmlMode'];
       'internal-link-prefix'?: LyraStreamingText['internalLinkPrefix'];
+      'link-schemes'?: LyraStreamingText['linkSchemes'];
       'link-target'?: LyraStreamingText['linkTarget'];
       'max-height'?: LyraStreamingText['maxHeight'];
       'streaming-render'?: LyraStreamingText['streamingRender'];
@@ -11769,6 +11775,7 @@ export interface LyraComponentTypeMap {
       | 'internalLinkPrefix'
       | 'languageLoaders'
       | 'languages'
+      | 'linkSchemes'
       | 'linkTarget'
       | 'locale'
       | 'math'
@@ -11797,6 +11804,7 @@ export interface LyraComponentTypeMap {
       'heading-offset'?: LyraStreamingTextCore['headingOffset'];
       'html-mode'?: LyraStreamingTextCore['htmlMode'];
       'internal-link-prefix'?: LyraStreamingTextCore['internalLinkPrefix'];
+      'link-schemes'?: LyraStreamingTextCore['linkSchemes'];
       'link-target'?: LyraStreamingTextCore['linkTarget'];
       'max-height'?: LyraStreamingTextCore['maxHeight'];
       'streaming-render'?: LyraStreamingTextCore['streamingRender'];
