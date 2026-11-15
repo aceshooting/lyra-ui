@@ -60,5 +60,75 @@ export const reservationStyles: CSSResult = css`
       display: inline-block;
       min-block-size: var(--lr-form-control-height, 2.375rem);
     }
+
+    lr-checkbox:not(:defined) {
+      display: inline-flex;
+      align-items: center;
+      max-inline-size: 100%;
+      font-family: var(--lr-font);
+      font-size: var(--lr-font-size-md-sm, 0.875rem);
+    }
+    lr-checkbox:not(:defined)::before {
+      --_lr-reserved-checkbox-target: var(--lr-icon-button-size, var(--lr-theme-icon-button-size, 2.25rem));
+      --_lr-reserved-checkbox-box: var(
+        --lr-checkbox-box-size,
+        min(var(--_lr-reserved-checkbox-target), calc(var(--lr-form-control-height, 2.375rem) * 0.7))
+      );
+      content: '';
+      flex: none;
+      inline-size: var(--lr-checkbox-label-indent, calc(var(--_lr-reserved-checkbox-box) + var(--lr-space-s, 0.5rem)));
+      block-size: var(--_lr-reserved-checkbox-box);
+      margin-block: calc((var(--_lr-reserved-checkbox-target) - var(--_lr-reserved-checkbox-box)) / 2);
+    }
+
+    lr-badge:not(:defined) {
+      display: inline-flex;
+      align-items: center;
+      box-sizing: border-box;
+      max-inline-size: 100%;
+      min-block-size: calc(var(--lr-badge-min-height, var(--lr-size-1-25rem, 1.25rem)) + 2 * var(--lr-border-width-thin, 1px));
+      padding-inline: var(--lr-badge-padding-inline, var(--lr-space-s, 0.5rem));
+      border: var(--lr-border-width-thin, 1px) solid transparent;
+      font-family: var(--lr-font);
+      font-size: var(--lr-badge-font-size, var(--lr-font-size-sm, 0.8125rem));
+      font-weight: var(--lr-font-weight-medium, 500);
+      line-height: var(--lr-line-height-compact, 1.25);
+    }
+
+    lr-chat-composer:not(:defined) {
+      display: block;
+      box-sizing: border-box;
+      min-block-size: calc(
+        var(--lr-icon-button-size, var(--lr-theme-icon-button-size, 2.25rem)) +
+          2 * var(--lr-chat-composer-padding, var(--lr-space-s, 0.5rem)) +
+          2 * var(--lr-border-width-thin, 1px)
+      );
+    }
+
+    lr-tab-group:not(:defined) {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      column-gap: var(--lr-space-m, 0.75rem);
+      row-gap: var(--lr-space-s, 0.5rem);
+      font-family: var(--lr-font);
+    }
+    lr-tab-group:not(:defined) > lr-tab:not(:defined) {
+      display: inline-flex;
+      align-items: center;
+      padding: var(--lr-space-s, 0.5rem) var(--lr-space-xs, 0.25rem);
+      border-block-end: var(--lr-border-width-medium, 2px) solid transparent;
+      font-weight: var(--lr-font-weight-medium, 500);
+      white-space: nowrap;
+    }
+    lr-tab-group:not(:defined) > lr-tab-panel:not(:defined) {
+      display: none;
+      flex: 0 0 100%;
+    }
+    lr-tab-group:not(:defined) > lr-tab-panel:not(:defined)[active],
+    lr-tab-group:not(:defined):not(:has(> lr-tab-panel[active])) > lr-tab-panel:not(:defined):first-of-type {
+      display: block;
+      padding-block-start: var(--lr-space-xs, 0.25rem);
+    }
   }
 `;

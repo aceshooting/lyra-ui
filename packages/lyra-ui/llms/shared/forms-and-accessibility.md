@@ -358,8 +358,21 @@ no `:root` rules.
 **Every reservation is expressed with the same custom property and fallback token the component's
 own stylesheet uses** — `--lr-chart-height` / `--lr-size-280px` for the chart family,
 `--lr-map-height` for `lr-map`, `--lr-canvas-reserved-height` for graph/canvas surfaces,
-`--lr-flag-aspect-ratio` for `lr-flag`, `--lr-form-control-height` for the field controls, and so
-on. That is the point of shipping it rather than documenting measured pixel values: a hand-written
+`--lr-flag-aspect-ratio` for `lr-flag`, `--lr-form-control-height` for the field controls,
+`--lr-checkbox-label-indent` and `--lr-icon-button-size` for `lr-checkbox`, `--lr-badge-min-height`,
+`--lr-badge-padding-inline` and `--lr-badge-font-size` for `lr-badge`, `--lr-chat-composer-padding`
+for `lr-chat-composer`, and so on.
+
+Covered tags: the chart family, `lr-map`, `lr-flag`, `lr-flow-canvas`, `lr-graph`,
+`lr-knowledge-graph-explorer`, the inline form-control row (`lr-input`, `lr-number-input`,
+`lr-select`, `lr-combobox`, `lr-date-input`, `lr-phone-input`, `lr-color-picker`, `lr-button`,
+`lr-icon-button`), `lr-checkbox`, `lr-badge`, `lr-chat-composer`, and the tab trio
+`lr-tab-group`/`lr-tab`/`lr-tab-panel`. Before upgrade a tab group lays its descriptors out as one
+row of tab-sized boxes and shows only the panel that will be shown (the one marked `active`, else
+the first), for the default top `placement`. The text-bearing reservations (`lr-checkbox`,
+`lr-badge`, the tab trio) also set `font-family: var(--lr-font)`, as every defined Lyra host does,
+because the reserved box is measured from the same text. The badge and checkbox reservations cover
+their default `m` size; a non-default `size` reserves the default footprint. That is the point of shipping it rather than documenting measured pixel values: a hand-written
 reservation rots silently the moment a component's default changes, whereas these track it, and
 theming a component through its documented custom property re-themes its reservation with it.
 
