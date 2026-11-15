@@ -376,6 +376,46 @@ export const ProgrammaticShow: StoryObj = {
   `,
 };
 
+export const ProgrammaticFocus: StoryObj = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`focusTab(name)` moves keyboard focus to the real tab button and the roving tab stop with it; under the default `activation="auto"` it also selects that tab, as `show()` does. `lr-tab.focus()` forwards the same way. Use it after `show(name)` or when closing an overlay opened from a tab.',
+      },
+    },
+  },
+  render: () => html`
+    <div>
+      <lr-tab-group id="focus-tabs">
+        <lr-tab panel="overview">Overview</lr-tab>
+        <lr-tab panel="activity">Activity</lr-tab>
+        <lr-tab-panel name="overview">Overview content.</lr-tab-panel>
+        <lr-tab-panel name="activity">Activity content.</lr-tab-panel>
+      </lr-tab-group>
+      <button
+        type="button"
+        @click=${() => {
+          const group = document.getElementById('focus-tabs') as HTMLElement & {
+            focusTab(name: string): boolean;
+          };
+          group.focusTab('activity');
+        }}
+      >
+        Focus activity
+      </button>
+      <button
+        type="button"
+        @click=${() => {
+          (document.querySelector('#focus-tabs lr-tab[panel="overview"]') as HTMLElement).focus();
+        }}
+      >
+        Focus overview through lr-tab.focus()
+      </button>
+    </div>
+  `,
+};
+
 export const Placement: StoryObj = {
   parameters: {
     docs: {

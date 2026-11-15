@@ -1058,7 +1058,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   /** Moves the roving focus without selecting -- the `activation="manual"` path. */
   private focusOnly(tab: TabDef): void {
     this.focusedTab = tab.slotName;
-    this.focusTab(tab.slotName);
+    this.focusTabButton(tab.slotName);
   }
 
   /** Whichever tab currently owns `tabindex="0"`. Under `auto` that is always the selected tab;
@@ -1101,14 +1101,47 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   }
 
   /** Moves real DOM focus to tab `slotName`'s button. Safe to call immediately (no `updateComplete` wait): every tab button already exists in the DOM regardless of its current `tabindex`, and `tabindex="-1"` elements are still focusable via script. */
-  private focusTab(slotName: string): void {
-    const buttons = this.renderRoot.querySelectorAll('[part="tab"]');
-    for (const button of Array.from(buttons)) {
-      if ((button as HTMLElement).dataset['slot'] === slotName) {
-        (button as HTMLElement).focus();
-        return;
-      }
-    }
+  private focusTabButton(slotName: string, options?: FocusOptions): boolean {
+    const button = this.tabButton(slotName);
+    if (!button) return false;
+    button.focus(options);
+    return true;
+  }
+
+  private tabButton(slotName: string): HTMLElement | undefined {
+    const buttons = this.renderRoot.querySelectorAll<HTMLElement>('[part="tab"]');
+    return Array.from(buttons).find((button) => button.dataset['slot'] === slotName);
+  }
+
+  /** Moves keyboard focus to the real tab button of the enabled, non-inert tab whose `panel` is
+   *  `panel`, and moves the roving tab stop with it. Under `activation="auto"` focus and selection
+   *  move together, so focusing an unselected tab also selects it exactly as `show()` does
+   *  (`lr-tab-hide`/`lr-tab-show`, never `lr-activate`); under `manual` only focus moves. A missing,
+   *  disabled or inert tab leaves focus and selection unchanged, and so does a tab added since the
+   *  group last read its children (await `updateComplete` first). Returns `true` when focus moved. */
+  focusTab(panel: string, options?: FocusOptions): boolean {
+    const tab = this.tabs.find((candidate) => candidate.slotName === panel);
+    return tab ? this.focusTabDefinition(tab, options) : false;
+  }
+
+  /** @internal `<lr-tab>.focus()` seam: focuses the real button projecting `element`. */
+  focusTabElement(element: Element, options?: FocusOptions): boolean {
+    const tab = this.tabs.find((candidate) => candidate.element === element);
+    return tab ? this.focusTabDefinition(tab, options) : false;
+  }
+
+  /** @internal `<lr-tab>.blur()` seam: blurs the real button projecting `element` if it has focus. */
+  blurTabElement(element: Element): void {
+    const tab = this.tabs.find((candidate) => candidate.element === element);
+    const button = tab ? this.tabButton(tab.slotName) : undefined;
+    if (button && shadowFocusTarget(this) === button) button.blur();
+  }
+
+  private focusTabDefinition(tab: TabDef, options?: FocusOptions): boolean {
+    if (!this.isNavigable(tab)) return false;
+    if (this.activation === 'manual') this.focusedTab = tab.slotName;
+    else this.selectTab(tab);
+    return this.focusTabButton(tab.slotName, options);
   }
 
   /** Whether the strip runs down the side rather than across the top -- which decides both the
@@ -1160,7 +1193,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       return;
     }
     this.activateTab(target);
-    this.focusTab(target.slotName);
+    this.focusTabButton(target.slotName);
   };
 
   private tabId(slotName: string): string {

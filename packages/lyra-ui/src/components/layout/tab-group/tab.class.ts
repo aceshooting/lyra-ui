@@ -2,12 +2,18 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { closeIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { tag } from '../../../internal/prefix.js';
 import { styles } from './tab.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_close } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+
+interface TabFocusOwner extends Element {
+  focusTabElement(element: Element, options?: FocusOptions): boolean;
+  blurTabElement(element: Element): void;
+}
 
 export interface LyraTabEventMap {
   'lr-close': CustomEvent<null>;
@@ -91,6 +97,28 @@ export class LyraTab extends LyraElement<LyraTabEventMap> {
     event.stopPropagation();
     this.requestCloseFromOwner();
   };
+
+  /** The owning `<lr-tab-group>` when it is upgraded, or `undefined`. */
+  private get owner(): TabFocusOwner | undefined {
+    const parent = this.parentElement as (Element & Partial<TabFocusOwner>) | null;
+    return parent && parent.localName === tag('tab-group') && typeof parent.focusTabElement === 'function'
+      ? parent as TabFocusOwner
+      : undefined;
+  }
+
+  /** Focuses the real `role="tab"` button the owning group renders for this descriptor, exactly
+   *  as the group's `focusTab(panel)` does (under `activation="auto"` that also selects it). A
+   *  disabled or inert tab, or one outside an upgraded group, is not focusable and is left alone. */
+  override focus(options?: FocusOptions): void {
+    if (!this.owner?.focusTabElement(this, options)) super.focus(options);
+  }
+
+  /** Removes focus from the owning group's real tab button when it is focused. */
+  override blur(): void {
+    const owner = this.owner;
+    if (owner) owner.blurTabElement(this);
+    else super.blur();
+  }
 
   /** @internal Owning-group seam for the focused tab's `Delete` shortcut. */
   requestCloseFromOwner(): void {
