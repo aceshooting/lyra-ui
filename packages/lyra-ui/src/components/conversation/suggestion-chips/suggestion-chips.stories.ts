@@ -116,6 +116,28 @@ export const MultiLineStarterPrompts: Story = {
   `,
 };
 
+export const VectorIcons: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Per-suggestion vector icons: `iconName` renders an `lr-icon` (here the built-in `search` and `calendar` glyphs), and a light-DOM element in the `icon-<suggestionId>` slot (an inline SVG for `chart`) replaces any `iconName`/`icon`. Literal `icon` text is never parsed as markup. Icons stay decorative; each chip is named by its label.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-suggestion-chips
+      .suggestions=${[
+        { suggestionId: 'search', label: 'Search the docs', iconName: 'search' },
+        { suggestionId: 'calendar', label: 'Plan next week', iconName: 'calendar' },
+        { suggestionId: 'chart', label: 'Chart last week', iconName: 'search' },
+      ]}
+    >
+      <svg slot="icon-chart" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="9" width="3" height="6"></rect><rect x="6" y="5" width="3" height="10"></rect><rect x="11" y="1" width="3" height="14"></rect></svg>
+    </lr-suggestion-chips>
+  `,
+};
+
 export const Empty: Story = {
   render: () => html`<p>Nothing renders below when suggestions is empty:</p>
     <lr-suggestion-chips .suggestions=${[]}></lr-suggestion-chips>`,

@@ -3143,12 +3143,17 @@ identifier disappears, focus repairs to the nearest surviving occurrence without
 external focus move.
 
 **Properties:** `suggestions: readonly LyraChatSuggestion[] = []` (attribute: false) —
-`LyraChatSuggestion { suggestionId: string; label: string; icon?: string; detail?: string; disabled?: boolean }`
+`LyraChatSuggestion { suggestionId: string; label: string; icon?: string; iconName?: string; iconLibrary?: string; detail?: string; disabled?: boolean }`
 (exported here). Identifiers must be nonempty and unique; invalid/later duplicates are omitted with
 the first valid occurrence winning. The input is clone-owned, bounded, and frozen; reassign a new
-array after changing the sequence or a row. `icon` is an optional
-peer-neutral literal hint (for example, an emoji), rendered decoratively before the text, and
-`detail` is an optional secondary line. `disabled` marks a suggestion non-actionable: its chip
+array after changing the sequence or a row. Each chip can show one decorative icon before its
+text, in increasing precedence: `icon`, an optional literal hint (for example, an emoji) rendered as
+text, so SVG or other markup in it is shown verbatim and never parsed; `iconName` (with optional
+`iconLibrary`, a registered `lr-icon` library; omitted uses the default set), rendered as an
+`<lr-icon>`; or a light-DOM element assigned to the per-suggestion `icon-<suggestionId>` slot, such
+as an inline `<svg>` or `<lr-icon>`. A slotted `<svg>` without its own `width` is sized to `1em`.
+Icons are always `aria-hidden`; the chip's accessible name stays its `label`. `detail` is an
+optional secondary line. `disabled` marks a suggestion non-actionable: its chip
 renders a genuinely disabled `<button>` (no roving tab stop, no hover/press affordance), activating
 it emits nothing, and arrow-key/Home/End roving navigation steps past it. Empty renders nothing at
 all. `wrap: boolean = false`
@@ -3158,9 +3163,13 @@ explicit empty string intentionally leaves the group unnamed.
 
 **Events:** `lr-suggestion-select` — `detail: { suggestionId, label }`.
 
+**Slots:** `icon-<suggestionId>` — decorative icon for the suggestion with that `suggestionId`
+(`slot="icon-a"` for `suggestionId: 'a'`); it replaces that suggestion's `iconName`/`icon`, and the
+fallback returns when the slotted element is removed.
+
 **CSS parts:** `base` (the labeled group), `row` (the flex container holding the chips, present in
 both the wrapping and the scrolling layout), `chip` (each suggestion button), `chip-icon` (the
-optional decorative literal icon), `chip-label` (the primary text), `chip-detail` (the secondary
+optional decorative icon wrapper: literal `icon`, `iconName` icon or slotted icon), `chip-label` (the primary text), `chip-detail` (the secondary
 line, only rendered when `detail` is set).
 
 **Themeable custom properties:** `--lr-suggestion-chips-justify` (default `flex-start`) — main-axis
@@ -3193,6 +3202,20 @@ Enter/Space activate. Renders inside an internal `lr-scroller` (`orientation="ho
   const composer = document.querySelector("lr-chat-composer");
   chips.suggestions = followUps;
   chips.addEventListener("lr-suggestion-select", (e) => (composer.value = e.detail.label));
+</script>
+```
+
+Vector icons per chip, by name or by slot:
+
+```html
+<lr-suggestion-chips id="starters">
+  <svg slot="icon-chart" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4"></circle></svg>
+</lr-suggestion-chips>
+<script type="module">
+  document.querySelector("#starters").suggestions = [
+    { suggestionId: "search", label: "Search the docs", iconName: "search" },
+    { suggestionId: "chart", label: "Chart last week" },
+  ];
 </script>
 ```
 
@@ -5226,6 +5249,8 @@ These named interfaces and helper signatures are available to typed integrations
     suggestionId: string;
     label: string;
     icon?: string;
+    iconName?: string;
+    iconLibrary?: string;
     detail?: string;
     disabled?: boolean;
   }`

@@ -13,6 +13,8 @@ import {
 } from '../../../internal/focus-navigation.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { RovingToolbarController } from '../../../internal/roving-toolbar.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
+import { ifDefined } from 'lit/directives/if-defined.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_suggestionsLabel } from '../../../internal/default-strings/conversation.generated.js';
@@ -23,8 +25,14 @@ export interface LyraChatSuggestion {
   suggestionId: string;
   /** Nonblank text used as the chip button's visible and accessible name. */
   label: string;
-  /** Optional literal icon hint (for example, an emoji). Rendered decoratively before the text. */
+  /** Optional literal icon hint (for example, an emoji). Rendered decoratively before the text, as
+   *  text: markup in it is shown verbatim, never parsed. `iconName` and a slotted icon win over it. */
   icon?: string;
+  /** Optional `<lr-icon>` name rendered decoratively before the text, for a vector icon instead of
+   *  literal text. Wins over `icon`; a slotted `icon-<suggestionId>` element wins over both. */
+  iconName?: string;
+  /** Optional registered `<lr-icon>` library resolving `iconName`. Omitted uses the default set. */
+  iconLibrary?: string;
   /** An optional secondary line (Perplexity-style related questions). */
   detail?: string;
   /**
@@ -65,13 +73,21 @@ interface PendingSuggestionFocus {
  * past it instead of landing on it. Omitted or `false` renders the chip exactly as before this
  * field existed.
  *
+ * Each chip can show a decorative icon before its text, in increasing precedence: `icon` (literal
+ * text such as an emoji), `iconName` (+ optional `iconLibrary`, rendered as an `<lr-icon>`), or a
+ * light-DOM element assigned to the per-suggestion `icon-<suggestionId>` slot, such as an inline
+ * `<svg>` or `<lr-icon>`. Icons are always hidden from assistive technology; the chip's accessible
+ * name stays its `label`. No icon field is ever parsed as markup.
+ *
  * @customElement lr-suggestion-chips
  * @event lr-suggestion-select - `detail: { suggestionId, label }`.
+ * @slot icon-<suggestionId> - Decorative icon for the suggestion with that `suggestionId` (for
+ *   example `slot="icon-a"` for `suggestionId: 'a'`); replaces its `iconName`/`icon`.
  * @csspart base - The labeled group.
  * @csspart row - The flex container holding the chips, in both the wrapping and the scrolling
  *   layout. Style this to change how chip lines pack (`justify-content`, `row-gap`).
  * @csspart chip - Each suggestion button.
- * @csspart chip-icon - Optional decorative literal icon.
+ * @csspart chip-icon - Optional decorative icon wrapper (literal `icon`, `iconName` icon or slotted icon).
  * @csspart chip-label - The primary text.
  * @csspart chip-detail - The secondary line (only rendered when `detail` is set).
  * @cssprop [--lr-suggestion-chips-justify=flex-start] - Main-axis packing of the chip row. `center`
@@ -119,6 +135,7 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
 
   @state() private activeIndex = 0;
   private readonly rovingToolbar = new RovingToolbarController();
+  private readonly slots = new SlotPresenceController(this, { observeLightDom: true });
   private pendingFocus?: PendingSuggestionFocus;
   private focusRepairGeneration = 0;
 
@@ -288,15 +305,25 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
         @click=${() => this.select(suggestion)}
         @focus=${() => this.onChipFocus(index)}
       >
-        ${suggestion.icon
-          ? html`<span part="chip-icon" aria-hidden="true">${suggestion.icon}</span>`
-          : nothing}
+        ${this.renderChipIcon(suggestion)}
         <span class="content">
           <span part="chip-label">${suggestion.label}</span>
           ${suggestion.detail ? html`<span part="chip-detail">${suggestion.detail}</span>` : nothing}
         </span>
       </button>
     `;
+  }
+
+  /** Slot, then `iconName`, then literal `icon`; renders no wrapper when none applies. */
+  private renderChipIcon(suggestion: LyraChatSuggestion): TemplateResult | typeof nothing {
+    const slotName = `icon-${suggestion.suggestionId}`;
+    const iconName = typeof suggestion.iconName === 'string' && suggestion.iconName.trim() !== '' ? suggestion.iconName : undefined;
+    const literal = typeof suggestion.icon === 'string' && suggestion.icon !== '' ? suggestion.icon : undefined;
+    if (!this.slots.has(slotName) && !iconName && !literal) return nothing;
+    const fallback = iconName
+      ? html`<lr-icon name=${iconName} library=${ifDefined(suggestion.iconLibrary || undefined)}></lr-icon>`
+      : literal ?? nothing;
+    return html`<span part="chip-icon" aria-hidden="true"><slot name=${slotName}>${fallback}</slot></span>`;
   }
 
   override render(): TemplateResult {

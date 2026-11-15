@@ -49,6 +49,13 @@ export const styles = css`
     flex: none;
     line-height: var(--lr-line-height-compact);
   }
+  /* A slotted inline SVG without its own width has no usable intrinsic size inside the
+     shrink-to-fit chip, so it is sized to the text like the built-in lr-icon. */
+  [part='chip-icon'] ::slotted(svg:not([width])) {
+    inline-size: var(--lr-size-1em);
+    block-size: var(--lr-size-1em);
+    vertical-align: middle;
+  }
   /* A wrapping row has a definite inline size to wrap within, so a chip never grows past it
      whatever the consumer cap: a full-question starter prompt wraps inside a narrow chat column
      instead of overflowing it. The scrolling row keeps the plain cap -- it scrolls instead. */

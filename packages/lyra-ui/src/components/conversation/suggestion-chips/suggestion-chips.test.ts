@@ -77,6 +77,81 @@ it('renders an optional literal icon as decorative content without changing chip
   await expect(el).to.be.accessible();
 });
 
+it('renders literal icon markup as text, never as parsed markup', async () => {
+  const markup = '<svg viewBox="0 0 8 8"><circle cx="4" cy="4" r="4"/></svg>';
+  const el = await fixture<LyraSuggestionChips>(html`
+    <lr-suggestion-chips .suggestions=${[{ suggestionId: 'a', label: 'A', icon: markup }]}></lr-suggestion-chips>
+  `);
+  const icon = el.shadowRoot!.querySelector<HTMLElement>('[part="chip-icon"]')!;
+  expect(icon.querySelectorAll('svg')).to.have.length(0);
+  expect(icon.textContent).to.equal(markup);
+});
+
+it('renders iconName as a decorative lr-icon that wins over the literal icon', async () => {
+  const el = await fixture<LyraSuggestionChips>(html`
+    <lr-suggestion-chips
+      .suggestions=${[
+        { suggestionId: 'a', label: 'Search', iconName: 'search', icon: '🔎' },
+        { suggestionId: 'b', label: 'Library', iconName: 'star', iconLibrary: 'custom' },
+        { suggestionId: 'c', label: 'Blank', iconName: '  ' },
+      ]}
+    ></lr-suggestion-chips>
+  `);
+  const chips = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="chip"]')];
+  const first = chips[0]!.querySelector('[part="chip-icon"]')!;
+  expect(first.getAttribute('aria-hidden')).to.equal('true');
+  const icon = first.querySelector('lr-icon')!;
+  expect(icon.getAttribute('name')).to.equal('search');
+  expect(icon.getAttribute('library')).to.equal('default');
+  expect(first.textContent).to.not.include('🔎');
+  expect(chips[1]!.querySelector('lr-icon')!.getAttribute('library')).to.equal('custom');
+  expect(chips[2]!.querySelectorAll('[part="chip-icon"]')).to.have.length(0);
+  expect(chips[0]!.textContent!.trim()).to.equal('Search');
+  await expect(el).to.be.accessible();
+});
+
+it('projects a per-suggestion icon-<suggestionId> slot that wins over iconName and icon', async () => {
+  const el = await fixture<LyraSuggestionChips>(html`
+    <lr-suggestion-chips
+      .suggestions=${[
+        { suggestionId: 'a', label: 'Alpha', iconName: 'search' },
+        { suggestionId: 'b', label: 'Beta' },
+        { suggestionId: 'c', label: 'Gamma' },
+      ]}
+    >
+      <svg slot="icon-a" id="svg-a" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4"></circle></svg>
+      <svg slot="icon-b" id="svg-b" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4"></circle></svg>
+    </lr-suggestion-chips>
+  `);
+  await el.updateComplete;
+  const chipFor = (id: string): HTMLButtonElement =>
+    el.shadowRoot!.querySelector<HTMLButtonElement>(`[data-suggestion-id="${id}"]`)!;
+  const assigned = (id: string): string[] => {
+    const slot = chipFor(id).querySelector<HTMLSlotElement>(`slot[name="icon-${id}"]`);
+    return slot ? slot.assignedElements().map((node) => node.id) : [];
+  };
+  expect(assigned('a')).to.deep.equal(['svg-a']);
+  expect(assigned('b')).to.deep.equal(['svg-b']);
+  expect(chipFor('a').querySelector('[part="chip-icon"]')!.getAttribute('aria-hidden')).to.equal('true');
+  expect(chipFor('c').querySelectorAll('[part="chip-icon"]')).to.have.length(0);
+  const box = el.querySelector('#svg-a')!.getBoundingClientRect();
+  const fontSize = parseFloat(getComputedStyle(chipFor('a')).fontSize);
+  expect(Math.round(box.width)).to.equal(Math.round(fontSize));
+
+  // A slotted icon added later appears; removing one drops the wrapper when nothing else applies.
+  const late = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  late.setAttribute('slot', 'icon-c');
+  late.id = 'svg-c';
+  el.append(late);
+  await waitUntil(() => assigned('c').length === 1, 'late slotted icon was not projected');
+  el.querySelector('#svg-b')!.remove();
+  await waitUntil(() => chipFor('b').querySelectorAll('[part="chip-icon"]').length === 0, 'empty icon wrapper remained');
+  // The fallback iconName returns when the slotted icon is removed.
+  el.querySelector('#svg-a')!.remove();
+  await waitUntil(() => chipFor('a').querySelector('lr-icon') !== null, 'iconName fallback did not return');
+  await expect(el).to.be.accessible();
+});
+
 it('emits lr-suggestion-select with suggestionId and label on activation', async () => {
   const el = (await fixture(
     html`<lr-suggestion-chips .suggestions=${suggestions}></lr-suggestion-chips>`,
