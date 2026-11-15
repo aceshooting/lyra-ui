@@ -22,7 +22,7 @@ export interface LyraStreamingTextCoreEventMap extends StreamingTextRuntimeEvent
  * renders fenced code at all. Every capability is identical to `<lr-streaming-text>` -- token
  * coalescing, `contentMode` auto-detection, the blinking cursor, the `lr-content-settled` event,
  * and the full forwarded Markdown configuration surface (`tabSize`, `htmlMode`, `withoutGfm`, `withoutImages`,
- * `linkTarget`, `internalLinkPrefix`, `headingOffset`, `withoutSyntaxHighlighting`, `headingAnchors`, `math`,
+ * `linkTarget`, `linkSchemes`, `internalLinkPrefix`, `headingOffset`, `withoutSyntaxHighlighting`, `headingAnchors`, `math`,
  * `maxHeight`) -- only which Markdown element Markdown mode composes differs: this variant
  * renders `<lr-markdown-core>` (`../markdown/markdown-core.js`) instead of `<lr-markdown>`, so this
  * component's own module never textually contains a reference to `<lr-markdown>`'s ~200-language
@@ -107,6 +107,7 @@ export class LyraStreamingTextCore extends StreamingTextRuntimeBase {
       .withoutGfm=${this.withoutGfm}
       .withoutImages=${this.withoutImages}
       .linkTarget=${this.linkTarget}
+      .linkSchemes=${this.linkSchemes}
       .internalLinkPrefix=${this.internalLinkPrefix}
       .headingOffset=${this.headingOffset}
       .withoutSyntaxHighlighting=${this.withoutSyntaxHighlighting}

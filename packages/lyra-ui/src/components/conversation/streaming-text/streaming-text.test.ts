@@ -602,6 +602,29 @@ describe("Markdown auto-detection and rendering mode", () => {
     expect(content.textContent).to.include("beacon alt and raw alt end");
   });
 
+  it("forwards link-schemes to the composed lr-markdown, which renders refused links as text", async () => {
+    const el = (await fixture(
+      html`<lr-streaming-text
+        content-mode="markdown"
+        link-schemes="https"
+        .content=${"[safe](https://example.com) [plain](http://example.com) end"}
+      ></lr-streaming-text>`
+    )) as LyraStreamingText;
+    const markdown = el.shadowRoot!.querySelector("lr-markdown") as unknown as HTMLElement & { linkSchemes?: string };
+    expect(markdown.linkSchemes).to.equal("https");
+    await waitUntil(() => markdown.shadowRoot!.querySelector('[part="content"] p') !== null);
+    const content = markdown.shadowRoot!.querySelector('[part="content"]')!;
+    expect([...content.querySelectorAll("a")].map((a) => a.getAttribute("href"))).to.deep.equal(["https://example.com"]);
+    expect(content.textContent).to.include("safe plain end");
+  });
+
+  it("leaves the composed lr-markdown linkSchemes unset by default (unset-regression)", async () => {
+    const el = (await fixture(html`<lr-streaming-text content-mode="markdown"></lr-streaming-text>`)) as LyraStreamingText;
+    const markdown = el.shadowRoot!.querySelector("lr-markdown") as unknown as { linkSchemes?: string };
+    expect(el.linkSchemes).to.equal(undefined);
+    expect(markdown.linkSchemes).to.equal(undefined);
+  });
+
   it('a forwarded non-default linkTarget still gets the composed lr-markdown\'s rel="noopener noreferrer" guard, and never a bare "opener"', async () => {
     const el = (await fixture(
       html`<lr-streaming-text

@@ -324,6 +324,17 @@ export class LyraMarkdownCore extends MarkdownRuntimeBase {
   @property({ attribute: 'link-target' }) override linkTarget: string | null =
     '_blank';
 
+  /** Narrows which link destinations may become anchors: a space- or comma-separated list of
+   *  `http`, `https`, `blob`, `mailto` and `relative` (a URL with no scheme of its own: a path,
+   *  query, fragment or scheme-relative `//host` URL), e.g. `link-schemes="https"`. Unset (the
+   *  default) keeps the standard allowlist. Tokens are case-insensitive and may end in `:`; any
+   *  other token is ignored, so this can only narrow that allowlist, never widen it, and a list with
+   *  no recognised token (including the empty string) allows no link at all. A refused link fails
+   *  closed: it renders as its plain text, never as an anchor. When set, it applies in every
+   *  `htmlMode` (`trusted` included) to Markdown links, autolinks and, after sanitization, raw HTML
+   *  `<a>`/`<area>` elements. Images are governed separately by `withoutImages`. */
+  @property({ attribute: 'link-schemes' }) override linkSchemes?: string;
+
   /** When set, a rendered link whose `href` starts with this prefix is
    *  treated as internal — its click is intercepted and reported via
    *  `lr-link-activate` instead of navigating. Empty (the default) means

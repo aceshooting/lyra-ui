@@ -3,6 +3,7 @@ import { normalizeShikiLanguage } from '../code-block/shiki-types.js';
 import { state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteInteger } from '../../../internal/numbers.js';
+import { parseLinkSchemes } from '../../../internal/safe-url.js';
 import {
   DocumentAnchorTarget,
   type LyraAnchorTargetEventMap,
@@ -210,6 +211,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
   abstract withoutGfm: boolean;
   abstract withoutImages: boolean;
   abstract linkTarget: string | null;
+  abstract linkSchemes?: string;
   abstract internalLinkPrefix: string;
   abstract headingOffset: number;
   abstract streaming: boolean;
@@ -572,7 +574,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
     this.codeBlocks = [];
     const outcome = renderMarkdownDocument({
       tag: this.markdownVariant.tag, deps, htmlMode: normalizeMarkdownHtmlMode(this.htmlMode), math: this.math,
-      codeBlockHeader: this.codeBlockHeader, withoutImages: this.withoutImages,
+      codeBlockHeader: this.codeBlockHeader, withoutImages: this.withoutImages, linkSchemes: parseLinkSchemes(this.linkSchemes),
       parse: (marked, pendingKeys, headingTreeOut) => this.parseMarkdown(marked, pendingKeys, headingTreeOut),
       onParsed: () => this.maybeLoadKatex(),
       isKatexConfirmedMissing: () => this.markdownVariant.katexState.isConfirmedMissing(),
@@ -618,6 +620,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       return undefined;
     }
     const withoutImages = this.withoutImages;
+    const linkSchemes = parseLinkSchemes(this.linkSchemes);
     const policy = markdownSanitizerPolicy({ htmlMode: mode, math: this.math, codeBlockHeader: this.codeBlockHeader, withoutImages });
     const activeHighlightKeys = new Set<string>();
     const session = new MarkdownProgressiveSession({
@@ -631,7 +634,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
         options.highlightCodeOption = !this.withoutSyntaxHighlighting;
         const result = createMarkdownRenderContext(options).render(source, { links, state });
         this.maybeLoadKatex();
-        return { ...result, rawHtml: result.html, html: finishMarkdownHtml(deps, policy, result.html, result.hasRawHtml, withoutImages), headings, codeBlocks: records, pendingKeys };
+        return { ...result, rawHtml: result.html, html: finishMarkdownHtml(deps, policy, result.html, result.hasRawHtml, withoutImages, linkSchemes), headings, codeBlocks: records, pendingKeys };
       },
     }, previous?.blocks);
     session.update(this.content ?? '');
@@ -795,6 +798,7 @@ export abstract class MarkdownRuntimeBase extends DocumentAnchorTarget(
       escapeHtmlOption: normalizeMarkdownHtmlMode(this.htmlMode) === 'escape',
       trustedHtmlOption: normalizeMarkdownHtmlMode(this.htmlMode) === 'trusted',
       withoutImagesOption: this.withoutImages,
+      linkSchemesOption: parseLinkSchemes(this.linkSchemes),
       codeBlockHeaderOption: this.codeBlockHeader,
       codeFrameNonce: this.codeBlockHeader ? this.codeHeader.nonce : undefined, tabSize: finiteInteger(this.tabSize, 4, 1, 32),
       highlightCodeOption: !this.withoutSyntaxHighlighting && !this.streaming,

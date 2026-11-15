@@ -6,6 +6,8 @@ import {
   safeFrameSrc,
   safeLinkHref,
   safeMediaSrc,
+  parseLinkSchemes,
+  safeLinkHrefWithin,
 } from './safe-url.js';
 
 describe('sink-specific safe URL helpers', () => {
@@ -153,5 +155,40 @@ describe('sink-specific safe URL helpers', () => {
       expect(safeDocumentNavigationUrl(value as string)).to.be.null;
       expect(safeFrameSrc(value as string)).to.be.null;
     }
+  });
+});
+
+describe('narrowed navigation link schemes', () => {
+  it('parses only known link schemes plus relative, case-insensitively', () => {
+    expect(parseLinkSchemes(undefined)).to.equal(null);
+    expect(parseLinkSchemes(null)).to.equal(null);
+    expect([...parseLinkSchemes('HTTPS: mailto,relative')!].sort()).to.deep.equal(['https:', 'mailto:', 'relative']);
+    expect([...parseLinkSchemes('data javascript vbscript ftp')!]).to.deep.equal([]);
+    expect([...parseLinkSchemes('')!]).to.deep.equal([]);
+  });
+
+  it('keeps only the listed absolute schemes', () => {
+    const httpsOnly = parseLinkSchemes('https')!;
+    expect(safeLinkHrefWithin(' https://example.test/a ', httpsOnly)).to.equal('https://example.test/a');
+    for (const url of ['http://example.test/a', 'mailto:someone@example.test', 'blob:https://example.test/id',
+      '/relative', 'relative/path', '//cdn.example.test/a', '?q=1', '#frag', 'HTTP://example.test']) {
+      expect(safeLinkHrefWithin(url, httpsOnly), url).to.equal(null);
+    }
+  });
+
+  it('admits scheme-less URLs only with the relative token', () => {
+    const allowed = parseLinkSchemes('https relative')!;
+    for (const url of ['/relative', 'relative/path', '//cdn.example.test/a', '?q=1', '#frag']) {
+      expect(safeLinkHrefWithin(url, allowed), url).to.equal(url);
+    }
+    expect(safeLinkHrefWithin('mailto:a@example.test', allowed)).to.equal(null);
+  });
+
+  it('never widens past the default link allowlist', () => {
+    const everything = parseLinkSchemes('http https blob mailto relative data javascript')!;
+    for (const url of ['javascript:alert(1)', 'java\tscript:alert(1)', 'data:text/html,<p>x</p>', 'vbscript:x', '', 42]) {
+      expect(safeLinkHrefWithin(url, everything), String(url)).to.equal(null);
+    }
+    expect(safeLinkHrefWithin('https://example.test', new Set())).to.equal(null);
   });
 });

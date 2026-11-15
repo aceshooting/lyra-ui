@@ -218,6 +218,21 @@ export const WithoutImages: Story = {
   `,
 };
 
+const linkAnswer = '[Secure docs](https://example.com/docs), [plain http](http://example.com), [mail us](mailto:team@example.com) and [a local page](/settings).';
+
+export const LinkSchemes: Story = {
+  parameters: {
+    docs: { description: { story: 'Left: the default allowlist keeps http, https, mailto and relative links. Middle: `link-schemes="https"` keeps only https links and renders every other link as plain text. Right: `link-schemes="https relative"` also keeps same-site paths. Sanitization is unchanged.' } },
+  },
+  render: () => html`
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(14rem, 1fr)); gap:1rem;">
+      <lr-markdown .content=${linkAnswer}></lr-markdown>
+      <lr-markdown link-schemes="https" .content=${linkAnswer}></lr-markdown>
+      <lr-markdown link-schemes="https relative" .content=${linkAnswer}></lr-markdown>
+    </div>
+  `,
+};
+
 /** Content removal clears the document without changing the native attribute readback. */
 export const ClearContent: Story = {
   render: () => html`

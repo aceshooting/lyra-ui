@@ -110,6 +110,11 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
    *  same tab. */
   @property({ attribute: 'link-target' }) linkTarget: string | null = '_blank';
 
+  /** Forwarded verbatim to the composed Markdown element's own `linkSchemes` -- narrows which link
+   *  destinations may become anchors (for example `link-schemes="https"`); a refused link renders
+   *  as plain text. Unset keeps the standard allowlist. */
+  @property({ attribute: 'link-schemes' }) linkSchemes?: string;
+
   /** Forwarded verbatim to the composed Markdown element's own `internalLinkPrefix`. Empty (the
    *  default) matches the composed element's own default -- every link is treated as external. */
   @property({ attribute: 'internal-link-prefix' }) internalLinkPrefix = '';

@@ -95,3 +95,48 @@ export function safeDocumentNavigationUrl(url: unknown, URLCtor: typeof URL = UR
 export function safeFrameSrc(url: unknown, URLCtor: typeof URL = URL): string | null {
   return safeDocumentNavigationUrl(url, URLCtor);
 }
+
+/** A scheme a caller may keep in a narrowed navigation-link allowlist: one of `safeLinkHref()`'s
+ * schemes, or `relative` for a URL that carries no scheme of its own. */
+export type LinkSchemeToken = 'http' | 'https' | 'blob' | 'mailto' | 'relative';
+
+/** Token that admits URLs without their own scheme in a `parseLinkSchemes()` set. */
+const RELATIVE_LINK_TOKEN = 'relative';
+
+/** Parses a space- or comma-separated scheme list (`'https mailto'`, `'https: relative'`) into an
+ * allowlist for `safeLinkHrefWithin()`. Tokens are case-insensitive and may end in `:`. Only
+ * `safeLinkHref()`'s own schemes and `relative` are kept; any other token (`data`, `javascript`,
+ * a typo) is ignored, so the result can only narrow the default allowlist, never widen it.
+ * `null`/`undefined` means "not configured" and returns `null`; any string, including an empty
+ * one or one with no recognised token, returns a set, which may be empty and then admits no URL. */
+export function parseLinkSchemes(value: unknown): ReadonlySet<string> | null {
+  if (value === null || value === undefined) return null;
+  const allowed = new Set<string>();
+  for (const raw of String(value).split(/[\s,]+/)) {
+    const token = raw.trim().toLowerCase().replace(/:$/, '');
+    if (token === RELATIVE_LINK_TOKEN) allowed.add(RELATIVE_LINK_TOKEN);
+    else if (token !== '' && SAFE_LINK_SCHEMES.has(`${token}:`)) allowed.add(`${token}:`);
+  }
+  return allowed;
+}
+
+/** Returns a trimmed URL safe for a navigation `<a href>` under a narrowed allowlist from
+ * `parseLinkSchemes()`, or `null`. The URL must first pass `safeLinkHref()`; then an absolute URL
+ * must use a listed scheme, and a URL with no scheme of its own (a path, query, fragment or
+ * scheme-relative `//host` URL, all of which inherit the document's scheme) needs `relative`. */
+export function safeLinkHrefWithin(
+  url: unknown,
+  allowed: ReadonlySet<string>,
+  URLCtor: typeof URL = URL,
+): string | null {
+  const safe = safeUrlOrNull(url, SAFE_LINK_SCHEMES, URLCtor);
+  if (safe === null) return null;
+  let protocol: string | null;
+  try {
+    protocol = new URLCtor(safe).protocol;
+  } catch {
+    protocol = null;
+  }
+  if (protocol === null) return allowed.has(RELATIVE_LINK_TOKEN) ? safe : null;
+  return allowed.has(protocol) ? safe : null;
+}

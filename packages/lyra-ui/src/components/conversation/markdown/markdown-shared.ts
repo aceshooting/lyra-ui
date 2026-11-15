@@ -32,7 +32,7 @@ import {
 } from '../../../internal/text-quote.js';
 import { prioritizedHighlightCandidates } from '../../../internal/anchor-target.js';
 import { resolveGuardedRel } from '../../../internal/link-rel.js';
-import { safeLinkHref, safeMediaSrc } from '../../../internal/safe-url.js';
+import { safeLinkHref, safeLinkHrefWithin, safeMediaSrc } from '../../../internal/safe-url.js';
 import { supportsCustomHighlights, type HighlightHandle } from '../../../internal/text-highlights.js';
 import type { LyraAnchor, LyraHighlight, LyraHighlightTone } from '../../viewers/document-viewer/anchors.js';
 import { normalizeShikiLanguage, SHIKI_THEMES, type ShikiHighlighter } from '../code-block/shiki-types.js';
@@ -394,6 +394,9 @@ export interface ParseMarkdownOptions {
   /** `withoutImages` -- every markdown-native image renders its alt text, exactly as a refused
    *  `src` does, so the parser never emits an `<img>`. */
   withoutImagesOption?: boolean;
+  /** Parsed `linkSchemes` allowlist (`parseLinkSchemes()`), or `null` when unset. When set it
+   *  narrows every markdown-native link in every `htmlMode`, `trusted` included. */
+  linkSchemesOption?: ReadonlySet<string> | null;
   /** Already combines `!withoutSyntaxHighlighting && !streaming` -- computed by the caller since that
    *  combination differs by call site only in name, never in meaning. */
   highlightCodeOption: boolean;
@@ -515,6 +518,7 @@ export function createMarkdownRenderContext(options: ParseMarkdownOptions): Mark
     escapeHtmlOption,
     trustedHtmlOption,
     withoutImagesOption = false,
+    linkSchemesOption = null,
     highlightCodeOption,
     getCachedHighlight: getCached,
     failedHighlightKeys,
@@ -693,7 +697,11 @@ export function createMarkdownRenderContext(options: ParseMarkdownOptions): Mark
         // full bypass: it already skips the DOMPurify pass below in `renderMarkdownDocument()`, so
         // gating this check the same way keeps the two behaviors consistent instead of `trusted`
         // getting an unvalidated `href` while everything else downstream of it stays raw.
-        const safeHref = trustedHtmlOption ? href : safeLinkHref(href);
+        // A configured `linkSchemes` narrows that allowlist further and, being an explicit opt-in,
+        // applies under `trusted` too; a refused link renders its text, never an anchor.
+        const safeHref = linkSchemesOption
+          ? safeLinkHrefWithin(href, linkSchemesOption)
+          : trustedHtmlOption ? href : safeLinkHref(href);
         if (safeHref === null) return text;
         const titleAttr = token.title ? ` title='${escapeHtml(token.title)}'` : '';
         const targetAttr = linkTarget ? ` target='${escapeHtml(linkTarget)}' rel='noopener noreferrer'` : '';
@@ -1008,6 +1016,29 @@ function stripMarkdownImages(markup: string): string {
   return changed ? template.innerHTML : markup;
 }
 
+const XLINK_NAMESPACE = 'http://www.w3.org/1999/xlink';
+
+/**
+ * `linkSchemes` enforcement over the finished markup, whatever produced it (raw HTML in any mode,
+ * or a consumer renderer or extension). Runs inside an inert `<template>`: an `<a>` (HTML or SVG)
+ * whose `href`/`xlink:href` falls outside the allowlist is replaced by its own children, so its
+ * text stays and no anchor survives; such an `<area>` is removed.
+ */
+function enforceMarkdownLinkSchemes(markup: string, allowed: ReadonlySet<string>): string {
+  if (!/<(?:a|area)[\s/>]/i.test(markup)) return markup;
+  const template = document.createElement('template');
+  template.innerHTML = markup;
+  let changed = false;
+  for (const link of template.content.querySelectorAll('a, area')) {
+    const hrefs = [link.getAttribute('href'), link.getAttributeNS(XLINK_NAMESPACE, 'href')];
+    if (hrefs.every((href) => href === null || safeLinkHrefWithin(href, allowed) !== null)) continue;
+    if (link.localName === 'area') link.remove();
+    else link.replaceWith(...link.childNodes);
+    changed = true;
+  }
+  return changed ? template.innerHTML : markup;
+}
+
 /** Raw `<a>`/`<area>` skip the `link()` renderer: every parsed one with a `target` gets the `resolveGuardedRel()` rel. */
 function enforceMarkdownAnchorRelGuard(markup: string): string {
   if (!/target/i.test(markup)) return markup;
@@ -1091,6 +1122,7 @@ export function markdownNeedsReparse(changed: Map<PropertyKey, unknown>): boolea
     changed.has('withoutGfm') ||
     changed.has('withoutImages') ||
     changed.has('linkTarget') ||
+    changed.has('linkSchemes') ||
     changed.has('headingOffset') ||
     changed.has('streaming') ||
     changed.has('headingAnchors') ||
@@ -1152,6 +1184,8 @@ export interface RenderMarkdownOptions {
   codeBlockHeader?: boolean;
   /** Renders every image as its alt text, after sanitization as well as in the parser. */
   withoutImages?: boolean;
+  /** Parsed `linkSchemes` allowlist, enforced over the finished markup; `null` when unset. */
+  linkSchemes?: ReadonlySet<string> | null;
   /** The instance's own `parseMarkdown()` -- see `ParseMarkdownOptions` for what it resolves. */
   parse: (
     marked: MarkedModule,
@@ -1215,6 +1249,7 @@ export function renderMarkdownDocument(options: RenderMarkdownOptions): Markdown
 
   const policy = markdownSanitizerPolicy({ ...options, codeBlockHeader: options.codeBlockHeader ?? false });
   const withoutImages = options.withoutImages ?? false;
+  const linkSchemes = options.linkSchemes ?? null;
   if (policy === null) {
     // Shiki palette data is trusted output from Lyra's highlighter, not authored HTML. Restore its
     // strict color-only declarations in both escape and trusted modes as well as after DOMPurify.
@@ -1222,7 +1257,7 @@ export function renderMarkdownDocument(options: RenderMarkdownOptions): Markdown
     // pass a raw-HTML anchor authored under the `trusted` bypass ever reaches.
     return {
       status: 'rendered',
-      html: finishMarkdownHtml(deps, null, rawHtml, hasRawHtml, withoutImages),
+      html: finishMarkdownHtml(deps, null, rawHtml, hasRawHtml, withoutImages, linkSchemes),
       headingTree,
       mathFailed,
       pendingKeys,
@@ -1241,7 +1276,7 @@ export function renderMarkdownDocument(options: RenderMarkdownOptions): Markdown
 
   let sanitized: string;
   try {
-    sanitized = finishMarkdownHtml(deps, policy, rawHtml, hasRawHtml, withoutImages);
+    sanitized = finishMarkdownHtml(deps, policy, rawHtml, hasRawHtml, withoutImages, linkSchemes);
   } catch (error) {
     warnMarkdownSanitizerUnavailable();
     return { status: 'fallback', error, headingTree };
@@ -1256,9 +1291,10 @@ export function renderMarkdownDocument(options: RenderMarkdownOptions): Markdown
 }
 
 /** The `lr-render-error` payload for a permanently-missing `katex` peer while `math` is set. */
-/** Applies the same sanitizer, Shiki palette restoration, and link guard to every render path. */
+/** Applies the same sanitizer, Shiki palette restoration, and link guards to every render path. */
 export function finishMarkdownHtml(
   deps: MarkdownDeps, policy: Record<string, unknown> | null, rawHtml: string, hasRawHtml = true, withoutImages = false,
+  linkSchemes: ReadonlySet<string> | null = null,
 ): string {
   if (typeof rawHtml !== 'string') throw new TypeError('The Markdown parser returned non-string markup.');
   let result = rawHtml;
@@ -1270,7 +1306,8 @@ export function finishMarkdownHtml(
   }
   const styled = restoreMarkdownHighlightStyles(result);
   const guarded = hasRawHtml ? enforceMarkdownAnchorRelGuard(styled) : styled;
-  return withoutImages ? stripMarkdownImages(guarded) : guarded;
+  const narrowed = linkSchemes ? enforceMarkdownLinkSchemes(guarded, linkSchemes) : guarded;
+  return withoutImages ? stripMarkdownImages(narrowed) : narrowed;
 }
 
 export function markdownMathPeerError(tag: 'lr-markdown' | 'lr-markdown-core'): Error {
