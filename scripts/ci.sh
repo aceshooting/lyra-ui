@@ -623,6 +623,9 @@ pnpm --filter @aceshooting/lyra-ui test:visual
 step "lyra-ui check:package-size"
 pnpm --filter @aceshooting/lyra-ui check:package-size
 
+step "companion package archive budgets"
+node scripts/check-companion-package-sizes.mjs
+
 step "check:packed-consumer"
 pnpm check:packed-consumer
 

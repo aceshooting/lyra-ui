@@ -8,6 +8,17 @@ import test from 'node:test';
 
 const read = (file) => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
 
+test('local aggregate checks companion archive budgets before packed consumers', () => {
+  const commands = read('scripts/ci.sh').split('\n').map(line => line.trim());
+  const uiSize = commands.indexOf('pnpm --filter @aceshooting/lyra-ui check:package-size');
+  const companionSizes = commands.indexOf('node scripts/check-companion-package-sizes.mjs');
+  const packedConsumer = commands.indexOf('pnpm check:packed-consumer');
+  assert.ok(uiSize >= 0 && packedConsumer >= 0, 'the aggregate retains package and consumer gates');
+  assert.ok(companionSizes > uiSize && companionSizes < packedConsumer,
+    'all companion archive ceilings must pass before packed-consumer qualification');
+  assert.equal(commands.filter(line => line === 'node scripts/check-companion-package-sizes.mjs').length, 1);
+});
+
 test('local aggregate builds package artifacts before workspace lint', () => {
   const commands = read('scripts/ci.sh').split('\n').map(line => line.trim());
   const build = commands.indexOf('pnpm build');
