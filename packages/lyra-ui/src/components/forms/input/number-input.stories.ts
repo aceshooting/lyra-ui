@@ -22,6 +22,18 @@ export const ExternalDescription: StoryObj = {
   `,
 };
 
+/** `localized` reads and shows the separators of the effective locale while `value` and the
+ *  submitted form value keep the native number form (`25000`, `10.24`). */
+export const LocalizedEntry: StoryObj = {
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-s); max-inline-size: var(--lr-size-20rem)">
+      <lr-number-input lang="de" localized label="Betrag (de)" value="25000" step="0.01" inputmode="decimal"></lr-number-input>
+      <lr-number-input lang="fr" localized label="Montant (fr)" value="1234.5" step="0.01" inputmode="decimal"></lr-number-input>
+      <lr-number-input lang="en" localized label="Amount (en)" value="1234.5" step="0.01" inputmode="decimal"></lr-number-input>
+    </div>
+  `,
+};
+
 /** The stepper pair, the native spin-button fallback, and the increment/decrement icon slots. */
 export const StepperVariants: StoryObj = {
   render: () => html`

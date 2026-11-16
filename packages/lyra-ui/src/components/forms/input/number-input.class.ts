@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import {
@@ -11,6 +11,9 @@ import { setCustomState } from '../../../internal/custom-states.js';
 import { styles as numberInputStyles } from './number-input.styles.js';
 import type { LyraAppearance } from '../../../internal/variants.js';
 import type { LyraFormValidator } from '../form-validator.js';
+import { isBarredFromValidation } from '../../../internal/form-associated.js';
+import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
+import { formatLocaleNumber, parseLocaleNumber } from './number-input-locale.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_numberInputDecrease, LYRA_DEFAULT_numberInputIncrease } from '../../../internal/default-strings/forms.generated.js';
@@ -45,6 +48,14 @@ export interface LyraNumberInputEventMap extends LyraInputEventMap {
  * compact tiers grow only enough for the stepper hit targets, while `l` and `xl` retain their
  * larger control heights. The mirrored `small`, `medium`, and `large` spellings render exactly as
  * canonical `s`, `m`, and `l`, including row height, padding, and native-input font size.
+ *
+ * `localized` opts into locale-aware entry: the field then reads and shows numbers with the
+ * grouping and decimal separators of the effective locale (`25.000` and `10,24` in `de`), while
+ * `value`, the submitted form value, `valueAsNumber` and range/step validity keep the native
+ * `type="number"` form (`25000`, `10.24`). The internal input becomes a text field with spinbutton
+ * semantics; ArrowUp/ArrowDown step the value as the native field does. Grouping is checked, so
+ * text the locale would not write (`10.24` in `de`, `10,24` in `en`) reports `badInput` instead
+ * of being misread. Typed text stays as entered until `change` or blur, which re-format it.
  *
  * Inherited stepUp/stepDown use pending value, step, min, and max properties synchronously
  * and remain event-silent. Removed label/hint/help-text/error-text content is safely omitted.
@@ -88,6 +99,13 @@ export class LyraNumberInput extends LyraInput {
     return `${super.inputWrapperParts} number-input`;
   }
 
+  /** Reads and shows numbers with the grouping and decimal separators of the effective locale
+   *  (`lang`/`locale`), e.g. `25.000` and `10,24` in `de`. `value` and the submitted form value stay
+   *  in the native `type="number"` form (`25000`, `10.24`). Unset (the default) keeps the native
+   *  number field unchanged. Pair it with `inputmode="decimal"` when fractions are expected, so
+   *  touch keyboards offer the decimal separator. */
+  @property({ type: Boolean, reflect: true }) localized = false;
+
   /** Hides the increment/decrement pair for a bare numeric field. */
   @property({ type: Boolean, attribute: 'without-steppers' }) withoutSteppers = false;
 
@@ -103,11 +121,117 @@ export class LyraNumberInput extends LyraInput {
   @property({ attribute: 'without-spin-buttons', converter: presenceTrueDefaultBooleanConverter, reflect: true })
   override withoutSpinButtons = true;
 
+  // Text typed in localized mode, kept as entered until the edit is committed; `null` shows the
+  // formatted `value`. `pendingTextEdit` carries a parse from `valueFromNativeText()` into the
+  // `value` write that immediately follows it, so only that write keeps the typed text.
+  private draftText: string | null = null;
+  private pendingTextEdit?: { text: string; value: string };
+  private localizedProbe?: HTMLInputElement;
+
   constructor() {
     super();
     this.type = 'number';
     this.addEventListener('focusin', this.onFocusWithin);
     this.addEventListener('focusout', this.onBlurWithin);
+    this.addEventListener('change', this.commitDraft);
+    this.addEventListener('keydown', this.onLocalizedKeyDown);
+  }
+
+  override get value(): string {
+    return super.value;
+  }
+
+  override set value(next: string | null) {
+    const edit = this.pendingTextEdit;
+    this.pendingTextEdit = undefined;
+    this.draftText = edit !== undefined && edit.value === (next ?? '') ? edit.text : null;
+    super.value = next;
+  }
+
+  protected override get nativeInputType(): string {
+    return this.localized ? 'text' : super.nativeInputType;
+  }
+
+  protected override get nativeInputText(): string {
+    if (!this.localized) return super.nativeInputText;
+    return this.draftText ?? formatLocaleNumber(this.value, this.effectiveLocale);
+  }
+
+  protected override valueFromNativeText(text: string): string {
+    if (!this.localized) return super.valueFromNativeText(text);
+    const value = parseLocaleNumber(text, this.effectiveLocale) ?? '';
+    this.pendingTextEdit = { text, value };
+    return value;
+  }
+
+  /** A detached `type="number"` input carrying the live constraints, so a localized field keeps
+   *  the platform's own stepping, `valueAsNumber` and range/step/required validity. */
+  protected override get constraintControl(): HTMLInputElement | null {
+    const rendered = super.constraintControl;
+    if (!this.localized || !rendered) return rendered;
+    const probe = (this.localizedProbe ??= this.ownerDocument.createElement('input'));
+    probe.type = 'number';
+    probe.min = this.min == null ? '' : String(this.min);
+    probe.max = this.max == null ? '' : String(this.max);
+    probe.step = this.step == null ? '' : String(this.step);
+    probe.required = this.required;
+    return probe;
+  }
+
+  /** Whether the localized field holds typed text that does not parse in the effective locale. */
+  private get hasUnparsedDraft(): boolean {
+    return this.localized && this.draftText !== null && parseLocaleNumber(this.draftText, this.effectiveLocale) === null;
+  }
+
+  protected override updateValidity(): void {
+    if (this.hasUnparsedDraft && !isBarredFromValidation(this, this.internals)) {
+      this[SET_ANCHORED_VALIDITY]({ badInput: true }, this.localize('valueInvalid'));
+      return;
+    }
+    super.updateValidity();
+  }
+
+  private commitDraft = (): void => {
+    if (this.draftText === null || this.hasUnparsedDraft) return;
+    this.draftText = null;
+    this.requestUpdate();
+  };
+
+  private onLocalizedKeyDown = (event: KeyboardEvent): void => {
+    if (!this.localized || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+    if (event.composedPath()[0] !== this.input) return;
+    event.preventDefault();
+    this.stepFromButton(event.key === 'ArrowUp' ? 'up' : 'down');
+  };
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (changed.has('localized')) this.updateValidity();
+    this.syncSpinbuttonSemantics();
+  }
+
+  /** A text field loses the implicit spinbutton role of `type="number"`; restore it, and its
+   *  value attributes, while localized. Lit does not own these attributes, so they are cleared
+   *  again when the field returns to the native number input. */
+  private syncSpinbuttonSemantics(): void {
+    const native = this.input;
+    if (!native) return;
+    const attributes: Record<string, string | null> = { role: null, 'aria-valuenow': null, 'aria-valuetext': null, 'aria-valuemin': null, 'aria-valuemax': null };
+    if (this.localized) {
+      const number = this.valueAsNumber;
+      const min = Number(this.min);
+      const max = Number(this.max);
+      attributes['role'] = 'spinbutton';
+      attributes['aria-valuenow'] = Number.isFinite(number) ? String(number) : null;
+      attributes['aria-valuetext'] = native.value === '' ? null : native.value;
+      attributes['aria-valuemin'] = this.min != null && String(this.min) !== '' && Number.isFinite(min) ? String(min) : null;
+      attributes['aria-valuemax'] = this.max != null && String(this.max) !== '' && Number.isFinite(max) ? String(max) : null;
+    }
+    for (const [name, value] of Object.entries(attributes)) {
+      if (value === null) native.removeAttribute(name);
+      else if (native.getAttribute(name) !== value) native.setAttribute(name, value);
+    }
   }
 
   override connectedCallback(): void {
@@ -126,6 +250,7 @@ export class LyraNumberInput extends LyraInput {
 
   private onBlurWithin = (): void => {
     setCustomState(this.internals, 'focused', false);
+    this.commitDraft();
   };
 
   private stepFromButton(direction: 'up' | 'down'): void {

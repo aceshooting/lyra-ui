@@ -494,6 +494,30 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
     this.touched = false;
   }
 
+  /** @internal The `type` the internal native `<input>` renders with. A subclass rendering a
+   *  different editing surface than its public `type` (a localized number field edits text)
+   *  overrides it. */
+  protected get nativeInputType(): string {
+    return this.type === 'password' && this.passwordVisible ? 'text' : this.type;
+  }
+
+  /** @internal The text the internal native `<input>` shows for the current `value`. */
+  protected get nativeInputText(): string {
+    return this.value;
+  }
+
+  /** @internal Converts the internal native `<input>`'s text into the `value` it edits. */
+  protected valueFromNativeText(text: string): string {
+    return text;
+  }
+
+  /** @internal The native control whose platform behavior backs `valueAsNumber`, `stepUp()`/
+   *  `stepDown()` and constraint validation: the rendered `<input>`, unless a subclass edits text
+   *  in it and supplies a typed control of its own. `null` before the first render. */
+  protected get constraintControl(): HTMLInputElement | null {
+    return this.inputEl ?? null;
+  }
+
   /** The internal native `<input>` element, for direct DOM access — mirrors `<lr-textarea>`'s own `input` getter. */
   get input(): HTMLInputElement | null {
     return this.inputEl ?? null;
@@ -568,14 +592,14 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
   /** Native numeric view (milliseconds for date/time inputs, numeric value for number inputs).
    * Assignment is silent, matching `HTMLInputElement.valueAsNumber`. */
   get valueAsNumber(): number {
-    const native = this.inputEl;
+    const native = this.constraintControl;
     if (!native) return Number.NaN;
     if (native.value !== this.value) native.value = this.value;
     return native.valueAsNumber;
   }
 
   set valueAsNumber(next: number) {
-    const native = this.inputEl;
+    const native = this.constraintControl;
     if (!native) return;
     native.valueAsNumber = next;
     this.value = native.value;
@@ -622,7 +646,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
   }
 
   private applyStep(direction: 'up' | 'down', steps: number): void {
-    const native = this.inputEl;
+    const native = this.constraintControl;
     if (!native || this.effectiveDisabled || this.readonly) return;
     const count = finiteCount(steps, 1);
     if (count === 0) return;
@@ -703,7 +727,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
     } else {
       input.setRangeText(replacement, start, end, selectMode);
     }
-    this.value = input.value;
+    this.value = this.valueFromNativeText(input.value);
   }
 
   /**
@@ -737,7 +761,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
    * would prioritize "did you fill this in" over "does it agree with the other field".
    */
   protected updateValidity(): void {
-    const native = this.inputEl;
+    const native = this.constraintControl;
     if (isBarredFromValidation(this, this.internals)) {
       this[SET_ANCHORED_VALIDITY]({});
       return;
@@ -851,7 +875,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
   private onInput = (event: InputEvent): void => {
     if (!this.inputEl) return;
     this.settlingValueFromInput = true;
-    this.value = this.inputEl.value;
+    this.value = this.valueFromNativeText(this.inputEl.value);
     this.settlingValueFromInput = false;
     relayNativeEvent(this, event);
     this.emit('lr-input', { value: this.value });
@@ -869,7 +893,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
     // last pushed, so this settles that pending value first and the reassignment right after finds
     // nothing left pending to cancel.
     this.settledDebounce.flush();
-    this.value = this.inputEl.value;
+    this.value = this.valueFromNativeText(this.inputEl.value);
     relayNativeEvent(this, event);
     this.emit('lr-change', { value: this.value });
   };
@@ -956,7 +980,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
       .join(' ');
     const isPassword = this.type === 'password';
     const showPasswordToggle = isPassword && this.passwordToggle;
-    const nativeType = isPassword && this.passwordVisible ? 'text' : this.type;
+    const nativeType = this.nativeInputType;
     const canClear =
       (this.clearable || this.withClear) &&
       (this.type === 'text' || this.type === 'search') &&
@@ -1012,7 +1036,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
             minlength=${this.minlength ?? nothing}
             maxlength=${this.maxlength ?? nothing}
             pattern=${this.pattern ?? nothing}
-            .value=${this.value}
+            .value=${this.nativeInputText}
             ?required=${this.required}
             ?disabled=${this.effectiveDisabled}
             ?readonly=${this.readonly}
