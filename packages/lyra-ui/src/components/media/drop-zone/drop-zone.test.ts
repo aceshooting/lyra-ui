@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './drop-zone.js';
 import '../file-input/file-input.js';
 import type { LyraFileInput } from '../file-input/file-input.js';
@@ -536,4 +536,172 @@ it('suppresses browser dragover navigation even while disabled', async () => {
   base(el).dispatchEvent(event);
 
   expect(event.defaultPrevented).to.equal(true);
+});
+
+describe('for / target', () => {
+  function dragLeave(el: HTMLElement): void {
+    el.dispatchEvent(new DragEvent('dragleave', { bubbles: true, cancelable: true }));
+  }
+
+  function overlayOf(el: LyraDropZone): HTMLElement {
+    return el.shadowRoot!.querySelector('[part="overlay"]') as HTMLElement;
+  }
+
+  function rounded(rect: DOMRect): number[] {
+    return [rect.left, rect.top, rect.width, rect.height].map((value) => Math.round(value));
+  }
+
+  it('attaches the drag session and overlay to a sibling region named by for', async () => {
+    const root = await fixture<HTMLElement>(html`
+      <div>
+        <section id="chat-region" style="margin: 24px; block-size: 120px; inline-size: 300px;">chat</section>
+        <lr-drop-zone for="chat-region" accept="image/*" multiple></lr-drop-zone>
+      </div>
+    `);
+    const zone = root.querySelector('lr-drop-zone') as LyraDropZone;
+    const region = root.querySelector('#chat-region') as HTMLElement;
+    await zone.updateComplete;
+    expect(getComputedStyle(zone).display, 'a targeting zone adds no box of its own').to.equal('contents');
+
+    dragEnterWith(region, [makeFile('photo.png', 'image/png')]);
+    await zone.updateComplete;
+    expect(zone.dragging).to.equal(true);
+    expect(zone.matches(':state(dragging)')).to.equal(true);
+    const overlay = overlayOf(zone);
+    expect(overlay.hidden).to.equal(false);
+    expect(overlay.dataset['dragState']).to.equal('accept');
+    expect(rounded(overlay.getBoundingClientRect())).to.deep.equal(rounded(region.getBoundingClientRect()));
+    // The quiet overlay text on the tinted accept fill measures 4:1 in wrapper mode too; this
+    // targeting test leaves that shared paint out of scope.
+    await expect(zone).to.be.accessible({ ignoredRules: ['color-contrast'] });
+
+    const over = new DragEvent('dragover', { bubbles: true, cancelable: true });
+    region.dispatchEvent(over);
+    expect(over.defaultPrevented, 'dragover on the region allows the drop').to.equal(true);
+
+    const result = oneEvent<LyraDropZoneFilesEvent>(zone, 'lr-files');
+    dropWith(region, [makeFile('photo.png', 'image/png'), makeFile('notes.txt')]);
+    const event = await result;
+    expect(event.target === zone).to.equal(true);
+    expect(event.detail.files.map((file) => file.name)).to.deep.equal(['photo.png']);
+    expect(event.detail.rejected.map((entry) => entry.reason)).to.deep.equal(['type']);
+    await zone.updateComplete;
+    expect(zone.dragging).to.equal(false);
+  });
+
+  it('ends the session on dragleave from the region', async () => {
+    const root = await fixture<HTMLElement>(html`
+      <div><div id="leave-region">region</div><lr-drop-zone for="leave-region"></lr-drop-zone></div>
+    `);
+    const zone = root.querySelector('lr-drop-zone') as LyraDropZone;
+    const region = root.querySelector('#leave-region') as HTMLElement;
+    await zone.updateComplete;
+    dragEnterWith(region, [makeFile('a.txt')]);
+    await zone.updateComplete;
+    expect(zone.dragging).to.equal(true);
+    dragLeave(region);
+    await zone.updateComplete;
+    expect(zone.dragging).to.equal(false);
+    expect(overlayOf(zone).hidden).to.equal(true);
+  });
+
+  it('covers the region even when the zone sits inside a transformed ancestor', async () => {
+    const root = await fixture<HTMLElement>(html`
+      <div>
+        <div id="moved-region" style="margin: 40px 0 0 60px; block-size: 80px; inline-size: 200px;">region</div>
+        <div style="transform: translate(30px, 50px);"><lr-drop-zone for="moved-region"></lr-drop-zone></div>
+      </div>
+    `);
+    const zone = root.querySelector('lr-drop-zone') as LyraDropZone;
+    const region = root.querySelector('#moved-region') as HTMLElement;
+    await zone.updateComplete;
+    dragEnterWith(region, [makeFile('a.txt')]);
+    await zone.updateComplete;
+    expect(rounded(overlayOf(zone).getBoundingClientRect())).to.deep.equal(rounded(region.getBoundingClientRect()));
+  });
+
+  it('prefers a direct target element over for', async () => {
+    const root = await fixture<HTMLElement>(html`
+      <div>
+        <div id="by-id">by id</div>
+        <div id="direct">direct</div>
+        <lr-drop-zone for="by-id"></lr-drop-zone>
+      </div>
+    `);
+    const zone = root.querySelector('lr-drop-zone') as LyraDropZone;
+    const direct = root.querySelector('#direct') as HTMLElement;
+    const byId = root.querySelector('#by-id') as HTMLElement;
+    zone.target = direct;
+    await zone.updateComplete;
+    dragEnterWith(byId, [makeFile('a.txt')]);
+    await zone.updateComplete;
+    expect(zone.dragging, 'the for region is no longer bound').to.equal(false);
+    dragEnterWith(direct, [makeFile('a.txt')]);
+    await zone.updateComplete;
+    expect(zone.dragging).to.equal(true);
+  });
+
+  it('degrades gracefully for a dangling for, then binds once the region appears', async () => {
+    const root = await fixture<HTMLElement>(html`<div><lr-drop-zone for="later-region"></lr-drop-zone></div>`);
+    const zone = root.querySelector('lr-drop-zone') as LyraDropZone;
+    await zone.updateComplete;
+    expect(zone.dragging).to.equal(false);
+    expect(overlayOf(zone).hidden).to.equal(true);
+
+    const region = document.createElement('div');
+    region.id = 'later-region';
+    region.textContent = 'late';
+    root.prepend(region);
+    await waitUntil(() => {
+      dragEnterWith(region, [makeFile('a.txt')]);
+      return zone.dragging;
+    }, 'the late region was never bound');
+  });
+
+  it('unbinds the previous region when for changes, and every region on disconnect', async () => {
+    const root = await fixture<HTMLElement>(html`
+      <div>
+        <div id="first-region">first</div>
+        <div id="second-region">second</div>
+        <lr-drop-zone for="first-region"></lr-drop-zone>
+      </div>
+    `);
+    const zone = root.querySelector('lr-drop-zone') as LyraDropZone;
+    const first = root.querySelector('#first-region') as HTMLElement;
+    const second = root.querySelector('#second-region') as HTMLElement;
+    await zone.updateComplete;
+    let fired = 0;
+    zone.addEventListener('lr-files', () => fired++);
+
+    zone.for = 'second-region';
+    await zone.updateComplete;
+    dropWith(first, [makeFile('a.txt')]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(fired, 'the old region no longer reports drops').to.equal(0);
+    dropWith(second, [makeFile('a.txt')]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(fired).to.equal(1);
+
+    zone.remove();
+    const over = new DragEvent('dragover', { bubbles: true, cancelable: true });
+    second.dispatchEvent(over);
+    expect(over.defaultPrevented, 'a disconnected zone leaves the region alone').to.equal(false);
+  });
+
+  it('leaves the wrapper behavior unchanged while for and target are unset', async () => {
+    const root = await fixture<HTMLElement>(html`
+      <div><div id="unrelated">unrelated</div><lr-drop-zone><div>wrapped</div></lr-drop-zone></div>
+    `);
+    const zone = root.querySelector('lr-drop-zone') as LyraDropZone;
+    expect(zone.for).to.equal('');
+    expect(zone.target === null).to.equal(true);
+    expect(getComputedStyle(zone).display).to.equal('block');
+    const over = new DragEvent('dragover', { bubbles: true, cancelable: true });
+    root.querySelector('#unrelated')!.dispatchEvent(over);
+    expect(over.defaultPrevented).to.equal(false);
+    dragEnterWith(base(zone), [makeFile('a.txt')]);
+    await zone.updateComplete;
+    expect(zone.dragging).to.equal(true);
+    expect(overlayOf(zone).getAttribute('style') ?? '').to.equal('');
+  });
 });

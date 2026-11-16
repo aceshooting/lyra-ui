@@ -1,6 +1,6 @@
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
@@ -9,6 +9,7 @@ import { setCustomState } from '../../../internal/custom-states.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { fileIcon } from '../../../internal/icons.js';
 import { falseDefaultBooleanConverter } from '../../../internal/converters.js';
+import { subscribeInheritedAttributes } from '../../../internal/inherited-attribute-hub.js';
 import {
   DropSessionController,
   type DropSessionState,
@@ -64,13 +65,22 @@ export interface LyraDropZoneEventMap {
  * selected-file list, or any focusable control of its own; wrap `lr-file-input` itself (or any
  * other focusable content) inside it when the region also needs a click-to-browse affordance.
  *
+ * **Targeting an existing region.** Instead of wrapping, the zone can sit beside a region that is
+ * already in the page: set `for` to the region's id (resolved in the zone's own root, like a
+ * label's `for`) or `target` to the element itself. The zone then attaches its drag listeners to
+ * that element, lays its overlay over the element's box, adds no box of its own (`display:
+ * contents`) and still emits `lr-files` from itself. Static markup keeps its layout tree, and the
+ * definition can load after first paint. A `for` id that matches nothing binds nothing and is
+ * re-resolved when the root's elements or ids change.
+ *
  * The drag-session mechanics (nested-depth tracking, accept/reject preview, legacy File System API
  * folder traversal) are the exact ones `lr-file-input` uses, shared through
  * `internal/drop-session-controller.ts` rather than reimplemented here.
  *
  * @customElement lr-drop-zone
  * @slot - The wrapped region. Rendered as ordinary light DOM content; this element adds only the
- * drag listeners and the overlay layered on top.
+ * drag listeners and the overlay layered on top. Not a drop target while `for`/`target` resolves to
+ * an element.
  * @slot overlay - Custom drag-over overlay content, overriding the localized accept/reject text.
  * @event lr-files - Frozen `detail: { files, rejected, remainingFiles, remainingTotalSize }` with
  * detached readonly sequences and rejected-file records, fired on drop.
@@ -79,8 +89,8 @@ export interface LyraDropZoneEventMap {
  * identity. Typed as {@linkcode LyraDropZoneFilesEvent}, so
  * `event.target`/`event.currentTarget` are `LyraDropZone` without a cast.
  * @csspart base - The wrapping element wrapping the default slot and the overlay.
- * @csspart overlay - The drag-over overlay, layered above the slotted content. Hidden outside an
- * active drag session.
+ * @csspart overlay - The drag-over overlay, layered above the slotted content (or, while targeting,
+ * fixed over the target's box). Hidden outside an active drag session.
  * @csspart overlay-icon - The default decorative overlay icon.
  * @csspart overlay-text - Wrapper around the overlay slot/text content.
  * @csspart status - The visually-hidden, `aria-hidden` mirror of the drag accept/reject state and
@@ -90,6 +100,7 @@ export interface LyraDropZoneEventMap {
  * @csspart rejection - The visible region listing each currently-rejected file alongside its
  * reason, rendered in addition to the sr-only `status` summary.
  * @cssstate dragging - Matches during an active file drag session.
+ * @cssstate targeted - Matches while `for`/`target` resolves to an element the zone is attached to.
  * @cssprop [--lr-drop-zone-radius=var(--lr-radius)] - Corner radius of `[part="overlay"]`.
  * @cssprop [--lr-drop-zone-overlay-border-color=var(--lr-color-brand)] - Dashed border color of
  *   `[part="overlay"]` in its neutral drag state, before an accept or reject verdict.
@@ -201,6 +212,19 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
    *  scale to `lr-file-input`'s own `size`, so a small-tier drop-zone can match a neighboring
    *  small-tier `lr-file-input` in the same dense layout. */
   @property({ reflect: true }) size: LyraSize = 'm';
+  /** Id of an existing element, in this zone's own root, to attach to instead of the default slot:
+   *  the zone handles drags over that element and lays its overlay over it, so a server-rendered
+   *  region becomes a drop target without being wrapped. An id that matches nothing binds nothing;
+   *  it is re-resolved when elements or ids in the root change. `target` takes precedence. */
+  @property() for = '';
+  /** An element to attach to directly, taking precedence over `for` while it is connected. Same
+   *  behavior as `for`; property only. */
+  @property({ attribute: false }) target: Element | null = null;
+
+  @query('[part="overlay"]') private overlayEl?: HTMLElement;
+  /** The element the drag listeners are currently attached to, if any. */
+  private boundTarget?: Element;
+  private stopObservingRoot?: () => void;
 
   @state() private dragState: DropSessionState = 'default';
   @state() private rejectedFiles: readonly LyraDropZoneRejectedFile[] = Object.freeze([]);
@@ -235,10 +259,77 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
     if (changed.has('disabled') && this.disabled) this.dropSession.reset();
+    if (changed.has('for') || changed.has('target')) {
+      this.syncTarget();
+      this.observeRoot();
+    }
+  }
+
+  private resolveTarget(): Element | undefined {
+    if (!this.isConnected) return undefined;
+    if (this.target?.isConnected) return this.target;
+    if (!this.for) return undefined;
+    const root = this.getRootNode() as Document | ShadowRoot;
+    return root.getElementById?.(this.for) ?? undefined;
+  }
+
+  /** Moves the drag listeners to whichever element `target`/`for` resolves to now. */
+  private syncTarget(): void {
+    const next = this.resolveTarget();
+    const previous = this.boundTarget;
+    if (next === previous) return;
+    if (previous) {
+      previous.removeEventListener('dragenter', this.onTargetDragEnter);
+      previous.removeEventListener('dragover', this.onTargetDragOver);
+      previous.removeEventListener('dragleave', this.onTargetDragLeave);
+      previous.removeEventListener('drop', this.onTargetDrop);
+      if (this.dropSession.dragging) this.dropSession.reset();
+    }
+    this.boundTarget = next;
+    if (next) {
+      next.addEventListener('dragenter', this.onTargetDragEnter);
+      next.addEventListener('dragover', this.onTargetDragOver);
+      next.addEventListener('dragleave', this.onTargetDragLeave);
+      next.addEventListener('drop', this.onTargetDrop);
+    }
+    setCustomState(this.internals, 'targeted', next !== undefined);
+  }
+
+  /** Watches the zone's root for element and id changes while `for`/`target` is set, so a region
+   *  rendered after the zone (or replaced) is picked up. */
+  private observeRoot(): void {
+    this.stopObservingRoot?.();
+    this.stopObservingRoot = undefined;
+    if (!this.isConnected || (!this.for && !this.target)) return;
+    const root = this.getRootNode();
+    this.stopObservingRoot = subscribeInheritedAttributes(root, this.ownerDocument.defaultView?.MutationObserver, {
+      attributes: ['id'],
+      childList: true,
+      changed: () => this.syncTarget(),
+    });
+  }
+
+  /** Lays the fixed overlay over the target's border box. A transformed or filtered ancestor makes
+   *  itself the containing block of a fixed box, so the box's actual origin is measured first and
+   *  subtracted rather than assumed to be the viewport's. */
+  private positionTargetOverlay(): void {
+    const overlay = this.overlayEl;
+    const target = this.boundTarget;
+    if (!overlay || !target || overlay.hidden) return;
+    const rect = target.getBoundingClientRect();
+    overlay.style.left = '0px';
+    overlay.style.top = '0px';
+    const origin = overlay.getBoundingClientRect();
+    overlay.style.left = `${rect.left - origin.left}px`;
+    overlay.style.top = `${rect.top - origin.top}px`;
+    overlay.style.width = `${rect.width}px`;
+    overlay.style.height = `${rect.height}px`;
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.syncTarget();
+    this.observeRoot();
     // Acquired on connect, not on the first announcement: assistive tech has to have been
     // observing a live region *before* text arrives for the change to be announced at all, and a
     // drag can start in the same task this element is appended in.
@@ -253,6 +344,9 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.stopObservingRoot?.();
+    this.stopObservingRoot = undefined;
+    this.syncTarget();
     this.politeSink?.release();
     this.politeSink = undefined;
     this.assertiveSink?.release();
@@ -267,6 +361,7 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
   // on private `@state()` fields, which `keyof this` does not include.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (changed.has('dragState')) this.positionTargetOverlay();
     if (this.announcementsArmed) {
       if (changed.has('dragState') && this.dragState !== 'default') {
         this.politeSink?.announce(this.overlayText());
@@ -330,12 +425,34 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
     this.emit('lr-files', detail);
   }
 
-  private onDragEnter = (e: DragEvent): void => this.dropSession.onDragEnter(e);
-  private onDragOver = (e: DragEvent): void => this.dropSession.onDragOver(e);
-  private onDragLeave = (e: DragEvent): void => this.dropSession.onDragLeave(e);
+  // The default slot is not a drop target while a `for`/`target` element is bound, so a zone placed
+  // inside its own target never counts one drag twice.
+  private onDragEnter = (e: DragEvent): void => {
+    if (!this.boundTarget) this.dropSession.onDragEnter(e);
+  };
+  private onDragOver = (e: DragEvent): void => {
+    if (!this.boundTarget) this.dropSession.onDragOver(e);
+  };
+  private onDragLeave = (e: DragEvent): void => {
+    if (!this.boundTarget) this.dropSession.onDragLeave(e);
+  };
+  private onDrop = (e: DragEvent): void => {
+    if (!this.boundTarget) this.handleDropEvent(e);
+  };
 
-  private onDrop = (e: DragEvent): void =>
+  private onTargetDragEnter = (e: Event): void => this.dropSession.onDragEnter(e as DragEvent);
+  private onTargetDragOver = (e: Event): void => {
+    this.dropSession.onDragOver(e as DragEvent);
+    // dragover repeats while the pointer moves, so the overlay follows a region that scrolls or
+    // resizes mid-drag.
+    this.positionTargetOverlay();
+  };
+  private onTargetDragLeave = (e: Event): void => this.dropSession.onDragLeave(e as DragEvent);
+  private onTargetDrop = (e: Event): void => this.handleDropEvent(e as DragEvent);
+
+  private handleDropEvent(e: DragEvent): void {
     handleDrop(this, this.dropSession, e, this.multiple, (files, rejected) => this.emitFiles(files, rejected));
+  }
 
   private overlayText(): string {
     if (this.dragState === 'accept') return this.localize('dropzoneReleaseToAdd');

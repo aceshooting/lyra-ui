@@ -62,6 +62,16 @@ export const styles = css`
   [part="overlay"][hidden] {
     display: none;
   }
+  /* Attached to a for/target element: the zone adds no box of its own, and the overlay is a fixed
+     box laid over the target's border box from script (drop-zone.class.ts positionTargetOverlay),
+     so it can sit anywhere in the tree relative to the region it covers. */
+  :host(:state(targeted)) {
+    display: contents;
+  }
+  :host(:state(targeted)) [part="overlay"] {
+    position: fixed;
+    inset: auto;
+  }
   [part="overlay-icon"] {
     font-size: var(--lr-drop-zone-overlay-icon-size, var(--_lr-drop-zone-overlay-icon-size));
   }

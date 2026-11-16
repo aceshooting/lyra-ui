@@ -2859,7 +2859,8 @@ make that entire region a file-drop target: it owns the drag-session state, rend
 drag-over overlay, applies `accept`/size/count limits, and emits the same `lr-files` event shape
 `lr-file-input` does. It never renders a native file picker, a selected-file list, or any focusable
 control of its own; wrap `lr-file-input` itself (or any other focusable content) inside it when the
-region also needs a click-to-browse affordance. The drag-session mechanics are the exact ones
+region also needs a click-to-browse affordance. It can also sit beside a region that already exists
+in the page instead of wrapping it (`for`/`target`, below). The drag-session mechanics are the exact ones
 `lr-file-input` uses, shared through `internal/drop-session-controller.ts` rather than
 reimplemented.
 
@@ -2888,6 +2889,15 @@ reimplemented.
   allow/deny lists, identical to `lr-file-input`'s (denylist first); a mismatch rejects with `'type'`.
 - `acceptedMessage` / `rejectedMessage: string` (attributes `accepted-message` / `rejected-message`) —
   caller-owned outcome copy with `{count}`; unset uses the localized default.
+- `for: string = ''` — id of an existing element, resolved in the zone's own root (like a label's
+  `for`), to attach to instead of the default slot. The zone then handles drags over that element,
+  lays its overlay over the element's box (a fixed box measured from the element, also correct
+  inside a transformed ancestor, following a region that scrolls mid-drag), adds no box of its own
+  (`display: contents`) and still emits `lr-files` from itself. An id matching nothing binds nothing
+  and is re-resolved when elements or ids in the root change, so a region rendered later is picked
+  up. The default slot is not a drop target while a target is bound.
+- `target: Element | null = null` (property only) — the same, with an element reference; takes
+  precedence over `for` while it is connected.
 - `readonly dragging: boolean` — `true` during an active drag session
 - `size: LyraSize = 'm'` (reflected) — density tier for the overlay's padding, icon and
   instructional text; identical contract and scale to `lr-file-input`'s own `size`, so a drop-zone
@@ -2912,7 +2922,8 @@ drag state and counts — announcements go through the shared light-DOM regions,
 `lr-file-input`), `rejection` (a visible region listing each currently-rejected file, rendered only
 while one exists).
 
-**CSS custom states:** `dragging`, matching `lr-file-input`'s.
+**CSS custom states:** `dragging`, matching `lr-file-input`'s; `targeted` while `for`/`target`
+resolves to an element the zone is attached to.
 
 **Themeable custom properties:** `--lr-drop-zone-radius` (default `var(--lr-radius)`),
 `--lr-drop-zone-overlay-border-color` (default `var(--lr-color-brand)`, the dashed overlay border in
@@ -2957,8 +2968,21 @@ shape, so check `event.target` when a zone-level listener must react to the zone
 </lr-drop-zone>
 ```
 
+Attaching to an existing, statically rendered region without wrapping it — the region keeps its own
+layout tree, and the zone's script can load after first paint:
+
+```html
+<section id="chat-area"><!-- server-rendered chat --></section>
+<lr-drop-zone for="chat-area" multiple></lr-drop-zone>
+```
+
 **Known gotchas:**
 
+- In `for`/`target` mode the overlay is a fixed box at the content layer (`--lr-layer-content`)
+  painted in the zone's own place in the tree; when the region has positioned descendants with a
+  higher `z-index`, raise the overlay with `::part(overlay) { z-index: … }`. The overlay never takes
+  pointer events, so drags keep reaching the region. A visible `rejection` list renders where the
+  zone itself sits.
 - No paste-from-clipboard handling (unlike `lr-file-input`, which accepts pasted files unless
   `without-paste` is set) — this component is drag/drop only.
 - Dragged folders are traversed recursively while `multiple` (not the default here), with the same

@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A drag-and-drop region wrapper with no file input of its own. Wraps an arbitrary region -- a chat composer, a whole conversation viewport, any panel larger than a single control -- and makes the entire region a file-drop target: it owns the drag-session state, renders a themeable drag-over overlay, applies accept/size/count limits, and emits the same `lr-files` event shape `lr-file-input` does.',
+          'A drag-and-drop region wrapper with no file input of its own. Wraps an arbitrary region -- a chat composer, a whole conversation viewport, any panel larger than a single control -- and makes the entire region a file-drop target: it owns the drag-session state, renders a themeable drag-over overlay, applies accept/size/count limits, and emits the same `lr-files` event shape `lr-file-input` does. Set `for` (an id) or `target` (an element) to attach to an existing region instead of wrapping it.',
       },
     },
   },
@@ -45,6 +45,25 @@ export const RegionWrapper: Story = {
 
 /** `accept`, `max-files`, and `max-total-size` mirror `lr-file-input`'s own limits and reuse its
  *  localized rejection-UI shape. */
+/** `for` attaches the zone to a region that already exists in the page instead of wrapping it:
+ *  the static markup keeps its own layout tree, the zone adds no box of its own, and the overlay is
+ *  laid over the region while a drag is over it. `target` does the same with an element reference. */
+export const TargetingAnExistingRegion: Story = {
+  name: 'for: attach to an existing region',
+  render: () => html`
+    <div>
+      <section
+        id="drop-zone-story-region"
+        style="border: 1px solid var(--lr-color-border); border-radius: var(--lr-radius); padding: 1.5rem; min-block-size: 8rem; max-inline-size: 32rem;"
+      >
+        <p style="margin-block-start:0;">Server-rendered chat area. Drop files anywhere in it.</p>
+      </section>
+      <lr-drop-zone for="drop-zone-story-region" multiple @lr-files=${logFiles('target-log')}></lr-drop-zone>
+      <p id="target-log" style="font: 0.8125rem monospace;">(no drop yet)</p>
+    </div>
+  `,
+};
+
 export const WithLimits: Story = {
   render: () => html`
     <lr-drop-zone
