@@ -9557,6 +9557,15 @@
             "default": null
           },
           {
+            "name": "camera-capture",
+            "property": "cameraCapture",
+            "type": "LyraAttachmentCameraCapture | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "disabled",
             "property": "disabled",
             "type": "boolean",
@@ -9626,6 +9635,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "plain"
+          },
+          {
+            "name": "cameraCapture",
+            "attribute": "camera-capture",
+            "type": "LyraAttachmentCameraCapture | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "capabilities",
@@ -51416,6 +51434,16 @@
             "default": false
           },
           {
+            "name": "for",
+            "property": "for",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "held-file-count",
             "property": "heldFileCount",
             "type": "number",
@@ -51556,6 +51584,16 @@
             "default": false
           },
           {
+            "name": "for",
+            "attribute": "for",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "forbiddenMimeTypes",
             "attribute": null,
             "type": "readonly string[]",
@@ -51653,6 +51691,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "m"
+          },
+          {
+            "name": "target",
+            "attribute": null,
+            "type": "Element | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
           }
         ],
         "slots": [
@@ -51769,6 +51817,10 @@
         "cssStates": [
           {
             "name": "dragging",
+            "deprecated": null
+          },
+          {
+            "name": "targeted",
             "deprecated": null
           }
         ],

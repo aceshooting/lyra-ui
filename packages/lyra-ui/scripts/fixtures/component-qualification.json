@@ -3509,6 +3509,12 @@
           "evidence": [
             {
               "file": "src/components/media/attachment-chip/attachment-chip.test.ts",
+              "test": "creates no blob: URL at all once thumbnail-src and preview-src cover a file",
+              "target": "quiet",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/media/attachment-chip/attachment-chip.test.ts",
               "test": "is accessible in a populated error state with a retry button",
               "target": "el",
               "state": "populated"
@@ -3534,7 +3540,7 @@
           "evidence": [
             {
               "file": "src/components/media/attachment-chip/attachment-chip.test.ts",
-              "line": 1311,
+              "line": 1401,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -3804,7 +3810,7 @@
           "evidence": [
             {
               "file": "src/components/media/attachment-trigger/attachment-trigger.class.ts",
-              "line": 375,
+              "line": 414,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -9282,6 +9288,12 @@
               "test": "is accessible under frame=\"plain\" with the textarea focused",
               "target": "el",
               "state": "populated"
+            },
+            {
+              "file": "src/components/conversation/chat-composer/chat-composer.test.ts",
+              "test": "puts the textarea on its own full-width line with start and end on one row below it under 'below'",
+              "target": "el",
+              "state": "populated"
             }
           ],
           "exemption": null
@@ -9303,7 +9315,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-composer/chat-composer.test.ts",
-              "test": "mirrors only the directional send glyph in RTL",
+              "test": "keeps end at the inline end under 'below' when start is empty, and mirrors under RTL",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -19453,6 +19465,12 @@
           "applicability": "applicable",
           "status": "automated",
           "evidence": [
+            {
+              "file": "src/components/media/drop-zone/drop-zone.test.ts",
+              "test": "attaches the drag session and overlay to a sibling region named by for",
+              "target": "zone",
+              "state": "populated"
+            },
             {
               "file": "src/components/media/drop-zone/drop-zone.test.ts",
               "test": "is accessible with the drag-over overlay showing",
@@ -42601,7 +42619,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/prompt-input/prompt-input.class.ts",
-              "line": 572,
+              "line": 573,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

@@ -2143,7 +2143,8 @@ own stylesheet uses** — `--lr-chart-height` / `--lr-size-280px` for the chart 
 `--lr-flag-aspect-ratio` for `lr-flag`, `--lr-form-control-height` for the field controls,
 `--lr-checkbox-label-indent` and `--lr-icon-button-size` for `lr-checkbox`, `--lr-badge-min-height`,
 `--lr-badge-padding-inline` and `--lr-badge-font-size` for `lr-badge`, `--lr-chat-composer-padding`
-for `lr-chat-composer`, and so on.
+for `lr-chat-composer` (plus its `--lr-line-height-normal` textarea line under
+`actions-layout="below"`), and so on.
 
 Covered tags: the chart family, `lr-map`, `lr-flag`, `lr-flow-canvas`, `lr-graph`,
 `lr-knowledge-graph-explorer`, the inline form-control row (`lr-input`, `lr-number-input`,
@@ -36593,7 +36594,8 @@ make that entire region a file-drop target: it owns the drag-session state, rend
 drag-over overlay, applies `accept`/size/count limits, and emits the same `lr-files` event shape
 `lr-file-input` does. It never renders a native file picker, a selected-file list, or any focusable
 control of its own; wrap `lr-file-input` itself (or any other focusable content) inside it when the
-region also needs a click-to-browse affordance. The drag-session mechanics are the exact ones
+region also needs a click-to-browse affordance. It can also sit beside a region that already exists
+in the page instead of wrapping it (`for`/`target`, below). The drag-session mechanics are the exact ones
 `lr-file-input` uses, shared through `internal/drop-session-controller.ts` rather than
 reimplemented.
 
@@ -36622,6 +36624,15 @@ reimplemented.
   allow/deny lists, identical to `lr-file-input`'s (denylist first); a mismatch rejects with `'type'`.
 - `acceptedMessage` / `rejectedMessage: string` (attributes `accepted-message` / `rejected-message`) —
   caller-owned outcome copy with `{count}`; unset uses the localized default.
+- `for: string = ''` — id of an existing element, resolved in the zone's own root (like a label's
+  `for`), to attach to instead of the default slot. The zone then handles drags over that element,
+  lays its overlay over the element's box (a fixed box measured from the element, also correct
+  inside a transformed ancestor, following a region that scrolls mid-drag), adds no box of its own
+  (`display: contents`) and still emits `lr-files` from itself. An id matching nothing binds nothing
+  and is re-resolved when elements or ids in the root change, so a region rendered later is picked
+  up. The default slot is not a drop target while a target is bound.
+- `target: Element | null = null` (property only) — the same, with an element reference; takes
+  precedence over `for` while it is connected.
 - `readonly dragging: boolean` — `true` during an active drag session
 - `size: LyraSize = 'm'` (reflected) — density tier for the overlay's padding, icon and
   instructional text; identical contract and scale to `lr-file-input`'s own `size`, so a drop-zone
@@ -36646,7 +36657,8 @@ drag state and counts — announcements go through the shared light-DOM regions,
 `lr-file-input`), `rejection` (a visible region listing each currently-rejected file, rendered only
 while one exists).
 
-**CSS custom states:** `dragging`, matching `lr-file-input`'s.
+**CSS custom states:** `dragging`, matching `lr-file-input`'s; `targeted` while `for`/`target`
+resolves to an element the zone is attached to.
 
 **Themeable custom properties:** `--lr-drop-zone-radius` (default `var(--lr-radius)`),
 `--lr-drop-zone-overlay-border-color` (default `var(--lr-color-brand)`, the dashed overlay border in
@@ -36691,8 +36703,21 @@ shape, so check `event.target` when a zone-level listener must react to the zone
 </lr-drop-zone>
 ```
 
+Attaching to an existing, statically rendered region without wrapping it — the region keeps its own
+layout tree, and the zone's script can load after first paint:
+
+```html
+<section id="chat-area"><!-- server-rendered chat --></section>
+<lr-drop-zone for="chat-area" multiple></lr-drop-zone>
+```
+
 **Known gotchas:**
 
+- In `for`/`target` mode the overlay is a fixed box at the content layer (`--lr-layer-content`)
+  painted in the zone's own place in the tree; when the region has positioned descendants with a
+  higher `z-index`, raise the overlay with `::part(overlay) { z-index: … }`. The overlay never takes
+  pointer events, so drags keep reaching the region. A visible `rejection` list renders where the
+  zone itself sits.
 - No paste-from-clipboard handling (unlike `lr-file-input`, which accepts pasted files unless
   `without-paste` is set) — this component is drag/drop only.
 - Dragged folders are traversed recursively while `multiple` (not the default here), with the same
@@ -37260,8 +37285,9 @@ composer's pre-send attachment tray or a sent message's attachments display. Two
 to populate it: set `file` to a real `File` (fresh from a picker/drop), from which `name`/`bytes`/
 `mime-type` and the image thumbnail are all auto-derived; or set the plain `name`/`bytes`/
 `mime-type`/`thumbnail-src` props instead, for reconstructing a chip from server-persisted
-attachment metadata after a page reload, when no real `File` object exists any more. `file` always
-wins when both are present. When a real `File` or `preview-src` is available, the chip offers a
+attachment metadata after a page reload, when no real `File` object exists any more. `file` wins
+for `name`/`bytes`/`mime-type` when both are present; a host-supplied `thumbnail-src`/`preview-src`
+wins over the `File`'s own blob URL. When a real `File` or `preview-src` is available, the chip offers a
 localized action that emits a plain, non-cancelable `lr-preview-request`; it never registers or owns a viewer
 or overlay, so the host composes the desired preview surface.
 
@@ -37273,8 +37299,9 @@ coalesce into one update.
 
 **Properties:**
 
-- `file?: File` (attribute `false`, i.e. property-only) — when set, `name`/`bytes`/`mimeType`/the
-  image thumbnail are all derived from it, taking precedence over the independent props below
+- `file?: File` (attribute `false`, i.e. property-only) — when set, `name`/`bytes`/`mimeType` are
+  derived from it, taking precedence over those independent props, and the image thumbnail and
+  preview source default to a temporary blob URL of it unless `thumbnailSrc`/`previewSrc` supply them
 - `name: string = ''` — filename, used only while `file` is unset
 - `bytes?: number` — file size in bytes, used only while `file` is unset. `0` is a known empty file
   and renders `0 B`; omission means unknown. Negative/non-finite writes normalize to omission.
@@ -37282,11 +37309,12 @@ coalesce into one update.
   attachment action events. Empty or whitespace-only values use the fallback identity below. The
   platform `id` remains available for DOM identity/idrefs only.
 - `mimeType: string = ''` (attribute `mime-type`) — used only while `file` is unset
-- `thumbnailSrc: string = ''` (attribute `thumbnail-src`) — thumbnail image URL, used only while
-  `file` is unset; rendered whenever present regardless of `mimeType` (no `file`-derived equivalent
-  exists for a non-image file)
-- `previewSrc: string = ''` (attribute `preview-src`) — source URL used for preview and download when
-  `file` is unset; a real `File` takes precedence and uses a temporary blob URL
+- `thumbnailSrc: string = ''` (attribute `thumbnail-src`) — thumbnail image URL, rendered whenever
+  present and safe regardless of `mimeType`, also while `file` is set: it then replaces the blob URL
+  the `File`'s own image thumbnail would otherwise use (unsafe schemes are ignored and fall back)
+- `previewSrc: string = ''` (attribute `preview-src`) — source URL used for preview and download.
+  While `file` is set and this is empty, the `File` is previewed through a temporary blob URL; a
+  non-empty value wins over it
 - `withoutPreview: boolean = false` (reflected, attribute `without-preview`) — hides the preview
   action, which otherwise renders whenever a `file` or `preview-src` is available.
 - `status: LyraAttachmentUploadStatus = 'pending'` (reflected) — `'pending' | 'uploading' |
@@ -37431,13 +37459,25 @@ ready-made `numberLabel` for `locale`, rendering exactly the requested fraction 
 The image thumbnail for a real `File` is a cached `URL.createObjectURL()` blob URL, allocated in
 `willUpdate()` — the update lifecycle, deliberately **never** from `render()`, so rendering stays a
 pure projection of already-prepared state and URL allocation never happens as a render side effect.
-It is created only when `file` is an image (or `without-preview` is unset), reused for as long as the same
-`File` object stays assigned, and revoked when `file` changes to a different `File`, to a non-image,
-or to `undefined`, and again on disconnect. Because the same pass that allocates also revokes the
+It is created only when it is actually shown: for an image `file` with no safe `thumbnail-src`, or
+for the preview action while `without-preview` and `preview-src` are both unset. It is reused for as
+long as the same `File` object stays assigned, and revoked when `file` changes to a different
+`File`, to a non-image, or to `undefined`, when host sources make it unnecessary, and again on
+disconnect. Because the same pass that allocates also revokes the
 previous entry, reassigning `file` several times before the next paint leaks nothing.
 
 **Known gotchas:**
 
+- Showing a `File`'s own image needs `blob:` in the page's Content-Security-Policy `img-src`. Under a
+  strict policy such as `img-src 'self' data:`, keep setting `file` (for name/size/type) and supply
+  a `data:` or same-origin `thumbnail-src` plus `preview-src` (or `without-preview`): the chip then
+  creates no blob URL at all.
+
+  ```js
+  chip.file = pickedFile;
+  chip.thumbnailSrc = await smallDataUrlThumbnail(pickedFile); // e.g. drawn on a canvas
+  chip.withoutPreview = true;
+  ```
 - `file` always wins over `name`/`bytes`/`mimeType` when both are set — assigning those props while
   `file` is also set has no visible effect on the rendered chip.
 - A `0` `bytes` value is a known empty file and renders `"0 B"`; only omission means unknown and
@@ -37695,6 +37735,14 @@ capability as a row.
 - Host `aria-label` attribute (default absent) — overrides the localized accessible name on the
   single-capability button or multi-capability menu trigger. An explicitly empty value is ignored,
   so the control keeps its localized name.
+- `cameraCapture?: LyraAttachmentCameraCapture` (attribute `camera-capture`; `'user' |
+  'environment'`, default unset) — opt-in system-camera capture for the `camera` capability. On an
+  engine that supports the native `capture` attribute (phones and tablets), activating `camera`
+  opens the hidden file input with `accept="image/*"` and this `capture` value synchronously inside
+  the same user gesture, and the photo arrives as `lr-files` with `capability: 'camera'` (non-image
+  picks move to `rejected`). Where `capture` is unsupported (desktop browsers, which would only show
+  a file picker), `camera` keeps firing `lr-camera-request`, so a host can keep its own
+  `getUserMedia` dialog there. Unset or any other value: unchanged request-only behavior.
 - `multiple: boolean = false` (reflected) — forwarded to the hidden file input. Bare `multiple`
   opts into batches; `multiple="false"` remains false and removal restores single-file mode.
 - `disabled: boolean = false` (reflected)
@@ -37708,15 +37756,18 @@ capability as a row.
   `--lr-icon-button-size` is an accessibility floor and the ladder's tightest steps resolve below
   WCAG 2.5.8's minimum. Override `--lr-icon-button-size` to make that trade-off explicitly
 
-**Events:** `lr-files` (`detail: { capability: 'files' | 'image'; files, rejected, remainingFiles,
-remainingTotalSize }`, the same shape as `lr-file-input`'s) — fired once a file-backed capability's
-hidden input produces a real selection. `files` are the picks matching `accept` as a fresh frozen
+**Events:** `lr-files` (`detail: { capability: LyraAttachmentFilesCapability; files, rejected,
+remainingFiles, remainingTotalSize }`, the same shape as `lr-file-input`'s;
+`LyraAttachmentFilesCapability = 'files' | 'image' | 'camera'`, `'camera'` only while
+`camera-capture` routed a capture through the system camera) — fired once a file-backed
+capability's hidden input produces a real selection. `files` are the picks matching `accept` as a fresh frozen
 owner-realm array snapshot, not a live reference to the input's own `.files`; picks the OS dialog's
 "All files" filter let through that do not match `accept` are listed in `rejected` with reason
 `'type'`. No size or count limit applies here, so both `remaining*` fields are `null`. `lr-camera-request`
 and `lr-audio-request`
 (both no detail — `detail` is `null`, not `undefined`, per the DOM spec's `CustomEventInit`
-default) — fired when the `camera` / `audio` capability is activated; this component implements no
+default) — fired when the `camera` / `audio` capability is activated (for `camera`, unless
+`camera-capture` opened the system camera instead); this component implements no
 capture UI of its own, the host owns everything from here (there's no single right answer for
 `getUserMedia` vs. `<input capture>` vs. a native wrapper's own camera API; for `audio` the
 typical host response is opening `<lr-push-to-talk>` in an overlay, then handing the resulting
@@ -37765,6 +37816,10 @@ public token must pass through. Size remains the one exception that does not cro
   trigger.addEventListener("lr-files", (e) => queueFiles(e.detail.capability, e.detail.files));
   trigger.addEventListener("lr-camera-request", openCameraFlow);
 </script>
+
+<!-- Phones open the rear camera and report the photo as lr-files (capability "camera");
+     desktop browsers keep firing lr-camera-request for a custom camera dialog. -->
+<lr-attachment-trigger camera-capture="environment"></lr-attachment-trigger>
 ```
 
 **Known gotchas:**
@@ -37774,9 +37829,14 @@ public token must pass through. Size remains the one exception that does not cro
   mutates that exact `FileList` object back to empty in place, not just detaches a stale reference.
   A consumer reading `lr-files` later would otherwise observe an empty list — this component
   copies into a fresh frozen `File[]` before clearing the native input.
-- The `camera`/`audio` capabilities never touch the hidden `<input type="file">` at all — both are
-  scope-limited by design to firing `lr-camera-request`/`lr-audio-request` and nothing else. The
-  hidden input is only rendered when `capabilities` contains `files` or `image`.
+- The `camera`/`audio` capabilities never touch the hidden `<input type="file">` by default — both
+  are scope-limited to firing `lr-camera-request`/`lr-audio-request`. The one exception is
+  `camera-capture` on a capture-capable engine (see above). The hidden input is only rendered when
+  `capabilities` contains `files` or `image`, or `camera` with a valid `camera-capture`.
+- A capture input has to open inside the user's own gesture, which is why `camera-capture` exists:
+  a host that opened its own hidden `<input capture>` from an asynchronous `lr-camera-request`
+  handler could lose the gesture. Support is detected from the engine's `capture` IDL attribute,
+  not from the pointer type.
 - Setting `disabled` closes an open capability menu, disables its items as well as the trigger, and
   discards a native file selection that arrives after the component became disabled.
 
@@ -47205,10 +47265,14 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
   _control fills itself_, and one property name cannot mean both. The focus affordance is swapped,
   not dropped — see **Known gotchas**
 - `actionsLayout: ChatComposerActionsLayout = 'inline'` (reflected, attribute `actions-layout`) —
-  `'inline' | 'stacked'`. `'inline'` (the default) keeps today's single flex row. `'stacked'`
-  arranges the `start` and `end` action slots as a compact one-column rail (`start` above `end`)
-  beside a `textarea` that spans both rows — for a multi-row composer (a taller `min-rows`) where
-  stretching the action buttons across the row's full height would otherwise look wrong. Layout
+  `'inline' | 'stacked' | 'below'`. `'inline'` (the default) keeps today's single flex row.
+  `'stacked'` arranges the `start` and `end` action slots as a compact one-column rail (`start`
+  above `end`) beside a `textarea` that spans both rows — for a multi-row composer (a taller
+  `min-rows`) where stretching the action buttons across the row's full height would otherwise look
+  wrong. `'below'` gives the `textarea` its own full-width line and puts `start` and `end` on one
+  row beneath it, `start` at the inline start and `end` at the inline end (also while `start` is
+  empty; mirrored under RTL) — the usual phone-width chat input with attach buttons. `min-rows`/
+  `max-rows` growth and inner scrolling are unchanged in every layout. Layout
   only; slot content, empty-slot hiding and the built-in button are unchanged. Invalid direct or
   attribute values normalize and reflect as `'inline'`.
 - `withoutEnterSubmit: boolean = false` (reflected, attribute `without-enter-submit`) — when set,
@@ -47350,9 +47414,11 @@ and disables only the built-in Send button; editing and busy-state Stop behavior
   restyle `[part="base"]` under `plain` and want to draw your own focus cue instead (e.g. on a
   wrapper you place the composer inside), set `--lr-chat-composer-focus-shadow: none` rather than
   fighting the default with a higher-specificity override.
-- `actions-layout="stacked"` only changes `[part="row"]`'s layout (a CSS grid instead of a flex
-  row); it does not change which slot content is hidden or when the built-in button replaces
-  `end`.
+- `actions-layout="stacked"` and `actions-layout="below"` only change `[part="row"]`'s layout (a
+  CSS grid instead of a flex row); they do not change which slot content is hidden or when the
+  built-in button replaces `end`. `reservations.css` reserves the taller resting footprint of
+  `below` (for the default `min-rows="1"`) before upgrade, so no `::part(row)` grid or hand-written
+  reservation is needed.
 
 ---
 
@@ -50874,7 +50940,7 @@ their corresponding data can be supplied. The default entry registers all childr
 `withoutEnterSubmit: boolean = false` (attribute `without-enter-submit`);
 `submitDisabled: boolean = false` (attribute `submit-disabled`), `withoutStop: boolean = false`
 (attribute `without-stop`), `minRows: number = 1` (attribute `min-rows`) and `maxRows: number = 8`
-(attribute `max-rows`), `frame: 'card' | 'plain' = 'card'` and `actionsLayout: 'inline' | 'stacked' = 'inline'`
+(attribute `max-rows`), `frame: 'card' | 'plain' = 'card'` and `actionsLayout: 'inline' | 'stacked' | 'below' = 'inline'`
 (attribute `actions-layout`) forward to the composed `lr-chat-composer` with its semantics, and a slotted
 `toolbar` child is forwarded to the composer's `toolbar` slot;
 `spellcheck: boolean = true` (string-aware true-default converter), `autocapitalize: string = ''`,

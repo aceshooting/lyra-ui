@@ -38,6 +38,14 @@ capability as a row.
 - Host `aria-label` attribute (default absent) — overrides the localized accessible name on the
   single-capability button or multi-capability menu trigger. An explicitly empty value is ignored,
   so the control keeps its localized name.
+- `cameraCapture?: LyraAttachmentCameraCapture` (attribute `camera-capture`; `'user' |
+  'environment'`, default unset) — opt-in system-camera capture for the `camera` capability. On an
+  engine that supports the native `capture` attribute (phones and tablets), activating `camera`
+  opens the hidden file input with `accept="image/*"` and this `capture` value synchronously inside
+  the same user gesture, and the photo arrives as `lr-files` with `capability: 'camera'` (non-image
+  picks move to `rejected`). Where `capture` is unsupported (desktop browsers, which would only show
+  a file picker), `camera` keeps firing `lr-camera-request`, so a host can keep its own
+  `getUserMedia` dialog there. Unset or any other value: unchanged request-only behavior.
 - `multiple: boolean = false` (reflected) — forwarded to the hidden file input. Bare `multiple`
   opts into batches; `multiple="false"` remains false and removal restores single-file mode.
 - `disabled: boolean = false` (reflected)
@@ -51,15 +59,18 @@ capability as a row.
   `--lr-icon-button-size` is an accessibility floor and the ladder's tightest steps resolve below
   WCAG 2.5.8's minimum. Override `--lr-icon-button-size` to make that trade-off explicitly
 
-**Events:** `lr-files` (`detail: { capability: 'files' | 'image'; files, rejected, remainingFiles,
-remainingTotalSize }`, the same shape as `lr-file-input`'s) — fired once a file-backed capability's
-hidden input produces a real selection. `files` are the picks matching `accept` as a fresh frozen
+**Events:** `lr-files` (`detail: { capability: LyraAttachmentFilesCapability; files, rejected,
+remainingFiles, remainingTotalSize }`, the same shape as `lr-file-input`'s;
+`LyraAttachmentFilesCapability = 'files' | 'image' | 'camera'`, `'camera'` only while
+`camera-capture` routed a capture through the system camera) — fired once a file-backed
+capability's hidden input produces a real selection. `files` are the picks matching `accept` as a fresh frozen
 owner-realm array snapshot, not a live reference to the input's own `.files`; picks the OS dialog's
 "All files" filter let through that do not match `accept` are listed in `rejected` with reason
 `'type'`. No size or count limit applies here, so both `remaining*` fields are `null`. `lr-camera-request`
 and `lr-audio-request`
 (both no detail — `detail` is `null`, not `undefined`, per the DOM spec's `CustomEventInit`
-default) — fired when the `camera` / `audio` capability is activated; this component implements no
+default) — fired when the `camera` / `audio` capability is activated (for `camera`, unless
+`camera-capture` opened the system camera instead); this component implements no
 capture UI of its own, the host owns everything from here (there's no single right answer for
 `getUserMedia` vs. `<input capture>` vs. a native wrapper's own camera API; for `audio` the
 typical host response is opening `<lr-push-to-talk>` in an overlay, then handing the resulting
@@ -108,6 +119,10 @@ public token must pass through. Size remains the one exception that does not cro
   trigger.addEventListener("lr-files", (e) => queueFiles(e.detail.capability, e.detail.files));
   trigger.addEventListener("lr-camera-request", openCameraFlow);
 </script>
+
+<!-- Phones open the rear camera and report the photo as lr-files (capability "camera");
+     desktop browsers keep firing lr-camera-request for a custom camera dialog. -->
+<lr-attachment-trigger camera-capture="environment"></lr-attachment-trigger>
 ```
 
 **Known gotchas:**
@@ -117,9 +132,14 @@ public token must pass through. Size remains the one exception that does not cro
   mutates that exact `FileList` object back to empty in place, not just detaches a stale reference.
   A consumer reading `lr-files` later would otherwise observe an empty list — this component
   copies into a fresh frozen `File[]` before clearing the native input.
-- The `camera`/`audio` capabilities never touch the hidden `<input type="file">` at all — both are
-  scope-limited by design to firing `lr-camera-request`/`lr-audio-request` and nothing else. The
-  hidden input is only rendered when `capabilities` contains `files` or `image`.
+- The `camera`/`audio` capabilities never touch the hidden `<input type="file">` by default — both
+  are scope-limited to firing `lr-camera-request`/`lr-audio-request`. The one exception is
+  `camera-capture` on a capture-capable engine (see above). The hidden input is only rendered when
+  `capabilities` contains `files` or `image`, or `camera` with a valid `camera-capture`.
+- A capture input has to open inside the user's own gesture, which is why `camera-capture` exists:
+  a host that opened its own hidden `<input capture>` from an asynchronous `lr-camera-request`
+  handler could lose the gesture. Support is detected from the engine's `capture` IDL attribute,
+  not from the pointer type.
 - Setting `disabled` closes an open capability menu, disables its items as well as the trigger, and
   discards a native file selection that arrives after the component became disabled.
 

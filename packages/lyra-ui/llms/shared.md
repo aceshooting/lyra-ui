@@ -2087,7 +2087,8 @@ own stylesheet uses** — `--lr-chart-height` / `--lr-size-280px` for the chart 
 `--lr-flag-aspect-ratio` for `lr-flag`, `--lr-form-control-height` for the field controls,
 `--lr-checkbox-label-indent` and `--lr-icon-button-size` for `lr-checkbox`, `--lr-badge-min-height`,
 `--lr-badge-padding-inline` and `--lr-badge-font-size` for `lr-badge`, `--lr-chat-composer-padding`
-for `lr-chat-composer`, and so on.
+for `lr-chat-composer` (plus its `--lr-line-height-normal` textarea line under
+`actions-layout="below"`), and so on.
 
 Covered tags: the chart family, `lr-map`, `lr-flag`, `lr-flow-canvas`, `lr-graph`,
 `lr-knowledge-graph-explorer`, the inline form-control row (`lr-input`, `lr-number-input`,

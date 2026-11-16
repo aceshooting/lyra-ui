@@ -21,8 +21,9 @@ composer's pre-send attachment tray or a sent message's attachments display. Two
 to populate it: set `file` to a real `File` (fresh from a picker/drop), from which `name`/`bytes`/
 `mime-type` and the image thumbnail are all auto-derived; or set the plain `name`/`bytes`/
 `mime-type`/`thumbnail-src` props instead, for reconstructing a chip from server-persisted
-attachment metadata after a page reload, when no real `File` object exists any more. `file` always
-wins when both are present. When a real `File` or `preview-src` is available, the chip offers a
+attachment metadata after a page reload, when no real `File` object exists any more. `file` wins
+for `name`/`bytes`/`mime-type` when both are present; a host-supplied `thumbnail-src`/`preview-src`
+wins over the `File`'s own blob URL. When a real `File` or `preview-src` is available, the chip offers a
 localized action that emits a plain, non-cancelable `lr-preview-request`; it never registers or owns a viewer
 or overlay, so the host composes the desired preview surface.
 
@@ -34,8 +35,9 @@ coalesce into one update.
 
 **Properties:**
 
-- `file?: File` (attribute `false`, i.e. property-only) — when set, `name`/`bytes`/`mimeType`/the
-  image thumbnail are all derived from it, taking precedence over the independent props below
+- `file?: File` (attribute `false`, i.e. property-only) — when set, `name`/`bytes`/`mimeType` are
+  derived from it, taking precedence over those independent props, and the image thumbnail and
+  preview source default to a temporary blob URL of it unless `thumbnailSrc`/`previewSrc` supply them
 - `name: string = ''` — filename, used only while `file` is unset
 - `bytes?: number` — file size in bytes, used only while `file` is unset. `0` is a known empty file
   and renders `0 B`; omission means unknown. Negative/non-finite writes normalize to omission.
@@ -43,11 +45,12 @@ coalesce into one update.
   attachment action events. Empty or whitespace-only values use the fallback identity below. The
   platform `id` remains available for DOM identity/idrefs only.
 - `mimeType: string = ''` (attribute `mime-type`) — used only while `file` is unset
-- `thumbnailSrc: string = ''` (attribute `thumbnail-src`) — thumbnail image URL, used only while
-  `file` is unset; rendered whenever present regardless of `mimeType` (no `file`-derived equivalent
-  exists for a non-image file)
-- `previewSrc: string = ''` (attribute `preview-src`) — source URL used for preview and download when
-  `file` is unset; a real `File` takes precedence and uses a temporary blob URL
+- `thumbnailSrc: string = ''` (attribute `thumbnail-src`) — thumbnail image URL, rendered whenever
+  present and safe regardless of `mimeType`, also while `file` is set: it then replaces the blob URL
+  the `File`'s own image thumbnail would otherwise use (unsafe schemes are ignored and fall back)
+- `previewSrc: string = ''` (attribute `preview-src`) — source URL used for preview and download.
+  While `file` is set and this is empty, the `File` is previewed through a temporary blob URL; a
+  non-empty value wins over it
 - `withoutPreview: boolean = false` (reflected, attribute `without-preview`) — hides the preview
   action, which otherwise renders whenever a `file` or `preview-src` is available.
 - `status: LyraAttachmentUploadStatus = 'pending'` (reflected) — `'pending' | 'uploading' |
@@ -192,13 +195,25 @@ ready-made `numberLabel` for `locale`, rendering exactly the requested fraction 
 The image thumbnail for a real `File` is a cached `URL.createObjectURL()` blob URL, allocated in
 `willUpdate()` — the update lifecycle, deliberately **never** from `render()`, so rendering stays a
 pure projection of already-prepared state and URL allocation never happens as a render side effect.
-It is created only when `file` is an image (or `without-preview` is unset), reused for as long as the same
-`File` object stays assigned, and revoked when `file` changes to a different `File`, to a non-image,
-or to `undefined`, and again on disconnect. Because the same pass that allocates also revokes the
+It is created only when it is actually shown: for an image `file` with no safe `thumbnail-src`, or
+for the preview action while `without-preview` and `preview-src` are both unset. It is reused for as
+long as the same `File` object stays assigned, and revoked when `file` changes to a different
+`File`, to a non-image, or to `undefined`, when host sources make it unnecessary, and again on
+disconnect. Because the same pass that allocates also revokes the
 previous entry, reassigning `file` several times before the next paint leaks nothing.
 
 **Known gotchas:**
 
+- Showing a `File`'s own image needs `blob:` in the page's Content-Security-Policy `img-src`. Under a
+  strict policy such as `img-src 'self' data:`, keep setting `file` (for name/size/type) and supply
+  a `data:` or same-origin `thumbnail-src` plus `preview-src` (or `without-preview`): the chip then
+  creates no blob URL at all.
+
+  ```js
+  chip.file = pickedFile;
+  chip.thumbnailSrc = await smallDataUrlThumbnail(pickedFile); // e.g. drawn on a canvas
+  chip.withoutPreview = true;
+  ```
 - `file` always wins over `name`/`bytes`/`mimeType` when both are set — assigning those props while
   `file` is also set has no visible effect on the rendered chip.
 - A `0` `bytes` value is a known empty file and renders `"0 B"`; only omission means unknown and

@@ -34,7 +34,7 @@ their corresponding data can be supplied. The default entry registers all childr
 `withoutEnterSubmit: boolean = false` (attribute `without-enter-submit`);
 `submitDisabled: boolean = false` (attribute `submit-disabled`), `withoutStop: boolean = false`
 (attribute `without-stop`), `minRows: number = 1` (attribute `min-rows`) and `maxRows: number = 8`
-(attribute `max-rows`), `frame: 'card' | 'plain' = 'card'` and `actionsLayout: 'inline' | 'stacked' = 'inline'`
+(attribute `max-rows`), `frame: 'card' | 'plain' = 'card'` and `actionsLayout: 'inline' | 'stacked' | 'below' = 'inline'`
 (attribute `actions-layout`) forward to the composed `lr-chat-composer` with its semantics, and a slotted
 `toolbar` child is forwarded to the composer's `toolbar` slot;
 `spellcheck: boolean = true` (string-aware true-default converter), `autocapitalize: string = ''`,

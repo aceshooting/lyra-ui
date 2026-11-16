@@ -1098,6 +1098,7 @@ export interface LyraComponentTypeMap {
       LyraAttachmentTrigger,
       | 'accept'
       | 'appearance'
+      | 'cameraCapture'
       | 'capabilities'
       | 'disabled'
       | 'locale'
@@ -1116,6 +1117,7 @@ export interface LyraComponentTypeMap {
     cssNames: never;
     attributeAliases: {
       'aria-label'?: LyraAttributeValue<string | null>;
+      'camera-capture'?: LyraAttachmentTrigger['cameraCapture'];
       'trigger-title'?: LyraAttachmentTrigger['triggerTitle'];
     };
   };
@@ -4725,6 +4727,7 @@ export interface LyraComponentTypeMap {
       | 'acceptedMessage'
       | 'allowedMimeTypes'
       | 'disabled'
+      | 'for'
       | 'forbiddenMimeTypes'
       | 'heldFileCount'
       | 'heldTotalSize'
@@ -4735,7 +4738,8 @@ export interface LyraComponentTypeMap {
       | 'multiple'
       | 'rejectedMessage'
       | 'size'
-      | 'strings',
+      | 'strings'
+      | 'target',
       {}
     >;
     events: LyraDropZoneEventMap;
