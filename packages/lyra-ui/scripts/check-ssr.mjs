@@ -63,6 +63,7 @@ assertIsolatedNodeImport(
     import { invalidateLyraTheme } from '@aceshooting/lyra-ui/utilities/theme.js';
     import { diagnoseLyraHydration } from '@aceshooting/lyra-ui/ssr.js';
     import { supportsScopedRegistries, createScopedRegistry } from '@aceshooting/lyra-ui/utilities/scoped-registry.js';
+    import { loadScopedRegistry } from '@aceshooting/lyra-ui/utilities/scoped-registry-loader.js';
     ${noBrowserGlobals}
     for (let pass = 0; pass < 2; pass++) {
       assert.deepEqual(await discover(), []);
@@ -75,6 +76,7 @@ assertIsolatedNodeImport(
     }
     assert.equal(supportsScopedRegistries(), false);
     assert.throws(() => createScopedRegistry({}), /Scoped custom element registries are not supported/);
+    await assert.rejects(() => loadScopedRegistry(['lr-empty']), /Scoped custom element registries are not supported/);
     await import('@aceshooting/lyra-ui/autoloader-cdn.js');
     assert.deepEqual(await discover(), []);
     ${noBrowserGlobals}
