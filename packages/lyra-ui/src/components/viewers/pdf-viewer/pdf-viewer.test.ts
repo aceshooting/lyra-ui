@@ -1690,6 +1690,72 @@ describe("anchor-target adoption", () => {
     }
   });
 
+  it("resolves goToPage false while no document is loaded", async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    expect(await el.goToPage(1)).to.equal(false);
+    expect(el.page).to.equal(1);
+  });
+
+  for (const [label, anchor] of [
+    ["region", { kind: "region", page: 2, rect: { x: 10, y: 20, width: 30, height: 15 } }],
+    ["text-quote", { kind: "text-quote", quote: "operating costs" }],
+  ] as const) {
+    it(`abandons a ${label} anchor when a page-change listener redirects before its page settles`, async () => {
+      const el = (await fixture(
+        html`<lr-pdf-viewer></lr-pdf-viewer>`
+      )) as LyraPdfViewer;
+      installFakeLoader(el, fakeDocument(3));
+      const restore = stubFetch();
+      try {
+        el.src = "https://example.test/report.pdf";
+        await waitFor(el, '[part="toolbar"]');
+        let redirect: Promise<boolean> | undefined;
+        el.addEventListener("lr-page-change", (event) => {
+          if ((event as CustomEvent<{ page: number }>).detail.page === 2 && !redirect) {
+            redirect = el.scrollToAnchor({ kind: "page", page: 3 });
+          }
+        });
+        expect(await el.scrollToAnchor(anchor)).to.equal(false);
+        expect(redirect !== undefined).to.equal(true);
+        expect(await redirect!).to.equal(true);
+        expect(el.page).to.equal(3);
+      } finally {
+        restore();
+      }
+    });
+  }
+
+  it("abandons a text-quote scan whose unmounted page text settles after a newer anchor took over", async () => {
+    const pages = Array.from({ length: 60 }, (_unused, index) => `Filler page ${index + 1}.`);
+    pages[59] = "The closing appendix lists deferred liabilities.";
+    const el = (await fixture(
+      html`<lr-pdf-viewer></lr-pdf-viewer>`
+    )) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocumentWithText(pages) as never);
+    const restore = stubFetch();
+    try {
+      el.src = "https://example.test/report.pdf";
+      await waitFor(el, '[part="toolbar"]');
+      const viewer = el as unknown as { getPageText: (page: number) => Promise<string> };
+      const original = viewer.getPageText.bind(el);
+      const gate = deferred<string>();
+      let gated = false;
+      viewer.getPageText = (page: number) => {
+        if (page !== 60) return original(page);
+        gated = true;
+        return gate.promise;
+      };
+      const stale = el.scrollToAnchor({ kind: "text-quote", quote: "deferred liabilities", page: 60 });
+      await waitUntil(() => gated, "the scan never requested the unmounted page text");
+      expect(await el.scrollToAnchor({ kind: "page", page: 2 })).to.equal(true);
+      gate.resolve(pages[59]!);
+      expect(await stale).to.equal(false);
+      expect(el.page).to.equal(2);
+    } finally {
+      restore();
+    }
+  });
+
   it("rejects out-of-range page and region anchors instead of clamping them", async () => {
     const el = (await fixture(
       html`<lr-pdf-viewer></lr-pdf-viewer>`

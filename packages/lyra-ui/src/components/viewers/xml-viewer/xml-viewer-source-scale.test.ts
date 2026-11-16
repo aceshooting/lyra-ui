@@ -446,6 +446,8 @@ it('accepts an initial canonical anchor property and rejects bounded malformed p
   for (const path of [[-1], [0.5], ['@'], Array.from({ length: 257 }, () => 0)]) {
     expect(await el.scrollToAnchor({ kind: 'node-path', path })).to.equal(false);
   }
+  // A non-path anchor kind never reaches the provider.
+  expect(await el.scrollToAnchor({ kind: 'page', page: 1 })).to.equal(false);
   expect(reveals.every(key => key === '[0,"@id"]')).to.equal(true);
 });
 

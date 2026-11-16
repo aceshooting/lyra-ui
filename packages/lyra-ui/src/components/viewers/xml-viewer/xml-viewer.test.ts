@@ -944,6 +944,17 @@ describe('search', () => {
     expect(el.shadowRoot!.querySelectorAll('[data-match]').length).to.be.greaterThan(0);
   });
 
+  it('keeps a match-less search inactive across an effective-locale change', async () => {
+    const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
+    expect(await el.search('zzz-absent')).to.equal(0);
+    await el.updateComplete;
+    const eventPromise = oneEvent(el, 'lr-search-change');
+    el.locale = 'fr';
+    const event = await eventPromise as CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
+    expect(event.detail).to.include({ query: 'zzz-absent', matchCount: 0, activeIndex: -1 });
+    expect(el.shadowRoot!.querySelectorAll('[data-active-match]').length).to.equal(0);
+  });
+
   it('matches only an element tag name, attribute names/values, and its own text -- never a comment, CDATA, or processing-instruction body', async () => {
     const el = (await fixture(html`<lr-xml-viewer .xml=${'<root><!-- secretword --><![CDATA[secretword]]><?pi secretword?><item>secretword</item></root>'}></lr-xml-viewer>`)) as LyraXmlViewer;
     const count = await el.search('secretword');

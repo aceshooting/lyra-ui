@@ -1,5 +1,5 @@
 import { twoFrames } from '../../../../test/frames.js';
-import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './geojson-viewer.js';
 // Registers the shipped `ar` catalog slices the `lang="ar"` feature-count test resolves against,
 // so it renders real catalog text instead of tripping the dev-mode locale-fallback warning that
@@ -2271,3 +2271,38 @@ it('keeps GeoJSON metadata left-to-right under RTL', async () => {
   expect(getComputedStyle(metadata).direction).to.equal('ltr');
   expect(getComputedStyle(metadata).unicodeBidi).to.equal('isolate');
 });
+
+for (const stage of ['peer load', 'fallback import'] as const) {
+  it(`settles nothing after a disconnect during the ${stage} and reloads on reconnection`, async () => {
+    const originalFetch = globalThis.fetch;
+    stubFetch(FEATURE_COLLECTION);
+    try {
+      const el = await fixture<LyraGeoJsonViewer>(html`<lr-geojson-viewer></lr-geojson-viewer>`);
+      const parent = el.parentNode!;
+      let detached = false;
+      // The peer probe is read once per load; detaching there (or one microtask later, ahead of the
+      // fallback module import) retires the load at the matching continuation.
+      Object.defineProperty(el, 'forceMissingMaplibreForTesting', { configurable: true, get() {
+        if (!detached) {
+          detached = true;
+          if (stage === 'peer load') el.remove(); else queueMicrotask(() => el.remove());
+        }
+        return true;
+      } });
+      const errors: unknown[] = [];
+      el.addEventListener('lr-render-error', event => errors.push(event.detail.error));
+      el.src = GEOJSON_URL;
+      await waitUntil(() => detached && !el.isConnected, 'the load reached its peer probe');
+      await aTimeout(20);
+      expect(errors.length).to.equal(0);
+      expect(el.shadowRoot!.querySelector('lr-json-viewer') === null).to.equal(true);
+      const event = oneEvent(el, 'lr-render-error');
+      parent.appendChild(el);
+      await event;
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-json-viewer') !== null);
+      expect(errors.length).to.equal(1);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+}

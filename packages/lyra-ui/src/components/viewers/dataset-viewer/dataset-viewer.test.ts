@@ -1550,3 +1550,89 @@ it('reports provider rejection without exposing backend details and recovers on 
     columnAt: () => ({ key: 'name', label: 'Name' }), cellAt: () => 'Recovered row' };
   await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') === null && el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.textContent?.includes('Recovered row') === true);
 });
+
+function tableText(el: LyraDatasetViewer): string {
+  return el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.textContent ?? '';
+}
+
+it('runs a search issued while the dataset loads once its rows arrive', async () => {
+  const original = window.fetch;
+  let release!: () => void;
+  window.fetch = (() => new Promise<Response>(resolve => { release = () => resolve(response(GRID_DATASET)); })) as typeof window.fetch;
+  try {
+    const el = await fixture<LyraDatasetViewer>(html`<lr-dataset-viewer src="https://example.test/data.csv"></lr-dataset-viewer>`);
+    await waitUntil(() => typeof release === 'function');
+    await el.updateComplete;
+    const counts: number[] = [];
+    el.addEventListener('lr-search-change', event => counts.push(event.detail.matchCount));
+    expect(await el.search('Ada')).to.equal(0);
+    release();
+    await waitUntil(() => counts.at(-1) === 2, 'the pending query ran against the loaded rows');
+    expect(await el.searchNext()).to.equal(true);
+  } finally {
+    window.fetch = original;
+  }
+});
+
+it('declines an unparsable cell range and retargets a jump whose document is replaced mid-scroll', async () => {
+  const original = window.fetch;
+  window.fetch = ((input: RequestInfo | URL) => Promise.resolve(response(String(input).endsWith('replacement.csv')
+    ? 'name,role\nLin,Replacement one\nKai,Replacement two' : GRID_DATASET))) as typeof window.fetch;
+  try {
+    const el = await fixture<LyraDatasetViewer>(html`<lr-dataset-viewer src="https://example.test/data.csv"></lr-dataset-viewer>`);
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+    shrinkAnchorRetry(el);
+    expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'not a cell' })).to.equal(false);
+    const root = el.shadowRoot!;
+    const query = root.querySelector;
+    let replaced = false;
+    root.querySelector = function (this: ShadowRoot, selector: string) {
+      if (selector === '[part="body"]' && !replaced) { replaced = true; el.src = 'https://example.test/replacement.csv'; }
+      return query.call(this, selector);
+    } as typeof query;
+    try {
+      expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'B3' })).to.equal(true);
+    } finally { root.querySelector = query; }
+    expect(replaced).to.equal(true);
+    expect(tableText(el)).to.include('Replacement two');
+    expect(tableText(el)).not.to.include('Scientist');
+  } finally {
+    window.fetch = original;
+  }
+});
+
+it('drops a response body that finishes reading after src is replaced', async () => {
+  const original = window.fetch;
+  let finishStale!: () => void;
+  window.fetch = ((input: RequestInfo | URL) => Promise.resolve(String(input).endsWith('stale.csv')
+    ? { ok: true, status: 200, statusText: 'OK', text: () => new Promise<string>(resolve => { finishStale = () => resolve('name\nStale row'); }) } as Response
+    : response('name\nCurrent row'))) as typeof window.fetch;
+  try {
+    const el = await fixture<LyraDatasetViewer>(html`<lr-dataset-viewer src="https://example.test/stale.csv"></lr-dataset-viewer>`);
+    await waitUntil(() => typeof finishStale === 'function');
+    el.src = 'https://example.test/current.csv';
+    await waitUntil(() => tableText(el).includes('Current row'));
+    finishStale();
+    await aTimeout(20);
+    expect(tableText(el)).to.include('Current row');
+    expect(tableText(el)).not.to.include('Stale row');
+  } finally {
+    window.fetch = original;
+  }
+});
+
+it('names a provider table, renders absent cells blank, and fails closed for invalid provider metadata', async () => {
+  const el = await fixture<LyraDatasetViewer>(html`<lr-dataset-viewer name="Sales" .dataSource=${{ revision: 1, rowCount: 1, columnCount: 2,
+    columnAt: (column: number) => ({ key: String(column), label: `Column ${column}` }), cellAt: (_row: number, column: number) => column ? null : 'Present' }}></lr-dataset-viewer>`);
+  await waitUntil(() => tableText(el).includes('Present'));
+  expect(el.shadowRoot!.querySelector('[role="table"]')?.getAttribute('aria-label')).to.equal('Sales: 1 rows');
+  const cells = [...el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!.querySelectorAll('[role="cell"]')].map(cell => cell.textContent!.trim());
+  expect(cells).to.deep.equal(['Present', '']);
+  const errors: unknown[] = [];
+  const broken = await fixture<LyraDatasetViewer>(html`<lr-dataset-viewer @lr-render-error=${(event: CustomEvent<{ error: unknown }>) => errors.push(event.detail.error)}
+    .dataSource=${{ revision: 1, rowCount: 1, columnCount: 'two', columnAt: () => ({ key: 'a', label: 'A' }), cellAt: () => 'x' }}></lr-dataset-viewer>`);
+  await waitUntil(() => broken.shadowRoot!.querySelector('[part="error"]') !== null);
+  expect(errors.length).to.equal(1);
+  expect(broken.shadowRoot!.querySelector('[part="error"]')!.textContent!.trim()).to.equal('Failed to load document.');
+  expect(broken.shadowRoot!.querySelector('lr-virtual-list') === null).to.equal(true);
+});

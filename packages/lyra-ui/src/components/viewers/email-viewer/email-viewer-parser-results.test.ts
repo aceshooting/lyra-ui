@@ -118,4 +118,43 @@ describe('lr-email-viewer parser results', () => {
       restore();
     }
   });
+
+  for (const stage of ['response', 'body'] as const) {
+    it(`never parses a message whose ${stage} settles after the viewer was disconnected`, async () => {
+      let parses = 0;
+      __setEmailDepsForTesting({
+        PostalMime: { parse: () => { parses += 1; return Promise.resolve({ text: 'Too late.' } as never); } },
+        DOMPurify: undefined,
+      });
+      const bytes = new TextEncoder().encode(EML);
+      let release: (() => void) | undefined;
+      const original = window.fetch;
+      window.fetch = (() => {
+        const ready = (): Response => ({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          arrayBuffer: () => stage === 'body'
+            ? new Promise<ArrayBuffer>((resolve) => { release = () => resolve(bytes.buffer); })
+            : Promise.resolve(bytes.buffer),
+        } as Response);
+        return stage === 'response'
+          ? new Promise<Response>((resolve) => { release = () => resolve(ready()); })
+          : Promise.resolve(ready());
+      }) as typeof window.fetch;
+      try {
+        const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer src="https://example.test/message.eml"></lr-email-viewer>`);
+        await waitUntil(() => release !== undefined, `the ${stage} was never requested`, { timeout: 5000 });
+        let errors = 0;
+        el.addEventListener('lr-render-error', () => { errors += 1; });
+        el.remove();
+        release!();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        expect(parses).to.equal(0);
+        expect(errors).to.equal(0);
+      } finally {
+        window.fetch = original;
+      }
+    });
+  }
 });

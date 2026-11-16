@@ -488,3 +488,89 @@ it('reports a localized unavailable-engine state when the installed engine break
   expect(viewer.shadowRoot!.querySelector('[part="viewport"]')?.hasAttribute('data-ready')).to.not.equal(true);
   await expect(viewer).to.be.accessible();
 });
+
+describe('engine lifecycle edges', () => {
+  const engineWith = (overrides: Record<string, unknown>) => {
+    modelEngineLoader.override(async () => ({ createEngine: () => ({
+      contract: 1, async mount(container: HTMLElement, host: Engine3dHost) { hosts.push(host); container.append(document.createElement('canvas')); },
+      setData(value: unknown) { data.push(value); const host = hosts.at(-1)!; queueMicrotask(() => host.progress?.(36, 36)); },
+      setStyle(value: unknown) { styles.push(value); }, setCamera(value: unknown) { cameras.push(value); }, fit: camera, resize() {}, dispose() { disposed++; },
+      ...overrides,
+    }) }));
+  };
+
+  it('reports an engine without a fit operation as unavailable', async () => {
+    engineWith({ fit: undefined });
+    const viewer = await fixture<LyraModelViewer>(html`<lr-model-viewer src=${source} format="obj"
+      .strings=${{ engine3dUnavailable: 'Engine unavailable here' }}></lr-model-viewer>`);
+    await waitUntil(() => (viewer.shadowRoot!.textContent ?? '').includes('Engine unavailable here'));
+    expect(data).to.have.length(0);
+    expect(viewer.shadowRoot!.querySelector('[part="viewport"]')?.hasAttribute('data-ready')).to.equal(false);
+  });
+
+  it('stops loading when the first environment refresh detaches the viewer', async () => {
+    let viewer!: LyraModelViewer;
+    engineWith({ setStyle(value: unknown) { styles.push(value); if (styles.length === 2) viewer.remove(); } });
+    const holder = await fixture<HTMLDivElement>(html`<div></div>`);
+    viewer = document.createElement('lr-model-viewer') as LyraModelViewer;
+    viewer.format = 'obj'; viewer.src = source;
+    holder.append(viewer);
+    await waitUntil(() => styles.length === 2 && !viewer.isConnected, 'the refresh reached the engine');
+    await new Promise(resolve => setTimeout(resolve, 20));
+    expect(data).to.have.length(0);
+    expect(disposed).to.equal(1);
+  });
+
+  it('announces a repeated context loss once and keeps the engine for restoration', async () => {
+    const viewer = await fixture<LyraModelViewer>(html`<lr-model-viewer src=${source} format="obj"></lr-model-viewer>`); await ready(viewer);
+    let fallbacks = 0; viewer.addEventListener('lr-engine-fallback', () => fallbacks++);
+    hosts[0]!.lost('context-lost'); hosts[0]!.lost('context-lost'); await viewer.updateComplete;
+    expect(fallbacks).to.equal(1); expect(disposed).to.equal(0);
+    hosts[0]!.restored?.(); await ready(viewer);
+  });
+
+  it('keeps the loaded engine when the media type is reassigned unchanged', async () => {
+    const viewer = await fixture<LyraModelViewer>(html`<lr-model-viewer src=${source} format="obj" mime-type="model/obj"></lr-model-viewer>`); await ready(viewer);
+    viewer.mimeType = 'model/obj'; await viewer.updateComplete;
+    expect(disposed).to.equal(0); expect(data).to.have.length(1);
+    expect(viewer.shadowRoot!.querySelector('[part="viewport"]')?.hasAttribute('data-ready')).to.equal(true);
+  });
+
+  it('survives an engine whose release throws and loads a fresh engine on reconnection', async () => {
+    engineWith({ dispose() { disposed++; throw new Error('release failed'); } });
+    const viewer = await fixture<LyraModelViewer>(html`<lr-model-viewer src=${source} format="obj"></lr-model-viewer>`); await ready(viewer);
+    const parent = viewer.parentNode!;
+    viewer.remove();
+    expect(disposed).to.equal(1);
+    parent.appendChild(viewer);
+    await waitUntil(() => data.length === 2); await ready(viewer);
+  });
+
+  it('re-resolves engine colors when a shadow-host ancestor changes its theme', async () => {
+    const outer = await fixture<HTMLDivElement>(html`<div style="--lr-theme-color-surface-default: rgb(255, 0, 0)" data-lr-theme-scope></div>`);
+    const root = outer.attachShadow({ mode: 'open' });
+    const viewer = document.createElement('lr-model-viewer') as LyraModelViewer;
+    viewer.format = 'obj'; viewer.src = source; root.append(viewer);
+    await ready(viewer);
+    const background = () => (styles.at(-1) as { background: string }).background;
+    expect(background()).to.equal('rgba(255, 0, 0, 1)');
+    outer.style.setProperty('--lr-theme-color-surface-default', 'rgb(0, 0, 255)');
+    await waitUntil(() => background() === 'rgba(0, 0, 255, 1)');
+  });
+
+  it('hands the engine resolved colors when no 2D canvas context is available', async () => {
+    const getContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, ...args: Parameters<typeof getContext>) {
+      return args[0] === '2d' ? null : getContext.apply(this, args);
+    } as typeof getContext;
+    try {
+      const viewer = await fixture<LyraModelViewer>(html`<lr-model-viewer src=${source} format="obj"></lr-model-viewer>`); await ready(viewer);
+      const style = styles.at(-1) as { background: string; accent: string };
+      expect(style.background.length).to.be.greaterThan(0);
+      expect(style.accent.length).to.be.greaterThan(0);
+      expect(style.background.startsWith('rgba(')).to.equal(false);
+    } finally {
+      HTMLCanvasElement.prototype.getContext = getContext;
+    }
+  });
+});

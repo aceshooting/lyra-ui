@@ -923,6 +923,35 @@ describe('loading a notebook from src', () => {
 });
 
 describe('rendering non-text outputs', () => {
+  it('ignores an invalidated sanitizer load that rejects after a reconnect', async () => {
+    let rejectFirst!: (error: unknown) => void;
+    const first = new Promise<{ sanitize(raw: string): string }>((_resolve, reject) => { rejectFirst = reject; });
+    __setNotebookSanitizerForTesting(first);
+    const notebook = {
+      nbformat: 4, nbformat_minor: 5,
+      cells: [{
+        cell_type: 'code', id: 'c1', source: 'x',
+        outputs: [{ output_type: 'display_data', data: { 'text/html': '<b>Safe</b>' } }],
+      }],
+    };
+    const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    await waitUntil(() => rowRoot(el).textContent?.includes('Loading document') ?? false);
+    await aTimeout(0);
+    el.remove();
+    await aTimeout(0);
+    __setNotebookSanitizerForTesting({ sanitize: (raw: string) => raw });
+    let errors = 0;
+    el.addEventListener('lr-render-error', () => { errors += 1; });
+    document.body.append(el);
+    await waitUntil(() => rowRoot(el).querySelector('b')?.textContent === 'Safe');
+    rejectFirst(new Error('stale sanitizer failure'));
+    await aTimeout(0);
+    await el.updateComplete;
+    expect(errors).to.equal(0);
+    expect(rowRoot(el).querySelector('b')?.textContent).to.equal('Safe');
+    el.remove();
+  });
+
   it('restarts an invalidated inline sanitization after reconnect', async () => {
     let resolveFirst!: (value: { sanitize(raw: string): string }) => void;
     let resolveSecond!: (value: { sanitize(raw: string): string }) => void;

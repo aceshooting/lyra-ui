@@ -300,6 +300,27 @@ describe('lr-archive-viewer', () => {
     }
   });
 
+  it('declines anchors while the archive loads and for entries it does not contain', async () => {
+    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
+    Object.assign(el, { anchorTimeoutMs: 20, anchorRetryIntervalMs: 2 });
+    const buffer = await buildZip({ 'README.md': 'a', 'docs/guide.txt': 'b' });
+    const response = deferred<Response>();
+    const original = window.fetch;
+    window.fetch = (() => response.promise) as typeof window.fetch;
+    try {
+      el.src = 'https://example.test/archive.zip';
+      await el.updateComplete;
+      expect(await el.scrollToAnchor({ kind: 'fragment', id: 'README.md' })).to.equal(false);
+      response.resolve({ ok: true, status: 200, statusText: 'OK', arrayBuffer: () => Promise.resolve(buffer) } as Response);
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+      expect(await el.scrollToAnchor({ kind: 'fragment', id: 'missing.md' })).to.equal(false);
+      expect(await el.scrollToAnchor({ kind: 'text-quote', quote: 'nowhere-in-this-listing' })).to.equal(false);
+      expect(await el.scrollToAnchor({ kind: 'fragment', id: 'README.md' })).to.equal(true);
+    } finally {
+      window.fetch = original;
+    }
+  });
+
   it('navigates to the previous search match, wrapping from the first to the last', async () => {
     const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
     const restore = stubFetch(await buildZip({

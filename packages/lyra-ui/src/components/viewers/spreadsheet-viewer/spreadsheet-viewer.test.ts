@@ -2000,3 +2000,26 @@ it("contains the composed lr-tab-group's lr-activate on a real repeat pick of th
     restore();
   }
 });
+
+it('declines a cell jump whose viewer is detached while switching sheets and jumps again after reconnection', async () => {
+  const restore = fetchBuffer(buffer({ First: GRID_WORKBOOK.Sheet1, Second: [['Key'], ['Value']] }));
+  try {
+    const el = await fixture<LyraSpreadsheetViewer>(html`<lr-spreadsheet-viewer src="https://example.test/book.xlsx"></lr-spreadsheet-viewer>`);
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+    Object.assign(el, { anchorTimeoutMs: 20, anchorRetryIntervalMs: 2 });
+    const parent = el.parentNode!;
+    // The new tab panel the jump renders detaches the viewer before the jump resumes from that update.
+    const observer = new MutationObserver(() => { if (el.isConnected) el.remove(); });
+    observer.observe(el.shadowRoot!, { subtree: true, childList: true, attributes: true });
+    const anchor = { kind: 'cell-range' as const, sheet: 'Second', range: 'A2' };
+    try {
+      expect(await el.scrollToAnchor(anchor)).to.equal(false);
+    } finally { observer.disconnect(); }
+    expect(el.isConnected).to.equal(false);
+    parent.appendChild(el);
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+    expect(await el.scrollToAnchor(anchor)).to.equal(true);
+  } finally {
+    restore();
+  }
+});

@@ -2173,3 +2173,148 @@ for (const stage of ['response body', 'renderer open'] as const) {
     });
   }
 }
+
+describe('lr-pptx-viewer load and search races', () => {
+  const statusText = (el: LyraPptxViewer) => el.shadowRoot!.textContent ?? '';
+
+  for (const failure of ['request', 'body'] as const) {
+    it(`fails closed with the generic message when the deck ${failure} rejects`, async () => {
+      const fake = fakeModule();
+      const original = window.fetch;
+      const cause = new Error('private transport detail');
+      window.fetch = (() => failure === 'request' ? Promise.reject(cause)
+        : Promise.resolve({ ok: true, status: 200, statusText: 'OK', arrayBuffer: () => Promise.reject(cause) } as unknown as Response)) as typeof window.fetch;
+      try {
+        const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+        el.loadRenderer = async () => fake.module;
+        const failed = oneEvent(el, 'lr-render-error');
+        el.src = 'https://example.test/deck.pptx';
+        expect((await failed).detail.error === cause).to.equal(true);
+        await el.updateComplete;
+        expect(statusText(el)).to.include('Failed to load document.');
+        expect(statusText(el)).not.to.include('private transport detail');
+        expect(fake.calls.open).to.equal(0);
+      } finally {
+        window.fetch = original;
+      }
+    });
+  }
+
+  it('cancels the unread body of a rejected deck response', async () => {
+    const fake = fakeModule();
+    const original = window.fetch;
+    let cancelled = 0;
+    const body = new ReadableStream({ cancel() { cancelled++; } });
+    window.fetch = (() => Promise.resolve(new Response(body, { status: 404 }))) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      const failed = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/missing.pptx';
+      await failed;
+      await waitUntil(() => cancelled === 1, 'the response body was cancelled');
+      expect(fake.calls.open).to.equal(0);
+    } finally {
+      window.fetch = original;
+    }
+  });
+
+  it('does not open a deck whose viewer is detached while the slide container renders', async () => {
+    const fake = fakeModule();
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      const parent = el.parentNode!;
+      let loaded = false;
+      const observer = new MutationObserver(() => {
+        if (!loaded && el.isConnected && el.shadowRoot!.querySelector('[part="container"]')) el.remove();
+      });
+      observer.observe(el.shadowRoot!, { subtree: true, childList: true });
+      el.addEventListener('lr-load', () => { loaded = true; });
+      el.src = 'https://example.test/deck.pptx';
+      await waitUntil(() => !el.isConnected, 'the mounted container rendered');
+      observer.disconnect();
+      await aTimeout(20);
+      expect(fake.calls.open).to.equal(0);
+      const reloaded = oneEvent(el, 'lr-load');
+      parent.appendChild(el);
+      await reloaded;
+      expect(fake.calls.open).to.equal(1);
+    } finally {
+      restore();
+    }
+  });
+
+  it('drops a failed search superseded while the renderer searched', async () => {
+    const fake = fakeModule(3, []);
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      const loaded = oneEvent(el, 'lr-load');
+      el.src = 'https://example.test/deck.pptx';
+      await loaded;
+      const diagnostics: unknown[] = [];
+      el.addEventListener('lr-viewer-diagnostic', event => diagnostics.push(event.detail.diagnostic));
+      let newer: Promise<number> | undefined;
+      fake.viewer.searchText = (query: string) => {
+        if (query === 'older') { newer = el.search('newer'); throw new Error('renderer search failed'); }
+        return [];
+      };
+      expect(await el.search('older')).to.equal(0);
+      expect(await newer).to.equal(0);
+      expect(diagnostics.length).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('skips highlighting a match whose search was replaced while its slide opened', async () => {
+    const match = (slideIndex: number, text: string): PptxTextSearchResult => ({ slideIndex, nodeId: `n${slideIndex}`, text, matchStart: 0, matchEnd: text.length });
+    const fake = fakeModule(3, []);
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      el.loadRenderer = async () => fake.module;
+      const loaded = oneEvent(el, 'lr-load');
+      el.src = 'https://example.test/deck.pptx';
+      await loaded;
+      fake.viewer.searchText = (query: string) => [match(query === 'older' ? 2 : 1, query)];
+      const open = fake.viewer.goToSlide;
+      const slide = deferred<void>();
+      let held = false;
+      fake.viewer.goToSlide = async (index: number) => {
+        if (!held) { held = true; await slide.promise; }
+        return open(index);
+      };
+      const older = el.search('older');
+      await waitUntil(() => held);
+      expect(await el.search('newer')).to.equal(1);
+      slide.resolve();
+      expect(await older).to.equal(1);
+      expect(fake.calls.highlighted.map(result => result.text)).to.deep.equal(['newer']);
+    } finally {
+      restore();
+    }
+  });
+  it('declines a quote anchor when its slide never becomes current', async () => {
+    const fake = fakeModule(3, [{ slideIndex: 2, nodeId: 'n2', matchStart: 0, matchEnd: 6, text: 'Target' }]);
+    const restore = stubFetch();
+    try {
+      const el = await fixture<LyraPptxViewer>(html`<lr-pptx-viewer></lr-pptx-viewer>`);
+      Object.assign(el, { anchorTimeoutMs: 20, anchorRetryIntervalMs: 2 });
+      el.loadRenderer = async () => fake.module;
+      const loaded = oneEvent(el, 'lr-load');
+      el.src = 'https://example.test/deck.pptx';
+      await loaded;
+      let requested = 0;
+      fake.viewer.goToSlide = async () => { requested++; };
+      expect(await el.scrollToAnchor({ kind: 'text-quote', quote: 'Target' })).to.equal(false);
+      expect(requested).to.be.greaterThan(0);
+      expect(fake.viewer.currentSlideIndex).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+});

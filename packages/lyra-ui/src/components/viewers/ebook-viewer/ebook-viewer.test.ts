@@ -291,6 +291,51 @@ function fakeBookWithLoadBinding() {
 afterEach(() => __setEpubJsForTesting(undefined));
 
 describe("lr-ebook-viewer", () => {
+  it("shows the localized load error when the ebook response is not ok", async () => {
+    const { factory } = fakeBook();
+    let books = 0;
+    __setEpubJsForTesting((() => { books++; return factory(); }) as never);
+    const original = window.fetch;
+    window.fetch = (() => Promise.resolve(response(false))) as typeof window.fetch;
+    try {
+      const el = (await fixture(html`<lr-ebook-viewer></lr-ebook-viewer>`)) as LyraEbookViewer;
+      const failed = oneEvent(el, "lr-render-error");
+      el.src = "https://example.test/missing.epub";
+      await failed;
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.contain("Failed to load the ebook.");
+      expect(books).to.equal(0);
+    } finally {
+      window.fetch = original;
+    }
+  });
+
+  it("discards an ebook download that completes after src was replaced", async () => {
+    const { factory } = fakeBook();
+    let books = 0;
+    __setEpubJsForTesting((() => { books++; return factory(); }) as never);
+    const original = window.fetch;
+    let releaseStale!: (value: Response) => void;
+    window.fetch = ((url: RequestInfo | URL) => String(url).includes("stale")
+      ? new Promise<Response>((resolve) => { releaseStale = resolve; })
+      : Promise.resolve(response())) as typeof window.fetch;
+    try {
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/stale.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
+      await waitUntil(() => releaseStale !== undefined, "the first download never started");
+      let errors = 0;
+      el.addEventListener("lr-render-error", () => { errors++; });
+      el.src = "https://example.test/current.epub";
+      await waitUntil(() => books === 1, "the replacement book never opened");
+      releaseStale(response());
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(books).to.equal(1);
+      expect(errors).to.equal(0);
+      expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.equal(true);
+    } finally {
+      window.fetch = original;
+    }
+  });
+
   it("keeps a stable mount and renders an idle state by default", async () => {
     const el = (await fixture(
       html`<lr-ebook-viewer></lr-ebook-viewer>`
@@ -1579,6 +1624,65 @@ describe("rendition actions", () => {
 });
 
 describe("lr-ebook-viewer search", () => {
+  it("lets a newer search win when the older one's section find settles late", async () => {
+    const fake = fakeBookWithFeatures({ "ch1.xhtml": "the treasure map" });
+    const item = fake.book.spine.spineItems[0]!;
+    const originalFind = item.find;
+    let releaseFind: ((value: unknown) => void) | undefined;
+    item.find = ((query: string) => {
+      if (query !== "map" || releaseFind) return originalFind(query);
+      return new Promise((resolve) => { releaseFind = resolve; });
+    }) as typeof item.find;
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(
+        html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`
+      )) as LyraEbookViewer;
+      await twoFrames();
+      const details: Array<{ query: string; matchCount: number }> = [];
+      el.addEventListener("lr-search-change", (event) => details.push(event.detail));
+      const stale = el.search("map");
+      await waitUntil(() => releaseFind !== undefined, "the first search never reached find()");
+      expect(await el.search("treasure")).to.equal(1);
+      releaseFind!([{ cfi: "epubcfi(/6/2!/4/stale)", excerpt: "stale" }]);
+      expect(await stale).to.equal(1);
+      expect(details.map((detail) => detail.query)).to.deep.equal(["treasure"]);
+    } finally {
+      restore();
+    }
+  });
+
+  it("lets a newer search win when the older one's last section load fails late", async () => {
+    const fake = fakeBookWithFeatures({ "ch1.xhtml": "the treasure map" });
+    const item = fake.book.spine.spineItems[0]!;
+    const originalLoad = item.load;
+    let failLoad: ((error: unknown) => void) | undefined;
+    item.load = (() => {
+      if (failLoad) return originalLoad();
+      return new Promise<void>((_resolve, reject) => { failLoad = reject; });
+    }) as typeof item.load;
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(
+        html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`
+      )) as LyraEbookViewer;
+      await twoFrames();
+      const details: Array<{ query: string; matchCountExact: boolean }> = [];
+      el.addEventListener("lr-search-change", (event) => details.push(event.detail));
+      const stale = el.search("map");
+      await waitUntil(() => failLoad !== undefined, "the first search never loaded its section");
+      expect(await el.search("treasure")).to.equal(1);
+      failLoad!(new Error("section unavailable"));
+      expect(await stale).to.equal(1);
+      expect(details).to.have.lengthOf(1);
+      expect(details[0]).to.include({ query: "treasure", matchCountExact: true });
+    } finally {
+      restore();
+    }
+  });
+
   it("finds matches across spine sections in order and navigates", async () => {
     const fake = fakeBookWithFeatures({
       "ch1.xhtml": "no match",
@@ -2243,6 +2347,46 @@ describe("lr-ebook-viewer search", () => {
 });
 
 describe("scrollToAnchor (ebook)", () => {
+  for (const stage of ["load", "find"] as const) {
+    it(`abandons a text-quote lookup when the book is unloaded during its section ${stage}`, async () => {
+      const fake = fakeBookWithFeatures({ "ch1.xhtml": "the treasure map" });
+      const item = fake.book.spine.spineItems[0]!;
+      const originalLoad = item.load;
+      const originalFind = item.find;
+      let release: (() => void) | undefined;
+      if (stage === "load") {
+        item.load = (() => new Promise<void>((resolve) => { release = resolve; })) as typeof item.load;
+      } else {
+        item.find = ((query: string) => new Promise((resolve) => {
+          release = () => resolve(originalFind(query));
+        })) as unknown as typeof item.find;
+      }
+      __setEpubJsForTesting(fake.factory as never);
+      const restore = stubFetch();
+      try {
+        const el = (await fixture(
+          html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`
+        )) as LyraEbookViewer;
+        await twoFrames();
+        const seam = el as unknown as { anchorTimeoutMs: number; anchorRetryIntervalMs: number };
+        seam.anchorTimeoutMs = 30;
+        seam.anchorRetryIntervalMs = 5;
+        const displayedBefore = fake.displayedCfis.length;
+        const pending = el.scrollToAnchor({ kind: "text-quote", quote: "treasure" });
+        await waitUntil(() => release !== undefined, `the lookup never reached ${stage}`);
+        el.src = "";
+        await el.updateComplete;
+        release!();
+        expect(await pending).to.equal(false);
+        expect(fake.displayedCfis.length).to.equal(displayedBefore);
+      } finally {
+        item.load = originalLoad;
+        item.find = originalFind;
+        restore();
+      }
+    });
+  }
+
   it("reports its supported anchor kinds", async () => {
     const el = (await fixture(
       html`<lr-ebook-viewer></lr-ebook-viewer>`
