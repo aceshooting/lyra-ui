@@ -931,6 +931,7 @@ export type {
   ChatMessageActionsPlacement,
   ChatMessageActionsPosition,
   ChatMessageAttachmentsPlacement,
+  ChatMessageAvatarPlacement,
   ChatMessageRole,
   ChatMessageStatus,
   ChatMessageToggleDetail,

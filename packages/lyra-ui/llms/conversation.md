@@ -618,6 +618,16 @@ after the write fulfills.
   `ChatMessageActionsPosition` remains exported as the same union.
 - `messageId: string = ''` (attribute `message-id`, reflected) — optional stable application id;
   included in `lr-message-retry` detail when the built-in retry control is activated
+- `avatarPlacement: ChatMessageAvatarPlacement = 'top'` (`'top' | 'start' | 'end'`, attribute
+  `avatar-placement`, reflected) — `'top'` keeps `[part="avatar"]` in the header row above the body;
+  `'start'`/`'end'` move it into its own column of `[part="bubble"]` beside the body at the inline
+  start/end (mirrored under RTL), while badges and the collapse toggle stay in the header. Any
+  other value behaves as `'top'`.
+- `announceStatus: boolean = true` (attribute `announce-status`, reflected; `announce-status="false"`
+  in markup turns it off) — whether status transitions are announced through the shared live region
+  (see "Accessibility of `status`" below). Off, neither the failure nor the streaming-complete
+  announcement fires; the visible `[part="status-text"]` is unchanged. Use it when the application
+  announces each finished reply with its own text.
 
 **Events:** `lr-message-retry` (`detail: { messageId?: string }`; fired by the built-in retry button,
 only rendered when `status="failed"`). `lr-toggle-request` is cancelable and carries
@@ -643,8 +653,10 @@ after `bubble` when `actions-placement="outside"`), `failure` (`display: content
 `failure` slot; contributes no box when the slot is empty)
 
 **Themeable custom properties:** `--lr-chat-message-max-width` (default `80%` — the bubble's max
-inline size; component-specific, no shared width token exists), four role-scoped bubble color
-properties:
+inline size; component-specific, no shared width token exists), `--lr-chat-message-width` (default
+`auto` — the bubble's inline size; `fit-content` shrinks each bubble to its content, still capped by
+`--lr-chat-message-max-width` and still aligned to its role's side, so a one-word user message renders
+a compact end-aligned bubble), four role-scoped bubble color properties:
 
 - `--lr-chat-message-bubble-bg` (default `var(--lr-color-surface)`) — bubble fill for every role
   except `user`.
@@ -663,6 +675,30 @@ component, and which shared token backs each role's fill is not a stable contrac
 between 4.x and 5.0.0, which silently turned one consumer's inner-surface scrim into the whole
 bubble (near-black text on `rgba(0,0,0,0.22)`, visible only by eye). These four are that stable
 contract.
+
+Three border properties cover every role:
+
+- `--lr-chat-message-bubble-border-width` (default `var(--lr-border-width-thin)`) — the border width
+  for every role and status; `0` removes the border everywhere.
+- `--lr-chat-message-bubble-border-color` (default `var(--lr-color-border-subtle)`) — the border
+  color for every role except `user`.
+- `--lr-chat-message-user-bubble-border-color` (default `transparent`) — the border color for
+  `message-role="user"`.
+
+`status="failed"`/`"streaming"` keep painting their own `--lr-chat-message-failed-border-color` /
+`--lr-chat-message-streaming-border-color` over a recolored resting border.
+
+```html
+<!-- Plain-text assistant reply with a side avatar: no border, no fill -->
+<lr-chat-message
+  message-role="assistant"
+  avatar-placement="start"
+  style="--lr-chat-message-bubble-border-width: 0; --lr-chat-message-bubble-bg: transparent;"
+>
+  <span slot="avatar" aria-hidden="true">A</span>
+  Reply text
+</lr-chat-message>
+```
 
 Two matching geometry properties cover the bubble's box:
 
@@ -718,6 +754,7 @@ Accessibility of `status`: the current status is always available as plain visib
 politely (`"Message complete."`) — so a screen-reader user not currently focused on this message
 still learns about it. No other status transition is announced (e.g. `streaming`→`sending`, or
 `sending`→`sent` without having passed through `streaming`, produce no announcement).
+`announce-status="false"` (`announceStatus = false`) turns off both announcements.
 
 **Known gotchas:**
 
@@ -742,6 +779,10 @@ undefined`, i.e. not the very first update) triggers the live-region announcemen
 - `--lr-chat-message-streaming-border-color` — Streaming bubble border. Default: `var(--lr-color-brand)`.
 - `--lr-chat-message-failed-border-color` — Failed bubble border. Default: `var(--lr-color-danger)`.
 - `--lr-chat-message-failed-bg` — Failed bubble fill. Default: `var(--lr-color-danger-quiet)`.
+- `--lr-chat-message-failed-color` — Failed bubble text color, for every role. Default:
+  `var(--lr-color-text)`. It pairs with `--lr-chat-message-failed-bg`, so a light role text color
+  (e.g. white `--lr-chat-message-user-bubble-color` on a dark brand fill) never lands on the pale
+  failed fill; restyle both together.
 - `--lr-chat-message-footer-color` — Default footer text. Default: `var(--lr-color-text-quiet)`.
 - `--lr-chat-message-user-footer-color` — User-message footer text. Default: `var(--lr-color-text)`.
 - `--lr-chat-message-failed-footer-color` — Failed-message footer text. Default: `var(--lr-color-danger)`.

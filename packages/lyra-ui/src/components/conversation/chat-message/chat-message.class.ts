@@ -5,7 +5,7 @@ import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon, retryIcon } from '../../../internal/icons.js';
 import { formatTimeOfDay } from '../../../internal/intl-cache.js';
-import { literalSetConverter } from '../../../internal/converters.js';
+import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '../../../internal/announcer.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
@@ -24,6 +24,9 @@ export type ChatMessageActionsPosition = 'inside' | 'outside';
 export type ChatMessageActionsPlacement = ChatMessageActionsPosition;
 /** Where `<lr-chat-message>`'s `attachments` slot renders relative to the message body. */
 export type ChatMessageAttachmentsPlacement = 'before' | 'after';
+/** Where `<lr-chat-message>`'s `avatar` slot renders: in the header row above the body (`'top'`),
+ *  or in its own column beside the body at the inline start (`'start'`) or end (`'end'`). */
+export type ChatMessageAvatarPlacement = 'top' | 'start' | 'end';
 
 /** `lr-toggle-request`/`lr-toggle` detail of `<lr-chat-message>`. */
 export interface ChatMessageToggleDetail {
@@ -85,7 +88,9 @@ export interface LyraChatMessageEventMap {
  * `failure` slot has content, in which case this internal announcement is
  * skipped: the host's own `role="alert"` failure content is expected to
  * announce itself, and firing both would double-announce the same failure
- * with two different (and differently specific) messages.
+ * with two different (and differently specific) messages. `announce-status="false"` turns both
+ * built-in announcements off for an application that announces replies itself; the visible status
+ * text is unaffected.
  *
  * `messageRole` identifies the author (`user`/`assistant`/`system`, matching
  * the vocabulary of chat/completion APIs). The platform `role` property remains available for
@@ -94,6 +99,12 @@ export interface LyraChatMessageEventMap {
  *
  * `actions-placement="outside"` renders the `actions` slot as a sibling immediately after the
  * message bubble instead of nested inside the footer.
+ *
+ * `avatar-placement="start"` (or `"end"`) moves the `avatar` slot out of the header row into its own
+ * column beside the body; badges and the collapse toggle stay in the header. Combine it with
+ * `--lr-chat-message-bubble-border-width: 0` and a transparent `--lr-chat-message-bubble-bg` for a
+ * plain-text message with a side avatar. Set `--lr-chat-message-width: fit-content` to size each
+ * bubble to its content (up to `--lr-chat-message-max-width`) while it stays on its role's side.
  *
  * @customElement lr-chat-message
  * @slot - The message body.
@@ -123,7 +134,7 @@ export interface LyraChatMessageEventMap {
  * @event lr-toggle - Collapse state committed. `detail: { expanded }` carries the resulting state.
  * @csspart bubble - The message article and bubble root. Programmatically focusable (`tabindex="-1"`) so focus has a stable place to land when the built-in retry button is removed. Its fill, text, and geometry derive from the documented theme hooks.
  * @csspart header - The row above the message body — avatar, badges, and the collapse toggle. Hidden entirely when none of those have anything to show.
- * @csspart avatar - The wrapper around the `avatar` slot.
+ * @csspart avatar - The wrapper around the `avatar` slot. Inside `header` by default; a column of `bubble` beside the body when `avatar-placement` is `start` or `end`.
  * @csspart badges - The wrapper around the `badges` slot.
  * @csspart collapse-button - The built-in collapse/expand toggle (only rendered when `collapsible`).
  * @csspart body - The wrapper around the default slot (the message content). Hidden while `collapsed`.
@@ -138,6 +149,10 @@ export interface LyraChatMessageEventMap {
  * @csspart retry-button - The built-in retry button (only rendered when `status="failed"`).
  * @csspart actions - The wrapper around the `actions` slot. Rendered inside the footer by default; a sibling immediately after `bubble` when `actions-placement="outside"`.
  * @cssprop [--lr-chat-message-max-width=80%] - Maximum inline size of the message bubble.
+ * @cssprop [--lr-chat-message-width=auto] - Inline size of the message bubble. `fit-content` shrinks the bubble to its content, capped by `--lr-chat-message-max-width`, while it stays aligned to its role's side.
+ * @cssprop [--lr-chat-message-bubble-border-width=var(--lr-border-width-thin)] - Bubble border width for every role and status; `0` removes the border.
+ * @cssprop [--lr-chat-message-bubble-border-color=var(--lr-color-border-subtle)] - Bubble border color for every role except `user`.
+ * @cssprop [--lr-chat-message-user-bubble-border-color=transparent] - Bubble border color for `message-role="user"`.
  * @cssprop [--lr-chat-message-bubble-bg=var(--lr-color-surface)] - Bubble fill for every role except `user`.
  * @cssprop [--lr-chat-message-bubble-color=var(--lr-color-text)] - Bubble text color for every role except `user`.
  * @cssprop [--lr-chat-message-user-bubble-bg=var(--lr-color-brand-quiet)] - Bubble fill for `message-role="user"`.
@@ -146,6 +161,7 @@ export interface LyraChatMessageEventMap {
  * @cssprop [--lr-chat-message-streaming-border-color=var(--lr-color-brand)] - Streaming bubble border.
  * @cssprop [--lr-chat-message-failed-border-color=var(--lr-color-danger)] - Failed bubble border.
  * @cssprop [--lr-chat-message-failed-bg=var(--lr-color-danger-quiet)] - Failed bubble fill.
+ * @cssprop [--lr-chat-message-failed-color=var(--lr-color-text)] - Failed bubble text color, for every role; pairs with `--lr-chat-message-failed-bg` so the role text color never lands on the failed fill.
  * @cssprop [--lr-chat-message-footer-color=var(--lr-color-text-quiet)] - Default footer text.
  * @cssprop [--lr-chat-message-user-footer-color=var(--lr-color-text)] - User-message footer text.
  * @cssprop [--lr-chat-message-failed-footer-color=var(--lr-color-danger)] - Failed-message footer text.
@@ -234,6 +250,18 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
   /** Where the actions row renders relative to the bubble. */
   @property({ reflect: true, attribute: 'actions-placement' })
   actionsPlacement: ChatMessageActionsPlacement = 'inside';
+
+  /** Where the `avatar` slot renders. `'top'` (the default) keeps it in the header row above the
+   *  body; `'start'`/`'end'` lay it beside the body at the inline start/end, mirroring under RTL.
+   *  Any other value behaves as `'top'`. */
+  @property({ reflect: true, attribute: 'avatar-placement' })
+  avatarPlacement: ChatMessageAvatarPlacement = 'top';
+
+  /** Whether status transitions are announced through the shared live region (the failure and
+   *  streaming-complete announcements described above). `announce-status="false"` silences both
+   *  while keeping the visible status text, for an application that announces replies itself. */
+  @property({ type: Boolean, reflect: true, attribute: 'announce-status', converter: trueDefaultBooleanConverter })
+  announceStatus = true;
 
   @state() private hasAvatarSlot = false;
   @state() private hasBadgesSlot = false;
@@ -382,7 +410,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
   }
 
   private announceStatusChange(previous: ChatMessageStatus): void {
-    if (previous === this.status) return;
+    if (previous === this.status || !this.announceStatus) return;
     if (this.status === 'failed') {
       // The `failure` slot's own content is expected to carry `role="alert"` and announce itself --
       // see the class doc's "Accessibility of `status`" paragraph. Firing this generic announcement
@@ -450,7 +478,8 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     // shown both at once (see the class doc's `failure` slot entry).
     const suppressBuiltInFailedUi = this.status === 'failed' && this.hasFailureSlot;
     const statusText = suppressBuiltInFailedUi ? undefined : this.statusText;
-    const showHeader = this.hasAvatarSlot || this.hasBadgesSlot || this.collapsible;
+    const avatarBeside = this.avatarPlacement === 'start' || this.avatarPlacement === 'end';
+    const showHeader = (!avatarBeside && this.hasAvatarSlot) || this.hasBadgesSlot || this.collapsible;
     // `statusText` is already truthy whenever `status === 'failed'` and the built-in UI isn't
     // suppressed, so it alone covers that case here too.
     const actionsOutside = this.actionsPlacement === 'outside';
@@ -472,17 +501,13 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
       <slot name="attachments" @slotchange=${this.onAttachmentsSlotChange}></slot>
     </div>`;
 
-    return html`
-      <div
-        part="bubble"
-        role="article"
-        aria-label=${articleLabel}
-        tabindex="-1"
-      >
+    const avatarBlock = html`<span part="avatar" ?hidden=${!this.hasAvatarSlot}
+      ><slot name="avatar" @slotchange=${this.onAvatarSlotChange}></slot
+    ></span>`;
+
+    const content = html`
         <div part="header" ?hidden=${!showHeader}>
-          <span part="avatar" ?hidden=${!this.hasAvatarSlot}
-            ><slot name="avatar" @slotchange=${this.onAvatarSlotChange}></slot
-          ></span>
+          ${avatarBeside ? nothing : avatarBlock}
           <span part="badges" ?hidden=${!this.hasBadgesSlot}
             ><slot name="badges" @slotchange=${this.onBadgesSlotChange}></slot
           ></span>
@@ -521,6 +546,21 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
             : nothing}
           ${actionsOutside ? nothing : actionsBlock}
         </div>
+    `;
+
+    return html`
+      <div
+        part="bubble"
+        role="article"
+        aria-label=${articleLabel}
+        tabindex="-1"
+      >
+        ${avatarBeside
+          ? html`${this.avatarPlacement === 'start' ? avatarBlock : nothing}<div class="content">${content}</div>${this
+                .avatarPlacement === 'end'
+                ? avatarBlock
+                : nothing}`
+          : content}
       </div>
       ${actionsOutside ? actionsBlock : nothing}
     `;

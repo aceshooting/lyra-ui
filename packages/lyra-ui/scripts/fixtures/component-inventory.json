@@ -22878,6 +22878,16 @@
             "default": "inside"
           },
           {
+            "name": "announce-status",
+            "property": "announceStatus",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
+          },
+          {
             "name": "attachments-placement",
             "property": "attachmentsPlacement",
             "type": "ChatMessageAttachmentsPlacement",
@@ -22886,6 +22896,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "after"
+          },
+          {
+            "name": "avatar-placement",
+            "property": "avatarPlacement",
+            "type": "ChatMessageAvatarPlacement",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
           },
           {
             "name": "collapsed",
@@ -22959,6 +22979,16 @@
             "default": "inside"
           },
           {
+            "name": "announceStatus",
+            "attribute": "announce-status",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": true
+          },
+          {
             "name": "attachmentsPlacement",
             "attribute": "attachments-placement",
             "type": "ChatMessageAttachmentsPlacement",
@@ -22967,6 +22997,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "after"
+          },
+          {
+            "name": "avatarPlacement",
+            "attribute": "avatar-placement",
+            "type": "ChatMessageAvatarPlacement",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
           },
           {
             "name": "collapsed",
@@ -23160,6 +23200,18 @@
             "default": "var(--lr-color-surface)"
           },
           {
+            "name": "--lr-chat-message-bubble-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border-subtle)"
+          },
+          {
+            "name": "--lr-chat-message-bubble-border-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-border-width-thin)"
+          },
+          {
             "name": "--lr-chat-message-bubble-color",
             "deprecated": null,
             "hasDefault": true,
@@ -23188,6 +23240,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-chat-message-failed-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
           },
           {
             "name": "--lr-chat-message-failed-footer-color",
@@ -23250,6 +23308,12 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-chat-message-user-bubble-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "transparent"
+          },
+          {
             "name": "--lr-chat-message-user-bubble-color",
             "deprecated": null,
             "hasDefault": true,
@@ -23260,6 +23324,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-chat-message-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
           },
           {
             "name": "--lr-transition-ambient",

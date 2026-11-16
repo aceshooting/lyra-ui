@@ -11,9 +11,11 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-xs);
+    inline-size: var(--lr-chat-message-width, auto);
     max-inline-size: var(--lr-chat-message-max-width, 80%);
     padding: var(--lr-chat-message-bubble-padding, var(--lr-space-m));
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border: var(--lr-chat-message-bubble-border-width, var(--lr-border-width-thin)) solid
+      var(--lr-chat-message-bubble-border-color, var(--lr-color-border-subtle));
     border-radius: var(--lr-chat-message-bubble-radius, var(--lr-radius));
     background: var(--lr-chat-message-bubble-bg, var(--lr-color-surface));
     color: var(--lr-chat-message-bubble-color, var(--lr-color-text));
@@ -25,7 +27,7 @@ export const styles = css`
     margin-inline-start: auto;
     background: var(--lr-chat-message-user-bubble-bg, var(--lr-color-brand-quiet));
     color: var(--lr-chat-message-user-bubble-color, var(--lr-color-text));
-    border-color: transparent;
+    border-color: var(--lr-chat-message-user-bubble-border-color, transparent);
   }
   :host([message-role='assistant']) [part='bubble'] {
     margin-inline-end: auto;
@@ -43,9 +45,29 @@ export const styles = css`
   :host([status='failed']) [part='bubble'] {
     border-color: var(--lr-chat-message-failed-border-color, var(--lr-color-danger));
     background: var(--lr-chat-message-failed-bg, var(--lr-color-danger-quiet));
+    /* The failed fill replaces every role's fill, so its text color is the failed treatment's own
+       too -- a light role text color would otherwise land on the pale danger fill. */
+    color: var(--lr-chat-message-failed-color, var(--lr-color-text));
   }
   :host([status='streaming']) [part='bubble'] {
     border-color: var(--lr-chat-message-streaming-border-color, var(--lr-color-brand));
+  }
+
+  /* -- avatar beside the body ----------------------------------------------
+     The avatar becomes the bubble's first (start) or last (end) flex item in a row; the remaining
+     chrome stacks in the content column exactly as it does in the default column layout. */
+  :host([avatar-placement='start']) [part='bubble'],
+  :host([avatar-placement='end']) [part='bubble'] {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: var(--lr-space-s);
+  }
+  .content {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--lr-space-xs);
   }
 
   [part='header'] {

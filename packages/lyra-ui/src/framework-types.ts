@@ -2318,7 +2318,9 @@ export interface LyraComponentTypeMap {
     properties: LyraElementProperties<
       LyraChatMessage,
       | 'actionsPlacement'
+      | 'announceStatus'
       | 'attachmentsPlacement'
+      | 'avatarPlacement'
       | 'collapsed'
       | 'collapsible'
       | 'formatTimestamp'
@@ -2335,11 +2337,14 @@ export interface LyraComponentTypeMap {
       | 'lr-toggle'
       | 'lr-toggle-request';
     cssNames:       | '--lr-chat-message-bubble-bg'
+      | '--lr-chat-message-bubble-border-color'
+      | '--lr-chat-message-bubble-border-width'
       | '--lr-chat-message-bubble-color'
       | '--lr-chat-message-bubble-padding'
       | '--lr-chat-message-bubble-radius'
       | '--lr-chat-message-failed-bg'
       | '--lr-chat-message-failed-border-color'
+      | '--lr-chat-message-failed-color'
       | '--lr-chat-message-failed-footer-color'
       | '--lr-chat-message-failed-indicator-color'
       | '--lr-chat-message-failed-status-color'
@@ -2350,12 +2355,16 @@ export interface LyraComponentTypeMap {
       | '--lr-chat-message-streaming-indicator-color'
       | '--lr-chat-message-system-color'
       | '--lr-chat-message-user-bubble-bg'
+      | '--lr-chat-message-user-bubble-border-color'
       | '--lr-chat-message-user-bubble-color'
       | '--lr-chat-message-user-footer-color'
+      | '--lr-chat-message-width'
       | '--lr-transition-ambient';
     attributeAliases: {
       'actions-placement'?: LyraChatMessage['actionsPlacement'];
+      'announce-status'?: LyraChatMessage['announceStatus'];
       'attachments-placement'?: LyraChatMessage['attachmentsPlacement'];
+      'avatar-placement'?: LyraChatMessage['avatarPlacement'];
       'message-id'?: LyraChatMessage['messageId'];
       'message-role'?: LyraChatMessage['messageRole'];
     };

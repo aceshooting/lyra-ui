@@ -905,6 +905,7 @@ it("retints streaming, failed, system, footer, and indicator states through comp
         --lr-chat-message-failed-footer-color: rgb(10, 11, 12);
         --lr-chat-message-failed-indicator-color: rgb(13, 14, 15);
         --lr-chat-message-failed-status-color: rgb(16, 17, 18);
+        --lr-chat-message-failed-color: rgb(25, 26, 27);
       "
       >hi</lr-chat-message
     >
@@ -917,7 +918,7 @@ it("retints streaming, failed, system, footer, and indicator states through comp
   const status = el.shadowRoot!.querySelector(
     '[part="status-text"]'
   ) as HTMLElement;
-  expect(getComputedStyle(bubble).color).to.equal("rgb(1, 2, 3)");
+  expect(getComputedStyle(bubble).color, "the failed text color wins over the role color").to.equal("rgb(25, 26, 27)");
   expect(getComputedStyle(bubble).borderColor).to.equal("rgb(4, 5, 6)");
   expect(getComputedStyle(bubble).backgroundColor).to.equal("rgb(7, 8, 9)");
   expect(getComputedStyle(footer).color).to.equal("rgb(10, 11, 12)");
@@ -937,6 +938,7 @@ it("retints streaming, failed, system, footer, and indicator states through comp
     "rgb(22, 23, 24)"
   );
   expect(getComputedStyle(bubble).borderColor).to.equal("rgb(19, 20, 21)");
+  expect(getComputedStyle(bubble).color, "the system color returns once not failed").to.equal("rgb(1, 2, 3)");
   expect(getComputedStyle(indicator).backgroundColor).to.equal(
     "rgb(22, 23, 24)"
   );
@@ -1656,4 +1658,258 @@ it("paints the collapse button hover from the shared icon-button surface, not a 
   } finally {
     await resetMouse();
   }
+});
+
+/** The `index`th message inside `root`, in document order; fails loudly on a missing one. */
+function messageAt(root: Element, index: number): LyraChatMessage {
+  const found = root.querySelectorAll<LyraChatMessage>("lr-chat-message")[index];
+  if (!found) throw new Error(`missing lr-chat-message #${index}`);
+  return found;
+}
+
+describe("bubble border hooks", () => {
+  const bubbleOf = (el: Element) => el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
+
+  it("defaults to a thin subtle border for assistant and a transparent one for user", async () => {
+    const wrapper = await fixture(html`<div>
+      <lr-chat-message message-role="assistant">a</lr-chat-message>
+      <lr-chat-message message-role="user">u</lr-chat-message>
+    </div>`);
+    const assistant = messageAt(wrapper, 0), user = messageAt(wrapper, 1);
+    const probe = document.createElement("div");
+    probe.style.cssText = "border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);";
+    assistant.shadowRoot!.append(probe);
+    expect(getComputedStyle(bubbleOf(assistant)).borderTopWidth).to.equal(getComputedStyle(probe).borderTopWidth);
+    expect(getComputedStyle(bubbleOf(assistant)).borderTopColor).to.equal(getComputedStyle(probe).borderTopColor);
+    probe.remove();
+    expect(getComputedStyle(bubbleOf(user)).borderTopColor).to.equal("rgba(0, 0, 0, 0)");
+  });
+
+  it("recolors the border per role and drops it for every role via the width hook, inherited from an ancestor", async () => {
+    const wrapper = await fixture(html`<div
+      style="--lr-chat-message-bubble-border-color: rgb(1, 2, 3); --lr-chat-message-user-bubble-border-color: rgb(4, 5, 6);"
+    >
+      <lr-chat-message message-role="assistant">a</lr-chat-message>
+      <lr-chat-message message-role="system">s</lr-chat-message>
+      <lr-chat-message message-role="user">u</lr-chat-message>
+    </div>`);
+    const assistant = messageAt(wrapper, 0), system = messageAt(wrapper, 1), user = messageAt(wrapper, 2);
+    expect(getComputedStyle(bubbleOf(assistant)).borderTopColor).to.equal("rgb(1, 2, 3)");
+    expect(getComputedStyle(bubbleOf(system)).borderTopColor).to.equal("rgb(1, 2, 3)");
+    expect(getComputedStyle(bubbleOf(user)).borderTopColor).to.equal("rgb(4, 5, 6)");
+
+    (wrapper as HTMLElement).style.setProperty("--lr-chat-message-bubble-border-width", "0px");
+    for (const el of [assistant, system, user]) {
+      expect(getComputedStyle(bubbleOf(el)).borderTopWidth).to.equal("0px");
+    }
+    (wrapper as HTMLElement).style.setProperty("--lr-chat-message-bubble-border-width", "3px");
+    expect(getComputedStyle(bubbleOf(user)).borderTopWidth).to.equal("3px");
+  });
+
+  it("keeps the failed and streaming border colors over a recolored resting border", async () => {
+    const wrapper = await fixture(html`<div
+      style="--lr-chat-message-bubble-border-color: rgb(1, 2, 3); --lr-chat-message-user-bubble-border-color: rgb(4, 5, 6); --lr-chat-message-failed-border-color: rgb(200, 0, 0); --lr-chat-message-streaming-border-color: rgb(0, 0, 200);"
+    >
+      <lr-chat-message message-role="user" status="failed">u</lr-chat-message>
+      <lr-chat-message message-role="assistant" status="streaming">a</lr-chat-message>
+    </div>`);
+    const failed = messageAt(wrapper, 0), streaming = messageAt(wrapper, 1);
+    expect(getComputedStyle(bubbleOf(failed)).borderTopColor).to.equal("rgb(200, 0, 0)");
+    expect(getComputedStyle(bubbleOf(streaming)).borderTopColor).to.equal("rgb(0, 0, 200)");
+  });
+});
+
+describe("avatar-placement", () => {
+  const partOf = (el: Element, name: string) => el.shadowRoot!.querySelector(`[part="${name}"]`) as HTMLElement;
+
+  it('defaults to "top": the avatar sits in the header row above the body', async () => {
+    const el = (await fixture(html`<lr-chat-message
+      ><span slot="avatar">A</span>Reply text</lr-chat-message
+    >`)) as LyraChatMessage;
+    expect(el.avatarPlacement).to.equal("top");
+    const avatar = partOf(el, "avatar");
+    expect(avatar.parentElement === partOf(el, "header")).to.be.true;
+    expect(partOf(el, "header").hidden).to.be.false;
+    expect(avatar.getBoundingClientRect().bottom).to.be.at.most(partOf(el, "body").getBoundingClientRect().top + 1);
+  });
+
+  it('lays the avatar beside the body at the inline start with avatar-placement="start"', async () => {
+    const el = (await fixture(html`<lr-chat-message message-role="assistant" avatar-placement="start"
+      ><span slot="avatar" style="display:inline-block;inline-size:24px;block-size:24px">A</span>Reply text</lr-chat-message
+    >`)) as LyraChatMessage;
+    expect(el.avatarPlacement).to.equal("start");
+    const avatar = partOf(el, "avatar");
+    const body = partOf(el, "body");
+    expect(avatar.parentElement === partOf(el, "bubble")).to.be.true;
+    expect(partOf(el, "header").hidden, "an avatar-only header collapses away").to.be.true;
+    const a = avatar.getBoundingClientRect();
+    const b = body.getBoundingClientRect();
+    expect(a.right).to.be.at.most(b.left + 1);
+    expect(a.top).to.be.closeTo(b.top, 1);
+  });
+
+  it('places the avatar at the inline end with "end", mirrored under dir="rtl" for "start"', async () => {
+    const wrapper = await fixture(html`<div>
+      <lr-chat-message message-role="user" avatar-placement="end"
+        ><span slot="avatar">U</span>Hi</lr-chat-message
+      >
+      <div dir="rtl">
+        <lr-chat-message avatar-placement="start"><span slot="avatar">A</span>Hi</lr-chat-message>
+      </div>
+    </div>`);
+    const end = messageAt(wrapper, 0), rtlStart = messageAt(wrapper, 1);
+    expect(partOf(end, "avatar").getBoundingClientRect().left).to.be.at.least(partOf(end, "body").getBoundingClientRect().right - 1);
+    expect(partOf(rtlStart, "avatar").getBoundingClientRect().left).to.be.at.least(
+      partOf(rtlStart, "body").getBoundingClientRect().right - 1,
+    );
+  });
+
+  it("keeps badges and the collapse toggle in the header while the avatar sits beside", async () => {
+    const el = (await fixture(html`<lr-chat-message avatar-placement="start" collapsible
+      ><span slot="avatar">A</span><span slot="badges">model</span>Reply</lr-chat-message
+    >`)) as LyraChatMessage;
+    const header = partOf(el, "header");
+    expect(header.hidden).to.be.false;
+    expect(header.querySelector('[part="badges"]') !== null).to.be.true;
+    expect(header.querySelector('[part="collapse-button"]') !== null).to.be.true;
+    expect(header.querySelector('[part="avatar"]') === null).to.be.true;
+    expect(partOf(el, "avatar").getBoundingClientRect().right).to.be.at.most(header.getBoundingClientRect().left + 1);
+  });
+
+  it("moves the avatar back into the header when switched to top, keeping the slotted node", async () => {
+    const el = (await fixture(html`<lr-chat-message avatar-placement="start"
+      ><span slot="avatar" id="av">A</span>Reply</lr-chat-message
+    >`)) as LyraChatMessage;
+    el.avatarPlacement = "top";
+    await el.updateComplete;
+    expect(el.getAttribute("avatar-placement")).to.equal("top");
+    expect(partOf(el, "avatar").parentElement === partOf(el, "header")).to.be.true;
+    expect(partOf(el, "header").hidden).to.be.false;
+    const slot = partOf(el, "avatar").querySelector("slot")!;
+    expect(slot.assignedElements().map((n) => n.id)).to.deep.equal(["av"]);
+  });
+
+  it("treats an unknown value as the default top placement", async () => {
+    const el = (await fixture(html`<lr-chat-message avatar-placement="bogus"
+      ><span slot="avatar">A</span>Reply</lr-chat-message
+    >`)) as LyraChatMessage;
+    expect(partOf(el, "avatar").parentElement === partOf(el, "header")).to.be.true;
+  });
+
+  it("is accessible as a borderless, fill-less assistant message with a side avatar", async () => {
+    const el = await fixture(html`<lr-chat-message
+      avatar-placement="start"
+      style="--lr-chat-message-bubble-border-width: 0; --lr-chat-message-bubble-bg: transparent;"
+      ><span slot="avatar" aria-hidden="true">A</span>Plain reply text</lr-chat-message
+    >`);
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe("--lr-chat-message-width", () => {
+  const bubbleOf = (el: Element) => el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
+
+  it("leaves the bubble at its max inline size by default (unset regression)", async () => {
+    const wrapper = await fixture(html`<div style="inline-size:600px;display:flex;flex-direction:column">
+      <lr-chat-message message-role="user">Hi</lr-chat-message>
+    </div>`);
+    const bubble = bubbleOf(wrapper.querySelector("lr-chat-message")!);
+    expect(bubble.getBoundingClientRect().width).to.be.closeTo(480, 1);
+  });
+
+  it("shrinks a user bubble to its content and keeps it at the inline end with fit-content", async () => {
+    const wrapper = await fixture(html`<div
+      style="inline-size:600px;display:flex;flex-direction:column;--lr-chat-message-width:fit-content"
+    >
+      <lr-chat-message message-role="user">Hi</lr-chat-message>
+      <lr-chat-message message-role="assistant">Hi</lr-chat-message>
+      <lr-chat-message message-role="user">${"word ".repeat(200)}</lr-chat-message>
+    </div>`);
+    const user = messageAt(wrapper, 0), assistant = messageAt(wrapper, 1), long = messageAt(wrapper, 2);
+    const container = (wrapper as HTMLElement).getBoundingClientRect();
+    const u = bubbleOf(user).getBoundingClientRect();
+    expect(u.width).to.be.lessThan(150);
+    expect(u.right).to.be.closeTo(container.right, 1);
+    const a = bubbleOf(assistant).getBoundingClientRect();
+    expect(a.width).to.be.lessThan(150);
+    expect(a.left).to.be.closeTo(container.left, 1);
+    expect(bubbleOf(long).getBoundingClientRect().width, "still capped by max-width").to.be.closeTo(480, 1);
+  });
+
+  it('keeps a fit-content user bubble at the inline end under dir="rtl"', async () => {
+    const wrapper = await fixture(html`<div dir="rtl" style="inline-size:600px;--lr-chat-message-width:fit-content">
+      <lr-chat-message message-role="user">Hi</lr-chat-message>
+    </div>`);
+    const u = bubbleOf(wrapper.querySelector("lr-chat-message")!).getBoundingClientRect();
+    expect(u.width).to.be.lessThan(150);
+    expect(u.left).to.be.closeTo((wrapper as HTMLElement).getBoundingClientRect().left, 1);
+  });
+});
+
+describe("announce-status", () => {
+  it("defaults to true and reflects; announce-status=\"false\" markup turns it off", async () => {
+    const wrapper = await fixture(html`<div>
+      <lr-chat-message>a</lr-chat-message>
+      <lr-chat-message announce-status="false">b</lr-chat-message>
+    </div>`);
+    const on = messageAt(wrapper, 0), off = messageAt(wrapper, 1);
+    expect(on.announceStatus).to.be.true;
+    expect(off.announceStatus).to.be.false;
+  });
+
+  it("suppresses the streaming-complete and failed announcements but keeps the visible status", async () => {
+    const el = (await fixture(html`<lr-chat-message status="streaming" announce-status="false"
+      >hi</lr-chat-message
+    >`)) as LyraChatMessage;
+    el.status = "sent";
+    await el.updateComplete;
+    expect(liveRegionText(), "no completion announcement").to.equal("");
+
+    el.status = "failed";
+    await el.updateComplete;
+    expect(liveRegionText(), "no failure announcement").to.equal("");
+    expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.equal("Failed to send");
+  });
+
+  it("resumes announcing once re-enabled through the property", async () => {
+    const el = (await fixture(html`<lr-chat-message status="streaming" announce-status="false"
+      >hi</lr-chat-message
+    >`)) as LyraChatMessage;
+    el.announceStatus = true;
+    el.status = "sent";
+    await el.updateComplete;
+    expect(liveRegionText("polite")).to.equal("Message complete.");
+  });
+});
+
+describe("--lr-chat-message-failed-color", () => {
+  const bubbleOf = (el: Element) => el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
+
+  it("paints failed bubble text in the readable default, not the role color", async () => {
+    const el = (await fixture(html`<lr-chat-message
+      message-role="user"
+      status="failed"
+      style="--lr-chat-message-user-bubble-color: rgb(255, 255, 255);"
+      >Message text</lr-chat-message
+    >`)) as LyraChatMessage;
+    const probe = document.createElement("div");
+    probe.style.cssText = "color: var(--lr-color-text);";
+    el.shadowRoot!.append(probe);
+    expect(getComputedStyle(bubbleOf(el)).color).to.equal(getComputedStyle(probe).color);
+    probe.remove();
+    await expect(el).to.be.accessible();
+  });
+
+  it("honors the failed-color hook and leaves the resting role color alone once the failure clears", async () => {
+    const el = (await fixture(html`<lr-chat-message
+      message-role="user"
+      status="failed"
+      style="--lr-chat-message-user-bubble-color: rgb(255, 255, 255); --lr-chat-message-failed-color: rgb(10, 20, 30);"
+      >Message text</lr-chat-message
+    >`)) as LyraChatMessage;
+    expect(getComputedStyle(bubbleOf(el)).color).to.equal("rgb(10, 20, 30)");
+    el.status = "sent";
+    await el.updateComplete;
+    expect(getComputedStyle(bubbleOf(el)).color).to.equal("rgb(255, 255, 255)");
+  });
 });

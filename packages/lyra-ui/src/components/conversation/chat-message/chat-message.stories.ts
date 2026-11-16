@@ -260,3 +260,89 @@ export const BubbleGeometry: Story = {
     </div>
   `,
 };
+
+export const AvatarBesideBody: Story = {
+  name: "Avatar beside the body, borderless",
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "`avatar-placement=\"start\"` (or `\"end\"`) lays the avatar beside the body instead of in the header row. `--lr-chat-message-bubble-border-width: 0` and a transparent `--lr-chat-message-bubble-bg` turn the assistant bubble into plain text.",
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex; flex-direction:column; gap:0.75rem; max-width:32rem;">
+      <lr-chat-message
+        message-role="assistant"
+        avatar-placement="start"
+        style="--lr-chat-message-bubble-border-width: 0; --lr-chat-message-bubble-bg: transparent;"
+      >
+        <span slot="avatar" aria-hidden="true">🤖</span>
+        Plain reply text with the avatar at the side, as in common chat designs.
+      </lr-chat-message>
+      <lr-chat-message message-role="user" avatar-placement="end">
+        <span slot="avatar" aria-hidden="true">🙂</span>
+        A user turn with the avatar at the inline end.
+      </lr-chat-message>
+    </div>
+  `,
+};
+
+export const FitContentBubbles: Story = {
+  name: "Bubbles sized to content",
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "`--lr-chat-message-width: fit-content` shrinks each bubble to its content, capped by `--lr-chat-message-max-width`, while it stays on its role's side.",
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex; flex-direction:column; gap:0.75rem; max-width:32rem; --lr-chat-message-width: fit-content;">
+      <lr-chat-message message-role="user">Hi</lr-chat-message>
+      <lr-chat-message message-role="assistant">Hello! How can I help?</lr-chat-message>
+      <lr-chat-message message-role="user">
+        A longer message still wraps at the maximum width instead of growing past it.
+      </lr-chat-message>
+    </div>
+  `,
+};
+
+export const SilentStatus: Story = {
+  name: "Status announcements off",
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "`announce-status=\"false\"` silences the built-in failure and streaming-complete live-region announcements while keeping the visible status text, for applications that announce each reply themselves.",
+      },
+    },
+  },
+  render: () => html`
+    <lr-chat-message message-role="assistant" status="streaming" announce-status="false">
+      Streaming without a built-in completion announcement.
+    </lr-chat-message>
+  `,
+};
+
+export const FailedOnDarkUserBubble: Story = {
+  name: "Failed text color on a dark user bubble",
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "`--lr-chat-message-failed-color` paints failed bubble text, so white user text on a brand fill stays readable once the failed fill replaces it.",
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="display:flex; flex-direction:column; gap:0.75rem; max-width:32rem; --lr-chat-message-user-bubble-bg: var(--lr-color-brand); --lr-chat-message-user-bubble-color: var(--lr-color-on-brand); --lr-chat-message-user-footer-color: var(--lr-color-on-brand);"
+    >
+      <lr-chat-message message-role="user">Sent on the dark brand fill.</lr-chat-message>
+      <lr-chat-message message-role="user" status="failed">This one failed to send.</lr-chat-message>
+    </div>
+  `,
+};

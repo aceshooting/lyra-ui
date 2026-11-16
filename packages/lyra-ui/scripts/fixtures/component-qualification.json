@@ -9451,6 +9451,12 @@
           "evidence": [
             {
               "file": "src/components/conversation/chat-message/chat-message.test.ts",
+              "test": "is accessible as a borderless, fill-less assistant message with a side avatar",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/conversation/chat-message/chat-message.test.ts",
               "test": "is accessible fully populated: avatar, badges, attachments, actions, timestamp, and status=\"failed\"",
               "target": "el",
               "state": "populated"
@@ -9470,6 +9476,12 @@
             {
               "file": "src/components/conversation/chat-message/chat-message.test.ts",
               "test": "is accessible with the bubble geometry props set on a failed message",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/conversation/chat-message/chat-message.test.ts",
+              "test": "paints failed bubble text in the readable default, not the role color",
               "target": "el",
               "state": "populated"
             }
