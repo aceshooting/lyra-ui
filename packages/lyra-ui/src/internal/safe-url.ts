@@ -71,6 +71,22 @@ export function safeDownloadHref(url: unknown, URLCtor: typeof URL = URL): strin
   return safeUrlOrNull(url, SAFE_DOWNLOAD_SCHEMES, URLCtor);
 }
 
+// An action link is an anchor the page author writes on a button-like control (`lr-button`,
+// `lr-icon-button`), never one projected from rendered content. Besides `safeLinkHref()`'s schemes
+// it may hand off to the phone dialer (`tel:`) or the messaging app (`sms:`): like `mailto:`, both
+// leave the page for a system handler, name no web origin and execute nothing. They stay out of
+// `SAFE_LINK_SCHEMES` because that allowlist also guards untrusted rendered content (Markdown
+// links), where admitting a new handoff scheme would change what such content can produce.
+const SAFE_ACTION_LINK_SCHEMES = new Set([...SAFE_LINK_SCHEMES, 'tel:', 'sms:']);
+
+/** Returns a trimmed URL safe for an author-written action anchor (a link styled as a button), or
+ * `null`. This is `safeLinkHref()` plus the `tel:` and `sms:` handoff schemes. Use it only for an
+ * `href` the page author sets directly on a control; content-derived links keep `safeLinkHref()`.
+ * A `download` anchor keeps `safeDownloadHref()`, which names neither scheme. */
+export function safeActionLinkHref(url: unknown, URLCtor: typeof URL = URL): string | null {
+  return safeUrlOrNull(url, SAFE_ACTION_LINK_SCHEMES, URLCtor);
+}
+
 // A document-navigation sink (an `<iframe src>`, a full page navigation) becomes an active,
 // executable document once loaded, unlike a resource sink that only ever renders/fetches bytes.
 // `data:` and `blob:` are therefore excluded even though both are allowed for `safeMediaSrc()`/

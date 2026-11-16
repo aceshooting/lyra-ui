@@ -2220,10 +2220,12 @@ The icon and label stay centered under `--lr-button-justify`, separated by `--lr
 
 **Properties:**
 
-- `href?: string` — when set to a safe link URL (`http:`/`https:`/`blob:`/`mailto:`/relative; see
-  `safeLinkHref`), the root renders as an `<a href=…>` instead of a `<button>`. Setting `download`
-  narrows the allowlist to `http:`/`https:`/`blob:`/relative — `mailto:` names no retrievable bytes,
-  so a `mailto:` href paired with `download` falls back to the native `<button>`. Unset (the default)
+- `href?: string` — when set to a safe link URL (`http:`/`https:`/`blob:`/`mailto:`/`tel:`/`sms:`/
+  relative; see `safeActionLinkHref`), the root renders as an `<a href=…>` instead of a `<button>`.
+  `tel:` and `sms:` hand off to the dialer or messaging app, like `mailto:` to the mail client
+  (`<lr-button href="tel:+40700000100">Call</lr-button>`). Setting `download` narrows the allowlist
+  to `http:`/`https:`/`blob:`/relative — a handoff names no retrievable bytes, so a `mailto:`,
+  `tel:` or `sms:` href paired with `download` falls back to the native `<button>`. Unset (the default)
   renders a plain `<button>`, unchanged. `type` (submit/reset) has no effect while the anchor
   renders. While the button is disabled the anchor is rendered **without** `href` (keeping
   `aria-disabled="true"`), so it cannot navigate; it also uses `--lr-opacity-disabled`, a
@@ -2606,7 +2608,8 @@ until `<lr-icon>` is registered by something else.
   accessible name; wins over `label`
 - `label: string = ''` — accessible name when `accessibleLabel` is unset
 - `disabled: boolean = false` (reflected)
-- `href?: string`, `target?: string`, `download?: string` — a safe `href` renders a native anchor;
+- `href?: string`, `target?: string`, `download?: string` — a safe `href` (the same
+  `http:`/`https:`/`blob:`/`mailto:`/`tel:`/`sms:`/relative allowlist as `<lr-button>`) renders a native anchor;
   `target` derives `rel="noopener noreferrer"`, and download presence (including `download=""`)
   selects the stricter downloadable-URL allowlist. A disabled link keeps the anchor but removes
   `href`

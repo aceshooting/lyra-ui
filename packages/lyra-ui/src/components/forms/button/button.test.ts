@@ -1450,6 +1450,30 @@ describe("lr-button", () => {
       ).to.equal("button");
     });
 
+    it("renders tel: and sms: hrefs as contact-handoff anchors", async () => {
+      for (const href of ["tel:+40700000100", "sms:+40700000100?body=Hello"]) {
+        const el = (await fixture(
+          html`<lr-button href=${href}>Contact</lr-button>`
+        )) as LyraButton;
+        const base = el.shadowRoot!.querySelector('[part~="base"]')!;
+        expect(base.localName, href).to.equal("a");
+        expect(base.getAttribute("href"), href).to.equal(href);
+      }
+    });
+
+    it("keeps the target rel guard on a tel: anchor and drops a tel: href under download", async () => {
+      const el = (await fixture(
+        html`<lr-button href="tel:+40700000100" target="_blank" rel="opener">Call</lr-button>`
+      )) as LyraButton;
+      const anchor = el.shadowRoot!.querySelector("a")!;
+      const rel = anchor.getAttribute("rel")!.split(/\s+/);
+      expect(rel).to.include.members(["noopener", "noreferrer"]);
+      expect(rel).to.not.include("opener");
+      el.download = "card";
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part~="base"]')!.localName).to.equal("button");
+    });
+
     it("ignores an unsafe href scheme, falling back to the native button", async () => {
       const el = (await fixture(
         html`<lr-button href="javascript:alert(1)">Go</lr-button>`

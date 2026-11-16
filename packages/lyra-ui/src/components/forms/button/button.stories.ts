@@ -38,6 +38,19 @@ export const ToggleAndCurrent: Story = {
   `,
 };
 
+export const ContactLinks: Story = {
+  parameters: {
+    docs: { description: { story: '`tel:`, `sms:` and `mailto:` hrefs render a native anchor that hands off to the dialer, messaging app or mail client. `download` drops all three, since a handoff names no retrievable bytes.' } },
+  },
+  render: () => html`
+    <div style="display:flex;gap:var(--lr-space-m);flex-wrap:wrap">
+      <lr-button href="tel:+40700000100">Call</lr-button>
+      <lr-button href="sms:+40700000100">Text</lr-button>
+      <lr-button href="mailto:support@example.com" appearance="outlined">E-mail</lr-button>
+    </div>
+  `,
+};
+
 export const LiveDescription: Story = {
   parameters: {
     docs: { description: { story: 'External descriptions remain attached to the native action when their source element is replaced, removed or reinserted.' } },

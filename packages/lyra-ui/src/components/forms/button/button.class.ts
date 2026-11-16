@@ -12,7 +12,7 @@ import {
   hasIconOnlyDefaultContent,
   IconOnlyLabelObserver,
 } from '../../../internal/icon-only-content.js';
-import { safeDownloadHref, safeLinkHref } from '../../../internal/safe-url.js';
+import { safeActionLinkHref, safeDownloadHref } from '../../../internal/safe-url.js';
 import {
   syncAriaControlsElements,
 } from '../../../internal/aria-reflection.js';
@@ -99,8 +99,9 @@ export interface LyraButtonEventMap {
  * transient native button rather than this host. With none of those properties set, submission
  * stays a plain `requestSubmit()` with a `null` submitter.
  *
- * When `href` is set to a safe link URL (`http:`/`https:`/`blob:`/`mailto:`/relative — see
- * `safeLinkHref`, or `safeDownloadHref` which drops `mailto:` when `download` is set) the root
+ * When `href` is set to a safe link URL (`http:`/`https:`/`blob:`/`mailto:`/`tel:`/`sms:`/relative —
+ * see `safeActionLinkHref`, or `safeDownloadHref` which drops `mailto:`, `tel:` and `sms:` when
+ * `download` is set) the root
  * renders as a real `<a part="base" href=…>` instead — for a link styled
  * as a button (e.g. a CTA). Native navigation is then the anchor's own activation, so the
  * submit/reset click handler and `type` (submit/reset) have no effect in that mode. When the
@@ -577,10 +578,11 @@ export class LyraButton extends LyraFormControlElement<LyraButtonEventMap> {
 
   /** When set to a safe link URL, the button's root renders as a real `<a href=…>` instead of a
    *  `<button>` — for a link styled as a button (e.g. a CTA). Unset (the default) renders a plain
-   *  `<button>`, byte-for-byte as before. Only `http:`/`https:`/`blob:`/`mailto:`/relative URLs are
-   *  honored (see `safeLinkHref`); an unsafe/unparseable value falls back to the native `<button>`.
-   *  Setting `download` narrows the allowlist to `safeDownloadHref`'s, which drops `mailto:` — a
-   *  mail handoff names no retrievable bytes, so it cannot be a download target.
+   *  `<button>`, byte-for-byte as before. Only `http:`/`https:`/`blob:`/`mailto:`/`tel:`/`sms:`/relative
+   *  URLs are honored (see `safeActionLinkHref`); an unsafe/unparseable value falls back to the
+   *  native `<button>`. `tel:` and `sms:` hand off to the dialer or messaging app, like `mailto:`
+   *  to the mail client. Setting `download` narrows the allowlist to `safeDownloadHref`'s, which
+   *  drops all three — a handoff names no retrievable bytes, so it cannot be a download target.
    *  `type` (submit/reset) has no effect while the anchor renders — an anchor has no submit/reset
    *  concept, and native navigation is its own activation. While the button is disabled the anchor
    *  renders with no `href` (see the class doc comment), so a disabled link button cannot navigate. */
@@ -1070,13 +1072,14 @@ export class LyraButton extends LyraFormControlElement<LyraButtonEventMap> {
     `;
 
     // `download` turns the anchor from a navigation sink into a resource sink, and the two carry
-    // different allowlists -- `mailto:` is a legitimate destination but names no retrievable bytes.
+    // different allowlists -- `mailto:`/`tel:`/`sms:` are legitimate destinations but name no
+    // retrievable bytes.
     // Presence is deliberate: native `download=""` is meaningful and still selects the stricter
     // resource URL policy even though it supplies no filename.
     const hasDownload = this.download !== undefined;
     const href = hasDownload
       ? safeDownloadHref(this.href)
-      : safeLinkHref(this.href);
+      : safeActionLinkHref(this.href);
     if (href) {
       const disabled = this.effectiveDisabled || this.loading;
       // A disabled link button omits `href` entirely. An anchor with no `href` is

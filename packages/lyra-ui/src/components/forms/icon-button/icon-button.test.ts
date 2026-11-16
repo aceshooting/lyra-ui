@@ -876,6 +876,19 @@ describe('lr-icon-button — mapped Shoelace surface', () => {
     expect(mail.shadowRoot!.querySelector('a')!.hasAttribute('download')).to.be.false;
   });
 
+  it('renders tel: and sms: hrefs as anchors, but not as download targets', async () => {
+    for (const href of ['tel:+40700000100', 'sms:+40700000100']) {
+      const el = (await fixture(html`
+        <lr-icon-button name="close" label="Call" href=${href}></lr-icon-button>
+      `)) as LyraIconButton;
+      expect(el.shadowRoot!.querySelector('[part~="base"]')!.localName, href).to.equal('a');
+      expect(el.shadowRoot!.querySelector('a')!.getAttribute('href'), href).to.equal(href);
+      el.download = '';
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part~="base"]')!.localName, href).to.equal('button');
+    }
+  });
+
   it('makes disabled link mode inert and restores its href when re-enabled', async () => {
     const el = (await fixture(html`
       <lr-icon-button name="close" label="Open" href="https://example.com" disabled></lr-icon-button>

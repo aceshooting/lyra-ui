@@ -10,7 +10,7 @@ import {
 import { styles } from './icon-button.styles.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { resolveGuardedRel } from '../../../internal/link-rel.js';
-import { safeDownloadHref, safeLinkHref } from '../../../internal/safe-url.js';
+import { safeActionLinkHref, safeDownloadHref } from '../../../internal/safe-url.js';
 import { isUnsafeSvgCloneAttribute, isUnsafeSvgCloneElement } from '../../../internal/safe-svg.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import type { LyraToolbarAction } from '../../conversation/message-actions/toolbar-actions.js';
@@ -125,7 +125,8 @@ function namesControl(nodes: Iterable<Node>): boolean {
  * renders no glyph unless a matching library is registered, including through
  * `registerIconLibrary('default', { resolver })`.
  *
- * A safe `href` switches the interactive root to a native anchor. `rel` is independently
+ * A safe `href` (`http:`/`https:`/`blob:`/`mailto:`/`tel:`/`sms:`/relative, see
+ * `safeActionLinkHref`) switches the interactive root to a native anchor. `rel` is independently
  * settable (no default); `opener` is always stripped and any `target` force-adds the
  * non-removable `noopener noreferrer` guard. `download` narrows URL validation to downloadable
  * schemes. A disabled link keeps the anchor anatomy but removes `href`, so it cannot navigate.
@@ -282,7 +283,8 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
   @property({ attribute: 'aria-pressed' }) private triggerPressed: string | null = null;
   @property({ attribute: 'aria-current' }) private triggerCurrent: string | null = null;
   @property() label = '';
-  /** Safe link URL. When valid, the native root is an anchor rather than a button. */
+  /** Safe link URL (`http:`/`https:`/`blob:`/`mailto:`/`tel:`/`sms:`/relative). When valid, the
+   *  native root is an anchor rather than a button; `download` drops the three handoff schemes. */
   @property() href?: string;
   /** Native anchor target. A non-empty target always derives a safe `rel`. */
   @property() target?: string;
@@ -551,7 +553,7 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
     // Empty is still present for native anchors: `download=""` asks the browser to derive a
     // filename and must select the same strict resource-URL policy as a named download.
     const hasDownload = this.download !== undefined;
-    const href = hasDownload ? safeDownloadHref(this.href) : safeLinkHref(this.href);
+    const href = hasDownload ? safeDownloadHref(this.href) : safeActionLinkHref(this.href);
 
     if (href) {
       const disabled = this.effectiveDisabled;

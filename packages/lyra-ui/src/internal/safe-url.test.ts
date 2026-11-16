@@ -8,6 +8,7 @@ import {
   safeMediaSrc,
   parseLinkSchemes,
   safeLinkHrefWithin,
+  safeActionLinkHref,
 } from './safe-url.js';
 
 describe('sink-specific safe URL helpers', () => {
@@ -190,5 +191,33 @@ describe('narrowed navigation link schemes', () => {
       expect(safeLinkHrefWithin(url, everything), String(url)).to.equal(null);
     }
     expect(safeLinkHrefWithin('https://example.test', new Set())).to.equal(null);
+  });
+});
+
+describe('author-written action links', () => {
+  it('adds tel: and sms: handoffs to the navigation allowlist', () => {
+    expect(safeActionLinkHref('tel:+40700000100')).to.equal('tel:+40700000100');
+    expect(safeActionLinkHref(' SMS:+40700000100?body=Hi ')).to.equal('SMS:+40700000100?body=Hi');
+    for (const url of ['https://example.com', '/path', 'mailto:a@example.com', 'blob:https://example.com/id']) {
+      expect(safeActionLinkHref(url), url).to.equal(url);
+    }
+  });
+
+  it('keeps tel: and sms: out of every other sink, including the general navigation link', () => {
+    for (const url of ['tel:+40700000100', 'sms:+40700000100']) {
+      expect(safeLinkHref(url), url).to.be.null;
+      expect(safeDownloadHref(url), url).to.be.null;
+      expect(safeMediaSrc(url), url).to.be.null;
+      expect(safeFetchUrl(url), url).to.be.null;
+      expect(safeDocumentNavigationUrl(url), url).to.be.null;
+    }
+  });
+
+  it('still rejects executable, document and obfuscated schemes and non-strings', () => {
+    for (const url of ['javascript:alert(1)', 'java\tscript:alert(1)', 'data:text/html,x', 'vbscript:x', 'file:///etc/passwd', 'facetime:+1', '']) {
+      expect(safeActionLinkHref(url), url).to.be.null;
+    }
+    expect(safeActionLinkHref(42)).to.be.null;
+    expect(safeActionLinkHref(null)).to.be.null;
   });
 });
