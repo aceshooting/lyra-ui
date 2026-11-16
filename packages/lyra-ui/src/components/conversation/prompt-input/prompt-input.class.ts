@@ -283,7 +283,8 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   @property({ type: Boolean, attribute: 'without-stop' }) withoutStop = false;
   /** Forwarded to the composed composer: `'plain'` removes its border, background and padding. */
   @property() frame: ChatComposerFrame = 'card';
-  /** Forwarded to the composed composer: `'stacked'` arranges `start` above `end` beside the textarea. */
+  /** Forwarded to the composed composer: `'stacked'` arranges `start` above `end` beside the textarea;
+   *  `'below'` puts both on one row under a full-width textarea. */
   @property({ attribute: 'actions-layout' }) actionsLayout: ChatComposerActionsLayout = 'inline';
   // numeric-guard-exempt: pass-through to <lr-chat-composer>, which normalizes its row limits.
   @property({ type: Number, attribute: 'min-rows' }) minRows = 1;

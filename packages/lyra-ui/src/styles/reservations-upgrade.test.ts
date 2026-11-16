@@ -30,10 +30,10 @@ function box(el: Element): Box {
 }
 
 const MEASURED = ['#first-group', '#first-group-after', '#active-group', '#active-group-after', 'lr-checkbox',
-  '#checkbox-after', 'lr-badge', '#badge-line', 'lr-chat-composer', '#composer-after'] as const;
+  '#checkbox-after', 'lr-badge', '#badge-line', 'lr-chat-composer', '#composer-after', '#composer-below', '#composer-below-after'] as const;
 
 describe('reservations.css upgrade shift', () => {
-  it('reserves tab group, tab, tab panel, checkbox, badge and chat composer at their upgraded size', async () => {
+  it('reserves tab group, tab, tab panel, checkbox, badge and chat composer (inline and below) at their upgraded size', async () => {
     await loadStylesheet('tokens-root.css');
     await loadStylesheet('reservations.css');
     const root = await fixture<HTMLElement>(html`
@@ -56,6 +56,8 @@ describe('reservations.css upgrade shift', () => {
         <p id="badge-line"><lr-badge>New</lr-badge> after</p>
         <lr-chat-composer></lr-chat-composer>
         <p id="composer-after">after</p>
+        <lr-chat-composer id="composer-below" actions-layout="below"></lr-chat-composer>
+        <p id="composer-below-after">after</p>
       </div>
     `);
     for (const tagName of TAGS) expect(customElements.get(tagName) === undefined, `${tagName} must start undefined`).to.equal(true);

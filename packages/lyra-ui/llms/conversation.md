@@ -938,10 +938,14 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
   _control fills itself_, and one property name cannot mean both. The focus affordance is swapped,
   not dropped — see **Known gotchas**
 - `actionsLayout: ChatComposerActionsLayout = 'inline'` (reflected, attribute `actions-layout`) —
-  `'inline' | 'stacked'`. `'inline'` (the default) keeps today's single flex row. `'stacked'`
-  arranges the `start` and `end` action slots as a compact one-column rail (`start` above `end`)
-  beside a `textarea` that spans both rows — for a multi-row composer (a taller `min-rows`) where
-  stretching the action buttons across the row's full height would otherwise look wrong. Layout
+  `'inline' | 'stacked' | 'below'`. `'inline'` (the default) keeps today's single flex row.
+  `'stacked'` arranges the `start` and `end` action slots as a compact one-column rail (`start`
+  above `end`) beside a `textarea` that spans both rows — for a multi-row composer (a taller
+  `min-rows`) where stretching the action buttons across the row's full height would otherwise look
+  wrong. `'below'` gives the `textarea` its own full-width line and puts `start` and `end` on one
+  row beneath it, `start` at the inline start and `end` at the inline end (also while `start` is
+  empty; mirrored under RTL) — the usual phone-width chat input with attach buttons. `min-rows`/
+  `max-rows` growth and inner scrolling are unchanged in every layout. Layout
   only; slot content, empty-slot hiding and the built-in button are unchanged. Invalid direct or
   attribute values normalize and reflect as `'inline'`.
 - `withoutEnterSubmit: boolean = false` (reflected, attribute `without-enter-submit`) — when set,
@@ -1083,9 +1087,11 @@ and disables only the built-in Send button; editing and busy-state Stop behavior
   restyle `[part="base"]` under `plain` and want to draw your own focus cue instead (e.g. on a
   wrapper you place the composer inside), set `--lr-chat-composer-focus-shadow: none` rather than
   fighting the default with a higher-specificity override.
-- `actions-layout="stacked"` only changes `[part="row"]`'s layout (a CSS grid instead of a flex
-  row); it does not change which slot content is hidden or when the built-in button replaces
-  `end`.
+- `actions-layout="stacked"` and `actions-layout="below"` only change `[part="row"]`'s layout (a
+  CSS grid instead of a flex row); they do not change which slot content is hidden or when the
+  built-in button replaces `end`. `reservations.css` reserves the taller resting footprint of
+  `below` (for the default `min-rows="1"`) before upgrade, so no `::part(row)` grid or hand-written
+  reservation is needed.
 
 ---
 
@@ -4608,7 +4614,7 @@ their corresponding data can be supplied. The default entry registers all childr
 `withoutEnterSubmit: boolean = false` (attribute `without-enter-submit`);
 `submitDisabled: boolean = false` (attribute `submit-disabled`), `withoutStop: boolean = false`
 (attribute `without-stop`), `minRows: number = 1` (attribute `min-rows`) and `maxRows: number = 8`
-(attribute `max-rows`), `frame: 'card' | 'plain' = 'card'` and `actionsLayout: 'inline' | 'stacked' = 'inline'`
+(attribute `max-rows`), `frame: 'card' | 'plain' = 'card'` and `actionsLayout: 'inline' | 'stacked' | 'below' = 'inline'`
 (attribute `actions-layout`) forward to the composed `lr-chat-composer` with its semantics, and a slotted
 `toolbar` child is forwarded to the composer's `toolbar` slot;
 `spellcheck: boolean = true` (string-aware true-default converter), `autocapitalize: string = ''`,

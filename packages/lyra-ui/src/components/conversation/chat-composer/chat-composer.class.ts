@@ -53,11 +53,12 @@ export type ChatComposerWrap = LyraTextWrap;
 export type ChatComposerSelectionDirection = LyraSelectionDirection;
 
 /** Arrangement of the `start`/`end` action slots relative to the textarea. `'inline'` is today's
- *  single flex row; `'stacked'` arranges them as a compact rail beside a multi-row textarea. */
-export type ChatComposerActionsLayout = 'inline' | 'stacked';
+ *  single flex row; `'stacked'` arranges them as a compact rail beside a multi-row textarea;
+ *  `'below'` gives the textarea its own full-width line with `start` and `end` on one row under it. */
+export type ChatComposerActionsLayout = 'inline' | 'stacked' | 'below';
 
 const CHAT_COMPOSER_ACTIONS_LAYOUT = literalSetConverter<ChatComposerActionsLayout>(
-  ['inline', 'stacked'],
+  ['inline', 'stacked', 'below'],
   'inline'
 );
 
@@ -229,8 +230,12 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
    *  `'inline'` (the default) keeps today's single flex row. `'stacked'` arranges `start` above
    *  `end` as a compact rail in one column, beside a `textarea` that spans both rows -- for a
    *  multi-row composer where the action buttons would otherwise stretch to the row's full
-   *  cross-axis height. Layout only; slot content, empty-slot hiding and the built-in button are
-   *  unchanged. Invalid direct or attribute values normalize and reflect as `'inline'`. */
+   *  cross-axis height. `'below'` puts the `textarea` on its own full-width line and `start` and
+   *  `end` on one row beneath it (`start` at the inline start, `end` at the inline end, even while
+   *  `start` is empty) -- the usual phone-width chat input with attach buttons; `min-rows`/
+   *  `max-rows` growth and inner scrolling are unchanged. Layout only; slot content, empty-slot
+   *  hiding and the built-in button are unchanged. Invalid direct or attribute values normalize and
+   *  reflect as `'inline'`. */
   @property({
     reflect: true,
     attribute: 'actions-layout',

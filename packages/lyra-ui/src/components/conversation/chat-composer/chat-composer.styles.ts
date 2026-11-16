@@ -161,6 +161,31 @@ export const styles = css`
     grid-row: 2;
   }
 
+  /* actions-layout="below": the textarea takes its own full-width line and start and end share one
+     row beneath it, start at the inline start and end at the inline end. Grid columns follow the
+     writing direction, so RTL mirrors with no extra rule; end keeps column 2 even while start is
+     hidden, so an empty start never pulls the send button across. */
+  :host([actions-layout='below']) [part='row'] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    align-items: center;
+  }
+  :host([actions-layout='below']) [part='textarea'] {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  :host([actions-layout='below']) [part='start'] {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: start;
+    padding-block-end: 0;
+  }
+  :host([actions-layout='below']) [part='end'] {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
   [part='action-button'] {
     display: inline-flex;
     align-items: center;

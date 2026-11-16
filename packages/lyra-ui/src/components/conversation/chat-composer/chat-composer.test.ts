@@ -678,6 +678,77 @@ describe('actionsLayout', () => {
       startRect.height + endRect.height - 1
     );
   });
+
+  it("puts the textarea on its own full-width line with start and end on one row below it under 'below'", async () => {
+    const el = (await fixture(html`
+      <div style="inline-size: 360px">
+        <lr-chat-composer actions-layout="below">
+          <button slot="start">Attach</button>
+        </lr-chat-composer>
+      </div>
+    `)).querySelector('lr-chat-composer') as LyraChatComposer;
+    await el.updateComplete;
+    expect(el.actionsLayout).to.equal('below');
+    expect(el.getAttribute('actions-layout')).to.equal('below');
+    const row = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
+    expect(getComputedStyle(row).display).to.equal('grid');
+
+    const start = el.shadowRoot!.querySelector('[part="start"]')!.getBoundingClientRect();
+    const end = el.shadowRoot!.querySelector('[part="end"]')!.getBoundingClientRect();
+    const textarea = textareaOf(el).getBoundingClientRect();
+    const rowRect = row.getBoundingClientRect();
+
+    // The textarea spans the row's whole inline size, above both action slots.
+    expect(Math.round(textarea.left)).to.equal(Math.round(rowRect.left));
+    expect(Math.round(textarea.right)).to.equal(Math.round(rowRect.right));
+    expect(start.top).to.be.at.least(textarea.bottom - 1);
+    expect(end.top).to.be.at.least(textarea.bottom - 1);
+    // start and end share one row: start at the inline start, end at the inline end.
+    expect(Math.abs(start.top + start.height / 2 - (end.top + end.height / 2))).to.be.at.most(1);
+    expect(Math.round(start.left)).to.equal(Math.round(rowRect.left));
+    expect(Math.round(end.right)).to.equal(Math.round(rowRect.right));
+    await expect(el).to.be.accessible();
+  });
+
+  it("keeps end at the inline end under 'below' when start is empty, and mirrors under RTL", async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div dir="rtl" style="inline-size: 360px">
+        <lr-chat-composer actions-layout="below">
+          <button slot="start">Attach</button>
+        </lr-chat-composer>
+        <lr-chat-composer actions-layout="below" id="no-start"></lr-chat-composer>
+      </div>
+    `);
+    const [withStart, withoutStart] = [...wrapper.querySelectorAll('lr-chat-composer')] as LyraChatComposer[];
+    await withStart!.updateComplete;
+    await withoutStart!.updateComplete;
+    const rowOf = (el: LyraChatComposer): DOMRect =>
+      el.shadowRoot!.querySelector('[part="row"]')!.getBoundingClientRect();
+    const rectOf = (el: LyraChatComposer, part: string): DOMRect =>
+      el.shadowRoot!.querySelector(`[part="${part}"]`)!.getBoundingClientRect();
+    // RTL: start hugs the right edge, end the left edge.
+    expect(Math.round(rectOf(withStart!, 'start').right)).to.equal(Math.round(rowOf(withStart!).right));
+    expect(Math.round(rectOf(withStart!, 'end').left)).to.equal(Math.round(rowOf(withStart!).left));
+    // An empty (hidden) start leaves end in place rather than pulling it to the inline start.
+    expect(Math.round(rectOf(withoutStart!, 'end').left)).to.equal(Math.round(rowOf(withoutStart!).left));
+    expect(rectOf(withoutStart!, 'end').top).to.be.at.least(rectOf(withoutStart!, 'textarea').bottom - 1);
+  });
+
+  it("keeps min-rows/max-rows growth and inner scrolling under 'below'", async () => {
+    const el = (await fixture(html`
+      <lr-chat-composer actions-layout="below" min-rows="2" max-rows="3"></lr-chat-composer>
+    `)) as LyraChatComposer;
+    const ta = textareaOf(el);
+    const lineHeight = parseFloat(getComputedStyle(ta).lineHeight);
+    const restingHeight = ta.getBoundingClientRect().height;
+    expect(restingHeight).to.be.at.least(lineHeight * 2);
+    el.value = 'one\ntwo\nthree\nfour\nfive\nsix';
+    await el.updateComplete;
+    await waitUntil(() => ta.style.overflowY === 'auto', 'textarea never switched to inner scrolling');
+    const grownHeight = ta.getBoundingClientRect().height;
+    expect(grownHeight).to.be.greaterThan(restingHeight);
+    expect(grownHeight).to.be.at.most(lineHeight * 3 + parseFloat(getComputedStyle(ta).paddingTop) * 2 + 2);
+  });
 });
 
 it("hides the built-in button entirely once the end slot has assigned content", async () => {

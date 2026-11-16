@@ -199,6 +199,40 @@ export const StackedActionsLayout: Story = {
   },
 };
 
+export const BelowActionsLayout: Story = {
+  name: 'actions-layout="below"',
+  render: () => html`
+    <div style="inline-size: 360px; max-inline-size: 100%;">
+      <lr-chat-composer actions-layout="below" max-rows="6" placeholder="Message the assistant…">
+        <span slot="start" style="display: inline-flex; gap: 0.25rem;">
+          <button
+            type="button"
+            aria-label="Attach file"
+            style="font:inherit;font-size:1.125rem;background:none;border:none;cursor:pointer;padding:0.375rem;line-height:1;"
+          >
+            📎
+          </button>
+          <button
+            type="button"
+            aria-label="Take photo"
+            style="font:inherit;font-size:1.125rem;background:none;border:none;cursor:pointer;padding:0.375rem;line-height:1;"
+          >
+            📷
+          </button>
+        </span>
+      </lr-chat-composer>
+    </div>
+  `,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`actions-layout="below"` gives the `textarea` its own full-width line and puts `start` (attach buttons) and `end` (the send button) on one row beneath it, `start` at the inline start and `end` at the inline end -- the common phone-width chat input. `min-rows`/`max-rows` growth and inner scrolling behave as in the other layouts, and `reservations.css` reserves this layout\'s taller resting footprint before upgrade.',
+      },
+    },
+  },
+};
+
 export const Narrow320: Story = {
   name: 'Narrow (320px, populated long draft)',
   render: () => html`
