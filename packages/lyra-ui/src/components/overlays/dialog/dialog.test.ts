@@ -2383,3 +2383,28 @@ it('does not settle an interrupted close after its accepted notification reopens
   expect(el.open).to.equal(true);
   expect(hidden).to.equal(0);
 });
+
+// With no surface chosen anywhere (no theme stylesheet, no data-lr-surface, no setLyraStyle), a
+// component import paints the built-in profile's Glass. Its backdrop blur lives on the panel's
+// glass layer pseudo-element, not on the panel itself, so the panel's own backdrop-filter reads
+// `none` even while the page behind is blurred. Translucency must never appear without that blur.
+it('pairs a translucent default panel with a backdrop blur, and paints Solid opaque without one', async function () {
+  if (!CSS.supports('backdrop-filter', 'blur(1px)') && !CSS.supports('-webkit-backdrop-filter', 'blur(1px)')) this.skip();
+  const el = await fixture<LyraDialog>(html`<lr-dialog label="Notice"><p>Body text</p></lr-dialog>`);
+  await el.show();
+  const panel = el.shadowRoot!.querySelector<HTMLElement>('[part~="panel"]')!;
+  const layer = panel.querySelector('.glass-scroll-layer') ?? panel;
+  const blurOf = (): string => {
+    const before = getComputedStyle(layer, '::before');
+    return before.content === 'none' ? 'none' : (before.backdropFilter || before.getPropertyValue('-webkit-backdrop-filter'));
+  };
+  expect(document.documentElement.hasAttribute('data-lr-surface'), 'no surface chosen').to.equal(false);
+  const alpha = toRgba(getComputedStyle(panel).backgroundColor)[3];
+  expect(alpha, 'default Glass is translucent').to.be.below(255);
+  expect(blurOf(), 'translucent panel blurs its backdrop').to.match(/blur\(1\dpx\)/);
+
+  el.setAttribute('data-lr-surface', 'solid');
+  expect(toRgba(getComputedStyle(panel).backgroundColor)[3], 'Solid panel is opaque').to.equal(255);
+  expect(blurOf(), 'Solid panel has no backdrop blur').to.equal('none');
+  el.close('api');
+});

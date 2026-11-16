@@ -1046,3 +1046,25 @@ describe('external removal while open', () => {
     expect(el.open).to.be.false;
   });
 });
+
+// See the matching lr-dialog test: with no surface chosen, the built-in Glass blurs through the
+// panel's glass layer pseudo-element, so translucency never appears without a backdrop blur.
+it('pairs a translucent default panel with a backdrop blur, and paints Solid opaque without one', async function () {
+  if (!CSS.supports('backdrop-filter', 'blur(1px)') && !CSS.supports('-webkit-backdrop-filter', 'blur(1px)')) this.skip();
+  const el = (await fixture(html`<lr-drawer label="Filters"><p>Body</p></lr-drawer>`)) as LyraDrawer;
+  await el.show();
+  const panel = el.shadowRoot!.querySelector<HTMLElement>('[part~="panel"]')!;
+  const layer = panel.querySelector('.glass-scroll-layer') ?? panel;
+  const blurOf = (): string => {
+    const before = getComputedStyle(layer, '::before');
+    return before.content === 'none' ? 'none' : (before.backdropFilter || before.getPropertyValue('-webkit-backdrop-filter'));
+  };
+  expect(document.documentElement.hasAttribute('data-lr-surface'), 'no surface chosen').to.equal(false);
+  expect(toRgba(getComputedStyle(panel).backgroundColor)[3], 'default Glass is translucent').to.be.below(255);
+  expect(blurOf(), 'translucent panel blurs its backdrop').to.match(/blur\(1\dpx\)/);
+
+  el.setAttribute('data-lr-surface', 'solid');
+  expect(toRgba(getComputedStyle(panel).backgroundColor)[3], 'Solid panel is opaque').to.equal(255);
+  expect(blurOf(), 'Solid panel has no backdrop blur').to.equal('none');
+  await el.hide();
+});
