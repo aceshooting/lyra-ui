@@ -43,6 +43,44 @@ const rootFontSize = (): number =>
 
 const fullKey = (storageKey: string): string => `lr-multi-split:${storageKey}:panels`;
 
+it('redistributes a folded share through successive sibling maximums and restores it from available slack', async () => {
+  const split = await fourPanels();
+  split.sizes = [40, 30, 20, 10];
+  split.panelConstraints = [null, { maxPercent: 35 }, { maxPercent: 40 }, null];
+  await split.updateComplete;
+  const folded = panel(split, 'a');
+  const content = document.createElement('div');
+  content.inert = true;
+  content.textContent = 'Consumer-managed hidden content';
+  folded.append(content);
+
+  const changes: (readonly number[])[] = [];
+  split.addEventListener('lr-multi-split-panel-collapse-change', event => {
+    changes.push(event.detail.sizes);
+  });
+  expect(split.collapsePanel('a')).to.equal(true);
+  await split.updateComplete;
+  // B fills first, then C; the remaining space belongs to the uncapped D.
+  expect(rounded(split.sizes)).to.deep.equal([0, 35, 40, 25]);
+  expect(rounded(changes[0]!)).to.deep.equal([0, 35, 40, 25]);
+  expect(folded.hasAttribute('data-panel-collapsed')).to.equal(true);
+  expect(folded.inert, 'the strip remains available for its expand control').to.equal(false);
+  expect(content.inert, 'folding preserves the consumer-managed hidden region').to.equal(true);
+
+  expect(split.expandPanel('a')).to.equal(true);
+  await split.updateComplete;
+  expect(split.sizes[0]).to.be.closeTo(40, 0.001);
+  expect(split.sizes.reduce((sum, value) => sum + value, 0)).to.be.closeTo(100, 0.001);
+  expect(split.sizes[1]).to.be.at.most(35);
+  expect(split.sizes[2]).to.be.at.most(40);
+  expect(split.sizes.every(value => value >= split.min)).to.equal(true);
+  expect(changes.length).to.equal(2);
+  expect([...changes[1]!]).to.deep.equal([...split.sizes]);
+  expect(folded.hasAttribute('data-panel-collapsed')).to.equal(false);
+  expect(folded.inert).to.equal(false);
+  expect(content.inert, 'expanding preserves the consumer-managed hidden region').to.equal(true);
+});
+
 it('records collapse requests made after connection but before the first update without emitting a change', async () => {
   const holder = await fixture<HTMLDivElement>(html`<div></div>`);
   const split = document.createElement('lr-multi-split') as LyraMultiSplit;

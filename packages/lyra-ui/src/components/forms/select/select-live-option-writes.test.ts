@@ -13,6 +13,61 @@ const settle = async (el: { updateComplete: Promise<unknown> }) => {
 const optionsOf = (el: Element) => [...el.querySelectorAll<LyraOption>('lr-option')];
 
 describe('lr-select live option selected writes', () => {
+  it('lets a later parent value write supersede a queued option edit without user events', async () => {
+    const form = await fixture<HTMLFormElement>(html`
+      <form><lr-select label="Fruit" name="fruit">
+        <lr-option value="a" selected>Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+        <lr-option value="c">Cherry</lr-option>
+      </lr-select></form>
+    `);
+    const el = form.querySelector('lr-select')!;
+    const options = optionsOf(el);
+    const events: string[] = [];
+    for (const name of ['input', 'change', 'lr-input', 'lr-change']) el.addEventListener(name, () => events.push(name));
+
+    options[1]!.selected = true;
+    el.value = 'c';
+    expect(new FormData(form).getAll('fruit')).to.deep.equal(['c']);
+    await settle(el);
+
+    expect(el.value).to.equal('c');
+    expect(options.map(option => option.selected)).to.deep.equal([false, false, true]);
+    expect(el.selectedOptions[0] === options[2]).to.equal(true);
+    expect(new FormData(form).getAll('fruit')).to.deep.equal(['c']);
+    expect(el.defaultValue).to.equal('a');
+    expect(events).to.deep.equal([]);
+  });
+
+  it('lets a native reset supersede queued multiple option edits without changing the reset default', async () => {
+    const form = await fixture<HTMLFormElement>(html`
+      <form><lr-select multiple label="Fruit" name="fruit">
+        <lr-option value="a" selected>Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+        <lr-option value="c">Cherry</lr-option>
+      </lr-select></form>
+    `);
+    const el = form.querySelector('lr-select') as LyraSelect<true>;
+    const options = optionsOf(el);
+    el.value = ['c'];
+    await settle(el);
+    const events: string[] = [];
+    for (const name of ['input', 'change', 'lr-input', 'lr-change']) el.addEventListener(name, () => events.push(name));
+
+    options[1]!.selected = true;
+    options[2]!.selected = false;
+    form.reset();
+    expect(new FormData(form).getAll('fruit')).to.deep.equal(['a']);
+    await settle(el);
+
+    expect(el.value).to.deep.equal(['a']);
+    expect(el.defaultValue).to.deep.equal(['a']);
+    expect(options.map(option => option.selected)).to.deep.equal([true, false, false]);
+    expect(el.selectedOptions[0] === options[0]).to.equal(true);
+    expect(new FormData(form).getAll('fruit')).to.deep.equal(['a']);
+    expect(events).to.deep.equal([]);
+  });
+
   it('clears a single selection when its own option is deselected', async () => {
     const el = await fixture<LyraSelect>(html`<lr-select value="b">
       <lr-option value="a">Apple</lr-option>

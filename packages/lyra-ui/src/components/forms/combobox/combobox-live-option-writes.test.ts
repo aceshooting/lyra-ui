@@ -5,6 +5,63 @@ import type { LyraCombobox } from './combobox.js';
 import type { LyraOption } from './option.js';
 
 describe('lr-combobox live option writes', () => {
+  it('lets a later parent value write supersede a queued option edit without user events', async () => {
+    const form = await fixture<HTMLFormElement>(html`
+      <form><lr-combobox label="Fruit" name="fruit">
+        <lr-option value="a" selected>Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+        <lr-option value="c">Cherry</lr-option>
+      </lr-combobox></form>
+    `);
+    const el = form.querySelector('lr-combobox')!;
+    const options = [...el.querySelectorAll<LyraOption>('lr-option')];
+    const events: string[] = [];
+    for (const name of ['input', 'change', 'lr-input', 'lr-change']) el.addEventListener(name, () => events.push(name));
+
+    options[1]!.selected = true;
+    el.value = 'c';
+    expect(new FormData(form).getAll('fruit')).to.deep.equal(['c']);
+    await Promise.resolve();
+    await Promise.resolve();
+    await el.updateComplete;
+
+    expect(el.value).to.equal('c');
+    expect(options.map(option => option.selected)).to.deep.equal([false, false, true]);
+    expect(new FormData(form).getAll('fruit')).to.deep.equal(['c']);
+    expect(options.map(option => option.defaultSelected)).to.deep.equal([true, false, false]);
+    expect(events).to.deep.equal([]);
+  });
+
+  it('lets a native reset supersede queued multiple option edits without changing the reset default', async () => {
+    const form = await fixture<HTMLFormElement>(html`
+      <form><lr-combobox multiple label="Fruit" name="fruit">
+        <lr-option value="a" selected>Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+        <lr-option value="c">Cherry</lr-option>
+      </lr-combobox></form>
+    `);
+    const el = form.querySelector('lr-combobox') as LyraCombobox<true>;
+    const options = [...el.querySelectorAll<LyraOption>('lr-option')];
+    el.value = ['c'];
+    await el.updateComplete;
+    const events: string[] = [];
+    for (const name of ['input', 'change', 'lr-input', 'lr-change']) el.addEventListener(name, () => events.push(name));
+
+    options[1]!.selected = true;
+    options[2]!.selected = false;
+    form.reset();
+    expect(new FormData(form).getAll('fruit')).to.deep.equal(['a']);
+    await Promise.resolve();
+    await Promise.resolve();
+    await el.updateComplete;
+
+    expect(el.value).to.deep.equal(['a']);
+    expect(options.map(option => option.defaultSelected)).to.deep.equal([true, false, false]);
+    expect(options.map(option => option.selected)).to.deep.equal([true, false, false]);
+    expect(new FormData(form).getAll('fruit')).to.deep.equal(['a']);
+    expect(events).to.deep.equal([]);
+  });
+
   it('applies a live selected write while connected', async () => {
     const el = await fixture<LyraCombobox>(html`<lr-combobox label="Fruit" value="a">
       <lr-option value="a">Apple</lr-option>

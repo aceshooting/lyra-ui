@@ -111,6 +111,67 @@ describe('lr-map native input failure boundaries', () => {
       { lngLat: [3, 4], point: [30, 40] }, { lngLat: [5, 6], point: [50, 60] },
     ]);
   });
+
+  it('coalesces pointer positions into a detached latest value and drops an unreported leave', async () => {
+    const { element, peer } = await mount();
+    const moved = events(element, 'lr-map-pointer-move');
+    const left = events(element, 'lr-map-pointer-leave');
+    peer.fire('mousemove', { lngLat: { lng: 1, lat: 2 }, point: { x: 10, y: 20 } });
+    const latest = { lngLat: { lng: 363, lat: 4 }, point: { x: 30, y: 40 } };
+    peer.fire('mousemove', latest);
+    latest.lngLat.lng = 100; latest.point.x = 100;
+    await nextFrame();
+    expect(moved).to.deep.equal([{ lngLat: [3, 4], point: [30, 40] }]);
+    const detail = moved[0] as { lngLat: readonly number[]; point: readonly number[] };
+    expect(Object.isFrozen(detail) && Object.isFrozen(detail.lngLat) && Object.isFrozen(detail.point)).to.equal(true);
+    peer.fire('mouseout');
+    expect(left).to.deep.equal([null]);
+    peer.fire('mousemove', { lngLat: { lng: 5, lat: 6 }, point: { x: 50, y: 60 } });
+    peer.fire('mouseout');
+    await nextFrame();
+    expect(moved.length).to.equal(1);
+    expect(left.length).to.equal(1);
+  });
+
+  it('drops queued pointer reports while disabled and resumes with a fresh position after enabling', async () => {
+    const { element, peer } = await mount();
+    const moved = events(element, 'lr-map-pointer-move');
+    const left = events(element, 'lr-map-pointer-leave');
+    peer.fire('mousemove', { lngLat: { lng: 1, lat: 2 }, point: { x: 10, y: 20 } });
+    element.setAttribute('disabled', '');
+    await element.updateComplete; await nextFrame();
+    expect(moved.length).to.equal(0);
+    peer.fire('mousemove', { lngLat: { lng: 3, lat: 4 }, point: { x: 30, y: 40 } });
+    await nextFrame();
+    expect(moved.length).to.equal(0);
+    expect(left.length).to.equal(0);
+    element.removeAttribute('disabled');
+    await element.updateComplete;
+    peer.fire('mousemove', { lngLat: { lng: 5, lat: 6 }, point: { x: 50, y: 60 } });
+    await nextFrame();
+    expect(moved).to.deep.equal([{ lngLat: [5, 6], point: [50, 60] }]);
+    peer.fire('mouseout');
+    expect(left).to.deep.equal([null]);
+  });
+
+  it('reports pointer positions synchronously when animation frames are unavailable', async () => {
+    const { element, peer } = await mount();
+    const moved = events(element, 'lr-map-pointer-move');
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'requestAnimationFrame');
+    Object.defineProperty(window, 'requestAnimationFrame', { configurable: true, value: undefined });
+    try {
+      peer.fire('mousemove', { lngLat: { lng: -181, lat: 2 }, point: { x: 10, y: 20 } });
+      expect(moved).to.deep.equal([{ lngLat: [179, 2], point: [10, 20] }]);
+    } finally {
+      if (descriptor) Object.defineProperty(window, 'requestAnimationFrame', descriptor);
+      else Reflect.deleteProperty(window, 'requestAnimationFrame');
+    }
+    peer.fire('mousemove', { lngLat: { lng: 3, lat: 4 }, point: { x: 30, y: 40 } });
+    await nextFrame();
+    expect(moved).to.deep.equal([
+      { lngLat: [179, 2], point: [10, 20] }, { lngLat: [3, 4], point: [30, 40] },
+    ]);
+  });
 });
 
 it('admits a connected anchor boundary in a document without a browsing context and rejects it after removal', () => {

@@ -542,4 +542,23 @@ describe('lr-map drawing integration', () => {
     expect((completions[0] as LyraMapDrawingSnapshot).vertices).to.deep.equal(input.vertices);
     expect(peer.gestureCalls).to.deep.equal(['disable', 'enable']);
   });
+
+  it('rejects a revoked vertex list without retaining edit admission or acquiring native gestures', async () => {
+    const { element, peer } = await mount();
+    const input = completed();
+    const revoked = Proxy.revocable([...input.vertices], {});
+    revoked.revoke();
+    const finishes = capture(element, 'lr-map-draw-complete');
+    expect(element.editDrawing({ ...input, vertices: revoked.proxy })).to.equal(false);
+    expect(peer.gestureCalls).to.deep.equal([]);
+    expect(peer.sources.size).to.equal(0);
+    expect(element.shadowRoot!.querySelector('[part="drawing-controls"]') === null).to.equal(true);
+    expect(element.editDrawing(input)).to.equal(true);
+    await settle(element, peer);
+    expect(element.completeDrawing()).to.equal(true);
+    await settle(element, peer);
+    expect(finishes).to.deep.equal([input]);
+    expect(peer.gestureCalls).to.deep.equal(['disable', 'enable']);
+    expect(peer.sources.size).to.equal(0);
+  });
 });

@@ -14,6 +14,33 @@ it('keeps one private profile and caps lookup keys before calling its child lane
 
 const populated = { search: 'term', nodeTypes: ['person'], empty: false, accepted: () => undefined };
 
+it('rejects blank, oversized and cumulatively oversized type names without replacing the active profile', () => {
+ const host = {};
+ const control = new GraphSourceCompositionController(host, () => undefined, async () => undefined, async () => undefined);
+ setGraphSourceComposition(host, populated);
+ for (const nodeTypes of [[' '], ['x'.repeat(65_537)], Array.from({ length: 31 }, () => 'x'.repeat(65_536))]) {
+  expect(() => setGraphSourceComposition(host, { ...populated, nodeTypes })).to.throw(RangeError);
+  expect(control.profile?.nodeTypes).to.deep.equal(['person']);
+ }
+});
+
+it('rejects malformed lookup identities and safely resolves profiles without a child lookup lane', async () => {
+ const host = {}, bare = {};
+ let calls = 0;
+ new GraphSourceCompositionController(host, () => undefined, async () => {
+  calls++;
+  return { records: [], current: () => true };
+ }, async () => undefined);
+ setGraphSourceComposition(host, populated);
+ for (const keys of [['node:'], ['plain'], [`edge:${'x'.repeat(65_536)}`]]) {
+  expect(await resolveGraphSourceComposition(host, keys)).to.equal(undefined);
+ }
+ expect(calls).to.equal(0);
+ setGraphSourceComposition(bare, populated);
+ expect(await resolveGraphSourceComposition(bare, ['node:a'])).to.equal(undefined);
+ expect(await resolveGraphSourceComposition({}, ['node:a'])).to.equal(undefined);
+});
+
 it('hands a toolbar profile installed before the graph attaches to the graph and rejects oversized filters', () => {
  const host = {};
  setGraphSourceComposition(host, populated);

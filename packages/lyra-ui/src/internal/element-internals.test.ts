@@ -8,6 +8,51 @@ function expectFallbackInternals(internals: ElementInternals): void {
 }
 
 describe('attachInternalsSafely()', () => {
+  for (const boundary of ['getOwnPropertyDescriptor', 'getPrototypeOf'] as const) {
+    it(`retains usable fallback validity when a partial DOM rejects ${boundary}`, () => {
+      let inspections = 0;
+      const host = new Proxy(Object.create(null) as HTMLElement, {
+        [boundary](): never {
+          inspections++;
+          throw new Error('DOM inspection unavailable');
+        },
+      });
+
+      const internals = attachInternalsSafely(host);
+
+      expect(inspections).to.equal(1);
+      expectFallbackInternals(internals);
+      internals.setValidity({ customError: true }, 'Invalid value');
+      expect(internals.checkValidity()).to.equal(false);
+      expect(internals.validationMessage).to.equal('Invalid value');
+      internals.setValidity({});
+      expect(internals.reportValidity()).to.equal(true);
+      expect(internals.validationMessage).to.equal('');
+    });
+  }
+
+  for (const result of [null, undefined]) {
+    it(`uses independent fallback state when a partial attachment returns ${String(result)}`, () => {
+      let calls = 0;
+      const host = Object.create(null) as HTMLElement;
+      Object.defineProperty(host, 'attachInternals', {
+        value() { calls++; return result; },
+      });
+
+      const first = attachInternalsSafely(host);
+      const second = attachInternalsSafely(host);
+
+      expect(calls).to.equal(2);
+      expectFallbackInternals(first);
+      expectFallbackInternals(second);
+      first.states.add('invalid');
+      first.setValidity({ valueMissing: true }, 'Required');
+      expect(first.validity.valueMissing).to.equal(true);
+      expect(second.states.has('invalid')).to.equal(false);
+      expect(second.validity.valid).to.equal(true);
+    });
+  }
+
   it('never evaluates an own attachInternals accessor, including one that throws', () => {
     const prototype = Object.create(null) as object;
     let accessorReads = 0;

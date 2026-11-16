@@ -328,6 +328,29 @@ it('owns finite bounded edge dash patterns independently of provider mutation', 
   expect(accepted[0]).to.equal(0);
 });
 
+it('bounds scene styling and prefers an entry position over the node value position', async () => {
+  const fixture = makeHost();
+  const control = new GraphSourceController(fixture.host, { onChange: () => {} });
+  const raw: Scene = { ...scene(), nodes: [
+    { key: 'node:a', position: { x: 10, y: 20 },
+      value: { id: 'a', radius: 100, expandable: false, position: { x: 1, y: 2, z: 0 } } },
+    { key: 'node:b', value: { id: 'b', radius: -10, expandable: true, position: { x: 3, y: 4, z: 0 } } },
+  ], edges: [
+    { key: 'edge:e', source: 'node:a', target: 'node:b',
+      value: { id: 'e', source: 'a', target: 'b', width: -5, directed: false } },
+  ] };
+  control.bind({ source: source(async () => raw), epoch: 0, locale: 'en' });
+  expect(await control.request(intent())).to.equal(true);
+  const accepted = control.state.scene!;
+  expect(accepted.nodes.map(entry => entry.value)).to.deep.equal([
+    { id: 'a', radius: 24, expandable: false, position: { x: 10, y: 20, z: 0 } },
+    { id: 'b', radius: 6, expandable: true, position: { x: 3, y: 4, z: 0 } },
+  ]);
+  expect(accepted.edges[0]?.value).to.deep.equal({ id: 'e', source: 'a', target: 'b', width: 0, directed: false });
+  expect(raw.nodes[0]?.value.radius).to.equal(100);
+  expect(raw.edges[0]?.value.width).to.equal(-5);
+});
+
 it('rejects invalid edge dash patterns atomically without reading accessor entries', async () => {
   const fixture = makeHost(); const control = new GraphSourceController(fixture.host, { onChange: () => {} });
   let reads = 0;

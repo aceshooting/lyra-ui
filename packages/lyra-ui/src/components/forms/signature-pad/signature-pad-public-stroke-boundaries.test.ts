@@ -2,7 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
-import { SIGNATURE_PAD_MAX_STROKES, type LyraSignaturePad } from './signature-pad.class.js';
+import { SIGNATURE_PAD_MAX_POINTS, SIGNATURE_PAD_MAX_STROKES, type LyraSignaturePad } from './signature-pad.class.js';
 import './signature-pad.js';
 
 function surfaceOf(el: LyraSignaturePad): HTMLElement {
@@ -26,6 +26,58 @@ function observeChanges(el: LyraSignaturePad): string[] {
 
 describe('signature pad public stroke boundaries', () => {
   afterEach(() => resetMouse());
+
+  it('caps a live keyboard stroke at the point ceiling and permits the next stroke after committing', async () => {
+    const form = await fixture<HTMLFormElement>(html`
+      <form><lr-signature-pad name="signature" required label="Signature"></lr-signature-pad></form>
+    `);
+    const el = form.querySelector('lr-signature-pad')!;
+    const surface = surfaceOf(el);
+    const changes = observeChanges(el);
+    await focusByKeyboard(surface);
+    await sendKeys({ press: 'Space' });
+    await waitUntil(() => cursorOf(el).hasAttribute('data-down'), 'the keyboard pen is down');
+    const move = (key: string) => surface.dispatchEvent(new KeyboardEvent('keydown', {
+      key, bubbles: true, composed: true, cancelable: true,
+    }));
+    // Alternate in place so the boundary is point admission, rather than clamping at a pad edge.
+    for (let index = 0; index < SIGNATURE_PAD_MAX_POINTS - 1; index++) {
+      move(index % 2 === 0 ? 'ArrowRight' : 'ArrowLeft');
+    }
+    await el.updateComplete;
+    const fullPaint = activePath(el);
+    expect(fullPaint !== null).to.equal(true);
+    expect(fullPaint!.split('L').length - 1).to.equal(SIGNATURE_PAD_MAX_POINTS);
+    move('ArrowDown');
+    move('ArrowUp');
+    await el.updateComplete;
+    expect(activePath(el), 'further moves cannot grow the painted active stroke').to.equal(fullPaint);
+    expect(el.strokes.length).to.equal(0);
+    expect(new FormData(form).has('signature')).to.equal(false);
+    expect(changes).to.deep.equal([]);
+
+    await sendKeys({ press: 'Space' });
+    await waitUntil(() => el.strokes.length === 1, 'the full stroke commits');
+    await el.updateComplete;
+    expect(el.strokes[0]!.length).to.equal(SIGNATURE_PAD_MAX_POINTS);
+    expect(el.strokes[0]![0]).to.deep.equal([0.5, 0.5]);
+    expect(el.strokes[0]![SIGNATURE_PAD_MAX_POINTS - 1]).to.deep.equal([0.51, 0.5]);
+    expect(el.validity.valid).to.equal(true);
+    expect(el.value).to.match(/^data:image\/png;base64,/);
+    expect(new FormData(form).get('signature')).to.equal(el.value);
+    expect(changes).to.deep.equal(['change', 'lr-change']);
+    expect(activePath(el)).to.equal(null);
+
+    await sendKeys({ press: 'Space' });
+    await waitUntil(() => cursorOf(el).hasAttribute('data-down'), 'a fresh stroke can start');
+    await sendKeys({ press: 'ArrowRight' });
+    await waitUntil(() => cursorOf(el).style.left === '52%', 'the fresh stroke reaches its endpoint');
+    await sendKeys({ press: 'Space' });
+    await waitUntil(() => el.strokes.length === 2, 'the fresh stroke commits');
+    expect(el.strokes[1]).to.deep.equal([[0.51, 0.5], [0.52, 0.5]]);
+    expect(new FormData(form).get('signature')).to.equal(el.value);
+    expect(changes).to.deep.equal(['change', 'lr-change', 'change', 'lr-change']);
+  });
 
   it('refuses keyboard and pointer starts at the stroke ceiling and draws again after a public clear', async () => {
     const form = await fixture<HTMLFormElement>(html`

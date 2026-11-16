@@ -90,6 +90,56 @@ describe('filtered graph engine column scene', () => {
 });
 
 describe('graph engine lifecycle seam', () => {
+  it('reports a rejected factory only while its request is current', async () => {
+    for (const closeBeforeRejection of [false, true]) {
+      let reject!: (reason: unknown) => void;
+      const loading = new Promise<Engine3dInstance | null>((_resolve, fail) => { reject = fail; });
+      const reasons: string[] = [];
+      const adapter = new GraphEngineAdapter({ available: () => true, create: () => loading });
+      const pending = adapter.open(request({ failure: (reason: string) => reasons.push(reason) }));
+      if (closeBeforeRejection) adapter.close();
+      reject(new Error('Companion load failed'));
+      expect(await pending).to.equal(null);
+      expect(reasons).to.deep.equal(closeBeforeRejection ? [] : ['unavailable']);
+      adapter.close();
+    }
+  });
+
+  it('contains a throwing paint-capability getter and mounts a later replacement', async () => {
+    const broken = fake(), replacement = fake();
+    let mounts = 0, loads = 0;
+    broken.engine.mount = async () => { mounts++; };
+    Object.defineProperty(broken.engine, 'setAppearance', { get() { throw new Error('Invalid capability'); } });
+    const reasons: string[] = [];
+    const adapter = new GraphEngineAdapter({ available: () => true,
+      create: async () => ++loads === 1 ? broken.engine : replacement.engine });
+    try {
+      expect(await adapter.open(request({ failure: (reason: string) => reasons.push(reason) }))).to.equal(null);
+      expect(mounts).to.equal(0);
+      expect(broken.disposals()).to.equal(1);
+      expect(reasons).to.deep.equal(['unavailable']);
+      expect(await adapter.open(request()) === replacement.engine).to.equal(true);
+    } finally { adapter.close(); }
+    expect(replacement.disposals()).to.equal(1);
+  });
+
+  it('accepts optional renderer notifications when the host omits their handlers', async () => {
+    const value = fake();
+    value.engine.mount = async (_container, host) => {
+      host.restored?.();
+      host.rendering?.({ software: false });
+      host.progress?.(1, 2);
+    };
+    const reasons: string[] = [];
+    const adapter = new GraphEngineAdapter({ available: () => true, create: async () => value.engine });
+    try {
+      expect(await adapter.open(request({ failure: (reason: string) => reasons.push(reason) })) === value.engine).to.equal(true);
+      expect(reasons).to.deep.equal([]);
+      expect(value.disposals()).to.equal(0);
+    } finally { adapter.close(); }
+    expect(value.disposals()).to.equal(1);
+  });
+
   for (const metadata of ['throwing-code', 'revoked-object'] as const) {
     it(`falls back after a mount rejection with ${metadata} metadata and can mount a replacement`, async () => {
       const broken = fake(), replacement = fake();

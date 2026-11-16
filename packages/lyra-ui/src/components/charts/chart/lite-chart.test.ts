@@ -4148,6 +4148,40 @@ describe('lite-chart semantics and geometry', () => {
     }
   });
 
+  it('keeps supplementary-plane category labels intact while fitting narrower allocations', async () => {
+    const labels = ['😀'.repeat(24), `A${'🌍'.repeat(24)}`, `AB${'🚀'.repeat(24)}`];
+    const el = await mount(html`
+      <lr-lite-chart
+        style="inline-size: 304px; block-size: 200px"
+        .labels=${labels}
+        .datasets=${[{ label: 'Revenue', data: [1, 2, 3] }]}
+      ></lr-lite-chart>
+    `);
+
+    for (const width of [304, 256, 208]) {
+      const previousExtent = categoryAxisLabels(el)[0]?.getAttribute('data-label-extent');
+      el.style.inlineSize = `${width}px`;
+      await waitUntil(() => {
+        const extent = categoryAxisLabels(el)[0]?.getAttribute('data-label-extent');
+        return extent !== undefined && extent !== null &&
+          (width === 304 || extent !== previousExtent);
+      }, 'category fitting follows the allocated width');
+      await el.updateComplete;
+
+      const ticks = categoryAxisLabels(el);
+      expect(ticks.length).to.equal(labels.length);
+      for (let index = 0; index < ticks.length; index++) {
+        const tick = ticks[index]!;
+        const display = Array.from(tick.childNodes).find(node => node.nodeType === Node.TEXT_NODE)?.textContent ?? '';
+        expect(display.endsWith('…'), 'the long label is actually truncated').to.equal(true);
+        expect(/[\uD800-\uDFFF]/u.test(display), 'fitting never leaves an unpaired surrogate').to.equal(false);
+        expect(labels[index]!.startsWith(display.slice(0, -1))).to.equal(true);
+        expect(tick.getAttribute('aria-label')).to.equal(labels[index]);
+        expect(tick.getComputedTextLength()).to.be.at.most(Number(tick.getAttribute('data-label-extent')) + 0.5);
+      }
+    }
+  });
+
   it('anchors the last category-axis tick toward the plot interior so a long trailing label is not clipped (LTR)', async () => {
     const el = await mount(html`
       <lr-lite-chart
