@@ -8,6 +8,15 @@ import test from 'node:test';
 
 const read = (file) => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
 
+test('local aggregate builds package artifacts before workspace lint', () => {
+  const commands = read('scripts/ci.sh').split('\n').map(line => line.trim());
+  const build = commands.indexOf('pnpm build');
+  const lint = commands.indexOf('pnpm lint');
+  assert.ok(build >= 0 && lint >= 0, 'the aggregate retains build and lint gates');
+  assert.ok(build < lint, 'workspace lint needs generated provenance and package exports on a clean checkout');
+  assert.equal(commands.filter(line => line === 'pnpm build').length, 1, 'reuse the build for later test gates');
+});
+
 // Section of a top-level job body (up to the next sibling job).
 function job(text, name) {
   const start = text.indexOf(`\n  ${name}:\n`);

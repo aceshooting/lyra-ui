@@ -122,7 +122,8 @@ const COMMAND_TIMEOUTS = Object.freeze({
   install: 600_000,
   list: 120_000,
   node: 120_000,
-  pack: 180_000,
+  // Standalone packing runs metadata generation, type generation and the full build via prepack.
+  pack: 600_000,
   toolchain: 15_000,
   typescript: 180_000,
 });

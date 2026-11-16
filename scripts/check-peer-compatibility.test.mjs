@@ -21,6 +21,23 @@ import { PassThrough } from 'node:stream';
 import test from 'node:test';
 import { gunzipSync, gzipSync } from 'node:zlib';
 
+test('standalone pack allows the complete prepack lifecycle within a finite deadline', async () => {
+  const source = await readFile(new URL('./check-peer-compatibility.mjs', import.meta.url), 'utf8');
+  const timeouts = source.match(/const COMMAND_TIMEOUTS = Object\.freeze\(\{([\s\S]*?)\}\);/u)?.[1];
+  assert.ok(timeouts, 'command deadlines remain explicit');
+  const budget = (name) => {
+    const value = timeouts.match(new RegExp(`\\b${name}: ([\\d_]+)`, 'u'))?.[1];
+    assert.ok(value, `${name} has a finite numeric deadline`);
+    return Number(value.replaceAll('_', ''));
+  };
+  assert.ok(budget('pack') >= budget('build') + budget('typescript'),
+    'prepack runs generation and compilation before the package build');
+  assert.ok(budget('pack') <= 600_000, 'a stalled lifecycle still has a ten-minute ceiling');
+  const pack = source.slice(source.indexOf('async function packLyraUi('), source.indexOf('async function packLyraUi(') + 700);
+  assert.match(pack, /\['pack', '--pack-destination', destination\]/u);
+  assert.match(pack, /timeoutMs: COMMAND_TIMEOUTS\.pack/u);
+});
+
 const MANAGED_PEER_RANGES = Object.freeze({
   '@sgratzl/chartjs-chart-boxplot': '^4.0.0',
   'chart.js': '^4.0.1',

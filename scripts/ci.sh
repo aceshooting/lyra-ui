@@ -417,6 +417,12 @@ if [[ "${CI_SH_SKIP_INSTALL:-0}" != "1" ]]; then
   pnpm --filter @aceshooting/lyra-ui exec playwright install --with-deps chromium firefox webkit
 fi
 
+# Workspace lint checks generated provenance and published package exports.
+# Build first so these checks also work on a clean checkout; later tests reuse it.
+step "pnpm build"
+pnpm build
+pnpm --filter @aceshooting/lyra-translations assemble
+
 step "pnpm lint"
 pnpm lint
 
@@ -460,13 +466,6 @@ pnpm test:coverage-tooling
 # package identity, exact version, tarball SHA-512 and manifest SHA-256, with no lifecycle process.
 step "pinned upstream public manifests"
 pnpm --filter @aceshooting/lyra-ui check:pinned-upstream-manifests
-
-# Build before test: src/package-entrypoints.test.ts dynamically imports the
-# package's published entry points (./dist/lyra.js etc.), which only exist
-# after a build.
-step "pnpm build"
-pnpm build
-pnpm --filter @aceshooting/lyra-translations assemble
 
 step "optional look and theme builder contracts"
 pnpm --filter @aceshooting/lyra-ui test:optional-looks
