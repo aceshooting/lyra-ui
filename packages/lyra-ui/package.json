@@ -1,6 +1,6 @@
 {
   "name": "@aceshooting/lyra-ui",
-  "version": "30.9.0",
+  "version": "31.0.0",
   "description": "Free, independent Lit web components: an open-source alternative to Shoelace and Web Awesome with accessible forms, dashboards, charts, and agent UI.",
   "keywords": [
     "web-components",
@@ -2850,7 +2850,7 @@
   "peerDependencies": {
     "@aceshooting/lyra-3d": "workspace:^1.2.0",
     "@aceshooting/lyra-flags": "workspace:^2.3.1",
-    "@aceshooting/lyra-map": "workspace:^1.5.0",
+    "@aceshooting/lyra-map": "workspace:^1.5.1",
     "@aceshooting/lyra-translations": "workspace:^",
     "@aiden0z/pptx-renderer": "^1.4.0",
     "@sgratzl/chartjs-chart-boxplot": "^4.0.0",

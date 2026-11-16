@@ -1,426 +1,323 @@
 # Changelog
 
-## 30.9.0
-
-### Minor Changes
-
-- b96b689: Optional peers no longer have to be installed for an application to bundle. Published peer imports now sit in a `try` block, which esbuild, the Angular `application` builder, Next.js, webpack and Rspack treat as non-fatal when the peer is absent; before this, they failed with "Could not resolve" or "Module not found" for peers the application never uses, including every `@aceshooting/lyra-translations` locale catalog. A missing peer still reaches the same loader at run time, so components keep failing closed with their documented state. Parcel still needs an `alias` entry; see "Bundling without an optional peer" in the AI types and optional peers guide.
-- b96b689: New `@aceshooting/lyra-ui/theme-core.css` lean theme entry for single-look applications: `theme.css` without the built-in Shadcn, Glass and Emerald profile, resolving to the Lyra look, Solid surface and no accent (about 83 KB against 104 KB raw). `looks/*.css`, `surfaces/glass.css`, `accents.css` and `density.css` add the choices an application selects, and the composition resolves identically to `theme.css`. Development builds now also warn when a selected default-profile look, surface or accent has no stylesheet under `theme-core.css`.
-
-### Patch Changes
-
-- 8e590fc: `<lr-ebook-viewer>` no longer lets epub.js register a window `unload` listener. epub.js adds one for every rendition and never removes it, so each closed book stayed reachable from the window, and browsers that disallow `unload` by default (Chromium 158 and later) logged a permissions-policy violation on every render. The viewer already releases its rendition and book when it disconnects; scroll, resize and page snapping are unchanged.
-- d90f34a: `createScopedRegistry(definitions, { document })` now constructs its elements in Firefox when `document` is an iframe or detached document. Firefox, which now ships native scoped custom element registries, left such elements unconstructed and logged a `NotSupportedError`; the registry now upgrades each element after adopting it into the owner document, and throws if a definition still fails to construct instead of returning an inert element.
-- @aceshooting/lyra-translations@30.9.0
-
-## 30.8.0
-
-### Minor Changes
-
-- fddd9e7: `lr-dock-panel` gains a `rail` slot shown only while `collapsed`: its items (typically one icon button per section) stack after the collapse toggle, in a column on `start`/`end` and a row on `top`/`bottom`, and the rail grows past `--lr-dock-panel-collapsed-size` to fit them. New `collapse-icon` and `expand-icon` slots replace the toggle's chevron with consumer glyphs while keeping its localized name. New `expand()`, `collapse()` and `toggle()` methods drive the fold through the same cancelable `lr-toggle-request`/`lr-toggle` pair as the built-in toggle, so a consumer-owned control can replace it; collapsing moves focus to the built-in toggle, else the first focusable rail item, else the host.
-- c8efd9b: Add `addMapCustomLayer(map, layer, options?)` from the new `@aceshooting/lyra-ui/map-custom-layers.js` entry for trusted custom WebGL2 layers on `lr-map`, such as beams, coverage cones, clouds or particles. A layer's `create(context)` receives the map's own WebGL2 context and geographic services; each frame provides the shared camera as a Mercator/globe shader prelude with projection uniforms, tile-local encoding, CSS projection and sea-level or terrain-relative altitude resolution. Layers are reinstalled with a fresh instance after a `mapStyle` replacement and after WebGL context restoration, disposed on `remove()` or map disconnection, and report `loading`, `ready`, `unavailable` and `removed` states. A pointer click that the layer's `pick()` hits emits `lr-map-scene-activate` with `kind: 'custom'` and `layerId`. The bridge loads from the optional `@aceshooting/lyra-map/scene` entry on first use; ordinary `lr-map` imports do not load it.
-
-  Scene paths and arcs with a nonzero altitude, a nonzero arc `height` or `sea-level` geometry over displayed terrain are now drawn in 3D at their authored altitude through that bridge, so the scene reports `ready` instead of `partial` with code `altitude`. Lines keep their CSS pixel width, depth-test against the map and hide behind the globe horizon; `terrain` altitude adds displayed terrain height, blending linearly along a segment between `terrain` and `sea-level` endpoints. When the bridge is unavailable or fails, those lines keep the ground-track fallback and the `partial`/`altitude` report.
-
-### Patch Changes
-
-- Updated dependencies [e93aebb]
-  - @aceshooting/lyra-map@1.5.0
-  - @aceshooting/lyra-translations@30.8.0
-
-## 30.7.0
-
-### Minor Changes
-
-- 630bae1: Add ten complete locale catalogs: Slovak (`sk`), Bulgarian (`bg`), Lithuanian (`lt`), Latvian (`lv`), Estonian (`et`), Catalan (`ca`), Irish (`ga`), Maltese (`mt`), and Serbian in Cyrillic (`sr`) and Latin (`sr-Latn`) script, bringing the built-in catalogs to 80. They ship in `@aceshooting/lyra-translations` as `<locale>.js` aggregates and per-family slices, and appear in `locales.json` and the optional locale loader. These are AI-assisted translations with structural verification only (complete keys, placeholders, ICU syntax and CLDR plural categories); they await native-speaker review, and no human or native-speaker review is claimed.
-
-  Serbian resolution is script-aware: a tag without a script subtag whose CLDR likely script differs from its bare language now tries that script before the bare language, so `sr-ME` (Latin by CLDR) reaches `sr-Latn` while `sr`, `sr-RS`, `sr-BA` and `sr-Cyrl-*` reach Cyrillic `sr`. `languageToCountry()` now maps `ga` to Ireland and `mt` to Malta.
-- 9a6b7bb: Add `hideRestore` (`hide-restore`) to `lr-artifact-panel` so applications can omit the built-in Restore action while preserving version browsing, labels, and announcements. The default keeps the existing Restore behavior.
-- ee377e2: Add signed curvature for 3D graph edges, including typed columns, provider scenes, built-in rendering and the optional WebGL companion. Curved paths retain edge identities and support continuous dashes, tangent arrows, midpoint labels and curve-aware fitting. Existing straight edges and 2D behavior remain unchanged.
-
-  The curved-edge renderer and guides measure 147,026 packed and 601,579 unpacked companion bytes. The affected archive limits advance only to the next 64-byte boundary.
-- a1cde90: Add `createMapCameraSession()` at `@aceshooting/lyra-ui/map-camera-session.js` and the root barrel. A session owns a ready `lr-map` camera to capture and restore saved viewpoints, run keyframe camera tours sampled from a shared simulation clock, and follow an accepted scene marker or model as the application moves it. Reduced motion turns transitions into jumps, holds tour keyframes and keeps following still after its first centring. Failures throw `MapCameraSessionError` with a typed code and leave the running action unchanged.
-
-  `lr-map` emits the noncancelable `lr-map-camera-interrupt` event, with `detail: { reason }`, when a user gesture, another camera command or `center`/`zoom` assignment, a style change or context loss ends a session action. Maps without a session never emit it.
-- ee377e2: Add typed `lr-map` projection and terrain overrides. `projection` selects mercator or globe; `terrain` uses a caller-owned raster elevation source with finite nonnegative exaggeration. Clearing an override restores the current style's captured configuration, including projection expressions. Overrides follow style replacement and participate in map readiness; unsupported or invalid configurations use the localized map fallback. Ordinary maps retain their existing style-driven behavior.
-
-  The typed scene controller adds 1,887 gzip bytes to the media barrel and 1,891 bytes to the viewers barrel. Their delivery limits advance only to the next 64-byte boundary; passing bundle limits and optional engine isolation remain unchanged.
-- df2c163: Add opt-in component-owned globe and terrain toggles to `lr-map.controls`. The controls update typed scene properties before emitting request-change events, preserve controlled application assignments, and expose localized pressed, busy and unavailable states. Terrain enablement requires an explicit existing elevation source.
-
-  Map scene ownership, controls and camera session support add 4,984 gzip bytes to the media barrel and 5,276 to viewers. Optional engines remain dynamically loaded.
-- 6113927: `lr-map` now draws scene paths and arcs. They render as one scene-owned GeoJSON source and data-driven line layer, using each object's resolved color, width and opacity, beneath scene markers. Great-circle paths are sampled at most one degree apart, linear paths join vertices straight in longitude/latitude, and both cross the antimeridian the shorter way. An arc follows the great circle between its endpoints with a parabolic `height` rise, carried as the third coordinate. Scene lines are reinstalled after a style replacement, updated in place for a newer accepted scene, guarded against late native preparation, and removed when cleared or disconnected.
-
-  `lr-map-scene-state` now reports what was drawn. Nonempty scenes report `loading`, then `ready` when every object is installed exactly (markers once the marker renderer reports their installation), `partial` with a code when some objects are missing or approximated, or `unavailable` with a code when nothing could be drawn. A new `altitude` code in `LyraMapSceneErrorCode` marks a path or arc that the flat map draws as its ground track. Models report `model`; renderer, layer and color failures report `engine`; generated geometry over 262,144 vertices reports `limit`; and a lost WebGL context reports `context-lost` until it is restored. Previously, every nonempty scene reported `unavailable` with code `engine`. The scene status text is hidden when `ready`, and a `partial` status is announced politely using the new localized `mapScenePartial` message.
-- 4c6b8d9: Add property-only `lr-map.scene` input with atomic synchronous admission, owned source snapshots, a localized accessible object list with pagination, and immutable scene status and activation events. Invalid updates preserve previously accepted objects, and text-row activation does not move the camera.
-
-  Nonempty accepted scenes currently report `unavailable` with code `engine`. Scene objects are not drawn, model sources are not fetched or decoded, and scene depth, terrain resolution and completed-frame projection are not provided.
-
-  Update eight exceeded bundle ceilings to the next 64-byte boundary above reviewed measurements for scene ownership, accessible feedback and shared localization. Optional 3D engines remain separately loaded.
-- 5979980: `lr-markdown` and `lr-markdown-core` gain a `without-images` attribute (`withoutImages` property) for untrusted content such as streamed language-model answers. In every `html-mode`, each Markdown image renders as its alt text, as a refused URL does, and the finished HTML is enforced too: raw-HTML `<img>` and `<input type="image">` become their alt text, `<picture>` sources and SVG `<image>`/`<feImage>` are removed, and `<video>` loses its `poster`, so rendering never loads an image element. In `sanitize` mode it also removes authored `<style>` elements. `lr-streaming-text` and `lr-streaming-text-core` forward it. The default is unchanged.
-- c77649c: `lr-multi-split` can fold any panel, not only the responsive edge pane, to a narrow rail at any container width. Assign `collapsedPanels` (panel ids) or call `collapsePanel()`, `expandPanel()` or `togglePanel()` from a host control. A folded panel clamps to `--lr-multi-split-collapsed-panel-size` and carries a `data-panel-collapsed` marker, so its own content can render the strip. Its share goes to the open panels within their `panelConstraints`, and dividers beside it keep resizing the nearest open panels. The methods announce `lr-multi-split-panel-collapse-change` and persist the folded set with the sizes under `storage-key`. Existing stored layouts still restore, and a split with nothing folded keeps writing the same stored format.
-- f0277da: Add a shared epoch-time simulation clock, immutable irregular sample mapping and an opt-in sequence playback binding. Maps, charts and detail panels can consume one selected instant while existing standalone index playback stays unchanged. Bindings release without pausing other consumers, and live/replay presentation remains separate from time-zone formatting.
-
-  The shared time helpers add 6,058 gzip bytes to the root entry. Granular entry points remain available, and the helpers do not load sequence components or optional engines.
-- cfc6524: Add bounded custom XYZ triangle bodies and optional static glow to WebGL graph views. Graph and knowledge-graph components accept a synchronous `nodeRenderer`, retain semantic list/keyboard alternatives, and report sanitized custom-mesh refusals. The companion owns admitted geometry, exact triangle picks, mixed depth composition and bounded image-space halo resources; both features remain disabled by default.
-- 6488a11: Let `lr-suggestion-chips` show multi-line prompts. With `wrap` set, each chip label now shows up to three lines and no chip grows wider than the row, so full-question starter prompts stay readable in a narrow chat column. Two new custom properties tune this: `--lr-suggestion-chips-label-lines` sets how many lines a label shows (default 1 in the scrolling row, 3 with `wrap`), and `--lr-suggestion-chips-chip-max-inline-size` sets each chip's maximum inline size (default `var(--lr-size-16rem)`). The scrolling row is unchanged when neither property is set.
-
-### Patch Changes
-
-- 5afdde7: Add the granular graph-layout entry point with deterministic directed acyclic graph layouts, six axis directions, strict cycle errors and owned position buffers. The asynchronous helper supports cancellation and bounded main-thread work for larger inputs.
-
-  Document standalone engine and lr-graph compositions that preserve supplied positions, cancel superseded requests and retain accessible list views.
-- 4bcb093: `lr-dock-panel`: the resize handle's hit area no longer swallows clicks on content beside the panel's inner edge. Precise pointers now get exactly `--lr-dock-panel-handle-hit-area` (default `var(--lr-space-m)`, shrinkable to the visible line); coarse or hover-less pointers keep the `--lr-icon-button-size` floor.
-- 80e85b6: `lr-locale-picker` no longer resolves every offered locale's native name during its first render. A closed picker resolves only the locale its trigger shows, or none when that row supplies a non-blank `label`; the other rows resolve when the listbox opens or when typeahead or search needs them, then stay cached. Supplying `{ tag, label }` rows keeps `Intl.DisplayNames` out of the closed render entirely. Option labels, ordering, typeahead, search and events are unchanged.
-- 8d430ea: `lr-markdown` / `lr-streaming-text`: progressive rendering now closes a fenced code block only on a line that repeats the opening fence character, matching CommonMark and the complete parse. A line such as ` ```~ ` no longer ends a backtick fence early while streaming.
-- 7f8a11f: An `lr-menu-item` or `lr-dropdown-item` with a safe `href` now names its internal `<a part="base">` link. The anchor previously had no accessible name, because its visible label sits inside the decorative label wrapper, so axe reported `link-name`. The anchor now carries the row's name as its `aria-label`: a non-empty host `aria-label` wins, otherwise the visible label, and the name follows label edits. Native `href`, `target`, `rel`, `download` and modifier-click behavior are unchanged.
-- 36f1381: `lr-page` now paints its sticky `banner`, `header`, and `subheader` regions with an opaque `var(--lr-color-surface)` background, so main content scrolling underneath no longer shows through them. Retheme each region with the new `--lr-page-banner-bg`, `--lr-page-header-bg`, and `--lr-page-subheader-bg` custom properties on the Page or any ancestor. A region named in `disable-sticky` and the non-sticky `footer` stay transparent.
-- 5481ded: Correct the documented download event for `lr-artifact-panel`.
-- Updated dependencies [630bae1]
-- Updated dependencies [ee377e2]
-- Updated dependencies [5afdde7]
-- Updated dependencies [ee377e2]
-- Updated dependencies [1186a68]
-- Updated dependencies [42909df]
-- Updated dependencies [302a6a0]
-- Updated dependencies [cfc6524]
-- Updated dependencies [62602a0]
-  - @aceshooting/lyra-translations@30.7.0
-  - @aceshooting/lyra-3d@1.2.0
-  - @aceshooting/lyra-map@1.4.0
-
-## 30.6.0
-
-### Minor Changes
-
-- 0bd9ba4: Add `label-display="hidden"` (`labelDisplay: 'visible' | 'hidden'`, type `LyraLabelDisplay`) to the form controls that render the shared label chrome: `lr-select`, `lr-combobox`, `lr-input`, `lr-time-input`, `lr-textarea`, `lr-locale-picker`, `lr-date-input`, `lr-phone-input`, `lr-token-input`, the catalog pickers, `lr-model-select` and `lr-voice-picker`. The label stays the accessible name while it is removed visually, for compact toolbars, so consumers no longer restyle the `form-control-label` part. Hint and error text are unaffected, and an unset control renders as before.
-
-  One seven-sample quick Chromium comparison against 30.5.0 recorded eight of 150 timing series
-  above the advisory 15% and 1 ms regression thresholds. All 15 semantic scenarios passed. Select
-  metadata-update p95 increased from 16.2 to 23.0 ms; document-library filtering paint median
-  increased from 8.7 to 13.4 ms. The shared workstation had background activity, and the causes
-  remain unresolved. This comparison is not a performance pass; its observations remain separate
-  from the hosted A/B qualification.
-
-### Patch Changes
-
-- 0bd9ba4: Keep `lr-map` native controls at least as wide as their own content. When a consumer removes a control's margin through its part and enlarges its buttons, the shrink-to-fit corner no longer clamps the group below its buttons and clips their icons off-centre; long attribution still wraps inside the map.
-- @aceshooting/lyra-translations@30.6.0
-
-## 30.5.0
-
-### Minor Changes
-
-- 13b4c5d: Add `controls.attribution.initialExpanded` to `lr-map`, an initial-only seed for the compact credits disclosure, and the non-cancelable `lr-map-attribution-toggle` event (`detail.expanded`), which reports later changes of the owned attribution control without firing on installation, seeding, replacement or reconnect. Requested control outlines now stay in place, decorative and non-interactive, after the map is constructed until those controls finish loading, and paint with the installed controls' glass or solid surface material.
-
-  Add the opt-in `keyboardActivation` property (attribute `keyboard-activation`): while the map canvas has focus, an unmodified Enter or Space activates the interactive feature at the view centre through the click hit query and emits `lr-map-click` with `trigger: 'keyboard'`. Add `getVisibleBounds({ padded? })`, a synchronous read of the padded or full visible box that returns `null` before the engine exists.
-
-  The attribution state tracking, pending control outlines, keyboard centre activation and visible-bounds reader add runtime code, and their guides and generated editor data increase archive sizes. Only the exceeded media and viewers bundle ceilings, the unpacked UI archive ceiling and the generated IDE archive ceilings advance to the next 64-byte boundary; passing limits and measurement inputs remain unchanged.
-
-### Patch Changes
-
-- @aceshooting/lyra-translations@30.5.0
-
-## 30.4.0
-
-### Minor Changes
-
-- fea5203: Add the shared optional size ladder to copy buttons. Keep viewport modals above ancestor stacking contexts and preserve their visual order across reconnects. Avoid redundant layout measurements and stale navigation-menu resize callbacks, and correct tooltip, sizing, and theme-contrast documentation.
-
-  Shared modal ordering and exit handling, allocation-preserving drawers, and copy-button sizing add runtime code; their required guides and generated editor data increase archive sizes. Only exceeded bundle and archive ceilings advance to the next 64-byte boundary after composition review; passing limits, measurement inputs and the UI download cap remain unchanged.
-
-  Make panorama pause-ownership qualification handle native callback delivery before the queued pause event, with deterministic coverage of both event orders.
-
-  Two compatible seven-sample Chromium quick comparisons against 30.3.0, run in opposite orders, retained 21 and 12 timing threshold exceedances. The second pair measured 10,000-row assignment median total time at 27.2 to 40.0 ms and chart-assignment p95 at 110.5 to 178.5 ms. All semantic checks and recorded work counts matched. Causes remain unresolved; neither pair is a performance pass. These advisory findings remain separate from passing preliminary hosted A/B qualification.
-
-### Patch Changes
-
-- @aceshooting/lyra-translations@30.4.0
-
-## 30.3.0
-
-### Minor Changes
-
-- 0d840bd: Add explicit widget registry and binding-state passthrough to message parts, preserve widget
-  identity during sibling text updates, and load non-text part renderers on demand. Correct the
-  structural A2UI-like helper's binding-state result and extend AG-UI reasoning/activity/custom
-  mapping with host-controlled custom-event destinations.
-
-  Add an opt-in official MCP Apps host transport with negotiated capabilities, bounded requests,
-  resource policy, cancellation and teardown alongside the existing default bridge. Incremental
-  text-delta accounting preserves untouched payload identities and handles UTF-8 surrogate joins
-  without repeatedly scanning retained message data. Support and qualification boundaries are
-  documented with the corresponding APIs.
-
-  The seven-sample quick Chromium comparison with 30.2.0 recorded eight advisory timing regressions
-  across table assignment, chart assignment and combobox metadata. Table update median increased
-  from 5.9 to 7.4 ms, while total median decreased from 28.1 to 27.7 ms; total p95 increased from
-  28.5 to 41.4 ms. The affected module closures and theme bytes are unchanged, and functional
-  assertions and bounded-work counts pass. Phase redistribution and isolated slow samples contribute
-  to these observations; their cause remains unresolved, so no runtime speedup is claimed.
-- c3b40ec: Expose map control container, corner, native icon and attribution-link parts, geolocation state
-  parts and expanded-attribution styling hooks. Add `--lr-map-scale-bar-display` to hide the scale
-  ruler independently of its distance text. Control option objects now accept finite `order`
-  values to keep visual and keyboard order aligned while retaining existing controls.
-  Use theme-aware SVG control icons while preserving native compass rotation, and give attribution
-  links a 24px minimum target size.
-
-  Add `whenControlsReady()` for installed native controls and synchronized chrome, and expose
-  initialization skeleton, label and control-corner parts so deferred maps can share control styling.
-  Independent top and bottom rows and expanded-attribution container tokens support responsive layouts.
-
-  The map layout/readiness helpers, icons and public references increase the media bundle to
-  350,928 gzip bytes and the UI archive to 21,969,742 unpacked bytes. Advance only exceeded media,
-  UI and editor byte ceilings to the next 64-byte boundary; retain all passing limits and file ceilings.
-
-  The tiled map scale DOM ceiling increases from 15 to 17 for the two fixed control-row wrappers;
-  all data-dependent scale ceilings remain unchanged. The tile test verifies both rows are reused
-  across camera moves and overlay updates.
-
-### Patch Changes
-
-- 0d840bd: Preserve keyboard scroll intent through native smooth scrolling so Home, PageUp and upward arrow
-  navigation can release chat following. Clear obsolete intent after settlement, cancellation,
-  focus changes and explicit scroll commands, including virtual conversations. Prevented keys and
-  editing controls retain their native behavior.
-- 0d840bd: Keep file-input labels, selected files and feedback inside intrinsically sized grid rows. Definite-height drop targets allocate the remaining space to the picker after the rest of the field content.
-- 0d840bd: Add measured Gen bundle and archive limits for parser, runtime, chat, generated views and chat
-  composition. JavaScript permits 2% headroom, CSS 4%, and assets none; external optional peers
-  remain listed separately. Archive increases use the next 64-byte boundary.
-
-  Widgets, MCP Apps, chat scroll intent, public type exports, documentation and seven Gen messages
-  across all 70 locale catalogs increase UI, editor and translation bytes. Raise only exceeded
-  ceilings; retain passing limits, the download ceiling, historical reduction rule and file inventories.
-
-  Navigation and server/client examples, catalog and adapter guides, CLI presets and the candidate
-  adapter correction increase Gen to 140 public files. Set its archive byte ceilings to the next
-  64-byte boundary. Interactive select validation adds 57 gzip bytes over its reviewed measurement; advance
-  only its exceeded direct-entry ceiling to the next 64-byte boundary.
-
-  Reviewed 2026-10-26: Gen measures 206,707 packed / 770,450 unpacked bytes across 140 files.
-  Set its ceilings to 206,720 / 770,496 bytes. The latest growth is the SDK 7 integration guide
-  and initial release notes; runtime entries, file count and other passing limits stay unchanged.
-- 0d840bd: Include generated-view status and action messages in every conversation locale catalog, retain
-  per-instance overrides, and update loaded MCP app locale and direction context without replacing
-  its frame. Locale changes during official app initialization are retained until the app is ready.
-- 3d5644c: Expose a required select's invalid state after native form submission or `reportValidity()`,
-  including its accessible state and error styling. Silent validity checks keep pristine controls
-  unchanged, and resetting the form restores that state.
-- @aceshooting/lyra-translations@30.3.0
-
-## 30.2.0
-
-### Minor Changes
-
-- 6c9751f: Wait for modular map style replacements to commit before restoring owned layers and basemap overrides. Block presentation-linked external media in PPTX slides and thumbnails while retaining embedded media. Deliver accessible-text notifications after the active render cycle so rail hover and keyboard focus do not trigger update warnings.
-
-### Patch Changes
-
-- d9fe8ee: Retain map-anchor placement subscriptions across camera movement, recover failed placement sessions, and avoid repeated overflow-admission scans. Consolidate hierarchy-source, prepared-chart, and default-label helpers while preserving cancellation, accessibility, and query bounds. Correct maturity metadata for published experimental components.
-
-  Use cancellable asynchronous model preparation when the model companion supports it, retaining compatibility with older companion versions.
-
-  Shared lifecycle helpers and regenerated component metadata increase several bundle and package measurements. Advance only exceeded byte ceilings to the next 64-byte boundary; retain the existing download, unpacked-reduction, artifact, and optional-peer policies.
-
-  The current-harness Chromium quick comparison against published 30.1.0 retains all functional assertions and recorded operation counts, but reports material timing increases in dataset selection, table filtering and no-op painting, chart assignment, and select metadata painting. Chart-assignment total p95 rises from 94.0 to 147.4 ms while its median remains approximately 77 ms; table-filter no-op total median rises from 8.2 to 10.7 ms, and select metadata paint median from 11.7 to 15.0 ms. These seven-sample measurements do not isolate the cause, and no general timing improvement is claimed. Wall-clock results remain advisory; deterministic scale budgets and release A/B qualification remain required.
-- Updated dependencies [074e36a]
-- Updated dependencies [8b60e43]
-  - @aceshooting/lyra-map@1.3.1
-  - @aceshooting/lyra-3d@1.1.0
-  - @aceshooting/lyra-translations@30.2.0
-
-## 30.1.0
-
-### Minor Changes
-
-- Add `lr-show`, `lr-after-show`, `lr-hide` and `lr-after-hide` lifecycle events to `lr-locale-picker`. Ordinary opening and closing requests can be vetoed; forced closes and superseded transitions retain consistent settled state.
-- Add `styleOverrides.before` to order existing basemap layers without copying their sources or geometry. Selectors retain stable relative order, placement coordinates with owned overlays, and removing the override restores its prior position among surviving unowned layers.
-
-  The locale-picker lifecycle and basemap placement logic, declarations and generated references increase the locale-picker initial route, media family and package sizes. Only exceeded ceilings advance to the next 64-byte boundary; passing budgets, peer exclusions, lazy loading and measurement settings remain unchanged.
-
-- 55ec21c: Add the experimental `<lr-map-anchor>` element for several independently owned panels on one `lr-map`. Each anchor holds your own live content, which is never cloned or moved, so its listeners and component state survive camera moves, off-screen hiding, style replacement and map reconnects. Each module opens, moves and closes its own anchor with `open`, `lngLat`, `close()` and a cancelable `lr-close-request` followed by `lr-close`, without affecting other anchors or the map's `anchor` slot.
-
-  - Anchors are placed like the `anchor` slot and follow the camera. They take their own `safeArea` and `boundary`, or the map's `anchorSafeArea` and `anchorBoundary` while those are unset, and stay placed through a `mapStyle` replacement.
-  - A `closable` anchor gets a localized close button and closes on Escape. Escape closes the anchor that contains focus first, otherwise the frontmost one. Overlapping anchors are painted with the most recently opened, focused or pressed one in front.
-  - Focus moves only to `[autofocus]` content or through `focusContent()`, and returns to where it came from when a focused anchor hides, closes or is removed.
-  - `lr-map` gains an `anchors` slot, where a direct child anchor assigns itself. Import `@aceshooting/lyra-ui/components/lr-map-anchor.js` alongside `lr-map.js`; maps without child anchors render, load and behave as before, and the placement code is still loaded only when an anchor opens.
-
-  The additional registration route, map runtime, declarations and consumer/editor metadata require small delivery-budget increases. Only exceeded media-family, initial scoped-loader, unpacked UI, packed/unpacked IDE and packed consumer core ceilings advance to the next 64-byte boundary. Existing passing limits, lazy-import boundaries and measurement settings are retained. The complete non-optional packed consumer graph measures 5,619,706 raw bytes across 57 files; its ceiling advances to 5,619,712 bytes, the next 64-byte boundary, with unchanged peer exclusions and no binary allowance.
-- 1e233d8: Add the opt-in `shiftCrossAxis` positioning option to keep a popup inside its clipping boundary along both axes. Map anchors use it to stay fully inside changing safe areas and custom boundaries, keeping their close actions reachable without moving the map camera.
-- 1e233d8: Expose `geolocate-control` and `attribution-content` map parts so applications can offset the geolocation group and position bounded credits independently of the compact attribution toggle.
-
-  The map readiness, layout and safe-area corrections measure 343,439 gzip bytes for the media family; its reviewed ceiling advances to 343,488 bytes, the next 64-byte boundary. Other entry budgets remain unchanged.
-
-  The generated editor archive retains all four editor formats and measures 1,701,215 packed and 10,541,676 unpacked bytes with the new parts and safe-area documentation. Its two exceeded limits advance to the next 64-byte boundaries at 1,701,248 and 10,541,696 bytes; file-count and other package limits remain unchanged.
-
-### Patch Changes
-
-- Keep maps ready when a style override targets a layer absent from the selected basemap. Defer its paint, layout and placement until the layer exists, discard obsolete restoration baselines, and retry after style changes while retaining rejection of invalid or conflicting resources.
-
-- 1e233d8: Preserve scoped theme ownership when an element is frozen after its first theme application, so later theme changes still restore the original attributes and token values when the scope is removed.
-
-  The theme entry measures 13,514 gzip bytes with the ownership correction. Its reviewed ceiling advances to 13,568 bytes, the next 64-byte boundary. Other entry budgets remain unchanged.
-- 1e233d8: Wait for URL style replacements to commit before reporting map readiness and restoring owned overlays, images and style overrides. URL replacements now rebuild the native basemap instead of diffing it, so unchanged responses also have a reliable completion event. This trades the native style-diff optimization for correct replacement readiness. Pending replacements can also be superseded repeatedly by inline styles without attempting to diff an unloaded basemap.
-- e7ed92d: Keep text-only agent messages valid when updating or completing them without structured parts. Explicit part replacements and empty-array clears retain their existing ownership and validation rules.
-- 49b43b3: Cancel obsolete file-tree reveals promptly when the listing, source mode, connection, or document changes, preventing stale focus and unresolved reveals during nested expansion.
-
-  The cancellation and selection initialization fixes measure 432,393 gzip bytes in the data family; dialog heading and overlay ownership fixes measure 152,491 in overlays; time-picker focus restoration measures 27,545 initial marginal bytes. Their three breached bundle ceilings advance to the next 64-byte boundaries (432,448, 152,512, and 27,584 bytes), preserving all passing ceilings and measurement settings.
-
-  The corresponding file-tree cancellation documentation measures 1,701,422 compressed bytes in the generated IDE package. Its packed ceiling advances to the next 64-byte boundary, 1,701,440 bytes, without changing required editor formats or any other package limit.
-- 49b43b3: Keep heatmap source PNG exports available after a completed resize or theme repaint, while continuing to withhold pending, failed, and obsolete source snapshots.
-- 49b43b3: Apply corrected neighbor-list provider pages before rendering so pagination and row actions share the current page without scheduling an unnecessary follow-up update.
-- 1e233d8: Retain the mixed runtime observations from comparisons with 30.0.0. Earlier controlled published/current/current/published measurements did not consistently reproduce the initial chart and combobox total-time increases, although three of four comparisons still flagged smaller wait-related metrics. A fresh complete quick Chromium comparison with matched metadata and dependencies reports 11 regressed and 7 improved timing metrics out of 150. Chart total p95 rises from 111.8 to 147.9 ms; table-sort update median rises from 11.5 to 13.7 ms. Additional regressions affect table no-op frame waits and select metadata-update p95. These observed regressions do not establish a performance pass.
-
-  The table's runtime import graph is unchanged. The chart's new late-feature request checks run during untimed setup, with those features disabled in the fixture. Select changes concern initial selection and reset behavior, while positioning changes affect open popups, outside the measured closed-control metadata updates. No changed algorithmic cause was identified for these operations. With seven samples, p95 is the maximum; phase timings include scheduling and frame waits. Those limits do not erase the observations. The deterministic scale checks and the separately required A/B benchmark retain their existing thresholds.
-- 1e233d8: Remove redundant closing whitespace from single-line declaration documentation, reducing the unpacked package by 4,076 bytes while preserving public types and editor documentation.
-- 1e233d8: Keep closed and offscreen map anchors hidden when applications customize their public part's display layout, including important consumer declarations. Visible anchors retain the application's display styling when restored.
-- e7ed92d: Keep map drawing failure handling responsive when the renderer temporarily cannot provide its canvas. Accessibility descriptions release the unavailable canvas and reconnect after the renderer recovers.
-- 49b43b3: Avoid a redundant reactive update while closing the time picker and restoring focus to the original segment, while preserving public focus events.
-- e487c79: Clear stale slider focus styling when a range-mode change is followed by disablement or a newer focus request, while preserving the current thumb's focus ownership.
-- 49b43b3: Keep dialogs suspended while an external modal owns focus, including when a previously hidden dialog becomes visible. Restore referenced heading names when dialogs and drawers open or reconnect without including hidden or inert headings.
-- e143d1c: Load the zoom, data-label and annotation add-ons for a chart whose `zoomable`, `data-labels`, `stack-totals` or `annotations` setting is assigned right after it connects, before its charting library has finished loading, instead of leaving them silently unloaded until the setting changes again.
-- e143d1c: Keep progressive Markdown streaming active when a rewriting edit discards committed groups while a queued recompute still points past them, instead of freezing the progressive render for the rest of that stream.
-- 49b43b3: Preserve an initial selectedOptions assignment until the select has collected its options, while honoring later value writes and retaining declarative form-reset defaults.
-- 1e233d8: Prevent an open, closable map anchor from repeatedly updating when inherited text direction changes. Anchors remain responsive when switching between left-to-right and right-to-left layouts.
-- @aceshooting/lyra-translations@30.1.0
-
-## 30.0.0
+## 31.0.0
 
 ### Major Changes
 
-- 6e32333: Use the JavaScript regex engine by default for fine-grained highlighting. Import the explicit Oniguruma factory and pass it to setShikiCoreEngine in place of the oniguruma string preset when custom grammars require its behavior. Full automatic language highlighting retains its existing engine.
-- d60e64e: Item-identity collections now ignore an assignment of the array they already hold. Assign a new array to update; mutating an array or one of its items and assigning the same array again no longer re-renders.
+- 2479fe6: Major release collecting behavior and type changes that can affect existing pages:
 
-  This applies to `lr-activity-feed` `entries`, `lr-agent-trace`, `lr-span-waterfall` and `lr-trace-tree` `spans`, `lr-calendar` `events`, `lr-claim-evidence` `claims` and `citations`, `lr-command-palette` `commands`, `lr-date-picker` `presets`, `lr-eval-dataset` and `lr-eval-run` `examples`, `lr-grounding-summary` `citations`, `lr-ingestion-queue`, `lr-node-palette`, `lr-prompt-queue`, `lr-task-list`, `lr-virtual-list`, `lr-mention-popover` and `lr-swatch-picker` `items`, `lr-map` `markers` and `dataLayers`, `lr-memory-panel` `shortTerm` and `longTerm`, `lr-retrieval-results` `chunks`, `lr-test-results` `suites`, `lr-thread-list` `threads` (unchanged) and `lr-tool-timeline` `entries`. Write `el.items = [...el.items, item]` instead of `el.items.push(item); el.items = el.items`. Opaque provider sources (`lr-virtual-list` `source`, `treeSource`, `dataSource`) keep refreshing when the same object is assigned again or `requestUpdate()` is called.
-
-  The protected static `immutableSourceCollectionProperties` on `LyraElement` is removed; the rule is the default for every identity collection. `lyra-ui-migrate --rule=immutable-collections` reports in-place array changes and same-array reassignments on these properties with the `IMMUTABLE_COLLECTION_REVIEW` code (reports only, acknowledged with `lyra-migrate-reviewed: IMMUTABLE_COLLECTION_REVIEW:<property>`). See `llms/shared/v29-to-v30-migration.md`.
-- d60e64e: `lr-map` gains camera commands and compares `center` by value.
-
-  - **Breaking:** assigning a new `center` array with the same coordinates is now a no-op instead of re-centring the map over the user's pan. Call `jumpTo()` to re-centre explicitly.
-  - `flyTo()`, `easeTo()` and `jumpTo()` honor reduced motion, queue until the engine exists and write the resulting camera back to `center` and `zoom`.
-  - `lr-map-view-change` reports programmatic moves with `source: 'command'` and the visible `bounds`.
-  - `cameraPadding` applies persistent camera padding, also used when fitting.
-  - `fitToData()` frames markers, data layers and the choropleth; `fitBounds()` and camera commands no longer get interrupted by a same-tick `center` or `zoom` update.
-  - `project()`, `unproject()` and a frame-throttled `lr-map-move` event.
-- 5b83018: Remove the 36 deprecated public names whose compatibility window has ended. Each has a replacement that already works in 29.x.
-
-  - Event aliases (the canonical event already fired first; listen to it instead): `lr-agent-run` and `lr-subagent-panel` `lr-cancel` -> `lr-run-cancel`; `lr-agent-eval-dashboard` and `lr-rag-eval-dashboard` `lr-metric-change` -> `lr-metric-change-request`; `lr-background-runs` `lr-run-open` -> `lr-run-activate`; `lr-change-review` `lr-change-decision` -> `lr-change-decision-request`; `lr-community-card`, `lr-path-strip`, `lr-entity-dossier`, `lr-memory-panel` and `lr-provenance-panel` `lr-entity-activate` -> `lr-entity-select`; `lr-chunk-inspector` `lr-chunk-toggle`, `lr-memory-panel` `lr-memory-toggle`, `lr-source-card` `lr-expand`, `lr-retrieval-trace` `lr-stage-toggle`, `lr-navigation-menu` `lr-expanded-change`, `lr-dock-panel` and `lr-widget` `lr-collapse-change` -> `lr-toggle` (the disclosure events carry `expanded`; the collapse events carried the opposite `collapsed`); `lr-dock-panel` and `lr-widget` `lr-collapse-request` -> `lr-toggle-request`; `lr-rag-eval-dashboard` `lr-run-change` -> `lr-run-activate` and `lr-slice-change` -> `lr-slice-change-request`; `lr-retrieval-results` `lr-select` -> `lr-selection-change`; `lr-source-picker` `lr-sources-change` -> `lr-selection-change`.
-  - `icon` slot aliases: `lr-app-rail-item`, `lr-flow-node` and `lr-widget` content moves from `slot="icon"` to `slot="start"`, and `lr-tool-call-chip` content to `slot="status-icon"`. Content left in `icon` is no longer projected.
-  - Parts that Web Awesome itself deprecated: the `base` part of `lr-accordion-item` (use `::part(accordion-item)`), `lr-file-input` (`file-input`), `lr-qr-code` (`qr-code`), `lr-sparkline` (`sparkline`) and `lr-video-playlist` (`video-playlist`); the `label` part of `lr-file-input` and `lr-known-date` (`form-control-label`).
-  - `lr-icon` `autoWidth` / `auto-width`: use `canvas="auto"`.
-
-  Migration: `npx lyra-ui-migrate --origin=lyra-v25` applies safe event renames and reports slot content, changed event details, and listeners whose reach would widen; the `wa-*`/`sl-*` migration maps the removed part names and `auto-width`. `wa-file-input` remains warning-required; apply its part replacements after reviewing the reported component differences. See the v29 to v30 upgrade guide.
+  - `lr-attachment-trigger`'s `lr-files` event `capability` now includes `'camera'`, so code typing it as `'files' | 'image'` must widen.
+  - `lr-json-viewer` defaults to `layout="auto"`, which stacks values under keys below 30rem; set `layout="inline"` for the previous layout.
+  - `lr-chat-viewport`'s slotted content wrapper is a flex column, so vertical margins between adjacent messages add instead of collapsing.
+  - `lr-attachment-chip` honors `thumbnail-src` and `preview-src` while `file` is set.
+  - `lr-button` and `lr-icon-button` render real links for author-written `tel:` and `sms:` hrefs.
+  - A failed `system` `lr-chat-message` uses `--lr-chat-message-failed-color` for its text.
 
 ### Minor Changes
 
-- 955817c: Add `<lr-chart-3d>`, a bounded three-dimensional scatter, bubble and line chart over immutable typed columns of up to one million rows. It always renders an accessible, paginated data table with a keyboard cursor, and loads the optional `@aceshooting/lyra-3d` points renderer only for an explicit `engine="webgl"`, falling back to the table with a localized notice and `lr-engine-fallback`.
-- 3c2bace: Add opt-in WebGL rendering to graph and embedding views and equirectangular panorama rendering to image and video views. Preserve built-in defaults and accessible alternatives, and expose typed-column inputs and localized panorama controls.
-- 9c55bdd: `lr-map` covers more of what map applications build by hand:
+- 47d5ced: `lr-attachment-chip`: a non-empty, safe `thumbnail-src` and a non-empty `preview-src` now take precedence over the blob URL derived from `file`, while `file` keeps supplying the name, size and MIME type. With `thumbnail-src` plus `preview-src` (or `without-preview`) the chip creates no `blob:` URL at all, so a page whose Content-Security-Policy has no `blob:` in `img-src` can keep passing the `File` and supply a `data:` or same-origin thumbnail. Previously `thumbnail-src` and `preview-src` were ignored while `file` was set. The docs now note that showing a `File`'s own image needs `blob:` in `img-src`.
+- fceec2c: `lr-attachment-trigger` gains an opt-in `camera-capture` attribute (`'environment'` or `'user'`). On an engine that supports the native `capture` attribute (phones and tablets), the `camera` capability then opens the hidden file input with `accept="image/*"` and that `capture` value inside the same user gesture and reports the photo through `lr-files` with `capability: 'camera'`. Desktop browsers keep firing `lr-camera-request`, so a host can keep its own camera dialog there. Unset, `camera` stays request-only. New exported types: `LyraAttachmentCameraCapture` and `LyraAttachmentFilesCapability`.
+- 5e894d7: `lr-button` and `lr-icon-button` now render a native anchor for `tel:` and `sms:` hrefs, so `<lr-button href="tel:+40700000100">Call</lr-button>` is a click-to-call action. Like `mailto:`, both hand off to a system app, name no web origin and execute nothing. Behavior change: such an href previously fell back to the native `<button>` and now renders a link. `download` still drops all three handoff schemes, the `target`-derived `noopener noreferrer` guard is unchanged, and executable or document schemes stay rejected. Content-derived links (`lr-markdown`, `lr-streaming-text`) keep their narrower allowlist and do not admit `tel:` or `sms:`.
+- 5cc0590: `lr-chat-composer` gains `actions-layout="below"`: the textarea takes its own full-width line and the `start` and `end` slots share one row beneath it, `start` at the inline start and `end` at the inline end (also while `start` is empty, and mirrored under RTL). `min-rows`/`max-rows` growth and inner scrolling are unchanged, `lr-prompt-input` forwards the new value, and `reservations.css` (and `reservationStyles`) reserves the layout's taller resting footprint before upgrade.
+- a0d873c: `<lr-chat-message>` gains layout, border, announcement and failed-text hooks:
 
-  - `initialization="interaction"` builds the map on the first press, touch, wheel or key on the element, behind a localized `initialization-activate` button; `initializationDelay` also builds it after a delay.
-  - Overlay layer paint and `styleOverrides` accept theme tokens, `currentColor` and CSS color functions, converted to sRGB and re-resolved when the theme changes. Overlay layers may target a source of the basemap style.
-  - `lr-map-geolocate` reports `{ lngLat, accuracy }` after the user-activated geolocate control locates the user.
-  - Drawing closes a polygon from a press on its first vertex, shows a rubber band to the pointer, offers localized on-map measurements (`drawingMeasurements`), completes on Enter and undoes on Backspace while the map has focus, survives a `mapStyle` swap, reports `lr-map-draw-vertex-end` when a vertex drag ends, and takes its color from `--lr-map-drawing-color`. A vertex drag now follows every pointer move instead of stopping after the first.
-  - `lr-map-pointer-move` and `lr-map-pointer-leave` report the pointer position once per frame, and hover, context-menu and pick events carry the hit as a frozen GeoJSON `feature` with geometry.
-  - `interactiveBasemapLayers` and `styleOverrides` select basemap layers by `source`, `sourceLayer` and `layerType`, and the read-only `styleLayers` and `styleSources` list the current style.
-- afc026a: `lr-map` image capacity for sprite catalogs: `images` admits up to 1,024 entries within the unchanged pixel and byte budget, accepts `sdf: true` for signed-distance-field icons recolored by `icon-color`, and adds, replaces or removes images in place without removing and re-adding the layers that use them. The new `imageProvider` supplies missing images on demand through the engine's missing-image hook, sharing the same budget and re-adding them after a style swap.
-- afc026a: `lr-map` renders large styled GeoJSON through `overlays`: a `geojson` source's `Feature` or `FeatureCollection` `data` object is kept by identity, outside the overlay value budget, so data of any size keeps native paint and layout expressions, filters, `minzoom`/`maxzoom`, symbol layers, `before` ordering, interaction and feature state across `mapStyle` swaps. A new data object updates the native source in place with `setData`, and `updateSourceData()` accepts overlay GeoJSON source IDs. Hits now skip a layer outside its zoom range at the fractional camera zoom, hidden, or with every opacity known to be `0`, so a hidden tier never shadows a visible one.
-- 2e3e192: `lr-map` loads drawing, image export, URL hash ownership, owned resources, images, style overrides, anchors, controls and feature state on demand, cutting its initial download by about a quarter. Calls made while a feature loads return `false`; await `whenIdle()` and call again.
-- 5c4824f: `lr-map` overlays and data.
-
-  - `anchor` slot positioned at `anchorLngLat`: follows the camera, flips and shifts to stay inside the map, hidden while the point is off screen.
-  - `choropleth.noData` (`color`, `strokeColor`, `label`): features without a numeric value paint with it, and a click on one reports `noData: true` in the `lr-map-click` detail.
-  - `choroplethLegend` derives the legend from the choropleth (step bands, or a gradient bar with ticks, plus a no-data swatch); `legendGradientTicks` adds labelled marks to the gradient bar.
-  - `cluster.zoomOnClick` eases into a clicked cluster.
-  - Declarative `controls` (`navigation`, `scale` with a corner and a scale `unit`); button names follow `lang` changes live.
-  - `LYRA_MAP_EMPTY_STYLE`, a frozen basemap-free style.
-  - `maxBounds` now applies at a fractional zoom below 1 instead of being dropped.
-  - The `immutable-collections` migration rule reports `lr-map` `center` assignments for review (`MAP_CENTER_REVIEW`), and the v29 → v30 guide has a Map section.
-- afc026a: `lr-map` gains `hashFormat` (attribute `hash-format`). `'unnamed'` makes `hash = true` read and write the raw engine's unnamed `#zoom/lat/lng[/bearing[/pitch]]` fragment, so existing deep links keep working, while preserving named fields after it. Only a valid camera in the owned field or token suppresses the initial fit; an unrelated or malformed fragment leaves the fit to run and is not overwritten.
-- afc026a: `lr-map` gains `minZoom` and `maxZoom` (attributes `min-zoom`, `max-zoom`): camera zoom limits forwarded to the engine at construction and live, clamping gestures, `zoom`, the URL `hash`, the camera commands and the `maxZoom` of `fitBounds()`/`fitToData()`.
-- 38a734c: Add `<lr-model-viewer>`, a bounded static preview for glTF, GLB, STL, OBJ, PLY, XYZ and PCD files that renders with the optional `@aceshooting/lyra-3d/model` engine.
-
-  - The companion loads lazily and only for a nonempty, supported source. A persistent text alternative and a guarded download link stay visible when the source, the companion or WebGL is unavailable.
-  - Sources pass the shared URL policy and are read through a bounded reader with a fixed 64 MiB ceiling; model files cannot load external resources or run code.
-  - The camera surface has keyboard orbit, zoom and fit (mirrored under RTL) and native toolbar buttons. `camera` is a copied, finite-checked property; user movement emits `lr-camera-change`.
-  - `<lr-document-viewer>` opens model attachments in place through the new `kind: 'model'` payload and `model-viewer-register.js`. The registry also accepts lazy payload adapters (`rendererKind: 'adapted'`).
-
-  The viewers-family gzip budget includes the new component with the reviewed 2% allowance. Package ceilings follow the measured model-viewer code, editor metadata and 13 translated controls, rounded to 64-byte boundaries; the UI archive retains its existing companion-pack allowance. The packed core registration graph retains 60 bytes of regression headroom above its measured non-asset size, with the required binary measured separately. The look-composition documentation route ceiling follows its measured UTF-8 size.
-- 166f12c: Introduce `@aceshooting/lyra-3d`, the optional companion that will hold the WebGL engines behind Lyra UI's 3D views, with `three` as a regular dependency.
-
-  - `@aceshooting/lyra-3d/core` exports the engine contract (`contract: 1`, `Lyra3dHost`, `Lyra3dEngine`, `Lyra3dStyle`) and the shared engine core: a WebGL2 viewport with software-rendering detection, an orbit camera that uses Lyra UI's camera values with fit and focus, GPU id picking, style validation, resizing, context-loss recovery that re-applies renderer state, reduced-motion camera transitions, disposal that releases the WebGL context, and module-worker tasks with a main-thread fallback.
-  - Lyra UI lists `@aceshooting/lyra-3d` as an optional peer dependency. Graph, embedding, chart, model and panorama views load the corresponding companion engines lazily when their WebGL rendering is opted into; built-in defaults and accessible alternatives remain available.
-- ff668f9: Extend declarative map composition and data-layer styling.
-
-  - Document owner-scoped overlay composition, preserve control order within each corner, and support guarded links in custom attribution.
-  - Add `before`, `minZoom` and `maxZoom` to GeoJSON data-layer rows, preserving generated-layer group order and applying visibility ranges to labels too.
-  - Add physical label anchors and bounded text-size-relative offsets for point and line labels.
-  - Add validated vector-layer paint, layout and filter options with a supported expression subset, theme-token colors and atomic admission before native updates.
-
-  Existing map camera and immutable-collection changes already require the next major release; these additions introduce no further breaking change.
-
-  The deferred map additions increase direct bundles that inline every reachable feature: both autoloaders, the viewers family through GeoJSON viewer, and SSR/all. Their measured gzip sizes are 1,651,344, 1,651,180, 419,654 and 1,661,479 bytes; only these four exceeded ceilings are refreshed with 2% headroom rounded up to a whole byte. Initial-load, CSS, component aggregate and other direct-entry ceilings stay unchanged.
-- 6e32333: Add an explicit redraw revision for retained map canvases and bounded local image URLs for image data layers. Paint-only changes repaint idle maps, while mutable owned-layer updates preserve native source, layer and feature-state identity with guarded rollback.
-
-  Keep native source options separate from immutable admitted snapshots so image URL updates can succeed without mutating caller data.
-- f5b4bde: Add owned map resources and readiness, external data layers and labels, controls and feature interactions, drawing and vertex editing, anchored content options, image export, and lazy construction.
-- aae417a: Declare `lr-menubar` and `lr-menubar-item` in `HTMLElementTagNameMap`, as every other component does, so `document.createElement()`, `querySelector()` and `closest()` return the typed classes.
+  - `avatar-placement="start" | "end"` lays the avatar beside the body instead of in the header row (`"top"`, the default, is unchanged).
+  - `--lr-chat-message-bubble-border-width` (every role), `--lr-chat-message-bubble-border-color` (every role except `user`) and `--lr-chat-message-user-bubble-border-color` recolor or remove the bubble border.
+  - `--lr-chat-message-width` sets the bubble's inline size; `fit-content` shrinks a bubble to its content while it stays on its role's side.
+  - `announce-status="false"` turns off the built-in failure and streaming-complete live-region announcements while keeping the visible status text.
+  - `--lr-chat-message-failed-color` (default `var(--lr-color-text)`) paints failed bubble text, so a light role text color no longer lands on the pale failed fill. A failed `system` message now uses this readable color instead of the quiet system color.
+- 33515ec: `lr-chat-viewport`: add the `--lr-chat-viewport-padding`, `--lr-chat-viewport-gap` and
+  `--lr-chat-viewport-content-max-inline-size` custom properties (a narrower transcript column is
+  centred), and a `live-settle` announce-when-settled mode that announces a streamed message once,
+  with its final text, after it stops changing. In slotted mode the transcript wrapper is now a flex
+  column, so adjacent message margins no longer collapse, and the unread divider is centred in the
+  space above the first unread message. The documentation now states the host's flex-column layout
+  contract: do not override its `display`, and give it a bounded block size.
+- 71b8079: `lr-drop-zone` gains `for` (an element id in the zone's own root) and `target` (an element reference, taking precedence). Set either to attach the zone to a region that already exists in the page instead of wrapping it: the zone handles drags over that element, lays its overlay over the element's box, adds no box of its own and still emits `lr-files` from itself. A `for` id that matches nothing binds nothing and is re-resolved when the root's elements or ids change. The new `targeted` custom state matches while a target is bound. Unset, the zone keeps wrapping its default slot as before.
+- bc213b1: Add `layout` to `lr-json-viewer` (`'auto' | 'inline' | 'stacked'`, default `'auto'`). Below a 30rem allocation the default now stacks each scalar value under its key and tightens leaf rows, through a container query on the viewer's own width, so a viewer inside a phone-width `lr-tool-call-block` no longer squeezes key and value side by side. Leaf rows drop the icon-button-sized floor of their hidden toggle spacer, while real expand/collapse toggles keep their full hit area. `layout="stacked"` forces this layout at any width and `layout="inline"` restores the side-by-side row at every width. Keys now break after `_`, `-`, `.`, `/`, `:` and `@` and at camelCase humps instead of mid-word. The `LyraJsonViewerLayout` type is exported.
+- ddac560: Add `linkSchemes` (attribute `link-schemes`) to `lr-markdown` and `lr-markdown-core`, forwarded by `lr-streaming-text` and `lr-streaming-text-core`. It narrows which link destinations may become anchors to a space- or comma-separated subset of `http`, `https`, `blob`, `mailto` and `relative`, so `link-schemes="https"` keeps only https links in model-generated text. A refused link renders as plain text, never as an anchor, in every `html-mode`; raw-HTML and SVG anchors are unwrapped after sanitization and `<area>` elements removed. Unknown tokens are ignored, so the list can never widen the default allowlist. Unset keeps today's behavior, and sanitization is unchanged.
+- 04fb410: `lr-number-input` gains an opt-in `localized` attribute for locale-aware entry. The field then reads and shows numbers with the grouping and decimal separators of the effective locale (`25.000` and `10,24` in `de` or `ro`), while `value`, the submitted form value and `valueAsNumber` keep the native number form (`25000`, `10.24`). Range, step and required validity still come from the platform, grouping is checked so an entry the locale would not write reports `badInput` instead of being misread, and the text field keeps spinbutton semantics and ArrowUp/ArrowDown stepping. Existing fields are unchanged: without `localized` the component stays a native `type="number"` input with the same defaults.
+- d531e88: `reservations.css` (and the adoptable `reservationStyles`) now reserve the upgraded footprint of `lr-tab-group`, `lr-tab`, `lr-tab-panel`, `lr-checkbox`, `lr-badge` and `lr-chat-composer` before their definitions load. A not-yet-upgraded tab group lays out its tabs as one tab-sized row and shows only the panel that will be shown, so prerendered pages using these elements no longer shift when they upgrade.
+- 6218e9e: `lr-suggestion-chips` can show a vector icon per suggestion: `iconName` (with optional `iconLibrary`) renders an `lr-icon`, and a light-DOM element in the `icon-<suggestionId>` slot, such as an inline SVG, replaces it. The literal `icon` text is unchanged and is still never parsed as markup. Icons stay decorative; each chip's accessible name is its label.
+- 644b7ab: Add `focusTab(name, options?)` to `lr-tab-group`, which moves keyboard focus and the roving tab stop to the named enabled tab's real button, and forward `lr-tab.focus()`/`blur()` to that button. Under the default `activation="auto"` focusing an unselected tab also selects it as `show()` does; under `manual` only focus moves. Disabled, inert and unknown tabs are left alone.
+- 2170466: Add `columns[].cellPart(row)` to `lr-table`. When a column defines it, the resting cell content is wrapped in a block `[part~="cell-content"]` element that also carries the returned part names, so the page or the component that owns the table can style `cell()` output per row with `lr-table::part(...)`. Columns without `cellPart` render unchanged. The reference now states that `cell()` templates render inside the table's shadow root, where the owner's class rules do not apply, and that a `part` attribute inside a `cell()` template is also a table part.
+- e868ed4: Add `ordered` and `start` to `lr-timeline`. An ordered timeline renders a native `<ol>` and each item's marker becomes a ring around its step number, real text formatted for the effective locale and exposed to assistive technology, in the new `marker-number` part; `start` sets the first number like `<ol start>`. The new `--lr-timeline-marker-number-color` property sets the number colour. `reservations.css` (and `reservationStyles`) now lay out a vertical flow timeline before its definitions load, with markers, rail, floated timestamps, descriptions and CSS-counter step numbers for an ordered timeline, so server-rendered steps no longer shift when the script arrives.
 
 ### Patch Changes
 
-- bdc75cc: Fix three rendering and accessibility defects.
+- c3498de: Restore release performance comparisons after Playwright upgrades by matching ChromeDriver to the configured Chromium version. Install the pinned benchmark tools in a fresh cache for each run so an older driver cannot be reused. The three workloads and the 10% regression threshold are unchanged.
+- 44b9773: Restore theme tokens when an adopted stylesheet is disabled or an imported token stylesheet's media stops matching. Reuse the original provider when it becomes active again without retaining a duplicate fallback.
 
-  - `lr-terminal` and `lr-notebook-viewer`: an unterminated escape string (OSC, DCS, APC, PM or SOS) no longer swallows the rest of the output. A string now ends at BEL, CAN, SUB or the next ESC, and `ESC \` still terminates it.
-  - `lr-color-picker`: `hsl()` and `hsla()` values resolve to the same 8-bit channels the browser computes, so `hsl(0, 100%, 95%)` formats as `#ffe6e6` (it was `#ffe5e5`). Hex, `rgb()` and `hsv()` input are unchanged.
-  - `lr-eval-run`: the live region now announces examples that become `queued`, `collecting` or take an application-defined status ("{label}: {status}"); they were silent before.
-- 52792ec: Use patched Zod 4 for Codecov build tooling, removing its remaining Zod 3 dependency. Preserve configuration validation, build-stopping errors, and normalized option types through a scoped compatibility patch. Verify both module formats and the GitHub job metadata/upload flow without contacting external services.
-- 7fa4f02: Fit the embedding explorer's WebGL camera after measuring its viewport so initial point clouds fill the available space instead of appearing as a small central cluster.
-- 30ca106: Preserve geolocation and attribution control constructors when loading the full MapLibre engine, so requested controls mount alongside navigation and scale controls.
-- daaf791: Allocate a fresh native source identity when a map data layer changes its clustering configuration or rendering shape. Reserve the replacement before validating layer order, preserve existing resources when a proposal is rejected, and retain source identity for compatible data and paint updates.
-- daaf791: Refresh the package size ceilings for map composition, lazy feature boundaries and source replacement. The UI archive measures 21,799,151 unpacked bytes (21,799,763 estimated bytes including the existing manifest allowance); translations measure 6,187,763 unpacked bytes, and editor metadata measures 1,700,103 packed and 10,535,164 unpacked bytes. Only the four exceeded ceilings advance to their next 64-byte boundaries. Download, file-count and other companion limits remain unchanged.
-- 631a5d5: Wait for requested native map controls to finish loading and installing before resolving `whenIdle()`.
-- 7fa4f02: Keep image catalog updates and lazy image-provider changes in the same map resource transaction. Updating both after initialization, or replacing a provider while images are preparing, now preserves the live map and waits for the current resources.
-- daaf791: Keep map layer ordering and style overrides behind their existing lazy feature loader. GeoJSON placement waits for the ordering helper before changing native resources; bounded style-value validation is shared without importing override handling eagerly.
-- ba97350: Allow bundlers to remove unused map feature loaders from an unused manual autoloader import while preserving lazy loading, shared caching, and retries for requested map features.
-- 7fa4f02: Preserve ordinary font-family records when snapshotting map styles so the full MapLibre engine accepts native font declarations on initial load and style replacement. Font descriptors remain detached and immutable, including family names that match inherited object properties.
-- c9a3891: Record the measured delivery cost of map resource and control-readiness handling, constrained popup placement, and cancellable autofocus-safe popover reveals. The direct media, overlays and popover bundles measure 343,322, 152,436 and 60,237 gzip bytes; popover's initial marginal payload measures 18,090 bytes. Advance only these breached ceilings to the next 64-byte boundaries: 343,360, 152,448, 60,288 and 18,112 bytes.
+  Recognize token imports preceded by CSS layer-order declarations so those providers can be replaced and restored correctly.
+- 53874fa: Stop reading calendar response bodies when their request has been superseded or the viewer has disconnected. Late responses from a transport that completes despite cancellation no longer start unnecessary body processing.
 
-  The UI package's estimated unpacked payload measures 21,799,880 bytes; its ceiling advances to 21,799,936 bytes. Preserve all passing limits, the compressed-download ceiling, historical unpacked reduction target, file-count allowance, companion limits, shared-shell imports, optional-peer exclusions and measurement settings.
-- 5c66e18: Record the observed limits of the release's runtime benchmarks. A matched quick Chromium
-  comparison against 29.2.2 passed all 15 semantic workloads with unchanged workload counts, but
-  12 of 150 timing metrics exceeded both the 15% and 1 ms material-regression thresholds. These
-  include document filtering paint, table assignment and sorting paint/no-op phases, chart
-  assignment, select metadata paint, and combobox metadata updates. For 1,000-record chart
-  assignment, observed p95 rose from 112.7 to 148.3 ms while the median remained 77.7 versus
-  77.5 ms; update and settlement tails increased in the same sample. Each run contained seven
-  samples, so its reported p95 is the largest observation.
+  The connection and generation guard adds three gzip bytes to the bundled autoloader (1,708,033 bytes). Its exceeded ceiling advances from 1,708,032 to the next 64-byte boundary, 1,708,096 bytes. Passing bundle ceilings remain unchanged.
 
-  One matched diagnostic trace pair recorded frame waiting in the scheduling control and real
-  layout and garbage-collection work in both chart implementations. The largest chart tail did
-  not recur in that pair, and its cause remains unestablished. The original comparison remains
-  a documented performance limitation. The traced workloads and unchanged counts do not establish
-  equivalent performance for every workload or device.
-- 3cc71c2: Keep mention caret measurements explicitly text-only, avoid excessive backtracking when parsing malformed 3D color values, and escape embedded values when generating map modules.
-- 631a5d5: Measure CSS-constrained popup dimensions before reporting their initial position, keeping large select menus and other overlays inside the available space.
-- 7fa4f02: Simplify overlay activation when an open tooltip changes its interactive content, removing an unreachable closed-tooltip branch while preserving focus management.
-- 1c49a93: Preserve focus when hover and focus triggers reveal popover content with autofocus. Keep pending popups inert and cancel their pending reveal when closing or disconnecting.
-- d84c719: Validate constrained message, notebook, form, calendar, formatter and provider inputs before rendering or emitting state. Preserve documented fallbacks for unknown lookup keys and reject forged restored files. Bound signature restoration by inspected input positions.
+  The npm dry-run inventory measures 22,550,659 unpacked bytes across the same 3,289 files, an increase of 58 runtime bytes. The exceeded unpacked ceiling advances to 22,550,720 bytes, the next 64-byte boundary; download and file-count ceilings remain unchanged.
 
-  Validate map resource metadata before rendering, keep explicit source and protocol registration authoritative, and preserve arbitrary valid sprite identifiers across worker transport. Unknown flag codes now consistently resolve to undefined across package entry points.
-- 04a9d6f: Prevent native video playback updates from causing unintended seeks, while preserving explicit playback-position changes.
-- Updated dependencies [e2701e9]
-- Updated dependencies [6da5b00]
-- Updated dependencies [5e6b131]
-- Updated dependencies [1c49a93]
-- Updated dependencies [166f12c]
-- Updated dependencies [8087f55]
-- Updated dependencies [27d9e64]
-- Updated dependencies [ffb5c06]
-- Updated dependencies [3cc71c2]
-- Updated dependencies [96ac5e7]
-- Updated dependencies [d84c719]
-  - @aceshooting/lyra-3d@1.0.0
-  - @aceshooting/lyra-map@1.3.0
-  - @aceshooting/lyra-flags@2.3.1
-  - @aceshooting/lyra-translations@30.0.0
+  The packed consumer's core graph measures 5,670,441 raw bytes across the same 64 files, an increase of 49 bytes. Its exceeded raw ceiling advances to 5,670,464 bytes, the next 64-byte boundary.
+- 3b2998e: Keep a canceled folder traversal classified as cancellation when directory reader initialization throws after the drop session has been withdrawn.
+
+  The cancellation check measures 508,228 gzip bytes in the agent-tools barrel, four bytes over its existing ceiling. Its budget alone advances to the next 64-byte boundary (508,288 bytes); measurement settings and the other limits stay unchanged.
+
+  The unpacked package measures 22,540,871 bytes, seven bytes over its existing ceiling; that ceiling advances by 64 bytes to 22,540,928. Download and file-count limits are unchanged.
+- f9b769c: Keep evaluation tag filters and feedback reason chips unchanged when a toggle request is canceled or the component becomes disabled or pending during that request. The visible selection now stays consistent with filtered rows and submitted feedback.
+
+  The two runtime modules add 107 unpacked bytes. The npm package estimate measures 22,552,443 unpacked bytes across 3,289 files; its exceeded ceiling moves to 22,552,448 bytes. The installed core bundle measures 5,671,433 raw bytes across 64 files; its exceeded ceiling moves to 5,671,488 bytes. Conversation and SSR bundles measure 443,655 and 1,730,011 gzip bytes, respectively; their exceeded ceilings move to 443,712 and 1,730,048 bytes. These are the next 64-byte boundaries; all other limits remain unchanged.
+- e69c1a0: Clamp out-of-range color percentages before conversion so very large finite RGB values retain the saturated channel instead of turning black.
+- f044d39: Remove an unpositioned date-input calendar from layout when its positioning runtime fails, including openings through a property binding or after reconnection. Failed openings settle without reporting a successful show, release the rendered calendar, and remain retryable. An obsolete placement cannot close a newer calendar.
+- 411cb01: Discard obsolete contact-file responses before reading their bodies when the viewer disconnects or its source changes while response headers are pending. Late network failures and aborts also remain isolated from the current document across the viewer family.
+
+  The guard adds 58 runtime bytes to the unchanged package inventory. Only the exceeded unpacked-package and two aggregate gzip ceilings advance to their next 64-byte boundaries after measurement.
+- 055fb82: Keep the fallback renderer available when a 3D engine rejects with an object whose failure code cannot be read, including a throwing accessor or revoked proxy. Classify that rejection as an engine error without throwing again while handling the original failure.
+- fdee86f: Keep file icons accessible when a custom metadata registry returns malformed or unreadable records. Invalid presentation data falls back to a localized generic badge and valid replacement registries recover normally. Read presentation fields once while retaining the glyph fallback for failures in optional badge data.
+
+  Together with namespace-correct theme scopes, the fixes add 530 unpacked archive bytes in two modules and 301 bytes to the complete core consumer bundle. Update only exceeded size ceilings to the next 64-byte boundary using the measured artifacts.
+- 926d1b0: Contain spatial chart renderer hit-test failures and reject malformed hit records without invoking getters or emitting an unrelated density selection. Valid later clicks continue to work.
+- 2dbef4f: Keep the virtual list's rendered window aligned with the current scroll position when a programmatic jump overtakes a queued native scroll event. This also lets consecutive source-row reveals reach and focus the requested XML node.
+- eb64a53: Preserve newer data-grid collection assignments when reading an older caller-owned array reenters a setter. Data, columns, column order, grouping, page-size choices and expanded keys now retain the latest snapshot. Selected rows and key aliases share assignment ownership, including initial template bindings, and row admission metadata stays paired with the data it describes.
+
+  The guards add 1,504 runtime/declaration bytes to the unchanged package inventory and 1,002 raw bytes to the packed core bundle. Only exceeded package and aggregate bundle ceilings advance to their next 64-byte boundaries after measurement.
+- 88c0382: Keep the newest data-grid filter and sort assignments when reading older caller-provided records or collections triggers another assignment. An older throwing getter also preserves the newer query, including when that query reaffirms the existing state.
+
+  The guards add 232 unpacked runtime/declaration bytes and 148 raw bytes to the packed core bundle, with both file inventories unchanged. Only exceeded package and bundle ceilings advance to their next 64-byte boundary; passing limits and optional-peer exclusions are preserved.
+- 43c4859: Stop obsolete data-grid requests after a request listener disconnects the grid, replaces its source or query, or starts a newer reload. This prevents duplicate loader calls, old queries reaching a replacement loader, and loading restarting after disconnect.
+
+  Recognize both equality and inequality request-generation guards when classifying component security review applicability.
+
+  The fix removes 24 emitted runtime bytes and adds 186 bytes of consumer guidance. Advance the unpacked package limit to the next 64-byte boundary above the 22,552,821-byte dry-run measurement. The shared guard increases the SSR aggregate to 1,730,053 gzip bytes; advance only that exceeded bundle limit to the next 64-byte boundary.
+- a182932: Document how `lr-dialog` and `lr-drawer` panels paint when no surface is chosen: they follow the built-in profile's Glass, a 60% fill over a 12px backdrop blur held on an internal layer, so `getComputedStyle(panel).backdropFilter` reads `none` while the backdrop is still blurred. Tests now pin that a translucent panel always carries the blur and that `data-lr-surface="solid"` paints it opaque without one. Rendering is unchanged.
+- 4decda0: Dispose rejected elevated-line renderer handles before falling back to ground tracks, including when capability access or cleanup throws.
+- 5d47cee: Keep layered graph and flow layouts stable for arbitrary unique string node IDs. Distinct edge endpoints no longer collide when IDs contain null characters, and synthetic ordering waypoints cannot share identities with caller nodes. Renaming node IDs preserves geometry, layer assignments and waypoint counts.
+
+  The identity fix adds small shared graph/flow entry increases. Four exceeded bundle ceilings advance only to the next 64-byte boundary above their measured sizes; passing limits stay unchanged.
+  The packed graph consumer measures 460,621 raw bytes across the same 14 files, so its exceeded ceiling advances to 460,672 bytes.
+- 81b0923: Ignore detached and obsolete dropdown slot notifications, preventing a WebKit update loop when prompt inputs move through an inert document. Reconnecting collects the current consumer menu and restores its interaction.
+- d77a865: Preserve host-routed AG-UI custom data when it arrives before the corresponding text or reasoning message starts.
+- b23677f: Keep embedding renderer callbacks scoped to their current connection and inputs. Retired renderers stop startup, dispose exactly once even after a delayed mount, and cannot overwrite a replacement renderer or report its failure. A throwing peer disposer no longer interrupts cleanup.
+
+  The renderer ownership checks add 615 unpacked bytes to one runtime module; the public API and declarations remain unchanged. The archive contains 22,549,979 unpacked bytes in 3,289 files; npm estimates 22,550,601 bytes. The unpacked limit advances to the next 64-byte boundary, 22,550,656 bytes. Four aggregate gzip limits advance only to the next 64-byte boundary above their measured 1,482,741 / 1,708,228 / 1,708,030 / 1,729,721 bytes for all, CDN autoloader, autoloader and SSR all. Passing limits, bundle inputs and optional-peer exclusions remain unchanged.
+
+  The packed consumer's core bundle measures 5,670,392 raw bytes across the same 64 files. Its ceiling advances to 5,670,400 bytes, leaving eight bytes of headroom; the separate required Shiki binary measurement is unchanged.
+- a1dadb4: Treat a removed include source as idle in deferred loading. Retain the current included content without fetching or throwing, and allow a later source attribute to load normally.
+
+  Reset an ebook viewer to idle when its source is removed, including across reconnection, and allow a replacement book to load without a deferred null-string error.
+- 7b61dc8: Clear custom graph geometry when a companion changes or disables the node renderer while accepting its mesh batch. Keep subsequent renderer replacements usable and suppress error events from obsolete mesh work.
+- 4e1f338: Preserve source-backed graph focus and entity-detail activation while the optional 2D rendering dependency loads. Wait for the renderer before moving the camera, and discard the pending focus if its source, view, or connection changes.
+
+  The fix adds 350 runtime/declaration bytes. The UI package measures 22,553,607 unpacked bytes; its exceeded ceiling advances to the next 64-byte boundary, 22,553,664 bytes.
+
+  The two exceeded aggregate gzip ceilings advance to the next 64-byte boundary: autoloader-cdn.js measures 1,708,609 bytes and ssr/all.js 1,730,137. Passing aggregate and initial-load ceilings remain unchanged.
+
+  The installed graph consumer measures 461,047 raw bytes across 14 files. Its exceeded raw ceiling advances to 461,056 bytes, the next 64-byte boundary; the core consumer and peer-loading constraints are unchanged.
+- 707146a: Allow file-tree expansion and collapse and thinking-panel and transcript-feed scrolling methods to be called before the first connection without throwing. Scrolling still re-engages follow without emitting a user transition, and the methods remain usable after rendering.
+- 11cb9f6: Discard chart clicks when native hit testing replaces the labels, datasets, raw configuration, or chart type. Check ownership after array and hit admission so obsolete hits cannot activate replacement data. A fresh click still selects the current data, and presentation-only updates preserve valid activations.
+
+  The ownership checks add 26 gzip bytes to the autoloader aggregate, which measures 1,706,769 bytes. Its exceeded ceiling advances to the next 64-byte boundary, 1,706,816 bytes. The unpacked UI archive grows by 234 bytes to 22,542,695 bytes, with its exceeded ceiling advancing to 22,542,720. Passing limits and measurement inputs stay unchanged.
+- 5236f0d: Return no screen anchor when an optional graph renderer supplies an invalid projection or the graph changes during a projection query. Contain projection failures without preventing a later valid query from recovering.
+
+  The ownership and finite-coordinate guards add 160 gzip bytes to the standalone graph entry. Only the three exceeded autoloader/SSR bundle ceilings advance to the next 64-byte boundary; their exact measurements are recorded. The required UI artifacts measure 22,541,960 unpacked bytes, so the unpacked ceiling advances to 22,542,016 bytes. Download, file-count, companion, and passing bundle limits are unchanged.
+
+  The packed optional graph consumer measures 460,203 raw bytes across the same 14 files after the projection checks, up from 459,450. Its separate raw-byte ceiling advances only to the next 64-byte boundary, 460,224 bytes; bundle contents and optional-peer checks remain enforced.
+- 6a59684: Validate optional graph renderer world positions before returning immutable coordinates. Failed or malformed queries and results from a retired view or data model now return no position; coordinate and unrelated metadata accessors are never evaluated. A later valid query recovers without recreating the renderer.
+
+  The shared ownership checks and world-coordinate validation add 83 gzip bytes to the standalone graph entry. The packed optional graph consumer grows by 360 raw bytes to 460,563 across the same 14 files; only its exceeded raw ceiling advances to the next 64-byte boundary, 460,608 bytes.
+
+  The CDN autoloader, autoloader and SSR aggregate measure 1,706,900, 1,706,743 and 1,728,332 gzip bytes. The unpacked UI archive measures 22,542,461 bytes. Their exceeded ceilings also advance only to the next 64-byte boundary; passing limits and the archive inventory stay unchanged.
+- c6fde08: Isolate panorama renderer disposal failures so image and video viewers can disconnect, replace their renderer, and show the localized native-media fallback. Dispose renderers arriving after disconnect only once, even when their cleanup throws.
+
+  The SSR aggregate measures 1,728,722 gzip bytes; its exceeded size ceiling advances to the next 64-byte boundary, 1,728,768 bytes. Other bundle ceilings and all coverage settings remain unchanged.
+  The npm dry-run inventory measures 22,545,774 unpacked bytes, so its exceeded ceiling advances to 22,545,792 bytes. The actual archive contains 22,545,152 bytes across the same 3,289 files.
+- ec87368: Keep scroll-overflow, icon-label, chat viewport, markdown DOM and accessible relationship observers released when an initial render finishes after removal or a detached component updates. Restore ordinary observation on reconnect, and restore markdown text-selection events when reconnecting either markdown variant.
+
+  The packed core retains 64 emitted files at 5,668,068 raw bytes, and the UI npm estimate is 22,545,665 unpacked bytes. Advance only the exceeded core, package and seven direct gzip ceilings to their next 64-byte boundaries; the packed map size is unchanged.
+- 26bef2a: Release partial WebGL allocations when an elevated map path cannot compile its shaders, link its program, or initialize its vertex buffers.
+- a1dadb4: Recover an invalid multi-split hydration count from the actual panel membership before computing divider geometry. Non-finite, negative, fractional, and unsafe integer counts no longer interrupt rendering or hide existing dividers.
+- 5363490: Stop obsolete Markdown code-copy feedback after a copy outcome listener disconnects the component, disables its code-block header, or starts another copy. Both Markdown variants now recheck the active copy before announcing feedback or scheduling its reset, preventing timers from surviving teardown or replacing a newer copy's timer.
+
+  The shared fix adds 13 gzip bytes to the largest component and 141 unpacked package bytes with its guidance. Only the exceeded component maximum and unpacked package budgets advance to the next 64-byte boundary; passing limits remain unchanged.
+- 7a85d8d: Refresh cached message widgets when updated action payloads change which fields share an object. Widget actions now emit the current reference relationships, while equivalent shared or cyclic payloads keep their widget document stable across unrelated text updates.
+
+  The fix adds 68 runtime bytes to the unchanged package inventory and 44 raw bytes to the packed core bundle. Only those exceeded ceilings advance to the next 64-byte boundaries; compressed bundle ceilings remain unchanged.
+- 2391e13: Preserve model viewer load ownership when renderer callbacks report a failure or change the source. Stop retired initialization, retain context-loss recovery, and prevent stale camera updates and duplicate error events.
+
+  The verified package changes one runtime module (+506 raw bytes, +56 standalone gzip bytes). The installed core consumer adds 329 raw bytes across the same 64 files. Only exceeded archive and bundle limits move to the next 64-byte boundary; package contents and optional-peer exclusions stay unchanged.
+- 2f03bb2: Restore cell-anchor navigation in CSV, dataset and spreadsheet viewers with more than 10,000 admitted inline body rows. Let the indexed source resolve its own row keys instead of overriding it with the array key callback. Navigation continues to work when a large table is replaced by a smaller one.
+
+  The three conditional bindings add 78 unpacked bytes: the package estimate is 22,543,419 bytes and the verified archive is 22,542,797 bytes. Raise only the unpacked ceiling to 22,543,424 bytes, five bytes above the estimate. Standalone gzip grows by two bytes for CSV and four bytes each for dataset and spreadsheet viewers.
+
+  The viewers barrel measures 460,904 gzip bytes, exceeding its previous 460,864-byte ceiling. Advance only that exceeded bundle ceiling to 460,928 bytes.
+
+  The packed consumer's complete core graph measures 5,666,723 raw bytes across 64 files. Raise its exceeded 5,666,688-byte ceiling to 5,666,752 bytes, with 29 bytes of headroom.
+- ddf7081: Match complete script and style tag names when searching notebook HTML output, preserving visible text in other elements and ignoring hidden raw text after misleading closing-tag prefixes. Keep quoted attribute text out of search results when it contains greater-than characters.
+
+  The quote-aware scanner adds 861 raw bytes to the notebook module. Reviewed bundle and unpacked-package ceilings advance only where this fix exceeds them, to the next 64-byte boundary. The packed consumer remains at 64 emitted files, measured at 5,669,889 raw bytes with a 5,669,952-byte ceiling. Package contents and optional-peer exclusions are unchanged.
+- fed2225: Observe custom graph renderer scheduler failures even when the scheduler synchronously cancels admission. Immediate and delayed failures from canceled work no longer escape as unhandled promise rejections.
+- a7a5763: Restore localized defaults when attachment uploading labels and tool-selection dialog labels are removed from markup. Preserve menu and mention-popover accessible names and empty-state messages when their copy attributes are removed.
+- e52be70: Keep newer panorama camera and hotspot assignments when inspecting older caller-provided data triggers another assignment in image and video viewers.
+
+  The assignment guards add 110–145 gzip bytes to affected aggregate bundles and 362 raw bytes to the packed core bundle across the same 64 files. Their reviewed size ceilings advance only to the next 64-byte boundary; optional renderer loading and bundle contents are unchanged.
+
+  The full package adds 544 runtime and declaration bytes. Its npm dry-run inventory measures 22,554,151 unpacked bytes, bounded at the next 64-byte boundary of 22,554,176 bytes. The actual pnpm archive contains 22,553,529 bytes across the same 3,289 files.
+- e104409: Keep PDF document replacement and detached-state cleanup working when the PDF renderer throws or rejects while releasing a document.
+
+  The verified SSR coverage script registration and shared PDF cleanup add 224 published metadata, runtime, and declaration bytes. Update the measured unpacked package allowance to the next 64-byte boundary (22,552,704 bytes); retain the existing download and file-count limits.
+
+  The shared cleanup adds 17 gzip bytes to the PDF entry (74,116 bytes measured). Advance only its exceeded ceiling to 74,176 bytes, the next 64-byte boundary.
+
+  The installed all-components consumer measures 5,671,510 raw bytes across the same 64 files. Advance its exceeded raw ceiling to 5,671,552 bytes, the next 64-byte boundary; keep the separate optional-asset and import-splitting checks.
+- 29cb92f: Resolve PDF outline bookmarks that identify pages with zero-based integer indexes, including named destinations and the first page. Only valid pages within the document are exposed; unresolved bookmark titles and children remain available.
+
+  The verified package changes one runtime module (+71 raw bytes, +23 standalone gzip bytes). The installed core consumer adds 47 raw bytes across the same 64 files. Only exceeded archive and bundle limits advance to the next 64-byte boundary; package contents and optional-peer exclusions remain unchanged.
+- 7bf8abe: Preserve the selected PDF page when page measurements or viewport resizing change only the end of the visible range. Scrolling across a page boundary still updates the current page, and moving a loaded viewer within the document retains its navigation and search state.
+
+  The fix adds 132 runtime/declaration bytes. The package measures 22,553,257 unpacked bytes; only its exceeded unpacked ceiling advances to the next 64-byte boundary, 22,553,280.
+
+  Four aggregate gzip ceilings also advance to the next 64-byte boundary: all.js measures 1,483,154 bytes, autoloader-cdn.js 1,708,567, autoloader.js 1,708,375, and viewers/index.js 461,783. Other bundle ceilings are unchanged.
+
+  The installed core consumer measures 5,671,600 raw bytes across 64 emitted files after the virtual-row and PDF navigation fixes. Only its exceeded raw ceiling advances to 5,671,616 bytes, retaining 16 bytes of headroom; gzip and initial-load ceilings remain unchanged.
+- 474c4cb: Keep the validated identity and label when copying catalog rows, including non-enumerable fields and rows whose key enumeration is unavailable. Preserve an own `__proto__` data field without changing the copied row's prototype.
+
+  The descriptor-safe copy adds 117 unpacked archive bytes and 135 bytes to the packed core graph. Direct gzip measurements are 1,482,120 bytes for all, 1,707,353 for the CDN autoloader, 1,707,189 for the autoloader, 443,528 for conversation and 1,728,775 for SSR all. Only these exceeded entry ceilings advance to their next 64-byte boundaries. The core graph measures 5,668,228 bytes across the same 64 files and is bounded at 5,668,288; the unchanged map graph measures 2,527,557 bytes across 52 files. The UI archive contains 22,545,269 unpacked bytes in 3,289 files; the npm dry-run estimate is 22,545,891 bytes, so only the exceeded unpacked ceiling advances to 22,545,920. Measurement options, optional-peer exclusions, file inventories, and passing ceilings remain unchanged.
+- 524f2f4: Keep chart data and CSV export usable while `lr-chart` or `lr-box-plot` belongs to a document without a window. Defer the browser chart instance until the element returns to a browsing context, avoiding a rendering exception during document adoption.
+
+  The two rendering guards add 38 raw bytes to the package. The measured npm unpacked estimate is 22,549,377 bytes; its exceeded ceiling advances to 22,549,440 bytes, the next 64-byte boundary. The actual archive contains 22,548,755 unpacked bytes across the same 3,289 files.
+- b5c8da4: Preserve valid CSS when the Happy DOM cascade-layer shim encounters punctuation inside layer-header comments. Block headers and layer-order statements now skip complete comment tokens before locating their actual boundary, and an unfinished header comment leaves preceding rules intact.
+
+  The parser fix adds 78 unpacked package bytes, measuring 22,542,773 bytes. Raise only the exceeded unpacked ceiling to the next 64-byte boundary, 22,542,784 bytes; download, file-count, and bundle ceilings remain unchanged.
+- 7378f05: Preserve escaped parentheses and backslashes in unquoted CSS URLs when flattening cascade layers for Happy DOM. Resource paths that resemble layer blocks now remain intact, and following layers still unwrap after the real URL boundary.
+
+  Preserve escaped at-signs and braces in selectors, and escaped punctuation in layer names, so they cannot be mistaken for layer directives or block boundaries.
+
+  The escape handling adds 95 unpacked bytes: the pnpm archive measures 22,542,246 bytes and the npm dry-run estimate measures 22,542,868 bytes. Raise only the exceeded unpacked ceiling to the next 64-byte boundary, 22,542,912 bytes. Download, file-count, and bundle ceilings remain unchanged.
+- 65c60d4: Preserve pending virtual-list navigation when unrelated keyboard events originate in the Window that owns the scroller. Typing letters or pressing horizontal arrow keys in an iframe no longer cancels a distant vertical scroll before measured row positions settle.
+- 644b1f2: Keep synchronized charts responsive when native hit testing, projection, or reset fails. Discard stale hit results, clear failed cues, let healthy peers update independently, and allow a failed receiver to retry the same category.
+
+  The required hit validation and renderer recovery increase the published JavaScript and its consumer bundles. Only exceeded library, archive, and packed-consumer ceilings advance to the next 64-byte boundary above their recorded measurements; optional-peer exclusions and the complete emitted-file sum remain unchanged.
+- bdb0150: Make focus and blur safe before the first render for accordion items, attachment triggers, chips, data grids, known-date inputs, pagination, pan-zoom, videos and video playlists. Add shared native focus and custom-validity contracts for controls created before mounting.
+
+  The defensive focus guards increase the measured CDN and local autoloader bundles by 29 and 31 gzip bytes, to 1,705,414 and 1,705,218 bytes. Advance only their exceeded ceilings to the next 64-byte boundary; passing bundle limits and measurement inputs stay unchanged.
+
+  Together with the stale map-scene report guard, the required runtime artifacts measure 22,534,149 unpacked bytes. Advance the exceeded unpacked package ceiling to 22,534,208 bytes, the next 64-byte boundary; the download and file-count limits stay unchanged.
+
+  The packed core consumer measures 5,664,357 raw bytes across the same 64 files, a 37-byte increase. Advance that exceeded ceiling to the next 64-byte boundary, 5,664,384 bytes, with its exclusions and binary accounting unchanged.
+- 644b1f2: Release deferred positioning and rectangle-tracking subscriptions when their owner is disposed from a synchronous setup callback. Repeated or reentrant disposal releases each subscription once, while retained placement sessions continue to support invalidation and geometry refresh.
+
+  The ownership checks add 108 unpacked package bytes and 55 raw bytes to the complete packed core bundle. Only exceeded package, core-consumer, library, and initial-route ceilings advance to the next 64-byte boundary above their recorded measurements, retaining all passing limits and optional-peer exclusions.
+- a76b936: Refresh stylesheet providers when explicitly adopting theme tokens so CSSOM edits restore missing tokens and withdraw duplicate fallbacks in documents and application shadow roots.
+- 79d296f: Prevent indexed and ranged data operations from invoking providers retired while their capabilities are being read. Replacing the source or disconnecting its host stops obsolete row and key callbacks before they run. Superseded binding and range work also stops before inspecting more capabilities or consuming replacement pages, while subsequent requests can use the current source normally.
+
+  The complete provider ownership checks measure 22,539,040 unpacked UI bytes; the exceeded package ceiling advances to 22,539,072 bytes. Eleven exceeded direct and aggregate gzip ceilings advance only to the next 64-byte boundary above the exact measurements recorded in the bundle budgets. The guards prevent obsolete callbacks and replacement-page loss; measurement inputs, optional-peer exclusions and passing limits remain fixed.
+
+  The packed core consumer measures 5,666,569 raw bytes across the same 64 files, an increase of 716 bytes from the initial lookup fix. Its exceeded ceiling advances to 5,666,624 bytes, the next 64-byte boundary. The explicit Oniguruma binary requirement remains unchanged.
+- 2229e1a: Keep text-quote searches consistent across inline element boundaries by collapsing whitespace before combining characters that expand during Unicode normalization.
+
+  Preserve emoji in Firefox when a UTF-16 surrogate pair is split across text nodes or streaming updates.
+
+  Normalize copied quotes after removing soft hyphens so accented text still matches its source.
+- 50f634b: Recognize mixed-case and CSS-escaped cascade-layer keywords when flattening stylesheets for Happy DOM. Preserve unrelated at-rules whose names extend the layer prefix, so their ignored contents cannot become active CSS rules.
+
+  The keyword decoder adds 509 unpacked bytes. Together with the date-input placement correction (36 fewer bytes), the package estimate grows from 22,542,868 to 22,543,341 bytes; the verified archive grows from 22,542,246 to 22,542,719 bytes. Raise only the unpacked package ceiling to 22,543,360 bytes, leaving 19 bytes above the estimate.
+- 88e7806: Close locale-picker popups and tooltips when positioning fails, including replacement geometry after a successful opening. Allow fresh openings and preserve newer placements when an obsolete operation fails.
+- 2060c47: Update the map style-spec dependency and refresh browser testing, DOM, and AI integration tooling. Preserve accurate coverage for unexecuted callbacks when merging results with the updated browser test runner.
+
+  Keep the supported PapaParse peer range when refreshing development dependencies.
+
+  The updated map style specification adds OKLCH color parsing and interpolation. Its verified archive grows by 2,185 compressed bytes and 5,365 unpacked bytes, with the same 677 files. Advance only the exceeded map size limits to the next 64-byte boundaries.
+- b43b4dc: Refresh workspace dependencies, including DOMPurify 3.4.18, and rebuild the reviewed DOCX engine against fast-xml-parser 5.12.1 and fast-xml-builder 1.3.2.
+- ccb0d35: Refresh native constraint validity after `required` changes on `lr-input`, `lr-number-input`, and
+  `lr-native-time-input`, so owning forms validate and submit correctly without a manual validity refresh.
+  Correct the dropdown menu example to supply its fallback accessible name through `aria-label`.
+- 57fb2a3: Refresh dependency versions and generated package artifacts. Qualify the latest optional peers while preserving supported consumer ranges, and update the map style specification dependency to 26.6.0. Rebuild the document engine with Vite 8.3.8 and the reviewed ProseMirror model 1.25.13 dependency.
+
+  Retain coverage counter safeguards and the dev-server dependency security patch with the upgraded test runner.
+
+  The map dependency rebuild changes the archive from 1,051,147 to 1,051,391 packed bytes while reducing unpacked bytes from 4,295,831 to 4,295,701, with the same 677 files. Advance only the exceeded packed ceiling to the next 64-byte boundary, 1,051,392 bytes.
+- f7ccc57: Release the clock subscription when a sequence playback binding is aborted during synchronous catch-up, so a retired binding cannot keep scheduling animation frames.
+- fbbfdda: Restore keyboard focus from interactive tooltip content when positioning failure closes the popup. Preserve focus on unrelated controls, including when the tooltip has a virtual anchor and an explicit return target.
+
+  Review the shared build growth with clock signal validation: the packed core remains 64 files at 5,667,789 raw bytes, the npm UI estimate is 22,545,330 unpacked bytes, and three direct gzip ceilings are exceeded. Advance only these limits to their next 64-byte boundaries.
+- f916304: Keep small finite chart domains from rounding to zero and preserve the positions of nearby values on logarithmic axes.
+- 7b1badf: Keep map feature clicks available while unchanged overlay layers prepare an in-place GeoJSON data
+  refresh. Changes to source options, layers, interaction rules, or other map resources retain the
+  preparation guard, as do disabled and inert maps.
+- fdee86f: Apply and restore theme scopes in standalone SVG and XML documents. Color probes use the HTML namespace in their owning document, and elements without inline CSS support retain scoped attributes without attempting to paint tokens.
+- f282fc2: Close navigation-menu disclosures when positioning fails, restore trigger focus when needed, and allow a fresh opening. Preserve newer floating or in-flow disclosures when an obsolete placement fails.
+- a49df38: Ignore queued spatial graph visibility and resize deliveries after their observer is retired. Reconnecting a graph or switching between list and 3D views can no longer let an old hidden notification suspend the replacement renderer. The current observers still suspend and restore rendering as visibility changes.
+
+  The ownership checks add 246 runtime bytes. The unpacked UI package estimate is 22,549,986 bytes, so its exceeded ceiling advances to the next 64-byte boundary, 22,550,016 bytes. The SSR aggregate measures 1,729,615 gzip bytes, with its exceeded ceiling advancing to 1,729,664 bytes. The packed graph consumer measures 460,762 raw bytes across the same 14 files, so its exceeded ceiling advances to 460,800 bytes. Passing limits and measurement inputs stay unchanged.
+- 353292c: Discard heatmap pointer selection when its grid, controlled selection or interaction mode is replaced before the next render. Recheck gesture ownership after focus, hit-testing and pointer-capture callbacks so obsolete interactions cannot overwrite a new selection or activate a retired cell. Accepting the normal controlled selection proposal still preserves cell activation.
+
+  The ownership checks advance five exceeded aggregate gzip ceilings, the unpacked UI archive ceiling and the packed core raw-byte ceiling only to their next 64-byte boundaries. The archive measures 22,546,461 unpacked bytes (22,547,083 in the npm packaging estimate) across the same 3,289 files; the packed core measures 5,669,098 raw bytes across the same 64 emitted files. Passing size limits remain unchanged.
+- 922d2d3: Retry incomplete map point icon rasterization on later declarative paint updates. Failed recoloring keeps the previous palette intact and no longer caches an unapplied color, allowing icons to recover when canvas allocation becomes available again.
+- 52fafa4: Report a map custom layer as unavailable when an optional bridge handle throws during capability validation. Attempt disposal independently and contain cleanup failures so a broken bridge cannot leave the layer loading or cause an unhandled promise rejection; a replacement layer can still install.
+
+  The fix adds 99 unpacked bytes, measuring 22,546,560 bytes in the UI archive and 22,547,182 in the npm estimate across the same 3,289 files. Only the exceeded unpacked ceiling advances to the next 64-byte boundary; all bundle gzip limits remain unchanged.
+- 45063a8: Let smooth virtual-list navigation finish before correcting estimated row and group sizes. Intermediate measurements no longer repeatedly restart native scrolling, and measured destinations settle after the animation. New navigation, replacement data, keyboard scrolling and disconnect retire stale corrections; reduced-motion navigation remains immediate.
+
+  Measure Window viewports from the document's scrolling root so lists remain virtualized in both standards and quirks mode. Documents without a doctype no longer render the entire collection or misalign distant scroll targets.
+
+  The fixes add 808 unpacked package bytes and 146 standalone virtual-list gzip bytes. The package estimate is 22,544,227 bytes and the verified archive is 22,543,605 bytes; advance the exceeded unpacked ceiling to 22,544,256 bytes, with 29 bytes of headroom. Advance only the 13 exceeded gzip ceilings to their next 64-byte boundaries. The complete packed core graph measures 5,667,406 raw bytes across the same 64 files, so its ceiling advances to 5,667,456 bytes, with 50 bytes of headroom.
+- 711b1fa: Ignore chart and box-plot activation hits when native hit testing or hit-result validation disconnects or replaces the chart instance. A reconnected chart accepts fresh clicks without emitting stale activation events. Box plots also contain native hit-testing failures so subsequent valid clicks still work.
+- f4ffb25: Preserve the latest workbook sheet when a source metadata callback switches sheets. Ignore obsolete dimensions and errors, and cancel navigation belonging to the superseded selection.
+
+  Discard column metadata and render errors from superseded sheet callbacks so the latest sheet keeps its own headers and cells.
+- 40780b4: Keep synchronized compare-panel scroll positions stable when panes have different content heights. Native scroll events that differ only by pixel rounding no longer feed back into the other pane after the animation frame completes.
+
+  The fix adds 45 unpacked UI bytes (22,539,085 total); the exceeded package ceiling advances to 22,539,136 bytes. The autoloader measures 1,706,255 gzip bytes, so its exceeded ceiling advances to 1,706,304 bytes. Both limits use the next 64-byte boundary; other passing limits and measurement inputs remain unchanged.
+- bac361a: Preserve newer searches and clears started by provider cancellation callbacks in CSV, dataset,
+  and spreadsheet viewers. Superseded operations no longer cancel the newer request or overwrite
+  its query label, including when reading a provider's search capability starts another search.
+
+  The shared fix adds 226 unpacked runtime bytes. The three exceeded aggregate gzip ceilings and
+  the unpacked package and complete core-consumer ceilings advance only to the next 64-byte boundary above their reviewed
+  measurements; passing limits and optional-peer exclusions are unchanged.
+- d867044: Data-source CSV, dataset and spreadsheet viewers no longer leave the visible rows blank when a cell reveal is cancelled (for example by `clearSearch()`) after it has started loading the target rows but before the list scrolled to them; the cell window returns to the rows on screen.
+- 6a24221: Restore ArrowUp, ArrowDown, Home and End navigation between slotted thread-list rows, skipping unavailable rows and respecting keys handled by row actions.
+
+  Keep rows assigned to named slots out of default-list navigation and `itemElement()` lookup until they join the default slot.
+
+  The default-slot filtering and keyboard listener add 13 gzip bytes to the component measurement. The full-library entry measures 1,483,084 gzip bytes, 12 bytes above its prior ceiling; its reviewed ceiling advances by 64 bytes to 1,483,136. Other bundle limits and optional-peer exclusions are unchanged.
+- f251b0d: Keep animated images, app-rail groups, and tooltips usable after their source, heading, or content attribute is removed. Clear the corresponding image or text and accept later replacements without throwing during rendering.
+- ee91edf: Preserve newer map legend, gradient, tick, hidden-category and style assignments when older caller-owned input reenters during normalization. Keep legend counts and visibility aligned with the winning input, and safely reject revoked tick arrays without preventing later updates. Assigning an explicit empty tick list now immediately removes already-rendered derived ticks.
+- 38b99fa: Keep an installed map scene ready when its active renderer delivers a delayed status report for an older scene revision. Reject reports for future revisions as well, and recheck ownership after reading renderer-controlled report fields.
+
+  The revision and ownership checks add 15 gzip bytes to the media barrel (382,597 bytes measured). Its ceiling advances from 382,592 to the next 64-byte boundary, 382,656 bytes; all other bundle ceilings and coverage settings stay unchanged.
+- cf16424: `lr-tooltip` now paints its `content` property, and describes the trigger with it, when the default slot holds only whitespace beside a `slot="trigger"` element written across lines. Previously the template indentation counted as slotted content, so the bubble opened empty and the trigger had no accessible description. Slotted elements or non-whitespace text still take precedence over `content`.
+- ecaebc3: Keep deeply nested declarative trees responsive in Chromium by assigning child slots before rendering instead of during connection.
+- c8b457a: Preserve descriptions and badge names in provider-backed tree rows, separate adjacent display text,
+  and give otherwise unnamed rows their stable ID. Explicit accessible labels retain precedence.
+
+  The complete packed core graph grows by 138 raw bytes across the same 64 files. Generated naming
+  references and declarations add 428 bytes alongside the 178-byte emitted module change. Only
+  exceeded package and bundle ceilings advance to their next 64-byte boundary; passing limits and
+  optional-peer exclusions are unchanged.
+
+  The companion editor manifest grows by 137 bytes. Its unpacked ceiling likewise advances only to
+  the next 64-byte boundary, retaining 12 bytes of headroom above the verified archive.
+- 31a13bc: Validate bulk flag resolver factory results and contain asynchronous initialization failures, returning the documented unavailable result with a version mismatch diagnostic.
+- fbbfdda: Reject present invalid simulation-clock subscription signals with the typed validation error before scheduling or retaining a listener. Keep an omitted or undefined signal valid.
+- 5b86df0: Keep video fullscreen and picture-in-picture controls synchronized with their native shadow-root state. Observe picture-in-picture events on the internal video so mode names and exit actions update correctly, including after reconnect. Browser permission refusals leave controls available for retry.
+
+  The CDN and local autoloaders measure 1,708,481 and 1,708,293 gzip bytes. Their exceeded ceilings move to the next 64-byte boundaries, 1,708,544 and 1,708,352 bytes. All other bundle ceilings remain unchanged.
+- 4ba3e5e: Respect search changes made by `lr-search-change` listeners in CSV, dataset, spreadsheet,
+  PDF, and DOCX viewers. Clearing results during next/previous navigation no longer throws or
+  reports a successful navigation, and interrupted searches no longer restore cleared highlights
+  or override a newer navigation started by the listener.
+
+  The fix adds 268 unpacked bytes across four runtime modules. Four exceeded aggregate gzip
+  limits, the unpacked package limit, and the complete core-consumer limit advance only to the
+  next 64-byte boundary above their reviewed measurements. Passing limits and optional-peer
+  exclusions remain unchanged.
+- 2279caf: Prevent ResizeObserver loop errors when a virtual list's local viewport follows its content, including slotted transcripts in an agent workspace. Row and group measurements now apply together on the next frame in both local and external scrolling modes, preserving scroll-anchor corrections while avoiding size writes during observer delivery.
+
+  Resolve queued row measurements against the current array membership so removal cannot read a missing row and reordering updates offsets from the row's new position.
+
+  The membership check adds 117 unpacked runtime bytes. Reviewed size ceilings advance only for the two exceeded measurements: the package measures 22,553,125 unpacked bytes (ceiling 22,553,152), and the agent-tools aggregate measures 508,549 gzip bytes (ceiling 508,608). Both use the next 64-byte boundary; other size limits are unchanged.
+- Updated dependencies [2060c47]
+- Updated dependencies [57fb2a3]
+- Updated dependencies [303f750]
+  - @aceshooting/lyra-map@1.5.1
+  - @aceshooting/lyra-translations@31.0.0
 
 Older major versions: [release history archive](https://github.com/aceshooting/lyra-ui/tree/main/docs/changelog).

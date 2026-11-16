@@ -155,17 +155,17 @@ const optionalPeerFamilyTags = componentInventory.components
 const rootHelperRegisteredTags = [];
 
 // Packed core/all.js includes every non-optional registration and every emitted chunk.
-// With message-widget payload alias ownership, the graph uses 5,673,156 raw bytes
-// across 64 files; the next 64-byte ceiling leaves 60 bytes of headroom.
+// With this release's features and the dependency refresh, the graph uses 5,691,624 raw bytes
+// across 65 files; the next 64-byte ceiling leaves 24 bytes of headroom.
 // Optional-peer exclusions and the complete file sum stay fixed. Core has no WASM allowance;
 // the explicit Oniguruma canary retains its separate exact 466,610-byte binary requirement.
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/ad043b8e3479fcd9990cd6ecc36e4638b48cfcc4/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'Message-widget payload alias ownership adds 44 raw bytes to the packed graph, measuring 5,673,156 bytes across the same 64 files. Only the exceeded raw ceiling advances to the next 64-byte boundary, 5,673,216 bytes. Gzip ceilings and the exact binary requirement for the explicit Oniguruma canary remain unchanged.',
-  reviewedCoreMeasurementBytes: 5_673_156,
+  $comment: 'This release (chat message and viewport hooks, markdown link schemes, suggestion-chip icons, tab focusTab, json-viewer layout, table cell parts, ordered timeline, tel/sms buttons, localized number parsing, camera capture, attachment thumbnails, drop-zone for/target, composer actions layout, map legend fixes) and the dependency refresh add 18,468 raw bytes to the packed graph, measuring 5,691,624 bytes across 65 files. Only the exceeded raw ceiling advances to the next 64-byte boundary, 5,691,648 bytes. Gzip ceilings and the exact binary requirement for the explicit Oniguruma canary remain unchanged.',
+  reviewedCoreMeasurementBytes: 5_691_624,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 60,
+  selectedRegressionHeadroomBytes: 24,
 };
 
 /**
@@ -327,8 +327,10 @@ const bundleEntries = {
   graph: {
     fixture: 'optional',
     // Source focus retains its intent until the optional renderer is ready: 461,047 measured
-    // bytes across 14 files, bounded by the next 64-byte boundary.
-    maxRawBytes: 461_056,
+    // bytes across 14 files, bounded by the next 64-byte boundary. This release's dependency
+    // refresh measures 461,063 bytes across the same 14 files; only this ceiling advances to the
+    // next 64-byte boundary.
+    maxRawBytes: 461_120,
   },
 };
 

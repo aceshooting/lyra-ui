@@ -1,5 +1,25 @@
 # @aceshooting/lyra-map
 
+## 1.5.1
+
+### Patch Changes
+
+- 2060c47: Update the map style-spec dependency and refresh browser testing, DOM, and AI integration tooling. Preserve accurate coverage for unexecuted callbacks when merging results with the updated browser test runner.
+
+  Keep the supported PapaParse peer range when refreshing development dependencies.
+
+  The updated map style specification adds OKLCH color parsing and interpolation. Its verified archive grows by 2,185 compressed bytes and 5,365 unpacked bytes, with the same 677 files. Advance only the exceeded map size limits to the next 64-byte boundaries.
+- 57fb2a3: Refresh dependency versions and generated package artifacts. Qualify the latest optional peers while preserving supported consumer ranges, and update the map style specification dependency to 26.6.0. Rebuild the document engine with Vite 8.3.8 and the reviewed ProseMirror model 1.25.13 dependency.
+
+  Retain coverage counter safeguards and the dev-server dependency security patch with the upgraded test runner.
+
+  The map dependency rebuild changes the archive from 1,051,147 to 1,051,391 packed bytes while reducing unpacked bytes from 4,295,831 to 4,295,701, with the same 677 files. Advance only the exceeded packed ceiling to the next 64-byte boundary, 1,051,392 bytes.
+- 303f750: Release map, visibility and canvas observers when scene bridge construction fails during listener registration or input subscription. Failed construction no longer retains callbacks for a bridge the caller never received. Keep releasing the remaining observers and graphics resources when one listener removal throws, preserving the original construction error.
+
+  The required cleanup increases the map archive from 1,051,117 to 1,051,147 packed bytes and from 4,295,602 to 4,295,831 unpacked bytes, with the same 677 files. Advance only the exceeded archive ceilings to the next 64-byte boundaries, 1,051,200 and 4,295,872 bytes.
+
+  The packed MapLibre consumer, including the scene-report validation and native-control guards, measures 2,525,671 raw bytes across 52 emitted files. Set its raw limit to the next 64-byte boundary, 2,525,696 bytes; retain its existing dependency and file checks.
+
 ## 1.5.0
 
 ### Minor Changes
