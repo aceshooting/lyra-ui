@@ -898,3 +898,128 @@ it('starts in single-file mode and resets to it after removing explicit multiple
 });
 
 expectStaleAttribute('lr-attachment-trigger', 'accessible-label');
+
+describe('camera-capture', () => {
+  const nativeCapture = 'capture' in HTMLInputElement.prototype;
+
+  /** Desktop engines expose no `capture` IDL attribute; emulate a capture-capable (touch) engine. */
+  async function withCaptureSupport(body: () => Promise<void>): Promise<void> {
+    if (nativeCapture) {
+      await body();
+      return;
+    }
+    Object.defineProperty(HTMLInputElement.prototype, 'capture', {
+      configurable: true,
+      get(this: HTMLInputElement) {
+        return this.getAttribute('capture') ?? '';
+      },
+      set(this: HTMLInputElement, value: string) {
+        this.setAttribute('capture', value);
+      },
+    });
+    try {
+      await body();
+    } finally {
+      delete (HTMLInputElement.prototype as { capture?: unknown }).capture;
+    }
+  }
+
+  it('leaves camera request-only when unset: no hidden input and lr-camera-request fires', async () => {
+    await withCaptureSupport(async () => {
+      const el = (await fixture(
+        html`<lr-attachment-trigger .capabilities=${['camera']}></lr-attachment-trigger>`,
+      )) as LyraAttachmentTrigger;
+      expect(el.cameraCapture).to.equal(undefined);
+      expect(hiddenInput(el) === null).to.equal(true);
+      const request = oneEvent(el, 'lr-camera-request');
+      trigger(el).click();
+      expect((await request).detail).to.equal(null);
+    });
+  });
+
+  it('opens a hidden image/* input with the configured capture value inside the activation', async () => {
+    await withCaptureSupport(async () => {
+      const el = (await fixture(html`
+        <lr-attachment-trigger camera-capture="environment" .capabilities=${['camera']}></lr-attachment-trigger>
+      `)) as LyraAttachmentTrigger;
+      const input = hiddenInput(el)!;
+      expect(input === null).to.equal(false);
+      let requested = false;
+      el.addEventListener('lr-camera-request', () => (requested = true));
+      let clickedWith: { accept: string; capture: string | null } | undefined;
+      input.addEventListener('click', () => {
+        clickedWith = { accept: input.accept, capture: input.getAttribute('capture') };
+      });
+
+      trigger(el).click();
+
+      expect(clickedWith).to.deep.equal({ accept: 'image/*', capture: 'environment' });
+      expect(requested).to.equal(false);
+    });
+  });
+
+  it('delivers the capture through lr-files with capability "camera", rejecting non-images', async () => {
+    await withCaptureSupport(async () => {
+      const el = (await fixture(html`
+        <lr-attachment-trigger camera-capture="user" accept=".pdf" .capabilities=${['files', 'camera']}></lr-attachment-trigger>
+      `)) as LyraAttachmentTrigger;
+      const cameraItem = menuItems(el).find((item) => item.value === 'camera')!;
+      clickItem(cameraItem);
+      const input = hiddenInput(el)!;
+      expect(input.accept).to.equal('image/*');
+      expect(input.getAttribute('capture')).to.equal('user');
+      const files = oneEvent(el, 'lr-files');
+      selectFiles(input, [makeFile('photo.jpg', 'image/jpeg'), makeFile('doc.pdf', 'application/pdf')]);
+      const detail = (await files).detail as LyraAttachmentFilesDetail;
+      expect(detail.capability).to.equal('camera');
+      expect(detail.files.map((file) => file.name)).to.deep.equal(['photo.jpg']);
+      expect(detail.rejected.map((entry) => `${entry.file.name}:${entry.reason}`)).to.deep.equal(['doc.pdf:type']);
+      expect(detail.remainingFiles).to.equal(null);
+      expect(detail.remainingTotalSize).to.equal(null);
+
+      // The shared input drops capture again for the files capability.
+      clickItem(menuItems(el).find((item) => item.value === 'files')!);
+      expect(input.hasAttribute('capture')).to.equal(false);
+      expect(input.accept).to.equal('.pdf');
+    });
+  });
+
+  it('keeps lr-camera-request where the engine has no capture support', async function () {
+    if (nativeCapture) this.skip();
+    const el = (await fixture(html`
+      <lr-attachment-trigger camera-capture="environment" .capabilities=${['camera']}></lr-attachment-trigger>
+    `)) as LyraAttachmentTrigger;
+    const input = hiddenInput(el);
+    let clicked = false;
+    input?.addEventListener('click', () => (clicked = true));
+    const request = oneEvent(el, 'lr-camera-request');
+    trigger(el).click();
+    await request;
+    expect(clicked).to.equal(false);
+  });
+
+  it('treats an unrecognized camera-capture value as unset', async () => {
+    await withCaptureSupport(async () => {
+      const el = (await fixture(html`
+        <lr-attachment-trigger camera-capture="front" .capabilities=${['camera']}></lr-attachment-trigger>
+      `)) as LyraAttachmentTrigger;
+      expect(hiddenInput(el) === null).to.equal(true);
+      const request = oneEvent(el, 'lr-camera-request');
+      trigger(el).click();
+      await request;
+    });
+  });
+
+  it('ignores camera activation while disabled', async () => {
+    await withCaptureSupport(async () => {
+      const el = (await fixture(html`
+        <lr-attachment-trigger disabled camera-capture="environment" .capabilities=${['camera']}></lr-attachment-trigger>
+      `)) as LyraAttachmentTrigger;
+      let clicked = false;
+      hiddenInput(el)!.addEventListener('click', () => (clicked = true));
+      el.click();
+      expect(clicked).to.equal(false);
+      await expect(el).to.be.accessible();
+    });
+  });
+});

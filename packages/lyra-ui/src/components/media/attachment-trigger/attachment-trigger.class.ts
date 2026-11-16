@@ -27,8 +27,20 @@ export type LyraAttachmentCapability = 'files' | 'image' | 'camera' | 'audio';
  *  never touch the hidden file input -- see the class doc). */
 export type LyraFileBackedCapability = Exclude<LyraAttachmentCapability, 'camera' | 'audio'>;
 
+/** The native `capture` values `camera-capture` accepts: which camera a capture-capable (touch)
+ *  device opens. */
+export type LyraAttachmentCameraCapture = 'user' | 'environment';
+
+/** The capabilities an `lr-files` event can report: the file-backed ones, plus `camera` while
+ *  `camera-capture` routes it through the system camera. */
+export type LyraAttachmentFilesCapability = LyraFileBackedCapability | 'camera';
+
+function isCameraCapture(value: unknown): value is LyraAttachmentCameraCapture {
+  return value === 'user' || value === 'environment';
+}
+
 export interface LyraAttachmentFilesDetail {
-  capability: LyraFileBackedCapability;
+  capability: LyraAttachmentFilesCapability;
   files: readonly File[];
   rejected: readonly LyraFileInputRejectedFile[];
   remainingFiles: number | null;
@@ -191,25 +203,35 @@ export interface LyraAttachmentTriggerEventMap {
  * `<input type="file">` with no `accept` attribute).
  *
  * **`camera`/`audio` are scope-limited by design.** This component does not
- * implement any camera or microphone capture UI itself — no `getUserMedia`,
- * no `<input capture>` — because that's entirely a host/browser concern with
- * no single right answer (a desktop web app, a mobile PWA, and a native
- * wrapper all want different things here). Activating `camera` fires
- * `lr-camera-request`; activating `audio` fires `lr-audio-request`. The
- * host owns everything from that point on — typically opening
- * `<lr-push-to-talk>` in a `<lr-overlay>`/popover for `audio`, then
- * handing the resulting blob to something like `<lr-attachment-chip>`.
+ * implement any camera or microphone capture UI itself — no `getUserMedia` —
+ * because that's entirely a host/browser concern with no single right answer
+ * (a desktop web app, a mobile PWA, and a native wrapper all want different
+ * things here). Activating `camera` fires `lr-camera-request`; activating
+ * `audio` fires `lr-audio-request`. The host owns everything from that point
+ * on — typically opening `<lr-push-to-talk>` in a `<lr-overlay>`/popover for
+ * `audio`, then handing the resulting blob to something like
+ * `<lr-attachment-chip>`.
+ *
+ * The one opt-in exception is `camera-capture`: set it to `'environment'` or
+ * `'user'` and, on an engine that supports the native `capture` attribute
+ * (phones and tablets), `camera` opens the shared hidden file input with
+ * `accept="image/*"` and that `capture` value synchronously inside the
+ * activation, so the system camera opens, and the photo arrives as `lr-files`
+ * with `capability: 'camera'`. Where `capture` is unsupported (desktop
+ * browsers, which would only show a file picker), `camera` still fires
+ * `lr-camera-request`, so one host can keep its own camera dialog there.
  *
  * @customElement lr-attachment-trigger
  * @event lr-files - A file-backed capability's hidden file input produced a real selection.
- * `detail: { capability: 'files' | 'image', files, rejected, remainingFiles, remainingTotalSize }`,
+ * `detail: { capability: 'files' | 'image' | 'camera', files, rejected, remainingFiles,
+ * remainingTotalSize }` (`'camera'` only while `camera-capture` routed the capture there),
  * the same shape as `lr-file-input`'s. `files` are the picks matching `accept` (a fresh readonly
  * owner-realm `File[]` snapshot rather than the native input's live `FileList`); the rest, which
  * the OS dialog's "All files" filter can let through, are listed in `rejected`. No size or count
  * limits apply here, so both `remaining*` fields are `null`.
  * @event lr-camera-request - The `camera` capability was activated. No
  * detail payload — see the class doc's scope note; the host implements the
- * actual capture flow.
+ * actual capture flow. Not fired when `camera-capture` opens the system camera instead.
  * @event lr-audio-request - The `audio` capability was activated. No
  * detail payload — same request-only scope as `lr-camera-request`; the
  * host implements the actual recording flow (typically `<lr-push-to-talk>`).
@@ -295,6 +317,15 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
    *  before this property existed. */
   @property({ attribute: 'trigger-title' }) triggerTitle?: string;
 
+  /** Opt-in system-camera capture for the `camera` capability: `'environment'` (rear camera) or
+   *  `'user'` (front camera), the native `<input capture>` values. On an engine that supports
+   *  `capture` (phones and tablets), activating `camera` opens the hidden file input with
+   *  `accept="image/*"` and this `capture` value inside the same user gesture and reports the photo
+   *  as `lr-files` with `capability: 'camera'` (non-image picks move to `rejected`). Elsewhere it
+   *  keeps firing `lr-camera-request`. Unset (the default) or any other value: `camera` only fires
+   *  `lr-camera-request`, unchanged. */
+  @property({ attribute: 'camera-capture' }) cameraCapture?: LyraAttachmentCameraCapture;
+
   /** Forwarded to the hidden file input's own `multiple` attribute. */
   @property({ type: Boolean, reflect: true, converter: falseDefaultBooleanConverter }) multiple = false;
 
@@ -337,7 +368,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   // belongs to -- set synchronously right before the synthetic .click(), so
   // one shared <input> can serve both 'files' and 'image' (each wanting a
   // different `accept`) without needing two separate hidden inputs.
-  private pendingCapability: LyraFileBackedCapability = 'files';
+  private pendingCapability: LyraAttachmentFilesCapability = 'files';
   private pickerGeneration = 0;
   private pendingPickerGeneration = -1;
 
@@ -346,7 +377,15 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   }
 
   private get hasFileCapability(): boolean {
-    return this.effectiveCapabilities.includes('files') || this.effectiveCapabilities.includes('image');
+    return this.effectiveCapabilities.includes('files') || this.effectiveCapabilities.includes('image')
+      || (isCameraCapture(this.cameraCapture) && this.effectiveCapabilities.includes('camera'));
+  }
+
+  /** Whether this realm's file input implements `capture` -- only touch engines do; a desktop
+   *  engine ignores the attribute and would show a plain file picker. */
+  private get captureSupported(): boolean {
+    const view = this.ownerDocument.defaultView;
+    return Boolean(view && 'capture' in view.HTMLInputElement.prototype);
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
@@ -387,13 +426,15 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
     );
   }
 
-  private effectiveAccept(capability: LyraFileBackedCapability): string {
+  private effectiveAccept(capability: LyraAttachmentFilesCapability): string {
+    if (capability === 'camera') return 'image/*';
     return capability === 'image' ? this.accept || 'image/*' : this.accept;
   }
 
   private activateCapability(capability: LyraAttachmentCapability): void {
     if (this.disabled) return;
-    if (capability === 'camera') {
+    const capture = this.cameraCapture;
+    if (capability === 'camera' && !(isCameraCapture(capture) && this.captureSupported)) {
       this.emit('lr-camera-request', null);
       return;
     }
@@ -406,6 +447,10 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
     const input = this.inputEl;
     if (!input) return;
     input.accept = this.effectiveAccept(capability);
+    // Imperative like `accept`: one shared input serves every file-backed capability, and only a
+    // camera activation may carry `capture`.
+    if (capability === 'camera' && isCameraCapture(capture)) input.setAttribute('capture', capture);
+    else input.removeAttribute('capture');
     input.click();
   }
 

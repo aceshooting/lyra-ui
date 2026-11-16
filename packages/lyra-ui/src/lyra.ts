@@ -1249,7 +1249,9 @@ export type {
   LyraMediaCardOpenDetail,
 } from './components/media/media-card/media-card.class.js';
 export type {
+  LyraAttachmentCameraCapture,
   LyraAttachmentCapability,
+  LyraAttachmentFilesCapability,
   LyraAttachmentFilesDetail,
   LyraFileBackedCapability,
 } from './components/media/attachment-trigger/attachment-trigger.class.js';

@@ -471,7 +471,7 @@ attachmentChip.addEventListener('lr-preview-request', (event) => {
 declare const attachmentTrigger: LyraAttachmentTrigger;
 attachmentTrigger.addEventListener('lr-files', (event) => {
   const files: readonly File[] = event.detail.files;
-  const capability: 'files' | 'image' = event.detail.capability;
+  const capability: 'files' | 'image' | 'camera' = event.detail.capability;
   void files;
   void capability;
 });

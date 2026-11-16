@@ -13,7 +13,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A compact attach affordance for a chat composer\'s start slot. Renders a single plain icon button when one recognized capability remains after normalization, or a small anchored menu when more than one remains. Normalization scans at most 64 candidates and retains the first four unique recognized values, so duplicates and unknown values do not consume valid slots. `files`/`image` open a hidden native file input and emit a readonly array snapshot as `lr-files`; `camera` only fires `lr-camera-request` — this component never implements capture UI itself, that\'s entirely a host concern. The active trigger relays one native `FocusEvent` for `focus`/`blur`.',
+          'A compact attach affordance for a chat composer\'s start slot. Renders a single plain icon button when one recognized capability remains after normalization, or a small anchored menu when more than one remains. Normalization scans at most 64 candidates and retains the first four unique recognized values, so duplicates and unknown values do not consume valid slots. `files`/`image` open a hidden native file input and emit a readonly array snapshot as `lr-files`; `camera` only fires `lr-camera-request` — this component never implements capture UI itself, that\'s entirely a host concern — unless `camera-capture` opts it into the system camera on touch devices, where the photo arrives as `lr-files`. The active trigger relays one native `FocusEvent` for `focus`/`blur`.',
       },
     },
   },
@@ -90,6 +90,25 @@ export const CameraOnly: Story = {
         @lr-camera-request=${logCameraRequest('camera-log')}
       ></lr-attachment-trigger>
       <p id="camera-log" style="margin-top:0.5rem; font: 0.8125rem monospace;">(no event yet)</p>
+    </div>
+  `,
+};
+
+/** `camera-capture` opts the `camera` capability into the system camera on touch devices: the
+ *  hidden input opens with `accept="image/*"` and `capture="environment"` inside the tap, and the
+ *  photo arrives as `lr-files` with `capability: 'camera'`. Desktop browsers have no `capture`
+ *  support, so there the same click still fires `lr-camera-request`. */
+export const CameraCapture: Story = {
+  name: 'camera-capture="environment"',
+  render: () => html`
+    <div>
+      <lr-attachment-trigger
+        camera-capture="environment"
+        .capabilities=${['files', 'camera']}
+        @lr-files=${logPick('capture-log')}
+        @lr-camera-request=${logCameraRequest('capture-log')}
+      ></lr-attachment-trigger>
+      <p id="capture-log" style="margin-top:0.5rem; font: 0.8125rem monospace;">(no event yet)</p>
     </div>
   `,
 };
