@@ -8640,6 +8640,7 @@ export interface LyraComponentTypeMap {
       | 'label'
       | 'labelDisplay'
       | 'locale'
+      | 'localized'
       | 'match'
       | 'max'
       | 'maxlength'

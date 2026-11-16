@@ -59,7 +59,8 @@ until `<lr-icon>` is registered by something else.
   accessible name; wins over `label`
 - `label: string = ''` — accessible name when `accessibleLabel` is unset
 - `disabled: boolean = false` (reflected)
-- `href?: string`, `target?: string`, `download?: string` — a safe `href` renders a native anchor;
+- `href?: string`, `target?: string`, `download?: string` — a safe `href` (the same
+  `http:`/`https:`/`blob:`/`mailto:`/`tel:`/`sms:`/relative allowlist as `<lr-button>`) renders a native anchor;
   `target` derives `rel="noopener noreferrer"`, and download presence (including `download=""`)
   selects the stricter downloadable-URL allowlist. A disabled link keeps the anchor but removes
   `href`

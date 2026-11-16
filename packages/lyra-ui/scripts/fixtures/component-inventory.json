@@ -96307,6 +96307,16 @@
             "default": ""
           },
           {
+            "name": "localized",
+            "property": "localized",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "match",
             "property": "match",
             "type": "LyraMatchTarget",
@@ -96787,6 +96797,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "localized",
+            "attribute": "localized",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "match",

@@ -27,6 +27,31 @@ synchronous call, including changes made immediately beforehand. They preserve n
 and bounds, update form submission silently, and remain no-ops before the native input has rendered
 or while disabled/readonly. Native `step="any"` remains a non-steppable no-op.
 
+**Locale-aware entry (`localized`).** `localized: boolean = false` (attribute `localized`,
+reflected) reads and shows numbers with the grouping and decimal separators of the effective locale
+(`lang`/`locale`): in `de` or `ro`, typing `25.000` gives twenty-five thousand and `10,24` gives ten
+point two four. `value`, the submitted form value and `valueAsNumber` keep the native
+`type="number"` form (`25000`, `10.24`), so the server and the `value`/`default-value` attributes
+always use `.` and no grouping; a prefilled `value="1234567.5"` displays `1.234.567,5` in `de`.
+Range, step and required validity come from a detached native number input given the parsed value,
+so `min`/`max`/`step` and the browser's validation messages behave as on the default field. Grouping
+is checked rather than ignored: text the locale would not write (`10.24` in `de`, `10,24` in `en`,
+`1,234,567` in `en-IN`) reports `badInput` and leaves `value` empty instead of misreading the
+entry. Any space counts as the group of a space-grouping locale (`fr`), and locale digits
+(`ar-EG`) are accepted. Typed text stays as entered until `change` or blur, which re-format it;
+stepping and programmatic writes re-format immediately, and a locale change re-formats the shown
+value. The internal input becomes a text field with `role="spinbutton"`, `aria-valuenow`,
+`aria-valuetext` and `aria-valuemin`/`aria-valuemax`, and ArrowUp/ArrowDown step the value with
+the same `input`/`lr-input`/`change`/`lr-change` sequence as a stepper click. The default
+`inputmode="numeric"` is unchanged; set `inputmode="decimal"` when fractions are expected so touch
+keyboards offer the separator. Unset, the field is the native number input, unchanged.
+
+```html
+<lr-number-input lang="de" localized label="Betrag" name="amount" step="0.01" inputmode="decimal"
+  value="25000"></lr-number-input>
+<!-- shows 25.000; submits amount=25000 -->
+```
+
 Changing own `disabled` from true to false in the same task that disables an ancestor fieldset keeps
 the native editing control effectively disabled. The enabled first-legend exception and explicit
 own-disabled state retain their native meaning; validity and form submission follow the effective
@@ -170,7 +195,9 @@ The exact-320px RTL story keeps long label/hint copy and both fixed-size stepper
 - `clearable`/`clear-button`/`lr-clear` are inert: the clear action only renders for
   `type="text"`/`"search"`. `password-visible`/`password-toggle` are likewise inert, since the
   toggle only renders for `type="password"`. `minlength`/`maxlength`/`pattern` are inert too — the
-  platform ignores all three on `type="number"`; use `min`/`max`/`step` instead.
+  platform ignores all three on `type="number"`; use `min`/`max`/`step` instead. With `localized`,
+  the internal input is a text field, so `maxlength` does limit typing there; validity still ignores
+  all three.
 - `type` is re-forced to `number` on every connect, but a later `el.type = 'text'` on a connected
   element is not reverted — use `lr-input` when the type has to change.
 

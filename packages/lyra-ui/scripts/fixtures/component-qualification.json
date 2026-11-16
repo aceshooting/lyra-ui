@@ -28886,6 +28886,12 @@
               "test": "keeps the required description visually hidden when a prefilled input is valid",
               "target": "el",
               "state": "populated"
+            },
+            {
+              "file": "src/components/forms/input/number-input-localized.test.ts",
+              "test": "keeps spinbutton semantics on the text field and passes axe",
+              "target": "el",
+              "state": "populated"
             }
           ],
           "exemption": null
@@ -29039,6 +29045,9 @@
           "src/components/forms/input/input.test.ts",
           "src/components/forms/input/native-time-input.test.ts",
           "src/components/forms/input/number-input-immediate-disabled.test.ts",
+          "src/components/forms/input/number-input-locale.property.test.ts",
+          "src/components/forms/input/number-input-locale.test.ts",
+          "src/components/forms/input/number-input-localized.test.ts",
           "src/components/forms/input/number-time-input.test.ts",
           "src/components/forms/input/positioning-strategy.test.ts",
           "src/components/forms/input/time-input-closed-layout.test.ts",
@@ -37124,6 +37133,9 @@
           "src/components/forms/input/input.test.ts",
           "src/components/forms/input/native-time-input.test.ts",
           "src/components/forms/input/number-input-immediate-disabled.test.ts",
+          "src/components/forms/input/number-input-locale.property.test.ts",
+          "src/components/forms/input/number-input-locale.test.ts",
+          "src/components/forms/input/number-input-localized.test.ts",
           "src/components/forms/input/number-time-input.test.ts",
           "src/components/forms/input/positioning-strategy.test.ts",
           "src/components/forms/input/time-input-closed-layout.test.ts",
@@ -38187,6 +38199,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/forms/input/number-input-localized.test.ts",
+              "test": "keeps spinbutton semantics on the text field and passes axe",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/forms/input/number-time-input.test.ts",
               "test": "forces number-input to native number semantics and preserves range validation",
               "target": "el",
@@ -38342,6 +38360,9 @@
           "src/components/forms/input/input.test.ts",
           "src/components/forms/input/native-time-input.test.ts",
           "src/components/forms/input/number-input-immediate-disabled.test.ts",
+          "src/components/forms/input/number-input-locale.property.test.ts",
+          "src/components/forms/input/number-input-locale.test.ts",
+          "src/components/forms/input/number-input-localized.test.ts",
           "src/components/forms/input/number-time-input.test.ts",
           "src/components/forms/input/positioning-strategy.test.ts",
           "src/components/forms/input/time-input-closed-layout.test.ts",
@@ -56246,6 +56267,9 @@
           "src/components/forms/input/input.test.ts",
           "src/components/forms/input/native-time-input.test.ts",
           "src/components/forms/input/number-input-immediate-disabled.test.ts",
+          "src/components/forms/input/number-input-locale.property.test.ts",
+          "src/components/forms/input/number-input-locale.test.ts",
+          "src/components/forms/input/number-input-localized.test.ts",
           "src/components/forms/input/number-time-input.test.ts",
           "src/components/forms/input/positioning-strategy.test.ts",
           "src/components/forms/input/time-input-closed-layout.test.ts",
@@ -59549,6 +59573,12 @@
             {
               "file": "src/components/overlays/overlay/tooltip-delay-reconfiguration.test.ts",
               "test": "replaces a pending hide delay without letting its obsolete timer close a still-visible tooltip",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/overlays/overlay/tooltip-description.test.ts",
+              "test": "paints and describes with content when the default slot holds only template whitespace",
               "target": "el",
               "state": "populated"
             },

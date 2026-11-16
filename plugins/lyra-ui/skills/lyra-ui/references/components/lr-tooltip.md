@@ -82,7 +82,9 @@ later text renders normally.
   `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'` (attribute `arrow-placement`) and
   `arrowPadding: number = 0` (attribute `arrow-padding`) — the same arrow trio `<lr-popover>`
   documents (`llms/components/lr-popover.md`).
-- `content: string = ''` — plain-text tooltip content, used when nothing is slotted
+- `content: string = ''` — plain-text tooltip content, used when nothing is slotted. Whitespace-only
+  text in the content slot (template indentation around a `slot="trigger"` element) counts as
+  nothing, so `content` still paints and describes the trigger.
 - `accessibleLabel: string = ''` (attribute **`aria-label`**) — a host `aria-label` wins by
   attribute presence, including an explicitly empty value. When the attribute is absent, an
   actionable popup with no property label uses the localized `popover` string.

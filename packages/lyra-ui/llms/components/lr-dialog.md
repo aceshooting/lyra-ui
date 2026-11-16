@@ -226,6 +226,16 @@ to scope it) retints the dialog together with every popup opened from it. The mo
 separate name from `--lr-overlay-shadow-anchored`, which anchored popups read, so raising popups
 never raises dialogs.
 
+**Surface treatment.** The panel follows the style system's surface axis like other floating chrome.
+With no surface chosen anywhere — no `data-lr-surface`, no `setLyraStyle({ surface })`, and either
+no theme stylesheet or `theme.css` — it paints the built-in profile's Glass: the fill at
+`--lr-theme-surface-opacity` (default 60%) over a 12px backdrop blur. The blur sits on an internal
+layer behind the panel content, so `getComputedStyle(panel).backdropFilter` reads `none` even while
+the backdrop is blurred; translucency never appears without that blur. `theme-core.css` defaults to
+Solid instead. For an opaque panel set `data-lr-surface="solid"` on the element, a wrapper or
+`<html>`, or call `setLyraStyle({ surface: 'solid' })`; reduced transparency, increased contrast and
+forced colours paint it opaque too. `<lr-drawer>` behaves the same way.
+
 Otherwise the shared tokens the panel and its chrome read include the `--lr-size-20rem` /
 `-24rem` / `-28rem` / `-32rem` / `-38rem` / `-48rem` width ladder behind `size`, `--lr-space-l`,
 `--lr-space-m`, `--lr-space-s` and `--lr-space-xs` (spacing defaults), the `--lr-safe-area-*` insets

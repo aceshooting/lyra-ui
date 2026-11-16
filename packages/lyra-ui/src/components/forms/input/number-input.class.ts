@@ -17,7 +17,7 @@ import { formatLocaleNumber, parseLocaleNumber } from './number-input-locale.js'
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_numberInputDecrease, LYRA_DEFAULT_numberInputIncrease } from '../../../internal/default-strings/forms.generated.js';
-import { LYRA_DEFAULT_fieldRequired } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Number-input events, including the native cancelable edit veto exposed by its mapped API. */
@@ -86,6 +86,7 @@ export class LyraNumberInput extends LyraInput {
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     numberInputDecrease: LYRA_DEFAULT_numberInputDecrease,
     numberInputIncrease: LYRA_DEFAULT_numberInputIncrease,
+    valueInvalid: LYRA_DEFAULT_valueInvalid,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

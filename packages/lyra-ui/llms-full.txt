@@ -9612,10 +9612,12 @@ The icon and label stay centered under `--lr-button-justify`, separated by `--lr
 
 **Properties:**
 
-- `href?: string` — when set to a safe link URL (`http:`/`https:`/`blob:`/`mailto:`/relative; see
-  `safeLinkHref`), the root renders as an `<a href=…>` instead of a `<button>`. Setting `download`
-  narrows the allowlist to `http:`/`https:`/`blob:`/relative — `mailto:` names no retrievable bytes,
-  so a `mailto:` href paired with `download` falls back to the native `<button>`. Unset (the default)
+- `href?: string` — when set to a safe link URL (`http:`/`https:`/`blob:`/`mailto:`/`tel:`/`sms:`/
+  relative; see `safeActionLinkHref`), the root renders as an `<a href=…>` instead of a `<button>`.
+  `tel:` and `sms:` hand off to the dialer or messaging app, like `mailto:` to the mail client
+  (`<lr-button href="tel:+40700000100">Call</lr-button>`). Setting `download` narrows the allowlist
+  to `http:`/`https:`/`blob:`/relative — a handoff names no retrievable bytes, so a `mailto:`,
+  `tel:` or `sms:` href paired with `download` falls back to the native `<button>`. Unset (the default)
   renders a plain `<button>`, unchanged. `type` (submit/reset) has no effect while the anchor
   renders. While the button is disabled the anchor is rendered **without** `href` (keeping
   `aria-disabled="true"`), so it cannot navigate; it also uses `--lr-opacity-disabled`, a
@@ -9998,7 +10000,8 @@ until `<lr-icon>` is registered by something else.
   accessible name; wins over `label`
 - `label: string = ''` — accessible name when `accessibleLabel` is unset
 - `disabled: boolean = false` (reflected)
-- `href?: string`, `target?: string`, `download?: string` — a safe `href` renders a native anchor;
+- `href?: string`, `target?: string`, `download?: string` — a safe `href` (the same
+  `http:`/`https:`/`blob:`/`mailto:`/`tel:`/`sms:`/relative allowlist as `<lr-button>`) renders a native anchor;
   `target` derives `rel="noopener noreferrer"`, and download presence (including `download=""`)
   selects the stricter downloadable-URL allowlist. A disabled link keeps the anchor but removes
   `href`
@@ -10615,6 +10618,31 @@ synchronous call, including changes made immediately beforehand. They preserve n
 and bounds, update form submission silently, and remain no-ops before the native input has rendered
 or while disabled/readonly. Native `step="any"` remains a non-steppable no-op.
 
+**Locale-aware entry (`localized`).** `localized: boolean = false` (attribute `localized`,
+reflected) reads and shows numbers with the grouping and decimal separators of the effective locale
+(`lang`/`locale`): in `de` or `ro`, typing `25.000` gives twenty-five thousand and `10,24` gives ten
+point two four. `value`, the submitted form value and `valueAsNumber` keep the native
+`type="number"` form (`25000`, `10.24`), so the server and the `value`/`default-value` attributes
+always use `.` and no grouping; a prefilled `value="1234567.5"` displays `1.234.567,5` in `de`.
+Range, step and required validity come from a detached native number input given the parsed value,
+so `min`/`max`/`step` and the browser's validation messages behave as on the default field. Grouping
+is checked rather than ignored: text the locale would not write (`10.24` in `de`, `10,24` in `en`,
+`1,234,567` in `en-IN`) reports `badInput` and leaves `value` empty instead of misreading the
+entry. Any space counts as the group of a space-grouping locale (`fr`), and locale digits
+(`ar-EG`) are accepted. Typed text stays as entered until `change` or blur, which re-format it;
+stepping and programmatic writes re-format immediately, and a locale change re-formats the shown
+value. The internal input becomes a text field with `role="spinbutton"`, `aria-valuenow`,
+`aria-valuetext` and `aria-valuemin`/`aria-valuemax`, and ArrowUp/ArrowDown step the value with
+the same `input`/`lr-input`/`change`/`lr-change` sequence as a stepper click. The default
+`inputmode="numeric"` is unchanged; set `inputmode="decimal"` when fractions are expected so touch
+keyboards offer the separator. Unset, the field is the native number input, unchanged.
+
+```html
+<lr-number-input lang="de" localized label="Betrag" name="amount" step="0.01" inputmode="decimal"
+  value="25000"></lr-number-input>
+<!-- shows 25.000; submits amount=25000 -->
+```
+
 Changing own `disabled` from true to false in the same task that disables an ancestor fieldset keeps
 the native editing control effectively disabled. The enabled first-legend exception and explicit
 own-disabled state retain their native meaning; validity and form submission follow the effective
@@ -10758,7 +10786,9 @@ The exact-320px RTL story keeps long label/hint copy and both fixed-size stepper
 - `clearable`/`clear-button`/`lr-clear` are inert: the clear action only renders for
   `type="text"`/`"search"`. `password-visible`/`password-toggle` are likewise inert, since the
   toggle only renders for `type="password"`. `minlength`/`maxlength`/`pattern` are inert too — the
-  platform ignores all three on `type="number"`; use `min`/`max`/`step` instead.
+  platform ignores all three on `type="number"`; use `min`/`max`/`step` instead. With `localized`,
+  the internal input is a text field, so `maxlength` does limit typing there; validity still ignores
+  all three.
 - `type` is re-forced to `number` on every connect, but a later `el.type = 'text'` on a connected
   element is not reverted — use `lr-input` when the type has to change.
 
@@ -28866,6 +28896,16 @@ to scope it) retints the dialog together with every popup opened from it. The mo
 separate name from `--lr-overlay-shadow-anchored`, which anchored popups read, so raising popups
 never raises dialogs.
 
+**Surface treatment.** The panel follows the style system's surface axis like other floating chrome.
+With no surface chosen anywhere — no `data-lr-surface`, no `setLyraStyle({ surface })`, and either
+no theme stylesheet or `theme.css` — it paints the built-in profile's Glass: the fill at
+`--lr-theme-surface-opacity` (default 60%) over a 12px backdrop blur. The blur sits on an internal
+layer behind the panel content, so `getComputedStyle(panel).backdropFilter` reads `none` even while
+the backdrop is blurred; translucency never appears without that blur. `theme-core.css` defaults to
+Solid instead. For an opaque panel set `data-lr-surface="solid"` on the element, a wrapper or
+`<html>`, or call `setLyraStyle({ surface: 'solid' })`; reduced transparency, increased contrast and
+forced colours paint it opaque too. `<lr-drawer>` behaves the same way.
+
 Otherwise the shared tokens the panel and its chrome read include the `--lr-size-20rem` /
 `-24rem` / `-28rem` / `-32rem` / `-38rem` / `-48rem` width ladder behind `size`, `--lr-space-l`,
 `--lr-space-m`, `--lr-space-s` and `--lr-space-xs` (spacing defaults), the `--lr-safe-area-*` insets
@@ -29872,7 +29912,9 @@ later text renders normally.
   `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'` (attribute `arrow-placement`) and
   `arrowPadding: number = 0` (attribute `arrow-padding`) — the same arrow trio `<lr-popover>`
   documents (`llms/components/lr-popover.md`).
-- `content: string = ''` — plain-text tooltip content, used when nothing is slotted
+- `content: string = ''` — plain-text tooltip content, used when nothing is slotted. Whitespace-only
+  text in the content slot (template indentation around a `slot="trigger"` element) counts as
+  nothing, so `content` still paints and describes the trigger.
 - `accessibleLabel: string = ''` (attribute **`aria-label`**) — a host `aria-label` wins by
   attribute presence, including an explicitly empty value. When the attribute is absent, an
   actionable popup with no property label uses the localized `popover` string.
@@ -46619,8 +46661,9 @@ can cover the other. Both surfaces use `white-space: pre` and scroll horizontall
   `encodeURI`-based validity guard throw, silently dropping just that anchor (the link text still
   renders, with no `href`) — mirrors `marked`'s own default `link()` renderer's defensive behavior.
 - every rendered link/image `href`/`src` is additionally scheme-checked against the same allowlist
-  `<lr-button>`/`<lr-card>` use for a navigation `href` (`http:`, `https:`, `blob:`, `mailto:`, and
-  relative URLs — plus `data:` for images only), independently of `htmlMode` — `sanitize` and
+  `<lr-card>` uses for a navigation `href` (`http:`, `https:`, `blob:`, `mailto:`, and
+  relative URLs — plus `data:` for images only; the `tel:`/`sms:` handoffs `<lr-button>` accepts on
+  an author-written `href` are not admitted here), independently of `htmlMode` — `sanitize` and
   `escape` both reject a disallowed scheme (e.g. `javascript:`) by dropping the anchor/image and
   rendering only its text/alt content, exactly like the malformed-`href` case above; only
   `html-mode="trusted"` skips this check, consistent with its documented full bypass. The allowlist

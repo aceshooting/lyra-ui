@@ -390,8 +390,9 @@ can cover the other. Both surfaces use `white-space: pre` and scroll horizontall
   `encodeURI`-based validity guard throw, silently dropping just that anchor (the link text still
   renders, with no `href`) — mirrors `marked`'s own default `link()` renderer's defensive behavior.
 - every rendered link/image `href`/`src` is additionally scheme-checked against the same allowlist
-  `<lr-button>`/`<lr-card>` use for a navigation `href` (`http:`, `https:`, `blob:`, `mailto:`, and
-  relative URLs — plus `data:` for images only), independently of `htmlMode` — `sanitize` and
+  `<lr-card>` uses for a navigation `href` (`http:`, `https:`, `blob:`, `mailto:`, and
+  relative URLs — plus `data:` for images only; the `tel:`/`sms:` handoffs `<lr-button>` accepts on
+  an author-written `href` are not admitted here), independently of `htmlMode` — `sanitize` and
   `escape` both reject a disallowed scheme (e.g. `javascript:`) by dropping the anchor/image and
   rendering only its text/alt content, exactly like the malformed-`href` case above; only
   `html-mode="trusted"` skips this check, consistent with its documented full bypass. The allowlist
