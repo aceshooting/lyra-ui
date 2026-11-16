@@ -679,9 +679,28 @@ resizable?, sortable?, sortValue?, defaultSortDir?: 'asc'|'desc', align?: 'start
 priority?: 'medium'|'low',
 sticky?: 'start'|'end', editTrigger?: 'double-click'|'always', editValue?, editLabel?: (row) => string,
 editType?: 'text'|'number'|'select',
-editOptions?: { value: string; label: string }[], footer?, cellStyle?, heatValue?,
+editOptions?: { value: string; label: string }[], footer?, cellStyle?, cellPart?, heatValue?,
 cell: (row) => unknown }` — `cell` is required for every `editTrigger` except `'always'`, whose
-  persistent editor renders unconditionally so the table's render path never falls back to it —
+  persistent editor renders unconditionally so the table's render path never falls back to it.
+  **`cell()` output renders inside the table's shadow root**, so class rules from the page or from
+  the component that owns the table never reach it (only inherited properties and custom
+  properties cross): ``cell: () => html`<span class="muted">…</span>` `` stays unstyled by the
+  owner's `.muted` rule. Style cell content from outside with `::part()` instead —
+  `cellPart(row) => string | undefined` wraps that column's resting content in a `display: block`
+  `[part~='cell-content']` element that also carries every whitespace-separated name returned
+  (non-string results are ignored; no wrapper renders when `cellPart` is omitted, and none inside
+  an open inline editor), and a `part` attribute written inside a `cell()` template is equally a
+  part of the table. Prefix those names (`cell-…`) so they never collide with the table's own parts:
+
+  ```ts
+  columns = [{ key: 'name', label: 'Name',
+    cellPart: (row) => (row.archived ? 'cell-archived' : undefined),
+    cell: (row) => html`${row.name}<span part="cell-secondary">${row.owner}</span>` }];
+  // in the owner's stylesheet
+  // lr-table::part(cell-archived) { opacity: 0.7; }
+  // lr-table::part(cell-secondary) { display: block; color: var(--lr-color-text-quiet); }
+  ```
+  —
   `ariaLabel` overrides that column header's accessible name (applied as the `<th>`'s `aria-label`
   whenever set) — e.g. an icon-only `headerCell` with no plain-text `label` to fall back on; when
   `label` is blank (or whitespace-only) and `ariaLabel` is also omitted, the header's accessible
@@ -1147,7 +1166,9 @@ geometrically identical to real rows, so `skeleton` is the part to target for th
 look: `::part(skeleton) { --lr-skeleton-h: 2em; }`), and
 `pagination` (the pager host; re-exported as `pagination-summary`,
 `pagination-controls`, `pagination-pages`, `pagination-page`, `pagination-page-current`,
-`pagination-page-field`, `pagination-page-input`, `pagination-page-count`, `pagination-button`), `cell-editor`, `group-row`, `group-cell`, and `resize-handle` (the focusable column
+`pagination-page-field`, `pagination-page-input`, `pagination-page-count`, `pagination-button`), `cell-editor`,
+`cell-content` (the block wrapper around a body cell's resting content, rendered only for a column
+defining `cellPart(row)`, which also carries every name that callback returns), `group-row`, `group-cell`, and `resize-handle` (the focusable column
 separator, with a finite explicit ARIA maximum even when no CSS `maxWidth` was supplied). The built-in empty state is addressable rather than fixed: `empty` is the `<lr-empty>`
 host in all three empty states, and it re-exports that element's own inner parts as `empty-base`,
 `empty-icon`, `empty-heading`, `empty-description` and `empty-actions`. Note that the no-columns and
@@ -5790,6 +5811,7 @@ These named interfaces and helper signatures are available to typed integrations
     footer?(rows: readonly T[]): unknown;
     cellStyle?(row: T): Record<string, string> | undefined;
     cellTitle?(row: T): string | undefined;
+    cellPart?(row: T): string | undefined;
     heatValue?(row: T): number | null | undefined;
     editTrigger?: TableColumnEditTrigger;
     editValue?: (row: T) => string | number;

@@ -359,6 +359,17 @@ interface TableColumnCommon<T> {
    *  `exactValue` carries). Use it for a longer form of what the cell already shows, never for
    *  information that exists nowhere else. */
   cellTitle?(row: T): string | undefined;
+  /** Extra CSS part names for a wrapper around this cell's rendered content. `cell()` templates
+   *  render inside this table's shadow root, so a class set on their markup is never reached by the
+   *  stylesheet of the component or page that owns the table; only inherited properties and custom
+   *  properties cross. When `cellPart` is defined, the resting cell content is wrapped in a
+   *  `display: block` element carrying `part="cell-content"` plus every whitespace-separated name
+   *  returned here, so an outer scope can style it per row: `lr-table::part(cell-muted)`. Return
+   *  `undefined` or an empty string for a plain `cell-content` wrapper; non-string results are
+   *  ignored. Prefix your names (e.g. `cell-`) so they cannot collide with the table's own parts.
+   *  Not applied to an open inline editor. A `part` attribute written directly inside a `cell()`
+   *  template is equally a part of this table. */
+  cellPart?(row: T): string | undefined;
   /** Numeric accessor backing the heat-tint background. A column that omits this is excluded from
    *  tinting (e.g. a label column) — its presence on any column is the opt-in signal for heat-tint
    *  mode as a whole, mirroring how `expandedContent` alone signals expand-mode (no separate
@@ -404,7 +415,10 @@ export type TableColumn<T> =
        *  inline editor at all. */
       editTrigger?: 'double-click';
       /** Renders this cell's content. Required whenever the column can be in its plain-text
-       *  resting state -- i.e. always, for a `'double-click'` or unset `editTrigger`. */
+       *  resting state -- i.e. always, for a `'double-click'` or unset `editTrigger`. The returned
+       *  template renders inside this table's shadow root, so the owning component's or page's
+       *  class rules never reach it; style it through `cellPart` or a `part` attribute in the
+       *  template, selected with `lr-table::part(...)`. */
       cell: (row: T) => unknown;
     })
   | (TableColumnCommon<T> & {
@@ -431,6 +445,15 @@ export type TableColumn<T> =
  *  activation by the table's own delegated listeners. */
 const INTERACTIVE_SELECTOR =
   'button, a[href], input, select, textarea, summary, audio[controls], video[controls], [contenteditable]:not([contenteditable="false"]), [tabindex]:not([tabindex="-1"]), [role="button"], [role="checkbox"], [role="combobox"], [role="listbox"], [role="menu"], [role="menuitem"], [role="option"], [role="radio"], [role="separator"], [role="slider"], [role="spinbutton"], [role="switch"], [role="tab"], [role="textbox"]';
+
+/** Normalizes a `cellPart(row)` result to space-separated, de-duplicated part names, dropping the
+ *  always-present `cell-content` and any non-string result. */
+function cellContentPartNames(value: unknown): string {
+  if (typeof value !== 'string') return '';
+  const names = new Set(value.split(/\s+/).filter(Boolean));
+  names.delete('cell-content');
+  return [...names].join(' ');
+}
 
 /** Fails closed for untyped values outside the explicit sticky-axis vocabulary. */
 function stickyDirection(sticky: TableEdgeAlign | undefined): TableEdgeAlign | undefined {
@@ -649,6 +672,9 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
  * @csspart cell - Each body `<td>`. An `editTrigger: 'double-click'` column's resting (not
  *   currently editing) cell additionally carries `[data-editable]` and its own `tabindex="-1"`
  *   roving-focus stop -- see the keyboard paragraph above.
+ * @csspart cell-content - The `display: block` wrapper around a body cell's resting content,
+ *   rendered only for a column that defines `cellPart(row)`; it also carries every part name that
+ *   callback returns, for per-row styling of `cell()` output from outside the shadow root.
  * @csspart row-total-cell - Each body row's trailing `<td>` holding `rowTotal(row)`, rendered only
  *   when `rowTotal` is set. The corresponding footer-row cell (holding `grandTotal`) is a
  *   `footer-cell` instead, matching every other footer cell.
@@ -3539,6 +3565,15 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    * Degrade to an empty cell so the rest of the table stays usable, and emit one fixed
    * development-only diagnostic for the page without retaining or reporting caller data.
    */
+  /** The resting cell content, wrapped in `[part~='cell-content']` when the column defines
+   *  `cellPart` -- see that member's doc. Without `cellPart` the output is unchanged. */
+  private renderCellContent(col: TableColumn<T>, row: T): unknown {
+    const value = this.renderCellValue(col, row);
+    if (typeof col.cellPart !== 'function') return value;
+    const extraParts = cellContentPartNames(col.cellPart(row));
+    return html`<div part="cell-content ${extraParts}">${value}</div>`;
+  }
+
   private renderCellValue(col: TableColumn<T>, row: T): unknown {
     if (typeof col.cell === 'function') return col.cell(row);
     devWarnOnce(
@@ -3969,7 +4004,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
                               title=${cellTitle || nothing}
                               style=${tintedStyle && Object.keys(tintedStyle).length ? styleMap(tintedStyle) : nothing}
                             >
-                              ${editing ? this.renderCellEditor(row, col, token, alwaysOn) : this.renderCellValue(col, row)}
+                              ${editing ? this.renderCellEditor(row, col, token, alwaysOn) : this.renderCellContent(col, row)}
                             </td>`;
                           })}
                           ${hasRowTotal ? html`<td part="row-total-cell">${this.rowTotal?.(row)}</td>` : nothing}

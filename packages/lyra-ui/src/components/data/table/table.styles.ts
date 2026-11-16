@@ -387,6 +387,12 @@ export const styles = css`
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     color: var(--lr-table-cell-color, inherit);
   }
+  /* Rendered only for a column defining cellPart(row): a block box, so a consumer's line clamp,
+     nowrap or ellipsis rule set through ::part() has a box to act on. */
+  [part~='cell-content'] {
+    display: block;
+    min-inline-size: 0;
+  }
   /* [data-editable] marks an editTrigger: 'double-click' column's resting (not currently open)
      cell -- the one the table gives its own tabindex=-1 roving-focus stop, reachable via
      ArrowLeft/ArrowRight from the row (see onRowLateralKeyDown in table.class.ts) and opened with

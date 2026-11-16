@@ -216,6 +216,55 @@ export const CellTitles: Story = {
   render: () => html`<lr-table .columns=${titledColumns} .rows=${rows} .rowKey=${(r: DemoRow) => r.id}></lr-table>`,
 };
 
+const cellPartColumns: TableColumn<DemoRow>[] = [
+  {
+    key: 'name',
+    label: 'Name',
+    cellPart: () => 'cell-two-line',
+    cell: (r) => html`${r.name}<span part="cell-secondary">Account ${r.id.toUpperCase()}, reviewed quarterly with the regional owner</span>`,
+  },
+  {
+    key: 'score',
+    label: 'Score',
+    align: 'end',
+    cellPart: (r) => (r.score < 80 ? 'cell-below-target' : undefined),
+    cell: (r) => r.score,
+  },
+];
+
+export const CellContentParts: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`cell()` templates render inside the table’s shadow root, so class rules from the page or the component that owns the table never reach them. `columns[].cellPart(row)` wraps the resting content in a block `[part~="cell-content"]` that also carries the returned names, and a `part` attribute written inside the template is a table part too. Style both from outside with `lr-table::part(...)`.',
+      },
+    },
+  },
+  render: () => html`
+    <style>
+      .cell-part-demo lr-table::part(cell-two-line) {
+        max-inline-size: 16rem;
+      }
+      .cell-part-demo lr-table::part(cell-secondary) {
+        display: block;
+        overflow: hidden;
+        color: var(--lr-color-text-quiet);
+        font-size: var(--lr-font-size-sm);
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .cell-part-demo lr-table::part(cell-below-target) {
+        color: var(--lr-color-danger-on-quiet, var(--lr-color-danger));
+        font-weight: var(--lr-font-weight-semibold);
+      }
+    </style>
+    <div class="cell-part-demo">
+      <lr-table aria-label="Accounts" .columns=${cellPartColumns} .rows=${rows} .rowKey=${(r: DemoRow) => r.id}></lr-table>
+    </div>
+  `,
+};
+
 export const FixedLayout: Story = {
   parameters: {
     docs: {
