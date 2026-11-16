@@ -39811,7 +39811,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.test.ts",
-              "line": 5267,
+              "line": 5333,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -47173,7 +47173,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-results/retrieval-results.class.ts",
-              "line": 704,
+              "line": 703,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -50629,6 +50629,7 @@
           "src/components/agent-tools/span-waterfall/span-waterfall-guards.test.ts",
           "src/components/agent-tools/span-waterfall/span-waterfall-scale.test.ts",
           "src/components/agent-tools/span-waterfall/span-waterfall-source-scale.test.ts",
+          "src/components/agent-tools/span-waterfall/span-waterfall-source-validation.test.ts",
           "src/components/agent-tools/span-waterfall/span-waterfall.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -54994,6 +54995,7 @@
           "src/components/agent-tools/task-list/task-list-reorderable.test.ts",
           "src/components/agent-tools/task-list/task-list-scale.test.ts",
           "src/components/agent-tools/task-list/task-list-source-scale.test.ts",
+          "src/components/agent-tools/task-list/task-list-source-validation.test.ts",
           "src/components/agent-tools/task-list/task-list.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -60104,6 +60106,7 @@
           "src/components/agent-tools/trace-tree/trace-tree-source-display.test.ts",
           "src/components/agent-tools/trace-tree/trace-tree-source-guards.test.ts",
           "src/components/agent-tools/trace-tree/trace-tree-source-scale.test.ts",
+          "src/components/agent-tools/trace-tree/trace-tree-source-staleness.test.ts",
           "src/components/agent-tools/trace-tree/trace-tree.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",

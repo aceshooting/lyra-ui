@@ -97,6 +97,20 @@ describe('createMapCameraSession', () => {
     expect(camera.snapshot).to.include({ mode: 'viewpoint', active: false, reason: 'complete' });
   });
 
+  it('settles an animating restore with a jump when reduced motion turns on mid-flight', async () => {
+    const { element, peer } = await mountCameraPeerMap();
+    const camera = session(element);
+    camera.restore(view(40), { kind: 'fly', duration: 500 });
+    expect(peer.calls.at(-1)).to.equal('flyTo');
+    expect(camera.snapshot).to.include({ mode: 'viewpoint', active: true });
+    element.parentElement!.setAttribute('data-lr-motion', 'reduce');
+    await element.updateComplete;
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    expect(peer.calls.at(-1)).to.equal('jumpTo');
+    expect(camera.capture()).to.deep.equal(view(40));
+    expect(camera.snapshot).to.include({ mode: 'viewpoint', active: false, reason: 'complete' });
+  });
+
   it('interpolates a clock-driven tour and holds keyframes under reduced motion', async () => {
     for (const motion of ['system', 'reduce'] as const) {
       const { element } = await mountCameraPeerMap(motion);

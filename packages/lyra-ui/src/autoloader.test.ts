@@ -454,6 +454,65 @@ describe('autoloader', () => {
     expect(customElements.get(tag)).to.be.a('function');
   });
 
+  it('skips loading a queued tag that the application defined while an earlier import was pending', async () => {
+    const first = 'lr-budget-meter';
+    const second = 'lr-branch-picker';
+    let releaseFirst!: (constructor: CustomElementConstructor) => void;
+    let secondLoads = 0;
+    override(first, () => new Promise<CustomElementConstructor>((resolve) => { releaseFirst = resolve; }));
+    override(second, async () => { secondLoads += 1; return constructorForTag(); });
+    const host = await fixture<HTMLElement>(html`<section></section>`);
+    const shadow = host.attachShadow({ mode: 'open' });
+    const registry = createScopedRegistry();
+    Object.defineProperty(shadow, 'customElementRegistry', { configurable: true, value: registry });
+    shadow.append(document.createElement(first), document.createElement(second));
+    try {
+      // One worker: the second tag's definition waits behind the first import.
+      const pending = discover(host, { maxConcurrency: 1 });
+      await waitUntil(() => releaseFirst !== undefined);
+      const appDefined = constructorForTag();
+      registry.define(second, appDefined);
+      releaseFirst(constructorForTag());
+      const loaded = await pending;
+      expect(loaded).to.include(first);
+      expect(loaded).to.not.include(second);
+      expect(secondLoads).to.equal(0);
+      expect(registry.get(second) === appDefined).to.equal(true);
+      expect(shadow.querySelector(second)!.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(false);
+    } finally {
+      delete (shadow as unknown as Record<string, unknown>)['customElementRegistry'];
+    }
+  });
+
+  it('never starts a queued definition after stop() and clears its pending marker', async () => {
+    const first = 'lr-budget-meter';
+    const second = 'lr-branch-picker';
+    let releaseFirst!: (constructor: CustomElementConstructor) => void;
+    let secondLoads = 0;
+    override(first, () => new Promise<CustomElementConstructor>((resolve) => { releaseFirst = resolve; }));
+    override(second, async () => { secondLoads += 1; return constructorForTag(); });
+    const host = await fixture<HTMLElement>(html`<section></section>`);
+    const shadow = host.attachShadow({ mode: 'open' });
+    const registry = createScopedRegistry();
+    Object.defineProperty(shadow, 'customElementRegistry', { configurable: true, value: registry });
+    shadow.append(document.createElement(first), document.createElement(second));
+    try {
+      const pending = start(host, { maxConcurrency: 1 });
+      await waitUntil(() => releaseFirst !== undefined);
+      expect(shadow.querySelector(second)!.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE)).to.equal(true);
+      stop();
+      releaseFirst(constructorForTag());
+      expect(await pending).to.deep.equal([]);
+      expect(secondLoads).to.equal(0);
+      expect(registry.get(second)).to.equal(undefined);
+      for (const tag of [first, second]) {
+        expect(shadow.querySelector(tag)!.hasAttribute(AUTOLOADER_PENDING_ATTRIBUTE), tag).to.equal(false);
+      }
+    } finally {
+      delete (shadow as unknown as Record<string, unknown>)['customElementRegistry'];
+    }
+  });
+
   it('propagates only the first of several concurrent definition failures', async () => {
     const tagA = 'lr-rating';
     const tagB = 'lr-card';

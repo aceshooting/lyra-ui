@@ -152,6 +152,39 @@ describe('injected visual camera follow runner', () => {
     }
   }
 
+  it('fails closed and releases every observer when the scene delivers a malformed notice', () => {
+      const h = fixture();
+      const runner = start(h);
+      expect(h.targets.size).to.equal(1);
+      expect(h.frames.size).to.equal(1);
+      expect(() => {
+        h.notice(null as unknown as MapCameraFollowNotice);
+      }).not.to.throw();
+      expect(runner.snapshot).to.include({ status: 'unavailable', reason: 'engine' });
+      expect(h.targets.size).to.equal(0);
+      expect(h.frames.size).to.equal(0);
+      expect(h.state.watchReleased).to.equal(h.state.watchAcquired);
+      expect(h.pans).to.deep.equal([]);
+      runner.dispose();
+  });
+
+  it('releases every observer when a frame request withdraws ownership', () => {
+    const h = fixture(), runner = start(h), scene = h.dependencies.scene!;
+    const request = scene.requestFrame.bind(scene);
+    scene.requestFrame = (objectId: string) => { request(objectId); h.state.current = false; };
+    const published = h.published.length;
+    h.advanceTarget();
+    expect(h.state.requests).to.be.greaterThan(1);
+    expect(h.targets.size).to.equal(0);
+    expect(h.frames.size).to.equal(0);
+    expect(h.state.watchReleased).to.equal(h.state.watchAcquired);
+    h.state.current = true;
+    h.emit(h.frame(5));
+    expect(h.pans).to.deep.equal([]);
+    expect(h.published.length).to.equal(published);
+    runner.dispose();
+  });
+
   it('abandons a target read that withdraws ownership before requesting another frame', () => {
     const h = fixture(), runner = start(h), scene = h.dependencies.scene!;
     const target = scene.target; let reads = 0;
