@@ -752,9 +752,10 @@ function applyStoredThemeBeforePaint() {
         return null;
       }
     };
+    // Private RGB producers and their blends always retain exactly three channels.
     const mix = (base: number[], foreground: number[], weight: number) =>
       base.map((channel, index) =>
-        Math.round(channel * (1 - weight) + (foreground[index] ?? 0) * weight));
+        Math.round(channel * (1 - weight) + foreground[index]! * weight));
     const luminance = (rgb: number[]) => {
       const linear = rgb.map((channel) => {
         const normalized = channel / 255;
@@ -762,9 +763,9 @@ function applyStoredThemeBeforePaint() {
           ? normalized / 12.92
           : ((normalized + 0.055) / 1.055) ** 2.4;
       });
-      return (linear[0] ?? 0) * 0.2126
-        + (linear[1] ?? 0) * 0.7152
-        + (linear[2] ?? 0) * 0.0722;
+      return linear[0]! * 0.2126
+        + linear[1]! * 0.7152
+        + linear[2]! * 0.0722;
     };
     const contrast = (left: number[], right: number[]) => {
       const a = luminance(left);

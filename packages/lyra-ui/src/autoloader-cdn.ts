@@ -1,7 +1,6 @@
 import { start, type AutoloaderOptionalPeers } from './autoloader.js';
 
 function loaderScript(): HTMLScriptElement | undefined {
-  if (typeof document === 'undefined') return undefined;
   const moduleUrl = new URL(import.meta.url).href;
   const scripts = [...document.scripts];
   const exact = scripts.find((script) => {
