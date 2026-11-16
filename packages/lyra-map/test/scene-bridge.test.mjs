@@ -345,6 +345,7 @@ for (const method of ['createShader', 'compileShader', 'createProgram', 'linkPro
     const item = fixture({ input: packet({ markers: [absolute()] }) }); let failed = false;
     item.gpu.beforeCall = name => { if (!failed && name === method) { failed = true; throw new Error('driver diagnostic must remain private'); } };
     item.start(); await item.ready(); await item.frames(2); assert.equal(failed, true); sanitized(item); item.stop();
+    assert.equal(item.calls.add.length, 1, 'an ordinary render failure does not automatically reinstall unchanged input');
     assert.ok(refusalCount(item) > 0);
     assert.equal(JSON.stringify([item.states, item.errors]).includes('driver diagnostic'), false);
     for (const kind of ['Program', 'Shader', 'VertexArray']) assert.equal(ownedLive(item, kind).length, 0);

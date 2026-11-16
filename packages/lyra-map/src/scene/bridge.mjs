@@ -230,7 +230,8 @@ export function createSceneBridge(map, host) {
   function current(owner) {
     if (!owner) return false;
     const identity = owner.identity, revision = reconcileRevision;
-    const local = () => active === owner && !owner.retired && owner.identity === identity && revision === reconcileRevision;
+    const local = () => active === owner && !owner.retired && !owner.nativeSignal?.aborted &&
+      owner.identity === identity && revision === reconcileRevision;
     if (!local() || !identityCurrent(identity) || !local()) return false;
     if (owner.committed && map.getLayer(layerID) !== owner.handle) return false;
     return local();
@@ -265,7 +266,8 @@ export function createSceneBridge(map, host) {
   }
   function commitInstallation(owner, attempt) {
     const identity = owner.identity, input = owner.input;
-    const local = () => active === owner && !owner.retired && !disposed && !signal.aborted && !contextLost &&
+    const local = () => active === owner && !owner.retired && owner.nativeSignal && !owner.nativeSignal.aborted &&
+      !disposed && !signal.aborted && !contextLost &&
       !awaitingStyle && reconcileRevision === attempt && owner.identity === identity && owner.input === input;
     if (!local() || !identityCurrent(identity) || !local()) return false;
     const handle = map.getLayer(layerID);
@@ -467,7 +469,7 @@ export function createSceneBridge(map, host) {
   function createOwner(identity, input) {
     const owner = { identity, input, serial: ++ownerSequence, styleRevision, committed: false, retired: false, leases: new Set(),
       requests: new Map(), terrainByCoordinate: new Map(), roots: new Map(), queueDisposed: false, cleaning: false,
-      context: undefined, glyph: undefined, sampler: undefined, batch: undefined, terrainUnavailable: false };
+      context: undefined, glyph: undefined, sampler: undefined, batch: undefined, terrainUnavailable: false, nativeSignal: undefined };
     owners.add(owner);
     owner.queue = createTerrainPointQueue({ reserve: resources => trackedReserve(owner, resources) });
     owner.queue.setStamp(stamp);
@@ -557,6 +559,7 @@ export function createSceneBridge(map, host) {
     }, {
       participant,
       prepare(layer, nativeSignal) {
+        owner.nativeSignal = nativeSignal;
         owner.layer = layer;
         let enteringCallback = false;
         for (const method of ['prerender', 'render']) {
@@ -655,7 +658,9 @@ export function createSceneBridge(map, host) {
     if (!input.markers.length || !input.allocation) {
       retire(active); publish(input.markers.length ? 'pending' : 'empty', input, identity); return;
     }
-    if (active && !active.retired && active.committed) {
+    // Failed native callbacks abort before their deferred layer removal. A queued input update
+    // must retire that installation instead of publishing a replacement against its old handle.
+    if (active && !active.retired && active.committed && active.nativeSignal && !active.nativeSignal.aborted) {
       const owner = active, previous = owner.input;
       if (map.getLayer(layerID) !== owner.handle) {
         retire(owner); publish('unavailable', input, identity, 'engine'); return;
