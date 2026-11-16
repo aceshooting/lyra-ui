@@ -352,8 +352,8 @@ upgrade:
 ```
 
 It styles **only** `:not(:defined)` elements, inside an `@layer lr-reservations`, so it becomes inert
-the moment a definition upgrades and can never fight a component's own layout. It sets no colors and
-no `:root` rules.
+the moment a definition upgrades and can never fight a component's own layout. It sets no `:root`
+rules and no colors except a timeline's marker and rail (below).
 
 **Every reservation is expressed with the same custom property and fallback token the component's
 own stylesheet uses** — `--lr-chart-height` / `--lr-size-280px` for the chart family,
@@ -366,8 +366,11 @@ for `lr-chat-composer`, and so on.
 Covered tags: the chart family, `lr-map`, `lr-flag`, `lr-flow-canvas`, `lr-graph`,
 `lr-knowledge-graph-explorer`, the inline form-control row (`lr-input`, `lr-number-input`,
 `lr-select`, `lr-combobox`, `lr-date-input`, `lr-phone-input`, `lr-color-picker`, `lr-button`,
-`lr-icon-button`), `lr-checkbox`, `lr-badge`, `lr-chat-composer`, and the tab trio
-`lr-tab-group`/`lr-tab`/`lr-tab-panel`. Before upgrade a tab group lays its descriptors out as one
+`lr-icon-button`), `lr-checkbox`, `lr-badge`, `lr-chat-composer`, the vertical flow
+`lr-timeline`/`lr-timeline-item` pair, and the tab trio `lr-tab-group`/`lr-tab`/`lr-tab-panel`.
+A timeline is the one reservation that paints color: its markers and rail, from the
+`--lr-timeline-marker-*`/`--lr-timeline-rail-*` tokens, plus CSS-counter step numbers for an
+`ordered` timeline, so a static page reads as a complete list before upgrade. Before upgrade a tab group lays its descriptors out as one
 row of tab-sized boxes and shows only the panel that will be shown (the one marked `active`, else
 the first), for the default top `placement`. The text-bearing reservations (`lr-checkbox`,
 `lr-badge`, the tab trio) also set `font-family: var(--lr-font)`, as every defined Lyra host does,

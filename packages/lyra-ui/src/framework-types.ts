@@ -6806,6 +6806,7 @@ export interface LyraComponentTypeMap {
       | 'copyable'
       | 'data'
       | 'expandDepth'
+      | 'layout'
       | 'locale'
       | 'maxHeight'
       | 'maxNodes'
@@ -12848,10 +12849,12 @@ export interface LyraComponentTypeMap {
       | 'accessibleLabel'
       | 'collision'
       | 'locale'
+      | 'ordered'
       | 'orientation'
       | 'rangeEnd'
       | 'rangeStart'
       | 'scale'
+      | 'start'
       | 'strings',
       {}
     >;
@@ -12887,6 +12890,7 @@ export interface LyraComponentTypeMap {
       | '--lr-timeline-cluster-color'
       | '--lr-timeline-cluster-size'
       | '--lr-timeline-marker-color'
+      | '--lr-timeline-marker-number-color'
       | '--lr-timeline-marker-size'
       | '--lr-timeline-rail-color'
       | '--lr-timeline-rail-width';

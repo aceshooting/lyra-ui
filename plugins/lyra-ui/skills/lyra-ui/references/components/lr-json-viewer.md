@@ -116,6 +116,23 @@ also apply. The flat source rows own logical treeitem semantics.
   uses a `var(--lr-size-20rem)` height ceiling. Values that do not parse
   as CSS `max-height`, contain declaration breaks, or contain `url()` are ignored, leaving
   `--lr-json-viewer-max-height` in control
+- `layout: 'auto' | 'inline' | 'stacked' = 'auto'` (type `LyraJsonViewerLayout`) — how a scalar row places
+  its key and value. `'auto'` keeps them side by side while the viewer's own inline size is at
+  least 30rem and stacks them below that, through a container query on the viewer's allocation
+  (not the viewport), so a viewer in a phone-width tool-call panel stacks without configuration.
+  `'stacked'` always puts the value on its own line under its key, aligned with the key, keeps
+  the per-node copy button on the key's line, and tightens rows: leaf rows drop the
+  icon-button-sized floor their hidden toggle spacer otherwise imposes and lines use the snug
+  line height, while real expand/collapse toggles keep their full hit area. `'inline'` keeps the
+  side-by-side row at every width. Unknown values fall back to `'auto'`. Applies to the `data`
+  tree; `treeSource` rows keep their fixed virtualized layout. In every layout a key offers line
+  breaks after `_`, `-`, `.`, `/`, `:` and `@` and between a lower-case and an upper-case letter,
+  so `contributie_proprie_lei` wraps between its words; a single overlong segment still breaks
+  anywhere as a last resort.
+
+  ```html
+  <lr-json-viewer layout="stacked"></lr-json-viewer>
+  ```
 - `copyable: boolean = false` (reflected) — shows copy-to-clipboard affordances: one for the whole
   value, plus one per node
 - `query: string = ''` — with `treeSource` unset, case-insensitive substring match against

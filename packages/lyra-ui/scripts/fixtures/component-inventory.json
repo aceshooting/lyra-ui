@@ -74956,6 +74956,16 @@
             "hasDefault": false
           },
           {
+            "name": "layout",
+            "property": "layout",
+            "type": "LyraJsonViewerLayout",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -75024,6 +75034,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "layout",
+            "attribute": "layout",
+            "type": "LyraJsonViewerLayout",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
           },
           {
             "name": "locale",
@@ -137703,6 +137723,10 @@
             "deprecated": null
           },
           {
+            "name": "cell-content",
+            "deprecated": null
+          },
+          {
             "name": "cell-editor",
             "deprecated": null
           },
@@ -145743,6 +145767,16 @@
             "default": ""
           },
           {
+            "name": "ordered",
+            "property": "ordered",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "orientation",
             "property": "orientation",
             "type": "LyraOrientation",
@@ -145759,6 +145793,16 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "start",
+            "property": "start",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 1
           }
         ],
         "properties": [
@@ -145800,6 +145844,16 @@
             "default": ""
           },
           {
+            "name": "ordered",
+            "attribute": "ordered",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "orientation",
             "attribute": "orientation",
             "type": "LyraOrientation",
@@ -145834,6 +145888,16 @@
             "reflects": true,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "start",
+            "attribute": "start",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 1
           }
         ],
         "slots": [
@@ -146091,6 +146155,10 @@
             "deprecated": null
           },
           {
+            "name": "marker-number",
+            "deprecated": null
+          },
+          {
             "name": "rail",
             "deprecated": null
           },
@@ -146137,6 +146205,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-timeline-marker-number-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
           },
           {
             "name": "--lr-timeline-marker-size",

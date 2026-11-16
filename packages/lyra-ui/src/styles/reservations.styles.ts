@@ -105,6 +105,106 @@ export const reservationStyles: CSSResult = css`
       );
     }
 
+    lr-timeline:not(:defined):not([orientation='horizontal']):not([scale='time']) {
+      display: block;
+      font-family: var(--lr-font);
+      counter-reset: lr-timeline-step;
+    }
+    lr-timeline:not(:defined):not([orientation='horizontal']):not([scale='time']) > lr-timeline-item:not(:defined) {
+      --_lr-reserved-timeline-marker: var(--lr-timeline-marker-size, var(--lr-size-1-25rem, 1.25rem));
+      --_lr-reserved-timeline-marker-color: var(--lr-timeline-marker-color, var(--lr-color-text-quiet));
+      position: relative;
+      display: flow-root;
+      box-sizing: border-box;
+      min-block-size: var(--_lr-reserved-timeline-marker);
+      padding-inline-start: calc(var(--_lr-reserved-timeline-marker) + var(--lr-space-s, 0.5rem));
+      padding-block-end: var(--lr-timeline-gap, var(--lr-space-l, 1.5rem));
+      font-weight: var(--lr-font-weight-semibold, 600);
+      line-height: var(--lr-line-height-snug, 1.375);
+      overflow-wrap: anywhere;
+      counter-increment: lr-timeline-step;
+    }
+    lr-timeline:not(:defined)[ordered]:not([orientation='horizontal']):not([scale='time']) > lr-timeline-item:not(:defined) {
+      --_lr-reserved-timeline-marker: var(--lr-timeline-marker-size, var(--lr-size-1-5rem, 1.5rem));
+    }
+    lr-timeline:not(:defined):not([orientation='horizontal']):not([scale='time']) > lr-timeline-item:not(:defined)[variant='brand'] {
+      --_lr-reserved-timeline-marker-color: var(--lr-timeline-marker-color, var(--lr-color-brand));
+    }
+    lr-timeline:not(:defined):not([orientation='horizontal']):not([scale='time']) > lr-timeline-item:not(:defined)[variant='success'] {
+      --_lr-reserved-timeline-marker-color: var(--lr-timeline-marker-color, var(--lr-color-success));
+    }
+    lr-timeline:not(:defined):not([orientation='horizontal']):not([scale='time']) > lr-timeline-item:not(:defined)[variant='warning'] {
+      --_lr-reserved-timeline-marker-color: var(--lr-timeline-marker-color, var(--lr-color-warning));
+    }
+    lr-timeline:not(:defined):not([orientation='horizontal']):not([scale='time']) > lr-timeline-item:not(:defined)[variant='danger'] {
+      --_lr-reserved-timeline-marker-color: var(--lr-timeline-marker-color, var(--lr-color-danger));
+    }
+    lr-timeline:not(:defined):not([orientation='horizontal']):not([scale='time']) > lr-timeline-item:not(:defined)::before {
+      content: '';
+      position: absolute;
+      inset-block-start: 0;
+      inset-inline-start: 0;
+      box-sizing: border-box;
+      inline-size: var(--_lr-reserved-timeline-marker);
+      block-size: var(--_lr-reserved-timeline-marker);
+      border-radius: 50%;
+      background: var(--_lr-reserved-timeline-marker-color);
+    }
+    lr-timeline:not(:defined):not([orientation='horizontal']):not([scale='time']) > lr-timeline-item:not(:defined):has(> [slot='marker-icon'])::before {
+      background: transparent;
+    }
+    lr-timeline:not(:defined)[ordered]:not([orientation='horizontal']):not([scale='time']) > lr-timeline-item:not(:defined)::before {
+      content: counter(lr-timeline-step);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding-inline: var(--lr-space-2xs, 0.125rem);
+      border: var(--lr-border-width-medium, 2px) solid var(--_lr-reserved-timeline-marker-color);
+      border-radius: var(--lr-radius-pill, 9999px);
+      background: transparent;
+      color: var(--lr-timeline-marker-number-color, var(--lr-color-text));
+      font-size: var(--lr-font-size-xs, 0.75rem);
+      font-variant-numeric: tabular-nums;
+      line-height: var(--lr-line-height-none, 1);
+    }
+    lr-timeline:not(:defined):not([orientation='horizontal']):not([scale='time']) > lr-timeline-item:not(:defined):not(:last-child)::after {
+      content: '';
+      position: absolute;
+      inset-block: var(--_lr-reserved-timeline-marker) 0;
+      inset-inline-start: calc((var(--_lr-reserved-timeline-marker) - var(--lr-timeline-rail-width, var(--lr-border-width-medium, 2px))) / 2);
+      inline-size: var(--lr-timeline-rail-width, var(--lr-border-width-medium, 2px));
+      background: var(--lr-timeline-rail-color, var(--lr-color-border-subtle));
+    }
+    lr-timeline:not(:defined):not([orientation='horizontal']):not([scale='time']) > lr-timeline-item:not(:defined) > [slot='marker-icon'] {
+      position: absolute;
+      inset-block-start: 0;
+      inset-inline-start: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      inline-size: var(--_lr-reserved-timeline-marker);
+      block-size: var(--_lr-reserved-timeline-marker);
+      overflow: hidden;
+    }
+    lr-timeline:not(:defined)[ordered]:not([orientation='horizontal']):not([scale='time']) > lr-timeline-item:not(:defined) > [slot='marker-icon'] {
+      display: none;
+    }
+    lr-timeline:not(:defined):not([orientation='horizontal']):not([scale='time']) > lr-timeline-item:not(:defined) > [slot='timestamp'] {
+      float: inline-end;
+      margin-inline-start: var(--lr-space-xs, 0.25rem);
+      font-size: var(--lr-font-size-xs, 0.75rem);
+      font-weight: normal;
+      line-height: normal;
+      white-space: nowrap;
+    }
+    lr-timeline:not(:defined):not([orientation='horizontal']):not([scale='time']) > lr-timeline-item:not(:defined) > [slot='description'] {
+      display: block;
+      margin-block-start: var(--lr-space-2xs, 0.125rem);
+      font-size: var(--lr-font-size-md-sm, 0.875rem);
+      font-weight: normal;
+      line-height: var(--lr-line-height-1-4, 1.4);
+    }
+
     lr-tab-group:not(:defined) {
       display: flex;
       flex-wrap: wrap;

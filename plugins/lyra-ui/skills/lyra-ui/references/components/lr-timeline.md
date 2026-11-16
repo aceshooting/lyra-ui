@@ -69,6 +69,35 @@ Cluster windows are bounded from their first sorted position rather than transit
 dense neighbour, so a large history becomes a useful sequence of markers rather than one axis-wide
 cluster. An isolated item remains an ordinary timeline item. Activating a count marker is a
 notification only; it never expands or selects items internally.
+`ordered: boolean = false` (reflected) presents the items as an ordered sequence of steps:
+`[part='base']` becomes a native `<ol>` (with an explicit `role="list"`, which WebKit otherwise
+drops from an unstyled list), and each item's marker shows its step number as real, readable text
+in `[part='marker-number']` — formatted for the item's effective locale and exposed to assistive
+technology — instead of the decorative dot, so titles need not repeat "Step 1". The marker becomes
+a ring (`--lr-timeline-marker-color` border, transparent fill, `--lr-timeline-marker-number-color`
+text, default size `var(--lr-size-1-5rem)` that widens for a long number) and replaces the
+`marker-icon` slot. Numbering follows document order, renumbers when items are added, removed or
+reordered, clears a removed item's number, and works with every orientation and scale.
+`start: number = 1` sets the first step number, like a native `<ol start>`; a non-finite value
+numbers from 1 and fractions truncate. Ignored unless `ordered`.
+
+```html
+<lr-timeline ordered aria-label="Permit application">
+  <lr-timeline-item>Submit the form<span slot="timestamp">by 3 March</span></lr-timeline-item>
+  <lr-timeline-item>Pay the fee<span slot="description">Within ten working days.</span></lr-timeline-item>
+  <lr-timeline-item>Collect the permit</lr-timeline-item>
+</lr-timeline>
+```
+
+**Before upgrade:** with `@aceshooting/lyra-ui/reservations.css` (or the adoptable
+`reservationStyles`) loaded, a server-rendered vertical flow timeline already has its upgraded
+layout before any script runs: each item reserves the marker column, paints its marker and trailing
+rail from the timeline's own tokens (the one place that stylesheet paints color), floats a slotted
+`timestamp` to the inline end of the title line and places a slotted `description` beneath it. An
+`ordered` timeline numbers its markers with a CSS counter from 1; for another `start`, also set
+`style="counter-reset: lr-timeline-step N"` where N is `start - 1`. Write the title text first, then
+the slotted elements. The step numbers become real text, and the list semantics apply, once the
+definitions load. Horizontal and `scale="time"` timelines are not reserved.
 `rangeStart` / `rangeEnd` (`Date | string | number`, attribute: false) pin the axis instead of
 deriving it from the earliest/latest item; a reversed or non-finite pair falls back to the derived
 range. An item with no parseable `timestamp` (including one supplied only through the `timestamp`
@@ -107,11 +136,14 @@ slot falls back to a color-coded dot), `timestamp` (wins outright over the
 `timestamp` property whenever it has assigned content), and `description` (its part is hidden
 entirely when empty).
 
-**CSS parts:** timeline `base` — the `role="list"` flex container (no separate `list` part). Item:
+**CSS parts:** timeline `base` — the `role="list"` flex container (no separate `list` part; an
+`<ol>` while `ordered`). Item:
 `cluster` — the native count button rendered while that item represents a cluster, with a 40px
 minimum action surface; `cluster-count` — its painted count pill; `base`, `track`
 (marker + rail spine, always the opposite axis from `base`), `marker`
-(`aria-hidden="true"`, decorative), `rail` (the connecting segment; `visibility: hidden` rather than
+(`aria-hidden="true"`, decorative — except inside an `ordered` timeline, where it is the exposed
+ring around the number), `marker-number` (the step number text, only inside an `ordered`
+timeline), `rail` (the connecting segment; `visibility: hidden` rather than
 removed on the last item, so marker alignment stays consistent), `content`, `header` (flex row
 wrapping `title` and `timestamp`; wraps at narrow widths rather than truncating), `title`,
 `timestamp` (hidden when there's nothing to show), `description`.
@@ -127,9 +159,11 @@ scrolling. On the item: `--lr-timeline-marker-size`
 (default `var(--lr-size-1-25rem)`, both dimensions so the dot stays circular),
 `--lr-timeline-rail-width` (default `var(--lr-border-width-medium)`), `--lr-timeline-rail-color`
 (default `var(--lr-color-border-subtle)`), `--lr-timeline-marker-color` (default
-`var(--lr-color-text-quiet)`, with a private default that changes per `variant`), and
+`var(--lr-color-text-quiet)`, with a private default that changes per `variant`),
+`--lr-timeline-marker-number-color` (default `var(--lr-color-text)`, the step number inside an
+`ordered` timeline's marker ring; the marker size defaults to `var(--lr-size-1-5rem)` there), and
 `--lr-timeline-active-ring-color`
-(defaults to the effective marker color). All five item hooks inherit from theme
+(defaults to the effective marker color). All six item hooks inherit from theme
 ancestors; setting one directly on an item wins over both the inherited value and variant default.
 
 Version 9 removes the legacy item `icon` slot; migrate marker glyphs to `slot="marker-icon"`.

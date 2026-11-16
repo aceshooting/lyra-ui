@@ -29433,6 +29433,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/utility/json-viewer/json-viewer-layout.test.ts",
+              "test": "does not collapse in a shrink-to-fit allocation and passes axe while stacked",
+              "target": "viewer",
+              "state": "populated"
+            },
+            {
               "file": "src/components/utility/json-viewer/json-viewer.test.ts",
               "test": "is accessible with a populated, expanded tree",
               "target": "el",
@@ -29560,7 +29566,7 @@
           "evidence": [
             {
               "file": "src/components/utility/json-viewer/json-viewer.class.ts",
-              "line": 718,
+              "line": 752,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -29597,6 +29603,7 @@
         "tests": [
           "src/components/utility/json-viewer/json-viewer-admission.test.ts",
           "src/components/utility/json-viewer/json-viewer-coverage.test.ts",
+          "src/components/utility/json-viewer/json-viewer-layout.test.ts",
           "src/components/utility/json-viewer/json-viewer-limits.test.ts",
           "src/components/utility/json-viewer/json-viewer-remediation.test.ts",
           "src/components/utility/json-viewer/json-viewer-scale.test.ts",
@@ -54597,6 +54604,7 @@
           "src/components/data/table/table-accessibility.test.ts",
           "src/components/data/table/table-admission.test.ts",
           "src/components/data/table/table-boundaries.test.ts",
+          "src/components/data/table/table-cell-content.test.ts",
           "src/components/data/table/table-editing.test.ts",
           "src/components/data/table/table-expansion.test.ts",
           "src/components/data/table/table-filter-work.test.ts",
@@ -56650,6 +56658,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/data/timeline/timeline-ordered.test.ts",
+              "test": "renders an ordered list with numbered, readable markers",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/data/timeline/timeline.test.ts",
               "test": "gives an overflowing horizontal strip a real tab stop, because nothing inside it is tabbable",
               "target": "el",
@@ -56773,7 +56787,7 @@
           "evidence": [
             {
               "file": "src/components/data/timeline/timeline.class.ts",
-              "line": 968,
+              "line": 1027,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -56811,6 +56825,7 @@
         "tests": [
           "src/components/data/timeline/timeline-cluster-boundaries.test.ts",
           "src/components/data/timeline/timeline-item.test.ts",
+          "src/components/data/timeline/timeline-ordered.test.ts",
           "src/components/data/timeline/timeline-remediation.test.ts",
           "src/components/data/timeline/timeline-scale.test.ts",
           "src/components/data/timeline/timeline.test.ts"
@@ -56856,6 +56871,12 @@
               "state": "populated"
             },
             {
+              "file": "src/components/data/timeline/timeline-ordered.test.ts",
+              "test": "renders an ordered list with numbered, readable markers",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/data/timeline/timeline.test.ts",
               "test": "gives an overflowing horizontal strip a real tab stop, because nothing inside it is tabbable",
               "target": "el",
@@ -56979,7 +57000,7 @@
           "evidence": [
             {
               "file": "src/components/data/timeline/timeline.class.ts",
-              "line": 968,
+              "line": 1027,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -57017,6 +57038,7 @@
         "tests": [
           "src/components/data/timeline/timeline-cluster-boundaries.test.ts",
           "src/components/data/timeline/timeline-item.test.ts",
+          "src/components/data/timeline/timeline-ordered.test.ts",
           "src/components/data/timeline/timeline-remediation.test.ts",
           "src/components/data/timeline/timeline-scale.test.ts",
           "src/components/data/timeline/timeline.test.ts"
