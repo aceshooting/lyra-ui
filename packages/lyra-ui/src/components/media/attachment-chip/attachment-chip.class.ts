@@ -116,12 +116,19 @@ export interface LyraAttachmentChipEventMap {
  *    for reconstructing a chip from server-persisted attachment metadata
  *    (e.g. after a page reload, when no real `File` object exists any more).
  *
- * `file` always wins when both are present — see each accessor's own doc.
- * The image thumbnail for a real `File` is a cached `URL.createObjectURL()`
- * blob URL, created in the update lifecycle immediately before the thumbnail
- * renders and revoked automatically once `file`
- * changes away from the object it was created for, and on disconnect — this
- * component never leaks a blob URL.
+ * `file` wins for `name`/`bytes`/`mime-type` when both are present — see each
+ * accessor's own doc. The image thumbnail and the preview source for a real
+ * `File` default to a cached `URL.createObjectURL()` blob URL, created in the
+ * update lifecycle immediately before the thumbnail renders and revoked
+ * automatically once `file` changes away from the object it was created for,
+ * once host-supplied sources make it unnecessary, and on disconnect — this
+ * component never leaks a blob URL. A non-empty, safe `thumbnail-src` (and a
+ * non-empty `preview-src`) takes precedence over that blob URL even while
+ * `file` is set, so a page whose Content-Security-Policy has no `blob:` in
+ * `img-src` can keep passing the `File` for name/size/type and supply its own
+ * `data:` or same-origin thumbnail: with both set (or `thumbnail-src` plus
+ * `without-preview`) no blob URL is ever created. Otherwise, showing a `File`'s
+ * own image needs `blob:` in `img-src`.
  *
  * Identifying *which* attachment a `lr-remove`/`lr-retry`/`lr-preview-request` event is about:
  * set `attachment-id="..."` when you have a stable server-side attachment identity. The platform
@@ -256,15 +263,15 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   /** MIME type, used only while `file` is unset. */
   @property({ attribute: 'mime-type' }) mimeType = '';
 
-  /** Thumbnail image URL, used only while `file` is unset (a real `File`'s
-   *  thumbnail always comes from a generated object URL instead — see the
-   *  class doc). Unlike the other independent props this one has no
-   *  `file`-derived equivalent to defer to for a non-image file; it's simply
-   *  rendered whenever present. */
+  /** Thumbnail image URL. Rendered whenever present and safe, also while `file` is set: it then
+   *  replaces the blob URL a `File`'s own image thumbnail would otherwise use (see the class doc),
+   *  for example a small `data:` thumbnail under a Content-Security-Policy without `blob:`. Like
+   *  the no-`file` case it renders regardless of the MIME type, since a generated thumbnail is
+   *  always an image. Unsafe schemes are ignored. */
   @property({ attribute: 'thumbnail-src' }) thumbnailSrc = '';
 
-  /** URL used to preview or download the attachment when `file` is unset.
-   *  A real `File` takes precedence and is previewed through a temporary blob URL. */
+  /** URL used to preview or download the attachment. While `file` is set and this is empty, the
+   *  `File` is previewed through a temporary blob URL instead; a non-empty value wins over it. */
   @property({ attribute: 'preview-src' }) previewSrc = '';
 
   /** Hides the preview action, which otherwise renders whenever a `file` or `preview-src` is
@@ -375,7 +382,21 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   }
 
   private get effectivePreviewSrc(): string {
-    return this.file ? this.objectUrl ?? '' : this.previewSrc;
+    if (this.previewSrc) return this.previewSrc;
+    return this.file ? this.objectUrl ?? '' : '';
+  }
+
+  /** The host-supplied thumbnail, when it is present and safe. */
+  private get hostThumbnailSrc(): string | null {
+    return safeMediaSrc(this.thumbnailSrc);
+  }
+
+  /** Whether `file` still needs its own blob URL: for the image thumbnail when no host thumbnail
+   *  replaces it, or for the preview action when no `preview-src` replaces it. */
+  private fileNeedsObjectUrl(file: File): boolean {
+    const forThumbnail = file.type.startsWith('image/') && !this.hostThumbnailSrc;
+    const forPreview = !this.withoutPreview && !this.previewSrc;
+    return forThumbnail || forPreview;
   }
 
   private get resolvedId(): string {
@@ -461,11 +482,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     // allocation out of the render phase and also handles a file changing to
     // a non-image or to undefined, where no thumbnail render would otherwise
     // revisit the old cache entry.
-    if (
-      this.isConnected &&
-      this.file &&
-      (this.file.type.startsWith('image/') || !this.withoutPreview)
-    )
+    if (this.isConnected && this.file && this.fileNeedsObjectUrl(this.file))
       this.ensureObjectUrl(this.file);
     else if (this.objectUrlFile) this.revokeObjectUrl();
   }
@@ -504,7 +521,8 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   };
 
   private renderThumbnail(): TemplateResult {
-    if (this.file) {
+    const hostThumbnailSrc = this.hostThumbnailSrc;
+    if (this.file && !hostThumbnailSrc) {
       const fileImageSrc = this.objectUrl ? safeMediaSrc(this.objectUrl) : null;
       return this.effectiveMimeType.startsWith('image/')
         ? // `nothing`, never `''`: an empty `src` is a valid URL that resolves against the
@@ -516,13 +534,12 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
           : html`${fileIcon()}`
         : html`${fileIcon()}`;
     }
-    // No `file`: `thumbnail-src` is used whenever present, regardless of
-    // `mime-type` -- a server-generated preview thumbnail (e.g. a rendered
-    // first page of a PDF) is itself always an image, independent of the
-    // *source* file's own MIME type.
-    const thumbnailSrc = safeMediaSrc(this.thumbnailSrc);
-    return thumbnailSrc
-      ? html`<img src=${thumbnailSrc} alt="" />`
+    // `thumbnail-src` is used whenever present, regardless of `mime-type` --
+    // a server-generated preview thumbnail (e.g. a rendered first page of a
+    // PDF) is itself always an image, independent of the *source* file's own
+    // MIME type.
+    return hostThumbnailSrc
+      ? html`<img src=${hostThumbnailSrc} alt="" />`
       : html`${fileIcon()}`;
   }
 

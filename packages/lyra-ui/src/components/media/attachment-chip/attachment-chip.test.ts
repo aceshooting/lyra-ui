@@ -311,13 +311,103 @@ describe('the file property', () => {
     expect((thumb.querySelector('svg')) != null).to.equal(true);
   });
 
-  it('ignores thumbnail-src once file is set (file always wins)', async () => {
-    const file = makeFile('photo.png', 'image/png');
+  it('lets a host-supplied thumbnail-src win over the file-derived blob thumbnail', async () => {
+    const file = makeFile('photo.png', 'image/png', 2048);
+    const thumb = 'data:image/png;base64,iVBORw0KGgo=';
     const el = (await fixture(
-      html`<lr-attachment-chip thumbnail-src="https://example.test/should-not-be-used.png" .file=${file}></lr-attachment-chip>`,
+      html`<lr-attachment-chip thumbnail-src=${thumb} .file=${file}></lr-attachment-chip>`,
     )) as LyraAttachmentChip;
     const img = el.shadowRoot!.querySelector('[part="thumbnail"] img') as HTMLImageElement;
-    expect(img.getAttribute('src')).to.match(/^blob:/);
+    expect(img.getAttribute('src')).to.equal(thumb);
+    // name, size and type still derive from the File.
+    expect(el.shadowRoot!.querySelector('[part="name"]')!.textContent).to.equal('photo.png');
+    expect(el.shadowRoot!.querySelector('[part="size"]')!.textContent).to.equal('2.0 KB');
+  });
+
+  it('creates no blob: URL at all once thumbnail-src and preview-src cover a file', async () => {
+    const created: string[] = [];
+    const original = URL.createObjectURL.bind(URL);
+    URL.createObjectURL = (obj: Blob | MediaSource) => {
+      const url = original(obj);
+      created.push(url);
+      return url;
+    };
+    try {
+      const file = makeFile('photo.jpg', 'image/jpeg');
+      const el = (await fixture(html`
+        <lr-attachment-chip
+          thumbnail-src="data:image/png;base64,iVBORw0KGgo="
+          preview-src="https://example.test/photo.jpg"
+          .file=${file}
+        ></lr-attachment-chip>
+      `)) as LyraAttachmentChip;
+      expect(created).to.deep.equal([]);
+      const request = oneEvent(el, 'lr-preview-request');
+      (el.shadowRoot!.querySelector('[part="preview-button"]') as HTMLButtonElement).click();
+      const detail = (await request).detail;
+      expect(detail.src).to.equal('https://example.test/photo.jpg');
+      expect(detail.mimeType).to.equal('image/jpeg');
+      expect(detail.name).to.equal('photo.jpg');
+
+      // thumbnail-src with previews disabled is just as blob-free.
+      const quiet = (await fixture(html`
+        <lr-attachment-chip without-preview thumbnail-src="data:image/png;base64,iVBORw0KGgo=" .file=${file}></lr-attachment-chip>
+      `)) as LyraAttachmentChip;
+      expect(quiet.shadowRoot!.querySelector('[part="thumbnail"] img')!.getAttribute('src')).to.match(/^data:/);
+      expect(created).to.deep.equal([]);
+      await expect(quiet).to.be.accessible();
+    } finally {
+      URL.createObjectURL = original;
+    }
+  });
+
+  it('keeps the blob preview when only thumbnail-src is supplied, and vice versa', async () => {
+    const file = makeFile('photo.png', 'image/png');
+    const el = (await fixture(html`
+      <lr-attachment-chip thumbnail-src="https://example.test/thumb.png" .file=${file}></lr-attachment-chip>
+    `)) as LyraAttachmentChip;
+    const request = oneEvent(el, 'lr-preview-request');
+    (el.shadowRoot!.querySelector('[part="preview-button"]') as HTMLButtonElement).click();
+    expect((await request).detail.src).to.match(/^blob:/);
+
+    const previewOnly = (await fixture(html`
+      <lr-attachment-chip preview-src="https://example.test/full.png" .file=${file}></lr-attachment-chip>
+    `)) as LyraAttachmentChip;
+    expect(previewOnly.shadowRoot!.querySelector('[part="thumbnail"] img')!.getAttribute('src')).to.match(/^blob:/);
+  });
+
+  it('falls back to the file-derived thumbnail when thumbnail-src is unsafe or later cleared', async () => {
+    const file = makeFile('photo.png', 'image/png');
+    const el = (await fixture(html`
+      <lr-attachment-chip thumbnail-src="javascript:alert(1)" .file=${file}></lr-attachment-chip>
+    `)) as LyraAttachmentChip;
+    expect(el.shadowRoot!.querySelector('[part="thumbnail"] img')!.getAttribute('src')).to.match(/^blob:/);
+    el.thumbnailSrc = 'https://example.test/thumb.png';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="thumbnail"] img')!.getAttribute('src')).to.equal('https://example.test/thumb.png');
+    el.thumbnailSrc = '';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="thumbnail"] img')!.getAttribute('src')).to.match(/^blob:/);
+  });
+
+  it('revokes the cached blob URL once host sources make it unnecessary', async () => {
+    const file = makeFile('a.png', 'image/png');
+    const el = (await fixture(html`<lr-attachment-chip .file=${file}></lr-attachment-chip>`)) as LyraAttachmentChip;
+    const blobSrc = el.shadowRoot!.querySelector('[part="thumbnail"] img')!.getAttribute('src')!;
+    let revoked = '';
+    const original = URL.revokeObjectURL.bind(URL);
+    URL.revokeObjectURL = (url: string) => {
+      revoked = url;
+      original(url);
+    };
+    try {
+      el.thumbnailSrc = 'https://example.test/thumb.png';
+      el.previewSrc = 'https://example.test/full.png';
+      await el.updateComplete;
+      expect(revoked).to.equal(blobSrc);
+    } finally {
+      URL.revokeObjectURL = original;
+    }
   });
 
   it('revokes the object URL when file is reassigned to a different file', async () => {

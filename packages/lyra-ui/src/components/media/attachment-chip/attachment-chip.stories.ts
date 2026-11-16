@@ -131,6 +131,26 @@ export const FromServerMetadata: Story = {
   `,
 };
 
+export const FileWithHostThumbnail: Story = {
+  name: 'Real File with a host-supplied thumbnail (strict CSP, no blob:)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A `.file` still supplies the name, size and MIME type, while a non-empty, safe `thumbnail-src` (here a `data:` URL) replaces the blob URL the File\'s own image thumbnail would otherwise use. With `thumbnail-src` plus `without-preview` (or a `preview-src`) the chip creates no blob URL at all, so it works under a Content-Security-Policy such as `img-src \'self\' data:`.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-attachment-chip
+      .file=${samplePngFile('site-photo.png')}
+      thumbnail-src="data:image/png;base64,${PNG_1X1_RED_BASE64}"
+      without-preview
+      status="success"
+    ></lr-attachment-chip>
+  `,
+};
+
 export const UploadingNumericProgress: Story = {
   name: 'Uploading — numeric progress bar',
   render: () => html`
