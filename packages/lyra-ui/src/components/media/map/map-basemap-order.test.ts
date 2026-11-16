@@ -190,4 +190,30 @@ describe('MapBasemapOrder', () => {
     expect(draft.plan(ids, []).valid).to.equal(true);
     expect(draft.plan([...ids, ...Array.from({ length: 3097 }, (_, i) => `other-${i}`)], []).valid).to.equal(false);
   });
+
+  it('rejects a selector expansion beyond 1024 layers before staging any baseline', () => {
+    const owner = new MapBasemapOrder();
+    const ids = Array.from({ length: 1025 }, (_, i) => `base-${i}`);
+    expect(() => owner.stage(ids, [{ source: 'base', before: null }], style(ids), unowned)).to.throw('Map layer order exceeds its limit.');
+    expect(owner.active).to.equal(false);
+    expect(owner.stage(ids.slice(0, 1024), [{ source: 'base', before: null }], style(ids.slice(0, 1024)), unowned).groups).to.have.length(1);
+  });
+
+  it('claims no layer for a placement entry that names neither a layer nor a selector', () => {
+    const owner = new MapBasemapOrder();
+    const draft = owner.stage(['a', 'b'], [{ before: null } as LyraMapStyleOverride], style(['a', 'b']), unowned);
+    expect(draft.groups).to.deep.equal([]);
+    expect(draft.plan(['a', 'b'], []).operations).to.deep.equal([]);
+  });
+
+  it('skips restoring a released placement whose layer the live style no longer has', () => {
+    const owner = new MapBasemapOrder();
+    const moved = apply(owner, ['base', 'a', 'labels'], [{ layerId: 'a', before: null }]);
+    expect(moved).to.deep.equal(['base', 'labels', 'a']);
+    const draft = owner.stage(moved, [], style(moved), unowned);
+    const plan = draft.plan(['base', 'labels'], []);
+    expect(plan.valid).to.equal(true);
+    expect(plan.operations).to.deep.equal([]);
+    expect(plan.order).to.deep.equal(['base', 'labels']);
+  });
 });

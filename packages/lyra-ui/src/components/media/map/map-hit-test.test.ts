@@ -29,6 +29,25 @@ describe('map hit selection', () => {
     expect(admitMapHitRules([throwing]).status).to.equal('invalid');
   });
 
+  it('rejects a plain rule record whose key enumeration trap throws', () => {
+    const keysTrap = new Proxy({ layerId: 'x', owner: 'overlay' }, { ownKeys() { throw new Error('trap'); } });
+    expect(admitMapHitRules([keysTrap])).to.deep.equal({ status: 'invalid', reason: 'rules' });
+    expect(admitMapHitRules([{ layerId: 'x', owner: 'overlay' }]).status).to.equal('ready');
+  });
+
+  it('treats a throwing generation check as stale and reports a failed query after supersession as stale', () => {
+    const point = { x: 1, y: 2 }; let queries = 0;
+    const service = { getLayer: () => ({}), queryRenderedFeatures() { queries++; return [feature('point')]; } };
+    expect(queryMapHit(service, point, rules, { current() { throw new Error('generation unavailable'); } }).status).to.equal('stale');
+    expect(queries).to.equal(0);
+    let live = true;
+    const superseding = { getLayer: () => ({}), queryRenderedFeatures() { live = false; throw new Error('engine failure'); } };
+    expect(queryMapHit(superseding, point, rules, { current: () => live }).status).to.equal('stale');
+    live = true;
+    const failing = { getLayer: () => ({}), queryRenderedFeatures() { throw new Error('engine failure'); } };
+    expect(queryMapHit(failing, point, rules, { current: () => live }).status).to.equal('query-error');
+  });
+
   it('admits own plain rule records from another window realm', async () => {
     const frame = await fixture<HTMLIFrameElement>('<iframe></iframe>');
     const RealmObject = (frame.contentWindow as unknown as { Object: ObjectConstructor }).Object;

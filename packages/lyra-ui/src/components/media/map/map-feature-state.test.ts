@@ -34,6 +34,14 @@ describe('map retained feature state', () => {
     expect(reads).to.equal(0); expect(store.get(target())).to.deep.equal({ selected: true });
     expect(store.set({ source: 'roads', id: NaN }, {}).accepted).to.equal(false);
   });
+  it('rejects empty and overlong state keys at any depth and keeps the retained state', () => {
+    const { store } = fixture(); store.set(target(), { selected: true });
+    for (const bad of [{ '': 1 }, { ['k'.repeat(257)]: 1 }, { nested: { '': true } }]) {
+      expect(store.set(target(), bad)).to.deep.equal({ accepted: false, code: 'invalid-input' });
+    }
+    expect(store.set(target(), { ['k'.repeat(256)]: 1 }).accepted).to.equal(true);
+    expect(Object.keys(store.get(target())!)).to.deep.equal(['selected', 'k'.repeat(256)]);
+  });
   it('replays retained state on a new style but drops it when source identity changes', () => {
     const { store, peer, calls } = fixture(); store.set(target(), { selected: true }); store.replay(peer, 1); store.replay(peer, 2);
     expect(calls.length).to.equal(2);

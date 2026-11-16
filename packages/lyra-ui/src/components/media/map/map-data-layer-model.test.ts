@@ -19,6 +19,12 @@ describe('map data layer model', () => {
     expect(result.external.map(row => row.sourceId)).to.deep.equal(['roads']);
     expect(result.external[0]!.source['tiles']).to.deep.equal(['https://example.test/tiles/{z}/{x}/{y}.pbf']);
   });
+  it('contains a throwing GeoJSON projector: no admitted rows, or a failed model once external rows were requested', () => {
+    const throwing = () => { throw new Error('projector failure'); };
+    const options = { baseUrl, ownerOrigin: new URL(baseUrl).origin, projectGeoJson: throwing };
+    expect(projectMapDataLayerModel([{ sourceId: 'old', geojson: {} }], options)).to.deep.equal({ ok: true, geojson: [], external: [] });
+    expect(projectMapDataLayerModel([vector, { sourceId: 'old', geojson: {} }], options)).to.deep.equal({ ok: false });
+  });
   it('keeps the legacy first 100 input-row ceiling and unset no-op', () => {
     expect(project(undefined)).to.deep.equal({ ok: true, geojson: [], external: [] });
     const result = project([...Array.from({ length: 100 }, () => ({})), vector]);
@@ -174,6 +180,14 @@ describe('map labels', () => {
     let calls = 0;
     expect(projectMapLabelOptions({ get field() { calls += 1; return 'name'; } })).to.equal(undefined);
     expect(calls).to.equal(0);
+  });
+  it('admits plain nested expression records but rejects class instances and oversized key sets', () => {
+    const label = projectMapLabelOptions({ expression: ['literal', { fr: 'Paris', en: null }] });
+    expect(label?.expression).to.deep.equal(['literal', { fr: 'Paris', en: null }]);
+    expect(projectMapLabelOptions({ expression: ['literal', new Date(0)] })).to.equal(undefined);
+    expect(projectMapLabelOptions({ expression: ['literal', new Map([['fr', 'Paris']])] })).to.equal(undefined);
+    const wide = Object.fromEntries(Array.from({ length: 4097 }, (_, index) => [`k${index}`, true]));
+    expect(projectMapLabelOptions({ expression: ['literal', wide] })).to.equal(undefined);
   });
   it('rejects oversized expression text before allocating an encoded copy', () => {
     const original = TextEncoder.prototype.encode; let largest = 0;

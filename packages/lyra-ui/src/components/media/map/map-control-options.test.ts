@@ -116,6 +116,13 @@ describe('map control option projection', () => {
     expect(result.controls.has('attribution')).to.equal(false);
     expect(reads).to.equal(0);
   });
+  it('treats revoked proxy controls as absent instead of throwing', () => {
+    const { proxy, revoke } = Proxy.revocable({ navigation: true }, {}); revoke();
+    expect(normalizeMapControlOptions(proxy)).to.deep.equal({ controls: new Map(), diagnostics: [] });
+    const nested = normalizeMapControlOptions({ navigation: proxy, scale: true });
+    expect([...nested.controls.keys()]).to.deep.equal(['scale']);
+    expect(nested.diagnostics).to.deep.equal([]);
+  });
   it('skips a navigation or scale value that is neither enabled nor a record and flags malformed new-control members', () => {
     const { controls, diagnostics } = normalizeMapControlOptions({ navigation: 'yes', scale: 1, geolocate: { zoomToUserAccuracy: 'yes' }, attribution: { compact: 'yes' } });
     expect(controls.size).to.equal(0);

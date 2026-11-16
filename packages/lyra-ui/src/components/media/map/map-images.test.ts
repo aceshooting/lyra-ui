@@ -160,6 +160,28 @@ describe('map image CORS fetch and failure boundaries', () => {
     } finally { window.fetch = nativeFetch; }
   });
 
+  it('aborts a fetched image when its owner is adopted into another document during the request', async () => {
+    const ctx = await context();
+    const frame = await fixture<HTMLIFrameElement>(html`<iframe title="Adopting document"></iframe>`);
+    const nativeFetch = window.fetch;
+    let rasterized = 0;
+    window.fetch = async () => {
+      frame.contentDocument!.body.append(ctx.owner);
+      const response = new Response(svg, { headers: { 'content-type': 'image/svg+xml' } });
+      Object.defineProperty(response, 'type', { value: 'cors' });
+      return response;
+    };
+    try {
+      const result = await prepareMapImages([{ ...row(), source: { kind: 'url', url: '/map-icon.svg' } }], ctx, {
+        ...fakeServices(), rasterize: async (input) => { rasterized += 1; return { image: new ImageData(input.width, input.height), dispose() {} }; },
+      });
+      expect(ctx.owner.isConnected).to.equal(true);
+      expect(result.ok).to.equal(false);
+      if (!result.ok) expect(result.issue.code).to.equal('aborted');
+      expect(rasterized).to.equal(0);
+    } finally { window.fetch = nativeFetch; ctx.owner.remove(); }
+  });
+
   it('rejects opaque responses, oversize streams and unsupported MIME before decoding', async () => {
     const ctx = await context();
     const nativeFetch = window.fetch;

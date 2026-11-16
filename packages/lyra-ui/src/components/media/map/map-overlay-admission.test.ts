@@ -97,6 +97,20 @@ describe('map overlay admission boundaries', () => {
     });
   }
 
+  it('bounds nested descriptor values by depth, total value count, entry count and reserved keys', () => {
+    const layer = (paint: unknown) => withLayer({ id: 'area', type: 'fill', paint });
+    const nest = (levels: number): unknown => levels ? [nest(levels - 1)] : 1;
+    // The layer record is depth 0 and its paint value depth 2, so 22 wrapping arrays reach the ceiling exactly.
+    expect(rejection(layer({ 'fill-color': nest(23) }))).to.equal('limit');
+    expect(rejection(layer({ 'fill-color': nest(22) }))).to.equal(undefined);
+    const chunk = () => Array.from({ length: 9_000 }, (_, index) => index);
+    expect(rejection(layer({ a: chunk(), b: chunk(), c: chunk(), d: chunk(), e: chunk(), f: chunk() }))).to.equal('limit');
+    expect(rejection(layer({ a: chunk(), b: chunk(), c: chunk(), d: chunk(), e: chunk() }))).to.equal(undefined);
+    expect(rejection(layer(manyKeys(10_001)))).to.equal('limit');
+    for (const key of ['constructor', 'prototype']) expect(rejection(layer({ [key]: 1 }))).to.equal('invalid-input');
+    expect(rejection(layer(Object.defineProperty({}, '__proto__', { value: 1, enumerable: true })))).to.equal('invalid-input');
+  });
+
   it('retains a GeoJSON envelope by identity while snapshotting the rest of the descriptor', () => {
     const overlays = admitted(withSource({ type: 'geojson', data: geojson, cluster: true, clusterRadius: 40 }));
     expect(overlays.sources[0]!.source['data'] === geojson).to.equal(true);

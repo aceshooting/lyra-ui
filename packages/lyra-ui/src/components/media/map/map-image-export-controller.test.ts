@@ -142,3 +142,42 @@ it('rejects an already stale request before clearing feedback or waiting for rea
     expect(h.failures).to.deep.equal([]);
   } finally { h.controller.cancel(); }
 });
+
+for (const probe of ['isMoving', 'loaded'] as const) {
+  it(`cancels without capturing when the ${probe} probe supersedes the export`, async () => {
+    const h = await setup(); h.state.autoRender = false;
+    try {
+      const outcome = failure(h.export(), 'cancelled');
+      await waitUntil(() => h.state.renders === 1);
+      if (probe === 'isMoving') h.map.isMoving = () => { h.state.features++; return false; };
+      else h.map.loaded = () => { h.state.drawing++; return true; };
+      h.render(); await outcome;
+      expect([h.state.captures, h.state.releases]).to.deep.equal([0, 1]);
+      expect(h.failures).to.deep.equal(['cancelled']);
+    } finally { h.controller.cancel(); }
+  });
+}
+
+it('cancels before rendering when the request is superseded while waiting for idle', async () => {
+  const h = await setup();
+  let settle!: () => void;
+  h.element.whenIdle = () => new Promise<void>(resolve => { settle = resolve; });
+  try {
+    const outcome = failure(h.export(), 'cancelled');
+    await waitUntil(() => settle !== undefined);
+    h.state.features++; settle(); await outcome;
+    expect([h.state.renders, h.state.captures]).to.deep.equal([0, 0]);
+  } finally { h.controller.cancel(); }
+});
+
+it('paints custom control attribution into the exported footer and omits the footer without credits', async () => {
+  const h = await setup();
+  try {
+    const plain = await createImageBitmap(await h.export({}));
+    try { expect([plain.width, plain.height]).to.deep.equal([64, 32]); } finally { plain.close(); }
+    h.element.controls = { attribution: { customAttribution: 'Survey' } };
+    const credited = await createImageBitmap(await h.export({}));
+    try { expect(credited.height).to.be.greaterThan(32); } finally { credited.close(); }
+    expect(h.failures).to.deep.equal([]);
+  } finally { h.controller.cancel(); }
+});

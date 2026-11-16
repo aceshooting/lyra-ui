@@ -795,6 +795,19 @@ describe('owned map mutable layer transactions', () => {
     expect(peer.getLayer('dots') === layer).to.equal(true); expect(peer.layers.get('dots')!['paint']).to.deep.equal({ 'circle-color': 'red', 'circle-radius': 2 });
     expect(peer.operations.some(op => op.startsWith('layer') || op.startsWith('source'))).to.equal(false); registry.dispose();
   });
+  it('rolls back newly added paint, layout and filter members to absence when the batch fails', async () => {
+    const peer = new MutableResourcePeer(), registry = new MapOwnedResources();
+    await registry.reconcile(peer, 1, nextMutable(), [], context()); const layer = peer.getLayer('dots');
+    peer.reject = 'repaint'; peer.operations.length = 0;
+    expect(await registry.reconcile(peer, 1, initialMutable(), [], context())).to.deep.equal({ ok: false, code: 'peer', rollbackFailed: false });
+    expect(peer.operations.filter(op => op === 'filter:dots')).to.have.length(2);
+    expect(peer.getLayer('dots') === layer).to.equal(true);
+    expect(peer.layers.get('dots')!['paint']).to.deep.equal({ 'circle-color': 'blue' });
+    expect(peer.layers.get('dots')!['layout']).to.deep.equal({ visibility: 'none' });
+    expect(Object.hasOwn(peer.layers.get('dots')!, 'filter')).to.equal(false);
+    expect(peer.layers.get('dots')!['minzoom']).to.equal(0); expect(peer.layers.get('dots')!['maxzoom']).to.equal(24);
+    registry.dispose();
+  });
   it('fails closed after rollback throws and reclaims ownership only under a fresh style', async () => {
     const peer = new MutableResourcePeer(), registry = new MapOwnedResources(), image = prepared('pin');
     await registry.reconcile(peer, 1, initialMutable(), [image.resource], context());

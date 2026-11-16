@@ -26,6 +26,18 @@ describe('map vector style', () => {
       expect(resolveMapVectorStyle(line({}, ['has', field])!, value => value).filter).to.deep.equal(['has', ['literal', field]]);
     }
   });
+  it('admits nested logical filters with boolean operands and lowers their literal comparisons', () => {
+    const filter = ['all', ['!', ['has', 'closed']],
+      ['any', ['==', true, true], ['in', ['get', 'open'], ['literal', [true, false]]]]];
+    expect(resolveMapVectorStyle(line({}, filter)!, value => value).filter).to.deep.equal(['all', ['!', ['has', 'closed']],
+      ['any', ['==', ['literal', true], true], ['in', ['get', 'open'], ['literal', [true, false]]]]]);
+    const branches = Array.from({ length: 32 }, (_, index) => ['has', `field${index}`]);
+    expect(line({}, ['any', ...branches])?.filter).to.deep.equal(['any', ...branches]);
+    expect(line({}, ['any', ...branches, ['has', 'overflow']]), 'a logical filter caps its operands').to.equal(undefined);
+    expect(line({}, ['all', ['has', 'x'], ['get', 'x']]), 'every logical operand must be a predicate').to.equal(undefined);
+    expect(line({}, ['!', ['get', 'x']]), 'a negated non-predicate is rejected').to.equal(undefined);
+    expect(line({}, ['in', ['get', 'n'], ['literal', [1, true]]]), 'membership lists keep one value type').to.equal(undefined);
+  });
   it('preserves literal membership arrays that resemble operator syntax', () => {
     const filter = ['in', ['get', 'kind'], ['literal', ['==', 'red']]];
     expect(resolveMapVectorStyle(line({}, filter)!, value => value).filter).to.deep.equal(filter);

@@ -3,6 +3,7 @@ import './map.js';
 import { LYRA_MAP_EMPTY_STYLE, type LyraMap } from './map.js';
 import { loadMapControlRuntime } from './map-feature-loader.js';
 import { MapControlsLifecycle } from './map-controls-lifecycle.js';
+import { MapControlsReadiness } from './map-controls-readiness.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 
 class Control {
@@ -243,5 +244,29 @@ describe('lr-map controls readiness', () => {
     (failed as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = async () => null;
     wrapper.append(failed);
     expect(await failed.whenControlsReady().then(() => 'resolved', (error: Error) => error.name)).to.equal('MapReadinessError');
+  });
+});
+
+describe('MapControlsReadiness barrier', () => {
+  const outcome = (promise: Promise<void>) => promise.then(() => 'resolved', (error: Error) => error.name);
+
+  it('cancels waits and attempts made before any connection generation exists', async () => {
+    const readiness = new MapControlsReadiness();
+    expect(await outcome(readiness.whenReady())).to.equal('AbortError');
+    const attempt = readiness.begin();
+    expect(attempt.isCurrent()).to.equal(false);
+    expect(await Promise.race([attempt.cancelled.then(() => 'cancelled'), new Promise(done => setTimeout(() => done('pending'), 50))])).to.equal('cancelled');
+    attempt.resolve(); attempt.fail();
+    expect(await outcome(readiness.whenReady())).to.equal('AbortError');
+  });
+
+  it('keeps reporting a failed generation to later waiters until it is reset', async () => {
+    const readiness = new MapControlsReadiness(); readiness.reset();
+    const pending = outcome(readiness.whenReady());
+    const attempt = readiness.begin(); attempt.fail(); attempt.resolve();
+    expect(await pending).to.equal('MapReadinessError');
+    expect(await outcome(readiness.whenReady())).to.equal('MapReadinessError');
+    readiness.reset(); const next = readiness.begin(); next.resolve();
+    expect(await outcome(readiness.whenReady())).to.equal('resolved');
   });
 });

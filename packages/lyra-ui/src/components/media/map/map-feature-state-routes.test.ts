@@ -222,4 +222,13 @@ describe('map feature-state routing boundaries', () => {
       expect(calls.filter(row => row[0] === 'set').length).to.equal(0); routes.dispose();
     }
   });
+  it('reports disposal when a native retirement callback disposes the routes mid-replay', () => {
+    const { routes, peer, calls } = fixture(); routes.configure([route()]); routes.set(target(), { selected: true, hover: true }); routes.replay(peer, 1);
+    routes.invalidateNative('data-layer', 'private-1'); routes.configure([route({ identity: 'updated' })]);
+    peer.removeFeatureState = (address, key) => { calls.push(['remove', address, key]); routes.dispose(); };
+    const result = routes.replay(peer, 1);
+    expect(result).to.deep.equal({ accepted: false, code: 'disposed', applied: 0, diagnostics: [{ code: 'disposed' }] });
+    expect(calls.filter(row => row[0] === 'remove').map(row => row[2])).to.deep.equal(['selected']);
+    expect(routes.set(target(), { selected: true })).to.deep.equal({ accepted: false, code: 'disposed' });
+  });
 });

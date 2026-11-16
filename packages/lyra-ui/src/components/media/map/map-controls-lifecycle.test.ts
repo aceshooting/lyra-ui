@@ -427,6 +427,28 @@ describe('map controls lifecycle boundaries', () => {
     manager.dispose();
   });
 
+  it('rejects a scene control without a scene context or capability, and drops one disposed while it subscribes', async () => {
+    const scene = { isCurrent: () => true, state: () => ({ ready: true, busy: false, label: 'Globe' }), unavailable: () => undefined };
+    class SceneControl extends Control { contexts = 0; setSceneContext() { this.contexts++; } }
+    const missing = harness();
+    const plain = new MapControlsLifecycle(async () => SceneControl);
+    await plain.sync(missing.map, options({ globe: true }), missing.context);
+    expect(missing.failures).to.deep.equal(['globe']); expect(missing.installed.length).to.equal(0); plain.dispose();
+    const incapable = harness();
+    const bare = new MapControlsLifecycle(async () => Control);
+    await bare.sync(incapable.map, options({ globe: true }), { ...incapable.context, scene });
+    expect(incapable.failures).to.deep.equal(['globe']); expect(incapable.installed.length).to.equal(0); bare.dispose();
+    const reentrant = harness(); let manager!: MapControlsLifecycle; let constructed!: SceneControl;
+    manager = new MapControlsLifecycle(async () => class extends SceneControl {
+      constructor() { super(); constructed = this; }
+      override on(type: string, callback: (event: unknown) => void): this { super.on(type, callback); manager.dispose(); return this; }
+    });
+    await manager.sync(reentrant.map, options({ globe: true }), { ...reentrant.context, scene });
+    expect(constructed.contexts).to.equal(1);
+    expect(reentrant.installed.length).to.equal(0); expect(reentrant.failures).to.deep.equal([]);
+    expect(constructed.retired).to.deep.equal(['activate']);
+  });
+
   it('rejects a geolocate control that cannot subscribe to events', async () => {
     const h = harness();
     const manager = new MapControlsLifecycle(async () => class { onAdd() { return document.createElement('div'); } });

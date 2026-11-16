@@ -244,4 +244,35 @@ describe('map frame image export boundaries', () => {
     await failure(exportMapImage({}, item.service), 'cancelled');
     expect(ready).to.equal(0); expect(item.cleanups()).to.equal(0); expect(item.destinations.length).to.equal(0);
   });
+
+  it('rejects attribution that wraps beyond 32 footer lines and accepts exactly 32', async () => {
+    const lines = (count: number) => Array.from({ length: count }, (_, index) => String(index % 10)).join('\n');
+    const over = setup(); over.service.attributionText = () => lines(33);
+    await failure(exportMapImage({}, over.service), 'attribution-failed');
+    expect(over.cleanups()).to.equal(1);
+    const within = setup(); within.service.attributionText = () => lines(32);
+    const bitmap = await createImageBitmap(await exportMapImage({}, within.service));
+    expect(bitmap.height).to.equal(32 + 16 + 32 * 16); bitmap.close();
+  });
+
+  it('cancels when the generation check itself throws', async () => {
+    const item = setup(); let ready = 0;
+    item.service.ready = async () => { ready++; };
+    item.service.current = () => { throw new Error('generation unavailable'); };
+    await failure(exportMapImage({}, item.service), 'cancelled');
+    expect(ready).to.equal(0);
+  });
+
+  it('reports a capture or readiness failure caused by supersession as cancellation', async () => {
+    const capture = setup();
+    capture.service.canvas = () => { capture.invalidate(); throw new Error('renderer removed'); };
+    await failure(exportMapImage({}, capture.service), 'cancelled');
+    expect(capture.cleanups()).to.equal(1); expect(capture.destinations.length).to.equal(0);
+    const readiness = setup();
+    readiness.service.ready = async () => { readiness.invalidate(); throw new Error('renderer removed'); };
+    await failure(exportMapImage({}, readiness.service), 'cancelled');
+    const failed = setup();
+    failed.service.ready = async () => { throw new Error('style failed'); };
+    await failure(exportMapImage({}, failed.service), 'not-ready');
+  });
 });

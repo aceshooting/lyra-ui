@@ -41,6 +41,15 @@ describe('map style font admission', () => {
     }
   });
 
+  it('caps the total font declaration work even when every family and list is within its own bound', () => {
+    const faces = (ranges: number) => Object.fromEntries(Array.from({ length: 64 }, (_, family) => [`Family ${family}`,
+      Array.from({ length: 256 }, () => ({ url: 'font.woff2', 'unicode-range': Array.from({ length: ranges }, () => 'U+0-7F') }))]));
+    // 64 families x 256 faces with two ranges each read 65,536 entries, beyond the 50,000 budget.
+    expect(snapshot({ glyphs: 'glyphs/{fontstack}/{range}.pbf', 'font-faces': faces(2) })['font-faces']).to.equal(undefined);
+    const admitted = snapshot({ glyphs: 'glyphs/{fontstack}/{range}.pbf', 'font-faces': faces(0) })['font-faces'] as Record<string, unknown>;
+    expect(Object.keys(admitted)).to.have.length(64);
+  });
+
   it('detaches and freezes valid providers and ordinary style fields', () => {
     const ranges = ['U+0-7F'];
     const input = style({ 'font-faces': { Demo: [{ url: 'font.woff2', 'unicode-range': ranges }] } });

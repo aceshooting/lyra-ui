@@ -11,6 +11,9 @@ describe('map named hash ownership', () => {
       expect(replaceMapHash('#map=%xx', option, camera)).to.deep.equal({ status: 'disabled', fragment: '#map=%xx' });
       expect(removeMapHash('#map=%xx', option)).to.deep.equal({ status: 'disabled', fragment: '#map=%xx' });
     }
+    for (const fragment of [undefined, null, 7]) {
+      expect(replaceMapHash(fragment as unknown as string, false, camera), 'an untyped fragment is reported as empty').to.deep.equal({ status: 'disabled', fragment: '' });
+    }
     expect(admitMapHashOption(true)).to.deep.equal({ status: 'enabled', key: 'map' });
     for (const option of ['', 'a&b', '1map', 'x'.repeat(65), 1, {}, 'map=other']) expect(admitMapHashOption(option).status).to.equal('invalid');
   });

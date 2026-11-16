@@ -176,6 +176,30 @@ describe('MapStyleOverrides', () => {
     expect(layer.paint.get('fill-color')).to.equal('latest');
   });
 
+  it('reports a failed repaint request but keeps the applied override and its restoration baseline', () => {
+    const h = harness(); const layer = h.add('base'); layer.paint.set('fill-color', 'original'); const owner = new MapStyleOverrides();
+    h.peer.triggerRepaint = () => { throw new Error('repaint unavailable'); };
+    const result = owner.reconcile(h.peer, 1, [{ layerId: 'base', paint: { 'fill-color': 'red' } }], options);
+    expect(result.accepted).to.equal(true);
+    expect(result.diagnostics).to.deep.equal([{ code: 'peer-error' }]);
+    expect(layer.paint.get('fill-color')).to.equal('red');
+    expect(owner.reconcile(h.peer, 1, [], options).accepted).to.equal(true);
+    expect(layer.paint.get('fill-color')).to.equal('original');
+  });
+
+  it('rejects expanded inputs that are not arrays or cannot be inspected', () => {
+    const { proxy, revoke } = Proxy.revocable([{ layerId: 'base' }], {}); revoke();
+    for (const input of [{ 0: { layerId: 'base' }, length: 1 }, 'base', proxy]) {
+      expect(projectMapStyleOverrides(input, true) === undefined).to.equal(true);
+    }
+    const h = harness(); h.add('base');
+    expect(new MapStyleOverrides().reconcile(h.peer, 1, proxy, options).diagnostics).to.deep.equal([{ code: 'invalid-input' }]);
+  });
+
+  it('expands an override that targets neither a layer id nor a selector to nothing', () => {
+    expect(expandMapStyleOverrides([{ paint: { 'fill-color': 'red' } }], [{ id: 'base', source: 'base', type: 'fill' }])).to.deep.equal([]);
+  });
+
   it('preserves restoration after a partially mutating setter throws and retries safely', () => {
     const h = harness(); const layer = h.add('base'); layer.paint.set('fill-color', 'original'); const owner = new MapStyleOverrides();
     const native = h.peer.setPaintProperty; let fail = true;

@@ -333,6 +333,28 @@ describe('lr-map public native control chrome', () => {
     });
   }
 
+  it('stops organizing corner rows as soon as its owner is no longer current', async () => {
+    const placed: string[][] = [];
+    for (const budget of [0, 1, 2, 3, 20]) {
+      const container = await fixture<HTMLElement>(html`<div><div class="maplibregl-control-container">
+        <div class="maplibregl-ctrl-top-left"></div><div class="maplibregl-ctrl-top-right"></div>
+        <div class="maplibregl-ctrl-bottom-left"></div><div class="maplibregl-ctrl-bottom-right"></div>
+      </div></div>`);
+      let checks = 0;
+      syncMapControlRows(container, () => checks++ < budget);
+      const controls = query(container, '.maplibregl-control-container');
+      placed.push([...controls.querySelectorAll('.map-control-row')].map(row =>
+        `${row.part.value}:${[...row.children].map(corner => corner.className.replace('maplibregl-ctrl-', '')).join(',')}`));
+    }
+    expect(placed).to.deep.equal([
+      [],
+      ['controls-top:'],
+      ['controls-top:top-right'],
+      ['controls-top:top-right'],
+      ['controls-top:top-left,top-right', 'controls-bottom:bottom-left,bottom-right'],
+    ]);
+  });
+
   it('honors focus transferred by a blur handler during fallback row initialization', async () => {
     const container = await fixture<HTMLElement>(html`<div><button id="outside">Outside controls</button><div class="maplibregl-control-container"><div class="maplibregl-ctrl-top-left"><button id="inside">Zoom</button></div></div></div>`);
     const inside = query<HTMLButtonElement>(container, '#inside');

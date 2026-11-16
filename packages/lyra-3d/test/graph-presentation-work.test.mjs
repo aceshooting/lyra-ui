@@ -1639,3 +1639,12 @@ test('malformed presentation scalars and dependencies reject before any native c
   try { result = finishPresentation(work); assert.equal(result.record.fitted, undefined); }
   finally { if (result) retirePresentation(result.candidate); work.dispose(); }
 });
+
+test('labelled presentation preparation refuses to start label work without a canvas factory', () => {
+  const fixture = preparePresentationFixture('ordinaryNullContext'), work = createGraphPresentationWork(fixture.input);
+  try {
+    assert.throws(() => finishPresentation(work), { name: 'TypeError', message: 'A canvas factory is required for graph labels' });
+    assert.equal(fixture.canvases.length, 0);
+    assert.throws(() => work.step(4096));
+  } finally { work.dispose(); }
+});

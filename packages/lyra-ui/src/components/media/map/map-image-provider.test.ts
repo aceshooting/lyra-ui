@@ -422,6 +422,20 @@ for (const boundary of ['ownership', 'occupancy', 'removal', 'pixels'] as const)
   });
 }
 
+it('disposes every supplied image when native removal throws during reset', async () => {
+  const h = await harness(); const map = new ProviderMap(); const provider = new MapImageProvider();
+  provider.configure(asMap(map), (id: string) => descriptor(id), h.context);
+  await map.resolver!('a'); await map.resolver!('b');
+  const removals: string[] = [];
+  map.removeImage = id => { removals.push(id); throw new Error('atlas already released'); };
+  try {
+    expect(() => provider.configure(asMap(map), undefined, h.context)).not.to.throw();
+    expect(removals).to.deep.equal(['a', 'b']);
+    expect(h.disposed).to.equal(2);
+    expect(provider.ids.size).to.equal(0); expect(map.resolver).to.equal(null);
+  } finally { provider.dispose(); }
+});
+
 it('restores a retained provider image when declarative handover fails after native removal', async () => {
   const { context } = await harness(); const map = new ProviderMap(); const provider = new MapImageProvider();
   provider.configure(asMap(map), (id: string) => descriptor(id), context);
