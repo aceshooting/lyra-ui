@@ -206,3 +206,40 @@ it('does not repeat a visible error announcement when the form is moved to anoth
   await el.updateComplete;
   expect(assertiveAnnouncements().length, 'a fresh error is still announced after the move').to.be.greaterThan(0);
 });
+
+it('clears a custom error when setCustomValidity receives a nullish message', async () => {
+  const el = await fixture<LyraToolParamForm>(html`<lr-tool-param-form .schema=${{ type: 'object', properties: { q: { type: 'string' } } }}></lr-tool-param-form>`);
+  el.setCustomValidity('Rejected by the server');
+  expect(el.checkValidity()).to.equal(false);
+  el.setCustomValidity(null as unknown as string);
+  expect(el.checkValidity()).to.equal(true);
+  expect(el.validationMessage).to.equal('');
+});
+
+it('treats focus() and blur() before the first connection as no-ops', () => {
+  const el = document.createElement('lr-tool-param-form');
+  el.focus();
+  el.blur();
+  expect(el.isConnected).to.equal(false);
+  expect(document.activeElement === el).to.equal(false);
+});
+
+it('announces fresh errors in the document it was moved into', async () => {
+  const schema = { type: 'object' as const, properties: { limit: { type: 'integer' as const } }, required: ['limit'] };
+  const el = await fixture<LyraToolParamForm>(html`<lr-tool-param-form .schema=${schema}></lr-tool-param-form>`);
+  const frame = document.createElement('iframe');
+  document.body.append(frame);
+  const destination = frame.contentDocument!;
+  try {
+    destination.body.append(destination.adoptNode(el));
+    await el.updateComplete;
+    paramField(el, 'limit').dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    const announced = [...destination.querySelectorAll<HTMLElement>(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"] > div`)].map((node) => node.textContent);
+    expect(announced).to.deep.equal(['This field is required.']);
+  } finally {
+    document.adoptNode(el);
+    el.remove();
+    frame.remove();
+  }
+});
