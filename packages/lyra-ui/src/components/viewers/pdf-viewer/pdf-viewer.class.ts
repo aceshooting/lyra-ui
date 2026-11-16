@@ -545,6 +545,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   private firstVisiblePage = 1;
   private loadLibrary: (workerSrc?: string | null) => Promise<PdfJsApi | null> = loadPdfJs;
   private generation = 0;
+  private pendingTransportGeneration?: number;
   private pendingDocument?: { task: PdfLoadingTaskApi; retired: boolean };
   private readonly pageCanvases = new Map<number, HTMLCanvasElement>();
   private readonly pageRenderTasks = new Map<number, { cancel(): void }>();
@@ -718,11 +719,13 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     if (this.hasUpdated) {
       const base = this.shadowRoot?.querySelector('[part="base"]') as HTMLElement | null;
       if (base && !this.textSelectionCleanup) this.bindTextSelection(base);
-      if (this.src && !moved) this.scheduleAfterUpdate(() => { void this.load(); }, 'pdf-load');
+      if (this.src && (!moved || this.pendingTransportGeneration !== undefined)) this.scheduleAfterUpdate(() => { void this.load(); }, 'pdf-load');
     }
   }
 
   override disconnectedCallback(): void {
+    // Transport is aborted immediately by the base element; an acquired parser task survives a move.
+    if (this.pendingTransportGeneration !== undefined) this.generation++;
     this.textSelectionCleanup?.();
     this.textSelectionCleanup = undefined;
     this.announcements.disconnect();
@@ -828,6 +831,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
 
   private async load(): Promise<void> {
     const generation = ++this.generation;
+    this.pendingTransportGeneration = undefined;
     this.firstVisiblePage = 1;
     this.retirePendingDocument();
     this.pageViewerState.advance();
@@ -846,16 +850,18 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       this.emit('lr-render-error', { error });
       return;
     }
+    this.pendingTransportGeneration = generation;
     this.loadState = { kind: 'loading' };
     this.publishPageViewerSnapshot('loading', 0);
+    let acquiringDocument = true;
     try {
       const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
-      if (!this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const data = await readResponseArrayBuffer(response);
-      if (!this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       const pdfjsLib = await this.loadLibrary(this.workerSrc || null);
-      if (!this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       if (!pdfjsLib) {
         const error = new LyraUserFacingError(this.localize('pdfViewerMissingLibrary'));
         this.loadState = { kind: 'error', message: error.message };
@@ -864,7 +870,13 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         return;
       }
       const pending = { task: pdfjsLib.getDocument({ data }), retired: false };
-      this.pendingDocument = pending;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) {
+        pending.retired = true;
+        this.destroyDocumentResource(pending.task);
+      } else this.pendingDocument = pending;
+      // From here the parser owns its lifetime independently of the completed transport signal.
+      acquiringDocument = false;
+      if (this.pendingTransportGeneration === generation) this.pendingTransportGeneration = undefined;
       let doc: PdfDocumentApi;
       try {
         doc = await pending.task.promise;
@@ -873,7 +885,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         throw error;
       }
       if (this.pendingDocument === pending) this.pendingDocument = undefined;
-      if (!this.isConnected || generation !== this.generation) {
+      if (pending.retired || !this.isConnected || generation !== this.generation) {
         if (!pending.retired || !pending.task.destroy) await doc.destroy?.();
         return;
       }
@@ -887,7 +899,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       this.publishPageViewerSnapshot('ready', pageCount);
       this.emit('lr-load', { pageCount });
     } catch (error) {
-      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
+      if ((acquiringDocument && signal?.aborted) || !this.isConnected || generation !== this.generation) return;
       this.loadState = {
         kind: 'error',
         message: error instanceof LyraUserFacingError
@@ -896,6 +908,8 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       };
       this.publishPageViewerSnapshot('error', 0);
       this.emit('lr-render-error', { error });
+    } finally {
+      if (this.pendingTransportGeneration === generation) this.pendingTransportGeneration = undefined;
     }
   }
 

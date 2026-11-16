@@ -7,7 +7,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import { fileIcon, folderIcon } from '../../../internal/icons.js';
-import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseArrayBuffer, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { isResourceLimitError, LyraUserFacingError, readResponseArrayBuffer, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import {
   buildQuoteAnchor,
@@ -245,10 +245,11 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     super.connectedCallback();
     this.announcements.connect();
     const moved = this.detached.cancel();
-    if (this.hasUpdated && this.src && !moved) this.scheduleAfterUpdate(() => { void this.load(); });
+    if (this.hasUpdated && this.src && (!moved || this.fetchState.kind === 'loading')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
   override disconnectedCallback(): void {
+    if (this.fetchState.kind === 'loading') this.generation++;
     this.announcements.disconnect();
     super.disconnectedCallback();
     this.detached.schedule();
@@ -373,9 +374,9 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
     try {
       const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-      if (!this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       const buffer = await readResponseArrayBuffer(response);
-      if (!this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       // The local-file signature must be byte zero; an appended valid ZIP must not turn an
       // arbitrary prefix into an accepted archive. The returned immutable metadata is also the
       // listing authority, so the validated entry graph cannot diverge from a peer parser's view.
@@ -385,7 +386,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
         maxUncompressedBytes: MAX_ARCHIVE_UNCOMPRESSED_BYTES,
         signal,
       });
-      if (!this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       const entries = metadata!.entries.map(({ name, dir, uncompressedBytes }) => ({
         name,
         dir,
@@ -394,7 +395,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
       this.fetchState = { kind: 'loaded', entries };
       if (this.archiveSearchQuery) this.recomputeArchiveSearch();
     } catch (error) {
-      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       this.fetchState = { kind: 'error', message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
       this.emit('lr-render-error', { error });
     }

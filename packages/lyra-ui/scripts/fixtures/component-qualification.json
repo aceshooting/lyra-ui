@@ -3288,6 +3288,7 @@
         "tests": [
           "src/components/viewers/archive-viewer/archive-viewer-load-lifecycle.test.ts",
           "src/components/viewers/archive-viewer/archive-viewer-register.test.ts",
+          "src/components/viewers/archive-viewer/archive-viewer-transport-ownership.test.ts",
           "src/components/viewers/archive-viewer/archive-viewer.test.ts",
           "src/components/viewers/archive-viewer/zip-resource-guard.test.ts"
         ],
@@ -40003,6 +40004,7 @@
           "src/components/viewers/pdf-viewer/pdf-viewer-accessible-text.test.ts",
           "src/components/viewers/pdf-viewer/pdf-viewer-outline.test.ts",
           "src/components/viewers/pdf-viewer/pdf-viewer-register.test.ts",
+          "src/components/viewers/pdf-viewer/pdf-viewer-transport-ownership.test.ts",
           "src/components/viewers/pdf-viewer/pdf-viewer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
