@@ -186,3 +186,55 @@ it('skips content inspection for an unrelated ancestor style write while closed,
   wrapper.style.display = 'none';
   await waitUntil(() => inspections > 0);
 });
+
+/** Flat-tree text of a shadow subtree: assigned nodes replace a slot, else its fallback renders. */
+function flatText(node: Node): string {
+  if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? '';
+  if (node instanceof HTMLSlotElement) {
+    const assigned = node.assignedNodes();
+    return (assigned.length > 0 ? assigned : Array.from(node.childNodes)).map(flatText).join('');
+  }
+  return Array.from(node.childNodes).map(flatText).join('');
+}
+
+describe('content property beside a named trigger and whitespace-only default content', () => {
+  it('paints and describes with content when the default slot holds only template whitespace', async () => {
+    const el = await fixture<LyraTooltip>(html`
+      <lr-tooltip manual content="Explains the tag">
+        <button type="button" slot="trigger">Tag</button>
+      </lr-tooltip>
+    `);
+    await el.updateComplete;
+    const defaultSlot = el.shadowRoot!.querySelector<HTMLSlotElement>('[part~="body"] slot:not([name])')!;
+    expect(defaultSlot.assignedNodes().length, 'fixture keeps the whitespace text assigned').to.be.greaterThan(0);
+    const description = el.querySelector('[data-lyra-tooltip-description]');
+    await focusByKeyboard(el.querySelector('button')!);
+    await el.show();
+    await el.updateComplete;
+    const body = el.shadowRoot!.querySelector<HTMLElement>('[part~="body"]')!;
+    expect(flatText(body).trim()).to.equal('Explains the tag');
+    expect(description?.textContent).to.equal('Explains the tag');
+    await expect(el).to.be.accessible();
+  });
+
+  it('switches back to slotted content once real nodes are assigned, and to content when they leave', async () => {
+    const el = await fixture<LyraTooltip>(html`
+      <lr-tooltip manual content="Fallback text">
+        <button type="button" slot="trigger">Tag</button>
+      </lr-tooltip>
+    `);
+    await el.show();
+    const body = el.shadowRoot!.querySelector<HTMLElement>('[part~="body"]')!;
+    const description = () => el.querySelector('[data-lyra-tooltip-description]')?.textContent;
+    const rich = document.createElement('strong');
+    rich.textContent = 'Slotted text';
+    el.append(rich);
+    await waitUntil(() => description() === 'Slotted text', 'slotted text describes the trigger');
+    await el.updateComplete;
+    expect(flatText(body).trim()).to.equal('Slotted text');
+    rich.remove();
+    await waitUntil(() => description() === 'Fallback text', 'content describes again once the element leaves');
+    await el.updateComplete;
+    expect(flatText(body).trim()).to.equal('Fallback text');
+  });
+});

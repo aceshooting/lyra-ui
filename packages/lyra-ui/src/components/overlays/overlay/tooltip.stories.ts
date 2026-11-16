@@ -29,6 +29,16 @@ export const LyraIconButtonTrigger: Story = {
   `,
 };
 
+/** `content` beside a named trigger written across lines: the indentation left in the default
+ *  slot is whitespace only, so it counts as nothing slotted and `content` paints and describes. */
+export const ContentWithNamedTrigger: Story = {
+  render: () => html`
+    <lr-tooltip content="Archived tags are hidden from search" show-delay="0">
+      <lr-icon-button slot="trigger" icon="info" aria-label="About archived tags"></lr-icon-button>
+    </lr-tooltip>
+  `,
+};
+
 export const KeyboardFocusOnly: Story = {
   name: 'Keyboard focus only',
   parameters: {

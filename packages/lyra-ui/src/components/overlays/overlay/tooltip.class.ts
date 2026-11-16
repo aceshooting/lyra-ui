@@ -112,9 +112,19 @@ const TOOLTIP_POSITIONING_STRATEGY = optionalLiteralSetConverter<PlaceStrategy>(
 
 /** The `showAt()` rectangle, shared verbatim with `<lr-popover>` (see `./overlay-shared.ts`). */
 
+const BLANK_TEXT = /^[ \t\n\f\r]*$/;
+
+/** Template whitespace between slotted elements: a text node holding only ASCII whitespace. */
+function isBlankText(node: Node): boolean {
+  return node.nodeType === Node.TEXT_NODE && BLANK_TEXT.test(node.textContent ?? '');
+}
+
 type TooltipContentSnapshot = {
   actionable: boolean;
+  /** The slot has assigned nodes other than whitespace-only text. */
   assigned: boolean;
+  /** The slot has assigned nodes, all of them whitespace-only text. */
+  blank: boolean;
   awaitingShadowRoot: boolean;
   labelReferenceRoots: Set<Document | ShadowRoot>;
   labelReferenceIds: Set<string>;
@@ -391,6 +401,9 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   @property({ attribute: 'arrow-placement' }) arrowPlacement: LyraArrowPlacement = 'anchor';
   /** Keeps the arrow this far from the popup's corners, in pixels. */
   @property({ type: Number, attribute: 'arrow-padding' }) arrowPadding = 0;
+  /** Plain-text tooltip content, painted when the active content slot carries nothing of its own.
+   *  Whitespace-only text there (template indentation around a `slot="trigger"` element) counts as
+   *  nothing, so this text still paints and describes the trigger. */
   @property() content = '';
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   private triggerElement?: HTMLElement;
@@ -399,6 +412,9 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
    * Shoelace content source makes the default slot unambiguously the trigger. */
   private namedTriggerMode = true;
   @state() private interactiveContent = false;
+  /** True while the active content slot holds assigned nodes that are all whitespace-only text:
+   * they suppress the slot's fallback, so `content` paints beside the slot instead. */
+  @state() private blankContentAssignment = false;
   @state() private resolvedSide: 'top' | 'bottom' | 'left' | 'right' = 'top';
   @state() private anchorPositioned = false;
   /** Removes the settled-closed popup from layout (`[hidden]` -> `display:none`) so its stale
@@ -1227,6 +1243,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     const snapshot: TooltipContentSnapshot = {
       actionable: false,
       assigned: false,
+      blank: false,
       awaitingShadowRoot: false,
       labelReferenceRoots: new Set<Document | ShadowRoot>(),
       labelReferenceIds: new Set<string>(),
@@ -1240,7 +1257,9 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     const activeSlot = this.activeContentSlot;
     if (!activeSlot) return snapshot;
     const renderRoot = this.renderRoot ?? this.shadowRoot;
-    snapshot.assigned = activeSlot.assignedNodes().length > 0;
+    const assignedNodes = activeSlot.assignedNodes();
+    snapshot.assigned = assignedNodes.some((node) => !isBlankText(node));
+    snapshot.blank = assignedNodes.length > 0 && !snapshot.assigned;
 
     // The popup hides itself with `visibility: hidden` while closed. Visibility inherits through
     // slots, so reading consumer content in that state would otherwise classify every closed
@@ -1415,6 +1434,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
     const snapshot = this.inspectContent();
     this.contentSnapshot = snapshot;
     this.interactiveContent = snapshot.actionable;
+    this.blankContentAssignment = snapshot.blank;
     this.syncContentSlotListeners(snapshot.forwardingSlots);
     this.bindContentObservation(snapshot);
     this.scheduleShadowContentScan(snapshot.awaitingShadowRoot);
@@ -1493,7 +1513,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
         <span part="body">
           ${this.namedTriggerMode
             ? html`<slot @slotchange=${this.onContentSlotChange}>${this.content}</slot>`
-            : html`<slot name="content" @slotchange=${this.onContentSlotChange}>${this.content}</slot>`}
+            : html`<slot name="content" @slotchange=${this.onContentSlotChange}>${this.content}</slot>`}${this.blankContentAssignment ? this.content : nothing}
         </span>
         ${this.rendersArrow
           ? html`<span part="arrow base__arrow arrow-${this.resolvedSide}"></span>`
