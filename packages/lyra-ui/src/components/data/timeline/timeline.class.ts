@@ -21,9 +21,13 @@ import type { LyraTimelineItem } from './timeline-item.class.js';
 import {
   OBSERVE_TIMELINE_ITEM_TIMESTAMP,
   SET_TIMELINE_CLUSTER_PRESENTATION,
+  SET_TIMELINE_ITEM_ORDINAL,
+  TIMELINE_ITEM_ORDINAL_OF,
   isTimelineClusterItemContract,
+  isTimelineOrdinalItem,
   timeValueChanged,
 } from './timeline-cluster.js';
+import { finiteInteger } from '../../../internal/numbers.js';
 import { scrollOverflowFadeStyles } from '../../../internal/scroll-overflow.styles.js';
 import { styles } from './timeline.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -266,6 +270,20 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
     this.requestUpdate('collision', previous);
   }
 
+  /**
+   * Presents the items as an ordered sequence of steps. `[part='base']` becomes a native `<ol>`
+   * (with an explicit `role="list"`, which WebKit otherwise drops from an unstyled list), and each
+   * item's marker shows its step number as real, readable text instead of the decorative dot,
+   * formatted for the item's effective locale. In this mode the number replaces the
+   * `marker-icon` slot. Numbering follows document order, counts every default-slot item and
+   * starts at `start`. Works with every orientation and scale.
+   */
+  @property({ type: Boolean, reflect: true }) ordered = false;
+
+  /** The number of the first step while `ordered` is set, like a native `<ol start>`. A
+   *  non-finite value numbers from 1; fractions truncate. Ignored unless `ordered`. */
+  @property({ type: Number }) start = 1;
+
   /** Pins the axis start instead of deriving it from the earliest item. Ignored unless
    *  `scale="time"`; a non-finite or reversed pair falls back to the derived range. */
   @property({ attribute: false, hasChanged: timeValueChanged }) rangeStart?: Date | string | number;
@@ -291,6 +309,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
   private readonly managedClusterRepresentatives = new Set<LyraTimelineItem>();
   private readonly clusterActivations = new Map<LyraTimelineItem, () => void>();
   private readonly timestampObservedItems = new Set<LyraTimelineItem>();
+  private readonly numberedItems = new Set<LyraTimelineItem>();
   private clusterMeasurementFrame?: number;
   private clusterMeasurementView?: Window;
   private timeExtentFrame?: number;
@@ -335,7 +354,10 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
     super.connectedCallback();
     if (this.hasUpdated) {
       this.scheduleAfterUpdate(
-        () => this.applyTimeScale(),
+        () => {
+          this.applyTimeScale();
+          this.syncOrdinals();
+        },
         'timeline-clusters'
       );
     }
@@ -349,6 +371,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
     this.restoreClusterVisibility();
     this.syncTimestampObservers([]);
     this.cachedTimelineItems = undefined;
+    this.syncOrdinals();
     this.overflowObservedItems.clear();
     this.overflowItemsPending = true;
     this.stopTimeGeometryObserver();
@@ -388,6 +411,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
     // only new targets, while allocation and placement changes refresh the complete geometry.
     if (changed.size === 0 || [...changed.keys()].some(key => key !== 'accessibleLabel')) this.invalidateTimeGeometry();
     if (this.overflowItemsPending || changed.has('scale') || changed.has('orientation')) this.syncItemObservations();
+    if (changed.has('ordered') || changed.has('start')) this.syncOrdinals();
     // After the controller's own `hostUpdated()` measurement, which Lit runs before this method,
     // so the overflow attribute read below is this render's.
     this.syncScrollTabStop();
@@ -449,6 +473,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
           this.slottedCount = this.countTimelineItems(slot);
           this.applyTimeScale();
           this.syncItemObservations();
+          this.syncOrdinals();
         }),
       'timeline-first-slot-reconciliation'
     );
@@ -472,7 +497,41 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
       this.applyTimeScale();
       this.syncItemObservations();
     });
+    this.syncOrdinals();
   };
+
+  /** The step number `ordered` gives the first item. */
+  private get firstOrdinal(): number {
+    return finiteInteger(this.start, 1);
+  }
+
+  /** Pushes each item's step number (or clears it when `ordered` is off), and clears the number of
+   *  every item that has left this timeline since the last pass. */
+  private syncOrdinals(): void {
+    const items = this.isConnected ? this.timelineItems() : [];
+    const current = new Set<LyraTimelineItem>(items);
+    for (const item of this.numberedItems) {
+      if (current.has(item)) continue;
+      if (isTimelineOrdinalItem(item)) item[SET_TIMELINE_ITEM_ORDINAL](undefined);
+      this.numberedItems.delete(item);
+    }
+    const first = this.firstOrdinal;
+    items.forEach((item, index) => {
+      if (!isTimelineOrdinalItem(item)) return;
+      item[SET_TIMELINE_ITEM_ORDINAL](this.ordered ? first + index : undefined);
+      if (this.ordered) this.numberedItems.add(item);
+      else this.numberedItems.delete(item);
+    });
+  }
+
+  /** @internal Lets an item that upgrades after the last numbering pass read its step number. */
+  [TIMELINE_ITEM_ORDINAL_OF](item: Element): number | undefined {
+    if (!this.ordered) return undefined;
+    const index = this.timelineItems().indexOf(item as LyraTimelineItem);
+    if (index < 0) return undefined;
+    this.numberedItems.add(item as LyraTimelineItem);
+    return this.firstOrdinal + index;
+  }
 
   private onTimelineItemTimestampChange = (): void => {
     if (!this.isConnected) return;
@@ -1097,11 +1156,20 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
   }
 
   override render(): TemplateResult {
-    return html`
-      <div part="base" role="list" tabindex="-1" aria-label=${this.accessibleLabel == null ? this.localize('timeline') : this.accessibleLabel}>
-        <slot @slotchange=${this.onSlotChange}></slot>
-      </div>
-    `;
+    const label = this.accessibleLabel == null ? this.localize('timeline') : this.accessibleLabel;
+    // A native <ol> carries ordered-list semantics; the explicit role keeps WebKit from dropping
+    // list semantics from a list whose markers are styled away.
+    return this.ordered
+      ? html`
+          <ol part="base" role="list" tabindex="-1" aria-label=${label}>
+            <slot @slotchange=${this.onSlotChange}></slot>
+          </ol>
+        `
+      : html`
+          <div part="base" role="list" tabindex="-1" aria-label=${label}>
+            <slot @slotchange=${this.onSlotChange}></slot>
+          </div>
+        `;
   }
 }
 

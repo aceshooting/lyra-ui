@@ -2,12 +2,15 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './timeline-item.styles.js';
-import { getDateTimeFormat } from '../../../internal/intl-cache.js';
+import { getDateTimeFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import type { LyraVariant } from '../../../internal/variants.js';
 import {
   OBSERVE_TIMELINE_ITEM_TIMESTAMP,
   SET_TIMELINE_CLUSTER_PRESENTATION,
+  SET_TIMELINE_ITEM_ORDINAL,
+  TIMELINE_ITEM_ORDINAL_OF,
+  isTimelineOrdinalOwner,
   type TimelineClusterPresentation,
   type TimelineTimestampObserver,
   timeValueChanged,
@@ -83,8 +86,13 @@ const normalizeTimelineItemVariant = (value: unknown): LyraVariant =>
  *   (marker beside content), `column` in horizontal-timeline mode (marker above content).
  * @csspart track - Wrapper around the marker and rail (the "spine"). Always the opposite axis from
  *   `[part="base"]` -- see the class doc's rail-mechanism note.
- * @csspart marker - The dot/icon circle. Always `aria-hidden="true"` -- purely decorative, the
- *   item's accessible content is its title/timestamp/description text.
+ * @csspart marker - The dot/icon circle. `aria-hidden="true"` -- purely decorative, the item's
+ *   accessible content is its title/timestamp/description text -- except inside an `ordered`
+ *   `<lr-timeline>`, where it is a ring (`--lr-timeline-marker-color` border, transparent fill)
+ *   around `marker-number`, is exposed to assistive technology, and replaces the `marker-icon`
+ *   slot. Its default size there is `--lr-size-1-5rem`, and it widens for a long number.
+ * @csspart marker-number - The step number inside the marker, rendered only inside an `ordered`
+ *   `<lr-timeline>`: real text formatted for the effective locale.
  * @csspart rail - The connecting line segment extending from this item's marker toward the next
  *   item's marker. Hidden (`visibility: hidden`, not removed) for the last item in a
  *   `<lr-timeline>` -- see the class doc.
@@ -102,6 +110,8 @@ const normalizeTimelineItemVariant = (value: unknown): LyraVariant =>
  * @cssprop [--lr-timeline-marker-size=var(--lr-size-1-25rem)] - Diameter of the marker circle
  *   (both inline-size and block-size, so the default dot stays circular). Inherits from theme
  *   ancestors.
+ * @cssprop [--lr-timeline-marker-number-color=var(--lr-color-text)] - Step-number colour inside an
+ *   `ordered` timeline's marker ring.
  * @cssprop [--lr-timeline-rail-width=var(--lr-border-width-medium)] - Thickness of the
  *   connecting rail line. Inherits from theme ancestors.
  * @cssprop [--lr-timeline-rail-color=var(--lr-color-border-subtle)] - Color of the connecting rail
@@ -181,6 +191,8 @@ export class LyraTimelineItem extends LyraElement {
   @state() private hasTimestampSlot = false;
   @state() private hasDescriptionSlot = false;
   @state() private clusterPresentation?: TimelineClusterPresentation;
+  /** Step number pushed by an `ordered` parent timeline; `undefined` renders the ordinary marker. */
+  @state() private ordinal?: number;
   // Read once more from `firstUpdated()` in addition to each slot's own `@slotchange` listener --
   // see `collectInitialSlotAssignment`'s doc: happy-dom never fires a slot's INITIAL `slotchange`,
   // so an item whose marker-icon/timestamp/description children already exist at connect (the
@@ -211,6 +223,11 @@ export class LyraTimelineItem extends LyraElement {
   }
 
   /** @internal */
+  [SET_TIMELINE_ITEM_ORDINAL](ordinal: number | undefined): void {
+    this.ordinal = ordinal;
+  }
+
+  /** @internal */
   [OBSERVE_TIMELINE_ITEM_TIMESTAMP](
     observer: TimelineTimestampObserver,
     observe: boolean
@@ -222,6 +239,12 @@ export class LyraTimelineItem extends LyraElement {
   override connectedCallback(): void {
     super.connectedCallback();
     this.setAttribute('role', 'listitem');
+    // An item that upgrades after its ordered timeline last numbered its children reads its own
+    // number once; the timeline pushes every later change.
+    const owner = this.parentElement;
+    if (this.ordinal === undefined && isTimelineOrdinalOwner(owner)) {
+      this.ordinal = owner[TIMELINE_ITEM_ORDINAL_OF](this);
+    }
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -339,16 +362,22 @@ export class LyraTimelineItem extends LyraElement {
     return html`
       <div part="base">
         <div part="track">
-          <span
-            part="marker"
-            aria-hidden="true"
-            ?data-has-icon=${this.hasIconSlot}
-          >
-            <slot
-              name="marker-icon"
-              @slotchange=${this.onIconSlotChange}
-            ></slot>
-          </span>
+          ${this.ordinal !== undefined
+            ? html`<span part="marker" data-ordered
+                ><span part="marker-number"
+                  >${getNumberFormat(this.effectiveLocale || undefined, { useGrouping: false }).format(this.ordinal)}</span
+                ></span
+              >`
+            : html`<span
+                part="marker"
+                aria-hidden="true"
+                ?data-has-icon=${this.hasIconSlot}
+              >
+                <slot
+                  name="marker-icon"
+                  @slotchange=${this.onIconSlotChange}
+                ></slot>
+              </span>`}
           <span part="rail"></span>
         </div>
         <div part="content">

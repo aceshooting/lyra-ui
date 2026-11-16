@@ -64,6 +64,27 @@ export const styles = css`
     background: transparent;
   }
 
+  /* Ordered timeline: the step number is the marker's content, so the marker becomes a ring around
+     real text -- the variant tint moves to the border and the number keeps body-text contrast on
+     whatever surface the timeline sits on. It is at least the marker size and grows for a long
+     number instead of clipping it. */
+  [part='marker'][data-ordered] {
+    box-sizing: border-box;
+    inline-size: auto;
+    min-inline-size: var(--lr-timeline-marker-size, var(--lr-size-1-5rem));
+    block-size: var(--lr-timeline-marker-size, var(--lr-size-1-5rem));
+    padding-inline: var(--lr-space-2xs);
+    border: var(--lr-border-width-medium) solid
+      var(--lr-timeline-marker-color, var(--_lr-timeline-marker-color-default));
+    border-radius: var(--lr-radius-pill);
+    background: transparent;
+    color: var(--lr-timeline-marker-number-color, var(--lr-color-text));
+    font-size: var(--lr-font-size-xs);
+    font-weight: var(--lr-font-weight-semibold);
+    font-variant-numeric: tabular-nums;
+    line-height: var(--lr-line-height-none);
+  }
+
   /* The pulsing in-progress treatment -- same token/guard shape as lr-stream-status's
      streaming-phase dot pulse. */
   :host([active]) [part='marker'] {

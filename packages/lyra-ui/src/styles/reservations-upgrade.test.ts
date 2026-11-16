@@ -93,4 +93,59 @@ describe('reservations.css upgrade shift', () => {
     }
     expect(shifts).to.deep.equal([]);
   });
+
+  it('lays out a vertical and an ordered timeline before upgrade at their upgraded size', async () => {
+    await loadStylesheet('tokens-root.css');
+    await loadStylesheet('reservations.css');
+    const root = await fixture<HTMLElement>(html`
+      <div style="inline-size: 480px">
+        <lr-timeline id="steps" ordered aria-label="Steps">
+          <lr-timeline-item>Submit the form<span slot="timestamp">3 March</span><span slot="description">Online or at the desk.</span></lr-timeline-item>
+          <lr-timeline-item variant="success">Pay the fee<span slot="description">Within ten working days.</span></lr-timeline-item>
+          <lr-timeline-item>Collect the permit</lr-timeline-item>
+        </lr-timeline>
+        <p id="steps-after">after</p>
+        <lr-timeline id="events" aria-label="Events">
+          <lr-timeline-item>Created</lr-timeline-item>
+          <lr-timeline-item>Approved<span slot="timestamp">today</span></lr-timeline-item>
+        </lr-timeline>
+        <p id="events-after">after</p>
+      </div>
+    `);
+    const tags = ['lr-timeline', 'lr-timeline-item'];
+    for (const tagName of tags) expect(customElements.get(tagName) === undefined, `${tagName} must start undefined`).to.equal(true);
+    const items = [...root.querySelectorAll('lr-timeline-item')];
+    const firstStep = items[0]!;
+    expect(getComputedStyle(firstStep, '::before').content).to.include('counter');
+    expect(getComputedStyle(firstStep, '::after').content).to.equal('""');
+    expect(getComputedStyle(items[2]!, '::after').content).to.equal('none');
+    const selectors = ['#steps', '#steps-after', '#events', '#events-after'];
+    const snapshot = (): Record<string, Box> => ({
+      ...Object.fromEntries(selectors.map((selector) => [selector, box(root.querySelector(selector)!)])),
+      ...Object.fromEntries(items.map((item, index) => [`item ${index}`, box(item)])),
+    });
+    const before = snapshot();
+
+    await import('../components/lr-timeline.js');
+    await waitUntil(() => tags.every((tagName) => customElements.get(tagName)), 'definitions did not load');
+    for (const el of root.querySelectorAll<HTMLElement & { updateComplete?: Promise<unknown> }>(tags.join(','))) {
+      await el.updateComplete;
+    }
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    for (const el of root.querySelectorAll<HTMLElement & { updateComplete?: Promise<unknown> }>(tags.join(','))) {
+      await el.updateComplete;
+    }
+    const upgraded = snapshot();
+    const step = (firstStep.shadowRoot!.querySelector('[part="marker-number"]')?.textContent ?? '').trim();
+    expect(step).to.equal('1');
+
+    const shifts: string[] = [];
+    for (const [selector, a] of Object.entries(before)) {
+      const b = upgraded[selector]!;
+      for (const key of ['x', 'y', 'w', 'h'] as const) {
+        if (Math.abs(a[key] - b[key]) > 1) shifts.push(`${selector} ${key}: reserved ${a[key]}, upgraded ${b[key]}`);
+      }
+    }
+    expect(shifts).to.deep.equal([]);
+  });
 });

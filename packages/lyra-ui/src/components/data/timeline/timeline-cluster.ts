@@ -44,3 +44,33 @@ export function isTimelineClusterItemContract(
     typeof candidate[OBSERVE_TIMELINE_ITEM_TIMESTAMP] === 'function'
   );
 }
+
+/** @internal Parent-to-item push of an `ordered` timeline's step number (`undefined` clears it). */
+export const SET_TIMELINE_ITEM_ORDINAL: unique symbol = Symbol.for(
+  '@aceshooting/lyra-ui/timeline/item-ordinal/v1'
+) as never;
+
+/** @internal Item-to-parent pull, for an item that upgrades after its timeline last numbered. */
+export const TIMELINE_ITEM_ORDINAL_OF: unique symbol = Symbol.for(
+  '@aceshooting/lyra-ui/timeline/ordinal-of/v1'
+) as never;
+
+/** @internal */
+export interface TimelineOrdinalItemContract {
+  [SET_TIMELINE_ITEM_ORDINAL](ordinal: number | undefined): void;
+}
+
+/** @internal */
+export interface TimelineOrdinalOwnerContract {
+  [TIMELINE_ITEM_ORDINAL_OF](item: Element): number | undefined;
+}
+
+/** @internal */
+export function isTimelineOrdinalItem(value: Element): value is Element & TimelineOrdinalItemContract {
+  return typeof (value as Partial<TimelineOrdinalItemContract>)[SET_TIMELINE_ITEM_ORDINAL] === 'function';
+}
+
+/** @internal */
+export function isTimelineOrdinalOwner(value: Element | null): value is Element & TimelineOrdinalOwnerContract {
+  return value !== null && typeof (value as Partial<TimelineOrdinalOwnerContract>)[TIMELINE_ITEM_ORDINAL_OF] === 'function';
+}

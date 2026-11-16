@@ -23,6 +23,28 @@ export const Default: Story = {
   `,
 };
 
+export const OrderedSteps: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`ordered` renders an ordered list whose markers show the step number as real text, formatted for the effective locale; `start` sets the first number. With `reservations.css` loaded, the same markup has its rail, markers and numbers before the definitions load.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-timeline ordered aria-label="Permit application">
+      <lr-timeline-item variant="success">Submit the form<span slot="timestamp">by 3 March</span></lr-timeline-item>
+      <lr-timeline-item variant="brand" active>Pay the fee<span slot="timestamp">by 17 March</span><span slot="description">Within ten working days of the confirmation e-mail.</span></lr-timeline-item>
+      <lr-timeline-item>Collect the permit<span slot="description">Bring the receipt and an identity document.</span></lr-timeline-item>
+    </lr-timeline>
+    <lr-timeline ordered start="4" aria-label="Permit application, continued" style="margin-block-start: var(--lr-space-l)">
+      <lr-timeline-item>Register the change</lr-timeline-item>
+      <lr-timeline-item>Archive the file</lr-timeline-item>
+    </lr-timeline>
+  `,
+};
+
 export const Horizontal: Story = {
   render: () => html`
     <lr-timeline orientation="horizontal" aria-label="Release stages">
