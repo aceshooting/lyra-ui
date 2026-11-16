@@ -155,17 +155,17 @@ const optionalPeerFamilyTags = componentInventory.components
 const rootHelperRegisteredTags = [];
 
 // Packed core/all.js includes every non-optional registration and every emitted chunk.
-// PDF/archive transport recovery and bootstrap simplifications bring the graph to 5,693,092 raw bytes
-// across 65 files; the next 64-byte ceiling leaves 28 bytes of headroom.
+// Viewer transport recovery, composer toolbar placement, excerpt layout and stepper focus containment
+// bring the graph to 5,697,963 raw bytes across 65 files; the next 64-byte ceiling leaves 21 bytes of headroom.
 // Optional-peer exclusions and the complete file sum stay fixed. Core has no WASM allowance;
 // the explicit Oniguruma canary retains its separate exact 466,610-byte binary requirement.
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/ad043b8e3479fcd9990cd6ecc36e4638b48cfcc4/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'PDF/archive transport ownership and bootstrap simplifications add 642 raw bytes to the previously reviewed graph. The complete packed graph measures 5,693,092 bytes across 65 files. Only the exceeded raw ceiling advances to the next 64-byte boundary, 5,693,120 bytes. Gzip ceilings, optional-peer exclusions and the exact binary requirement for the explicit Oniguruma canary remain unchanged.',
-  reviewedCoreMeasurementBytes: 5_693_092,
+  $comment: 'Viewer transport recovery, composer toolbar placement, excerpt layout and stepper focus containment add 4,871 raw bytes to the previously reviewed graph. The complete packed graph measures 5,697,963 bytes across 65 files. Only the exceeded raw ceiling advances to the next 64-byte boundary, 5,697,984 bytes, with 21 bytes of headroom. Gzip ceilings, optional-peer exclusions and the exact binary requirement for the explicit Oniguruma canary remain unchanged.',
+  reviewedCoreMeasurementBytes: 5_697_963,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 28,
+  selectedRegressionHeadroomBytes: 21,
 };
 
 /**

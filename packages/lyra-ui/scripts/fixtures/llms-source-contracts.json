@@ -14695,7 +14695,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "28c5fa009d5a9dc91675",
+      "fingerprint": "1d47e83fddd768897e7a",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -16320,7 +16320,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "68c23a237a241db9045b",
+      "fingerprint": "b3fa74ba856cb43894a0",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16336,7 +16336,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "010862ebea11adfb0da8",
+      "fingerprint": "2e7cb8956cb395f3244c",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16896,7 +16896,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "c35cbb50a98149fec15b",
+      "fingerprint": "e374e74c610b9d1f7dc3",
       "routes": [
         "src/vue.ts"
       ],
@@ -17305,7 +17305,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "6728d989d92c6873e4c3",
+      "fingerprint": "0a448465296221056c10",
       "routes": [
         "src/framework-types.ts"
       ],

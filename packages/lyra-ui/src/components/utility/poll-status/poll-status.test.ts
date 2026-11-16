@@ -43,7 +43,6 @@ describe('lr-poll-status', () => {
       <div>
         <lr-poll-status
           with-refresh
-          next-in-ms="900"
           .strings=${{ pollRefresh: 'Actualiser maintenant' }}
         ></lr-poll-status>
       </div>
@@ -71,6 +70,9 @@ describe('lr-poll-status', () => {
     expect(events[0]!.bubbles).to.be.true;
     expect(events[0]!.composed).to.be.true;
 
+    // Start the real countdown after keyboard-command delivery, whose latency can exceed its delay.
+    el.nextInMs = 900;
+    await el.updateComplete;
     // wait-reason: real timer semantics, time must pass before the restart so the deadline is provably measured from the click
     await aTimeout(200);
     const restartedAt = performance.now();
