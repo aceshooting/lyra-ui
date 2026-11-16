@@ -31,6 +31,13 @@ import {
   normalizeAutocorrect,
   trueDefaultBooleanConverter,
 } from '../../../internal/converters.js';
+import { deepActiveElementIn } from '../../../internal/active-element.js';
+import { isHtmlElement } from '../../../internal/dom-guards.js';
+import {
+  captureComposedFocusRepair,
+  applyComposedFocusRepair,
+  type ComposedFocusRepairSnapshot,
+} from '../../../internal/focus-navigation.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import {
   acquireResolvedAriaRelationship,
@@ -60,6 +67,14 @@ export type ChatComposerActionsLayout = 'inline' | 'stacked' | 'below';
 const CHAT_COMPOSER_ACTIONS_LAYOUT = literalSetConverter<ChatComposerActionsLayout>(
   ['inline', 'stacked', 'below'],
   'inline'
+);
+
+/** Placement of caller-supplied toolbar controls inside the composer frame. */
+export type ChatComposerToolbarPlacement = 'above' | 'actions';
+
+const CHAT_COMPOSER_TOOLBAR_PLACEMENT = literalSetConverter<ChatComposerToolbarPlacement>(
+  ['above', 'actions'],
+  'above'
 );
 
 export interface LyraChatComposerEventMap {
@@ -122,8 +137,9 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  *
  * @customElement lr-chat-composer
  * @slot toolbar - Auxiliary controls (e.g. a model or provider picker) rendered inside the frame,
- * above the chips tray and input row, sharing `[part="base"]`'s `:focus-within` affordance.
- * @slot start - Content rendered before the textarea (e.g. an attach-file trigger button).
+ * above the chips tray and input row by default, or between start and end below the textarea
+ * with toolbar-placement="actions" and actions-layout="below", sharing `[part="base"]`'s `:focus-within` affordance.
+ * @slot start - Content at the logical start of the input/action layout (e.g. an attach-file trigger).
  * @slot chips - An attachment tray rendered above the input row (e.g. files queued for this message).
  * @slot end - Overrides the built-in send/stop button entirely when it has assigned content.
  * @event input - One realm-correct native `InputEvent` relayed from the textarea for each user edit.
@@ -139,10 +155,11 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  * @csspart base - The bordered root container. Drops its card chrome (border, background, padding,
  * radius) under `frame="plain"`, where the focus affordance becomes an underline on this same
  * part instead of the border-color shift.
- * @csspart toolbar - The wrapper around the `toolbar` slot. Hidden entirely when empty, matching
- * `start`/`chips`.
+ * @csspart toolbar - The toolbar wrapper, above attachments by default or in the bottom action row
+ * with toolbar-placement="actions" and actions-layout="below". Hidden entirely when empty.
  * @csspart chips - The wrapper around the `chips` slot. Hidden entirely when the slot is empty.
- * @csspart row - The row holding the start slot, textarea, and end slot/button.
+ * @csspart row - The input/action layout holding the textarea, start and end, plus the toolbar
+ * when toolbar-placement="actions" and actions-layout="below".
  * @csspart start - The wrapper around the `start` slot. Hidden entirely when empty.
  * @csspart textarea - The auto-resizing `<textarea>` itself.
  * @csspart end - The wrapper around the `end` slot and the built-in `action-button`.
@@ -256,6 +273,38 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     this.requestUpdate('actionsLayout', previous);
   }
 
+  private toolbarPlacementValue: ChatComposerToolbarPlacement = 'above';
+  /** Toolbar position. `'above'` keeps controls above attachments. `'actions'` places them between
+   * start and end below the textarea only with `actionsLayout='below'`; other layouts retain the
+   * upper toolbar. Invalid or removed values normalize to `'above'`.
+   * @default 'above'
+   */
+  @property({
+    reflect: true,
+    attribute: 'toolbar-placement',
+    converter: CHAT_COMPOSER_TOOLBAR_PLACEMENT,
+  })
+  get toolbarPlacement(): ChatComposerToolbarPlacement {
+    return this.toolbarPlacementValue;
+  }
+  set toolbarPlacement(next: ChatComposerToolbarPlacement) {
+    const normalized = CHAT_COMPOSER_TOOLBAR_PLACEMENT.normalizeReflected(this, 'toolbar-placement', next);
+    if (this.hasUpdated && !this.hasAttribute('toolbar-placement')) {
+      this.setAttribute('toolbar-placement', normalized);
+    }
+    const previous = this.toolbarPlacementValue;
+    if (previous === normalized) return;
+    this.toolbarPlacementValue = normalized;
+    this.requestUpdate('toolbarPlacement', previous);
+  }
+
+  private get toolbarInActions(): boolean {
+    return this.actionsLayout === 'below' && this.toolbarPlacement === 'actions';
+  }
+
+  private renderedToolbarInActions = false;
+  private placementFocusRepair: ComposedFocusRepairSnapshot | null = null;
+
   /** Turns off Enter-to-send: plain Enter inserts a newline, as Shift+Enter always does. */
   @property({ type: Boolean, reflect: true, attribute: 'without-enter-submit' })
   withoutEnterSubmit = false;
@@ -339,6 +388,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
 
   constructor() {
     super();
+    this.requestUpdate('toolbarPlacement', undefined);
     this.addEventListener('invalid', () => {
       this.touched = true;
     });
@@ -421,6 +471,15 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (this.hasUpdated && this.toolbarInActions !== this.renderedToolbarInActions) {
+      const active = deepActiveElementIn(this.ownerDocument);
+      if (isHtmlElement(active)) {
+        for (const wrapper of this.renderRoot.querySelectorAll('[part="start"], [part="toolbar"]')) {
+          this.placementFocusRepair = captureComposedFocusRepair(wrapper, active);
+          if (this.placementFocusRepair) break;
+        }
+      }
+    }
     // A server render sees no light-DOM children, so a hydrating composer reproduces the server's
     // slot-less rendering first and adopts the real adornment slots on the next update.
     this.seedFirstRenderState(() => {
@@ -459,6 +518,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.resetTextareaResizeWork();
+    this.placementFocusRepair = null;
     this.descriptionLease?.release();
     this.descriptionLease = undefined;
   }
@@ -470,6 +530,10 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.renderedToolbarInActions = this.toolbarInActions;
+    const repair = this.placementFocusRepair;
+    this.placementFocusRepair = null;
+    if (repair && this.isConnected) applyComposedFocusRepair(repair);
     if (
       changed.has('value') ||
       changed.has('minRows') ||
@@ -797,19 +861,27 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     `;
   }
 
+  private renderToolbar(): TemplateResult {
+    return html`<div part="toolbar" ?hidden=${!this.hasToolbarSlot}>
+      <slot name="toolbar" @slotchange=${this.syncToolbarSlot}></slot>
+    </div>`;
+  }
+
+  private renderStart(): TemplateResult {
+    return html`<span part="start" ?hidden=${!this.hasStartSlot}>
+      <slot name="start" @slotchange=${this.syncStartSlot}></slot>
+    </span>`;
+  }
+
   override render(): TemplateResult {
     return html`
       <div part="base">
-        <div part="toolbar" ?hidden=${!this.hasToolbarSlot}>
-          <slot name="toolbar" @slotchange=${this.syncToolbarSlot}></slot>
-        </div>
+        ${this.toolbarInActions ? nothing : this.renderToolbar()}
         <div part="chips" ?hidden=${!this.hasChipsSlot}>
           <slot name="chips" @slotchange=${this.onChipsSlotChange}></slot>
         </div>
         <div part="row">
-          <span part="start" ?hidden=${!this.hasStartSlot}>
-            <slot name="start" @slotchange=${this.syncStartSlot}></slot>
-          </span>
+          ${this.toolbarInActions ? nothing : this.renderStart()}
           <textarea
             part="textarea"
             aria-label=${this.accessibleLabel ??
@@ -839,6 +911,8 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
             @focus=${this.onTextareaFocus}
             @blur=${this.onTextareaBlur}
           ></textarea>
+          ${this.toolbarInActions ? this.renderStart() : nothing}
+          ${this.toolbarInActions ? this.renderToolbar() : nothing}
           <span part="end">
             <slot name="end" @slotchange=${this.syncEndSlot}></slot>
             ${this.hasEndSlot ? nothing : this.renderActionButton()}

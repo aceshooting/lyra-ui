@@ -906,6 +906,9 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
   @query('[part="search-input"]') private searchInputEl?: HTMLInputElement;
   private focusTaskGeneration = 0;
+  private excerptObserver?: MutationObserver;
+  private excerptRoot?: Node & ParentNode;
+  private excerptObservationGeneration = 0;
   private readonly injectedListItemRoles = new Set<Element>();
 
   // Slotted mode is only for a host that's actually relying on it (real slotted content present)
@@ -923,6 +926,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       const defaultSlotted = this.defaultSlottedElements();
       this.hasDefaultSlotContent = defaultSlotted.length > 0;
       if (!this.sourceMode && this.normalizedThreads.length === 0) this.markAsListItems(defaultSlotted);
+      void this.observeRenderedExcerpts();
     }
   }
 
@@ -997,6 +1001,43 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     // Rows read parent state through this stable callback. A named render refresh preserves
     // the child's source identities, group index and measurements when the model is unchanged.
     this.virtualListEl?.requestUpdate('renderItem');
+    void this.observeRenderedExcerpts();
+  }
+
+  private async observeRenderedExcerpts(): Promise<void> {
+    const generation = ++this.excerptObservationGeneration;
+    const list = this.virtualListEl;
+    if (list) await list.updateComplete;
+    if (!this.isConnected || generation !== this.excerptObservationGeneration || list !== this.virtualListEl) return;
+    const root = this.renderExcerpt ? list?.renderRoot : undefined;
+    if (root !== this.excerptRoot) {
+      this.excerptObserver?.disconnect();
+      this.excerptObserver = undefined;
+      this.excerptRoot = root;
+      const Observer = this.ownerDocument.defaultView?.MutationObserver;
+      if (root && Observer) {
+        const observer = new Observer(() => {
+          if (this.isConnected && this.excerptObserver === observer && this.virtualListEl?.renderRoot === root) {
+            this.syncRenderedExcerpts(root);
+          }
+        });
+        this.excerptObserver = observer;
+        observer.observe(root, { childList: true, characterData: true, subtree: true });
+      }
+    }
+    if (root) this.syncRenderedExcerpts(root);
+  }
+
+  private syncRenderedExcerpts(root: Node & ParentNode): void {
+    // The renderer's span is plumbing, not excerpt content. Keep all element children meaningful
+    // (including icons and images), while an empty Lit template contributes no slot or row gap.
+    for (const wrapper of root.querySelectorAll<HTMLElement>('[part="row-excerpt"]')) {
+      if (wrapper.parentElement?.localName !== tag('conversation-item')) continue;
+      const present = Array.from(wrapper.childNodes).some(node =>
+        node.nodeType === 1 || (node.nodeType === 3 && (node.textContent ?? '').trim().length > 0));
+      const slot = present ? 'excerpt' : '';
+      if (wrapper.slot !== slot) wrapper.slot = slot;
+    }
   }
 
   private defaultSlottedElements(): Element[] {
@@ -1029,6 +1070,10 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.excerptObservationGeneration++;
+    this.excerptObserver?.disconnect();
+    this.excerptObserver = undefined;
+    this.excerptRoot = undefined;
     this.sourceRequestVersion++; this.sourceActiveInputs = undefined; this.sourceActiveReveal = undefined; this.sourceFilterIntent = undefined;
     this.sourceStatusInitialized = false; this.previousSourceStatus = '';
     this.focusTaskGeneration++;

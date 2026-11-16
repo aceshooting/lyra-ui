@@ -972,6 +972,7 @@ export type {
 } from './components/agent-tools/tool-result-dialog/tool-result-dialog.class.js';
 export type {
   ChatComposerActionsLayout,
+  ChatComposerToolbarPlacement,
   ChatComposerFrame,
   ChatComposerStatus,
   ChatComposerWrap,

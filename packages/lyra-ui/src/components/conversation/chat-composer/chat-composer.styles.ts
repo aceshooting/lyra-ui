@@ -186,6 +186,25 @@ export const styles = css`
     grid-row: 2;
   }
 
+  :host([actions-layout='below'][toolbar-placement='actions']) [part='row'] {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    column-gap: 0;
+  }
+  :host([actions-layout='below'][toolbar-placement='actions']) [part='start'],
+  :host([actions-layout='below'][toolbar-placement='actions']) [part='toolbar'] {
+    margin-inline-end: var(--lr-space-s);
+  }
+  :host([actions-layout='below'][toolbar-placement='actions']) [part='toolbar'] {
+    grid-column: 2;
+    grid-row: 2;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow: auto;
+  }
+  :host([actions-layout='below'][toolbar-placement='actions']) [part='end'] {
+    grid-column: 3;
+  }
+
   [part='action-button'] {
     display: inline-flex;
     align-items: center;

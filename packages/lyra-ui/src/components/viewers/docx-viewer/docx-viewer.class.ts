@@ -5,7 +5,6 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { boundedViewerSearchQuery } from '../viewer-search-limits.js';
 import { srOnly } from '../../../internal/a11y.js';
 import {
-  isAbortError,
   isResourceLimitError,
   LyraUserFacingError,
   readResponseArrayBuffer,
@@ -283,6 +282,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   @state() private resolvedHighlightActions: LyraHighlight[] = [];
 
   private generation = 0;
+  private pendingTransportGeneration?: number;
   private lastLoadSrc = '';
   private loadLibrary: () => Promise<DocxDeps> = loadDocxDeps;
   private readonly announcements = new ViewerAnnouncementController(this);
@@ -318,7 +318,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
       // The mixin's disconnect released the selection listener; the content itself stayed.
       const root = this.contentRoot();
       if (root) (this as unknown as { bindTextSelection(root: Element): void }).bindTextSelection(root);
-      return;
+      if (this.pendingTransportGeneration === undefined) return;
     }
     if (this.hasUpdated && this.src.trim() && this.src === this.lastLoadSrc) {
       this.scheduleAfterUpdate(() => { void this.load(); });
@@ -326,6 +326,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   }
 
   override disconnectedCallback(): void {
+    if (this.pendingTransportGeneration !== undefined) this.generation++;
     this.announcements.disconnect();
     super.disconnectedCallback(); // reaches DocumentAnchorTarget's own cleanup (anchor retry, selection binding)
     this.detached.schedule();
@@ -402,6 +403,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
 
   private async load(): Promise<void> {
     const generation = ++this.generation;
+    this.pendingTransportGeneration = undefined;
     const signal = this.beginAbortableLoad();
     this.lastLoadSrc = this.src;
     if (!this.src) {
@@ -416,11 +418,13 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
       return;
     }
 
+    this.pendingTransportGeneration = generation;
     this.fetchState = { kind: 'loading' };
+    let acquiringDocument = true;
     try {
       const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
       if (
-        !this.isConnected
+        signal?.aborted || !this.isConnected
         || generation !== this.generation
         || this.ownerDocument.defaultView !== fetchTarget.view
       )
@@ -428,21 +432,21 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const arrayBuffer = await readResponseArrayBuffer(response);
       if (
-        !this.isConnected
+        signal?.aborted || !this.isConnected
         || generation !== this.generation
         || this.ownerDocument.defaultView !== fetchTarget.view
       )
         return;
       await assertDocxArchiveWithinLimits(arrayBuffer, undefined, undefined, { signal, strictAdmission: true });
       if (
-        !this.isConnected
+        signal?.aborted || !this.isConnected
         || generation !== this.generation
         || this.ownerDocument.defaultView !== fetchTarget.view
       )
         return;
       const { mammoth, DOMPurify } = await this.loadLibrary();
       if (
-        !this.isConnected
+        signal?.aborted || !this.isConnected
         || generation !== this.generation
         || this.ownerDocument.defaultView !== fetchTarget.view
       )
@@ -456,6 +460,9 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
         return;
       }
 
+      // Conversion has no transport dependency and can finish across a same-task move.
+      acquiringDocument = false;
+      if (this.pendingTransportGeneration === generation) this.pendingTransportGeneration = undefined;
       const rawConverted = await mammoth.convertToHtml({ arrayBuffer });
       if (
         !this.isConnected
@@ -496,7 +503,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
       }
     } catch (error) {
       if (
-        isAbortError(error)
+        (acquiringDocument && signal?.aborted)
         || !this.isConnected
         || generation !== this.generation
         || this.ownerDocument.defaultView !== fetchTarget.view
@@ -507,6 +514,8 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
         message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad'),
       };
       this.emit('lr-render-error', { error });
+    } finally {
+      if (this.pendingTransportGeneration === generation) this.pendingTransportGeneration = undefined;
     }
   }
 

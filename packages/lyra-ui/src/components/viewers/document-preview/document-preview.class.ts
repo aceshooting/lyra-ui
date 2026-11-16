@@ -6,7 +6,6 @@ import { fileIcon } from '../../../internal/icons.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { safeDownloadHref, safeFetchUrl, safeMediaSrc } from '../../../internal/safe-url.js';
 import {
-  isAbortError,
   isResourceLimitError,
   LyraUserFacingError,
   readResponseText,
@@ -399,7 +398,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     super.connectedCallback();
     this.announcements.connect();
     const moved = this.detached.cancel();
-    if (this.hasUpdated && this.src && classifyFormat(this.mimeType) === 'text' && !moved) {
+    if (this.hasUpdated && this.src && classifyFormat(this.mimeType) === 'text' && (!moved || this.textFetch.kind === 'loading')) {
       this.textFetch = IDLE_TEXT_FETCH;
       this.scheduleAfterUpdate(() => {
         const url = safeFetchUrl(this.src);
@@ -409,6 +408,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   }
 
   override disconnectedCallback(): void {
+    if (this.textFetch.kind === 'loading') this.generation++;
     this.announcements.disconnect();
     super.disconnectedCallback();
     this.detached.schedule();
@@ -526,13 +526,13 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     this.textFetch = { kind: 'loading' };
     try {
       const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
-      if (!this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const text = await readResponseText(response);
-      if (!this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       this.textFetch = { kind: 'loaded', text };
     } catch (error) {
-      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       const message = this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad');
       this.textFetch = { kind: 'error', message };
       this.emit('lr-render-error', { error });

@@ -314,3 +314,28 @@ export const InAForm: Story = {
     </form>
   `,
 };
+
+export const BottomToolbar: Story = {
+  name: 'Bottom toolbar with attachments, narrow and RTL',
+  render: () => html`
+    <div style="display: flex; flex-wrap: wrap; gap: var(--lr-space-l)">
+      ${['ltr', 'rtl'].map(direction => html`
+        <div dir=${direction} style="inline-size: 320px; max-inline-size: 100%">
+          <lr-chat-composer actions-layout="below" toolbar-placement="actions"
+            value="A draft with an attached document" placeholder="Message the assistant…">
+            <button slot="start" type="button" aria-label="Attach file">+</button>
+            <select slot="toolbar" aria-label="Model">
+              <option>Research model with extended reasoning</option>
+              <option>Fast model</option>
+            </select>
+            <button slot="toolbar" type="button">Options</button>
+            <span slot="chips">notes.txt</span>
+          </lr-chat-composer>
+        </div>
+      `)}
+    </div>
+  `,
+  parameters: {
+    docs: { description: { story: 'With actions-layout="below", toolbar-placement="actions" places caller controls between attach and send, below the textarea. Attachments remain above it. The toolbar wraps or scrolls within its allocation; native Tab order follows the visible input and action row.' } },
+  },
+};

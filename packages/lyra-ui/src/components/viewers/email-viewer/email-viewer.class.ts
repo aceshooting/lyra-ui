@@ -8,7 +8,6 @@ import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyr
 import { TextViewerTarget, type LyraSearchChangeDetail, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import { createTextQuoteIndex, scopeFromElement, TEXT_QUOTE_LIMITS } from '../../../internal/text-quote.js';
 import {
-  isAbortError,
   isResourceLimitError,
   LyraUserFacingError,
   readResponseArrayBuffer,
@@ -502,6 +501,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
   @state() private textQuoteExpanded = false;
   @state() private expandedHtmlQuoteIndices: number[] = [];
   private generation = 0;
+  private pendingTransportGeneration: number | undefined;
   private lastLoadSrc = '';
   private readonly announcements = new ViewerAnnouncementController(this);
   /** Memoizes {@link foldHtmlQuotes}'s output so an unrelated re-render (any `@state`/`@property`
@@ -531,7 +531,8 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcements.connect();
-    if (this.detached.cancel()) return;
+    const moved = this.detached.cancel();
+    if (moved && this.pendingTransportGeneration === undefined) return;
     if (this.hasUpdated && this.src.trim() && this.src === this.lastLoadSrc) {
       this.scheduleAfterUpdate(() => { void this.load(); });
     }
@@ -546,6 +547,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
   });
 
   override disconnectedCallback(): void {
+    if (this.pendingTransportGeneration !== undefined) this.generation++;
     this.announcements.disconnect();
     super.disconnectedCallback();
     this.detached.schedule();
@@ -577,6 +579,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
 
   private async load(): Promise<void> {
     const generation = ++this.generation;
+    this.pendingTransportGeneration = undefined;
     const signal = this.beginAbortableLoad();
     this.lastLoadSrc = this.src;
     if (!this.src) { this.fetchState = { kind: 'idle' }; return; }
@@ -586,20 +589,26 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
       return;
     }
     this.fetchState = { kind: 'loading' };
+    this.pendingTransportGeneration = generation;
+    let acquiringMessage = true;
     try {
       const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
-      if (!this.isCurrentLoad(generation, fetchTarget.view)) return;
+      if (signal?.aborted || !this.isCurrentLoad(generation, fetchTarget.view)) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const buffer = await readResponseArrayBuffer(response);
-      if (!this.isCurrentLoad(generation, fetchTarget.view)) return;
+      if (signal?.aborted || !this.isCurrentLoad(generation, fetchTarget.view)) return;
+      if (this.pendingTransportGeneration === generation) this.pendingTransportGeneration = undefined;
+      acquiringMessage = false;
       const result = await this.parse(buffer, generation, fetchTarget.view);
       if (result && this.isCurrentLoad(generation, fetchTarget.view)) {
         this.fetchState = { kind: 'loaded', ...result };
       }
     } catch (error) {
-      if (isAbortError(error) || !this.isCurrentLoad(generation, fetchTarget.view)) return;
+      if ((acquiringMessage && signal?.aborted) || !this.isCurrentLoad(generation, fetchTarget.view)) return;
       this.fetchState = { kind: 'error', message: error instanceof LyraUserFacingError ? error.message : this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
       this.emit('lr-render-error', { error });
+    } finally {
+      if (this.pendingTransportGeneration === generation) this.pendingTransportGeneration = undefined;
     }
   }
 

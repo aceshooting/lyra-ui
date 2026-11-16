@@ -420,10 +420,12 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     this.announcements.connect();
     const moved = this.detached.cancel();
     // After a genuine disconnect updated()'s `src` gate won't fire again, so re-arm the mount.
-    if (this.hasUpdated && this.src && !moved) this.scheduleAfterUpdate(() => { void this.mount(); });
+    if (this.hasUpdated && this.src && (!moved || this.phase === 'loading')) this.scheduleAfterUpdate(() => { void this.mount(); });
   }
 
   override disconnectedCallback(): void {
+    // Fetch, body admission and library acquisition stop with transport; renderer opens survive moves.
+    if (this.phase === 'loading') this.generation++;
     this.announcements.disconnect();
     super.disconnectedCallback();
     this.detached.schedule();
@@ -720,14 +722,14 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
         fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined),
       ]);
     } catch (error) {
-      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       this.phase = 'error';
       this.errorMessage = this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad');
       this.publishPageViewerSnapshot('error', 0);
       this.emit('lr-render-error', { error });
       return;
     }
-    if (!this.isConnected || generation !== this.generation) return;
+    if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
     if (!module || !response.ok) {
       void response.body?.cancel().catch(() => undefined);
       const error = new LyraUserFacingError(
@@ -742,17 +744,17 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     let buffer: ArrayBuffer;
     try {
       buffer = await readResponseArrayBuffer(response);
-      if (!this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       await assertPptxArchiveWithinLimits(buffer, { signal });
     } catch (error) {
-      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       this.phase = 'error';
       this.errorMessage = this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad');
       this.publishPageViewerSnapshot('error', 0);
       this.emit('lr-render-error', { error });
       return;
     }
-    if (!this.isConnected || generation !== this.generation) return;
+    if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
     this.phase = 'mounted';
     await this.updateComplete;
     if (!this.isConnected || generation !== this.generation || !this.containerEl) return;

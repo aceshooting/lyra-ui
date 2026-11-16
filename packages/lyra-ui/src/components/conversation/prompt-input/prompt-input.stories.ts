@@ -106,3 +106,18 @@ export const InputLimit: StoryObj = {
   parameters: { docs: { description: { story: 'The wrapper reports original catalog loss even when its deep-input budget is reached before the child picker row ceiling.' } } },
   render: () => html`<lr-prompt-input .modelCatalog=${Array.from({ length: 1000 }, (_, index) => ({ id: `model${index}`, label: `Model ${index}`, metadata: Array.from({ length: 100 }, () => 'detail') }))}></lr-prompt-input>`,
 };
+
+export const BottomToolbar: Story = {
+  render: () => html`
+    <lr-prompt-input actions-layout="below" toolbar-placement="actions"
+      .modelCatalog=${[{ id: 'fast', label: 'Fast' }]} model="fast"
+      style="inline-size: 320px; max-inline-size: 100%">
+      <button slot="start" type="button" aria-label="Attach file">+</button>
+      <button slot="toolbar" type="button">Generation options</button>
+      <span slot="chips">notes.txt</span>
+    </lr-prompt-input>
+  `,
+  parameters: {
+    docs: { description: { story: 'Caller toolbar content moves into the bottom action row. The independent model, voice and source controls remain above the composer.' } },
+  },
+};

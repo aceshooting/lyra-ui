@@ -8,7 +8,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { specialistTokens } from '../../../internal/specialist-host-tokens.styles.js';
 import { DocumentAnchorTarget, prioritizedHighlightCandidates, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
 import type { LyraAnchor, LyraAnchorKind, LyraHighlight } from '../document-viewer/anchors.js';
-import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
@@ -746,7 +746,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     super.connectedCallback();
     this.announcements.connect();
     const moved = this.detached.cancel();
-    if (moved) return;
+    if (moved && this.loadState.kind !== 'loading') return;
     if (this.hasUpdated && this.src && this._notebook === undefined) {
       this.scheduleSourceLoad();
     }
@@ -757,6 +757,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
   }
 
   override disconnectedCallback(): void {
+    if (this._notebook === undefined && this.loadState.kind === 'loading') this.generation++;
     this.announcements.disconnect();
     super.disconnectedCallback();
     this.detached.schedule();
@@ -847,13 +848,13 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
     this.loadState = { kind: 'loading' };
     try {
       const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
-      if (!this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const text = await readResponseText(response);
-      if (!this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       this.setDoc(JSON.parse(text), generation);
     } catch (error) {
-      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       this.loadState = {
         kind: 'error',
         message: error instanceof LyraUserFacingError

@@ -59,6 +59,15 @@ reveals the invalid state, and `form.reset()` clears the touched presentation.
   `max-rows` growth and inner scrolling are unchanged in every layout. Layout
   only; slot content, empty-slot hiding and the built-in button are unchanged. Invalid direct or
   attribute values normalize and reflect as `'inline'`.
+- `toolbarPlacement: ChatComposerToolbarPlacement = 'above'` (reflected, attribute
+  `toolbar-placement`) — `'above' | 'actions'`. By default the toolbar remains above attachments
+  and the input row. With `actionsLayout='below'`, `'actions'` places it between `start` and `end`
+  below the textarea, while attachments stay above the textarea. Inline and stacked layouts retain
+  the upper toolbar. Bottom controls use native Tab order: textarea, start, toolbar, end; callers
+  own keyboard behavior inside their toolbar controls. Long toolbar content stays in a bounded
+  wrapping/scrolling region so start and send remain visible at narrow widths and in RTL. Live
+  placement changes retain the textarea, draft, selection and focused caller controls. Invalid or
+  removed placement values normalize and reflect as `'above'`.
 - `withoutEnterSubmit: boolean = false` (reflected, attribute `without-enter-submit`) — when set,
   Enter always inserts a newline instead of submitting.
 - `submitDisabled: boolean = false` (reflected, attribute `submit-disabled`) — consumer-controlled
@@ -105,8 +114,10 @@ validity and recomputes the current intrinsic constraints.
   preventing it also prevents the native `invalid` event that produced it
 
 **Slots:** `toolbar` (auxiliary controls, e.g. a model or provider picker, rendered inside the
-frame above the chips tray and input row, sharing `[part="base"]`'s `:focus-within` affordance),
-`start` (content before the textarea, e.g. an attach-file trigger button), `end` (overrides the
+frame above the chips tray and input row by default, or between start/end below the textarea with
+`toolbar-placement="actions"` and `actions-layout="below"`, sharing `[part="base"]`'s
+`:focus-within` affordance),
+`start` (content at the logical start of the input/action layout, e.g. an attach-file trigger button), `end` (overrides the
 built-in send/stop button entirely when it has assigned content), `chips` (an attachment tray
 rendered above the input row).
 

@@ -35,8 +35,11 @@ their corresponding data can be supplied. The default entry registers all childr
 `submitDisabled: boolean = false` (attribute `submit-disabled`), `withoutStop: boolean = false`
 (attribute `without-stop`), `minRows: number = 1` (attribute `min-rows`) and `maxRows: number = 8`
 (attribute `max-rows`), `frame: 'card' | 'plain' = 'card'` and `actionsLayout: 'inline' | 'stacked' | 'below' = 'inline'`
-(attribute `actions-layout`) forward to the composed `lr-chat-composer` with its semantics, and a slotted
-`toolbar` child is forwarded to the composer's `toolbar` slot;
+(attribute `actions-layout`) forward to the composed `lr-chat-composer` with its semantics.
+`toolbarPlacement: ChatComposerToolbarPlacement = 'above'` (attribute `toolbar-placement`) forwards
+`'above' | 'actions'` to that composer; `'actions'` takes effect with `actions-layout="below"`.
+A slotted `toolbar` child is forwarded to the composer's `toolbar` slot. The separate data-driven
+model, voice and source controls remain above the composer regardless of toolbar placement;
 `spellcheck: boolean = true` (string-aware true-default converter), `autocapitalize: string = ''`,
 `autocorrect: boolean = true` (legacy string writes `'off'`/`'false'` normalize to `false`),
 `wrap: 'hard' | 'soft' | 'off' = 'soft'`,

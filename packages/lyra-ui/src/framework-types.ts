@@ -2273,6 +2273,7 @@ export interface LyraComponentTypeMap {
       | 'status'
       | 'strings'
       | 'submitDisabled'
+      | 'toolbarPlacement'
       | 'value'
       | 'withoutEnterSubmit'
       | 'withoutStop'
@@ -2310,6 +2311,7 @@ export interface LyraComponentTypeMap {
       'minlength'?: LyraChatComposer['minLength'];
       'readonly'?: LyraChatComposer['readOnly'];
       'submit-disabled'?: LyraChatComposer['submitDisabled'];
+      'toolbar-placement'?: LyraChatComposer['toolbarPlacement'];
       'value'?: LyraChatComposer['defaultValue'];
       'without-enter-submit'?: LyraChatComposer['withoutEnterSubmit'];
       'without-stop'?: LyraChatComposer['withoutStop'];
@@ -9765,6 +9767,7 @@ export interface LyraComponentTypeMap {
       | 'status'
       | 'strings'
       | 'submitDisabled'
+      | 'toolbarPlacement'
       | 'value'
       | 'voice'
       | 'voiceCatalog'
@@ -9806,6 +9809,7 @@ export interface LyraComponentTypeMap {
       'minlength'?: LyraPromptInput['minLength'];
       'readonly'?: LyraPromptInput['readOnly'];
       'submit-disabled'?: LyraPromptInput['submitDisabled'];
+      'toolbar-placement'?: LyraPromptInput['toolbarPlacement'];
       'without-enter-submit'?: LyraPromptInput['withoutEnterSubmit'];
       'without-stop'?: LyraPromptInput['withoutStop'];
     };

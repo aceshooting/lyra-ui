@@ -22003,6 +22003,16 @@
             "default": false
           },
           {
+            "name": "toolbar-placement",
+            "property": "toolbarPlacement",
+            "type": "ChatComposerToolbarPlacement",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "above"
+          },
+          {
             "name": "value",
             "property": "defaultValue",
             "type": "string",
@@ -22323,6 +22333,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "toolbarPlacement",
+            "attribute": "toolbar-placement",
+            "type": "ChatComposerToolbarPlacement",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "above"
           },
           {
             "name": "validationMessage",
@@ -109488,6 +109508,16 @@
             "default": false
           },
           {
+            "name": "toolbar-placement",
+            "property": "toolbarPlacement",
+            "type": "ChatComposerToolbarPlacement",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "above"
+          },
+          {
             "name": "value",
             "property": "value",
             "type": "string",
@@ -109857,6 +109887,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "toolbarPlacement",
+            "attribute": "toolbar-placement",
+            "type": "ChatComposerToolbarPlacement",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "above"
           },
           {
             "name": "value",

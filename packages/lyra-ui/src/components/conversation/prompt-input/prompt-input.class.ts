@@ -45,6 +45,7 @@ import type {
 import { normalizeChatComposerStatus } from '../chat-composer/chat-composer.class.js';
 import type {
   ChatComposerActionsLayout,
+  ChatComposerToolbarPlacement,
   ChatComposerFrame,
   ChatComposerSelectionDirection,
   ChatComposerStatus,
@@ -149,7 +150,8 @@ type LyraPromptInputCustomEventName = Exclude<
  * @slot controls - Replaces the data-driven model, voice, and source controls.
  * @slot start - Attachment-control content rendered before the textarea. Replaces the default
  *   attachment trigger.
- * @slot toolbar - Content above the textarea, forwarded to the composed composer's `toolbar` slot.
+ * @slot toolbar - Auxiliary controls forwarded to the composed composer; toolbarPlacement selects
+ * the upper toolbar or, with actionsLayout below, the bottom action row.
  * @slot chips - Replaces the data-driven attachment chips.
  * @slot end - Custom send/stop action replacing the built-in composer action.
  * @slot footer - Content below the composer.
@@ -286,6 +288,8 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   /** Forwarded to the composed composer: `'stacked'` arranges `start` above `end` beside the textarea;
    *  `'below'` puts both on one row under a full-width textarea. */
   @property({ attribute: 'actions-layout' }) actionsLayout: ChatComposerActionsLayout = 'inline';
+  /** Forwarded toolbar position; data-driven model/voice/source controls remain above the composer. */
+  @property({ attribute: 'toolbar-placement' }) toolbarPlacement: ChatComposerToolbarPlacement = 'above';
   // numeric-guard-exempt: pass-through to <lr-chat-composer>, which normalizes its row limits.
   @property({ type: Number, attribute: 'min-rows' }) minRows = 1;
   // numeric-guard-exempt: same <lr-chat-composer> pass-through as minRows above.
@@ -951,6 +955,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
         .maxRows=${this.maxRows}
         .frame=${this.frame}
         .actionsLayout=${this.actionsLayout}
+        .toolbarPlacement=${this.toolbarPlacement}
         aria-label=${label}
         @lr-input=${this.onInput}
         @lr-change=${this.onChange}

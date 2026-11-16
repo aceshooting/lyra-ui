@@ -9280,6 +9280,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/conversation/chat-composer/chat-composer-toolbar-placement.test.ts",
+              "test": "places the toolbar between start and end below the textarea while attachments stay above it",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/conversation/chat-composer/chat-composer.test.ts",
               "test": "is accessible in a populated, busy, chip-laden state",
               "target": "el",
@@ -9305,8 +9311,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/conversation/chat-composer/chat-composer.test.ts",
-              "test": "plain Enter submits and prevents the default newline insertion",
+              "file": "src/components/conversation/chat-composer/chat-composer-toolbar-placement.test.ts",
+              "test": "tabs from the textarea through attach and toolbar controls to the built-in send action",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -9316,8 +9322,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/conversation/chat-composer/chat-composer.test.ts",
-              "test": "keeps end at the inline end under 'below' when start is empty, and mirrors under RTL",
+              "file": "src/components/conversation/chat-composer/chat-composer-toolbar-placement.test.ts",
+              "line": 102,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -9428,6 +9434,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/conversation/chat-composer/chat-composer-resize-boundary.test.ts",
+          "src/components/conversation/chat-composer/chat-composer-toolbar-placement.test.ts",
           "src/components/conversation/chat-composer/chat-composer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -18396,6 +18403,7 @@
           "src/components/viewers/document-preview/document-preview-anchor-identity.test.ts",
           "src/components/viewers/document-preview/document-preview-fetch-lifecycle.test.ts",
           "src/components/viewers/document-preview/document-preview-remediation.test.ts",
+          "src/components/viewers/document-preview/document-preview-transport-ownership.test.ts",
           "src/components/viewers/document-preview/document-preview.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -18767,6 +18775,7 @@
           "src/components/viewers/docx-viewer/docx-resource-guard.test.ts",
           "src/components/viewers/docx-viewer/docx-viewer-load-lifecycle.test.ts",
           "src/components/viewers/docx-viewer/docx-viewer-register.test.ts",
+          "src/components/viewers/docx-viewer/docx-viewer-transport-ownership.test.ts",
           "src/components/viewers/docx-viewer/docx-viewer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -20463,6 +20472,7 @@
           "src/components/viewers/email-viewer/email-viewer-quote-cost.test.ts",
           "src/components/viewers/email-viewer/email-viewer-register.test.ts",
           "src/components/viewers/email-viewer/email-viewer-remediation.test.ts",
+          "src/components/viewers/email-viewer/email-viewer-transport-ownership.test.ts",
           "src/components/viewers/email-viewer/email-viewer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -38186,6 +38196,7 @@
           "src/components/viewers/notebook-viewer/notebook-viewer-markup.property.test.ts",
           "src/components/viewers/notebook-viewer/notebook-viewer-register.test.ts",
           "src/components/viewers/notebook-viewer/notebook-viewer-remediation.test.ts",
+          "src/components/viewers/notebook-viewer/notebook-viewer-transport-ownership.test.ts",
           "src/components/viewers/notebook-viewer/notebook-viewer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -42143,6 +42154,7 @@
           "src/components/viewers/pptx-viewer/pptx-resource-guard.test.ts",
           "src/components/viewers/pptx-viewer/pptx-viewer-external-media.test.ts",
           "src/components/viewers/pptx-viewer/pptx-viewer-register.test.ts",
+          "src/components/viewers/pptx-viewer/pptx-viewer-transport-ownership.test.ts",
           "src/components/viewers/pptx-viewer/pptx-viewer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -42626,7 +42638,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/prompt-input/prompt-input.class.ts",
-              "line": 573,
+              "line": 577,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -42667,6 +42679,7 @@
           "src/components/conversation/prompt-input/prompt-input-immediate-disabled.test.ts",
           "src/components/conversation/prompt-input/prompt-input-input-limit-scale.test.ts",
           "src/components/conversation/prompt-input/prompt-input-register.test.ts",
+          "src/components/conversation/prompt-input/prompt-input-toolbar-placement.test.ts",
           "src/components/conversation/prompt-input/prompt-input.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -51933,8 +51946,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/stepper/stepper-input-and-reconnect.test.ts",
-              "test": "ignores navigation keys when every step is disabled",
+              "file": "src/components/layout/stepper/stepper-consumer-regression.test.ts",
+              "test": "keeps the ${edge} interactive step outline inside its clipping track at ${inlineSize}px in ${direction}",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -51944,8 +51957,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/stepper/stepper.test.ts",
-              "test": "mirrors horizontal arrow navigation under RTL",
+              "file": "src/components/layout/stepper/stepper-consumer-regression.test.ts",
+              "line": 42,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -51961,8 +51974,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/stepper/stepper.test.ts",
-              "test": "contains long unbroken vertical labels at an exact 320px allocation in LTR and RTL",
+              "file": "src/components/layout/stepper/stepper-consumer-regression.test.ts",
+              "test": "keeps the vertical first-step outline visible without a clipping track in ${direction}",
               "kind": "320px allocation test signal"
             }
           ]
@@ -52055,6 +52068,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/stepper/stepper-consumer-regression.test.ts",
           "src/components/layout/stepper/stepper-coverage.test.ts",
           "src/components/layout/stepper/stepper-input-and-reconnect.test.ts",
           "src/components/layout/stepper/stepper.test.ts"
@@ -55963,8 +55977,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/conversation/thread-list/thread-list-search-size.test.ts",
-              "test": "keeps the tiered field symmetric and the clear button at the inline end under dir=\"rtl\"",
+              "file": "src/components/conversation/thread-list/thread-list-consumer-regression.test.ts",
+              "line": 49,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -55980,8 +55994,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/conversation/thread-list/thread-list-search-size.test.ts",
-              "test": "keeps the tiered field symmetric and the clear button at the inline end under dir=\"rtl\"",
+              "file": "src/components/conversation/thread-list/thread-list-consumer-regression.test.ts",
+              "test": "retains nontext excerpt content and reconciles callbacks after reconnect in ${direction}",
               "kind": "320px allocation test signal"
             }
           ]
@@ -56050,10 +56064,16 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/conversation/thread-list/thread-list.class.ts",
+              "line": 1011,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -56078,7 +56098,7 @@
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
         "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -56086,6 +56106,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/conversation/thread-list/thread-list-adoption.test.ts",
+          "src/components/conversation/thread-list/thread-list-consumer-regression.test.ts",
           "src/components/conversation/thread-list/thread-list-coverage.test.ts",
           "src/components/conversation/thread-list/thread-list-input-limit.test.ts",
           "src/components/conversation/thread-list/thread-list-keyboard-boundaries.test.ts",

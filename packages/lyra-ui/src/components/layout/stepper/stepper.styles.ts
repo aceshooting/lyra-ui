@@ -116,6 +116,15 @@ export const styles = css`
   [part="step"]:focus-visible {
     ${focusRing}
   }
+  /* Horizontal scrolling clips both axes. Keep the entire ring inside the button rather than
+     letting the track clip its block edges or the first and last step's inline edges. */
+  :host(:where(:not([orientation="vertical"]))) [part="step"]:focus-visible,
+  :host(:where([data-effective-orientation="horizontal"])) [part="step"]:focus-visible {
+    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+  }
+  :host(:where([data-effective-orientation="vertical"])) [part="step"]:focus-visible {
+    outline-offset: var(--lr-focus-ring-offset);
+  }
   /* Inline var() fallbacks rather than :host-declared properties, so a consumer can set them on any
      ancestor with no :host declaration shadowing them. ::part(step)[data-state='current'] is
      invalid CSS -- an attribute selector cannot follow ::part -- so recoloring current/error
