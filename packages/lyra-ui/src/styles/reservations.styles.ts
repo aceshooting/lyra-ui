@@ -105,6 +105,16 @@ export const reservationStyles: CSSResult = css`
       );
     }
 
+    lr-chat-composer[actions-layout='below']:not(:defined) {
+      min-block-size: calc(
+        1em * var(--lr-line-height-normal, 1.5) + 2 * var(--lr-space-xs, 0.25rem) +
+          var(--lr-space-s, 0.5rem) +
+          var(--lr-icon-button-size, var(--lr-theme-icon-button-size, 2.25rem)) +
+          2 * var(--lr-chat-composer-padding, var(--lr-space-s, 0.5rem)) +
+          2 * var(--lr-border-width-thin, 1px)
+      );
+    }
+
     lr-timeline:not(:defined):not([orientation='horizontal']):not([scale='time']) {
       display: block;
       font-family: var(--lr-font);
