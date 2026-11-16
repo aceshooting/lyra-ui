@@ -1,4 +1,4 @@
-import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { recordScaleMeasurement, renderedNodeCount } from '../../../../test/scale-budgets.js';
 import './embedding-explorer.js';
 import type { LyraEmbeddingExplorer } from './embedding-explorer.class.js';
@@ -418,4 +418,92 @@ it('rejects an exact missing result when its ID was represented during the pendi
   await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="point"]').length === 1);
   lookup.resolve(null);
   await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="error"]').length === 1);
+});
+
+describe('revealSourcePoint() supersession while a step is pending', () => {
+  const empty = (request: { bounds: LyraSpatialBounds }): LyraSpatialQuery<SpatialPoint> => ({ matchedCount: 1, bins: [{ bounds: request.bounds, count: 1 }], points: [] });
+  it('resolves false when the panned query is still loading and a newer reveal supersedes it', async () => {
+    let handler = (request: { bounds: LyraSpatialBounds }): LyraSpatialQuery<SpatialPoint> | Promise<LyraSpatialQuery<SpatialPoint>> => empty(request);
+    const source = { ...provider(), query: (request: { bounds: LyraSpatialBounds }) => handler(request) };
+    const queries: { resolve(): void }[] = [];
+    const el = await spatial(source, { viewport: { minX: 0, maxX: 20, minY: 0, maxY: 20 } });
+    handler = request => { const next = deferred<LyraSpatialQuery<SpatialPoint>>(); queries.push({ ...next, resolve: () => next.resolve(empty(request)) }); return next.promise; };
+    let events = 0; el.addEventListener('lr-point-select', () => events++);
+    const obsolete = el.revealSourcePoint('90');
+    await waitUntil(() => queries.length === 1, 'panned query pending');
+    handler = empty;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-busy') === 'true', 'panned query loading');
+    await aTimeout(20);
+    const newest = el.revealSourcePoint('10');
+    expect(await obsolete).to.equal(false);
+    for (const query of queries) query.resolve();
+    expect(await newest).to.equal(true);
+    expect(events).to.equal(0);
+  });
+
+  it('resolves false when the element is removed while the panned viewport renders', async () => {
+    let handler = (request: { bounds: LyraSpatialBounds }): LyraSpatialQuery<SpatialPoint> => empty(request);
+    const source = { ...provider(), query: (request: { bounds: LyraSpatialBounds }) => handler(request) };
+    const el = await spatial(source, { viewport: { minX: 0, maxX: 20, minY: 0, maxY: 20 } });
+    handler = request => { el.remove(); return empty(request); };
+    expect(await el.revealSourcePoint('90')).to.equal(false);
+    expect(el.viewport).to.deep.equal({ minX: 70, maxX: 90, minY: 70, maxY: 90 });
+  });
+
+  it('resolves false when the element is removed as the loaded panned view renders', async () => {
+    let release: (() => void) | undefined;
+    let pan = false;
+    const source = { ...provider(), query: (request: { bounds: LyraSpatialBounds }) => {
+      if (!pan) return empty(request);
+      return new Promise<LyraSpatialQuery<SpatialPoint>>(resolve => { release = () => resolve(empty(request)); });
+    } };
+    const el = await spatial(source, { viewport: { minX: 0, maxX: 20, minY: 0, maxY: 20 } });
+    pan = true;
+    const reveal = el.revealSourcePoint('90');
+    await waitUntil(() => release !== undefined && el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-busy') === 'true', 'panned query loading');
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    const observer = new MutationObserver(() => { if (base.getAttribute('aria-busy') === 'false') el.remove(); });
+    observer.observe(base, { attributes: true, attributeFilter: ['aria-busy'] });
+    try {
+      release!();
+      expect(await reveal).to.equal(false);
+    } finally { observer.disconnect(); }
+    expect(el.isConnected).to.equal(false);
+  });
+
+  it('resolves false when the element is removed as the revealed point becomes the tab stop', async () => {
+    const neighbor = { id: '75', sourceIndex: 75, x: 75, y: 75 };
+    const inside = (bounds: LyraSpatialBounds) => neighbor.x >= bounds.minX && neighbor.x <= bounds.maxX && neighbor.y >= bounds.minY && neighbor.y <= bounds.maxY;
+    const source = { ...provider(), query: (request: { bounds: LyraSpatialBounds }) => ({ ...empty(request), points: inside(request.bounds) ? [neighbor] : [] }) };
+    const el = await spatial(source, { viewport: { minX: 70, maxX: 90, minY: 70, maxY: 90 } });
+    await waitUntil(() => el.shadowRoot!.querySelector('[data-id="75"]')?.getAttribute('tabindex') === '0', 'neighbor is the tab stop');
+    let focusEvents = 0;
+    el.addEventListener('focusin', () => focusEvents++);
+    const observer = new MutationObserver(() => {
+      if (el.shadowRoot!.querySelector('[data-id="90"]')?.getAttribute('tabindex') === '0') el.remove();
+    });
+    observer.observe(el.shadowRoot!, { subtree: true, childList: true, attributes: true, attributeFilter: ['tabindex'] });
+    try {
+      expect(await el.revealSourcePoint('90')).to.equal(false);
+    } finally { observer.disconnect(); }
+    expect(el.isConnected).to.equal(false);
+    expect(focusEvents).to.equal(0);
+  });
+
+  it('resolves false while the bound source reports an error', async () => {
+    const el = await fixture<LyraEmbeddingExplorer>(html`<lr-embedding-explorer .source=${{ ...provider(), query: () => { throw new Error('provider detail'); } }}></lr-embedding-explorer>`);
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null, 'source error shown');
+    expect(await el.revealSourcePoint('10')).to.equal(false);
+  });
+
+  it('resolves false without moving the viewport when no representable same-size pan exists', async () => {
+    const global = { minX: -Number.MAX_VALUE, maxX: Number.MAX_VALUE, minY: 0, maxY: 100 };
+    const source = { ...provider(), bounds: global, query: (request: { bounds: LyraSpatialBounds }) => ({ matchedCount: 1, bins: [{ bounds: request.bounds, count: 1 }], points: [] }), getPoint: (id: string) => ({ id, sourceIndex: 1, x: Number.MAX_VALUE, y: 30 }) };
+    const fine = { minX: 0, maxX: 1, minY: 20, maxY: 40 };
+    const el = await spatial(source, { viewport: fine });
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-busy') === 'false');
+    expect((el as unknown as { spatial: { error: unknown } }).spatial.error).to.equal(false);
+    expect(await el.revealSourcePoint('far')).to.equal(false);
+    expect(el.viewport).to.deep.equal(fine);
+  });
 });

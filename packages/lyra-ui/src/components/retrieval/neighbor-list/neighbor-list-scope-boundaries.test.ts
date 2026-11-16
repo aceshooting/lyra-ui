@@ -60,6 +60,47 @@ describe('neighbor-list source scope boundaries', () => {
     });
   }
 
+  for (const throws of [false, true]) {
+    it(`keeps a newer type filter assigned while an older one is read and ${throws ? 'throws' : 'returns'}`, async () => {
+      const data = provider();
+      const list = await mount(data.source);
+      let reads = 0;
+      // Field reads go through own-property descriptors; the trap stands in for a hostile host
+      // array whose inspection reassigns the filter.
+      const stale = new Proxy(['place'], { getOwnPropertyDescriptor(target, key) {
+        if (key === '0') {
+          reads++;
+          list.sourceNodeTypes = ['person'];
+          if (throws) throw new Error('Obsolete type filter');
+        }
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      } });
+      list.sourceNodeTypes = stale;
+      await ready(list);
+      expect(reads).to.equal(1);
+      expect(list.sourceNodeTypes).to.deep.equal(['person']);
+      expect(data.queries.at(-1)!.query.nodeTypes).to.deep.equal(['person']);
+      expect(list.shadowRoot!.textContent).not.to.include('Invalid neighborhood');
+    });
+  }
+
+  it('stays failed without querying when only the page changes after an invalid scope', async () => {
+    const data = provider();
+    const list = await mount(data.source);
+    Reflect.set(list, 'sourceNodeTypes', null);
+    await list.updateComplete;
+    expect(list.shadowRoot!.textContent).to.include('Invalid neighborhood');
+    list.sourcePage = 3;
+    await list.updateComplete;
+    expect(data.queries.length).to.equal(1);
+    expect(list.sourceTotal).to.equal(null);
+    expect(list.shadowRoot!.textContent).to.include('Invalid neighborhood');
+    list.sourceNodeTypes = ['person'];
+    await ready(list);
+    expect(list.sourcePage).to.equal(0);
+    expect(data.queries.length).to.equal(2);
+  });
+
   const exactLimits: [string, string[]][] = [
     ['500 entries', Array.from({ length: 500 }, (_, i) => `type-${i}`)],
     ['65,536 units per type', ['x'.repeat(65_536)]],

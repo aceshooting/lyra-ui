@@ -493,3 +493,212 @@ for (const dir of ['ltr', 'rtl'] as const) it(`moves source row focus with Arrow
   expect(active(), 'ArrowDown clamps at the last row').to.equal('node:99');
   expect(press('x', 'node:99').defaultPrevented, 'unrelated keys are left alone').to.equal(false);
 });
+
+it('moves source row focus to the first row on Home', async () => {
+  const data = provider();
+  const graph = await fixture<SourceGraph>(html`<lr-graph view="list" .graphSource=${data.source}></lr-graph>`);
+  await ready(graph, 'node:0');
+  const event = new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true });
+  row(graph, 'node:42')!.dispatchEvent(event);
+  expect(event.defaultPrevented).to.equal(true);
+  expect((graph.shadowRoot!.activeElement as HTMLElement | null)?.dataset['sourceKey']).to.equal('node:0');
+});
+
+it('switches the record kind back to nodes and normalizes the incident direction control', async () => {
+  const data = provider();
+  const graph = await fixture<SourceGraph>(html`<lr-graph view="list" .graphSource=${data.source}></lr-graph>`);
+  await ready(graph, 'node:0');
+  const kind = graph.shadowRoot!.querySelector<HTMLSelectElement>('[data-source-kind]')!;
+  kind.value = 'edges'; kind.dispatchEvent(new Event('change', { bubbles: true }));
+  await ready(graph, 'edge:0');
+  kind.value = 'nodes'; kind.dispatchEvent(new Event('change', { bubbles: true }));
+  await ready(graph, 'node:0');
+  expect(data.queries.at(-1)!.query.kind).to.equal('nodes');
+
+  graph.shadowRoot!.querySelector<HTMLButtonElement>('[data-source-incident="node:0"]')!.click();
+  await waitUntil(() => data.queries.at(-1)!.query.centerKey === 'node:0', 'incident edges requested');
+  const direction = () => graph.shadowRoot!.querySelector<HTMLSelectElement>('select[aria-label="Direction"]')!;
+  await waitUntil(() => !!direction(), 'direction control');
+  direction().value = 'in'; direction().dispatchEvent(new Event('change', { bubbles: true }));
+  await waitUntil(() => data.queries.at(-1)!.query.direction === 'in', 'inbound edges requested');
+  const select = direction();
+  const option = document.createElement('option'); option.value = 'sideways'; select.append(option);
+  select.value = 'sideways'; select.dispatchEvent(new Event('change', { bubbles: true }));
+  await waitUntil(() => data.queries.at(-1)!.query.direction === 'both', 'unknown direction normalized to both');
+  graph.shadowRoot!.querySelector<HTMLButtonElement>('.source-toolbar button')!.click();
+  await waitUntil(() => data.queries.at(-1)!.query.centerKey === null, 'all records restored');
+});
+
+it('names source rows by accessible label, then label, then id', async () => {
+  const data = provider();
+  const query = data.source.records.query;
+  data.source.records.query = async request => {
+    const result = await query(request);
+    return { ...result, rows: result.rows.map(row => row.key === 'node:0' ? { ...row, value: { kind: 'node' as const, value: { id: '0', label: 'Visible', accessibleLabel: 'Spoken' } } }
+      : row.key === 'node:1' ? { ...row, value: { kind: 'node' as const, value: { id: '1' } } } : row) };
+  };
+  const graph = await fixture<SourceGraph>(html`<lr-graph view="list" .graphSource=${data.source}></lr-graph>`);
+  await ready(graph, 'node:1');
+  expect(row(graph, 'node:0')!.textContent!.trim()).to.equal('Spoken');
+  expect(row(graph, 'node:1')!.textContent!.trim()).to.equal('1');
+  expect(row(graph, 'node:2')!.textContent!.trim()).to.equal('Node 2');
+});
+
+it('describes aggregate scene coverage in the source navigator', async () => {
+  const coverage = 'aggregate' as const;
+  const data = provider();
+  const scene = data.source.scene;
+  data.source.scene = async request => ({ ...await scene(request), coverage });
+  const graph = await fixture<SourceGraph>(html`<lr-graph .graphSource=${data.source}></lr-graph>`);
+  await waitUntil(() => data.scenes.length > 0 && !!graph.shadowRoot!.querySelector('[part="source-coverage"]'), 'source coverage shown', { timeout: 4000 });
+  await waitUntil(() => graph.shadowRoot!.querySelector('[part="source-coverage"]')!.textContent!.includes('Summary: showing'), 'aggregate coverage text', { timeout: 4000 });
+});
+
+describe('global reveal boundaries', () => {
+  it('rejects malformed keys without querying the provider', async () => {
+    const data = provider();
+    const graph = await fixture<SourceGraph>(html`<lr-graph view="list" .graphSource=${data.source}></lr-graph>`);
+    await ready(graph, 'node:0');
+    const before = data.queries.length;
+    for (const key of ['node:', 'vertex:1', `node:${'x'.repeat(65_536)}`, 7 as unknown as string]) expect(await graph.revealSourceKey(key)).to.equal(false);
+    expect(data.queries.length).to.equal(before);
+  });
+
+  it('reports a record the provider cannot locate as missing', async () => {
+    const data = provider();
+    data.source.records.locate = async () => null;
+    const graph = await fixture<SourceGraph>(html`<lr-graph view="list" .graphSource=${data.source}></lr-graph>`);
+    await ready(graph, 'node:0');
+    expect(await graph.revealSourceKey('node:123')).to.equal(false);
+    await graph.updateComplete;
+    expect(graph.shadowRoot!.querySelector('[part="source-status"]')!.textContent).to.equal('This graph record is unavailable.');
+  });
+
+  it('resolves false when the provider is replaced while locating', async () => {
+    const data = provider(), fresh = provider();
+    let release!: () => void;
+    data.source.records.locate = key => new Promise(resolve => { release = () => resolve(Number(key.slice(5))); });
+    const graph = await fixture<SourceGraph>(html`<lr-graph view="list" .graphSource=${data.source}></lr-graph>`);
+    await ready(graph, 'node:0');
+    const reveal = graph.revealSourceKey('node:500');
+    await waitUntil(() => release !== undefined, 'locate pending');
+    graph.graphSource = fresh.source;
+    release();
+    expect(await reveal).to.equal(false);
+    await ready(graph, 'node:0');
+    expect(fresh.queries.every(request => request.page === 0)).to.equal(true);
+  });
+
+  it('resolves false when the located row is no longer in the returned page', async () => {
+    const data = provider();
+    data.source.records.locate = async () => 250;
+    const query = data.source.records.query;
+    data.source.records.query = async request => request.page === 2 ? { ...await query(request), rows: [] } : query(request);
+    const graph = await fixture<SourceGraph>(html`<lr-graph view="list" .graphSource=${data.source}></lr-graph>`);
+    await ready(graph, 'node:0');
+    expect(await graph.revealSourceKey('node:250')).to.equal(false);
+  });
+
+  it('resolves false when the provider is replaced before the current page settles', async () => {
+    const data = provider(), fresh = provider();
+    const graph = await fixture<SourceGraph>(html`<lr-graph view="list" .graphSource=${data.source}></lr-graph>`);
+    await ready(graph, 'node:0');
+    const reveal = graph.revealSourceKey('node:500');
+    graph.graphSource = fresh.source;
+    expect(await reveal).to.equal(false);
+  });
+
+  it('resolves false when the provider is replaced while the located page loads', async () => {
+    const data = provider(), fresh = provider();
+    const query = data.source.records.query;
+    let release: (() => void) | undefined;
+    data.source.records.query = request => request.page === 5 ? new Promise(resolve => { release = () => resolve(query(request)); }) : query(request);
+    const graph = await fixture<SourceGraph>(html`<lr-graph view="list" .graphSource=${data.source}></lr-graph>`);
+    await ready(graph, 'node:0');
+    const reveal = graph.revealSourceKey('node:500');
+    await waitUntil(() => release !== undefined, 'located page pending');
+    graph.graphSource = fresh.source;
+    release!();
+    expect(await reveal).to.equal(false);
+  });
+
+  it('resolves false when the element is removed as the located page renders', async () => {
+    const data = provider();
+    const graph = await fixture<SourceGraph>(html`<lr-graph view="list" .graphSource=${data.source}></lr-graph>`);
+    await ready(graph, 'node:0');
+    const observer = new MutationObserver(() => { if (row(graph, 'node:500')) graph.remove(); });
+    observer.observe(graph.shadowRoot!, { subtree: true, childList: true });
+    try { expect(await graph.revealSourceKey('node:500')).to.equal(false); } finally { observer.disconnect(); }
+    expect(graph.isConnected).to.equal(false);
+  });
+
+  it('marks an activated row missing when the provider can no longer resolve it, without emitting activation', async () => {
+    const data = provider();
+    data.source.records.lookup = async () => [];
+    const graph = await fixture<SourceGraph>(html`<lr-graph view="list" .graphSource=${data.source}></lr-graph>`);
+    await ready(graph, 'node:3');
+    let activations = 0; graph.addEventListener('lr-node-activate', () => activations++);
+    row(graph, 'node:3')!.click();
+    await waitUntil(() => graph.shadowRoot!.querySelector('[part="source-status"]')?.textContent === 'This graph record is unavailable.', 'missing status');
+    expect(activations).to.equal(0);
+  });
+
+  it('caps the activation scene reservation at 32 keys across selected nodes and edges', async () => {
+    const data = provider();
+    const graph = await fixture<SourceGraph>(html`<lr-graph view="list" .graphSource=${data.source}
+      .selectedNodeIds=${Array.from({ length: 20 }, (_, index) => String(index + 100))}
+      .selectedEdgeIds=${Array.from({ length: 20 }, (_, index) => String(index + 200))}></lr-graph>`);
+    await ready(graph, 'node:3');
+    const activated = new Promise(resolve => graph.addEventListener('lr-node-activate', resolve, { once: true }));
+    row(graph, 'node:3')!.click();
+    await activated;
+    const keys = data.scenes.at(-1)!.includeKeys;
+    expect(keys.length).to.equal(32);
+    expect(keys[0]).to.equal('node:3');
+    expect(keys.filter(key => key.startsWith('edge:')).length).to.equal(11);
+  });
+
+  it('does not activate a row whose record is absent from the accepted scene', async () => {
+    const data = provider();
+    const scene = data.source.scene;
+    data.source.scene = async request => { const value = await scene(request); return { ...value, nodes: value.nodes.filter(node => node.key !== 'node:3') }; };
+    const graph = await fixture<SourceGraph>(html`<lr-graph view="list" .graphSource=${data.source}></lr-graph>`);
+    await ready(graph, 'node:3');
+    let activations = 0; graph.addEventListener('lr-node-activate', () => activations++);
+    const scenes = data.scenes.length;
+    row(graph, 'node:3')!.click();
+    await waitUntil(() => data.scenes.length > scenes, 'activation scene requested');
+    await graph.updateComplete; await new Promise(resolve => setTimeout(resolve, 50));
+    expect(activations).to.equal(0);
+  });
+
+  it('does not activate a row when the element is removed as the accepted scene renders', async () => {
+    const data = provider();
+    let removeOnScene = false;
+    const scene = data.source.scene;
+    data.source.scene = async request => { const value = await scene(request); if (removeOnScene) queueMicrotask(() => queueMicrotask(() => graph.remove())); return value; };
+    const graph = await fixture<SourceGraph>(html`<lr-graph view="list" .graphSource=${data.source}></lr-graph>`);
+    await ready(graph, 'node:3');
+    let activations = 0; graph.addEventListener('lr-node-activate', () => activations++);
+    removeOnScene = true;
+    row(graph, 'node:3')!.click();
+    await waitUntil(() => !graph.isConnected, 'removed');
+    await new Promise(resolve => setTimeout(resolve, 50));
+    expect(activations).to.equal(0);
+  });
+
+  it('ignores a click on a row retained from a previous page', async () => {
+    const data = provider();
+    const graph = await fixture<SourceGraph>(html`<lr-graph view="list" .graphSource=${data.source}></lr-graph>`);
+    await ready(graph, 'node:3');
+    const stale = row(graph, 'node:3')!;
+    graph.sourcePage = 1;
+    await ready(graph, 'node:100');
+    let activations = 0; graph.addEventListener('lr-node-activate', () => activations++);
+    const scenes = data.scenes.length;
+    stale.click();
+    await graph.updateComplete; await new Promise(resolve => setTimeout(resolve, 50));
+    expect(activations).to.equal(0);
+    expect(data.scenes.length).to.equal(scenes);
+  });
+});

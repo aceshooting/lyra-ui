@@ -1526,6 +1526,59 @@ it('recovers virtualized inspector focus from rendered rows when the controlled-
   ).to.equal('open-button');
 });
 
+/** Detaches `host` the first time `target.updateComplete` is read, then restores the prototype
+ *  getter, so the focus restore that awaits it resumes on a disconnected panel. */
+function detachOnNextUpdateComplete(target: HTMLElement, host: HTMLElement): () => boolean {
+  let detached = false;
+  Object.defineProperty(target, 'updateComplete', { configurable: true, get() {
+    delete (target as { updateComplete?: unknown }).updateComplete;
+    detached = true;
+    host.remove();
+    return (target as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+  } });
+  return () => detached;
+}
+
+for (const stage of ['panel', 'virtual list', 'inspector'] as const) {
+  it(`does not restore focus into a panel detached while its ${stage} settles`, async () => {
+    const el = (await fixture(
+      html`<lr-retrieval-results
+        grouping="source"
+        sort="none"
+        without-selection
+        .chunks=${chunks}
+      ></lr-retrieval-results>`
+    )) as LyraRetrievalResults;
+    const parent = el.parentNode!;
+    const list = vlist(el);
+    await list.updateComplete;
+    await nextFrame();
+    const focusedInspector = list.shadowRoot!.querySelector(
+      'lr-chunk-inspector[data-chunk-id="c2"]'
+    ) as LyraChunkInspector;
+    await focusedInspector.updateComplete;
+    (focusedInspector.shadowRoot!.querySelector('[part="open-button"]') as HTMLButtonElement).focus();
+    const survivor = list.shadowRoot!.querySelector(
+      'lr-chunk-inspector[data-chunk-id="c3"]'
+    ) as LyraChunkInspector;
+    const detached = detachOnNextUpdateComplete(
+      stage === 'panel' ? el : stage === 'virtual list' ? list : survivor, el
+    );
+    try {
+      el.chunks = [chunks[0]!, chunks[2]!];
+      await waitUntil(detached, 'the focus restore reached its awaited update');
+      await nextFrame();
+      expect(el.isConnected).to.equal(false);
+      expect(survivor.shadowRoot!.activeElement === null).to.equal(true);
+      expect(el.shadowRoot!.activeElement === null).to.equal(true);
+    } finally {
+      if (!el.isConnected) parent.appendChild(el);
+    }
+    await el.updateComplete;
+    expect(list.shadowRoot!.querySelectorAll('lr-chunk-inspector').length).to.equal(2);
+  });
+}
+
 it('keeps focus on a surviving virtualized inspector action through a controlled reorder', async () => {
   const el = (await fixture(
     html`<lr-retrieval-results

@@ -352,3 +352,33 @@ it('preserves supported locator scalars, rects and paths while leaving metadata 
   expect(virtual.items.map(item => (item as RetrievalChunk).locator)).to.deep.equal(locators);
   expect(virtual.items.every(item => (item as RetrievalChunk).metadata === metadata)).to.equal(true);
 });
+it('ignores a located page for an active ID that was replaced while locate was pending', async () => {
+  const provider = source(); const pending = new Map<string, (index: number | null) => void>();
+  provider.locate = key => new Promise(resolve => pending.set(key, resolve));
+  const el = await fixture<LyraRetrievalResults>(html`<lr-retrieval-results .dataSource=${provider}></lr-retrieval-results>`);
+  await list(el, 'c0');
+  el.activeChunkId = 'c500'; await waitUntil(() => pending.has('c500'));
+  el.activeChunkId = 'c700'; await el.updateComplete;
+  pending.get('c500')!(500); await nextFrame();
+  expect(el.sourcePage).to.equal(0);
+  await waitUntil(() => pending.has('c700'));
+  pending.get('c700')!(700); await list(el, 'c700');
+  expect(el.sourcePage).to.equal(7);
+  expect(el.activeChunkId).to.equal('c700');
+});
+it('skips revealing a located row once an error replaces the provider list', async () => {
+  const provider = source(); let release!: (index: number) => void;
+  provider.locate = () => new Promise(resolve => { release = resolve; });
+  const el = await fixture<LyraRetrievalResults>(html`<lr-retrieval-results .dataSource=${provider}></lr-retrieval-results>`);
+  await list(el, 'c0');
+  el.activeChunkId = 'c50'; await waitUntil(() => typeof release === 'function');
+  release(50); el.errorText = 'Results unavailable';
+  await el.updateComplete; await nextFrame();
+  expect(el.shadowRoot!.querySelector('lr-virtual-list') === null).to.equal(true);
+  expect(el.shadowRoot!.textContent).to.contain('Results unavailable');
+  el.errorText = '';
+  await list(el, 'c50');
+  expect(el.sourcePage).to.equal(0);
+  expect(el.activeChunkId).to.equal('c50');
+  expect(el.shadowRoot!.textContent).not.to.contain('Results unavailable');
+});

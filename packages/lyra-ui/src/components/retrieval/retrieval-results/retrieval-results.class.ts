@@ -674,7 +674,6 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   private previouslyInputTruncated = false;
 
   private inputLimitText(): string {
-    if (this.sourceMode) return '';
     const truncation = publicCollectionTruncation(this, 'chunks');
     const number = getNumberFormat(this.effectiveLocale);
     return truncation ? this.localize('retrievalResultsInputLimit', undefined, {

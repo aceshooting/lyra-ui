@@ -637,6 +637,27 @@ it('keeps an in-flight keyboard focus target by id when sources reorder before t
   ).to.include('Beta');
 });
 
+for (const retirement of ['newer key press', 'removed target', 'disconnect'] as const) {
+  it(`drops an in-flight keyboard focus move superseded by a ${retirement}`, async () => {
+    const el = await fixture<LyraSourcePicker>(html`<lr-source-picker .sources=${[
+      { id: 'a', label: 'Alpha' }, { id: 'b', label: 'Beta' }, { id: 'c', label: 'Gamma' },
+    ]}></lr-source-picker>`);
+    const parent = el.parentNode!;
+    const tree = el.shadowRoot!.querySelector('[part="tree"]')!;
+    const press = (key: string) => tree.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+    press('ArrowDown');
+    if (retirement === 'newer key press') press('ArrowDown');
+    else if (retirement === 'removed target') el.sources = [{ id: 'a', label: 'Alpha' }, { id: 'c', label: 'Gamma' }];
+    else el.remove();
+    await el.updateComplete;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const focused = el.shadowRoot!.activeElement?.textContent ?? '';
+    if (retirement === 'newer key press') expect(focused).to.include('Gamma');
+    else expect(el.shadowRoot!.activeElement === null).to.equal(true);
+    if (retirement === 'disconnect') parent.appendChild(el);
+  });
+}
+
 it('keyboard: Home/End jump the active row to the first/last visible entry', async () => {
   const el = (await fixture(
     html`<lr-source-picker></lr-source-picker>`

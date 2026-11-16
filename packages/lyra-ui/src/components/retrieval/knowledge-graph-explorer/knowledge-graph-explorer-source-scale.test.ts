@@ -232,3 +232,96 @@ it('preserves strictly accepted source curvature through the wrapper child scene
   expect(seam.sourceScene.state.scene!.edges[0]!.value.curvature).to.equal(-1);
   expect(child.engine).to.equal('builtin');
 });
+
+describe('source entity activation boundaries', () => {
+  const select = (el: Explorer, entityId: string) => el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(
+    new CustomEvent('lr-entity-select', { detail: { entityId }, bubbles: true, composed: true }));
+  function deferredLookups(data: ReturnType<typeof provider>) {
+    const pending: (() => void)[] = [];
+    const lookup = data.source.records.lookup;
+    data.source.records.lookup = (keys, context) => new Promise(resolve => { pending.push(() => resolve(lookup(keys, context))); });
+    return pending;
+  }
+
+  it('ignores blank, oversized and all-hidden activations without touching the provider', async () => {
+    const data = provider();
+    const el = await fixture<Explorer>(html`<lr-knowledge-graph-explorer view="list" .graphSource=${data.source} .nodeTypes=${[{ id: 'person', label: 'Person' }]}></lr-knowledge-graph-explorer>`);
+    await ready(el);
+    for (const id of ['   ', 'x'.repeat(65_532)]) select(el, id);
+    await el.updateComplete;
+    expect(data.lookups.length).to.equal(0);
+    el.hiddenTypes = ['person']; await el.updateComplete;
+    select(el, '9'); await el.updateComplete;
+    expect(data.lookups.length).to.equal(0);
+    expect(el.selectedNodeId === null).to.equal(true);
+  });
+
+  it('leaves selection unset when the provider no longer knows the activated entity', async () => {
+    const data = provider();
+    const el = await fixture<Explorer>(html`<lr-knowledge-graph-explorer view="list" .graphSource=${data.source}></lr-knowledge-graph-explorer>`);
+    await ready(el);
+    const selections: unknown[] = [];
+    el.addEventListener('lr-selection-change', event => selections.push(event.detail));
+    select(el, 'missing');
+    await waitUntil(() => data.lookups.some(keys => keys.includes('node:missing')), 'missing entity looked up');
+    await el.updateComplete;
+    expect(el.selectedNodeId === null).to.equal(true);
+    expect(selections).to.deep.equal([]);
+  });
+
+  it('clears a controlled selection the provider cannot resolve', async () => {
+    const data = provider();
+    const el = await fixture<Explorer>(html`<lr-knowledge-graph-explorer view="list" .graphSource=${data.source}></lr-knowledge-graph-explorer>`);
+    await ready(el);
+    el.selectedNodeId = 'missing';
+    await waitUntil(() => el.selectedNodeId === null, 'unresolvable controlled selection cleared');
+  });
+
+  for (const transition of ['replace', 'disconnect'] as const) {
+    it(`drops an activation whose lookup resolves after the source was ${transition === 'replace' ? 'replaced' : 'disconnected'}`, async () => {
+      const data = provider(), fresh = provider();
+      const el = await fixture<Explorer>(html`<lr-knowledge-graph-explorer view="list" .graphSource=${data.source}></lr-knowledge-graph-explorer>`);
+      await ready(el);
+      const pending = deferredLookups(data);
+      const selections: unknown[] = [];
+      el.addEventListener('lr-selection-change', event => selections.push(event.detail));
+      select(el, '9');
+      await waitUntil(() => pending.length === 1, 'activation lookup pending');
+      if (transition === 'replace') el.graphSource = fresh.source; else el.remove();
+      for (const release of pending.splice(0)) release();
+      await el.updateComplete;
+      await new Promise(resolve => setTimeout(resolve, 50));
+      expect(el.selectedNodeId === null).to.equal(true);
+      expect(selections).to.deep.equal([]);
+      expect(el.shadowRoot!.querySelector<LyraPopover>('[part="detail-popover"]')?.open ?? false).to.equal(false);
+    });
+  }
+
+  it('drops an activation when the source is replaced before the first update settles', async () => {
+    const data = provider(), fresh = provider();
+    const el = await fixture<Explorer>(html`<lr-knowledge-graph-explorer view="list" .graphSource=${data.source}></lr-knowledge-graph-explorer>`);
+    await ready(el);
+    select(el, '9');
+    el.graphSource = fresh.source;
+    await ready(el);
+    await new Promise(resolve => setTimeout(resolve, 50));
+    expect(data.lookups.length).to.equal(0);
+    expect(el.selectedNodeId === null).to.equal(true);
+  });
+
+  it('resolves revealSourceKey() to false once the source is removed', async () => {
+    const data = provider();
+    const el = await fixture<Explorer>(html`<lr-knowledge-graph-explorer view="list" .graphSource=${data.source}></lr-knowledge-graph-explorer>`);
+    await ready(el);
+    el.graphSource = undefined; await el.updateComplete;
+    expect(await el.revealSourceKey('node:9')).to.equal(false);
+  });
+});
+
+it('reports a zero match count for a whitespace-only source search intent', async () => {
+  const data = provider(); const el = await fixture<Explorer>(html`<lr-knowledge-graph-explorer view="list" .graphSource=${data.source}></lr-knowledge-graph-explorer>`); await ready(el);
+  const events: unknown[] = []; el.addEventListener('lr-search-change', e => events.push(e.detail));
+  el.shadowRoot!.querySelector('[part="search"]')!.dispatchEvent(new CustomEvent('lr-input', { detail: { value: '   ' }, bubbles: true, composed: true }));
+  await waitUntil(() => events.length === 1, 'whitespace search accepted');
+  expect(events[0]).to.deep.equal({ query: '   ', matchCount: 0, matchCountExact: true, activeIndex: -1 });
+});

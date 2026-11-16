@@ -203,3 +203,66 @@ it('keeps current row actions live after a successful same-page reveal', async (
  el.sourcePage = 1; current.click(); previousExpand.click();
  expect(selected).to.deep.equal(['a']); expect(expanded).to.deep.equal(['a']);
 });
+it('declines a reveal when the provider locates the key on a page that does not contain it', async () => {
+  const data = provider();
+  const source: GraphSource = { ...data.source, records: { ...data.source.records, locate: async () => 150 } };
+  const list = await fixture<List>(html`<lr-neighbor-list .graphSource=${source} .centerKey=${'node:center'}></lr-neighbor-list>`);
+  await ready(list);
+  expect(await list.revealSourceKey('node:5')).to.equal(false);
+  expect(list.sourcePage).to.equal(1); await ready(list, 'node:150');
+  expect(list.shadowRoot!.activeElement === null).to.equal(true);
+});
+for (const stage of ['page render', 'scroll'] as const) {
+  it(`declines a reveal whose list is detached during its ${stage} and reveals again after reconnection`, async () => {
+    const data = provider(); let list!: List;
+    const query = data.source.records.query;
+    const source: GraphSource = { ...data.source, records: { ...data.source.records, query: async (...args: Parameters<typeof query>) => {
+      const result = await query(...args); if (stage === 'page render' && args[0].page === 2) detach(); return result;
+    } } };
+    list = await fixture<List>(html`<lr-neighbor-list .graphSource=${source} .centerKey=${'node:center'}></lr-neighbor-list>`);
+    await ready(list); const parent = list.parentNode!;
+    const scroll = Element.prototype.scrollIntoView;
+    let detached = false;
+    const detach = () => { if (!detached) { detached = true; list.remove(); } };
+    if (stage === 'scroll') Element.prototype.scrollIntoView = function (this: Element, ...args: Parameters<Element['scrollIntoView']>) { scroll.apply(this, args); detach(); };
+    try {
+      expect(await list.revealSourceKey('node:250')).to.equal(false);
+      expect(detached).to.equal(true);
+      expect(list.shadowRoot!.activeElement === null).to.equal(true);
+    } finally { Element.prototype.scrollIntoView = scroll; if (!list.isConnected) parent.appendChild(list); }
+    await ready(list, 'node:250');
+    expect(await list.revealSourceKey('node:250')).to.equal(true);
+    expect(list.shadowRoot!.activeElement === button(list, 'node:250')).to.equal(true);
+  });
+}
+it('declines a reveal while the provider revision cannot be read', async () => {
+  const data = provider(); let broken = false;
+  const source: GraphSource = { ...data.source, get revision() { if (broken) throw new Error('Revision unavailable'); return 1; } };
+  const list = await fixture<List>(html`<lr-neighbor-list .graphSource=${source} .centerKey=${'node:center'}></lr-neighbor-list>`);
+  await ready(list); broken = true;
+  expect(await list.revealSourceKey('node:0')).to.equal(false);
+  expect(list.shadowRoot!.activeElement === null).to.equal(true);
+});
+it('fails closed when a page total exceeds the summarized neighborhood and recovers on retry', async () => {
+  const data = provider(); let inconsistent = true; const query = data.source.records.query;
+  const source: GraphSource = { ...data.source, records: { ...data.source.records, query: async (...args: Parameters<typeof query>) => {
+    const result = await query(...args); return inconsistent ? { ...result, summary: { nodes: 10, edges: 0 } } : result;
+  } } };
+  const list = await fixture<List>(html`<lr-neighbor-list .graphSource=${source} .centerKey=${'node:center'}></lr-neighbor-list>`);
+  await waitUntil(() => Boolean(list.shadowRoot!.querySelector('[part="source-retry"]')));
+  expect(list.sourceTotal).to.equal(null); expect(list.shadowRoot!.querySelectorAll('[data-source-key]').length).to.equal(0);
+  inconsistent = false; list.shadowRoot!.querySelector<HTMLButtonElement>('[part="source-retry"]')!.click();
+  await ready(list); expect(list.sourceTotal).to.equal(1_000_000);
+});
+for (const flaw of ['mismatched record revision', 'group metadata'] as const) {
+  it(`fails closed for a provider with ${flaw} and recovers when replaced`, async () => {
+    const data = provider(); const query = data.source.records.query;
+    const source: GraphSource = flaw === 'mismatched record revision'
+      ? { ...data.source, records: { ...data.source.records, revision: 2 } }
+      : { ...data.source, records: { ...data.source.records, query: async (...args: Parameters<typeof query>) => ({ ...(await query(...args)), groups: [] }) } };
+    const list = await fixture<List>(html`<lr-neighbor-list .graphSource=${source} .centerKey=${'node:center'}></lr-neighbor-list>`);
+    await waitUntil(() => list.shadowRoot!.textContent!.includes('The neighbors could not be loaded.'));
+    expect(list.sourceTotal).to.equal(null); expect(list.shadowRoot!.querySelectorAll('[data-source-key]').length).to.equal(0);
+    list.graphSource = data.source; await ready(list); expect(list.sourceTotal).to.equal(1_000_000);
+  });
+}

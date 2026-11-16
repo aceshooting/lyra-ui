@@ -3,6 +3,7 @@ import './retrieval-results.js';
 import type { LyraRetrievalResults, RetrievalResultsSource } from './retrieval-results.class.js';
 import type { LyraSourceRecord } from '../../../data-sources.js';
 import type { RetrievalChunk } from '../../../ai/types.js';
+import { sinkTexts } from '../../../../test/announcements.js';
 
 const entry = (order: number): LyraSourceRecord<RetrievalChunk> => ({
   key: `c${order}`,
@@ -75,5 +76,17 @@ describe('lr-retrieval-results provider page states', () => {
     expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent?.trim()).to.equal('Search is unavailable');
     expect(el.shadowRoot!.querySelector('[part="source-status"]') === null).to.equal(true);
     expect(el.shadowRoot!.querySelector('lr-virtual-list') === null).to.equal(true);
+  });
+  it('does not announce the legacy empty state on mount while an announce panel waits for its provider page', async () => {
+    const el = await fixture<LyraRetrievalResults>(html`
+      <lr-retrieval-results announce .dataSource=${provider(() => new Promise(() => undefined))}></lr-retrieval-results>
+    `);
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="source-status"]') !== null);
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelector('[part="source-status"]')?.textContent?.trim()).to.equal('Loading…');
+    expect(sinkTexts('polite')).not.to.include('No chunks retrieved');
+    expect(sinkTexts('assertive').length).to.equal(0);
   });
 });

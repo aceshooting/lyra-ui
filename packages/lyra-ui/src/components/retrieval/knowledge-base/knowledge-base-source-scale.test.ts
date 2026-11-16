@@ -41,3 +41,16 @@ it('keeps million-source middle and final pages, global summaries and actions bo
   expect([...el.shadowRoot!.querySelectorAll('lr-stat')].map(stat => stat.getAttribute('value'))).to.deep.equal(['1,000,003', '1,000,003', '0', '0']);
   recordScaleMeasurement('lr-knowledge-base', 'n=1000003 allocated sources first middle final pages', { sources: total, queries, lookups, peak, fieldReads, pageRows: grid.rows.length }, { elapsedMs: Math.round(performance.now() - started) });
 });
+
+it('lets a legacy table page change bubble without touching the source page', async () => {
+  const sources: KnowledgeSource[] = [{ id: 'a', name: 'Alpha', syncStatus: 'synced' }, { id: 'b', name: 'Beta', syncStatus: 'synced' }];
+  const el = await fixture<LyraKnowledgeBase>(html`<lr-knowledge-base .sources=${sources}></lr-knowledge-base>`);
+  await waitUntil(() => el.shadowRoot?.querySelector<LyraTable<KnowledgeSource>>('lr-table')?.rows.length === 2);
+  const grid = el.shadowRoot!.querySelector<LyraTable<KnowledgeSource>>('lr-table')!;
+  const pages: number[] = [];
+  el.addEventListener('lr-page-change', event => pages.push(event.detail.page));
+  grid.dispatchEvent(new CustomEvent('lr-page-change', { detail: { page: 2 }, bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(pages).to.deep.equal([2]);
+  expect(el.sourcePage).to.equal(0);
+});
