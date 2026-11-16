@@ -6,7 +6,7 @@ import { isAccessibilityVisible, srOnly } from '../../../internal/a11y.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
 import { isUnsafeSvgCloneAttribute, isUnsafeSvgCloneElement } from '../../../internal/safe-svg.js';
-import { isAbortError, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import type { ResourceCacheLease } from '../../../internal/safe-resource-cache.js';
 import { getIconLibrary, subscribeIconLibrary } from './icon-library.js';
 import { acquireSanitizedIconResource, IconResourceError } from './icon-resource.js';
@@ -412,13 +412,13 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
       // library, a direct `src`, or a later cache hit.
       const node = this.ownerDocument.importNode(canonical, true) as SVGSVGElement;
       library?.mutator?.(node);
+      if (!this.isConnected || generation !== this.generation) return;
 
       this.fetchState = { kind: 'loaded', node };
       await this.updateComplete;
       if (!this.isConnected || generation !== this.generation) return;
       this.emit('lr-load', { src: safeSource });
     } catch (error) {
-      if (isAbortError(error)) return;
       const reason = error instanceof IconResourceError ? error.reason : 'load';
       await this.fail(reason, generation, safeSource, error);
     } finally {

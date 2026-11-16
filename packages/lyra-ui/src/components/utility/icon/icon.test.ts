@@ -824,6 +824,263 @@ describe('lr-icon icon libraries', () => {
     }
   });
 
+  it('keeps the built-in fallback when a mutator unregisters its own library', async () => {
+    const library = 'self-unregistering-mutator';
+    const restore = stubFetch(() => Promise.resolve(svgResponse(CIRCLE_SVG)));
+    let el: LyraIcon | undefined;
+    let mutations = 0;
+    try {
+      registerIconLibrary(library, {
+        resolver: () => 'https://icons.test/self-unregistering.svg',
+        mutator: () => {
+          mutations += 1;
+          unregisterIconLibrary(library);
+        },
+      });
+      el = await fixture<LyraIcon>(html`<lr-icon></lr-icon>`);
+      const events: string[] = [];
+      el.addEventListener('lr-load', () => events.push('load'));
+      el.addEventListener('lr-error', () => events.push('error'));
+      el.library = library;
+      el.name = 'search';
+      await waitUntil(() => mutations === 1, 'the library mutator unregisters itself');
+      await el.updateComplete;
+      await Promise.resolve();
+
+      expect(getIconLibrary(library)).to.equal(undefined);
+      expect(partCount(el, '[part="svg"] > path')).to.equal(1);
+      expect(partCount(el, '[part="svg"] circle')).to.equal(0);
+      expect(partCount(el, '[part="error"]')).to.equal(0);
+      expect(events).to.deep.equal([]);
+    } finally {
+      el?.remove();
+      unregisterIconLibrary(library);
+      restore();
+    }
+  });
+
+  it('retires a mutator that disconnects its icon and loads freshly after reconnect', async () => {
+    const library = 'disconnecting-mutator';
+    const source = 'https://icons.test/disconnecting-mutator.svg';
+    const restore = stubFetch(() => Promise.resolve(svgResponse(CIRCLE_SVG)));
+    let el: LyraIcon | undefined;
+    let resolutions = 0;
+    let mutations = 0;
+    try {
+      registerIconLibrary(library, {
+        resolver: () => {
+          resolutions += 1;
+          return source;
+        },
+        mutator: (svg) => {
+          mutations += 1;
+          svg.setAttribute('data-mutator-invocation', String(mutations));
+          if (mutations === 1) el!.remove();
+        },
+      });
+      const container = await fixture<HTMLDivElement>(html`<div><lr-icon></lr-icon></div>`);
+      el = container.querySelector<LyraIcon>('lr-icon')!;
+      const loads: string[] = [];
+      let errors = 0;
+      el.addEventListener('lr-load', (event) => loads.push(event.detail.src));
+      el.addEventListener('lr-error', () => errors += 1);
+      el.library = library;
+      el.name = 'search';
+      await waitUntil(() => mutations === 1, 'the first mutator invocation disconnects its icon');
+      await el.updateComplete;
+      await Promise.resolve();
+
+      expect(el.isConnected).to.equal(false);
+      expect(resolutions).to.equal(1);
+      expect(partCount(el, '[part="svg"] > path')).to.equal(1);
+      expect(partCount(el, '[part="svg"] circle')).to.equal(0);
+      expect(partCount(el, '[data-mutator-invocation]')).to.equal(0);
+      expect(partCount(el, '[part="error"]')).to.equal(0);
+      expect(loads).to.deep.equal([]);
+      expect(errors).to.equal(0);
+
+      const loaded = oneEvent(el, 'lr-load');
+      container.append(el);
+      await loaded;
+      expect(el.isConnected).to.equal(true);
+      expect(resolutions).to.equal(2);
+      expect(mutations).to.equal(2);
+      expect(partCount(el, '[part="svg"] circle')).to.equal(1);
+      expect(el.shadowRoot!.querySelector('[part="svg"]')!.getAttribute('data-mutator-invocation')).to.equal('2');
+      expect(partCount(el, '[part="error"]')).to.equal(0);
+      expect(loads).to.deep.equal([source]);
+      expect(errors).to.equal(0);
+    } finally {
+      el?.remove();
+      unregisterIconLibrary(library);
+      restore();
+    }
+  });
+
+  it('reports an active request AbortError and recovers when its source changes', async () => {
+    const failedSource = 'https://icons.test/active-abort.svg';
+    const recoveredSource = 'https://icons.test/after-active-abort.svg';
+    const message = 'Remote glyph unavailable';
+    const failure = new DOMException('transport ended unexpectedly', 'AbortError');
+    let rejectFetch: ((reason: unknown) => void) | undefined;
+    let requestSignal: AbortSignal | null | undefined;
+    const requested: string[] = [];
+    const restore = stubFetch((url, init) => {
+      requested.push(url);
+      if (url === failedSource) {
+        requestSignal = init?.signal;
+        return new Promise<Response>((_resolve, reject) => { rejectFetch = reject; });
+      }
+      return Promise.resolve(svgResponse(RECT_SVG));
+    });
+    let el: LyraIcon | undefined;
+    try {
+      el = await fixture<LyraIcon>(html`<lr-icon .strings=${{ iconLoadError: message }}></lr-icon>`);
+      const loads: string[] = [];
+      const errors: Array<{ src: string; error: unknown }> = [];
+      el.addEventListener('lr-load', (event) => loads.push(event.detail.src));
+      el.addEventListener('lr-error', (event) => errors.push(event.detail));
+      el.src = failedSource;
+      await waitUntil(() => rejectFetch !== undefined, 'the current request starts');
+      expect(el.isConnected).to.equal(true);
+      expect(requestSignal?.aborted).to.equal(false);
+      rejectFetch!(failure);
+      await waitUntil(() => partCount(el!, '[part="error"]') === 1, 'an active transport abort receives an error fallback');
+
+      expect(errors.length).to.equal(1);
+      expect(errors[0]!.src).to.equal(failedSource);
+      expect(errors[0]!.error === failure).to.equal(true);
+      expect(loads).to.deep.equal([]);
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal(message);
+      expect(el.shadowRoot!.textContent).not.to.include(failure.message);
+      const sink = document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`)!;
+      expect(sink.lastElementChild?.textContent).to.equal(message);
+
+      const loaded = oneEvent(el, 'lr-load');
+      el.src = recoveredSource;
+      await loaded;
+      expect(partCount(el, '[part="svg"] rect')).to.equal(1);
+      expect(partCount(el, '[part="error"]')).to.equal(0);
+      expect(errors.length).to.equal(1);
+      expect(loads).to.deep.equal([recoveredSource]);
+      expect(requested).to.deep.equal([failedSource, recoveredSource]);
+    } finally {
+      el?.remove();
+      restore();
+    }
+  });
+
+  for (const retirement of ['disconnect', 'replacement'] as const) {
+    it(`keeps a retired request AbortError silent after ${retirement}`, async () => {
+      const retiredSource = `https://icons.test/retired-${retirement}.svg`;
+      const replacementSource = 'https://icons.test/abort-replacement.svg';
+      let requestSignal: AbortSignal | null | undefined;
+      let aborted = false;
+      const restore = stubFetch((url, init) => {
+        if (url !== retiredSource) return Promise.resolve(svgResponse(RECT_SVG));
+        requestSignal = init?.signal;
+        return new Promise<Response>((_resolve, reject) => {
+          requestSignal?.addEventListener('abort', () => {
+            aborted = true;
+            reject(new DOMException('retired request', 'AbortError'));
+          }, { once: true });
+        });
+      });
+      let el: LyraIcon | undefined;
+      try {
+        el = await fixture<LyraIcon>(html`<lr-icon></lr-icon>`);
+        const loads: string[] = [];
+        let errors = 0;
+        el.addEventListener('lr-load', (event) => loads.push(event.detail.src));
+        el.addEventListener('lr-error', () => errors += 1);
+        el.src = retiredSource;
+        await waitUntil(() => requestSignal !== undefined, 'the pending request owns an abort signal');
+        expect(requestSignal?.aborted).to.equal(false);
+
+        if (retirement === 'disconnect') el.remove();
+        else el.src = replacementSource;
+        await waitUntil(() => aborted, 'retiring the last resource lease aborts its request');
+        if (retirement === 'replacement') {
+          await waitUntil(() => loads.length === 1, 'the replacement resource finishes loading');
+          expect(loads).to.deep.equal([replacementSource]);
+          expect(partCount(el, '[part="svg"] rect')).to.equal(1);
+        }
+        // wait-reason: negative assertion, the retired fetch rejection must settle without error feedback
+        await aTimeout(0);
+        expect(errors).to.equal(0);
+        expect(partCount(el, '[part="error"]')).to.equal(0);
+        if (retirement === 'disconnect') expect(loads).to.deep.equal([]);
+      } finally {
+        el?.remove();
+        restore();
+      }
+    });
+  }
+
+  it('contains a throwing mutator without changing the cached canonical SVG', async () => {
+    const library = 'throwing-cached-mutator';
+    const source = 'https://icons.test/throwing-mutator.svg';
+    const message = 'Custom glyph unavailable';
+    const failure = new Error('mutator failed after changing its clone');
+    let fetches = 0;
+    let mutations = 0;
+    const restore = stubFetch(() => {
+      fetches += 1;
+      return Promise.resolve(svgResponse(CIRCLE_SVG));
+    });
+    let failed: LyraIcon | undefined;
+    let plain: LyraIcon | undefined;
+    try {
+      registerIconLibrary(library, {
+        resolver: () => source,
+        mutator: (svg) => {
+          mutations += 1;
+          svg.setAttribute('data-failed-mutator', 'true');
+          svg.querySelector('circle')!.remove();
+          throw failure;
+        },
+      });
+      failed = await fixture<LyraIcon>(html`<lr-icon .strings=${{ iconLoadError: message }}></lr-icon>`);
+      let loads = 0;
+      const errors: Array<{ src: string; error: unknown }> = [];
+      failed.addEventListener('lr-load', () => loads += 1);
+      failed.addEventListener('lr-error', (event) => errors.push(event.detail));
+      const errored = oneEvent(failed, 'lr-error');
+      failed.library = library;
+      failed.name = 'search';
+      await errored;
+
+      expect(mutations).to.equal(1);
+      expect(errors.length).to.equal(1);
+      expect(errors[0]!.src).to.equal(source);
+      expect(errors[0]!.error === failure).to.equal(true);
+      expect(loads).to.equal(0);
+      expect(partCount(failed, '[part="svg"]')).to.equal(0);
+      expect(failed.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal(message);
+      expect(failed.shadowRoot!.textContent).not.to.include(failure.message);
+      const sink = document.querySelector(`[${ANNOUNCEMENT_SINK_ATTRIBUTE}="assertive"]`)!;
+      expect(sink.lastElementChild?.textContent).to.equal(message);
+
+      plain = await fixture<LyraIcon>(html`<lr-icon></lr-icon>`);
+      const loaded = oneEvent(plain, 'lr-load');
+      plain.src = source;
+      const event = await loaded;
+      expect((event.detail as { src: string }).src).to.equal(source);
+      expect(partCount(plain, '[part="svg"] circle')).to.equal(1);
+      expect(partCount(plain, '[data-failed-mutator]')).to.equal(0);
+      expect(partCount(plain, '[part="error"]')).to.equal(0);
+      expect(fetches).to.equal(1);
+      expect(mutations).to.equal(1);
+      expect(errors.length).to.equal(1);
+      expect(loads).to.equal(0);
+    } finally {
+      failed?.remove();
+      plain?.remove();
+      unregisterIconLibrary(library);
+      restore();
+    }
+  });
+
   it('awaits async resolvers with family and variant and drops a superseded result', async () => {
     const resolverCalls: Array<[string, string, string]> = [];
     const requested: string[] = [];
