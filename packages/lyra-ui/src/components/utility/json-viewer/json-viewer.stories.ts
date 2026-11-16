@@ -133,6 +133,39 @@ export const Narrow320: Story = {
   `,
 };
 
+const toolArguments = {
+  contributie_proprie_lei: 20000,
+  beneficiaryName: 'Ana Popescu',
+  approved: true,
+  period: { start: '2026-01-01', end: '2026-06-30' },
+};
+
+export const NarrowLayout: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Below a 30rem allocation the default `layout="auto"` stacks each value under its key and tightens leaf rows; keys break after separators and at camelCase humps rather than mid-word. `layout="stacked"` forces that layout at any width and `layout="inline"` keeps key and value side by side.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-l); grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));">
+      <div style="max-inline-size: 360px">
+        <p>auto, 360px</p>
+        <lr-json-viewer aria-label="Arguments (auto)" .data=${toolArguments}></lr-json-viewer>
+      </div>
+      <div style="max-inline-size: 360px">
+        <p>inline, 360px</p>
+        <lr-json-viewer aria-label="Arguments (inline)" layout="inline" .data=${toolArguments}></lr-json-viewer>
+      </div>
+      <div>
+        <p>stacked, any width</p>
+        <lr-json-viewer aria-label="Arguments (stacked)" layout="stacked" copyable .data=${toolArguments}></lr-json-viewer>
+      </div>
+    </div>
+  `,
+};
 
 export const BackwardSearch: Story = {
   parameters: { docs: { description: { story: 'First Previous selects the last match. Subsequent navigation wraps and reveals only the selected result’s ancestors. Removing query clears matches.' } } },

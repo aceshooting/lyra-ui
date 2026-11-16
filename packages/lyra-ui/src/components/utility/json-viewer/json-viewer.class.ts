@@ -11,6 +11,7 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import { literalSetConverter } from '../../../internal/converters.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 import { viewerSearchDetail } from '../../../internal/viewer-search.js';
 import {
@@ -314,6 +315,26 @@ function valueType(value: JsonSnapshotValue): JsonValueType {
   if (t === 'object') return 'object';
   // BigInt is admitted and displayed as its decimal string.
   return 'string';
+}
+
+/** How a scalar row places its key and value; see `LyraJsonViewer.layout`. */
+export type LyraJsonViewerLayout = 'auto' | 'inline' | 'stacked';
+
+const JSON_VIEWER_LAYOUT = literalSetConverter<LyraJsonViewerLayout>(['auto', 'inline', 'stacked'], 'auto');
+
+/** Positions right after a key separator, or between a lower-case letter and an upper-case one. */
+const KEY_BREAK_POINT = /(?<=[_\-./:@])(?=.)|(?<=\p{Ll})(?=\p{Lu})/u;
+
+/**
+ * A key label with a `<wbr>` line-break opportunity after each separator and at each camelCase
+ * hump, so a long key such as `contributie_proprie_lei` wraps between its words rather than
+ * mid-word. `overflow-wrap: anywhere` stays the last resort for a single overlong segment. The
+ * text content, and with it search and copy, is unchanged.
+ */
+function keyWithBreaks(label: string): unknown {
+  const segments = label.split(KEY_BREAK_POINT);
+  if (segments.length < 2) return label;
+  return segments.map((segment, index) => (index === 0 ? segment : html`<wbr>${segment}`));
 }
 
 function formatPrimitive(value: JsonSnapshotValue, type: JsonValueType): string {
@@ -647,6 +668,19 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   /** A CSS length (e.g. `"20rem"`); once set, the viewer scrolls internally past this height
    * instead of growing the page. Invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
+  /**
+   * How a scalar row places its key and value.
+   *
+   * `'auto'` (the default) keeps them side by side while the viewer's own inline size is at least
+   * 30rem and switches to the stacked layout below that, through a container query on the
+   * viewer's allocation, not the viewport. `'stacked'` always puts the value on its own line under
+   * its key and tightens rows: leaf rows lose the icon-button-sized floor their hidden toggle
+   * spacer otherwise imposes, and lines use the snug line height. Real expand/collapse toggles keep
+   * their full hit area. `'inline'` keeps the side-by-side row at every width. Unknown values
+   * fall back to `'auto'`. Applies to the `data` tree; `treeSource` rows keep their fixed
+   * virtualized layout.
+   */
+  @property({ converter: JSON_VIEWER_LAYOUT }) layout: LyraJsonViewerLayout = 'auto';
   /** Shows copy-to-clipboard affordances: one for the whole value, plus one per node. */
   @property({ type: Boolean, reflect: true }) copyable = false;
   /** Removing the attribute clears search without changing its null readback. Case-insensitive substring match against keys/values; matches are highlighted and their ancestors auto-expanded. See also `runSearch()`/`searchNext()`/`searchPrevious()`/`clearSearch()` for imperative, cursor-navigable search built on top of this property. */
@@ -1097,7 +1131,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
                 aria-current=${activeMatch && activeMatch.pathKey === pathKey && activeMatch.kind === 'key'
                   ? 'true'
                   : 'false'}
-                >${keyLabel}</span
+                >${keyWithBreaks(keyLabel)}</span
               ><span class="colon">:</span>`
           : nothing}
         ${isCircular
@@ -1355,7 +1389,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
               </button>
             </div>`
           : nothing}
-        <div part="tree" role="list" aria-label=${hostAriaLabel(this) ?? nothing}>${tree}</div>
+        <div part="tree" role="list" data-layout=${JSON_VIEWER_LAYOUT.normalize(this.layout)} aria-label=${hostAriaLabel(this) ?? nothing}>${tree}</div>
         ${limited
           ? html`<p part="limit">${this.localize('jsonViewerLimit', undefined, {
               count: getNumberFormat(this.effectiveLocale).format(this.effectiveMaxNodes),

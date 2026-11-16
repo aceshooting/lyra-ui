@@ -1,5 +1,6 @@
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host {
@@ -25,6 +26,11 @@ export const styles = css`
        that indentation. A :host declaration only replaces the inherited value; a rule written on
        lr-json-viewer itself still wins, and [part='value'] re-enables pre-wrap for values. */
     white-space: normal;
+    /* The key/value layout responds to the viewer's own allocation (a tool-call panel, a phone
+       column), not the viewport. Inline-size containment drops the content-based intrinsic size,
+       so a shrink-to-fit parent gets the tokenized fallback instead of a zero-width viewer. */
+    container-type: inline-size;
+    contain-intrinsic-inline-size: var(--lr-size-20rem);
   }
   .source-shell { min-inline-size: 0; }
   .source-shell .source-tree { block-size: var(--lr-json-viewer-max-height, var(--lr-size-20rem)); max-block-size: var(--lr-json-viewer-max-height, var(--lr-size-20rem)); }
@@ -62,10 +68,42 @@ export const styles = css`
   }
   .row {
     display: flex;
+    flex-wrap: var(--_lr-json-viewer-row-wrap, nowrap);
     align-items: flex-start;
     gap: var(--lr-space-xs);
+    row-gap: 0;
     min-inline-size: 0;
     border-radius: var(--lr-radius);
+  }
+  /* Stacked layout (layout='stacked', or layout='auto' in a container narrower than 30rem). The
+     conditions below only switch private properties on the tree; the rules that read them are
+     written once. A scalar row's value takes a full line of its own under its key, aligned with
+     the key (past the toggle column), while the copy button stays on the key's line. A hidden
+     toggle on a leaf row is only an alignment spacer, so negative block margins drop its
+     icon-button-sized floor from the row height; real toggles keep their whole hit area. */
+  [part='tree'][data-layout='stacked'] {
+    --_lr-json-viewer-row-wrap: wrap;
+    --_lr-json-viewer-value-basis: 100%;
+    --_lr-json-viewer-value-indent: calc(var(--lr-icon-button-size) + var(--lr-space-xs));
+    --_lr-json-viewer-value-order: 1;
+    --_lr-json-viewer-spacer-margin-block: calc(var(--lr-icon-button-size) / -2);
+    line-height: var(--lr-line-height-snug);
+  }
+  @container ${mediumContainerQuery} {
+    [part='tree'][data-layout='auto'] {
+      --_lr-json-viewer-row-wrap: wrap;
+      --_lr-json-viewer-value-basis: 100%;
+      --_lr-json-viewer-value-indent: calc(var(--lr-icon-button-size) + var(--lr-space-xs));
+      --_lr-json-viewer-value-order: 1;
+      --_lr-json-viewer-spacer-margin-block: calc(var(--lr-icon-button-size) / -2);
+      line-height: var(--lr-line-height-snug);
+    }
+  }
+  /* Only a value that follows a key stacks: a keyless root scalar has nothing to sit under. */
+  [part='key'] ~ [part='value'] {
+    flex-basis: var(--_lr-json-viewer-value-basis, auto);
+    order: var(--_lr-json-viewer-value-order, 0);
+    margin-inline-start: var(--_lr-json-viewer-value-indent, 0);
   }
   .row:hover {
     background: var(--lr-json-viewer-row-hover-bg, var(--lr-color-brand-quiet));
@@ -107,6 +145,7 @@ export const styles = css`
      have a chevron. */
   [part="toggle"][hidden] {
     visibility: hidden;
+    margin-block: var(--_lr-json-viewer-spacer-margin-block, var(--lr-size-0-1875rem) 0);
   }
   [part="toggle"] .chevron {
     display: inline-flex;
