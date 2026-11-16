@@ -82,6 +82,30 @@ for (const kind of ['csv', 'dataset', 'spreadsheet'] as const) {
     expect(await viewer.searchNext()).to.equal(false);
   });
 
+  it(`${kind} drops a queued search that a clear retires before the running one settles`, async () => {
+    let settle!: (reply: Reply) => void;
+    const pending = new Promise<Reply>(resolve => { settle = resolve; });
+    const queries: string[] = [];
+    const changes: LyraSearchChangeDetail[] = [];
+    const viewer = await mount(kind, request => {
+      queries.push(request.query);
+      return request.query === 'running' ? pending : Promise.resolve({ hits: [{ row: 1, column: 0 }], total: 1, exhaustive: true });
+    }, changes);
+    const running = viewer.search('running');
+    await waitUntil(() => queries.length === 1);
+    const queued = viewer.search('queued');
+    viewer.clearSearch();
+    expect(await queued).to.equal(0);
+    settle({ hits: [{ row: 2, column: 0 }], total: 1, exhaustive: true });
+    expect(await running).to.equal(0);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(queries).to.deep.equal(['running']);
+    expect(changes.at(-1)).to.deep.equal({ query: '', matchCount: 0, matchCountExact: true, activeIndex: -1 });
+    expect(await viewer.searchNext()).to.equal(false);
+    expect(await viewer.search('after')).to.equal(1);
+    expect(queries).to.deep.equal(['running', 'after']);
+  });
+
   it(`${kind} preserves a newer search started while reading the provider capability`, async () => {
     const queries: string[] = [];
     const changes: LyraSearchChangeDetail[] = [];

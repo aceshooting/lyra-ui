@@ -843,11 +843,18 @@ export class TableViewerSourceController implements ReactiveController {
     await this.chrome.showColumn(this, column, this.hooks.scrollContainer?.() ?? this.host.shadowRoot?.querySelector('[part="sheet"]') ?? null);
     if (!lease.isCurrent()) return false;
     if (row < 0) return this.chrome.revealCell(this.host.shadowRoot?.querySelector(`[part="header-row"] [aria-colindex="${column + 1}"]`) as HTMLElement | undefined);
+    const previousRow = this.firstRow, sheet = this.sheet, epoch = this.epoch;
     this.firstRow = row; this.activeRow = row; this.requestWindow(); this.notify();
+    // Until the list scrolls, its range events still describe the old rows; a reveal retired in
+    // between must hand the window back to them or the visible rows stay blank.
+    const abandon = (): false => {
+      if (this.firstRow === row && this.sheet === sheet && this.current(epoch)) { this.firstRow = previousRow; this.requestWindow(); this.notify(); }
+      return false;
+    };
     await this.host.updateComplete;
-    if (!lease.isCurrent()) return false;
+    if (!lease.isCurrent()) return abandon();
     const list = this.host.shadowRoot?.querySelector<LyraVirtualList>(tag('virtual-list'));
-    if (!list) return false;
+    if (!list) return abandon();
     list.scrollToIndex(row, { align: 'start', behavior: 'auto' });
     await list.updateComplete;
     if (!lease.isCurrent()) return false;
