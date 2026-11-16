@@ -69,7 +69,9 @@ for (const direction of ['ltr', 'rtl'] as const) {
       expect(element.shadowRoot!.activeElement === active).to.equal(true);
       expect(active.tabIndex).to.equal(0);
       expect(element.shadowRoot!.querySelectorAll('[part="node-control"][tabindex="0"]').length).to.equal(1);
-      expect([node(element, 'before').tabIndex, node(element, 'after').tabIndex]).to.deep.equal([-1, -1]);
+      // Disabled boundary nodes can be culled from the rendered viewport; any that render stay out of the tab order.
+      const others = [...element.shadowRoot!.querySelectorAll<HTMLElement>('[part="node-control"]')].filter(control => control !== active);
+      expect(others.map(control => control.tabIndex).filter(index => index !== -1)).to.deep.equal([]);
     }
   });
 }
