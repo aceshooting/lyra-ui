@@ -21,3 +21,16 @@ paths:
 # than code the project runs, and are compared as text by the migration tests.
 paths-ignore:
   - packages/lyra-ui/scripts/fixtures/migrate-wa
+  # Tests, stories, type assertions, benchmarks and RFC evidence never ship or run in a
+  # consumer's page, yet were roughly half the extracted source and most of the analysis time.
+  # The security queries target shipped and tooling code; tests are covered by CI instead.
+  - "**/*.test.ts"
+  - "**/*.test.mjs"
+  - "**/*.test.js"
+  - "**/*.stories.ts"
+  - "**/test"
+  - packages/lyra-ui/type-tests
+  - benchmarks
+  - docs/rfcs
+  # Generated flag glyph modules (Public Domain SVG data, no logic).
+  - packages/lyra-flags/flags
