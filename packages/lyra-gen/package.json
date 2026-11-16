@@ -222,7 +222,7 @@
     "@types/node": "^22.20.5",
     "@web/dev-server-esbuild": "^2.0.1",
     "@web/test-runner": "^1.0.1",
-    "@web/test-runner-commands": "^1.0.3",
+    "@web/test-runner-commands": "^1.1.0",
     "ai": "7.0.173",
     "ajv": "8.20.0",
     "esbuild": "^0.28.2",
@@ -230,5 +230,5 @@
     "playwright": "^1.65.1",
     "typescript": "^7.0.2"
   },
-  "packageManager": "pnpm@12.18.0"
+  "packageManager": "pnpm@12.21.0"
 }

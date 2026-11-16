@@ -19,7 +19,7 @@ async function typeInto(el: LyraNumberInput, text: string): Promise<void> {
 
 describe('lr-number-input localized', () => {
   beforeEach(() => {
-    expectLocaleFallback('de', ['fieldRequired']);
+    expectLocaleFallback('de', ['fieldRequired', 'valueInvalid']);
   });
 
   it('keeps the native number contract when unset', async () => {

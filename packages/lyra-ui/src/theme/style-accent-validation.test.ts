@@ -5,8 +5,19 @@ const brandFill = (): string =>
   document.documentElement.style.getPropertyValue('--lr-theme-color-brand-fill-loud').trim();
 
 let previousRecord: string | null;
+let originalSheets: CSSStyleSheet[];
+let themeSheet: CSSStyleSheet;
+
+before(async () => {
+  const response = await fetch(new URL('../theme.css', import.meta.url));
+  if (!response.ok) throw new Error('Missing theme stylesheet fixture');
+  themeSheet = new CSSStyleSheet();
+  themeSheet.replaceSync(await response.text());
+});
 
 beforeEach(() => {
+  originalSheets = [...document.adoptedStyleSheets];
+  document.adoptedStyleSheets = [...originalSheets, themeSheet];
   previousRecord = localStorage.getItem('lyra-theme');
   resetLyraStyle();
   setLyraStyle({ mode: 'light' });
@@ -16,6 +27,7 @@ afterEach(() => {
   setLyraStyle({ mode: 'unset', look: null, surface: null, density: null, accent: null, overrides: null, accentBackground: null });
   if (previousRecord === null) localStorage.removeItem('lyra-theme');
   else localStorage.setItem('lyra-theme', previousRecord);
+  document.adoptedStyleSheets = originalSheets;
 });
 
 describe('runtime accent color validation', () => {

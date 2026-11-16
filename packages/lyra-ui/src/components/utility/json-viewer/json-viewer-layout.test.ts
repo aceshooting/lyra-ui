@@ -3,7 +3,7 @@ import { twoFrames } from '../../../../test/frames.js';
 import './json-viewer.js';
 import type { LyraJsonViewer } from './json-viewer.js';
 
-const data = { contributie_proprie_lei: 20000, status: 'approved', nested: { amount: 12.5 } };
+const data = { monthly_contribution_amount: 20000, status: 'approved', nested: { amount: 12.5 } };
 
 async function mount(width: string, layout?: string, wrapperStyle = ''): Promise<LyraJsonViewer> {
   const wrapper = await fixture<HTMLElement>(html`
@@ -98,7 +98,7 @@ describe('lr-json-viewer layout', () => {
   it('offers line breaks after key separators instead of mid-word only', async () => {
     const viewer = await mount('180px', 'stacked');
     const keyEl = [...viewer.shadowRoot!.querySelectorAll<HTMLElement>('[part="key"]')].find(
-      (el) => el.textContent === 'contributie_proprie_lei'
+      (el) => el.textContent === 'monthly_contribution_amount'
     )!;
     expect(keyEl.querySelectorAll('wbr')).to.have.lengthOf(2);
     // Every rendered line of the key ends at a separator: the text before each <wbr> is whole.
@@ -109,7 +109,7 @@ describe('lr-json-viewer layout', () => {
     const firstText = [...keyEl.childNodes].find((node) => node.nodeType === Node.TEXT_NODE && node.textContent)!;
     range.selectNodeContents(firstText);
     const firstLines = new Set([...range.getClientRects()].map((r) => Math.round(r.top)));
-    expect(firstLines.size, 'contributie_ stays on one line').to.equal(1);
+    expect(firstLines.size, 'monthly_ stays on one line').to.equal(1);
   });
 
   it('does not collapse in a shrink-to-fit allocation and passes axe while stacked', async () => {

@@ -134,7 +134,7 @@ export const Narrow320: Story = {
 };
 
 const toolArguments = {
-  contributie_proprie_lei: 20000,
+  monthly_contribution_amount: 20000,
   beneficiaryName: 'Ana Popescu',
   approved: true,
   period: { start: '2026-01-01', end: '2026-06-30' },

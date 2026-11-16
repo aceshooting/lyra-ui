@@ -483,8 +483,8 @@ it('reports a localized unavailable-engine state when the installed engine break
   expectDevWarning('lyra-3d-model-incompatible');
   modelEngineLoader.override(async () => ({ createEngine: () => { throw new Error('incompatible build'); } }));
   const viewer = await fixture<LyraModelViewer>(html`<lr-model-viewer src=${source} format="obj"
-    .strings=${{ engine3dUnavailable: 'Moteur 3D indisponible' }}></lr-model-viewer>`);
-  await waitUntil(() => (viewer.shadowRoot!.textContent ?? '').includes('Moteur 3D indisponible'));
+    .strings=${{ engine3dUnavailable: 'Custom 3D engine notice' }}></lr-model-viewer>`);
+  await waitUntil(() => (viewer.shadowRoot!.textContent ?? '').includes('Custom 3D engine notice'));
   expect(viewer.shadowRoot!.querySelector('[part="viewport"]')?.hasAttribute('data-ready')).to.not.equal(true);
   await expect(viewer).to.be.accessible();
 });

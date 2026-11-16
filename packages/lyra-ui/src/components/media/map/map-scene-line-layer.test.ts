@@ -127,15 +127,15 @@ for (const missing of ['source', 'layer'] as const) {
 }
 
 it('installs beneath scene marker glyphs and reinstalls only after a replaced style is ready', () => {
-  const test = lineLayerHarness(), befores: (string | undefined)[] = [];
+  const test = lineLayerHarness(), beforeIds: (string | undefined)[] = [];
   test.map.getStyle = () => ({ version: 8, sources: {}, layers: [{ id: 'background' }, { id: 'scene-markers-3' }, { id: 'scene-markers-x' }] }) as never;
   const add = test.map.addLayer.bind(test.map);
-  test.map.addLayer = (value, before) => { befores.push(before); return add(value, before); };
+  test.map.addLayer = (value, before) => { beforeIds.push(before); return add(value, before); };
   const layer = createMapSceneLineLayer(test.options);
   try {
     layer.update(request(1));
     expect(layer.capture().outcome.state).to.equal('drawn');
-    expect(befores).to.deep.equal(['scene-markers-3']);
+    expect(beforeIds).to.deep.equal(['scene-markers-3']);
     layer.invalidateStyle();
     expect(layer.capture().outcome.state).to.equal('pending');
     test.sources.clear(); test.layers.clear();
@@ -144,7 +144,7 @@ it('installs beneath scene marker glyphs and reinstalls only after a replaced st
     expect(test.layers.size).to.equal(0);
     layer.styleReady();
     expect(layer.capture()).to.deep.equal({ revision: 2, outcome: { state: 'drawn', approximate: false } });
-    expect(befores).to.deep.equal(['scene-markers-3', 'scene-markers-3']);
+    expect(beforeIds).to.deep.equal(['scene-markers-3', 'scene-markers-3']);
   } finally { layer.dispose(); }
 });
 

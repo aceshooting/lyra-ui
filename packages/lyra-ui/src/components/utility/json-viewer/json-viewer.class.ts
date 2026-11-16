@@ -327,7 +327,7 @@ const KEY_BREAK_POINT = /(?<=[_\-./:@])(?=.)|(?<=\p{Ll})(?=\p{Lu})/u;
 
 /**
  * A key label with a `<wbr>` line-break opportunity after each separator and at each camelCase
- * hump, so a long key such as `contributie_proprie_lei` wraps between its words rather than
+ * hump, so a long key such as `monthly_contribution_amount` wraps between its words rather than
  * mid-word. `overflow-wrap: anywhere` stays the last resort for a single overlong segment. The
  * text content, and with it search and copy, is unchanged.
  */

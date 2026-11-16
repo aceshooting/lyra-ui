@@ -594,7 +594,7 @@ also apply. The flat source rows own logical treeitem semantics.
   side-by-side row at every width. Unknown values fall back to `'auto'`. Applies to the `data`
   tree; `treeSource` rows keep their fixed virtualized layout. In every layout a key offers line
   breaks after `_`, `-`, `.`, `/`, `:` and `@` and between a lower-case and an upper-case letter,
-  so `contributie_proprie_lei` wraps between its words; a single overlong segment still breaks
+  so `monthly_contribution_amount` wraps between its words; a single overlong segment still breaks
   anywhere as a last resort.
 
   ```html

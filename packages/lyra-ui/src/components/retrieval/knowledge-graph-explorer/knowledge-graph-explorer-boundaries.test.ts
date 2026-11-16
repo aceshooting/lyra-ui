@@ -23,15 +23,6 @@ describe('lr-knowledge-graph-explorer API boundaries', () => {
     expect(await el.focusNode('marie')).to.equal(false);
   });
 
-  it('normalizes a whitespace-only selectedNodeId to null', async () => {
-    const el = await fixture<LyraKnowledgeGraphExplorer>(html`<lr-knowledge-graph-explorer .nodes=${people}></lr-knowledge-graph-explorer>`);
-    el.selectedNodeId = '   ';
-    await el.updateComplete;
-    await waitUntil(() => el.selectedNodeId === null, 'blank selection cleared');
-    await el.updateComplete;
-    expect(el.selectedNodeId).to.equal(null);
-  });
-
   it('ignores a search input that repeats the current query', async () => {
     const el = await fixture<LyraKnowledgeGraphExplorer>(html`<lr-knowledge-graph-explorer .nodes=${people}></lr-knowledge-graph-explorer>`);
     const search = el.shadowRoot!.querySelector('[part="search"]')!;

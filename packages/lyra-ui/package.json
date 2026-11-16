@@ -3003,7 +3003,7 @@
     "@types/react": "^19.3.0",
     "@web/dev-server-esbuild": "^2.0.1",
     "@web/test-runner": "^1.0.1",
-    "@web/test-runner-commands": "^1.0.3",
+    "@web/test-runner-commands": "^1.1.0",
     "@web/test-runner-junit-reporter": "^1.0.2",
     "@web/test-runner-playwright": "^1.0.2",
     "chart.js": "^4.6.1",
@@ -3014,7 +3014,7 @@
     "d3-force": "^3.0.1",
     "d3-selection": "^3.0.1",
     "d3-zoom": "^3.0.1",
-    "dompurify": "^3.4.17",
+    "dompurify": "^3.4.18",
     "emoji-picker-element-data": "^1.8.0",
     "epubjs": "^0.3.93",
     "fast-check": "^4.10.2",
@@ -3047,5 +3047,5 @@
     "xlsx": "file:../../vendor/xlsx-0.20.3.tgz",
     "zod": "4.6.7"
   },
-  "packageManager": "pnpm@12.18.0"
+  "packageManager": "pnpm@12.21.0"
 }
