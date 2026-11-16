@@ -6,7 +6,6 @@ import { srOnly } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { TextViewerTarget, type LyraSearchChangeDetail, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import {
-  isAbortError,
   isResourceLimitError,
   LyraResourceLimitError,
   LyraUserFacingError,
@@ -181,7 +180,8 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcements.connect();
-    if (this.detached.cancel()) return;
+    // The inherited disconnect aborts pending transport even when a DOM move keeps the document.
+    if (this.detached.cancel() && this.fetchState.kind !== 'loading') return;
     if (this.hasUpdated && this.src) {
       this.requestUpdate();
       if (this.src === this.lastLoadSrc) this.scheduleAfterUpdate(() => { void this.load(); });
@@ -192,6 +192,7 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
   private readonly detached = new DeferredTeardown(() => { this.generation++; });
 
   override disconnectedCallback(): void {
+    if (this.fetchState.kind === 'loading') this.generation++;
     this.announcements.disconnect();
     super.disconnectedCallback();
     this.detached.schedule();
@@ -228,24 +229,24 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
     this.fetchState = { kind: 'loading' };
     try {
       const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
-      if (!this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const source = await readResponseText(response);
-      if (!this.isConnected || generation !== this.generation) return;
-      const events = await this.parse(source, generation);
-      if (!this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
+      const events = await this.parse(source, generation, signal);
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       if (!events) return;
-      if (generation === this.generation) this.fetchState = { kind: 'loaded', events };
+      if (!signal?.aborted && this.isConnected && generation === this.generation) this.fetchState = { kind: 'loaded', events };
     } catch (error) {
-      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       this.fetchState = { kind: 'error', message: error instanceof LyraUserFacingError ? error.message : this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
       this.emit('lr-render-error', { error });
     }
   }
 
-  private async parse(source: string, generation: number): Promise<ParsedCalendarEvent[] | undefined> {
+  private async parse(source: string, generation: number, signal: AbortSignal | undefined): Promise<ParsedCalendarEvent[] | undefined> {
     const ical = await loadIcal();
-    if (!this.isConnected || generation !== this.generation) return undefined;
+    if (signal?.aborted || !this.isConnected || generation !== this.generation) return undefined;
     if (!ical) throw new LyraUserFacingError(this.localize('calendarViewerMissingParser'));
     // Count events before the peer materializes the whole (up to 25 MB) calendar tree.
     if ((source.match(/^BEGIN:VEVENT\r?$/gim)?.length ?? 0) > MAX_CALENDAR_EVENTS) {

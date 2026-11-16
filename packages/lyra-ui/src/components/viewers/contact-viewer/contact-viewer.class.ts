@@ -3,7 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { TextViewerTarget, type LyraSearchChangeDetail, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
-import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { getListFormat } from '../../../internal/intl-cache.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
@@ -135,7 +135,8 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcements.connect();
-    if (this.detached.cancel()) return;
+    // The inherited disconnect aborts pending transport even when a DOM move keeps the document.
+    if (this.detached.cancel() && this.fetchState.kind !== 'loading') return;
     if (this.hasUpdated && this.src) {
       this.requestUpdate();
       if (this.src === this.lastLoadSrc) this.scheduleAfterUpdate(() => { void this.load(); });
@@ -146,6 +147,7 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
   private readonly detached = new DeferredTeardown(() => { this.generation++; });
 
   override disconnectedCallback(): void {
+    if (this.fetchState.kind === 'loading') this.generation++;
     this.announcements.disconnect();
     super.disconnectedCallback();
     this.detached.schedule();
@@ -182,14 +184,14 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
     this.fetchState = { kind: 'loading' };
     try {
       const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
-      if (!this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const source = await readResponseText(response);
-      if (!this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       const contacts = parseVCards(source);
-      if (generation === this.generation) this.fetchState = contacts.length ? { kind: 'loaded', contacts } : { kind: 'empty' };
+      if (!signal?.aborted && this.isConnected && generation === this.generation) this.fetchState = contacts.length ? { kind: 'loaded', contacts } : { kind: 'empty' };
     } catch (error) {
-      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       this.fetchState = { kind: 'error', message: error instanceof LyraUserFacingError ? error.message : this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
       this.emit('lr-render-error', { error });
     }

@@ -15,7 +15,6 @@ import type {
   LyraHighlight,
 } from '../document-viewer/anchors.js';
 import {
-  isAbortError,
   isResourceLimitError,
   readResponseText,
   LyraResourceLimitError,
@@ -877,8 +876,9 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     this.requestUpdate('sourceReconnect', null);
     this.renderRoot.addEventListener('click', this.cancelSourceAnchor, true);
     this.renderRoot.addEventListener('keydown', this.cancelSourceAnchor, true);
+    // A move preserves parsed content, but inherited disconnect has aborted any pending transport.
     const moved = this.detached.cancel();
-    if (this.hasUpdated && this.src && this._xml === undefined && !moved) {
+    if (this.hasUpdated && this.src && this._xml === undefined && (!moved || this.xmlState.kind === 'loading')) {
       this.scheduleAfterUpdate(() => {
         void this.loadFromSrc();
       });
@@ -896,6 +896,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
   };
 
   override disconnectedCallback(): void {
+    if (this.xmlState.kind === 'loading') this.generation++;
     this.invalidateSourceSearch();
     this.sourceBinding = undefined;
     this.renderRoot.removeEventListener('click', this.cancelSourceAnchor, true);
@@ -956,15 +957,16 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     this.xmlState = { kind: 'loading' };
     try {
       const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
-      if (!this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const text = await readResponseText(response, this.effectiveMaxBytes);
-      if (!this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       preflightXml(text, this.effectiveMaxBytes, this.effectiveMaxNodes);
-      await yieldViewerTask(this.ownerDocument.defaultView, () => this.isConnected && generation === this.generation);
+      await yieldViewerTask(this.ownerDocument.defaultView, () => !signal?.aborted && this.isConnected && generation === this.generation);
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       this.setDoc(parseXmlDocument(text, this.ownerDocument, this.effectiveMaxBytes, this.effectiveMaxNodes, true), generation);
     } catch (error) {
-      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       this.xmlState = {
         kind: 'error',
         message: this.localize(

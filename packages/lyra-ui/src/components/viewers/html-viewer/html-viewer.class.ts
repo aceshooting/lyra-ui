@@ -4,7 +4,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { TextViewerTarget, type LyraSearchChangeDetail, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
-import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { loadHtmlSanitizer } from './dompurify-loader.js';
 import { styles } from './html-viewer.styles.js';
@@ -120,7 +120,8 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcements.connect();
-    if (this.detached.cancel()) return;
+    // The inherited disconnect aborts pending transport even when a DOM move keeps the document.
+    if (this.detached.cancel() && this.fetchState.kind !== 'loading') return;
     if (this.hasUpdated && this.src) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
@@ -132,6 +133,7 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
   });
 
   override disconnectedCallback(): void {
+    if (this.fetchState.kind === 'loading') this.generation++;
     this.announcements.disconnect();
     super.disconnectedCallback();
     this.detached.schedule();
@@ -157,20 +159,20 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
     this.fetchState = { kind: 'loading' };
     try {
       const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
-      if (!this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const sanitizer = await loadHtmlSanitizer();
-      if (!this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       if (!sanitizer) throw new LyraUserFacingError(this.localize('documentViewerMissingSanitizer'));
       const raw = await readResponseText(response);
-      if (!this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       const markup = sanitizePassiveMarkup(sanitizer, raw, this.ownerDocument, 'passive-document');
-      if (!this.isConnected || generation !== this.generation) return;
-      if (this.isConnected && generation === this.generation) {
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
+      if (!signal?.aborted && this.isConnected && generation === this.generation) {
         this.fetchState = { kind: 'loaded', markup };
       }
     } catch (error) {
-      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       this.fetchState = { kind: 'error', message: error instanceof LyraUserFacingError ? error.message : this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
       this.emit('lr-render-error', { error });
     }

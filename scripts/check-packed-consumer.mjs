@@ -155,17 +155,17 @@ const optionalPeerFamilyTags = componentInventory.components
 const rootHelperRegisteredTags = [];
 
 // Packed core/all.js includes every non-optional registration and every emitted chunk.
-// With this release's features and the dependency refresh, the graph uses 5,691,624 raw bytes
-// across 65 files; the next 64-byte ceiling leaves 24 bytes of headroom.
+// Request ownership and pending-load recovery bring the graph to 5,692,450 raw bytes
+// across 65 files; the next 64-byte ceiling leaves 30 bytes of headroom.
 // Optional-peer exclusions and the complete file sum stay fixed. Core has no WASM allowance;
 // the explicit Oniguruma canary retains its separate exact 466,610-byte binary requirement.
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/ad043b8e3479fcd9990cd6ecc36e4638b48cfcc4/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'This release (chat message and viewport hooks, markdown link schemes, suggestion-chip icons, tab focusTab, json-viewer layout, table cell parts, ordered timeline, tel/sms buttons, localized number parsing, camera capture, attachment thumbnails, drop-zone for/target, composer actions layout, map legend fixes) and the dependency refresh add 18,468 raw bytes to the packed graph, measuring 5,691,624 bytes across 65 files. Only the exceeded raw ceiling advances to the next 64-byte boundary, 5,691,648 bytes. Gzip ceilings and the exact binary requirement for the explicit Oniguruma canary remain unchanged.',
-  reviewedCoreMeasurementBytes: 5_691_624,
+  $comment: 'Icon request ownership added 26 raw bytes and viewer request ownership and pending-load recovery add another 800 raw bytes to the previously reviewed 5,691,624-byte graph. The complete packed graph measures 5,692,450 bytes across 65 files. Only the exceeded raw ceiling advances to the next 64-byte boundary, 5,692,480 bytes. Gzip ceilings, optional-peer exclusions and the exact binary requirement for the explicit Oniguruma canary remain unchanged.',
+  reviewedCoreMeasurementBytes: 5_692_450,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 24,
+  selectedRegressionHeadroomBytes: 30,
 };
 
 /**

@@ -7579,7 +7579,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/calendar-viewer/calendar-viewer.class.ts",
-              "line": 11,
+              "line": 10,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -7618,6 +7618,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/calendar-viewer/calendar-loader.test.ts",
+          "src/components/viewers/calendar-viewer/calendar-viewer-fetch-abort-ownership.test.ts",
           "src/components/viewers/calendar-viewer/calendar-viewer-load-lifecycle.test.ts",
           "src/components/viewers/calendar-viewer/calendar-viewer-peer-data-boundaries.test.ts",
           "src/components/viewers/calendar-viewer/calendar-viewer-remediation.test.ts",
@@ -13994,6 +13995,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/viewers/contact-viewer/contact-viewer-fetch-abort-ownership.test.ts",
           "src/components/viewers/contact-viewer/contact-viewer-load-lifecycle.test.ts",
           "src/components/viewers/contact-viewer/contact-viewer.test.ts",
           "src/components/viewers/contact-viewer/vcard.test.ts"
@@ -27709,6 +27711,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/html-viewer/dompurify-loader.test.ts",
+          "src/components/viewers/html-viewer/html-viewer-fetch-abort-ownership.test.ts",
           "src/components/viewers/html-viewer/html-viewer-load-lifecycle.test.ts",
           "src/components/viewers/html-viewer/html-viewer.test.ts"
         ],
@@ -53178,6 +53181,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/svg-viewer/dompurify-loader.test.ts",
+          "src/components/viewers/svg-viewer/svg-viewer-fetch-abort-ownership.test.ts",
           "src/components/viewers/svg-viewer/svg-viewer-load-lifecycle.test.ts",
           "src/components/viewers/svg-viewer/svg-viewer-remediation.test.ts",
           "src/components/viewers/svg-viewer/svg-viewer.test.ts"
@@ -63240,7 +63244,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/xml-viewer/xml-viewer.class.ts",
-              "line": 20,
+              "line": 19,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -63276,6 +63280,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/viewers/xml-viewer/xml-viewer-fetch-abort-ownership.test.ts",
           "src/components/viewers/xml-viewer/xml-viewer-limits.test.ts",
           "src/components/viewers/xml-viewer/xml-viewer-load-lifecycle.test.ts",
           "src/components/viewers/xml-viewer/xml-viewer-public-boundaries.test.ts",

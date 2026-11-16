@@ -9,7 +9,7 @@ import {
   prioritizedHighlightCandidates,
   type LyraAnchorTargetEventMap,
 } from '../../../internal/anchor-target.js';
-import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
+import { isResourceLimitError, LyraUserFacingError, readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { loadSvgSanitizer } from './dompurify-loader.js';
 import { styles } from './svg-viewer.styles.js';
@@ -189,7 +189,8 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcements.connect();
-    if (this.detached.cancel()) return;
+    // The inherited disconnect aborts pending transport even when a DOM move keeps the document.
+    if (this.detached.cancel() && this.fetchState.kind !== 'loading') return;
     if (this.hasUpdated && this.src) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
@@ -201,6 +202,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
   });
 
   override disconnectedCallback(): void {
+    if (this.fetchState.kind === 'loading') this.generation++;
     this.announcements.disconnect();
     super.disconnectedCallback();
     this.detached.schedule();
@@ -239,19 +241,19 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     this.fetchState = { kind: 'loading' };
     try {
       const response = await fetchTarget.view.fetch(fetchTarget.url, signal ? { signal } : undefined);
-      if (!this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const sanitizer = await loadSvgSanitizer();
-      if (!this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       if (!sanitizer) throw new LyraUserFacingError(this.localize('documentViewerMissingSanitizer'));
       const raw = await readResponseText(response);
-      if (!this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       const markup = sanitizeInlineSvg(sanitizer, raw, this.ownerDocument);
-      if (this.isConnected && generation === this.generation) {
+      if (!signal?.aborted && this.isConnected && generation === this.generation) {
         this.fetchState = { kind: 'loaded', markup };
       }
     } catch (error) {
-      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
+      if (signal?.aborted || !this.isConnected || generation !== this.generation) return;
       const message = error instanceof LyraUserFacingError
         ? error.message
         : this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad');
