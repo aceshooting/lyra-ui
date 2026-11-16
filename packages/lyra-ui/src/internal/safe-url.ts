@@ -112,10 +112,6 @@ export function safeFrameSrc(url: unknown, URLCtor: typeof URL = URL): string | 
   return safeDocumentNavigationUrl(url, URLCtor);
 }
 
-/** A scheme a caller may keep in a narrowed navigation-link allowlist: one of `safeLinkHref()`'s
- * schemes, or `relative` for a URL that carries no scheme of its own. */
-export type LinkSchemeToken = 'http' | 'https' | 'blob' | 'mailto' | 'relative';
-
 /** Token that admits URLs without their own scheme in a `parseLinkSchemes()` set. */
 const RELATIVE_LINK_TOKEN = 'relative';
 
