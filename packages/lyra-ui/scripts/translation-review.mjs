@@ -76,6 +76,54 @@ function validateSnapshot(actual, recorded, label, errors) {
   }
 }
 
+/** Resolve review snapshots from the same English and inherited locale maps as catalog discovery. */
+export function companionTranslationSnapshots({ standaloneFamilies, englishEntries, catalogs }) {
+  return Object.fromEntries([...standaloneFamilies].map(([family, keys]) => {
+    const familyKeys = new Set(keys);
+    const snapshot = (entries) => messageSnapshot(entries.filter(([key]) => familyKeys.has(key)));
+    return [family, {
+      source: snapshot(englishEntries),
+      locales: Object.fromEntries([...catalogs].map(([locale, entries]) => [locale, snapshot(entries)])),
+    }];
+  }));
+}
+
+function sameRecordKeys(expected, actual) {
+  return actual && typeof actual === 'object' && !Array.isArray(actual) &&
+    sameArray(Object.keys(expected).sort(), Object.keys(actual).sort());
+}
+
+/** Companion review records bind their exact content without changing the core approval scope. */
+export function validateCompanionTranslationReviews(fixture, inventory) {
+  if (fixture?.schemaVersion !== 1) return ['schemaVersion must be 1'];
+  const snapshots = companionTranslationSnapshots(inventory);
+  if (!sameRecordKeys(snapshots, fixture.families)) return ['families must cover exactly the standalone catalog families'];
+  const errors = [];
+  for (const [family, current] of Object.entries(snapshots)) {
+    const recorded = fixture.families[family];
+    validateSnapshot(current.source, recorded?.source, `${family}.source`, errors);
+    if (!sameRecordKeys(current.locales, recorded?.locales)) {
+      errors.push(`${family}.locales must cover exactly the resolved source locale IDs`);
+      continue;
+    }
+    for (const [locale, snapshot] of Object.entries(current.locales)) {
+      const record = recorded.locales[locale];
+      const label = `${family}.locales.${locale}`;
+      validateSnapshot(snapshot, record?.catalog, `${label}.catalog`, errors);
+      const { aiReview, humanReview, nativeSpeakerReview } = record ?? {};
+      if (aiReview?.status === 'spot-checked') {
+        if (typeof aiReview.scope !== 'string' || aiReview.scope.trim().length < 24)
+          errors.push(`${label}.aiReview.scope must describe the bounded spot check`);
+      } else if (aiReview?.status !== 'not-reviewed' || aiReview.scope !== null) {
+        errors.push(`${label}.aiReview must record bounded evidence or an unreviewed state with null scope`);
+      }
+      if (humanReview !== 'not-reviewed' || nativeSpeakerReview !== 'not-reviewed')
+        errors.push(`${label}: schema 1 records no human or native-speaker review approval`);
+    }
+  }
+  return errors;
+}
+
 /**
  * Validate the release-review ledger against the exact English source and translated catalogs.
  * The JSON Schema documents the persistent format; this function enforces the cross-file facts a

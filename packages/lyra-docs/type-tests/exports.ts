@@ -3,7 +3,7 @@ import type { LyraDocxEditor } from '@aceshooting/lyra-docs/docx/editor.class';
 import type { DocxImageSource, DocxInsertImageOptions, DocxRevision, DocxResult, DocxTableBorderStyle, DocxTableBorderTarget } from '@aceshooting/lyra-docs/docx';
 import { DOCX_REMOTE_LIMITS, fetchDocxBytes, type DocxFetchOptions } from '@aceshooting/lyra-docs/docx';
 import { DOCX_BATCH_LIMITS, DOCX_FRAGMENT_LIMITS, type DocxBatchEdit, type DocxBatchOptions, type DocxBatchResult, type DocxBatchStep,
-  type DocxFragment, type DocxFragmentBlock, type DocxFragmentBlockKind, type DocxFragmentRequest, type DocxParagraphEdit } from '@aceshooting/lyra-docs/docx';
+  type DocxFragment, type DocxPaintDetail, type DocxFragmentBlock, type DocxFragmentBlockKind, type DocxFragmentRequest, type DocxParagraphEdit } from '@aceshooting/lyra-docs/docx';
 import { DOCX_COMMAND_CATALOG, buildDocxCommandAction, type DocxCommandDescriptor, type DocxOutline,
   type DocxDocumentInspection, type DocxReviewReport } from '@aceshooting/lyra-docs/docx';
 // @ts-expect-error DOCX-specific contracts belong to the format subpath.
@@ -137,6 +137,12 @@ async function remoteContracts(editor: LyraDocxEditor): Promise<void> {
 void remoteContracts;
 
 async function operationContracts(session: DocxSession, editor: LyraDocxEditor): Promise<void> {
+  editor.addEventListener('lr-paint', event => {
+    const detail: DocxPaintDetail = event.detail;
+    const pages: readonly number[] = detail.pageIndexes;
+    const revision: DocxRevision = detail.revision;
+    void pages; void revision;
+  });
   const fragment: DocxResult<DocxFragment> = session.readFragment({ start: 0, maxBlocks: 8, maxText: 2048 });
   editor.readFragment({ outlineItemId: 'opaque' });
   if (fragment.ok) {

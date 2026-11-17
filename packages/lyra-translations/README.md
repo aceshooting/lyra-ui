@@ -32,6 +32,11 @@ Each locale also has one slice per component family for smaller bundles, for exa
 `@aceshooting/lyra-translations/fr/forms.js`. `locales.json` in `@aceshooting/lyra-ui` lists every
 locale with its exact import specifiers, direction and coverage.
 
+The `docx-editor` slice translates the toolbar, dialogs, status messages and accessible
+names of `lr-docx-editor` from `@aceshooting/lyra-docs`. Import
+`@aceshooting/lyra-translations/fr/docx-editor.js` to load just the French editor
+messages, or import `fr.js` for all families. English defaults ship with the editor.
+
 The `conversation` slice also includes the seven `genView*` renderer messages used by the optional
 `@aceshooting/lyra-gen` companion. Full locale imports include them automatically. With slices,
 load `conversation.js` for generated-view empty/loading/error and action messages, plus the

@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { pinnedPluralCategories, validatePluralCategoryPin } from './cldr-plural-categories.mjs';
 import { readTranslationCatalogInventory } from './check-translations.mjs';
 import { validateTranslationReviews } from './translation-review.mjs';
-import { readTranslationReviews } from './translation-review-source.mjs';
+import { readCompanionTranslationReviews, readTranslationReviews } from './translation-review-source.mjs';
 import { TRANSLATIONS_PACKAGE } from './translations-companion.mjs';
 
 const defaultPackageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -56,9 +56,16 @@ export function canonicalCatalogIdentities(sourceLocales) {
   return byCanonicalLocale;
 }
 
-function translationEntries({ review, module, ownKeys, parentKeys, sourceKeys, pluralPin }) {
+function translationEntries({ review, module, ownKeys, parentKeys, sourceKeys, pluralPin, standaloneFamilies, companionReviews }) {
   const locale = canonicalLocale(review.locale);
   const coverage = countCoverage({ locale, ownKeys, sourceKeys, parent: module.parent, parentKeys });
+  const standaloneCoverage = Object.fromEntries([...standaloneFamilies].map(([family, keys]) => [
+    family,
+    {
+      ...countCoverage({ locale, ownKeys, sourceKeys: keys, parent: module.parent, parentKeys }),
+      aiReview: companionReviews[family].locales[review.locale].aiReview.status,
+    },
+  ]));
   if (review.direction !== 'ltr' && review.direction !== 'rtl') {
     throw new Error(`${locale} review metadata has an invalid direction`);
   }
@@ -82,6 +89,7 @@ function translationEntries({ review, module, ownKeys, parentKeys, sourceKeys, p
     familyImports: families,
     sourceKeyCount: sourceKeys.length,
     ...coverage,
+    ...(standaloneFamilies.size > 0 ? { standaloneCoverage } : {}),
     reviewTier: review.reviewTier,
     reviewStatus: review.reviewer.status,
     pluralCategories: pinnedPluralCategories(pluralPin, locale),
@@ -153,7 +161,9 @@ export async function analyzeLocaleInventory({ packageDir = defaultPackageDir, r
   if (pinErrors.length > 0) throw new Error(pinErrors.join('\n'));
   validateRuntimePin(pluralPin, runtime);
 
-  const sourceKeys = inventory.englishEntries.map(([key]) => key);
+  // Preserve core key counts and the scope of the existing review fields for manifest consumers.
+  const sourceKeys = inventory.coreEnglishEntries.map(([key]) => key);
+  const allSourceKeys = inventory.englishEntries.map(([key]) => key);
   const catalogLocales = sorted(inventory.catalogs.keys());
   const reviewedLocales = reviews.catalogs.map((record) => record.locale);
   if (JSON.stringify(catalogLocales) !== JSON.stringify(reviewedLocales)) {
@@ -163,14 +173,15 @@ export async function analyzeLocaleInventory({ packageDir = defaultPackageDir, r
     );
   }
   const reviewErrors = validateTranslationReviews(reviews, {
-    englishEntries: inventory.englishEntries,
-    catalogs: inventory.catalogs,
+    englishEntries: inventory.coreEnglishEntries,
+    catalogs: inventory.coreCatalogs,
     upstreamPins: { webawesome: upstream.webawesome, shoelace: upstream.shoelace },
     requireApproved: false,
     englishRootLocales: inventory.englishRootLocales,
   });
   if (reviewErrors.length > 0) throw new Error(reviewErrors.join('\n'));
 
+  const companionReviews = await readCompanionTranslationReviews({ packageDir, inventory });
   const modules = new Map(inventory.modules.map((module) => [module.locale, module]));
   const reviewByLocale = new Map(reviews.catalogs.map((record) => [record.locale, record]));
   const localeTags = ['en', ...catalogLocales, ...inventory.pseudoModules.map(({ locale }) => locale)];
@@ -186,12 +197,24 @@ export async function analyzeLocaleInventory({ packageDir = defaultPackageDir, r
       review,
       module,
       ownKeys: inventory.authoredCatalogs.get(locale).map(([key]) => key),
-      parentKeys: module.parent === 'en' ? sourceKeys : module.parent ? inventory.catalogs.get(module.parent).map(([key]) => key) : undefined,
+      parentKeys: module.parent === 'en' ? allSourceKeys : module.parent ? inventory.catalogs.get(module.parent).map(([key]) => key) : undefined,
       sourceKeys,
       pluralPin,
+      standaloneFamilies: inventory.standaloneFamilies,
+      companionReviews,
     });
   });
   const pseudoEntries = inventory.pseudoModules.map((module) => pseudoEntry({ module, sourceKeys, pluralPin }));
+  const standaloneFamilies = Object.fromEntries(Object.entries(companionReviews).map(([family, record]) => {
+    const locales = Object.values(record.locales);
+    const spotCheckedLocaleCount = locales.filter(({ aiReview }) => aiReview.status === 'spot-checked').length;
+    return [family, {
+      sourceKeyCount: record.source.keyCount,
+      spotCheckedLocaleCount,
+      humanReviewedLocaleCount: locales.filter(({ humanReview }) => humanReview !== 'not-reviewed').length,
+      nativeSpeakerReviewedLocaleCount: locales.filter(({ nativeSpeakerReview }) => nativeSpeakerReview !== 'not-reviewed').length,
+    }];
+  }));
   const manifest = {
     schemaVersion: 1,
     pluralRules: {
@@ -200,6 +223,7 @@ export async function analyzeLocaleInventory({ packageDir = defaultPackageDir, r
       unicode: pluralPin.runtime.unicode,
     },
     runtimeFallbacks: pluralPin.runtimeFallbacks ?? {},
+    ...(inventory.standaloneFamilies.size > 0 ? { standaloneFamilies } : {}),
     sourceKeyCount: sourceKeys.length,
     locales: [sourceEntry(sourceKeys, pluralPin), ...translatedEntries, ...pseudoEntries]
       .sort((left, right) => left.locale.localeCompare(right.locale)),

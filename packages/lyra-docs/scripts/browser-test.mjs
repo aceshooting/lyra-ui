@@ -1113,6 +1113,36 @@ async function runSaveChecks(page, check, { editor, record }) {
   });
 }
 
+async function runLocaleChecks(page, check) {
+  await check('the French editor catalog localizes a populated toolbar and its accessible names', async () => {
+    await createEditor(page, 'french-editor', 'basic-editing');
+    const localized = page.locator('#french-editor');
+    await localized.evaluate(async element => {
+      element.lang = 'fr-FR';
+      await element.updateComplete;
+    });
+    assert.equal(await localized.getByRole('toolbar', { name: 'Editing tools', exact: true }).count(), 1);
+    assert.equal(await localized.getByRole('region', { name: 'Document editor', exact: true }).count(), 1);
+
+    await page.evaluate(() => window.__docxTest.loadFrenchEditorLocale());
+    const toolbar = localized.getByRole('toolbar', { name: 'Outils d’édition', exact: true });
+    await toolbar.waitFor({ state: 'visible' });
+    assert.equal(await toolbar.getByRole('button', { name: 'Enregistrer', exact: true }).isEnabled(), true);
+    assert.equal(await toolbar.getByRole('button', { name: 'Gras', exact: true }).count(), 1);
+    assert.equal(await localized.getByRole('region', { name: 'Éditeur de documents', exact: true }).count(), 1);
+    assert.equal(await localized.getByRole('document', { name: 'Éditeur de documents', exact: true }).count(), 1);
+    assert.match(await localized.locator('[part="state"]').textContent(), /Document prêt/u);
+    assert.match(await localized.locator('.docx-pages').textContent(), /Café 東京/u);
+
+    await localized.evaluate(async element => {
+      element.strings = { docxEditorToolbar: 'Outils personnalisés' };
+      await element.updateComplete;
+    });
+    assert.equal(await localized.getByRole('toolbar', { name: 'Outils personnalisés', exact: true }).count(), 1);
+    await localized.evaluate(element => element.remove());
+  });
+}
+
 // Read-only, oversize, corpus and fallback inputs.
 async function runInputChecks(page, check, { record }) {
   await check('read-only instance refuses editing and preserves revision', async () => {
@@ -1425,7 +1455,7 @@ async function runBrowser(name, url, { lazyEntry, engineEntry, engineFiles }) {
   const editor = page.locator('lr-docx-editor').first();
   try {
     const navigationStart = performance.now();
-    await page.goto(url, { waitUntil: 'networkidle' });
+    await page.goto(url, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => window.__docxTest?.ready === true);
     await check('ordinary entry leaves editor lazy', async () => {
       assert.equal(record.requests.some(path => path.endsWith(`/${lazyEntry}`)), false);
@@ -1457,6 +1487,7 @@ async function runBrowser(name, url, { lazyEntry, engineEntry, engineFiles }) {
       await runInputChecks(page, check, context);
       await runLifecycleChecks(page, check, context);
       await runSharedSuites(page, check, context);
+      await runLocaleChecks(page, check);
     }
     assert.deepEqual(record.pageErrors, [], 'Browser page errors');
     assert.deepEqual(record.requestFailures, [], 'Browser request failures');

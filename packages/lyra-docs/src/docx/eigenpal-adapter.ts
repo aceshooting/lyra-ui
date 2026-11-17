@@ -560,6 +560,7 @@ export async function openEigenpalDocument(
         const ready = documentReadiness();
         return ready.ok ? inspection.inspectDocument() : ready;
       },
+      paragraphIndexes: () => inspection.paragraphIndexes(),
       selectDocumentTarget: token => inspection.select(token),
       fragment(request) {
         const ready = documentReadiness();

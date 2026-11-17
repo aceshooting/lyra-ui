@@ -6,6 +6,7 @@ import './es-419/agent-tools.js';
 import './es-419/charts.js';
 import './es-419/conversation.js';
 import './es-419/data.js';
+import './es-419/docx-editor.js';
 import './es-419/forms.js';
 import './es-419/layout.js';
 import './es-419/media.js';

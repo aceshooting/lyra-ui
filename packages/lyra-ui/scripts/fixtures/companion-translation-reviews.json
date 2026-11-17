@@ -1,0 +1,973 @@
+{
+  "schemaVersion": 1,
+  "families": {
+    "docx-editor": {
+      "source": {
+        "keyCount": 276,
+        "sha256": "sha256:2c680bbd14f786ddb1c367a6c8d9c1647f2ef19a363f5d6626b75ac0771e699d"
+      },
+      "locales": {
+        "am": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:ffed6ce4681a00df0d1548e4b2590b9a0c87f09248314191a7f1e68a2e05c81a"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 59 editor messages with the source, including review decisions, selection and alignment commands, destructive actions, document refusal, metadata removal and numeric bounds."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "ar": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:2f2b3824c47a973b1b59ed4e32e12cedfb326e5ad98132138a4735ec0b4b5540"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 59 editor messages with the source, including review decisions, selection and alignment commands, destructive actions, document refusal, metadata removal and numeric bounds."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "bg": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:af784fb5a237ea67420f8bb439c9464ab82a8c996a09fc6127f78f94b9f06ec0"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 59 editor messages with the source, including review decisions, selection and alignment commands, destructive actions, document refusal, metadata removal and numeric bounds."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "bho": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:02aa72cba86d7b1d62a04e685e87a9ade3433051777792b7c5d5cf7266aadf12"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 59 editor messages with the source, including review decisions, selection and alignment commands, destructive actions, document refusal, metadata removal and numeric bounds."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "bn": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:a412c9b00760d102c1d50aa7221afd1f8c4a8f087abffeccc82f0005b63c5fa7"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 59 editor messages with the source, including review decisions, selection and alignment commands, destructive actions, document refusal, metadata removal and numeric bounds."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "ca": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:7dc8a708ef5d2a36b0d398cab5a2c2bdccd31bc0c6eebee25a6da68ba58209e2"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 59 editor messages with the source, including review decisions, selection and alignment commands, destructive actions, document refusal, metadata removal and numeric bounds."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "cs": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:bed2ffb581fdd15e187bd073a265c304668e7f505d807c09c7a30196bb02d2c4"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 59 editor messages with the source, including review decisions, selection and alignment commands, destructive actions, document refusal, metadata removal and numeric bounds."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "da": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:48bc6489d2f0bee022126cd87287b8e0b74134c1ca0e2922aac7784e107e3452"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 59 editor messages with the source, including review decisions, selection and alignment commands, destructive actions, document refusal, metadata removal and numeric bounds."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "de": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:43e50403aebd1d73a7b065f7b18569e2821582ff5974c38ac966bf52f59ba866"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 46 editor messages with the English source, covering unsupported and read-only states, physical direction, stale selection recovery, image metadata and numeric limits."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "de-CH": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:19c3704e8ea74e0e5c937064ff5f7dfa84dbb1267dec5411ba90338b96eb9c0a"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared all 21 editor overrides against their parent and checked representative inherited messages for Swiss orthography and quotation marks. Verified placeholder names and numeric limits."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "el": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:f531c92f244b46fbf39b666102526e0b05af7690e4524a7c147b52d8791611a8"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 15 editor messages with the English source, covering document checks, attribution, read-only editing, save errors, external content, DOM placement, link inputs, image metadata, size limits and case sensitivity."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "en-GB": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:a224f75032b6a0d0e7091303ddd2d67d8689eb96e551cefa5c1e8b263aa9dcf6"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared all 11 editor overrides against their parent and checked representative inherited messages for British spelling and editor terminology. Verified placeholder names and numeric limits."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "es": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:defaf6022e5ef9205d95a21dccf5e68ad434b3239bc467b105308c7ad5b26989"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 15 editor messages with the English source, covering document checks, attribution, read-only editing, save errors, external content, DOM placement, link inputs, image metadata, size limits and case sensitivity."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "es-419": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:483f94e8235f48a3d5b60cd35871b8f4d2ec59af4992218ef126ddb9fc3a1f7d"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared all 12 editor overrides against their parent and checked representative inherited messages for Latin American command and status wording. Verified placeholder names and numeric limits."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "et": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:62e662dce51f33b85ad0fbf7421710ac73d3cbb36da3ba19dc201a829e19a3ce"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 15 editor messages with the English source, covering document checks, attribution, read-only editing, save errors, external content, DOM placement, link inputs, image metadata, size limits and case sensitivity."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "fa": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:43a0b93ad32b99905745fdc0b7c59632ac1cc8edc8df493c8b8de06dfb84a40c"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 15 editor messages with the English source, covering document checks, attribution, read-only editing, save errors, external content, DOM placement, link inputs, image metadata, size limits and case sensitivity."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "fa-AF": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:e698414f26c0e8061fa3825cb6e372544ec8240c69269817de2e082881cbf0a6"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 15 editor messages with the English source, covering document checks, attribution, read-only editing, save errors, external content, DOM placement, link inputs, image metadata, size limits and case sensitivity."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "fi": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:3792392f6633dad1b0470b79fc1d1a2c037b4ecbd4fb98bfeb4a014a0a67f710"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 15 editor messages with the English source, covering document checks, attribution, read-only editing, save errors, external content, DOM placement, link inputs, image metadata, size limits and case sensitivity."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "fr": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:edb7f55c3317e11a1c31ae0f9b215b0e836970e19800c5ecfd0fcc5a6b1ec088"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 15 editor messages with the English source, covering document checks, attribution, read-only editing, save errors, external content, DOM placement, link inputs, image metadata, size limits and case sensitivity."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "fr-CA": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:edb7f55c3317e11a1c31ae0f9b215b0e836970e19800c5ecfd0fcc5a6b1ec088"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared all 0 editor overrides against their parent and checked representative inherited messages for Canadian French command and review terminology. Verified placeholder names and numeric limits."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "ga": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:eada9872d30988bcba86da2404cf5fb9b6acb191947df576a206971d76724a0c"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 15 editor messages with the English source, covering document checks, attribution, read-only editing, save errors, external content, DOM placement, link inputs, image metadata, size limits and case sensitivity."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "gu": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:41279192a024cd6e8efc69c7c9685c3f8552285042405e22e142a8d18b656b52"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 15 editor messages with the English source, covering document checks, attribution, read-only editing, save errors, external content, DOM placement, link inputs, image metadata, size limits and case sensitivity."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "ha": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:fbd26de271f9eff7b134c0276a0fe110c328b442235912f54b99f63feb040352"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Independent AI-assisted checks of ordered messages, literal tokens, numeric limits and English-identical copy, with targeted review of command scope, toolbar semantics and terminology."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "he": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:003929715e92ac9072ad72393f24a6a4e3c2e05004d8c88f5b2b25034410838b"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Independent AI-assisted checks of ordered messages, literal tokens, numeric limits and English-identical copy, with targeted review of command scope, toolbar semantics and terminology."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "hi": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:c4a0f0e0fab863384f84af79ee16b22f759e4bc86dd321624ba8c8e66cc55bf8"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Independent AI-assisted checks of ordered messages, literal tokens, numeric limits and English-identical copy, with targeted review of command scope, toolbar semantics and terminology."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "hr": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:90c55b989bf53bc65b7a1dfb09903253a4960f6b1f26bd25c0ab019c1efcd398"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Independent AI-assisted checks of ordered messages, literal tokens, numeric limits and English-identical copy, with targeted review of command scope, toolbar semantics and terminology."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "hu": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:9c19b7ddf31514b417721db40926459d77b62e05cd1161dde1df0de51d44baf3"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Independent AI-assisted checks of ordered messages, literal tokens, numeric limits and English-identical copy, with targeted review of command scope, toolbar semantics and terminology."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "id": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:1e8c58d68c3247d96cd43d41ad215d4d06a22d1bdc96203e503c0237447ff956"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Independent AI-assisted checks of ordered messages, literal tokens, numeric limits and English-identical copy, with targeted review of command scope, toolbar semantics and terminology."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "ig": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:e849ac4cc426b2623d10f4550840ec7fe847eebc2ea8a6ab8ce7d48e7c6d7425"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Independent AI-assisted checks of ordered messages, literal tokens, numeric limits and English-identical copy, with targeted review of command scope, toolbar semantics and terminology."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "it": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:f7c684303ca056d04278f2818c90bb6380b671f498613488ce0a4323dcda0c3f"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Independent AI-assisted checks of ordered messages, literal tokens, numeric limits and English-identical copy, with targeted review of command scope, toolbar semantics and terminology."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "ja": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:4305c9ad5f84ac5c5c0351e36a956d3126d81bfc904bcae01d166a941573047a"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared a sample of 98 editor messages with the source and existing locale terminology, including error recovery, changes to the original selection, destructive actions, image limits and table commands."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "jv": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:a49bbb63b419f600ba2c5346e0b21be558f430f1108ca10a254e2b8839c30330"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared a sample of 98 editor messages with the source and existing locale terminology, including error recovery, changes to the original selection, destructive actions, image limits and table commands."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "kk": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:f911bd90c0da4738b49a017e68d9c524a921ad5cd0a077c34701db7b7e0c2441"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared a sample of 98 editor messages with the source and existing locale terminology, including error recovery, changes to the original selection, destructive actions, image limits and table commands."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "kn": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:660e8ccee028285d4437a79781b050f6e3fd04aefa44bf7aef27e53cac6ad89b"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared a sample of 98 editor messages with the source and existing locale terminology, including error recovery, changes to the original selection, destructive actions, image limits and table commands."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "ko": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:25091214093f827ba2b86316ad51222b646616fb3993a7c84778fd9312ad584e"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared a sample of 98 editor messages with the source and existing locale terminology, including error recovery, changes to the original selection, destructive actions, image limits and table commands."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "ln": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:83427503f668c92a3dbdab067cbb44b97c6f05998d28ef35d4d07d240bbc9ac0"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared a sample of 98 editor messages with the source and existing locale terminology, including error recovery, changes to the original selection, destructive actions, image limits and table commands."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "lt": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:f8aecc3c3da9b000dd2c6ff76d0b0f423c4d83048f8742f64e93f2341c9f9248"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared a sample of 98 editor messages with the source and existing locale terminology, including error recovery, changes to the original selection, destructive actions, image limits and table commands."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "lv": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:7c597f562fd9c7856d161edd062d3ded59570dcc3e080caeaaff0016461b95bb"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared a sample of 98 editor messages with the source and existing locale terminology, including error recovery, changes to the original selection, destructive actions, image limits and table commands."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "ml": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:df8c8643071d8cb179726f068f26af405686fda051fdffab4cde7e3f233e9b7a"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 92 editor messages against the source, including command scope, review controls, document and image errors, metadata preservation, numeric bounds and editing terminology."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "mr": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:a955ca20f324f2274ae62f738086c2e25765be2e077d8f0a468a0e48fcfd7c70"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 92 editor messages against the source, including command scope, review controls, document and image errors, metadata preservation, numeric bounds and editing terminology."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "ms": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:f25674ca087b0b8d914455c8e552fdea2cb35a733ecb4b03d67fb9190ecddd4a"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 92 editor messages against the source, including command scope, review controls, document and image errors, metadata preservation, numeric bounds and editing terminology."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "mt": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:39120a92833ed479f8fa8606551023274a5ebfd2802f54272e2a052c5c8db82b"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 92 editor messages against the source, including command scope, review controls, document and image errors, metadata preservation, numeric bounds and editing terminology."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "my": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:47c0dad9e1ef30cf7d584d99d54121b09f046060f8076f181ea8941e105a09ed"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 92 editor messages against the source, including command scope, review controls, document and image errors, metadata preservation, numeric bounds and editing terminology."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "nb": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:10dc147f32dbacc7d14885c7aabdbd992d270e3f45748cd9672901c627c5c059"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 92 editor messages against the source, including command scope, review controls, document and image errors, metadata preservation, numeric bounds and editing terminology."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "ne": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:a9bbd877d1e561a9b075fe7d51fbda3ae15b7aecbd2064781ca65cf627b2b510"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 92 editor messages against the source, including command scope, review controls, document and image errors, metadata preservation, numeric bounds and editing terminology."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "nl": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:6b86b36bfeeeabf43277e8583a38c2ce8a5f117d5a20f2cdd6faae589758ec0e"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 92 editor messages against the source, including command scope, review controls, document and image errors, metadata preservation, numeric bounds and editing terminology."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "nn": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:004355094a85c26e1c32d7030a93614db3123635bc428db244139631bf9e7a8f"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared at least 67 editor messages with their intended actions, including read-only and discard states, stale selection, directional table commands, image eligibility, metadata and search replacement."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "om": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:fb470cde0b4318d8f5f8cea4a33b4bdf7efc40c86edaed7eb3568e3024a9da04"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared at least 67 editor messages with their intended actions, including read-only and discard states, stale selection, directional table commands, image eligibility, metadata and search replacement."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "or": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:ed9d8f28155a3868cebb3453c358853a80da4a05523676f0853fc3f81f45e9c8"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared at least 67 editor messages with their intended actions, including read-only and discard states, stale selection, directional table commands, image eligibility, metadata and search replacement."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "pa": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:73ecb1caca13f981c8a155cc95413979a62ab7a759679eec01b190784e58461f"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared at least 67 editor messages with their intended actions, including read-only and discard states, stale selection, directional table commands, image eligibility, metadata and search replacement."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "pcm": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:dfb0c4885c8d19e996cf51bcc8da46757de4cd387f3e84607b951dc63c4d3c55"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared at least 67 editor messages with their intended actions, including read-only and discard states, stale selection, directional table commands, image eligibility, metadata and search replacement."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "pl": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:2655095b22713df0672d54522bf32400fea2aed8a2d501b0d2f9a641ab934c61"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared at least 67 editor messages with their intended actions, including read-only and discard states, stale selection, directional table commands, image eligibility, metadata and search replacement."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "pnb": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:72bd08592b235940a76624cb49bb860b909e4259331c9562475ec8ac2b63cfe7"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared at least 67 editor messages with their intended actions, including read-only and discard states, stale selection, directional table commands, image eligibility, metadata and search replacement."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "ps": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:3b55f8007ebe6e71e80ddc598c6cd0e4ed978d99c63a2da6fa4cb3f42e5c1fb1"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared at least 67 editor messages with their intended actions, including read-only and discard states, stale selection, directional table commands, image eligibility, metadata and search replacement."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "pt-BR": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:41948c97c9a7be5a858724995e2c89d00a6e4dd5b70809b4dfac8e47492df8ce"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 59 editor messages with the English source and their controls, including review decisions, deleting rows or columns, borders, caret changes, link schemes and image dimensions."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "pt-PT": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:dd74f2c7189b94deb3e11384fd644dfdb6cc576a4720b1e768451ac739e6fb7c"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 35 editor messages with the English source, covering unsupported and read-only states, physical direction, stale selection recovery, image metadata and numeric limits."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "ro": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:40103e88c0646802be8e9ab1c3fb192f79cc30976ad49f3f5515b66ab3d73ee4"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 59 editor messages with the English source and their controls, including review decisions, deleting rows or columns, borders, caret changes, link schemes and image dimensions."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "ru": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:93d53ef68180d6a88a292721d3205b65b553c6fe47a476f40a3f7cc712f21341"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 59 editor messages with the English source and their controls, including review decisions, deleting rows or columns, borders, caret changes, link schemes and image dimensions."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "sd": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:7e94089841ef03e513d3d04415d8b7602dc34aabea011432b1f845e9c64b3252"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 59 editor messages with the English source and their controls, including review decisions, deleting rows or columns, borders, caret changes, link schemes and image dimensions."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "sk": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:1faf38aa26b72e02cf0fd356c960402a04cb2cdc9bcadb327285afda8631ba8f"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 59 editor messages with the English source and their controls, including review decisions, deleting rows or columns, borders, caret changes, link schemes and image dimensions."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "sl": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:abc3fa45a1e3e4db0b1d6b21d75122ae8e1d4ace9ed25c4d9c6a67eb91226ca4"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 59 editor messages with the English source and their controls, including review decisions, deleting rows or columns, borders, caret changes, link schemes and image dimensions."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "sr": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:4b681c8cbc5fab12efd82a37f5e4372433213f01130ebb6b3167dad7770f622b"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 59 editor messages with the English source and their controls, including review decisions, deleting rows or columns, borders, caret changes, link schemes and image dimensions."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "sr-Latn": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:def5bd4f157a9abad450bf2eda528c1140f39b1ae8f6aeebe965a7dae0f68787"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 59 editor messages with the English source and their controls, including review decisions, deleting rows or columns, borders, caret changes, link schemes and image dimensions."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "su": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:a732fe6e948f4394cf78118367312eee6eeee00b1443d9c3ffebfac90de63cdd"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 60 editor messages against the source, including refusal and retry states, discarding unsaved changes, metadata removal, formatting actions, physical direction and keyboard instructions."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "sv": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:06cb3880e15a705eccd8aa6dd19b98c5e284d4769f23159e81a3c9d69413267a"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 60 editor messages against the source, including refusal and retry states, discarding unsaved changes, metadata removal, formatting actions, physical direction and keyboard instructions."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "sw": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:eeb9257b93be59ba47e977e4a3e6c77e2c1844c8eab4b1eed9df8e0d6c11c9d2"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 60 editor messages against the source, including refusal and retry states, discarding unsaved changes, metadata removal, formatting actions, physical direction and keyboard instructions. The revised Find/Replace result labels and first-100 limit were checked again."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "ta": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:80084f7dd0a1d7071d3c6dd024074d4a1a2a7d3edb7c123838dce014889e439f"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 60 editor messages against the source, including refusal and retry states, discarding unsaved changes, metadata removal, formatting actions, physical direction and keyboard instructions."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "te": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:b46c54c0afa99be2fce1c482b92d05c1eeb53b381948aa874175d2391b3e14c1"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 60 editor messages against the source, including refusal and retry states, discarding unsaved changes, metadata removal, formatting actions, physical direction and keyboard instructions."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "th": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:f02517cacb2059aa8595efb3d8a4bfaee9905fba5a6dd9e5165aa80d2e5f9fbf"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 60 editor messages against the source, including refusal and retry states, discarding unsaved changes, metadata removal, formatting actions, physical direction and keyboard instructions."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "tl": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:f6dd0f4aa983382c086025d32461d7bac08a5e1ee56da25ce533d663c73c26a7"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 60 editor messages against the source, including refusal and retry states, discarding unsaved changes, metadata removal, formatting actions, physical direction and keyboard instructions."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "tr": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:38576678355491521e86b37c1a7aa35da5a0522735aa814808120c00ccd06bb7"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 60 editor messages against the source, including refusal and retry states, discarding unsaved changes, metadata removal, formatting actions, physical direction and keyboard instructions."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "uk": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:94929e78db2860e683e70ef30beb2fe9e778536e1ba9e1185d069efcbeb5e22b"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 46 editor messages with the English source, covering unsupported and read-only states, physical direction, stale selection recovery, image metadata and numeric limits."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "ur": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:e71c093258a4da4561a337235088a85e69c59cf3c919f005e4d0bb4d5718d407"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 46 editor messages with the English source, covering unsupported and read-only states, physical direction, stale selection recovery, image metadata and numeric limits."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "uz": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:4f7ccea4fcb98bdc79ecb4b2813eb99d87b331b6d024fcdcdba31f6cd2267b18"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 46 editor messages with the English source, covering unsupported and read-only states, physical direction, stale selection recovery, image metadata and numeric limits."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "vi": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:f2ab6fafac22ae1a958dee9b34015f6da80422c45e03f8ae810b910c36e88391"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 54 editor messages with the English source, covering unsupported and read-only states, physical direction, stale selection recovery, image metadata and numeric limits."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "yo": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:79847e1b6eb13537a4e4a2a67fd7d16ab6a2e17742ee3a71a0ace1cceb0435e3"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 54 editor messages with the English source, covering unsupported and read-only states, physical direction, stale selection recovery, image metadata and numeric limits."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "zh-CN": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:5ab6dcf233c5ec68e1b463184214ac8de439985036e0dff5c12ff24738c7beb4"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 46 editor messages with the English source, covering unsupported and read-only states, physical direction, stale selection recovery, image metadata and numeric limits."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "zh-HK": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:127bdddfda0ea312b65d1a75619264ab172db36bea6f11d1da65a11e5edf6edc"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared all 39 editor overrides against their parent and checked representative inherited messages for Hong Kong character forms and editor terminology. Verified placeholder names and numeric limits."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "zh-TW": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:eb8edfd597255e1f02b5299140efdf9367e026144305474861c5d33701095f1a"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 46 editor messages with the English source, covering unsupported and read-only states, physical direction, stale selection recovery, image metadata and numeric limits."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        },
+        "zu": {
+          "catalog": {
+            "keyCount": 276,
+            "sha256": "sha256:87d6a9aff4f36bc6bcf6ff8ae0605f555bf61461b4916fe0cb9a8253fd594fd7"
+          },
+          "aiReview": {
+            "status": "spot-checked",
+            "scope": "Compared 46 editor messages with the English source, covering unsupported and read-only states, physical direction, stale selection recovery, image metadata and numeric limits."
+          },
+          "humanReview": "not-reviewed",
+          "nativeSpeakerReview": "not-reviewed"
+        }
+      }
+    }
+  }
+}

@@ -69,6 +69,8 @@ export interface DocxEnginePort {
   charts?(): readonly DocxChartPlacement[];
   /** Presentation only: page zoom as a factor (0.25–4) or the bounded page-width fit. */
   setZoom?(zoom: number | 'fit'): boolean;
+  /** Current direct body paragraph identities keyed to readFragment block indexes. */
+  paragraphIndexes?(): ReadonlyMap<string, number> | null;
   /** Presentation only: the painted node of the selected supported image, for pointer chrome. */
   selectedImageElement?(): HTMLElement | null;
   /** A change event is one committed document change, never initial loading. */

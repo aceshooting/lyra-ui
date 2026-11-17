@@ -9,6 +9,7 @@ Lyra UI before the companion package:
 
 ```sh
 pnpm --filter @aceshooting/lyra-ui build
+pnpm --filter @aceshooting/lyra-translations assemble
 pnpm --filter @aceshooting/lyra-docs build
 pnpm --filter @aceshooting/lyra-docs lint
 pnpm --filter @aceshooting/lyra-docs test

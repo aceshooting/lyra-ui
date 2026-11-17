@@ -137,6 +137,24 @@ review or update its hash automatically. The generated locale manifest reports c
 separately; fallback messages must never be counted as translated coverage. The pinned CLDR
 category fixture defines structural requirements without claiming linguistic quality.
 
+Standalone companion sources are declared in `scripts/fixtures/companion-localization.json`.
+They enter the translation generator, catalog validation and compressed size check while their English
+fallbacks stay in the owning package. Their review evidence lives in
+`scripts/fixtures/companion-translation-reviews.json`. Each family has an English source snapshot
+and a record for every source locale ID with its resolved catalog snapshot. The snapshot includes
+inherited values, so editing a parent also invalidates the affected regional records. Record the
+actual scope of any AI spot check and use `not-reviewed` when evidence is absent. Schema version 1
+records human and native-speaker review as separate unreviewed fields. The catalog checker and locale
+manifest generator reject missing or stale records, and regeneration never updates the review ledger.
+Use `companionTranslationSnapshots()` from `scripts/translation-review.mjs` with the validated
+inventory to obtain current hashes after reviewing the affected content.
+
+The `locales.json` manifest publishes `standaloneFamilies` with source counts and AI spot-check,
+human and native-speaker review counts. `standaloneCoverage` reports per-locale message coverage
+and AI spot-check status. The top-level source count and locale review fields describe the core
+catalog covered by the core review ledger. When a family adds published modules, measure both the
+locale manifest and the translation companion archive during release budget preparation.
+
 ## RTL — logical properties, not a forced `dir`
 
 - Components never set their own `dir` attribute. Direction is inherited from the nearest

@@ -307,22 +307,40 @@ export function createDocumentInspection(current: () => DocxEditorInstance,
       } catch { return null; }
     };
   }
+  function bodyBlocks() {
+    if (disposed) reject();
+    const editor = current(), surface = editor.surface;
+    if (!surface) reject();
+    const session = surface.session, generation = editor.mountGeneration, revision = session.packageRevision();
+    const valid = () => !disposed && current() === editor && editor.surface === surface && editor.mountGeneration === generation &&
+      surface.session === session && session.packageRevision() === revision;
+    const pkg = session.currentPackage(), part = session.part();
+    if (!valid() || pkg.parts.get(pkg.mainDocumentPart) !== part) reject();
+    if (elementName(part.root) !== wordName('document')) reject();
+    const bodies = array(data(part.root, 'children'), limits.nodes).filter(value => elementName(value) === wordName('body'));
+    if (bodies.length !== 1) reject();
+    const blocks = array(data(bodies[0], 'children'), fragmentLimits.bodyBlocks).filter(value => elementName(value) !== null);
+    return { pkg, valid, blocks };
+  }
   return {
+    /** Join painted paragraph identities to direct body block indexes without reading their text. */
+    paragraphIndexes(): ReadonlyMap<string, number> | null {
+      try {
+        const { blocks, valid } = bodyBlocks();
+        const indexes = new Map<string, number>();
+        for (const [index, block] of blocks.entries()) {
+          if (elementName(block) !== wordName('p')) continue;
+          const id = data(block, 'id');
+          if (typeof id !== 'string' || !id || indexes.has(id)) return null;
+          indexes.set(id, index);
+        }
+        return valid() ? indexes : null;
+      } catch { return null; }
+    },
     /** Copies a bounded run of top-level body blocks; other blocks' subtrees are never visited. */
     fragment(request: DocxEngineFragmentRequest): DocxResult<DocxEngineFragmentReport> {
       try {
-        if (disposed) reject();
-        const editor = current(), surface = editor.surface;
-        if (!surface) reject();
-        const session = surface.session, generation = editor.mountGeneration, revision = session.packageRevision();
-        const valid = () => !disposed && current() === editor && editor.surface === surface && editor.mountGeneration === generation &&
-          surface.session === session && session.packageRevision() === revision;
-        const pkg = session.currentPackage(), part = session.part();
-        if (!valid() || pkg.parts.get(pkg.mainDocumentPart) !== part) reject();
-        if (elementName(part.root) !== wordName('document')) reject();
-        const bodies = array(data(part.root, 'children'), limits.nodes).filter(value => elementName(value) === wordName('body'));
-        if (bodies.length !== 1) reject();
-        const blocks = array(data(bodies[0], 'children'), fragmentLimits.bodyBlocks).filter(value => elementName(value) !== null);
+        const { pkg, valid, blocks } = bodyBlocks();
         let start = request.start ?? 0;
         if (request.token !== undefined) {
           const target = tokens.get(request.token);

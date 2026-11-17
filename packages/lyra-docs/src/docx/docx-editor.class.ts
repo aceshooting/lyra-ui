@@ -10,7 +10,7 @@ import { formatNumber } from '@aceshooting/lyra-ui/utilities/format.js';
 import { nextId } from '@aceshooting/lyra-ui/utilities/a11y.js';
 import { createDocxSession } from './create-session.js';
 import { loadDocumentControls, replacementSearchIndex } from './editor-controls.js';
-import { internalDocxCharts, internalDocxSelectedImageElement, refreshInternalDocxTableLabels, setInternalDocxZoom } from './session.js';
+import { internalDocxCharts, internalDocxParagraphIndexes, internalDocxSelectedImageElement, refreshInternalDocxTableLabels, setInternalDocxZoom } from './session.js';
 import type { DocxChartPlacement } from './eigenpal-charts.js';
 import type { DocxChartModel } from './chart-model.js';
 import { DOCX_LIMITS } from './commands.js';
@@ -32,12 +32,14 @@ import type {
   DocxAction, DocxCommand, DocxEdit, DocxRefusalCode, DocxResult, DocxRevision, DocxSaveReceipt,
   DocxSelectionLease, DocxSession, DocxSnapshot, DocxSource, DocxSearchResults, DocxTableAction,
   DocxImageAction, DocxImageDescription, DocxImageDirection, DocxImageSource, DocxInsertImageOptions, DocxCommandAvailability,
-  DocxHighlight, DocxBatchStep, DocxBatchOptions, DocxBatchResult,
+  DocxPaintDetail, DocxHighlight, DocxBatchStep, DocxBatchOptions, DocxBatchResult,
 } from './types.js';
+import { observeParagraphPaint } from './paragraph-paint.js';
 import { DOCX_EDITOR_STRINGS } from './strings.js';
 import { styles } from './docx-editor.styles.js';
 
 interface DocxEditorEvents {
+  'lr-paint': CustomEvent<DocxPaintDetail>;
   'lr-before-open': CustomEvent<{ kind: DocxSource['kind']; currentRevision: DocxRevision | null }>;
   'lr-ready': CustomEvent<{ revision: DocxRevision }>;
   'lr-change': CustomEvent<{ snapshot: Readonly<DocxSnapshot> | null }>;
@@ -215,6 +217,7 @@ const refused = <T>(code: DocxRefusalCode): DocxResult<T> => ({ ok: false, code 
  * clearing dirty state; call `acknowledgeSaved()` after durable host persistence.
  *
  * @event lr-before-open - Cancelable when a document with unsaved content would be replaced; an untouched or emptied single blank page is replaced without asking.
+ * @event lr-paint - Materialized, repainted or evicted page indexes after painted body paragraphs receive their current data-lr-block-index.
  * @event lr-ready - A document finished opening.
  * @event lr-change - Session state or revision changed; no document bytes are included.
  * @event lr-selection-change - Selection kind or version changed.
@@ -547,6 +550,7 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
   private readonly availabilityMemo = new AvailabilityMemo<DocxCommandAvailability>();
   private colorItems: { key: string; text: readonly object[]; highlight: readonly object[] } | null = null;
   private session: DocxSession | null = null;
+  private paragraphPaint: ReturnType<typeof observeParagraphPaint> | null = null;
   private unsubscribeSession: (() => void) | null = null;
   private toolbarSelection: DocxSelectionLease | null = null;
   @state() private openInProgress = false;
@@ -659,6 +663,8 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     this.cancelImageDrag();
     this.toolbarSelection?.release();
     this.toolbarSelection = null;
+    this.paragraphPaint?.disconnect();
+    this.paragraphPaint = null;
     this.unsubscribeSession?.();
     this.unsubscribeSession = null;
     this.session?.destroy();
@@ -736,6 +742,14 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
       this.reviewIntent.lease = null;
     }
     this.currentSnapshot = next;
+    if (next.status !== 'ready') {
+      this.paragraphPaint?.disconnect();
+      this.paragraphPaint = null;
+    } else if (next.revision && this.mount) {
+      if (!this.paragraphPaint) this.paragraphPaint = observeParagraphPaint(this.mount, next.revision,
+        () => internalDocxParagraphIndexes(owner), detail => this.emit('lr-paint', detail));
+      else if (next.revision.value !== previous?.revision?.value) this.paragraphPaint.refresh(next.revision);
+    }
     this.refreshCommands();
     const current = () => this.isConnected && this.session === owner && this.currentSnapshot === next && owner.snapshot() === next;
     if (next.image) this.imageNavigationEmpty = false;

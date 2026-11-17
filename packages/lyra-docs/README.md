@@ -138,6 +138,18 @@ action. Paragraph style and font catalogs are read only when requested (for
 example, when a picker opens), not on each keystroke. A style action must refer
 to a style present in the open document.
 
+The editor ships English defaults. Install `@aceshooting/lyra-translations` at the same
+version as `@aceshooting/lyra-ui` to load an editor catalog. For example, this import
+registers the French editor messages for elements with an effective locale of `fr`.
+
+```js
+import '@aceshooting/lyra-translations/fr/docx-editor.js';
+```
+
+Importing the full locale (`@aceshooting/lyra-translations/fr.js`) also registers the
+editor family. Applications using a lazy import can load the family after mounting.
+Per-instance `.strings` entries take precedence over the registered catalog.
+
 The component's localizable messages include these keys through Lyra's inherited
 `strings` property:
 
@@ -289,6 +301,7 @@ Apply. The exact scope and limits are in **Selected existing image actions** bel
 | Event | Detail and behavior |
 | --- | --- |
 | `lr-before-open` | Cancelable; `{ kind, currentRevision }` before replacing a document with unsaved content. Call `preventDefault()` to veto a programmatic New or Open. |
+| `lr-paint` | `{ revision, pageIndexes }` after painted paragraph indexes are updated. |
 | `lr-ready` | `{ revision }` for the opened document. |
 | `lr-change` | `{ snapshot }`, where the snapshot may be `null` after disconnect. It never includes document bytes. |
 | `lr-selection-change` | `{ selection }` with selection kind and version. |
@@ -751,6 +764,74 @@ Use `retainSelection()` when host controls need to preserve an editor selection
 while focus moves outside the document surface. `focus()` returns focus to the
 editing surface. `save()` returns bytes and a receipt; the session never writes
 to storage on its own. Always destroy the session when finished.
+
+### Annotating painted paragraphs
+
+When the body can be inspected, each painted fragment of a top-level body paragraph
+carries `data-lr-block-index`, the zero-based `index` returned by `readFragment()`
+at the current revision. The attribute is omitted if the body exceeds the inspection
+bound or its paragraph identities are ambiguous. Several fragments can share an index
+when a paragraph spans pages. Duplicate paragraphs keep
+distinct indexes even when their text is identical. Tables and other top-level blocks
+occupy an index. Paragraphs inside tables, headers, footers and other stories have no
+body paragraph index.
+
+Listen for `lr-paint` on the editor. Its `DocxPaintDetail` contains the current
+`revision` and sorted, zero-based `pageIndexes` for pages that have been painted,
+repainted or evicted. The event is coalesced per animation frame and fires after
+the paragraph attributes are available. Virtual pages contribute fragments only
+while materialized. Replace retained ranges on paint, discard them on document
+replacement, and resolve annotation targets against the new revision after an edit
+can shift indexes. The editor never scrolls pages into view to produce annotations.
+
+For an annotation within plain text, gather the actual painted text nodes for the
+chosen block. This example highlights the first occurrence of a word in the paragraph
+at body block index 1, including a word split across styled runs. It waits for a
+complete matching text projection and leaves the editor selection alone.
+
+```js
+function wordRanges(editor, block, word) {
+  if (block?.kind !== 'paragraph' || block.textTruncated) return [];
+  const start = block.text.indexOf(word);
+  if (start < 0 || !word.length) return [];
+  const nodes = [];
+  for (const fragment of editor.querySelectorAll(`[data-lr-block-index="${block.index}"]`)) {
+    const walker = document.createTreeWalker(fragment, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+  }
+  if (nodes.map(node => node.data).join('') !== block.text) return [];
+  const ranges = [];
+  let offset = 0;
+  for (const node of nodes) {
+    const from = Math.max(0, start - offset);
+    const to = Math.min(node.length, start + word.length - offset);
+    if (from < to) {
+      const range = node.ownerDocument.createRange();
+      range.setStart(node, from);
+      range.setEnd(node, to);
+      ranges.push(range);
+    }
+    offset += node.length;
+  }
+  return ranges;
+}
+
+let cached;
+editor.addEventListener('lr-paint', ({ detail: { revision } }) => {
+  if (cached?.revision.documentId !== revision.documentId || cached.revision.value !== revision.value) {
+    const result = editor.readFragment({ start: 1, maxBlocks: 1, expectedRevision: revision });
+    cached = result.ok ? result.value : undefined;
+  }
+  CSS.highlights.set('annotated-word', new Highlight(...wordRanges(editor, cached?.blocks[0], 'example')));
+});
+```
+
+Style the highlight with `::highlight(annotated-word)`. Both the plain fragment
+string and DOM text node offsets use UTF-16 code units. Layout run positions can
+count graphemes, and drawings, tabs, field results and revision display can change
+the visible text. A block index identifies the paragraph even when the text
+representations differ. The package does not expose a general offset conversion for
+those projections.
 
 ## Input and format limits
 

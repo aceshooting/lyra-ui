@@ -6,6 +6,7 @@ import './kn/agent-tools.js';
 import './kn/charts.js';
 import './kn/conversation.js';
 import './kn/data.js';
+import './kn/docx-editor.js';
 import './kn/forms.js';
 import './kn/layout.js';
 import './kn/media.js';

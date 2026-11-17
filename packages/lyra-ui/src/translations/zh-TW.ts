@@ -6,6 +6,7 @@ import './zh-TW/agent-tools.js';
 import './zh-TW/charts.js';
 import './zh-TW/conversation.js';
 import './zh-TW/data.js';
+import './zh-TW/docx-editor.js';
 import './zh-TW/forms.js';
 import './zh-TW/layout.js';
 import './zh-TW/media.js';

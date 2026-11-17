@@ -107,6 +107,11 @@ export function internalDocxSelectedImageElement(session: DocxSession | null): H
   return session instanceof InternalDocxSession ? session.selectedImageElement() : null;
 }
 
+/** Component-only bridge for annotating painted body paragraphs. */
+export function internalDocxParagraphIndexes(session: DocxSession): ReadonlyMap<string, number> | null {
+  return session instanceof InternalDocxSession ? session.paragraphIndexes() : null;
+}
+
 class InternalDocxSession implements DocxSession {
   private status: DocxStatus = 'idle';
   private revision: DocxRevision | null = null;
@@ -160,6 +165,10 @@ class InternalDocxSession implements DocxSession {
     if (zoom !== 'fit' && !(Number.isFinite(zoom) && zoom >= 0.25 && zoom <= 4)) return false;
     try { return this.engine.setZoom?.(zoom) ?? false; }
     catch { return false; }
+  }
+  paragraphIndexes(): ReadonlyMap<string, number> | null {
+    if (!this.owned() || this.status !== 'ready') return null;
+    return this.engine?.paragraphIndexes?.() ?? null;
   }
   selectedImageElement(): HTMLElement | null {
     if (this.gate() || !this.engine || !this.image || !this.imageReady) return null;

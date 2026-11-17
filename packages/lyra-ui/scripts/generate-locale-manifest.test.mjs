@@ -30,6 +30,19 @@ test('manifest and loader map preserve authored aliases while publishing canonic
   const byLocale = new Map(manifest.locales.map((entry) => [entry.locale, entry]));
 
   assert.equal(inventory.catalogs.size, 80);
+  assert.equal(manifest.standaloneFamilies['docx-editor'].sourceKeyCount, inventory.standaloneFamilies.get('docx-editor').length);
+  assert.equal(manifest.standaloneFamilies['docx-editor'].humanReviewedLocaleCount, 0);
+  assert.equal(manifest.standaloneFamilies['docx-editor'].nativeSpeakerReviewedLocaleCount, 0);
+  const translated = manifest.locales.filter(({ kind }) => kind === 'translated');
+  assert.equal(manifest.standaloneFamilies['docx-editor'].spotCheckedLocaleCount,
+    translated.filter(({ standaloneCoverage }) => standaloneCoverage['docx-editor'].aiReview === 'spot-checked').length);
+  assert.equal(manifest.sourceKeyCount, inventory.coreEnglishEntries.length);
+  for (const entry of manifest.locales.filter(({ kind }) => kind === 'translated')) {
+    assert.equal(entry.familyImports['docx-editor'], `@aceshooting/lyra-translations/${entry.sourceLocale ?? entry.locale}/docx-editor.js`);
+    const coverage = entry.standaloneCoverage['docx-editor'];
+    assert.equal(coverage.missingKeyCount, 0);
+    assert.equal(coverage.translatedOwnKeyCount + coverage.inheritedKeyCount, manifest.standaloneFamilies['docx-editor'].sourceKeyCount);
+  }
   for (const locale of ['en-XA', 'ar-XB']) {
     assert.equal(byLocale.get(locale).aggregateImport, `@aceshooting/lyra-ui/translations/pseudo/${locale}.js`);
     assert.equal(byLocale.get(locale).kind, 'testing-only');
@@ -90,8 +103,8 @@ test('review snapshots fail closed when a shipped catalog changes after review',
   const changed = structuredClone(reviews);
   changed.catalogs[0].catalog.sha256 = '0'.repeat(64);
   const errors = validateTranslationReviews(changed, {
-    englishEntries: inventory.englishEntries,
-    catalogs: inventory.catalogs,
+    englishEntries: inventory.coreEnglishEntries,
+    catalogs: inventory.coreCatalogs,
     upstreamPins: { webawesome: upstream.webawesome, shoelace: upstream.shoelace },
     requireApproved: false,
   });

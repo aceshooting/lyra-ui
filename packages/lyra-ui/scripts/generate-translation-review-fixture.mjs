@@ -18,8 +18,8 @@ async function validationContext() {
   const inventory = await readTranslationCatalogInventory({ packageDir });
   const upstream = JSON.parse(await readFile(path.join(packageDir, 'scripts/fixtures/upstream-tags.json'), 'utf8'));
   return {
-    englishEntries: inventory.englishEntries,
-    catalogs: inventory.catalogs,
+    englishEntries: inventory.coreEnglishEntries,
+    catalogs: inventory.coreCatalogs,
     englishRootLocales: inventory.englishRootLocales,
     upstreamPins: { webawesome: upstream.webawesome, shoelace: upstream.shoelace },
   };

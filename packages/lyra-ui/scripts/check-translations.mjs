@@ -39,12 +39,11 @@ import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseProgram, visitAst } from './lib/ast.mjs';
 import { pinnedPluralCategories, validatePluralCategoryPin } from './cldr-plural-categories.mjs';
-import { catalogEntries, computeFamilyKeyIndex } from './generate-default-string-slices.mjs';
+import { catalogEntries, readCompanionLocalization, translationFamilyIndex } from './generate-default-string-slices.mjs';
 import { validateTranslationReviews } from './translation-review.mjs';
-import { readTranslationReviews } from './translation-review-source.mjs';
+import { readCompanionTranslationReviews, readTranslationReviews } from './translation-review-source.mjs';
 
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
-const localizationFile = join(packageRoot, 'src/internal/localization.ts');
 const localizationRuntimeFile = join(packageRoot, 'src/internal/localization-runtime.ts');
 const translationsRoot = join(packageRoot, 'src/translations');
 const packageJsonPath = join(packageRoot, 'package.json');
@@ -201,28 +200,53 @@ export async function readPortugueseRegionalOverrides(packageDir) {
   return { values, raw };
 }
 
-/**
- * Reads literal own messages, complete resolved locale maps, and the generated module
- * paths that compose it. Shared by the translation checker and locale discovery generator so the
- * published coverage counts, content hashes, and optional loader map describe the same source.
- */
-export async function readTranslationCatalogInventory({ packageDir = packageRoot } = {}) {
-  const translationsRoot = join(packageDir, 'src/translations');
+/** Read the English sources in catalog order for inventory checks and scaffolding. */
+export async function readTranslationEnglish(packageDir, errors) {
   const localizationFile = join(packageDir, 'src/internal/localization.ts');
   const englishSource = await readFile(localizationFile, 'utf8');
   const englishProgram = parseProgram('src/internal/localization.ts', englishSource);
   const defaults = namedObjectLiteral(englishProgram, 'DEFAULT_STRINGS');
   if (!defaults) throw new Error('src/internal/localization.ts does not declare DEFAULT_STRINGS as an object literal');
-  const errors = [];
-  const englishEntries = messageEntries(defaults, 'src/internal/localization.ts', errors);
-  if (englishEntries.length < 100) {
-    throw new Error(`implausibly few DEFAULT_STRINGS entries parsed (${englishEntries.length})`);
+  const coreEnglishEntries = messageEntries(defaults, 'src/internal/localization.ts', errors);
+  if (coreEnglishEntries.length < 100) {
+    throw new Error(`implausibly few DEFAULT_STRINGS entries parsed (${coreEnglishEntries.length})`);
   }
-  const englishOrder = englishEntries.map(([key]) => key);
+  const englishEntries = [...coreEnglishEntries];
+  const sourceKeys = new Set(englishEntries.map(([key]) => key));
+  const standaloneFamilies = new Map();
+  for (const { family, standalone, file, messages } of await readCompanionLocalization(packageDir)) {
+    if (!standalone) continue;
+    if (family === 'shared' || standaloneFamilies.has(family)) throw new Error(`Duplicate standalone localization family ${family}`);
+    const properties = [...messages].map(([key, value]) => `${key}: ${value},`).join('\n');
+    const program = parseProgram(file, `const messages = {\n${properties}\n};`);
+    const entries = messageEntries(namedObjectLiteral(program, 'messages'), file, errors);
+    for (const [key] of entries) {
+      if (sourceKeys.has(key)) throw new Error(`${file}: duplicate standalone localization key ${key}`);
+      sourceKeys.add(key);
+    }
+    englishEntries.push(...entries);
+    standaloneFamilies.set(family, entries.map(([key]) => key));
+  }
+  return { englishEntries, coreEnglishEntries, standaloneFamilies };
+}
+
+/** Read resolved translations and their on-disk module layout for checking and discovery. */
+export async function readTranslationCatalogInventory({ packageDir = packageRoot } = {}) {
+  const translationsRoot = join(packageDir, 'src/translations');
+  const errors = [];
+  const { englishEntries, coreEnglishEntries, standaloneFamilies } = await readTranslationEnglish(packageDir, errors);
   const knownFamilies = new Set(
     JSON.parse(await readFile(join(packageDir, 'scripts/component-families.json'), 'utf8'))
       .families.map(({ key }) => key),
   );
+  const englishByKey = new Map(englishEntries);
+  const standaloneKeyFamilies = new Map();
+  for (const [family, keys] of standaloneFamilies) {
+    if (knownFamilies.has(family)) throw new Error(`Duplicate standalone localization family ${family}`);
+    knownFamilies.add(family);
+    for (const key of keys) standaloneKeyFamilies.set(key, family);
+  }
+  const englishOrder = englishEntries.map(([key]) => key);
   const rootFiles = (await readdir(translationsRoot))
     .filter((name) => name.endsWith('.ts') && !name.endsWith('.test.ts'))
     .sort();
@@ -314,6 +338,14 @@ export async function readTranslationCatalogInventory({ packageDir = packageRoot
         continue;
       }
       const entries = messageEntries(object, sliceFile, errors);
+      for (const [key, message] of entries) {
+        const standaloneFamily = standaloneKeyFamilies.get(key);
+        if (standaloneFamily === family) {
+          validateMessagePlaceholders(sliceFile, key, englishByKey.get(key), message, errors);
+        } else if (standaloneFamily || standaloneFamilies.has(family)) {
+          errors.push(`${sliceFile}: message ${key} belongs outside this family`);
+        }
+      }
       sliceEntriesByFamily.set(family, entries);
       for (const [key, value] of entries) {
         if (unionEntries.has(key)) errors.push(`src/translations/${base}: duplicate message key ${key}`);
@@ -383,6 +415,9 @@ export async function readTranslationCatalogInventory({ packageDir = packageRoot
         if (!module.familyPaths[family]) errors.push(`${locale}: missing inherited parent family ${family}`);
       }
     }
+    for (const family of standaloneFamilies.keys()) {
+      if (!module.familyPaths[family]) errors.push(`${locale}: missing standalone family ${family}`);
+    }
     const merged = new Map([...inherited, ...own]);
     const missing = englishOrder.filter((key) => !merged.has(key));
     if (missing.length) errors.push(`${locale}: complete resolved catalog is missing ${missing.join(', ')}`);
@@ -451,7 +486,6 @@ export async function readTranslationCatalogInventory({ packageDir = packageRoot
   }
   if (errors.length > 0) throw new Error(errors.join('\n'));
   const englishRootLocales = new Set(modules.filter(({ parent }) => parent === ENGLISH_SOURCE_PARENT).map(({ locale }) => locale));
-  const englishByKey = new Map(englishEntries);
   for (const locale of englishRootLocales) {
     for (const [key, value] of authoredCatalogs.get(locale)) {
       if (JSON.stringify(englishByKey.get(key)) === JSON.stringify(value))
@@ -459,7 +493,11 @@ export async function readTranslationCatalogInventory({ packageDir = packageRoot
     }
   }
   if (errors.length > 0) throw new Error(errors.join('\n'));
-  return { englishEntries, catalogs, authoredCatalogs, modules, pseudoModules, englishRootLocales };
+  const coreKeys = new Set(coreEnglishEntries.map(([key]) => key));
+  const coreCatalogs = new Map([...catalogs].map(([locale, entries]) =>
+    [locale, entries.filter(([key]) => coreKeys.has(key))],
+  ));
+  return { englishEntries, catalogs, authoredCatalogs, modules, pseudoModules, englishRootLocales, coreEnglishEntries, coreCatalogs, standaloneFamilies };
 }
 
 /** The base language subtag of a locale tag, normalized the way `normalizeLocale()` does. */
@@ -664,29 +702,33 @@ function validateCatalogEntries({ file, entries, expectedOrderedKeys, english, c
       }
     }
 
-    const expected = unionPlaceholders(source_message);
-    const actual = unionPlaceholders(message);
-    const lost = [...expected].filter((placeholder) => !actual.has(placeholder));
-    if (lost.length > 0) {
-      errors.push(`${file}: "${key}" drops the {${lost.join('}, {')}} placeholder(s) present in English`);
-    }
-    const strayed = [...actual].filter((placeholder) => !expected.has(placeholder));
-    if (strayed.length > 0) {
-      errors.push(
-        `${file}: "${key}" introduces the {${strayed.join('}, {')}} placeholder(s), which nothing supplies ` +
-          `-- they would render as literal text`,
-      );
-    }
-    // The `other` variant is the one every locale is guaranteed to reach, so it must carry the
-    // full English placeholder set even when a narrower category (Arabic `zero`, Russian `one`)
-    // idiomatically spells the number out instead.
-    if (translatedIsPlural && typeof message.other === 'string') {
-      const otherExpected = placeholders(typeof source_message === 'string' ? source_message : source_message.other);
-      const otherActual = placeholders(message.other);
-      const otherLost = [...otherExpected].filter((placeholder) => !otherActual.has(placeholder));
-      if (otherLost.length > 0) {
-        errors.push(`${file}: "${key}".other drops the {${otherLost.join('}, {')}} placeholder(s)`);
-      }
+    validateMessagePlaceholders(file, key, source_message, message, errors);
+  }
+}
+
+function validateMessagePlaceholders(file, key, source_message, message, errors) {
+  const expected = unionPlaceholders(source_message);
+  const actual = unionPlaceholders(message);
+  const lost = [...expected].filter((placeholder) => !actual.has(placeholder));
+  if (lost.length > 0) {
+    errors.push(`${file}: "${key}" drops the {${lost.join('}, {')}} placeholder(s) present in English`);
+  }
+  const strayed = [...actual].filter((placeholder) => !expected.has(placeholder));
+  if (strayed.length > 0) {
+    errors.push(
+      `${file}: "${key}" introduces the {${strayed.join('}, {')}} placeholder(s), which nothing supplies ` +
+        `-- they would render as literal text`,
+    );
+  }
+  // The `other` variant is the one every locale is guaranteed to reach, so it must carry the
+  // full English placeholder set even when a narrower category (Arabic `zero`, Russian `one`)
+  // idiomatically spells the number out instead.
+  if (typeof message !== 'string' && typeof message.other === 'string') {
+    const otherExpected = placeholders(typeof source_message === 'string' ? source_message : source_message.other);
+    const otherActual = placeholders(message.other);
+    const otherLost = [...otherExpected].filter((placeholder) => !otherActual.has(placeholder));
+    if (otherLost.length > 0) {
+      errors.push(`${file}: "${key}".other drops the {${otherLost.join('}, {')}} placeholder(s)`);
     }
   }
 }
@@ -698,19 +740,13 @@ export async function runTranslationCatalogCheck() {
   const pluralCategoryPin = JSON.parse(await readFile(pluralCategoryPinPath, 'utf8'));
   errors.push(...validatePluralCategoryPin(pluralCategoryPin).map((error) => `${pluralCategoryPinPath}: ${error}`));
 
-  const localizationSource = await readFile(localizationFile, 'utf8');
-  const localizationProgram = parseProgram('src/internal/localization.ts', localizationSource);
   const localizationRuntimeSource = await readFile(localizationRuntimeFile, 'utf8');
   const localizationRuntimeProgram = parseProgram(
     'src/internal/localization-runtime.ts',
     localizationRuntimeSource,
   );
-  const defaults = namedObjectLiteral(localizationProgram, 'DEFAULT_STRINGS');
-  if (!defaults) throw new Error('src/internal/localization.ts does not declare DEFAULT_STRINGS as an object literal');
-  const englishEntries = messageEntries(defaults, 'src/internal/localization.ts', errors);
-  if (englishEntries.length < 100) {
-    throw new Error(`implausibly few DEFAULT_STRINGS entries parsed (${englishEntries.length})`);
-  }
+  const inventory = await readTranslationCatalogInventory({ packageDir: packageRoot });
+  const { englishEntries } = inventory;
   const english = new Map(englishEntries);
   const englishOrder = englishEntries.map(([key]) => key);
 
@@ -718,7 +754,7 @@ export async function runTranslationCatalogCheck() {
   // from (`generate-default-string-slices.mjs`'s `computeFamilyKeyIndex()`), reused rather than
   // re-derived, so a translation slice's expected key set can never drift from what
   // `generate-translation-slices.mjs` actually routes there.
-  const familyIndex = await computeFamilyKeyIndex({ packageDir: packageRoot });
+  const familyIndex = await translationFamilyIndex(packageRoot);
   // Routed exactly as generate-translation-slices.mjs routes them: a key with one owning family
   // goes to that family's slice, any other reachable key to `shared`. A key reached only from a
   // shared `src/internal/` helper is owned by `shared` itself and belongs there too.
@@ -750,8 +786,6 @@ export async function runTranslationCatalogCheck() {
   const requiredSideEffects = [];
 
   const summaries = [];
-  const inventory = await readTranslationCatalogInventory({ packageDir: packageRoot });
-  const catalogEntries = new Map();
   const registeredTags = [];
 
   for (const name of files) {
@@ -787,7 +821,6 @@ export async function runTranslationCatalogCheck() {
       }
       const entries = messageEntries(catalog, file, errors);
       const resolved = inventory.catalogs.get(tag);
-      catalogEntries.set(tag, resolved);
       validateCatalogEntries({ file, entries, expectedOrderedKeys: registration.parent ? englishOrder.filter((key) => entries.some(([own]) => own === key)) : englishOrder, english, categories, errors });
       validateCatalogEntries({ file, entries: resolved, expectedOrderedKeys: englishOrder, english, categories, errors });
 
@@ -895,7 +928,6 @@ export async function runTranslationCatalogCheck() {
     // hash the ORDERED entry list, and that snapshot must stay identical to what the pre-16.0.0
     // monolith produced, or every approved review goes stale for a purely mechanical reason.
     const resolved = inventory.catalogs.get(tag);
-    catalogEntries.set(tag, resolved);
     validateCatalogEntries({ file, entries: resolved, expectedOrderedKeys: englishOrder, english, categories: pluralCategoriesFor(tag, pluralCategoryPin), errors });
 
     const srcAggregateEntry = `./src/translations/${name}`;
@@ -922,6 +954,7 @@ export async function runTranslationCatalogCheck() {
       readTranslationReviews({ packageDir: packageRoot }),
       readFile(reviewSchemaPath, 'utf8'),
       readFile(upstreamTagsPath, 'utf8'),
+      readCompanionTranslationReviews({ packageDir: packageRoot, inventory }),
     ]);
     // Parsing the schema here makes a missing or malformed authoritative schema fail the same gate
     // as its fixture, even though cross-file facts are enforced by validateTranslationReviews().
@@ -929,8 +962,8 @@ export async function runTranslationCatalogCheck() {
     const upstream = JSON.parse(upstreamSource);
     errors.push(
       ...validateTranslationReviews(fixture, {
-        englishEntries,
-        catalogs: catalogEntries,
+        englishEntries: inventory.coreEnglishEntries,
+        catalogs: inventory.coreCatalogs,
         upstreamPins: {
           webawesome: upstream.webawesome,
           shoelace: upstream.shoelace,

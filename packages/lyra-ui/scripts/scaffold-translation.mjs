@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
-// Emits a translation catalog SKELETON for one locale: every `DEFAULT_STRINGS` key, in
-// `DEFAULT_STRINGS` order, with the English text as the starting value, and every count-bearing
+// Emits a translation catalog skeleton for one locale: every English source key, in catalog order, with the English text as the starting value, and every count-bearing
 // message expanded to the reviewed pinned category requirements for that locale. The pin also
 // records the explicit existing-runtime fallback for ICU-unsupported Lahnda.
 // The point is that the three things a human translator cannot be trusted to get right by hand are
@@ -38,10 +37,10 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseSync } from 'oxc-parser';
 import { pinnedPluralCategories, validatePluralCategoryPin } from './cldr-plural-categories.mjs';
-import { computeFamilyKeyIndex } from './generate-default-string-slices.mjs';
+import { readTranslationEnglish } from './check-translations.mjs';
+import { translationFamilyIndex } from './generate-default-string-slices.mjs';
 
 const packageRoot = fileURLToPath(new URL('../', import.meta.url));
-const localizationFile = join(packageRoot, 'src/internal/localization.ts');
 const translationsRoot = join(packageRoot, 'src/translations');
 
 function visit(node, visitor) {
@@ -63,26 +62,6 @@ const literal = (node) => {
 };
 const propName = (property) =>
   property.key?.type === 'Identifier' ? property.key.name : literal(property.key);
-
-/** `DEFAULT_STRINGS` as `[key, string | Record<category, string>][]`, in source order. */
-function readDefaults() {
-  const source = readFileSync(localizationFile, 'utf8');
-  const program = parseSync(localizationFile, source).program;
-  let object;
-  visit(program, (node) => {
-    if (object) return;
-    if (node.type === 'VariableDeclarator' && node.id?.name === 'DEFAULT_STRINGS') object = node.init;
-  });
-  if (!object) throw new Error('could not find the DEFAULT_STRINGS object literal');
-  return object.properties.map((property) => {
-    const key = propName(property);
-    const text = literal(property.value);
-    if (text !== undefined) return [key, text];
-    const variants = {};
-    for (const variant of property.value.properties) variants[propName(variant)] = literal(variant.value);
-    return [key, variants];
-  });
-}
 
 // Newlines and tabs must be escaped, not embedded: a few messages are multi-line, and emitting one
 // raw inside a single-quoted literal produces a file that will not parse at all.
@@ -178,7 +157,7 @@ function messageLines(entries, categories) {
   });
 }
 
-function emitSlice(tag, family, entries, categories, meta) {
+function emitSlice(tag, family, entries, categories, meta, standalone) {
   const registration = meta
     ? [
         '',
@@ -191,11 +170,13 @@ function emitSlice(tag, family, entries, categories, meta) {
   const familyProse =
     family === 'shared'
       ? 'cross-cutting strings reachable from more than one component family'
-      : `strings owned exclusively by \`src/components/${family}/**\``;
+      : standalone
+        ? 'strings owned by a companion package'
+        : `strings owned exclusively by \`src/components/${family}/**\``;
   return `// The \`${family}\` slice of the ${tag} translation catalog for @aceshooting/lyra-ui: ${familyProse}.
 // A side-effect-only module: a consumer writes a bare
 // \`import '@aceshooting/lyra-translations/${tag}/${family}';\` and reads nothing from it. Keep the
-// keys in DEFAULT_STRINGS order -- \`scripts/check-translations.mjs\` enforces coverage, order,
+// keys in English source order -- \`scripts/check-translations.mjs\` enforces coverage, order,
 // placeholder names and the plural-category set for this slice, and a catalog that cannot be
 // diffed against another line-for-line is a catalog nobody will review.
 // Regenerate the SHAPE (never the translations) with:
@@ -264,7 +245,9 @@ function readCurrentEntries(tag) {
 }
 
 const args = process.argv.slice(2);
-const entries = readDefaults();
+const sourceErrors = [];
+const { englishEntries: entries, standaloneFamilies } = await readTranslationEnglish(packageRoot, sourceErrors);
+if (sourceErrors.length > 0) throw new Error(sourceErrors.join('\n'));
 
 if (args.includes('--report')) {
   const english = new Map(entries);
@@ -322,7 +305,7 @@ const pinErrors = validatePluralCategoryPin(pluralPin);
 if (pinErrors.length > 0) throw new Error(pinErrors.join('\n'));
 const categories = pinnedPluralCategories(pluralPin, tag);
 
-const { keyToFamilies, familyToKeys } = await computeFamilyKeyIndex({ packageDir: packageRoot });
+const { keyToFamilies, familyToKeys } = await translationFamilyIndex(packageRoot);
 const sliceNames = [...familyToKeys.keys()].sort();
 const bySlice = new Map(sliceNames.map((name) => [name, []]));
 bySlice.set('shared', []);
@@ -337,7 +320,7 @@ mkdirSync(sliceDir, { recursive: true });
 for (const name of emittedSliceNames) {
   writeFileSync(
     join(sliceDir, `${name}.ts`),
-    emitSlice(tag, name, bySlice.get(name), categories, meta),
+    emitSlice(tag, name, bySlice.get(name), categories, meta, standaloneFamilies.has(name)),
     'utf8',
   );
 }

@@ -6,6 +6,7 @@ import './fa-AF/agent-tools.js';
 import './fa-AF/charts.js';
 import './fa-AF/conversation.js';
 import './fa-AF/data.js';
+import './fa-AF/docx-editor.js';
 import './fa-AF/forms.js';
 import './fa-AF/layout.js';
 import './fa-AF/media.js';

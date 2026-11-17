@@ -32,7 +32,7 @@ import { readFile, readdir, mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ENGLISH_SOURCE_PARENT, readPortugueseRegionalOverrides, readTranslationCatalogModule } from './check-translations.mjs';
-import { catalogEntries, computeFamilyKeyIndex } from './generate-default-string-slices.mjs';
+import { catalogEntries, translationFamilyIndex } from './generate-default-string-slices.mjs';
 
 const defaultPackageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -139,16 +139,13 @@ export async function generateTranslationSlices({
   write = false,
   exclusions,
 } = {}) {
-  const { keyToFamilies, familyToKeys } = await computeFamilyKeyIndex(
-    exclusions === undefined ? { packageDir } : { packageDir, exclusions },
-  );
+  const { keyToFamilies, familyToKeys, english, standaloneFamilies } = await translationFamilyIndex(packageDir, exclusions);
   const families = [...familyToKeys.keys()].sort();
   const sliceNames = [...families, 'shared'];
 
   const catalogFile = path.join(packageDir, 'src/internal/localization.ts');
   const runtimeFile = path.join(packageDir, 'src/internal/localization-runtime.ts');
-  const catalogSource = await readFile(catalogFile, 'utf8');
-  const englishOrder = [...catalogEntries(catalogSource, catalogFile).keys()];
+  const englishOrder = [...english.keys()];
 
   const translationsRoot = path.join(packageDir, 'src/translations');
   const localeFiles = (await readdir(translationsRoot, { withFileTypes: true }))
@@ -190,7 +187,7 @@ export async function generateTranslationSlices({
   // DEFAULT_STRINGS and has no slice modules, so children import no parent family.
   catalogs.set(ENGLISH_SOURCE_PARENT, {
     tag: ENGLISH_SOURCE_PARENT, parent: null, imports: [], metaText: undefined,
-    entries: catalogEntries(catalogSource, catalogFile),
+    entries: english,
   });
   for (const tag of catalogs.keys()) {
     const visited = new Set();
@@ -256,7 +253,10 @@ export async function generateTranslationSlices({
         inheritedSlices.add(owners && owners.size === 1 ? [...owners][0] : 'shared');
       }
     }
-    const emittedSliceNames = sliceNames.filter((sliceName) => bySlice.get(sliceName).length > 0 || inheritedSlices.has(sliceName));
+    const emittedSliceNames = sliceNames.filter((sliceName) =>
+      bySlice.get(sliceName).length > 0 || inheritedSlices.has(sliceName) ||
+      (current.parent === ENGLISH_SOURCE_PARENT && standaloneFamilies.has(sliceName)),
+    );
     const keep = new Set();
     for (const sliceName of emittedSliceNames) {
       const sliceFile = path.join(localeDir, `${sliceName}.ts`);

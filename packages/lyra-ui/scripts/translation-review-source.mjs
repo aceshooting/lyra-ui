@@ -1,4 +1,4 @@
-import { readdir } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -7,7 +7,7 @@ import {
   parseSourceJson,
   readSourceSnapshot,
 } from './source-fixture-io.mjs';
-import { validateTranslationReviews } from './translation-review.mjs';
+import { validateCompanionTranslationReviews, validateTranslationReviews } from './translation-review.mjs';
 
 const SCHEMA_VERSION = 2;
 const SCHEMA_PATH = './translation-reviews.schema.json';
@@ -196,4 +196,14 @@ export async function writeTranslationReviews({ packageDir = defaultPackageDir, 
     ],
   });
   return fixture;
+}
+
+/** Read and verify review evidence for separately owned companion messages. */
+export async function readCompanionTranslationReviews({ packageDir = defaultPackageDir, inventory }) {
+  if (inventory.standaloneFamilies.size === 0) return {};
+  const file = 'scripts/fixtures/companion-translation-reviews.json';
+  const fixture = parseSourceJson(await readFile(path.join(packageDir, file), 'utf8'), file);
+  const errors = validateCompanionTranslationReviews(fixture, inventory);
+  if (errors.length > 0) throw new Error(`${file}:\n${errors.join('\n')}`);
+  return fixture.families;
 }

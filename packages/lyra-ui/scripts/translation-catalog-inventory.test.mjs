@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { readTranslationCatalogInventory } from './check-translations.mjs';
-import { messageSnapshot } from './translation-review.mjs';
+import { companionTranslationSnapshots, messageSnapshot, validateCompanionTranslationReviews } from './translation-review.mjs';
 
 async function fixture(t) {
   const root = await mkdtemp(path.join(tmpdir(), 'lyra-regional-catalog-'));
@@ -79,6 +79,56 @@ test('a plural override replaces the complete parent message without merging its
   const inventory = await readTranslationCatalogInventory({ packageDir: root });
   assert.deepEqual(new Map(inventory.catalogs.get('de-CH')).get('key1'), {other: '{count} regional'});
   assert.deepEqual(new Map(inventory.catalogs.get('de')).get('key1'), {one: 'One item', other: '{count} items'});
+});
+
+test('checks standalone family inheritance while preserving the core review snapshots', async (t) => {
+  const { root, entries, put } = await fixture(t);
+  await mkdir(path.join(root, 'scripts/fixtures'));
+  await writeFile(path.join(root, 'scripts/fixtures/companion-localization.json'), JSON.stringify([
+    { source: 'companion.ts', export: 'MESSAGES', family: 'companion', standalone: true },
+  ]));
+  await writeFile(path.join(root, 'companion.ts'), "export const MESSAGES = Object.freeze({ editorLabel: 'Document editor: {name}' });");
+  for (const tag of ['de', 'de-CH']) {
+    await put(`${tag}.ts`, `import './${tag}/forms.js'; import './${tag}/layout.js'; import './${tag}/companion.js';`);
+  }
+  await put('de/companion.ts', "const strings = {editorLabel: 'Dokumenteditor: {name}'}; registerLyraLocale('de', strings);");
+  await put('de-CH/companion.ts', "import '../de/companion.js'; const strings = {}; registerLyraLocaleDelta('de-CH', 'de', strings, {dir: 'ltr'});");
+  const inventory = await readTranslationCatalogInventory({ packageDir: root });
+  assert.deepEqual(inventory.englishEntries.at(-1), ['editorLabel', 'Document editor: {name}']);
+  assert.deepEqual(inventory.catalogs.get('de-CH').at(-1), ['editorLabel', 'Dokumenteditor: {name}']);
+  assert.deepEqual(inventory.coreEnglishEntries, entries);
+  assert.deepEqual(inventory.coreCatalogs.get('de'), entries);
+  assert.equal(inventory.modules.find(({ locale }) => locale === 'de-CH').familyPaths.companion, './de-CH/companion.js');
+
+  const family = companionTranslationSnapshots(inventory).companion;
+  const ledger = { schemaVersion: 1, families: { companion: {
+    source: family.source,
+    locales: Object.fromEntries(Object.entries(family.locales).map(([locale, catalog]) => [locale, {
+      catalog, aiReview: { status: 'not-reviewed', scope: null },
+      humanReview: 'not-reviewed', nativeSpeakerReview: 'not-reviewed',
+    }])),
+  } } };
+  assert.deepEqual(validateCompanionTranslationReviews(ledger, inventory), []);
+  const missingRecord = structuredClone(ledger);
+  delete missingRecord.families.companion.locales['de-CH'];
+  assert.match(validateCompanionTranslationReviews(missingRecord, inventory).join('\n'), /cover exactly the resolved source locale IDs/u);
+  const falseApproval = structuredClone(ledger);
+  falseApproval.families.companion.locales.de.nativeSpeakerReview = 'approved';
+  assert.match(validateCompanionTranslationReviews(falseApproval, inventory).join('\n'), /no human or native-speaker review approval/u);
+
+  await put('de/companion.ts', "const strings = {editorLabel: 'Dokumentenbearbeitung: {name}'}; registerLyraLocale('de', strings);");
+  const edited = await readTranslationCatalogInventory({ packageDir: root });
+  const stale = validateCompanionTranslationReviews(ledger, edited).join('\n');
+  assert.match(stale, /\.de\.catalog\.sha256 is stale/u);
+  assert.match(stale, /\.de-CH\.catalog\.sha256 is stale/u);
+  const editedEnglish = { ...edited, englishEntries: [...entries, ['editorLabel', 'Edit document: {name}']] };
+  assert.match(validateCompanionTranslationReviews(ledger, editedEnglish).join('\n'), /companion\.source\.sha256 is stale/u);
+
+  await put('de/companion.ts', "const strings = {editorLabel: 'Dokumenteditor: {title}'}; registerLyraLocale('de', strings);");
+  await assert.rejects(readTranslationCatalogInventory({ packageDir: root }), /drops the \{name\} placeholder/u);
+
+  await put('de/companion.ts', "const strings = {}; registerLyraLocale('de', strings);");
+  await assert.rejects(readTranslationCatalogInventory({ packageDir: root }), /missing editorLabel/u);
 });
 
 test('a regional English delta resolves over the built-in English source without a parent import', async (t) => {

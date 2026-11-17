@@ -420,13 +420,26 @@ async function verifyPackedTranslationsPackage({ workspace, uiTarball, translati
   }));
   await writePackedUiOverride(fixtureDir, uiSpecifier);
   await writeFile(join(fixtureDir, 'load.mjs'), `import '@aceshooting/lyra-translations/fr.js';
-import '@aceshooting/lyra-translations/ar/forms.js';
-import { getRegisteredLyraLocales } from '@aceshooting/lyra-ui/localization.js';
+import '@aceshooting/lyra-translations/ar/docx-editor.js';
+import { getRegisteredLyraLocaleKeys, getRegisteredLyraLocales, resolveLyraString } from '@aceshooting/lyra-ui/localization.js';
 import { loadLyraLocale } from '@aceshooting/lyra-ui/locale-loader.js';
 await loadLyraLocale('de');
 const registered = getRegisteredLyraLocales();
 for (const locale of ['fr', 'ar', 'de']) {
   if (!registered.includes(locale)) throw new Error('the packed ' + locale + ' catalog did not register through lyra-ui');
+}
+for (const locale of ['fr', 'ar', 'de']) {
+  if (!getRegisteredLyraLocaleKeys(locale).includes('docxEditorLabel')) {
+    throw new Error('the packed ' + locale + ' catalog did not register DOCX editor messages');
+  }
+}
+if (getRegisteredLyraLocaleKeys('ar').some(key => !key.startsWith('docxEditor'))) {
+  throw new Error('importing the DOCX editor family registered messages from another family');
+}
+await import('@aceshooting/lyra-translations/ar/forms.js');
+const arabicHost = { getAttribute: name => name === 'lang' ? 'ar' : null };
+if (resolveLyraString(arabicHost, 'openCalendar') !== 'فتح التقويم') {
+  throw new Error('the packed Arabic forms catalog did not translate its calendar action');
 }
 // Assembled so the export-reachability lint reads these deliberately absent subpaths as non-literals.
 for (const specifier of ['translations/fr.js', 'custom-elements.json'].map((subpath) => '@aceshooting/lyra-ui/' + subpath)) {

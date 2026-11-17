@@ -147,3 +147,18 @@ test('malformed, oversized, changing or disposed documents are refused', () => {
   const bodyText = fixture([paragraph('Body text', { level: 10 })]);
   assert.equal(read(bodyText.helper).blocks[0]!.headingLevel, null, 'outline level 9 is body text');
 });
+
+test('painted paragraph identity follows current body order across duplicate text and edits', () => {
+  const first = paragraph('Repeated'), second = paragraph('Repeated'), nested = paragraph('Repeated');
+  const h = fixture([first, el('tbl', [el('tr', [el('tc', [nested])])]), second]);
+  assert.deepEqual([...h.helper.paragraphIndexes()!], [[first.id, 0], [second.id, 2]]);
+  const inserted = paragraph('Repeated');
+  (h.body.children as OoxmlNode[]).unshift(inserted);
+  h.f.revision++;
+  assert.deepEqual([...h.helper.paragraphIndexes()!], [[inserted.id, 0], [first.id, 1], [second.id, 3]]);
+  assert.equal(fixture([first, first]).helper.paragraphIndexes(), null, 'ambiguous canonical identity');
+  h.f.onPackage = () => { h.f.revision++; };
+  assert.equal(h.helper.paragraphIndexes(), null);
+  h.helper.dispose();
+  assert.equal(h.helper.paragraphIndexes(), null);
+});

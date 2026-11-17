@@ -5,6 +5,7 @@
 import './en-GB/agent-tools.js';
 import './en-GB/conversation.js';
 import './en-GB/data.js';
+import './en-GB/docx-editor.js';
 import './en-GB/forms.js';
 import './en-GB/media.js';
 import './en-GB/retrieval.js';

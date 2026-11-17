@@ -957,30 +957,64 @@ async function classKeyReachability({ packageDir, exclusions }) {
       exclusions,
     }));
   }
-  const companionFile = path.join(packageDir, 'scripts/fixtures/companion-localization.json');
-  const companionSource = await readOptionalFile(companionFile);
-  sourceCache.set(companionFile, companionSource);
   const companionMessages = [];
-  if (companionSource !== undefined) {
-    const definitions = JSON.parse(companionSource);
-    if (!Array.isArray(definitions)) throw new Error('Companion localization declarations must be an array');
-    for (const definition of definitions) {
-      if (!definition || typeof definition.source !== 'string' || !/^[a-z][a-z-]*$/.test(definition.family ?? '') ||
-          !/^[$A-Z_a-z][$\w]*$/.test(definition.export ?? '')) throw new Error('Invalid companion localization declaration');
-      const file = path.resolve(packageDir, definition.source);
-      const source = await readFile(file, 'utf8');
-      sourceCache.set(file, source);
-      const messages = catalogEntries(source, file, definition.export);
-      if (messages.size === 0) throw new Error(`${file}: companion message table must not be empty`);
-      for (const [key, value] of messages) {
-        if (entries.get(key) !== value) throw new Error(`${file}: companion message ${key} must match its DEFAULT_STRINGS entry`);
-      }
-      companionMessages.push({ family: definition.family, keys: [...messages.keys()] });
+  for (const { family, standalone, file, messages } of await readCompanionLocalization(packageDir, sourceCache)) {
+    if (standalone) continue;
+    for (const [key, value] of messages) {
+      if (entries.get(key) !== value) throw new Error(`${file}: companion message ${key} must match its DEFAULT_STRINGS entry`);
     }
+    companionMessages.push({ family, keys: [...messages.keys()] });
   }
   const result = { catalogFile, catalogSource, entries, catalogKeys, componentsDir, files, sourceCache, keysByFile, helperConsumers, companionMessages };
   reachabilityMemo.set(memoKey, { exclusions, result });
   return result;
+}
+
+/** Read companion English source tables. Standalone tables only participate in translation tooling. */
+export async function readCompanionLocalization(packageDir, sourceCache = new Map()) {
+  const companionFile = path.join(packageDir, 'scripts/fixtures/companion-localization.json');
+  const companionSource = await readOptionalFile(companionFile);
+  sourceCache.set(companionFile, companionSource);
+  if (companionSource === undefined) return [];
+  const definitions = JSON.parse(companionSource);
+  if (!Array.isArray(definitions)) throw new Error('Companion localization declarations must be an array');
+  return Promise.all(definitions.map(async (definition) => {
+    if (!definition || typeof definition.source !== 'string' || !/^[a-z][a-z-]*$/.test(definition.family ?? '') ||
+        !/^[$A-Z_a-z][$\w]*$/.test(definition.export ?? '') ||
+        (definition.standalone !== undefined && typeof definition.standalone !== 'boolean')) {
+      throw new Error('Invalid companion localization declaration');
+    }
+    const file = path.resolve(packageDir, definition.source);
+    const source = await readFile(file, 'utf8');
+    sourceCache.set(file, source);
+    const messages = catalogEntries(source, file, definition.export);
+    if (messages.size === 0) throw new Error(`${file}: companion message table must not be empty`);
+    return { family: definition.family, standalone: definition.standalone === true, file, messages };
+  }));
+}
+
+/** Extend the core translation routing index and English source with standalone companion slices. */
+export async function translationFamilyIndex(packageDir, exclusions) {
+  const { keyToFamilies, familyToKeys, catalogKeys } = await computeFamilyKeyIndex(
+    exclusions === undefined ? { packageDir } : { packageDir, exclusions },
+  );
+  const file = path.join(packageDir, 'src/internal/localization.ts');
+  const english = catalogEntries(await readFile(file, 'utf8'), file);
+  const standaloneFamilies = new Map();
+  for (const { family, standalone, messages } of await readCompanionLocalization(packageDir)) {
+    if (!standalone) continue;
+    if (family === 'shared' || familyToKeys.has(family)) throw new Error(`Duplicate standalone localization family ${family}`);
+    const keys = new Set();
+    for (const [key, text] of messages) {
+      if (catalogKeys.has(key) || english.has(key)) throw new Error(`Duplicate standalone localization key ${key}`);
+      keys.add(key);
+      keyToFamilies.set(key, new Set([family]));
+      english.set(key, text);
+    }
+    familyToKeys.set(family, keys);
+    standaloneFamilies.set(family, keys);
+  }
+  return { keyToFamilies, familyToKeys, english, standaloneFamilies };
 }
 
 /**

@@ -39,7 +39,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
-import { catalogEntries, computeFamilyKeyIndex } from './generate-default-string-slices.mjs';
+import { catalogEntries, translationFamilyIndex } from './generate-default-string-slices.mjs';
 
 const defaultPackageDir = fileURLToPath(new URL('../', import.meta.url));
 
@@ -129,13 +129,8 @@ export async function checkTranslationCatalogSizes({
   const notes = [];
   const translationsRoot = join(packageDir, 'src/translations');
 
-  const localizationFile = join(packageDir, 'src/internal/localization.ts');
-  const localizationSource = await readFile(localizationFile, 'utf8');
-  const english = catalogEntries(localizationSource, 'src/internal/localization.ts', 'DEFAULT_STRINGS');
-
-  const familyIndex = await computeFamilyKeyIndex(
-    exclusions === undefined ? { packageDir } : { packageDir, exclusions },
-  );
+  const familyIndex = await translationFamilyIndex(packageDir, exclusions);
+  const { english } = familyIndex;
   const families = [...familyIndex.familyToKeys.keys(), 'shared'].sort();
   const keysByFamily = new Map(families.map((family) => [family, familyKeys(familyIndex, family)]));
   const englishGzipByFamily = new Map(

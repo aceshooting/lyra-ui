@@ -6,6 +6,7 @@ import './pcm/agent-tools.js';
 import './pcm/charts.js';
 import './pcm/conversation.js';
 import './pcm/data.js';
+import './pcm/docx-editor.js';
 import './pcm/forms.js';
 import './pcm/layout.js';
 import './pcm/media.js';

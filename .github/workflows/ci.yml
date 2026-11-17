@@ -1628,6 +1628,7 @@ jobs:
         env:
           DOCX_BROWSERS: ${{ matrix.docx_browser }}
         run: |
+          pnpm --filter @aceshooting/lyra-translations assemble
           if [ "$DOCX_BROWSERS" = 'chromium' ]; then
             pnpm --filter @aceshooting/lyra-docs test:coverage
             node scripts/prepare-codecov-lcov.mjs lyra-docs

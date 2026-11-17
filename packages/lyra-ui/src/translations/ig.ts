@@ -6,6 +6,7 @@ import './ig/agent-tools.js';
 import './ig/charts.js';
 import './ig/conversation.js';
 import './ig/data.js';
+import './ig/docx-editor.js';
 import './ig/forms.js';
 import './ig/layout.js';
 import './ig/media.js';

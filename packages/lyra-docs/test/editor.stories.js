@@ -53,9 +53,17 @@ export const ImageReplacement = {
   render: () => render('Select an image, then use Replace image to choose a local PNG, JPEG or static GIF. Replacement keeps its dimensions, title and description. Resize and description are separate explicit edits. Undo restores the original image.'),
   play: load(() => imageFixture('image-simple')),
 };
+export const PaintedParagraphs = {
+  render: () => html`<div style=${container} class="docx-painted-paragraphs-story">
+    <style>.docx-painted-paragraphs-story [data-lr-block-index="1"] { outline: 2px solid currentColor; }</style>
+    <p>The outline follows the second body paragraph. Change the zoom or insert a paragraph above it to see the index update.</p>
+    <lr-docx-editor></lr-docx-editor>
+  </div>`,
+  play: load(headings),
+};
 export const NarrowEditor = {
   render: () => render('A narrow editor uses fit zoom. Open Commands, Find, Outline, Checks or Review to explore the same bounded controls at a small allocation.', true),
   play: load(headings),
 };
 
-export const stories = { CommandsOutlineAndChecks, CommentsAndTrackedText, TableFormatting, ImageReplacement, NarrowEditor };
+export const stories = { CommandsOutlineAndChecks, CommentsAndTrackedText, TableFormatting, ImageReplacement, PaintedParagraphs, NarrowEditor };

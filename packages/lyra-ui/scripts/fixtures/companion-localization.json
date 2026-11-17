@@ -3,5 +3,11 @@
     "source": "../lyra-gen/src/localization.ts",
     "export": "LYRA_GEN_STRINGS",
     "family": "conversation"
+  },
+  {
+    "source": "../lyra-docs/src/docx/strings.ts",
+    "export": "DOCX_EDITOR_STRINGS",
+    "family": "docx-editor",
+    "standalone": true
   }
 ]

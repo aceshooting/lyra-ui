@@ -16,6 +16,9 @@ const test = {
   async registerLocale(locale: string, strings: Record<string, string>) {
     (await import('./editor-entry.js')).registerLyraLocale(locale, strings);
   },
+  async loadFrenchEditorLocale() {
+    await import('../../lyra-translations/dist/fr/docx-editor.js');
+  },
   async imageBytes(kind: 'png' | 'jpeg' | 'gif') {
     return (await import('./corpus.js')).imageInsertionBytes(kind);
   },

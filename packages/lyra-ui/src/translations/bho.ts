@@ -6,6 +6,7 @@ import './bho/agent-tools.js';
 import './bho/charts.js';
 import './bho/conversation.js';
 import './bho/data.js';
+import './bho/docx-editor.js';
 import './bho/forms.js';
 import './bho/layout.js';
 import './bho/media.js';

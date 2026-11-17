@@ -118,6 +118,8 @@ export interface DocxTableContext {
   readonly rowIndex: number | null;
   readonly columnIndex: number | null;
 }
+/** Materialized, repainted or evicted pages in one presentation update. */
+export type DocxPaintDetail = Readonly<{ revision: DocxRevision; pageIndexes: readonly number[] }>;
 export type DocxRevision = Readonly<{ documentId: string; value: number }>;
 export type DocxSource = Readonly<{ kind: 'blank' }> | Readonly<{ kind: 'docx'; bytes: Uint8Array }>;
 export type DocxRefusalCode =

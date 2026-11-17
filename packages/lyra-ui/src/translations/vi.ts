@@ -6,6 +6,7 @@ import './vi/agent-tools.js';
 import './vi/charts.js';
 import './vi/conversation.js';
 import './vi/data.js';
+import './vi/docx-editor.js';
 import './vi/forms.js';
 import './vi/layout.js';
 import './vi/media.js';

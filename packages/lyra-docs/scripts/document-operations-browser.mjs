@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { strFromU8, unzipSync } from 'fflate';
+import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { zipParts } from './lib/harness.mjs';
 
 const documentXml = bytes => strFromU8(unzipSync(Uint8Array.from(bytes))['word/document.xml']);
@@ -7,6 +7,134 @@ const remove = (page, id) => page.locator(`#${id}`).evaluate(element => element.
 
 /** Real-engine checks for fragment reads, edit batches and URL loading, through public element APIs only. */
 export async function runDocumentOperations(page, check, { createEditor, saveEditor }) {
+  await check('paint identifies duplicate body paragraphs and refreshes their fragments after zoom', async () => {
+    const id = 'operations-paint';
+    const parts = unzipSync(Uint8Array.from(await page.evaluate(() => window.__docxTest.fixture('basic-editing'))));
+    const paragraph = '<w:p><w:r><w:t>Repeated 😀 text</w:t></w:r></w:p>';
+    const splitParagraph = '<w:p><w:r>' + '<w:t>Wrapped line</w:t><w:br/>'.repeat(100) + '</w:r></w:p>';
+    const followingPages = Array.from({ length: 16 }, (_, index) =>
+      '<w:p><w:pPr><w:pageBreakBefore/></w:pPr><w:r><w:t>Page ' + index + '</w:t></w:r></w:p>').join('');
+    parts['word/document.xml'] = strToU8(strFromU8(parts['word/document.xml'])
+      .replace('<w:body>', '<w:body>' + paragraph.repeat(2) + splitParagraph).replace('</w:body>', followingPages + '</w:body>'));
+    const bytes = [...zipSync(parts)];
+    const opened = await page.evaluate(async ({ id, bytes }) => {
+      const editor = document.createElement('lr-docx-editor');
+      editor.id = id;
+      editor.paintEvents = [];
+      editor.nextPaint = () => new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Missing page paint notification')), 5000);
+        editor.addEventListener('lr-paint', event => { clearTimeout(timeout); resolve(event.detail); }, { once: true });
+      });
+      editor.addEventListener('lr-paint', event => editor.paintEvents.push(event.detail));
+      document.querySelector('#fixture').append(editor);
+      return editor.open(Uint8Array.from(bytes));
+    }, { id, bytes });
+    try {
+      assert.equal(opened.ok, true);
+      await page.waitForFunction(id => document.getElementById(id).paintEvents.length > 0, id);
+      const editor = page.locator('#' + id);
+      const painted = await editor.evaluate(editor => {
+        const result = editor.readFragment({ maxBlocks: 2 });
+        const paragraphs = result.value.blocks.map(block => {
+          const fragment = editor.querySelector('[data-lr-block-index="' + block.index + '"]');
+          const range = document.createRange();
+          range.selectNodeContents(fragment);
+          return [block.index, block.text, range.toString()];
+        });
+        const detail = editor.paintEvents.at(-1);
+        editor.paintEvents.length = 0;
+        editor.zoom = 0.75;
+        return { paragraphs, detail };
+      });
+      assert.deepEqual(painted.paragraphs, [[0, 'Repeated 😀 text', 'Repeated 😀 text'], [1, 'Repeated 😀 text', 'Repeated 😀 text']]);
+      assert.deepEqual(painted.detail.revision, opened.value);
+      assert.ok(painted.detail.pageIndexes.includes(0));
+      await page.waitForFunction(id => document.getElementById(id).paintEvents.some(detail => detail.pageIndexes.includes(0)), id);
+      assert.equal(await editor.locator('[data-lr-block-index="1"]').count(), 1);
+      assert.ok(await editor.locator('[data-lr-block-index="2"]').count() >= 2, 'one body block can have fragments on multiple pages');
+      assert.equal(await editor.locator('.docx-table-fragment [data-lr-block-index]').count(), 0);
+
+      const last = await editor.evaluate(editor => {
+        const last = editor.readFragment({ maxBlocks: 64 }).value.blocks.filter(block => block.kind === 'paragraph').at(-1);
+        const pages = [...editor.querySelectorAll('.docx-page')];
+        const lastPage = Number(pages.at(-1).dataset.pageIndex);
+        const before = editor.querySelector('[data-lr-block-index="' + last.index + '"]') !== null;
+        editor.paintEvents.length = 0;
+        const viewport = editor.querySelector('[data-lr-docx-viewport]');
+        viewport.scrollTop = viewport.scrollHeight;
+        return { before, index: last.index, page: lastPage };
+      });
+      assert.equal(last.before, false, 'a virtual page has no painted paragraph');
+      await page.waitForFunction(({ id, last }) => {
+        const editor = document.getElementById(id);
+        return editor.paintEvents.some(detail => detail.pageIndexes.includes(last.page)) &&
+          editor.querySelector('[data-lr-block-index="' + last.index + '"]') !== null;
+      }, { id, last });
+      await editor.evaluate(editor => {
+        editor.paintEvents.length = 0;
+        const viewport = editor.querySelector('[data-lr-docx-viewport]');
+        viewport.scrollTop = 0;
+      });
+      await page.waitForFunction(({ id, last }) => {
+        const editor = document.getElementById(id);
+        return editor.paintEvents.some(detail => detail.pageIndexes.includes(last.page)) &&
+          editor.querySelector('[data-lr-block-index="' + last.index + '"]') === null;
+      }, { id, last });
+
+      const original = await editor.evaluate(editor => {
+        const first = editor.readFragment({ maxBlocks: 2 }).value.blocks[0];
+        editor.selectFragmentBlock(first.id);
+        editor.focusEditor();
+        editor.paintEvents.length = 0;
+        return editor.snapshot().revision.value;
+      });
+      await page.keyboard.press('Enter');
+      await page.waitForFunction(({ id, original }) => {
+        const editor = document.getElementById(id);
+        if (!editor.paintEvents.some(detail => detail.revision.value > original)) return false;
+        const blocks = editor.readFragment({ maxBlocks: 3 });
+        if (!blocks.ok) return false;
+        return blocks.value.blocks.map(block => block.text).join('|') === '|Repeated 😀 text|Repeated 😀 text' &&
+          [1, 2].every(index => editor.querySelector('[data-lr-block-index="' + index + '"]')?.textContent === 'Repeated 😀 text');
+      }, { id, original });
+      assert.equal((await editor.evaluate(editor => editor.execute('undo'))).ok, true);
+      await page.waitForFunction(id => document.getElementById(id).querySelector('[data-lr-block-index="0"]')?.textContent === 'Repeated 😀 text', id);
+
+      // A retained page can repaint its furniture without touching its body.
+      const furniture = await editor.evaluate(async editor => {
+        const layer = editor.querySelector('.docx-page .docx-hf');
+        const page = layer.closest('[data-page-index]');
+        const nextPaint = editor.nextPaint();
+        layer.append(document.createTextNode('Updated header'));
+        return { detail: await nextPaint, page: Number(page.dataset.pageIndex),
+          indexed: layer.querySelector('[data-lr-block-index]') !== null };
+      });
+      assert.ok(furniture.detail.pageIndexes.includes(furniture.page));
+      assert.equal(furniture.indexed, false);
+
+      // Exercise in-place painter recycling without making it depend on an engine optimization.
+      const recycled = await editor.evaluate(async editor => {
+        const fragment = editor.querySelector('[data-lr-block-index="1"]');
+        const page = fragment.closest('[data-page-index]');
+        const nextPaint = editor.nextPaint();
+        const oldIndex = Number(page.dataset.pageIndex);
+        page.dataset.pageIndex = '70';
+        fragment.removeAttribute('data-paragraph-id');
+        const detail = await nextPaint;
+        const stale = fragment.hasAttribute('data-lr-block-index');
+        editor.paintEvents.length = 0;
+        page.dataset.pageIndex = String(oldIndex);
+        await Promise.resolve();
+        editor.remove();
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        return { stale, pages: detail.pageIndexes, oldIndex, laterEvents: editor.paintEvents.length };
+      });
+      assert.equal(recycled.stale, false);
+      assert.ok([recycled.oldIndex, 70].every(index => recycled.pages.includes(index)));
+      assert.equal(recycled.laterEvents, 0);
+    } finally { await page.evaluate(id => document.getElementById(id)?.remove(), id); }
+  });
+
   await check('fragment reads copy bounded body block slices and navigate without editing', async () => {
     const id = 'operations-fragment'; await createEditor(page, id, 'basic-editing');
     try {
