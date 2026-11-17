@@ -93,7 +93,7 @@
     "istanbul-reports": "^3.2.0",
     "knip": "^6.45.1",
     "lit": "^3.3.3",
-    "maplibre-gl": "^6.18.0",
+    "maplibre-gl": "^6.19.0",
     "oxlint": "1.94.0",
     "oxlint-tsgolint": "7.0.2007",
     "pdfjs-dist": "^6.5.438",
