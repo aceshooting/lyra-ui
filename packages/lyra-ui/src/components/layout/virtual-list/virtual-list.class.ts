@@ -1493,8 +1493,12 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       this.attachContainerListeners();
     if (changed.has('activeItemId') && !this.isFirstUpdate)
       this.scrollActiveIntoView();
+    const ownerDocument = this.ownerDocument;
+    const ownerGeneration = this.ownerRealmGeneration;
     this.emitRangeChangeIfNeeded();
+    if (!this.isCurrentOwnerWork(ownerDocument, ownerGeneration)) return;
     this.maybeFireLoadMore();
+    if (!this.isCurrentOwnerWork(ownerDocument, ownerGeneration)) return;
     this.maybeCorrectPendingScroll();
   }
 

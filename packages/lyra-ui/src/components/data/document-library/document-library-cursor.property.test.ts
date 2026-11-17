@@ -1,19 +1,16 @@
 import { expect } from '@open-wc/testing';
 import fc from 'fast-check';
 import { propertyRuns } from '../../../../test/property-options.js';
-import { cursorIds, cursorQuery } from './document-library-cursor.js';
-import type { DocumentLibrarySourceQuery } from './document-library.class.js';
+import { cursorIds, cursorQueryText } from './document-library-cursor.js';
 
 const current = () => true;
-const query = (tags: readonly string[], searchTerm = ''): DocumentLibrarySourceQuery => ({
-  tagFilter: tags, searchTerm, sortKey: 'name', sortDir: 'asc', filter: undefined,
-});
+const query = (tags: readonly string[], searchTerm = '') => cursorQueryText(searchTerm, tags, current);
 
-it('owns stable deduplicated cursor IDs and immutable query snapshots', () => {
+it('owns stable deduplicated cursor IDs and immutable query text snapshots', () => {
   fc.assert(fc.property(fc.array(fc.string({ maxLength: 100 }).map(value => `key:${value}`), { maxLength: 30 }), ids => {
     const expected = [...new Set(ids)];
     const snapshot = cursorIds(ids, 500, current);
-    const accepted = cursorQuery(query(ids, 'needle'), current);
+    const accepted = query(ids, 'needle');
     ids.length = 0;
     expect(snapshot).to.deep.equal(expected);
     expect(accepted.tagFilter).to.deep.equal(expected);
@@ -42,10 +39,10 @@ it('distinguishes raw scan bounds from unique-key bounds', () => {
 
 it('checks the aggregate query text budget after stable deduplication', () => {
   const tags = Array.from({ length: 40 }, (_, index) => `${index}:`.padEnd(50_000, 'x'));
-  expect(cursorQuery(query(tags), current).tagFilter.length).to.equal(40);
-  expect(cursorQuery(query([...tags, tags[0]!]), current).tagFilter.length).to.equal(40);
-  expect(() => cursorQuery(query(tags, 'x'), current)).to.throw(RangeError);
-  expect(() => cursorQuery(query([], 'x'.repeat(65_537)), current)).to.throw(TypeError);
+  expect(query(tags).tagFilter.length).to.equal(40);
+  expect(query([...tags, tags[0]!]).tagFilter.length).to.equal(40);
+  expect(() => query(tags, 'x')).to.throw(RangeError);
+  expect(() => query([], 'x'.repeat(65_537))).to.throw(TypeError);
 });
 
 it('stops list projection as soon as a descriptor trap revokes the input', () => {

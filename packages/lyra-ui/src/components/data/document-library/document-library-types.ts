@@ -29,12 +29,3 @@ export type LibraryDocumentSortKey =
   | 'owner'
   | 'freshness'
   | 'updatedAt';
-
-/** Full-source document query; tags use AND semantics and filter receives folded search text. */
-export interface DocumentLibrarySourceQuery {
-  readonly searchTerm: string;
-  readonly tagFilter: readonly string[];
-  readonly sortKey: LibraryDocumentSortKey;
-  readonly sortDir: 'asc' | 'desc';
-  readonly filter: ((document: LibraryDocument, query: string) => boolean) | undefined;
-}

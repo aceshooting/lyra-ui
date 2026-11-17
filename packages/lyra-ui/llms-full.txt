@@ -20712,8 +20712,7 @@ the nested table.
 
 The provider query type is `DocumentLibrarySourceQuery { readonly searchTerm: string;
 readonly tagFilter: readonly string[]; readonly sortKey: LibraryDocumentSortKey;
-readonly sortDir: 'asc' | 'desc'; readonly filter:
-((document: LibraryDocument, query: string) => boolean) | undefined }`.
+readonly sortDir: 'asc' | 'desc'; readonly filter: LyraDocumentLibrary['filter'] }`.
 The component's `filter` property uses this same callback contract.
 
 **Full-source paging:** Set property-only `dataSource: DocumentLibrarySource | undefined`

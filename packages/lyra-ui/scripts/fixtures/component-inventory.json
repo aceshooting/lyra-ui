@@ -47725,7 +47725,7 @@
           {
             "name": "filter",
             "attribute": null,
-            "type": "DocumentLibrarySourceQuery['filter'] | undefined",
+            "type": "( document: LibraryDocument, query: string ) => boolean | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,

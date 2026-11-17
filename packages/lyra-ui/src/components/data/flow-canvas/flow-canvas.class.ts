@@ -2403,6 +2403,12 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     }
   }
 
+  private activationAuthority(): () => boolean {
+    const nodes = this.modelNodes, edges = this.modelEdges;
+    const current = this.sourceAuthority();
+    return () => current() && this.modelNodes === nodes && this.modelEdges === edges;
+  }
+
   private applySelection(kind: 'node' | 'edge', id: string, additive: boolean): void {
     const current = this.sourceAuthority();
     if (!current()) return;
@@ -2455,7 +2461,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
    *  selection state, matching every other declared-non-actionable entry in this library. */
   private onNodeActivate(node: FlowNode, additive: boolean): void {
     if (node.disabled) return;
-    const current = this.sourceAuthority();
+    const current = this.activationAuthority();
     if (!current()) return;
     this.emit('lr-node-activate', Object.freeze({ nodeId: node.id }));
     if (current()) this.applySelection('node', node.id, additive);
@@ -2479,7 +2485,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   }
 
   private onEdgeActivate(edge: FlowEdge, additive: boolean): void {
-    const current = this.sourceAuthority();
+    const current = this.activationAuthority();
     if (!current()) return;
     this.emit(
       'lr-edge-activate',

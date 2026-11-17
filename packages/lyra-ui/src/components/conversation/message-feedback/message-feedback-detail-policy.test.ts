@@ -267,9 +267,9 @@ describe('feedback detail reason and comment policy', () => {
     };
     expect(group.getAttribute('role')).to.equal('group');
     expect(description()).to.equal('Choose up to one reason.');
-    Object.assign(el, { strings: { feedbackSingleReasonDescription: 'Choisissez au plus une raison.' } });
+    Object.assign(el, { strings: { feedbackSingleReasonDescription: 'Choisissez au plus un motif.' } });
     await settle(el);
-    expect(description()).to.equal('Choisissez au plus une raison.');
+    expect(description()).to.equal('Choisissez au plus un motif.');
     expect(chips(el).map(chip => chip.shadowRoot!.querySelector('[part="toggle-button"]')!.getAttribute('aria-pressed'))).to.deep.equal(['false', 'false']);
   });
 });

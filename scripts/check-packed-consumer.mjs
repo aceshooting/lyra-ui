@@ -157,16 +157,16 @@ const rootHelperRegisteredTags = [];
 
 // Packed core/all.js includes every non-optional registration and every emitted chunk.
 // Cursor-backed documents, ingestion presentation, feedback detail, quantity formatting and lifecycle
-// fixes bring the graph to 5,734,158 raw bytes across 65 files; the next 64-byte ceiling leaves 50 bytes.
+// fixes bring the graph to 5,734,530 raw bytes across 65 files; the next 64-byte ceiling leaves 62 bytes.
 // Optional-peer exclusions and the complete file sum stay fixed. Core has no WASM allowance;
 // the explicit Oniguruma canary retains its separate exact 466,610-byte binary requirement.
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/ad043b8e3479fcd9990cd6ecc36e4638b48cfcc4/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'Cursor-backed documents, custom ingestion presentation and actions, feedback detail limits, quantity formatting and lifecycle fixes increase the complete packed core graph by 34,173 raw bytes to 5,734,158 bytes across 65 files. The immutable package comparison contains the reviewed runtime helpers, component changes, declarations, guides and generated metadata, with no dependency changes or accidental payload. Only the exceeded raw ceiling advances to the next 64-byte boundary, 5,734,208 bytes, with 50 bytes of headroom. Gzip ceilings, optional-peer exclusions and the exact binary requirement for the explicit Oniguruma canary remain unchanged.',
-  reviewedCoreMeasurementBytes: 5_734_158,
+  $comment: 'Cursor-backed documents, custom ingestion presentation and actions, feedback detail limits, quantity formatting and lifecycle fixes increase the complete packed core graph by 34,545 raw bytes to 5,734,530 bytes across 65 files. The immutable package comparison contains the reviewed runtime helpers, component changes, declarations, guides and generated metadata, with no dependency changes or accidental payload. Only the exceeded raw ceiling advances to the next 64-byte boundary, 5,734,592 bytes, with 62 bytes of headroom. Gzip ceilings, optional-peer exclusions and the exact binary requirement for the explicit Oniguruma canary remain unchanged.',
+  reviewedCoreMeasurementBytes: 5_734_530,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 50,
+  selectedRegressionHeadroomBytes: 62,
 };
 
 /**

@@ -1,5 +1,4 @@
 import { getOwnDataDescriptor, MISSING_OWN_DATA_DESCRIPTOR, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
-import type { DocumentLibrarySourceQuery } from './document-library-types.js';
 
 /** Cursor inputs are admitted atomically; partial lists cannot describe the host's query. */
 export function cursorIds(value: unknown, maximum: number, current: () => boolean): readonly string[] {
@@ -28,12 +27,10 @@ export function cursorIds(value: unknown, maximum: number, current: () => boolea
   return Object.freeze([...ids]);
 }
 
-export function cursorQuery(value: DocumentLibrarySourceQuery, current: () => boolean): DocumentLibrarySourceQuery {
-  const searchTerm = value.searchTerm;
+/** Admits bounded query text and detached, deduplicated tags before provider dispatch. */
+export function cursorQueryText(searchTerm: unknown, tags: unknown, current: () => boolean) {
   if (typeof searchTerm !== 'string' || searchTerm.length > 65_536) throw new TypeError('Invalid cursor search');
-  const tagFilter = cursorIds(value.tagFilter, 500, current);
+  const tagFilter = cursorIds(tags, 500, current);
   if (tagFilter.reduce((units, tag) => units + tag.length, searchTerm.length) > 2_000_000) throw new RangeError('Cursor query text limit');
-  if (!['name', 'version', 'owner', 'freshness', 'updatedAt'].includes(value.sortKey) ||
-    (value.sortDir !== 'asc' && value.sortDir !== 'desc') || (value.filter !== undefined && typeof value.filter !== 'function')) throw new TypeError('Invalid cursor query');
-  return Object.freeze({ searchTerm, tagFilter, sortKey: value.sortKey, sortDir: value.sortDir, filter: value.filter });
+  return Object.freeze({ searchTerm, tagFilter });
 }

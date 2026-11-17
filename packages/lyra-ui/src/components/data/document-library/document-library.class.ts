@@ -1,9 +1,9 @@
 import type { LyraPageSource, LyraPageResult, LyraSourceRecord, LyraCursorSource, LyraCursorNavigationState } from '../../../data-sources.js';
 import { SourceCursorController } from '../../../internal/source-cursor-controller.js';
 import { setSourcePageScope, sourcePageScope, shareSourcePageQueries } from '../../../internal/source-page-scope.js';
-import { cursorIds, cursorQuery } from './document-library-cursor.js';
-import type { DocumentLibrarySourceQuery, LibraryDocument, LibraryDocumentFreshness, LibraryDocumentSortKey } from './document-library-types.js';
-export type { DocumentLibrarySourceQuery, LibraryDocument, LibraryDocumentFreshness, LibraryDocumentSortKey } from './document-library-types.js';
+import { cursorIds, cursorQueryText } from './document-library-cursor.js';
+import type { LibraryDocument, LibraryDocumentFreshness, LibraryDocumentSortKey } from './document-library-types.js';
+export type { LibraryDocument, LibraryDocumentFreshness, LibraryDocumentSortKey } from './document-library-types.js';
 import { SourcePageController } from '../../../internal/source-page-controller.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { indexByKey } from '../../../internal/keyed-index.js';
@@ -47,6 +47,14 @@ import { LYRA_DEFAULT_documentLibraryClearSelection, LYRA_DEFAULT_documentLibrar
 import { LYRA_DEFAULT_next, LYRA_DEFAULT_previous, LYRA_DEFAULT_retry, LYRA_DEFAULT_sourceSelectionFailed, LYRA_DEFAULT_sourceSelectionLoading, LYRA_DEFAULT_tagFacetLimit } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+/** Full-source document query; tags use AND semantics and filter receives folded search text. */
+export interface DocumentLibrarySourceQuery {
+  readonly searchTerm: string;
+  readonly tagFilter: readonly string[];
+  readonly sortKey: LibraryDocumentSortKey;
+  readonly sortDir: 'asc' | 'desc';
+  readonly filter: LyraDocumentLibrary['filter'];
+}
 export type DocumentLibrarySource = LyraPageSource<LibraryDocument, DocumentLibrarySourceQuery>;
 /** Unknown-total document batches; the provider owns the complete query. */
 export type DocumentLibraryCursorSource = LyraCursorSource<LibraryDocument, DocumentLibrarySourceQuery>;
@@ -90,6 +98,13 @@ export interface LyraDocumentLibraryEventMap {
   'lr-open': CustomEvent<DocumentLibraryOpenDetail>;
   /** Cancelable retry proposal. The default action clears the parent and nested table error. */
   'lr-retry-request': CustomEvent<null>;
+}
+
+function cursorQuery(value: DocumentLibrarySourceQuery, current: () => boolean): DocumentLibrarySourceQuery {
+  const { searchTerm, tagFilter } = cursorQueryText(value.searchTerm, value.tagFilter, current);
+  if (!['name', 'version', 'owner', 'freshness', 'updatedAt'].includes(value.sortKey) ||
+    (value.sortDir !== 'asc' && value.sortDir !== 'desc') || (value.filter !== undefined && typeof value.filter !== 'function')) throw new TypeError('Invalid cursor query');
+  return Object.freeze({ searchTerm, tagFilter, sortKey: value.sortKey, sortDir: value.sortDir, filter: value.filter });
 }
 
 const FRESHNESS_RANK: Record<LibraryDocumentFreshness, number> = {
@@ -865,7 +880,10 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
 
   /** Overrides the default case-insensitive name/owner/tag substring match. Receives the already
    *  trimmed, lowercased search text, mirroring `<lr-thread-list>`'s identical `filter` contract. */
-  @property({ attribute: false }) filter?: DocumentLibrarySourceQuery['filter'];
+  @property({ attribute: false }) filter?: (
+    document: LibraryDocument,
+    query: string
+  ) => boolean;
 
   /** Controlled sortable column key. */
   @property({ attribute: 'sort-key' }) sortKey: LibraryDocumentSortKey = 'name';
