@@ -13,3 +13,7 @@ reason = "GHSA-hp3w-g68c-fv3c was withdrawn on 2026-10-22. Retain patches/sprint
 [[IgnoredVulns]]
 id = "GHSA-5pgg-2g8v-p4x9"
 reason = "SheetJS is pinned to the fixed 0.20.3 release from the official CDN; the scanner cannot resolve the CDN tarball version."
+
+[[IgnoredVulns]]
+id = "GHSA-fc5q-39xc-vjpf"
+reason = "picomatch 2.3.2 and 4.0.7 are patched by patches/picomatch@2.3.2.patch and patches/picomatch@4.0.7.patch to literalize repeated extglob bodies containing wildcard stars. CI check:dependency-security verifies each exact version's patch registration and installed source digests and runs bounded exploit regressions; version-only scanning cannot identify these local fixes."

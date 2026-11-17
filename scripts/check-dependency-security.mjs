@@ -104,29 +104,55 @@ export function parseAudit(stdout, status) {
   return advisories;
 }
 
+/** The complete identity keeps one advisory's independently patched versions separate. */
+function mitigationIdentity(entry) {
+  if (!object(entry) || ['advisory', 'package', 'version'].some((key) =>
+    typeof entry[key] !== 'string' || entry[key].length === 0 || entry[key].trim() !== entry[key])) {
+    throw new Error('Invalid dependency mitigation identity');
+  }
+  return JSON.stringify([entry.advisory, entry.package, entry.version]);
+}
+
 /** Evidence is collected independently from the installed dependency graph and reviewed patch files. */
 export function validateMitigations(advisories, mitigations, evidence) {
+  const byIdentity = new Map();
   for (const mitigation of mitigations) {
-    const proof = evidence.find((entry) => entry.advisory === mitigation.advisory);
+    const identity = mitigationIdentity(mitigation);
+    if (byIdentity.has(identity)) throw new Error(`Duplicate mitigation: ${identity}`);
+    byIdentity.set(identity, mitigation);
+  }
+  const proofsByIdentity = new Map();
+  for (const proof of evidence) {
+    const identity = mitigationIdentity(proof);
+    if (proofsByIdentity.has(identity)) throw new Error(`Duplicate patch evidence: ${identity}`);
+    if (!byIdentity.has(identity)) throw new Error(`Unexpected patch evidence: ${identity}`);
+    proofsByIdentity.set(identity, proof);
+  }
+  for (const mitigation of mitigations) {
+    const proof = proofsByIdentity.get(mitigationIdentity(mitigation));
+    const label = `${mitigation.advisory} (${mitigation.package}@${mitigation.version})`;
     if (!proof || proof.registration !== mitigation.patch || proof.patchSha256 !== mitigation.patchSha256) {
-      throw new Error(`Missing or changed patch: ${mitigation.advisory}`);
+      throw new Error(`Missing or changed patch: ${label}`);
     }
     if (!Array.isArray(proof.installed) || proof.installed.length === 0) {
-      throw new Error(`Patched dependency is not installed: ${mitigation.package}`);
+      throw new Error(`Patched dependency is not installed: ${mitigation.package}@${mitigation.version}`);
     }
     for (const installed of proof.installed) {
       if (installed.version !== mitigation.version || Object.entries(mitigation.files).some(
         ([file, digest]) => installed.files[file] !== digest)) {
-        throw new Error(`Unverified installed dependency: ${mitigation.package}`);
+        throw new Error(`Unverified installed dependency: ${mitigation.package}@${mitigation.version}`);
       }
     }
-    if (!proof.scannerCorrespondence) throw new Error(`Missing scanner patch reference: ${mitigation.advisory}`);
+    if (!proof.scannerCorrespondence) throw new Error(`Missing scanner patch reference: ${label}`);
   }
   for (const advisory of advisories) {
-    const mitigation = mitigations.find((entry) => entry.advisory === advisory.github_advisory_id &&
-      entry.package === advisory.module_name);
-    if (!mitigation || advisory.findings.some((finding) => finding.version !== mitigation.version)) {
-      throw new Error(`Unmitigated advisory: ${advisory.github_advisory_id} (${advisory.module_name})`);
+    for (const finding of advisory.findings) {
+      const identity = mitigationIdentity({
+        advisory: advisory.github_advisory_id, package: advisory.module_name, version: finding.version,
+      });
+      if (!byIdentity.has(identity)) {
+        throw new Error(`Unmitigated advisory: ${advisory.github_advisory_id} (${advisory.module_name}@${finding.version})`);
+      }
     }
   }
   return { unmitigated: 0, patched: advisories.length };
@@ -191,11 +217,13 @@ export async function collectEvidence(root, mitigations) {
   const packages = await installedPackages(root, new Set(mitigations.map((entry) => entry.package)));
   return Promise.all(mitigations.map(async (entry) => ({
     advisory: entry.advisory,
+    package: entry.package,
+    version: entry.version,
     registration: registrations[`${entry.package}@${entry.version}`],
     patchSha256: sha256(await readFile(join(root, entry.patch))),
     scannerCorrespondence: scanner.split('[[IgnoredVulns]]').some((block) =>
       block.includes(`id = "${entry.advisory}"`) && block.includes(entry.patch)),
-    installed: await Promise.all(packages.filter((pkg) => pkg.name === entry.package).map(async (pkg) => ({
+    installed: await Promise.all(packages.filter((pkg) => pkg.name === entry.package && pkg.version === entry.version).map(async (pkg) => ({
       version: pkg.version,
       files: Object.fromEntries(await Promise.all(Object.keys(entry.files).map(async (file) =>
         [file, sha256(await readFile(join(pkg.root, file)))]))),

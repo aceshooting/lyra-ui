@@ -72,3 +72,21 @@ with the application's origin privileges.
 
 This document describes the implementation's security argument and its limits. It is not a claim
 that an independent security audit has been performed.
+
+## Patched development dependencies
+
+The local picomatch 2.3.2 and 4.0.7 patches mitigate
+[GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf) by treating
+repeated extglob groups containing wildcard stars, such as `+(*)` and `+(*a)`, as
+literal pattern text. This intentionally restricts those ambiguous patterns using picomatch's
+existing handling of risky repetition; ordinary filesystem globs and literal stars in escapes,
+quotes and character classes remain supported. If `unescape: true` emits an escaped star as a
+regular-expression quantifier outside a character class, the same restriction applies.
+The restriction remains enabled when
+`maxExtglobRecursion` disables the separate recursion heuristic. It is not a general safety
+claim for arbitrary raw regular-expression constructs.
+
+The [dependency-security regressions](../scripts/dependency-security-picomatch.test.mjs) run
+potentially exponential matches in child processes with hard timeouts. The
+[security gate](../scripts/check-dependency-security.mjs) verifies patch and installed-source
+hashes independently for both versions; a scanner exception alone does not establish mitigation.

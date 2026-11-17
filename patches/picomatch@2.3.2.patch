@@ -1,0 +1,85 @@
+diff --git a/lib/parse.js b/lib/parse.js
+--- a/lib/parse.js
++++ b/lib/parse.js
+@@ -280,7 +280,68 @@
+   return depth;
+ };
+ 
++// Repeating a glob wildcard nests unbounded regex quantifiers. Treat the
++// containing extglob as literal, as for the existing ambiguous-repeat cases.
++const hasRepeatedWildcard = (body, options) => {
++  const lastClosingBracket = body.lastIndexOf(']');
++  let bracket = -1;
++  let quoted = false;
++
++  for (let index = 0; index < body.length; index++) {
++    const ch = body[index];
++
++    if (ch === '\\') {
++      // unescape emits this star as a regex quantifier, even inside quotes.
++      if (options.unescape === true && bracket === -1 && body[index + 1] === '*') {
++        return true;
++      }
++      index++;
++      continue;
++    }
++
++    if (bracket !== -1) {
++      // A POSIX class has its own closing bracket inside the outer class.
++      if (ch === '[' && options.posix !== false) {
++        const name = Object.keys(POSIX_REGEX_SOURCE).find(name => body.startsWith(`[:${name}:]`, index));
++        if (name) {
++          index += name.length + 3;
++          continue;
++        }
++      }
++      if (ch === ']' && index !== bracket + 1 &&
++          !(index === bracket + 2 && (body[bracket + 1] === '^' ||
++            (options.posix === true && body[bracket + 1] === '!')))) {
++        bracket = -1;
++      }
++      continue;
++    }
++
++    if (ch === '"') {
++      quoted = !quoted;
++      continue;
++    }
++    if (quoted) continue;
++    // Disabled or unclosed brackets are literal text in the glob parser.
++    if (ch === '[' && options.nobracket !== true && index < lastClosingBracket) {
++      bracket = index;
++      continue;
++    }
++
++    // Match the current parser's extglob-star admission, including its leading-? exclusion.
++    if (ch === '*' && !(body[index + 1] === '(' && body[index + 2] !== undefined && body[index + 2] !== '?')) {
++      return true;
++    }
++  }
++
++  return false;
++};
++
+ const analyzeRepeatedExtglob = (body, options) => {
++  // This mandatory wildcard guard is separate from the optional recursion heuristic.
++  if (hasRepeatedWildcard(body, options)) {
++    return { risky: true, literalBackslashes: true };
++  }
++
+   if (options.maxExtglobRecursion === false) {
+     return { risky: false };
+   }
+@@ -520,7 +581,11 @@
+ 
+       open.type = 'text';
+       open.value = literal;
+-      open.output = safeOutput || utils.escapeRegex(literal);
++      // escapeRegex preserves backslashes; raw wildcard literals must preserve them too.
++      const literalOutput = analysis.literalBackslashes
++        ? utils.escapeRegex(literal.replace(/\\/g, '\\\\'))
++        : utils.escapeRegex(literal);
++      open.output = safeOutput || literalOutput;
+ 
+       for (let i = token.tokensIndex + 1; i < tokens.length; i++) {
+         tokens[i].value = '';

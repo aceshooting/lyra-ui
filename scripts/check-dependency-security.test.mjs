@@ -14,14 +14,16 @@ const report = (advisories) => JSON.stringify({
   advisories: Object.fromEntries(advisories.map((entry, index) => [index, entry])),
   metadata: { vulnerabilities: { info: 0, low: 0, moderate: 0, high: advisories.length, critical: 0 } },
 });
-const evidence = () => mitigations.map((entry) => ({
-  advisory: entry.advisory, registration: entry.patch, patchSha256: entry.patchSha256,
+const mitigationEvidence = (entry) => ({
+  advisory: entry.advisory, package: entry.package, version: entry.version,
+  registration: entry.patch, patchSha256: entry.patchSha256,
   scannerCorrespondence: true, installed: [{ version: entry.version, files: { ...entry.files } }],
-}));
+});
+const evidence = () => mitigations.map(mitigationEvidence);
 
 test('accepts exact verified patches while retaining registry advisory counts', () => {
   const advisories = parseAudit(report(mitigations.map(advisory)), 1);
-  assert.deepEqual(validateMitigations(advisories, mitigations, evidence()), { unmitigated: 0, patched: 2 });
+  assert.deepEqual(validateMitigations(advisories, mitigations, evidence()), { unmitigated: 0, patched: advisories.length });
   assert.deepEqual(parseAudit(report([]), 0), []);
 });
 
@@ -169,5 +171,146 @@ test('dependency upgrades preserve the manually reviewed SheetJS development arc
     assert.ok(pass, `Missing dependency upgrade pass ${scope}`);
     const rejected = pass.match(/--reject ([^\n]+)/u)?.[1].trim().replace(/\s*\\$/u, '').split(',');
     assert.ok(rejected?.includes('xlsx'), `The ${scope} pass must preserve the reviewed SheetJS identity`);
+  }
+});
+
+
+function multiversionMitigations() {
+  return ['2.3.2', '4.0.7'].map(version => ({
+    advisory: 'GHSA-test-shared', package: 'picomatch', version,
+    patch: `patches/picomatch@${version}.patch`,
+    patchSha256: sha256(`reviewed patch ${version}`),
+    files: { 'lib/parse.js': sha256(`patched source ${version}`) },
+  }));
+}
+
+const multiversionAdvisory = entries => ({
+  ...advisory(entries[0]),
+  findings: entries.map(entry => ({ version: entry.version, paths: [`application>${entry.package}@${entry.version}`] })),
+});
+
+test('accepts independently proved versions of one advisory in either finding and proof order', () => {
+  const entries = multiversionMitigations();
+  for (const ordered of [entries, [...entries].reverse()]) {
+    const findings = parseAudit(report([multiversionAdvisory(ordered)]), 1);
+    assert.deepEqual(validateMitigations(findings, entries, [...ordered].reverse().map(mitigationEvidence)),
+      { unmitigated: 0, patched: 1 }, 'patched counts registry advisory records, not version findings');
+  }
+  assert.deepEqual(validateMitigations([], entries, entries.map(mitigationEvidence)), { unmitigated: 0, patched: 0 });
+});
+
+test('requires the exact package as well as advisory and version evidence identity', () => {
+  const entry = multiversionMitigations()[0];
+  for (const field of ['package', 'version']) {
+    const proof = mitigationEvidence(entry);
+    proof[field] = 'unexpected';
+    assert.throws(() => validateMitigations([advisory(entry)], [entry], [proof]));
+    delete proof[field];
+    assert.throws(() => validateMitigations([], [entry], [proof]));
+  }
+});
+
+test('rejects a missing version proof even when another version proves the same advisory', () => {
+  const entries = multiversionMitigations();
+  assert.throws(() => validateMitigations([multiversionAdvisory(entries)], entries,
+    [mitigationEvidence(entries[0])]), /Missing or changed patch/);
+});
+
+test('rejects duplicate exact mitigation identities even when the registry reports no advisory', () => {
+  const entry = multiversionMitigations()[0];
+  assert.throws(() => validateMitigations([], [entry, { ...entry }], [mitigationEvidence(entry)]),
+    /Duplicate mitigation/);
+});
+
+test('rejects duplicate or unmatched version proofs instead of accepting the first match', () => {
+  const entries = multiversionMitigations();
+  const proofs = entries.map(mitigationEvidence);
+  assert.throws(() => validateMitigations([], entries, [...proofs, mitigationEvidence(entries[0])]),
+    /Duplicate patch evidence/);
+  assert.throws(() => validateMitigations([], entries,
+    [...proofs, { ...mitigationEvidence(entries[0]), version: '4.0.6' }]), /Unexpected patch evidence/);
+});
+
+test('rejects every unreviewed version finding without weakening either supported version', () => {
+  const entries = multiversionMitigations();
+  const known = multiversionAdvisory(entries);
+  for (const version of ['4.0.6', '2.3.1', '4.0.8', '']) {
+    const unknown = { version, paths: ['application>picomatch'] };
+    for (const findings of [[unknown, ...known.findings], [...known.findings, unknown]]) {
+      assert.throws(() => validateMitigations([{ ...known, findings }], entries, entries.map(mitigationEvidence)));
+    }
+  }
+});
+
+test('verifies each version patch, installed digest and scanner reference even after audit withdrawal', () => {
+  const entries = multiversionMitigations();
+  for (const change of [
+    proof => { proof.registration = entries[0].patch; },
+    proof => { proof.patchSha256 = entries[0].patchSha256; },
+    proof => { proof.installed[0].files['lib/parse.js'] = entries[0].files['lib/parse.js']; },
+    proof => { proof.scannerCorrespondence = false; },
+  ]) {
+    const proofs = entries.map(mitigationEvidence);
+    change(proofs[1]);
+    assert.throws(() => validateMitigations([multiversionAdvisory(entries)], entries, proofs));
+    assert.throws(() => validateMitigations([], entries, proofs));
+  }
+});
+
+test('verifies every reachable physical copy within an exact-version proof', () => {
+  const entry = multiversionMitigations()[0];
+  const proof = mitigationEvidence(entry);
+  proof.installed.push({ version: entry.version, files: { ...entry.files } });
+  assert.deepEqual(validateMitigations([advisory(entry)], [entry], [proof]), { unmitigated: 0, patched: 1 });
+  proof.installed[1].files['lib/parse.js'] = sha256('unpatched second physical copy');
+  assert.throws(() => validateMitigations([advisory(entry)], [entry], [proof]), /Unverified installed/);
+});
+
+test('collects separate reachable versions with their own source digests and scanner patch references', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'lyra-dependency-security-versions-'));
+  const entries = multiversionMitigations();
+  try {
+    await mkdir(join(root, 'packages'));
+    await mkdir(join(root, 'patches'));
+    const installed = new Map();
+    for (const [index, entry] of entries.entries()) {
+      const name = `host-${index}`;
+      const store = join(root, 'node_modules/.pnpm', name, 'node_modules');
+      await mkdir(join(store, name), { recursive: true });
+      await writeFile(join(store, name, 'package.json'), JSON.stringify({ name, version: '1.0.0' }));
+      await symlink(join(store, name), join(root, 'node_modules', name));
+      const packageRoot = join(store, entry.package);
+      await mkdir(join(packageRoot, 'lib'), { recursive: true });
+      await writeFile(join(packageRoot, 'package.json'), JSON.stringify({ name: entry.package, version: entry.version }));
+      await writeFile(join(packageRoot, 'lib/parse.js'), `patched source ${entry.version}`);
+      await writeFile(join(root, entry.patch), `reviewed patch ${entry.version}`);
+      installed.set(entry.version, packageRoot);
+    }
+    await writeFile(join(root, 'pnpm-workspace.yaml'), 'patchedDependencies:\n' +
+      entries.map(entry => `  ${entry.package}@${entry.version}: ${entry.patch}\n`).join(''));
+    const scanner = paths => '[[IgnoredVulns]]\nid = "GHSA-test-shared"\nreason = "Verified ' + paths.join(' and ') + '"\n';
+    await writeFile(join(root, 'osv-scanner.toml'), scanner(entries.map(entry => entry.patch)));
+    const proofs = await collectEvidence(root, entries);
+    for (const entry of entries) {
+      const proof = proofs.find(value => value.advisory === entry.advisory &&
+        value.package === entry.package && value.version === entry.version);
+      assert.ok(proof, `missing exact collected identity ${entry.package}@${entry.version}`);
+      assert.deepEqual(proof.installed, [{ version: entry.version, files: { ...entry.files } }]);
+      assert.equal(proof.registration, entry.patch);
+      assert.equal(proof.patchSha256, entry.patchSha256);
+      assert.equal(proof.scannerCorrespondence, true);
+    }
+    assert.deepEqual(validateMitigations([multiversionAdvisory(entries)], entries, proofs), { unmitigated: 0, patched: 1 });
+    await writeFile(join(installed.get(entries[1].version), 'lib/parse.js'), 'unpatched second version');
+    const changed = await collectEvidence(root, entries);
+    assert.throws(() => validateMitigations([], entries, changed), /Unverified installed/);
+    await writeFile(join(installed.get(entries[1].version), 'lib/parse.js'), `patched source ${entries[1].version}`);
+    await writeFile(join(root, 'osv-scanner.toml'), scanner([entries[0].patch]));
+    const missingReference = await collectEvidence(root, entries);
+    assert.equal(missingReference[0].scannerCorrespondence, true);
+    assert.equal(missingReference[1].scannerCorrespondence, false);
+    assert.throws(() => validateMitigations([], entries, missingReference), /Missing scanner patch reference/);
+  } finally {
+    await rm(root, { recursive: true, force: true });
   }
 });

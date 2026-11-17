@@ -9,6 +9,8 @@ patchedDependencies:
   '@web/test-runner-coverage-v8@1.0.1': patches/@web__test-runner-coverage-v8@1.0.1.patch
   braces@3.0.3: patches/braces@3.0.3.patch
   deepmerge@4.1.1: patches/deepmerge@4.1.1.patch
+  picomatch@2.3.2: patches/picomatch@2.3.2.patch
+  picomatch@4.0.7: patches/picomatch@4.0.7.patch
   sprintf-js@1.0.3: patches/sprintf-js@1.0.3.patch
   v8-to-istanbul@9.3.0: patches/v8-to-istanbul@9.3.0.patch
 # dependency-cruiser parses TypeScript through the legacy compiler API, which typescript@7 no longer

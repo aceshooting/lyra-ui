@@ -22,5 +22,25 @@
     "files": {
       "src/sprintf.js": "c150afe72f7e5f900b6068552831f2037717c05d6967c4027582a4abbd365017"
     }
+  },
+  {
+    "advisory": "GHSA-fc5q-39xc-vjpf",
+    "package": "picomatch",
+    "version": "2.3.2",
+    "patch": "patches/picomatch@2.3.2.patch",
+    "patchSha256": "107d856875f43302b5f320749bf411288b06339635eab2a6a5258612a4740a97",
+    "files": {
+      "lib/parse.js": "3073533f5afad19df4b6d2913b4584bc15557b98a6563a52b5bd9ef533e68d89"
+    }
+  },
+  {
+    "advisory": "GHSA-fc5q-39xc-vjpf",
+    "package": "picomatch",
+    "version": "4.0.7",
+    "patch": "patches/picomatch@4.0.7.patch",
+    "patchSha256": "c616193f83d68a54e2c340c1cb94fa60ccc86be6395c16d59a72066eb637a12f",
+    "files": {
+      "lib/parse.js": "de72e774f3002bd2e13955187173ab4f11ef6b8f7f4b084fc16438faac689d86"
+    }
   }
 ]
