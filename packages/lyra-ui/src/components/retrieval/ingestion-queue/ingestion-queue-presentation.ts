@@ -32,6 +32,8 @@ export interface IngestionPresentationProjection {
   readonly actionLimit?: Readonly<{ source: number; retained: number }>;
 }
 
+const EMPTY_PRESENTATION: IngestionPresentationProjection = Object.freeze({});
+
 function record(value: unknown): value is object {
   try { return value !== null && typeof value === 'object' && !Array.isArray(value); }
   catch { return false; }
@@ -44,7 +46,6 @@ export function projectIngestionPresentation(
   isCurrent: () => boolean = () => true,
   maxTextUnits = MAX_PRESENTATION_TEXT,
 ): IngestionPresentationProjection {
-  let remaining = finiteInteger(maxTextUnits, MAX_PRESENTATION_TEXT, 0, MAX_PRESENTATION_TEXT);
   const read = (value: object, key: PropertyKey): unknown => {
     if (!isCurrent()) throw new TypeError('Obsolete ingestion presentation');
     const descriptor = getOwnDataDescriptor(value, key);
@@ -52,6 +53,12 @@ export function projectIngestionPresentation(
     return descriptor === MISSING_OWN_DATA_DESCRIPTOR ? undefined
       : descriptor === UNSAFE_OWN_DATA_DESCRIPTOR ? UNSAFE_OWN_DATA_DESCRIPTOR : descriptor.value;
   };
+  let candidate: unknown;
+  if (stage !== 'custom') {
+    candidate = read(raw, 'actions');
+    if (candidate === undefined) return EMPTY_PRESENTATION;
+  }
+  let remaining = finiteInteger(maxTextUnits, MAX_PRESENTATION_TEXT, 0, MAX_PRESENTATION_TEXT);
   const text = (value: unknown): string | undefined => {
     if (typeof value !== 'string' || value.trim() === '' || value.length > remaining) return undefined;
     remaining -= value.length;
@@ -69,8 +76,8 @@ export function projectIngestionPresentation(
       if (id !== undefined && label !== undefined) customStage = Object.freeze({ id, label, variant, showProgress });
     }
   }
-  const candidate = read(raw, 'actions');
-  if (candidate === undefined) return Object.freeze({ ...(customStage ? { customStage } : {}) });
+  if (stage === 'custom') candidate = read(raw, 'actions');
+  if (candidate === undefined) return customStage ? Object.freeze({ customStage }) : EMPTY_PRESENTATION;
   const result: IngestionQueueAction[] = [];
   const finish = (actionLimit?: Readonly<{ source: number; retained: number }>): IngestionPresentationProjection => Object.freeze({
     ...(customStage ? { customStage } : {}), actions: result.length ? Object.freeze(result) : EMPTY_ACTIONS,
