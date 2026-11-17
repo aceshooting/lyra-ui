@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { SourceMap } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -43,12 +45,116 @@ export function assertInstalledTopology(rows, expectedVersion, expectedIntegrity
   assert.ok(lockfile.includes(expectedIntegrity), 'The lockfile must retain the supplied archive integrity');
 }
 
-export function assertRuntimeIdentity(sameFunction, mode, environment = 'production') {
-  // Ordinary optimizer discovery may validly collapse equal public specifiers.
-  // That observation is a single-runtime control, not a missing-diagnostic RED.
-  if (mode === 'raw' && environment === 'development') return sameFunction ? 'single' : 'split';
-  assert.equal(sameFunction, mode !== 'raw', `${mode}: independently imported public utility identity`);
-  return sameFunction ? 'single' : 'split';
+export function assertRuntimeIdentity(sameFunction, mode, environment = 'production', evidence) {
+  const defaultDiscovery = mode === 'raw' && environment === 'development';
+  if (!defaultDiscovery) {
+    assert.equal(sameFunction, mode !== 'raw', `${mode}: independently imported public utility identity`);
+  }
+  if (!evidence) return sameFunction ? 'single' : 'split';
+  const { carriers, applicationRoot } = evidence;
+  assert.ok(Array.isArray(carriers) && carriers.length > 0, 'Runtime ownership needs affirmative executable carrier evidence');
+  const owners = new Map();
+  for (const carrier of carriers) {
+    assert.ok(carrier.url && carrier.source && carrier.packageRoot, 'A carrier needs executable and exact source ownership');
+    assert.match(carrier.sourceSha256 ?? '', /^[a-f\d]{64}$/u);
+    assert.ok(Number.isSafeInteger(carrier.generatedLine) && carrier.generatedLine >= 0);
+    assert.ok(Number.isSafeInteger(carrier.generatedColumn) && carrier.generatedColumn >= 0);
+    const key = JSON.stringify([carrier.url, carrier.generatedLine, carrier.generatedColumn]);
+    if (owners.has(key)) assert.deepEqual(owners.get(key), carrier, 'Conflicting ownership for one evaluated initializer');
+    else owners.set(key, carrier);
+  }
+  if (mode !== 'raw') {
+    assert.equal(owners.size, 1, 'Canonical use must evaluate exactly one runtime token initializer');
+    assert.ok(applicationRoot, 'Canonical ownership needs its application package root');
+    assert.equal([...owners.values()][0].packageRoot, applicationRoot, 'Canonical runtime must belong to the application');
+    return 'single';
+  }
+  if (defaultDiscovery && owners.size === 1) {
+    assert.ok(Array.isArray(evidence.actualRoots), 'A default single-runtime control needs actual UI roots');
+    const actualRoots = [...new Set(evidence.actualRoots)];
+    assert.equal(actualRoots.length, 1, 'A default single-runtime control must serve exactly one actual UI root');
+    assert.equal(actualRoots[0], [...owners.values()][0].packageRoot, 'The single runtime must own that actual UI root');
+  }
+  if (!sameFunction) assert.ok(owners.size >= 2, 'Different utilities require affirmative split-runtime carriers');
+  if (!defaultDiscovery) assert.ok(owners.size >= 2, 'The explicit raw profiles must retain separate runtime carriers');
+  return owners.size === 1 ? 'single' : 'split';
+}
+
+const sourceHash = source => createHash('sha256').update(source).digest('hex');
+const sourcePoint = (text, offset) => {
+  const before = text.slice(0, offset);
+  const line = before.split('\n').length - 1;
+  return { line, column: offset - (before.lastIndexOf('\n') + 1) };
+};
+function tokenInitializer(source) {
+  const matches = [...source.matchAll(/\bruntimeToken\s*=\s*Symbol\s*\(\s*\)/gu)];
+  assert.equal(matches.length, 1, 'The verified diagnostic source needs one recognized runtime token initializer');
+  return {
+    identifier: sourcePoint(source, matches[0].index),
+    symbol: sourcePoint(source, matches[0].index + matches[0][0].indexOf('Symbol')),
+  };
+}
+
+/** Strict development-only evidence; unsupported optimizer shapes fail rather than infer ownership. */
+export function runtimeDiagnosticCarriers({ url, file, code, map, mapFile, verifiedSources }) {
+  const known = new Map(verifiedSources.map(source => {
+    assert.equal(source.file, resolve(source.packageRoot, 'dist/internal/runtime-diagnostics.js'));
+    assert.equal(sourceHash(source.content), source.sha256);
+    assert.equal(source.sha256, source.packedSha256, 'Diagnostic source must match the immutable archive');
+    return [source.file, source];
+  }));
+  const direct = known.get(file);
+  if (!map) {
+    if (!direct) return []; // A mapless facade is validated separately and contributes no initializer.
+    assert.equal(code, direct.content, 'Direct diagnostic module must match its verified source');
+    const point = tokenInitializer(direct.content).identifier;
+    return [{ url, source: file, packageRoot: direct.packageRoot, sourceSha256: direct.sha256,
+      generatedLine: point.line, generatedColumn: point.column }];
+  }
+  const resolvedSources = optimizerSourceFiles(map, mapFile);
+  const owned = resolvedSources.filter(source => known.has(source));
+  if (owned.length === 0) return [];
+  assert.equal(map.sections, undefined, 'Runtime carrier extraction needs a reviewed flat optimizer map');
+  assert.ok(Array.isArray(map.sourcesContent) && map.sourcesContent.length === map.sources.length,
+    'Runtime carrier maps need exact source content');
+  assert.equal(typeof map.mappings, 'string');
+  const spans = new Map();
+  for (const [index, source] of resolvedSources.entries()) {
+    if (!known.has(source)) continue;
+    const record = known.get(source);
+    assert.equal(map.sourcesContent[index], record.content, 'Mapped diagnostic content must match the archive');
+    spans.set(source, tokenInitializer(record.content));
+  }
+  const mapping = new SourceMap({ ...map, sourceRoot: '', sources: resolvedSources });
+  const carriers = [], seen = new Set();
+  for (const match of code.matchAll(/^(?:var|let|const) ([A-Za-z_$][\w$]*) = Symbol\(\);$/gmu)) {
+    const identifier = sourcePoint(code, match.index + match[0].indexOf(match[1]));
+    const symbol = sourcePoint(code, match.index + match[0].indexOf('Symbol'));
+    const left = mapping.findEntry(identifier.line, identifier.column);
+    const right = mapping.findEntry(symbol.line, symbol.column);
+    if (!spans.has(left.originalSource) && !spans.has(right.originalSource)) continue;
+    assert.equal(left.originalSource, right.originalSource, 'Runtime initializer mappings must have one source owner');
+    const source = left.originalSource, span = spans.get(source);
+    assert.ok(span, 'A runtime initializer must map to a verified diagnostic source');
+    for (const [entry, generated, original] of [[left, identifier, span.identifier], [right, symbol, span.symbol]]) {
+      // findEntry returns the range start; require the actual mapped positions, never interpolate.
+      assert.equal(entry.generatedLine, generated.line, 'Runtime initializer mapping must be on its generated line');
+      assert.equal(entry.generatedColumn, generated.column, 'Runtime initializer needs an exact mapped range start');
+      assert.equal(entry.originalLine, original.line, 'Runtime initializer must map to the verified source span');
+      assert.equal(entry.originalColumn, original.column, 'Runtime initializer must map to the verified source span');
+    }
+    const record = known.get(source);
+    carriers.push({ url, source, packageRoot: record.packageRoot, sourceSha256: record.sha256,
+      generatedLine: identifier.line, generatedColumn: identifier.column });
+    seen.add(source);
+  }
+  for (const source of owned) assert.ok(seen.has(source), 'Mapped diagnostic ownership has no unambiguous executable token initializer');
+  return carriers;
+}
+
+export async function captureFailureDevelopmentGraph(row, capture) {
+  try { row.failureDevelopmentGraph = await capture(); }
+  catch (error) { row.failureGraphError = error.stack ?? String(error); }
 }
 
 export function assertBundleRoots(roots, mode, expectedRoots) {

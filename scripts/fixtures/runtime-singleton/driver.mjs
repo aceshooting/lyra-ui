@@ -9,6 +9,7 @@ import { build, createLogger, createServer, preview } from 'vite';
 import * as playwright from 'playwright';
 import {
   assertBundleRoots, assertCompositionOwnership, assertConsoleContract, assertDevelopmentGraph, assertInstalledTopology, assertRuntimeIdentity,
+  captureFailureDevelopmentGraph, runtimeDiagnosticCarriers,
   optimizerFacadeImports, optimizerSourceFiles, PUBLIC_PROBES, UI_PACKAGE, withRuntimePhase,
 } from './contract.mjs';
 
@@ -42,6 +43,7 @@ async function packageOwner(entry, name) {
   }
 }
 
+const verifiedRuntimeSources = [];
 for (const owner of ['app', 'feature-a', 'feature-b']) {
   const require = createRequire(join(fixture, owner, 'package.json'));
   const packageFile = await realpath(require.resolve(`${UI_PACKAGE}/package.json`));
@@ -51,6 +53,14 @@ for (const owner of ['app', 'feature-a', 'feature-b']) {
   const packedPath = relative(packageRoot, utilityEntry);
   assert.ok(!packedPath.startsWith('..') && !isAbsolute(packedPath), 'The public export must belong to its installed package');
   const packedUtility = execFileSync('tar', ['-xzOf', archive, `package/${packedPath.split(sep).join('/')}`], { maxBuffer: 16 * 1024 * 1024 });
+  const runtimeFile = await realpath(join(packageRoot, 'dist/internal/runtime-diagnostics.js'));
+  const runtimeContent = await readFile(runtimeFile, 'utf8');
+  const packedRuntime = execFileSync('tar', ['-xzOf', archive, 'package/dist/internal/runtime-diagnostics.js'], { maxBuffer: 16 * 1024 * 1024 });
+  assert.equal(hash(runtimeContent), hash(packedRuntime), 'Installed runtime diagnostic must match the archive');
+  if (!verifiedRuntimeSources.some(source => source.file === runtimeFile)) {
+    verifiedRuntimeSources.push({ file: runtimeFile, packageRoot, content: runtimeContent,
+      sha256: hash(runtimeContent), packedSha256: hash(packedRuntime) });
+  }
   const uiRequire = createRequire(packageFile);
   const peer = await packageOwner(await realpath(uiRequire.resolve('katex')), 'katex');
   report.topology.push({
@@ -106,7 +116,7 @@ async function uiRootForSource(source) {
   }
 }
 
-async function inspectDevelopmentGraph(server, servedScripts, mode, environmentName, expectedRoots, topology) {
+async function inspectDevelopmentGraph(server, servedScripts) {
   const environment = server.environments.client;
   const optimizer = environment.depsOptimizer;
   const modules = [];
@@ -119,6 +129,7 @@ async function inspectDevelopmentGraph(server, servedScripts, mode, environmentN
     const file = await realpath(module.file);
     const optimized = optimizer?.isOptimizedDepFile(file) ?? false;
     let sources = [file], optimizerId, facadeChildren, optimizerSource;
+    let generatedCode, generatedMap, mapFile;
     if (optimized) {
       let info = optimizer.metadata.depInfoList.find(entry => resolve(entry.file) === file);
       assert.ok(info, 'A served optimizer file must match its actual dependency/chunk metadata');
@@ -129,10 +140,12 @@ async function inspectDevelopmentGraph(server, servedScripts, mode, environmentN
       if (servedHash) assert.equal(servedHash, info.browserHash ?? optimizer.metadata.browserHash,
         'Do not attribute an earlier served optimizer generation to a later source graph');
       optimizerId = info.id;
-      const mapFile = `${file}.map`;
+      mapFile = `${file}.map`;
       optimizerSource = info.src;
       try {
-        sources = optimizerSourceFiles(JSON.parse(await readFile(mapFile, 'utf8')), mapFile);
+        generatedMap = JSON.parse(await readFile(mapFile, 'utf8'));
+        sources = optimizerSourceFiles(generatedMap, mapFile);
+        generatedCode = await readFile(file, 'utf8');
       } catch (error) {
         if (error.code !== 'ENOENT') throw error;
         const imports = optimizerFacadeImports(await readFile(file, 'utf8'));
@@ -141,16 +154,14 @@ async function inspectDevelopmentGraph(server, servedScripts, mode, environmentN
       }
     }
     const uiRoots = [...new Set((await Promise.all(sources.map(uiRootForSource))).filter(Boolean))];
-    modules.push({ url: address, file, optimized, optimizerId, optimizerSource, facadeChildren, sources: [...new Set(sources)], uiRoots });
+    const runtimeCarriers = runtimeDiagnosticCarriers({ url: address, file,
+      code: generatedCode ?? await readFile(file, 'utf8'), map: generatedMap, mapFile,
+      verifiedSources: verifiedRuntimeSources });
+    modules.push({ url: address, file, optimized, optimizerId, optimizerSource, facadeChildren,
+      sources: [...new Set(sources)], uiRoots, runtimeCarriers });
   }
-  if (mode === 'raw' && environmentName === 'development' && topology === 'single') {
-    const actualRoots = [...new Set(modules.flatMap(module => module.uiRoots))];
-    assert.equal(actualRoots.length, 1, 'The default optimizer single-runtime control must serve one actual UI root');
-    assert.ok(expectedRoots.includes(actualRoots[0]), 'The observed runtime must come from the supplied installed archive');
-    assertDevelopmentGraph(modules, { mode, expectedRoots: actualRoots });
-  } else {
-    assertDevelopmentGraph(modules, { mode, expectedRoots });
-  }
+  // Validate all source/facade edges even when retaining evidence for an already failed case.
+  assertDevelopmentGraph(modules, { mode: 'observed', expectedRoots: [...new Set(modules.flatMap(module => module.uiRoots))] });
   return modules;
 }
 
@@ -220,8 +231,17 @@ async function runCase(browser, base, metadata, name, action, owner = 'a', audit
     await page.goto(url.href);
     await page.waitForFunction(() => Boolean(window.runtimeFixture));
     row.phase = 'runtime-identity';
-    row.runtimeTopology = assertRuntimeIdentity(await page.evaluate(() => window.runtimeFixture.sameUtility), metadata.mode, metadata.environment);
+    row.sameUtility = await page.evaluate(() => window.runtimeFixture.sameUtility);
+    row.runtimeTopology = assertRuntimeIdentity(row.sameUtility, metadata.mode, metadata.environment);
     assertCompositionOwnership(await page.evaluate(() => window.runtimeFixture.ownership), owner);
+    if (auditDevelopment) {
+      row.phase = 'development-graph-before-behavior';
+      row.developmentGraph = await auditDevelopment(servedScripts);
+      row.runtimeTopology = assertRuntimeIdentity(row.sameUtility, metadata.mode, metadata.environment, {
+        carriers: row.developmentGraph.flatMap(module => module.runtimeCarriers), applicationRoot: appRoot,
+        actualRoots: row.developmentGraph.flatMap(module => module.uiRoots),
+      });
+    }
     row.phase = 'passive-diagnostics';
     assertConsoleContract(messages, { mode: metadata.mode, development: metadata.environment !== 'production', active: false, topology: row.runtimeTopology });
     row.phase = 'behavior';
@@ -231,7 +251,11 @@ async function runCase(browser, base, metadata, name, action, owner = 'a', audit
     assert.deepEqual(responses, [], 'Failed browser requests');
     if (auditDevelopment) {
       row.phase = 'development-graph';
-      row.developmentGraph = await auditDevelopment(servedScripts, row.runtimeTopology);
+      row.developmentGraph = await auditDevelopment(servedScripts);
+      assert.equal(assertRuntimeIdentity(row.sameUtility, metadata.mode, metadata.environment, {
+        carriers: row.developmentGraph.flatMap(module => module.runtimeCarriers), applicationRoot: appRoot,
+        actualRoots: row.developmentGraph.flatMap(module => module.uiRoots),
+      }), row.runtimeTopology, 'Active use must preserve the independently observed runtime ownership');
     }
     row.phase = 'active-diagnostics';
     assertConsoleContract(messages, { mode: metadata.mode, development: metadata.environment !== 'production', topology: row.runtimeTopology });
@@ -242,6 +266,9 @@ async function runCase(browser, base, metadata, name, action, owner = 'a', audit
     row.error = error.stack ?? String(error);
     failures.push(`${metadata.mode}/${metadata.environment}/${metadata.browser}/${name}/${owner}: ${error.message}`);
   } finally {
+    if (row.status === 'failed' && auditDevelopment) {
+      await captureFailureDevelopmentGraph(row, () => auditDevelopment(servedScripts, true));
+    }
     row.console = messages;
     row.pageErrors = errors;
     row.failedRequests = responses;
@@ -373,8 +400,16 @@ try {
             await server.listen();
           }
           const base = server.resolvedUrls.local[0];
-          const auditDevelopment = environment !== 'production'
-            ? (scripts, topology) => inspectDevelopmentGraph(server, scripts, mode, environment, expectedRoots, topology) : undefined;
+          const auditDevelopment = environment !== 'production' ? async (scripts, evidenceOnly = false) => {
+            const modules = await inspectDevelopmentGraph(server, scripts);
+            if (evidenceOnly) return modules; // This path can retain evidence, never qualify a failed case.
+            const actualRoots = [...new Set(modules.flatMap(module => module.uiRoots))];
+            if (mode === 'raw' && environment === 'development') {
+              assert.ok(actualRoots.length > 0 && actualRoots.every(root => expectedRoots.includes(root)),
+                'Observed raw dependencies must belong to the supplied installed archive contexts');
+            } else assertBundleRoots(actualRoots, mode, expectedRoots);
+            return modules;
+          } : undefined;
           for (const browserName of engines) {
             const browser = await playwright[browserName].launch({ headless: true });
             try {

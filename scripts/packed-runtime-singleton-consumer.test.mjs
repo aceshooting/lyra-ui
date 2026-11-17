@@ -10,6 +10,7 @@ import {
 } from './packed-runtime-singleton-consumer.mjs';
 import {
   assertBundleRoots, assertCompositionOwnership, assertConsoleContract, assertDevelopmentGraph, assertInstalledTopology, assertRuntimeIdentity,
+  captureFailureDevelopmentGraph, runtimeDiagnosticCarriers,
   classifyConsole, optimizerFacadeImports, optimizerSourceFiles, runtimePeerVersions, UI_PACKAGE, withRuntimePhase,
 } from './fixtures/runtime-singleton/contract.mjs';
 
@@ -236,4 +237,88 @@ test('production conditions are explicit and restored after successful and faile
     if (original === undefined) delete process.env.NODE_ENV;
     else process.env.NODE_ENV = original;
   }
+});
+
+
+test('default optimizer utility identity cannot hide two proven runtime carriers', () => {
+  const carrier = (url, packageRoot) => ({
+    url, source: `${packageRoot}/dist/internal/runtime-diagnostics.js`, packageRoot,
+    sourceSha256: 'a'.repeat(64), generatedLine: 0, generatedColumn: 4,
+  });
+  const carriers = [carrier('http://fixture/utility.js', '/fixture/a'), carrier('http://fixture/popover.js', '/fixture/b')];
+  assert.equal(assertRuntimeIdentity(true, 'raw', 'development', { carriers, applicationRoot: '/fixture/a' }), 'split');
+});
+
+const tokenSource = (root = '/fixture/a') => {
+  const content = 'const runtimeToken=Symbol();';
+  const sha256 = createHash('sha256').update(content).digest('hex');
+  return { file: `${root}/dist/internal/runtime-diagnostics.js`, packageRoot: root, content, sha256, packedSha256: sha256 };
+};
+const base64Vlq = value => {
+  let number = value < 0 ? ((-value) * 2 + 1) : value * 2, output = '';
+  do { const digit = number % 32; number = Math.floor(number / 32); output += 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'[digit + (number ? 32 : 0)]; } while (number);
+  return output;
+};
+const mappedToken = (source = tokenSource(), { url = 'http://fixture/chunk.js?v=one', name = 'token', offset = 0, sourceColumn = source.content.indexOf('runtimeToken'), previousColumn = 0 } = {}) => {
+  const line = `var ${name} = Symbol();`, symbol = line.indexOf('Symbol');
+  const originalSymbol = source.content.indexOf('Symbol');
+  const mapping = [[4, 0, 0, sourceColumn - previousColumn], [symbol - 4, 0, 0, originalSymbol - sourceColumn]]
+    .map(fields => fields.map(base64Vlq).join('')).join(',');
+  return { url, file: '/fixture/cache/chunk.js', code: '\n'.repeat(offset) + line,
+    mapFile: '/fixture/cache/chunk.js.map', verifiedSources: [source],
+    map: { version: 3, file: 'chunk.js', names: [], sources: [source.file], sourcesContent: [source.content], mappings: ';'.repeat(offset) + mapping } };
+};
+
+test('runtime carriers require exact mapped token initializer ownership, not source-list membership', () => {
+  const source = tokenSource(), input = mappedToken(source);
+  const carriers = runtimeDiagnosticCarriers(input);
+  assert.equal(carriers.length, 1);
+  assert.equal(carriers[0].sourceSha256, source.sha256);
+  assert.equal(carriers[0].generatedColumn, 4);
+  assert.throws(() => runtimeDiagnosticCarriers({ ...input, map: { ...input.map, mappings: '' } }), /unambiguous executable/u);
+  assert.throws(() => runtimeDiagnosticCarriers({ ...input, code: 'var token=Symbol();' }), /unambiguous executable/u);
+  assert.throws(() => runtimeDiagnosticCarriers({ ...input, map: { ...input.map, sourcesContent: ['changed'] } }), /match the archive/u);
+  assert.throws(() => runtimeDiagnosticCarriers(mappedToken(source, { sourceColumn: 0 })), /verified source span/u);
+  const late = mappedToken(source, { offset: 1 });
+  assert.throws(() => runtimeDiagnosticCarriers({ ...late, map: { ...late.map, mappings: input.map.mappings } }), /generated line/u);
+});
+
+test('runtime carrier identity preserves executable URLs and repeated initializer positions', () => {
+  const source = tokenSource(), first = mappedToken(source);
+  const a = runtimeDiagnosticCarriers(first), b = runtimeDiagnosticCarriers({ ...first, url: 'http://fixture/chunk.js?v=two' });
+  const direct = runtimeDiagnosticCarriers({ url: 'http://fixture/direct.js', file: source.file, code: source.content, verifiedSources: [source] });
+  assert.equal(assertRuntimeIdentity(true, 'raw', 'development', { carriers: [...a, ...a], actualRoots: ['/fixture/a'] }), 'single');
+  assert.equal(assertRuntimeIdentity(true, 'raw', 'development', { carriers: [...a, ...b] }), 'split');
+  assert.equal(assertRuntimeIdentity(true, 'raw', 'development', { carriers: [...a, ...direct] }), 'split');
+  const second = mappedToken(source, { name: 'anotherToken', previousColumn: source.content.indexOf('Symbol') });
+  const combined = { ...first, code: first.code + '\n' + second.code,
+    map: { ...first.map, mappings: first.map.mappings + ';' + second.map.mappings } };
+  const repeated = runtimeDiagnosticCarriers(combined);
+  assert.equal(repeated.length, 2);
+  assert.equal(assertRuntimeIdentity(true, 'raw', 'development', { carriers: repeated }), 'split');
+  assert.deepEqual(runtimeDiagnosticCarriers({ url: 'http://fixture/facade.js', file: '/fixture/cache/facade.js', code: 'export { token } from "./chunk.js";', verifiedSources: [source] }), []);
+});
+
+test('canonical ownership and diagnostic expectations cannot be selected by a warning alone', () => {
+  const source = tokenSource(), one = runtimeDiagnosticCarriers(mappedToken(source));
+  const other = runtimeDiagnosticCarriers(mappedToken(tokenSource('/fixture/b'), { url: 'http://fixture/other.js' }));
+  assert.equal(assertRuntimeIdentity(true, 'app', 'development', { carriers: one, applicationRoot: '/fixture/a' }), 'single');
+  assert.throws(() => assertRuntimeIdentity(true, 'shared', 'development', { carriers: [...one, ...other], applicationRoot: '/fixture/a' }), /exactly one runtime/u);
+  assert.throws(() => assertRuntimeIdentity(true, 'app', 'development', { carriers: other, applicationRoot: '/fixture/a' }), /belong to the application/u);
+  assert.throws(() => assertRuntimeIdentity(true, 'raw', 'development', {
+    carriers: one, actualRoots: ['/fixture/a', '/fixture/b'],
+  }), /exactly one actual UI root/u);
+  assert.throws(() => assertRuntimeIdentity(true, 'raw', 'development', { carriers: [] }), /affirmative executable/u);
+  assert.throws(() => assertRuntimeIdentity(false, 'raw', 'development', { carriers: one, actualRoots: ['/fixture/a'] }), /affirmative split-runtime/u);
+  assert.throws(() => assertConsoleContract([diagnostic], { mode: 'raw', topology: 'single' }));
+  assert.throws(() => assertConsoleContract([], { mode: 'raw', topology: 'split' }));
+});
+
+test('failure graph capture preserves the primary behavioral failure', async () => {
+  const row = { status: 'failed', error: 'original behavior timeout' };
+  await captureFailureDevelopmentGraph(row, async () => [{ url: 'http://fixture/module.js' }]);
+  assert.equal(row.failureDevelopmentGraph.length, 1);
+  await captureFailureDevelopmentGraph(row, async () => { throw new Error('secondary graph failure'); });
+  assert.equal(row.error, 'original behavior timeout');
+  assert.match(row.failureGraphError, /secondary graph failure/u);
 });

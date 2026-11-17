@@ -4234,7 +4234,7 @@
       "module": "src/components/conversation/message-feedback/message-feedback.class.ts",
       "exportName": "MessageFeedbackDetailConfiguration",
       "kind": "interface",
-      "fingerprint": "8a9307cef36e44391446",
+      "fingerprint": "31c51281691e901cba9c",
       "routes": [
         "src/all.ts",
         "src/components/conversation/index.ts",
@@ -5636,7 +5636,7 @@
       "module": "src/components/data/document-library/document-library.class.ts",
       "exportName": "DocumentLibrarySortCommitDetail",
       "kind": "interface",
-      "fingerprint": "945459e37074e8f7a61d",
+      "fingerprint": "40e47802621206b94bd6",
       "routes": [
         "src/all.ts",
         "src/components/data/document-library/document-library.class.ts",
@@ -5658,7 +5658,7 @@
       "module": "src/components/data/document-library/document-library.class.ts",
       "exportName": "DocumentLibrarySortRequestDetail",
       "kind": "interface",
-      "fingerprint": "097d624027c53ad01c77",
+      "fingerprint": "b9a466fbd3b78bcfe20a",
       "routes": [
         "src/all.ts",
         "src/components/data/document-library/document-library.class.ts",
@@ -5677,10 +5677,10 @@
       }
     },
     {
-      "module": "src/components/data/document-library/document-library.class.ts",
+      "module": "src/components/data/document-library/document-library-types.ts",
       "exportName": "LibraryDocument",
       "kind": "interface",
-      "fingerprint": "1bb2cefcbf874fa42a55",
+      "fingerprint": "6ccd8b06eae19092cb73",
       "routes": [
         "src/all.ts",
         "src/components/data/document-library/document-library.class.ts",
@@ -11988,7 +11988,7 @@
       "module": "src/components/retrieval/ingestion-queue/ingestion-queue.class.ts",
       "exportName": "IngestionQueueItem",
       "kind": "interface",
-      "fingerprint": "eb6fe49a66b64f042138",
+      "fingerprint": "443a5a428043cc4081b1",
       "routes": [
         "src/all.ts",
         "src/components/lr-ingestion-queue.ts",
@@ -14695,7 +14695,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "1d47e83fddd768897e7a",
+      "fingerprint": "4c5321265c97d87e0e00",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15602,7 +15602,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "ca28b4a3c4a43b210c54",
+      "fingerprint": "da8f70856385e2181d21",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15736,7 +15736,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "4f83c239126729f09bba",
+      "fingerprint": "5f588d771300b63efbbd",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -16320,7 +16320,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "b3fa74ba856cb43894a0",
+      "fingerprint": "ffd4194012180ca71ed7",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16336,7 +16336,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "2e7cb8956cb395f3244c",
+      "fingerprint": "b0e70af24b368a6c6ce0",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16352,7 +16352,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "da23586bba747ce65eaf",
+      "fingerprint": "e214c8bf7dd2f382adfe",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16879,7 +16879,7 @@
       "module": "src/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "f11a1c2a1ac0333f4924",
+      "fingerprint": "005f9fd4c8b7830fd601",
       "routes": [
         "src/localization.ts",
         "src/utilities/index.ts"
@@ -16896,7 +16896,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "e374e74c610b9d1f7dc3",
+      "fingerprint": "f79d7490e8171c2fcd85",
       "routes": [
         "src/vue.ts"
       ],
@@ -17305,7 +17305,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "0a448465296221056c10",
+      "fingerprint": "f989a211b45c4a158c38",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -17330,7 +17330,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocaleDelta",
       "kind": "function",
-      "fingerprint": "2409d2f6120df41056b8",
+      "fingerprint": "4600e8499e140ad7fb19",
       "routes": [
         "src/localization.ts"
       ],
@@ -19050,7 +19050,7 @@
       "module": "src/components/data/document-library/document-library.class.ts",
       "exportName": "DocumentLibrarySourceQuery",
       "kind": "interface",
-      "fingerprint": "5808c87a28a24a47ed47",
+      "fingerprint": "3e3011a076b83d00dbf7",
       "routes": [
         "src/all.ts",
         "src/components/data/document-library/document-library.class.ts",
@@ -22867,6 +22867,189 @@
         "kind": "utility",
         "name": "components-layout-multi-split-multi-split-contracts",
         "declaration": "LyraMultiSplitPanelCollapseChangeDetail"
+      }
+    },
+    {
+      "module": "src/components/agent-tools/budget-meter/budget-meter.class.ts",
+      "exportName": "BudgetMeterFormatContext",
+      "kind": "interface",
+      "fingerprint": "3deaa2531e13677d3dca",
+      "routes": [
+        "src/all.ts",
+        "src/components/agent-tools/budget-meter/budget-meter.class.ts",
+        "src/components/agent-tools/budget-meter/budget-meter.ts",
+        "src/components/agent-tools/index.ts",
+        "src/components/lr-budget-meter.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/agent-tools.md",
+      "family": "agent-tools",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-budget-meter",
+        "declaration": "BudgetMeterFormatContext"
+      }
+    },
+    {
+      "module": "src/components/data/document-library/document-library.class.ts",
+      "exportName": "DocumentLibraryQueryChangeDetail",
+      "kind": "interface",
+      "fingerprint": "7584ee7f52e94ead854d",
+      "routes": [
+        "src/all.ts",
+        "src/components/data/document-library/document-library.class.ts",
+        "src/components/data/document-library/document-library.ts",
+        "src/components/data/index.ts",
+        "src/components/lr-document-library.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/data.md",
+      "family": "data",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-document-library",
+        "declaration": "DocumentLibraryQueryChangeDetail"
+      }
+    },
+    {
+      "module": "src/components/retrieval/ingestion-queue/ingestion-queue-presentation.ts",
+      "exportName": "IngestionItemActionEventDetail",
+      "kind": "interface",
+      "fingerprint": "1efe3448836b064de248",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-ingestion-queue.ts",
+        "src/components/retrieval/index.ts",
+        "src/components/retrieval/ingestion-queue/ingestion-queue.class.ts",
+        "src/components/retrieval/ingestion-queue/ingestion-queue.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/retrieval.md",
+      "family": "retrieval",
+      "locator": {
+        "kind": "utility",
+        "name": "components-retrieval-ingestion-queue-ingestion-queue-contracts",
+        "declaration": "IngestionItemActionEventDetail"
+      }
+    },
+    {
+      "module": "src/components/retrieval/ingestion-queue/ingestion-queue-presentation.ts",
+      "exportName": "IngestionQueueStagePresentation",
+      "kind": "interface",
+      "fingerprint": "7d796bd50fd52699a469",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-ingestion-queue.ts",
+        "src/components/retrieval/index.ts",
+        "src/components/retrieval/ingestion-queue/ingestion-queue.class.ts",
+        "src/components/retrieval/ingestion-queue/ingestion-queue.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/retrieval.md",
+      "family": "retrieval",
+      "locator": {
+        "kind": "utility",
+        "name": "components-retrieval-ingestion-queue-ingestion-queue-contracts",
+        "declaration": "IngestionQueueStagePresentation"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraCursorNavigationState",
+      "kind": "interface",
+      "fingerprint": "5c77863fdc0a03927773",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraCursorNavigationState"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraCursorRecord",
+      "kind": "interface",
+      "fingerprint": "afbba0182eee37bf05bc",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraCursorRecord"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraCursorRequest",
+      "kind": "interface",
+      "fingerprint": "ce7cb28bacd4dcbf2681",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraCursorRequest"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraCursorResult",
+      "kind": "interface",
+      "fingerprint": "3dcc273017880fa22295",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraCursorResult"
+      }
+    },
+    {
+      "module": "src/data-sources.ts",
+      "exportName": "LyraCursorSource",
+      "kind": "interface",
+      "fingerprint": "6383ce67600ccc93c299",
+      "routes": [
+        "src/all.ts",
+        "src/data-sources.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "data-sources-contracts",
+        "declaration": "LyraCursorSource"
       }
     }
   ],
