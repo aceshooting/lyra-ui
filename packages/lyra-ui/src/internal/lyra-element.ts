@@ -10,6 +10,7 @@ import { hostTokens } from './host-tokens.styles.js';
 import { ensureLyraTokens, primeLyraTokens } from './document-tokens.js';
 import { DOCUMENT_TOKEN_SCOPE_ATTRIBUTES } from './document-tokens.generated.js';
 import { resolveIntlLocale } from './intl-cache.js';
+import { claimDocumentRuntime } from './runtime-diagnostics.js';
 import { devWarnOnce, warnThemeScopeUsage, warnUnknownAttributes } from './dev-mode-attribute-warning.js';
 import type { LyraDeprecatedAliases } from './deprecated-alias-types.js';
 
@@ -490,6 +491,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   }
 
   override connectedCallback(): void {
+    claimDocumentRuntime(this.ownerDocument);
     // Read before `super`, which creates the render root: on the very first connect a shadow root
     // can only already exist because the parser built it from server-rendered declarative markup,
     // which is exactly when the first browser render has to reproduce that markup rather than

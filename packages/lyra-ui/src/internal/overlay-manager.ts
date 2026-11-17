@@ -1,3 +1,4 @@
+import { claimDocumentRuntime } from './runtime-diagnostics.js';
 import { getActiveNativeModal, isPageHelperRegion } from './native-modal-context.js';
 import { activateNonmodalOverlay } from './nonmodal-overlay-manager.js';
 import type { DeferredFocusReturnPass } from './deferred-focus-return.js';
@@ -127,6 +128,7 @@ export function authoredOverlayInert(host: HTMLElement): boolean {
 }
 
 function modalStateFor(doc: Document): ModalDocumentState {
+  claimDocumentRuntime(doc);
   const existing = modalStates.get(doc);
   if (existing) return existing;
   const state: ModalDocumentState = {

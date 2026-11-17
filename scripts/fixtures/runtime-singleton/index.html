@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Runtime ownership fixture</title>
+    <link rel="icon" href="data:,">
+    <style>
+      body { margin: 24px; font: 16px system-ui; }
+      button { padding: 12px; margin: 8px; }
+      [data-panel] { border: 1px solid; padding: 16px; background: white; color: black; }
+      [data-modal] { position: fixed; inset: 20% 15%; }
+    </style>
+  </head>
+  <body>
+    <section id="background"><button id="open-lower">Open lower overlay</button></section>
+    <section id="authored-inert" inert>Already inert</section>
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>

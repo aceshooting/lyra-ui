@@ -1,3 +1,5 @@
+import { claimDocumentRuntime } from './runtime-diagnostics.js';
+
 /** A one-use document-bound reservation for a deferred overlay's activation order. */
 export type OverlayOrderReservation = (document: Document) => number | undefined;
 
@@ -11,6 +13,7 @@ function nextOrder(document: Document): number {
 
 /** Reserves shared ordering before a first-open runtime starts loading. */
 export function reserveOverlayOrder(document: Document): OverlayOrderReservation {
+  claimDocumentRuntime(document);
   let order: number | undefined = nextOrder(document);
   return (destination) => {
     const reserved = destination === document ? order : undefined;

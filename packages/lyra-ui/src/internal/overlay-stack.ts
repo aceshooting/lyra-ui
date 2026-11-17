@@ -1,3 +1,4 @@
+import { claimDocumentRuntime } from './runtime-diagnostics.js';
 import { getActiveNativeModal } from './native-modal-context.js';
 import { takeOverlayOrder, type OverlayOrderReservation } from './overlay-order.js';
 import { deepActiveElementIn } from './active-element.js';
@@ -369,6 +370,7 @@ function createState(doc: Document): OverlayDocumentState {
 }
 
 function stateFor(doc: Document): OverlayDocumentState {
+  claimDocumentRuntime(doc);
   return states.get(doc) ?? createState(doc);
 }
 

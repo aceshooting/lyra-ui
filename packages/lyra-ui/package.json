@@ -2649,7 +2649,7 @@
     "check:build-artifacts": "node scripts/generate-shiki-wasm.mjs --check && node --test scripts/generate-shiki-wasm.test.mjs && node scripts/check-build-artifacts.mjs && node scripts/check-host-token-declarations.mjs && node --test scripts/ai-compile-contract.test.mjs && node --test scripts/theme-bootstrap-build-check.test.mjs",
     "pretest": "pnpm run build",
     "test": "wtr",
-    "test:ssr": "node --test scripts/ssr-fixture.test.mjs && node scripts/check-ssr.mjs && node scripts/check-ssr-tokens.mjs && node --conditions=browser scripts/check-jsdom.mjs && node --conditions=browser scripts/check-happy-dom.mjs",
+    "test:ssr": "node --test scripts/ssr-fixture.test.mjs scripts/runtime-diagnostics-ssr.test.mjs && node scripts/check-ssr.mjs && node scripts/check-ssr-tokens.mjs && node --conditions=browser scripts/check-jsdom.mjs && node --conditions=browser scripts/check-happy-dom.mjs",
     "test:hydration": "node scripts/check-hydration.mjs",
     "test:visual": "node scripts/visual-regression.mjs",
     "test:map-legend-compositor": "node scripts/map-legend-compositor.mjs",

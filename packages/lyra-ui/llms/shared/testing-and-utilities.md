@@ -708,7 +708,11 @@ animationName: string, options?: LyraGetAnimationOptions): LyraResolvedElementAn
 - **`overlay-manager` → `activateOverlay(options): OverlayHandle` and
   `suspendLyraModalsFor(externalModal): () => void`** — per-`Document` coordination used by Lyra's
   modal and focus-returning overlay surfaces, including dialogs/drawers, Page/app navigation,
-  command/tool surfaces, lightbox/tour, and responsive/floating/fullscreen panels. All entries share
+  command/tool surfaces, lightbox/tour, and responsive/floating/fullscreen panels. Components and
+  utility imports must use [one application-owned runtime per document](./imports-and-registration.md#one-runtime-per-document),
+  including lazy chunks; equal versions do not make separate package copies coordinate.
+  `[lr-runtime-duplicate]` detects unsupported split-runtime use without merging its state.
+  All entries in the supported runtime share
   one topmost stack: only the top entry handles Escape, Tab
   trapping, and backdrop dismissal. Content outside the active modal's composed path is inert,
   including lower overlays and page content added while it is open. Focus traversal crosses slots

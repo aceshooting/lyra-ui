@@ -62,7 +62,7 @@ test('the migrated consumer configures its modular worker without changing nativ
   }
 });
 
-test('caps the full core graph without an implicit binary allowance', () => {
+test('caps measured core and optional graphs without an implicit binary allowance', () => {
   const block = checkerSource.match(/const coreRawBudget = \{(?<body>[\s\S]*?)\n\};/u);
   assert.ok(block?.groups?.body, 'coreRawBudget must remain an inspectable measured budget');
 
@@ -71,14 +71,14 @@ test('caps the full core graph without an implicit binary allowance', () => {
       .map((match) => [match.groups.name, Number(match.groups.value.replaceAll('_', ''))]),
   );
   assert.deepEqual(terms, {
-    reviewedCoreMeasurementBytes: 5_697_963,
+    reviewedCoreMeasurementBytes: 5_699_985,
     reviewedRequiredShikiAssetBytes: 466_610,
-    selectedRegressionHeadroomBytes: 21,
+    selectedRegressionHeadroomBytes: 47,
   });
   const nonAssetCeiling = terms.reviewedCoreMeasurementBytes + terms.selectedRegressionHeadroomBytes;
   const ceiling = nonAssetCeiling;
-  assert.equal(nonAssetCeiling, 5_697_984);
-  assert.equal(ceiling, 5_697_984);
+  assert.equal(nonAssetCeiling, 5_700_032);
+  assert.equal(ceiling, 5_700_032);
   assert.equal(ceiling, Math.ceil(terms.reviewedCoreMeasurementBytes / 64) * 64,
     'the measured full graph receives only the next 64-byte boundary');
   assert.ok(terms.selectedRegressionHeadroomBytes / terms.reviewedCoreMeasurementBytes < 0.005,
@@ -99,6 +99,23 @@ test('caps the full core graph without an implicit binary allowance', () => {
   const overage = inspectOverage({ rawBytes: ceiling + 1 }, { maxRawBytes: ceiling }, String);
   assert.equal(overage.length, 1, 'one byte above the reviewed raw ceiling must fail');
   assert.match(overage[0], /exceeds budget/u);
+
+  for (const [entry, measurement, expectedCeiling] of [
+    ['map', 2_527_705, 2_527_744],
+    ['graph', 462_858, 462_912],
+  ]) {
+    const entryBlock = checkerSource.match(new RegExp(`^  ${entry}: \\{([\\s\\S]*?)^  \\},`, 'mu'))?.[1];
+    assert.ok(entryBlock, `${entry} must retain its packed bundle canary`);
+    const actualCeiling = Number(entryBlock.match(/maxRawBytes:\s*([\d_]+),/u)?.[1].replaceAll('_', ''));
+    assert.equal(actualCeiling, expectedCeiling, `${entry} retains its exact reviewed ceiling`);
+    assert.equal(actualCeiling, Math.ceil(measurement / 64) * 64,
+      `${entry} receives only the next 64-byte boundary`);
+    assert.deepEqual(inspectOverage({ rawBytes: measurement }, { maxRawBytes: actualCeiling }, String), []);
+    assert.deepEqual(inspectOverage({ rawBytes: actualCeiling }, { maxRawBytes: actualCeiling }, String), []);
+    const optionalOverage = inspectOverage({ rawBytes: actualCeiling + 1 }, { maxRawBytes: actualCeiling }, String);
+    assert.equal(optionalOverage.length, 1, `${entry} must fail one byte above its reviewed raw ceiling`);
+    assert.match(optionalOverage[0], /exceeds budget/u);
+  }
 });
 
 test('the asset allowance rejects missing, duplicate, corrupt, or resized binaries and cannot fund JavaScript growth', () => {

@@ -1,6 +1,8 @@
 /**
  * `activateOverlay()` — the per-document topmost-overlay stack that coordinates
  * Escape handling, light dismiss and focus return across every overlay in the library.
+ * All components and utilities in a document must resolve to one application-owned package
+ * runtime, including lazy chunks. Equal package versions do not make separate copies coordinate.
  *
  * Part of the curated `@aceshooting/lyra-ui/utilities/*` surface: these re-exports are the
  * supported entry points, and they are covered by semver. The `internal/` modules they forward to

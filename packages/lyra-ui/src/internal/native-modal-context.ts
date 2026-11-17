@@ -1,5 +1,6 @@
 import { composedParentElement, deepActiveElementIn } from './active-element.js';
 import { tag } from './prefix.js';
+import { claimDocumentRuntime } from './runtime-diagnostics.js';
 
 /** Marks a shared announcement sink; `announcer.ts` publishes it as `ANNOUNCEMENT_SINK_ATTRIBUTE`. */
 export const SHARED_LIVE_REGION_ATTRIBUTE = `data-${tag('live-region')}`;
@@ -28,6 +29,7 @@ export function registerNativeModalContext(
   contentHost: HTMLElement,
   mountTarget: HTMLElement = contentHost,
 ): () => void {
+  claimDocumentRuntime(modal.ownerDocument);
   const context = { contentHost, mountTarget };
   contexts.set(modal, context);
   // A carrier registers right before `showModal()` and releases right before `close()`.
@@ -123,6 +125,7 @@ function mayHaveNativeModal(doc: Document): boolean {
  */
 export function getActiveNativeModal(doc: Document | null | undefined): HTMLDialogElement | null {
   if (!doc) return null;
+  claimDocumentRuntime(doc);
   const remembered = probes.get(doc);
   if (remembered && (remembered.modal === null || isNativeModal(remembered.modal))) return remembered.modal;
   const probe: NativeModalProbe = { modal: probeActiveNativeModal(doc) };

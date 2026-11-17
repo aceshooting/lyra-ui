@@ -15,6 +15,7 @@ import { verifyPacked3dConsumer } from './packed-3d-consumer.mjs';
 import { verifyPackedMapConsumer } from './packed-map-consumer.mjs';
 import { verifyPackedGenConsumer } from './packed-gen-consumer.mjs';
 import { verifyPackedShikiConsumer } from './packed-shiki-consumer.mjs';
+import { verifyPackedRuntimeSingletonConsumer } from './packed-runtime-singleton-consumer.mjs';
 import {
   parsePerformanceQualificationOptions,
   runPackedHydrationSmoke,
@@ -155,17 +156,17 @@ const optionalPeerFamilyTags = componentInventory.components
 const rootHelperRegisteredTags = [];
 
 // Packed core/all.js includes every non-optional registration and every emitted chunk.
-// Viewer transport recovery, composer toolbar placement, excerpt layout and stepper focus containment
-// bring the graph to 5,697,963 raw bytes across 65 files; the next 64-byte ceiling leaves 21 bytes of headroom.
+// The shared document-runtime diagnostic brings the graph to 5,699,985 raw bytes across 65 files;
+// the next 64-byte ceiling leaves 47 bytes of headroom.
 // Optional-peer exclusions and the complete file sum stay fixed. Core has no WASM allowance;
 // the explicit Oniguruma canary retains its separate exact 466,610-byte binary requirement.
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/ad043b8e3479fcd9990cd6ecc36e4638b48cfcc4/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'Viewer transport recovery, composer toolbar placement, excerpt layout and stepper focus containment add 4,871 raw bytes to the previously reviewed graph. The complete packed graph measures 5,697,963 bytes across 65 files. Only the exceeded raw ceiling advances to the next 64-byte boundary, 5,697,984 bytes, with 21 bytes of headroom. Gzip ceilings, optional-peer exclusions and the exact binary requirement for the explicit Oniguruma canary remain unchanged.',
-  reviewedCoreMeasurementBytes: 5_697_963,
+  $comment: 'The shared document-runtime diagnostic increases the complete packed core graph by 2,022 raw bytes to 5,699,985 bytes across 65 files. The immutable package comparison identifies only the six runtime module payload changes, with no dependency changes. Only the exceeded raw ceiling advances to the next 64-byte boundary, 5,700,032 bytes, with 47 bytes of headroom. Gzip ceilings, optional-peer exclusions and the exact binary requirement for the explicit Oniguruma canary remain unchanged.',
+  reviewedCoreMeasurementBytes: 5_699_985,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 21,
+  selectedRegressionHeadroomBytes: 47,
 };
 
 /**
@@ -320,17 +321,15 @@ const bundleEntries = {
   },
   map: {
     fixture: 'optional',
-    // Retrying incomplete point icon atlases and preparing recolors before publication measures
-    // 2,527,557 raw bytes across the same 52 files; the next 64-byte boundary leaves 59 bytes.
-    maxRawBytes: 2_527_616,
+    // The shared document-runtime diagnostic adds 148 raw bytes to the MapLibre v6 graph:
+    // 2,527,705 bytes across the same 52 files; the next 64-byte boundary leaves 39 bytes.
+    maxRawBytes: 2_527_744,
   },
   graph: {
     fixture: 'optional',
-    // Source focus retains its intent until the optional renderer is ready: 461,047 measured
-    // bytes across 14 files, bounded by the next 64-byte boundary. This release's dependency
-    // refresh measures 461,063 bytes across the same 14 files; only this ceiling advances to the
-    // next 64-byte boundary.
-    maxRawBytes: 461_120,
+    // The shared document-runtime diagnostic adds 1,795 raw bytes to the graph bundle:
+    // 462,858 bytes across the same 14 files; the next 64-byte boundary leaves 54 bytes.
+    maxRawBytes: 462_912,
   },
 };
 
@@ -1721,9 +1720,7 @@ async function main() {
       compareExports: true,
     })) ?? await pack(uiPackage, tarballDir);
     if (migrationArtifactsDir) await preservePackedTarball({ tarballPath: uiTarball, artifactsDir: join(migrationArtifactsDir, 'packages') });
-    const candidateTarballSha256 = performanceOptions
-      ? createHash('sha256').update(await readFile(uiTarball)).digest('hex')
-      : undefined;
+    const candidateTarballSha256 = createHash('sha256').update(await readFile(uiTarball)).digest('hex');
     const flagsTarball = (await suppliedPackedTarball(PACKED_TARBALL_ENVIRONMENT.flags, {
       packageDir: flagsPackage,
       destination: tarballDir,
@@ -1933,6 +1930,32 @@ async function main() {
     await verifyPackedShikiConsumer({ fixtureDir: optionalFixture, withShiki: true, expectedShikiVersion: shikiFloor });
 
     await verifyPacked3dConsumer({ coreFixture, optionalFixture, engine3dTarball, optionalPeers, run, pnpm });
+
+    let runtimeFailed = false;
+    let runtimeError;
+    try {
+      await verifyPackedRuntimeSingletonConsumer({
+        workspace, uiTarball, expectedSha256: candidateTarballSha256, run, pnpm,
+        modes: 'all', browsers: 'chromium,firefox,webkit',
+      });
+    } catch (error) {
+      runtimeFailed = true;
+      runtimeError = error;
+    }
+    if (migrationArtifactsDir) {
+      try {
+        const report = await readFile(join(workspace, 'runtime-singleton-consumer', 'report.json'));
+        const destination = join(migrationArtifactsDir, 'runtime-singleton');
+        await mkdir(destination, { recursive: true });
+        await writeFile(join(destination, 'report.json'), report);
+      } catch (error) {
+        if (error.code !== 'ENOENT') {
+          if (runtimeFailed) console.error('Could not retain runtime singleton evidence:', error);
+          else throw error;
+        }
+      }
+    }
+    if (runtimeFailed) throw runtimeError;
 
     console.log('Packed-consumer checks passed.');
   } finally {
