@@ -229,6 +229,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   private hasRail = false;
   /** Set when a collapse moved focus out of the content and the rail may receive it once rendered. */
   private pendingRailFocus = false;
+  private temporaryHostTabIndex = false;
   // Keeps aria-valuemax/aria-valuenow (and the %/max-extent fallback they're
   // derived from) live against a *passive* container resize -- window
   // resize, a sibling collapsing, a media query -- none of which touch any
@@ -249,6 +250,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.endDrag();
+    this.releaseHostTabIndex();
     this.containerResizeObserver?.disconnect();
     this.containerResizeObserver = undefined;
   }
@@ -258,6 +260,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     this.renderBounds = undefined;
     this.renderSizePx = undefined;
     this.endDrag();
+    this.releaseHostTabIndex();
     this.containerResizeObserver?.disconnect();
     this.containerResizeObserver = undefined;
   }
@@ -324,10 +327,21 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     this.focusHost();
   }
 
+  private releaseHostTabIndex(): void {
+    this.removeEventListener('blur', this.onHostBlur);
+    if (this.temporaryHostTabIndex && this.getAttribute('tabindex') === '-1') this.removeAttribute('tabindex');
+    this.temporaryHostTabIndex = false;
+  }
+
+  private onHostBlur = (event: FocusEvent): void => {
+    if (event.composedPath()[0] === this) this.releaseHostTabIndex();
+  };
+
   private focusHost(): void {
     if (!this.hasAttribute('tabindex')) {
+      this.temporaryHostTabIndex = true;
       this.tabIndex = -1;
-      this.addEventListener('blur', () => this.removeAttribute('tabindex'), { once: true });
+      this.addEventListener('blur', this.onHostBlur);
     }
     this.focus();
   }

@@ -19915,6 +19915,7 @@
           "src/components/overlays/overlay/tooltip-property-normalization.test.ts",
           "src/components/overlays/overlay/tooltip-top-layer.test.ts",
           "src/components/overlays/overlay/tooltip-visibility.test.ts",
+          "src/components/overlays/overlay/tooltip-width-convergence.test.ts",
           "src/components/overlays/overlay/tooltip.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -39146,6 +39147,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/page/page-allocation-invalidation.test.ts",
           "src/components/layout/page/page-allocation-lifecycle.test.ts",
           "src/components/layout/page/page-reconcile-cost.test.ts",
           "src/components/layout/page/page-top-layer.test.ts",
@@ -41890,6 +41892,7 @@
           "src/components/overlays/overlay/tooltip-property-normalization.test.ts",
           "src/components/overlays/overlay/tooltip-top-layer.test.ts",
           "src/components/overlays/overlay/tooltip-visibility.test.ts",
+          "src/components/overlays/overlay/tooltip-width-convergence.test.ts",
           "src/components/overlays/overlay/tooltip.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -60006,6 +60009,7 @@
           "src/components/overlays/overlay/tooltip-property-normalization.test.ts",
           "src/components/overlays/overlay/tooltip-top-layer.test.ts",
           "src/components/overlays/overlay/tooltip-visibility.test.ts",
+          "src/components/overlays/overlay/tooltip-width-convergence.test.ts",
           "src/components/overlays/overlay/tooltip.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",

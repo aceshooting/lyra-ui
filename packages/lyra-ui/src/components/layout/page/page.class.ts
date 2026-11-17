@@ -16,6 +16,7 @@ import {
 } from '../../../internal/aria-ownership.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
+import { CSS_NUMBER_SOURCE } from '../../../internal/css-number.js';
 import { cancelDeferredFocusReturn, type DeferredFocusReturnPass } from '../../../internal/deferred-focus-return.js';
 import { isComposedFocusAvailable } from '../../../internal/focus-navigation.js';
 import { menuIcon } from '../../../internal/icons.js';
@@ -35,7 +36,7 @@ import { LYRA_DEFAULT_closeNavigation, LYRA_DEFAULT_openNavigation, LYRA_DEFAULT
 import { LYRA_DEFAULT_navigation } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-const DEFAULT_MOBILE_BREAKPOINT = '768px';
+const RELATIVE_BREAKPOINT_RE = new RegExp(`^(?:${CSS_NUMBER_SOURCE})(r?em|v[wh])$`, 'i');
 
 /** The Page presentation derived from its allocated inline size. */
 export type PageView = 'mobile' | 'desktop';
@@ -216,8 +217,8 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
   @property({ type: Boolean, attribute: 'nav-open', reflect: true }) navOpen =
     false;
 
-  /** Allocation breakpoint. Bare numbers/px, `rem`, and `em` use the shared CSS-length resolver;
-   * invalid values fall back to `768px`. */
+  /** Allocation breakpoint in pixels, host `em`, root `rem`, or owner-window `vw` and `vh`.
+   * Invalid lengths fall back to `768px`. */
   @property({ attribute: 'mobile-breakpoint' }) mobileBreakpoint = '768px';
 
   /** Logical edge occupied by desktop navigation and the mobile drawer. */
@@ -252,6 +253,10 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     | null = this.getAttribute('tabindex') ?? '-1';
   private resizeObserver?: ResizeObserver;
   private allocationMeasured = false;
+  private allocationInlineSize?: number;
+  private allocationBreakpoint?: number;
+  private allocationMetric?: HTMLElement;
+  private allocationMetricInlineSize?: number;
   private readonly allocationFrame = new OwnedFrame(this);
   private resizeView?: Window;
   private overlayHandle?: OverlayHandle;
@@ -306,6 +311,11 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     this.modalSurface.disconnect();
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
+    this.allocationMetric?.remove();
+    this.allocationMetric = undefined;
+    this.allocationMetricInlineSize = undefined;
+    this.allocationInlineSize = undefined;
+    this.allocationBreakpoint = undefined;
     this.allocationFrame.cancel();
     this.resizeView?.removeEventListener('resize', this.onWindowResize);
     this.resizeView = undefined;
@@ -324,6 +334,10 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (this.hasUpdated && changed.has('mobileBreakpoint')) {
+      this.allocationBreakpoint = undefined;
+      this.measureAllocation();
+    }
     if (this.view === 'mobile' && this.navOpen && !this.overlayHandle) this.modalSurface.prepare();
     if (this.view !== 'mobile' || !this.navOpen) {
       this.modalSurface.hide();
@@ -339,17 +353,12 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
+    if (changed.has('mobileBreakpoint')) this.observeAllocation();
     if (this.view === 'mobile' && this.navOpen) this.modalSurface.show();
     // Idrefs do not cross the shadow boundary: reflect them as element references on the dialog owner.
     const describedBy = this.view === 'mobile' && this.navOpen ? this.getAttribute('aria-describedby') : null;
     for (const dialog of this.renderRoot.querySelectorAll<HTMLElement>('[part="drawer"], [data-native-modal-carrier]')) {
       syncAriaDescribedByElements(this, dialog, describedBy);
-    }
-    if (
-      changed.has('mobileBreakpoint') &&
-      changed.get('mobileBreakpoint') !== undefined
-    ) {
-      this.measureAllocation();
     }
     const deactivatingOverlay =
       this.overlayHandle !== undefined &&
@@ -366,33 +375,79 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     }
   }
 
+  private get allocationBreakpointUnit(): string | undefined {
+    return typeof this.mobileBreakpoint === 'string'
+      ? RELATIVE_BREAKPOINT_RE.exec(this.mobileBreakpoint.trim())?.[1]?.toLowerCase()
+      : undefined;
+  }
+
+  private observeAllocationMetric(unit: string | undefined): void {
+    // Measure rem in the document itself. A root font change need not invalidate rem styles
+    // inside a shadow tree whose host has an explicit font size.
+    const parent = unit === 'rem' ? this.ownerDocument.body ?? this.ownerDocument.documentElement
+      : unit === 'em' ? this.renderRoot : undefined;
+    if (this.allocationMetric?.parentNode === parent) return;
+    if (this.allocationMetric) {
+      this.resizeObserver?.unobserve(this.allocationMetric);
+      this.allocationMetric.remove();
+      this.allocationMetric = undefined;
+    }
+    this.allocationMetricInlineSize = undefined;
+    if (parent) {
+      const metric = this.ownerDocument.createElement('span');
+      metric.setAttribute('aria-hidden', 'true');
+      metric.style.cssText = 'all:initial;position:fixed;inset-block-start:0;inset-inline-start:0;block-size:0;overflow:hidden;visibility:hidden;pointer-events:none;font-size:inherit';
+      metric.style.inlineSize = unit === 'rem' ? '1rem' : '1em';
+      parent.appendChild(metric);
+      this.allocationMetric = metric;
+      this.resizeObserver?.observe(metric);
+    }
+  }
+
   private observeAllocation(): void {
     if (!this.isConnected) return;
     this.resizeView?.removeEventListener('resize', this.onWindowResize);
     this.resizeView = undefined;
     const view = this.ownerDocument.defaultView;
     const ResizeObserverConstructor = view?.ResizeObserver;
+    const unit = this.allocationBreakpointUnit;
+    if (view && (!ResizeObserverConstructor || unit === 'vw' || unit === 'vh')) {
+      this.resizeView = view;
+      view.addEventListener('resize', this.onWindowResize);
+    }
     if (ResizeObserverConstructor) {
       if (!this.resizeObserver) {
         const observer = new ResizeObserverConstructor((entries) => {
           if (!this.isConnected || this.ownerDocument.defaultView !== view || this.resizeObserver !== observer) return;
-          const entry =
-            entries.find((candidate) => candidate.target === this) ?? entries[0];
-          const inlineSize =
-            entry?.contentBoxSize?.[0]?.inlineSize ?? entry?.contentRect.width;
-          // Next frame: the flip changes this host's block size, which loops the observer if done inside it.
-          if (inlineSize !== undefined) {
-            this.allocationFrame.schedule(() => this.applyMeasuredInlineSize(inlineSize));
+          // A single-target observer may deliver only a content rectangle for its first entry.
+          const hostEntry = entries.find((entry) => entry.target === this) ??
+            (this.allocationMetric ? undefined : entries[0]);
+          let changed = false;
+          for (const entry of entries) {
+            const inlineSize = entry.contentBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
+            if (!Number.isFinite(inlineSize) || inlineSize < 0) continue;
+            if (entry === hostEntry && inlineSize !== this.allocationInlineSize) {
+              this.allocationInlineSize = inlineSize;
+              changed = true;
+            } else if (entry.target === this.allocationMetric && inlineSize !== this.allocationMetricInlineSize) {
+              this.allocationMetricInlineSize = inlineSize;
+              // Read the font in the same delivery as its measured unit, before another frame can change it.
+              this.allocationBreakpoint = this.resolveAllocationBreakpoint();
+              changed = true;
+            }
+          }
+          // Block-only host notifications do not invalidate the breakpoint. Font-relative units
+          // have their own metric observation, including font changes inherited through stylesheets.
+          if (changed && this.allocationInlineSize !== undefined) {
+            this.allocationFrame.schedule(() => {
+              if (this.allocationInlineSize !== undefined) this.applyMeasuredInlineSize(this.allocationInlineSize, true);
+            });
           }
         });
         this.resizeObserver = observer;
       }
       this.resizeObserver.observe(this);
-      return;
-    }
-    if (view) {
-      this.resizeView = view;
-      view.addEventListener('resize', this.onWindowResize);
+      this.observeAllocationMetric(unit);
     }
   }
 
@@ -402,21 +457,23 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
     const width = this.getBoundingClientRect().width;
     if (width > 0) {
       this.allocationMeasured = true;
+      this.allocationInlineSize = width;
+      this.allocationFrame.cancel();
       this.applyMeasuredInlineSize(width);
     }
   }
 
-  /** Applies an authoritative allocation measurement. Kept separate from ResizeObserver delivery
-   * so reconnect and deterministic browser contracts exercise the same classification path. */
-  private applyMeasuredInlineSize(width: number): void {
-    if (!Number.isFinite(width) || width < 0) return;
+  private resolveAllocationBreakpoint(): number {
     const resolved = resolveCssLength(this.mobileBreakpoint, { host: this });
-    const fallback =
-      resolveCssLength(DEFAULT_MOBILE_BREAKPOINT, { host: this }) ?? 768;
-    const breakpoint = Math.max(
-      0,
-      resolved !== undefined && Number.isFinite(resolved) ? resolved : fallback
-    );
+    return Math.max(0, resolved !== undefined && Number.isFinite(resolved) ? resolved : 768);
+  }
+
+  /** Classifies an authoritative allocation. Observer frames reuse the threshold from the latest
+   * metric delivery. Explicit measurements resolve it against the current owner and styles. */
+  private applyMeasuredInlineSize(width: number, reuseBreakpoint = false): void {
+    if (!Number.isFinite(width) || width < 0) return;
+    const breakpoint = (reuseBreakpoint ? this.allocationBreakpoint : undefined) ?? this.resolveAllocationBreakpoint();
+    this.allocationBreakpoint = breakpoint;
     const next: PageView = width <= breakpoint ? 'mobile' : 'desktop';
     if (next !== this.view) this.view = next;
   }

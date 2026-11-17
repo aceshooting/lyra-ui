@@ -4,8 +4,10 @@
 
 ### Patch Changes
 
-Map canvas allocation, minimum-query suggestions and sequence playback presentation add runtime, types, versioned metadata and generated consumer guidance to the release artifacts. Only exceeded delivery ceilings advance to the smallest reviewed boundaries; passing limits, optional-peer exclusions, the UI download limit and file-count policies remain unchanged.
+Map canvas allocation, minimum-query suggestions and sequence playback presentation add runtime code, types and consumer guidance to the package. The page breakpoint, dock focus and tooltip fixes add 554–592 gzip bytes to five aggregate bundles. The affected bundle, packed core and unpacked delivery ceilings round their measurements up to the next 64-byte boundary.
 
+- Update page navigation when a font-relative or viewport-relative breakpoint changes at a fixed page width. Content that only increases the page height no longer repeats breakpoint measurements.
+- Keep focus on the dock panel when a rail icon expands it. Keep tooltips anchored as they open in narrow columns.
 - Restore the shared `label-display` accessibility reference. Document the JSON viewer's 20rem intrinsic sizing introduced in 31.0.0, including constrained parent grid tracks for narrow panels.
 - Make the network monitoring example's history keyboard reachable, with a localized accessible name and visible focus ring.
 - Add sequence playback position formatting and an optional visible readout. Restart completed standalone non-looping playback from the first item, preserve listener-owned actions, and document which navigation methods pause playback.

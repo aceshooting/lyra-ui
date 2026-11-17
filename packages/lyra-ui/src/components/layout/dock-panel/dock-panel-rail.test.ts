@@ -1,6 +1,9 @@
 import { elementUpdated, expect, fixture, html } from '@open-wc/testing';
 import './dock-panel.js';
+import '../../forms/icon-button/icon-button.js';
+import { sendKeys } from '@web/test-runner-commands';
 import type { LyraDockPanel, LyraDockPanelCollapseChangeDetail, LyraDockPanelEdge } from './dock-panel.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 async function panelFixture(placement: LyraDockPanelEdge, attrs: { collapsible?: boolean; collapsed?: boolean; rail?: boolean } = {}): Promise<LyraDockPanel> {
@@ -166,5 +169,82 @@ describe('lr-dock-panel focus with a rail', () => {
     panel.expand();
     await elementUpdated(panel);
     expect(document.activeElement === panel).to.equal(true, 'focus stays on the panel rather than dropping to the body');
+  });
+});
+
+
+describe('lr-dock-panel host focus after an icon rail', () => {
+  afterEach(() => resetMouse());
+  async function iconRail() {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div style="position:relative;block-size:20rem;inline-size:40rem;display:flex">
+        <lr-dock-panel placement="start" extent="240px" collapsed>
+          <lr-icon-button slot="rail" label="Expand panel"></lr-icon-button>
+          <button>Panel content</button>
+        </lr-dock-panel>
+        <button data-outside>Outside panel</button>
+      </div>`);
+    const panel = wrapper.querySelector('lr-dock-panel')!;
+    const rail = panel.querySelector('lr-icon-button')!;
+    const outside = wrapper.querySelector<HTMLButtonElement>('[data-outside]')!;
+    rail.addEventListener('click', () => { panel.collapsed = false; });
+    await elementUpdated(panel); await elementUpdated(rail);
+    return { wrapper, panel, rail, outside };
+  }
+
+  for (const activation of ['Space', 'pointer'] as const) {
+    it(`keeps actual host focus through the icon button's relayed blur after ${activation}`, async () => {
+      const { panel, rail, outside } = await iconRail();
+      let relayedBlurs = 0;
+      rail.addEventListener('blur', event => { if (event.bubbles) relayedBlurs++; });
+      await focusByKeyboard(rail);
+      if (activation === 'Space') {
+        await sendKeys({ press: 'Space' });
+      } else {
+        const rect = rail.getBoundingClientRect();
+        await sendMouse({ type: 'click', position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)] });
+      }
+      await elementUpdated(panel);
+      expect(relayedBlurs).to.be.greaterThan(0);
+      expect(panel.collapsed).to.equal(false);
+      expect(document.activeElement === panel).to.equal(true);
+      expect(panel.shadowRoot!.activeElement === null).to.equal(true);
+      expect(panel.getAttribute('tabindex')).to.equal('-1');
+      await focusByKeyboard(outside);
+      expect(panel.hasAttribute('tabindex')).to.equal(false);
+    });
+  }
+
+  it('preserves an authored host tabindex before and after relocation', async () => {
+    const { panel, rail, outside } = await iconRail();
+    panel.tabIndex = 0;
+    await focusByKeyboard(rail); await sendKeys({ press: 'Space' }); await elementUpdated(panel);
+    expect(document.activeElement === panel).to.equal(true);
+    expect(panel.getAttribute('tabindex')).to.equal('0');
+    await focusByKeyboard(outside);
+    expect(panel.getAttribute('tabindex')).to.equal('0');
+  });
+
+  it('preserves an author replacement for its temporary tabindex', async () => {
+    const { panel, rail, outside } = await iconRail();
+    await focusByKeyboard(rail); await sendKeys({ press: 'Space' }); await elementUpdated(panel);
+    expect(document.activeElement === panel).to.equal(true);
+    panel.tabIndex = 0;
+    await focusByKeyboard(outside);
+    expect(panel.getAttribute('tabindex')).to.equal('0');
+  });
+
+  it('releases temporary focus ownership on disconnect and acquires it after reconnect', async () => {
+    const { wrapper, panel, rail, outside } = await iconRail();
+    await focusByKeyboard(rail); await sendKeys({ press: 'Space' }); await elementUpdated(panel);
+    expect(panel.getAttribute('tabindex')).to.equal('-1');
+    panel.remove();
+    expect(panel.hasAttribute('tabindex')).to.equal(false);
+    panel.collapsed = true; wrapper.prepend(panel); await elementUpdated(panel);
+    await focusByKeyboard(rail); await sendKeys({ press: 'Space' }); await elementUpdated(panel);
+    expect(document.activeElement === panel).to.equal(true);
+    expect(panel.getAttribute('tabindex')).to.equal('-1');
+    await focusByKeyboard(outside);
+    expect(panel.hasAttribute('tabindex')).to.equal(false);
   });
 });

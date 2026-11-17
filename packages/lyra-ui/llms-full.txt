@@ -27292,8 +27292,10 @@ and event listeners survive every breakpoint crossing.
   to mobile restores the same open drawer rather than replacing its content.
 - `mobileBreakpoint: string = '768px'` (attribute `mobile-breakpoint`, not reflected) — accepts a
   bare number/px length, `rem` resolved against the live root font size, or `em` resolved against
-  the Page's live font size. It is re-resolved on every allocation measurement. Invalid values,
-  including `%`, viewport units, `calc()`, and `var()`, fall back to `768px`.
+  the Page's live font size. Inline allocation changes reclassify the Page using its resolved
+  threshold. Changes to height alone skip this work. Changing the breakpoint or its font size,
+  or reconnecting the Page, resolves the threshold again. `vw` and `vh` track the size of the
+  owner window. Invalid values, including `%`, `calc()`, and `var()`, fall back to `768px`.
 - `navigationPlacement: 'start' | 'end' = 'start'` (attribute `navigation-placement`, reflected) —
   a logical placement: `start` is left in LTR and right in RTL; `end` is the reverse.
 - `tabindex: string = '-1'` (reflected) — the host fragment target's native focusability. The Page

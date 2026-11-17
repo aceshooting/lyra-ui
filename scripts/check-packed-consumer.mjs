@@ -156,17 +156,16 @@ const optionalPeerFamilyTags = componentInventory.components
 const rootHelperRegisteredTags = [];
 
 // Packed core/all.js includes every non-optional registration and every emitted chunk.
-// Minimum-query admission, sequence presentation and versioned metadata bring the graph to
-// 5,741,897 raw bytes across 65 files; the next 64-byte ceiling leaves 55 bytes.
-// Optional-peer exclusions and the complete file sum stay fixed. Core has no WASM allowance;
-// the explicit Oniguruma canary retains its separate exact 466,610-byte binary requirement.
+// Page breakpoint tracking, dock focus ownership and tooltip sizing add 2,191 raw bytes.
+// The complete graph measures 5,744,088 bytes across 65 files. Rounding to the next 64-byte
+// boundary leaves 40 bytes. The opt-in Oniguruma entry measures its WASM separately.
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/ad043b8e3479fcd9990cd6ecc36e4638b48cfcc4/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'Minimum-query combobox admission, sequence playback presentation and versioned metadata bring the complete core graph to 5,741,897 raw bytes across the same 65 emitted files. Only its exceeded raw ceiling advances to 5,741,952 bytes, the next 64-byte boundary with 55 bytes of headroom. Passing optional packed limits, gzip limits, peer exclusions and the exact Oniguruma binary requirement remain unchanged.',
-  reviewedCoreMeasurementBytes: 5_741_897,
+  $comment: 'The complete core graph measures 5,744,088 raw bytes across 65 emitted files after the page, dock and tooltip fixes. The raw ceiling is 5,744,128 bytes.',
+  reviewedCoreMeasurementBytes: 5_744_088,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 55,
+  selectedRegressionHeadroomBytes: 40,
 };
 
 /**
