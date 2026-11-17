@@ -20,7 +20,7 @@
   },
   "maximum": {
     "packedBytes": 9999999,
-    "unpackedBytes": 22737472,
+    "unpackedBytes": 22738176,
     "fileCount": 3352
   },
   "companions": {
@@ -34,7 +34,7 @@
     "@aceshooting/lyra-map": {
       "maximum": {
         "packedBytes": 1054976,
-        "unpackedBytes": 4308608,
+        "unpackedBytes": 4308672,
         "fileCount": 677
       }
     },

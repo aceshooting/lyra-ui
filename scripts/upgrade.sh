@@ -175,6 +175,12 @@ echo "==> Refreshing transitive dependencies within workspace manifest ranges"
 pnpm --recursive --include-workspace-root update --depth Infinity --no-save
 
 echo
+echo "==> Deduplicating refreshed workspace dependencies"
+# A transitive refresh can retain older compatible copies. Normalize the final graph before
+# metadata writers and VERIFY=0 return so check:lockfile sees the same deduplicated resolutions.
+pnpm dedupe
+
+echo
 echo "==> Verifying the pinned DOCX engine source and synchronizing shipped notices"
 node scripts/sync-docx-engine-peer.mjs
 

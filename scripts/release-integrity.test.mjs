@@ -2843,7 +2843,7 @@ test('upgrade protects managed peer floors before synchronizing package-manager 
   );
 });
 
-test('upgrade dependency-only mode refreshes transitive dependencies before synchronizing peers and fails closed', () => {
+test('upgrade dependency-only mode refreshes and deduplicates transitive dependencies before synchronizing peers and fails closed', () => {
   const root = mkdtempSync(path.join(tmpdir(), 'lyra-upgrade-mode-'));
   try {
     mkdirSync(path.join(root, 'scripts'), { recursive: true });
@@ -2855,18 +2855,18 @@ test('upgrade dependency-only mode refreshes transitive dependencies before sync
     const commandLog = path.join(root, 'commands.log');
     for (const command of ['node', 'pnpm']) {
       const binary = path.join(root, 'bin', command);
-      writeFileSync(binary, `#!/usr/bin/env bash\nif [[ "$1" == '-p' ]]; then echo '22.23.2'; exit 0; fi\nprintf '%s\\n' '${command} '"$*" >> "$UPGRADE_TEST_LOG"\nif [[ "\${UPGRADE_TEST_FAIL_REFRESH:-0}" == '1' && "$*" == '--recursive --include-workspace-root update --depth Infinity --no-save' ]]; then exit 42; fi\n`);
+      writeFileSync(binary, `#!/usr/bin/env bash\nif [[ "$1" == '-p' ]]; then echo '22.23.2'; exit 0; fi\nprintf '%s\\n' '${command} '"$*" >> "$UPGRADE_TEST_LOG"\nif [[ "\${UPGRADE_TEST_FAIL_REFRESH:-0}" == '1' && "$*" == '--recursive --include-workspace-root update --depth Infinity --no-save' ]]; then exit 42; fi\nif [[ "\${UPGRADE_TEST_FAIL_DEDUPE:-0}" == '1' && "$*" == 'dedupe' ]]; then exit 43; fi\n`);
       chmodSync(binary, 0o755);
     }
     writeFileSync(path.join(root, 'package.sh'), '#!/usr/bin/env bash\necho package.sh >> "$UPGRADE_TEST_LOG"\n');
     chmodSync(path.join(root, 'package.sh'), 0o755);
-    const run = (verify, failRefresh = false) => {
+    const run = (verify, failRefresh = false, failDedupe = false) => {
       writeFileSync(commandLog, '');
-      const env = { ...process.env, PATH: `${path.join(root, 'bin')}:/usr/bin:/bin`, UPGRADE_TEST_LOG: commandLog, UPGRADE_TEST_FAIL_REFRESH: failRefresh ? '1' : '0' };
+      const env = { ...process.env, PATH: `${path.join(root, 'bin')}:/usr/bin:/bin`, UPGRADE_TEST_LOG: commandLog, UPGRADE_TEST_FAIL_REFRESH: failRefresh ? '1' : '0', UPGRADE_TEST_FAIL_DEDUPE: failDedupe ? '1' : '0' };
       delete env.VERIFY;
       if (verify !== undefined) env.VERIFY = verify;
       const result = spawnSync('bash', ['scripts/upgrade.sh'], { cwd: root, encoding: 'utf8', env });
-      assert.equal(result.status, failRefresh ? 42 : 0, result.stderr);
+      assert.equal(result.status, failRefresh ? 42 : failDedupe ? 43 : 0, result.stderr);
       return { output: result.stdout, commands: readFileSync(commandLog, 'utf8') };
     };
     const dependencyOnly = run('0');
@@ -2881,7 +2881,12 @@ test('upgrade dependency-only mode refreshes transitive dependencies before sync
     const refreshCommand = 'pnpm --recursive --include-workspace-root update --depth Infinity --no-save';
     const refreshIndex = dependencyOnly.commands.indexOf(refreshCommand);
     assert.ok(refreshIndex > dependencyOnly.commands.indexOf('pnpm install --no-prod --no-frozen-lockfile'));
-    assert.ok(dependencyOnly.commands.indexOf('check-peer-compatibility.mjs --write-current-versions') > refreshIndex);
+    const dedupeIndex = dependencyOnly.commands.indexOf('pnpm dedupe\n');
+    assert.equal(exactShellCommandCount(dependencyOnly.commands, 'pnpm dedupe'), 1);
+    assert.ok(dedupeIndex > refreshIndex, 'dedupe must follow the transitive update');
+    const docxIndex = dependencyOnly.commands.indexOf('node scripts/sync-docx-engine-peer.mjs');
+    assert.ok(docxIndex > dedupeIndex, 'dedupe must finish before source metadata writers');
+    assert.ok(dependencyOnly.commands.indexOf('check-peer-compatibility.mjs --write-current-versions') > docxIndex);
     assert.match(dependencyOnly.commands, /check-managed-peer-rewrites/u);
     assert.match(dependencyOnly.commands, /sync-package-manager-docs\.mjs --write/u);
     assert.match(dependencyOnly.commands, /check-peer-compatibility\.mjs --write-current-versions/u);
@@ -2890,10 +2895,20 @@ test('upgrade dependency-only mode refreshes transitive dependencies before sync
     for (const verify of ['0', undefined]) {
       const failed = run(verify, true);
       assert.match(failed.commands, /--recursive --include-workspace-root update --depth Infinity --no-save/u);
-      assert.doesNotMatch(failed.commands, /sync-docx-engine-peer|check-peer-compatibility\.mjs --write-current-versions|pnpm manifest|pnpm build|package\.sh/u);
+      assert.doesNotMatch(failed.commands, /pnpm dedupe|sync-docx-engine-peer|check-peer-compatibility\.mjs --write-current-versions|pnpm manifest|pnpm build|package\.sh/u);
+      assert.doesNotMatch(failed.output, /Dependencies upgraded|regeneration complete/u);
+    }
+    for (const verify of ['0', undefined]) {
+      const failed = run(verify, false, true);
+      assert.ok(failed.commands.indexOf('pnpm dedupe\n') > failed.commands.indexOf(refreshCommand));
+      assert.equal(exactShellCommandCount(failed.commands, 'pnpm dedupe'), 1);
+      assert.doesNotMatch(failed.commands, /sync-docx-engine-peer|check-peer-compatibility\.mjs --write-current-versions|pnpm manifest|pnpm build|package\.sh|generate-component-quality/u);
       assert.doesNotMatch(failed.output, /Dependencies upgraded|regeneration complete/u);
     }
     const full = run(undefined);
+    assert.equal(exactShellCommandCount(full.commands, 'pnpm dedupe'), 1);
+    assert.ok(full.commands.indexOf('pnpm dedupe\n') > full.commands.indexOf(refreshCommand));
+    assert.ok(full.commands.indexOf('node scripts/sync-docx-engine-peer.mjs') > full.commands.indexOf('pnpm dedupe\n'));
     assert.match(full.commands, /pnpm manifest/u);
     assert.match(full.commands, /package\.sh/u);
     assert.match(full.commands, /pnpm build/u);

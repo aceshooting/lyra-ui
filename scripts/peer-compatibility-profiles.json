@@ -23,7 +23,7 @@
     "dompurify": "3.4.18",
     "katex": "0.19.1",
     "mammoth": "1.13.0",
-    "marked": "18.2.0",
+    "marked": "18.2.1",
     "pdfjs-dist": "6.5.438"
   },
   "toolchain": {
