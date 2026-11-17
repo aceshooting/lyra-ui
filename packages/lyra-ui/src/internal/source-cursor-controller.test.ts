@@ -213,3 +213,28 @@ it('revokes ready rows and navigation synchronously when their composition host 
     expect(await first.control.retry()).to.equal(false);
   } finally { first.disconnect(); second.disconnect(); }
 });
+
+
+it('retires queued provider work before invoking it and permits a fresh request', async () => {
+  const test = setup();
+  const searches: string[] = [];
+  const source: LyraCursorSource<Row, Query> = {
+    revision: 1, scope: 'scope',
+    query: async request => { searches.push(request.query.search); return page(request.query.search); },
+  };
+  try {
+    test.bind(source);
+    const retired = test.control.request(Object.freeze({ search: 'retired' }), 1);
+    // Hand off queued controller work, then retire it before the provider continuation runs.
+    await Promise.resolve();
+    test.control.invalidate();
+    expect(await retired).to.equal(false);
+    expect(searches).to.deep.equal([]);
+    expect(test.control.state.navigation.status).to.equal('idle');
+    expect(test.control.state.rows.length).to.equal(0);
+    test.bind(source);
+    expect(await test.control.request(Object.freeze({ search: 'current' }), 1)).to.equal(true);
+    expect(searches).to.deep.equal(['current']);
+    expect(test.control.state.rows.map(row => row.key)).to.deep.equal(['current']);
+  } finally { test.disconnect(); }
+});

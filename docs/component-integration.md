@@ -289,7 +289,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-test-results"></a>`lr-test-results` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-test-results.js';` | none | `lr-empty`, `lr-live-region`, `lr-pagination`, `lr-spinner` | none | 58.8 KiB |
 | <a id="lr-textarea"></a>`lr-textarea` | forms | `import '@aceshooting/lyra-ui/components/lr-textarea.js';` | none | none | none | 43.4 KiB |
 | <a id="lr-thinking-panel"></a>`lr-thinking-panel` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-thinking-panel.js';` | none | none | none | 26.3 KiB |
-| <a id="lr-thread-list"></a>`lr-thread-list` | conversation | `import '@aceshooting/lyra-ui/components/lr-thread-list.js';` | none | `lr-conversation-item`, `lr-empty`, `lr-live-region`, `lr-pagination`, `lr-virtual-list` | none | 79.1 KiB |
+| <a id="lr-thread-list"></a>`lr-thread-list` | conversation | `import '@aceshooting/lyra-ui/components/lr-thread-list.js';` | none | `lr-conversation-item`, `lr-empty`, `lr-live-region`, `lr-pagination`, `lr-virtual-list` | none | 79.2 KiB |
 | <a id="lr-time-input"></a>`lr-time-input` | forms | `import '@aceshooting/lyra-ui/components/lr-time-input.js';` | none | none | none | 70.6 KiB |
 | <a id="lr-time-range"></a>`lr-time-range` | forms | `import '@aceshooting/lyra-ui/components/lr-time-range.js';` | none | none | none | 35.7 KiB |
 | <a id="lr-time-zone-picker"></a>`lr-time-zone-picker` | forms | `import '@aceshooting/lyra-ui/components/lr-time-zone-picker.js';` | none | `lr-option`, `lr-select` | `lr-combobox`, `lr-empty` | 113.5 KiB |

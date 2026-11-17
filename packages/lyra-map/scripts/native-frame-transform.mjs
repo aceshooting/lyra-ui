@@ -42,12 +42,14 @@ export function beginNativePainter(frameContext, style, renderToTexture) {
     if (!Array.isArray(order) || order.length > 10000) throw new Error('Native layer order unavailable.');
     const orderedLayers = order.map(id => ({ id, type: style._layers[id].type }));
     const data = frameContext.data;
-    if ([data.showOverdrawInspector, data.showTileBoundaries, data.showPadding, data.isRenderingGlobe]
+    const overdraw = data.showOverdrawInspector;
+    if (overdraw !== undefined && typeof overdraw !== 'boolean') throw new Error('Native frame flags unavailable.');
+    if ([data.showTileBoundaries, data.showPadding, data.isRenderingGlobe]
       .some(value => typeof value !== 'boolean')) throw new Error('Native frame flags unavailable.');
     facts = { styleGeneration, orderedLayers, terrainEnabled: frameContext.terrain !== null,
       projection: style.projection.name, projectionTransition: data.projectionTransition,
-      debug: data.showOverdrawInspector || data.showTileBoundaries || data.showPadding,
-      tailDraws: data.isRenderingGlobe || data.showTileBoundaries || data.showPadding || renderToTexture || Boolean(data.sky) };
+      debug: overdraw === true || data.showTileBoundaries || data.showPadding,
+      tailDraws: data.isRenderingGlobe || data.showTileBoundaries || data.showPadding || renderToTexture };
   } catch {
     // An invalid begin still revokes the previous paint before native work resumes.
     facts = undefined;

@@ -489,6 +489,8 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   );
 
   override adoptedCallback(): void {
+    this.focusTaskGeneration++;
+    this.stopPendingFocus?.();
     super.adoptedCallback();
     this.hostDescription.adopted();
     this.inputLimitAnnouncements.adopted();
@@ -906,6 +908,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
   @query('[part="search-input"]') private searchInputEl?: HTMLInputElement;
   private focusTaskGeneration = 0;
+  private stopPendingFocus?: () => void;
   private excerptObserver?: MutationObserver;
   private excerptRoot?: Node & ParentNode;
   private excerptObservationGeneration = 0;
@@ -1077,6 +1080,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     this.sourceRequestVersion++; this.sourceActiveInputs = undefined; this.sourceActiveReveal = undefined; this.sourceFilterIntent = undefined;
     this.sourceStatusInitialized = false; this.previousSourceStatus = '';
     this.focusTaskGeneration++;
+    this.stopPendingFocus?.();
     this.restoreInjectedListItemRoles();
     super.disconnectedCallback();
   }
@@ -1326,6 +1330,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   private onSearchKeyDown = (e: KeyboardEvent): void => {
     if (e.key !== 'ArrowDown') return;
     const focusGeneration = ++this.focusTaskGeneration;
+    this.stopPendingFocus?.();
     const rows = this.navigableRows();
     const list = this.virtualListEl;
     const items = (list?.items ?? []) as ThreadListItem[];
@@ -1425,7 +1430,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   /**
    * Mounts and focuses the first navigable thread at or beyond a complete-model item index. Group
    * records and unavailable rendered rows are skipped in `direction`; a newer navigation, search,
-   * disconnect, or list replacement invalidates the pending focus task.
+   * disconnect, adoption, list replacement, or outside focus invalidates the pending focus task.
    */
   private focusVirtualThreadFromItemIndex(
     list: LyraVirtualList,
@@ -1434,6 +1439,20 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     direction: 1 | -1,
     focusGeneration: number
   ): void {
+    this.stopPendingFocus?.();
+    const ownerDocument = this.ownerDocument;
+    const stop = (): void => {
+      ownerDocument.removeEventListener('focusin', onFocusIn, true);
+      if (this.stopPendingFocus === stop) this.stopPendingFocus = undefined;
+    };
+    const onFocusIn = (event: FocusEvent): void => {
+      // Observe actual transfers; removing a focused virtual row can leave body active without one.
+      if (!event.isTrusted || this.matches(':focus-within')) return;
+      if (focusGeneration === this.focusTaskGeneration) this.focusTaskGeneration++;
+      stop();
+    };
+    this.stopPendingFocus = stop;
+    ownerDocument.addEventListener('focusin', onFocusIn, true);
     void (async () => {
       let targetItemIndex = initialItemIndex;
       while (targetItemIndex >= 0 && targetItemIndex < items.length) {
@@ -1453,13 +1472,14 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
         let targetRow: LyraConversationItem | undefined;
         for (let attempt = 0; attempt < 2; attempt += 1) {
           await new Promise<void>((resolve) => {
-            const view = this.ownerDocument.defaultView;
+            const view = ownerDocument.defaultView;
             if (view) view.requestAnimationFrame(() => resolve());
             else requestAnimationFrame(() => resolve());
           });
           if (
             focusGeneration !== this.focusTaskGeneration ||
             !this.isConnected ||
+            this.ownerDocument !== ownerDocument ||
             this.virtualListEl !== list
           ) {
             return;
@@ -1468,6 +1488,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
           if (
             focusGeneration !== this.focusTaskGeneration ||
             !this.isConnected ||
+            this.ownerDocument !== ownerDocument ||
             this.virtualListEl !== list
           ) {
             return;
@@ -1483,7 +1504,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
         }
         targetItemIndex += direction;
       }
-    })();
+    })().finally(stop);
   }
 
   private onListKeyDown = (e: KeyboardEvent): void => {
@@ -1505,6 +1526,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     )
       return;
     const focusGeneration = ++this.focusTaskGeneration;
+    this.stopPendingFocus?.();
     const list = this.virtualListEl;
     if (
       this.dataMode &&

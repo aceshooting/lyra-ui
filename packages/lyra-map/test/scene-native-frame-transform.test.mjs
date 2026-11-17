@@ -134,6 +134,75 @@ test('callback tail reset and nested native failures cannot leave a completed or
   }
 });
 
+test('native default overdraw absence is false while malformed frame flags still revoke authority', async () => {
+  const native = await loadTransformedNative(), item = nativePaintFixture(native), release = item.enroll();
+  try {
+    item.data.showOverdrawInspector = undefined;
+    item.render();
+    const initial = item.captures.at(-1);
+    assert.equal(initial.status, 'admitted');
+    assert.equal(completed(item, initial).frame.debug, false);
+    assert.equal(completed(item, initial).frame.tailDraws, false);
+    for (const value of [false, true]) {
+      item.data.showOverdrawInspector = value; item.render();
+      assert.equal(completed(item, item.captures.at(-1)).frame.debug, value);
+    }
+    for (const key of ['showOverdrawInspector', 'showTileBoundaries', 'showPadding', 'isRenderingGlobe']) {
+      const malformed = [null, 0, ''];
+      if (key === 'showOverdrawInspector') malformed.push(1, 'false', {}, []);
+      else malformed.push(undefined);
+      for (const value of malformed) {
+        item.data.showOverdrawInspector = false; item.data[key] = false; item.render();
+        const previous = item.captures.at(-1), before = item.events.length;
+        assert.equal(previous.status, 'admitted');
+        item.data[key] = value; item.render();
+        assert.notEqual(item.captures.at(-1).status, 'admitted', `${key} rejects ${String(value)}`);
+        assert.throws(() => completed(item, previous), unavailable);
+        assert.ok(item.events.slice(before).includes('render'), 'metadata refusal preserves the original native callback');
+        assert.ok(item.events.slice(before).includes('reset'), 'metadata refusal preserves the native reset');
+        item.data[key] = false;
+      }
+    }
+    assert.equal(queryCount(item), 0, 'phase metadata never issues observations itself');
+  } finally { release(); }
+});
+
+test('native sky precedes custom rendering while globe and debug tails remain classified', async () => {
+  const native = await loadTransformedNative(), item = nativePaintFixture(native), release = item.enroll();
+  try {
+    item.data.sky = { 'atmosphere-blend': 0 };
+    item.painter.drawFunctions.sky = () => { item.events.push('sky'); };
+    item.render();
+    const initial = item.captures.at(-1), facts = completed(item, initial);
+    assert.equal(initial.status, 'admitted');
+    assert.equal(facts.frame.tailDraws, false);
+    assert.equal(facts.frame.debug, false);
+    assert.equal(item.events.filter(value => value === 'sky').length, 1);
+    assert.ok(item.events.indexOf('sky') < item.events.indexOf('render'));
+    assert.ok(item.events.indexOf('render') < item.events.indexOf('reset'));
+    item.data.sky = { 'atmosphere-blend': 1 };
+    const skyOffset = item.events.length;
+    item.render();
+    const skyEvents = item.events.slice(skyOffset);
+    assert.equal(skyEvents.filter(value => value === 'sky').length, 1);
+    assert.ok(skyEvents.indexOf('sky') < skyEvents.indexOf('render'));
+    assert.equal(completed(item, item.captures.at(-1)).frame.tailDraws, false, 'sky values do not move its native draw after custom rendering');
+    item.data.showPadding = true;
+    let offset = item.events.length; item.render();
+    const padding = completed(item, item.captures.at(-1)), paddingEvents = item.events.slice(offset);
+    assert.equal(padding.frame.debug, true); assert.equal(padding.frame.tailDraws, true);
+    assert.ok(paddingEvents.indexOf('render') < paddingEvents.indexOf('tail'));
+    item.data.showPadding = false; item.data.isRenderingGlobe = true; item.data.projectionTransition = 1;
+    item.painter._renderTilesDepthBuffer = () => { item.events.push('globe-depth'); };
+    offset = item.events.length; item.render();
+    const globe = completed(item, item.captures.at(-1)), globeEvents = item.events.slice(offset);
+    assert.equal(globe.frame.projectionTransition, 1); assert.equal(globe.frame.tailDraws, true);
+    assert.ok(globeEvents.indexOf('render') < globeEvents.indexOf('tail'));
+    assert.ok(globeEvents.indexOf('tail') < globeEvents.indexOf('reset'));
+    assert.equal(queryCount(item), 0);
+  } finally { release(); }
+});
+
 test('source-pair admission and exact anchors are atomic while ordinary build integrity still refuses corrupt pins', async () => {
   const sources = await nativeSources();
   for (const name of Object.keys(sources)) assert.equal(createHash('sha256').update(sources[name]).digest('hex'), sourceHashes[name]);

@@ -14275,8 +14275,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/overlays/context-menu/context-menu.test.ts",
-              "test": "keeps the menu inside a 320px viewport for pointer and keyboard opens",
+              "file": "src/components/overlays/context-menu/context-menu-no-resize-observer.test.ts",
+              "test": "tracks real anchor motion and preserves native dismissal without ResizeObserver",
               "kind": "320px allocation test signal"
             }
           ]
@@ -14382,6 +14382,7 @@
         "tests": [
           "src/components/overlays/context-menu/context-menu-anchor-lifecycle.test.ts",
           "src/components/overlays/context-menu/context-menu-gesture-edges.test.ts",
+          "src/components/overlays/context-menu/context-menu-no-resize-observer.test.ts",
           "src/components/overlays/context-menu/context-menu-resize-anchor.test.ts",
           "src/components/overlays/context-menu/context-menu-stable-anchor.test.ts",
           "src/components/overlays/context-menu/context-menu.test.ts"
@@ -22158,6 +22159,7 @@
           "src/components/agent-tools/eval-result/eval-result-register.test.ts",
           "src/components/agent-tools/eval-result/eval-result-source-projection.test.ts",
           "src/components/agent-tools/eval-result/eval-result-source-scale.test.ts",
+          "src/components/agent-tools/eval-result/eval-result-source-values.test.ts",
           "src/components/agent-tools/eval-result/eval-result-source.property.test.ts",
           "src/components/agent-tools/eval-result/eval-result-source.test.ts",
           "src/components/agent-tools/eval-result/eval-result.test.ts"
@@ -33978,6 +33980,7 @@
           "src/components/utility/mention-popover/mention-popover-closed-layout.test.ts",
           "src/components/utility/mention-popover/mention-popover-coverage.test.ts",
           "src/components/utility/mention-popover/mention-popover-placement-recovery.test.ts",
+          "src/components/utility/mention-popover/mention-popover-platform-fallback.test.ts",
           "src/components/utility/mention-popover/mention-popover-remediation.test.ts",
           "src/components/utility/mention-popover/mention-popover-scale.test.ts",
           "src/components/utility/mention-popover/mention-popover.test.ts",
@@ -35775,7 +35778,9 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/message-parts/message-parts-lazy-builtins.test.ts",
           "src/components/conversation/message-parts/message-parts-lazy.test.ts",
+          "src/components/conversation/message-parts/message-parts-redacted-failure.test.ts",
           "src/components/conversation/message-parts/message-parts-registration-failure.test.ts",
           "src/components/conversation/message-parts/message-parts-widget.test.ts",
           "src/components/conversation/message-parts/message-parts.test.ts"
@@ -56020,8 +56025,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/conversation/thread-list/thread-list-keyboard-boundaries.test.ts",
-              "test": "moves native Home and End across slotted threads while skipping hidden and inert endpoints",
+              "file": "src/components/conversation/thread-list/thread-list-focus-ownership.test.ts",
+              "test": "preserves an outside focus transfer before a pending virtual boundary navigation finishes",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -56123,7 +56128,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/thread-list/thread-list.class.ts",
-              "line": 1011,
+              "line": 1014,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -56162,6 +56167,7 @@
           "src/components/conversation/thread-list/thread-list-adoption.test.ts",
           "src/components/conversation/thread-list/thread-list-consumer-regression.test.ts",
           "src/components/conversation/thread-list/thread-list-coverage.test.ts",
+          "src/components/conversation/thread-list/thread-list-focus-ownership.test.ts",
           "src/components/conversation/thread-list/thread-list-input-limit.test.ts",
           "src/components/conversation/thread-list/thread-list-keyboard-boundaries.test.ts",
           "src/components/conversation/thread-list/thread-list-remediation.test.ts",
