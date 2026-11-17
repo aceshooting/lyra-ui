@@ -25,17 +25,22 @@ describe('autoloader manifest', () => {
     this.timeout(180_000);
 
     const failures: string[] = [];
-    // Chunked rather than one flat Promise.all: the dev server serves each module individually,
-    // and a 280-wide burst starves the runner's own transport on slower CI workers.
-    const chunkSize = 16;
-    for (let index = 0; index < entries.length; index += chunkSize) {
-      await Promise.all(
-        entries.slice(index, index + chunkSize).map(async ([tag, load]) => {
+    // Keep at most 16 loaders pending: a library-wide burst starves the runner's transport on
+    // slower workers. Each completed loader makes room for the next without a chunk barrier.
+    const attempted: string[] = [];
+    let nextIndex = 0;
+    await Promise.all(
+      Array.from({ length: Math.min(16, entries.length) }, async () => {
+        while (true) {
+          const entry = entries[nextIndex++];
+          if (!entry) return;
+          const [tag, load] = entry;
+          attempted.push(tag);
           try {
             const constructor = await load();
             if (typeof constructor !== 'function') {
               failures.push(`${tag}: loader resolved to ${typeof constructor}`);
-              return;
+              continue;
             }
             // Never hand a live element class to chai as `actual`/`expected` -- serializing one
             // for a failure message hangs the whole file. Record a string instead.
@@ -45,11 +50,12 @@ describe('autoloader manifest', () => {
           } catch (error) {
             failures.push(`${tag}: ${error instanceof Error ? error.message : String(error)}`);
           }
-        }),
-      );
-    }
+        }
+      }),
+    );
 
-    expect(failures).to.deep.equal([]);
+    expect(attempted.sort()).to.deep.equal(entries.map(([tag]) => tag).sort());
+    expect(failures.sort()).to.deep.equal([]);
   });
 
   it('names optional peers as a sorted list of non-empty package names for known tags', () => {

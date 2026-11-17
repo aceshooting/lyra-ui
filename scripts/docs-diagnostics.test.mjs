@@ -140,6 +140,56 @@ test('rejects map-anchor driver diagnostics outside the exact warning and iframe
   for (const fixture of fixtures) assert.equal(findUnexpectedDiagnostics(fixture).length, 1);
 });
 
+const modelViewerDriverWarning = {
+  type: 'warning',
+  text: '[.WebGL-0x341c02f83e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels',
+  url: 'http://127.0.0.1:6006/iframe.html?id=documentviewer-modelviewer--docs&viewMode=docs',
+};
+
+test('accepts both exact model-viewer driver performance warning forms on its docs iframe', () => {
+  for (const suffix of ['', ' (this message will no longer repeat)']) {
+    const fixture = resultWith('documentviewer-modelviewer--docs', 'console', {
+      ...modelViewerDriverWarning,
+      text: modelViewerDriverWarning.text + suffix,
+    });
+    assert.deepEqual(findUnexpectedDiagnostics(fixture), []);
+  }
+});
+
+test('rejects model-viewer driver diagnostics outside the exact warning and iframe boundary', () => {
+  const fixtures = [
+    resultWith('checkbox--docs', 'console', modelViewerDriverWarning),
+    resultWith('map-map-anchor--docs', 'console', modelViewerDriverWarning),
+    resultWith('documentviewer-modelviewer--docs', 'pageError', modelViewerDriverWarning.text),
+    ...[
+      { type: 'error' },
+      { type: 'log' },
+      { type: undefined },
+      { url: undefined },
+      { url: '' },
+      { url: 'not a URL' },
+      { url: 'http://127.0.0.1:6006/other.html?id=documentviewer-modelviewer--docs&viewMode=docs' },
+      { url: 'http://127.0.0.1:6006/assets/model-viewer.js' },
+      { url: 'http://127.0.0.1:6006/iframe.html?viewMode=docs' },
+      { url: 'http://127.0.0.1:6006/iframe.html?id=map-map-anchor--docs&viewMode=docs' },
+      { url: 'http://127.0.0.1:6006/iframe.html?id=documentviewer-modelviewer--docs-extra&viewMode=docs' },
+      { url: 'http://127.0.0.1:6006/iframe.html?id=documentviewer-modelviewer--docs' },
+      { url: 'http://127.0.0.1:6006/iframe.html?id=documentviewer-modelviewer--docs&viewMode=story' },
+      { text: modelViewerDriverWarning.text + ' unexpected suffix' },
+      { text: 'unexpected prefix ' + modelViewerDriverWarning.text },
+      { text: modelViewerDriverWarning.text.replace('Performance', 'Error') },
+      { text: modelViewerDriverWarning.text.replace('ReadPixels', 'context lost') },
+      { text: 'WARNING: Too many active WebGL contexts. Oldest context will be lost.' },
+      { text: 'WebGL: CONTEXT_LOST_WEBGL: loseContext: context lost' },
+      { text: 'TypeError: Failed to fetch' },
+    ].map((change) => resultWith('documentviewer-modelviewer--docs', 'console', {
+      ...modelViewerDriverWarning,
+      ...change,
+    })),
+  ];
+  for (const fixture of fixtures) assert.equal(findUnexpectedDiagnostics(fixture).length, 1);
+});
+
 test('fails a docs page with no Show code controls', () => {
   assert.match(
     structuralDocsFailure({

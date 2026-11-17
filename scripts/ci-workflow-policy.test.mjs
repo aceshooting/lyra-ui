@@ -99,52 +99,101 @@ test('the coverage shard step runs under the strict console gate', () => {
   assert.match(step.slice(at, at + 400), /WTR_STRICT_CONSOLE: "1"/u);
 });
 
-test('the complete DOCX group runs once per engine with Firefox owned by platform shard 2', () => {
-  const platform = job(read('.github/workflows/ci.yml'), 'platform-contracts');
+function platformRows(platform) {
   const matrix = platform.slice(platform.indexOf('        include:\n'), platform.indexOf('    runs-on:'));
-  const rows = [...matrix.matchAll(/^ {10}- browser: ([^\n]+)\n([\s\S]*?)(?=^ {10}- browser:|$(?![\s\S]))/gmu)]
+  return [...matrix.matchAll(/^ {10}- browser: ([^\n]+)\n([\s\S]*?)(?=^ {10}- browser:|$(?![\s\S]))/gmu)]
     .map(([, browser, body]) => ({
       browser,
       install_browser: body.match(/^ {12}install_browser: (\S+)$/mu)?.[1],
+      docx_browser: body.match(/^ {12}docx_browser: (\S+)$/mu)?.[1].replace(/^'|'$/gu, ''),
       shard_index: Number(body.match(/^ {12}shard_index: (\d+)$/mu)?.[1]),
     }));
-  assert.deepEqual(rows.map((row) => `${row.browser}/${row.shard_index}`), [
-    'chromium/1', 'chrome/1', 'edge/1', 'firefox/1', 'firefox/2', 'safari/1',
-  ], 'evaluate the live complete platform matrix');
+}
+
+test('the complete DOCX group runs once per engine on the assigned platform runners', () => {
+  const platform = job(read('.github/workflows/ci.yml'), 'platform-contracts');
+  const rows = platformRows(platform);
+  assert.deepEqual(rows.map(row => [`${row.browser}/${row.shard_index}`, row.docx_browser]), [
+    ['chromium/1', 'chromium'], ['chrome/1', ''], ['edge/1', ''],
+    ['firefox/1', 'webkit'], ['firefox/2', 'firefox'], ['safari/1', ''],
+  ], 'retain every platform leg while assigning one DOCX engine per runner');
+  assert.match(platform, /max-parallel: 6/u);
   const steps = platform.split(/\n(?= {6}- )/u);
-  for (const name of [
-    "Download this run's lyra-ui build for the DOCX editor",
-    'Qualify the experimental DOCX editor',
-    'Archive DOCX editor qualification',
-  ]) {
-    const matches = steps.filter((step) => step.startsWith(`      - name: ${name}\n`));
+  for (const name of ['Qualify the experimental DOCX editor', 'Archive DOCX editor qualification']) {
+    const matches = steps.filter(step => step.startsWith(`      - name: ${name}\n`));
     assert.equal(matches.length, 1, `${name} exists exactly once`);
     const expression = matches[0].match(/^ {8}if: (.+)$/mu)?.[1];
     assert.ok(expression, `${name} has an explicit owner condition`);
-    // These conditions use the common JavaScript/GitHub expression subset: comparisons,
-    // parentheses, boolean operators and always(). Evaluate each real row independently.
-    const owners = rows.filter((row) => runInNewContext(expression, {
+    const owners = rows.filter(row => runInNewContext(expression, {
       matrix: row, always: () => true,
-    }, { timeout: 100 })).map((row) => `${row.install_browser}/${row.shard_index}`);
-    assert.deepEqual(owners, ['chromium/1', 'firefox/2', 'webkit/1'], `${name} keeps the same owners`);
+    }, { timeout: 100 }));
+    assert.deepEqual(owners.map(row => row.docx_browser).sort(), ['chromium', 'firefox', 'webkit']);
     if (name.startsWith('Archive')) {
       assert.match(expression, /^always\(\) &&/u, 'failed DOCX runs still archive evidence');
-      assert.match(matches[0], /name: docx-editor-\$\{\{ matrix\.install_browser \}\}/u);
+      assert.match(matches[0], /name: docx-editor-\$\{\{ matrix\.docx_browser \}\}-\$\{\{ github\.run_attempt \}\}/u);
+      for (const path of ['.browser-output/browser-evidence.json', '.browser-evidence',
+        'coverage/coverage-summary.json', 'coverage/coverage-metadata.json', 'coverage/coverage-gaps.json', 'coverage/lcov.info']) {
+        assert.ok(matches[0].includes(`packages/lyra-docs/${path}\n`), `retain ${path}`);
+      }
+      assert.match(matches[0], /if-no-files-found: warn\n {10}retention-days: 7/u);
+    } else {
+      assert.match(matches[0], /DOCX_BROWSERS: \$\{\{ matrix\.docx_browser \}\}/u);
+      assert.match(matches[0], /if \[ "\$DOCX_BROWSERS" = 'chromium' \]; then\n {12}pnpm --filter @aceshooting\/lyra-docs test:coverage\n {12}node scripts\/prepare-codecov-lcov\.mjs lyra-docs\n {10}else\n {12}pnpm --filter @aceshooting\/lyra-docs build\n {12}pnpm --filter @aceshooting\/lyra-docs test:browser/u);
     }
-    if (name.startsWith('Qualify')) {
-      assert.match(matches[0], /DOCX_BROWSERS: \$\{\{ matrix\.install_browser \}\}/u);
-      assert.match(matches[0], /pnpm --filter @aceshooting\/lyra-docs test:coverage/u);
-      assert.match(matches[0], /pnpm --filter @aceshooting\/lyra-docs test:browser/u);
+  }
+  const download = steps.find(step => step.startsWith("      - name: Download this run's lyra-ui build for the DOCX editor and generated views\n"));
+  assert.ok(download);
+  const condition = download.match(/^ {8}if: (.+)$/mu)?.[1];
+  const owners = rows.filter(row => runInNewContext(condition, { matrix: row }, { timeout: 100 }));
+  assert.deepEqual(owners.map(row => `${row.browser}/${row.shard_index}`), ['chromium/1', 'firefox/1', 'firefox/2', 'safari/1']);
+  assert.match(download, /name: lyra-ui-dist\n {10}path: packages\/lyra-ui\/dist/u);
+  assert.ok(steps.indexOf(download) < steps.findIndex(step => step.startsWith('      - name: Qualify the experimental DOCX editor\n')));
+});
+
+test('the existing docs runners exhaustively share Show Code and retain all three theme engines', () => {
+  const workflow = read('.github/workflows/ci.yml');
+  const allocations = [
+    ['docs_theme_builder', 'docs-and-storybook / theme builder', '1', ['firefox', 'webkit']],
+    ['docs_show_code', 'docs-and-storybook / show-code', '2', ['chromium']],
+  ];
+  const allEngines = [];
+  for (const [id, name, shard, engines] of allocations) {
+    const body = job(workflow, id);
+    assert.ok(body.includes(`    name: ${name}\n`));
+    assert.match(body, /^ {4}needs: docs_build$/mu);
+    assert.match(body, /^ {4}timeout-minutes: 30$/mu);
+    assert.match(body, /name: storybook-static\n {10}path: storybook-static/u);
+    assert.match(body, /options: --shm-size=2g -v \/usr\/share\/fonts:\/usr\/share\/host-fonts:ro/u);
+    assert.doesNotMatch(body, /continue-on-error:|DOCS_CHECK_CONCURRENCY|--concurrency/u);
+    const steps = body.split(/\n(?= {6}- )/u);
+    const crawl = steps.filter(step => /^ {8}run: pnpm docs:check-show-code$/mu.test(step));
+    assert.equal(crawl.length, 1);
+    assert.ok(crawl[0].includes(`          DOCS_CHECK_SHARD_INDEX: '${shard}'\n`));
+    assert.match(crawl[0], /^ {10}DOCS_CHECK_SHARD_TOTAL: '2'$/mu);
+    const themeSteps = steps.filter(step => step.includes('run: pnpm check:theme-builder --browser '));
+    const actualEngines = themeSteps.map(step => step.match(/run: pnpm check:theme-builder --browser (\S+)/u)[1]);
+    assert.deepEqual(actualEngines, engines);
+    allEngines.push(...actualEngines);
+    for (const step of themeSteps) {
+      assert.match(step, /if: \$\{\{ !cancelled\(\) \}\}/u, 'independent theme checks run after a failed crawl');
+      assert.ok(steps.indexOf(step) > steps.indexOf(crawl[0]), 'one browser workload runs at a time');
     }
+  }
+  assert.deepEqual(allEngines.sort(), ['chromium', 'firefox', 'webkit']);
+  assert.equal((workflow.match(/run: pnpm docs:check-show-code\n/gu) ?? []).length, 2);
+  assert.equal((workflow.match(/run: pnpm check:theme-builder --browser /gu) ?? []).length, 3);
+  const aggregate = job(workflow, 'docs-and-storybook');
+  assert.match(aggregate, /^ {4}if: \$\{\{ always\(\) \}\}$/mu);
+  for (const [id] of allocations) {
+    assert.ok(aggregate.includes(`      - ${id}\n`));
+    assert.ok(aggregate.includes(`needs.${id}.result`));
   }
 });
 
 test('generated UI has one browser and durable-host qualification per engine plus built static contracts', () => {
   const workflow = read('.github/workflows/ci.yml');
   const platform = job(workflow, 'platform-contracts');
-  const matrix = platform.slice(platform.indexOf('        include:\n'), platform.indexOf('    runs-on:'));
-  const rows = [...matrix.matchAll(/^ {10}- browser: ([^\n]+)\n([\s\S]*?)(?=^ {10}- browser:|$(?![\s\S]))/gmu)]
-    .map(([, browser, body]) => ({ browser, install_browser: body.match(/^ {12}install_browser: (\S+)$/mu)?.[1], shard_index: Number(body.match(/^ {12}shard_index: (\d+)$/mu)?.[1]) }));
+  const rows = platformRows(platform);
   assert.equal(rows.length, 6, 'test all real matrix legs, including branded channels and both Firefox shards');
   const steps = platform.split(/\n(?= {6}- )/u);
   const matches = steps.filter(step => step.startsWith('      - name: Qualify generated views and the saved-dashboard host\n'));
@@ -155,7 +204,11 @@ test('generated UI has one browser and durable-host qualification per engine plu
   const owners = rows.filter(row => runInNewContext(condition, { matrix: row }, { timeout: 100 })).map(row => `${row.install_browser}/${row.shard_index}`);
   assert.deepEqual(owners, ['chromium/1', 'firefox/2', 'webkit/1']);
   const download = steps.find(candidate => candidate.includes("name: Download this run's lyra-ui build for the DOCX editor"));
-  assert.equal(download.match(/^ {8}if: (.+)$/mu)?.[1], condition, 'the shared UI declarations exist in every selected leg');
+  const downloadCondition = download.match(/^ {8}if: (.+)$/mu)?.[1];
+  for (const row of rows.filter(row => runInNewContext(condition, { matrix: row }, { timeout: 100 }))) {
+    assert.equal(runInNewContext(downloadCondition, { matrix: row }, { timeout: 100 }), true,
+      `the shared UI declarations exist for ${row.browser}/${row.shard_index}`);
+  }
   assert.ok(steps.indexOf(download) < steps.indexOf(step));
   assert.match(step, /WTR_BROWSER: \$\{\{ matrix\.install_browser \}\}/u);
   assert.match(step, /WTR_STRICT_CONSOLE: "1"/u);

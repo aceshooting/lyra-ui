@@ -91,6 +91,24 @@ const DOCS_DIAGNOSTIC_ALLOWLIST = Object.freeze([
     message:
       /^\[\.WebGL-[^\]]+\]GL Driver Message \(OpenGL, Performance, GL_CLOSE_PATH_NV, High\): GPU stall due to ReadPixels(?: \(this message will no longer repeat\))?$/,
   },
+  // The model-viewer docs also mount a real WebGL renderer. Scope its native driver
+  // performance warning to this docs iframe; renderer errors and context loss still fail.
+  {
+    pageId: 'documentviewer-modelviewer--docs',
+    kind: 'console',
+    type: 'warning',
+    url: (value) => {
+      try {
+        const url = new URL(value);
+        return url.pathname === '/iframe.html' && url.searchParams.get('id') === 'documentviewer-modelviewer--docs' &&
+          url.searchParams.get('viewMode') === 'docs';
+      } catch {
+        return false;
+      }
+    },
+    message:
+      /^\[\.WebGL-[^\]]+\]GL Driver Message \(OpenGL, Performance, GL_CLOSE_PATH_NV, High\): GPU stall due to ReadPixels(?: \(this message will no longer repeat\))?$/,
+  },
   {
     pageId: 'map--docs',
     kind: 'console',

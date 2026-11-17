@@ -121,16 +121,29 @@ it('registers nothing from the root, exactly one tag from a granular entry, and 
     expect(definedAmong(registry, packageTags).join(',')).to.equal('');
 
     // Representative exact and wildcard subpaths resolve without registering a component.
-    const localization = await entrypoints.importLocalization();
-    const classEntry = await entrypoints.importEmptyClass();
-    const helperEntry = await entrypoints.importCsv();
-    const utilities = await entrypoints.importUtilities();
-    const positioner = await entrypoints.importPositioner();
-    const agentStatusPresentation = await entrypoints.importAgentStatusPresentation();
-    const approvalState = await entrypoints.importApprovalState();
-    const stackTraceParse = await entrypoints.importStackTraceParse();
-    const traceTreeSpan = await entrypoints.importTraceTreeSpan();
-    const widgetDefaultRegistry = await entrypoints.importWidgetDefaultRegistry();
+    const [
+      localization,
+      classEntry,
+      helperEntry,
+      utilities,
+      positioner,
+      agentStatusPresentation,
+      approvalState,
+      stackTraceParse,
+      traceTreeSpan,
+      widgetDefaultRegistry,
+    ] = await Promise.all([
+      entrypoints.importLocalization(),
+      entrypoints.importEmptyClass(),
+      entrypoints.importCsv(),
+      entrypoints.importUtilities(),
+      entrypoints.importPositioner(),
+      entrypoints.importAgentStatusPresentation(),
+      entrypoints.importApprovalState(),
+      entrypoints.importStackTraceParse(),
+      entrypoints.importTraceTreeSpan(),
+      entrypoints.importWidgetDefaultRegistry(),
+    ]);
     expect(typeof localization['registerLyraLocale']).to.equal('function');
     expect(typeof localization['setLyraLocale']).to.equal('function');
     expect(typeof localization['resolveLyraString']).to.equal('function');

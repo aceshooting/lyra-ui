@@ -254,8 +254,13 @@ real data dependencies, so a red check names the phase to reproduce:
    `TS2305: has no exported member`.
 5. **`docs-and-storybook`**: `docs_build` builds the packages needed by the map worker and document
    engine stories, runs `pnpm docs:build` once, verifies the generated sitemap is fresh and uploads
-   `storybook-static/`. The Storybook contract crawl and the Show Code crawl run in parallel against
-   that artifact, and the stable `docs-and-storybook` aggregate requires both.
+   `storybook-static/`. The Storybook contract crawl and two Show Code shards run against that
+   artifact. The existing theme-builder job owns Show Code shard 1 plus the Firefox/WebKit theme
+   checks; the show-code job owns shard 2 plus the Chromium theme check. Each job runs its tasks
+   sequentially, retaining the crawl's four-page default. The stable `docs-and-storybook` aggregate
+   requires all three jobs. `DOCS_CHECK_SHARD_INDEX` and `DOCS_CHECK_SHARD_TOTAL` select disjoint,
+   exhaustive partitions of sorted docs IDs; missing coordinates, duplicates, empty shards and
+   combinations with manual `--start`/`--end` ranges fail. The ordinary local command remains complete.
 6. **`visual-regression`** is blocking (baselines and determinism notes:
    `packages/lyra-ui/visual-baselines/README.md`). Stories expand to axis-level captures, some
    compared with tracked baselines and some evidence-only, lexically sorted and round-robin
@@ -275,8 +280,10 @@ Firefox in two shards, and Chromium, Chrome, Edge and Safari (WebKit) in one eac
 pinned Playwright image; branded Chrome and Edge use the runner VM with bounded browser setup. Every
 leg installs with `--frozen-lockfile` and enables strict browser console checking. The packed-consumer
 jobs cover the Node floor, declarations, tree shaking and framework recipes without repeating that
-matrix per browser. DOCX qualification runs on Firefox shard 2, leaving the map and 3D companions
-on Firefox shard 1; Chromium and WebKit qualify DOCX on their single shard.
+matrix per browser. The explicit `docx_browser` assignment runs Chromium DOCX on the Chromium leg,
+Firefox DOCX on Firefox shard 2 and WebKit DOCX on Firefox shard 1, using the image's bundled engines.
+Every DOCX engine keeps its own evidence artifact. Generated-view qualification stays on Chromium,
+Firefox shard 2 and Safari; their shared UI build download also covers the WebKit DOCX owner.
 Node 22 uses `package.json#packageManager` (`pnpm@12.21.0`).
 
 ### Package coverage reporting

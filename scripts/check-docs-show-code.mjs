@@ -1,10 +1,12 @@
 #!/usr/bin/env node
+import { createHash } from 'node:crypto';
 import { createReadStream, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { findUnexpectedDiagnostics, structuralDocsFailure } from './docs-diagnostics.mjs';
+import { parseShowCodeSelectionOptions, selectShowCodeDocs } from './docs-show-code-selection.mjs';
 
 const args = new Map(
   process.argv.slice(2).flatMap((arg) => {
@@ -12,6 +14,12 @@ const args = new Map(
     return value.length ? [[key, value.join('=')]] : [];
   }),
 );
+const selectionOptions = parseShowCodeSelectionOptions({
+  start: args.get('start'),
+  end: args.get('end'),
+  shardIndex: process.env.DOCS_CHECK_SHARD_INDEX,
+  shardTotal: process.env.DOCS_CHECK_SHARD_TOTAL,
+});
 const configuredUrl = args.get('url') ?? process.env.DOCS_URL;
 let localServer;
 let baseUrl = configuredUrl;
@@ -48,8 +56,6 @@ if (!baseUrl) {
   await new Promise((resolve) => localServer.listen(0, '127.0.0.1', resolve));
   baseUrl = `http://127.0.0.1:${localServer.address().port}`;
 }
-const start = Number(args.get('start') ?? 0);
-const endArg = args.get('end');
 const requestedConcurrency = Number(args.get('concurrency') ?? process.env.DOCS_CHECK_CONCURRENCY ?? 4);
 const concurrency = Math.min(8, Math.max(1, Number.isFinite(requestedConcurrency) ? Math.trunc(requestedConcurrency) : 4));
 
@@ -232,66 +238,76 @@ async function inspectDoc(context, doc) {
 // (64MB on the runners, and by default in a container), this sweep drives several pages at
 // once across every docs entry, and exhausting it kills the renderer with no CDP error --
 // which reads as a stray action timeout on whichever story happened to be mid-scroll.
-const browser = await chromium.launch({ headless: true, args: ['--disable-dev-shm-usage'] });
-// One context for every doc: each doc still gets its own tab (its own navigation queue and session
-// storage), but they share the HTTP cache, so 282 loads don't re-fetch the same Storybook chunks.
-const context = await browser.newContext();
-const indexPage = await context.newPage();
-const index = await indexPage.goto(`${baseUrl}/index.json`, { waitUntil: 'domcontentloaded' });
-if (!index?.ok()) throw new Error(`Could not load ${baseUrl}/index.json (${index?.status() ?? 'no response'})`);
+let browser;
+try {
+  browser = await chromium.launch({ headless: true, args: ['--disable-dev-shm-usage'] });
+  // One context for every doc: each doc still gets its own tab (its own navigation queue and session
+  // storage), but they share the HTTP cache, so 282 loads don't re-fetch the same Storybook chunks.
+  const context = await browser.newContext();
+  const indexPage = await context.newPage();
+  const index = await indexPage.goto(`${baseUrl}/index.json`, { waitUntil: 'domcontentloaded' });
+  if (!index?.ok()) throw new Error(`Could not load ${baseUrl}/index.json (${index?.status() ?? 'no response'})`);
 
-const entries = await indexPage.evaluate(() =>
-  fetch(new URL('index.json', location.href)).then((response) => response.json()),
-);
-await indexPage.close();
-const docs = Object.values(entries.entries)
-  .filter((entry) => entry.type === 'docs')
-  .map(({ id, title, importPath }) => ({ id, title, importPath }));
-const end = endArg === undefined ? docs.length - 1 : Number(endArg);
-const selected = docs.slice(start, end + 1);
-const results = new Array(selected.length);
+  const entries = await indexPage.evaluate(() =>
+    fetch(new URL('index.json', location.href)).then((response) => response.json()),
+  );
+  await indexPage.close();
+  const docs = Object.values(entries.entries)
+    .filter((entry) => entry.type === 'docs')
+    .map(({ id, title, importPath }) => ({ id, title, importPath }));
+  const { selected, inventoryIds, range, shard } = selectShowCodeDocs(docs, selectionOptions);
+  const results = new Array(selected.length);
 
-const startedAt = Date.now();
-let cursor = 0;
-await Promise.all(
-  Array.from({ length: Math.min(concurrency, selected.length) }, async () => {
-    while (cursor < selected.length) {
-      const position = cursor;
-      cursor += 1;
-      results[position] = await inspectDoc(context, selected[position]);
-    }
-  }),
-);
-const elapsedMs = Date.now() - startedAt;
+  const startedAt = Date.now();
+  let cursor = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, selected.length) }, async () => {
+      while (cursor < selected.length) {
+        const position = cursor;
+        cursor += 1;
+        results[position] = await inspectDoc(context, selected[position]);
+      }
+    }),
+  );
+  const elapsedMs = Date.now() - startedAt;
 
-await context.close();
-await browser.close();
-localServer?.close();
+  await context.close();
 
-const structuralFailures = results.filter((result) => result.failure);
-const diagnosticPages = results.filter(
-  (result) =>
-    result.diagnostics.console.length ||
-    result.diagnostics.pageErrors.length ||
-    result.diagnostics.requests.length ||
-    result.diagnostics.responses.length ||
-    result.diagnostics.navigations.length,
-);
-const diagnosticFailures = results
-  .map((result) => ({ ...result, unexpectedDiagnostics: findUnexpectedDiagnostics(result) }))
-  .filter((result) => result.unexpectedDiagnostics.length > 0);
-const summary = {
-  url: baseUrl,
-  range: [start, end],
-  concurrency,
-  elapsedMs,
-  pages: results.length,
-  controls: results.reduce((total, result) => total + result.clicked + (result.remaining ?? 0), 0),
-  clicked: results.reduce((total, result) => total + result.clicked, 0),
-  structuralFailures,
-  diagnosticPages,
-  diagnosticFailures,
-};
+  const structuralFailures = results.filter((result) => result.failure);
+  const diagnosticPages = results.filter(
+    (result) =>
+      result.diagnostics.console.length ||
+      result.diagnostics.pageErrors.length ||
+      result.diagnostics.requests.length ||
+      result.diagnostics.responses.length ||
+      result.diagnostics.navigations.length,
+  );
+  const diagnosticFailures = results
+    .map((result) => ({ ...result, unexpectedDiagnostics: findUnexpectedDiagnostics(result) }))
+    .filter((result) => result.unexpectedDiagnostics.length > 0);
+  const summary = {
+    url: baseUrl,
+    range,
+    shard,
+    inventoryCount: inventoryIds.length,
+    inventorySha256: createHash('sha256').update(JSON.stringify(inventoryIds)).digest('hex'),
+    selectedIds: selected.map(doc => doc.id),
+    concurrency,
+    elapsedMs,
+    pages: results.length,
+    controls: results.reduce((total, result) => total + result.clicked + (result.remaining ?? 0), 0),
+    clicked: results.reduce((total, result) => total + result.clicked, 0),
+    structuralFailures,
+    diagnosticPages,
+    diagnosticFailures,
+  };
 
-console.log(JSON.stringify(summary, null, 2));
-process.exitCode = structuralFailures.length || diagnosticFailures.length ? 1 : 0;
+  console.log(JSON.stringify(summary, null, 2));
+  process.exitCode = structuralFailures.length || diagnosticFailures.length ? 1 : 0;
+} finally {
+  try {
+    await browser?.close();
+  } finally {
+    localServer?.close();
+  }
+}

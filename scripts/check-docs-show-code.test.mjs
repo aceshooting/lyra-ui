@@ -6,8 +6,18 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import './docs-show-code-selection.test.mjs';
+import './docs-show-code-selection.property.test.mjs';
 
 const checker = fileURLToPath(new URL('./check-docs-show-code.mjs', import.meta.url));
+
+function checkerEnvironment(overrides = {}) {
+  const environment = { ...process.env };
+  // These regression fixtures own their inventories, independently of the CI crawl's shard.
+  delete environment.DOCS_CHECK_SHARD_INDEX;
+  delete environment.DOCS_CHECK_SHARD_TOTAL;
+  return { ...environment, ...overrides };
+}
 
 test('the local docs server supports streaming WebAssembly compilation', async t => {
   const directory = await mkdtemp(join(tmpdir(), 'lyra-show-code-wasm-'));
@@ -26,7 +36,7 @@ test('the local docs server supports streaming WebAssembly compilation', async t
     </script>`);
   const result = await new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [checker, '--concurrency=1'], {
-      env: { ...process.env, STORYBOOK_STATIC_DIR: directory, DOCS_URL: '' },
+      env: checkerEnvironment({ STORYBOOK_STATIC_DIR: directory, DOCS_URL: '' }),
       stdio: ['ignore', 'pipe', 'pipe'], timeout: 30_000,
     });
     let stdout = '';
@@ -90,6 +100,7 @@ async function inspectFixture(t, { delayedSource = false, initialDelay = 0, neve
   const url = `http://127.0.0.1:${server.address().port}`;
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [checker, `--url=${url}`, '--concurrency=1'], {
+      env: checkerEnvironment(),
       stdio: ['ignore', 'pipe', 'pipe'],
       timeout: 90_000,
     });
@@ -148,4 +159,69 @@ test('expands offscreen source controls without scrolling into unrelated demos',
   assert.equal(summary.clicked, 1);
   assert.deepEqual(summary.structuralFailures, []);
   assert.deepEqual(summary.diagnosticFailures, []);
+});
+
+test('the Show Code CLI crawls both shards completely and retains diagnostic failures', { timeout: 60_000 }, async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'lyra-show-code-shards-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  await writeFile(join(directory, 'index.json'), JSON.stringify({ entries: Object.fromEntries(
+    ['c', 'b', 'a'].map(id => [id, {
+      id, type: 'docs', title: id, importPath: './src/components/fixture.stories.ts',
+    }]),
+  ) }));
+  await writeFile(join(directory, 'iframe.html'), `<!doctype html>
+    <body class="sb-show-main">
+      <button role="switch" aria-controls="source" onclick="this.textContent='Hide code'">Show code</button>
+      <pre id="source">Rendered source</pre>
+      <script>
+        if (new URLSearchParams(location.search).get('id') === 'b') console.error('Broken shard fixture');
+      </script>
+    </body>`);
+  const runs = [];
+  for (const shard of ['1', '2']) {
+    const result = await new Promise((resolve, reject) => {
+      const child = spawn(process.execPath, [checker, '--concurrency=1'], {
+        env: checkerEnvironment({ STORYBOOK_STATIC_DIR: directory, DOCS_URL: '',
+          DOCS_CHECK_SHARD_INDEX: shard, DOCS_CHECK_SHARD_TOTAL: '2' }),
+        stdio: ['ignore', 'pipe', 'pipe'], timeout: 25_000,
+      });
+      let stdout = '';
+      let stderr = '';
+      child.stdout.on('data', chunk => { stdout += chunk; });
+      child.stderr.on('data', chunk => { stderr += chunk; });
+      child.on('error', reject);
+      child.on('close', code => resolve({ code, stdout, stderr }));
+    });
+    assert.equal(result.code, shard === '1' ? 0 : 1, result.stderr || result.stdout);
+    runs.push(JSON.parse(result.stdout));
+  }
+  assert.deepEqual(runs.map(run => run.selectedIds), [['a', 'c'], ['b']]);
+  assert.deepEqual(runs.map(run => run.pages), [2, 1]);
+  assert.deepEqual(runs.map(run => run.clicked), [2, 1]);
+  assert.deepEqual(runs.map(run => run.inventoryCount), [3, 3]);
+  assert.equal(runs[0].inventorySha256, runs[1].inventorySha256);
+  assert.deepEqual(runs.map(run => run.shard), [{ index: 1, total: 2 }, { index: 2, total: 2 }]);
+  assert.deepEqual(runs[0].diagnosticFailures, []);
+  assert.deepEqual(runs[1].diagnosticFailures.map(page => page.id), ['b']);
+});
+
+test('an empty sharded docs inventory fails and closes the local server', { timeout: 30_000 }, async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'lyra-show-code-empty-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  await writeFile(join(directory, 'index.json'), JSON.stringify({ entries: {} }));
+  const result = await new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [checker], {
+      env: checkerEnvironment({ STORYBOOK_STATIC_DIR: directory, DOCS_URL: '',
+        DOCS_CHECK_SHARD_INDEX: '1', DOCS_CHECK_SHARD_TOTAL: '2' }),
+      stdio: ['ignore', 'pipe', 'pipe'], timeout: 25_000,
+    });
+    let stderr = '';
+    child.stdout.resume();
+    child.stderr.on('data', chunk => { stderr += chunk; });
+    child.on('error', reject);
+    child.on('close', (code, signal) => resolve({ code, signal, stderr }));
+  });
+  assert.equal(result.code, 1, result.stderr);
+  assert.equal(result.signal, null, 'validation failure exits without waiting for the subprocess timeout');
+  assert.match(result.stderr, /Show Code docs inventory is empty/u);
 });

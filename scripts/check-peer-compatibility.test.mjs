@@ -302,6 +302,154 @@ async function loadChecker() {
   return import('./check-peer-compatibility.mjs');
 }
 
+const PEER_CONSUMER_LABELS = [
+  'chart-floor/pnpm',
+  'chart-floor/npm',
+  'markdown-math-floor/pnpm',
+  'markdown-math-floor/npm',
+  'docx-floor/pnpm',
+  'docx-floor/npm',
+  'current-all/pnpm',
+  'current-all/npm',
+];
+
+test('runs every peer consumer exactly once with at most two active consumers', async () => {
+  const { resolvePeerProfiles, runPeerConsumers } = await loadChecker();
+  const profiles = resolvePeerProfiles(authorityFixture());
+  const gates = new Map(PEER_CONSUMER_LABELS.map((label) => [label, Promise.withResolvers()]));
+  const started = [];
+  const finished = [];
+  let active = 0;
+  let peakActive = 0;
+  const execution = runPeerConsumers(profiles, async ({ profile, packageManager }) => {
+    const label = `${profile.id}/${packageManager}`;
+    started.push(label);
+    active += 1;
+    peakActive = Math.max(peakActive, active);
+    await gates.get(label).promise;
+    active -= 1;
+    finished.push(label);
+  });
+  try {
+    assert.deepEqual(started, PEER_CONSUMER_LABELS.slice(0, 2));
+    for (let index = 0; index < PEER_CONSUMER_LABELS.length; index += 1) {
+      assert.ok(started.includes(PEER_CONSUMER_LABELS[index]));
+      gates.get(PEER_CONSUMER_LABELS[index]).resolve();
+      await new Promise((resolveTurn) => setImmediate(resolveTurn));
+      assert.ok(active <= 2, 'releasing one consumer never starts more than one replacement');
+    }
+    await execution;
+    assert.deepEqual(started, PEER_CONSUMER_LABELS);
+    assert.deepEqual(finished, PEER_CONSUMER_LABELS);
+    assert.equal(peakActive, 2, 'the queue overlaps consumers rather than remaining serial');
+    assert.equal(active, 0);
+  } finally {
+    for (const gate of gates.values()) gate.resolve();
+    await execution;
+  }
+});
+
+test('keeps shared peer resources alive until all consumers settle after failures', { timeout: 10_000 }, async () => {
+  const {
+    resolvePeerProfiles,
+    runPeerConsumers,
+    stagePeerTarball,
+    withPeerTarballServer,
+    withTemporaryPeerWorkspace,
+  } = await loadChecker();
+  const profiles = resolvePeerProfiles(authorityFixture());
+  const firstFailure = new Error('first consumer failed');
+  const laterFailure = new Error('later consumer failed synchronously');
+  const failFirst = Promise.withResolvers();
+  const releaseSecond = Promise.withResolvers();
+  const releaseLast = Promise.withResolvers();
+  const lastStarted = Promise.withResolvers();
+  const started = [];
+  const finished = [];
+  const bytes = lyraTarball();
+  let workspace;
+  let staged;
+  let probeUrl;
+  let settled = false;
+  let cleaned = false;
+  const execution = withTemporaryPeerWorkspace(async (createdWorkspace) => {
+    workspace = createdWorkspace;
+    const sourcePath = join(workspace, 'source.tgz');
+    await writeFile(sourcePath, bytes);
+    staged = await stagePeerTarball({
+      sourcePath,
+      workspace,
+      expectedPackage: { name: '@aceshooting/lyra-ui', version: '14.0.0' },
+    });
+    await withPeerTarballServer(staged, async (transport) => {
+      probeUrl = transport.specifierFor('resource-probe');
+      await runPeerConsumers(profiles, ({ profile, packageManager }) => {
+        const label = `${profile.id}/${packageManager}`;
+        started.push(label);
+        if (label === 'markdown-math-floor/pnpm') throw laterFailure;
+        return (async () => {
+          if (label === 'chart-floor/pnpm') {
+            await failFirst.promise;
+            throw firstFailure;
+          }
+          if (label === 'chart-floor/npm') await releaseSecond.promise;
+          if (label === 'current-all/npm') {
+            lastStarted.resolve();
+            await releaseLast.promise;
+          }
+          const response = await fetch(transport.specifierFor(label));
+          assert.deepEqual(Buffer.from(await response.arrayBuffer()), bytes);
+          transport.assertConsumed(label);
+          finished.push(label);
+        })();
+      });
+    });
+  }, {
+    removeWorkspace: async (createdWorkspace) => {
+      cleaned = true;
+      await rm(createdWorkspace, { recursive: true, force: true });
+    },
+  });
+  const outcome = execution.then(
+    () => { settled = true; return undefined; },
+    (error) => { settled = true; return error; },
+  );
+  try {
+    failFirst.resolve();
+    await Promise.race([
+      lastStarted.promise,
+      outcome.then((error) => { throw error ?? new Error('Peer consumers returned before the final case started.'); }),
+    ]);
+    assert.deepEqual(started, PEER_CONSUMER_LABELS);
+    assert.equal(settled, false, 'a consumer rejection must not return control to resource cleanup');
+    assert.equal(cleaned, false);
+    assert.deepEqual(await readFile(staged.path), bytes);
+    const response = await fetch(probeUrl);
+    assert.deepEqual(Buffer.from(await response.arrayBuffer()), bytes, 'the tarball server remains available');
+    releaseSecond.resolve();
+    await new Promise((resolveTurn) => setImmediate(resolveTurn));
+    assert.equal(settled, false, 'the final active consumer still owns the shared resources');
+    assert.equal(cleaned, false);
+    releaseLast.resolve();
+    const error = await outcome;
+    assert.ok(error instanceof AggregateError);
+    assert.deepEqual(new Set(error.errors), new Set([firstFailure, laterFailure]));
+    assert.match(error.message, /chart-floor\/pnpm/u);
+    assert.match(error.message, /markdown-math-floor\/pnpm/u);
+    assert.deepEqual(finished.sort(), PEER_CONSUMER_LABELS.filter((label) => ![
+      'chart-floor/pnpm', 'markdown-math-floor/pnpm',
+    ].includes(label)).sort());
+    assert.equal(cleaned, true);
+    await assert.rejects(access(workspace), /ENOENT/u);
+    await assert.rejects(fetch(probeUrl), /fetch failed/iu);
+  } finally {
+    failFirst.resolve();
+    releaseSecond.resolve();
+    releaseLast.resolve();
+    await outcome;
+  }
+});
+
 test('accepts the exact manifest, four-profile authority, dev bases, and current lock', async () => {
   const { validatePeerCompatibilityDocuments, resolvePeerProfiles } = await loadChecker();
   const fixture = validationFixture();

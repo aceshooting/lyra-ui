@@ -4628,6 +4628,38 @@ export async function assertExecutionToolchain({
   }
 }
 
+export async function runPeerConsumers(profiles, operation) {
+  const cases = profiles.flatMap((profile) =>
+    ['pnpm', 'npm'].map((packageManager) => ({ profile, packageManager })),
+  );
+  const failures = [];
+  let nextCase = 0;
+  const worker = async () => {
+    while (nextCase < cases.length) {
+      const index = nextCase;
+      nextCase += 1;
+      const consumer = cases[index];
+      try {
+        await operation(consumer);
+      } catch (error) {
+        failures[index] = { error, label: `${consumer.profile.id}/${consumer.packageManager}` };
+      }
+    }
+  };
+  // Workers retain each failure so both finish before their shared resources can be cleaned up.
+  await Promise.all([worker(), worker()]);
+  const rejected = failures.filter(Boolean);
+  if (rejected.length > 0) {
+    const details = rejected.map(({ error, label }) =>
+      `${label}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    throw new AggregateError(
+      rejected.map(({ error }) => error),
+      `Peer compatibility consumers failed:\n${details.join('\n')}`,
+    );
+  }
+}
+
 async function runAllProfiles({ authority, packageManifest, profiles, tarball: suppliedTarball }) {
   await withTemporaryPeerWorkspace(async (workspace) => {
     const sourceTarball = suppliedTarball
@@ -4642,18 +4674,14 @@ async function runAllProfiles({ authority, packageManifest, profiles, tarball: s
       workspace,
     });
     await withPeerTarballServer(stagedTarball, async (transport) => {
-      for (const profile of profiles) {
-        for (const packageManager of ['pnpm', 'npm']) {
-          await runConsumer({
-            authority,
-            packageManager,
-            profile,
-            stagedTarball,
-            transport,
-            workspace,
-          });
-        }
-      }
+      await runPeerConsumers(profiles, ({ profile, packageManager }) => runConsumer({
+        authority,
+        packageManager,
+        profile,
+        stagedTarball,
+        transport,
+        workspace,
+      }));
     });
     console.log('All four peer-compatibility profiles passed through strict pnpm and npm consumers.');
   });
