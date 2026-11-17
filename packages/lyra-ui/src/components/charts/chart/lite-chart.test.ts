@@ -190,6 +190,18 @@ function categoryAxisLabels(el: LyraLiteChart): SVGTextElement[] {
   );
 }
 
+function categoryEllipsisWidth(tick: SVGTextElement): number {
+  const measure = tick.cloneNode(false) as SVGTextElement;
+  measure.removeAttribute('data-full-label');
+  measure.textContent = '…';
+  tick.parentNode!.appendChild(measure);
+  try {
+    return measure.getComputedTextLength();
+  } finally {
+    measure.remove();
+  }
+}
+
 type TextBox = { left: number; right: number; top: number; bottom: number };
 
 /** Client-space box of an SVG `<text>` from its geometry box (`getBBox()` mapped through the
@@ -4138,7 +4150,14 @@ describe('lite-chart semantics and geometry', () => {
     expect(getComputedStyle(svg).overflow).to.equal('hidden');
 
     const svgRect = svg.getBoundingClientRect();
-    const labelRects = axisLabels.map((label) => textGeometryBox(label));
+    // Empty SVG text paints no box and can report geometry at the SVG origin.
+    const paintedLabels = axisLabels.filter((label) => label.getComputedTextLength() !== 0);
+    expect(paintedLabels.length, 'at least two boundary labels still paint').to.be.at.least(2);
+    expect(
+      paintedLabels[0] === axisLabels[0] && paintedLabels[paintedLabels.length - 1] === axisLabels[axisLabels.length - 1],
+      'both boundary labels remain part of the paint checks',
+    ).to.equal(true);
+    const labelRects = paintedLabels.map((label) => textGeometryBox(label));
     for (const rect of labelRects) {
       expect(rect.left).to.be.at.least(svgRect.left - 0.5);
       expect(rect.right).to.be.at.most(svgRect.right + 0.5);
@@ -4158,6 +4177,7 @@ describe('lite-chart semantics and geometry', () => {
       ></lr-lite-chart>
     `);
 
+    let retainedSupplementaryPrefix = false;
     for (const width of [304, 256, 208]) {
       const previousExtent = categoryAxisLabels(el)[0]?.getAttribute('data-label-extent');
       el.style.inlineSize = `${width}px`;
@@ -4173,12 +4193,52 @@ describe('lite-chart semantics and geometry', () => {
       for (let index = 0; index < ticks.length; index++) {
         const tick = ticks[index]!;
         const display = Array.from(tick.childNodes).find(node => node.nodeType === Node.TEXT_NODE)?.textContent ?? '';
-        expect(display.endsWith('…'), 'the long label is actually truncated').to.equal(true);
+        if (display === '') {
+          expect(categoryEllipsisWidth(tick), 'an empty tick is necessary only when the marker cannot fit')
+            .to.be.greaterThan(Number(tick.getAttribute('data-label-extent')));
+        } else {
+          expect(display.endsWith('…'), 'the long label is actually truncated').to.equal(true);
+          retainedSupplementaryPrefix ||= Array.from(display).some(character => character.length === 2);
+        }
         expect(/[\uD800-\uDFFF]/u.test(display), 'fitting never leaves an unpaired surrogate').to.equal(false);
         expect(labels[index]!.startsWith(display.slice(0, -1))).to.equal(true);
         expect(tick.getAttribute('aria-label')).to.equal(labels[index]);
         expect(tick.getComputedTextLength()).to.be.at.most(Number(tick.getAttribute('data-label-extent')) + 0.5);
       }
+    }
+    expect(retainedSupplementaryPrefix, 'nonempty fitting still exercises complete supplementary characters').to.equal(true);
+  });
+
+  it('retains category names without painting an oversized marker, then restores text when lanes grow', async () => {
+    const labels = ['😀😀', 'A🌍', 'AB🚀', '…'];
+    const el = await mount(html`<lr-lite-chart
+      style="inline-size:640px;--lr-chart-tick-font-size:32px"
+      .barX=${(index: number) => 80 + index * 4}
+      .labels=${labels}
+      .datasets=${[{ label: 'Revenue', data: [1, 2, 3, 4] }]}
+    ></lr-lite-chart>`);
+    const ticks = categoryAxisLabels(el);
+    expect(ticks.length).to.equal(labels.length);
+    for (let index = 0; index < ticks.length; index++) {
+      const tick = ticks[index]!;
+      const extent = Number(tick.getAttribute('data-label-extent'));
+      expect(Number.isFinite(extent) && extent >= 0).to.equal(true);
+      expect(categoryEllipsisWidth(tick), 'the public tick positions leave no room for a marker').to.be.greaterThan(extent);
+      expect(tick.textContent, 'no glyph paints outside a too-small lane').to.equal('');
+      expect(tick.getComputedTextLength()).to.equal(0);
+      expect(tick.getAttribute('aria-label')).to.equal(labels[index]);
+      expect(tick.getAttribute('data-full-label')).to.equal(labels[index]);
+    }
+    expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length, 'fitting does not remove observations').to.equal(labels.length);
+
+    el.barX = undefined;
+    await el.updateComplete;
+    const restored = categoryAxisLabels(el);
+    expect(restored.map(tick => tick.textContent), 'each fit restarts from the full source label').to.deep.equal(labels);
+    expect(restored.every(tick => !tick.hasAttribute('aria-label')), 'full text no longer needs a separate name').to.equal(true);
+    for (const tick of restored) {
+      expect(tick.getComputedTextLength()).to.be.at.most(Number(tick.getAttribute('data-label-extent')) + 0.5);
+      expect(/[\uD800-\uDFFF]/u.test(tick.textContent ?? ''), 'restored supplementary characters remain intact').to.equal(false);
     }
   });
 

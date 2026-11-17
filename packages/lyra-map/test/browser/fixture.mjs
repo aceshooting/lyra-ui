@@ -5,6 +5,7 @@ const data = await (await fetch('./data.json')).json();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const errors = [];
 const maps = new Set();
+const initialReadiness = [];
 function assert(condition, message) {
   if (!condition) throw Error(message);
 }
@@ -80,16 +81,59 @@ function vectorStyle() {
     ]
   };
 }
-async function make(style, { waitForLoad = true } = {}) {
+async function make(style, { waitForLoad = true, width = 640, height = 480 } = {}) {
   const container = document.createElement('div');
-  container.style.cssText = 'width:640px;height:480px';
+  container.style.cssText = `width:${width}px;height:${height}px`;
   document.body.append(container);
   const map = new engine.Map({ container, style, center: [0, 0], zoom: 1, attributionControl: false, fadeDuration: 0 });
   map.on('error', (event) =>
     errors.push({ message: event.error?.message ?? String(event.error), map: map.getContainer() === container })
   );
   maps.add(map);
-  if (waitForLoad) await until(() => map.loaded(), 'initial map load');
+  if (waitForLoad) {
+    const began = performance.now();
+    const observations = { polls: 0, renders: 0, loads: 0, idles: 0, loadedAtRender: 0,
+      firstRenderMs: null, firstLoadMs: null, maximumPollGapMs: 0 };
+    let lastPoll = began;
+    const onRender = () => {
+      observations.renders++;
+      observations.firstRenderMs ??= performance.now() - began;
+      if (map.loaded()) observations.loadedAtRender++;
+    };
+    const onLoad = () => {
+      observations.loads++;
+      observations.firstLoadMs ??= performance.now() - began;
+    };
+    const onIdle = () => { observations.idles++; };
+    const snapshot = outcome => {
+      const sources = Object.fromEntries(Object.keys(style.sources ?? {}).map(id => {
+        try { return [id, { exists: !!map.getSource(id), loaded: map.isSourceLoaded(id) }]; }
+        catch (failure) { return [id, { inspectionError: failure.name }]; }
+      }));
+      return { outcome, readiness: observations, elapsedMs: performance.now() - began,
+        loaded: map.loaded(), styleLoaded: map.isStyleLoaded(), moving: map.isMoving(),
+        contextLost: map.getCanvas().getContext('webgl2')?.isContextLost(), sources,
+        nativeErrors: errors.map(entry => entry.message).slice(-5) };
+    };
+    map.on('render', onRender); map.on('load', onLoad); map.on('idle', onIdle);
+    try {
+      await until(() => {
+        const now = performance.now();
+        observations.polls++;
+        observations.maximumPollGapMs = Math.max(observations.maximumPollGapMs, now - lastPoll);
+        lastPoll = now;
+        return map.loaded();
+      }, 'initial map load');
+      initialReadiness.push(snapshot('passed'));
+    } catch (error) {
+      const report = snapshot('failed');
+      initialReadiness.push(report);
+      error.message += ' ' + JSON.stringify(report);
+      throw error;
+    } finally {
+      map.off('render', onRender); map.off('load', onLoad); map.off('idle', onIdle);
+    }
+  }
   return map;
 }
 async function change(map, style) {
@@ -135,6 +179,7 @@ window.fixture = {
   sleep,
   async run(name) {
     const startErrors = errors.length;
+    const startReadiness = initialReadiness.length;
     if (name === 'prepared-canvas-identity') {
       const m = await make(base());
       const canvas = document.createElement('canvas'); canvas.width = canvas.height = 4;
@@ -339,7 +384,7 @@ window.fixture = {
       remove(m);
       await sleep(100);
       assert(errors.length === startErrors + 2, 'no additional source or sprite errors after recovery and removal');
-      return { name, passed: true, expectedErrors: errors.slice(startErrors) };
+      return { name, passed: true, expectedErrors: errors.slice(startErrors), initialReadiness: initialReadiness.slice(startReadiness) };
     } else if (name === 'controls-exports') {
       const m = await make(base());
       for (const name of ['AttributionControl', 'NavigationControl', 'GeolocateControl', 'ScaleControl']) {
@@ -381,9 +426,16 @@ window.fixture = {
         { id: 'hillshade', type: 'hillshade', source: 'shade' },
         { id: 'relief', type: 'color-relief', source: 'relief' }
       );
-      const m = await make(style);
+      const m = await make(style, { width: 320, height: 240 });
       assert(m.getTerrain()?.source === 'dem', 'terrain active');
       await until(() => m.loaded(), 'DEM loads');
+      assert(m.isStyleLoaded() && m.areTilesLoaded(), 'terrain style and visible tiles loaded');
+      for (const id of ['sample', 'dem', 'shade', 'relief']) {
+        assert(m.getSource(id) && m.isSourceLoaded(id), 'terrain source loaded: ' + id);
+      }
+      for (const id of ['circle', 'hillshade', 'relief']) {
+        assert(m.getLayer(id), 'terrain layer installed: ' + id);
+      }
       remove(m);
     } else if (name === 'custom') {
       const m = await make(base());
@@ -462,7 +514,7 @@ window.fixture = {
       remove(m);
     } else throw Error('Unknown case ' + name);
     assert(errors.length === startErrors, JSON.stringify(errors.slice(startErrors)));
-    return { name, passed: true };
+    return { name, passed: true, initialReadiness: initialReadiness.slice(startReadiness) };
   }
 };
 window.ready = true;

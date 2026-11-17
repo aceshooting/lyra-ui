@@ -105,20 +105,27 @@ async function read(record, point = { x: WIDTH / 2, y: HEIGHT / 2 }, state = emp
 function observeNativeDraws(record, media) {
   const { gl, canvas } = record;
   let latest; let sequence = 0;
-  const cleanups = [];
+  const cleanups = [], trace = [];
   for (const name of ['drawArrays', 'drawElements', 'drawArraysInstanced', 'drawElementsInstanced']) {
     const descriptor = Object.getOwnPropertyDescriptor(gl, name);
     const original = gl[name];
     Object.defineProperty(gl, name, { configurable: true, writable: true, value: (...args) => {
+      const startedAt = performance.now(), startedMediaTime = media.currentTime;
       Reflect.apply(original, gl, args);
       if (gl.isContextLost() || gl.getParameter(gl.DRAW_FRAMEBUFFER_BINDING) !== null || gl.getParameter(gl.READ_FRAMEBUFFER_BINDING) !== null) return;
       const pixels = new Uint8Array(canvas.width * canvas.height * 4);
+      const readbackStartedAt = performance.now();
       gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-      latest = { sequence: ++sequence, mediaTime: media.currentTime, pixels };
+      const observedAt = performance.now();
+      const observation = { sequence: ++sequence, mediaTime: media.currentTime, startedMediaTime, observedAt,
+        drawMs: readbackStartedAt - startedAt, readbackMs: observedAt - readbackStartedAt };
+      trace.push(observation); if (trace.length > 32) trace.shift();
+      latest = { ...observation, pixels };
     } });
     cleanups.push(() => { if (descriptor) Object.defineProperty(gl, name, descriptor); else Reflect.deleteProperty(gl, name); });
   }
-  return { get latest() { return latest; }, stop() { for (const cleanup of cleanups.splice(0)) cleanup(); } };
+  return { get latest() { return latest; }, get trace() { return trace.map(observation => ({ ...observation })); },
+    stop() { for (const cleanup of cleanups.splice(0)) cleanup(); } };
 }
 function centerPixels(record, pixels) {
   const offset = ((record.canvas.height - 1 - Math.floor(record.canvas.height / 2)) * record.canvas.width + Math.floor(record.canvas.width / 2)) * 4;
@@ -357,9 +364,18 @@ export const panoramaCases = {
       // Keep that strip in view throughout playback so consecutive frames discriminate uploads.
       record.engine.setCamera({ ...HOME, pitch: -Math.PI * 0.3 });
       draws = observeNativeDraws(record, video);
+      // Finish the camera's real paused draw and synchronous readback before the finite clip runs.
+      const warmupStartedAt = performance.now();
+      await until(() => video.paused && near(video.currentTime, 0, 0.001) && draws.latest &&
+        near(draws.latest.startedMediaTime, 0, 0.001) && near(draws.latest.mediaTime, 0, 0.001),
+      () => `Paused native video did not complete its initial draw: ${JSON.stringify({ draws: draws.trace, lost: record.calls.lost, native: nativeVideoState(video) })}`, 5000);
+      const warmup = { sequence: draws.latest.sequence, mediaTime: draws.latest.mediaTime,
+        elapsedMs: performance.now() - warmupStartedAt };
       await video.play();
-      await until(() => draws.latest && draws.latest.mediaTime > 0.35, 'Automatic native playback did not draw beyond startup', 5000);
+      await until(() => draws.latest && draws.latest.sequence > warmup.sequence && draws.latest.mediaTime > 0.35,
+        'Automatic native playback did not draw beyond startup', 5000);
       let previous = draws.latest;
+      const startup = { sequence: previous.sequence, mediaTime: previous.mediaTime, observedAt: previous.observedAt };
       let changed = 0; let maxDelta = 0; const transitions = [];
       const deadline = performance.now() + 3500;
       while (!video.ended && performance.now() < deadline) {
@@ -377,7 +393,7 @@ export const panoramaCases = {
         }
       }
       return { passed: transitions.length >= 2 && changed > 100 && maxDelta > 100 && video.currentTime > 1 && record.calls.lost.length === 0,
-        changed, maxDelta, transitions, currentTime: video.currentTime, native: nativeVideoState(video) };
+        changed, maxDelta, transitions, warmup, startup, draws: draws.trace, lost: [...record.calls.lost], currentTime: video.currentTime, native: nativeVideoState(video) };
     } finally { draws?.stop(); if (!record) { releaseVideo(video); fixture.container.remove(); } }
   },
   async 'panorama-native-video-observation-ownership'() {

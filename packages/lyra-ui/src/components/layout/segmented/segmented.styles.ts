@@ -1,5 +1,7 @@
 import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { visuallyHidden } from '../../../internal/a11y.js';
+import { formControlChrome, formControlTextWrap } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   :host {
@@ -17,6 +19,20 @@ export const styles = css`
     --_lr-segmented-segment-padding: var(--lr-form-control-padding-block)
       var(--lr-form-control-padding-inline);
     --_lr-segmented-font-size: var(--lr-form-control-font-size);
+  }
+  ${formControlChrome}
+  [part="form-control"] {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  [part="form-control-label"], [part="hint"] {
+    ${formControlTextWrap}
+  }
+  :host(:not([label-display='visible'])) [part="form-control-label"] {
+    ${visuallyHidden}
   }
   [part="base"] {
     display: inline-flex;

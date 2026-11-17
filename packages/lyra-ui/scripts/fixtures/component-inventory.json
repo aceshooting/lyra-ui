@@ -123574,6 +123574,16 @@
             "default": false
           },
           {
+            "name": "hint",
+            "property": "hint",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string",
@@ -123582,6 +123592,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "label-display",
+            "property": "labelDisplay",
+            "type": "LyraLabelDisplay",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "hidden"
           },
           {
             "name": "locale",
@@ -123626,6 +123646,16 @@
             "default": false
           },
           {
+            "name": "hint",
+            "attribute": "hint",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "items",
             "attribute": null,
             "type": "readonly LyraSegmentedItem[]",
@@ -123643,6 +123673,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "labelDisplay",
+            "attribute": "label-display",
+            "type": "LyraLabelDisplay",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "hidden"
           },
           {
             "name": "locale",
@@ -123675,7 +123715,16 @@
             "default": ""
           }
         ],
-        "slots": [],
+        "slots": [
+          {
+            "name": "hint",
+            "deprecated": null
+          },
+          {
+            "name": "label",
+            "deprecated": null
+          }
+        ],
         "events": [
           {
             "name": "lr-activate",
@@ -123695,6 +123744,18 @@
         "parts": [
           {
             "name": "base",
+            "deprecated": null
+          },
+          {
+            "name": "form-control",
+            "deprecated": null
+          },
+          {
+            "name": "form-control-label",
+            "deprecated": null
+          },
+          {
+            "name": "hint",
             "deprecated": null
           },
           {

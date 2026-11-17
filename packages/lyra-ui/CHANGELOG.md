@@ -4,6 +4,7 @@
 
 ### Minor Changes
 
+- Add opt-in visible field labels and hints to `lr-segmented`, with shared form styling, label and hint slots, and accessible group naming. Label display remains hidden by default.
 - 6dd5f5a: Add explicit custom ingestion-stage presentation and bounded replacement row actions. Hosts can gate built-in Retry/Cancel or request their own actions while stale and disabled controls remain inert.
 - 6dd5f5a: Add optional single-reason selection and native UTF-16 comment limits to message feedback detail configuration. Oversized drafts remain intact and receive a localized error before submission.
 - 32cbf4c: Add `toolbar-placement="actions"` to chat composer and prompt input. With `actions-layout="below"`, caller toolbar controls sit between start and end below the textarea while attachments remain above it. The default upper toolbar stays unchanged. Live placement changes preserve the editor, draft, selection and focused controls; narrow and RTL layouts keep the toolbar bounded and retain native Tab order. Prompt input's independent model, voice and source controls keep their existing position.
@@ -13,6 +14,8 @@
 - 6dd5f5a: Add an optional budget meter quantity formatter with locale context, coherent visible and accessible text, and numeric fallback for invalid results.
 
 ### Patch Changes
+
+- Keep category labels within narrow chart lanes when even an ellipsis cannot fit, preserve their full accessible names, and restore Unicode text when space grows.
 
 Final release artifacts include versioned changelogs and metadata alongside the thread-navigation focus and shared ingestion presentation fixes. Only exceeded delivery ceilings advance to the smallest reviewed boundaries; passing limits, measurement options, optional-peer exclusions, the UI download limit, file-count ceilings, scaffold reserves and the historical reduction policy remain unchanged.
 

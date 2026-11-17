@@ -32,6 +32,34 @@ export const Default: Story = {
   `,
 };
 
+export const VisibleFieldLabel: Story = {
+  name: 'Visible field label and hint',
+  render: () => html`
+    <lr-segmented label="Time range" label-display="visible" hint="Choose one range."
+      value="week" .items=${[
+        { value: 'day', label: 'Day' },
+        { value: 'week', label: 'Week' },
+        { value: 'month', label: 'Month' },
+      ]}></lr-segmented>
+  `,
+};
+
+export const SlottedFieldLabel: Story = {
+  name: 'Slotted field label and hint',
+  render: () => html`
+    <div dir="rtl" style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-segmented label-display="visible" value="week" .items=${[
+        { value: 'day', label: 'يوم' },
+        { value: 'week', label: 'أسبوع' },
+        { value: 'month', label: 'شهر' },
+      ]}>
+        <span slot="label">اختر طريقة عرض التقويم ومجاله الزمني</span>
+        <span slot="hint">يمكن تغيير الاختيار باستخدام مفاتيح الأسهم.</span>
+      </lr-segmented>
+    </div>
+  `,
+};
+
 export const FourItems: Story = {
   name: 'Four items',
   render: () => html`

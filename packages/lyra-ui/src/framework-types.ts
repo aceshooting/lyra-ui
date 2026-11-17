@@ -10948,8 +10948,10 @@ export interface LyraComponentTypeMap {
     properties: LyraElementProperties<
       LyraSegmented,
       | 'disabled'
+      | 'hint'
       | 'items'
       | 'label'
+      | 'labelDisplay'
       | 'locale'
       | 'size'
       | 'strings'
@@ -10979,7 +10981,9 @@ export interface LyraComponentTypeMap {
       | '--lr-segmented-track-min-height'
       | '--lr-segmented-track-padding'
       | '--lr-segmented-track-radius';
-    attributeAliases: {};
+    attributeAliases: {
+      'label-display'?: LyraSegmented['labelDisplay'];
+    };
   };
   'lr-select': {
     element: LyraSelect;

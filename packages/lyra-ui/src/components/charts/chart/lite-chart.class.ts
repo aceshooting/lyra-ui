@@ -1429,10 +1429,18 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         if (last >= 0xd800 && last <= 0xdbff) item.lower--;
         item.text.data = item.source.length ? `${item.source.slice(0, item.lower)}…` : '';
       }
-      if (item.text.data === item.source) item.tick.removeAttribute('aria-label');
-      else item.tick.setAttribute('aria-label', item.source);
     }
     const widths = candidates.map(item => item.tick.getComputedTextLength());
+    candidates.forEach((item, index) => {
+      if (!item.text) return;
+      // No glyph can be painted when even the ellipsis exceeds the available lane.
+      if (item.overflow && widths[index]! > item.bounded) {
+        item.text.data = '';
+        widths[index] = 0;
+      }
+      if (item.text.data === item.source) item.tick.removeAttribute('aria-label');
+      else item.tick.setAttribute('aria-label', item.source);
+    });
     return widths;
   }
 

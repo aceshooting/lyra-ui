@@ -154,7 +154,8 @@ is no "every item in the tooltip" surface to hook a title or footer formatter on
   It therefore responds to either `layout` mode without DOM text measurement or browser-specific
   font metrics. Unset (the default) renders every label, unchanged. Each rendered category label
   is allocation-aware: narrow/long text is ellipsized before paint, with the complete caller label
-  retained as its accessible name. With `preparedData = null`, the global 1,000-record safety
+  retained as its accessible name. If even the ellipsis cannot fit, the tick keeps that accessible
+  name without painting text; a later wider lane restores the label. With `preparedData = null`, the global 1,000-record safety
   sampler may independently bound marks and labels for very large category×series input.
 - `barX?: (index: number) => number` (attribute: false, bar type only) — overrides the internal
   per-category x-origin formula (`plotX + i * slot`) used by both bars and their axis labels, so a

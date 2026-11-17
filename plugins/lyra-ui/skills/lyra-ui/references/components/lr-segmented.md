@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -36,8 +36,15 @@ string; label: string; icon?: unknown; disabled?: boolean }`; `icon` renders as 
   256 positions); malformed/hostile entries are skipped, later duplicate values use
   first-valid-value-wins, and the frozen returned array/records never alias caller-owned objects.
 - `value: string = ''` — the currently selected item's `value`.
-- `label: string = ''` — accessible-name fallback copied to the internal `role="radiogroup"`. A
-  host-level `aria-label` wins by attribute presence, including an explicitly empty value.
+- `label: string = ''` — field caption and accessible-name fallback. Property-only naming keeps
+  its existing `aria-label` value on the internal `role="radiogroup"`.
+- `labelDisplay: LyraLabelDisplay = 'hidden'` (reflected, attribute `label-display`) — shared
+  `'visible' | 'hidden'` vocabulary. Only `label-display="visible"` opts into a caption above the
+  track, with the same label typography as `lr-select` and `lr-input`. Unset or other attribute
+  values leave the caption visually hidden and preserve the track-only footprint. Hidden labels
+  remain available for accessible naming; supporting hints are unaffected.
+- `hint: string = ''` — supporting text below the track; the actual radiogroup references its
+  same-shadow hint id while content is present.
 - `disabled: boolean = false` (reflected) — disables the whole control: the `radiogroup` and every
   segment report `aria-disabled="true"` and neither pointer nor keyboard selects. An item's own
   `disabled` is unaffected.
@@ -73,11 +80,19 @@ string; label: string; icon?: unknown; disabled?: boolean }`; `icon` renders as 
   is changed programmatically (keyboard navigation already reveals the focused segment on its own),
   so you only need to call it for the "reveal without selecting" case.
 
-**Slots:** none.
+**Slots:** `label` and `hint` slots replace their corresponding property
+fallbacks. Assigned content, including an empty assigned element, follows native slot fallback
+semantics; removing it restores the property. A label slot names the group via a same-shadow
+`aria-labelledby` relationship in both display modes. A present host `aria-label` takes precedence,
+including an explicitly empty value, without hiding the visible caption. A hint supplies the
+same-shadow `aria-describedby` relationship; dynamic slot assignment/removal updates these
+relationships. These are noninteractive group captions, with no external-idref forwarding,
+label-click action, form association or validation API.
 
-**CSS parts:** `base` (the `role="radiogroup"` root), `segment` (a single `role="radio"` button),
-`segment-icon` (an optional inert, `aria-hidden` decorative leading icon), `segment-label` (the
-segment's label text).
+**CSS parts:** `form-control` (caption, track and hint wrapper), `form-control-label` (caption),
+`hint` (supporting text), `base` (the `role="radiogroup"` root and horizontal scroll owner),
+`segment` (a single `role="radio"` button), `segment-icon` (an optional inert, `aria-hidden`
+decorative leading icon), `segment-label` (the segment's label text).
 
 **Themeable custom properties:** `--lr-scroll-fade-size` (default `2rem`) — width of the mask fade
 at each horizontal scroll edge of the track, painted only while the track actually overflows (a row
@@ -152,6 +167,11 @@ resolves.
 </script>
 ```
 
+
+```html
+<lr-segmented label="Time range" label-display="visible" hint="Choose one range."></lr-segmented>
+```
+
 **Known gotchas:**
 
 - arrow-key navigation cycles (past the last non-disabled item wraps to the first, and vice versa)
@@ -161,9 +181,9 @@ resolves.
   `lr-select`'s popup has. `lr-change` is change-only, so re-picking the segment that is already
   selected fires nothing on it; listen for `lr-activate` if a repeat pick is meaningful to
   your application.
-- the semantic `radiogroup` lives inside shadow DOM. Set `label` (preferred for reactive code) or a
-  host `aria-label`; a present host attribute wins, including an explicit empty value, and the
-  component deliberately forwards the resulting name to that internal role.
+- the semantic `radiogroup` lives inside shadow DOM. Set `label`, assign the `label` slot, or set
+  a host `aria-label`; a present host attribute wins, including an explicit empty value. Visible
+  caption display is opt-in and does not replace this naming precedence.
 
 **Additional API surface:**
 

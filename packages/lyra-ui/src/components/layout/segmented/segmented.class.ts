@@ -3,7 +3,8 @@ import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraSize } from '../../../internal/variants.js';
+import type { LyraLabelDisplay, LyraSize } from '../../../internal/variants.js';
+import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { resolveListMove } from '../../../internal/list-navigation.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
@@ -93,7 +94,11 @@ function snapshotSegmentedItems(
  * "choose exactly one of N labeled options, rendered as a button row" is ubiquitous
  * settings/filter-panel UI. Supports the library's shared `size` ladder, the same one
  * `<lr-select>`/`<lr-combobox>`/`<lr-input>` use, so it can sit flush beside those controls in a
- * toolbar at a matching height.
+ * toolbar at a matching height. The optional field caption is visually hidden by default;
+ * `label-display="visible"` places it above the track using shared form-label typography.
+ * A `label` slot replaces the label property's text in either display mode. A present host
+ * `aria-label`, including an empty value, retains precedence on the radiogroup.
+ * This composite is not form-associated; the caption does not add label-click behavior.
  *
  * @customElement lr-segmented
  * @event lr-change - Fired when the selected value changes via click or keyboard.
@@ -111,7 +116,12 @@ function snapshotSegmentedItems(
  *   `value` into view within the (possibly overflowing) track. Called automatically when `value`
  *   changes programmatically; exposed for the "reveal without selecting" case. Honors
  *   `prefers-reduced-motion`.
- * @csspart base - The `role="radiogroup"` root.
+ * @slot label - Field caption; assigned content replaces the `label` property fallback.
+ * @slot hint - Supporting text; assigned content replaces the `hint` property fallback.
+ * @csspart form-control - The outer caption, track and hint wrapper.
+ * @csspart form-control-label - The noninteractive field caption, visually hidden by default.
+ * @csspart hint - Supporting text referenced by the radiogroup when supplied.
+ * @csspart base - The `role="radiogroup"` root and horizontal scroll owner.
  * @csspart segment - A single `role="radio"` button.
  * @csspart segment-icon - Optional decorative leading visual supplied by the item's `icon` field.
  *   Content may have a natural aspect ratio and is not restricted to a square icon; it is inert and
@@ -193,11 +203,40 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   /** The currently selected item's `value`. */
   @property() value = '';
 
-  /** Accessible-name fallback for the radiogroup when the host has no `aria-label`, used when no
-   *  visible label context exists around it (e.g. no wrapping `<label>` or adjacent heading). A
-   *  host `aria-label` wins by attribute presence, including an explicitly empty value. The resolved
-   *  name is set on the `role="radiogroup"` element. */
+  /** Field caption and accessible-name fallback. Hidden visually unless `labelDisplay` is
+   *  `'visible'`. Assigned `label` slot content replaces this text and names the radiogroup in
+   *  either mode. A present host `aria-label`, including an empty value, wins for naming only. */
   @property() label = '';
+
+  /** Shared field-caption display vocabulary. Only `'visible'` opts into visible label chrome;
+   *  the default `'hidden'` preserves the existing track-only footprint. */
+  @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'hidden';
+
+  /** Supporting text below the track, referenced by the radiogroup. The `hint` slot replaces it. */
+  @property() hint = '';
+
+  private readonly slotPresence = new SlotPresenceController(this);
+  @state() private hasNativeLabelAssignment = false;
+  @state() private hasNativeHintAssignment = false;
+
+  private readonly syncNativeFieldAssignments = (): void => {
+    const assigned = (name: string): boolean => {
+      const slot = this.renderRoot?.querySelector<HTMLSlotElement>(`slot[name="${name}"]`);
+      if (slot) return slot.assignedNodes().length > 0;
+      return Array.from(this.children).some(child => child.getAttribute('slot') === name);
+    };
+    this.hasNativeLabelAssignment = assigned('label');
+    this.hasNativeHintAssignment = assigned('hint');
+  };
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.updateBrowserDerivedState(this.syncNativeFieldAssignments);
+  }
+
+  private readonly onFieldSlotChange = (): void => {
+    this.updateBrowserDerivedState(this.syncNativeFieldAssignments);
+  };
 
   /** Disables the whole control: the radiogroup and every segment report `aria-disabled`, and
    *  neither pointer nor keyboard selects. Each item's own `disabled` is unaffected. */
@@ -370,7 +409,11 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   };
 
   override render(): TemplateResult {
-    const ariaLabel = hostAriaLabel(this) ?? (this.label || nothing);
+    const hostLabel = hostAriaLabel(this);
+    const hasLabelSlot = this.hasNativeLabelAssignment || this.slotPresence.has('label');
+    const hasLabel = hasLabelSlot || (this.label ?? '').length > 0;
+    const hasHint = this.hasNativeHintAssignment || this.slotPresence.has('hint') || (this.hint ?? '').length > 0;
+    const ariaLabel = hostLabel ?? (hasLabelSlot ? nothing : this.label || nothing);
     // WAI-ARIA APG radiogroup: exactly one non-disabled radio is ever tabbable.
     // That's normally the checked item, but a fresh/cleared radiogroup has no
     // checked item at all -- falling back to `item.value === this.value` alone
@@ -389,34 +432,44 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
         ? fallbackSelectedIndex
         : this.items.findIndex((item) => !item.disabled);
     return html`
-      <div
-        part="base"
-        role="radiogroup"
-        aria-label=${ariaLabel}
-        aria-disabled=${this.disabled ? 'true' : nothing}
-        @keydown=${this.onKeyDown}
-      >
-        ${repeat(
-          this.items,
-          (item) => item.value,
-          (item, index) => html`<button
-            type="button"
-            part="segment"
-            data-value=${item.value}
-            data-index=${index}
-            role="radio"
-            aria-checked=${index === fallbackSelectedIndex ? 'true' : 'false'}
-            aria-disabled=${item.disabled || this.disabled ? 'true' : 'false'}
-            tabindex=${index === tabbableIndex ? '0' : '-1'}
-            @click=${() => this.select(item)}
-          >
-            ${item.icon !== undefined
-              ? html`<span part="segment-icon" aria-hidden="true" inert
-                  >${item.icon}</span
-                >`
-              : nothing}<span part="segment-label">${item.label}</span>
-          </button>`
-        )}
+      <div part="form-control">
+        <div id="segmented-label" part="form-control-label" ?hidden=${!hasLabel}
+          ><slot name="label" @slotchange=${this.onFieldSlotChange}>${this.label}</slot></div
+        >
+        <div
+          part="base"
+          role="radiogroup"
+          aria-label=${ariaLabel}
+          aria-labelledby=${hostLabel === null && hasLabelSlot ? 'segmented-label' : nothing}
+          aria-describedby=${hasHint ? 'segmented-hint' : nothing}
+          aria-disabled=${this.disabled ? 'true' : nothing}
+          @keydown=${this.onKeyDown}
+        >
+          ${repeat(
+            this.items,
+            (item) => item.value,
+            (item, index) => html`<button
+              type="button"
+              part="segment"
+              data-value=${item.value}
+              data-index=${index}
+              role="radio"
+              aria-checked=${index === fallbackSelectedIndex ? 'true' : 'false'}
+              aria-disabled=${item.disabled || this.disabled ? 'true' : 'false'}
+              tabindex=${index === tabbableIndex ? '0' : '-1'}
+              @click=${() => this.select(item)}
+            >
+              ${item.icon !== undefined
+                ? html`<span part="segment-icon" aria-hidden="true" inert
+                    >${item.icon}</span
+                  >`
+                : nothing}<span part="segment-label">${item.label}</span>
+            </button>`
+          )}
+        </div>
+        <div id="segmented-hint" part="hint" ?hidden=${!hasHint}
+          ><slot name="hint" @slotchange=${this.onFieldSlotChange}>${this.hint}</slot></div
+        >
       </div>
     `;
   }

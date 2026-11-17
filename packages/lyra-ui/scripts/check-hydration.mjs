@@ -1055,7 +1055,7 @@ const documentHtml = `<!doctype html>
           const host = fixture.firstElementChild;
           const before = globalThis.__lyraBeforeHydration.get(tag);
           try {
-            await withTimeout(customElements.whenDefined(host.localName), tag + ' definition');
+            await customElements.whenDefined(host.localName);
             if (host.updateComplete) {
               await withTimeout(host.updateComplete, tag + ' first update');
             }
@@ -1129,6 +1129,10 @@ const documentHtml = `<!doctype html>
             throw new Error(tag + ': first hydration failed: ' + detail);
           }
         });
+        // Observe failures immediately while imports are pending, but preserve the original
+        // rejecting promise for the awaited result below.
+        const firstHydrationComplete = Promise.all(firstHydrationPromises);
+        void firstHydrationComplete.catch(() => {});
         globalThis.__lyraHydrationStage = 'importing-hydration-support';
         await import('/dist/hydration.js');
         const loader = await import('/dist/ssr.js');
@@ -1140,8 +1144,16 @@ const documentHtml = `<!doctype html>
         await Promise.all(${JSON.stringify(
           optionalRegistrationUrls
         )}.map((url) => import(url)));
+        // Definitions are required once both registration imports have completed. Keep the
+        // observers above pre-armed for first-update identity without timing module loading.
+        const missingDefinitions = [...new Set(fixtures.map((fixture) =>
+          fixture.firstElementChild.localName,
+        ))].filter((tag) => !customElements.get(tag));
+        if (missingDefinitions.length > 0) {
+          throw new Error('registration imports completed without definitions: ' + missingDefinitions.join(', '));
+        }
         globalThis.__lyraHydrationStage = 'awaiting-first-updates';
-        await Promise.all(firstHydrationPromises);
+        await firstHydrationComplete;
         globalThis.__lyraHydrationStage = 'awaiting-settled-updates';
         const updateErrors = (await Promise.all(fixtures.map(async (fixture) => {
           const host = fixture.firstElementChild;

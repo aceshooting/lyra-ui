@@ -48399,6 +48399,60 @@
               "state": "populated"
             },
             {
+              "file": "src/components/layout/segmented/segmented-field-label.test.ts",
+              "test": "keeps present host aria-label authoritative, including empty, while a caption stays visible",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/segmented/segmented-field-label.test.ts",
+              "test": "keeps the unset label visually hidden, the old property name bytes and the track footprint",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/segmented/segmented-field-label.test.ts",
+              "test": "names the group from assigned label content in both modes and restores the property fallback",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/segmented/segmented-field-label.test.ts",
+              "test": "opts a property caption into the shared field typography without changing control height",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/segmented/segmented-field-label.test.ts",
+              "test": "retains native forwarding-slot fallback and restores assignments ${withProperties ? 'with' : 'without'} property fallbacks",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/segmented/segmented-field-label.test.ts",
+              "test": "retains native forwarding-slot fallback and restores assignments ${withProperties ? 'with' : 'without'} property fallbacks",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/segmented/segmented-field-label.test.ts",
+              "test": "uses same-shadow hint references and slot fallback through live assignment and removal",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/segmented/segmented-field-label.test.ts",
+              "test": "uses same-shadow hint references and slot fallback through live assignment and removal",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/segmented/segmented-field-label.test.ts",
+              "test": "wraps long RTL captions at 320px while preserving the scroll owner, focus and selection events",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/layout/segmented/segmented.test.ts",
               "test": "is accessible",
               "target": "el",
@@ -48430,8 +48484,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/segmented/segmented.test.ts",
-              "test": "ArrowRight from the unselected, first-tabbable state selects the first item",
+              "file": "src/components/layout/segmented/segmented-field-label.test.ts",
+              "test": "wraps long RTL captions at 320px while preserving the scroll owner, focus and selection events",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -48458,8 +48512,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/segmented/segmented.test.ts",
-              "line": 950,
+              "file": "src/components/layout/segmented/segmented-field-label.test.ts",
+              "test": "wraps long RTL captions at 320px while preserving the scroll owner, focus and selection events",
               "kind": "320px allocation test signal"
             }
           ]
@@ -48553,6 +48607,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/segmented/segmented-checked-contrast.test.ts",
+          "src/components/layout/segmented/segmented-field-label.test.ts",
           "src/components/layout/segmented/segmented-items-replacement.test.ts",
           "src/components/layout/segmented/segmented.test.ts"
         ],

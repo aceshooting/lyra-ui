@@ -156,17 +156,17 @@ const optionalPeerFamilyTags = componentInventory.components
 const rootHelperRegisteredTags = [];
 
 // Packed core/all.js includes every non-optional registration and every emitted chunk.
-// Thread focus ownership, shared ingestion presentation and release metadata bring the complete
-// graph to 5,735,133 raw bytes across 65 files; the next 64-byte ceiling leaves 35 bytes.
+// Segmented captions, hint and forwarded-slot naming, plus the chart no-glyph fallback bring the
+// graph to 5,737,070 raw bytes across 65 files; the next 64-byte ceiling leaves 18 bytes.
 // Optional-peer exclusions and the complete file sum stay fixed. Core has no WASM allowance;
 // the explicit Oniguruma canary retains its separate exact 466,610-byte binary requirement.
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/ad043b8e3479fcd9990cd6ecc36e4638b48cfcc4/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'The final release core graph includes the thread-navigation focus guard, shared ingestion presentation and version-stamped metadata. It measures 5,735,133 raw bytes across 65 emitted files; only its exceeded raw ceiling advances to 5,735,168 bytes, the next 64-byte boundary with 35 bytes of headroom. Optional packed limits, gzip limits, peer exclusions and the exact Oniguruma binary requirement remain unchanged.',
-  reviewedCoreMeasurementBytes: 5_735_133,
+  $comment: 'Segmented field captions, hints and forwarded-slot naming, together with the chart no-glyph fallback, add 1,937 raw bytes to the complete core graph. It measures 5,737,070 bytes across the same 65 emitted files; only its exceeded raw ceiling advances to 5,737,088 bytes, the next 64-byte boundary with 18 bytes of headroom. Optional packed limits, gzip limits, peer exclusions and the exact Oniguruma binary requirement remain unchanged.',
+  reviewedCoreMeasurementBytes: 5_737_070,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 35,
+  selectedRegressionHeadroomBytes: 18,
 };
 
 /**
