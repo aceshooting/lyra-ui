@@ -1,5 +1,111 @@
 # Changelog
 
+## 31.1.0
+
+### Minor Changes
+
+- 6dd5f5a: Add explicit custom ingestion-stage presentation and bounded replacement row actions. Hosts can gate built-in Retry/Cancel or request their own actions while stale and disabled controls remain inert.
+- 6dd5f5a: Add optional single-reason selection and native UTF-16 comment limits to message feedback detail configuration. Oversized drafts remain intact and receive a localized error before submission.
+- 32cbf4c: Add `toolbar-placement="actions"` to chat composer and prompt input. With `actions-layout="below"`, caller toolbar controls sit between start and end below the textarea while attachments remain above it. The default upper toolbar stays unchanged. Live placement changes preserve the editor, draft, selection and focused controls; narrow and RTL layouts keep the toolbar bounded and retain native Tab order. Prompt input's independent model, voice and source controls keep their existing position.
+
+  The stable toolbar layout, viewer request lifecycle fixes, thread excerpt observation and contained stepper focus ring increase eight measured bundles. Reviewed gzip sizes are 303,920 bytes for the largest component, 1,489,754 for all components, 1,715,239 for the CDN autoloader, 1,715,085 for the local autoloader, 452,193 for the conversation barrel, 389,655 for the layout barrel, 463,509 for the viewers barrel and 1,736,802 for the SSR aggregate. Only these exceeded ceilings advance to the next 64-byte boundary; passing ceilings, measurement options and optional-peer exclusions are unchanged.
+- 6dd5f5a: Add document-library cursor sources for collections without a known total. Provide bounded Previous, Next, Retry, and Start over navigation, immutable query details, and shared cursor-source types. Retire stale requests and rendered rows when queries or providers change, preserving the existing array and indexed-source routes when cursor mode is unset.
+- 6dd5f5a: Add an optional budget meter quantity formatter with locale context, coherent visible and accessible text, and numeric fallback for invalid results.
+
+### Patch Changes
+
+Final release artifacts include versioned changelogs and metadata alongside the thread-navigation focus and shared ingestion presentation fixes. Only exceeded delivery ceilings advance to the smallest reviewed boundaries; passing limits, measurement options, optional-peer exclusions, the UI download limit, file-count ceilings, scaffold reserves and the historical reduction policy remain unchanged.
+
+- 6dd5f5a: Update thirteen measured bundle ceilings for bounded cursor navigation, ingestion actions, feedback detail policies, quantity formatting, and lifecycle recovery. Each ceiling rounds its reviewed gzip measurement to a 64-byte boundary; passing limits, optional-peer exclusions, and initial-route budgets remain unchanged.
+
+  The final ownership guard adds 65 unpacked bytes, and all.js measures 1,498,947 gzip bytes. Only its exceeded ceiling advances by 64 bytes to 1,499,008 bytes; all other reviewed limits stay unchanged.
+- 32cbf4c: Report active DOCX and PPTX transport failures even when they use an AbortError, while keeping canceled requests silent. Resume pending transport after same-task DOM moves without restarting active document conversions or presentation renderers, and discard late responses from retired requests.
+- cb780e1: Remove redundant environment and RGB channel checks from CDN autoloading and theme startup while preserving document-less imports, input validation, and color calculations.
+- 6dd5f5a: Retire obsolete diff-view search and anchor scrolling when synchronous search listeners replace results, compared text changes, or the viewer disconnects. Clear virtual-list sticky scroll insets when no groups remain.
+- 6dd5f5a: Prevent graph activation from proposing obsolete selections when an activation listener changes controlled selection or replaces the graph's data, presentation, or connection.
+- 6dd5f5a: Suppress movement and settled-view notifications when a native camera or bounds read disconnects or replaces the map, preventing retired camera data from being published after ownership changes.
+- 6dd5f5a: Recover to the built-in graph renderer when a companion fit or camera operation fails, and release failed companions even when their final position snapshot throws. Keep fallback controls usable and ignore callbacks from retired engines.
+- 63e863b: Reuse a frozen empty presentation for ingestion rows without optional metadata, preserving descriptor validation, cancellation guards and row ownership. A 5,000-row diagnostic reduced returned presentation objects from 5,000 to one while retaining all 10,000 validity checks.
+
+  The initial seven-sample comparison against 31.0.0 observed ingestion update median/p95 increases of 26.6/29.6 to 33.8/48.7 ms and total p95 of 60.4 to 77.3 ms. Chart total p95 increased from 95.8 to 111.9 ms, no-op paint median/p95 from 21.2/25.9 to 24.9/32.7 ms, and no-op total from 22.3/27.0 to 26.0/33.9 ms. Chart production source was unchanged; the elapsed metrics include animation-frame waits.
+
+  The fixed-order, 21-sample before/after ingestion comparisons showed mixed timing results: update medians of 32.5 to 28.9 ms and 30.2 to 30.3 ms, with one comparison observing a 3.9 ms paint-wait increase. The refactor establishes reduced allocation, not a sustained wall-time improvement. The final matched 21-sample comparison against 31.0.0 did not flag ingestion or chart metrics. Its only material increase was evaluation-dataset selection update p95, from 2.1 to 3.3 ms, while median improved from 1.8 to 1.5 ms. This unchanged component's tail timing remains observational. All original samples are retained, and benchmark thresholds are unchanged.
+- 3a0f6aa: Update eight measured bundle budget pairs for document-library API compatibility and flow-canvas and virtual-list fixes. Only exceeded ceilings advance to the next 64-byte boundary; passing limits, including all.js at its existing cap, optional-peer exclusions and initial-route budgets remain unchanged.
+
+  The same fixes add 437 unpacked bytes across eight existing package files. The actual archive is 22,736,831 bytes; npm dry-run metadata produces a 22,737,453-byte estimate. Only the exceeded unpacked estimate ceiling advances to 22,737,472 bytes, with 19 bytes of allowance.
+
+  The same source changes add 372 raw bytes to the complete packed core graph, bringing it to 5,734,530 bytes across the same 65 files. Its raw ceiling advances to 5,734,592 bytes, with 62 bytes of allowance. All optional packed bundle limits and gzip limits remain unchanged.
+- 6dd5f5a: Update the UI unpacked ceiling and the translation and IDE byte ceilings for cursor navigation, ingestion actions, feedback policies, quantity formatting, localized labels and generated API data. The final ownership guard adds 65 unpacked UI bytes; each exceeded ceiling advances only to the next 64-byte boundary, preserving download limits, file-count reserves and the historical 25% reduction requirement.
+- 6dd5f5a: Respect cancellation, stopping, or removal during push-to-talk state notifications: avoid requesting microphone permission for a retired request and suppress obsolete recording-start effects for a take already stopping or disconnected.
+- 6d20578: Keep icon-library changes made during a mutator from being overwritten by its retired load. Show a localized error when an active icon request aborts unexpectedly, while keeping replaced and disconnected requests silent.
+
+  The corrected shared icon load path changes bundle compression. Measured media aggregate and popup/export-button marginal gzip sizes exceed their previous canaries by 4, 4, and 2 bytes; only those ceilings move to the next 64-byte boundary.
+- 15a78de: Report active PDF and archive transport failures even when they use an AbortError, while keeping canceled requests silent. Resume pending transport after same-task DOM moves, preserve active PDF parsing tasks, and discard late responses from retired requests.
+
+  PDF transport ownership adds 82 gzip bytes to its standalone entry, while archive ownership reduces its entry by 13 bytes. The reviewed all-components, autoloader, viewer-family, PDF and SSR bundle ceilings advance only where exceeded, to the next 64-byte boundary. Together with the bootstrap simplifications, the package measures 22,639,805 unpacked bytes in the actual archive and 22,640,427 in the npm dry-run inventory across the same 3,290 files; its unpacked ceiling becomes 22,640,448 bytes. Download, file-count, companion and passing bundle limits remain unchanged.
+
+  The installed core bundle measures 5,693,092 raw bytes across 65 files, a 642-byte increase. Its raw ceiling advances to 5,693,120 bytes; gzip limits, optional-peer exclusions and the separate exact binary requirement remain unchanged.
+- 3a0f6aa: Stop a virtual list's pending notification sequence when a range-change or load-more listener disconnects or moves it to a new document. A removed list no longer requests more data from the retired update, and normal demand resumes after reconnect.
+- 7daef56: Warn once per document when multiple active UI runtimes are detected, including copies with the
+  same package version. Document application-owned whole-package resolution for components,
+  utilities and lazy chunks. The diagnostic identifies unsupported split-runtime use without
+  merging overlay ownership or interrupting component operation.
+
+  The shared document-runtime diagnostic increases a standalone button registration from 36,507
+  to 37,120 gzip bytes (+613 bytes). Reviewed bundle measurements advance only the 21 exceeded
+  entry, aggregate and component-maximum ceilings to their smallest 64-byte boundary, leaving
+  0–63 bytes of allowance; the button canary has none. The eight passing measurement/ceiling
+  pairs, measurement options and optional-peer exclusions remain unchanged.
+
+  The runtime diagnostic, its overlay declaration and resolution/testing guides add 5,752 unpacked
+  package bytes. The actual archive measures 22,654,271 bytes and the npm dry-run estimate measures
+  22,654,893 across 3,291 files. Only the exceeded unpacked ceiling advances to 22,654,912 bytes,
+  the next 64-byte boundary with 19 bytes of allowance. All other byte limits, file-count ceilings
+  and the historical reduction policy remain unchanged.
+
+  The shared document-runtime diagnostic increases the complete installed core graph by 2,022 raw
+  bytes to 5,699,985 bytes across 65 files. The immutable package comparison identifies only six
+  runtime module payload changes, with no dependency changes. Only the exceeded core raw ceiling
+  advances to 5,700,032 bytes, the next 64-byte boundary with 47 bytes of allowance. Gzip limits,
+  optional-peer exclusions and exact binary requirements remain unchanged.
+
+  With the runtime diagnostic and lifecycle fixes included, the optional MapLibre v6 map bundle
+  measures 2,528,040 raw bytes across 52 files, up 335 bytes from 2,527,705. The optional graph
+  bundle measures 463,780 raw bytes across 14 files, up 922 bytes from 462,858. These are complete
+  emitted bundle measurements. Only their exceeded raw ceilings advance to the next 64-byte
+  boundaries: 2,528,064 bytes with 24 bytes of allowance for map, and 463,808 bytes with 28 bytes
+  for graph. The MapLibre v5 bundle remains below its existing ceiling. Gzip limits and peer-graph
+  checks remain unchanged.
+
+  Cursor-backed documents, custom ingestion presentation and actions, feedback detail limits,
+  quantity formatting and lifecycle fixes increase the complete installed core graph by 34,173 raw
+  bytes to 5,734,158 bytes across 65 files. Only the exceeded raw ceiling advances to 5,734,208
+  bytes, the next 64-byte boundary with 50 bytes of allowance. Gzip limits, optional-peer
+  exclusions and exact binary requirements remain unchanged.
+- 3a0f6aa: Preserve the current scene's selection when a flow node or edge activation listener replaces the scene. The original action now retires before applying selection to the replacement, while later actions continue normally.
+- 32cbf4c: Report active document preview, notebook, and email transport failures with localized feedback even when named AbortError. Resume pending requests after same-task DOM moves, discard retired responses, and preserve email parsing already in progress.
+- a7eeb1d: Preserve outside focus when pending virtual thread navigation finishes rendering its destination.
+
+  The temporary focus-ownership listener and lifecycle cleanup add 103–120 gzip bytes to the affected registration, autoloader, conversation and SSR aggregate bundles. Only the five exceeded ceilings and their exact reviewed measurements advance, using the next 64-byte boundary; passing limits and optional-peer exclusions remain unchanged.
+
+  The focus fix adds 649 emitted runtime bytes and 26 declaration bytes. The ordinary npm inventory also includes 622 more manifest bytes than the published archive. The unpacked package ceiling advances to the next 64-byte boundary above the larger measured inventory; the download limit and file-count allowance stay unchanged.
+- 6dd5f5a: Keep time-scaled timeline positions in sync with timestamp changes when timeline items register after their parent has rendered.
+- 86ab216: Resume pending contact, calendar, HTML, SVG, and XML document loads after a same-task DOM move while preserving already-loaded content. Report unexpected failures named AbortError with localized feedback, and keep requests cancelled by replacement or disconnect silent.
+
+  Request ownership and pending-load recovery add 149–194 gzip bytes to the five exceeded viewer-containing bundles. Their ceilings advance only to the next 64-byte boundary: all components 1,488,704 bytes, CDN autoloader 1,714,176 bytes, autoloader 1,713,984 bytes, viewers barrel 463,168 bytes, and SSR all components 1,735,744 bytes. The npm dry-run estimate measures 22,639,711 unpacked bytes across 3,290 files; only the exceeded unpacked ceiling advances to 22,639,744 bytes. Passing limits and measurement inputs remain unchanged.
+
+  The complete packed core graph measures 5,692,450 raw bytes across 65 files: 800 bytes from these viewer fixes and 26 bytes from the preceding icon ownership fix above the prior reviewed measurement. Its exceeded raw ceiling advances to 5,692,480 bytes, leaving 30 bytes of headroom. Gzip limits, optional-peer exclusions and binary requirements are unchanged.
+- 32cbf4c: Keep horizontal stepper keyboard focus outlines inside the scrolling track, and remove empty thread-list excerpt template spacing while preserving nontext excerpt content and reconnect updates.
+- 8deb78a: Update measured delivery budgets for viewer transport recovery, composer toolbar placement and its declarations, thread excerpt layout, and stepper focus containment. The actual UI archive measures 22,648,519 unpacked bytes and the npm dry-run estimate measures 22,649,141 across the same 3,290 files; only the exceeded unpacked ceiling advances to 22,649,152 bytes. The generated composer editor API data measures 1,741,853 packed and 10,755,183 unpacked IDE archive bytes across eight files, bounded at 1,741,888 and 10,755,200 bytes.
+
+  The complete installed core graph measures 5,697,963 raw bytes across 65 files, an increase of 4,871 bytes. Its exceeded raw ceiling advances to 5,697,984 bytes with 21 bytes of headroom. Passing byte limits, the UI download ceiling, file-count ceilings, measurement options, optional-peer exclusions, and exact binary requirements remain unchanged.
+
+  Review the generated-chat composition after shared component runtime and ownership fixes. Lazy JavaScript measures 1,033,397 bytes; its raw ceiling is 1,033,408 bytes, the next 64-byte boundary with 11 bytes of headroom. Its eager JavaScript, gzip, CSS and asset limits, external-import inventory and pinned measurement toolchain remain unchanged.
+- Updated dependencies [a7eeb1d]
+- Updated dependencies [9c67698]
+  - @aceshooting/lyra-map@1.5.2
+  - @aceshooting/lyra-translations@31.1.0
+
 ## 31.0.0
 
 ### Major Changes

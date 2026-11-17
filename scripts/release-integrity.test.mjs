@@ -986,12 +986,29 @@ test('requires the exhaustive packed ATTW matrix in the stable release gate', ()
   for (const variable of ['LYRA_PACKED_UI_TARBALL', 'LYRA_PACKED_FLAGS_TARBALL', 'LYRA_PACKED_DOCS_TARBALL', 'LYRA_PACKED_GEN_TARBALL']) {
     assert.match(contractJob, new RegExp(`echo "${variable}=`, 'u'));
   }
-  assert.doesNotMatch(contractJob, /pnpm build|pnpm pack|check:package-size/u);
+  assert.doesNotMatch(contractJob, /pnpm build|pnpm(?: --config\.ignore-scripts=true)? pack|check:package-size/u);
   assert.match(companionsJob, /needs: \[build_and_coverage_build, changes\]/u);
   assert.match(companionsJob, /name: lyra-ui-dist/u);
   assert.match(companionsJob, /cd packages\/lyra-flags && pnpm pack --pack-destination/u);
-  assert.match(companionsJob, /cd packages\/lyra-docs && pnpm pack --ignore-scripts --pack-destination/u);
-  assert.match(companionsJob, /cd packages\/lyra-gen && pnpm pack --ignore-scripts --pack-destination/u);
+  let previousPack = companionsJob.indexOf('(cd packages/lyra-flags && pnpm pack --pack-destination');
+  for (const [name, preparation] of [
+    ['lyra-map', ['build']], ['lyra-3d', ['build']], ['lyra-gen', ['build']], ['lyra-docs', ['build']],
+    ['lyra-translations', ['assemble', 'lint']], ['lyra-ide', ['sync']],
+  ]) {
+    for (const command of preparation) {
+      const prepare = `pnpm --filter @aceshooting/${name} ${command}`;
+      assert.equal(companionsJob.split('\n').filter(line => line.trim() === prepare).length, 1, prepare);
+      const at = companionsJob.indexOf(prepare);
+      assert.ok(at > previousPack, `${name}: explicit preparation precedes packing`);
+      previousPack = at;
+    }
+    const pack = `(cd packages/${name} && pnpm --config.ignore-scripts=true pack --pack-destination ../../artifacts/packed-companions)`;
+    assert.equal(companionsJob.split('\n').filter(line => line.trim() === pack).length, 1, pack);
+    assert.ok(companionsJob.indexOf(pack) > previousPack, `${name}: pack consumes its prepared artifacts`);
+    previousPack = companionsJob.indexOf(pack);
+  }
+  assert.equal([...companionsJob.matchAll(/pnpm --config\.ignore-scripts=true pack /gu)].length, 6);
+  assert.doesNotMatch(companionsJob, /pnpm pack[^\n]*--ignore-scripts/u);
   assert.match(companionsJob, /git diff --exit-code/u);
   assert.match(companionsJob, /sha256sum "\$\{tarballs\[@\]\}" > SHA256SUMS/u);
   assert.match(companionsJob, /name: packed-companion-tarballs/u);

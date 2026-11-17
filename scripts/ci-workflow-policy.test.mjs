@@ -19,6 +19,68 @@ test('local aggregate checks companion archive budgets before packed consumers',
   assert.equal(commands.filter(line => line === 'node scripts/check-companion-package-sizes.mjs').length, 1);
 });
 
+for (const rejected of ['', '@aceshooting/lyra-map']) {
+  test(`companion size packs use supported config syntax after preparation${rejected ? ' and retain all checks after an overrun' : ''}`, () => {
+    const root = mkdtempSync(join(tmpdir(), 'lyra-companion-pack-options-'));
+    const bin = join(root, 'bin');
+    const calls = join(root, 'calls.jsonl');
+    const companions = [
+      ['lyra-translations', 'assemble'], ['lyra-ide', 'sync'], ['lyra-map', 'build'],
+      ['lyra-3d', 'build'], ['lyra-gen', 'build'],
+    ];
+    try {
+      mkdirSync(bin);
+      mkdirSync(join(root, 'scripts'));
+      mkdirSync(join(root, 'packages/lyra-ui/scripts'), { recursive: true });
+      writeFileSync(join(root, 'scripts/check-companion-package-sizes.mjs'), read('scripts/check-companion-package-sizes.mjs'));
+      for (const [name] of companions) {
+        const directory = join(root, 'packages', name);
+        mkdirSync(directory, { recursive: true });
+        writeFileSync(join(directory, 'package.json'), JSON.stringify({ name: `@aceshooting/${name}`, version: '0.0.0' }));
+      }
+      writeFileSync(join(bin, 'pnpm'), `#!${process.execPath}
+const { appendFileSync, readFileSync, writeFileSync } = require('node:fs');
+const { join } = require('node:path');
+const args = process.argv.slice(2);
+appendFileSync(process.env.LYRA_COMPANION_TEST_LOG, JSON.stringify({ kind: args[0] === '--filter' ? 'prepare' : 'pack', args, cwd: process.cwd() }) + '\\n');
+if (args[0] === '--filter') process.exit(0);
+if (args.length !== 4 || args[0] !== '--config.ignore-scripts=true' || args[1] !== 'pack' || args[2] !== '--pack-destination') {
+  console.error('Unsupported companion pack argument form'); process.exit(64);
+}
+const metadata = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8'));
+const file = metadata.name.replace('@', '').replace('/', '-') + '-' + metadata.version + '.tgz';
+writeFileSync(join(args[3], file), 'fixture archive');
+`, { mode: 0o755 });
+      writeFileSync(join(root, 'packages/lyra-ui/scripts/check-package-size.mjs'), `import { appendFileSync, existsSync } from 'node:fs';
+const args = process.argv.slice(2), name = args[args.indexOf('--package') + 1], archive = args[args.indexOf('--tarball') + 1];
+appendFileSync(process.env.LYRA_COMPANION_TEST_LOG, JSON.stringify({ kind: 'check', args, exists: existsSync(archive) }) + '\\n');
+process.exit(name === process.env.LYRA_COMPANION_TEST_REJECT ? 1 : 0);
+`);
+      const result = spawnSync(process.execPath, ['scripts/check-companion-package-sizes.mjs'], {
+        cwd: root,
+        env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, LYRA_COMPANION_TEST_LOG: calls, LYRA_COMPANION_TEST_REJECT: rejected },
+        encoding: 'utf8',
+      });
+      assert.equal(result.status, rejected ? 1 : 0, result.stderr);
+      const events = readFileSync(calls, 'utf8').trim().split('\n').map(line => JSON.parse(line));
+      assert.deepEqual(events.map(event => event.kind), companions.flatMap(() => ['prepare', 'pack', 'check']));
+      for (const [index, [name, prepare]] of companions.entries()) {
+        const [preparation, pack, check] = events.slice(index * 3, index * 3 + 3);
+        assert.deepEqual(preparation.args, ['--filter', `@aceshooting/${name}`, prepare]);
+        assert.equal(preparation.cwd, root);
+        assert.deepEqual(pack.args.slice(0, 3), ['--config.ignore-scripts=true', 'pack', '--pack-destination']);
+        assert.equal(pack.cwd, join(root, 'packages', name));
+        assert.equal(check.exists, true, `${name}: gate consumes the produced archive`);
+        assert.deepEqual(check.args, ['--package', `@aceshooting/${name}`, '--tarball',
+          join(pack.args[3], `aceshooting-${name}-0.0.0.tgz`)]);
+        assert.equal(existsSync(pack.args[3]), false, 'the orchestration cleans its temporary destination');
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+}
+
 test('local aggregate builds package artifacts before workspace lint', () => {
   const commands = read('scripts/ci.sh').split('\n').map(line => line.trim());
   const build = commands.indexOf('pnpm build');

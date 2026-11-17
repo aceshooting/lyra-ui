@@ -27,7 +27,7 @@ let failed = false;
 try {
   for (const { name, directory, prepare } of COMPANIONS) {
     run('pnpm', ['--filter', name, prepare]);
-    run('pnpm', ['pack', '--ignore-scripts', '--pack-destination', destination], resolve(root, directory));
+    run('pnpm', ['--config.ignore-scripts=true', 'pack', '--pack-destination', destination], resolve(root, directory));
     const prefix = `${name.replace('@', '').replace('/', '-')}-`;
     const tarball = readdirSync(destination).find((file) => file.startsWith(prefix) && file.endsWith('.tgz'));
     if (!tarball) throw new Error(`${name}: pnpm pack produced no tarball`);

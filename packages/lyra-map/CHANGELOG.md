@@ -1,5 +1,16 @@
 # @aceshooting/lyra-map
 
+## 1.5.2
+
+### Patch Changes
+
+- a7eeb1d: Preserve scene-completion observations with the native default overdraw setting and sky rendering before custom layers. Malformed frame flags and actual drawing after the custom layer still prevent an observation.
+
+  The native-frame correction adds 98 unpacked archive bytes with no added files. Its unpacked package ceiling advances to the next 64-byte boundary above the measured archive; the compressed size and file-count limits stay unchanged.
+- 9c67698: Prevent a scene replacement from reporting an installed state after a failed native callback retires its layer. Validate the native installation lifetime during reconciliation and commit so later accepted input can recover with a drawable scene.
+
+  The lifetime guards add 204 unpacked runtime bytes to the map archive. Its unpacked size ceiling moves to the next 64-byte boundary above the measured 4,308,548 bytes; compressed size and file-count limits stay unchanged.
+
 ## 1.5.1
 
 ### Patch Changes
