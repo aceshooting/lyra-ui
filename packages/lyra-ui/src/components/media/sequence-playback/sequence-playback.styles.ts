@@ -16,6 +16,27 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-s);
   }
+  [part="base"]:where(.with-value) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    inline-size: 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  :where(.with-value) [part="slider"] {
+    margin: 0;
+    inline-size: 100%;
+    min-inline-size: 0;
+    box-sizing: border-box;
+  }
+  [part="value"] {
+    grid-column: 2;
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+    unicode-bidi: plaintext;
+    font-size: var(--lr-font-size-sm);
+    color: var(--lr-color-text);
+  }
   [part="play-button"] {
     /* Already exactly the shared floor (2.5rem/40px) through inline-size/block-size for this
        circular button's shape -- min-inline-size/min-block-size are added alongside at the same

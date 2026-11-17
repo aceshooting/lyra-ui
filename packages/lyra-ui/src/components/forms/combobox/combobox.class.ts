@@ -539,7 +539,8 @@ export type LyraComboboxSourceErrorEvent =
  *   a host that owns its own retry timing.
  * @method refresh - `refresh(): void` — re-runs the current `source` query without changing the
  *   source's identity, its debounce controller, or its delay. Queues for the next open when the
- *   listbox is closed; does nothing without a `source`.
+ *   listbox is closed; does not call a source while the query is below `minQueryLength`, and
+ *   does nothing without a `source`.
  * @slot source-error - Replaces the built-in failed-`source` state, retry control included. Named
  *   apart from the form-control `error` slot deliberately: they are different failures and a
  *   control has to be able to show both.
@@ -548,8 +549,8 @@ export type LyraComboboxSourceErrorEvent =
  * @event lr-after-show - The listbox finished opening and its transition settled.
  * @event lr-hide - The listbox is about to close, however `open` became false. Conditionally
  *   cancelable: connected transitions can be vetoed on the same terms as `lr-show`; an
- *   already-removed element closing on disconnect or a failed positioning runtime cannot honour
- *   a veto. Vetoing an ordinary connected dismissal preserves the live filter query, active
+ *   already-removed element closing on disconnect, a failed positioning runtime, or an enforced
+ *   minimum-query close cannot honour a veto. Vetoing an ordinary connected dismissal preserves the live filter query, active
  *   option, and async rows exactly.
  * @event lr-after-hide - The listbox finished closing and its transition settled.
  * @event lr-clear - The value was cleared.
@@ -560,7 +561,8 @@ export type LyraComboboxSourceErrorEvent =
  * host's `value` (the committed selection). User-input only: typing and the clear button announce
  * it. Programmatic edits, including `setRangeText()`, are silent. `setRangeText()` preserves
  * the replaced filter text and synchronizes its query/options without changing selected value.
- * Picking a row, resetting the form, and dismissing the listbox also update the filter silently.
+ * Picking a row, resetting the form, and ordinary dismissal also update the filter silently.
+ * A minimum-query close instead preserves the typed filter.
  * @event {FocusEvent} blur - Re-dispatched from the internal native input as a bubbling, composed,
  * non-cancelable event.
  * @event {FocusEvent} focus - Re-dispatched from the internal native input as a bubbling, composed,
@@ -786,6 +788,7 @@ export class LyraCombobox<
     },
     maxRender: { type: Number, attribute: 'max-render', noAccessor: true },
     sourceDelay: { type: Number, attribute: 'source-delay', noAccessor: true },
+    minQueryLength: { type: Number, attribute: 'min-query-length', noAccessor: true },
   };
 
   @property() placeholder = '';
@@ -799,8 +802,8 @@ export class LyraCombobox<
   @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
-  /** Whether the listbox is open. Disabled or readonly controls reject direct reopen attempts,
-   * including a synchronous fieldset cascade. */
+  /** Whether the listbox is open. Disabled, readonly, or below-minimum queries reject direct
+   * reopen attempts, including a synchronous fieldset cascade. */
   @property({ type: Boolean, reflect: true })
   get open(): boolean {
     return this._open;
@@ -810,7 +813,7 @@ export class LyraCombobox<
     const liveDisabled =
       this.effectiveDisabled ||
       (typeof this.matches === 'function' && this.matches(':disabled'));
-    this._open = Boolean(next) && !this.readonly && !liveDisabled;
+    this._open = Boolean(next) && !this.readonly && !liveDisabled && this.meetsMinimumQuery(this.query);
     if (this._open === old) {
       if (next && !this._open && this.hasAttribute('open'))
         this.removeAttribute('open');
@@ -1058,7 +1061,16 @@ export class LyraCombobox<
   // `formResetCallback()`, `hide()`, and `pickRow()`'s two commit resets -- is
   // the component blanking its own filter, never the user driving it, so none
   // of them emit.
-  @state() private query = '';
+  private _query = '';
+  @state()
+  private get query(): string { return this._query; }
+  private set query(next: string) {
+    const old = this._query;
+    if (next === old) return;
+    this._query = next;
+    this.requestUpdate('query', old);
+    this.enforceMinimumQuery(true);
+  }
   /** Public `inputValue` and `setRangeText()` writes remain visible while closed; stale user filter
    * text left behind by a direct `open = false` write does not. */
   private explicitInputValue = false;
@@ -1173,6 +1185,8 @@ export class LyraCombobox<
   private openVetoed = false;
   /** A positioning failure cannot keep the listbox open, even if ordinary dismissal is vetoed. */
   private closeAfterPositioningFailure = false;
+  private minimumQueryClosePending = false;
+  private minimumQueryCloseUnpainted = false;
   /** Set only by `hide()`. Cleanup is applied in `willUpdate()` after `lr-hide` accepts the close,
    * so a veto remains an atomic no-op for the query, active row, and async result set. */
   private closeCleanupPending = false;
@@ -1233,6 +1247,7 @@ export class LyraCombobox<
   private _maxOptionsVisible = 3;
   private _maxRender = 200;
   private _sourceDelay = 200;
+  private _minQueryLength = 0;
 
   constructor() {
     super();
@@ -1428,6 +1443,7 @@ export class LyraCombobox<
     // -- capture that distinction here, while it's still reliable, for
     // `updated()`'s `open`-handling below to consult.
     this._isFirstUpdate = !this.hasUpdated;
+    this.enforceMinimumQuery(false);
     this.announceOpenTransition(changed);
     if (this.open) {
       this.listboxHidden = false;
@@ -1680,6 +1696,56 @@ export class LyraCombobox<
     const old = this._sourceDelay;
     this._sourceDelay = finiteDuration(next, 200);
     this.requestUpdate('sourceDelay', old);
+  }
+
+  /** Minimum Unicode code points in the trimmed query before suggestions or source calls are
+   * allowed. Counting never changes the displayed or provider query. Zero preserves unrestricted
+   * opening and selected-value source warmup; positive values also gate that empty-query warmup.
+   * @default 0 */
+  get minQueryLength(): number { return this._minQueryLength; }
+  set minQueryLength(next: number) {
+    const old = this._minQueryLength;
+    this._minQueryLength = finiteCount(next);
+    this.enforceMinimumQuery(this.open || this.explicitInputValue);
+    this.requestUpdate('minQueryLength', old);
+  }
+
+  private meetsMinimumQuery(query: string): boolean {
+    const minimum = this._minQueryLength ?? 0;
+    if (minimum === 0) return true;
+    const trimmed = query.trim();
+    let count = 0;
+    for (let index = 0; index < trimmed.length; index += trimmed.codePointAt(index)! > 0xffff ? 2 : 1) {
+      if (++count >= minimum) return true;
+    }
+    return false;
+  }
+
+  /** A threshold close keeps the editing draft; ordinary dismissal has different reset semantics. */
+  private enforceMinimumQuery(preserveDraft: boolean): void {
+    if (this.meetsMinimumQuery(this.query)) return;
+    this.clearSourceTimer();
+    const abort = this.sourceAbort;
+    this.sourceAbort = undefined;
+    const token = ++this.sourceToken;
+    this.refreshQueued = false;
+    this.sourceLoading = false;
+    this.sourceFailed = false;
+    if (this.asyncRows.length) this.asyncRows = [];
+    this._sourceTotal = 0;
+    this._sourceTruncated = false;
+    this.activeIndex = -1;
+    abort?.abort();
+    // Retire old transient state before an abort listener can install newer work.
+    if (token !== this.sourceToken || this.meetsMinimumQuery(this.query)) return;
+    this.closeCleanupPending = false;
+    if (preserveDraft) this.explicitInputValue = true;
+    this.minimumQueryClosePending ||= this.open;
+    this.open = false;
+    this.listboxHidden = true;
+    this.listboxRendered = false;
+    this.listboxPositioned = false;
+    this.popupController.cancel();
   }
 
   set maxRender(next: number) {
@@ -2679,6 +2745,19 @@ export class LyraCombobox<
    */
   private announceOpenTransition(changed: PropertyValues): void {
     this.openVetoed = false;
+    this.minimumQueryCloseUnpainted = false;
+    const minimumClose = this.minimumQueryClosePending;
+    this.minimumQueryClosePending = false;
+    if (minimumClose && !this.open) {
+      if (!this._isFirstUpdate && changed.has('open') && changed.get('open') === true && this.isConnected) {
+        emitPopupEvent(this, 'lr-hide', false);
+        // A hide listener may explicitly start a new eligible opening.
+        if (!this.open) return;
+      } else {
+        this.minimumQueryCloseUnpainted = true;
+        return;
+      }
+    }
     const closeAfterPositioningFailure = !this.open && this.closeAfterPositioningFailure;
     this.closeAfterPositioningFailure = false;
     if (!changed.has('open') || this._isFirstUpdate || (!this.open && this.interactionBarred)) return;
@@ -2692,11 +2771,13 @@ export class LyraCombobox<
     });
   }
 
-  /** Opens the listbox and resolves after `lr-after-show`. */
+  /** Opens the listbox and resolves after `lr-after-show`; a below-minimum query resolves
+   * immediately without starting an opening. */
   show(): Promise<void> {
-    if (this.open || this.interactionBarred) return Promise.resolve();
+    if (this.open || this.interactionBarred || !this.meetsMinimumQuery(this.query)) return Promise.resolve();
     const settled = this.popupController.wait(true);
     this.open = true;
+    if (!this.open) this.popupController.release('lr-after-show');
     return settled;
   }
   /** Closes the listbox and resolves after `lr-after-hide`. */
@@ -2932,7 +3013,7 @@ export class LyraCombobox<
         }
       } else if (!this.open) {
         this.teardownListboxOverlay();
-        if (this.interactionBarred) {
+        if (this.interactionBarred || this.minimumQueryCloseUnpainted) {
           this.popupController.cancel();
         } else if (!this._isFirstUpdate) {
           void this.settleTransition('lr-after-hide');
@@ -3177,11 +3258,16 @@ export class LyraCombobox<
   private runSource(query: string, options?: { immediate?: boolean }): void {
     const source = this.source;
     if (!source) return;
+    if (!this.meetsMinimumQuery(query) || !this.meetsMinimumQuery(this.query)) {
+      this.enforceMinimumQuery(false);
+      return;
+    }
     this.clearSourceTimer();
-    // Abort any in-flight request from a prior query so its fetch can be cancelled.
-    this.sourceAbort?.abort();
+    const abort = this.sourceAbort;
     this.sourceAbort = undefined;
     const token = ++this.sourceToken;
+    abort?.abort();
+    if (token !== this.sourceToken || source !== this.source || !this.meetsMinimumQuery(this.query)) return;
     const ownerWindow = this.ownerDocument.defaultView;
     if (!this.isConnected || !ownerWindow) return;
     const request = { query, token, owner: ownerWindow, source };
@@ -3207,6 +3293,9 @@ export class LyraCombobox<
   }: ComboboxSourceRequest): void {
     if (
       token !== this.sourceToken ||
+      source !== this.source ||
+      !this.meetsMinimumQuery(query) ||
+      !this.meetsMinimumQuery(this.query) ||
       !this.isConnected ||
       this.ownerDocument.defaultView !== ownerWindow
     ) {
@@ -3222,12 +3311,20 @@ export class LyraCombobox<
     // following `.catch()` handles, instead of escaping this debounced
     // settle callback as an uncaught exception.
     Promise.resolve()
-      .then(() =>
-        source(query, { signal: controller.signal, limit: MAX_SOURCE_ROWS })
-      )
+      .then(() => {
+        if (
+          token !== this.sourceToken || source !== this.source || !this.isConnected ||
+          this.ownerDocument.defaultView !== ownerWindow ||
+          !this.meetsMinimumQuery(query) || !this.meetsMinimumQuery(this.query)
+        ) return undefined;
+        return source(query, { signal: controller.signal, limit: MAX_SOURCE_ROWS });
+      })
       .then((result) => {
         if (
           token !== this.sourceToken ||
+          source !== this.source ||
+          !this.meetsMinimumQuery(query) ||
+          !this.meetsMinimumQuery(this.query) ||
           !this.isConnected ||
           this.ownerDocument.defaultView !== ownerWindow
         ) {
@@ -3250,6 +3347,9 @@ export class LyraCombobox<
       .catch((err) => {
         if (
           token !== this.sourceToken ||
+          source !== this.source ||
+          !this.meetsMinimumQuery(query) ||
+          !this.meetsMinimumQuery(this.query) ||
           !this.isConnected ||
           this.ownerDocument.defaultView !== ownerWindow
         ) {
@@ -3336,6 +3436,7 @@ export class LyraCombobox<
     switch (e.key) {
       case 'ArrowDown':
       case 'ArrowUp':
+        if (!this.meetsMinimumQuery(this.query)) return;
         e.preventDefault();
         if (!this.open) {
           this.activeIndex = navigable.findIndex((row) => this.committed.includes(row.value));

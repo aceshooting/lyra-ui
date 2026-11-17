@@ -273,14 +273,34 @@ feedback.
   Start and stop it with `play()`, `pause()` or `toggle()`; assigning it throws in strict-mode code
   and an authored `playing` attribute starts nothing.
 - `withoutLoop: boolean = false` (attribute `without-loop`) — stops playback on the last item
-  instead of wrapping back to the first; read on every tick.
+  instead of wrapping back to the first; read on every tick. Starting paused standalone playback
+  again from the final item resets to zero. A bound source clock owns restart and loop policy.
+- `valueFormatter?: SequencePlaybackValueFormatter` (property-only) — synchronous, side-effect-free
+  `(currentIndex: number) => string | null | undefined`, receiving the normalized **zero-based** index.
+  Its plain text supplies the range's `aria-valuetext` and the optional visible readout. Nullish,
+  nonstring, or thrown results use the localized ordinal; an explicit empty string remains empty.
+  Mutating playback inside the callback discards its result without immediately retrying it.
+- `withValue: boolean = false` (attribute `with-value`) — show a non-live position readout below
+  the range. Hidden by default; it duplicates the range's text and is `aria-hidden`.
 - `hidden: boolean = false` (reflected; re-declared over the native IDL property so Lit's
   change-tracking sees it and auto-pauses on `hidden = true`)
 
-**Methods:** `play()`, `pause()`, `toggle()`, `next()`, `previous()`,
-`goTo(currentIndex: number)` — all idempotent/clamped; `itemCount <= 1` is a no-op degenerate case.
-`focus(options?)`, `blur()`, and
-`click()` forward to the play button.
+**Methods:**
+
+- `play()` starts playback; repeated calls while playing and starts with fewer than two items do
+  nothing. For paused standalone `withoutLoop` playback at the last item, index zero is installed
+  **before** `lr-play`; one `lr-sequence-step { currentIndex: 0 }` follows unless a listener supersedes
+  the start. A reentrant pause, seek, restart, disconnect, binding attachment, or manual step retires
+  the stale reset event. The next timer tick advances from the current index.
+- `pause()` stops playback and is idempotent; `toggle()` pauses or starts with the same replay rules.
+- `next()` and `previous()` preserve playing/paused state, moving one item or doing nothing at the
+  respective endpoint. They do not pause active playback.
+- `goTo(currentIndex)` pauses, clamps the requested index, and emits a manual step even when the
+  index is unchanged. Use `goTo(index); play()` for an explicit seek-and-resume.
+- `focus(options?)`, `blur()`, and `click()` forward to the play button.
+
+When bound, these commands delegate to the source clock; its restart and loop semantics take
+precedence over the standalone rules.
 
 **Events:** `lr-play`, `lr-pause` (no detail), `lr-sequence-step`
 (`detail: LyraSequencePlaybackStepDetail { currentIndex }`, fired on every tick and manual step);
@@ -288,19 +308,22 @@ internal `focus`/`blur` are relayed exactly once as owner-realm native `FocusEve
 composed, preserving `relatedTarget`).
 
 **Class and event types:** `LyraSequencePlayback`, `LyraSequencePlaybackEventMap`, and
-`LyraSequencePlaybackStepDetail`.
+`LyraSequencePlaybackStepDetail`, plus the `SequencePlaybackValueFormatter` callback type.
 
 **Slots:** `play-icon`, `pause-icon` — decorative glyphs for the paused and playing states; an empty
 slot keeps the built-in glyph. Assigned content renders in an inert, `aria-hidden` layer inside the
 play/pause button, so do not use either slot for a second interactive control.
 
-**CSS parts:** `base`, `play-button`, `slider`
+**CSS parts:** `base`, `play-button`, `slider`, `value` (the optional readout)
 
 The `slider` carries supplemental localized `aria-valuetext` — `Step {index} of {total}` (key
 `playbackStepPosition`, both numbers formatted with the component's effective locale). Browsers may
 ignore that override on a native range, so the interoperable semantic contract is itself one-based
 (`min=1`, `max=itemCount`, `value=currentIndex+1`): assistive technologies receive the correct
-ordinal even when they expose the native numeric value.
+ordinal even when they expose the native numeric value. `valueFormatter` can supply a frame name,
+date, or state instead; enable `with-value` when sighted users also need that text. The callback is
+called at most once per render and both presentations share its result. The visible text wraps at narrow
+allocations and is not a live region, avoiding unsolicited announcements on every timer tick.
 
 **Themeable custom properties:** `--lr-sequence-playback-icon-size` (default
 `calc(var(--lr-icon-button-size) * 0.35)` — the play/pause glyph's size; applied as the button's
@@ -326,6 +349,19 @@ dimming at `itemCount <= 1`), `--lr-focus-ring-*`.
 </script>
 ```
 
+For caller-owned frame labels, use a property binding (not an attribute):
+
+```ts
+import '@aceshooting/lyra-ui/components/lr-sequence-playback.js';
+import type { LyraSequencePlayback } from '@aceshooting/lyra-ui/components/media/sequence-playback/sequence-playback.class.js';
+
+const frames = ['Initial state', 'Review', 'Final state'];
+const playback = document.querySelector<LyraSequencePlayback>('lr-sequence-playback')!;
+playback.itemCount = frames.length;
+playback.withValue = true;
+playback.valueFormatter = index => frames[index];
+```
+
 **Known gotchas:**
 
 - `currentIndex` is re-clamped into `[0, itemCount)` as soon as `itemCount` shrinks (in
@@ -343,9 +379,8 @@ dimming at `itemCount <= 1`), `--lr-focus-ring-*`.
   values cannot poison end conditions or the slider.
 - `interval-ms` is clamped to the 16ms floor and the browser's finite timer ceiling: a non-finite or
   lower value ticks at 16ms, while an oversized value uses the timer ceiling.
-- No _visible_ "N of M" position label beside the range input; the native one-based range still
-  exposes the current ordinal and total bounds, with localized `aria-valuetext` as a supplemental
-  enhancement where the platform honors it.
+- The compact default has no visible position readout. Opt in with `with-value`; formatting alone
+  updates `aria-valuetext` without adding visible content. The native range remains one-based.
 - Calling `play()`/`pause()` programmatically (not via the button) gives no `aria-live`
   announcement of the Play/Pause state change.
 
@@ -992,6 +1027,39 @@ cannot load rejects with `capture-failed`.
   panel or toolbar covering part of the map does not hide what the map frames. Changing it keeps
   the geographic centre fixed, shifts the picture and is not reported as a camera change. Sides are
   physical, not logical.
+- `canvasTarget?: LyraMapCanvasTarget` (property only) — a connected same-document ancestor
+  element or `'viewport'` that the canvas fills. The host remains the usable rectangle: native
+  controls, legend and toolbars stay in it, and the camera automatically adds the target-to-host
+  insets. `cameraPadding` is additional space inside that rectangle; per-fit padding is additional
+  to both. `getVisibleBounds()` and movement-event bounds use the padded host, while
+  `getVisibleBounds({ padded: false })` explicitly reads the whole canvas. `project()`,
+  `unproject()` and pointer positions remain canvas-local CSS pixels.
+
+  ```ts
+  import '@aceshooting/lyra-ui/components/lr-map.js';
+  import type { LyraMapCanvasTarget } from '@aceshooting/lyra-ui/components/lr-map.js';
+
+  const target: LyraMapCanvasTarget = mapElement.parentElement!;
+  mapElement.canvasTarget = target; // The host occupies the uncovered part of this ancestor.
+  mapElement.cameraPadding = { top: 12 }; // Extra breathing room inside the host.
+  // Or use mapElement.canvasTarget = 'viewport' for the current visual viewport.
+  mapElement.canvasTarget = undefined; // Restore the ordinary host-sized canvas.
+  ```
+
+  The allocation follows resize, scroll, layout and transform changes. Translation and positive
+  axis-aligned scaling work beneath transformed, filtered and container-query ancestors without
+  moving the canvas out of its shadow root. A target must contain the entire host rectangle;
+  partial containment, an unrelated/disconnected target, rotation, skew, perspective or a
+  reflected/zero scale restores ordinary host layout and removes the automatic insets. Ordinary
+  ancestor overflow/paint clipping still applies; this option does not escape it or move content
+  into the top layer. Use a containing panel whose clipping permits the intended paint extent.
+
+  If authored padding collapses the usable region in an active extent, padded bounds return
+  `null` and live fits return `false`; the engine keeps the valid automatic host inset until the
+  padding becomes usable again. A per-fit padding that consumes the remaining region is also
+  refused. Explicit whole-canvas bounds remain available. Changing the allocation preserves the
+  geographic camera and emits no synthetic `lr-map-view-change`; clearing the option or
+  disconnecting the map releases extent tracking. Leaving it unset preserves existing behavior.
 - `renderWorldCopies?: boolean` (attribute: false) — forwarded to MapLibre when its map is
   constructed. Leave it unset to preserve MapLibre's own current default; set `false` before
   construction to stop repeating the world horizontally. This is a construction-time option, so a

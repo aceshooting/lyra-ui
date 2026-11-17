@@ -496,6 +496,40 @@ reassigned as a fresh object per patch. A container value that self-references (
 renders as a leaf `Circular reference` marker (`data-type="circular"`) instead of recursing — no
 stack overflow on cyclic `data`.
 
+**Host sizing:** the host is a block with `container-type: inline-size` so automatic row layout
+responds to its own allocation. Inline-size containment replaces content-based intrinsic sizing
+with `contain-intrinsic-inline-size: var(--lr-size-20rem)` (20rem by default). This fallback prevents a shrink-to-fit
+viewer from collapsing, but it is not a minimum width required by the JSON content. Shrink-to-fit
+parents and automatic grid tracks can size from that fallback rather than the available column.
+Changing `layout` controls key/value arrangement; it does not remove host containment.
+
+Give a narrow panel an allocation from its surrounding layout, and use a zero-minimum grid track
+instead of a content-sized `auto` track (or the automatic minimum of a bare `1fr`):
+
+```js
+import '@aceshooting/lyra-ui/components/lr-json-viewer.js';
+```
+
+```html
+<div class="json-panel"><lr-json-viewer aria-label="Response"></lr-json-viewer></div>
+```
+
+```css
+/* The surrounding layout supplies this panel's available inline size. */
+.json-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+.json-panel > lr-json-viewer { min-inline-size: 0; }
+```
+
+The parent track/allocation is the important constraint: `min-inline-size: 0` on the viewer alone
+does not change a content-sized parent's sizing rule. In a shrink-to-fit composition, first give
+the panel a definite or otherwise constrained available inline size. Preserve containment so the
+`layout="auto"` container query can continue following the viewer's width.
+
 Removing `query` clears matches while retaining null property readback. Before any match is active,
 `searchPrevious()` selects the final match; later next/previous navigation wraps. Navigation may
 reopen the selected match’s ancestors while unrelated manual collapse remains intact.

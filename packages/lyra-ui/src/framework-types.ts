@@ -2976,6 +2976,7 @@ export interface LyraComponentTypeMap {
       | 'locale'
       | 'maxOptionsVisible'
       | 'maxRender'
+      | 'minQueryLength'
       | 'multiple'
       | 'name'
       | 'open'
@@ -3075,6 +3076,7 @@ export interface LyraComponentTypeMap {
       'loading-text'?: LyraCombobox['loadingText'];
       'max-options-visible'?: LyraCombobox['maxOptionsVisible'];
       'max-render'?: LyraCombobox['maxRender'];
+      'min-query-length'?: LyraCombobox['minQueryLength'];
       'overflow-text'?: LyraCombobox['overflowText'];
       'positioning-strategy'?: LyraCombobox['positioningStrategy'];
       'source-delay'?: LyraCombobox['sourceDelay'];
@@ -7444,6 +7446,7 @@ export interface LyraComponentTypeMap {
       | 'anchorLngLat'
       | 'anchorSafeArea'
       | 'cameraPadding'
+      | 'canvasTarget'
       | 'center'
       | 'choropleth'
       | 'choroplethLegend'
@@ -11141,7 +11144,9 @@ export interface LyraComponentTypeMap {
       | 'itemCount'
       | 'locale'
       | 'strings'
-      | 'withoutLoop',
+      | 'valueFormatter'
+      | 'withoutLoop'
+      | 'withValue',
       {}
     >;
     events: LyraSequencePlaybackEventMap;
@@ -11157,6 +11162,7 @@ export interface LyraComponentTypeMap {
       'current-index'?: LyraSequencePlayback['currentIndex'];
       'interval-ms'?: LyraSequencePlayback['intervalMs'];
       'item-count'?: LyraSequencePlayback['itemCount'];
+      'with-value'?: LyraSequencePlayback['withValue'];
       'without-loop'?: LyraSequencePlayback['withoutLoop'];
     };
   };

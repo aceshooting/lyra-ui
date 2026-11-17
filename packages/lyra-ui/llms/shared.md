@@ -807,6 +807,31 @@ activation.
   `lr-time-range` is form-associated only for fieldset-cascaded disablement: no submission value,
   no state restoration.
 
+### Hiding the label visually: `label-display`
+
+On controls that expose `labelDisplay: LyraLabelDisplay` (`'visible' | 'hidden'`, reflected as
+`label-display`), use `label-display="hidden"` to visually hide the existing field caption without
+removing its accessible-name relationship. The caption leaves normal layout but remains available
+to assistive technology. Keep a meaningful `label` or documented label slot; the display setting
+does not supply a label. A host `aria-label` retains its documented naming precedence.
+
+The display choice affects the `form-control-label` part only: hint/error text, their description
+relationships, required semantics and validation are unchanged. It does not hide the whole control.
+The default is `'visible'` on `lr-input`, `lr-number-input`, `lr-time-input`, `lr-textarea`,
+`lr-select`, `lr-combobox`, `lr-date-input`, `lr-phone-input`, `lr-token-input`, `lr-locale-picker`,
+`lr-country-picker`, `lr-currency-picker`, `lr-time-zone-picker`, `lr-unit-picker`, `lr-model-select`
+and `lr-voice-picker`. `lr-segmented` uses the same vocabulary but defaults to `'hidden'`; set
+`label-display="visible"` to add its field caption. Supporting text follows each component's own
+hint/error API; `lr-segmented` provides a hint, not form validation or an error field.
+
+```js
+import '@aceshooting/lyra-ui/components/lr-select.js';
+```
+
+```html
+<lr-select label="Sort order" label-display="hidden"></lr-select>
+```
+
 ### Enter submits the form
 
 A native `<input>` submits its form owner when the user presses Enter. The `<input>` these controls

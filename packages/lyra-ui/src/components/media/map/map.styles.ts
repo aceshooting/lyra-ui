@@ -152,9 +152,11 @@ export const styles = css`
   }
   [part='container'] {
     position: absolute;
-    inset: 0;
-    inline-size: 100%;
-    block-size: 100%;
+    /* policy-allow(physical-css): canvas placement follows physical DOM rectangle coordinates. */
+    left: var(--_lr-map-canvas-left, 0px);
+    top: var(--_lr-map-canvas-top, 0px);
+    width: var(--_lr-map-canvas-width, 100%);
+    height: var(--_lr-map-canvas-height, 100%);
     overflow: hidden;
   }
   /* MapLibre creates these nodes inside the container above, so inside this shadow root: page-level
@@ -680,7 +682,8 @@ export const styles = css`
      the map, on Lyra's own surface, typography, and interaction tokens. */
   .maplibregl-control-container {
     position: absolute;
-    inset: 0;
+    inset: var(--_lr-map-canvas-inset-top, 0px) var(--_lr-map-canvas-inset-right, 0px)
+      var(--_lr-map-canvas-inset-bottom, 0px) var(--_lr-map-canvas-inset-left, 0px);
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto 1fr auto;

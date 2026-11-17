@@ -2,7 +2,7 @@
   "$comment": "Authoritative component, public-surface, and upstream mapping inventory. Refresh with generate-component-inventory.mjs using the pinned published manifests and artifact-bound black-box evidence; do not infer upstream behavior from implementation source.",
   "schemaVersion": 1,
   "pins": {
-    "lyraVersion": "31.1.0",
+    "lyraVersion": "31.1.1",
     "webawesome": {
       "version": "3.11.0",
       "commit": "1d05f1a4468336de35d2c61282a953ef07da3bdf"
@@ -30738,6 +30738,16 @@
             "hasDefault": false
           },
           {
+            "name": "min-query-length",
+            "property": "minQueryLength",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
             "name": "multiple",
             "property": "multiple",
             "type": "boolean",
@@ -31243,6 +31253,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "minQueryLength",
+            "attribute": "min-query-length",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
           },
           {
             "name": "multiple",
@@ -82448,6 +82468,15 @@
             "hasDefault": false
           },
           {
+            "name": "canvasTarget",
+            "attribute": null,
+            "type": "LyraMapCanvasTarget | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "center",
             "attribute": "center",
             "type": "readonly [number, number]",
@@ -125867,6 +125896,16 @@
             "default": ""
           },
           {
+            "name": "with-value",
+            "property": "withValue",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "without-loop",
             "property": "withoutLoop",
             "type": "boolean",
@@ -125938,8 +125977,27 @@
             "hasDefault": false
           },
           {
+            "name": "valueFormatter",
+            "attribute": null,
+            "type": "SequencePlaybackValueFormatter | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "withoutLoop",
             "attribute": "without-loop",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "withValue",
+            "attribute": "with-value",
             "type": "boolean",
             "readonly": false,
             "reflects": false,
@@ -126005,6 +126063,10 @@
           },
           {
             "name": "slider",
+            "deprecated": null
+          },
+          {
+            "name": "value",
             "deprecated": null
           }
         ],

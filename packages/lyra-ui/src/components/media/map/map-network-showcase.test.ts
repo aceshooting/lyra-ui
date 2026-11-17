@@ -56,6 +56,31 @@ describe('network monitoring showcase story', function () {
     await expect(root).to.be.accessible();
   });
 
+  it('lets keyboard users reach the final history observation', async () => {
+    const { root } = await mount();
+    const history = root.querySelector<HTMLOListElement>('[data-history]')!;
+    // Ensure genuine overflow in every engine, independent of the page's default typography.
+    history.style.maxBlockSize = '3rem';
+    expect(history.scrollHeight).to.be.greaterThan(history.clientHeight);
+    const nodeSelect = root.querySelector<HTMLSelectElement>('[data-node]')!;
+    await focusByKeyboard(nodeSelect);
+    await sendKeys({ press: 'Tab' });
+    expect(history.ownerDocument.activeElement === history).to.equal(true);
+    expect(history.matches(':focus-visible')).to.equal(true);
+    const focusStyle = getComputedStyle(history);
+    expect(focusStyle.outlineStyle).not.to.equal('none');
+    expect(parseFloat(focusStyle.outlineWidth)).to.be.greaterThan(0);
+    expect(history.scrollTop).to.equal(0);
+    await sendKeys({ press: 'End' });
+    let bottomSamples = 0;
+    await waitUntil(() => {
+      const maximum = history.scrollHeight - history.clientHeight;
+      const atBottom = Math.abs(history.scrollTop - maximum) <= 1;
+      bottomSamples = atBottom ? bottomSamples + 1 : 0;
+      return bottomSamples >= 2;
+    }, 'keyboard reaches and settles at the final history observation');
+  });
+
   it('operates saved views and following from the keyboard', async () => {
     const { root, map } = await mount();
     await focusByKeyboard(button(root, '[data-camera="save"]'));

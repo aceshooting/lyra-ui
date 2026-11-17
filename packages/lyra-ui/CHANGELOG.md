@@ -1,5 +1,23 @@
 # Changelog
 
+## 31.1.1
+
+### Patch Changes
+
+Map canvas allocation, minimum-query suggestions and sequence playback presentation add runtime, types, versioned metadata and generated consumer guidance to the release artifacts. Only exceeded delivery ceilings advance to the smallest reviewed boundaries; passing limits, optional-peer exclusions, the UI download limit and file-count policies remain unchanged.
+
+- Restore the shared `label-display` accessibility reference. Document the JSON viewer's 20rem intrinsic sizing introduced in 31.0.0, including constrained parent grid tracks for narrow panels.
+- Make the network monitoring example's history keyboard reachable, with a localized accessible name and visible focus ring.
+- Add sequence playback position formatting and an optional visible readout. Restart completed standalone non-looping playback from the first item, preserve listener-owned actions, and document which navigation methods pause playback.
+- Add opt-in combobox `min-query-length` to keep short queries closed and out of asynchronous sources. Preserve typed text and selection while canceling obsolete searches; the default remains unrestricted.
+- Add map `canvasTarget` for painting behind application chrome while controls, fitting and visible bounds use the host's usable area. Track layout changes, support axis-aligned transforms, and retire geometry work when the map or its document changes.
+- 03eaaf1: Preserve valid accessible names for category labels when no glyph fits their measured chart lane. Retire the temporary role and name when a label becomes intentionally blank, and restore native text semantics when the lane widens.
+
+  The semantic repair increases five measured aggregate bundles by 41–44 gzip bytes. Only their exceeded ceilings advance to the next 64-byte boundary; individual-entry limits, passing ceilings, measurement inputs and optional-peer exclusions stay unchanged.
+
+  The generated-view chat composition measures 1,035,535 raw and 293,712 gzip bytes of lazy JavaScript. Only these exceeded lazy limits advance to the next 64-byte boundary, preserving eager-loading limits and external dependency inventories.
+- @aceshooting/lyra-translations@31.1.1
+
 ## 31.1.0
 
 ### Minor Changes

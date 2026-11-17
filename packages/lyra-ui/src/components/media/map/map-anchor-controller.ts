@@ -468,7 +468,8 @@ export class MapAnchorController {
       wrapper.hidden = false;
       const rect = container.getBoundingClientRect();
       if (!current()) return;
-      const pointRect = virtualAnchorFromRect({ x: rect.left + point[0], y: rect.top + point[1] }).getBoundingClientRect();
+      const pointRect = virtualAnchorFromRect({ x: rect.left + point[0] * rect.width / width,
+        y: rect.top + point[1] * rect.height / height }).getBoundingClientRect();
       const publish = (): void => {
         if (!current() || !this.hasContent()) return;
         const first = !this.placed;

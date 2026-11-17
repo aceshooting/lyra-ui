@@ -1,4 +1,4 @@
-import { html, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -21,6 +21,9 @@ const INVALID_INTERVAL_WARNING =
 function warnInvalidInterval(): void {
   devWarnOnce(INVALID_INTERVAL_WARNING_KEY, INVALID_INTERVAL_WARNING);
 }
+
+/** Formats a zero-based sequence index as caller-owned plain text. */
+export type SequencePlaybackValueFormatter = (currentIndex: number) => string | null | undefined;
 
 export interface LyraSequencePlaybackStepDetail {
   currentIndex: number;
@@ -52,6 +55,7 @@ export interface LyraSequencePlaybackEventMap {
  * @csspart base - The playback controls wrapper.
  * @csspart play-button - The play/pause button; disabled resting paint is retained under hover and press.
  * @csspart slider - The playback position slider.
+ * @csspart value - Optional non-live position readout shown by `with-value`.
  * @cssprop [--lr-sequence-playback-icon-size=calc(var(--lr-icon-button-size) * 0.35)] - Font size of the
  *   play/pause glyph, derived from the shared icon-button hit-target size.
  * @cssprop --lr-sequence-playback-play-button-active-bg - Pressed play/pause button background. Defaults
@@ -86,9 +90,18 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
    *  `scheduleTick()`. */
   @property({ type: Number, attribute: 'interval-ms' }) intervalMs = 900;
 
-  /** Stops playback on the last item instead of wrapping back to the first. Read on every tick,
-   *  so a live change takes effect at the next step. */
+  /** Stops standalone playback on the last item instead of wrapping. Starting again from that
+   *  item restarts at zero. Read on every tick; dormant while a source clock owns playback. */
   @property({ type: Boolean, attribute: 'without-loop' }) withoutLoop = false;
+
+  /** Optional synchronous, side-effect-free formatter for the normalized zero-based index.
+   *  Its plain text supplies `aria-valuetext` and the optional visible value. Nullish, nonstring,
+   *  or thrown results use the localized ordinal; an explicit empty string remains empty.
+   *  Mutating playback during formatting discards that result without immediately retrying it. */
+  @property({ attribute: false }) valueFormatter?: SequencePlaybackValueFormatter;
+
+  /** Show a non-live position readout below the slider. Hidden by default. */
+  @property({ type: Boolean, attribute: 'with-value' }) withValue = false;
 
   /**
    * Re-declared as a Lit reactive property (shadowing the inherited plain
@@ -102,6 +115,11 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
   private timer?: number;
   private timerWindow?: Window;
   private _playing = false;
+  private playbackGeneration = 0;
+  private indexRevision = 0;
+  private formatGeneration = 0;
+  private formatting = false;
+  private suppressFormatter = false;
   @query('[part="play-button"]') private playButton?: HTMLButtonElement;
 
   private boundCommands?: SequencePlaybackCommands;
@@ -118,9 +136,16 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
     });
   }
 
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    this.formatGeneration = (this.formatGeneration ?? 0) + 1;
+    this.suppressFormatter = this.formatting === true;
+    super.requestUpdate(...args);
+  }
+
   private attachBinding(commands: SequencePlaybackCommands, released: () => void): SequencePlaybackOwner {
     const count = this.itemCount, index = this.currentIndex;
     const generation = ++this.bindingGeneration;
+    this.playbackGeneration++;
     this.clearTimer(); this._playing = false; this.toggleAttribute('playing', false);
     this.boundCommands = commands;
     this.releaseBinding = released;
@@ -138,6 +163,7 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
       },
       release: () => {
         if (!current()) return;
+        this.playbackGeneration++;
         this.bindingGeneration++; this.boundCommands = undefined; this.boundProjection = undefined; this.releaseBinding = undefined;
         this.clearTimer(); this._playing = false; this.toggleAttribute('playing', false);
         this.silentRestoration = true;
@@ -148,6 +174,7 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
   }
 
   override adoptedCallback(): void {
+    this.playbackGeneration++;
     this.releaseBinding?.();
     super.adoptedCallback();
   }
@@ -159,12 +186,27 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
 
   private setPlaying(next: boolean): void {
     if (next === this._playing || (next && finiteCount(this.itemCount) <= 1)) return;
+    const generation = ++this.playbackGeneration;
+    const document = this.ownerDocument;
+    const connected = this.isConnected;
+    const count = finiteCount(this.itemCount);
+    const restart = next && this.withoutLoop &&
+      finiteCount(this.currentIndex, 0, this.maxIndex) === this.maxIndex;
+    if (restart) this.currentIndex = 0;
     this._playing = next;
     this.toggleAttribute('playing', next);
     this.requestUpdate();
     if (next) {
+      const current = (): boolean => generation === this.playbackGeneration && this._playing &&
+        !this.boundCommands && this.ownerDocument === document && this.isConnected === connected &&
+        finiteCount(this.itemCount) > 1;
+      const resetRevision = this.indexRevision;
       this.emit('lr-play');
-      if (this._playing) this.scheduleTick();
+      if (!current()) return;
+      if (restart && this.indexRevision === resetRevision && this.currentIndex === 0 && finiteCount(this.itemCount) === count) {
+        this.emit('lr-sequence-step', { currentIndex: 0 });
+      }
+      if (current()) this.scheduleTick();
     } else {
       this.clearTimer();
       this.emit('lr-pause');
@@ -223,7 +265,9 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
     }
   }
 
-  /** Start playback; no-op if there's nothing to advance through. */
+  /** Start playback; no-op while playing or with fewer than two items. Standalone non-looping
+   *  playback at its final item resets to zero before `lr-play`, followed by one reset step unless
+   *  a listener supersedes the start. A bound source clock owns its own restart semantics. */
   play(): void {
     if (this.boundCommands) { this.boundCommands.play(); return; }
     this.setPlaying(true);
@@ -235,7 +279,7 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
     this.setPlaying(false);
   }
 
-  /** Toggle between playing and paused. */
+  /** Toggle playing/paused; starting follows the same restart semantics as `play()`. */
   toggle(): void {
     if (this.boundCommands) { this.boundCommands.toggle(); return; }
     this.setPlaying(!this._playing);
@@ -291,18 +335,19 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
   }
 
   private setIndex(i: number): void {
+    this.indexRevision++;
     this.currentIndex = finiteCount(i, 0, this.maxIndex);
     this.emit('lr-sequence-step', { currentIndex: this.currentIndex });
   }
 
-  /** Advance one step without starting playback. */
+  /** Advance one step, preserving playing/paused state; no-op at the final item. */
   next(): void {
     if (this.boundCommands) { this.boundCommands.next(); return; }
     const currentIndex = finiteCount(this.currentIndex);
     if (currentIndex + 1 < finiteCount(this.itemCount)) this.setIndex(currentIndex + 1);
   }
 
-  /** Go back one step without starting playback. */
+  /** Go back one step, preserving playing/paused state; no-op at the first item. */
   previous(): void {
     if (this.boundCommands) { this.boundCommands.previous(); return; }
     const currentIndex = finiteCount(this.currentIndex);
@@ -357,12 +402,47 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
     this.goTo(finiteCount(this.currentIndex, 0, this.maxIndex) + delta);
   };
 
+  private positionProjection(): { index: number; count: number; text: string } {
+    const formatter = this.valueFormatter;
+    const indexInput = this.currentIndex;
+    const countInput = this.itemCount;
+    const locale = this.effectiveLocale;
+    const document = this.ownerDocument;
+    const connected = this.isConnected;
+    const generation = this.formatGeneration;
+    const current = (): boolean => generation === this.formatGeneration &&
+      formatter === this.valueFormatter && Object.is(indexInput, this.currentIndex) &&
+      Object.is(countInput, this.itemCount) && locale === this.effectiveLocale &&
+      document === this.ownerDocument && connected === this.isConnected;
+    let custom: unknown;
+    if (typeof formatter === 'function' && !this.suppressFormatter) {
+      this.formatting = true;
+      try {
+        custom = formatter(finiteCount(indexInput, 0, Math.max(0, finiteCount(countInput) - 1)));
+      } catch {
+        // Consumer formatting cannot remove the native ordinal fallback.
+      } finally {
+        this.formatting = false;
+      }
+      if (!current()) this.suppressFormatter = true;
+    }
+    const coherent = current();
+    const count = finiteCount(this.itemCount);
+    const index = finiteCount(this.currentIndex, 0, Math.max(0, count - 1));
+    const numberFormat = getNumberFormat(this.effectiveLocale);
+    const text = coherent && typeof custom === 'string' ? custom :
+      this.localize('playbackStepPosition', undefined, {
+        index: numberFormat.format(index + 1),
+        total: numberFormat.format(count),
+      });
+    return { index, count, text };
+  }
+
   override render(): TemplateResult {
-    const maxIndex = this.maxIndex;
-    const currentIndex = finiteCount(this.currentIndex, 0, maxIndex);
-    const disabled = finiteCount(this.itemCount) <= 1;
+    const position = this.positionProjection();
+    const disabled = position.count <= 1;
     return html`
-      <div part="base">
+      <div part="base" class=${this.withValue ? 'with-value' : nothing}>
         <button
           part="play-button"
           type="button"
@@ -380,19 +460,17 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
           part="slider"
           type="range"
           min="1"
-          max=${Math.max(1, finiteCount(this.itemCount))}
-          .value=${String(currentIndex + 1)}
+          max=${Math.max(1, position.count)}
+          .value=${String(position.index + 1)}
           aria-label=${this.localize('playbackPosition')}
-          aria-valuetext=${this.localize('playbackStepPosition', undefined, {
-            index: getNumberFormat(this.effectiveLocale).format(currentIndex + 1),
-            total: getNumberFormat(this.effectiveLocale).format(finiteCount(this.itemCount)),
-          })}
+          aria-valuetext=${position.text}
           ?disabled=${disabled}
           @input=${(e: Event) => this.goTo(Number((e.target as HTMLInputElement).value) - 1)}
           @keydown=${this.onSliderKeyDown}
           @focus=${this.onControlFocus}
           @blur=${this.onControlBlur}
         />
+        ${this.withValue ? html`<span part="value" aria-hidden="true">${position.text}</span>` : nothing}
       </div>
     `;
   }

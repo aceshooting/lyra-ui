@@ -758,6 +758,7 @@ export type {
   LyraMapSourceDataDiff,
   LyraMapInstance,
   LyraMapEngine,
+  LyraMapCanvasTarget,
   LyraMapFeatureRequirements,
 } from './components/media/map/map.class.js';
 export type {
@@ -2108,6 +2109,7 @@ export type { LyraModelSettingsPanelEventMap } from './components/conversation/m
 export type {
   LyraSequencePlaybackEventMap,
   LyraSequencePlaybackStepDetail,
+  SequencePlaybackValueFormatter,
 } from './components/media/sequence-playback/sequence-playback.class.js';
 export type { LyraPaginationEventMap } from './components/data/pagination/pagination.class.js';
 export type { LyraPollStatusEventMap } from './components/utility/poll-status/poll-status.class.js';

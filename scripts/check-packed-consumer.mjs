@@ -156,17 +156,17 @@ const optionalPeerFamilyTags = componentInventory.components
 const rootHelperRegisteredTags = [];
 
 // Packed core/all.js includes every non-optional registration and every emitted chunk.
-// Segmented captions, hint and forwarded-slot naming, plus the chart no-glyph fallback bring the
-// graph to 5,737,070 raw bytes across 65 files; the next 64-byte ceiling leaves 18 bytes.
+// Minimum-query admission, sequence presentation and versioned metadata bring the graph to
+// 5,741,897 raw bytes across 65 files; the next 64-byte ceiling leaves 55 bytes.
 // Optional-peer exclusions and the complete file sum stay fixed. Core has no WASM allowance;
 // the explicit Oniguruma canary retains its separate exact 466,610-byte binary requirement.
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/ad043b8e3479fcd9990cd6ecc36e4638b48cfcc4/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'Segmented field captions, hints and forwarded-slot naming, together with the chart no-glyph fallback, add 1,937 raw bytes to the complete core graph. It measures 5,737,070 bytes across the same 65 emitted files; only its exceeded raw ceiling advances to 5,737,088 bytes, the next 64-byte boundary with 18 bytes of headroom. Optional packed limits, gzip limits, peer exclusions and the exact Oniguruma binary requirement remain unchanged.',
-  reviewedCoreMeasurementBytes: 5_737_070,
+  $comment: 'Minimum-query combobox admission, sequence playback presentation and versioned metadata bring the complete core graph to 5,741,897 raw bytes across the same 65 emitted files. Only its exceeded raw ceiling advances to 5,741,952 bytes, the next 64-byte boundary with 55 bytes of headroom. Passing optional packed limits, gzip limits, peer exclusions and the exact Oniguruma binary requirement remain unchanged.',
+  reviewedCoreMeasurementBytes: 5_741_897,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 18,
+  selectedRegressionHeadroomBytes: 55,
 };
 
 /**
@@ -321,9 +321,9 @@ const bundleEntries = {
   },
   map: {
     fixture: 'optional',
-    // The complete MapLibre v6 graph measures 2,528,040 raw bytes across the same 52 files,
-    // up 335 bytes; the next 64-byte boundary leaves 24 bytes.
-    maxRawBytes: 2_528_064,
+    // The complete MapLibre v6 graph with canvas allocation measures 2,534,012 raw bytes
+    // across the same 52 files; the next 64-byte boundary leaves 4 bytes.
+    maxRawBytes: 2_534_016,
   },
   graph: {
     fixture: 'optional',

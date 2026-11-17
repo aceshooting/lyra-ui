@@ -357,6 +357,11 @@ other value (a plain object, a function) is dropped from the row instead of reac
   mapped IDLs `inputmode` and `enterkeyhint` delegate to the corresponding camel-case native
   properties
 - `inputValue: string` — the live filter input text; programmatic writes are event-silent
+- `minQueryLength: number = 0` (attribute `min-query-length`) — opt-in minimum Unicode code
+  points in the trimmed query before suggestions can open or `source` can be called. The actual
+  displayed and provider query is preserved verbatim; counting is not grapheme segmentation.
+  Negative values clamp to zero, fractional values truncate, and non-finite values fall back to
+  zero. Unset or zero preserves unrestricted opening and current source behavior.
 - `maxOptionsVisible: number = 3` (attribute `max-options-visible` — caps how many selected **tags**
   show before collapsing to `+N`; nothing to do with the suggestion list, see the three-caps note
   below)
@@ -448,6 +453,26 @@ including during SSR, a committed value renders as its raw code without an unava
 synthetic unknown option or custom unknown label. Once the slot has been observed, even when
 empty, ordinary matched/unmatched presentation applies.
 
+**Minimum query length:** a positive `minQueryLength` applies to local suggestions and every
+source/opening path, including focus, input, arrow keys, `show()`, direct `open`, public text edits,
+refresh, clear/pick resets and reconnect. A rejected `show()` resolves immediately without
+show/after-show events. Below the minimum the popup and its expanded/active-descendant ARIA state
+stay closed. Typing a qualifying query follows the normal opening/debounce behavior.
+
+When editing falls below the minimum, the popup closes without clearing the typed draft, moving
+focus or changing the committed selection. This threshold-forced close is non-cancelable and
+reports hide/after-hide only if the popup was already open; it emits no selection or clear events.
+Ordinary explicit dismissal keeps its existing query-reset contract. Armed searches are canceled,
+in-flight searches are aborted, and obsolete results/errors cannot restore suggestions. Already
+known selected-row labels/data are retained. Raising the minimum reconciles the current query;
+lowering it does not independently reopen or fetch before another normal query/open/refresh action.
+
+A positive minimum also suppresses the closed selected-value `source('')` warmup: no short-query
+metadata exception invokes the provider. A newly assigned async selection whose label has never
+been resolved keeps the existing unresolved-selection presentation until a qualifying response can
+resolve it. This does not change `selectedRows`' current/deferred resolution contract. Leave the
+minimum at zero when empty-query label lookup or immediate catalog browsing is required.
+
 **Methods:** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and `setRangeText()`
 forward to the internal input. `setRangeText()` synchronizes the filter query and visible options.
 `show(): Promise<void>` and `hide(): Promise<void>` settle after `lr-after-show` and
@@ -537,7 +562,8 @@ disconnect or a positioning runtime failure are non-cancelable because they cann
 Vetoing an ordinary connected close
 is atomic: the filter query, active option, async result rows, reflected `open` state, and overlay
 ownership remain unchanged, so the host can defer dismissal without reconstructing the search.
-`lr-after-show` and
+A minimum-query-length forced close is also non-cancelable because an ineligible query cannot
+keep suggestions open. `lr-after-show` and
 `lr-after-hide` fire when the corresponding transition settles. `lr-create` carries
 `detail: { inputValue }` and is also cancelable: preventing it suppresses the default append/select
 action so the host can normalize and commit its own option.

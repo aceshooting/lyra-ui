@@ -1,3 +1,4 @@
+import { MapCanvasAllocationController, type MapCanvasAllocation } from './map-canvas-target.js';
 import { MapPaintBatch } from './map-paint-batch.js';
 import type { MapExternalSourceEffects } from './map-external-source-effects.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
@@ -235,6 +236,8 @@ export type { LyraMapFeatureRequirements } from './map-loader.js';
 
 /** Map engine selected before connecting the component. */
 export type LyraMapEngine = 'modular' | 'maplibre';
+/** A containing ancestor or the visual viewport painted by the canvas while the host stays usable. */
+export type LyraMapCanvasTarget = HTMLElement | 'viewport';
 const MAP_ENGINE = literalSetConverter<LyraMapEngine>(['modular', 'maplibre'], 'modular');
 
 type MapFailureReason =
@@ -3561,6 +3564,49 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    *  Changing it keeps the geographic centre fixed and shifts the picture; it is not reported as a
    *  camera change. Applied to the engine once it exists. */
   @property({ attribute: false }) cameraPadding?: LyraMapPadding;
+
+  /** Optional canvas extent. A connected same-document composed ancestor, or `'viewport'`,
+   * expands the canvas while controls, legend, camera framing and padded visible bounds use the
+   * host. The target must contain the whole host. Translation and positive axis-aligned scale are
+   * supported; rotation, skew, perspective, disconnected targets and noncontaining allocations
+   * restore host layout. Ordinary ancestor clipping still applies. Authored cameraPadding adds
+   * space inside the host; clearing this property restores the original allocation. */
+  @property({ attribute: false }) canvasTarget?: LyraMapCanvasTarget;
+  private canvasAllocationController?: MapCanvasAllocationController;
+  private canvasAllocation?: MapCanvasAllocation;
+  private canvasPaddingUsable = true;
+
+  private syncCanvasAllocation(): void {
+    if (!this.isConnected) return;
+    if (!this.canvasAllocationController && this.canvasTarget === undefined) return;
+    this.canvasAllocationController ??= new MapCanvasAllocationController({
+      element: this,
+      base: () => this.shadowRoot?.querySelector<HTMLElement>('[part="base"]') ?? undefined,
+      target: () => this.canvasTarget,
+      changed: allocation => {
+        this.canvasAllocation = allocation;
+        const map = this._map, generation = this._connectGeneration, document = this.ownerDocument;
+        const current = (): boolean => this.isConnected && this._map === map &&
+          this._connectGeneration === generation && this.ownerDocument === document;
+        if (map && current()) {
+          this.writeCamera(() => { try { map.resize(); } catch { /* A retiring engine cannot retain allocation work. */ } });
+          if (!current()) return;
+          this.applyCameraPadding();
+          if (!current()) return;
+          this.drawingController?.scheduleHandles();
+          this.geographicSceneRender?.refreshAllocation();
+          this.scheduleAnchorSync();
+        }
+      },
+    });
+    this.canvasAllocationController.refresh();
+  }
+
+  private releaseCanvasAllocation(): void {
+    this.canvasAllocationController?.dispose(); this.canvasAllocationController = undefined;
+    this.canvasAllocation = undefined; this.canvasPaddingUsable = true;
+  }
+
   /** The padding currently applied to the engine. */
   private appliedPadding: Readonly<Required<LyraMapPadding>> = ZERO_CAMERA_PADDING;
 
@@ -5652,7 +5698,15 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private applyCameraPadding(): void {
     const map = this._map;
     if (!map || typeof map.setPadding !== 'function') return;
-    const next = normalizeFitPadding(this.cameraPadding);
+    const authored = normalizeFitPadding(this.cameraPadding);
+    const allocation = this.canvasAllocation;
+    this.canvasPaddingUsable = !allocation || authored.left + authored.right < allocation.width - allocation.padding.left - allocation.padding.right &&
+      authored.top + authored.bottom < allocation.height - allocation.padding.top - allocation.padding.bottom;
+    // A collapsed authored region is unreadable/unfittable; keep valid automatic native padding
+    // until the author supplies a usable region again, without forwarding an invalid box.
+    const extra = this.canvasPaddingUsable ? authored : ZERO_CAMERA_PADDING;
+    const next = allocation ? { top: allocation.padding.top + extra.top, right: allocation.padding.right + extra.right,
+      bottom: allocation.padding.bottom + extra.bottom, left: allocation.padding.left + extra.left } : authored;
     const current = this.appliedPadding;
     if (
       next.top === current.top && next.right === current.right &&
@@ -5684,6 +5738,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   /** The visible box inside the applied `cameraPadding`, or `undefined` when it cannot be read. */
   private readVisibleBounds(map: MapLibreMapCapability, padded = true): LyraMapBounds | undefined {
+    const generation = this._connectGeneration, document = this.ownerDocument;
+    const current = (): boolean => this.isConnected && this._map === map &&
+      this._connectGeneration === generation && this.ownerDocument === document;
+    this.syncCanvasAllocation();
+    if (!current() || padded && this.canvasAllocation && !this.canvasPaddingUsable) return undefined;
     try {
       const { top, right, bottom, left } = padded ? this.appliedPadding : { top: 0, right: 0, bottom: 0, left: 0 };
       const container = this.containerEl;
@@ -5704,6 +5763,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         east = north = -Infinity;
         for (const [x, y] of corners) {
           const { lng, lat } = map.unproject([x, y]);
+          if (!current()) return undefined;
           west = Math.min(west, lng);
           east = Math.max(east, lng);
           south = Math.min(south, lat);
@@ -5711,11 +5771,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         }
       } else {
         const box = map.getBounds?.();
-        if (!box) return undefined;
-        west = box.getWest();
-        south = box.getSouth();
-        east = box.getEast();
-        north = box.getNorth();
+        if (!box || !current()) return undefined;
+        west = box.getWest(); if (!current()) return undefined;
+        south = box.getSouth(); if (!current()) return undefined;
+        east = box.getEast(); if (!current()) return undefined;
+        north = box.getNorth(); if (!current()) return undefined;
       }
       if (![west, south, east, north].every(isFiniteCoordinate)) return undefined;
       // `west` into [-180, 180], keeping the span, so `fitBounds()` takes the box back.
@@ -5778,6 +5838,13 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   private applyFit(map: MapLibreMapCapability, fit: MapFitRequest, animate: boolean): boolean {
+    const generation = this._connectGeneration, document = this.ownerDocument;
+    this.syncCanvasAllocation();
+    if (!this.isConnected || this._map !== map || this._connectGeneration !== generation || this.ownerDocument !== document) return false;
+    const allocation = this.canvasAllocation, padding = this.appliedPadding;
+    if (allocation && (!this.canvasPaddingUsable ||
+      padding.left + padding.right + fit.padding.left + fit.padding.right >= allocation.width ||
+      padding.top + padding.bottom + fit.padding.top + fit.padding.bottom >= allocation.height)) return false;
     if (typeof map.fitBounds !== 'function') return false;
     const [[west, south], [east, north]] = fit.bounds;
     // Limits apply when the fit runs: a queued fit honours limits assigned after it was requested.
@@ -5983,6 +6050,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.releaseCanvasAllocation();
     this.stopObservingMapInteractionState();
     this.interruptCameraSession('disconnect', false);
     const session = this.cameraSession;
@@ -6121,6 +6189,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.releaseCanvasAllocation();
+    if (this.isConnected) this.syncCanvasAllocation();
     this.observeMapInteractionState();
     if (this.geographicSceneDocument && this.geographicSceneDocument !== this.ownerDocument) {
       this.interruptCameraSession('disconnect', false);
@@ -6172,6 +6242,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // (it fires a GPUInitializationError internally and still returns a Map instance with no
     // `painter`, which would crash disconnectedCallback()'s `this._map.remove()`), so this must
     // stay a precondition rather than a try/catch around the constructor below.
+    this.syncCanvasAllocation();
     const mod = this._maplibreModule;
     const authoredCenter = this.center, authoredZoom = this.zoom, option = this.hashOption;
     this.syncHash();
@@ -6596,6 +6667,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     }
     this.constructionScheduler?.setReady(!!this.containerEl && this._webglReady && !!this._maplibreModule && hasMapStyle(this.mapStyle));
     if (changed.has('hiddenCategories') && this._map && this._styleLoaded) this.refreshThemePaint();
+    this.syncCanvasAllocation();
     if (changed.has('cameraPadding') && this._map) {
       this.applyCameraPadding();
       this.geographicSceneRender?.refreshAllocation();

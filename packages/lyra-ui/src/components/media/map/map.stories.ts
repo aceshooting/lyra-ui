@@ -2320,6 +2320,7 @@ export const NetworkMonitoringShowcase: Story = {
         .lr-story-network dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--lr-space-2xs) var(--lr-space-s); margin: 0; }
         .lr-story-network dd { margin: 0; overflow-wrap: anywhere; }
         .lr-story-network ol { margin: 0; padding-inline-start: var(--lr-space-l); max-block-size: var(--lr-size-12rem); overflow: auto; }
+        .lr-story-network ol:focus-visible { outline: var(--lr-focus-ring); outline-offset: var(--lr-focus-ring-offset); }
         .lr-story-network li[aria-current] { font-weight: var(--lr-font-weight-semibold); }
         @container (min-width: 48rem) {
           .lr-story-network [data-layout] { grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr); }
@@ -2367,11 +2368,37 @@ export const NetworkMonitoringShowcase: Story = {
               <dt data-copy="position">Position</dt><dd data-detail-position></dd>
               <dt data-copy="source">Position source</dt><dd data-detail-source></dd>
             </dl>
-            <h4 data-copy="history" style="margin: 0">Availability history</h4>
-            <ol data-history></ol>
+            <h4 id="network-showcase-history" data-copy="history" style="margin: 0">Availability history</h4>
+            <ol data-history tabindex="0" aria-labelledby="network-showcase-history"></ol>
           </aside>
         </div>
       </section>
     `;
   },
+};
+
+/** The canvas paints the full panel; the smaller host is the camera's usable allocation. */
+export const FullBleedCanvas: StoryObj = {
+  parameters: { docs: { description: { story: 'Assign a containing ancestor to canvasTarget. The map paints behind translucent chrome while its host keeps controls, legend and camera framing in the uncovered region. No native engine measurements or container-part positioning are needed.' } } },
+  render: () => html`
+    <style>
+      .canvas-extent-demo { position: relative; isolation: isolate; inline-size: 100%; block-size: 26rem; overflow: hidden; }
+      .canvas-extent-demo > lr-map { position: absolute; inset: 4rem 1rem 1rem 6rem; width: auto; height: auto; }
+      .canvas-extent-header, .canvas-extent-rail {
+        position: absolute; z-index: 2; display: grid; place-items: center;
+        color: var(--lr-color-text); background: color-mix(in srgb, var(--lr-color-surface) 75%, transparent);
+        backdrop-filter: blur(var(--lr-space-s)); border: var(--lr-border-width-thin) solid var(--lr-color-border);
+      }
+      .canvas-extent-header { inset: 0 0 auto; block-size: 3rem; }
+      .canvas-extent-rail { inset: 3rem auto 0 0; inline-size: 5rem; }
+    </style>
+    <section class="canvas-extent-demo" aria-label="Map behind application chrome">
+      <lr-map label="Full bleed map" .mapStyle=${OFFLINE_RASTER_STYLE} .center=${[6.13, 49.61]} .zoom=${5}
+        ${ref(node => { if (node instanceof HTMLElement) (node as LyraMap).canvasTarget = node.parentElement ?? undefined; })}>
+        <span slot="legend">The legend and controls stay inside the usable map region.</span>
+      </lr-map>
+      <header class="canvas-extent-header">Area overview</header>
+      <aside class="canvas-extent-rail" aria-label="Map context">Places</aside>
+    </section>
+  `,
 };

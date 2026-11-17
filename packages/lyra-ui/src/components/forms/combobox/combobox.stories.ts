@@ -401,6 +401,23 @@ export const AsyncSource: Story = {
   },
 };
 
+export const MinimumQueryLength: Story = {
+  name: 'Search after three characters',
+  render: () => {
+    const fruits = ['Apple', 'Apricot', 'Banana', 'Cherry', 'Grape', 'Grapefruit'];
+    const source: ComboboxSource = async (query, { limit }) => {
+      const matches = fruits.filter(label => label.toLowerCase().includes(query.trim().toLowerCase()));
+      return {
+        rows: matches.slice(0, limit).map(label => ({ value: label.toLowerCase(), label })),
+        total: matches.length,
+      };
+    };
+    return html`<lr-combobox label="Fruit search" hint="Type at least three characters for suggestions."
+      min-query-length="3" clearable style="max-inline-size:22rem"
+      .source=${source}></lr-combobox>`;
+  },
+};
+
 export const RichAsyncRows: Story = {
   parameters: {
     docs: {

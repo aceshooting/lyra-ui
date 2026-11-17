@@ -451,6 +451,15 @@ assert.throws(
 const reviewedCeilingKeys = Object.keys(budgets)
   .filter((key) => key.startsWith('dist/') || key === '$componentP95GzipKb' || key === '$componentMaxGzipKb')
   .sort();
+test('combobox minimum-query admission retains its reviewed initial-route ceiling', () => {
+  const entry = 'dist/components/forms/combobox/combobox.js';
+  const measurement = 42_692;
+  const ceiling = budgetKilobytesToBytes(initialBudgets.$marginalGzipKb[entry], entry);
+  assert.equal(ceiling, 42_752);
+  assert.equal(ceiling, Math.ceil(measurement / 64) * 64,
+    'only the exceeded initial-route ceiling advances to the next 64-byte boundary');
+});
+
 // Standalone button registration measures 37,120 gzip bytes. Its 37,120-byte ceiling
 // has no growth allowance and retains the shared-base canary.
 test('standalone button retains its reviewed gzip measurement and tight canary', () => {

@@ -611,6 +611,39 @@ cannot load rejects with `capture-failed`.
   panel or toolbar covering part of the map does not hide what the map frames. Changing it keeps
   the geographic centre fixed, shifts the picture and is not reported as a camera change. Sides are
   physical, not logical.
+- `canvasTarget?: LyraMapCanvasTarget` (property only) — a connected same-document ancestor
+  element or `'viewport'` that the canvas fills. The host remains the usable rectangle: native
+  controls, legend and toolbars stay in it, and the camera automatically adds the target-to-host
+  insets. `cameraPadding` is additional space inside that rectangle; per-fit padding is additional
+  to both. `getVisibleBounds()` and movement-event bounds use the padded host, while
+  `getVisibleBounds({ padded: false })` explicitly reads the whole canvas. `project()`,
+  `unproject()` and pointer positions remain canvas-local CSS pixels.
+
+  ```ts
+  import '@aceshooting/lyra-ui/components/lr-map.js';
+  import type { LyraMapCanvasTarget } from '@aceshooting/lyra-ui/components/lr-map.js';
+
+  const target: LyraMapCanvasTarget = mapElement.parentElement!;
+  mapElement.canvasTarget = target; // The host occupies the uncovered part of this ancestor.
+  mapElement.cameraPadding = { top: 12 }; // Extra breathing room inside the host.
+  // Or use mapElement.canvasTarget = 'viewport' for the current visual viewport.
+  mapElement.canvasTarget = undefined; // Restore the ordinary host-sized canvas.
+  ```
+
+  The allocation follows resize, scroll, layout and transform changes. Translation and positive
+  axis-aligned scaling work beneath transformed, filtered and container-query ancestors without
+  moving the canvas out of its shadow root. A target must contain the entire host rectangle;
+  partial containment, an unrelated/disconnected target, rotation, skew, perspective or a
+  reflected/zero scale restores ordinary host layout and removes the automatic insets. Ordinary
+  ancestor overflow/paint clipping still applies; this option does not escape it or move content
+  into the top layer. Use a containing panel whose clipping permits the intended paint extent.
+
+  If authored padding collapses the usable region in an active extent, padded bounds return
+  `null` and live fits return `false`; the engine keeps the valid automatic host inset until the
+  padding becomes usable again. A per-fit padding that consumes the remaining region is also
+  refused. Explicit whole-canvas bounds remain available. Changing the allocation preserves the
+  geographic camera and emits no synthetic `lr-map-view-change`; clearing the option or
+  disconnecting the map releases extent tracking. Leaving it unset preserves existing behavior.
 - `renderWorldCopies?: boolean` (attribute: false) — forwarded to MapLibre when its map is
   constructed. Leave it unset to preserve MapLibre's own current default; set `false` before
   construction to stop repeating the world horizontally. This is a construction-time option, so a

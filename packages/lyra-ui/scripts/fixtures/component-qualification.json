@@ -12354,6 +12354,24 @@
               "test": "passes an accessibility audit while the error row is showing",
               "target": "el",
               "state": "open"
+            },
+            {
+              "file": "src/components/forms/combobox/combobox-min-query-length.test.ts",
+              "test": "counts trimmed Unicode code points while preserving the raw provider query",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/forms/combobox/combobox-min-query-length.test.ts",
+              "test": "keeps the native draft, caret, focus and committed row when shrinking forces a noncancelable close",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/forms/combobox/combobox-min-query-length.test.ts",
+              "test": "preserves empty-query opening and selected-label warmup with ${explicitZero ? 'explicit zero' : 'the property unset'}",
+              "target": "el",
+              "state": "populated"
             }
           ],
           "exemption": null
@@ -12466,7 +12484,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2802,
+              "line": 2883,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -12505,6 +12523,7 @@
           "src/components/forms/combobox/combobox-catalog.test.ts",
           "src/components/forms/combobox/combobox-form-lifecycle.test.ts",
           "src/components/forms/combobox/combobox-live-option-writes.test.ts",
+          "src/components/forms/combobox/combobox-min-query-length.test.ts",
           "src/components/forms/combobox/combobox-projection.test.ts",
           "src/components/forms/combobox/combobox-refresh.test.ts",
           "src/components/forms/combobox/combobox-remediation.test.ts",
@@ -32236,6 +32255,11 @@
           "src/components/media/map/map-camera-session-native.test.ts",
           "src/components/media/map/map-camera-session-recovery.test.ts",
           "src/components/media/map/map-camera.test.ts",
+          "src/components/media/map/map-canvas-target-lifecycle.test.ts",
+          "src/components/media/map/map-canvas-target-native.test.ts",
+          "src/components/media/map/map-canvas-target-retirement.test.ts",
+          "src/components/media/map/map-canvas-target.property.test.ts",
+          "src/components/media/map/map-canvas-target.test.ts",
           "src/components/media/map/map-composition-pattern.property.test.ts",
           "src/components/media/map/map-composition-pattern.test.ts",
           "src/components/media/map/map-construction-scheduler.test.ts",
@@ -32590,6 +32614,11 @@
           "src/components/media/map/map-camera-session-native.test.ts",
           "src/components/media/map/map-camera-session-recovery.test.ts",
           "src/components/media/map/map-camera.test.ts",
+          "src/components/media/map/map-canvas-target-lifecycle.test.ts",
+          "src/components/media/map/map-canvas-target-native.test.ts",
+          "src/components/media/map/map-canvas-target-retirement.test.ts",
+          "src/components/media/map/map-canvas-target.property.test.ts",
+          "src/components/media/map/map-canvas-target.test.ts",
           "src/components/media/map/map-composition-pattern.property.test.ts",
           "src/components/media/map/map-composition-pattern.test.ts",
           "src/components/media/map/map-construction-scheduler.test.ts",
@@ -38540,6 +38569,12 @@
               "state": "open"
             },
             {
+              "file": "src/components/forms/combobox/combobox-min-query-length.test.ts",
+              "test": "keeps the native draft, caret, focus and committed row when shrinking forces a noncancelable close",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/forms/combobox/option.test.ts",
               "test": "is accessible",
               "target": "listbox",
@@ -38645,7 +38680,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2802,
+              "line": 2883,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -38684,6 +38719,7 @@
           "src/components/forms/combobox/combobox-catalog.test.ts",
           "src/components/forms/combobox/combobox-form-lifecycle.test.ts",
           "src/components/forms/combobox/combobox-live-option-writes.test.ts",
+          "src/components/forms/combobox/combobox-min-query-length.test.ts",
           "src/components/forms/combobox/combobox-projection.test.ts",
           "src/components/forms/combobox/combobox-refresh.test.ts",
           "src/components/forms/combobox/combobox-remediation.test.ts",
@@ -49099,9 +49135,7 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "rtl",
           "reducedMotion",
-          "narrowAllocation",
           "visual",
           "forcedColors",
           "assistiveTechnology"
@@ -49120,6 +49154,12 @@
           "applicability": "applicable",
           "status": "automated",
           "evidence": [
+            {
+              "file": "src/components/media/sequence-playback/sequence-playback-position.test.ts",
+              "test": "keeps a long RTL readout within 320px and preserves keyboard range selection and focus",
+              "target": "el",
+              "state": "populated"
+            },
             {
               "file": "src/components/media/sequence-playback/sequence-playback.test.ts",
               "test": "is accessible",
@@ -49146,17 +49186,22 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/sequence-playback/sequence-playback.test.ts",
-              "test": "keeps an authored interactive glyph decorative: skipped by Tab and never the click target",
+              "file": "src/components/media/sequence-playback/sequence-playback-position.test.ts",
+              "test": "keeps a long RTL readout within 320px and preserves keyboard range selection and focus",
               "kind": "component keyboard exercise signal"
             }
           ]
         },
         "rtl": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local rendered RTL assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/media/sequence-playback/sequence-playback-position.test.ts",
+              "test": "keeps a long RTL readout within 320px and preserves keyboard range selection and focus",
+              "kind": "rendered RTL test signal"
+            }
+          ]
         },
         "reducedMotion": {
           "applicability": "applicable",
@@ -49166,9 +49211,14 @@
         },
         "narrowAllocation": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "No component-local 320px allocation assertion is recorded."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/media/sequence-playback/sequence-playback-position.test.ts",
+              "test": "keeps a long RTL readout within 320px and preserves keyboard range selection and focus",
+              "kind": "320px allocation test signal"
+            }
+          ]
         },
         "engines": {
           "applicability": "applicable",
@@ -49223,10 +49273,16 @@
           "limitation": "The component declares no optional peer dependencies."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/media/sequence-playback/sequence-playback.class.ts",
+              "line": 200,
+              "kind": "remote-content or trust-boundary source signal"
+            }
+          ],
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -49246,20 +49302,19 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "No component-local rendered RTL assertion is recorded.",
         "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
-        "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
         "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/media/sequence-playback/sequence-playback-position.test.ts",
           "src/components/media/sequence-playback/sequence-playback-remediation.test.ts",
           "src/components/media/sequence-playback/sequence-playback.test.ts"
         ],

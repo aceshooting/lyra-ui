@@ -73,6 +73,37 @@ export const NoLoop: Story = {
     html`<lr-sequence-playback item-count="10" interval-ms="500" without-loop></lr-sequence-playback>`,
 };
 
+export const ReplayFromEnd: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'With without-loop, starting paused standalone playback at its final item resets to the first item before lr-play, followed by one reset step. A bound source clock owns its own restart and loop policy.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-sequence-playback item-count="5" current-index="4" interval-ms="500" without-loop with-value></lr-sequence-playback>
+  `,
+};
+
+export const FormattedPosition: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'A zero-based valueFormatter supplies caller-owned text to the native slider and optional non-live readout. Returning null or undefined restores the localized ordinal; an explicit empty string stays empty.',
+      },
+    },
+  },
+  render: () => {
+    const frames = ['2026-01-01 · Initial state', '2026-01-08 · Review', '2026-01-15 · Final state'];
+    return html`
+      <lr-sequence-playback item-count="3" interval-ms="900" with-value
+        .valueFormatter=${(index: number) => frames[index]}
+      ></lr-sequence-playback>
+    `;
+  },
+};
+
 export const SingleFrame: Story = {
   render: () => html`<lr-sequence-playback item-count="1"></lr-sequence-playback>`,
 };

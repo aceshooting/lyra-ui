@@ -120,7 +120,7 @@ it('advances the index on each tick and wraps by default', async () => {
 
 it('stops at the last index when withoutLoop is set and the end is reached', async () => {
   const el = (await fixture(
-    html`<lr-sequence-playback item-count="2" interval-ms="20" current-index="1"></lr-sequence-playback>`,
+    html`<lr-sequence-playback item-count="2" interval-ms="20"></lr-sequence-playback>`,
   )) as LyraSequencePlayback;
   el.withoutLoop = true;
   el.play();
@@ -131,7 +131,7 @@ it('stops at the last index when withoutLoop is set and the end is reached', asy
 
 it('stops at the last index when the without-loop attribute is set', async () => {
   const el = (await fixture(
-    html`<lr-sequence-playback item-count="2" interval-ms="20" current-index="1" without-loop></lr-sequence-playback>`,
+    html`<lr-sequence-playback item-count="2" interval-ms="20" without-loop></lr-sequence-playback>`,
   )) as LyraSequencePlayback;
   expect(el.withoutLoop).to.be.true;
   el.play();
@@ -141,23 +141,17 @@ it('stops at the last index when the without-loop attribute is set', async () =>
 });
 
 describe('canonical loop control', () => {
-  // Runs the two-item sequence from its last item and reports whether it wrapped (still playing).
-  async function wrapsAtEnd(el: LyraSequencePlayback): Promise<boolean> {
-    el.play();
-    // wait-reason: after one interval the sequence must still be playing; there is no event to await for "did not stop"
-    await aTimeout(30);
-    const wrapped = el.playing;
-    el.pause();
-    return wrapped;
-  }
-
   it('keeps without-loop authoritative with the retired attribute present', async () => {
     await captureDeprecationWarnings(LOOP, async () => {
       const el = (await fixture(
-        html`<lr-sequence-playback item-count="2" interval-ms="20" current-index="1" loop without-loop></lr-sequence-playback>`,
+        html`<lr-sequence-playback item-count="2" interval-ms="20" loop without-loop></lr-sequence-playback>`,
       )) as LyraSequencePlayback;
       expect(el.withoutLoop).to.be.true;
-      expect(await wrapsAtEnd(el)).to.be.false;
+      const stopped = oneEvent(el, 'lr-pause');
+      el.play();
+      await stopped;
+      expect(el.currentIndex).to.equal(1);
+      expect(el.playing).to.be.false;
     });
   });
 });
