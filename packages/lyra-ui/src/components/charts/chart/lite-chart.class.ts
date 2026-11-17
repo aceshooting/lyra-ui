@@ -1438,6 +1438,9 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         item.text.data = '';
         widths[index] = 0;
       }
+      // Empty SVG text needs a nameable role to expose its full category name.
+      if (item.text.data === '' && item.source.length > 0) item.tick.setAttribute('role', 'img');
+      else item.tick.removeAttribute('role');
       if (item.text.data === item.source) item.tick.removeAttribute('aria-label');
       else item.tick.setAttribute('aria-label', item.source);
     });
@@ -1469,7 +1472,14 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     // A tick whose resolved text is empty paints nothing, so it arbitrates exactly like a tick
     // `axisLabelText` blanked with `null`: its labelled neighbors may grow into its slot.
     const ticks = [...this.svgEl.querySelectorAll<SVGTextElement>('[part="axis-label"][data-full-label]')]
-      .filter((tick) => hasCategoryLabelText(tick.getAttribute('data-full-label')))
+      .filter((tick) => {
+        const hasText = hasCategoryLabelText(tick.getAttribute('data-full-label'));
+        if (!hasText) {
+          tick.removeAttribute('role');
+          tick.removeAttribute('aria-label');
+        }
+        return hasText;
+      })
       .sort((a, b) => Number(a.getAttribute('x')) - Number(b.getAttribute('x')));
     const count = ticks.length;
     if (count === 0) return;

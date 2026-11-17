@@ -31202,6 +31202,24 @@
             },
             {
               "file": "src/components/charts/chart/lite-chart.test.ts",
+              "test": "retains category names without painting an oversized marker, then restores text when lanes grow",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/charts/chart/lite-chart.test.ts",
+              "test": "retains category names without painting an oversized marker, then restores text when lanes grow",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/charts/chart/lite-chart.test.ts",
+              "test": "retains category names without painting an oversized marker, then restores text when lanes grow",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/charts/chart/lite-chart.test.ts",
               "test": "stays accessible with a fixed pitch",
               "target": "el",
               "state": "populated"

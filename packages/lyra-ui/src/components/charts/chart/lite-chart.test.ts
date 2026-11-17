@@ -1,3 +1,4 @@
+import { accessibleName } from '../../../../test/accessible-name.js';
 import { renderedChartTextBox as renderedBox } from '../../../../test/chart-rendered-box.js';
 import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import './lite-chart.js';
@@ -4230,12 +4231,35 @@ describe('lite-chart semantics and geometry', () => {
       expect(tick.getAttribute('data-full-label')).to.equal(labels[index]);
     }
     expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length, 'fitting does not remove observations').to.equal(labels.length);
+    await expect(el).to.be.accessible();
+    for (let index = 0; index < ticks.length; index++) {
+      expect(ticks[index]!.getAttribute('role')).to.equal('img');
+      expect(accessibleName(ticks[index]!)).to.equal(labels[index]);
+    }
 
+    el.axisLabelText = () => '';
+    await el.updateComplete;
+    const blanked = categoryAxisLabels(el);
+    expect(blanked.length).to.equal(labels.length);
+    expect(blanked.every((tick, index) => tick === ticks[index]), 'the public blank override reuses the named ticks').to.equal(true);
+    for (const tick of blanked) {
+      expect(tick.textContent).to.equal('');
+      expect(tick.getAttribute('data-full-label')).to.equal('');
+      expect(tick.hasAttribute('role'), 'an intentionally blank category is not an unnamed image').to.equal(false);
+      expect(tick.hasAttribute('aria-label')).to.equal(false);
+    }
+    await expect(el).to.be.accessible();
+    expect(blanked.map(tick => accessibleName(tick))).to.deep.equal(labels.map(() => ''));
+
+    el.axisLabelText = undefined;
     el.barX = undefined;
     await el.updateComplete;
     const restored = categoryAxisLabels(el);
     expect(restored.map(tick => tick.textContent), 'each fit restarts from the full source label').to.deep.equal(labels);
     expect(restored.every(tick => !tick.hasAttribute('aria-label')), 'full text no longer needs a separate name').to.equal(true);
+    expect(restored.every(tick => !tick.hasAttribute('role')), 'full text returns to native SVG text semantics').to.equal(true);
+    await expect(el).to.be.accessible();
+    expect(restored.map(tick => accessibleName(tick))).to.deep.equal(labels);
     for (const tick of restored) {
       expect(tick.getComputedTextLength()).to.be.at.most(Number(tick.getAttribute('data-label-extent')) + 0.5);
       expect(/[\uD800-\uDFFF]/u.test(tick.textContent ?? ''), 'restored supplementary characters remain intact').to.equal(false);

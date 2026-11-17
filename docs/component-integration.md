@@ -233,7 +233,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-radio-button"></a>`lr-radio-button` | forms | `import '@aceshooting/lyra-ui/components/lr-radio-button.js';` | none | none | none | 44.3 KiB |
 | <a id="lr-radio-group"></a>`lr-radio-group` | forms | `import '@aceshooting/lyra-ui/components/lr-radio-group.js';` | none | none | none | 43.5 KiB |
 | <a id="lr-rag-answer"></a>`lr-rag-answer` | retrieval | `import '@aceshooting/lyra-ui/components/lr-rag-answer.js';` | `dompurify`, `katex`, `marked`, `shiki` | `lr-button`, `lr-citation-badge`, `lr-empty`, `lr-grounding-summary`, `lr-markdown`, `lr-source-card`, `lr-source-list`, `lr-spinner` | `lr-badge`, `lr-claim-evidence`, `lr-stat` | 131.6 KiB |
-| <a id="lr-rag-eval-dashboard"></a>`lr-rag-eval-dashboard` | retrieval | `import '@aceshooting/lyra-ui/components/lr-rag-eval-dashboard.js';` | none | `lr-empty`, `lr-lite-chart`, `lr-stat` | `lr-live-region` | 75.9 KiB |
+| <a id="lr-rag-eval-dashboard"></a>`lr-rag-eval-dashboard` | retrieval | `import '@aceshooting/lyra-ui/components/lr-rag-eval-dashboard.js';` | none | `lr-empty`, `lr-lite-chart`, `lr-stat` | `lr-live-region` | 76 KiB |
 | <a id="lr-random-content"></a>`lr-random-content` | utility | `import '@aceshooting/lyra-ui/components/lr-random-content.js';` | none | none | none | 40 KiB |
 | <a id="lr-rating"></a>`lr-rating` | overlays | `import '@aceshooting/lyra-ui/components/lr-rating.js';` | none | none | none | 33.7 KiB |
 | <a id="lr-realtime-session"></a>`lr-realtime-session` | conversation | `import '@aceshooting/lyra-ui/components/lr-realtime-session.js';` | none | `lr-audio-visualizer`, `lr-badge`, `lr-push-to-talk`, `lr-transcript-feed` | `lr-live-region` | 52.6 KiB |
