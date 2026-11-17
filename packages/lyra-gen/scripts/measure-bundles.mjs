@@ -212,17 +212,40 @@ async function main() {
   const budgetsFile = resolve(args.find(arg => arg.startsWith('--budgets='))?.slice(10) ?? join(packageDirectory, 'scripts/bundle-budgets.json'));
   const output = args.find(arg => arg.startsWith('--output='))?.slice(9);
   const report = await measureBundles();
+  if (output) await writeFile(resolve(output), `${JSON.stringify(report, null, 2)}\n`, { flag: 'wx' });
   let refreshed;
   if (!args.includes('--write-budgets')) {
     const budgets = JSON.parse(await readFile(budgetsFile, 'utf8'));
     if (args.includes('--refresh-versions')) refreshed = refreshBudgetVersions(report, budgets);
     else checkBudgets(report, budgets);
   }
-  if (output) await writeFile(resolve(output), `${JSON.stringify(report, null, 2)}\n`, { flag: 'wx' });
   if (args.includes('--write-budgets')) await writeFile(budgetsFile, `${JSON.stringify(deriveBudgets(report), null, 2)}\n`, { flag: 'wx' });
   else if (refreshed) await refreshBudgetFile(report, budgetsFile);
   console.log(JSON.stringify(report, null, 2));
 }
+
+// Only known validation messages may reach the CLI; build and filesystem errors stay private.
+function validationFailureReason(error) {
+  if (!(error instanceof Error) || typeof error.message !== 'string' || error.message.length > 200) return undefined;
+  const fixed = new Set([
+    'Bundle budget package versions must be stable release versions.',
+    'Bundle budget package version is out of range.',
+    'Bundle budget toolchain or package version differs; remeasure and review.',
+    'Bundle budget profile set differs.',
+    'Bundle budget package versions cannot regress.',
+    'Invalid measured byte count.',
+  ]);
+  if (fixed.has(error.message)) return error.message;
+  const match = /^(External dependency inventory changed|Bundle metric inventory changed|Bundle budget exceeded): ([\w-]+)(?:\/((?:eager|lazy)(?:Js|Css)(?:Gzip)?Bytes|assetBytes))?$/.exec(error.message);
+  if (!match || !Object.hasOwn(PROFILES, match[2]) || (match[1] === 'Bundle budget exceeded') !== Boolean(match[3])) return undefined;
+  return `${match[1]}: ${match[2]}${match[3] ? `/${match[3]}` : ''}`;
+}
+
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
-  await main().catch(() => { console.error('Bundle measurement failed; verify built packages, pinned toolchain and reviewed budgets.'); process.exitCode = 1; });
+  await main().catch(error => {
+    const reason = validationFailureReason(error);
+    console.error(reason ? `Bundle validation failed: ${reason}`
+      : 'Bundle measurement failed; verify built packages, pinned toolchain and reviewed budgets.');
+    process.exitCode = 1;
+  });
 }

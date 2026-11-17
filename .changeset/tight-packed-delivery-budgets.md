@@ -6,4 +6,4 @@ Update measured delivery budgets for viewer transport recovery, composer toolbar
 
 The complete installed core graph measures 5,697,963 raw bytes across 65 files, an increase of 4,871 bytes. Its exceeded raw ceiling advances to 5,697,984 bytes with 21 bytes of headroom. Passing byte limits, the UI download ceiling, file-count ceilings, measurement options, optional-peer exclusions, and exact binary requirements remain unchanged.
 
-The generated-chat composition measures 1,033,193 bytes of lazy JavaScript, 21,746 bytes above its recorded baseline. Only this exceeded raw ceiling advances to 1,033,216 bytes, the next 64-byte boundary with 23 bytes of headroom. Its eager JavaScript, gzip, CSS and asset limits, external-import inventory and pinned measurement toolchain remain unchanged.
+Review the generated-chat composition after shared component runtime and ownership fixes. Lazy JavaScript measures 1,033,397 bytes; its raw ceiling is 1,033,408 bytes, the next 64-byte boundary with 11 bytes of headroom. Its eager JavaScript, gzip, CSS and asset limits, external-import inventory and pinned measurement toolchain remain unchanged.

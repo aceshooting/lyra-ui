@@ -153,3 +153,43 @@ test('derives ceilings from measured bytes and rejects toolchain, inventory and 
   const loosened = structuredClone(budget); loosened.profiles.parser.ceilings.eagerJsBytes = 2000;
   assert.throws(() => checkBudgets(report, loosened));
 });
+
+test('CLI retains completed production measurements and rejects invalid reviewed bytes with a bounded reason', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'lyra-gen-cli-validation-'));
+  const budgetsPath = join(directory, 'budgets.json');
+  const outputPath = join(directory, 'report.json');
+  const checker = new URL('./measure-bundles.mjs', import.meta.url).pathname;
+  try {
+    const originalBudgets = await readFile(new URL('./bundle-budgets.json', import.meta.url), 'utf8');
+    const invalid = deriveBudgets(await measurement.measureBundles());
+    invalid.profiles.parser.ceilings.eagerJsBytes = 0;
+    const input = `${JSON.stringify(invalid, null, 2)}\n`;
+    await writeFile(budgetsPath, input, { flag: 'wx' });
+    const result = spawnSync(process.execPath, [checker, `--budgets=${budgetsPath}`, `--output=${outputPath}`], { encoding: 'utf8' });
+    assert.equal(result.status, 1);
+    const report = JSON.parse(await readFile(outputPath, 'utf8'));
+    assert.deepEqual(report.profiles.map(profile => profile.name), Object.keys(measurement.PROFILES));
+    assert.ok(report.profiles.every(profile => profile.files.length > 0));
+    assert.throws(() => checkBudgets(report, invalid), /Bundle budget exceeded: parser\/eagerJsBytes/);
+    assert.equal(result.stderr.trim(), 'Bundle validation failed: Bundle budget exceeded: parser/eagerJsBytes');
+    assert.equal(await readFile(budgetsPath, 'utf8'), input);
+    assert.equal(await readFile(new URL('./bundle-budgets.json', import.meta.url), 'utf8'), originalBudgets);
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
+
+test('CLI hides arbitrary filesystem details while retaining its completed requested report', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'lyra-gen-cli-private-errors-'));
+  const marker = 'private-filesystem-detail';
+  const missingBudgets = join(directory, marker, 'missing.json');
+  const outputPath = join(directory, 'report.json');
+  try {
+    const result = spawnSync(process.execPath, [new URL('./measure-bundles.mjs', import.meta.url).pathname,
+      `--budgets=${missingBudgets}`, `--output=${outputPath}`], { encoding: 'utf8' });
+    assert.equal(result.status, 1);
+    const report = JSON.parse(await readFile(outputPath, 'utf8'));
+    assert.deepEqual(report.profiles.map(profile => profile.name), Object.keys(measurement.PROFILES));
+    assert.equal(result.stderr.trim(), 'Bundle measurement failed; verify built packages, pinned toolchain and reviewed budgets.');
+    assert.ok(!result.stderr.includes(marker));
+    assert.ok(!result.stderr.includes(directory));
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
