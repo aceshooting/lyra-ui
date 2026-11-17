@@ -10,7 +10,7 @@ export const PUBLIC_PROBES = Object.freeze([
   `${UI_PACKAGE}/components/lr-popover.js`,
   `${UI_PACKAGE}/components/overlays/dialog/dialog.class.js`,
 ]);
-export const DUPLICATE_CODE = '[lr-runtime-duplicate]';
+const DUPLICATE_CODE = '[lr-runtime-duplicate]';
 
 export function runtimePeerVersions(profile, manifest) {
   const range = profile.managedPeerRanges?.katex;

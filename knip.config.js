@@ -7,6 +7,8 @@ export default {
         'scripts/sync-docx-engine-peer.mjs',
         // The upgrade script also invokes the Playwright container-image synchronizer directly.
         'scripts/sync-playwright-images.mjs',
+        // The packed runtime consumer copies this driver into its fixture and spawns it with Node.
+        'scripts/fixtures/runtime-singleton/driver.mjs',
         // TypeScript resolves this declaration as the authored contract for theme-contract.js.
         '.storybook/theme-contract.d.ts',
         '.storybook/**/*.mdx',
